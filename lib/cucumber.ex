@@ -67,7 +67,7 @@ defmodule Cucumber do
   end
 
   # Helper function to call step/2 in the test module with merged args and context
-  def apply_step(module, context, %Gherkin.Step{text: text}) do
+  def apply_step(module, context, %Gherkin.Step{text: text, docstring: docstring, datatable: datatable} = _step) do
     # Extract parameters using the Expression module
     patterns = module.__cucumber_patterns__()
 
@@ -85,9 +85,46 @@ defmodule Cucumber do
 
     case result do
       {pattern, args} ->
-        # Merge args into context and call step/2 with the pattern
+        # Merge args into context and add docstring and datatable when present
         context_with_args = Map.put(context, :args, args)
-        step_result = apply(module, :step, [context_with_args, pattern])
+        
+        # Add docstring if present
+        context_with_docstring = 
+          if docstring, do: Map.put(context_with_args, :docstring, docstring), else: context_with_args
+        
+        # Add datatable if present
+        context_with_extras = 
+          if datatable do
+            # If first row looks like headers, convert to a list of maps
+            if length(datatable) > 1 do
+              [headers | rows] = datatable
+              
+              # Convert rows to maps using headers as keys
+              table_maps = Enum.map(rows, fn row ->
+                Enum.zip(headers, row) |> Enum.into(%{})
+              end)
+              
+              Map.put(context_with_docstring, :datatable, %{
+                headers: headers,
+                rows: rows,
+                maps: table_maps,
+                raw: datatable
+              })
+            else
+              # Single row or empty table
+              Map.put(context_with_docstring, :datatable, %{
+                headers: [],
+                rows: datatable,
+                maps: [],
+                raw: datatable
+              })
+            end
+          else
+            context_with_docstring
+          end
+        
+        # Call the step function with the enhanced context
+        step_result = apply(module, :step, [context_with_extras, pattern])
         
         # Enhanced return value handling
         case step_result do
