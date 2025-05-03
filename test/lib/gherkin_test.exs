@@ -24,18 +24,54 @@ defmodule Gherkin.ParserTest do
         description: "",
         background: %Background{
           steps: [
-            %Step{keyword: "Given", text: "a logged in user"}
+            %Step{
+              keyword: "Given",
+              text: "a logged in user",
+              line: 1,
+              docstring: nil,
+              datatable: nil
+            }
           ]
         },
         scenarios: [
           %Scenario{
             name: "User joins an event",
             steps: [
-              %Step{keyword: "Given", text: "an event titled \"Tech Gathering\""},
-              %Step{keyword: "When", text: "I visit \"/\""},
-              %Step{keyword: "Then", text: "I should see the event"},
-              %Step{keyword: "When", text: "I click \"join\" on the first event"},
-              %Step{keyword: "Then", text: "I should see \"joined event\""}
+              %Step{
+                keyword: "Given",
+                text: "an event titled \"Tech Gathering\"",
+                line: 1,
+                docstring: nil,
+                datatable: nil
+              },
+              %Step{
+                keyword: "When",
+                text: "I visit \"/\"",
+                line: 2,
+                docstring: nil,
+                datatable: nil
+              },
+              %Step{
+                keyword: "Then",
+                text: "I should see the event",
+                line: 3,
+                docstring: nil,
+                datatable: nil
+              },
+              %Step{
+                keyword: "When",
+                text: "I click \"join\" on the first event",
+                line: 4,
+                docstring: nil,
+                datatable: nil
+              },
+              %Step{
+                keyword: "Then",
+                text: "I should see \"joined event\"",
+                line: 5,
+                docstring: nil,
+                datatable: nil
+              }
             ]
           }
         ]
@@ -67,17 +103,47 @@ defmodule Gherkin.ParserTest do
           %Scenario{
             name: "First scenario",
             steps: [
-              %Step{keyword: "Given", text: "something"},
-              %Step{keyword: "When", text: "I do something"},
-              %Step{keyword: "Then", text: "I see something"}
+              %Step{keyword: "Given", text: "something", line: 1, docstring: nil, datatable: nil},
+              %Step{
+                keyword: "When",
+                text: "I do something",
+                line: 2,
+                docstring: nil,
+                datatable: nil
+              },
+              %Step{
+                keyword: "Then",
+                text: "I see something",
+                line: 3,
+                docstring: nil,
+                datatable: nil
+              }
             ]
           },
           %Scenario{
             name: "Second scenario",
             steps: [
-              %Step{keyword: "Given", text: "another thing"},
-              %Step{keyword: "When", text: "I do another thing"},
-              %Step{keyword: "Then", text: "I see another thing"}
+              %Step{
+                keyword: "Given",
+                text: "another thing",
+                line: 5,
+                docstring: nil,
+                datatable: nil
+              },
+              %Step{
+                keyword: "When",
+                text: "I do another thing",
+                line: 6,
+                docstring: nil,
+                datatable: nil
+              },
+              %Step{
+                keyword: "Then",
+                text: "I see another thing",
+                line: 7,
+                docstring: nil,
+                datatable: nil
+              }
             ]
           }
         ]

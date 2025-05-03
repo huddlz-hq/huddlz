@@ -31,36 +31,54 @@ defmodule CucumberReturnValuesTest do
   # Verify direct map return
   defstep "I should see value {string} in the context", context do
     value = List.first(context.args)
-    
+
     cond do
       # Check for direct map return value
       Map.has_key?(context, :direct_value) ->
         assert context.direct_value == value
-      
+
       # Check for {:ok, map} tuple return value
       Map.has_key?(context, :tuple_value) ->
         assert context.tuple_value == value
-      
+
       true ->
         flunk("Expected value #{value} not found in context")
     end
-    
+
     context
   end
 
   # Verify context preservation with :ok or nil returns
   defstep "the initial context should be preserved", context do
     assert context.initial == true
-    
+
     # Only check that our custom key exists and no other custom keys were added
-    # (ignoring standard ExUnit keys which will always be present)
-    custom_keys = Map.keys(context) -- [
-      :initial, :args, 
-      # Standard ExUnit context keys to ignore
-      :async, :case, :describe, :describe_line, :file, 
-      :line, :module, :registered, :test, :test_type, :test_pid
-    ]
-    
+    # (ignoring standard ExUnit keys which will always be present, and our new step_history tracking)
+    custom_keys =
+      Map.keys(context) --
+        [
+          :initial,
+          :args,
+          :step_history,
+          :feature_file,
+          :feature_name,
+          :scenario_name,
+          :docstring,
+          :datatable,
+          # Standard ExUnit context keys to ignore
+          :async,
+          :case,
+          :describe,
+          :describe_line,
+          :file,
+          :line,
+          :module,
+          :registered,
+          :test,
+          :test_type,
+          :test_pid
+        ]
+
     assert custom_keys == []
     context
   end

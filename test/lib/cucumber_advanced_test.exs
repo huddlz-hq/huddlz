@@ -7,7 +7,7 @@ defmodule CucumberAdvancedTest do
     assert context.datatable.raw == [["key", "value"], ["setup", "true"]]
     assert context.datatable.headers == ["key", "value"]
     assert context.datatable.maps == [%{"key" => "setup", "value" => "true"}]
-    
+
     # Pass data from the table to the next step
     Map.put(context, :setup_value, context.datatable.maps |> List.first() |> Map.get("value"))
   end
@@ -18,7 +18,7 @@ defmodule CucumberAdvancedTest do
     assert is_binary(context.docstring)
     assert String.contains?(context.docstring, "multi-line")
     assert String.contains?(context.docstring, "formatting and indentation")
-    
+
     # Store the docstring for later steps
     Map.put(context, :document, context.docstring)
   end
@@ -27,7 +27,7 @@ defmodule CucumberAdvancedTest do
   defstep "I process the document", context do
     assert context.document != nil
     assert context.setup_value == "true"
-    
+
     # Transform the document
     processed_text = String.upcase(context.document)
     Map.put(context, :processed_document, processed_text)
@@ -46,10 +46,10 @@ defmodule CucumberAdvancedTest do
   defstep "a table of users", context do
     # Verify the data table structure
     assert length(context.datatable.maps) == 3
-    assert Enum.all?(context.datatable.maps, &(Map.has_key?(&1, "username")))
-    assert Enum.all?(context.datatable.maps, &(Map.has_key?(&1, "email")))
-    assert Enum.all?(context.datatable.maps, &(Map.has_key?(&1, "role")))
-    
+    assert Enum.all?(context.datatable.maps, &Map.has_key?(&1, "username"))
+    assert Enum.all?(context.datatable.maps, &Map.has_key?(&1, "email"))
+    assert Enum.all?(context.datatable.maps, &Map.has_key?(&1, "role"))
+
     # Store the users for later steps
     Map.put(context, :users, context.datatable.maps)
   end
@@ -57,7 +57,7 @@ defmodule CucumberAdvancedTest do
   # Step that searches in the data from previous step
   defstep "I search for {string}", context do
     search_term = List.first(context.args)
-    
+
     # Find the user with the matching username
     found_user = Enum.find(context.users, &(&1["username"] == search_term))
     Map.put(context, :found_user, found_user)
@@ -66,7 +66,7 @@ defmodule CucumberAdvancedTest do
   # Verify the search result
   defstep "I should find user with email {string}", context do
     expected_email = List.first(context.args)
-    
+
     assert context.found_user != nil
     assert context.found_user["email"] == expected_email
     context

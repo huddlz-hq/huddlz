@@ -23,7 +23,7 @@ defmodule Gherkin.Step do
   @moduledoc """
   Represents a Gherkin step (Given/When/Then/And/But/*).
   """
-  defstruct keyword: "", text: "", docstring: nil, datatable: nil
+  defstruct keyword: "", text: "", docstring: nil, datatable: nil, line: nil
 end
 
 # Initial parser module scaffold
@@ -58,10 +58,11 @@ defmodule Gherkin.Parser do
 
           if has_background do
             # Extract background details with docstring and datatable support
-            {bg_steps, _, _, _} = 
+            {bg_steps, _, _, _} =
               bg_lines
               |> Enum.drop_while(&(&1 == "" or String.starts_with?(&1, "Background:")))
-              |> Enum.reduce({[], nil, false, nil}, fn line, {steps, current_step, in_docstring, _} ->
+              |> Enum.reduce({[], nil, false, nil}, fn line,
+                                                       {steps, current_step, in_docstring, _} ->
                 cond do
                   # Docstring start/end marker
                   String.starts_with?(line, ~s(""")) ->
@@ -77,32 +78,33 @@ defmodule Gherkin.Parser do
                   in_docstring ->
                     # Append this line to the docstring of the current step
                     # Initialize the docstring if nil, otherwise append with newline
-                    updated_step = 
+                    updated_step =
                       if is_nil(current_step.docstring) do
                         %{current_step | docstring: line}
                       else
                         %{current_step | docstring: current_step.docstring <> "\n" <> line}
                       end
-                      
+
                     # Replace the current step in the steps list
                     updated_steps = List.replace_at(steps, 0, updated_step)
                     {updated_steps, updated_step, in_docstring, nil}
 
                   # Data table row
                   String.starts_with?(line, "|") ->
-                    table_row = 
+                    table_row =
                       line
                       |> String.split("|", trim: true)
                       |> Enum.map(&String.trim/1)
-                    
+
                     if current_step do
                       # If we already have a step, add this row to its datatable
-                      updated_step = 
+                      updated_step =
                         if current_step.datatable do
                           %{current_step | datatable: current_step.datatable ++ [table_row]}
                         else
                           %{current_step | datatable: [table_row]}
                         end
+
                       # Replace the current step in the steps list
                       updated_steps = List.replace_at(steps, 0, updated_step)
                       {updated_steps, updated_step, in_docstring, nil}
@@ -114,9 +116,13 @@ defmodule Gherkin.Parser do
                   # Step line
                   Regex.match?(~r/^(Given|When|Then|And|But|\*) /, line) ->
                     [keyword, text] =
-                      Regex.run(~r/^(Given|When|Then|And|But|\*) (.+)$/, line, capture: :all_but_first)
+                      Regex.run(~r/^(Given|When|Then|And|But|\*) (.+)$/, line,
+                        capture: :all_but_first
+                      )
 
-                    new_step = %Step{keyword: keyword, text: text}
+                    # Track the original line number by using the index in the list
+                    line_number = Enum.find_index(bg_lines, &(&1 =~ text)) || 0
+                    new_step = %Step{keyword: keyword, text: text, line: line_number}
                     {[new_step | steps], new_step, false, nil}
 
                   # Ignore other lines
@@ -152,8 +158,10 @@ defmodule Gherkin.Parser do
     # Keep track of state while parsing
     # current_step tracks the current step being processed for docstring/datatable attachment
     {scenarios, current_scenario, current_tags, steps, _current_step, _in_docstring} =
-      Enum.reduce(lines, {[], nil, [], [], nil, false}, 
-        fn line, {scenarios, current_scenario, current_tags, steps, current_step, in_docstring} ->
+      Enum.reduce(lines, {[], nil, [], [], nil, false}, fn line,
+                                                           {scenarios, current_scenario,
+                                                            current_tags, steps, current_step,
+                                                            in_docstring} ->
         cond do
           # Docstring start/end marker
           String.starts_with?(line, ~s(""")) ->
@@ -169,35 +177,38 @@ defmodule Gherkin.Parser do
           in_docstring ->
             # Append this line to the docstring of the current step
             # Initialize the docstring if nil, otherwise append with newline
-            updated_step = 
+            updated_step =
               if is_nil(current_step.docstring) do
                 %{current_step | docstring: line}
               else
                 %{current_step | docstring: current_step.docstring <> "\n" <> line}
               end
-              
+
             # Replace the current step in the steps list
             updated_steps = List.replace_at(steps, 0, updated_step)
             {scenarios, current_scenario, current_tags, updated_steps, updated_step, in_docstring}
 
           # Data table row
           String.starts_with?(line, "|") ->
-            table_row = 
+            table_row =
               line
               |> String.split("|", trim: true)
               |> Enum.map(&String.trim/1)
-            
+
             if current_step do
               # If we already have a step, add this row to its datatable
-              updated_step = 
+              updated_step =
                 if current_step.datatable do
                   %{current_step | datatable: current_step.datatable ++ [table_row]}
                 else
                   %{current_step | datatable: [table_row]}
                 end
+
               # Replace the current step in the steps list
               updated_steps = List.replace_at(steps, 0, updated_step)
-              {scenarios, current_scenario, current_tags, updated_steps, updated_step, in_docstring}
+
+              {scenarios, current_scenario, current_tags, updated_steps, updated_step,
+               in_docstring}
             else
               # This should not happen (table row without a step), but handle gracefully
               {scenarios, current_scenario, current_tags, steps, current_step, in_docstring}
@@ -246,7 +257,9 @@ defmodule Gherkin.Parser do
             [keyword, text] =
               Regex.run(~r/^(Given|When|Then|And|But|\*) (.+)$/, line, capture: :all_but_first)
 
-            new_step = %Step{keyword: keyword, text: text}
+            # Track the line number based on position in the original lines array
+            line_number = Enum.find_index(lines, &(&1 =~ text)) || 0
+            new_step = %Step{keyword: keyword, text: text, line: line_number}
             {scenarios, current_scenario, current_tags, [new_step | steps], new_step, false}
 
           # Ignore other lines
