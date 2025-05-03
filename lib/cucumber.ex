@@ -87,7 +87,30 @@ defmodule Cucumber do
       {pattern, args} ->
         # Merge args into context and call step/2 with the pattern
         context_with_args = Map.put(context, :args, args)
-        apply(module, :step, [context_with_args, pattern])
+        step_result = apply(module, :step, [context_with_args, pattern])
+        
+        # Enhanced return value handling
+        case step_result do
+          # When step returns {:ok, map}, merge map into context
+          {:ok, value} when is_map(value) -> 
+            Map.merge(context, value)
+          
+          # When step returns a map directly, use it as the new context
+          %{} = new_context -> 
+            new_context
+            
+          # When step returns :ok or nil, keep existing context
+          result when result == :ok or result == nil -> 
+            context
+            
+          # When step returns {:error, reason}, raise an error
+          {:error, reason} ->
+            raise ExUnit.AssertionError, "Step failed: #{inspect(reason)}"
+            
+          # For any other return value, just keep the current context
+          _other -> 
+            context
+        end
 
       nil ->
         # No matching pattern found
