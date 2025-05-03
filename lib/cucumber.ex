@@ -51,13 +51,12 @@ defmodule Cucumber do
 
     quote do
       use ExUnit.Case, async: true
-      import Cucumber, only: [defstep: 2]
 
-      # Silence warnings about unused variables in this module's functions
-      @compile {:nowarn_unused_vars, step: 2}
-      
-      # Register module attribute for step definitions
-      Module.register_attribute(__MODULE__, :cucumber_steps, accumulate: true)
+      # Import only the defstep macros that we actually define
+      import Cucumber, only: [defstep: 2, defstep: 3]
+
+      # Register module attribute for cucumber patterns
+      Module.register_attribute(__MODULE__, :cucumber_patterns, accumulate: true)
       @before_compile Cucumber
 
       describe unquote(feature.name) do
@@ -67,103 +66,63 @@ defmodule Cucumber do
     end
   end
 
-  # Helper function to call step/2 in the test module
-  def apply_step(module, context, step) do
-    apply(module, :step, [context, step])
-  end
+  # Helper function to call step/2 in the test module with merged args and context
+  def apply_step(module, context, %Gherkin.Step{text: text}) do
+    # Extract parameters using the Expression module
+    patterns = module.__cucumber_patterns__()
 
-  # Enhanced defstep macro with multiple supported signatures
+    # Find a matching pattern and extract args
+    result =
+      Enum.find_value(patterns, fn pattern_info ->
+        {pattern_text, _} = pattern_info
+        compiled_pattern = Cucumber.Expression.compile(pattern_text)
 
-  # Case 1: defstep "pattern" do ... end (original style)
-  defmacro defstep(pattern, [do: block]) do
-    quote do
-      @cucumber_steps {unquote(pattern), {nil, nil, unquote(Macro.escape(block))}}
-    end
-  end
-
-  # Case 2: defstep "pattern", args do ... end (new style)
-  defmacro defstep(pattern, args, [do: block]) do
-    quote do
-      @cucumber_steps {unquote(pattern), {unquote(Macro.escape(args)), nil, unquote(Macro.escape(block))}}
-    end
-  end
-
-  # Case 3: defstep "pattern", args, context do ... end (new style)
-  defmacro defstep(pattern, args, context, [do: block]) do
-    quote do
-      @cucumber_steps {unquote(pattern), {unquote(Macro.escape(args)), unquote(Macro.escape(context)), unquote(Macro.escape(block))}}
-    end
-  end
-  
-  # __before_compile__ generates step/2 function for matching and executing steps
-  defmacro __before_compile__(env) do
-    steps = Module.get_attribute(env.module, :cucumber_steps) || []
-
-    quote do
-      # Main step dispatch function that tries to match patterns and extracts arguments
-      def step(context, %Gherkin.Step{text: text}) do
-        result = 
-          Enum.find_value(unquote(Macro.escape(steps)), fn
-            {pattern, {args_pattern, context_pattern, block}} ->
-              # Compile the pattern at runtime
-              compiled_pattern = Cucumber.Expression.compile(pattern)
-              
-              case Cucumber.Expression.match(text, compiled_pattern) do
-                {:match, args} -> 
-                  # Execute the step function with extracted arguments
-                  try do
-                    result = case {args_pattern, context_pattern} do
-                      {nil, nil} ->
-                        # Original style: make context and args available as vars
-                        var!(context) = context
-                        var!(args) = args
-                        unquote(quote do: block)
-                        
-                      {args_pat, nil} when not is_nil(args_pat) ->
-                        # New style: args explicitly named
-                        unquote(quote do
-                          args_pat = args
-                          block
-                        end)
-                        
-                      {args_pat, ctx_pat} ->
-                        # New style: both args and context explicitly named
-                        unquote(quote do
-                          args_pat = args
-                          ctx_pat = context
-                          block
-                        end)
-                    end
-                    
-                    {:ok, result}
-                  rescue
-                    e -> 
-                      # Capture the error but preserve the stacktrace for better debugging
-                      {:error, {e, __STACKTRACE__}}
-                  end
-                  
-                :no_match -> 
-                  nil
-              end
-          end)
-
-        case result do
-          {:ok, new_context} when is_map(new_context) -> 
-            # If the step returns a map, use it as the new context
-            new_context
-            
-          {:ok, _other_value} -> 
-            # For other return values, just keep the existing context
-            context
-            
-          {:error, {error, stacktrace}} ->
-            # Re-raise the error with the original stacktrace
-            reraise error, stacktrace
-            
-          nil -> 
-            # No matching step found
-            raise "No matching step definition found for: #{inspect(text)}"
+        case Cucumber.Expression.match(text, compiled_pattern) do
+          {:match, args} -> {pattern_text, args}
+          :no_match -> nil
         end
+      end)
+
+    case result do
+      {pattern, args} ->
+        # Merge args into context and call step/2 with the pattern
+        context_with_args = Map.put(context, :args, args)
+        apply(module, :step, [context_with_args, pattern])
+
+      nil ->
+        # No matching pattern found
+        raise "No matching step definition found for: #{inspect(text)}"
+    end
+  end
+
+  # New simpler API: defstep "pattern", context do ... end
+  defmacro defstep(pattern, context \\ nil, do: block) do
+    quote do
+      # Register the pattern in a module attribute for lookup
+      @cucumber_patterns {unquote(pattern), unquote(Macro.escape(block))}
+
+      # Generate a step/2 function with pattern as second parameter and merged context+args
+      def step(context_value, unquote(pattern)) do
+        # Bind context to the actual value (already contains args)
+        unquote(context || quote(do: context)) = context_value
+        unquote(block)
+      end
+    end
+  end
+
+  # __before_compile__ generates the function to return cucumber patterns
+  defmacro __before_compile__(env) do
+    patterns = Module.get_attribute(env.module, :cucumber_patterns) || []
+
+    quote do
+      # Helper function to get defined patterns for lookup
+      def __cucumber_patterns__ do
+        unquote(Macro.escape(patterns))
+      end
+
+      # Fallback step function for unmatched patterns
+      def step(_context, _pattern) do
+        raise "No matching step definition found"
       end
     end
   end

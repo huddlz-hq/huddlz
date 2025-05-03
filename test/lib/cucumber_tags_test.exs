@@ -5,23 +5,23 @@ defmodule CucumberTagsTest do
     tags: ["smoke"]
 
   # Define step implementations for our tagged scenarios
-  defstep "a simple smoke test", _args, context do
+  defstep "a simple smoke test", context do
     Map.put(context, :smoke_test, true)
   end
 
-  defstep "I run with smoke tag filter", _args, context do
+  defstep "I run with smoke tag filter", context do
     context
   end
 
-  defstep "this scenario should run", _args, context do
+  defstep "this scenario should run", context do
     context
   end
 
-  defstep "a test with multiple tags", _args, context do
+  defstep "a test with multiple tags", context do
     Map.put(context, :multi_tagged, true)
   end
 
-  defstep "I run with either smoke or regression tag filter", _args, context do
+  defstep "I run with either smoke or regression tag filter", context do
     context
   end
 
