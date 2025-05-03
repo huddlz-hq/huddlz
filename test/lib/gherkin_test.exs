@@ -43,5 +43,47 @@ defmodule Gherkin.ParserTest do
 
       assert Gherkin.Parser.parse(gherkin) == expected
     end
+
+    test "parses a feature file with multiple scenarios" do
+      gherkin = """
+      Feature: Multiple scenarios
+
+      Scenario: First scenario
+        Given something
+        When I do something
+        Then I see something
+
+      Scenario: Second scenario
+        Given another thing
+        When I do another thing
+        Then I see another thing
+      """
+
+      expected = %Feature{
+        name: "Multiple scenarios",
+        description: "",
+        background: nil,
+        scenarios: [
+          %Scenario{
+            name: "First scenario",
+            steps: [
+              %Step{keyword: "Given", text: "something"},
+              %Step{keyword: "When", text: "I do something"},
+              %Step{keyword: "Then", text: "I see something"}
+            ]
+          },
+          %Scenario{
+            name: "Second scenario",
+            steps: [
+              %Step{keyword: "Given", text: "another thing"},
+              %Step{keyword: "When", text: "I do another thing"},
+              %Step{keyword: "Then", text: "I see another thing"}
+            ]
+          }
+        ]
+      }
+
+      assert Gherkin.Parser.parse(gherkin) == expected
+    end
   end
 end
