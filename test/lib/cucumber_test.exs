@@ -1,9 +1,8 @@
 defmodule CucumberMacroTest do
-  # Silence warnings about unused variables in the step function
-  @compile {:nowarn_unused, {:vars, [:context, :args]}}
+  # Remove the compile directive since we'll be explicit with parameters
   use Cucumber, feature: "simple.feature"
 
-  defstep "a simple step" do
+  defstep "a simple step", _args, context do
     Map.put(context, :simple, true)
   end
 end

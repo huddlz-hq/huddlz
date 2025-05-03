@@ -2,21 +2,21 @@ defmodule CucumberParameterTest do
   use Cucumber, feature: "parameters.feature"
 
   # Step with {int} parameter
-  defstep "a number {int}" do
+  defstep "a number {int}", args, context do
     number = List.first(args)
     assert number == 42
     Map.put(context, :number, number)
   end
 
   # Step with {float} parameter
-  defstep "a decimal {float}" do
+  defstep "a decimal {float}", args, context do
     float = List.first(args)
     assert float == 3.14
     Map.put(context, :float, float)
   end
 
   # Step with {string} and {word} parameters
-  defstep "I click {string} on the {word}" do
+  defstep "I click {string} on the {word}", args, context do
     [button_text, form_name] = args
     assert button_text == "Submit"
     assert form_name == "form"
@@ -24,7 +24,7 @@ defmodule CucumberParameterTest do
   end
 
   # Step with {string} and {word} parameters that uses the context from previous steps
-  defstep "I should see {string} message on the {word}" do
+  defstep "I should see {string} message on the {word}", args, context do
     [message, location] = args
     assert message == "Success"
     assert location == "dashboard"
