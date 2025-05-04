@@ -64,7 +64,7 @@ config :huddlz, HuddlzWeb.Endpoint,
   ]
 
 # Enable dev routes for dashboard and mailbox
-config :huddlz, dev_routes: true
+config :huddlz, dev_routes: true, token_signing_secret: "/A60LYcpcenN52Sishm+PjFjYIb6dR7n"
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"

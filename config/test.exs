@@ -1,4 +1,6 @@
 import Config
+config :huddlz, token_signing_secret: "B/l8TS6gx/jZednXDgVLAka5u5vIqk22"
+config :bcrypt_elixir, log_rounds: 1
 
 # Configure your database
 #

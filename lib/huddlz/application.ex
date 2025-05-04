@@ -15,7 +15,8 @@ defmodule Huddlz.Application do
       # Start a worker by calling: Huddlz.Worker.start_link(arg)
       # {Huddlz.Worker, arg},
       # Start to serve requests, typically the last entry
-      HuddlzWeb.Endpoint
+      HuddlzWeb.Endpoint,
+      {AshAuthentication.Supervisor, [otp_app: :huddlz]}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

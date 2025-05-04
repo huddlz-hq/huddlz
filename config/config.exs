@@ -23,6 +23,8 @@ config :spark,
     remove_parens?: true,
     "Ash.Resource": [
       section_order: [
+        :authentication,
+        :tokens,
         :postgres,
         :resource,
         :code_interface,
@@ -45,7 +47,8 @@ config :spark,
 
 config :huddlz,
   ecto_repos: [Huddlz.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  ash_domains: [Huddlz.Accounts]
 
 # Configures the endpoint
 config :huddlz, HuddlzWeb.Endpoint,
