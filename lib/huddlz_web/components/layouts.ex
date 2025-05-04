@@ -13,30 +13,20 @@ defmodule HuddlzWeb.Layouts do
 
   def app(assigns) do
     ~H"""
-    <header class="navbar px-4 sm:px-6 lg:px-8">
-      <div class="flex-1">
-        <a href="/" class="flex-1 flex items-center gap-2">
+    <header class="navbar bg-base-100 px-4 sm:px-6 lg:px-8 shadow">
+      <div class="navbar-start">
+        <a href="/" class="flex items-center gap-2">
           <img src={~p"/images/logo.svg"} width="36" />
-          <span class="text-sm font-semibold">v{Application.spec(:phoenix, :vsn)}</span>
+          <span class="text-lg font-bold tracking-tight">Huddlz</span>
         </a>
       </div>
-      <div class="flex-none">
-        <ul class="flex flex-column px-1 space-x-4 items-center">
-          <li>
-            <a href="https://phoenixframework.org/" class="btn btn-ghost">Website</a>
-          </li>
-          <li>
-            <a href="https://github.com/phoenixframework/phoenix" class="btn btn-ghost">GitHub</a>
-          </li>
-          <li>
-            <.theme_toggle />
-          </li>
-          <li>
-            <a href="https://hexdocs.pm/phoenix/overview.html" class="btn btn-primary">
-              Get Started <span aria-hidden="true">&rarr;</span>
-            </a>
-          </li>
-        </ul>
+      <div class="navbar-end flex items-center gap-4">
+        <.theme_toggle />
+        <%= if @current_user do %>
+          <a href="/sign-out" class="btn btn-outline btn-sm">Sign Out</a>
+        <% else %>
+          <a href="/sign-in" class="btn btn-primary btn-sm">Sign In</a>
+        <% end %>
       </div>
     </header>
 
