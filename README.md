@@ -9,6 +9,15 @@ Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 
 Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
 
+## Contributing
+
+* [Commit Style Guidelines](docs/commit-style.md) - Please follow these guidelines when contributing to this project
+
+## Documentation
+
+* [Vision](docs/vision.md) - Project vision and goals
+* [Testing](docs/testing.md) - Testing approach and guidelines
+
 ## Learn more
 
 * Official website: https://www.phoenixframework.org/

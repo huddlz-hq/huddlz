@@ -1,0 +1,95 @@
+# Commit Style Guidelines
+
+This document outlines the commit message style guidelines for the Huddlz project. Following these guidelines helps maintain a clean, readable, and useful git history.
+
+## Conventional Commits Format
+
+All commits should follow the [Conventional Commits](https://www.conventionalcommits.org/) format:
+
+```
+type(scope): concise description
+```
+
+### Types
+
+- `feat`: A new feature
+- `fix`: A bug fix
+- `docs`: Documentation only changes
+- `style`: Changes that do not affect the meaning of the code (white-space, formatting, etc.)
+- `refactor`: A code change that neither fixes a bug nor adds a feature
+- `test`: Adding missing tests or correcting existing tests
+- `chore`: Changes to the build process or auxiliary tools and libraries
+
+### Scope
+
+The scope should be a short identifier indicating the part of the codebase affected:
+
+- `auth`: Authentication related changes
+- `ui`: User interface changes
+- `api`: API endpoints or related functionality
+- `router`: Routing or URL handling
+- `db`: Database schema or query changes
+- `email`: Email functionality
+- `test`: Test infrastructure (not specific feature tests)
+
+## Full Commit Message Structure
+
+```
+type(scope): concise description
+
+Detailed explanation of what the change does and why it's necessary.
+Wrap text at approximately 80 characters.
+
+- Bullet points for specific changes (if applicable)
+- Another bullet point
+
+Related issue: #123 (if applicable)
+```
+
+## Guidelines
+
+1. **First line**: 
+   - Start with the type and scope
+   - Use imperative, present tense: "add" not "added" or "adds"
+   - Keep it under 70 characters
+   - Don't end with a period
+
+2. **Detailed description**:
+   - Leave a blank line after the first line
+   - Explain "why" not just "what"
+   - Wrap text at approximately 80 characters
+
+3. **Focus**:
+   - Each commit should focus on a single logical change
+   - If you can use "and" in your commit message, consider splitting it into separate commits
+
+## Examples
+
+Good commit messages:
+
+```
+feat(auth): add magic link authentication
+
+Implement magic link authentication to provide passwordless login.
+This improves security by eliminating password-related vulnerabilities
+and simplifies the user experience.
+
+- Add email sending infrastructure
+- Create token verification endpoint
+- Update user model to support magic link auth
+```
+
+```
+fix(ui): correct alignment of nav items on mobile
+
+Fix navigation item alignment issues that occur on screens smaller than
+576px. This ensures the navigation remains usable on mobile devices.
+
+The issue was caused by conflicting flex properties in the navbar component.
+```
+
+## For AI Assistants
+
+When using AI assistants like Claude with this project, you can instruct them to follow these guidelines by saying:
+
+"Please follow the commit style guidelines in docs/commit-style.md for this project."
