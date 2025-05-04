@@ -35,13 +35,13 @@ defmodule HuddlzWeb.Router do
       #
       # If an authenticated user must *not* be present:
       # on_mount {HuddlzWeb.LiveUserAuth, :live_no_user}
+      live "/", HomeLive, :index
     end
   end
 
   scope "/", HuddlzWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
     auth_routes AuthController, Huddlz.Accounts.User, path: "/auth"
     sign_out_route AuthController
 
