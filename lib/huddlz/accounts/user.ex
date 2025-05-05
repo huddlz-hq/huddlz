@@ -65,9 +65,14 @@ defmodule Huddlz.Accounts.User do
         allow_nil? false
       end
 
+      argument :display_name, :string do
+        description "The user's display name"
+        allow_nil? true
+      end
+
       upsert? true
       upsert_identity :unique_email
-      upsert_fields [:email]
+      upsert_fields [:email, :display_name]
 
       # Uses the information from the token to create or sign in the user
       change AshAuthentication.Strategy.MagicLink.SignInChange
@@ -83,6 +88,11 @@ defmodule Huddlz.Accounts.User do
       end
 
       run AshAuthentication.Strategy.MagicLink.Request
+    end
+
+    update :update do
+      description "Update a user's attributes"
+      accept [:display_name]
     end
   end
 
@@ -102,6 +112,12 @@ defmodule Huddlz.Accounts.User do
     attribute :email, :ci_string do
       allow_nil? false
       public? true
+    end
+
+    attribute :display_name, :string do
+      allow_nil? true
+      public? true
+      description "User's display name shown in the UI"
     end
   end
 

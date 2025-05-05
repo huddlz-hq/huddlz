@@ -25,6 +25,7 @@ defmodule HuddlzWeb.Layouts do
         <%= if @current_user do %>
           <a href="/sign-out" class="btn btn-outline btn-sm">Sign Out</a>
         <% else %>
+          <a href="/register" class="btn btn-outline btn-sm">Sign Up</a>
           <a href="/sign-in" class="btn btn-primary btn-sm">Sign In</a>
         <% end %>
       </div>
