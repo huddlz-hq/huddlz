@@ -19,9 +19,9 @@ defmodule SignInAndSignOutSteps do
     # Find the link in the page and click it
     # Assert that the element exists before trying to click it
     assert has_element?(live, "a", link_text), "Could not find link with text: #{link_text}"
-    
+
     # Click the link and capture the result
-    result = 
+    result =
       live
       |> element("a", link_text)
       |> render_click()

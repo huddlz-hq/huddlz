@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Run a single test file: `mix test path/to/test_file.exs`
 - Run a specific test: `mix test path/to/test_file.exs:line_number`
 - Run Cucumber features: `mix test test/features/`
-- Format code: `mix format`
+- Format code: `mix format` (always run before committing changes)
 
 ## Test-Driven Development
 
@@ -35,6 +35,7 @@ tests should remain stable. See docs/testing.md for complete guidelines.
 - Properly handle errors with pattern matching and descriptive error messages
 - Use Phoenix LiveView for interactive UI components
 - Implement authentication with AshAuthentication
+- Always run `mix format` before committing changes
 
 The project uses Ash Framework for data modeling, Ash Authentication for user auth, 
 and Phoenix for the web interface.
