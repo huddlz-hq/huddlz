@@ -35,7 +35,7 @@ defmodule HuddlzWeb.Router do
       #
       # If an authenticated user must *not* be present:
       # on_mount {HuddlzWeb.LiveUserAuth, :live_no_user}
-      live "/", HomeLive, :index
+      live "/", SoireeLive, :index
     end
   end
 

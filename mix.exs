@@ -27,6 +27,7 @@ defmodule Huddlz.MixProject do
 
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(:dev), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
   # Specifies your project dependencies.
@@ -42,6 +43,7 @@ defmodule Huddlz.MixProject do
       {:ash, "~> 3.0"},
       {:tidewave, "~> 0.1", only: [:dev]},
       {:igniter, "~> 0.5", only: [:dev, :test]},
+      {:faker, "~> 0.18", only: [:dev, :test]},
       {:phoenix, "~> 1.8.0-rc.2", override: true},
       {:phoenix_ecto, "~> 4.5"},
       {:ecto_sql, "~> 3.10"},

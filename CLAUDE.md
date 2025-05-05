@@ -39,3 +39,16 @@ tests should remain stable. See docs/testing.md for complete guidelines.
 
 The project uses Ash Framework for data modeling, Ash Authentication for user auth, 
 and Phoenix for the web interface.
+
+## Custom Commands
+
+When encountering commands with a leading slash (like `/command`):
+
+- If you don't recognize a command or are uncertain about its purpose or process, ask for clarification
+- Don't assume meaning based on context or guesswork
+- Request details about the command's phases or steps if they're referenced
+- Only proceed once you have clear instructions about what the command requires
+- Avoid implementing partial functionality based on assumptions
+
+Example response for unknown commands:
+"I'm not familiar with the `/command` command. Could you please explain what this command should do and what steps or phases it involves?"

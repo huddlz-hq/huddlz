@@ -91,4 +91,70 @@ Run your tests as usual:
 mix test
 ```
 
-This approach ensures that every feature starts with a clear specification and is always covered by automated tests
+This approach ensures that every feature starts with a clear specification and is always covered by automated tests.
+
+## Test Support Guidelines
+
+### Test Fixtures
+
+Create reusable test fixtures to set up test data consistently across test scenarios:
+
+1. Place fixtures in `test/support/` directory
+2. Create specific fixture modules for each domain concept (e.g., `SoireeFixture`)
+3. Design fixtures to be idempotent (can be run multiple times without side effects)
+4. Make fixtures flexible with optional parameters for different test needs
+
+Example fixture:
+```elixir
+defmodule Huddlz.SoireeFixture do
+  def create_sample_soirees(count \\ 3) do
+    # Create test host with consistent email for lookup
+    host = get_or_create_test_host("test.host@example.com")
+    
+    # Create soirées with sequential information
+    for i <- 1..count do
+      create_soiree(%{
+        title: "Test Soirée #{i}",
+        host_id: host.id
+      })
+    end
+  end
+end
+```
+
+### Test Generators
+
+For more complex data needs, create generators that produce realistic test data:
+
+1. Use the `Ash.Generator` module to create test data generators
+2. Place generators in the appropriate domain module: `lib/huddlz/domain/generators/`
+3. Use libraries like `Faker` to create diverse, realistic test data
+4. Make generators customizable with options to override default values
+
+Example generator:
+```elixir
+defmodule Huddlz.Soirees.Generators.SoireeGenerator do
+  use Ash.Generator
+  
+  def soiree(opts \\ []) do
+    seed_generator(
+      %Soiree{
+        title: sequence(:title, &"Soirée #{&1}"),
+        description: Faker.Lorem.paragraph(),
+        starts_at: random_future_date()
+      },
+      overrides: opts
+    )
+  end
+end
+```
+
+### LiveView Testing
+
+When testing LiveView components:
+
+1. Use `Phoenix.LiveViewTest` to interact with LiveView components
+2. Test user interactions with `render_click`, `render_submit`, and `render_change`
+3. Verify page content using string matching with `=~` operator
+4. Structure assertions to verify behavior, not implementation
+5. Use background setup steps to establish a known state
