@@ -1,15 +1,11 @@
-defmodule Huddlz.Soirees.Soiree do
-  @moduledoc """
-  DEPRECATED: This module is deprecated in favor of Huddlz.Huddls.Huddl
-  """
+defmodule Huddlz.Huddls.Huddl do
   use Ash.Resource,
     otp_app: :huddlz,
-    domain: Huddlz.Soirees,
-    data_layer: AshPostgres.DataLayer,
-    validate_domain_inclusion?: false
+    domain: Huddlz.Huddls,
+    data_layer: AshPostgres.DataLayer
 
   postgres do
-    table "soirees"
+    table "huddls"
     repo Huddlz.Repo
   end
 

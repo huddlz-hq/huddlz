@@ -6,13 +6,13 @@ Huddlz is a social networking platform focused on facilitating real-life meetups
 
 ## Current Features
 
-- **Soirée Listing** - Discover upcoming discussion events directly on the landing page
-- **Search Functionality** - Find soirées by keyword across titles and descriptions
+- **Huddl Listing** - Discover upcoming discussion events directly on the landing page
+- **Search Functionality** - Find huddls by keyword across titles and descriptions
 - **Magic Link Authentication** - Secure, passwordless login via email
 
 ### Project Status
 
-Huddlz is under active development. The landing page with soirée listings has been implemented, providing immediate value to users visiting the site. Users can browse available soirées and search for events matching their interests without requiring authentication.
+Huddlz is under active development. The landing page with huddl listings has been implemented, providing immediate value to users visiting the site. Users can browse available huddls and search for events matching their interests without requiring authentication.
 
 ## Technology Stack
 

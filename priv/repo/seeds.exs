@@ -9,3 +9,6 @@
 #
 # We recommend using the bang functions (`insert!`, `update!`
 # and so on) as they will fail if something goes wrong.
+
+# Load the seed files
+Code.require_file("seeds/huddls/sample_huddls.exs", __DIR__)
