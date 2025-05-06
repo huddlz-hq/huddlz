@@ -53,14 +53,14 @@
     3. Identify potential UX improvements or considerations
     4. Ask about any specific design requirements or preferences
 
-    ## Phase 5: PRD Creation
-    Create a comprehensive PRD using this structure:
+    ## Phase 5: Requirements Document Creation
+    Create a comprehensive requirements document using this structure:
 
     ```markdown
-    # {{ params.feature_name }} - Product Requirements Document
+    # {{ params.title }} - Requirements Document
 
     ## Version Information
-    - PRD ID: [PRD Number]
+    - Requirements ID: {{ params.id }}
     - Date Created: [Current Date]
     - Version: 1.0
     - Author: [User]
@@ -117,12 +117,12 @@
     ```
 
     ## Phase 6: Review and Finalization
-    1. Review the draft PRD for completeness and clarity
+    1. Review the draft requirements document for completeness and clarity
     2. Check for any missing information or ambiguities
     3. Ensure all sections are appropriately detailed
     4. Ask the user for feedback and make necessary adjustments
-    5. Save the final PRD to the designated location: `docs/requirements/[number]_[snake_case_feature_name].md`
-    6. Provide a summary of the PRD content and next steps
+    5. Save the final document to the designated location: `docs/requirements/{{ params.id }}_[title_slug].md`
+    6. Provide a summary of the document content and next steps
 
     # Important Guidelines
     - Focus on WHAT needs to be done, not HOW to implement it

@@ -82,7 +82,7 @@ Follow the standard implementation workflow:
 
 1. **Plan**: Analyze requirements and design solution
    ```
-   /plan prd_id="feature_id"
+   /plan feature_id="feature_id"
    ```
 
 2. **Build**: Implement the solution
@@ -113,11 +113,11 @@ See `/workflow` for detailed implementation instructions.
 
 - Complete all phases thoroughly
 - Maintain detailed documentation at each stage
-- Consider breaking into multiple PRDs and implementation cycles
+- Consider breaking into multiple requirements documents and implementation cycles
 
 ### For Medium Features
 
-- Complete PRD and implementation workflow
+- Complete requirements definition and implementation workflow
 - Simplify design phase if UI changes are minimal
 - Combine some implementation steps for efficiency
 
@@ -127,7 +127,7 @@ See `/workflow` for detailed implementation instructions.
   ```
   /quickfix description="Button alignment issue on signup form" issue_id="signup-btn-123"
   ```
-- This creates a lightweight notes file without requiring a formal PRD
+- This creates a lightweight notes file without requiring a formal requirements document
 - Still captures learnings for reflection
 - Follows streamlined implementation workflow
 
@@ -135,7 +135,7 @@ See `/workflow` for detailed implementation instructions.
 
 Maintain knowledge across all phases:
 
-- PRD learnings update future requirements
+- Requirements document learnings update future specifications
 - Design patterns are documented in design system
 - Implementation insights captured in `LEARNINGS.md`
 

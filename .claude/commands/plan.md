@@ -52,9 +52,9 @@
     
     ## Analysis Phase
     
-    1. Read and analyze the PRD file thoroughly
+    1. Read and analyze the requirements document thoroughly
     2. Update the Requirements Analysis section with:
-       - Clear list of explicit requirements from the PRD
+       - Clear list of explicit requirements from the requirements document
        - Any implicit requirements you've identified
        - Areas requiring clarification
        - Your assumptions

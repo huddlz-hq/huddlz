@@ -74,6 +74,8 @@ This document captures key insights, patterns, and best practices discovered dur
 - Extract learnings from implementation immediately while they're fresh
 - Use consistent parameter naming across commands for ease of use
 - Create specific commands for different types of work (standard features vs. quick fixes)
+- Prefer ripgrep (rg) over grep for faster and more powerful code searching
+- Add ripgrep to standard toolkit recommendations for all developers
 
 ## Performance Patterns
 
