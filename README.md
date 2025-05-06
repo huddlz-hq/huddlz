@@ -1,6 +1,8 @@
-# Huddlz
+# huddlz
 
-Huddlz is a social networking platform focused on facilitating real-life meetups and events, prioritizing in-person connections over digital interactions. The platform aims to support tech meetup organizers and other community builders with tools for event management and attendee coordination.
+huddlz is a social networking platform focused on facilitating real-life meetups and events, prioritizing in-person connections over digital interactions. The platform aims to support tech meetup organizers and other community builders with tools for event management and attendee coordination.
+
+> **Naming Convention**: In huddlz, a singular event is called a "huddl" and multiple events are called "huddlz", matching the platform name. For branding purposes, we always use lowercase in UI and documentation.
 
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-blue.svg)](LICENSE.md)
 

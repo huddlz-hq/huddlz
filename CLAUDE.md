@@ -37,6 +37,16 @@ tests should remain stable. See docs/testing.md for complete guidelines.
 - Implement authentication with AshAuthentication
 - Always run `mix format` before committing changes
 
+### Naming Conventions
+
+- A singular event is called a "huddl" (lowercase)
+- Multiple events are called "huddlz" (lowercase)
+- The platform/application name is "huddlz" (lowercase) in all branding, UI copy, and documentation
+- In Elixir code, we follow standard conventions:
+  - Module names are capitalized (e.g., `Huddlz.Huddls.Huddl`)
+  - Variables and function names use snake_case
+- When referring to events in comments and documentation, always use lowercase "huddl" and "huddlz"
+
 The project uses Ash Framework for data modeling, Ash Authentication for user auth, 
 and Phoenix for the web interface.
 

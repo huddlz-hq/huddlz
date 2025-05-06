@@ -36,10 +36,10 @@ defmodule HuddlListingSteps do
 
   # Assertions
   defstep "I should see a list of upcoming huddls", context do
-    # Should not see the "no huddls found" message
-    refute context.html =~ "No huddls found"
+    # Should not see the "no huddlz found" message
+    refute context.html =~ "No huddlz found"
     # We know we're on the huddl list page if we see the right heading
-    assert context.html =~ "Discover Huddls"
+    assert context.html =~ "Find your huddl"
     :ok
   end
 
@@ -52,7 +52,7 @@ defmodule HuddlListingSteps do
   end
 
   defstep "I should see a search form", context do
-    assert context.html =~ "Search huddls"
+    assert context.html =~ "Search huddlz"
     assert context.html =~ ~s(<input type="text")
     assert context.html =~ "Search"
     :ok
@@ -61,17 +61,17 @@ defmodule HuddlListingSteps do
   defstep "I should see huddls matching {string}", context do
     # For the search feature test, we'll simply verify we're still on a page with huddls
     # The actual search won't contain the search term because we're using generated test data
-    assert context.html =~ "Discover Huddls"
-    # Should not see the "no huddls found" message
-    refute context.html =~ "No huddls found"
+    assert context.html =~ "Find your huddl"
+    # Should not see the "no huddlz found" message
+    refute context.html =~ "No huddlz found"
     :ok
   end
 
   defstep "I should see all upcoming huddls again", context do
     # In the real implementation, we'd see all original huddls again
     # For the test, we'll verify we're still on a page with huddls
-    assert context.html =~ "Discover Huddls"
-    refute context.html =~ "No huddls found"
+    assert context.html =~ "Find your huddl"
+    refute context.html =~ "No huddlz found"
     :ok
   end
 end

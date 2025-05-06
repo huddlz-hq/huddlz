@@ -34,7 +34,7 @@ defmodule HuddlzWeb.HuddlLive do
     <Layouts.app flash={@flash} current_user={@current_user}>
       <div class="container mx-auto px-4 py-8">
         <div class="mb-8">
-          <h1 class="text-3xl font-bold mb-4">Discover Huddls</h1>
+          <h1 class="text-3xl font-bold mb-4">Find your huddl</h1>
           <p class="text-lg text-base-content/80">
             Find and join engaging discussion events with interesting people
           </p>
@@ -44,7 +44,7 @@ defmodule HuddlzWeb.HuddlLive do
                 type="text"
                 name="query"
                 value={@search_query}
-                placeholder="Search huddls..."
+                placeholder="Search huddlz..."
                 class="flex-grow px-4 py-2 border rounded-l focus:outline-none bg-base-100 text-base-content"
               />
               <button
@@ -60,7 +60,7 @@ defmodule HuddlzWeb.HuddlLive do
         <div class="w-full">
           <%= if Enum.empty?(@huddls) do %>
             <div class="text-center py-12">
-              <p class="text-lg text-base-content/70">No huddls found. Check back soon!</p>
+              <p class="text-lg text-base-content/70">No huddlz found. Check back soon!</p>
             </div>
           <% else %>
             <ul class="divide-y divide-base-300">
