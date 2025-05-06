@@ -22,7 +22,7 @@
     Create a new notes file with this structure:
     
     ```markdown
-    # Feature: [Feature Name] (PRD-{{ params.prd_id }})
+    # Feature: [Feature Name] (Feature-{{ params.feature_id }})
     
     ## Current Status
     - Phase: Planning
@@ -35,6 +35,13 @@
     
     ## Implementation Plan
     [Design decisions will be documented here]
+    
+    ## UI Component Selection
+    - Primary components from DaisyUI: [component names]
+    - Layout approach: [grid/flex/etc.]
+    - Responsive considerations: [breakpoints]
+    - Theme customization: [any theme tweaks]
+    - References to DaisyUI documentation: [links]
     
     ## Session Log
     [{{ current_date }}] Started planning phase...
@@ -61,12 +68,23 @@
     1. Propose a high-level implementation plan
     2. Discuss design alternatives and tradeoffs
     3. Check for existing patterns in the codebase
-    4. Update the Implementation Plan section with:
+    4. Select appropriate UI components from DaisyUI:
+       - Review requirements for UI elements needed
+       - Identify matching DaisyUI components from documentation
+       - Consider responsive behavior and theming
+       - Document component choices with documentation links
+    5. Update the Implementation Plan section with:
        - Chosen approach with rationale
        - Architecture and data flow diagrams (using MermaidJS)
        - Technical components needed
        - Testing strategy
-    5. Get user approval before implementation
+    6. Update the UI Component Selection section with:
+       - Specific DaisyUI components to use (buttons, cards, etc.)
+       - Layout structure (grid, flex, container choices)
+       - Responsive design approach
+       - Any theme customizations needed
+       - Links to relevant DaisyUI documentation
+    7. Get user approval before implementation
     
     ## Important Rules
     

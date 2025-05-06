@@ -56,24 +56,25 @@ This phase:
 
 ## 2. Design Process
 
-While no formal command exists yet, UI/UX design typically follows these steps:
+The Huddlz project uses DaisyUI as its primary UI component library, allowing for consistent design without requiring extensive custom UI creation. The design process is integrated into the planning phase:
 
-1. Sketch initial concepts based on PRD requirements
-2. Create wireframes or mockups
-3. Review designs with stakeholders
-4. Finalize UI specifications
-5. Document in appropriate format
+1. Identify required UI elements based on requirements
+2. Select appropriate components from DaisyUI
+3. Plan layout and responsive behavior
+4. Document component choices with references to DaisyUI docs
+5. Note any customizations needed
 
-### Design Artifacts
+### DaisyUI Integration
 
-Store design artifacts in:
+The UI Component Selection section in planning notes should include:
+- Specific DaisyUI components to use (buttons, cards, etc.)
+- Layout structure decisions
+- Responsive design approach
+- Theme customizations
+- Links to relevant DaisyUI documentation
+
+This component-based approach ensures consistency while reducing design overhead. For complex UI requirements that exceed DaisyUI's capabilities, custom design work can be documented in:
 - `docs/designs/[feature_id]/`
-
-Include:
-- Wireframes
-- Visual designs
-- Component specifications
-- User flow diagrams
 
 ## 3. Implementation Workflow
 
