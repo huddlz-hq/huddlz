@@ -1,6 +1,6 @@
 <prompt>
   <params>
-    feature_id # Either the full requirements filename (e.g., "0001_list_events.md") or just the feature number (e.g., "0001")
+    req_id # Either the full requirements document ID (e.g., "0001_list_events.md") or just the number (e.g., "0001")
   </params>
 
   <instructions>
@@ -11,10 +11,10 @@
     ## Initial Setup
     
     1. Create the `notes` directory if it doesn't exist: `mkdir -p notes`
-    2. Extract information from the feature ID:
-       - If {{ params.feature_id }} contains a file extension (e.g., "0001_list_events.md"), use this filename
-       - If {{ params.feature_id }} is just a number (e.g., "0001"), find the matching file in docs/requirements/
-    3. Use the feature ID as prefix for your notes file: `notes/[FEATURE_ID]_notes.md`
+    2. Extract information from the requirements ID:
+       - If {{ params.req_id }} contains a file extension (e.g., "0001_list_events.md"), use this filename
+       - If {{ params.req_id }} is just a number (e.g., "0001"), find the matching file in docs/requirements/
+    3. Use the requirements ID as prefix for your notes file: `notes/[REQ_ID]_notes.md`
        - Example: `notes/0001_notes.md`
     
     ## Note Structure
@@ -22,7 +22,7 @@
     Create a new notes file with this structure:
     
     ```markdown
-    # Feature: [Feature Name] (Feature-{{ params.feature_id }})
+    # Feature: [Feature Name] (Req-{{ params.req_id }})
     
     ## Current Status
     - Phase: Planning

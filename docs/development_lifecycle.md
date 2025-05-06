@@ -33,7 +33,7 @@ Each workflow has its own focus, but they connect to form a complete cycle.
 Use the `/define` command to specify product requirements:
 
 ```
-/define id="feature_id" title="Feature Title"
+/define id="0001" title="Feature Title"
 ```
 
 This phase:
@@ -74,7 +74,7 @@ The UI Component Selection section in planning notes should include:
 - Links to relevant DaisyUI documentation
 
 This component-based approach ensures consistency while reducing design overhead. For complex UI requirements that exceed DaisyUI's capabilities, custom design work can be documented in:
-- `docs/designs/[feature_id]/`
+- `docs/designs/[req_id]/`
 
 ## 3. Implementation Workflow
 
@@ -82,7 +82,7 @@ Follow the standard implementation workflow:
 
 1. **Plan**: Analyze requirements and design solution
    ```
-   /plan feature_id="feature_id"
+   /plan req_id="0001"
    ```
 
 2. **Build**: Implement the solution

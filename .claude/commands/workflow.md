@@ -13,7 +13,7 @@
     Use the `/plan` command to analyze requirements and design the solution:
     
     ```
-    /plan feature_id="feature_id"
+    /plan req_id="0001"
     ```
     
     This command:
@@ -102,7 +102,7 @@
     ## Note Organization
     
     All feature notes should be stored in the `notes/` directory with consistent naming:
-    - `notes/[feature_id]_notes.md`
+    - `notes/[req_id]_notes.md`
     
     ## Knowledge Management
     
@@ -129,7 +129,7 @@
     
     For example:
     ```
-    /plan feature_id="0001"
+    /plan req_id="0001"
     /build notes_file="notes/0001_notes.md"
     ```
     
