@@ -30,12 +30,21 @@ tests should remain stable. See docs/testing.md for complete guidelines.
 - Use the pipe operator (`|>`) to chain operations when appropriate
 - Modules and functions should have clear, descriptive names in snake_case
 - Organize imports: Elixir libraries first, then Phoenix, then project modules
-- Use conventional commits for git commits (see docs/commit-style.md)
 - Write docstrings for public functions with @moduledoc and @doc
 - Properly handle errors with pattern matching and descriptive error messages
 - Use Phoenix LiveView for interactive UI components
 - Implement authentication with AshAuthentication
 - Always run `mix format` before committing changes
+
+### Commit Messages
+
+- Follow conventional commits format: `type(scope): concise description`
+- Do not include AI attribution lines or AI-generated signatures
+- "Co-Authored-By" is reserved for human collaborators only
+- Keep first line under 70 characters, no period at the end
+- Use imperative, present tense: "add" not "added" or "adds"
+- Include a descriptive body with bullet points for specific changes when appropriate
+- See `docs/commit-style.md` for complete guidelines
 
 ### Naming Conventions
 
