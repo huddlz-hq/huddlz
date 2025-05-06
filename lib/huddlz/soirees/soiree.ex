@@ -29,7 +29,10 @@ defmodule Huddlz.Soirees.Soiree do
         allow_nil? true
       end
 
-      filter expr(is_nil(^arg(:query)) or like(title, ^"%\#{arg(:query)}%") or like(description, ^"%\#{arg(:query)}%"))
+      filter expr(
+               is_nil(^arg(:query)) or like(title, ^"%\#{arg(:query)}%") or
+                 like(description, ^"%\#{arg(:query)}%")
+             )
     end
   end
 
@@ -78,4 +81,3 @@ defmodule Huddlz.Soirees.Soiree do
     identity :unique_title_per_host, [:host_id, :title]
   end
 end
-

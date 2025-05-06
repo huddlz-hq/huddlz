@@ -40,6 +40,28 @@ tests should remain stable. See docs/testing.md for complete guidelines.
 The project uses Ash Framework for data modeling, Ash Authentication for user auth, 
 and Phoenix for the web interface.
 
+## Development Tools
+
+### Tidewave MCP
+
+Always use the Tidewave MCP tools early and often when working with Elixir code:
+
+- `mcp__tidewave__project_eval`: Test and debug Elixir code in the project context
+- `mcp__tidewave__get_source_location`: Find where modules and functions are defined
+- `mcp__tidewave__execute_sql_query`: Run database queries
+- `mcp__tidewave__get_ecto_schemas`: List all available schemas
+
+Using these tools will help you understand code behavior rather than making assumptions.
+
+### Development Patterns
+
+For detailed development patterns and learnings, refer to `docs/development_patterns.md`. 
+This document contains best practices for working with:
+
+- Ash Framework authentication flows
+- Testing strategies
+- Common challenges and solutions
+
 ## Custom Commands
 
 When encountering commands with a leading slash (like `/command`):

@@ -1,11 +1,16 @@
 defmodule HuddlzWeb.AuthOverrides do
   use AshAuthentication.Phoenix.Overrides
 
-  def overrides do
-    %{
-      {AshAuthentication.Phoenix.Components.SignIn, :strategy_class} => "w-full",
-      {AshAuthentication.Phoenix.Components.MagicLink, :disable_button_text} =>
-        "Sending magic link..."
-    }
+  override AshAuthentication.Phoenix.Components.SignIn do
+    set :strategy_class, "w-full"
+  end
+
+  override AshAuthentication.Phoenix.Components.MagicLink do
+    set :disable_button_text, "Sending magic link..."
+  end
+
+  # Add a custom banner for user account pages
+  override AshAuthentication.Phoenix.Components.Banner do
+    set :text_class, "font-medium text-indigo-600"
   end
 end

@@ -1,4 +1,6 @@
 defmodule Huddlz.Accounts.User do
+  import Ash.Resource.Change.Builtins
+
   use Ash.Resource,
     otp_app: :huddlz,
     domain: Huddlz.Accounts,
@@ -74,6 +76,16 @@ defmodule Huddlz.Accounts.User do
       upsert_identity :unique_email
       upsert_fields [:email, :display_name]
 
+      # Generate a random display name if one isn't provided
+      change before_action(fn changeset, _context ->
+               if Ash.Changeset.get_attribute(changeset, :display_name) do
+                 changeset
+               else
+                 display_name = generate_random_display_name()
+                 Ash.Changeset.change_attribute(changeset, :display_name, display_name)
+               end
+             end)
+
       # Uses the information from the token to create or sign in the user
       change AshAuthentication.Strategy.MagicLink.SignInChange
 
@@ -101,6 +113,7 @@ defmodule Huddlz.Accounts.User do
       authorize_if always()
     end
 
+    # Default policy for other actions
     policy always() do
       forbid_if always()
     end
@@ -123,5 +136,38 @@ defmodule Huddlz.Accounts.User do
 
   identities do
     identity :unique_email, [:email]
+  end
+
+  # Helper function to generate a random display name
+  def generate_random_display_name do
+    adjectives = [
+      "Happy",
+      "Clever",
+      "Gentle",
+      "Brave",
+      "Wise",
+      "Cool",
+      "Brilliant",
+      "Swift",
+      "Calm",
+      "Daring"
+    ]
+
+    nouns = [
+      "Dolphin",
+      "Tiger",
+      "Eagle",
+      "Panda",
+      "Wolf",
+      "Falcon",
+      "Bear",
+      "Fox",
+      "Lion",
+      "Hawk"
+    ]
+
+    random_number = :rand.uniform(999)
+
+    "#{Enum.random(adjectives)}#{Enum.random(nouns)}#{random_number}"
   end
 end

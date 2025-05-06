@@ -78,17 +78,17 @@ defmodule HuddlzWeb.SoireeLive do
                     </div>
                   <% end %>
                   <div class="absolute top-2 right-2 px-2 py-1 bg-blue-600 text-white text-xs font-semibold rounded">
-                    <%= soiree.status %>
+                    {soiree.status}
                   </div>
                 </div>
                 <div class="p-4">
-                  <h2 class="text-xl font-semibold mb-2"><%= soiree.title %></h2>
+                  <h2 class="text-xl font-semibold mb-2">{soiree.title}</h2>
                   <p class="text-gray-600 mb-4 line-clamp-2">
-                    <%= soiree.description || "No description provided" %>
+                    {soiree.description || "No description provided"}
                   </p>
                   <div class="flex justify-between items-center">
                     <div class="text-sm text-gray-500">
-                      <%= Calendar.strftime(soiree.starts_at, "%b %d, %Y · %I:%M %p") %>
+                      {Calendar.strftime(soiree.starts_at, "%b %d, %Y · %I:%M %p")}
                     </div>
                     <button class="px-4 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded">
                       Join

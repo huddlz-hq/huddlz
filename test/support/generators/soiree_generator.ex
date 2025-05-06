@@ -58,7 +58,8 @@ defmodule Huddlz.Generators.SoireeGenerator do
     [
       %{
         title: "Introduction to Elixir",
-        description: "Learn the basics of functional programming with Elixir. Perfect for beginners!",
+        description:
+          "Learn the basics of functional programming with Elixir. Perfect for beginners!",
         starts_at: DateTime.add(DateTime.utc_now(), 2, :day),
         ends_at: DateTime.add(DateTime.utc_now(), 2, :day) |> DateTime.add(2, :hour),
         thumbnail_url: "https://placehold.co/600x400/444/FFF?text=Elixir",

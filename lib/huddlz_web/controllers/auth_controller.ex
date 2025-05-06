@@ -5,23 +5,6 @@ defmodule HuddlzWeb.AuthController do
   def success(conn, activity, user, _token) do
     return_to = get_session(conn, :return_to) || ~p"/"
 
-    # Set display name for new users if they don't have one
-    user =
-      if is_nil(user.display_name) do
-        # Generate a random display name for new users
-        display_name = generate_random_display_name()
-
-        # Update the user with the random display name
-        {:ok, updated_user} =
-          Huddlz.Accounts.User
-          |> Ash.Changeset.for_update(:update, user.id, %{display_name: display_name})
-          |> Ash.update()
-
-        updated_user
-      else
-        user
-      end
-
     message =
       case activity do
         {:confirm_new_user, :confirm} ->
@@ -31,9 +14,7 @@ defmodule HuddlzWeb.AuthController do
           "Your password has successfully been reset"
 
         {:magic_link, :sign_in} ->
-          if is_nil(user.display_name),
-            do: "Your account has been created",
-            else: "You are now signed in"
+          "You are now signed in"
 
         _ ->
           "You are now signed in"
@@ -78,38 +59,5 @@ defmodule HuddlzWeb.AuthController do
     |> clear_session()
     |> put_flash(:info, "You are now signed out")
     |> redirect(to: return_to)
-  end
-
-  # Helper function to generate a random display name
-  defp generate_random_display_name do
-    adjectives = [
-      "Happy",
-      "Clever",
-      "Gentle",
-      "Brave",
-      "Wise",
-      "Cool",
-      "Brilliant",
-      "Swift",
-      "Calm",
-      "Daring"
-    ]
-
-    nouns = [
-      "Dolphin",
-      "Tiger",
-      "Eagle",
-      "Panda",
-      "Wolf",
-      "Falcon",
-      "Bear",
-      "Fox",
-      "Lion",
-      "Hawk"
-    ]
-
-    random_number = :rand.uniform(999)
-
-    "#{Enum.random(adjectives)}#{Enum.random(nouns)}#{random_number}"
   end
 end

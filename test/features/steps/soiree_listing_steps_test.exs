@@ -8,7 +8,7 @@ defmodule SoireeListingSteps do
   defstep "there are upcoming soirees in the system", %{conn: conn} do
     # Create sample soirées using our fixtures
     soirees = Huddlz.SoireeFixture.create_sample_soirees(3)
-    
+
     # Return the connection and soiree information
     {:ok, %{conn: conn, soirees_count: length(soirees)}}
   end

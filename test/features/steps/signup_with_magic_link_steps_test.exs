@@ -119,8 +119,9 @@ defmodule SignupWithMagicLinkSteps do
   end
 
   defstep "the user receives a magic link email", context do
-    # Check that an email was sent to the user's email address using Swoosh.TestAssertions
-    assert_email_sent to: {nil, context.email}
+    # Check that an email was sent to the user's email address
+    assert_email_sent(to: {nil, context.email})
+    # No need to access the email content in this test
     :ok
   end
 end

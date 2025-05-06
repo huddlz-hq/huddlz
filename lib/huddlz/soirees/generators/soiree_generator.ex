@@ -13,18 +13,19 @@ defmodule Huddlz.Soirees.Generators.SoireeGenerator do
   def soiree(opts \\ []) do
     host = Keyword.get(opts, :host)
     host_id = if host, do: host.id, else: nil
-    
+
     # Generate random dates in the future
     days_ahead = :rand.uniform(30)
     hours_duration = :rand.uniform(4)
     start_time = DateTime.add(DateTime.utc_now(), days_ahead, :day)
     end_time = DateTime.add(start_time, hours_duration, :hour)
-    
+
     # Random title using Faker with sequence for uniqueness
     title = Keyword.get(opts, :title, sequence(:title, &"#{Faker.Company.bs()} #{&1}"))
-    
+
     # Generate a thumbnail URL
-    thumbnail_url = "https://placehold.co/600x400/#{random_hex_color()}/FFFFFF?text=#{String.replace(title, " ", "+")}"
+    thumbnail_url =
+      "https://placehold.co/600x400/#{random_hex_color()}/FFFFFF?text=#{String.replace(title, " ", "+")}"
 
     # Create seed generator with default values
     seed_generator(
@@ -46,19 +47,18 @@ defmodule Huddlz.Soirees.Generators.SoireeGenerator do
   """
   def host_with_soirees(email \\ nil, count \\ 3, soiree_opts \\ []) do
     email = email || Faker.Internet.email()
-    
+
     host =
       UserGenerator.user(email: email)
       |> generate()
 
-    soirees = 
+    soirees =
       soiree(Keyword.merge([host: host], soiree_opts))
       |> generate_many(count)
 
     {host, soirees}
   end
 
-  
   # Helper function to generate random hex color
   defp random_hex_color do
     ["3D8BFD", "6610F2", "6F42C1", "D63384", "DC3545", "FD7E14", "FFC107", "198754"]

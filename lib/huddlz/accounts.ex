@@ -4,8 +4,6 @@ defmodule Huddlz.Accounts do
 
   resources do
     resource Huddlz.Accounts.Token
-    resource Huddlz.Accounts.User do
-      define :get_by_email, args: [:email], action: :get_by_email
-    end
+    resource Huddlz.Accounts.User
   end
 end
