@@ -33,7 +33,7 @@ Each workflow has its own focus, but they connect to form a complete cycle.
 Use the `/define` command to specify product requirements:
 
 ```
-/define id="0001" title="Feature Title"
+/define id="0001" title="User Authentication"
 ```
 
 This phase:
@@ -87,22 +87,22 @@ Follow the standard implementation workflow:
 
 2. **Build**: Implement the solution
    ```
-   /build notes_file="path/to/notes"
+   /build notes_file="notes/0001_notes.md"
    ```
 
 3. **Verify**: Review and ensure quality
    ```
-   /verify notes_file="path/to/notes"
+   /verify notes_file="notes/0001_notes.md" commit=true
    ```
 
 4. **Reflect**: Capture learnings
    ```
-   /reflect notes_file="path/to/notes"
+   /reflect notes_file="notes/0001_notes.md" update_learnings=true
    ```
 
 If interrupted, use:
 ```
-/resume notes_file="path/to/notes"
+/resume notes_file="notes/0001_notes.md"
 ```
 
 See `/workflow` for detailed implementation instructions.
@@ -125,7 +125,7 @@ See `/workflow` for detailed implementation instructions.
 
 - Use the QuickFix workflow for minor issues:
   ```
-  /quickfix description="Button alignment issue on signup form" issue_id="signup-btn-123"
+  /quickfix description="Fix button alignment on signup form" issue_id="ui-123"
   ```
 - This creates a lightweight notes file without requiring a formal requirements document
 - Still captures learnings for reflection
@@ -154,7 +154,7 @@ All substantial work is automatically documented through session notes, regardle
    - No command needed - documentation happens proactively
 
 These session notes can be:
-- Reflected on using `/reflect notes_file="path/to/session_notes.md"`
+- Reflected on using `/reflect notes_file="notes/session-20250506-workflow.md"`
 - Added to the knowledge repository
 - Linked to relevant documentation
 - Used to track decisions and rationales

@@ -13,7 +13,7 @@
     Use the `/plan` command to analyze requirements and design the solution:
     
     ```
-    /plan req_id="0001"
+    /plan req_id="<requirements_id>"
     ```
     
     This command:
@@ -27,7 +27,7 @@
     Use the `/build` command to implement the solution:
     
     ```
-    /build notes_file="path/to/notes" [task="specific task"]
+    /build notes_file="<notes_file_path>" [task="<specific_task>"]
     ```
     
     This command:
@@ -41,7 +41,7 @@
     Use the `/verify` command to review and ensure quality:
     
     ```
-    /verify notes_file="path/to/notes" [commit=true|false]
+    /verify notes_file="<notes_file_path>" [commit=true|false]
     ```
     
     This command:
@@ -55,7 +55,7 @@
     Use the `/reflect` command to capture learnings:
     
     ```
-    /reflect notes_file="path/to/notes" [update_learnings=true|false]
+    /reflect notes_file="<notes_file_path>" [update_learnings=true|false]
     ```
     
     This command:
@@ -69,7 +69,7 @@
     If you need to resume work after a break:
     
     ```
-    /resume notes_file="path/to/notes"
+    /resume notes_file="<notes_file_path>"
     ```
     
     This command:
@@ -129,8 +129,8 @@
     
     For example:
     ```
-    /plan req_id="0001"
-    /build notes_file="notes/0001_notes.md"
+    /plan req_id="<requirements_id>"
+    /build notes_file="<notes_file_path>"
     ```
     
     The commands are loaded from the `.claude/commands/` directory and are project-specific. Claude recognizes them through this directory structure.
