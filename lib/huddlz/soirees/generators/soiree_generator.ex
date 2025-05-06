@@ -22,10 +22,17 @@ defmodule Huddlz.Soirees.Generators.SoireeGenerator do
 
     # Random title using Faker with sequence for uniqueness
     title = Keyword.get(opts, :title, sequence(:title, &"#{Faker.Company.bs()} #{&1}"))
+    
+    # Generate a placeholder title for the URL that works with StreamData
+    url_title = 
+      case title do
+        title when is_binary(title) -> String.replace(title, " ", "+")
+        _ -> "Soiree" # Default placeholder if title is a StreamData object
+      end
 
     # Generate a thumbnail URL
     thumbnail_url =
-      "https://placehold.co/600x400/#{random_hex_color()}/FFFFFF?text=#{String.replace(title, " ", "+")}"
+      "https://placehold.co/600x400/#{random_hex_color()}/FFFFFF?text=#{url_title}"
 
     # Create seed generator with default values
     seed_generator(

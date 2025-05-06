@@ -12,12 +12,16 @@ if Enum.empty?(existing_soirees) do
   # Create random hosts
   host1 = UserGenerator.user() |> Ash.Generator.generate()
   host2 = UserGenerator.user() |> Ash.Generator.generate()
+  host3 = UserGenerator.user() |> Ash.Generator.generate()
+  host4 = UserGenerator.user() |> Ash.Generator.generate()
   
-  # Create soirées for each host using generate_many
+  # Create 20 soirées distributed among hosts using generate_many
   soirees1 = SoireeGenerator.soiree(host: host1) |> Ash.Generator.generate_many(5)
   soirees2 = SoireeGenerator.soiree(host: host2) |> Ash.Generator.generate_many(5)
+  soirees3 = SoireeGenerator.soiree(host: host3) |> Ash.Generator.generate_many(5)
+  soirees4 = SoireeGenerator.soiree(host: host4) |> Ash.Generator.generate_many(5)
   
-  IO.puts("Created #{length(soirees1) + length(soirees2)} sample soirées!")
+  IO.puts("Created #{length(soirees1) + length(soirees2) + length(soirees3) + length(soirees4)} sample soirées!")
 else
   IO.puts("Soirées already exist, skipping seed data creation")
 end
