@@ -61,6 +61,9 @@ This document captures key insights, patterns, and best practices discovered dur
 - For smaller tasks, use the quickfix command to maintain documentation without overhead
 - Automatically document session activities for continuous knowledge capture
 - Structure notes consistently to make information easy to find later
+- Component-based UI design can be integrated into planning rather than requiring a separate phase
+- Standardize terminology to clearly distinguish between requirements docs and features
+- Modularize commands to improve maintainability and flexibility
 
 ### AI Collaboration
 - Start with requirements definition before implementation to ensure alignment
@@ -76,6 +79,9 @@ This document captures key insights, patterns, and best practices discovered dur
 - Create specific commands for different types of work (standard features vs. quick fixes)
 - Prefer ripgrep (rg) over grep for faster and more powerful code searching
 - Add ripgrep to standard toolkit recommendations for all developers
+- Use angle brackets for placeholder variables in command definitions
+- Use concrete examples in user-facing documentation
+- Maintain clear distinction between commands and their documentation
 
 ## Performance Patterns
 
