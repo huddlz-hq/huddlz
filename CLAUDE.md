@@ -74,12 +74,47 @@ Using these tools will help you understand code behavior rather than making assu
 
 ### Development Patterns
 
-For detailed development patterns and learnings, refer to `docs/development_patterns.md`. 
-This document contains best practices for working with:
+For detailed development patterns and learnings, refer to:
+
+- `docs/development_patterns.md` - Best practices for working with the technology stack
+- `docs/development_lifecycle.md` - Complete development workflow from requirements to implementation
+
+These documents contain best practices for:
 
 - Ash Framework authentication flows
 - Testing strategies
 - Common challenges and solutions
+- Feature development workflow
+- Knowledge management
+
+## Knowledge Capture and Session Documentation
+
+For all substantial work sessions:
+
+1. **Automatically Create Session Notes**: 
+   - Create `notes/session-YYYYMMDD-topic.md` at the beginning of any significant session
+   - Use a descriptive topic based on the user's initial request
+   - Structure with sections: Goals, Activities, Decisions, Outcomes, Learnings, Next Steps
+
+2. **During the Session**:
+   - Update the session notes after each significant step or decision
+   - Record all meaningful changes, commands run, and files modified
+   - Document rationales for important decisions 
+   - Note any challenges encountered and how they were resolved
+
+3. **At Session End**:
+   - Add a session summary with key outcomes and learnings
+   - Identify any items to be added to `LEARNINGS.md`
+   - Suggest improvements to documentation or processes
+   - List potential follow-up tasks
+
+This proactive documentation approach applies to all types of work:
+- Feature development
+- Bug fixes
+- Infrastructure improvements
+- Workflow refinements
+- Exploratory sessions
+- Documentation work
 
 ## Custom Commands
 

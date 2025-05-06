@@ -36,6 +36,18 @@ Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 
 ## Development
 
+### Development Workflow
+
+Huddlz follows a streamlined development process optimized for solo development and AI collaboration:
+
+1. **Requirements Definition**: Define feature requirements using `/define`
+2. **Implementation Planning**: Plan implementation approach using `/plan`
+3. **Development**: Implement the solution using `/build`
+4. **Verification**: Review and test using `/verify`
+5. **Knowledge Capture**: Extract learnings using `/reflect`
+
+See [Development Lifecycle](docs/development_lifecycle.md) for detailed information.
+
 ### Testing
 
 * Run all tests: `mix test`
@@ -55,6 +67,7 @@ Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 
 * [Vision](docs/vision.md) - Project vision and goals
 * [Testing](docs/testing.md) - Testing approach and guidelines
+* [Development Lifecycle](docs/development_lifecycle.md) - Complete development workflow from requirements to implementation
 
 ## Deployment
 

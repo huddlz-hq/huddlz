@@ -1,34 +1,36 @@
 <prompt>
   <params>
-    feature_name # Short name for the feature (will be converted to snake_case)
+    id # Feature identifier (e.g., "0001" or descriptive slug like "signup-flow")
+    title # Descriptive title of the feature
   </params>
 
   <s>
-    When creating a Product Requirements Document (PRD), follow a structured approach to ensure clarity and completeness.
-    A well-written PRD provides clear direction for development while allowing flexibility in implementation.
+    When defining feature requirements, follow a structured approach to ensure clarity and completeness.
+    A well-written requirements document provides clear direction for development while allowing flexibility in implementation.
     Focus on the "what" and "why" rather than the "how" of implementation.
-    Always convert the feature name to snake_case for file naming and references.
+    Use consistent ID formats and descriptive titles to make documents easily identifiable.
   </s>
 
   <instructions>
-    # PRD Creation Process
-    Follow these steps to create a comprehensive Product Requirements Document:
+    # Requirements Definition Process
+    Follow these steps to create a comprehensive feature requirements document:
 
     ## Phase 1: Initial Setup
-    1. Convert the feature name to snake_case:
-       - Convert {{ params.feature_name }} to lowercase
-       - Replace spaces with underscores
+    1. Format the feature ID and create a filename:
+       - Use the provided ID: {{ params.id }}
+       - Create a filename in format: `docs/requirements/[ID]_[title_slug].md`
+       - Where [title_slug] is {{ params.title }} converted to lowercase with spaces replaced by underscores
        - Remove special characters
-       - Example: "List Events" becomes "list_events"
+       - Example: With ID "0001" and title "List Events", file becomes "0001_list_events.md"
     2. Create directory if it doesn't exist: `mkdir -p docs/requirements`
-    3. Check for existing PRDs and determine the next number in sequence:
-       - List existing PRDs: `ls docs/requirements/*.md`
-       - If no PRDs exist, start with 0001
+    3. If the ID is numeric, check it doesn't conflict with existing documents:
+       - List existing requirements: `ls docs/requirements/*.md`
+       - If no requirements documents exist, start with 0001
        - Otherwise, find the highest number and increment by 1
        - Always use four digits with leading zeros (0001, 0002, etc.)
-    4. Determine the full path for the PRD file: `docs/requirements/[number]_[snake_case_feature_name].md`
+    4. Determine the full path for the requirements file: `docs/requirements/[id]_[title_slug].md`
        - Example: `docs/requirements/0001_list_events.md`
-    5. Create a temporary working file to prepare the PRD content
+    5. Create a temporary working file to prepare the requirements content
 
     ## Phase 2: Problem Definition
     1. Ask the user to describe the problem this feature will solve
