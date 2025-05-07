@@ -10,44 +10,48 @@
     
     ### 1. Plan Phase
     
-    Use the `/plan` command to analyze requirements and design the solution:
+    Use the `/plan` command to analyze requirements and break them down into manageable tasks:
     
     ```
-    /plan req_id="<requirements_id>"
+    /plan [description="brief feature description"]
     ```
     
     This command:
-    - Creates structured notes for the feature
-    - Analyzes requirements and confirms understanding
-    - Designs the implementation approach
-    - Returns the path to the notes file
+    - Creates a timestamped task directory
+    - Analyzes requirements and breaks them into discrete tasks
+    - Generates an index of all tasks in implementation order
+    - Creates detailed specifications for each task
+    - Returns the path to the task directory
     
     ### 2. Build Phase
     
-    Use the `/build` command to implement the solution:
+    Use the `/build` command to implement each task in sequence:
     
     ```
-    /build notes_file="<notes_file_path>" [task="<specific_task>"]
+    /build [task_dir="<task_directory_path>"]
     ```
     
     This command:
-    - Guides implementation based on the plan
-    - Updates progress in the notes file
-    - Tests the implementation
-    - Focuses on one task at a time if specified
+    - Automatically finds the next task to implement
+    - Handles both starting new tasks and resuming in-progress work
+    - Guides implementation based on the task specification
+    - Updates progress in both the task file and index
+    - Ensures quality through tests and formatting
+    - Requires human verification before proceeding to the next task
     
     ### 3. Verify Phase
     
-    Use the `/verify` command to review and ensure quality:
+    Use the `/verify` command to review the complete feature:
     
     ```
-    /verify notes_file="<notes_file_path>" [commit=true|false]
+    /verify [task_dir="<task_directory_path>"] [commit=true|false]
     ```
     
     This command:
-    - Reviews code against multiple quality criteria
+    - Performs comprehensive review of the entire feature
     - Runs tests to verify correctness
     - Implements critical fixes
+    - Documents verification results
     - Optionally commits changes
     
     ### 4. Reflect Phase
@@ -55,61 +59,57 @@
     Use the `/reflect` command to capture learnings:
     
     ```
-    /reflect notes_file="<notes_file_path>" [update_learnings=true|false]
+    /reflect [task_dir="<task_directory_path>"]
     ```
     
     This command:
-    - Analyzes the development process
-    - Documents learnings in the notes
-    - Updates the central knowledge repository
+    - Analyzes the development process across all tasks
+    - Documents learnings in both the task directory and LEARNINGS.md
     - Suggests process improvements
+    - Identifies potential future work
     
-    ## Context Recovery
+    ## Task Organization
     
-    If you need to resume work after a break:
-    
+    Tasks are organized in timestamped directories with consistent naming:
     ```
-    /resume notes_file="<notes_file_path>"
+    notes/tasks/[timestamp]_[description]/
+      - index.md (overview and task sequence)
+      - 0001_[task_name].md
+      - 0002_[task_name].md
+      - etc.
     ```
     
-    This command:
-    - Recovers context from the notes
-    - Determines current status and next actions
-    - Updates the session log
+    Each task file contains:
+    - Task description and boundaries
+    - Implementation plan and checklist
+    - Progress tracking
+    - Quality assurance steps
     
-    ## Scaling the Process
+    ## Task Progression
     
-    ### For Large Features
-    
-    - Use the full workflow with detailed documentation
-    - Break down into multiple tasks during the build phase
-    - Use multiple verification cycles
-    - Reflect at major milestones
-    
-    ### For Medium Features
-    
-    - Use plan, build, and verify phases
-    - Combine verification and reflection for efficiency
-    - Focus documentation on key decisions
-    
-    ### For Small Tasks
-    
-    - Use a simplified approach:
-      - Quick plan in notes
-      - Combined build/verify
-      - Reflect only if significant insights gained
-    
-    ## Note Organization
-    
-    All feature notes should be stored in the `notes/` directory with consistent naming:
-    - `notes/[req_id]_notes.md`
+    Tasks are completed in sequence according to their numbering:
+    1. Complete all items in the implementation checklist
+    2. Ensure all tests are passing
+    3. Format code according to project standards
+    4. Commit changes following CLAUDE.md guidelines
+    5. Get human verification
+    6. Proceed to the next task
     
     ## Knowledge Management
     
     The central knowledge repository is maintained in:
     - `LEARNINGS.md` at the project root
     
-    Update this file through the reflect command to build a knowledge base over time.
+    This file is automatically updated during the reflect phase to build a knowledge base over time.
+    
+    ## Directory Resolution
+    
+    All commands support flexible task directory resolution:
+    - Full path: `/build /Users/name/project/notes/tasks/20250506_create_groups/`
+    - Timestamp: `/build 20250506`
+    - Feature name: `/build create_groups`
+    
+    If no task directory is specified, commands will use the most recent one.
     
     ## Important Note
     
@@ -129,8 +129,8 @@
     
     For example:
     ```
-    /plan req_id="<requirements_id>"
-    /build notes_file="<notes_file_path>"
+    /plan description="Add user groups"
+    /build task_dir="create_groups"
     ```
     
     The commands are loaded from the `.claude/commands/` directory and are project-specific. Claude recognizes them through this directory structure.

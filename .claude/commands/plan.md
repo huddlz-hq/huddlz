@@ -1,103 +1,155 @@
 <prompt>
   <params>
-    req_id # Either the full requirements document ID (e.g., "0001_list_events.md") or just the number (e.g., "0001")
+    description # Optional brief feature description
   </params>
 
   <instructions>
-    # Combined Planning Phase
+    # Task Decomposition Planning
     
-    This command handles both analysis and design in a streamlined process.
+    This command analyzes requirements and breaks down features into manageable tasks.
     
     ## Initial Setup
     
-    1. Create the `notes` directory if it doesn't exist: `mkdir -p notes`
-    2. Extract information from the requirements ID:
-       - If {{ params.req_id }} contains a file extension (e.g., "0001_list_events.md"), use this filename
-       - If {{ params.req_id }} is just a number (e.g., "0001"), find the matching file in docs/requirements/
-    3. Use the requirements ID as prefix for your notes file: `notes/[REQ_ID]_notes.md`
-       - Example: `notes/0001_notes.md`
+    1. If description is not provided, ask the user for a brief feature description
+    2. Generate a timestamp for the planning session
+    3. Create the tasks directory structure:
+       ```
+       mkdir -p notes/tasks/[timestamp]_[description]/
+       ```
     
-    ## Note Structure
+    ## Feature Analysis
     
-    Create a new notes file with this structure:
+    1. Ask the user to describe the feature requirements in detail
+    2. Analyze the requirements to identify:
+       - Core functionality needed
+       - Data models and structures required
+       - User interface components
+       - API endpoints or services
+       - Dependencies on existing systems
+    3. Break down the feature into discrete, manageable tasks
+    4. Determine the logical implementation sequence based on dependencies
     
-    ```markdown
-    # Feature: [Feature Name] (Req-{{ params.req_id }})
+    ## Task Documentation
     
-    ## Current Status
-    - Phase: Planning
-    - Progress: 0%
-    - Blockers: None
-    - Next steps: Complete planning and analysis
+    1. Create an index file: `notes/tasks/[timestamp]_[description]/index.md`
+       ```markdown
+       # Feature: [Feature Name]
+       
+       ## Overview
+       [Brief description of the overall feature]
+       
+       ## Implementation Sequence
+       1. [First task name] - [Brief description]
+       2. [Second task name] - [Brief description]
+       ...
+       
+       ## Planning Session Info
+       - Created: [Current date and time]
+       - Feature Description: [Description]
+       ```
     
-    ## Requirements Analysis
-    [Requirements will be filled in during analysis]
+    2. For each identified task, create a sequentially numbered file:
+       ```
+       notes/tasks/[timestamp]_[description]/0001_[task_name].md
+       notes/tasks/[timestamp]_[description]/0002_[task_name].md
+       ...
+       ```
     
-    ## Implementation Plan
-    [Design decisions will be documented here]
+    3. Each task file should follow this template:
+       ```markdown
+       # Task: [Task Name]
+       
+       ## Context
+       - Part of feature: [Feature Name]
+       - Sequence: Task [X] of [Y]
+       - Purpose: [Brief explanation of how this task fits in]
+       
+       ## Task Boundaries
+       - In scope: [What should be done in this task]
+       - Out of scope: [What should NOT be done in this task]
+       
+       ## Current Status
+       - Progress: 0%
+       - Blockers: None
+       - Next steps: Begin implementation
+       
+       ## Requirements Analysis
+       - [Specific requirements for this task]
+       
+       ## Implementation Plan
+       - [Overall approach/strategy for this task]
+       - [Design decisions]
+       - [Technical considerations]
+       
+       ## Implementation Checklist
+       1. [Specific action item #1] 
+       2. [Specific action item #2]
+       3. [Specific action item #3]
+       ...
+       
+       ## Related Files
+       - [Files that will likely need to be modified]
+       
+       ## Definition of Done
+       - [Specific, measurable completion criteria]
+       
+       ## Quality Assurance
+       
+       ### AI Verification (Throughout Implementation)
+       - Run appropriate tests after each checklist item
+       - Run `mix format` before committing changes
+       - Verify compilation with `mix compile` regularly
+       
+       ### Human Verification (Required Before Next Task)
+       - After completing the entire implementation checklist, ask the user:
+         "I've completed task [X]. Could you please verify the implementation by:
+          1. Running the application (`mix phx.server`)
+          2. Testing the new functionality
+          If everything looks good, I'll proceed to the next task (Task [Y])."
+       
+       ## Progress Tracking
+       - Update after completing each checklist item
+       - Mark items as completed with timestamps
+       - Document any issues encountered and how they were resolved
+       
+       ## Commit Instructions
+       - Make atomic commits after completing logical units of work
+       - Before finishing the task, ensure all changes are committed
+       - Follow commit message standards in CLAUDE.md
+       - Update the Session Log with commit details
+       
+       ## Session Log
+       - [Current date and time] Started task planning...
+       
+       ## Next Task
+       - Next task: [0002_next_task_name]
+       - Only proceed to the next task after:
+         - All checklist items are complete
+         - All tests are passing
+         - Code is properly formatted
+         - Changes have been committed
+         - User has verified and approved the implementation
+       ```
     
-    ## UI Component Selection
-    - Primary components from DaisyUI: [component names]
-    - Layout approach: [grid/flex/etc.]
-    - Responsive considerations: [breakpoints]
-    - Theme customization: [any theme tweaks]
-    - References to DaisyUI documentation: [links]
+    ## Important Guidelines
     
-    ## Session Log
-    [{{ current_date }}] Started planning phase...
+    1. Task Sizing:
+       - Each task should be completable in a single focused work session
+       - Tasks should have clear, measurable completion criteria
+       - If a task seems too large, break it down further
     
-    ## Learnings
-    [This section will capture insights during development]
-    ```
+    2. Dependency Management:
+       - Order tasks to minimize dependencies between them
+       - Clearly document any dependencies in the Context section
+       - Ensure the implementation sequence is technically feasible
     
-    ## Analysis Phase
-    
-    1. Read and analyze the requirements document thoroughly
-    2. Update the Requirements Analysis section with:
-       - Clear list of explicit requirements from the requirements document
-       - Any implicit requirements you've identified
-       - Areas requiring clarification
-       - Your assumptions
-    3. Ask the user to confirm your understanding
-    4. Update the notes based on user feedback
-    
-    ## Design Phase
-    
-    After user confirmation:
-    
-    1. Propose a high-level implementation plan
-    2. Discuss design alternatives and tradeoffs
-    3. Check for existing patterns in the codebase
-    4. Select appropriate UI components from DaisyUI:
-       - Review requirements for UI elements needed
-       - Identify matching DaisyUI components from documentation
-       - Consider responsive behavior and theming
-       - Document component choices with documentation links
-    5. Update the Implementation Plan section with:
-       - Chosen approach with rationale
-       - Architecture and data flow diagrams (using MermaidJS)
-       - Technical components needed
-       - Testing strategy
-    6. Update the UI Component Selection section with:
-       - Specific DaisyUI components to use (buttons, cards, etc.)
-       - Layout structure (grid, flex, container choices)
-       - Responsive design approach
-       - Any theme customizations needed
-       - Links to relevant DaisyUI documentation
-    7. Get user approval before implementation
-    
-    ## Important Rules
-    
-    - Do not write implementation code during planning
-    - Document all key decisions and rationales
-    - Always use consistent formatting in notes
-    - Break down complex problems into manageable components
-    - Update the Session Log with timestamped entries
-    - Focus on understanding the problem completely before designing
-    - Examine existing codebase patterns before proposing new ones
+    3. Task Clarity:
+       - Each task should have a clear, specific purpose
+       - Task boundaries should be explicit
+       - Implementation checklists should be actionable and concrete
     
     ## Return Values
     
-    Return the path to the created notes file for reference in future commands.
+    Return the path to the tasks directory and a summary of the tasks created.
   </instructions>
 </prompt>
