@@ -56,10 +56,35 @@ tests should remain stable. See docs/testing.md for complete guidelines.
   - Variables and function names use snake_case
 - When referring to events in comments and documentation, always use lowercase "huddl" and "huddlz"
 
-The project uses Ash Framework for data modeling, Ash Authentication for user auth, 
-and Phoenix for the web interface.
-
 ## Development Tools
+
+### Technology Stack
+
+This project uses:
+- Ash Framework for data modeling and business logic
+- Ash Authentication for user authentication
+- Phoenix for the web interface and LiveView components
+
+### Framework References
+
+#### Ash Framework
+
+For reference on working with Ash Framework, see the detailed documentation in the 
+`docs/ash_framework/` directory, covering topics like:
+
+- `docs/ash_framework/relationships.md` - Working with relationships
+- `docs/ash_framework/multitenancy.md` - Implementing multi-tenancy
+- `docs/ash_framework/authentication.md` - Setting up authentication
+- `docs/ash_framework/access_control.md` - Implementing permissions
+- `docs/ash_framework/phoenix_integration.md` - Using Ash with Phoenix
+
+Start with `docs/ash_framework/index.md` for a complete overview.
+
+#### Phoenix Framework
+
+For Phoenix-specific questions, refer to:
+- [Phoenix documentation](https://hexdocs.pm/phoenix/overview.html)
+- [LiveView documentation](https://hexdocs.pm/phoenix_live_view/Phoenix.LiveView.html)
 
 ### Tidewave MCP
 
