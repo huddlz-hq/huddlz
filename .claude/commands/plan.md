@@ -4,9 +4,9 @@
   </params>
 
   <instructions>
-    # Task Decomposition Planning
+    # Enhanced Task Decomposition Planning
     
-    This command analyzes requirements and breaks down features into manageable tasks.
+    This command analyzes requirements, conducts thorough product management exploration, and breaks down features into manageable tasks.
     
     ## Initial Setup
     
@@ -17,17 +17,54 @@
        mkdir -p notes/tasks/[timestamp]_[description]/
        ```
     
+    ## Feature Exploration
+    
+    1. Ask the user to describe the feature at a high level
+    2. Conduct a structured product management interview with questions like:
+       - What problem does this feature solve for users?
+       - Who are the primary users of this feature?
+       - How does this feature align with the overall product vision?
+       - What specific actions should users be able to perform?
+       - What are explicit constraints or limitations we should be aware of?
+    
+    ## Requirements Detailing
+    
+    1. Based on initial answers, drill down into specific areas:
+       - Data requirements: "What information needs to be collected or displayed?"
+       - User flows: "Walk me through the typical user journey for this feature"
+       - Edge cases: "What should happen when [unexpected condition]?"
+       - Access control: "Who should be able to perform these actions?"
+       - Integration points: "How does this feature interact with existing functionality?"
+    
+    2. For each unclear aspect, ask follow-up questions until you have:
+       - Clear scope boundaries (what is and isn't included)
+       - Specific functional requirements
+       - Non-functional requirements (performance, security)
+       - Success criteria
+
+    ## Technical Assessment
+    
+    1. Consider implementation details:
+       - Data modeling: "What changes to data models are needed?"
+       - API requirements: "What new endpoints or services are required?"
+       - UI components: "What interface elements need to be created or modified?"
+       - Authorization: "What permission checks are needed?"
+    
+    2. Identify potential technical challenges:
+       - Complex logic or algorithms
+       - Performance considerations
+       - Migration considerations
+
     ## Feature Analysis
     
-    1. Ask the user to describe the feature requirements in detail
-    2. Analyze the requirements to identify:
+    1. Analyze the requirements to identify:
        - Core functionality needed
        - Data models and structures required
        - User interface components
        - API endpoints or services
        - Dependencies on existing systems
-    3. Break down the feature into discrete, manageable tasks
-    4. Determine the logical implementation sequence based on dependencies
+    2. Break down the feature into discrete, manageable tasks
+    3. Determine the logical implementation sequence based on dependencies
     
     ## Task Documentation
     
@@ -36,11 +73,21 @@
        # Feature: [Feature Name]
        
        ## Overview
-       [Brief description of the overall feature]
+       [Comprehensive description of the overall feature based on discovery]
+       
+       ## User Stories
+       - As a [user type], I want to [action], so that [benefit]
+       - As a [user type], I want to [action], so that [benefit]
+       ...
        
        ## Implementation Sequence
        1. [First task name] - [Brief description]
        2. [Second task name] - [Brief description]
+       ...
+       
+       ## Success Criteria
+       - [Specific, measurable criteria for feature completion]
+       - [Observable user outcome that indicates success]
        ...
        
        ## Planning Session Info
@@ -70,7 +117,7 @@
        
        ## Current Status
        - Progress: 0%
-       - Blockers: None
+       - Blockers: [Any dependencies on other tasks]
        - Next steps: Begin implementation
        
        ## Requirements Analysis
