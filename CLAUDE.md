@@ -48,13 +48,16 @@ tests should remain stable. See docs/testing.md for complete guidelines.
 
 ### Naming Conventions
 
-- A singular event is called a "huddl" (lowercase)
-- Multiple events are called "huddlz" (lowercase)
+**IMPORTANT: ALWAYS follow these naming conventions precisely**
+
+- A singular event is called a "huddl" (lowercase) - **NEVER** use "event" or any other term
+- Multiple events are called "huddlz" (lowercase) - **NEVER** use "events", "huddles", or any other term
 - The platform/application name is "huddlz" (lowercase) in all branding, UI copy, and documentation
 - In Elixir code, we follow standard conventions:
   - Module names are capitalized (e.g., `Huddlz.Huddls.Huddl`)
   - Variables and function names use snake_case
 - When referring to events in comments and documentation, always use lowercase "huddl" and "huddlz"
+- This terminology is core to our brand identity and must be maintained consistently
 
 ## Development Tools
 
