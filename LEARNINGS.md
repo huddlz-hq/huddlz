@@ -15,6 +15,10 @@ This document captures key insights, patterns, and best practices discovered dur
 - Remember that Ash Framework functions often require context as a second parameter
 - Use `authorize?: false` only when absolutely necessary (and document why)
 - Keep permission policies simple and use the built-in authorization system
+- Design domains around conceptual relationships between resources
+- For significant data model changes, consider creating new domains
+- Use many-to-many relationships with join resources for group memberships
+- Generate snapshots before migrations when using Ash migrations
 
 ### Authentication
 - Use the DSL style for auth_overrides with `override` and `set` blocks
@@ -64,6 +68,10 @@ This document captures key insights, patterns, and best practices discovered dur
 - Component-based UI design can be integrated into planning rather than requiring a separate phase
 - Standardize terminology to clearly distinguish between requirements docs and features
 - Modularize commands to improve maintainability and flexibility
+- Use product management interview techniques when planning features
+- Break complex features into logical task sequences with clear dependencies
+- Document architecture decisions during planning phase
+- Create detailed task boundaries to prevent scope creep
 
 ### AI Collaboration
 - Start with requirements definition before implementation to ensure alignment
