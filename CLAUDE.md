@@ -21,6 +21,10 @@ This project follows behavior-driven development using Cucumber:
 4. Focus on user-visible outcomes rather than internal implementation details
 5. Write the minimal code needed to make tests pass
 
+### Important Testing Guideline
+
+- IMPORTANT: Always implement tests, never skip, comment out, stub, etc... always write good tests they are the backbone of ensuring the code works.
+
 Always test behavior from the user's perspective. Implementation may change, but behavior
 tests should remain stable. See docs/testing.md for complete guidelines.
 
@@ -156,3 +160,8 @@ When encountering commands with a leading slash (like `/command`):
 
 Example response for unknown commands:
 "I'm not familiar with the `/command` command. Could you please explain what this command should do and what steps or phases it involves?"
+
+## Migration Guidelines
+
+- Never edit a migration file, only generate new migrations 
+- Because this is an Ash project, generate migrations using: `mix ash.codegen <name_of_change_to_resource>`

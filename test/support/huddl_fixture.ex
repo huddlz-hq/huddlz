@@ -6,7 +6,7 @@ defmodule Huddlz.HuddlFixture do
   """
 
   alias Huddlz.Accounts.Generators.UserGenerator
-  alias Huddlz.Huddls.Generators.HuddlGenerator
+  alias Huddlz.Communities.Generators.HuddlGenerator
   alias Ash.Generator
 
   @doc """
@@ -25,7 +25,7 @@ defmodule Huddlz.HuddlFixture do
       end
 
     # Get existing huddls
-    {:ok, existing_huddls} = Ash.read(Huddlz.Huddls.Huddl)
+    {:ok, existing_huddls} = Ash.read(Huddlz.Communities.Huddl)
 
     # If we already have at least the requested count, return them
     if length(existing_huddls) >= count do

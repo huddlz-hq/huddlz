@@ -15,6 +15,14 @@ defmodule Huddlz.MixProject do
     ]
   end
 
+  def cli do
+    [
+      preferred_envs: [
+        "test.watch": :test
+      ]
+    ]
+  end
+
   # Configuration for the OTP application.
   #
   # Type `mix help compile.app` for more information.
@@ -35,6 +43,7 @@ defmodule Huddlz.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false},
       {:picosat_elixir, "~> 0.2"},
       {:ash_authentication_phoenix, "~> 2.0"},
       {:ash_postgres, "~> 2.0"},
@@ -70,7 +79,7 @@ defmodule Huddlz.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"},
-      {:cucumber, path: "cucumber", only: [:dev, :test]}
+      {:cucumber, "~> 0.1.0", only: [:dev, :test]}
     ]
   end
 

@@ -36,4 +36,14 @@ defmodule HuddlzWeb.LiveUserAuth do
       {:cont, assign(socket, :current_user, nil)}
     end
   end
+
+  def on_mount([role_required: role_required], _params, _session, socket) do
+    current_user = socket.assigns[:current_user]
+
+    if current_user && current_user.role == role_required do
+      {:cont, socket}
+    else
+      {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/sign-in")}
+    end
+  end
 end

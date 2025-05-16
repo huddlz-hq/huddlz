@@ -1,7 +1,7 @@
 defmodule HuddlzWeb.HuddlLive do
   use HuddlzWeb, :live_view
 
-  alias Huddlz.Huddls
+  alias Huddlz.Communities
   alias HuddlzWeb.Layouts
 
   # Authentication is optional - show cards to all but require auth for joining
@@ -10,7 +10,7 @@ defmodule HuddlzWeb.HuddlLive do
   def mount(_params, _session, socket) do
     if connected?(socket) do
       # Only get huddls when socket is connected to minimize load
-      upcoming_huddls = Huddls.get_upcoming!()
+      upcoming_huddls = Communities.get_upcoming!()
       {:ok, assign(socket, huddls: upcoming_huddls, search_query: nil)}
     else
       # Initial load - empty to speed up first render
@@ -21,9 +21,9 @@ defmodule HuddlzWeb.HuddlLive do
   def handle_event("search", %{"query" => query}, socket) do
     huddls =
       if query && query != "" do
-        Huddls.search!(query)
+        Communities.search!(query)
       else
-        Huddls.get_upcoming!()
+        Communities.get_upcoming!()
       end
 
     {:noreply, assign(socket, huddls: huddls, search_query: query)}
@@ -47,10 +47,7 @@ defmodule HuddlzWeb.HuddlLive do
                 placeholder="Search huddlz..."
                 class="flex-grow px-4 py-2 border rounded-l focus:outline-none bg-base-100 text-base-content"
               />
-              <button
-                type="submit"
-                class="btn btn-primary px-4 py-2 rounded-r"
-              >
+              <button type="submit" class="btn btn-primary px-4 py-2 rounded-r">
                 Search
               </button>
             </div>

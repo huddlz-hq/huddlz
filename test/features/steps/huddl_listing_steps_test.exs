@@ -4,13 +4,13 @@ defmodule HuddlListingSteps do
 
   import Phoenix.LiveViewTest
 
-  # Background step: Create sample huddls
-  defstep "there are upcoming huddls in the system", %{conn: conn} do
-    # Create sample huddls using our fixtures
-    huddls = Huddlz.HuddlFixture.create_sample_huddls(3)
+  # Background step: Create sample huddlz
+  defstep "there are upcoming huddlz in the system", %{conn: conn} do
+    # Create sample huddlz using our fixtures
+    huddlz = Huddlz.HuddlFixture.create_sample_huddls(3)
 
     # Return the connection and huddl information
-    {:ok, %{conn: conn, huddls_count: length(huddls)}}
+    {:ok, %{conn: conn, huddlz_count: length(huddlz)}}
   end
 
   # Visit landing page
@@ -23,7 +23,7 @@ defmodule HuddlListingSteps do
   defstep "I search for {string}", context do
     term = List.first(context.args)
     # For testing, we'll just verify that search is working by using an empty search
-    # which will show all huddls - the details of the search functionality are tested elsewhere
+    # which will show all huddlz - the details of the search functionality are tested elsewhere
     html = render_change(context.live, "search", %{"query" => ""})
     {:ok, Map.merge(context, %{html: html, search_term: term})}
   end
@@ -35,7 +35,7 @@ defmodule HuddlListingSteps do
   end
 
   # Assertions
-  defstep "I should see a list of upcoming huddls", context do
+  defstep "I should see a list of upcoming huddlz", context do
     # Should not see the "no huddlz found" message
     refute context.html =~ "No huddlz found"
     # We know we're on the huddl list page if we see the right heading
@@ -58,8 +58,8 @@ defmodule HuddlListingSteps do
     :ok
   end
 
-  defstep "I should see huddls matching {string}", context do
-    # For the search feature test, we'll simply verify we're still on a page with huddls
+  defstep "I should see huddlz matching {string}", context do
+    # For the search feature test, we'll simply verify we're still on a page with huddlz
     # The actual search won't contain the search term because we're using generated test data
     assert context.html =~ "Find your huddl"
     # Should not see the "no huddlz found" message
@@ -67,9 +67,9 @@ defmodule HuddlListingSteps do
     :ok
   end
 
-  defstep "I should see all upcoming huddls again", context do
-    # In the real implementation, we'd see all original huddls again
-    # For the test, we'll verify we're still on a page with huddls
+  defstep "I should see all upcoming huddlz again", context do
+    # In the real implementation, we'd see all original huddlz again
+    # For the test, we'll verify we're still on a page with huddlz
     assert context.html =~ "Find your huddl"
     refute context.html =~ "No huddlz found"
     :ok

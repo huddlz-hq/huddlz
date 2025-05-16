@@ -11,9 +11,10 @@ defmodule Huddlz.Accounts.Generators.UserGenerator do
   """
   def user(opts \\ []) do
     email = Keyword.get(opts, :email, Faker.Internet.email())
+    role = Keyword.get(opts, :role, :regular)
 
     seed_generator(
-      %User{email: email},
+      %User{email: email, role: role},
       overrides: opts
     )
   end

@@ -20,10 +20,20 @@ defmodule HuddlzWeb.Layouts do
           <span class="text-lg font-bold tracking-tight">Huddlz</span>
         </a>
       </div>
+      <div class="navbar-center">
+        <%= if @current_user && Huddlz.Accounts.admin?(@current_user) do %>
+          <nav class="flex items-center gap-4">
+            <a href="/admin" class="btn btn-ghost btn-sm">Admin Panel</a>
+          </nav>
+        <% end %>
+      </div>
       <div class="navbar-end flex items-center gap-4">
         <.theme_toggle />
         <%= if @current_user do %>
-          <a href="/sign-out" class="btn btn-outline btn-sm">Sign Out</a>
+          <div class="flex items-center gap-3">
+            <span class="text-sm">{@current_user.display_name || @current_user.email}</span>
+            <a href="/sign-out" class="btn btn-outline btn-sm">Sign Out</a>
+          </div>
         <% else %>
           <a href="/register" class="btn btn-outline btn-sm">Sign Up</a>
           <a href="/sign-in" class="btn btn-primary btn-sm">Sign In</a>

@@ -48,7 +48,7 @@ config :spark,
 config :huddlz,
   ecto_repos: [Huddlz.Repo],
   generators: [timestamp_type: :utc_datetime],
-  ash_domains: [Huddlz.Accounts, Huddlz.Huddls, Huddlz.Soirees]
+  ash_domains: [Huddlz.Accounts, Huddlz.Communities]
 
 # Configures the endpoint
 config :huddlz, HuddlzWeb.Endpoint,

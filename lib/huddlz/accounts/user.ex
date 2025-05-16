@@ -1,6 +1,4 @@
 defmodule Huddlz.Accounts.User do
-  import Ash.Resource.Change.Builtins
-
   use Ash.Resource,
     otp_app: :huddlz,
     domain: Huddlz.Accounts,
@@ -36,6 +34,10 @@ defmodule Huddlz.Accounts.User do
   postgres do
     table "users"
     repo Huddlz.Repo
+
+    custom_indexes do
+      index "email gin_trgm_ops", name: "users_email_gin_index", using: "GIN"
+    end
   end
 
   actions do
@@ -57,6 +59,17 @@ defmodule Huddlz.Accounts.User do
       end
 
       filter expr(email == ^arg(:email))
+    end
+
+    read :search_by_email do
+      description "Searches for users by partial email match"
+
+      argument :email, :string do
+        constraints allow_empty?: true
+        default ""
+      end
+
+      filter expr(contains(email, ^arg(:email)))
     end
 
     create :sign_in_with_magic_link do
@@ -102,15 +115,42 @@ defmodule Huddlz.Accounts.User do
       run AshAuthentication.Strategy.MagicLink.Request
     end
 
-    update :update do
-      description "Update a user's attributes"
+    update :update_display_name do
+      description "Update a user's display_name"
       accept [:display_name]
+    end
+
+    update :update_role do
+      description "Update a user's role"
+      accept [:role]
     end
   end
 
   policies do
     bypass AshAuthentication.Checks.AshAuthenticationInteraction do
       authorize_if always()
+    end
+
+    bypass actor_attribute_equals(:role, :admin) do
+      authorize_if always()
+    end
+
+    # Basic read permissions - needed for auth
+    policy action(:read) do
+      authorize_if always()
+    end
+
+    policy action(:get_by_subject) do
+      authorize_if always()
+    end
+
+    policy action(:get_by_email) do
+      authorize_if always()
+    end
+
+    policy action(:update_display_name) do
+      description "Users can update their own display_name"
+      authorize_if expr(id == ^actor(:id))
     end
 
     # Default policy for other actions
@@ -128,9 +168,15 @@ defmodule Huddlz.Accounts.User do
     end
 
     attribute :display_name, :string do
+      description "Name the user wants others to idenify them as"
       allow_nil? true
       public? true
-      description "User's display name shown in the UI"
+    end
+
+    attribute :role, Huddlz.Accounts.Role do
+      description "User's role determines their permissions in the system"
+      allow_nil? false
+      default :regular
     end
   end
 

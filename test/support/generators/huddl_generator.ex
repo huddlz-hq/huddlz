@@ -4,7 +4,7 @@ defmodule Huddlz.Generators.HuddlGenerator do
   """
   use Ash.Generator
 
-  alias Huddlz.Huddls.Huddl
+  alias Huddlz.Communities.Huddl
   alias Huddlz.Generators.UserGenerator
 
   @doc """
