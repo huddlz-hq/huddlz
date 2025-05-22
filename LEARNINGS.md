@@ -19,6 +19,11 @@ This document captures key insights, patterns, and best practices discovered dur
 - For significant data model changes, consider creating new domains
 - Use many-to-many relationships with join resources for group memberships
 - Generate snapshots before migrations when using Ash migrations
+- **CRITICAL**: Always follow the domain-resource-codegen sequence:
+  1. Define/update the domain first
+  2. Create/update the resource definition next
+  3. Generate migrations last using `mix ash.codegen`
+- See `docs/ash_framework/resource_workflow.md` for the complete workflow guidance
 
 ### Authentication
 - Use the DSL style for auth_overrides with `override` and `set` blocks

@@ -39,6 +39,7 @@ tests should remain stable. See docs/testing.md for complete guidelines.
 - Use Phoenix LiveView for interactive UI components
 - Implement authentication with AshAuthentication
 - Always run `mix format` before committing changes
+- **IMPORTANT: Always prefer `with` statements over `case` statements for better error handling and readability**
 
 ### Commit Messages
 
@@ -62,6 +63,43 @@ tests should remain stable. See docs/testing.md for complete guidelines.
   - Variables and function names use snake_case
 - When referring to events in comments and documentation, always use lowercase "huddl" and "huddlz"
 - This terminology is core to our brand identity and must be maintained consistently
+
+---
+
+### Group Membership Roles & Access Rules
+
+#### Roles
+
+- `owner`: The creator and primary leader of a group. There is only one owner per group, and the owner must be a verified user.
+- `organizer`: Trusted, verified users who help manage the group. There can be multiple organizers per group.
+- `member`: Regular participants. Members can be either verified or regular (non-verified) users.
+
+#### Verification
+
+- Only verified users can be assigned as `owner` or `organizer`.
+- Verified status is required for elevated permissions and visibility.
+
+#### Access Matrix
+
+| User Type/Role         | Group Type | Can See Members? | Notes                  |
+|------------------------|------------|------------------|------------------------|
+| owner (verified)       | any        | Yes              |                        |
+| organizer (verified)   | any        | Yes              |                        |
+| member (verified)      | any        | Yes              |                        |
+| member (regular)       | any        | No (count only)  |                        |
+| non-member (verified)  | public     | Yes              |                        |
+| non-member (verified)  | private    | No               |                        |
+| non-member (regular)   | any        | No (count only)  |                        |
+
+#### Policy Summary
+
+- Owners and organizers (must be verified) can always see the full member list for their group.
+- Verified members can see the full member list for groups they belong to.
+- Regular (non-verified) members and non-members can only see the count of members, not the member list.
+- Only verified users can be assigned as owner or organizer.
+- When creating a group, the owner must be a verified user.
+
+Refer to `docs/group_membership.md` for a detailed rationale and examples.
 
 ## Development Tools
 

@@ -3,14 +3,15 @@ defmodule HuddlListingSteps do
   use HuddlzWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
+  import Huddlz.Generator
 
   # Background step: Create sample huddlz
   defstep "there are upcoming huddlz in the system", %{conn: conn} do
-    # Create sample huddlz using our fixtures
-    huddlz = Huddlz.HuddlFixture.create_sample_huddls(3)
+    # Create sample huddlz using our generators
+    {_host, huddlz} = host_with_huddlz()
 
     # Return the connection and huddl information
-    {:ok, %{conn: conn, huddlz_count: length(huddlz)}}
+    {:ok, %{conn: conn, huddlz: huddlz, huddlz_count: length(huddlz)}}
   end
 
   # Visit landing page
@@ -44,8 +45,14 @@ defmodule HuddlListingSteps do
   end
 
   defstep "I should see basic information for each huddl", context do
-    # Check for presence of expected card elements
-    assert context.html =~ "Test Huddl"
+    # Check that we can see at least one of the huddl titles
+    huddl_titles = Enum.map(context.huddlz, & &1.title)
+
+    assert Enum.any?(huddl_titles, fn title ->
+             context.html =~ title
+           end),
+           "Expected to find at least one huddl title in the HTML"
+
     # Check for date format presence (month and year)
     assert context.html =~ ", 2025"
     :ok

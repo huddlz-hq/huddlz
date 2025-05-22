@@ -70,6 +70,7 @@ defmodule Huddlz.Accounts.User do
       end
 
       filter expr(contains(email, ^arg(:email)))
+      prepare Huddlz.Accounts.User.Preparations.AdminOnlySearch
     end
 
     create :sign_in_with_magic_link do
@@ -148,14 +149,14 @@ defmodule Huddlz.Accounts.User do
       authorize_if always()
     end
 
+    policy action(:search_by_email) do
+      description "All users can search, but results are filtered"
+      authorize_if always()
+    end
+
     policy action(:update_display_name) do
       description "Users can update their own display_name"
       authorize_if expr(id == ^actor(:id))
-    end
-
-    # Default policy for other actions
-    policy always() do
-      forbid_if always()
     end
   end
 

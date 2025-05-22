@@ -8,6 +8,12 @@ The initial version of this documentation was inspired by and based on the excel
 
 ## Table of Contents
 
+- [Resource Workflow](resource_workflow.md) - **IMPORTANT**: The correct workflow for developing resources
+  - Domain definition first
+  - Resource definition next
+  - Code generation last
+  - Best practices and common mistakes
+
 - [Relationships](relationships.md) - How to work with different relationship types in Ash
   - Has Many, Belongs To, Has One, Many-to-Many relationships
   - Creating, reading, and managing related data
