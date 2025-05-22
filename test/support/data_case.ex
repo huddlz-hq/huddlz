@@ -24,6 +24,7 @@ defmodule Huddlz.DataCase do
       import Ecto.Changeset
       import Ecto.Query
       import Huddlz.DataCase
+      import Huddlz.Generator
     end
   end
 

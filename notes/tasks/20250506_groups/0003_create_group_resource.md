@@ -17,9 +17,9 @@
   - Integration with huddlz
 
 ## Current Status
-- Progress: 0%
-- Blockers: Communities domain must be created first
-- Next steps: Begin implementation
+- Status: In progress
+- Blockers: None
+- Current activity: Fixing Group resource tests
 
 ## Requirements Analysis
 - Create a Group resource using Ash Framework in the Communities domain
@@ -191,9 +191,14 @@ end
 - Module compiles successfully
 
 ## Progress Tracking
-- Update after completing each checklist item
-- Mark items as completed with timestamps
-- Document any issues encountered and how they were resolved
+1. Task preparation - [May 17, 2025]
+
+## Session Log
+- [May 17, 2025] Starting implementation of this task...
+- [May 17, 2025] Group and GroupMember resource files already created
+- [May 17, 2025] Fixed compilation issues (action_type(:all) not supported, duplicate search methods)
+- [May 17, 2025] Created tests for Group and GroupMember resources
+- [May 17, 2025] Working on fixing tests to match Ash patterns
 
 ## Next Task
 - Next task: 0004_generate_group_migrations

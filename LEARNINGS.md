@@ -23,6 +23,8 @@ This document captures key insights, patterns, and best practices discovered dur
   1. Define/update the domain first
   2. Create/update the resource definition next
   3. Generate migrations last using `mix ash.codegen`
+  4. Run migrations with `mix ash.migrate` (NEVER use `mix ecto.migrate`)
+- **IMPORTANT**: For Ash resources, always use `mix ash.migrate` instead of `mix ecto.migrate` to ensure proper handling of resource snapshots and extensions
 - See `docs/ash_framework/resource_workflow.md` for the complete workflow guidance
 
 ### Authentication

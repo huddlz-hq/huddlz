@@ -21,7 +21,7 @@ defmodule HuddlzWeb.HuddlLive do
   def handle_event("search", %{"query" => query}, socket) do
     huddls =
       if query && query != "" do
-        Communities.search!(query)
+        Communities.search_huddlz!(query)
       else
         Communities.get_upcoming!()
       end

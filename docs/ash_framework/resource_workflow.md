@@ -78,6 +78,9 @@ Only after the domain and resource are fully defined should you generate migrati
 ```bash
 # Generate migrations based on resource changes
 mix ash.codegen communities_changes
+
+# IMPORTANT: Always use ash.migrate to run migrations, not ecto.migrate
+mix ash.migrate
 ```
 
 **Never modify existing migrations** - always generate new ones to make changes.
@@ -89,8 +92,8 @@ After completing the workflow, verify your implementation:
 1. Check that the domain includes the new resource
 2. Compile the application to ensure there are no errors
 3. Run tests to verify functionality
-4. Generate migrations if needed
-5. Apply migrations to update the database schema
+4. Generate migrations if needed using `mix ash.codegen`
+5. Apply migrations to update the database schema using `mix ash.migrate` (NOT `mix ecto.migrate`)
 
 ## Common Mistakes to Avoid
 

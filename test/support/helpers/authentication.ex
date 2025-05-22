@@ -15,8 +15,15 @@ defmodule Huddlz.Test.Helpers.Authentication do
     end
   end
 
+  # TODO: look into figuring out why this doesn't work
+  # @spec login(Plug.Conn.t(), %User{}) :: Plug.Conn.t()
+  # def login(conn, user) do
+  #   conn
+  #   |> Phoenix.ConnTest.init_test_session(%{})
+  #   |> AshAuthentication.Plug.Helpers.store_in_session(user)
+  # end
+
   def create_user(opts \\ %{}) do
-    User
-    |> Ash.Seed.seed!(opts |> Enum.into(%{email: Faker.Internet.email()}))
+    Huddlz.Generator.generate(Huddlz.Generator.user(opts))
   end
 end

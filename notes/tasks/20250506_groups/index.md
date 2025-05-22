@@ -5,7 +5,7 @@ Implement a group management system for huddlz that allows admins and verified u
 
 ## Implementation Sequence
 1. ✅ Admin Panel Implementation - Create admin panel for user search and permissions management
-2. Group Resource - Implement the core Group resource with basic attributes and relationships
+2. 🚧 Group Resource - Implement the core Group resource with basic attributes and relationships
 3. Group Creation - Add functionality for verified users and admins to create new groups
 4. Group Membership - Implement basic membership management (join/leave)
 5. Group Listing and Discovery - Create interfaces for browsing and searching groups

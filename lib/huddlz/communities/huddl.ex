@@ -75,6 +75,12 @@ defmodule Huddlz.Communities.Huddl do
       allow_nil? false
       primary_key? false
     end
+
+    belongs_to :group, Huddlz.Communities.Group do
+      attribute_type :uuid
+      allow_nil? true
+      primary_key? false
+    end
   end
 
   identities do

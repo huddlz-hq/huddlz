@@ -29,6 +29,7 @@ defmodule HuddlzWeb.ConnCase do
       import Phoenix.ConnTest
       import HuddlzWeb.ConnCase
       import Huddlz.Test.Helpers.Authentication
+      import Huddlz.Generator
     end
   end
 
