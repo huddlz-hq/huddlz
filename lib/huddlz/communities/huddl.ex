@@ -25,13 +25,13 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     read :search do
-      argument :query, :string do
+      argument :query, :ci_string do
         allow_nil? true
       end
 
       filter expr(
-               is_nil(^arg(:query)) or like(title, ^"%\#{arg(:query)}%") or
-                 like(description, ^"%\#{arg(:query)}%")
+               is_nil(^arg(:query)) or contains(title, ^arg(:query)) or
+                 contains(description, ^arg(:query))
              )
     end
   end

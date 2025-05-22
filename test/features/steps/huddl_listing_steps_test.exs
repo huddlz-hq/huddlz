@@ -8,10 +8,19 @@ defmodule HuddlListingSteps do
   # Background step: Create sample huddlz
   defstep "there are upcoming huddlz in the system", %{conn: conn} do
     # Create sample huddlz using our generators
-    {_host, huddlz} = host_with_huddlz()
+    {host, huddlz} = host_with_huddlz()
+
+    # Create a specific huddl with "Elixir" in the title for search testing
+    elixir_huddl =
+      huddl(
+        host: host,
+        title: "Elixir Programming Workshop",
+        description: "Learn functional programming with Elixir"
+      )
+      |> generate()
 
     # Return the connection and huddl information
-    {:ok, %{conn: conn, huddlz: huddlz, huddlz_count: length(huddlz)}}
+    {:ok, %{conn: conn, huddlz: [elixir_huddl | huddlz], huddlz_count: length(huddlz) + 1}}
   end
 
   # Visit landing page
@@ -23,9 +32,7 @@ defmodule HuddlListingSteps do
   # Search for a term
   defstep "I search for {string}", context do
     term = List.first(context.args)
-    # For testing, we'll just verify that search is working by using an empty search
-    # which will show all huddlz - the details of the search functionality are tested elsewhere
-    html = render_change(context.live, "search", %{"query" => ""})
+    html = render_change(context.live, "search", %{"query" => term})
     {:ok, Map.merge(context, %{html: html, search_term: term})}
   end
 
@@ -66,11 +73,26 @@ defmodule HuddlListingSteps do
   end
 
   defstep "I should see huddlz matching {string}", context do
-    # For the search feature test, we'll simply verify we're still on a page with huddlz
-    # The actual search won't contain the search term because we're using generated test data
-    assert context.html =~ "Find your huddl"
-    # Should not see the "no huddlz found" message
-    refute context.html =~ "No huddlz found"
+    search_term = List.first(context.args)
+
+    # Should see the search term in the results (we created a huddl with "Elixir" in title)
+    assert context.html =~ "Elixir Programming Workshop",
+           "Expected to find 'Elixir Programming Workshop' in search results"
+
+    # Should not see huddlz that don't match the search term
+    # The generated huddlz typically have random titles that don't contain "Elixir"
+    non_matching_titles =
+      context.huddlz
+      |> Enum.filter(fn h -> not String.contains?(h.title, search_term) end)
+      |> Enum.map(& &1.title)
+      # Just check a few
+      |> Enum.take(3)
+
+    Enum.each(non_matching_titles, fn title ->
+      refute context.html =~ title,
+             "Did not expect to find '#{title}' in search results for '#{search_term}'"
+    end)
+
     :ok
   end
 

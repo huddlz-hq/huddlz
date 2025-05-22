@@ -38,7 +38,7 @@ defmodule HuddlzWeb.HuddlLive do
           <p class="text-lg text-base-content/80">
             Find and join engaging discussion events with interesting people
           </p>
-          <form phx-change="search" class="mt-4">
+          <form phx-change="search" phx-submit="search" class="mt-4">
             <div class="flex">
               <input
                 type="text"
