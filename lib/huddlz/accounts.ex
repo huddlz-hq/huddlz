@@ -1,4 +1,8 @@
 defmodule Huddlz.Accounts do
+  @moduledoc """
+  The Accounts domain handles user authentication and authorization.
+  """
+
   use Ash.Domain,
     otp_app: :huddlz
 

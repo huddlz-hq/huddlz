@@ -80,7 +80,8 @@ defmodule Huddlz.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"},
-      {:cucumber, "~> 0.1.0", only: [:dev, :test]}
+      {:cucumber, "~> 0.1.0", only: [:dev, :test]},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end
 

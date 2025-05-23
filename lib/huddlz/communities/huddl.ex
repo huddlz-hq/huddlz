@@ -1,4 +1,8 @@
 defmodule Huddlz.Communities.Huddl do
+  @moduledoc """
+  A huddl represents an event or gathering within the Huddlz platform.
+  """
+
   use Ash.Resource,
     otp_app: :huddlz,
     domain: Huddlz.Communities,

@@ -9,21 +9,24 @@ defmodule Huddlz.Communities.GroupMember.Validations.VerifiedForElevatedRoles do
     role = Ash.Changeset.get_attribute(changeset, :role)
 
     if role in [:owner, :organizer] do
-      user_id = Ash.Changeset.get_argument(changeset, :user_id)
-
-      case Ash.get(Huddlz.Accounts.User, user_id, authorize?: false) do
-        {:ok, user} ->
-          if user.role in [:verified, :admin] do
-            :ok
-          else
-            {:error, field: :role, message: "Only verified users can be assigned as #{role}"}
-          end
-
-        _ ->
-          {:error, field: :user_id, message: "User not found"}
-      end
+      validate_elevated_role(changeset, role)
     else
       :ok
+    end
+  end
+
+  defp validate_elevated_role(changeset, role) do
+    user_id = Ash.Changeset.get_argument(changeset, :user_id)
+
+    with {:ok, user} <- Ash.get(Huddlz.Accounts.User, user_id, authorize?: false),
+         true <- user.role in [:verified, :admin] do
+      :ok
+    else
+      {:ok, _user} ->
+        {:error, field: :role, message: "Only verified users can be assigned as #{role}"}
+
+      _ ->
+        {:error, field: :user_id, message: "User not found"}
     end
   end
 end

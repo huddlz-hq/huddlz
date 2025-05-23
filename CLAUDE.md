@@ -11,6 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Run a specific test: `mix test path/to/test_file.exs:line_number`
 - Run Cucumber features: `mix test test/features/`
 - Format code: `mix format` (always run before committing changes)
+- Run linter: `mix credo --strict` (always run before committing changes)
 
 ## Test-Driven Development
 
@@ -39,7 +40,7 @@ tests should remain stable. See docs/testing.md for complete guidelines.
 - Use Phoenix LiveView for interactive UI components
 - Implement authentication with AshAuthentication
 - Always run `mix format` before committing changes
-- **IMPORTANT: Always prefer `with` statements over `case` statements for better error handling and readability**
+- **IMPORTANT: Prefer `with` statements over `case` statements for better error handling and readability when handling multiple operations or complex error cases. For single-clause pattern matching, use `case` statements as suggested by Credo**
 
 ### Commit Messages
 

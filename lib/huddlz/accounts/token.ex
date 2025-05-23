@@ -1,4 +1,8 @@
 defmodule Huddlz.Accounts.Token do
+  @moduledoc """
+  Token resource for managing authentication tokens and revocations.
+  """
+
   use Ash.Resource,
     otp_app: :huddlz,
     domain: Huddlz.Accounts,

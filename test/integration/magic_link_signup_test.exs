@@ -4,6 +4,8 @@ defmodule Huddlz.Integration.MagicLinkSignupTest do
   import Phoenix.LiveViewTest
   import Swoosh.TestAssertions
 
+  alias Huddlz.Accounts.User
+
   test "complete signup flow with magic link", %{conn: conn} do
     # Start on home page
     conn = get(conn, "/")
@@ -45,14 +47,14 @@ defmodule Huddlz.Integration.MagicLinkSignupTest do
   test "verify display name generation pattern", %{conn: _conn} do
     # We're just testing the display name generation function directly
     # Generate a display name using our function
-    display_name = Huddlz.Accounts.User.generate_random_display_name()
+    display_name = User.generate_random_display_name()
 
     # Verify the display name follows our pattern
     # It should be a combination of an adjective, animal, and number
     assert String.match?(display_name, ~r/[A-Z][a-z]+[A-Z][a-z]+\d+/)
 
     # Generate multiple names and make sure they're all different
-    names = for _ <- 1..10, do: Huddlz.Accounts.User.generate_random_display_name()
+    names = for _ <- 1..10, do: User.generate_random_display_name()
     unique_names = Enum.uniq(names)
 
     # Verify we got 10 unique names

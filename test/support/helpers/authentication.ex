@@ -1,8 +1,13 @@
 defmodule Huddlz.Test.Helpers.Authentication do
-  alias Huddlz.Accounts.User
-  alias Huddlz.Accounts
+  @moduledoc """
+  Test helper functions for user authentication in tests.
+  """
 
-  @spec login(Plug.Conn.t(), %User{}) :: Plug.Conn.t()
+  alias AshAuthentication.Plug.Helpers
+  alias Huddlz.Accounts
+  alias Huddlz.Accounts.User
+
+  @spec login(Plug.Conn.t(), User.t()) :: Plug.Conn.t()
   def login(conn, user) do
     case AshAuthentication.Jwt.token_for_user(user, %{}, domain: Accounts) do
       {:ok, token, _claims} ->
@@ -15,13 +20,13 @@ defmodule Huddlz.Test.Helpers.Authentication do
     end
   end
 
-  # TODO: look into figuring out why this doesn't work
-  # @spec login(Plug.Conn.t(), %User{}) :: Plug.Conn.t()
-  # def login(conn, user) do
-  #   conn
-  #   |> Phoenix.ConnTest.init_test_session(%{})
-  #   |> AshAuthentication.Plug.Helpers.store_in_session(user)
-  # end
+  # Alternative login method using AshAuthentication's store_in_session
+  # This method stores the user directly in the session instead of using JWT tokens
+  def login_with_session(conn, user) do
+    conn
+    |> Phoenix.ConnTest.init_test_session(%{})
+    |> Helpers.store_in_session(user)
+  end
 
   def create_user(opts \\ %{}) do
     Huddlz.Generator.generate(Huddlz.Generator.user(opts))

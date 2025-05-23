@@ -1,4 +1,8 @@
 defmodule Huddlz.Communities.Group do
+  @moduledoc """
+  A group is a community container that can organize huddlz and manage members.
+  """
+
   use Ash.Resource,
     otp_app: :huddlz,
     domain: Huddlz.Communities,

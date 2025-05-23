@@ -317,25 +317,41 @@ defmodule Huddlz.Communities.GroupMemberTest do
       assert private_result == []
     end
 
-    # TODO: update this test according to the matrix if needed
-    # test "verified non-member can see all members in public group, not in private group", %{
-    #   verified_non_member: verified_non_member,
-    #   public_group: public_group,
-    #   private_group: private_group
-    # } do
-    #   public_result =
-    #     GroupMember
-    #     |> Ash.Query.for_read(:get_by_group, %{group_id: public_group.id})
-    #     |> Ash.read!(actor: verified_non_member)
-    #
-    #   assert length(public_result) == 4
-    #
-    #   private_result =
-    #     GroupMember
-    #     |> Ash.Query.for_read(:get_by_group, %{group_id: private_group.id})
-    #     |> Ash.read!(actor: verified_non_member)
-    #
-    #   assert private_result == []
-    # end
+    test "verified non-member can see all members in public group, not in private group" do
+      # Create test users
+      owner = generate(user(role: :verified))
+      member1 = generate(user(role: :verified))
+      member2 = generate(user(role: :regular))
+      verified_non_member = generate(user(role: :verified))
+
+      # Create groups
+      public_group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+      private_group = generate(group(is_public: false, owner_id: owner.id, actor: owner))
+
+      # Add members to public group
+      generate(group_member(group_id: public_group.id, user_id: member1.id, role: :member, actor: owner))
+      generate(group_member(group_id: public_group.id, user_id: member2.id, role: :member, actor: owner))
+
+      # Add members to private group
+      generate(group_member(group_id: private_group.id, user_id: member1.id, role: :member, actor: owner))
+      generate(group_member(group_id: private_group.id, user_id: member2.id, role: :member, actor: owner))
+
+      # According to the access matrix, verified non-members can see members in public groups
+      public_result =
+        GroupMember
+        |> Ash.Query.for_read(:get_by_group, %{group_id: public_group.id})
+        |> Ash.read!(actor: verified_non_member)
+
+      # Should see owner + 2 members = 3 total
+      assert length(public_result) == 3
+
+      # But not in private groups - should return empty list
+      private_result =
+        GroupMember
+        |> Ash.Query.for_read(:get_by_group, %{group_id: private_group.id})
+        |> Ash.read!(actor: verified_non_member)
+
+      assert private_result == []
+    end
   end
 end

@@ -1,4 +1,8 @@
 defmodule Huddlz.Communities do
+  @moduledoc """
+  The Communities domain manages groups, huddlz, and group memberships.
+  """
+
   use Ash.Domain,
     otp_app: :huddlz
 

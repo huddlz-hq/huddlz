@@ -1,4 +1,8 @@
 defmodule Huddlz.Secrets do
+  @moduledoc """
+  Handles secret configuration for AshAuthentication tokens.
+  """
+
   use AshAuthentication.Secret
 
   def secret_for(

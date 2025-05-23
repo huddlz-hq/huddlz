@@ -6,8 +6,8 @@ defmodule Huddlz.Accounts.AdminAuthorizationTest do
 
   use Huddlz.DataCase, async: true
 
-  alias Huddlz.Accounts.User
   alias Huddlz.Accounts
+  alias Huddlz.Accounts.User
 
   setup do
     # Create an admin user for testing

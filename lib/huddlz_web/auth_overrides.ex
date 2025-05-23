@@ -1,4 +1,8 @@
 defmodule HuddlzWeb.AuthOverrides do
+  @moduledoc """
+  Custom authentication component overrides for the Huddlz application.
+  """
+
   use AshAuthentication.Phoenix.Overrides
 
   override AshAuthentication.Phoenix.Components.SignIn do

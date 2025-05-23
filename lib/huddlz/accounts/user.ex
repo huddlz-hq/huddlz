@@ -1,4 +1,8 @@
 defmodule Huddlz.Accounts.User do
+  @moduledoc """
+  User resource with authentication capabilities and role-based permissions.
+  """
+
   use Ash.Resource,
     otp_app: :huddlz,
     domain: Huddlz.Accounts,

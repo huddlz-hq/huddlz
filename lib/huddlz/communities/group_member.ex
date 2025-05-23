@@ -1,12 +1,16 @@
 defmodule Huddlz.Communities.GroupMember do
+  @moduledoc """
+  Represents membership of users in groups with different roles (owner, organizer, member).
+  """
+
   use Ash.Resource,
     otp_app: :huddlz,
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer]
 
-  alias Huddlz.Communities.GroupMember.Checks.GroupOwner
   alias Huddlz.Communities.GroupMember.Checks.GroupOrganizer
+  alias Huddlz.Communities.GroupMember.Checks.GroupOwner
   alias Huddlz.Communities.GroupMember.Checks.GroupVerifiedMember
 
   postgres do

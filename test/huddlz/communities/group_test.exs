@@ -1,9 +1,9 @@
 defmodule Huddlz.Communities.GroupTest do
   use Huddlz.DataCase, async: true
 
+  alias Huddlz.Accounts.User
   alias Huddlz.Communities
   alias Huddlz.Communities.Group
-  alias Huddlz.Accounts.User
 
   describe "group creation" do
     test "admin users can create groups" do
@@ -442,7 +442,7 @@ defmodule Huddlz.Communities.GroupTest do
       group_ids = Enum.map(result, & &1.id) |> MapSet.new()
 
       # Verify both groups are found
-      # Alpha in name 
+      # Alpha in name
       assert MapSet.member?(group_ids, group1.id)
       # alpha in description
       assert MapSet.member?(group_ids, group3.id)

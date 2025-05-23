@@ -22,16 +22,11 @@ defmodule Huddlz.Communities.GroupMember.Checks.GroupVerifiedMember do
       |> Ash.Query.filter(group_id: group_id, user_id: actor.id)
       |> Ash.Query.limit(1)
 
-    case Ash.read(query, authorize?: false) do
-      {:ok, [%GroupMember{}]} ->
-        # Check if the actor (user) is verified
-        case Map.get(actor, :role) do
-          :verified -> true
-          _ -> false
-        end
-
-      _ ->
-        false
+    with {:ok, [%GroupMember{}]} <- Ash.read(query, authorize?: false),
+         :verified <- Map.get(actor, :role) do
+      true
+    else
+      _ -> false
     end
   end
 
