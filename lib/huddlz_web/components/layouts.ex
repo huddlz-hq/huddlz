@@ -21,11 +21,12 @@ defmodule HuddlzWeb.Layouts do
         </a>
       </div>
       <div class="navbar-center">
-        <%= if @current_user && Huddlz.Accounts.admin?(@current_user) do %>
-          <nav class="flex items-center gap-4">
+        <nav class="flex items-center gap-4">
+          <a href="/groups" class="btn btn-ghost btn-sm">Groups</a>
+          <%= if @current_user && Huddlz.Accounts.admin?(@current_user) do %>
             <a href="/admin" class="btn btn-ghost btn-sm">Admin Panel</a>
-          </nav>
-        <% end %>
+          <% end %>
+        </nav>
       </div>
       <div class="navbar-end flex items-center gap-4">
         <.theme_toggle />

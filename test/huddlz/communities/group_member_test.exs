@@ -329,12 +329,22 @@ defmodule Huddlz.Communities.GroupMemberTest do
       private_group = generate(group(is_public: false, owner_id: owner.id, actor: owner))
 
       # Add members to public group
-      generate(group_member(group_id: public_group.id, user_id: member1.id, role: :member, actor: owner))
-      generate(group_member(group_id: public_group.id, user_id: member2.id, role: :member, actor: owner))
+      generate(
+        group_member(group_id: public_group.id, user_id: member1.id, role: :member, actor: owner)
+      )
+
+      generate(
+        group_member(group_id: public_group.id, user_id: member2.id, role: :member, actor: owner)
+      )
 
       # Add members to private group
-      generate(group_member(group_id: private_group.id, user_id: member1.id, role: :member, actor: owner))
-      generate(group_member(group_id: private_group.id, user_id: member2.id, role: :member, actor: owner))
+      generate(
+        group_member(group_id: private_group.id, user_id: member1.id, role: :member, actor: owner)
+      )
+
+      generate(
+        group_member(group_id: private_group.id, user_id: member2.id, role: :member, actor: owner)
+      )
 
       # According to the access matrix, verified non-members can see members in public groups
       public_result =

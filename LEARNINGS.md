@@ -46,6 +46,18 @@ This document captures key insights, patterns, and best practices discovered dur
 - Structure Cucumber steps to be reusable across similar scenarios
 - Use generators for creating test data to avoid repetition
 - Separate UI testing from business logic testing
+- **Ash Testing Patterns**:
+  - Always use `to_string()` when comparing CiString attributes in assertions
+  - Use `authorize?: false` when testing data access patterns or queries
+  - Must `require Ash.Query` before using Ash.Query macros in tests
+  - Ash errors don't have a simple `.message` field - match on error type instead
+  - When testing validation errors, check for the actual error structure fields
+- **Cucumber Testing**:
+  - Run Cucumber tests synchronously (`async: false`) when they share data
+  - Ensure users are properly persisted before authentication steps
+- **LiveView Testing**:
+  - All LiveView modules should wrap content in Layouts.app for consistency
+  - Navigation tests may redirect to sign-in if authentication is required
 
 ### Error Handling
 - Use pattern matching on error tuples (`{:error, reason}`) for explicit error handling

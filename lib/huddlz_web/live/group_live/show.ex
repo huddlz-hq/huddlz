@@ -2,7 +2,10 @@ defmodule HuddlzWeb.GroupLive.Show do
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities.Group
+  alias Huddlz.Communities.GroupMember
   alias HuddlzWeb.Layouts
+
+  require Ash.Query
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
 
@@ -15,10 +18,14 @@ defmodule HuddlzWeb.GroupLive.Show do
   def handle_params(%{"id" => id}, _, socket) do
     with {:ok, group} <- get_group(id),
          :ok <- check_group_access(group, socket.assigns.current_user) do
+      members = get_members(group, socket.assigns.current_user)
+
       {:noreply,
        socket
        |> assign(:page_title, group.name)
        |> assign(:group, group)
+       |> assign(:members, members)
+       |> assign(:member_count, get_member_count(group))
        |> assign(:is_member, member?(group, socket.assigns.current_user))
        |> assign(:is_owner, owner?(group, socket.assigns.current_user))}
     else
@@ -56,7 +63,24 @@ defmodule HuddlzWeb.GroupLive.Show do
             <span class="badge badge-primary ml-2">Owner</span>
           <% end %>
         </:subtitle>
-        <:actions></:actions>
+        <:actions>
+          <%= if @current_user && !@is_owner do %>
+            <%= if @is_member do %>
+              <.button
+                phx-click="leave_group"
+                data-confirm="Are you sure you want to leave this group?"
+              >
+                Leave Group
+              </.button>
+            <% else %>
+              <%= if @group.is_public do %>
+                <.button phx-click="join_group">
+                  Join Group
+                </.button>
+              <% end %>
+            <% end %>
+          <% end %>
+        </:actions>
       </.header>
 
       <div class="mt-8">
@@ -103,13 +127,68 @@ defmodule HuddlzWeb.GroupLive.Show do
           </div>
 
           <div class="mt-8">
-            <h3>Members</h3>
-            <p class="text-gray-600">Membership features coming soon!</p>
+            <h3>Members ({@member_count})</h3>
+            <%= if @members do %>
+              <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <%= for member <- @members do %>
+                  <div class="flex items-center gap-3 rounded-lg border p-3">
+                    <div class="flex-1">
+                      <p class="font-medium">
+                        {member.display_name || "User"}
+                        <%= if member.id == @group.owner_id do %>
+                          <span class="text-xs font-normal text-gray-500">(Owner)</span>
+                        <% end %>
+                      </p>
+                      <p class="text-sm text-gray-500">{member.email}</p>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+            <% else %>
+              <p class="text-gray-600">Members list is only visible to verified users.</p>
+            <% end %>
           </div>
         </div>
       </div>
     </Layouts.app>
     """
+  end
+
+  @impl true
+  def handle_event("join_group", _, socket) do
+    case join_group(socket.assigns.group, socket.assigns.current_user) do
+      {:ok, _} ->
+        group = Ash.reload!(socket.assigns.group)
+        members = get_members(group, socket.assigns.current_user)
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Successfully joined the group!")
+         |> assign(:is_member, true)
+         |> assign(:members, members)
+         |> assign(:member_count, get_member_count(group))}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to join group")}
+    end
+  end
+
+  def handle_event("leave_group", _, socket) do
+    case leave_group(socket.assigns.group, socket.assigns.current_user) do
+      {:ok, _} ->
+        group = Ash.reload!(socket.assigns.group)
+        members = get_members(group, socket.assigns.current_user)
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Successfully left the group")
+         |> assign(:is_member, false)
+         |> assign(:members, members)
+         |> assign(:member_count, get_member_count(group))}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to leave group")}
+    end
   end
 
   defp get_group(id) do
@@ -132,8 +211,6 @@ defmodule HuddlzWeb.GroupLive.Show do
   defp member?(_group, nil), do: false
 
   defp member?(group, user) do
-    require Ash.Query
-
     Huddlz.Communities.GroupMember
     |> Ash.Query.filter(group_id == ^group.id and user_id == ^user.id)
     |> Ash.exists?(authorize?: false)
@@ -147,5 +224,68 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   defp format_date(datetime) do
     Calendar.strftime(datetime, "%B %d, %Y")
+  end
+
+  defp get_members(group, current_user) do
+    # Check if current user can see members based on CLAUDE.md rules
+    cond do
+      # Owners and organizers can always see members
+      owner?(group, current_user) || organizer?(group, current_user) ->
+        load_members(group)
+
+      # Verified members can see member list
+      member?(group, current_user) && current_user && current_user.role == :verified ->
+        load_members(group)
+
+      # Verified non-members can see members of public groups
+      group.is_public && current_user && current_user.role == :verified ->
+        load_members(group)
+
+      # Everyone else cannot see members
+      true ->
+        nil
+    end
+  end
+
+  defp load_members(group) do
+    GroupMember
+    |> Ash.Query.filter(group_id == ^group.id)
+    |> Ash.Query.load(:user)
+    |> Ash.read!(authorize?: false)
+    |> Enum.map(& &1.user)
+  end
+
+  defp get_member_count(group) do
+    GroupMember
+    |> Ash.Query.filter(group_id == ^group.id)
+    |> Ash.count!(authorize?: false)
+  end
+
+  defp organizer?(_group, nil), do: false
+
+  defp organizer?(group, user) do
+    GroupMember
+    |> Ash.Query.filter(group_id == ^group.id and user_id == ^user.id and role == :organizer)
+    |> Ash.exists?(authorize?: false)
+  end
+
+  defp join_group(group, user) do
+    GroupMember
+    |> Ash.Changeset.for_create(
+      :join_group,
+      %{
+        group_id: group.id,
+        user_id: user.id
+      },
+      actor: user
+    )
+    |> Ash.create()
+  end
+
+  defp leave_group(group, user) do
+    GroupMember
+    |> Ash.Query.filter(group_id == ^group.id and user_id == ^user.id)
+    |> Ash.read_one!(authorize?: false)
+    |> Ash.destroy(action: :leave_group, actor: user)
   end
 end

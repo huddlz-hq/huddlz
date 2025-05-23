@@ -12,6 +12,7 @@ defmodule Huddlz.Communities.GroupMember do
   alias Huddlz.Communities.GroupMember.Checks.GroupOrganizer
   alias Huddlz.Communities.GroupMember.Checks.GroupOwner
   alias Huddlz.Communities.GroupMember.Checks.GroupVerifiedMember
+  alias Huddlz.Communities.GroupMember.Checks.PublicGroup
 
   postgres do
     table "group_members"
@@ -59,6 +60,26 @@ defmodule Huddlz.Communities.GroupMember do
       filter expr(user_id == ^arg(:user_id))
     end
 
+    create :join_group do
+      description "Join a group as a regular member"
+
+      argument :group_id, :uuid do
+        allow_nil? false
+      end
+
+      argument :user_id, :uuid do
+        allow_nil? false
+      end
+
+      change manage_relationship(:group_id, :group, type: :append)
+      change manage_relationship(:user_id, :user, type: :append)
+      change set_attribute(:role, :member)
+    end
+
+    destroy :leave_group do
+      description "Leave a group (member removes themselves)"
+    end
+
     read :get_by_group do
       description "Get all members of a group"
 
@@ -96,6 +117,22 @@ defmodule Huddlz.Communities.GroupMember do
     # Group owners can remove members
     policy action(:remove_member) do
       authorize_if GroupOwner
+    end
+
+    # Users can join public groups
+    policy action(:join_group) do
+      description "Allow users to join public groups"
+      # Check if the user is trying to join as themselves
+      forbid_unless expr(^arg(:user_id) == ^actor(:id))
+      # And the group is public
+      authorize_if PublicGroup
+    end
+
+    # Users can leave groups
+    policy action(:leave_group) do
+      description "Allow users to leave groups they're members of"
+      # User must be the member being removed
+      authorize_if relates_to_actor_via(:user)
     end
 
     policy action(:get_by_group) do

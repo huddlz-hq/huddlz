@@ -47,6 +47,19 @@ defmodule Huddlz.Accounts.User do
   actions do
     defaults [:read]
 
+    create :create do
+      accept [:email, :display_name, :role]
+
+      change before_action(fn changeset, _context ->
+               if Ash.Changeset.get_attribute(changeset, :display_name) do
+                 changeset
+               else
+                 display_name = generate_random_display_name()
+                 Ash.Changeset.change_attribute(changeset, :display_name, display_name)
+               end
+             end)
+    end
+
     read :get_by_subject do
       description "Get a user by the subject claim in a JWT"
       argument :subject, :string, allow_nil?: false

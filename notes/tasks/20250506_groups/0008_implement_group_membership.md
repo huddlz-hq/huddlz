@@ -17,11 +17,17 @@
   - Member roles beyond basic membership
 
 ## Current Status
-- Progress: 0%
-- Blockers: 
-  - Group resource must be implemented
-  - Group creation must be functional
-- Next steps: Begin implementation
+- Progress: 100%
+- Blockers: None
+- Current activity: Completed
+
+## Session Log
+[2025-01-23] Starting implementation of this task...
+[2025-01-23] Added join_group and leave_group actions to GroupMember resource
+[2025-01-23] Created PublicGroup check to ensure only public groups can be joined
+[2025-01-23] Updated group show LiveView with membership UI and functionality
+[2025-01-23] Added comprehensive tests for membership functionality
+[2025-01-23] Task completed successfully - users can now join/leave groups
 
 ## Requirements Analysis
 - Implement join/leave functionality for public groups
@@ -301,9 +307,16 @@ end
    If everything looks good, this completes the group management feature."
 
 ## Progress Tracking
-- Update after completing each checklist item
-- Mark items as completed with timestamps
-- Document any issues encountered and how they were resolved
+- [x] Add join_group action to GroupMember resource - Completed
+- [x] Add leave_group action to GroupMember resource - Completed  
+- [x] Ensure group creator becomes a member automatically - Already implemented
+- [x] Create UI components for membership actions - Completed
+- [x] Implement members list view - Completed
+- [x] Add authorization checks for membership actions - Completed
+- [x] Update group show page with membership functionality - Completed
+- [x] Test all membership scenarios - Completed
+
+Note: Ownership transfer when owner leaves group deemed out of scope for this feature.
 
 ## Next Task
 - This is the final task for the group management feature

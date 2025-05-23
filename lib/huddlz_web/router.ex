@@ -37,6 +37,11 @@ defmodule HuddlzWeb.Router do
       # on_mount {HuddlzWeb.LiveUserAuth, :live_no_user}
       live "/", HuddlLive, :index
       live "/admin", AdminLive, :index
+
+      # Group routes
+      live "/groups", GroupLive.Index, :index
+      live "/groups/new", GroupLive.New, :new
+      live "/groups/:id", GroupLive.Show, :show
     end
   end
 

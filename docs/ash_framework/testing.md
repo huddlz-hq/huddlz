@@ -1,290 +1,181 @@
-# Ash Framework: Testing
+# Testing Ash Framework Resources
 
-This document covers best practices and patterns for testing Ash Framework applications, with a focus on authentication, LiveView, and comprehensive test helpers.
+This guide covers best practices and common patterns for testing Ash Framework resources in Elixir applications.
 
-## Table of Contents
+## Key Testing Patterns
 
-- [Setting Up the Testing Environment](#setting-up-the-testing-environment)
-- [Testing Authentication and Protected Routes](#testing-authentication-and-protected-routes)
-- [Creating Reusable Test Helpers](#creating-reusable-test-helpers)
-- [Testing LiveView Interactions](#testing-liveview-interactions)
-- [Best Practices](#best-practices-for-testing-ash-applications)
-- [Key Testing Functions](#key-test-functions-for-ash-applications)
+### 1. CiString Attribute Handling
 
-## Setting Up the Testing Environment
-
-### Configuring Ash for Testing
-
-When testing Ash applications, specific configurations are needed for the test environment:
+Ash's CiString (case-insensitive string) type requires special handling in tests:
 
 ```elixir
-# In config/test.exs
-config :ash, :disable_async?, true
-config :ash, :missed_notifications, :ignore
+# ❌ Wrong - Direct comparison will fail
+assert group.name == "Test Group"
+
+# ✅ Right - Convert to string first
+assert to_string(group.name) == "Test Group"
 ```
 
-These settings:
-1. Disable asynchronous processing to prevent race conditions during tests
-2. Ignore Ecto transaction notifications which can cause issues in the test environment
+This applies to all CiString fields like name, description, etc.
 
-### Adding mix_test_watch for Development
+### 2. Query Authorization
 
-For a streamlined development workflow, the `mix_test_watch` tool can be added:
-
-```bash
-# Using Igniter
-mix igniter.install mix_test_watch
-
-# Or manually in mix.exs
-defp deps do
-  [
-    {:mix_test_watch, "~> 1.0", only: :dev, runtime: false}
-    # other deps...
-  ]
-end
-```
-
-This tool automatically runs tests when files change, providing immediate feedback during development.
-
-## Testing Authentication and Protected Routes
-
-### Testing Guest Access Restrictions
-
-To verify that unauthenticated users cannot access protected routes:
+When testing queries, you often need to bypass authorization to test the data layer directly:
 
 ```elixir
-defmodule HelpcenterWeb.KnowledgeBase.CategoriesLiveTest do
-  use HelpcenterWeb.ConnCase, async: false
-  import Phoenix.LiveViewTest
+# ❌ Wrong - May fail due to authorization policies
+groups = Group |> Ash.Query.filter(is_public: true) |> Ash.read!()
+
+# ✅ Right - Bypass authorization for testing
+groups = Group |> Ash.Query.filter(is_public: true) |> Ash.read!(authorize?: false)
+```
+
+Use `authorize?: false` when:
+- Testing data access patterns
+- Setting up test data
+- Verifying query logic independent of permissions
+
+### 3. Query Macro Requirements
+
+Always require Ash.Query before using query macros:
+
+```elixir
+defmodule MyTest do
+  use MyApp.DataCase
   
-  test "Guest cannot access /categories", %{conn: conn} do
-    assert conn
-           |> live(~p"/categories")
-           # Guests are redirected to login page
-           |> follow_redirect(conn, "/sign-in")
-  end
-end
-```
-
-This test confirms that:
-- Unauthenticated users attempting to access protected routes are redirected
-- The authentication system is properly integrated with route protection
-
-### Testing Authenticated Access
-
-Testing protected routes requires setting up authenticated sessions:
-
-```elixir
-test "User can see a list of categories", %{conn: conn} do
-  # Create test user
-  user = create_user()
-  
-  # Add test data
-  categories = get_categories()
-
-  # Access protected page with authenticated connection
-  {:ok, _view, html} =
-    conn
-    |> login(user)
-    |> live(~p"/categories")
-
-  # Verify content
-  assert html =~ "Categories"
-  
-  # Verify each category is displayed
-  for category <- categories do
-    assert html =~ category.name
-  end
-end
-```
-
-## Creating Reusable Test Helpers
-
-To avoid repetition and improve test organization, extract common testing logic:
-
-### Authentication Helper
-
-```elixir
-# In test/support/auth_case.ex
-defmodule AuthCase do
-  def login(conn, user) do
-    case AshAuthentication.Jwt.token_for_user(user, %{}, domain: Helpcenter.Accounts) do
-      {:ok, token, _claims} ->
-        conn
-        |> Phoenix.ConnTest.init_test_session(%{})
-        |> Plug.Conn.put_session(:user_token, token)
-
-      {:error, reason} ->
-        raise "Failed to generate token: #{inspect(reason)}"
-    end
-  end
-
-  def create_user do
-    Helpcenter.Accounts.User
-    |> Ash.Seed.seed!(%{email: "test@example.com"})
-  end
-end
-```
-
-### Data Generation Helper
-
-```elixir
-# In test/support/category_case.ex
-defmodule CategoryCase do
-  alias Helpcenter.KnowledgeBase.Category
-
-  @doc """
-  Get a single category from the database. If none exists,
-  insert categories and return the first one.
-  """
-  def get_category do
-    case Ash.read_first(Category) do
-      {:ok, nil} -> create_categories() |> Enum.at(0)
-      {:ok, category} -> category
-    end
-  end
-
-  @doc """
-  Get a list of categories. If none exist in the database,
-  insert them and return the list.
-  """
-  def get_categories do
-    case Ash.read(Category) do
-      {:ok, []} -> create_categories()
-      {:ok, categories} -> categories
-    end
-  end
-
-  @doc """
-  Insert categories into the database.
-  """
-  def create_categories do
-    attrs = [
-      %{
-        name: "Account and Login",
-        slug: "account-login",
-        description: "Help with account creation and login issues"
-      },
-      # Additional test categories...
-    ]
-
-    Ash.Seed.seed!(Category, attrs)
-  end
-end
-```
-
-## Testing LiveView Interactions
-
-Ash applications often use LiveView for interactive interfaces. Testing these interactions requires simulating user actions:
-
-### Testing Form Submissions
-
-```elixir
-test "User can edit category from the UI", %{conn: conn} do
-  category = get_category()
-
-  # Navigate to edit page
-  {:ok, view, html} =
-    conn
-    |> login(create_user())
-    |> live(~p"/categories/#{category.id}")
-
-  # Verify form is rendered
-  assert html =~ category.name
-  assert html =~ "form[name]"
-
-  # Prepare updated attributes
-  attributes = %{
-    name: "#{category.name} updated",
-    description: "#{category.description} updated."
-  }
-
-  # Test form validation
-  assert view
-         |> form("#category-form-#{category.id}", form: %{name: ""})
-         |> render_change() =~ "required"
-
-  # Submit form and follow redirect
-  assert view
-         |> form("#category-form-#{category.id}", form: attributes)
-         |> render_submit()
-         |> follow_redirect(conn, "/categories")
-
-  # Verify database was updated
+  # ✅ Required for using Ash.Query macros
   require Ash.Query
-  assert Helpcenter.KnowledgeBase.Category
-         |> Ash.Query.filter(name == ^attributes.name)
-         |> Ash.exists?()
+  
+  test "filters groups by owner" do
+    Group
+    |> Ash.Query.filter(owner_id: user.id)
+    |> Ash.read!()
+  end
 end
 ```
 
-### Testing UI Element Interactions
+### 4. Error Structure Assertions
+
+Ash errors have a specific structure. Don't expect a simple `.message` field:
 
 ```elixir
-test "User can go to the new category form page from the list", %{conn: conn} do
-  {:ok, view, _html} =
-    conn
-    |> login(create_user())
-    |> live(~p"/categories")
-    
-  # Click the create button and follow redirect
-  assert view
-         |> element("#create-category-button")
-         |> render_click()
-         |> follow_redirect(conn, ~p"/categories/create")
-end
+# ❌ Wrong - Ash errors don't have a direct message field
+assert error.message =~ "is required"
+
+# ✅ Right - Check the field that caused the error
+assert error.field == :name
+
+# ✅ Right - For validation errors with messages
+assert error.message =~ "greater than or equal"
+
+# ✅ Right - Check error type
+assert %Ash.Error.Changes.Required{} = error
 ```
 
-### Testing Delete Operations
+### 5. Testing Changesets and Actions
+
+When testing create/update actions:
 
 ```elixir
-test "User should be able to delete an existing category", %{conn: conn} do
-  category = get_category()
+# Create with changeset
+{:ok, group} =
+  Group
+  |> Ash.Changeset.for_create(:create_group, %{
+    name: "Test Group",
+    owner_id: owner.id
+  })
+  |> Ash.create(actor: owner)
 
-  {:ok, view, html} =
-    conn
-    |> login(create_user())
-    |> live(~p"/categories")
+# Update with changeset
+{:ok, updated} =
+  group
+  |> Ash.Changeset.for_update(:update_details, %{
+    name: "Updated Name"
+  })
+  |> Ash.update(actor: owner)
+```
 
-  # Verify category exists initially
-  assert html =~ category.name
+### 6. Testing with Generators
 
-  # Trigger delete action
-  view
-  |> element("#delete-button-#{category.id}")
-  |> render_click()
+Use generators to create test data consistently:
 
-  # Verify category was removed from database
-  require Ash.Query
-  refute Helpcenter.KnowledgeBase.Category
-         |> Ash.Query.filter(id == ^category.id)
-         |> Ash.exists?()
+```elixir
+setup do
+  owner = generate(user(role: :verified))
+  group = generate(group(
+    name: "Test Group",
+    owner_id: owner.id,
+    actor: owner
+  ))
+  
+  %{owner: owner, group: group}
 end
 ```
 
-## Best Practices for Testing Ash Applications
+## Common Pitfalls
 
-1. **Data Isolation**: Use `Ash.Seed` for test data setup instead of raw database operations
-2. **Test for Permissions**: Verify both allowed and disallowed operations for different user types
-3. **Helper Modules**: Create helper modules to reduce duplication in tests
-4. **Complete Workflows**: Test end-to-end workflows, not just individual operations
-5. **Verify Database State**: Check that database records reflect UI operations
-6. **LiveView Testing**: Use `render_click`, `render_submit`, and other LiveView test helpers
-7. **Authentication Testing**: Test both authenticated and unauthenticated scenarios
+### 1. Forgetting Authorization Context
 
-## Key Test Functions for Ash Applications
+```elixir
+# ❌ May fail if no actor provided
+Ash.get!(Group, group_id)
 
-1. **Ash.Seed.seed!/2**: Creates test records with specific attributes
-2. **Ash.exists?/1**: Verifies if records matching a query exist
-3. **Ash.read/1, Ash.read_first/1**: Retrieves records for verification
-4. **Ash.Query.filter/2**: Builds queries to verify database state
+# ✅ Provide actor or disable authorization
+Ash.get!(Group, group_id, actor: user)
+# or
+Ash.get!(Group, group_id, authorize?: false)
+```
 
-## LiveView Testing Functions
+### 2. Assuming Error Message Format
 
-1. **live/2**: Connects to a LiveView for testing
-2. **element/2**: Selects a DOM element for interaction
-3. **render_click/1**: Simulates clicking an element
-4. **form/3**: Selects a form for interaction
-5. **render_change/1**: Simulates form field changes
-6. **render_submit/1**: Simulates form submission
-7. **follow_redirect/3**: Follows LiveView redirects
+```elixir
+# ❌ Error messages may vary
+assert error.message == "is required"
+
+# ✅ More flexible assertion
+assert error.field == :name
+assert error.__struct__ == Ash.Error.Changes.Required
+```
+
+### 3. Testing Implementation Instead of Behavior
+
+```elixir
+# ❌ Testing internal changeset details
+assert changeset.changes.name == "Test"
+
+# ✅ Testing the outcome
+{:ok, group} = Ash.create(changeset)
+assert to_string(group.name) == "Test"
+```
+
+## Integration with LiveView Tests
+
+When testing LiveView components that use Ash resources:
+
+```elixir
+test "displays group details", %{conn: conn, group: group} do
+  {:ok, _view, html} = live(conn, ~p"/groups/#{group.id}")
+  
+  # Remember to convert CiString fields
+  assert html =~ to_string(group.name)
+  assert html =~ to_string(group.description)
+end
+```
+
+## Cucumber/BDD Testing
+
+For Cucumber tests with Ash:
+
+1. Tests can run asynchronously when using ConnCase or DataCase - database isolation is handled properly
+2. Ensure proper data persistence in setup steps
+3. Use `authorize?: false` when looking up test data
+
+## Testing Checklist
+
+- [ ] Add `require Ash.Query` when using query macros
+- [ ] Use `to_string()` for CiString comparisons
+- [ ] Consider authorization context (`actor` or `authorize?: false`)
+- [ ] Test behavior, not implementation
+- [ ] Handle error structures appropriately
+- [ ] Use generators for consistent test data
+- [ ] Use ConnCase or DataCase for proper database isolation
