@@ -95,6 +95,10 @@ defmodule Huddlz.Generator do
     host = Keyword.get(opts, :host)
     host_id = if host, do: host.id, else: nil
 
+    # Get or create a group
+    group = Keyword.get(opts, :group) || generate(group(owner: host))
+    group_id = if group, do: group.id, else: nil
+
     # Generate random dates in the future
     days_ahead = :rand.uniform(30)
     hours_duration = :rand.uniform(4)
@@ -123,9 +127,13 @@ defmodule Huddlz.Generator do
         description: Faker.Lorem.paragraph(2..3),
         starts_at: start_time,
         ends_at: end_time,
-        status: "upcoming",
         thumbnail_url: thumbnail_url,
-        host_id: host_id
+        creator_id: host_id,
+        group_id: group_id,
+        event_type: :in_person,
+        physical_location: "123 Main St, Anytown, USA",
+        is_private: false,
+        rsvp_count: 0
       },
       overrides: opts
     )
