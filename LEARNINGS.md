@@ -19,6 +19,11 @@ This document captures key insights, patterns, and best practices discovered dur
 - For significant data model changes, consider creating new domains
 - Use many-to-many relationships with join resources for group memberships
 - Generate snapshots before migrations when using Ash migrations
+- **Authorization Architecture**: Use modular check modules (e.g., GroupOwner, GroupMember) for complex access control
+- **Change Modules**: Custom changes (e.g., AddOwnerAsMember) elegantly handle complex business logic
+- **Validation Patterns**: Cross-cutting validations (e.g., VerifiedForElevatedRoles) enforce business rules
+- **CiString Usage**: Case-insensitive strings are ideal for user-facing identifiers (group names, etc.)
+- **Role Modeling**: String-based roles with validation provide flexibility and type safety
 - **CRITICAL**: Always follow the domain-resource-codegen sequence:
   1. Define/update the domain first
   2. Create/update the resource definition next
@@ -52,6 +57,9 @@ This document captures key insights, patterns, and best practices discovered dur
   - Must `require Ash.Query` before using Ash.Query macros in tests
   - Ash errors don't have a simple `.message` field - match on error type instead
   - When testing validation errors, check for the actual error structure fields
+  - Test authorization comprehensively with all role/permission combinations
+  - Use custom generators for complex test data (e.g., verified users)
+  - Test edge cases like non-member access and invalid role assignments
 - **Cucumber Testing**:
   - Run Cucumber tests synchronously (`async: false`) when they share data
   - Ensure users are properly persisted before authentication steps
@@ -91,6 +99,11 @@ This document captures key insights, patterns, and best practices discovered dur
 - Break complex features into logical task sequences with clear dependencies
 - Document architecture decisions during planning phase
 - Create detailed task boundaries to prevent scope creep
+- **Task Granularity**: Avoid overly small tasks (e.g., separate migration generation)
+- **State Verification**: Check current system state before planning modifications
+- **Duplicate Detection**: Review existing implementations to avoid redundancy
+- **Access Control Documentation**: Define visibility matrices upfront for complex permissions
+- **Real-time Documentation**: Update task progress immediately after each step
 
 ### AI Collaboration
 - Start with requirements definition before implementation to ensure alignment

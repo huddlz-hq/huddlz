@@ -1,0 +1,23 @@
+// Folder-specific settings
+//
+// For a full list of overridable settings, and general information on folder-specific settings,
+// see the documentation: https://zed.dev/docs/configuring-zed#settings-files
+{
+  "context_servers": {
+    "Context7": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "@upstash/context7-mcp@latest"]
+      },
+      "settings": {}
+    },
+    "tidewave": {
+      "command": {
+        "path": "mcp-proxy",
+        "args": ["http://localhost:4000/tidewave/mcp"],
+        "env": null
+      },
+      "settings": {}
+    }
+  }
+}
