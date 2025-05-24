@@ -276,6 +276,194 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
     end
   end
 
+  describe "RSVP cancellation functionality" do
+    setup do
+      # Create users
+      owner = create_verified_user()
+      member = create_verified_user()
+      other_user = create_verified_user()
+
+      # Create group
+      group =
+        Group
+        |> Ash.Changeset.for_create(
+          :create_group,
+          %{
+            name: "Test Group",
+            description: "A test group",
+            is_public: true,
+            owner_id: owner.id
+          },
+          actor: owner
+        )
+        |> Ash.create!()
+
+      # Add member to group
+      GroupMember
+      |> Ash.Changeset.for_create(
+        :add_member,
+        %{
+          group_id: group.id,
+          user_id: member.id,
+          role: "member"
+        },
+        actor: owner
+      )
+      |> Ash.create!()
+
+      # Create a huddl
+      huddl =
+        Huddl
+        |> Ash.Changeset.for_create(
+          :create,
+          %{
+            title: "Test Huddl",
+            description: "A test huddl",
+            starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
+            ends_at: DateTime.add(DateTime.utc_now(), 2, :day),
+            event_type: :virtual,
+            virtual_link: "https://zoom.us/j/123456",
+            is_private: false,
+            group_id: group.id,
+            creator_id: owner.id
+          },
+          actor: owner
+        )
+        |> Ash.create!()
+
+      %{
+        owner: owner,
+        member: member,
+        other_user: other_user,
+        group: group,
+        huddl: huddl
+      }
+    end
+
+    test "user can cancel their own RSVP", %{member: member, huddl: huddl} do
+      # First RSVP to the huddl
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.update!()
+
+      # Verify RSVP exists
+      huddl_with_rsvp = Ash.reload!(huddl)
+      assert huddl_with_rsvp.rsvp_count == 1
+
+      # Cancel the RSVP
+      updated_huddl =
+        huddl_with_rsvp
+        |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: member.id}, actor: member)
+        |> Ash.update!()
+
+      assert updated_huddl.rsvp_count == 0
+
+      # Verify attendee record was deleted
+      attendees =
+        HuddlAttendee
+        |> Ash.Query.for_read(:by_huddl, %{huddl_id: huddl.id})
+        |> Ash.read!(authorize?: false)
+
+      assert Enum.empty?(attendees)
+    end
+
+    test "cancelling RSVP when not RSVPed returns unchanged", %{member: member, huddl: huddl} do
+      # Try to cancel without having RSVPed
+      updated_huddl =
+        huddl
+        |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: member.id}, actor: member)
+        |> Ash.update!()
+
+      assert updated_huddl.rsvp_count == 0
+    end
+
+    test "user cannot cancel someone else's RSVP", %{
+      member: member,
+      other_user: other_user,
+      huddl: huddl
+    } do
+      # Member RSVPs
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.update!()
+
+      # Other user tries to cancel member's RSVP
+      assert_raise Ash.Error.Forbidden, fn ->
+        huddl
+        |> Ash.reload!()
+        |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: member.id}, actor: other_user)
+        |> Ash.update!()
+      end
+    end
+
+    test "multiple users can cancel their RSVPs independently", %{
+      member: member,
+      owner: owner,
+      huddl: huddl
+    } do
+      # Both users RSVP
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.update!()
+
+      huddl
+      |> Ash.reload!()
+      |> Ash.Changeset.for_update(:rsvp, %{user_id: owner.id}, actor: owner)
+      |> Ash.update!()
+
+      huddl_with_rsvps = Ash.reload!(huddl)
+      assert huddl_with_rsvps.rsvp_count == 2
+
+      # Member cancels their RSVP
+      huddl_after_first_cancel =
+        huddl_with_rsvps
+        |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: member.id}, actor: member)
+        |> Ash.update!()
+
+      assert huddl_after_first_cancel.rsvp_count == 1
+
+      # Owner cancels their RSVP
+      huddl_after_second_cancel =
+        huddl_after_first_cancel
+        |> Ash.reload!()
+        |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: owner.id}, actor: owner)
+        |> Ash.update!()
+
+      assert huddl_after_second_cancel.rsvp_count == 0
+    end
+
+    test "user can RSVP again after cancelling", %{member: member, huddl: huddl} do
+      # RSVP
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.update!()
+
+      # Cancel
+      huddl
+      |> Ash.reload!()
+      |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.update!()
+
+      # RSVP again
+      updated_huddl =
+        huddl
+        |> Ash.reload!()
+        |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+        |> Ash.update!()
+
+      assert updated_huddl.rsvp_count == 1
+
+      # Verify attendee record exists
+      attendees =
+        HuddlAttendee
+        |> Ash.Query.for_read(:by_huddl, %{huddl_id: huddl.id})
+        |> Ash.read!(authorize?: false)
+
+      assert length(attendees) == 1
+      assert hd(attendees).user_id == member.id
+    end
+  end
+
   defp create_verified_user do
     User
     |> Ash.Changeset.for_create(:create, %{
