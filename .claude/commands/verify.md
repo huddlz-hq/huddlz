@@ -1,252 +1,172 @@
 <prompt>
   <params>
-    issue # GitHub parent issue number to verify
+    issue # GitHub issue number to verify
   </params>
 
   <instructions>
     # Verification Phase
     
-    This command performs comprehensive review and testing of a completed feature implementation.
+    This command performs comprehensive verification of the implemented feature.
     
-    ## Feature Status Check
+    ## Context Discovery
     
-    1. Fetch parent issue and all sub-issues:
-       ```
-       gh issue view {{ params.issue }} --json title,body,state,labels
-       gh issue list --label "parent-{{ params.issue }}" --json number,title,state
-       ```
-    
-    2. Verify completion status:
-       - Count closed vs open sub-issues
-       - List any incomplete tasks
-       - If not all closed, ask user if they want to proceed
-    
-    3. Update Feature Log:
-       ```markdown
-       ### Verification Phase - [Current Date/Time]
+    1. Validate issue parameter:
+       - Must have {{ params.issue }} parameter
+       - If missing, error with: "Please specify issue: /verify issue=123"
        
-       Starting comprehensive review of feature implementation.
-       Sub-issues completed: [X] of [Y]
+    2. Verify task directory exists:
        ```
+       tasks/issue-{{ params.issue }}/
+       ```
+       If not found: "No task structure found for issue {{ params.issue }}. Nothing to verify."
     
-    ## Requirements Review
+    3. Check implementation status:
+       - Read all task files in `tasks/issue-{{ params.issue }}/tasks/`
+       - Ensure all have `**Status**: completed`
+       - If any pending/in_progress, list them and stop
     
-    1. Extract original requirements from parent issue
-    2. Review each requirement against implementation:
-       - ✅ Fully implemented
-       - ⚠️ Partially implemented
-       - ❌ Not implemented
+    ## Verification Process
     
-    3. Check acceptance criteria:
-       - Each criterion met?
-       - Edge cases handled?
-       - Performance requirements satisfied?
+    1. **Code Quality Verification**:
+       ```bash
+       # Run all quality gates
+       mix format --check-formatted
+       mix test
+       mix credo --strict
+       mix test test/features/
+       ```
+       
+       Document any issues found
     
-    ## Code Quality Review
+    2. **Requirements Review**:
+       - Read original requirements from index.md
+       - Check each success criteria
+       - Verify acceptance criteria for each task
     
-    Analyze the implementation for:
+    3. **Integration Testing**:
+       - Start Phoenix server
+       - Test the complete user flow
+       - Verify all components work together
+       - Check for edge cases
     
-    1. **Architecture & Design**:
-       - Follows project patterns?
-       - Proper separation of concerns?
-       - Ash Framework best practices?
+    4. **Documentation Review**:
+       - Ensure any new components are documented
+       - Check for outdated documentation
+       - Verify examples work
     
-    2. **Code Quality**:
-       - Readable and maintainable?
-       - DRY principles followed?
-       - Proper error handling?
-       - No code smells?
+    ## Create Verification Report
     
-    3. **Security**:
-       - No hardcoded secrets
-       - Proper authorization checks
-       - Input validation in place
-       - SQL injection prevention
+    Append to session.md:
     
-    4. **Performance**:
-       - No N+1 queries
-       - Efficient database access
-       - Appropriate indexes
-       - Caching where needed
-    
-    5. **Testing**:
-       - Adequate test coverage
-       - Tests follow BDD/TDD style
-       - Edge cases covered
-       - Tests are maintainable
-    
-    ## Quality Gates (Comprehensive)
-    
-    Run full test suite:
-    ```bash
-    # Clean build
-    mix clean && mix deps.get && mix compile
-    
-    # Format check
-    mix format --check-formatted
-    
-    # All tests with coverage
-    mix test --cover
-    
-    # Static analysis
-    mix credo --strict
-    
-    # Feature tests specifically
-    mix test test/features/
-    
-    # Check for warnings
-    mix compile --warnings-as-errors
-    ```
-    
-    Document results:
     ```markdown
-    ## Quality Gate Results
     
-    ✅ **Build**: Clean compilation
-    ✅ **Format**: No changes needed
-    ✅ **Tests**: [X] passed, 0 failed
-    ✅ **Coverage**: [X]% (target: 80%)
-    ✅ **Credo**: No issues
-    ✅ **Features**: All scenarios passing
-    ✅ **Warnings**: None
-    ```
-    
-    ## Integration Testing
-    
-    Beyond unit tests:
-    1. Run the application: `mix phx.server`
-    2. Test the feature end-to-end
-    3. Verify UI components work correctly
-    4. Check for regressions in related features
-    5. Test with different user roles
-    
-    ## Issues Found
-    
-    Categorize any issues:
-    
-    1. **🔴 Critical** (must fix now):
-       - Security vulnerabilities
-       - Data corruption risks
-       - Broken functionality
-       - Failing tests
-    
-    2. **🟡 Important** (should fix):
-       - Performance problems
-       - Missing tests
-       - Code quality issues
-       - Minor bugs
-    
-    3. **🟢 Minor** (can defer):
-       - Style improvements
-       - Refactoring opportunities
-       - Documentation gaps
-    
-    If critical issues found:
-    - Fix immediately
-    - Re-run all quality gates
-    - Document fixes in Feature Log
-    
-    ## Documentation Review
-    
-    Check for:
-    - Updated README if needed
-    - API documentation current
-    - Code comments where necessary
-    - LEARNINGS.md candidates
-    
-    ## Verification Summary
-    
-    Post comprehensive summary to parent issue:
-    ```markdown
-    ## Verification Complete ✅
-    
-    ### Requirements Coverage
-    - [X] of [Y] requirements fully implemented
-    - [List any gaps]
-    
-    ### Quality Assessment
-    **Code Quality**: Excellent/Good/Needs Work
-    **Test Coverage**: [X]%
-    **Performance**: Acceptable/Optimized
-    **Security**: Passed all checks
+    ## Verification Phase - [Date/Time]
     
     ### Quality Gates
-    All gates passing:
-    - Tests: [X] passed
-    - Format: Clean
-    - Credo: No issues
-    - Coverage: [X]%
+    - Format: [✅ Pass / ❌ Issues found]
+    - Tests: [X passing, Y failing]
+    - Credo: [✅ Clean / ❌ X issues]
+    - Features: [✅ All passing / ❌ X scenarios failing]
     
-    ### Issues Found & Resolution
-    🔴 Critical: [0] - All resolved
-    🟡 Important: [X] - [Status]
-    🟢 Minor: [X] - Documented for later
+    ### Requirements Verification
     
-    ### Integration Testing
-    - Feature works end-to-end ✅
-    - No regressions found ✅
-    - UI components render correctly ✅
+    #### Success Criteria
+    - [ ] [Criterion 1]: [Status and notes]
+    - [ ] [Criterion 2]: [Status and notes]
     
-    ### Recommendations
-    1. [Future enhancements]
-    2. [Technical debt to address]
-    3. [Process improvements]
+    #### User Flow Testing
+    1. [Test scenario 1]: [Result]
+    2. [Test scenario 2]: [Result]
     
-    **Feature is ready for production.** 🚀
+    ### Issues Found
+    
+    #### 🔴 Critical (Must fix)
+    - [Issue description and location]
+    
+    #### 🟡 Important (Should fix)
+    - [Issue description and location]
+    
+    #### 🟢 Minor (Nice to fix)
+    - [Issue description and location]
+    
+    ### Verification Summary
+    [Overall assessment and recommendation]
     ```
     
-    ## Learning Extraction
+    ## Handle Verification Results
     
-    Review all sub-issue comments for:
-    - 🔄 Course corrections
-    - Testing strategies that worked
-    - Performance optimizations found
-    - Patterns to document
+    1. **If all checks pass**:
+       - Update index.md with verification timestamp
+       - Prepare for PR creation
+       - Suggest next step: `/reflect`
     
-    Add to Feature Log:
+    2. **If issues found**:
+       - Create fix tasks in tasks directory
+       - Update task status tracking
+       - Provide clear remediation plan
+    
+    ## Fix Task Creation
+    
+    If issues need fixing, create `tasks/issue-[issue]/tasks/0X-fix-[description].md`:
+    
     ```markdown
-    ### Key Learnings from Verification
-    - [Important insights]
-    - [Patterns validated]
-    - [Areas for improvement]
+    # Fix Task: [Description]
+    
+    **Status**: pending
+    **Type**: fix
+    **Severity**: [critical/important/minor]
+    
+    ## Issue Description
+    [What's wrong and why it needs fixing]
+    
+    ## Fix Approach
+    [How to fix the issue]
+    
+    ## Verification
+    [How to verify the fix works]
     ```
     
-    ## Next Steps
+    ## GitHub Sync
     
-    1. If all verified successfully:
-       ```
-       Feature #{{ params.issue }} verified successfully!
-       All quality gates passed.
-       
-       Ready to:
-       1. Create PR for review
-       2. Deploy to staging
-       3. Run `/reflect issue={{ params.issue }}` to capture learnings
-       ```
+    Post verification summary:
     
-    2. If issues remain:
-       ```
-       Verification found [X] issues that need attention.
-       Please review the verification summary.
-       
-       Fix critical issues before proceeding.
-       ```
+    ```markdown
+    ## ✅ Verification Complete
     
-    ## Important Rules
+    All implementation tasks have been completed and verified.
     
-    - Be thorough and systematic
-    - Run ALL quality gates
-    - Test the actual user experience
-    - Document all findings
-    - Don't skip security checks
-    - Verify against original requirements
+    **Quality Gates**: [Status]
+    **Requirements**: [X of Y] criteria met
+    **Integration**: [Status]
     
-    ## Return Values
+    [If issues found, list critical ones]
     
-    - Feature: #{{ params.issue }}
-    - Status: Passed/Failed/Passed with issues
-    - Quality gates: [Results]
-    - Issues found: [Count by severity]
-    - Ready for: PR/Fixes needed/Deployment
+    Ready for final review and reflection.
+    ```
+    
+    ## Return Message
+    
+    Based on results:
+    
+    ```
+    # If passed:
+    ✅ Verification complete! All checks passed.
+    
+    Quality gates: All green
+    Requirements: Fully satisfied
+    Integration: Working as expected
+    
+    Ready to proceed with: /reflect
+    
+    # If issues:
+    ⚠️ Verification found [N] issues to address:
+    
+    Critical: [X] issues (must fix)
+    Important: [Y] issues (should fix)
+    Minor: [Z] issues (optional)
+    
+    Created fix tasks. Start with:
+    /build task=[next task number]
+    ```
   </instructions>
 </prompt>

@@ -1,153 +1,193 @@
 <prompt>
   <instructions>
-    # GitHub-Integrated Development Workflow
+    # Hybrid Development Workflow
     
-    This document outlines the streamlined development process using GitHub Issues for transparency and collaboration.
+    This document outlines the development process that combines GitHub Issues for tracking with local files for rich documentation.
     
     ## Complete Workflow
     
-    Feature development follows four phases, each activating a different cognitive mode:
+    Feature development follows five phases, maintaining both local context and GitHub visibility:
     
     ### 1. Plan Phase (Project Manager Mode)
     
-    Analyze a GitHub issue and break it down into manageable tasks:
+    Analyze a GitHub issue and create local task structure:
     
     ```
     /plan issue=123
     ```
     
     This command:
-    - Deep-dives into requirements with structured questions
-    - Creates sub-issues for each discrete task
-    - Establishes feature branch for development
-    - Documents initial insights in Feature Log
-    - Returns list of created sub-issues
+    - Fetches requirements from GitHub issue
+    - Deep-dives with structured questions
+    - Creates local directory `tasks/issue-123/`
+    - Generates task files with clear scope
+    - Establishes feature branch
+    - Posts planning summary to GitHub
+    
+    Creates:
+    ```
+    tasks/issue-123/
+    ├── index.md       # Plan and progress tracking
+    ├── session.md     # Implementation notes
+    └── tasks/         # Individual task files
+        ├── 01-setup.md
+        ├── 02-models.md
+        └── 03-ui.md
+    ```
     
     ### 2. Build Phase (Expert Engineer Mode)
     
-    Implement each sub-issue with TDD/BDD discipline:
+    Implement each task with TDD/BDD discipline:
     
     ```
-    /build issue=123-1
+    /build task=1
     ```
     
     This command:
-    - Extracts requirements from sub-issue
+    - Reads requirements from local task file
+    - Updates task status to in_progress
     - Enforces test-first development
-    - Updates progress in real-time via comments
-    - Captures course corrections with 🔄 emoji
-    - Enforces quality gates before completion
-    - Requires user verification before proceeding
+    - Documents progress in session.md
+    - Captures course corrections with 🔄
+    - Enforces quality gates
+    - Requires user verification
     
     Quality Gates (Mandatory):
     - `mix format` - Clean formatting
     - `mix test` - 100% passing
     - `mix credo --strict` - Zero issues
-    - `mix test test/features/` - All scenarios pass
+    - `mix test test/features/` - All pass
     
-    ### 3. Verify Phase (Senior Reviewer Mode)
+    ### 3. Sync Phase (Communication Bridge)
     
-    Comprehensive review of the complete feature:
+    Keep GitHub updated with local progress:
     
     ```
-    /verify issue=123
+    /sync
     ```
     
     This command:
-    - Reviews all sub-issues for completeness
+    - Reads current status from local files
+    - Generates concise progress summary
+    - Posts update to GitHub issue
+    - Maintains transparency without clutter
+    
+    Sync when:
+    - Task completed
+    - Major milestone reached
+    - Course correction made
+    - End of work session
+    
+    ### 4. Verify Phase (Senior Reviewer Mode)
+    
+    Comprehensive review of complete feature:
+    
+    ```
+    /verify
+    ```
+    
+    This command:
+    - Checks all tasks are completed
     - Runs comprehensive quality checks
-    - Tests integration and user experience
-    - Documents findings in verification summary
-    - Identifies issues by severity
-    - Provides go/no-go decision
+    - Tests integration and UX
+    - Documents findings in session.md
+    - Creates fix tasks if needed
+    - Posts summary to GitHub
     
-    ### 4. Reflect Phase (QA/Process Analyst Mode)
+    ### 5. Reflect Phase (QA/Process Analyst Mode)
     
-    Extract learnings from the complete journey:
+    Extract learnings from the journey:
     
     ```
-    /reflect issue=123
+    /reflect
     ```
     
     This command:
-    - Analyzes entire development process
-    - Identifies patterns and improvements
-    - Updates LEARNINGS.md with insights
-    - Creates follow-up issues
-    - Proposes process enhancements
-    - Posts reflection summary to issue
+    - Analyzes session notes
+    - Identifies patterns and insights
+    - Creates local learnings.md
+    - Updates global LEARNINGS.md
+    - Generates PR description
+    - Posts completion to GitHub
     
-    ## GitHub Integration Features
+    ## File Structure Benefits
     
-    ### Feature Log
-    A pinned comment on parent issues tracks all phases:
-    - Planning discoveries
-    - Building progress
-    - Verification results
-    - Reflection insights
+    ### Session Notes (session.md)
+    Captures the implementation journey:
+    - Real-time decision documentation
+    - Course corrections with context
+    - Technical discoveries
+    - Progress timestamps
     
-    ### Progress Tracking
-    Sub-issue comments provide real-time updates:
-    - Completed items ✅
-    - In-progress work 🔄
-    - Quality gate status
-    - Course corrections
+    ### Task Files (tasks/*.md)
+    Maintain clear boundaries:
+    - Specific scope and requirements
+    - Implementation checklist
+    - Status tracking
+    - Dependencies
     
-    ### Learning Capture
-    Continuous documentation of insights:
-    - Requirements that emerged
-    - Technical patterns discovered
-    - Testing strategies that worked
-    - Process improvements identified
+    ### Learning Accumulation
+    Knowledge builds throughout:
+    - Immediate capture in session.md
+    - Task-specific insights
+    - Feature-level learnings
+    - Global patterns in LEARNINGS.md
     
     ## Workflow Benefits
     
-    1. **Transparency**: All work visible in GitHub
-    2. **Collaboration**: Team members can contribute
-    3. **Traceability**: Complete audit trail
-    4. **Learning**: Continuous improvement loop
-    5. **Quality**: Enforced gates at every step
+    1. **Rich Context**: Session notes preserve the "why"
+    2. **Fast Access**: No API calls for task details
+    3. **Natural Flow**: File-based feels familiar
+    4. **GitHub Integration**: Maintains visibility
+    5. **Learning Capture**: Journey documented
     
     ## Best Practices
     
-    1. **Clear Issues**: Well-written issues improve planning
-    2. **Atomic Tasks**: Each sub-issue = one PR
-    3. **Real-time Updates**: Keep comments current
-    4. **Capture Everything**: Document course corrections
-    5. **Close the Loop**: Always run reflection
+    1. **Continuous Documentation**: Update session.md as you work
+    2. **Atomic Commits**: One per checklist item
+    3. **Regular Syncs**: Keep GitHub informed
+    4. **Quality First**: Never skip gates
+    5. **Capture Everything**: Especially course corrections
     
     ## Command Reference
     
     ```bash
-    # Analyze and plan
+    # Start from GitHub issue
     /plan issue=123
     
-    # Build tasks sequentially
-    /build issue=123-1
-    /build issue=123-2
+    # Build tasks locally
+    /build task=1
+    /build task=2
     
-    # Verify complete feature
-    /verify issue=123
+    # Sync progress periodically
+    /sync
+    
+    # Verify when complete
+    /verify
     
     # Extract learnings
-    /reflect issue=123
+    /reflect
+    
+    # Create PR
+    gh pr create --body-file tasks/issue-123/pr-description.md
     ```
     
-    ## Parallel Work Support
+    ## Migration from Pure GitHub
     
-    Multiple AI instances can work on different sub-issues:
-    - Each claims a sub-issue by commenting
-    - Work proceeds independently
-    - Verification ensures integration
+    If you have existing GitHub sub-issues:
+    1. Use `/plan` to create local structure
+    2. Copy requirements from sub-issues to task files
+    3. Close sub-issues with reference to local tasks
+    4. Continue with `/build task=N`
     
     ## Important Notes
     
-    - Never skip quality gates
-    - Always write tests first
-    - Document learnings immediately
-    - Get user verification between tasks
-    - Update LEARNINGS.md during reflection
+    - Local files are source of truth during development
+    - GitHub provides visibility and collaboration
+    - Session notes capture the journey
+    - Quality gates are never optional
+    - Learning happens continuously
     
-    This workflow ensures consistent, high-quality development while building institutional knowledge over time.
+    This hybrid approach gives you the best of both worlds: rich local documentation with public progress tracking.
   </instructions>
 </prompt>

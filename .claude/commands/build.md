@@ -1,63 +1,65 @@
 <prompt>
   <params>
-    issue # GitHub sub-issue number to work on
+    issue # GitHub issue number to work on
+    task # Optional: Task number (defaults to next pending task)
   </params>
 
   <instructions>
     # Implementation Phase
     
-    This command implements a specific task from a GitHub sub-issue with TDD/BDD discipline.
+    This command implements a specific task from the local task files with TDD/BDD discipline.
     
-    ## Issue Validation
+    ## Parameter Handling
     
-    1. Fetch sub-issue details:
+    1. **Issue is required**:
+       - Must have {{ params.issue }} parameter
+       - If missing, error with: "Please specify issue: /build issue=123"
+    
+    2. **Task is optional**:
+       - If {{ params.task }} provided, use it
+       - If not provided, find next pending task:
+         - Read `tasks/issue-{{ params.issue }}/index.md`
+         - Find first unchecked task in Progress Tracking section
+         - If none found, report "All tasks complete!"
+    
+    ## Task Location
+    
+    1. Verify issue directory exists:
        ```
-       gh issue view {{ params.issue }} --json title,body,labels,assignees,state,comments
+       tasks/issue-{{ params.issue }}/
        ```
+       If not found: "No task structure found for issue {{ params.issue }}. Run /plan issue={{ params.issue }} first."
     
-    2. Validate it's a task sub-issue:
-       - Check for "task" label
-       - Extract parent issue number from title or labels
-       - Verify issue is open
-       - If closed, suggest next open sub-issue
+    2. Locate task file:
+       - If task number provided: `tasks/issue-{{ params.issue }}/tasks/0{{ params.task }}-*.md`
+       - If auto-detected: Use task number from index.md
     
-    3. Ensure on correct branch:
-       - Check current branch matches parent issue pattern
-       - If not, checkout or create: `git checkout -b feature/issue-[parent]-[description]`
+    3. Validate task:
+       - Read task file
+       - Check status field
+       - If completed and task was specified: "Task {{ params.task }} is already completed"
+       - If completed and auto-detected: Find next pending task
     
-    ## Progress Initialization
+    ## Session Initialization
     
-    1. Check for existing progress in issue comments
-       - Look for "Progress Update" comments
-       - Determine what's already completed
-       - Identify current state
+    1. Update task file status:
+       - Change `**Status**: pending` to `**Status**: in_progress`
+       - Set `**Started**: [Current Date/Time]`
     
-    2. Update parent issue Feature Log:
+    2. Append to session file `tasks/issue-[issue]/session.md`:
        ```markdown
-       ### Building Phase - [Current Date/Time]
-       Starting work on sub-issue #{{ params.issue }}: [Task Title]
-       ```
-    
-    3. Add initial progress comment if starting fresh:
-       ```markdown
-       ## Progress Update - [Time]
        
-       Starting implementation of this task.
+       ## Task {{ params.task }} Implementation - [Date/Time]
        
-       ✅ Completed:
-       - None yet
-       
-       🔄 In Progress:
-       - Setting up implementation
-       
-       📝 Approach:
-       - [Initial implementation strategy]
+       ### Starting State
+       - Task: [Task name from file]
+       - Approach: [Initial implementation plan]
        ```
     
     ## Implementation Process
     
-    1. Extract requirements from issue body:
-       - Implementation checklist items
+    1. Read task requirements:
+       - Implementation checklist
        - Acceptance criteria
        - Technical details
        - Dependencies
@@ -66,13 +68,14 @@
        - Research similar patterns in codebase
        - Write tests FIRST for each checklist item
        - Implement incrementally
-       - Run tests after each change
+       - Run quality gates after each change
     
     3. For each checklist item:
        - Write failing test
        - Implement minimal code to pass
        - Refactor if needed
-       - Update progress comment
+       - Update task file checklist
+       - Document progress in session notes
     
     ## Quality Gates (MANDATORY)
     
@@ -88,132 +91,157 @@
     If ANY gate fails:
     - Fix immediately
     - Re-run ALL gates
-    - Document what was fixed
+    - Document issue and fix in session notes
     
-    ## Progress Tracking
+    ## Progress Documentation
     
-    Update issue comment regularly:
+    Continuously update session file during implementation:
+    
     ```markdown
-    ## Progress Update - [Time]
+    ### Progress Log
     
-    ✅ Completed:
-    - [x] Wrote tests for [functionality]
-    - [x] Implemented [component]
+    **[Time]** - Working on: [Current checklist item]
+    - Wrote test: [test file:line]
+    - Test failing as expected ✓
     
-    🔄 In Progress:
-    - Working on [current item]
+    **[Time]** - Implementation
+    - Added [what was added]
+    - Test now passing ✓
     
-    📝 Notes:
-    - [Key decisions made]
-    - [Challenges encountered]
-    
-    Quality Gates: ✅ All passing
+    **[Time]** - Quality Gates
+    - All tests passing: ✓
+    - Format clean: ✓
+    - Credo clean: ✓
     ```
     
     ## Learning Capture
     
-    Document insights immediately:
+    Document insights immediately in session file:
     
-    1. **Course Corrections** (when approach changes):
+    1. **Course Corrections**:
        ```markdown
-       🔄 COURSE CORRECTION:
-       - Original: [What was tried]
+       🔄 COURSE CORRECTION - [Time]
+       - Tried: [What was attempted]
        - Issue: [Why it didn't work]
-       - New approach: [What worked]
-       - Learning: [General principle]
+       - Solution: [What worked instead]
+       - Learning: [Generalizable principle]
        ```
     
-    2. **Pattern Discoveries**:
+    2. **Discoveries**:
        - Useful patterns found
-       - Performance optimizations
-       - Testing strategies
+       - Performance considerations
+       - Testing strategies that worked well
     
     3. **Challenges**:
-       - Unexpected complexity
-       - Framework limitations
-       - Integration issues
+       - Framework quirks
+       - Integration complexities
+       - Workarounds needed
     
     ## Commit Strategy
     
-    Make atomic commits:
-    - After each checklist item
-    - With descriptive messages
-    - Following conventional commits:
-      ```
-      feat: add user authentication to groups
-      test: add coverage for group permissions
-      fix: resolve N+1 query in member list
-      ```
+    Make atomic commits after each checklist item:
+    ```
+    git add [relevant files]
+    git commit -m "feat(issue-{{ issue }}): [specific change]"
+    ```
+    
+    Follow conventional commits:
+    - `feat:` for new functionality
+    - `test:` for test additions
+    - `fix:` for bug fixes
+    - `refactor:` for code improvements
     
     ## Task Completion
     
-    When all checklist items done:
+    When all checklist items complete:
     
     1. Run final quality gates
-    2. Ensure all tests pass
-    3. Review implementation against acceptance criteria
-    4. Add completion comment:
+    2. Update task file:
+       - Change `**Status**: in_progress` to `**Status**: completed`
+       - Set `**Completed**: [Current Date/Time]`
+       - Check all checklist items
+    
+    3. Update index file:
+       - Check off task in Progress Tracking section
+       - Update any relevant technical notes
+    
+    4. Final session notes:
        ```markdown
-       ## Task Complete! ✅
+       ### Task Complete - [Time]
        
-       All implementation checklist items completed.
+       **Summary**: Successfully implemented [task name]
        
-       **Quality Gates:** All passing
-       - Tests: [X] passed, 0 failed
-       - Format: Clean
-       - Credo: No issues
+       **Key Changes**:
+       - [Major change 1]
+       - [Major change 2]
        
-       **Ready for verification.**
+       **Tests Added**: [count]
+       **Files Modified**: [count]
        
-       Please review by:
-       1. Running `mix phx.server`
-       2. Testing the functionality
-       3. Confirming acceptance criteria are met
+       **Quality Gates**: ✅ All passing
        ```
     
     5. Ask user for verification:
        ```
-       I've completed task #{{ params.issue }}.
+       Task {{ params.task }} complete! 
        
-       Please verify the implementation works as expected.
+       Please test the implementation:
+       1. Run `mix phx.server`
+       2. [Specific testing instructions based on task]
+       
        Quality gates are all passing.
-       
-       Ready to proceed to the next task?
+       Ready to continue with the next task?
        ```
-    
-    6. After user confirmation:
-       - Close the sub-issue with final comment
-       - Update parent issue task list (check the box)
     
     ## Next Task
     
-    1. Find next open sub-issue for parent:
+    1. Find next pending task in directory:
+       - List all task files in `tasks/issue-{{ params.issue }}/tasks/`
+       - Find first with `**Status**: pending`
+       
+    2. If found, suggest:
        ```
-       gh issue list --label "parent-[number]" --state open --json number,title
+       Next task available: Task [N] - [Name]
+       Continue with: /build issue={{ params.issue }} task=[N]
+       Or simply: /build issue={{ params.issue }}
        ```
     
-    2. If found, ask user:
+    3. If none found:
        ```
-       Next task available: #[number] - [title]
-       Would you like to continue with `/build issue=[number]`?
+       All tasks complete! Ready for verification phase.
+       Use: /verify issue={{ params.issue }}
        ```
+    
+    ## GitHub Sync Points
+    
+    At task completion, optionally sync to GitHub:
+    ```markdown
+    ## 🚀 Progress Update
+    
+    Completed Task {{ params.task }}: [Task Name]
+    
+    **Changes**:
+    - [Key implementation points]
+    
+    **Next**: Working on Task [N]
+    ```
     
     ## Important Rules
     
     - NEVER skip quality gates
     - ALWAYS write tests first (TDD/BDD)
-    - Capture learnings in real-time
-    - Make atomic, focused commits
-    - Get user verification before closing
-    - Document all course corrections
-    - Keep issue comments up to date
+    - Document learning in real-time
+    - Keep session notes detailed
+    - Make atomic, well-described commits
+    - Update task status immediately
+    - Get user verification before proceeding
     
     ## Return Values
     
-    - Task completed: #{{ params.issue }}
+    - Task completed: #{{ params.task }}
     - Quality gates: [Status]
-    - Commits made: [Count]
-    - Next task: #[number] or None
-    - Key learnings: [Summary]
+    - Commits made: [List]
+    - Session notes: Updated
+    - Next task: [Number] or None
   </instructions>
 </prompt>

@@ -1,279 +1,220 @@
 <prompt>
   <params>
-    issue # GitHub parent issue number to reflect on
+    issue # GitHub issue number to reflect on
   </params>
 
   <instructions>
-    # Reflection Process
+    # Reflection & Learning Extraction
     
-    This command analyzes the complete development journey to extract learnings and improve future work.
+    This command analyzes the development journey and extracts learnings.
     
-    ## Data Collection
+    ## Context Gathering
     
-    1. Fetch complete issue history:
-       ```
-       gh issue view {{ params.issue }} --json title,body,comments,state
-       gh issue list --label "parent-{{ params.issue }}" --json number,title,state,body,comments
-       ```
+    1. Validate issue parameter:
+       - Must have {{ params.issue }} parameter
+       - If missing, error with: "Please specify issue: /reflect issue=123"
     
-    2. Extract Feature Log from parent issue
-       - Planning phase insights
-       - Building phase progress
-       - Verification findings
-       - All course corrections (🔄)
+    2. Read all relevant files:
+       - `tasks/issue-{{ params.issue }}/index.md` - Requirements and plan
+       - `tasks/issue-{{ params.issue }}/session.md` - Implementation journey
+       - `tasks/issue-{{ params.issue }}/learnings.md` - Accumulated insights
+       - All task files for specific challenges
     
-    3. Analyze sub-issue histories:
-       - Progress updates
-       - Challenges documented
-       - Solutions found
-       - Time taken per task
+    ## Analysis Process
     
-    ## Journey Analysis
+    1. **Journey Analysis**:
+       - Original plan vs actual implementation
+       - Time estimates vs actual time
+       - Unexpected challenges encountered
+       - Course corrections made (🔄)
     
-    Review the entire development process:
+    2. **Pattern Recognition**:
+       - Recurring challenges across tasks
+       - Successful strategies that worked well
+       - Anti-patterns to avoid
+       - Reusable solutions discovered
     
-    ### 1. Requirements Evolution
-    ```markdown
-    ## Requirements Analysis
+    3. **Technical Insights**:
+       - Framework-specific learnings
+       - Performance considerations found
+       - Testing strategies that proved effective
+       - Integration patterns
     
-    **Initial Understanding:**
-    - [What we thought we were building]
+    4. **Process Improvements**:
+       - Workflow bottlenecks identified
+       - Planning accuracy assessment
+       - Task sizing effectiveness
+       - Communication gaps
     
-    **Discovered Requirements:**
-    - [What emerged during planning]
-    - [What emerged during building]
+    ## Create Learnings Document
     
-    **Gaps Identified:**
-    - [What was missed initially]
-    - [Why it was missed]
-    ```
-    
-    ### 2. Planning Effectiveness
-    ```markdown
-    ## Planning Assessment
-    
-    **Task Breakdown:**
-    - Total tasks created: [X]
-    - Task sizing accuracy: [Good/Needs work]
-    - Dependency management: [Effective/Issues]
-    
-    **What Worked:**
-    - [Successful strategies]
-    
-    **What Didn't:**
-    - [Planning gaps]
-    - [Over/under estimation]
-    ```
-    
-    ### 3. Implementation Insights
-    
-    Look for patterns in:
-    - 🔄 Course corrections
-    - Multiple attempts at same problem
-    - Quality gate failures
-    - Performance discoveries
+    Update or create `tasks/issue-[issue]/learnings.md`:
     
     ```markdown
-    ## Implementation Learnings
+    # Learnings from Issue #[issue]: [Title]
     
-    **Technical Patterns:**
-    - [Patterns that worked well]
-    - [Anti-patterns to avoid]
+    **Completed**: [Date]
+    **Duration**: [Planned vs Actual]
+    **Complexity**: [Assessment]
     
-    **Course Corrections:**
-    [List each with lesson learned]
+    ## Key Insights
     
-    **Testing Insights:**
-    - [Effective test strategies]
-    - [Missing test scenarios]
-    ```
+    ### 🎯 What Worked Well
+    - [Success pattern 1 with example]
+    - [Success pattern 2 with example]
     
-    ### 4. Process Observations
-    ```markdown
-    ## Process Insights
+    ### 🔄 Course Corrections
+    [List all course corrections with lessons learned]
     
-    **Workflow Effectiveness:**
-    - [What helped productivity]
-    - [What caused delays]
+    ### ⚠️ Challenges & Solutions
+    1. **Challenge**: [Description]
+       **Solution**: [What worked]
+       **Learning**: [Generalizable principle]
     
-    **Communication:**
-    - [Clear areas]
-    - [Confusion points]
+    ### 🚀 Reusable Patterns
     
-    **Tools & Automation:**
-    - [What worked well]
-    - [What needs improvement]
-    ```
-    
-    ## Learning Synthesis
-    
-    Categorize key learnings:
-    
-    ```markdown
-    ## Key Learnings
-    
-    ### Technical Insights
-    1. **[Pattern/Approach Name]**
-       - Context: [When to use]
-       - Example: [From this feature]
-       - Benefit: [Why it works]
-    
-    ### Ash Framework Patterns
-    1. **[Specific Ash pattern]**
-       - Use case: [When applicable]
-       - Implementation: [How to do it]
-    
-    ### Testing Strategies
-    1. **[Test approach]**
-       - Scenario: [When to apply]
-       - Example: [From this feature]
-    
-    ### Process Improvements
-    1. **[Improvement idea]**
-       - Current: [What we do now]
-       - Proposed: [Better approach]
-       - Rationale: [Why it's better]
-    ```
-    
-    ## LEARNINGS.md Update
-    
-    1. Read current LEARNINGS.md
-    2. Identify appropriate sections
-    3. Add new insights with context:
-    
-    ```markdown
-    ### [Learning Title]
-    *From: Issue #{{ params.issue }} - [Feature Name]*
-    *Date: [Current Date]*
-    
-    **Context:**
-    [Situation where this applies]
-    
-    **Discovery:**
-    [What we learned]
-    
-    **Application:**
-    [How to use this knowledge]
-    
-    **Example:**
+    #### Pattern: [Name]
+    **Context**: When to use this
+    **Implementation**:
     ```elixir
     # Code example if applicable
     ```
+    **Benefits**: Why this works
+    
+    ## Process Insights
+    
+    ### Planning Accuracy
+    - Estimated tasks: [N]
+    - Actual tasks: [N + additional]
+    - Estimation accuracy: [X%]
+    
+    ### Time Analysis
+    - Planned: [hours]
+    - Actual: [hours]
+    - Factors: [What affected timeline]
+    
+    ## Recommendations
+    
+    ### For Similar Features
+    - [Specific recommendation 1]
+    - [Specific recommendation 2]
+    
+    ### For Process Improvement
+    - [Process change suggestion]
+    - [Tool or command enhancement]
+    
+    ## Follow-up Items
+    - [ ] [Improvement to make]
+    - [ ] [Documentation to update]
+    - [ ] [Pattern to document]
     ```
     
-    ## Process Evolution
+    ## Update Global Learnings
     
-    Based on learnings, suggest improvements:
+    If significant insights, append to `/LEARNINGS.md`:
     
     ```markdown
-    ## Proposed Process Improvements
     
-    1. **Planning Phase Enhancement**
-       - Add question: [New question to ask]
-       - Rationale: [Why based on this feature]
+    ## Issue #[issue]: [Title] - [Date]
     
-    2. **Build Command Update**
-       - Add check: [New validation]
-       - Prevents: [Issue it would avoid]
-    
-    3. **Documentation Template**
-       - Add section: [What's missing]
-       - Benefit: [How it helps]
-    ```
-    
-    Ask for approval before implementing any command changes.
-    
-    ## Future Work
-    
-    Create follow-up issues:
-    
-    ```bash
-    # Technical debt
-    gh issue create \
-      --title "refactor: [description]" \
-      --body "Identified during #{{ params.issue }}..." \
-      --label "tech-debt,enhancement"
-    
-    # Feature enhancements  
-    gh issue create \
-      --title "feat: [description]" \
-      --body "Enhancement opportunity from #{{ params.issue }}..." \
-      --label "enhancement"
-    
-    # Documentation needs
-    gh issue create \
-      --title "docs: [description]" \
-      --body "Documentation gap found in #{{ params.issue }}..." \
-      --label "documentation"
-    ```
-    
-    ## Reflection Summary
-    
-    Post final reflection to parent issue:
-    
-    ```markdown
-    ## Reflection Complete 📚
-    
-    ### Feature Summary
-    - Started: [Date from first comment]
-    - Completed: [Date]
-    - Tasks: [X] sub-issues
-    - Commits: [Y] total
+    ### Context
+    [Brief description of what was built]
     
     ### Key Learnings
+    [2-3 most important insights]
     
-    **Technical:**
-    1. [Most important technical insight]
-    2. [Second insight]
+    ### Reusable Patterns
+    [Any patterns worth sharing]
     
-    **Process:**
-    1. [Most important process learning]
-    2. [Second learning]
-    
-    **Domain:**
-    1. [Business logic understanding]
-    
-    ### Improvements Made
-    - Updated LEARNINGS.md with [X] new insights
-    - Created [Y] follow-up issues
-    - Proposed [Z] process improvements
-    
-    ### Metrics
-    - Course corrections: [Count of 🔄]
-    - Quality gate failures: [Count]
-    - Time per task: [Average]
-    
-    ### Next Features Will Benefit From
-    1. [Specific improvement]
-    2. [Specific pattern]
-    3. [Specific approach]
-    
-    **Thank you for the learning opportunity!** 🎉
+    See `tasks/issue-[issue]/learnings.md` for full details.
     ```
     
-    ## Close the Loop
+    ## Create Follow-up Tasks
     
-    1. Ensure LEARNINGS.md is updated
-    2. Verify follow-up issues created
-    3. Confirm process improvements documented
-    4. Close parent issue if appropriate
+    If improvements identified:
     
-    ## Important Rules
+    1. For code improvements:
+       - Create new GitHub issues
+       - Link back to this implementation
     
-    - Extract learnings from entire journey
-    - Focus on patterns, not one-offs
-    - Make learnings actionable
-    - Always update LEARNINGS.md
-    - Create issues for future work
-    - Get approval for process changes
-    - Be specific with examples
+    2. For documentation:
+       - Note files to update
+       - Create specific tasks
     
-    ## Return Values
+    3. For process improvements:
+       - Update relevant command files
+       - Document in CLAUDE.md
     
-    - Feature reflected: #{{ params.issue }}
-    - Key learnings: [Count]
-    - LEARNINGS.md sections updated: [List]
-    - Follow-up issues created: [Numbers]
-    - Process improvements proposed: [Count]
+    ## Final GitHub Update
+    
+    Post completion summary:
+    
+    ```markdown
+    ## ✨ Feature Complete & Reflected
+    
+    Successfully implemented [feature description].
+    
+    **Stats**:
+    - Tasks completed: [N]
+    - Commits: [N]
+    - Tests added: [N]
+    - Files changed: [N]
+    
+    **Key Learnings**:
+    - [Top insight 1]
+    - [Top insight 2]
+    
+    **Next Steps**:
+    - [ ] Create PR
+    - [ ] Address follow-up items
+    
+    Full learnings documented in codebase.
+    ```
+    
+    ## Prepare for PR
+    
+    Generate PR description template:
+    
+    ```markdown
+    ## Summary
+    [What this PR accomplishes]
+    
+    Closes #[issue]
+    
+    ## Changes
+    - [Major change 1]
+    - [Major change 2]
+    
+    ## Testing
+    - [How to test the feature]
+    - [What scenarios were covered]
+    
+    ## Learnings
+    [1-2 key insights from implementation]
+    
+    ## Screenshots
+    [If applicable]
+    ```
+    
+    Save to `tasks/issue-[issue]/pr-description.md`
+    
+    ## Return Message
+    
+    ```
+    ✅ Reflection complete!
+    
+    Documented:
+    - Key insights: [N]
+    - Course corrections: [N]
+    - Reusable patterns: [N]
+    
+    Created:
+    - Local learnings file
+    - Updated global LEARNINGS.md
+    - PR description template
+    
+    Ready to create PR with:
+    gh pr create --title "[Title]" --body-file tasks/issue-[issue]/pr-description.md
+    ```
   </instructions>
 </prompt>
