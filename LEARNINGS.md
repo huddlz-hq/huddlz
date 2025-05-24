@@ -104,7 +104,6 @@ This document captures key insights, patterns, and best practices discovered dur
 - **Duplicate Detection**: Review existing implementations to avoid redundancy
 - **Access Control Documentation**: Define visibility matrices upfront for complex permissions
 - **Real-time Documentation**: Update task progress immediately after each step
-- **Git Worktrees**: Use `git worktree` instead of branches for parallel development as per Anthropic best practices
 - **Requirements First**: ALWAYS conduct thorough requirements analysis with clarifying questions BEFORE creating sub-issues
 - **Planning Phase Discipline**: The /plan command requires deep PM-style analysis - never skip this critical step
 
