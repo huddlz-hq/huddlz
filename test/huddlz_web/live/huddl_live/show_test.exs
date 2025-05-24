@@ -377,6 +377,103 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       # But should still show attending status
       assert html =~ "1 person attending"
     end
+
+    test "handles cancel_rsvp event successfully", %{
+      conn: conn,
+      member: member,
+      group: group,
+      huddl: huddl
+    } do
+      # First RSVP to the huddl
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.update!()
+
+      {:ok, show_live, _html} =
+        conn
+        |> log_in_user(member)
+        |> live(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
+
+      # Click Cancel RSVP button
+      result =
+        show_live
+        |> element("button", "Cancel RSVP")
+        |> render_click()
+
+      # Check success message and UI updates
+      assert result =~ "RSVP cancelled successfully"
+      assert result =~ "RSVP to this huddl"
+      refute result =~ "You&#39;re attending!"
+      refute result =~ "Cancel RSVP"
+
+      # Should show 0 people attending
+      assert render(show_live) =~ "Be the first to RSVP!"
+    end
+
+    test "cancel_rsvp updates attendee count correctly", %{
+      conn: conn,
+      member: member,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      # Both users RSVP
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{user_id: owner.id}, actor: owner)
+      |> Ash.update!()
+
+      huddl
+      |> Ash.reload!()
+      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.update!()
+
+      {:ok, show_live, html} =
+        conn
+        |> log_in_user(member)
+        |> live(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
+
+      assert html =~ "2 people attending"
+
+      # Member cancels their RSVP
+      show_live
+      |> element("button", "Cancel RSVP")
+      |> render_click()
+
+      # Should show 1 person attending (owner still RSVPed)
+      assert render(show_live) =~ "1 person attending"
+    end
+
+    test "can RSVP again after cancelling", %{
+      conn: conn,
+      member: member,
+      group: group,
+      huddl: huddl
+    } do
+      # RSVP
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.update!()
+
+      {:ok, show_live, _html} =
+        conn
+        |> log_in_user(member)
+        |> live(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
+
+      # Cancel RSVP
+      show_live
+      |> element("button", "Cancel RSVP")
+      |> render_click()
+
+      # RSVP again
+      result =
+        show_live
+        |> element("button", "RSVP to this huddl")
+        |> render_click()
+
+      assert result =~ "Successfully RSVPed to this huddl!"
+      assert result =~ "You&#39;re attending!"
+      assert result =~ "1 person attending"
+    end
   end
 
   defp create_verified_user do
