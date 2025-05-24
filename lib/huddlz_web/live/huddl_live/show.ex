@@ -207,6 +207,32 @@ defmodule HuddlzWeb.HuddlLive.Show do
     end
   end
 
+  @impl true
+  def handle_event("cancel_rsvp", _, socket) do
+    case cancel_rsvp(socket.assigns.huddl, socket.assigns.current_user) do
+      {:ok, _} ->
+        # Reload the huddl to get updated RSVP count
+        {:ok, huddl} =
+          get_huddl(
+            socket.assigns.huddl.id,
+            socket.assigns.huddl.group_id,
+            socket.assigns.current_user
+          )
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "RSVP cancelled successfully")
+         |> assign(:huddl, huddl)
+         |> assign(:has_rsvped, false)}
+
+      {:error, %Ash.Error.Forbidden{}} ->
+        {:noreply, put_flash(socket, :error, "You can only cancel your own RSVP.")}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to cancel RSVP. Please try again.")}
+    end
+  end
+
   defp get_huddl(id, group_id, user) do
     case Huddl
          |> Ash.Query.filter(id == ^id and group_id == ^group_id)
@@ -233,6 +259,12 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp rsvp_to_huddl(huddl, user) do
     huddl
     |> Ash.Changeset.for_update(:rsvp, %{user_id: user.id}, actor: user)
+    |> Ash.update()
+  end
+
+  defp cancel_rsvp(huddl, user) do
+    huddl
+    |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: user.id}, actor: user)
     |> Ash.update()
   end
 
