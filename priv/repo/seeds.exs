@@ -11,4 +11,4 @@
 # and so on) as they will fail if something goes wrong.
 
 # Load the seed files
-Code.require_file("seeds/huddls/sample_huddlz.exs", __DIR__)
+Code.require_file("seeds/communities/sample_huddlz.exs", __DIR__)

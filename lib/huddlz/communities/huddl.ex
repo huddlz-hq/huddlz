@@ -130,6 +130,48 @@ defmodule Huddlz.Communities.Huddl do
         end
       end
     end
+
+    update :cancel_rsvp do
+      description "Cancel RSVP to this huddl"
+      require_atomic? false
+
+      # Accept the user_id as an argument
+      argument :user_id, :uuid do
+        allow_nil? false
+      end
+
+      # Custom change to handle cancellation
+      change fn changeset, _context ->
+        user_id = Ash.Changeset.get_argument(changeset, :user_id)
+        huddl_id = changeset.data.id
+
+        # Find the existing RSVP
+        existing =
+          Huddlz.Communities.HuddlAttendee
+          |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl_id, user_id: user_id})
+          |> Ash.read_one(authorize?: false)
+
+        case existing do
+          {:ok, nil} ->
+            # No RSVP to cancel, return unchanged
+            changeset
+
+          {:ok, attendee} ->
+            # Delete the attendee record
+            Ash.destroy!(attendee, authorize?: false)
+
+            # Decrement count
+            Ash.Changeset.change_attribute(
+              changeset,
+              :rsvp_count,
+              max(changeset.data.rsvp_count - 1, 0)
+            )
+
+          {:error, error} ->
+            Ash.Changeset.add_error(changeset, error)
+        end
+      end
+    end
   end
 
   policies do
@@ -182,6 +224,17 @@ defmodule Huddlz.Communities.Huddl do
     policy action(:rsvp) do
       description "Users can RSVP to huddls they have access to"
       # User must be RSVPing for themselves
+      forbid_unless expr(^arg(:user_id) == ^actor(:id))
+      # Public huddls in public groups
+      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
+      # Any huddl in a group they're a member of
+      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
+    end
+
+    # Cancel RSVP policies
+    policy action(:cancel_rsvp) do
+      description "Users can cancel their own RSVPs"
+      # User must be cancelling their own RSVP
       forbid_unless expr(^arg(:user_id) == ^actor(:id))
       # Public huddls in public groups
       authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
