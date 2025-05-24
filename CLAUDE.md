@@ -158,47 +158,104 @@ These documents contain best practices for:
 - Feature development workflow
 - Knowledge management
 
+## Development Workflow Commands
+
+This project uses custom commands to maintain consistent development practices and knowledge capture. Commands are defined in `.claude/commands/` directory.
+
+### Core Workflow Commands
+
+The development workflow consists of four phases, each with a specific role and objective:
+
+1. **`/plan`** - Requirements Analysis & Task Breakdown
+   - **Role**: Project Manager
+   - **Objective**: Understand requirements and break down into manageable tasks
+   - **Usage**: `/plan description="brief feature description"`
+   - **Output**: Creates timestamped task directory with detailed task specifications
+
+2. **`/build`** - Implementation with TDD/BDD
+   - **Role**: Expert Engineer
+   - **Objective**: Meticulously implement code following test-driven development
+   - **Usage**: `/build task_dir="<task_directory_path>"`
+   - **Features**: 
+     - Automatically resumes in-progress work
+     - Enforces quality gates before completion
+     - Requires human verification between tasks
+
+3. **`/verify`** - Code Review & Quality Assurance
+   - **Role**: Senior Engineer/Reviewer
+   - **Objective**: Critical review, testing, and quality validation
+   - **Usage**: `/verify task_dir="<task_directory_path>" commit=true|false`
+   - **Output**: Comprehensive review results and optional commit
+
+4. **`/reflect`** - Learning Extraction & Process Improvement
+   - **Role**: QA Engineer/Process Analyst
+   - **Objective**: Identify gaps, extract learnings, improve documentation
+   - **Usage**: `/reflect task_dir="<task_directory_path>"`
+   - **Updates**: LEARNINGS.md and suggests process improvements
+
+### Quality Gates
+
+**IMPORTANT**: All code must pass quality gates before any commit or completion:
+
+1. **Code Formatting**: `mix format` - Must have zero formatting changes
+2. **All Tests Pass**: `mix test` - Must have 100% pass rate, no skipped tests
+3. **Static Analysis**: `mix credo --strict` - Must pass with zero issues
+4. **Feature Tests**: `mix test test/features/` - All behavior tests must pass
+
+The `/build` command automatically enforces these gates before marking any task as complete.
+
+### Command Usage Examples
+
+```bash
+# Start a new feature
+/plan description="Add user authentication"
+
+# Build the first task (automatically finds next task)
+/build task_dir="20250124_add_user_authentication"
+
+# Or use shortcuts
+/build 20250124              # Uses timestamp
+/build add_user_authentication # Uses feature name
+
+# Verify completed feature
+/verify task_dir="20250124_add_user_authentication" commit=true
+
+# Extract learnings
+/reflect task_dir="20250124_add_user_authentication"
+```
+
+### Workflow Philosophy
+
+This workflow simulates a team of specialists:
+- Each command activates a different cognitive mode
+- Tasks are broken into context-window-sized pieces
+- Continuous learning improves both AI and process
+- Knowledge is captured throughout, not just at the end
+
+For detailed workflow documentation, use the `/workflow` command.
+
 ## Knowledge Capture and Session Documentation
 
-For all substantial work sessions:
+Session documentation happens through the workflow commands:
 
-1. **Automatically Create Session Notes**: 
-   - Create `notes/session-YYYYMMDD-topic.md` at the beginning of any significant session
-   - Use a descriptive topic based on the user's initial request
-   - Structure with sections: Goals, Activities, Decisions, Outcomes, Learnings, Next Steps
+1. **Planning Phase**: Documents requirements analysis and task breakdown
+2. **Building Phase**: Captures implementation decisions and challenges
+3. **Verification Phase**: Records review findings and fixes
+4. **Reflection Phase**: Extracts learnings and updates LEARNINGS.md
 
-2. **During the Session**:
-   - Update the session notes after each significant step or decision
-   - Record all meaningful changes, commands run, and files modified
-   - Document rationales for important decisions 
-   - Note any challenges encountered and how they were resolved
-
-3. **At Session End**:
-   - Add a session summary with key outcomes and learnings
-   - Identify any items to be added to `LEARNINGS.md`
-   - Suggest improvements to documentation or processes
-   - List potential follow-up tasks
-
-This proactive documentation approach applies to all types of work:
-- Feature development
-- Bug fixes
-- Infrastructure improvements
-- Workflow refinements
-- Exploratory sessions
-- Documentation work
+For work outside the standard workflow (exploration, documentation, etc.), create session notes manually:
+- Create `notes/session-YYYYMMDD-topic.md` at the beginning
+- Document decisions, challenges, and outcomes
+- Include learnings for future reference
 
 ## Custom Commands
 
 When encountering commands with a leading slash (like `/command`):
 
-- If you don't recognize a command or are uncertain about its purpose or process, ask for clarification
-- Don't assume meaning based on context or guesswork
-- Request details about the command's phases or steps if they're referenced
-- Only proceed once you have clear instructions about what the command requires
-- Avoid implementing partial functionality based on assumptions
-
-Example response for unknown commands:
-"I'm not familiar with the `/command` command. Could you please explain what this command should do and what steps or phases it involves?"
+- Check `.claude/commands/` directory for command definitions
+- Commands follow the standard format: `/command param1="value1" param2="value2"`
+- If you don't recognize a command, ask for clarification
+- Available commands are documented in this section
 
 ## Migration Guidelines
 
