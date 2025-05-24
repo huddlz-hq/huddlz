@@ -37,27 +37,32 @@
     
     ## Requirements Analysis
     
-    Conduct thorough requirements analysis with PM mindset:
+    **CRITICAL: Do NOT proceed with planning until completing thorough discovery with the user!**
     
-    1. Ask clarifying questions about the feature:
+    Conduct interactive requirements analysis with PM mindset:
+    
+    1. **Initial Questions** (MUST ask the user):
        - What problem does this solve for users?
        - Who are the primary users?
        - What specific actions should users be able to perform?
        - What are the constraints or limitations?
        - How does this integrate with existing features?
     
-    2. Deep dive into specifics:
+    2. **Deep Dive** (based on initial answers):
        - Data requirements: What information needs to be stored/displayed?
        - User flows: Walk through the typical user journey
        - Edge cases: What happens in unexpected scenarios?
        - Access control: Who can perform these actions?
        - Performance: Any specific performance requirements?
     
-    3. Continue until you have:
-       - Clear scope boundaries
-       - Specific functional requirements
-       - Non-functional requirements
-       - Measurable success criteria
+    3. **Continue dialogue until you have**:
+       - Clear scope boundaries agreed with user
+       - Specific functional requirements confirmed
+       - Non-functional requirements understood
+       - Measurable success criteria defined
+       - User has explicitly approved the understanding
+    
+    **Only after user confirms understanding is complete, proceed to create files!**
     
     ## Create Index File
     
@@ -214,25 +219,13 @@
     [Implementation notes will be added here]
     ```
     
-    ## GitHub Integration
+    ## Session Notes Update
     
-    Post initial update to GitHub issue:
-    
+    Add to session.md:
     ```markdown
-    ## 📋 Planning Complete
-    
-    I've analyzed the requirements and created a local implementation plan.
-    
-    **Branch**: `feature/issue-{{ params.issue }}-[description]`
-    **Tasks**: [N] tasks identified
-    
-    ### Implementation Approach
-    [Brief summary of technical approach]
-    
-    ### Next Steps
-    Starting implementation with Task 1: [Name]
-    
-    I'll provide updates as significant milestones are reached.
+    ### Planning Complete - [Time]
+    - Created [N] tasks
+    - Ready to start implementation
     ```
     
     ## Important Guidelines
