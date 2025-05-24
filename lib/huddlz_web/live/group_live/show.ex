@@ -27,7 +27,8 @@ defmodule HuddlzWeb.GroupLive.Show do
        |> assign(:members, members)
        |> assign(:member_count, get_member_count(group))
        |> assign(:is_member, member?(group, socket.assigns.current_user))
-       |> assign(:is_owner, owner?(group, socket.assigns.current_user))}
+       |> assign(:is_owner, owner?(group, socket.assigns.current_user))
+       |> assign(:is_organizer, organizer?(group, socket.assigns.current_user))}
     else
       {:error, :not_found} ->
         {:noreply,
@@ -64,19 +65,27 @@ defmodule HuddlzWeb.GroupLive.Show do
           <% end %>
         </:subtitle>
         <:actions>
-          <%= if @current_user && !@is_owner do %>
-            <%= if @is_member do %>
-              <.button
-                phx-click="leave_group"
-                data-confirm="Are you sure you want to leave this group?"
-              >
-                Leave Group
-              </.button>
-            <% else %>
-              <%= if @group.is_public do %>
-                <.button phx-click="join_group">
-                  Join Group
+          <%= if @current_user do %>
+            <%= if @is_owner || @is_organizer do %>
+              <.link navigate={~p"/groups/#{@group.id}/huddlz/new"} class="btn btn-primary">
+                <.icon name="hero-plus" class="h-4 w-4" /> Create Huddl
+              </.link>
+            <% end %>
+
+            <%= if !@is_owner do %>
+              <%= if @is_member do %>
+                <.button
+                  phx-click="leave_group"
+                  data-confirm="Are you sure you want to leave this group?"
+                >
+                  Leave Group
                 </.button>
+              <% else %>
+                <%= if @group.is_public do %>
+                  <.button phx-click="join_group">
+                    Join Group
+                  </.button>
+                <% end %>
               <% end %>
             <% end %>
           <% end %>
@@ -227,24 +236,29 @@ defmodule HuddlzWeb.GroupLive.Show do
   end
 
   defp get_members(group, current_user) do
-    # Check if current user can see members based on CLAUDE.md rules
-    cond do
-      # Owners and organizers can always see members
-      owner?(group, current_user) || organizer?(group, current_user) ->
-        load_members(group)
-
-      # Verified members can see member list
-      member?(group, current_user) && current_user && current_user.role == :verified ->
-        load_members(group)
-
-      # Verified non-members can see members of public groups
-      group.is_public && current_user && current_user.role == :verified ->
-        load_members(group)
-
-      # Everyone else cannot see members
-      true ->
-        nil
+    if can_see_members?(group, current_user) do
+      load_members(group)
+    else
+      nil
     end
+  end
+
+  defp can_see_members?(group, current_user) do
+    owner_or_organizer?(group, current_user) ||
+      verified_member?(group, current_user) ||
+      verified_non_member_of_public_group?(group, current_user)
+  end
+
+  defp owner_or_organizer?(group, current_user) do
+    owner?(group, current_user) || organizer?(group, current_user)
+  end
+
+  defp verified_member?(group, current_user) do
+    member?(group, current_user) && current_user && current_user.role == :verified
+  end
+
+  defp verified_non_member_of_public_group?(group, current_user) do
+    group.is_public && current_user && current_user.role == :verified
   end
 
   defp load_members(group) do

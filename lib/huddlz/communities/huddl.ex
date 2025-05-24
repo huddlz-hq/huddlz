@@ -6,7 +6,9 @@ defmodule Huddlz.Communities.Huddl do
   use Ash.Resource,
     otp_app: :huddlz,
     domain: Huddlz.Communities,
-    data_layer: AshPostgres.DataLayer
+    data_layer: AshPostgres.DataLayer,
+    authorizers: [Ash.Policy.Authorizer],
+    primary_read_warning?: false
 
   postgres do
     table "huddlz"
@@ -14,7 +16,12 @@ defmodule Huddlz.Communities.Huddl do
   end
 
   actions do
-    defaults [:read, :destroy]
+    defaults [:destroy]
+
+    read :read do
+      primary? true
+      prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
+    end
 
     create :create do
       primary? true
@@ -33,6 +40,8 @@ defmodule Huddlz.Communities.Huddl do
         :creator_id,
         :group_id
       ]
+
+      change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
     end
 
     update :update do
@@ -61,10 +70,12 @@ defmodule Huddlz.Communities.Huddl do
       end
 
       filter expr(status == ^arg(:status))
+      prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
     end
 
     read :upcoming do
       filter expr(starts_at > ^DateTime.utc_now())
+      prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
     end
 
     read :search do
@@ -76,6 +87,67 @@ defmodule Huddlz.Communities.Huddl do
                is_nil(^arg(:query)) or contains(title, ^arg(:query)) or
                  contains(description, ^arg(:query))
              )
+
+      prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
+    end
+  end
+
+  policies do
+    # Admins can do anything
+    bypass always() do
+      description "Admins can do anything"
+      authorize_if actor_attribute_equals(:role, :admin)
+    end
+
+    # Creation policies
+    policy action(:create) do
+      description "Only group owners and organizers can create huddls"
+      authorize_if Huddlz.Communities.Huddl.Checks.GroupOwnerOrOrganizer
+    end
+
+    # Read policies
+    policy action(:read) do
+      description "Users can read huddls they have access to"
+      # Public huddls in public groups
+      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
+      # Any huddl in a group they're a member of
+      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
+    end
+
+    policy action(:upcoming) do
+      description "Users can view upcoming huddls they have access to"
+      # Public huddls in public groups
+      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
+      # Any huddl in a group they're a member of
+      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
+    end
+
+    policy action(:search) do
+      description "Users can search huddls they have access to"
+      # Public huddls in public groups
+      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
+      # Any huddl in a group they're a member of
+      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
+    end
+
+    policy action(:by_status) do
+      description "Users can filter huddls by status"
+      # Public huddls in public groups
+      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
+      # Any huddl in a group they're a member of
+      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
+    end
+
+    # Update policies
+    policy action(:update) do
+      description "Only group owners and organizers can update huddls"
+      authorize_if Huddlz.Communities.Huddl.Checks.GroupOwnerOrOrganizer
+    end
+
+    # Delete policies
+    policy action(:destroy) do
+      description "Only group owners and organizers can delete huddls"
+      authorize_if Huddlz.Communities.Huddl.Checks.GroupOwnerOrOrganizer
     end
   end
 
@@ -204,6 +276,10 @@ defmodule Huddlz.Communities.Huddl do
           end
         end)
       end
+    end
+
+    calculate :visible_virtual_link, :string do
+      calculation Huddlz.Communities.Huddl.Calculations.VisibleVirtualLink
     end
   end
 

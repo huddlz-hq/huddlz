@@ -11,8 +11,8 @@ Enable group owners and organizers to create huddlz (events) for their groups. T
 - As a user, I want to search and browse public huddlz, so that I can discover interesting events
 
 ## Implementation Sequence
-1. Update Huddl Resource - Add new fields and relationships for events
-2. Create Event Form - Build LiveView form for event creation
+1. ✅ Update Huddl Resource - Add new fields and relationships for events
+2. 🔄 Create Event Form - Build LiveView form for event creation (in progress)
 3. Implement Access Control - Ensure only owners/organizers can create events
 4. Add Event Display - Show events on group pages and main listing
 5. Implement RSVP System - Basic RSVP functionality with count display

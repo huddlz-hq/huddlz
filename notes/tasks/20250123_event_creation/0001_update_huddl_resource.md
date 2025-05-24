@@ -104,6 +104,7 @@
 - January 23, 2025 - Generated and ran migration (dropped existing test data)
 - January 23, 2025 - Updated test generator to provide group_id and new fields
 - January 23, 2025 - All tests passing, code formatted
+- January 23, 2025 - Committed changes: feat(huddlz): extend Huddl resource for event functionality
 
 ## Next Task
 - Next task: 0002_create_event_form

@@ -1,9 +1,9 @@
 defmodule Huddlz.Communities.GroupMembershipTest do
   use Huddlz.DataCase
 
+  alias Huddlz.Accounts.User
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupMember
-  alias Huddlz.Accounts.User
 
   require Ash.Query
 

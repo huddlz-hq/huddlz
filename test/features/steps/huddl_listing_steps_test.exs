@@ -7,20 +7,54 @@ defmodule HuddlListingSteps do
 
   # Background step: Create sample huddlz
   defstep "there are upcoming huddlz in the system", %{conn: conn} do
-    # Create sample huddlz using our generators
-    {host, huddlz} = host_with_huddlz()
+    # Create a verified host who can create huddls
+    host = generate(user(role: :verified))
+
+    # Create a public group owned by the host
+    public_group = generate(group(owner_id: host.id, is_public: true, actor: host))
+
+    # Create huddls in the public group
+    huddl1 =
+      generate(
+        huddl(
+          group_id: public_group.id,
+          creator_id: host.id,
+          is_private: false,
+          title: "Functional Programming Basics",
+          description: "Introduction to functional programming concepts",
+          actor: host
+        )
+      )
+
+    huddl2 =
+      generate(
+        huddl(
+          group_id: public_group.id,
+          creator_id: host.id,
+          is_private: false,
+          title: "Web Development Workshop",
+          description: "Modern web development techniques",
+          actor: host
+        )
+      )
 
     # Create a specific huddl with "Elixir" in the title for search testing
     elixir_huddl =
-      huddl(
-        host: host,
-        title: "Elixir Programming Workshop",
-        description: "Learn functional programming with Elixir"
+      generate(
+        huddl(
+          group_id: public_group.id,
+          creator_id: host.id,
+          is_private: false,
+          title: "Elixir Programming Workshop",
+          description: "Learn functional programming with Elixir",
+          actor: host
+        )
       )
-      |> generate()
+
+    huddlz = [huddl1, huddl2, elixir_huddl]
 
     # Return the connection and huddl information
-    {:ok, %{conn: conn, huddlz: [elixir_huddl | huddlz], huddlz_count: length(huddlz) + 1}}
+    {:ok, %{conn: conn, huddlz: huddlz, huddlz_count: length(huddlz)}}
   end
 
   # Visit landing page

@@ -42,6 +42,9 @@ defmodule HuddlzWeb.Router do
       live "/groups", GroupLive.Index, :index
       live "/groups/new", GroupLive.New, :new
       live "/groups/:id", GroupLive.Show, :show
+
+      # Huddl routes
+      live "/groups/:group_id/huddlz/new", HuddlLive.New, :new
     end
   end
 

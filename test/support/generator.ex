@@ -92,12 +92,24 @@ defmodule Huddlz.Generator do
   Create a huddl with random data.
   """
   def huddl(opts \\ []) do
-    host = Keyword.get(opts, :host)
-    host_id = if host, do: host.id, else: nil
+    actor =
+      opts[:actor] ||
+        once(:default_actor, fn ->
+          generate(user(role: opts[:actor_role] || :verified))
+        end)
 
-    # Get or create a group
-    group = Keyword.get(opts, :group) || generate(group(owner: host))
-    group_id = if group, do: group.id, else: nil
+    creator_id =
+      opts[:creator_id] ||
+        once(:default_creator_id, fn ->
+          generate(user(role: :verified)).id
+        end)
+
+    group_id =
+      opts[:group_id] ||
+        once(:default_group_id, fn ->
+          owner = generate(user(role: :verified))
+          generate(group(owner_id: owner.id, is_public: true, actor: owner)).id
+        end)
 
     # Generate random dates in the future
     days_ahead = :rand.uniform(30)
@@ -105,37 +117,28 @@ defmodule Huddlz.Generator do
     start_time = DateTime.add(DateTime.utc_now(), days_ahead, :day)
     end_time = DateTime.add(start_time, hours_duration, :hour)
 
-    # Random title using Faker with sequence for uniqueness
-    title = Keyword.get(opts, :title, sequence(:title, &"#{Faker.Company.bs()} #{&1}"))
-
-    # Generate a placeholder title for the URL that works with StreamData
-    url_title =
-      case title do
-        title when is_binary(title) -> String.replace(title, " ", "+")
-        # Default placeholder if title is a StreamData object
-        _ -> "Huddl"
-      end
-
     # Generate a thumbnail URL
     thumbnail_url =
-      "https://placehold.co/600x400/#{random_hex_color()}/FFFFFF?text=#{url_title}"
+      "https://placehold.co/600x400/#{random_hex_color()}/FFFFFF?text=Huddl"
 
-    # Create seed generator with default values
-    seed_generator(
-      %Huddl{
-        title: title,
-        description: Faker.Lorem.paragraph(2..3),
+    changeset_generator(
+      Huddl,
+      :create,
+      defaults: [
+        title: StreamData.repeatedly(fn -> Faker.Company.bs() end),
+        description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
         starts_at: start_time,
         ends_at: end_time,
         thumbnail_url: thumbnail_url,
-        creator_id: host_id,
+        creator_id: creator_id,
         group_id: group_id,
         event_type: :in_person,
         physical_location: "123 Main St, Anytown, USA",
         is_private: false,
         rsvp_count: 0
-      },
-      overrides: opts
+      ],
+      overrides: opts,
+      actor: actor
     )
   end
 
@@ -146,11 +149,24 @@ defmodule Huddlz.Generator do
     email = email || Faker.Internet.email()
 
     host =
-      user(email: email)
+      user(email: email, role: :verified)
       |> generate()
 
+    # Create a public group for the host
+    public_group = generate(group(owner_id: host.id, is_public: true, actor: host))
+
     huddlz =
-      huddl(Keyword.merge([host: host], huddl_opts))
+      huddl(
+        Keyword.merge(
+          [
+            creator_id: host.id,
+            group_id: public_group.id,
+            is_private: false,
+            actor: host
+          ],
+          huddl_opts
+        )
+      )
       |> generate_many(count)
 
     {host, huddlz}

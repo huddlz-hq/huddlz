@@ -18,9 +18,9 @@
   - UI changes (beyond hiding/showing based on permissions)
 
 ## Current Status
-- Progress: 0%
-- Blockers: Requires Task 2 completion (Event form)
-- Next steps: Begin implementation after Task 2 verification
+- Progress: 100%
+- Blockers: None
+- Next steps: Task completed, ready for Task 4
 
 ## Requirements Analysis
 - Only owners and organizers can create huddlz
@@ -38,18 +38,18 @@
 - Update LiveView to check permissions
 
 ## Implementation Checklist
-1. [ ] Add create authorization to Huddl resource (check owner/organizer)
-2. [ ] Create custom check for owner/organizer status
-3. [ ] Add change to force is_private=true for private groups
-4. [ ] Add read authorization based on event/group privacy
-5. [ ] Create preparation to filter events based on membership
-6. [ ] Add virtual_link visibility logic (only for attendees)
-7. [ ] Update event form LiveView to check create permission
-8. [ ] Hide "Create Huddl" button for non-owners/organizers
-9. [ ] Add query preparation for public event filtering
-10. [ ] Test authorization with different user types
-11. [ ] Ensure private events don't appear in public listings
-12. [ ] Write tests for access control scenarios
+1. [x] Add create authorization to Huddl resource (check owner/organizer)
+2. [x] Create custom check for owner/organizer status
+3. [x] Add change to force is_private=true for private groups
+4. [x] Add read authorization based on event/group privacy
+5. [x] Create preparation to filter events based on membership
+6. [x] Add virtual_link visibility logic (only for attendees)
+7. [x] Update event form LiveView to check create permission
+8. [x] Hide "Create Huddl" button for non-owners/organizers
+9. [x] Add query preparation for public event filtering
+10. [x] Test authorization with different user types
+11. [x] Ensure private events don't appear in public listings
+12. [x] Write tests for access control scenarios
 
 ## Related Files
 - lib/huddlz/communities/huddl.ex
@@ -94,6 +94,17 @@
 
 ## Session Log
 - January 23, 2025 - Started task planning...
+- May 23, 2025 - Starting implementation of access control...
+- May 23, 2025 - Created custom authorization checks (GroupOwnerOrOrganizer, GroupMember, PublicHuddl)
+- May 23, 2025 - Created change module to force private events for private groups
+- May 23, 2025 - Created preparation to filter events based on visibility
+- May 23, 2025 - Created calculation for virtual link visibility
+- May 23, 2025 - Added authorization policies to Huddl resource
+- May 23, 2025 - Updated HuddlLive to pass actor to queries
+- May 23, 2025 - Created comprehensive access control tests
+- May 23, 2025 - Fixed issue with policies not applying to :upcoming and :search actions
+- May 23, 2025 - All tests passing (157 tests, 0 failures)
+- May 23, 2025 - Task completed successfully
 
 ## Next Task
 - Next task: 0004_add_event_display

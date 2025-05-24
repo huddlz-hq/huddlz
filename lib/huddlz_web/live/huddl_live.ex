@@ -10,7 +10,7 @@ defmodule HuddlzWeb.HuddlLive do
   def mount(_params, _session, socket) do
     if connected?(socket) do
       # Only get huddls when socket is connected to minimize load
-      upcoming_huddls = Communities.get_upcoming!()
+      upcoming_huddls = Communities.get_upcoming!(actor: socket.assigns[:current_user])
       {:ok, assign(socket, huddls: upcoming_huddls, search_query: nil)}
     else
       # Initial load - empty to speed up first render
@@ -21,9 +21,9 @@ defmodule HuddlzWeb.HuddlLive do
   def handle_event("search", %{"query" => query}, socket) do
     huddls =
       if query && query != "" do
-        Communities.search_huddlz!(query)
+        Communities.search_huddlz!(query, actor: socket.assigns[:current_user])
       else
-        Communities.get_upcoming!()
+        Communities.get_upcoming!(actor: socket.assigns[:current_user])
       end
 
     {:noreply, assign(socket, huddls: huddls, search_query: query)}

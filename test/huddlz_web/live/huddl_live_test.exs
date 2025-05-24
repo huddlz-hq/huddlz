@@ -5,40 +5,61 @@ defmodule HuddlzWeb.HuddlLiveTest do
   import Huddlz.Generator
 
   describe "Huddl listing" do
-    test "displays huddlz on the homepage", %{conn: conn} do
-      # Create test data
-      {_host, huddlz} = host_with_huddlz()
+    setup do
+      # Create a public group with a verified owner for all tests
+      host = generate(user(role: :verified))
+      public_group = generate(group(is_public: true, owner_id: host.id, actor: host))
 
-      {:ok, _view, html} = live(conn, "/")
+      %{host: host, public_group: public_group}
+    end
+
+    test "displays huddlz on the homepage", %{conn: conn, host: host, public_group: public_group} do
+      public_huddl =
+        generate(
+          huddl(
+            group_id: public_group.id,
+            creator_id: host.id,
+            is_private: false,
+            title: "Public Huddl Test",
+            actor: host
+          )
+        )
+
+      {:ok, view, html} = live(conn, "/")
 
       # Check that the page renders correctly
       assert html =~ "Find your huddl"
       assert html =~ "Search huddlz"
 
-      # Check that huddlz are displayed
-      huddl = List.first(huddlz)
-      assert html =~ huddl.title
+      # The initial render won't have huddls because connected?(socket) is false
+      # We need to use render/1 to get the connected view
+      assert render(view) =~ public_huddl.title
     end
 
-    test "searches huddlz by title", %{conn: conn} do
-      # Create test data with specific titles
-      {host, _} = host_with_huddlz()
-
+    test "searches huddlz by title", %{conn: conn, host: host, public_group: public_group} do
       _elixir_huddl =
-        huddl(
-          host: host,
-          title: "Elixir Programming Workshop",
-          description: "Learn functional programming"
+        generate(
+          huddl(
+            group_id: public_group.id,
+            creator_id: host.id,
+            is_private: false,
+            title: "Elixir Programming Workshop",
+            description: "Learn functional programming",
+            actor: host
+          )
         )
-        |> generate()
 
       _python_huddl =
-        huddl(
-          host: host,
-          title: "Python Data Science",
-          description: "Data analysis with Python"
+        generate(
+          huddl(
+            group_id: public_group.id,
+            creator_id: host.id,
+            is_private: false,
+            title: "Python Data Science",
+            description: "Data analysis with Python",
+            actor: host
+          )
         )
-        |> generate()
 
       {:ok, view, _html} = live(conn, "/")
 
@@ -51,25 +72,30 @@ defmodule HuddlzWeb.HuddlLiveTest do
       refute html =~ "Python Data Science"
     end
 
-    test "searches huddlz by description", %{conn: conn} do
-      # Create test data
-      {host, _} = host_with_huddlz()
-
+    test "searches huddlz by description", %{conn: conn, host: host, public_group: public_group} do
       _huddl_with_description =
-        huddl(
-          host: host,
-          title: "Tech Talk",
-          description: "Advanced Elixir patterns and best practices"
+        generate(
+          huddl(
+            group_id: public_group.id,
+            creator_id: host.id,
+            is_private: false,
+            title: "Tech Talk",
+            description: "Advanced Elixir patterns and best practices",
+            actor: host
+          )
         )
-        |> generate()
 
       _other_huddl =
-        huddl(
-          host: host,
-          title: "Coffee Chat",
-          description: "Casual morning meetup"
+        generate(
+          huddl(
+            group_id: public_group.id,
+            creator_id: host.id,
+            is_private: false,
+            title: "Coffee Chat",
+            description: "Casual morning meetup",
+            actor: host
+          )
         )
-        |> generate()
 
       {:ok, view, _html} = live(conn, "/")
 
@@ -82,14 +108,38 @@ defmodule HuddlzWeb.HuddlLiveTest do
       refute html =~ "Coffee Chat"
     end
 
-    test "shows all huddlz when search is cleared", %{conn: conn} do
+    test "shows all huddlz when search is cleared", %{
+      conn: conn,
+      host: host,
+      public_group: public_group
+    } do
       # Create test data
-      {host, _} = host_with_huddlz()
+      huddl1 =
+        generate(
+          huddl(
+            group_id: public_group.id,
+            creator_id: host.id,
+            is_private: false,
+            title: "Elixir Workshop",
+            actor: host
+          )
+        )
 
-      huddl1 = huddl(host: host, title: "Elixir Workshop") |> generate()
-      huddl2 = huddl(host: host, title: "JavaScript Basics") |> generate()
+      huddl2 =
+        generate(
+          huddl(
+            group_id: public_group.id,
+            creator_id: host.id,
+            is_private: false,
+            title: "JavaScript Basics",
+            actor: host
+          )
+        )
 
-      {:ok, view, html} = live(conn, "/")
+      {:ok, view, _html} = live(conn, "/")
+
+      # Get the connected view
+      html = render(view)
 
       # Initially should see both huddlz
       assert html =~ huddl1.title
@@ -108,11 +158,20 @@ defmodule HuddlzWeb.HuddlLiveTest do
       assert html =~ huddl2.title
     end
 
-    test "shows 'No huddlz found' when search has no results", %{conn: conn} do
-      # Create test data
-      {host, _} = host_with_huddlz()
-
-      huddl(host: host, title: "Elixir Workshop") |> generate()
+    test "shows 'No huddlz found' when search has no results", %{
+      conn: conn,
+      host: host,
+      public_group: public_group
+    } do
+      generate(
+        huddl(
+          group_id: public_group.id,
+          creator_id: host.id,
+          is_private: false,
+          title: "Elixir Workshop",
+          actor: host
+        )
+      )
 
       {:ok, view, _html} = live(conn, "/")
 
@@ -123,23 +182,32 @@ defmodule HuddlzWeb.HuddlLiveTest do
       assert html =~ "No huddlz found"
     end
 
-    test "search button triggers search via form submit", %{conn: conn} do
-      # Create test data
-      {host, _} = host_with_huddlz()
-
+    test "search button triggers search via form submit", %{
+      conn: conn,
+      host: host,
+      public_group: public_group
+    } do
       _elixir_huddl =
-        huddl(
-          host: host,
-          title: "Elixir Programming Workshop"
+        generate(
+          huddl(
+            group_id: public_group.id,
+            creator_id: host.id,
+            is_private: false,
+            title: "Elixir Programming Workshop",
+            actor: host
+          )
         )
-        |> generate()
 
       _python_huddl =
-        huddl(
-          host: host,
-          title: "Python Data Science"
+        generate(
+          huddl(
+            group_id: public_group.id,
+            creator_id: host.id,
+            is_private: false,
+            title: "Python Data Science",
+            actor: host
+          )
         )
-        |> generate()
 
       {:ok, view, _html} = live(conn, "/")
 
@@ -152,21 +220,21 @@ defmodule HuddlzWeb.HuddlLiveTest do
       refute html =~ "Python Data Science"
     end
 
-    test "search is case-insensitive", %{conn: conn} do
-      # Create test data with explicit status and future date
-      {host, _} = host_with_huddlz()
-
+    test "search is case-insensitive", %{conn: conn, host: host, public_group: public_group} do
       future_date = DateTime.add(DateTime.utc_now(), 7, :day)
 
       _elixir_huddl =
-        huddl(
-          host: host,
-          title: "Elixir Programming Workshop",
-          status: "upcoming",
-          starts_at: future_date,
-          ends_at: DateTime.add(future_date, 2, :hour)
+        generate(
+          huddl(
+            group_id: public_group.id,
+            creator_id: host.id,
+            is_private: false,
+            title: "Elixir Programming Workshop",
+            starts_at: future_date,
+            ends_at: DateTime.add(future_date, 2, :hour),
+            actor: host
+          )
         )
-        |> generate()
 
       {:ok, view, _html} = live(conn, "/")
 
@@ -184,16 +252,17 @@ defmodule HuddlzWeb.HuddlLiveTest do
       assert html =~ "Elixir Programming Workshop", "Mixed case search should work"
     end
 
-    test "partial search matches work", %{conn: conn} do
-      # Create test data
-      {host, _} = host_with_huddlz()
-
+    test "partial search matches work", %{conn: conn, host: host, public_group: public_group} do
       _workshop_huddl =
-        huddl(
-          host: host,
-          title: "Elixir Programming Workshop"
+        generate(
+          huddl(
+            group_id: public_group.id,
+            creator_id: host.id,
+            is_private: false,
+            title: "Elixir Programming Workshop",
+            actor: host
+          )
         )
-        |> generate()
 
       {:ok, view, _html} = live(conn, "/")
 
