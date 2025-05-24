@@ -1,6 +1,7 @@
 <prompt>
   <params>
-    task_dir # Path or identifier for the task directory (full path, feature name, or timestamp)
+    task_dir # Path/identifier for task directory OR GitHub issue number
+    issue # Optional GitHub parent issue number
   </params>
 
   <instructions>
@@ -8,104 +9,198 @@
     
     This command analyzes completed work to extract learnings and improve future development.
     
-    ## Task Directory Resolution
+    ## Workflow Detection
     
-    1. Resolve the task directory from {{ params.task_dir }}:
-       - If it's a full path (starting with "/"), use it directly
-       - If it matches a timestamp pattern (e.g., "20250506120145"), find `notes/tasks/[timestamp]_*`
-       - If it's a feature name (e.g., "create_groups"), find `notes/tasks/*_[feature_name]`
-       - If not provided, use the most recent task directory in `notes/tasks/`
+    1. Determine workflow mode:
+       - If {{ params.issue }} is provided: GitHub issue mode
+       - If {{ params.task_dir }} looks like a number: Check if it's a GitHub issue
+       - Otherwise: File-based mode (legacy)
     
-    2. If multiple matches or no matches found, ask the user to clarify
+    ## GitHub Issue Mode
     
-    ## Reflection Preparation
+    If working with GitHub issues:
     
-    3. Read the index.md file from the task directory
-    4. Check if all tasks are marked as "completed"
-       - If not all tasks are completed, inform the user and ask if they want to proceed anyway
-    
-    5. Create a new Reflection section in the index.md if it doesn't exist
-    6. Add a reflection entry to the index.md:
+    1. Fetch parent issue and all sub-issues:
        ```
-       [{{ current_date }}] Starting reflection process...
+       gh issue view {{ params.issue }} --json title,body,comments
+       gh issue list --label "issue-{{ params.issue }}" --json number,title,state,comments
        ```
+    
+    2. Extract Feature Log from parent issue comments
+    
+    3. Analyze all phases:
+       - Planning insights from initial breakdown
+       - Building challenges from progress updates
+       - Course corrections marked with 🔄
+       - Verification findings
+    
+    4. Update Feature Log with reflection:
+       ```markdown
+       ### Reflection Phase - [Current Date/Time]
+       
+       Analyzing complete feature implementation...
+       ```
+    
+    ## File-Based Mode (Legacy)
+    
+    If using file-based workflow:
+    
+    1. Resolve task directory and analyze all task files
+    2. Extract learnings from Session Logs and Progress sections
     
     ## Holistic Analysis
     
-    7. Review the entire task directory, including:
-       - The index.md for overall progress and challenges
-       - Each individual task file for specific learnings
-       - The Verification section if it exists
+    Review the entire development process:
     
-    8. Analyze the entire development process, focusing on:
-       - Task breakdown effectiveness (were tasks sized appropriately?)
-       - Task sequencing (was the implementation order logical?)
-       - Key decisions made and their outcomes
-       - Challenges encountered and how they were addressed
-       - Architectural or design patterns that worked well
-       - Patterns that caused issues or needed reworking
-       - Testing approaches and their effectiveness
-       - Techniques that improved efficiency or quality
+    1. **Requirements Evolution**:
+       - What wasn't clear initially?
+       - What requirements emerged during implementation?
+       - Were acceptance criteria sufficient?
     
-    ## Knowledge Extraction
+    2. **Task Breakdown Effectiveness**:
+       - Were tasks appropriately sized?
+       - Was the sequence logical?
+       - Any unnecessary dependencies?
     
-    9. Add insights to the "Reflection" section of the index.md:
-       - Organize learnings by categories (e.g., Design, Implementation, Testing, Process)
-       - Use clear, actionable language
-       - Include concrete examples
-       - Focus on transferable knowledge
-       - Include specific references to tasks where appropriate
+    3. **Implementation Insights**:
+       - Course corrections and why they happened
+       - Patterns that worked well
+       - Anti-patterns to avoid
+       - Performance considerations discovered
+    
+    4. **Testing Strategies**:
+       - Test approaches that caught issues
+       - Missing test scenarios discovered
+       - BDD/TDD effectiveness
+    
+    5. **Process Observations**:
+       - Communication gaps
+       - Documentation needs
+       - Tool effectiveness
+    
+    ## Learning Extraction
+    
+    Look for patterns in:
+    - 🔄 COURSE CORRECTION markers
+    - Multiple attempts at same problem
+    - User feedback that changed approach
+    - Quality gate failures and fixes
+    
+    Categorize learnings:
+    ```markdown
+    ## Key Learnings
+    
+    ### Technical Insights
+    - [Specific technical pattern or approach]
+    - [Performance optimization discovered]
+    
+    ### Process Improvements  
+    - [Better way to break down similar features]
+    - [Testing strategy that works well]
+    
+    ### Domain Knowledge
+    - [Business logic understanding]
+    - [User behavior insights]
+    
+    ### Tooling & Framework
+    - [Ash Framework pattern]
+    - [Phoenix LiveView approach]
+    ```
     
     ## Global Knowledge Integration
     
-    10. Update the central LEARNINGS.md file:
-        - Open and read the LEARNINGS.md file
-        - Identify categories where new learnings should be added
-        - Add new insights in appropriate sections
-        - Ensure there are no duplicates
-        - Maintain consistent formatting
-        - Reference the feature/task directory where relevant
+    Update LEARNINGS.md with new insights:
     
-    ## Process Improvement
+    1. Read current LEARNINGS.md
+    2. Identify appropriate categories
+    3. Add new learnings with context:
+       ```markdown
+       ## [Category]
+       
+       ### [Learning Title]
+       *From: Issue #{{ params.issue }} - [Feature Name]*
+       
+       [Detailed explanation with example]
+       ```
     
-    11. Based on the reflection, suggest improvements to:
-        - Feature breakdown process
-        - Task sizing and sequencing
-        - Implementation approaches
-        - Testing methodologies
-        - Documentation practices
+    ## Process Evolution
     
-    12. Add a "Process Improvements" section to the index.md:
-        ```
-        ## Process Improvements
-        - [Specific improvement 1]
-        - [Specific improvement 2]
-        ...
-        ```
+    Based on patterns identified:
     
-    ## Future Work
+    1. Suggest command improvements:
+       - Should planning ask different questions?
+       - Should build enforce additional checks?
+       - Should verify include new criteria?
     
-    13. Identify potential follow-up tasks or enhancements:
-        - Extensions to the feature
-        - Refactorings that could improve the implementation
-        - Technical debt that should be addressed later
+    2. If suggesting changes, prepare proposals:
+       ```markdown
+       ## Proposed Process Improvements
+       
+       1. **Enhancement**: [What to change]
+          **Rationale**: [Why based on this feature]
+          **Implementation**: [How to update commands]
+       ```
     
-    14. Add a "Future Work" section to the index.md with these items
+    3. Ask user for approval before modifying any commands
+    
+    ## Future Work Identification
+    
+    Create issues for:
+    - Technical debt identified
+    - Performance optimizations deferred  
+    - Feature enhancements discovered
+    - Refactoring opportunities
+    
+    ### GitHub Mode
+    ```
+    gh issue create \
+      --title "[Type]: [Description]" \
+      --body "[Details from reflection]" \
+      --label "enhancement,from-reflection"
+    ```
+    
+    ## Documentation Update
+    
+    ### GitHub Mode
+    
+    Final comment on parent issue:
+    ```markdown
+    ## Reflection Complete
+    
+    ### Summary
+    Feature implemented successfully with [X] tasks completed.
+    
+    ### Key Learnings
+    [Top 3-5 insights]
+    
+    ### Process Improvements
+    [Suggested changes to workflow]
+    
+    ### Future Work
+    - #[new-issue-1] - [Description]
+    - #[new-issue-2] - [Description]
+    
+    LEARNINGS.md updated with new insights.
+    ```
+    
+    ### File Mode
+    
+    Update index.md with reflection results
     
     ## Important Rules
     
-    - Be specific and concrete in identifying learnings
-    - Focus on actionable insights, not just observations
-    - Consider both technical and process improvements
-    - Look for patterns across multiple tasks
-    - Separate one-off issues from systemic patterns
-    - Keep the LEARNINGS.md file well-organized with clear categories
-    - When adding to LEARNINGS.md, maintain a consistent style
-    - Pay special attention to task breakdown effectiveness
-    - ALWAYS update the LEARNINGS.md file with new insights
+    - Extract learnings from the entire journey, not just the end
+    - Focus on patterns, not one-off issues
+    - Make learnings actionable and specific
+    - Always update LEARNINGS.md
+    - Create follow-up issues for future work
+    - Get approval before modifying commands
     
     ## Return Values
     
-    Summarize the key learnings identified, improvements suggested, and changes made to LEARNINGS.md.
+    - Key learnings summary
+    - LEARNINGS.md updates made
+    - Process improvements suggested
+    - Future work issues created
   </instructions>
 </prompt>

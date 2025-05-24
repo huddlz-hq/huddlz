@@ -164,33 +164,44 @@ This project uses custom commands to maintain consistent development practices a
 
 ### Core Workflow Commands
 
-The development workflow consists of four phases, each with a specific role and objective:
+The development workflow consists of four phases, each with a specific role and objective. Commands support both GitHub issue-based and file-based workflows.
 
 1. **`/plan`** - Requirements Analysis & Task Breakdown
    - **Role**: Project Manager
    - **Objective**: Understand requirements and break down into manageable tasks
-   - **Usage**: `/plan description="brief feature description"`
-   - **Output**: Creates timestamped task directory with detailed task specifications
+   - **Usage**: 
+     - GitHub: `/plan issue=123`
+     - File-based: `/plan description="brief feature description"`
+   - **Output**: 
+     - GitHub: Creates sub-issues and feature branch
+     - File-based: Creates timestamped task directory
 
 2. **`/build`** - Implementation with TDD/BDD
    - **Role**: Expert Engineer
    - **Objective**: Meticulously implement code following test-driven development
-   - **Usage**: `/build task_dir="<task_directory_path>"`
+   - **Usage**: 
+     - GitHub: `/build issue=123-1` (sub-issue number)
+     - File-based: `/build task_dir="<task_directory_path>"`
    - **Features**: 
      - Automatically resumes in-progress work
      - Enforces quality gates before completion
      - Requires human verification between tasks
+     - Real-time learning capture
 
 3. **`/verify`** - Code Review & Quality Assurance
    - **Role**: Senior Engineer/Reviewer
    - **Objective**: Critical review, testing, and quality validation
-   - **Usage**: `/verify task_dir="<task_directory_path>" commit=true|false`
+   - **Usage**: 
+     - GitHub: `/verify issue=123` (parent issue)
+     - File-based: `/verify task_dir="<task_directory_path>" commit=true|false`
    - **Output**: Comprehensive review results and optional commit
 
 4. **`/reflect`** - Learning Extraction & Process Improvement
    - **Role**: QA Engineer/Process Analyst
    - **Objective**: Identify gaps, extract learnings, improve documentation
-   - **Usage**: `/reflect task_dir="<task_directory_path>"`
+   - **Usage**: 
+     - GitHub: `/reflect issue=123`
+     - File-based: `/reflect task_dir="<task_directory_path>"`
    - **Updates**: LEARNINGS.md and suggests process improvements
 
 ### Quality Gates
@@ -206,6 +217,23 @@ The `/build` command automatically enforces these gates before marking any task 
 
 ### Command Usage Examples
 
+#### GitHub Issue Workflow (Recommended)
+```bash
+# Start from a GitHub issue
+/plan issue=123
+
+# Build sub-issues in sequence
+/build issue=123-1
+/build issue=123-2
+
+# Verify the complete feature
+/verify issue=123
+
+# Extract learnings
+/reflect issue=123
+```
+
+#### File-Based Workflow (Legacy)
 ```bash
 # Start a new feature
 /plan description="Add user authentication"
@@ -224,6 +252,16 @@ The `/build` command automatically enforces these gates before marking any task 
 /reflect task_dir="20250124_add_user_authentication"
 ```
 
+### GitHub Issue Integration
+
+The workflow integrates seamlessly with GitHub Issues:
+
+1. **Feature Log**: All work is documented in a pinned comment on the parent issue
+2. **Sub-Issues**: Each task becomes a sub-issue with clear requirements
+3. **Progress Tracking**: Updates posted to issues in real-time
+4. **Learning Capture**: Course corrections marked with 🔄 emoji
+5. **Parallel Work**: Multiple AI instances can work on different sub-issues
+
 ### Workflow Philosophy
 
 This workflow simulates a team of specialists:
@@ -231,6 +269,7 @@ This workflow simulates a team of specialists:
 - Tasks are broken into context-window-sized pieces
 - Continuous learning improves both AI and process
 - Knowledge is captured throughout, not just at the end
+- GitHub integration enables collaboration and transparency
 
 For detailed workflow documentation, use the `/workflow` command.
 

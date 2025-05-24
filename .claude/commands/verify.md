@@ -1,6 +1,7 @@
 <prompt>
   <params>
-    task_dir # Path or identifier for the task directory (full path, feature name, or timestamp)
+    task_dir # Path/identifier for task directory OR GitHub issue number  
+    issue # Optional GitHub parent issue number
     commit # Whether to commit changes after verification (true/false, default false)
   </params>
 
@@ -9,110 +10,200 @@
     
     This command performs comprehensive review and testing of a completed feature implementation.
     
-    ## Task Directory Resolution
+    ## Workflow Detection
     
-    1. Resolve the task directory from {{ params.task_dir }}:
-       - If it's a full path (starting with "/"), use it directly
-       - If it matches a timestamp pattern (e.g., "20250506120145"), find `notes/tasks/[timestamp]_*`
-       - If it's a feature name (e.g., "create_groups"), find `notes/tasks/*_[feature_name]`
-       - If not provided, use the most recent task directory in `notes/tasks/`
+    1. Determine workflow mode:
+       - If {{ params.issue }} is provided: GitHub issue mode
+       - If {{ params.task_dir }} looks like a number: Check if it's a GitHub issue
+       - Otherwise: File-based mode (legacy)
     
-    2. If multiple matches or no matches found, ask the user to clarify
+    ## GitHub Issue Mode
     
-    ## Feature Completion Check
+    If working with GitHub issues:
     
-    3. Read the index.md file from the task directory
-    4. Check if all tasks are marked as "completed"
-    5. If not all tasks are completed:
-       - Inform the user that some tasks are incomplete
-       - Ask if they want to proceed with verification anyway
-       - If they decline, suggest using the `/build` command to complete remaining tasks
-    
-    ## Verification Preparation
-    
-    6. Create a new Verification section in the index.md file
-    7. Update the index.md with a verification entry:
+    1. Fetch parent issue details:
        ```
-       [{{ current_date }}] Starting comprehensive verification of the feature...
+       gh issue view {{ params.issue }} --json title,body,labels,state
        ```
+    
+    2. List all sub-issues:
+       ```
+       gh issue list --label "issue-{{ params.issue }}" --json number,title,state
+       ```
+    
+    3. Check completion status:
+       - Count closed vs open sub-issues
+       - If not all closed, ask if user wants to proceed anyway
+    
+    4. Update Feature Log on parent issue:
+       ```markdown
+       ### Verification Phase - [Current Date/Time]
+       
+       Starting comprehensive review of feature implementation...
+       Sub-issues completed: [X/Y]
+       ```
+    
+    ## File-Based Mode (Legacy)
+    
+    If using file-based workflow:
+    
+    1. Resolve task directory and check task completion status
+    2. Proceed with file-based verification as before
     
     ## Comprehensive Review
     
-    8. Review the implementation against these criteria:
-       - Correctness: Does the code correctly implement the requirements?
-       - Completeness: Are all requirements addressed?
-       - Security: Are there any security vulnerabilities?
-       - Performance: Are there any potential performance issues?
-       - Readability: Is the code easy to understand?
-       - Maintainability: Will the code be easy to maintain?
-       - Project Standards: Does the code follow project style guidelines?
-       - Testing: Is there adequate test coverage?
-       - Consistency: Is the implementation consistent across all tasks?
+    Review the implementation against these criteria:
     
-    9. Document findings in the Verification section in index.md:
-       - List issues found by category
-       - Suggest specific improvements
-       - Note any missed requirements
+    1. **Requirements Coverage**:
+       - Check each requirement from parent issue
+       - Verify all acceptance criteria are met
+       - Note any missing functionality
     
-    ## Testing
+    2. **Code Quality**:
+       - Readability and maintainability
+       - Follows project patterns and conventions
+       - Proper error handling
+       - No code smells or anti-patterns
     
-    10. Run all relevant tests:
-        - Unit tests for the feature: `mix test`
-        - Integration tests if applicable
-        - Cucumber feature tests if applicable: `mix test test/features/`
-        - Format checks with `mix format`
+    3. **Security**:
+       - No hardcoded secrets
+       - Proper input validation
+       - Authorization checks in place
+       - SQL injection prevention
     
-    11. Document test results in the index.md:
-        - Tests that pass
-        - Any test failures with details
-        - Coverage statistics if available
+    4. **Performance**:
+       - No N+1 queries
+       - Efficient algorithms
+       - Appropriate caching
+    
+    5. **Testing**:
+       - Adequate test coverage
+       - Tests follow BDD/TDD principles
+       - Edge cases covered
+    
+    ## Quality Gates (Re-run)
+    
+    Run comprehensive quality checks:
+    
+    ```bash
+    # Format check
+    mix format --check-formatted
+    
+    # All tests
+    mix test
+    
+    # Static analysis  
+    mix credo --strict
+    
+    # Feature tests
+    mix test test/features/
+    ```
+    
+    Document results:
+    ```markdown
+    ## Quality Gate Results
+    - Format: ✅ Clean
+    - Tests: ✅ 127 passed, 0 failed
+    - Credo: ✅ No issues
+    - Features: ✅ All scenarios passing
+    ```
+    
+    ## Integration Testing
+    
+    Beyond unit tests, verify:
+    - Feature works end-to-end
+    - No regressions in existing functionality
+    - UI components render correctly
+    - API endpoints respond as expected
+    
+    ## Issue Documentation
+    
+    ### GitHub Mode
+    
+    Create verification comment on parent issue:
+    ```markdown
+    ## Verification Complete
+    
+    ### Coverage
+    ✅ All requirements implemented
+    ✅ All sub-issues completed
+    
+    ### Quality
+    - Code Review: [Pass/Issues Found]
+    - Security: [Pass/Concerns]
+    - Performance: [Acceptable/Needs Work]
+    
+    ### Testing
+    - Unit Tests: [X passed]
+    - Feature Tests: [Y passed]
+    - Manual Testing: [Completed/Issues]
+    
+    ### Issues Found & Fixed
+    1. [Issue description] - ✅ Fixed
+    2. [Issue description] - 📝 Documented for later
+    
+    ### Recommendations
+    - [Future improvements]
+    - [Technical debt to address]
+    ```
+    
+    ### File Mode
+    
+    Update index.md with verification results
     
     ## Improvements
     
-    12. Implement critical fixes for any issues found:
-        - Fix any failing tests
-        - Address security concerns
-        - Correct functionality issues
-        - Add missing test coverage
-        - Format code properly
+    If issues found:
     
-    13. For non-critical improvements:
-        - Document in the Verification section
-        - Determine priority for later implementation
+    1. **Critical** (must fix now):
+       - Security vulnerabilities
+       - Failing tests
+       - Broken functionality
+       - Data corruption risks
+    
+    2. **Important** (should fix):
+       - Performance issues
+       - Code quality problems
+       - Missing tests
+    
+    3. **Minor** (can defer):
+       - Style improvements
+       - Refactoring opportunities
+       - Documentation updates
+    
+    Fix critical issues immediately and re-run quality gates.
     
     ## Commit Changes
     
-    14. If {{ params.commit }} is true and all tests pass:
-        - Stage all changes
-        - Prepare a detailed commit message following CLAUDE.md guidelines
-        - Commit the changes
-        - Document the commit in the index.md
+    If {{ params.commit }} is true and all tests pass:
     
-    ## Final Status Update
+    1. Stage all changes
+    2. Create commit message:
+       ```
+       feat(scope): implement [feature name]
+       
+       - [Key change 1]
+       - [Key change 2]
+       
+       Closes #{{ params.issue }}
+       ```
+    3. Commit changes
+    4. Push to feature branch
     
-    15. Update the index.md with verification results:
-        ```
-        ## Verification Results
-        - Completed: [{{ current_date }}]
-        - Status: [Passed/Failed/Passed with minor issues]
-        - Issues Found: [number]
-        - Issues Fixed: [number]
-        - Overall Assessment: [brief assessment]
-        ```
+    ## Learning Capture
     
-    ## Important Rules
-    
-    - Be thorough and systematic in your review
-    - Prioritize issues: security > correctness > completeness > rest
-    - Run all tests after making any changes
-    - Always format code according to project standards
-    - Focus on both technical correctness and maintainability
-    - Verify against the original requirements
-    - Document all issues found, even if not immediately fixed
-    - Consider how the feature works as a whole, not just individual tasks
+    Document verification insights:
+    - Gaps in original requirements
+    - Testing strategies that worked well
+    - Patterns to use in future features
+    - Process improvements identified
     
     ## Return Values
     
-    Summarize the verification results, issues found, fixes applied, and provide recommendations for future improvements.
+    - Verification status (Passed/Failed/Passed with issues)
+    - Quality gate results
+    - Issues found and fixes applied
+    - Recommendations for future work
+    - Commit hash (if committed)
   </instructions>
 </prompt>

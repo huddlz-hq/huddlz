@@ -1,25 +1,55 @@
 <prompt>
   <params>
-    description # Optional brief feature description
+    description # Optional brief feature description  
+    issue # Optional GitHub issue number to plan from
   </params>
 
   <instructions>
     # Enhanced Task Decomposition Planning
     
-    This command analyzes requirements, conducts thorough product management exploration, and breaks down features into manageable tasks.
+    This command analyzes requirements and breaks down features into manageable tasks. Supports both file-based and GitHub issue-based workflows.
     
     ## Initial Setup
     
-    1. If description is not provided, ask the user for a brief feature description
-    2. Generate a timestamp for the planning session
-    3. Create the tasks directory structure:
+    1. Determine workflow mode:
+       - If {{ params.issue }} is provided: GitHub issue mode
+       - If only {{ params.description }} is provided: File-based mode
+       - If neither provided: Ask user for either an issue number or description
+    
+    ## GitHub Issue Mode
+    
+    If {{ params.issue }} is provided:
+    
+    1. Fetch issue details using gh CLI:
+       ```
+       gh issue view {{ params.issue }} --json title,body,labels,assignees,milestone
+       ```
+    
+    2. Extract requirements from issue:
+       - Parse issue body for requirements
+       - Identify acceptance criteria
+       - Note any technical specifications
+    
+    3. Create feature branch:
+       ```
+       git checkout -b feature/issue-{{ params.issue }}-[short-description]
+       ```
+    
+    ## File-Based Mode (Legacy)
+    
+    If only {{ params.description }} is provided:
+    
+    1. Generate a timestamp for the planning session
+    2. Create the tasks directory structure:
        ```
        mkdir -p notes/tasks/[timestamp]_[description]/
        ```
     
     ## Feature Exploration
     
-    1. Ask the user to describe the feature at a high level
+    Regardless of mode, conduct thorough requirements analysis:
+    
+    1. Ask the user to describe the feature at a high level (if not in issue)
     2. Conduct a structured product management interview with questions like:
        - What problem does this feature solve for users?
        - Who are the primary users of this feature?
@@ -41,7 +71,7 @@
        - Specific functional requirements
        - Non-functional requirements (performance, security)
        - Success criteria
-
+    
     ## Technical Assessment
     
     1. Consider implementation details:
@@ -54,7 +84,7 @@
        - Complex logic or algorithms
        - Performance considerations
        - Migration considerations
-
+    
     ## Feature Analysis
     
     1. Analyze the requirements to identify:
@@ -68,115 +98,92 @@
     
     ## Task Documentation
     
-    1. Create an index file: `notes/tasks/[timestamp]_[description]/index.md`
+    ### GitHub Issue Mode
+    
+    If using GitHub issues:
+    
+    1. Create a Feature Log comment on the parent issue:
        ```markdown
-       # Feature: [Feature Name]
+       ## Feature Log
        
-       ## Overview
-       [Comprehensive description of the overall feature based on discovery]
+       ### Planning Phase - [Current Date/Time]
        
-       ## User Stories
-       - As a [user type], I want to [action], so that [benefit]
-       - As a [user type], I want to [action], so that [benefit]
-       ...
+       **Requirements Analysis:**
+       [Summary of requirements discovered]
        
-       ## Implementation Sequence
-       1. [First task name] - [Brief description]
-       2. [Second task name] - [Brief description]
-       ...
+       **Technical Considerations:**
+       [Key technical decisions and challenges]
        
-       ## Success Criteria
-       - [Specific, measurable criteria for feature completion]
-       - [Observable user outcome that indicates success]
-       ...
-       
-       ## Planning Session Info
-       - Created: [Current date and time]
-       - Feature Description: [Description]
+       **Task Breakdown:**
+       Creating [N] sub-issues for implementation...
        ```
     
-    2. For each identified task, create a sequentially numbered file:
+    2. For each task, create a GitHub sub-issue:
        ```
-       notes/tasks/[timestamp]_[description]/0001_[task_name].md
-       notes/tasks/[timestamp]_[description]/0002_[task_name].md
-       ...
+       gh issue create \
+         --title "[Parent #{{ params.issue }}] Task N: [Task Name]" \
+         --body "[Task template content]" \
+         --label "task,issue-{{ params.issue }}" \
+         --milestone "[Same as parent]"
        ```
     
-    3. Each task file should follow this template:
+    3. Sub-issue template:
        ```markdown
-       # Task: [Task Name]
-       
        ## Context
-       - Part of feature: [Feature Name]
-       - Sequence: Task [X] of [Y]
-       - Purpose: [Brief explanation of how this task fits in]
+       Parent Issue: #{{ params.issue }}
+       Task [N] of [Total]
        
-       ## Task Boundaries
-       - In scope: [What should be done in this task]
-       - Out of scope: [What should NOT be done in this task]
+       ## Purpose
+       [Brief explanation of what this task accomplishes]
        
-       ## Current Status
-       - Progress: 0%
-       - Blockers: [Any dependencies on other tasks]
-       - Next steps: Begin implementation
+       ## Scope
+       **In Scope:**
+       - [Specific items to complete]
        
-       ## Requirements Analysis
+       **Out of Scope:**
+       - [Items for other tasks]
+       
+       ## Requirements
        - [Specific requirements for this task]
        
-       ## Implementation Plan
-       - [Overall approach/strategy for this task]
-       - [Design decisions]
-       - [Technical considerations]
-       
        ## Implementation Checklist
-       1. [Specific action item #1] 
-       2. [Specific action item #2]
-       3. [Specific action item #3]
-       ...
+       - [ ] Write tests for [functionality]
+       - [ ] Implement [specific feature]
+       - [ ] Update documentation
+       - [ ] Pass quality gates (format, test, credo)
        
-       ## Related Files
-       - [Files that will likely need to be modified]
+       ## Acceptance Criteria
+       - [Measurable completion criteria]
        
-       ## Definition of Done
-       - [Specific, measurable completion criteria]
-       
-       ## Quality Assurance
-       
-       ### AI Verification (Throughout Implementation)
-       - Run appropriate tests after each checklist item
-       - Run `mix format` before committing changes
-       - Verify compilation with `mix compile` regularly
-       
-       ### Human Verification (Required Before Next Task)
-       - After completing the entire implementation checklist, ask the user:
-         "I've completed task [X]. Could you please verify the implementation by:
-          1. Running the application (`mix phx.server`)
-          2. Testing the new functionality
-          If everything looks good, I'll proceed to the next task (Task [Y])."
-       
-       ## Progress Tracking
-       - Update after completing each checklist item
-       - Mark items as completed with timestamps
-       - Document any issues encountered and how they were resolved
-       
-       ## Commit Instructions
-       - Make atomic commits after completing logical units of work
-       - Before finishing the task, ensure all changes are committed
-       - Follow commit message standards in CLAUDE.md
-       - Update the Session Log with commit details
-       
-       ## Session Log
-       - [Current date and time] Started task planning...
-       
-       ## Next Task
-       - Next task: [0002_next_task_name]
-       - Only proceed to the next task after:
-         - All checklist items are complete
-         - All tests are passing
-         - Code is properly formatted
-         - Changes have been committed
-         - User has verified and approved the implementation
+       ## Dependencies
+       - Depends on: [Other task numbers if any]
+       - Blocks: [Tasks that depend on this]
        ```
+    
+    4. Update parent issue with task list:
+       ```markdown
+       ## Implementation Tasks
+       - [ ] #[sub-issue-1] - Task 1: [Name]
+       - [ ] #[sub-issue-2] - Task 2: [Name]
+       ...
+       ```
+    
+    ### File-Based Mode
+    
+    If using file-based workflow, create files as before:
+    
+    1. Create an index file: `notes/tasks/[timestamp]_[description]/index.md`
+    2. Create individual task files for each task
+    
+    ## Learning Capture
+    
+    During planning, capture insights:
+    - Requirements that were unclear initially
+    - Edge cases discovered through questioning  
+    - Technical constraints identified
+    - Patterns that might apply to future features
+    
+    If in GitHub mode, add these to the Feature Log comment.
     
     ## Important Guidelines
     
@@ -187,7 +194,7 @@
     
     2. Dependency Management:
        - Order tasks to minimize dependencies between them
-       - Clearly document any dependencies in the Context section
+       - Clearly document any dependencies
        - Ensure the implementation sequence is technically feasible
     
     3. Task Clarity:
@@ -197,6 +204,13 @@
     
     ## Return Values
     
-    Return the path to the tasks directory and a summary of the tasks created.
+    For GitHub mode:
+    - Parent issue number
+    - List of created sub-issue numbers
+    - Feature branch name
+    
+    For file mode:
+    - Path to the tasks directory
+    - Summary of tasks created
   </instructions>
 </prompt>
