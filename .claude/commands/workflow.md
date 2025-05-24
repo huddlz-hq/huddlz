@@ -1,140 +1,153 @@
 <prompt>
   <instructions>
-    # Development Workflow
+    # GitHub-Integrated Development Workflow
     
-    This document outlines a streamlined development process optimized for solo development with AI assistance.
+    This document outlines the streamlined development process using GitHub Issues for transparency and collaboration.
     
     ## Complete Workflow
     
-    For a typical feature development, follow these phases in order:
+    Feature development follows four phases, each activating a different cognitive mode:
     
-    ### 1. Plan Phase
+    ### 1. Plan Phase (Project Manager Mode)
     
-    Use the `/plan` command to analyze requirements and break them down into manageable tasks:
-    
-    ```
-    /plan [description="brief feature description"]
-    ```
-    
-    This command:
-    - Creates a timestamped task directory
-    - Analyzes requirements and breaks them into discrete tasks
-    - Generates an index of all tasks in implementation order
-    - Creates detailed specifications for each task
-    - Returns the path to the task directory
-    
-    ### 2. Build Phase
-    
-    Use the `/build` command to implement each task in sequence:
+    Analyze a GitHub issue and break it down into manageable tasks:
     
     ```
-    /build [task_dir="<task_directory_path>"]
+    /plan issue=123
     ```
     
     This command:
-    - Automatically finds the next task to implement
-    - Handles both starting new tasks and resuming in-progress work
-    - Guides implementation based on the task specification
-    - Updates progress in both the task file and index
-    - Ensures quality through tests and formatting
-    - Requires human verification before proceeding to the next task
+    - Deep-dives into requirements with structured questions
+    - Creates sub-issues for each discrete task
+    - Establishes feature branch for development
+    - Documents initial insights in Feature Log
+    - Returns list of created sub-issues
     
-    ### 3. Verify Phase
+    ### 2. Build Phase (Expert Engineer Mode)
     
-    Use the `/verify` command to review the complete feature:
-    
-    ```
-    /verify [task_dir="<task_directory_path>"] [commit=true|false]
-    ```
-    
-    This command:
-    - Performs comprehensive review of the entire feature
-    - Runs tests to verify correctness
-    - Implements critical fixes
-    - Documents verification results
-    - Optionally commits changes
-    
-    ### 4. Reflect Phase
-    
-    Use the `/reflect` command to capture learnings:
+    Implement each sub-issue with TDD/BDD discipline:
     
     ```
-    /reflect [task_dir="<task_directory_path>"]
+    /build issue=123-1
     ```
     
     This command:
-    - Analyzes the development process across all tasks
-    - Documents learnings in both the task directory and LEARNINGS.md
-    - Suggests process improvements
-    - Identifies potential future work
+    - Extracts requirements from sub-issue
+    - Enforces test-first development
+    - Updates progress in real-time via comments
+    - Captures course corrections with 🔄 emoji
+    - Enforces quality gates before completion
+    - Requires user verification before proceeding
     
-    ## Task Organization
+    Quality Gates (Mandatory):
+    - `mix format` - Clean formatting
+    - `mix test` - 100% passing
+    - `mix credo --strict` - Zero issues
+    - `mix test test/features/` - All scenarios pass
     
-    Tasks are organized in timestamped directories with consistent naming:
-    ```
-    notes/tasks/[timestamp]_[description]/
-      - index.md (overview and task sequence)
-      - 0001_[task_name].md
-      - 0002_[task_name].md
-      - etc.
-    ```
+    ### 3. Verify Phase (Senior Reviewer Mode)
     
-    Each task file contains:
-    - Task description and boundaries
-    - Implementation plan and checklist
-    - Progress tracking
-    - Quality assurance steps
-    
-    ## Task Progression
-    
-    Tasks are completed in sequence according to their numbering:
-    1. Complete all items in the implementation checklist
-    2. Ensure all tests are passing
-    3. Format code according to project standards
-    4. Commit changes following CLAUDE.md guidelines
-    5. Get human verification
-    6. Proceed to the next task
-    
-    ## Knowledge Management
-    
-    The central knowledge repository is maintained in:
-    - `LEARNINGS.md` at the project root
-    
-    This file is automatically updated during the reflect phase to build a knowledge base over time.
-    
-    ## Directory Resolution
-    
-    All commands support flexible task directory resolution:
-    - Full path: `/build /Users/name/project/notes/tasks/20250506_create_groups/`
-    - Timestamp: `/build 20250506`
-    - Feature name: `/build create_groups`
-    
-    If no task directory is specified, commands will use the most recent one.
-    
-    ## Important Note
-    
-    These commands are designed to work with:
-    - Elixir/Phoenix architecture
-    - Ash Framework data model
-    - Feature requirements system
-    - Cucumber and ExUnit testing patterns
-    
-    ### Command Usage Syntax
-    
-    When using these commands with Claude or other AI assistants, use the standard slash command format:
+    Comprehensive review of the complete feature:
     
     ```
-    /command param1="value1" param2="value2"
+    /verify issue=123
     ```
     
-    For example:
+    This command:
+    - Reviews all sub-issues for completeness
+    - Runs comprehensive quality checks
+    - Tests integration and user experience
+    - Documents findings in verification summary
+    - Identifies issues by severity
+    - Provides go/no-go decision
+    
+    ### 4. Reflect Phase (QA/Process Analyst Mode)
+    
+    Extract learnings from the complete journey:
+    
     ```
-    /plan description="Add user groups"
-    /build task_dir="create_groups"
+    /reflect issue=123
     ```
     
-    The commands are loaded from the `.claude/commands/` directory and are project-specific. Claude recognizes them through this directory structure.
+    This command:
+    - Analyzes entire development process
+    - Identifies patterns and improvements
+    - Updates LEARNINGS.md with insights
+    - Creates follow-up issues
+    - Proposes process enhancements
+    - Posts reflection summary to issue
     
-    When working with Claude or other AI assistants on this project, always refer to these custom commands to maintain consistency in development patterns and documentation.
+    ## GitHub Integration Features
+    
+    ### Feature Log
+    A pinned comment on parent issues tracks all phases:
+    - Planning discoveries
+    - Building progress
+    - Verification results
+    - Reflection insights
+    
+    ### Progress Tracking
+    Sub-issue comments provide real-time updates:
+    - Completed items ✅
+    - In-progress work 🔄
+    - Quality gate status
+    - Course corrections
+    
+    ### Learning Capture
+    Continuous documentation of insights:
+    - Requirements that emerged
+    - Technical patterns discovered
+    - Testing strategies that worked
+    - Process improvements identified
+    
+    ## Workflow Benefits
+    
+    1. **Transparency**: All work visible in GitHub
+    2. **Collaboration**: Team members can contribute
+    3. **Traceability**: Complete audit trail
+    4. **Learning**: Continuous improvement loop
+    5. **Quality**: Enforced gates at every step
+    
+    ## Best Practices
+    
+    1. **Clear Issues**: Well-written issues improve planning
+    2. **Atomic Tasks**: Each sub-issue = one PR
+    3. **Real-time Updates**: Keep comments current
+    4. **Capture Everything**: Document course corrections
+    5. **Close the Loop**: Always run reflection
+    
+    ## Command Reference
+    
+    ```bash
+    # Analyze and plan
+    /plan issue=123
+    
+    # Build tasks sequentially
+    /build issue=123-1
+    /build issue=123-2
+    
+    # Verify complete feature
+    /verify issue=123
+    
+    # Extract learnings
+    /reflect issue=123
+    ```
+    
+    ## Parallel Work Support
+    
+    Multiple AI instances can work on different sub-issues:
+    - Each claims a sub-issue by commenting
+    - Work proceeds independently
+    - Verification ensures integration
+    
+    ## Important Notes
+    
+    - Never skip quality gates
+    - Always write tests first
+    - Document learnings immediately
+    - Get user verification between tasks
+    - Update LEARNINGS.md during reflection
+    
+    This workflow ensures consistent, high-quality development while building institutional knowledge over time.
   </instructions>
 </prompt>

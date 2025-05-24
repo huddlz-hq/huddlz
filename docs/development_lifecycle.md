@@ -1,6 +1,6 @@
-# Complete Product Development Lifecycle
+# Development Lifecycle
 
-This document illustrates the complete product development lifecycle, connecting requirements definition, design, implementation, and learning phases.
+This document describes the GitHub-integrated development workflow for consistent, high-quality feature delivery.
 
 ## Overview
 
@@ -23,143 +23,146 @@ Each phase activates a different cognitive mode to ensure comprehensive developm
 
 ## 1. Planning Phase (`/plan`)
 
-The planning phase analyzes requirements and breaks them into manageable tasks:
+Starting from a GitHub issue, analyze and decompose into manageable tasks:
 
 ```
-/plan description="User Authentication"
+/plan issue=123
 ```
 
 This phase:
-- Analyzes the feature requirements deeply
-- Breaks down work into context-window-sized tasks
-- Creates detailed task specifications
-- Establishes implementation sequence
+- Deep-dives into requirements with PM mindset
+- Creates sub-issues for each discrete task
+- Establishes feature branch for development
+- Documents insights in Feature Log
 
-### Purpose
+### Outputs
 
-- Activate "Project Manager" cognitive mode
-- Understand the full scope of work
-- Identify dependencies and challenges
-- Create clear, actionable tasks
+- Sub-issues with clear scope and checklists
+- Feature branch: `feature/issue-123-description`
+- Implementation sequence with dependencies
+- Initial learnings captured
 
 ## 2. Building Phase (`/build`)
 
-The building phase implements tasks with rigorous quality standards:
+Implement each sub-issue with TDD/BDD discipline:
 
 ```
-/build task_dir="20250124_user_authentication"
+/build issue=123-1
 ```
 
 This phase:
-- Implements one task at a time in sequence
-- Follows test-driven development (TDD/BDD)
+- Writes tests first, then implementation
+- Updates progress in real-time via comments
+- Captures course corrections with 🔄 emoji
 - Enforces quality gates before completion
-- Automatically resumes in-progress work
 
 ### Quality Gates (Mandatory)
 
-Before any task can be marked complete:
-1. `mix format` - Zero formatting changes
-2. `mix test` - 100% pass rate
+Before any task completion:
+1. `mix format` - Clean formatting
+2. `mix test` - 100% passing
 3. `mix credo --strict` - Zero issues
-4. `mix test test/features/` - All behavior tests pass
+4. `mix test test/features/` - All scenarios pass
 
-### Purpose
+### Progress Tracking
 
-- Activate "Expert Engineer" cognitive mode
-- Write tests before implementation
-- Maintain high code quality standards
-- Document decisions and challenges
+- Issue comments show completed items
+- Quality gate status updated regularly
+- Course corrections documented immediately
+- User verification required between tasks
 
 ## 3. Verification Phase (`/verify`)
 
-The verification phase performs comprehensive review:
+Comprehensive review of the complete feature:
 
 ```
-/verify task_dir="20250124_user_authentication" commit=true
+/verify issue=123
 ```
 
 This phase:
-- Reviews entire feature implementation
-- Runs all tests and quality checks
-- Identifies integration issues
-- Optionally commits approved changes
+- Validates all requirements are met
+- Runs comprehensive quality checks
+- Tests integration and user experience
+- Documents findings in issue comment
 
-### Purpose
+### Review Criteria
 
-- Activate "Senior Reviewer" cognitive mode
-- Critical evaluation of code quality
-- Ensure requirements are met
-- Find gaps or improvements
+- Requirements coverage
+- Code quality and security
+- Performance characteristics
+- Test adequacy
+- Documentation completeness
+
+### Output
+
+Detailed verification summary posted to issue with:
+- Quality gate results
+- Issues found and severity
+- Recommendations for future work
 
 ## 4. Reflection Phase (`/reflect`)
 
-The reflection phase extracts learnings:
+Extract learnings from the complete journey:
 
 ```
-/reflect task_dir="20250124_user_authentication"
+/reflect issue=123
 ```
 
 This phase:
-- Analyzes the entire development process
-- Identifies what worked well and what didn't
-- Updates LEARNINGS.md with insights
-- Suggests process improvements
+- Analyzes all phases from planning to verification
+- Identifies patterns and course corrections
+- Updates LEARNINGS.md with actionable insights
+- Creates follow-up issues for improvements
 
-### Purpose
+### Learning Categories
 
-- Activate "QA/Process Analyst" cognitive mode
-- Build institutional knowledge
-- Improve future development cycles
-- Document lessons learned
+- Technical patterns discovered
+- Process improvements identified
+- Testing strategies that worked
+- Domain knowledge gained
 
-## Scaling the Process
+### Outputs
 
-### For Large Features
+- Updated LEARNINGS.md
+- Follow-up issues created
+- Process improvement proposals
+- Metrics and insights posted to issue
 
-- Complete all phases thoroughly
-- Maintain detailed documentation at each stage
-- Consider breaking into multiple requirements documents and implementation cycles
+## Key Benefits
 
-### For Medium Features
+### GitHub Integration
 
-- Complete requirements definition and implementation workflow
-- Simplify design phase if UI changes are minimal
-- Combine some implementation steps for efficiency
+- **Transparency**: All work visible in issues
+- **Collaboration**: Team members can comment
+- **History**: Complete audit trail
+- **Metrics**: Track velocity and patterns
 
-### For Small Tasks and Bug Fixes
+### Continuous Learning
 
-- Use simplified workflow without full task breakdown
-- Start directly with implementation
-- Still enforce quality gates
-- Document learnings in session notes
+- Course corrections captured in real-time
+- Patterns emerge from multiple features
+- Process evolves based on experience
+- Knowledge compounds over time
 
-## Knowledge Management
+### Quality Enforcement
 
-Maintain knowledge across all phases:
+- No shortcuts on quality gates
+- TDD/BDD as standard practice
+- Multiple review checkpoints
+- User verification required
 
-- Requirements document learnings update future specifications
-- Design patterns are documented in design system
-- Implementation insights captured in `LEARNINGS.md`
+## Workflow Tips
 
-### Knowledge Capture Throughout
-
-Knowledge is captured continuously during development:
-
-1. **During Planning**: Discovery of unknown requirements, edge cases
-2. **During Building**: Implementation realities, technical challenges
-3. **During Verification**: Quality gaps, missing tests
-4. **During Reflection**: Patterns, improvements, lessons learned
-
-All insights feed back into the process, improving each iteration.
+1. **Start with clear issues**: Well-written issues lead to better planning
+2. **Keep comments updated**: Progress should be visible
+3. **Document immediately**: Capture insights as they happen
+4. **Close the loop**: Always run reflection phase
 
 ## Command Reference
 
-Core workflow commands:
-- `/plan` - Analyze requirements and create task breakdown
-- `/build` - Implement tasks with TDD/BDD approach
-- `/verify` - Review complete feature and ensure quality
-- `/reflect` - Extract learnings and improve process
-- `/workflow` - View detailed implementation workflow
+- `/plan issue=123` - Analyze and break down feature
+- `/build issue=123-1` - Implement specific task
+- `/verify issue=123` - Review complete feature
+- `/reflect issue=123` - Extract learnings
 
-See CLAUDE.md for complete command documentation and usage examples.
+See CLAUDE.md for complete documentation.

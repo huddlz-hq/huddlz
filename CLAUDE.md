@@ -164,45 +164,35 @@ This project uses custom commands to maintain consistent development practices a
 
 ### Core Workflow Commands
 
-The development workflow consists of four phases, each with a specific role and objective. Commands support both GitHub issue-based and file-based workflows.
+The development workflow consists of four phases, each with a specific role and objective. All commands work with GitHub Issues for transparency and collaboration.
 
 1. **`/plan`** - Requirements Analysis & Task Breakdown
    - **Role**: Project Manager
    - **Objective**: Understand requirements and break down into manageable tasks
-   - **Usage**: 
-     - GitHub: `/plan issue=123`
-     - File-based: `/plan description="brief feature description"`
-   - **Output**: 
-     - GitHub: Creates sub-issues and feature branch
-     - File-based: Creates timestamped task directory
+   - **Usage**: `/plan issue=123`
+   - **Output**: Creates sub-issues for each task and feature branch
 
 2. **`/build`** - Implementation with TDD/BDD
    - **Role**: Expert Engineer
    - **Objective**: Meticulously implement code following test-driven development
-   - **Usage**: 
-     - GitHub: `/build issue=123-1` (sub-issue number)
-     - File-based: `/build task_dir="<task_directory_path>"`
+   - **Usage**: `/build issue=123-1` (sub-issue number)
    - **Features**: 
-     - Automatically resumes in-progress work
      - Enforces quality gates before completion
+     - Real-time progress tracking in issue comments
+     - Captures course corrections with 🔄 emoji
      - Requires human verification between tasks
-     - Real-time learning capture
 
 3. **`/verify`** - Code Review & Quality Assurance
    - **Role**: Senior Engineer/Reviewer
    - **Objective**: Critical review, testing, and quality validation
-   - **Usage**: 
-     - GitHub: `/verify issue=123` (parent issue)
-     - File-based: `/verify task_dir="<task_directory_path>" commit=true|false`
-   - **Output**: Comprehensive review results and optional commit
+   - **Usage**: `/verify issue=123` (parent issue)
+   - **Output**: Comprehensive review posted to issue
 
 4. **`/reflect`** - Learning Extraction & Process Improvement
    - **Role**: QA Engineer/Process Analyst
-   - **Objective**: Identify gaps, extract learnings, improve documentation
-   - **Usage**: 
-     - GitHub: `/reflect issue=123`
-     - File-based: `/reflect task_dir="<task_directory_path>"`
-   - **Updates**: LEARNINGS.md and suggests process improvements
+   - **Objective**: Analyze journey, extract learnings, improve process
+   - **Usage**: `/reflect issue=123`
+   - **Updates**: LEARNINGS.md and creates follow-up issues
 
 ### Quality Gates
 
@@ -215,42 +205,29 @@ The development workflow consists of four phases, each with a specific role and 
 
 The `/build` command automatically enforces these gates before marking any task as complete.
 
-### Command Usage Examples
+### Command Usage Example
 
-#### GitHub Issue Workflow (Recommended)
 ```bash
-# Start from a GitHub issue
+# 1. Start from a GitHub issue
 /plan issue=123
 
-# Build sub-issues in sequence
+# 2. Build sub-issues in sequence
 /build issue=123-1
+# After verification, continue to next task
 /build issue=123-2
 
-# Verify the complete feature
+# 3. Verify the complete feature
 /verify issue=123
 
-# Extract learnings
+# 4. Extract learnings and close the loop
 /reflect issue=123
 ```
 
-#### File-Based Workflow (Legacy)
-```bash
-# Start a new feature
-/plan description="Add user authentication"
-
-# Build the first task (automatically finds next task)
-/build task_dir="20250124_add_user_authentication"
-
-# Or use shortcuts
-/build 20250124              # Uses timestamp
-/build add_user_authentication # Uses feature name
-
-# Verify completed feature
-/verify task_dir="20250124_add_user_authentication" commit=true
-
-# Extract learnings
-/reflect task_dir="20250124_add_user_authentication"
-```
+The workflow ensures:
+- Clear requirements through deep analysis
+- Quality code through enforced gates
+- Continuous learning through reflection
+- Transparent progress via GitHub
 
 ### GitHub Issue Integration
 
@@ -273,19 +250,19 @@ This workflow simulates a team of specialists:
 
 For detailed workflow documentation, use the `/workflow` command.
 
-## Knowledge Capture and Session Documentation
+## Knowledge Capture
 
-Session documentation happens through the workflow commands:
+Knowledge is captured continuously throughout development via GitHub:
 
-1. **Planning Phase**: Documents requirements analysis and task breakdown
-2. **Building Phase**: Captures implementation decisions and challenges
-3. **Verification Phase**: Records review findings and fixes
-4. **Reflection Phase**: Extracts learnings and updates LEARNINGS.md
+1. **Feature Log**: A pinned comment on parent issues tracks all phases
+2. **Progress Updates**: Real-time documentation in sub-issue comments
+3. **Course Corrections**: Marked with 🔄 emoji for easy identification
+4. **Learnings**: Extracted during reflection and stored in LEARNINGS.md
 
-For work outside the standard workflow (exploration, documentation, etc.), create session notes manually:
-- Create `notes/session-YYYYMMDD-topic.md` at the beginning
-- Document decisions, challenges, and outcomes
-- Include learnings for future reference
+For exploratory work outside the standard workflow:
+- Create `notes/session-YYYYMMDD-topic.md` for documentation
+- Capture decisions, experiments, and insights
+- Link to relevant issues when applicable
 
 ## Custom Commands
 

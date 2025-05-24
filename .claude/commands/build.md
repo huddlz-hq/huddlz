@@ -1,195 +1,219 @@
 <prompt>
   <params>
-    task_dir # Path/identifier for task directory OR GitHub issue number
-    issue # Optional GitHub sub-issue number to work on
+    issue # GitHub sub-issue number to work on
   </params>
 
   <instructions>
     # Implementation Phase
     
-    This command implements tasks from a planned feature, supporting both file-based and GitHub issue workflows.
+    This command implements a specific task from a GitHub sub-issue with TDD/BDD discipline.
     
-    ## Workflow Detection
-    
-    1. Determine workflow mode:
-       - If {{ params.issue }} is provided: GitHub issue mode
-       - If {{ params.task_dir }} looks like a number: Check if it's a GitHub issue
-       - Otherwise: File-based mode (legacy)
-    
-    ## GitHub Issue Mode
-    
-    If working with GitHub issues:
+    ## Issue Validation
     
     1. Fetch sub-issue details:
        ```
-       gh issue view {{ params.issue }} --json title,body,labels,assignees,state
+       gh issue view {{ params.issue }} --json title,body,labels,assignees,state,comments
        ```
     
-    2. Verify it's a task sub-issue:
+    2. Validate it's a task sub-issue:
        - Check for "task" label
        - Extract parent issue number from title or labels
+       - Verify issue is open
+       - If closed, suggest next open sub-issue
     
-    3. Check issue state:
-       - If closed: Ask if user wants to work on a different task
-       - If open: Proceed with implementation
+    3. Ensure on correct branch:
+       - Check current branch matches parent issue pattern
+       - If not, checkout or create: `git checkout -b feature/issue-[parent]-[description]`
     
-    4. Find or create working branch:
-       - Check if already on a feature branch for parent issue
-       - If not, create/checkout: `git checkout -b feature/issue-[parent]-[description]`
+    ## Progress Initialization
     
-    5. Update Feature Log on parent issue:
+    1. Check for existing progress in issue comments
+       - Look for "Progress Update" comments
+       - Determine what's already completed
+       - Identify current state
+    
+    2. Update parent issue Feature Log:
        ```markdown
        ### Building Phase - [Current Date/Time]
        Starting work on sub-issue #{{ params.issue }}: [Task Title]
        ```
     
-    ## File-Based Mode (Legacy)
-    
-    If using file-based workflow:
-    
-    1. Resolve the task directory from {{ params.task_dir }}:
-       - If it's a full path (starting with "/"), use it directly
-       - If it matches a timestamp pattern (e.g., "20250506120145"), find `notes/tasks/[timestamp]_*`
-       - If it's a feature name (e.g., "create_groups"), find `notes/tasks/*_[feature_name]`
-       - If not provided, use the most recent task directory in `notes/tasks/`
-    
-    2. Read the index.md file and find next task to work on
+    3. Add initial progress comment if starting fresh:
+       ```markdown
+       ## Progress Update - [Time]
+       
+       Starting implementation of this task.
+       
+       ✅ Completed:
+       - None yet
+       
+       🔄 In Progress:
+       - Setting up implementation
+       
+       📝 Approach:
+       - [Initial implementation strategy]
+       ```
     
     ## Implementation Process
     
-    Regardless of mode:
+    1. Extract requirements from issue body:
+       - Implementation checklist items
+       - Acceptance criteria
+       - Technical details
+       - Dependencies
     
-    1. Extract task requirements:
-       - From GitHub issue body (if GitHub mode)
-       - From task file (if file mode)
-    
-    2. Begin implementation:
-       - Research similar patterns in the codebase
-       - Follow TDD/BDD approach - write tests first
+    2. Begin TDD/BDD implementation:
+       - Research similar patterns in codebase
+       - Write tests FIRST for each checklist item
        - Implement incrementally
+       - Run tests after each change
     
-    3. For each checklist item completed:
-       - Run tests: `mix test`
-       - Format code: `mix format`
-       - Update progress (issue comment or task file)
+    3. For each checklist item:
+       - Write failing test
+       - Implement minimal code to pass
+       - Refactor if needed
+       - Update progress comment
     
     ## Quality Gates (MANDATORY)
     
-    Before marking any task complete, ALL must pass:
+    After each significant change, run ALL:
     
-    1. Code Formatting:
-       ```
-       mix format
-       ```
-       - Must show no changes needed
+    ```bash
+    mix format              # Must be clean
+    mix test               # Must be 100% passing
+    mix credo --strict     # Must have zero issues
+    mix test test/features/ # All scenarios must pass
+    ```
     
-    2. All Tests Pass:
-       ```
-       mix test
-       ```
-       - Zero failures allowed
-       - No skipped tests
-    
-    3. Static Analysis:
-       ```
-       mix credo --strict
-       ```
-       - Must pass with zero issues
-    
-    4. Feature Tests:
-       ```
-       mix test test/features/
-       ```
-       - All behavior tests must pass
-    
-    If any quality gate fails:
-    - Fix the issue immediately
-    - Re-run ALL quality gates
+    If ANY gate fails:
+    - Fix immediately
+    - Re-run ALL gates
     - Document what was fixed
     
     ## Progress Tracking
     
-    ### GitHub Mode
-    
-    Update the sub-issue with progress:
+    Update issue comment regularly:
     ```markdown
     ## Progress Update - [Time]
     
     ✅ Completed:
-    - [Checklist items completed]
+    - [x] Wrote tests for [functionality]
+    - [x] Implemented [component]
     
     🔄 In Progress:
-    - [Current work]
+    - Working on [current item]
     
     📝 Notes:
-    - [Any decisions or challenges]
+    - [Key decisions made]
+    - [Challenges encountered]
     
-    Quality Gates: ✅ Passing / ❌ [Specific failures]
+    Quality Gates: ✅ All passing
     ```
-    
-    ### File Mode
-    
-    Update task file's Session Log and Progress sections
     
     ## Learning Capture
     
-    Document insights as they occur:
-    - Course corrections (when approach changes)
-    - Failed attempts (what didn't work and why)
-    - Patterns discovered
-    - Performance considerations identified
+    Document insights immediately:
     
-    Add marker in updates:
-    ```
-    🔄 COURSE CORRECTION: [What changed and why]
-    ```
+    1. **Course Corrections** (when approach changes):
+       ```markdown
+       🔄 COURSE CORRECTION:
+       - Original: [What was tried]
+       - Issue: [Why it didn't work]
+       - New approach: [What worked]
+       - Learning: [General principle]
+       ```
+    
+    2. **Pattern Discoveries**:
+       - Useful patterns found
+       - Performance optimizations
+       - Testing strategies
+    
+    3. **Challenges**:
+       - Unexpected complexity
+       - Framework limitations
+       - Integration issues
+    
+    ## Commit Strategy
+    
+    Make atomic commits:
+    - After each checklist item
+    - With descriptive messages
+    - Following conventional commits:
+      ```
+      feat: add user authentication to groups
+      test: add coverage for group permissions
+      fix: resolve N+1 query in member list
+      ```
     
     ## Task Completion
     
-    When implementation checklist is complete:
+    When all checklist items done:
     
     1. Run final quality gates
-    2. Commit changes with descriptive message
-    3. Ask user for verification:
-       ```
-       I've completed task {{ params.issue or task_name }}.
+    2. Ensure all tests pass
+    3. Review implementation against acceptance criteria
+    4. Add completion comment:
+       ```markdown
+       ## Task Complete! ✅
        
-       Please verify by:
-       1. Running the application (mix phx.server)
-       2. Testing the new functionality
+       All implementation checklist items completed.
        
-       Quality gates: ✅ All passing
+       **Quality Gates:** All passing
+       - Tests: [X] passed, 0 failed
+       - Format: Clean
+       - Credo: No issues
        
-       Ready to proceed to next task?
+       **Ready for verification.**
+       
+       Please review by:
+       1. Running `mix phx.server`
+       2. Testing the functionality
+       3. Confirming acceptance criteria are met
        ```
     
-    4. After user verification:
-       - GitHub mode: Close the sub-issue with completion comment
-       - File mode: Mark task as completed in files
+    5. Ask user for verification:
+       ```
+       I've completed task #{{ params.issue }}.
+       
+       Please verify the implementation works as expected.
+       Quality gates are all passing.
+       
+       Ready to proceed to the next task?
+       ```
+    
+    6. After user confirmation:
+       - Close the sub-issue with final comment
+       - Update parent issue task list (check the box)
     
     ## Next Task
     
-    1. Identify next task:
-       - GitHub: Find next open sub-issue for parent
-       - File: Find next incomplete task in index
+    1. Find next open sub-issue for parent:
+       ```
+       gh issue list --label "parent-[number]" --state open --json number,title
+       ```
     
-    2. Ask user if they want to continue
-    3. If yes, recursively start build process for next task
+    2. If found, ask user:
+       ```
+       Next task available: #[number] - [title]
+       Would you like to continue with `/build issue=[number]`?
+       ```
     
     ## Important Rules
     
-    - NEVER mark a task complete without passing ALL quality gates
-    - Always write tests before implementation (TDD/BDD)
-    - Capture learnings in real-time, not just at the end
-    - Get user verification before proceeding to next task
-    - Make atomic commits with clear messages
+    - NEVER skip quality gates
+    - ALWAYS write tests first (TDD/BDD)
+    - Capture learnings in real-time
+    - Make atomic, focused commits
+    - Get user verification before closing
     - Document all course corrections
+    - Keep issue comments up to date
     
     ## Return Values
     
-    - Summary of work completed
-    - Quality gate status
-    - Next task available (if any)
-    - Key learnings captured
+    - Task completed: #{{ params.issue }}
+    - Quality gates: [Status]
+    - Commits made: [Count]
+    - Next task: #[number] or None
+    - Key learnings: [Summary]
   </instructions>
 </prompt>

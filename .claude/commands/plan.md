@@ -1,24 +1,14 @@
 <prompt>
   <params>
-    description # Optional brief feature description  
-    issue # Optional GitHub issue number to plan from
+    issue # GitHub issue number to plan from
   </params>
 
   <instructions>
-    # Enhanced Task Decomposition Planning
+    # Task Decomposition Planning
     
-    This command analyzes requirements and breaks down features into manageable tasks. Supports both file-based and GitHub issue-based workflows.
+    This command analyzes a GitHub issue and breaks it down into manageable sub-tasks.
     
     ## Initial Setup
-    
-    1. Determine workflow mode:
-       - If {{ params.issue }} is provided: GitHub issue mode
-       - If only {{ params.description }} is provided: File-based mode
-       - If neither provided: Ask user for either an issue number or description
-    
-    ## GitHub Issue Mode
-    
-    If {{ params.issue }} is provided:
     
     1. Fetch issue details using gh CLI:
        ```
@@ -29,188 +19,184 @@
        - Parse issue body for requirements
        - Identify acceptance criteria
        - Note any technical specifications
+       - Check for existing sub-issues
     
     3. Create feature branch:
        ```
        git checkout -b feature/issue-{{ params.issue }}-[short-description]
        ```
     
-    ## File-Based Mode (Legacy)
+    ## Requirements Analysis
     
-    If only {{ params.description }} is provided:
+    Conduct thorough requirements analysis with PM mindset:
     
-    1. Generate a timestamp for the planning session
-    2. Create the tasks directory structure:
-       ```
-       mkdir -p notes/tasks/[timestamp]_[description]/
-       ```
-    
-    ## Feature Exploration
-    
-    Regardless of mode, conduct thorough requirements analysis:
-    
-    1. Ask the user to describe the feature at a high level (if not in issue)
-    2. Conduct a structured product management interview with questions like:
-       - What problem does this feature solve for users?
-       - Who are the primary users of this feature?
-       - How does this feature align with the overall product vision?
+    1. Ask clarifying questions about the feature:
+       - What problem does this solve for users?
+       - Who are the primary users?
        - What specific actions should users be able to perform?
-       - What are explicit constraints or limitations we should be aware of?
+       - What are the constraints or limitations?
+       - How does this integrate with existing features?
     
-    ## Requirements Detailing
+    2. Deep dive into specifics:
+       - Data requirements: What information needs to be stored/displayed?
+       - User flows: Walk through the typical user journey
+       - Edge cases: What happens in unexpected scenarios?
+       - Access control: Who can perform these actions?
+       - Performance: Any specific performance requirements?
     
-    1. Based on initial answers, drill down into specific areas:
-       - Data requirements: "What information needs to be collected or displayed?"
-       - User flows: "Walk me through the typical user journey for this feature"
-       - Edge cases: "What should happen when [unexpected condition]?"
-       - Access control: "Who should be able to perform these actions?"
-       - Integration points: "How does this feature interact with existing functionality?"
-    
-    2. For each unclear aspect, ask follow-up questions until you have:
-       - Clear scope boundaries (what is and isn't included)
+    3. Continue until you have:
+       - Clear scope boundaries
        - Specific functional requirements
-       - Non-functional requirements (performance, security)
-       - Success criteria
+       - Non-functional requirements
+       - Measurable success criteria
     
     ## Technical Assessment
     
-    1. Consider implementation details:
-       - Data modeling: "What changes to data models are needed?"
-       - API requirements: "What new endpoints or services are required?"
-       - UI components: "What interface elements need to be created or modified?"
-       - Authorization: "What permission checks are needed?"
+    Analyze implementation needs:
     
-    2. Identify potential technical challenges:
-       - Complex logic or algorithms
-       - Performance considerations
-       - Migration considerations
+    1. Data modeling:
+       - Database schema changes
+       - New Ecto schemas needed
+       - Relationships between entities
     
-    ## Feature Analysis
+    2. Business logic:
+       - Ash actions required
+       - Authorization policies
+       - Validations and checks
     
-    1. Analyze the requirements to identify:
-       - Core functionality needed
-       - Data models and structures required
-       - User interface components
-       - API endpoints or services
-       - Dependencies on existing systems
-    2. Break down the feature into discrete, manageable tasks
-    3. Determine the logical implementation sequence based on dependencies
+    3. User interface:
+       - LiveView components needed
+       - Forms and interactions
+       - Real-time updates
     
-    ## Task Documentation
+    4. Testing strategy:
+       - Unit test scenarios
+       - Integration test needs
+       - Feature/behavior tests
     
-    ### GitHub Issue Mode
+    ## Task Breakdown
     
-    If using GitHub issues:
+    1. Analyze requirements to identify discrete tasks:
+       - Each task should be completable in one session
+       - Tasks should have minimal dependencies
+       - Clear boundaries between tasks
+       - Logical implementation sequence
     
-    1. Create a Feature Log comment on the parent issue:
+    2. Create Feature Log comment on parent issue:
        ```markdown
        ## Feature Log
        
        ### Planning Phase - [Current Date/Time]
        
        **Requirements Analysis:**
-       [Summary of requirements discovered]
+       - [Key requirements discovered]
+       - [Clarifications obtained]
+       - [Edge cases identified]
        
-       **Technical Considerations:**
-       [Key technical decisions and challenges]
+       **Technical Approach:**
+       - [High-level implementation strategy]
+       - [Key technical decisions]
        
        **Task Breakdown:**
        Creating [N] sub-issues for implementation...
+       
+       **Learning Capture:**
+       - [Any insights from planning phase]
+       - [Patterns to consider]
        ```
     
-    2. For each task, create a GitHub sub-issue:
+    3. For each task, create a GitHub sub-issue:
        ```
        gh issue create \
-         --title "[Parent #{{ params.issue }}] Task N: [Task Name]" \
-         --body "[Task template content]" \
-         --label "task,issue-{{ params.issue }}" \
-         --milestone "[Same as parent]"
+         --title "[#{{ params.issue }}] Task N: [Task Name]" \
+         --body "[Task content]" \
+         --label "task,parent-{{ params.issue }}" \
+         --assignee "@me"
        ```
     
-    3. Sub-issue template:
+    4. Sub-issue template:
        ```markdown
-       ## Context
        Parent Issue: #{{ params.issue }}
        Task [N] of [Total]
        
        ## Purpose
-       [Brief explanation of what this task accomplishes]
+       [What this task accomplishes for the feature]
        
        ## Scope
-       **In Scope:**
-       - [Specific items to complete]
+       **Must Include:**
+       - [Specific deliverables]
+       - [Required functionality]
        
-       **Out of Scope:**
+       **Explicitly Excludes:**
        - [Items for other tasks]
-       
-       ## Requirements
-       - [Specific requirements for this task]
+       - [Out of scope items]
        
        ## Implementation Checklist
-       - [ ] Write tests for [functionality]
-       - [ ] Implement [specific feature]
-       - [ ] Update documentation
-       - [ ] Pass quality gates (format, test, credo)
+       - [ ] Write tests for [specific functionality]
+       - [ ] Implement [specific component/feature]
+       - [ ] Update [specific documentation]
+       - [ ] Ensure quality gates pass
+       
+       ## Technical Details
+       - [Specific implementation notes]
+       - [Files likely to be modified]
+       - [Patterns to follow]
        
        ## Acceptance Criteria
-       - [Measurable completion criteria]
+       - [Specific, measurable criteria]
+       - [User-visible outcomes]
        
        ## Dependencies
-       - Depends on: [Other task numbers if any]
-       - Blocks: [Tasks that depend on this]
+       - Requires: [Previous task numbers if any]
+       - Blocks: [Subsequent tasks if any]
        ```
     
-    4. Update parent issue with task list:
+    5. Update parent issue with implementation plan:
        ```markdown
-       ## Implementation Tasks
-       - [ ] #[sub-issue-1] - Task 1: [Name]
-       - [ ] #[sub-issue-2] - Task 2: [Name]
+       ## Implementation Plan
+       
+       ### Tasks
+       - [ ] #[sub-1] - [Name]: [Brief description]
+       - [ ] #[sub-2] - [Name]: [Brief description]
        ...
+       
+       ### Sequence
+       Tasks should be completed in order due to dependencies.
+       
+       ### Estimated Effort
+       [Rough estimate based on task complexity]
        ```
-    
-    ### File-Based Mode
-    
-    If using file-based workflow, create files as before:
-    
-    1. Create an index file: `notes/tasks/[timestamp]_[description]/index.md`
-    2. Create individual task files for each task
     
     ## Learning Capture
     
-    During planning, capture insights:
-    - Requirements that were unclear initially
-    - Edge cases discovered through questioning  
-    - Technical constraints identified
-    - Patterns that might apply to future features
-    
-    If in GitHub mode, add these to the Feature Log comment.
+    Document planning insights in Feature Log:
+    - Requirements that were initially unclear
+    - Technical challenges identified early
+    - Patterns from similar features
+    - Process improvements to consider
     
     ## Important Guidelines
     
-    1. Task Sizing:
-       - Each task should be completable in a single focused work session
-       - Tasks should have clear, measurable completion criteria
-       - If a task seems too large, break it down further
+    1. **Task Sizing**:
+       - Aim for 2-4 hour tasks
+       - If larger, break down further
+       - Each task = one focused PR
     
-    2. Dependency Management:
-       - Order tasks to minimize dependencies between them
-       - Clearly document any dependencies
-       - Ensure the implementation sequence is technically feasible
+    2. **Clear Boundaries**:
+       - No overlap between tasks
+       - Explicit scope statements
+       - Clear handoff points
     
-    3. Task Clarity:
-       - Each task should have a clear, specific purpose
-       - Task boundaries should be explicit
-       - Implementation checklists should be actionable and concrete
+    3. **User Focus**:
+       - Tasks deliver user value
+       - Not just technical subdivisions
+       - Testable outcomes
     
     ## Return Values
     
-    For GitHub mode:
-    - Parent issue number
-    - List of created sub-issue numbers
-    - Feature branch name
-    
-    For file mode:
-    - Path to the tasks directory
-    - Summary of tasks created
+    - Parent issue: #{{ params.issue }}
+    - Created sub-issues: [List of numbers]
+    - Feature branch: [Branch name]
+    - Next step: Start with first sub-issue using `/build`
   </instructions>
 </prompt>

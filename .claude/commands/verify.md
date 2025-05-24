@@ -1,8 +1,6 @@
 <prompt>
   <params>
-    task_dir # Path/identifier for task directory OR GitHub issue number  
-    issue # Optional GitHub parent issue number
-    commit # Whether to commit changes after verification (true/false, default false)
+    issue # GitHub parent issue number to verify
   </params>
 
   <instructions>
@@ -10,200 +8,245 @@
     
     This command performs comprehensive review and testing of a completed feature implementation.
     
-    ## Workflow Detection
+    ## Feature Status Check
     
-    1. Determine workflow mode:
-       - If {{ params.issue }} is provided: GitHub issue mode
-       - If {{ params.task_dir }} looks like a number: Check if it's a GitHub issue
-       - Otherwise: File-based mode (legacy)
-    
-    ## GitHub Issue Mode
-    
-    If working with GitHub issues:
-    
-    1. Fetch parent issue details:
+    1. Fetch parent issue and all sub-issues:
        ```
-       gh issue view {{ params.issue }} --json title,body,labels,state
+       gh issue view {{ params.issue }} --json title,body,state,labels
+       gh issue list --label "parent-{{ params.issue }}" --json number,title,state
        ```
     
-    2. List all sub-issues:
-       ```
-       gh issue list --label "issue-{{ params.issue }}" --json number,title,state
-       ```
-    
-    3. Check completion status:
+    2. Verify completion status:
        - Count closed vs open sub-issues
-       - If not all closed, ask if user wants to proceed anyway
+       - List any incomplete tasks
+       - If not all closed, ask user if they want to proceed
     
-    4. Update Feature Log on parent issue:
+    3. Update Feature Log:
        ```markdown
        ### Verification Phase - [Current Date/Time]
        
-       Starting comprehensive review of feature implementation...
-       Sub-issues completed: [X/Y]
+       Starting comprehensive review of feature implementation.
+       Sub-issues completed: [X] of [Y]
        ```
     
-    ## File-Based Mode (Legacy)
+    ## Requirements Review
     
-    If using file-based workflow:
+    1. Extract original requirements from parent issue
+    2. Review each requirement against implementation:
+       - ✅ Fully implemented
+       - ⚠️ Partially implemented
+       - ❌ Not implemented
     
-    1. Resolve task directory and check task completion status
-    2. Proceed with file-based verification as before
+    3. Check acceptance criteria:
+       - Each criterion met?
+       - Edge cases handled?
+       - Performance requirements satisfied?
     
-    ## Comprehensive Review
+    ## Code Quality Review
     
-    Review the implementation against these criteria:
+    Analyze the implementation for:
     
-    1. **Requirements Coverage**:
-       - Check each requirement from parent issue
-       - Verify all acceptance criteria are met
-       - Note any missing functionality
+    1. **Architecture & Design**:
+       - Follows project patterns?
+       - Proper separation of concerns?
+       - Ash Framework best practices?
     
     2. **Code Quality**:
-       - Readability and maintainability
-       - Follows project patterns and conventions
-       - Proper error handling
-       - No code smells or anti-patterns
+       - Readable and maintainable?
+       - DRY principles followed?
+       - Proper error handling?
+       - No code smells?
     
     3. **Security**:
        - No hardcoded secrets
-       - Proper input validation
-       - Authorization checks in place
+       - Proper authorization checks
+       - Input validation in place
        - SQL injection prevention
     
     4. **Performance**:
        - No N+1 queries
-       - Efficient algorithms
-       - Appropriate caching
+       - Efficient database access
+       - Appropriate indexes
+       - Caching where needed
     
     5. **Testing**:
        - Adequate test coverage
-       - Tests follow BDD/TDD principles
+       - Tests follow BDD/TDD style
        - Edge cases covered
+       - Tests are maintainable
     
-    ## Quality Gates (Re-run)
+    ## Quality Gates (Comprehensive)
     
-    Run comprehensive quality checks:
-    
+    Run full test suite:
     ```bash
+    # Clean build
+    mix clean && mix deps.get && mix compile
+    
     # Format check
     mix format --check-formatted
     
-    # All tests
-    mix test
+    # All tests with coverage
+    mix test --cover
     
-    # Static analysis  
+    # Static analysis
     mix credo --strict
     
-    # Feature tests
+    # Feature tests specifically
     mix test test/features/
+    
+    # Check for warnings
+    mix compile --warnings-as-errors
     ```
     
     Document results:
     ```markdown
     ## Quality Gate Results
-    - Format: ✅ Clean
-    - Tests: ✅ 127 passed, 0 failed
-    - Credo: ✅ No issues
-    - Features: ✅ All scenarios passing
+    
+    ✅ **Build**: Clean compilation
+    ✅ **Format**: No changes needed
+    ✅ **Tests**: [X] passed, 0 failed
+    ✅ **Coverage**: [X]% (target: 80%)
+    ✅ **Credo**: No issues
+    ✅ **Features**: All scenarios passing
+    ✅ **Warnings**: None
     ```
     
     ## Integration Testing
     
-    Beyond unit tests, verify:
-    - Feature works end-to-end
-    - No regressions in existing functionality
-    - UI components render correctly
-    - API endpoints respond as expected
+    Beyond unit tests:
+    1. Run the application: `mix phx.server`
+    2. Test the feature end-to-end
+    3. Verify UI components work correctly
+    4. Check for regressions in related features
+    5. Test with different user roles
     
-    ## Issue Documentation
+    ## Issues Found
     
-    ### GitHub Mode
+    Categorize any issues:
     
-    Create verification comment on parent issue:
-    ```markdown
-    ## Verification Complete
-    
-    ### Coverage
-    ✅ All requirements implemented
-    ✅ All sub-issues completed
-    
-    ### Quality
-    - Code Review: [Pass/Issues Found]
-    - Security: [Pass/Concerns]
-    - Performance: [Acceptable/Needs Work]
-    
-    ### Testing
-    - Unit Tests: [X passed]
-    - Feature Tests: [Y passed]
-    - Manual Testing: [Completed/Issues]
-    
-    ### Issues Found & Fixed
-    1. [Issue description] - ✅ Fixed
-    2. [Issue description] - 📝 Documented for later
-    
-    ### Recommendations
-    - [Future improvements]
-    - [Technical debt to address]
-    ```
-    
-    ### File Mode
-    
-    Update index.md with verification results
-    
-    ## Improvements
-    
-    If issues found:
-    
-    1. **Critical** (must fix now):
+    1. **🔴 Critical** (must fix now):
        - Security vulnerabilities
-       - Failing tests
-       - Broken functionality
        - Data corruption risks
+       - Broken functionality
+       - Failing tests
     
-    2. **Important** (should fix):
-       - Performance issues
-       - Code quality problems
+    2. **🟡 Important** (should fix):
+       - Performance problems
        - Missing tests
+       - Code quality issues
+       - Minor bugs
     
-    3. **Minor** (can defer):
+    3. **🟢 Minor** (can defer):
        - Style improvements
        - Refactoring opportunities
-       - Documentation updates
+       - Documentation gaps
     
-    Fix critical issues immediately and re-run quality gates.
+    If critical issues found:
+    - Fix immediately
+    - Re-run all quality gates
+    - Document fixes in Feature Log
     
-    ## Commit Changes
+    ## Documentation Review
     
-    If {{ params.commit }} is true and all tests pass:
+    Check for:
+    - Updated README if needed
+    - API documentation current
+    - Code comments where necessary
+    - LEARNINGS.md candidates
     
-    1. Stage all changes
-    2. Create commit message:
+    ## Verification Summary
+    
+    Post comprehensive summary to parent issue:
+    ```markdown
+    ## Verification Complete ✅
+    
+    ### Requirements Coverage
+    - [X] of [Y] requirements fully implemented
+    - [List any gaps]
+    
+    ### Quality Assessment
+    **Code Quality**: Excellent/Good/Needs Work
+    **Test Coverage**: [X]%
+    **Performance**: Acceptable/Optimized
+    **Security**: Passed all checks
+    
+    ### Quality Gates
+    All gates passing:
+    - Tests: [X] passed
+    - Format: Clean
+    - Credo: No issues
+    - Coverage: [X]%
+    
+    ### Issues Found & Resolution
+    🔴 Critical: [0] - All resolved
+    🟡 Important: [X] - [Status]
+    🟢 Minor: [X] - Documented for later
+    
+    ### Integration Testing
+    - Feature works end-to-end ✅
+    - No regressions found ✅
+    - UI components render correctly ✅
+    
+    ### Recommendations
+    1. [Future enhancements]
+    2. [Technical debt to address]
+    3. [Process improvements]
+    
+    **Feature is ready for production.** 🚀
+    ```
+    
+    ## Learning Extraction
+    
+    Review all sub-issue comments for:
+    - 🔄 Course corrections
+    - Testing strategies that worked
+    - Performance optimizations found
+    - Patterns to document
+    
+    Add to Feature Log:
+    ```markdown
+    ### Key Learnings from Verification
+    - [Important insights]
+    - [Patterns validated]
+    - [Areas for improvement]
+    ```
+    
+    ## Next Steps
+    
+    1. If all verified successfully:
        ```
-       feat(scope): implement [feature name]
+       Feature #{{ params.issue }} verified successfully!
+       All quality gates passed.
        
-       - [Key change 1]
-       - [Key change 2]
-       
-       Closes #{{ params.issue }}
+       Ready to:
+       1. Create PR for review
+       2. Deploy to staging
+       3. Run `/reflect issue={{ params.issue }}` to capture learnings
        ```
-    3. Commit changes
-    4. Push to feature branch
     
-    ## Learning Capture
+    2. If issues remain:
+       ```
+       Verification found [X] issues that need attention.
+       Please review the verification summary.
+       
+       Fix critical issues before proceeding.
+       ```
     
-    Document verification insights:
-    - Gaps in original requirements
-    - Testing strategies that worked well
-    - Patterns to use in future features
-    - Process improvements identified
+    ## Important Rules
+    
+    - Be thorough and systematic
+    - Run ALL quality gates
+    - Test the actual user experience
+    - Document all findings
+    - Don't skip security checks
+    - Verify against original requirements
     
     ## Return Values
     
-    - Verification status (Passed/Failed/Passed with issues)
-    - Quality gate results
-    - Issues found and fixes applied
-    - Recommendations for future work
-    - Commit hash (if committed)
+    - Feature: #{{ params.issue }}
+    - Status: Passed/Failed/Passed with issues
+    - Quality gates: [Results]
+    - Issues found: [Count by severity]
+    - Ready for: PR/Fixes needed/Deployment
   </instructions>
 </prompt>
