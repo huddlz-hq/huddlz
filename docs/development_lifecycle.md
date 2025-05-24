@@ -4,108 +4,114 @@ This document illustrates the complete product development lifecycle, connecting
 
 ## Overview
 
-The development process consists of three interconnected workflows:
+The development process follows a streamlined four-phase workflow:
 
 ```mermaid
 flowchart TD
-  subgraph Requirements["Requirements Definition"]
-    define["Requirements Definition"] --> review["Stakeholder Review"]
-  end
-  
-  subgraph Design["Design Process"]
-    ui_spec["UI/UX Specification"] --> design_review["Design Review"]
-  end
-  
-  subgraph Implementation["Implementation Workflow"]
+  subgraph Implementation["Development Workflow"]
     plan["Plan"] --> build["Build"] --> verify["Verify"] --> reflect["Reflect"]
-    resume["Resume"] -.-> build
+    reflect -.-> plan
   end
   
-  Requirements --> Design
-  Design --> Implementation
-  reflect -.-> define
+  plan -.- role1["Role: Project Manager"]
+  build -.- role2["Role: Expert Engineer"]
+  verify -.- role3["Role: Senior Reviewer"]
+  reflect -.- role4["Role: QA/Process Analyst"]
 ```
 
-Each workflow has its own focus, but they connect to form a complete cycle.
+Each phase activates a different cognitive mode to ensure comprehensive development.
 
-## 1. Requirements Definition Workflow
+## 1. Planning Phase (`/plan`)
 
-Use the `/define` command to specify product requirements:
+The planning phase analyzes requirements and breaks them into manageable tasks:
 
 ```
-/define id="0001" title="User Authentication"
+/plan description="User Authentication"
 ```
 
 This phase:
-- Defines the problem and user needs
-- Specifies functional requirements
-- Sets acceptance criteria
-- Creates a document in `docs/requirements/` 
+- Analyzes the feature requirements deeply
+- Breaks down work into context-window-sized tasks
+- Creates detailed task specifications
+- Establishes implementation sequence
 
-### When to Use
+### Purpose
 
-- For all significant new features
-- When making substantial changes to existing features
-- When implementing complex business logic
+- Activate "Project Manager" cognitive mode
+- Understand the full scope of work
+- Identify dependencies and challenges
+- Create clear, actionable tasks
 
-### When to Skip
+## 2. Building Phase (`/build`)
 
-- For minor bug fixes
-- For simple enhancements to existing features
-- When requirements are already well-defined elsewhere
+The building phase implements tasks with rigorous quality standards:
 
-## 2. Design Process
-
-The Huddlz project uses DaisyUI as its primary UI component library, allowing for consistent design without requiring extensive custom UI creation. The design process is integrated into the planning phase:
-
-1. Identify required UI elements based on requirements
-2. Select appropriate components from DaisyUI
-3. Plan layout and responsive behavior
-4. Document component choices with references to DaisyUI docs
-5. Note any customizations needed
-
-### DaisyUI Integration
-
-The UI Component Selection section in planning notes should include:
-- Specific DaisyUI components to use (buttons, cards, etc.)
-- Layout structure decisions
-- Responsive design approach
-- Theme customizations
-- Links to relevant DaisyUI documentation
-
-This component-based approach ensures consistency while reducing design overhead. For complex UI requirements that exceed DaisyUI's capabilities, custom design work can be documented in:
-- `docs/designs/[req_id]/`
-
-## 3. Implementation Workflow
-
-Follow the standard implementation workflow:
-
-1. **Plan**: Analyze requirements and design solution
-   ```
-   /plan req_id="0001"
-   ```
-
-2. **Build**: Implement the solution
-   ```
-   /build notes_file="notes/0001_notes.md"
-   ```
-
-3. **Verify**: Review and ensure quality
-   ```
-   /verify notes_file="notes/0001_notes.md" commit=true
-   ```
-
-4. **Reflect**: Capture learnings
-   ```
-   /reflect notes_file="notes/0001_notes.md" update_learnings=true
-   ```
-
-If interrupted, use:
 ```
-/resume notes_file="notes/0001_notes.md"
+/build task_dir="20250124_user_authentication"
 ```
 
-See `/workflow` for detailed implementation instructions.
+This phase:
+- Implements one task at a time in sequence
+- Follows test-driven development (TDD/BDD)
+- Enforces quality gates before completion
+- Automatically resumes in-progress work
+
+### Quality Gates (Mandatory)
+
+Before any task can be marked complete:
+1. `mix format` - Zero formatting changes
+2. `mix test` - 100% pass rate
+3. `mix credo --strict` - Zero issues
+4. `mix test test/features/` - All behavior tests pass
+
+### Purpose
+
+- Activate "Expert Engineer" cognitive mode
+- Write tests before implementation
+- Maintain high code quality standards
+- Document decisions and challenges
+
+## 3. Verification Phase (`/verify`)
+
+The verification phase performs comprehensive review:
+
+```
+/verify task_dir="20250124_user_authentication" commit=true
+```
+
+This phase:
+- Reviews entire feature implementation
+- Runs all tests and quality checks
+- Identifies integration issues
+- Optionally commits approved changes
+
+### Purpose
+
+- Activate "Senior Reviewer" cognitive mode
+- Critical evaluation of code quality
+- Ensure requirements are met
+- Find gaps or improvements
+
+## 4. Reflection Phase (`/reflect`)
+
+The reflection phase extracts learnings:
+
+```
+/reflect task_dir="20250124_user_authentication"
+```
+
+This phase:
+- Analyzes the entire development process
+- Identifies what worked well and what didn't
+- Updates LEARNINGS.md with insights
+- Suggests process improvements
+
+### Purpose
+
+- Activate "QA/Process Analyst" cognitive mode
+- Build institutional knowledge
+- Improve future development cycles
+- Document lessons learned
 
 ## Scaling the Process
 
@@ -123,13 +129,10 @@ See `/workflow` for detailed implementation instructions.
 
 ### For Small Tasks and Bug Fixes
 
-- Use the QuickFix workflow for minor issues:
-  ```
-  /quickfix description="Fix button alignment on signup form" issue_id="ui-123"
-  ```
-- This creates a lightweight notes file without requiring a formal requirements document
-- Still captures learnings for reflection
-- Follows streamlined implementation workflow
+- Use simplified workflow without full task breakdown
+- Start directly with implementation
+- Still enforce quality gates
+- Document learnings in session notes
 
 ## Knowledge Management
 
@@ -139,33 +142,24 @@ Maintain knowledge across all phases:
 - Design patterns are documented in design system
 - Implementation insights captured in `LEARNINGS.md`
 
-### Automatic Session Documentation
+### Knowledge Capture Throughout
 
-All substantial work is automatically documented through session notes, regardless of workflow:
+Knowledge is captured continuously during development:
 
-1. **For Workflow-Based Development**:
-   - Session notes complement the structured workflow notes
-   - `/plan`, `/build`, etc. create workflow-specific documentation
-   - Automatic session notes capture the broader context and discussion
+1. **During Planning**: Discovery of unknown requirements, edge cases
+2. **During Building**: Implementation realities, technical challenges
+3. **During Verification**: Quality gaps, missing tests
+4. **During Reflection**: Patterns, improvements, lessons learned
 
-2. **For Meta-Work and Exploration**:
-   - When no specific workflow applies, session notes become the primary documentation
-   - Notes are automatically created at `notes/session-YYYYMMDD-topic.md`
-   - No command needed - documentation happens proactively
-
-These session notes can be:
-- Reflected on using `/reflect notes_file="notes/session-20250506-workflow.md"`
-- Added to the knowledge repository
-- Linked to relevant documentation
-- Used to track decisions and rationales
+All insights feed back into the process, improving each iteration.
 
 ## Command Reference
 
-- `/define` - Define feature requirements
-- `/plan` - Plan implementation based on requirements
-- `/build` - Build the solution
-- `/verify` - Verify implementation quality
-- `/reflect` - Document learnings
-- `/resume` - Resume work after interruption
+Core workflow commands:
+- `/plan` - Analyze requirements and create task breakdown
+- `/build` - Implement tasks with TDD/BDD approach
+- `/verify` - Review complete feature and ensure quality
+- `/reflect` - Extract learnings and improve process
 - `/workflow` - View detailed implementation workflow
-- `/quickfix` - Handle small changes and bug fixes
+
+See CLAUDE.md for complete command documentation and usage examples.
