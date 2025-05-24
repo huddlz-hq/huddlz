@@ -10,7 +10,10 @@ defmodule HuddlzWeb.HuddlLive do
   def mount(_params, _session, socket) do
     if connected?(socket) do
       # Only get huddls when socket is connected to minimize load
-      upcoming_huddls = Communities.get_upcoming!(actor: socket.assigns[:current_user])
+      upcoming_huddls =
+        Communities.get_upcoming!(actor: socket.assigns[:current_user])
+        |> Ash.load!([:status, :visible_virtual_link, :group])
+
       {:ok, assign(socket, huddls: upcoming_huddls, search_query: nil)}
     else
       # Initial load - empty to speed up first render
@@ -22,8 +25,10 @@ defmodule HuddlzWeb.HuddlLive do
     huddls =
       if query && query != "" do
         Communities.search_huddlz!(query, actor: socket.assigns[:current_user])
+        |> Ash.load!([:status, :visible_virtual_link, :group])
       else
         Communities.get_upcoming!(actor: socket.assigns[:current_user])
+        |> Ash.load!([:status, :visible_virtual_link, :group])
       end
 
     {:noreply, assign(socket, huddls: huddls, search_query: query)}
@@ -60,48 +65,11 @@ defmodule HuddlzWeb.HuddlLive do
               <p class="text-lg text-base-content/70">No huddlz found. Check back soon!</p>
             </div>
           <% else %>
-            <ul class="divide-y divide-base-300">
+            <div class="space-y-4">
               <%= for huddl <- @huddls do %>
-                <li class="py-4">
-                  <div class="flex flex-col md:flex-row bg-base-100 rounded-lg shadow-sm overflow-hidden">
-                    <div class="w-full md:w-48 h-32 md:h-auto relative bg-base-200">
-                      <%= if huddl.thumbnail_url do %>
-                        <img
-                          src={huddl.thumbnail_url}
-                          alt={huddl.title}
-                          class="w-full h-full object-cover"
-                        />
-                      <% else %>
-                        <div class="w-full h-full flex items-center justify-center bg-base-300">
-                          <span class="text-base-content/80 font-medium">No image</span>
-                        </div>
-                      <% end %>
-                      <div class="absolute top-2 right-2 px-2 py-1 bg-primary text-primary-content text-xs font-semibold rounded">
-                        {huddl.status}
-                      </div>
-                    </div>
-                    <div class="flex-1 p-4">
-                      <div class="flex flex-col h-full justify-between">
-                        <div>
-                          <h2 class="text-xl font-semibold mb-2">{huddl.title}</h2>
-                          <p class="text-base-content/80 mb-2">
-                            {huddl.description || "No description provided"}
-                          </p>
-                          <div class="text-sm text-base-content/70 mb-4">
-                            {Calendar.strftime(huddl.starts_at, "%b %d, %Y · %I:%M %p")}
-                          </div>
-                        </div>
-                        <div class="flex justify-end">
-                          <button class="btn btn-primary btn-sm">
-                            Join
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </li>
+                <.huddl_card huddl={huddl} show_group={true} />
               <% end %>
-            </ul>
+            </div>
           <% end %>
         </div>
       </div>

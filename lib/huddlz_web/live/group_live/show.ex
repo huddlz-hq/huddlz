@@ -3,6 +3,7 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupMember
+  alias Huddlz.Communities.Huddl
   alias HuddlzWeb.Layouts
 
   require Ash.Query
@@ -20,6 +21,8 @@ defmodule HuddlzWeb.GroupLive.Show do
          :ok <- check_group_access(group, socket.assigns.current_user) do
       members = get_members(group, socket.assigns.current_user)
 
+      huddlz = get_group_huddlz(group, socket.assigns.current_user)
+
       {:noreply,
        socket
        |> assign(:page_title, group.name)
@@ -28,7 +31,8 @@ defmodule HuddlzWeb.GroupLive.Show do
        |> assign(:member_count, get_member_count(group))
        |> assign(:is_member, member?(group, socket.assigns.current_user))
        |> assign(:is_owner, owner?(group, socket.assigns.current_user))
-       |> assign(:is_organizer, organizer?(group, socket.assigns.current_user))}
+       |> assign(:is_organizer, organizer?(group, socket.assigns.current_user))
+       |> assign(:huddlz, huddlz)}
     else
       {:error, :not_found} ->
         {:noreply,
@@ -133,6 +137,19 @@ defmodule HuddlzWeb.GroupLive.Show do
                 <dd>{@group.owner.display_name || @group.owner.email}</dd>
               </div>
             </dl>
+          </div>
+
+          <div class="mt-8">
+            <h3>Upcoming Huddlz</h3>
+            <%= if Enum.empty?(@huddlz) do %>
+              <p class="text-gray-600 mt-4">No upcoming huddlz scheduled.</p>
+            <% else %>
+              <div class="mt-4 space-y-4">
+                <%= for huddl <- @huddlz do %>
+                  <.huddl_card huddl={huddl} />
+                <% end %>
+              </div>
+            <% end %>
           </div>
 
           <div class="mt-8">
@@ -301,5 +318,14 @@ defmodule HuddlzWeb.GroupLive.Show do
     |> Ash.Query.filter(group_id == ^group.id and user_id == ^user.id)
     |> Ash.read_one!(authorize?: false)
     |> Ash.destroy(action: :leave_group, actor: user)
+  end
+
+  defp get_group_huddlz(group, user) do
+    Huddl
+    |> Ash.Query.filter(group_id == ^group.id)
+    |> Ash.Query.filter(starts_at > ^DateTime.utc_now())
+    |> Ash.Query.sort(starts_at: :asc)
+    |> Ash.Query.load([:status, :visible_virtual_link])
+    |> Ash.read!(actor: user)
   end
 end

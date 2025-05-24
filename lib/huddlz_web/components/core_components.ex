@@ -32,6 +32,9 @@ defmodule HuddlzWeb.CoreComponents do
   alias Phoenix.HTML.Form
   alias Phoenix.LiveView.JS
 
+  # Import verified routes for ~p sigil
+  use HuddlzWeb, :verified_routes
+
   @doc """
   Renders flash notices.
 
@@ -466,5 +469,173 @@ defmodule HuddlzWeb.CoreComponents do
   """
   def translate_errors(errors, field) when is_list(errors) do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
+  end
+
+  @doc """
+  Renders a huddl card.
+
+  ## Examples
+
+      <.huddl_card huddl={@huddl} />
+  """
+  attr :huddl, :map, required: true
+  attr :show_group, :boolean, default: false
+  attr :class, :string, default: nil
+  attr :rest, :global
+
+  def huddl_card(assigns) do
+    ~H"""
+    <div
+      class={[
+        "flex flex-col md:flex-row bg-base-100 rounded-lg shadow-sm overflow-hidden",
+        @class
+      ]}
+      {@rest}
+    >
+      <div class="w-full md:w-48 h-32 md:h-auto relative bg-base-200">
+        <%= if @huddl.thumbnail_url do %>
+          <img src={@huddl.thumbnail_url} alt={@huddl.title} class="w-full h-full object-cover" />
+        <% else %>
+          <div class="w-full h-full flex items-center justify-center bg-base-300">
+            <span class="text-base-content/80 font-medium">No image</span>
+          </div>
+        <% end %>
+        <div class="absolute top-2 right-2">
+          <.huddl_status_badge status={@huddl.status} />
+        </div>
+        <div class="absolute top-2 left-2">
+          <.huddl_type_badge type={@huddl.event_type} />
+        </div>
+      </div>
+      <div class="flex-1 p-4">
+        <div class="flex flex-col h-full justify-between">
+          <div>
+            <h3 class="text-xl font-semibold mb-2">{@huddl.title}</h3>
+            <%= if @show_group && Map.has_key?(@huddl, :group) do %>
+              <p class="text-sm text-base-content/70 mb-1">
+                <.icon name="hero-user-group" class="h-4 w-4 inline" />
+                {@huddl.group.name}
+              </p>
+            <% end %>
+            <p class="text-base-content/80 mb-2">
+              {truncate(@huddl.description || "No description provided", 150)}
+            </p>
+            <div class="space-y-1 text-sm text-base-content/70">
+              <div class="flex items-center gap-2">
+                <.icon name="hero-calendar" class="h-4 w-4" />
+                {format_datetime(@huddl.starts_at)}
+                <%= if @huddl.ends_at do %>
+                  - {format_time_only(@huddl.ends_at)}
+                <% end %>
+              </div>
+              <%= if @huddl.event_type in [:in_person, :hybrid] && @huddl.physical_location do %>
+                <div class="flex items-center gap-2">
+                  <.icon name="hero-map-pin" class="h-4 w-4" />
+                  {@huddl.physical_location}
+                </div>
+              <% end %>
+              <%= if @huddl.event_type in [:virtual, :hybrid] do %>
+                <div class="flex items-center gap-2">
+                  <.icon name="hero-video-camera" class="h-4 w-4" />
+                  <%= if @huddl.visible_virtual_link do %>
+                    <a href={@huddl.visible_virtual_link} target="_blank" class="link link-primary">
+                      Join virtually
+                    </a>
+                  <% else %>
+                    <span class="text-base-content/50">Virtual link available after RSVP</span>
+                  <% end %>
+                </div>
+              <% end %>
+              <%= if @huddl.rsvp_count > 0 do %>
+                <div class="flex items-center gap-2">
+                  <.icon name="hero-user-group" class="h-4 w-4" />
+                  {@huddl.rsvp_count} attending
+                </div>
+              <% end %>
+            </div>
+          </div>
+          <div class="flex justify-between items-center mt-4">
+            <div>
+              <%= if @huddl.is_private do %>
+                <span class="badge badge-neutral badge-sm">Private</span>
+              <% end %>
+            </div>
+            <.link
+              navigate={~p"/groups/#{@huddl.group_id}/huddlz/#{@huddl.id}"}
+              class="btn btn-primary btn-sm"
+            >
+              View Details
+            </.link>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders a huddl status badge.
+  """
+  attr :status, :atom, required: true
+  attr :class, :string, default: nil
+
+  def huddl_status_badge(assigns) do
+    ~H"""
+    <span class={[
+      "badge badge-sm font-semibold",
+      status_badge_class(@status),
+      @class
+    ]}>
+      {@status |> to_string() |> String.capitalize()}
+    </span>
+    """
+  end
+
+  @doc """
+  Renders a huddl type badge.
+  """
+  attr :type, :atom, required: true
+  attr :class, :string, default: nil
+
+  def huddl_type_badge(assigns) do
+    ~H"""
+    <span class={[
+      "badge badge-sm",
+      type_badge_class(@type),
+      @class
+    ]}>
+      <.icon name={type_icon(@type)} class="h-3 w-3 mr-1" />
+      {@type |> to_string() |> String.replace("_", " ") |> String.capitalize()}
+    </span>
+    """
+  end
+
+  defp status_badge_class(:upcoming), do: "badge-primary"
+  defp status_badge_class(:in_progress), do: "badge-success"
+  defp status_badge_class(:completed), do: "badge-neutral"
+  defp status_badge_class(_), do: "badge-ghost"
+
+  defp type_badge_class(:in_person), do: "badge-info"
+  defp type_badge_class(:virtual), do: "badge-warning"
+  defp type_badge_class(:hybrid), do: "badge-accent"
+  defp type_badge_class(_), do: "badge-ghost"
+
+  defp type_icon(:in_person), do: "hero-map-pin"
+  defp type_icon(:virtual), do: "hero-video-camera"
+  defp type_icon(:hybrid), do: "hero-globe-alt"
+  defp type_icon(_), do: "hero-calendar"
+
+  defp truncate(text, max_length) when is_binary(text) and byte_size(text) > max_length do
+    String.slice(text, 0, max_length) <> "..."
+  end
+
+  defp truncate(text, _), do: text
+
+  defp format_datetime(datetime) do
+    Calendar.strftime(datetime, "%b %d, %Y · %I:%M %p")
+  end
+
+  defp format_time_only(datetime) do
+    Calendar.strftime(datetime, "%I:%M %p")
   end
 end
