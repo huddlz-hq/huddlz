@@ -15,7 +15,7 @@ Enable group owners and organizers to create huddlz (events) for their groups. T
 2. ✅ Create Event Form - Build LiveView form for event creation
 3. ✅ Implement Access Control - Ensure only owners/organizers can create events
 4. ✅ Add Event Display - Show events on group pages and main listing
-5. Implement RSVP System - Basic RSVP functionality with count display
+5. ✅ Implement RSVP System - Basic RSVP functionality with count display
 6. Add Event Search - Enable searching/filtering of public events
 
 ## Success Criteria

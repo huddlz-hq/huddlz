@@ -90,6 +90,46 @@ defmodule Huddlz.Communities.Huddl do
 
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
     end
+
+    update :rsvp do
+      description "RSVP to this huddl"
+      require_atomic? false
+
+      # Accept the user_id as an argument
+      argument :user_id, :uuid do
+        allow_nil? false
+      end
+
+      # Custom change to handle RSVP
+      change fn changeset, _context ->
+        user_id = Ash.Changeset.get_argument(changeset, :user_id)
+        huddl_id = changeset.data.id
+
+        # Check if already RSVPed
+        existing =
+          Huddlz.Communities.HuddlAttendee
+          |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl_id, user_id: user_id})
+          |> Ash.read_one(authorize?: false)
+
+        case existing do
+          {:ok, nil} ->
+            # Create RSVP
+            Huddlz.Communities.HuddlAttendee
+            |> Ash.Changeset.for_create(:rsvp, %{huddl_id: huddl_id, user_id: user_id})
+            |> Ash.create!(authorize?: false)
+
+            # Increment count
+            Ash.Changeset.change_attribute(changeset, :rsvp_count, changeset.data.rsvp_count + 1)
+
+          {:ok, _} ->
+            # Already RSVPed, no change needed
+            changeset
+
+          {:error, error} ->
+            Ash.Changeset.add_error(changeset, error)
+        end
+      end
+    end
   end
 
   policies do
@@ -132,6 +172,17 @@ defmodule Huddlz.Communities.Huddl do
 
     policy action(:by_status) do
       description "Users can filter huddls by status"
+      # Public huddls in public groups
+      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
+      # Any huddl in a group they're a member of
+      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
+    end
+
+    # RSVP policies
+    policy action(:rsvp) do
+      description "Users can RSVP to huddls they have access to"
+      # User must be RSVPing for themselves
+      forbid_unless expr(^arg(:user_id) == ^actor(:id))
       # Public huddls in public groups
       authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
       # Any huddl in a group they're a member of
@@ -260,6 +311,10 @@ defmodule Huddlz.Communities.Huddl do
       attribute_type :uuid
       allow_nil? false
       primary_key? false
+    end
+
+    has_many :attendees, Huddlz.Communities.HuddlAttendee do
+      destination_attribute :huddl_id
     end
   end
 

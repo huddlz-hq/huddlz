@@ -198,6 +198,12 @@ defmodule Huddlz.Accounts.User do
     end
   end
 
+  relationships do
+    has_many :rsvps, Huddlz.Communities.HuddlAttendee do
+      destination_attribute :user_id
+    end
+  end
+
   identities do
     identity :unique_email, [:email]
   end

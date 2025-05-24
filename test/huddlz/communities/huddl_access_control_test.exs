@@ -340,7 +340,15 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
       }
     end
 
-    test "members can see virtual links", %{member: member, virtual_huddl: virtual_huddl} do
+    test "members can see virtual links after RSVP", %{
+      member: member,
+      virtual_huddl: virtual_huddl
+    } do
+      # First, member needs to RSVP
+      virtual_huddl
+      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.update!()
+
       result =
         Huddl
         |> Ash.Query.filter(id == ^virtual_huddl.id)
@@ -348,6 +356,20 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
         |> Ash.read_one!(actor: member)
 
       assert result.visible_virtual_link == "https://zoom.us/j/secret123"
+      assert result.virtual_link == "https://zoom.us/j/secret123"
+    end
+
+    test "members cannot see virtual links without RSVP", %{
+      member: member,
+      virtual_huddl: virtual_huddl
+    } do
+      result =
+        Huddl
+        |> Ash.Query.filter(id == ^virtual_huddl.id)
+        |> Ash.Query.load(:visible_virtual_link)
+        |> Ash.read_one!(actor: member)
+
+      assert result.visible_virtual_link == nil
       assert result.virtual_link == "https://zoom.us/j/secret123"
     end
 

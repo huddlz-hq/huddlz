@@ -32,5 +32,13 @@ defmodule Huddlz.Communities do
       define :get_by_group, action: :get_by_group, args: [:group_id]
       define :get_by_user, action: :get_by_user, args: [:user_id]
     end
+
+    resource Huddlz.Communities.HuddlAttendee do
+      define :rsvp_to_huddl, action: :rsvp, args: [:huddl_id, :user_id]
+      define :cancel_huddl_rsvp, action: :cancel_rsvp
+      define :get_huddl_attendees, action: :by_huddl, args: [:huddl_id]
+      define :get_user_rsvps, action: :by_user, args: [:user_id]
+      define :check_user_rsvp, action: :check_rsvp, args: [:huddl_id, :user_id]
+    end
   end
 end
