@@ -78,73 +78,71 @@ defmodule HuddlzWeb.HuddlLive do
       current_user: current_user
     } = socket.assigns
 
-    # Start with the base query
-    base_query =
-      if query && query != "" do
-        Communities.search_huddlz!(query, actor: current_user)
-      else
-        # Get all accessible huddls
-        Huddlz.Communities.Huddl
-        |> Ash.read!(actor: current_user)
-      end
-
-    # Apply date filter
-    filtered =
-      case date_filter do
-        "upcoming" ->
-          Enum.filter(base_query, fn huddl ->
-            DateTime.compare(huddl.starts_at, DateTime.utc_now()) == :gt
-          end)
-
-        "this_week" ->
-          now = DateTime.utc_now()
-          week_end = DateTime.add(now, 7 * 24 * 60 * 60, :second)
-
-          Enum.filter(base_query, fn huddl ->
-            DateTime.compare(huddl.starts_at, now) == :gt &&
-              DateTime.compare(huddl.starts_at, week_end) != :gt
-          end)
-
-        "this_month" ->
-          now = DateTime.utc_now()
-          month_end = DateTime.add(now, 30 * 24 * 60 * 60, :second)
-
-          Enum.filter(base_query, fn huddl ->
-            DateTime.compare(huddl.starts_at, now) == :gt &&
-              DateTime.compare(huddl.starts_at, month_end) != :gt
-          end)
-
-        _ ->
-          base_query
-      end
-
-    # Apply event type filter
-    filtered =
-      if event_type && event_type != "" do
-        Enum.filter(filtered, fn huddl ->
-          to_string(huddl.event_type) == event_type
-        end)
-      else
-        filtered
-      end
-
-    # Apply sorting
-    sorted =
-      case sort_by do
-        "date_desc" ->
-          Enum.sort_by(filtered, & &1.starts_at, {:desc, DateTime})
-
-        "recent" ->
-          Enum.sort_by(filtered, & &1.inserted_at, {:desc, DateTime})
-
-        _ ->
-          # Default to date_asc
-          Enum.sort_by(filtered, & &1.starts_at, {:asc, DateTime})
-      end
-
-    # Load related data
-    sorted
+    current_user
+    |> get_base_huddls(query)
+    |> apply_date_filter(date_filter)
+    |> apply_event_type_filter(event_type)
+    |> apply_sorting(sort_by)
     |> Ash.load!([:status, :visible_virtual_link, :group])
+  end
+
+  defp get_base_huddls(current_user, query) when is_binary(query) and query != "" do
+    Communities.search_huddlz!(query, actor: current_user)
+  end
+
+  defp get_base_huddls(current_user, _query) do
+    Huddlz.Communities.Huddl
+    |> Ash.read!(actor: current_user)
+  end
+
+  defp apply_date_filter(huddls, "upcoming") do
+    Enum.filter(huddls, fn huddl ->
+      DateTime.compare(huddl.starts_at, DateTime.utc_now()) == :gt
+    end)
+  end
+
+  defp apply_date_filter(huddls, "this_week") do
+    now = DateTime.utc_now()
+    week_end = DateTime.add(now, 7 * 24 * 60 * 60, :second)
+
+    Enum.filter(huddls, fn huddl ->
+      DateTime.compare(huddl.starts_at, now) == :gt &&
+        DateTime.compare(huddl.starts_at, week_end) != :gt
+    end)
+  end
+
+  defp apply_date_filter(huddls, "this_month") do
+    now = DateTime.utc_now()
+    month_end = DateTime.add(now, 30 * 24 * 60 * 60, :second)
+
+    Enum.filter(huddls, fn huddl ->
+      DateTime.compare(huddl.starts_at, now) == :gt &&
+        DateTime.compare(huddl.starts_at, month_end) != :gt
+    end)
+  end
+
+  defp apply_date_filter(huddls, _), do: huddls
+
+  defp apply_event_type_filter(huddls, event_type)
+       when is_binary(event_type) and event_type != "" do
+    Enum.filter(huddls, fn huddl ->
+      to_string(huddl.event_type) == event_type
+    end)
+  end
+
+  defp apply_event_type_filter(huddls, _), do: huddls
+
+  defp apply_sorting(huddls, "date_desc") do
+    Enum.sort_by(huddls, & &1.starts_at, {:desc, DateTime})
+  end
+
+  defp apply_sorting(huddls, "recent") do
+    Enum.sort_by(huddls, & &1.inserted_at, {:desc, DateTime})
+  end
+
+  defp apply_sorting(huddls, _) do
+    # Default to date_asc
+    Enum.sort_by(huddls, & &1.starts_at, {:asc, DateTime})
   end
 
   def render(assigns) do
@@ -287,7 +285,6 @@ defmodule HuddlzWeb.HuddlLive do
     |> to_string()
     |> String.replace("_", " ")
     |> String.split(" ")
-    |> Enum.map(&String.capitalize/1)
-    |> Enum.join(" ")
+    |> Enum.map_join(" ", &String.capitalize/1)
   end
 end
