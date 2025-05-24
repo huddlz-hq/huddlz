@@ -14,24 +14,137 @@ defmodule HuddlzWeb.HuddlLive do
         Communities.get_upcoming!(actor: socket.assigns[:current_user])
         |> Ash.load!([:status, :visible_virtual_link, :group])
 
-      {:ok, assign(socket, huddls: upcoming_huddls, search_query: nil)}
+      {:ok,
+       assign(socket,
+         huddls: upcoming_huddls,
+         search_query: nil,
+         event_type_filter: nil,
+         date_filter: "upcoming",
+         sort_by: "date_asc"
+       )}
     else
       # Initial load - empty to speed up first render
-      {:ok, assign(socket, huddls: [], search_query: nil)}
+      {:ok,
+       assign(socket,
+         huddls: [],
+         search_query: nil,
+         event_type_filter: nil,
+         date_filter: "upcoming",
+         sort_by: "date_asc"
+       )}
     end
   end
 
-  def handle_event("search", %{"query" => query}, socket) do
-    huddls =
+  def handle_event("search", params, socket) do
+    query = params["query"]
+    event_type = params["event_type"]
+    date_filter = params["date_filter"] || "upcoming"
+    sort_by = params["sort_by"] || "date_asc"
+
+    socket =
+      socket
+      |> assign(search_query: query)
+      |> assign(event_type_filter: event_type)
+      |> assign(date_filter: date_filter)
+      |> assign(sort_by: sort_by)
+      |> apply_filters()
+
+    {:noreply, socket}
+  end
+
+  def handle_event("clear_filters", _params, socket) do
+    socket =
+      socket
+      |> assign(search_query: nil)
+      |> assign(event_type_filter: nil)
+      |> assign(date_filter: "upcoming")
+      |> assign(sort_by: "date_asc")
+      |> apply_filters()
+
+    {:noreply, socket}
+  end
+
+  defp apply_filters(socket) do
+    huddls = get_filtered_huddls(socket)
+    assign(socket, huddls: huddls)
+  end
+
+  defp get_filtered_huddls(socket) do
+    %{
+      search_query: query,
+      event_type_filter: event_type,
+      date_filter: date_filter,
+      sort_by: sort_by,
+      current_user: current_user
+    } = socket.assigns
+
+    # Start with the base query
+    base_query =
       if query && query != "" do
-        Communities.search_huddlz!(query, actor: socket.assigns[:current_user])
-        |> Ash.load!([:status, :visible_virtual_link, :group])
+        Communities.search_huddlz!(query, actor: current_user)
       else
-        Communities.get_upcoming!(actor: socket.assigns[:current_user])
-        |> Ash.load!([:status, :visible_virtual_link, :group])
+        # Get all accessible huddls
+        Huddlz.Communities.Huddl
+        |> Ash.read!(actor: current_user)
       end
 
-    {:noreply, assign(socket, huddls: huddls, search_query: query)}
+    # Apply date filter
+    filtered =
+      case date_filter do
+        "upcoming" ->
+          Enum.filter(base_query, fn huddl ->
+            DateTime.compare(huddl.starts_at, DateTime.utc_now()) == :gt
+          end)
+
+        "this_week" ->
+          now = DateTime.utc_now()
+          week_end = DateTime.add(now, 7 * 24 * 60 * 60, :second)
+
+          Enum.filter(base_query, fn huddl ->
+            DateTime.compare(huddl.starts_at, now) == :gt &&
+              DateTime.compare(huddl.starts_at, week_end) != :gt
+          end)
+
+        "this_month" ->
+          now = DateTime.utc_now()
+          month_end = DateTime.add(now, 30 * 24 * 60 * 60, :second)
+
+          Enum.filter(base_query, fn huddl ->
+            DateTime.compare(huddl.starts_at, now) == :gt &&
+              DateTime.compare(huddl.starts_at, month_end) != :gt
+          end)
+
+        _ ->
+          base_query
+      end
+
+    # Apply event type filter
+    filtered =
+      if event_type && event_type != "" do
+        Enum.filter(filtered, fn huddl ->
+          to_string(huddl.event_type) == event_type
+        end)
+      else
+        filtered
+      end
+
+    # Apply sorting
+    sorted =
+      case sort_by do
+        "date_desc" ->
+          Enum.sort_by(filtered, & &1.starts_at, {:desc, DateTime})
+
+        "recent" ->
+          Enum.sort_by(filtered, & &1.inserted_at, {:desc, DateTime})
+
+        _ ->
+          # Default to date_asc
+          Enum.sort_by(filtered, & &1.starts_at, {:asc, DateTime})
+      end
+
+    # Load related data
+    sorted
+    |> Ash.load!([:status, :visible_virtual_link, :group])
   end
 
   def render(assigns) do
@@ -43,26 +156,118 @@ defmodule HuddlzWeb.HuddlLive do
           <p class="text-lg text-base-content/80">
             Find and join engaging discussion events with interesting people
           </p>
-          <form phx-change="search" phx-submit="search" class="mt-4">
-            <div class="flex">
+
+          <form phx-change="search" phx-submit="search" class="mt-6 space-y-4">
+            <div class="flex gap-2">
               <input
                 type="text"
                 name="query"
                 value={@search_query}
                 placeholder="Search huddlz..."
-                class="flex-grow px-4 py-2 border rounded-l focus:outline-none bg-base-100 text-base-content"
+                phx-debounce="300"
+                class="flex-grow px-4 py-2 border rounded focus:outline-none bg-base-100 text-base-content"
               />
-              <button type="submit" class="btn btn-primary px-4 py-2 rounded-r">
+              <button type="submit" class="btn btn-primary px-4 py-2">
                 Search
               </button>
             </div>
+
+            <div class="flex flex-wrap gap-4">
+              <!-- Event Type Filter -->
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text">Event Type</span>
+                </label>
+                <select name="event_type" class="select select-bordered">
+                  <option value="">All Types</option>
+                  <option value="in_person" selected={@event_type_filter == "in_person"}>
+                    In Person
+                  </option>
+                  <option value="virtual" selected={@event_type_filter == "virtual"}>
+                    Virtual
+                  </option>
+                  <option value="hybrid" selected={@event_type_filter == "hybrid"}>
+                    Hybrid
+                  </option>
+                </select>
+              </div>
+              
+    <!-- Date Filter -->
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text">Date Range</span>
+                </label>
+                <select name="date_filter" class="select select-bordered">
+                  <option value="upcoming" selected={@date_filter == "upcoming"}>
+                    All Upcoming
+                  </option>
+                  <option value="this_week" selected={@date_filter == "this_week"}>
+                    This Week
+                  </option>
+                  <option value="this_month" selected={@date_filter == "this_month"}>
+                    This Month
+                  </option>
+                </select>
+              </div>
+              
+    <!-- Sort By -->
+              <div class="form-control">
+                <label class="label">
+                  <span class="label-text">Sort By</span>
+                </label>
+                <select name="sort_by" class="select select-bordered">
+                  <option value="date_asc" selected={@sort_by == "date_asc"}>
+                    Date (Earliest First)
+                  </option>
+                  <option value="date_desc" selected={@sort_by == "date_desc"}>
+                    Date (Latest First)
+                  </option>
+                  <option value="recent" selected={@sort_by == "recent"}>
+                    Recently Added
+                  </option>
+                </select>
+              </div>
+            </div>
           </form>
+          
+    <!-- Active Filters Display -->
+          <%= if @search_query || @event_type_filter || @date_filter != "upcoming" || @sort_by != "date_asc" do %>
+            <div class="mt-4 flex items-center gap-2">
+              <span class="text-sm">Active filters:</span>
+              <%= if @search_query do %>
+                <span class="badge badge-primary">Search: {@search_query}</span>
+              <% end %>
+              <%= if @event_type_filter do %>
+                <span class="badge badge-primary">Type: {humanize_filter(@event_type_filter)}</span>
+              <% end %>
+              <%= if @date_filter != "upcoming" do %>
+                <span class="badge badge-primary">Date: {humanize_filter(@date_filter)}</span>
+              <% end %>
+              <%= if @sort_by != "date_asc" do %>
+                <span class="badge badge-primary">Sort: {humanize_filter(@sort_by)}</span>
+              <% end %>
+              <button phx-click="clear_filters" class="btn btn-xs btn-ghost">
+                Clear all
+              </button>
+            </div>
+          <% end %>
         </div>
 
         <div class="w-full">
+          <!-- Results count -->
+          <div class="mb-4 text-sm text-base-content/70">
+            Found {length(@huddls)} {if length(@huddls) == 1, do: "huddl", else: "huddlz"}
+          </div>
+
           <%= if Enum.empty?(@huddls) do %>
-            <div class="text-center py-12">
-              <p class="text-lg text-base-content/70">No huddlz found. Check back soon!</p>
+            <div class="text-center py-12 bg-base-200 rounded-lg">
+              <p class="text-lg text-base-content/70">
+                <%= if @search_query || @event_type_filter || @date_filter != "upcoming" do %>
+                  No huddlz found matching your filters. Try adjusting your search criteria.
+                <% else %>
+                  No huddlz found. Check back soon!
+                <% end %>
+              </p>
             </div>
           <% else %>
             <div class="space-y-4">
@@ -75,5 +280,14 @@ defmodule HuddlzWeb.HuddlLive do
       </div>
     </Layouts.app>
     """
+  end
+
+  defp humanize_filter(filter) do
+    filter
+    |> to_string()
+    |> String.replace("_", " ")
+    |> String.split(" ")
+    |> Enum.map(&String.capitalize/1)
+    |> Enum.join(" ")
   end
 end
