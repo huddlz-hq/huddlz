@@ -309,6 +309,74 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       # Should redirect to the group page when huddl is not found (due to authorization)
       assert String.starts_with?(path, "/groups/")
     end
+
+    test "shows Cancel RSVP button when user has RSVPed", %{
+      conn: conn,
+      member: member,
+      group: group,
+      huddl: huddl
+    } do
+      # First RSVP to the huddl
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.update!()
+
+      {:ok, _show_live, html} =
+        conn
+        |> log_in_user(member)
+        |> live(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
+
+      # Should show Cancel RSVP button instead of RSVP button
+      assert html =~ "Cancel RSVP"
+      assert html =~ "phx-click=\"cancel_rsvp\""
+      refute html =~ "RSVP to this huddl"
+
+      # Should still show attending status
+      assert html =~ "You&#39;re attending!" || html =~ "You're attending!"
+    end
+
+    test "Cancel RSVP button only shows for upcoming huddls", %{
+      conn: conn,
+      member: member,
+      owner: owner,
+      group: group
+    } do
+      # Create a past huddl
+      past_huddl =
+        Huddl
+        |> Ash.Changeset.for_create(
+          :create,
+          %{
+            title: "Past Event",
+            description: "This already happened",
+            starts_at: DateTime.add(DateTime.utc_now(), -2, :day),
+            ends_at: DateTime.add(DateTime.utc_now(), -1, :day),
+            event_type: :virtual,
+            virtual_link: "https://zoom.us/j/past",
+            is_private: false,
+            group_id: group.id,
+            creator_id: owner.id
+          },
+          actor: owner
+        )
+        |> Ash.create!()
+
+      # RSVP to the past huddl (directly in database since it's past)
+      past_huddl
+      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.update!()
+
+      {:ok, _show_live, html} =
+        conn
+        |> log_in_user(member)
+        |> live(~p"/groups/#{group.id}/huddlz/#{past_huddl.id}")
+
+      # Should not show Cancel RSVP button for past events
+      refute html =~ "Cancel RSVP"
+      refute html =~ "RSVP to this huddl"
+      # But should still show attending status
+      assert html =~ "1 person attending"
+    end
   end
 
   defp create_verified_user do

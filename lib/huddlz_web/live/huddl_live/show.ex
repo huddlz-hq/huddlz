@@ -63,8 +63,17 @@ defmodule HuddlzWeb.HuddlLive.Show do
         <:actions>
           <%= if @current_user && @huddl.status == :upcoming do %>
             <%= if @has_rsvped do %>
-              <div class="text-success font-semibold">
-                <.icon name="hero-check-circle" class="h-5 w-5 inline" /> You're attending!
+              <div class="flex items-center gap-4">
+                <div class="text-success font-semibold">
+                  <.icon name="hero-check-circle" class="h-5 w-5 inline" /> You're attending!
+                </div>
+                <.button
+                  phx-click="cancel_rsvp"
+                  phx-disable-with="Cancelling..."
+                  class="btn-error btn-sm"
+                >
+                  Cancel RSVP
+                </.button>
               </div>
             <% else %>
               <.button phx-click="rsvp" class="btn-primary">
