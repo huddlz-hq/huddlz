@@ -157,7 +157,9 @@ defmodule HuddlzWeb.HuddlLive do
 
           <form phx-change="search" phx-submit="search" class="mt-6 space-y-4">
             <div class="flex gap-2">
+              <label for="search-query" class="sr-only">Search huddlz</label>
               <input
+                id="search-query"
                 type="text"
                 name="query"
                 value={@search_query}
@@ -173,10 +175,10 @@ defmodule HuddlzWeb.HuddlLive do
             <div class="flex flex-wrap gap-4">
               <!-- Event Type Filter -->
               <div class="form-control">
-                <label class="label">
+                <label for="event-type" class="label">
                   <span class="label-text">Event Type</span>
                 </label>
-                <select name="event_type" class="select select-bordered">
+                <select id="event-type" name="event_type" class="select select-bordered">
                   <option value="">All Types</option>
                   <option value="in_person" selected={@event_type_filter == "in_person"}>
                     In Person
@@ -192,10 +194,10 @@ defmodule HuddlzWeb.HuddlLive do
               
     <!-- Date Filter -->
               <div class="form-control">
-                <label class="label">
+                <label for="date-range" class="label">
                   <span class="label-text">Date Range</span>
                 </label>
-                <select name="date_filter" class="select select-bordered">
+                <select id="date-range" name="date_filter" class="select select-bordered">
                   <option value="upcoming" selected={@date_filter == "upcoming"}>
                     All Upcoming
                   </option>
@@ -210,10 +212,10 @@ defmodule HuddlzWeb.HuddlLive do
               
     <!-- Sort By -->
               <div class="form-control">
-                <label class="label">
+                <label for="sort-by" class="label">
                   <span class="label-text">Sort By</span>
                 </label>
-                <select name="sort_by" class="select select-bordered">
+                <select id="sort-by" name="sort_by" class="select select-bordered">
                   <option value="date_asc" selected={@sort_by == "date_asc"}>
                     Date (Earliest First)
                   </option>
