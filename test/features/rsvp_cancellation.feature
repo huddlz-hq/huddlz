@@ -68,8 +68,8 @@ Feature: RSVP Cancellation
   Scenario: Cannot cancel RSVP for past events
     Given I am logged in as "member@example.com"
     And the following huddl exists in "Tech Meetup":
-      | title        | description    | event_type | starts_at      | ends_at        | virtual_link            |
-      | Past Event   | Already done   | virtual    | yesterday 2pm  | yesterday 3pm  | https://zoom.us/j/past  |
+      | title        | description    | event_type | starts_at      | ends_at        |
+      | Past Event   | Already done   | virtual    | yesterday 2pm  | yesterday 3pm  |
     And I have RSVPed to "Past Event"
     When I visit the "Past Event" huddl page
     Then I should not see "Cancel RSVP"

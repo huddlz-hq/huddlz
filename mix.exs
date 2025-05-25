@@ -82,8 +82,7 @@ defmodule Huddlz.MixProject do
       {:bandit, "~> 1.5"},
       {:cucumber, "~> 0.1.0", only: [:dev, :test]},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:phoenix_test, "~> 0.6.0", only: :test},
-      {:wallaby, "~> 0.30", only: :test, runtime: false}
+      {:phoenix_test, "~> 0.6.0", only: :test}
     ]
   end
 

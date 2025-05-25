@@ -24,16 +24,7 @@ defmodule HuddlzWeb.Router do
   scope "/", HuddlzWeb do
     pipe_through :browser
 
-    # Add sandbox hook for Wallaby testing in test environment
-    on_mount_hooks =
-      if Application.compile_env(:huddlz, :sandbox, false) do
-        [{HuddlzWeb.Hooks.AllowEctoSandbox, :default}]
-      else
-        []
-      end
-
-    ash_authentication_live_session :authenticated_routes,
-      on_mount: on_mount_hooks do
+    ash_authentication_live_session :authenticated_routes do
       # in each liveview, add one of the following at the top of the module:
       #
       # If an authenticated user must be present:

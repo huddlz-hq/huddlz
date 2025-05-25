@@ -1,7 +1,7 @@
 defmodule HuddlzWeb.GroupLiveTest do
   use HuddlzWeb.ConnCase, async: true
 
-  import PhoenixTest
+  import Phoenix.LiveViewTest
   import Huddlz.Generator
 
   alias Huddlz.Communities.Group
@@ -27,40 +27,56 @@ defmodule HuddlzWeb.GroupLiveTest do
     end
 
     test "lists public groups for anonymous users", %{conn: conn, public_group: public_group} do
-      conn
-      |> visit("/groups")
-      |> assert_has("h1", text: "Groups")
-      |> assert_has("body", text: to_string(public_group.name))
-      |> refute_has("a", text: "New Group")
+      {:ok, _index_live, html} = live(conn, ~p"/groups")
+
+      assert html =~ "Groups"
+      assert html =~ to_string(public_group.name)
+      refute html =~ "New Group"
     end
 
     test "shows New Group button for verified users", %{conn: conn, verified: verified} do
-      conn
-      |> login(verified)
-      |> visit("/groups")
-      |> assert_has("a", text: "New Group")
+      {:ok, _index_live, html} =
+        conn
+        |> login(verified)
+        |> live(~p"/groups")
+
+      assert html =~ "New Group"
     end
 
     test "shows New Group button for admin users", %{conn: conn, admin: admin} do
-      conn
-      |> login(admin)
-      |> visit("/groups")
-      |> assert_has("a", text: "New Group")
+      {:ok, _index_live, html} =
+        conn
+        |> login(admin)
+        |> live(~p"/groups")
+
+      assert html =~ "New Group"
     end
 
     test "does not show New Group button for regular users", %{conn: conn, regular: regular} do
-      conn
-      |> login(regular)
-      |> visit("/groups")
-      |> refute_has("a", text: "New Group")
+      {:ok, _index_live, html} =
+        conn
+        |> login(regular)
+        |> live(~p"/groups")
+
+      refute html =~ "New Group"
     end
 
     test "navigates to new group page", %{conn: conn, verified: verified} do
-      conn
-      |> login(verified)
-      |> visit("/groups")
-      |> click_link("New Group")
-      |> assert_has("h1", text: "Create a New Group")
+      {:ok, index_live, _html} =
+        conn
+        |> login(verified)
+        |> live(~p"/groups")
+
+      # Need to pass the authenticated conn for the redirect
+      authenticated_conn = login(conn, verified)
+
+      assert {:ok, _new_live, html} =
+               index_live
+               |> element("a", "New Group")
+               |> render_click()
+               |> follow_redirect(authenticated_conn, ~p"/groups/new")
+
+      assert html =~ "Create a New Group"
     end
   end
 
@@ -74,15 +90,17 @@ defmodule HuddlzWeb.GroupLiveTest do
     end
 
     test "renders form for verified users", %{conn: conn, verified: verified} do
-      conn
-      |> login(verified)
-      |> visit("/groups/new")
-      |> assert_has("h1", text: "Create a New Group")
-      |> assert_has("label", text: "Group Name")
-      |> assert_has("label", text: "Description")
-      |> assert_has("label", text: "Location")
-      |> assert_has("label", text: "Image URL")
-      |> assert_has("body", text: "Privacy")
+      {:ok, _new_live, html} =
+        conn
+        |> login(verified)
+        |> live(~p"/groups/new")
+
+      assert html =~ "Create a New Group"
+      assert html =~ "Group Name"
+      assert html =~ "Description"
+      assert html =~ "Location"
+      assert html =~ "Image URL"
+      assert html =~ "Privacy"
     end
 
     test "redirects regular users", %{conn: conn, regular: regular} do
