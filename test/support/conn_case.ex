@@ -27,6 +27,7 @@ defmodule HuddlzWeb.ConnCase do
       # Import conveniences for testing with connections
       import Plug.Conn
       import Phoenix.ConnTest
+      import PhoenixTest
       import HuddlzWeb.ConnCase
       import Huddlz.Test.Helpers.Authentication
       import Huddlz.Generator

@@ -38,17 +38,16 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
     end
 
     test "owner can access huddl creation form", %{conn: conn, owner: owner, group: group} do
-      {:ok, view, html} =
+      session = 
         conn
         |> login(owner)
-        |> live(~p"/groups/#{group.id}/huddlz/new")
-
-      assert html =~ "Create New Huddl"
-
-      assert html =~
-               Phoenix.HTML.html_escape(to_string(group.name)) |> Phoenix.HTML.safe_to_string()
-
-      assert has_element?(view, "#huddl-form")
+        |> visit(~p"/groups/#{group.id}/huddlz/new")
+      
+      assert_has(session, "h1", text: "Create New Huddl")
+      assert_has(session, "#huddl-form")
+      
+      # The group name should be somewhere on the page
+      assert session.conn.resp_body =~ Phoenix.HTML.html_escape(to_string(group.name)) |> Phoenix.HTML.safe_to_string()
     end
 
     test "organizer can access huddl creation form", %{
@@ -56,17 +55,16 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       organizer: organizer,
       group: group
     } do
-      {:ok, view, html} =
+      session = 
         conn
         |> login(organizer)
-        |> live(~p"/groups/#{group.id}/huddlz/new")
-
-      assert html =~ "Create New Huddl"
-
-      assert html =~
-               Phoenix.HTML.html_escape(to_string(group.name)) |> Phoenix.HTML.safe_to_string()
-
-      assert has_element?(view, "#huddl-form")
+        |> visit(~p"/groups/#{group.id}/huddlz/new")
+      
+      assert_has(session, "h1", text: "Create New Huddl")
+      assert_has(session, "#huddl-form")
+      
+      # The group name should be somewhere on the page
+      assert session.conn.resp_body =~ Phoenix.HTML.html_escape(to_string(group.name)) |> Phoenix.HTML.safe_to_string()
     end
 
     test "regular member cannot access huddl creation form", %{
@@ -74,13 +72,16 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       member: member,
       group: group
     } do
-      {:error, {:redirect, %{to: path, flash: flash}}} =
+      session = 
         conn
         |> login(member)
-        |> live(~p"/groups/#{group.id}/huddlz/new")
-
-      assert path == ~p"/groups/#{group.id}"
-      assert flash["error"] =~ "You don't have permission to create huddlz for this group"
+        |> visit(~p"/groups/#{group.id}/huddlz/new")
+      
+      # Should redirect to group page
+      assert_path(session, ~p"/groups/#{group.id}")
+      
+      # Check flash message
+      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~ "You don't have permission to create huddlz for this group"
     end
 
     test "non-member cannot access huddl creation form", %{
@@ -88,28 +89,38 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       non_member: non_member,
       group: group
     } do
-      {:error, {:redirect, %{to: path, flash: flash}}} =
+      session = 
         conn
         |> login(non_member)
-        |> live(~p"/groups/#{group.id}/huddlz/new")
-
-      assert path == ~p"/groups/#{group.id}"
-      assert flash["error"] =~ "You don't have permission to create huddlz for this group"
+        |> visit(~p"/groups/#{group.id}/huddlz/new")
+      
+      # Should redirect to group page
+      assert_path(session, ~p"/groups/#{group.id}")
+      
+      # Check flash message
+      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~ "You don't have permission to create huddlz for this group"
     end
 
     test "redirects when group not found", %{conn: conn, owner: owner} do
-      {:error, {:redirect, %{to: path, flash: flash}}} =
+      session = 
         conn
         |> login(owner)
-        |> live(~p"/groups/#{Ash.UUID.generate()}/huddlz/new")
-
-      assert path == ~p"/groups"
-      assert flash["error"] =~ "Group not found"
+        |> visit(~p"/groups/#{Ash.UUID.generate()}/huddlz/new")
+      
+      # Should redirect to groups index
+      assert_path(session, ~p"/groups")
+      
+      # Check flash message
+      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~ "Group not found"
     end
 
     test "requires authentication", %{conn: conn, group: group} do
-      {:error, {:redirect, %{to: path}}} = live(conn, ~p"/groups/#{group.id}/huddlz/new")
-      assert path =~ "/sign-in"
+      session = 
+        conn
+        |> visit(~p"/groups/#{group.id}/huddlz/new")
+      
+      # Should redirect to sign-in
+      assert session.conn.request_path =~ "/sign-in"
     end
   end
 
@@ -123,16 +134,16 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
     end
 
     test "shows all form fields", %{conn: conn, owner: owner, public_group: group} do
-      {:ok, view, _html} =
+      session = 
         conn
         |> login(owner)
-        |> live(~p"/groups/#{group.id}/huddlz/new")
+        |> visit(~p"/groups/#{group.id}/huddlz/new")
 
-      assert has_element?(view, "input[name='form[title]']")
-      assert has_element?(view, "textarea[name='form[description]']")
-      assert has_element?(view, "input[name='form[starts_at]'][type='datetime-local']")
-      assert has_element?(view, "input[name='form[ends_at]'][type='datetime-local']")
-      assert has_element?(view, "select[name='form[event_type]']")
+      assert_has(session, "input[name='form[title]']")
+      assert_has(session, "textarea[name='form[description]']")
+      assert_has(session, "input[name='form[starts_at]'][type='datetime-local']")
+      assert_has(session, "input[name='form[ends_at]'][type='datetime-local']")
+      assert_has(session, "select[name='form[event_type]']")
     end
 
     test "shows is_private checkbox for public groups", %{
@@ -140,13 +151,13 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       owner: owner,
       public_group: group
     } do
-      {:ok, view, html} =
+      session = 
         conn
         |> login(owner)
-        |> live(~p"/groups/#{group.id}/huddlz/new")
+        |> visit(~p"/groups/#{group.id}/huddlz/new")
 
-      assert has_element?(view, "input[name='form[is_private]'][type='checkbox']")
-      assert html =~ "Make this a private event"
+      assert_has(session, "input[name='form[is_private]'][type='checkbox']")
+      assert session.conn.resp_body =~ "Make this a private event"
     end
 
     test "shows private event notice for private groups", %{
@@ -154,14 +165,14 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       owner: owner,
       private_group: group
     } do
-      {:ok, _view, html} =
+      session = 
         conn
         |> login(owner)
-        |> live(~p"/groups/#{group.id}/huddlz/new")
+        |> visit(~p"/groups/#{group.id}/huddlz/new")
 
-      refute html =~ "input[name='form[is_private]'][type='checkbox']"
-      assert html =~ "This will be a private event"
-      assert html =~ "private groups can only create private events"
+      refute session.conn.resp_body =~ ~s(input[name='form[is_private]'][type='checkbox'])
+      assert session.conn.resp_body =~ "This will be a private event"
+      assert session.conn.resp_body =~ "private groups can only create private events"
     end
   end
 
@@ -173,46 +184,32 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
     end
 
     test "shows physical location for in-person events", %{conn: conn, owner: owner, group: group} do
-      {:ok, view, _html} =
-        conn
-        |> login(owner)
-        |> live(~p"/groups/#{group.id}/huddlz/new")
-
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.id}/huddlz/new")
       # Default should be in_person
-      assert has_element?(view, "input[name='form[physical_location]']")
-      refute has_element?(view, "input[name='form[virtual_link]']")
+      |> assert_has("input[name='form[physical_location]']")
+      |> refute_has("input[name='form[virtual_link]']")
     end
 
     test "shows virtual link for virtual events", %{conn: conn, owner: owner, group: group} do
-      {:ok, view, _html} =
-        conn
-        |> login(owner)
-        |> live(~p"/groups/#{group.id}/huddlz/new")
-
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.id}/huddlz/new")
       # Change to virtual
-      html =
-        view
-        |> element("#huddl-form")
-        |> render_change(%{"form" => %{"event_type" => "virtual"}})
-
-      refute html =~ "name=\"form[physical_location]\""
-      assert html =~ "name=\"form[virtual_link]\""
+      |> select("Event Type", option: "Virtual", exact: false)
+      |> refute_has("input[name='form[physical_location]']")
+      |> assert_has("input[name='form[virtual_link]']")
     end
 
     test "shows both fields for hybrid events", %{conn: conn, owner: owner, group: group} do
-      {:ok, view, _html} =
-        conn
-        |> login(owner)
-        |> live(~p"/groups/#{group.id}/huddlz/new")
-
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.id}/huddlz/new")
       # Change to hybrid
-      html =
-        view
-        |> element("#huddl-form")
-        |> render_change(%{"form" => %{"event_type" => "hybrid"}})
-
-      assert html =~ "name=\"form[physical_location]\""
-      assert html =~ "name=\"form[virtual_link]\""
+      |> select("Event Type", option: "Hybrid (Both In-Person and Virtual)", exact: false)
+      |> assert_has("input[name='form[physical_location]']")
+      |> assert_has("input[name='form[virtual_link]']")
     end
   end
 

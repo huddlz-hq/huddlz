@@ -192,3 +192,94 @@ After extensive exploration and testing, we discovered that:
 ### Recommendation
 
 Close issue #20 without implementing PhoenixTest migration. The standard Phoenix testing tools are the correct approach for this codebase.
+
+## Migrating LiveView Unit Tests to PhoenixTest - 2025-01-25 18:00
+
+### Progress Log
+
+**18:00** - Starting migration of LiveView unit tests
+- Found 6 LiveView test files to migrate
+- Starting with huddl_live/new_test.exs as example
+- Key learning: PhoenixTest imports through ConnCase, no need for separate import
+
+**18:15** - Migrating mount and authorization tests
+- Pattern: Use `visit` instead of `live`
+- Pattern: Use `assert_has` for element presence
+- Pattern: Check flash with `Phoenix.Flash.get(session.conn.assigns.flash, :error)`
+- Pattern: Use `assert_path` for redirect checks
+
+**18:30** - Form interaction patterns discovered
+- PhoenixTest has NO `fill_form` function - must use individual field functions
+- `select/3` for dropdown selections with `exact: false` for partial label matching
+- `fill_in/3` for text inputs
+- `click_button/2` for form submission
+
+**18:45** - Dynamic field visibility tests
+- Successfully migrated tests that change form state
+- `select` with `exact: false` works for labels inside spans
+- All 12 tests in mount/form rendering/dynamic visibility passing
+
+**19:00** - Progress check
+- Successfully migrated:
+  - 6 mount and authorization tests
+  - 3 form rendering tests  
+  - 3 dynamic field visibility tests
+- Remaining in huddl_live/new_test.exs:
+  - 4 form submission tests
+  - 3 create huddl button tests
+
+## Key Learnings from PhoenixTest Migration
+
+### 1. Setup
+- PhoenixTest is imported via ConnCase - just add `import PhoenixTest` there
+- Keep `import Phoenix.LiveViewTest` for tests not yet migrated
+- Tests can be migrated incrementally
+
+### 2. Basic Navigation Patterns
+```elixir
+# Old pattern
+{:ok, view, html} = live(conn, path)
+
+# PhoenixTest pattern
+session = conn |> visit(path)
+```
+
+### 3. Assertions
+```elixir
+# Element presence
+assert_has(session, "h1", text: "Title")
+assert_has(session, "#element-id")
+refute_has(session, "selector")
+
+# Path assertions (pipe-friendly)
+session |> assert_path("/expected/path")
+
+# Flash messages
+assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~ "message"
+
+# Raw HTML checks (when needed)
+assert session.conn.resp_body =~ "text"
+```
+
+### 4. Form Interactions
+- **NO fill_form function** - must interact with individual fields
+- `select/3` for dropdowns: `select("Label", option: "Value", exact: false)`
+- `fill_in/3` for text inputs: `fill_in("Label", with: "value")`
+- `click_button/2` for submissions
+- Use `exact: false` when labels are nested in spans
+
+### 5. LiveView Specific
+- PhoenixTest handles LiveView redirects automatically
+- No need to handle `{:error, {:redirect, ...}}` patterns
+- Form changes trigger phx-change events automatically
+
+### 6. Migration Strategy
+- Start with simple tests (mount/render)
+- Move to interactive tests (forms/clicks)
+- Keep old imports until fully migrated
+- Run tests frequently to catch issues early
+
+### Next Steps
+- Complete form submission tests migration
+- Migrate remaining LiveView unit tests
+- Then tackle Cucumber step definitions (most complex)
