@@ -460,3 +460,30 @@ Key discoveries:
 - 🔄 PhoenixTest doesn't have `submit_form` function - only form interaction is via labeled fields
 
 Status: ✅ All 12 tests passing (simplified search tests)
+
+## Migrating group_live_test.exs - 2025-01-25 21:15
+
+### Starting Analysis
+- File has 16 tests in three describe blocks (Index, New, Show)
+- Tests cover: group listing, creation, viewing, access control
+- Uses Phoenix.LiveViewTest functions: live/2, element/2, render_click/0, follow_redirect/2, form/2, render_submit/0, render_change/0
+
+**21:15** - Starting migration
+- Removed Phoenix.LiveViewTest import
+- Migrated all tests to PhoenixTest patterns
+
+**21:20** - Key fixes needed:
+- Group names displayed in h2.card-title not as links
+- Checkbox label is "Public group (visible to everyone)" not just "Public"
+
+**21:25** - All 16 tests passing
+
+### group_live_test.exs Migration Summary
+
+Key discoveries:
+- Group listing shows names in h2.card-title elements
+- Checkbox labels need full text for check() function
+- PhoenixTest handles redirects and flash messages well
+- Form interactions work smoothly with labeled inputs
+
+Status: ✅ All 16 tests passing

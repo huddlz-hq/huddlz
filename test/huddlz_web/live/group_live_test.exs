@@ -1,7 +1,6 @@
 defmodule HuddlzWeb.GroupLiveTest do
   use HuddlzWeb.ConnCase, async: true
 
-  import Phoenix.LiveViewTest
   import Huddlz.Generator
 
   alias Huddlz.Communities.Group
@@ -27,56 +26,40 @@ defmodule HuddlzWeb.GroupLiveTest do
     end
 
     test "lists public groups for anonymous users", %{conn: conn, public_group: public_group} do
-      {:ok, _index_live, html} = live(conn, ~p"/groups")
-
-      assert html =~ "Groups"
-      assert html =~ to_string(public_group.name)
-      refute html =~ "New Group"
+      conn
+      |> visit(~p"/groups")
+      |> assert_has("h1", text: "Groups")
+      |> assert_has("h2.card-title", text: to_string(public_group.name))
+      |> refute_has("a", text: "New Group")
     end
 
     test "shows New Group button for verified users", %{conn: conn, verified: verified} do
-      {:ok, _index_live, html} =
-        conn
-        |> login(verified)
-        |> live(~p"/groups")
-
-      assert html =~ "New Group"
+      conn
+      |> login(verified)
+      |> visit(~p"/groups")
+      |> assert_has("a", text: "New Group")
     end
 
     test "shows New Group button for admin users", %{conn: conn, admin: admin} do
-      {:ok, _index_live, html} =
-        conn
-        |> login(admin)
-        |> live(~p"/groups")
-
-      assert html =~ "New Group"
+      conn
+      |> login(admin)
+      |> visit(~p"/groups")
+      |> assert_has("a", text: "New Group")
     end
 
     test "does not show New Group button for regular users", %{conn: conn, regular: regular} do
-      {:ok, _index_live, html} =
-        conn
-        |> login(regular)
-        |> live(~p"/groups")
-
-      refute html =~ "New Group"
+      conn
+      |> login(regular)
+      |> visit(~p"/groups")
+      |> refute_has("a", text: "New Group")
     end
 
     test "navigates to new group page", %{conn: conn, verified: verified} do
-      {:ok, index_live, _html} =
-        conn
-        |> login(verified)
-        |> live(~p"/groups")
-
-      # Need to pass the authenticated conn for the redirect
-      authenticated_conn = login(conn, verified)
-
-      assert {:ok, _new_live, html} =
-               index_live
-               |> element("a", "New Group")
-               |> render_click()
-               |> follow_redirect(authenticated_conn, ~p"/groups/new")
-
-      assert html =~ "Create a New Group"
+      conn
+      |> login(verified)
+      |> visit(~p"/groups")
+      |> click_link("New Group")
+      |> assert_has("h1", text: "Create a New Group")
     end
   end
 
@@ -90,85 +73,64 @@ defmodule HuddlzWeb.GroupLiveTest do
     end
 
     test "renders form for verified users", %{conn: conn, verified: verified} do
-      {:ok, _new_live, html} =
-        conn
-        |> login(verified)
-        |> live(~p"/groups/new")
-
-      assert html =~ "Create a New Group"
-      assert html =~ "Group Name"
-      assert html =~ "Description"
-      assert html =~ "Location"
-      assert html =~ "Image URL"
-      assert html =~ "Privacy"
+      conn
+      |> login(verified)
+      |> visit(~p"/groups/new")
+      |> assert_has("h1", text: "Create a New Group")
+      |> assert_has("label", text: "Group Name")
+      |> assert_has("label", text: "Description")
+      |> assert_has("label", text: "Location")
+      |> assert_has("label", text: "Image URL")
+      |> assert_has("label", text: "Privacy")
     end
 
     test "redirects regular users", %{conn: conn, regular: regular} do
-      {:error, {:redirect, %{to: path, flash: flash}}} =
+      session =
         conn
         |> login(regular)
-        |> live(~p"/groups/new")
-
-      assert path == ~p"/groups"
-      assert flash["error"] =~ "You need to be a verified user to create groups"
+        |> visit(~p"/groups/new")
+      
+      assert_path(session, ~p"/groups")
+      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~ "You need to be a verified user to create groups"
     end
 
     test "creates group with valid data", %{conn: conn, verified: verified} do
-      {:ok, new_live, _html} =
+      session =
         conn
         |> login(verified)
-        |> live(~p"/groups/new")
-
-      assert new_live
-             |> form("#group-form", %{
-               "form" => %{
-                 "name" => "Test Group",
-                 "description" => "A test group",
-                 "location" => "Test City",
-                 "is_public" => "true"
-               }
-             })
-             |> render_submit()
-
+        |> visit(~p"/groups/new")
+        |> fill_in("Group Name", with: "Test Group")
+        |> fill_in("Description", with: "A test group")
+        |> fill_in("Location", with: "Test City")
+        |> check("Public group (visible to everyone)")
+        |> click_button("Create Group")
+      
       # Verify group was created
       group =
         Group
         |> Ash.Query.filter(name: "Test Group")
         |> Ash.read_one!()
 
-      assert_redirect(new_live, ~p"/groups/#{group.id}")
+      assert_path(session, ~p"/groups/#{group.id}")
     end
 
     test "shows errors with invalid data", %{conn: conn, verified: verified} do
-      {:ok, new_live, _html} =
-        conn
-        |> login(verified)
-        |> live(~p"/groups/new")
-
-      assert new_live
-             |> form("#group-form", %{
-               "form" => %{
-                 "name" => "",
-                 "description" => "Missing name"
-               }
-             })
-             |> render_submit() =~ "is required"
+      conn
+      |> login(verified)
+      |> visit(~p"/groups/new")
+      |> fill_in("Group Name", with: "")
+      |> fill_in("Description", with: "Missing name")
+      |> click_button("Create Group")
+      |> assert_has("p", text: "is required")
     end
 
     test "validates on change", %{conn: conn, verified: verified} do
-      {:ok, new_live, _html} =
-        conn
-        |> login(verified)
-        |> live(~p"/groups/new")
-
-      assert new_live
-             |> form("#group-form", %{
-               "form" => %{
-                 # Too short (min 3 chars)
-                 "name" => "ab"
-               }
-             })
-             |> render_change() =~ "length must be greater than or equal to"
+      conn
+      |> login(verified)
+      |> visit(~p"/groups/new")
+      |> fill_in("Group Name", with: "ab")
+      # PhoenixTest triggers phx-change automatically when filling fields
+      |> assert_has("p", text: "length must be greater than or equal to")
     end
   end
 
@@ -213,14 +175,14 @@ defmodule HuddlzWeb.GroupLiveTest do
       conn: conn,
       public_group: group
     } do
-      {:ok, _show_live, html} = live(conn, ~p"/groups/#{group.id}")
-
-      assert html =~ to_string(group.name)
-      assert html =~ "Public Group"
-      assert html =~ to_string(group.description)
-      assert html =~ group.location
+      conn
+      |> visit(~p"/groups/#{group.id}")
+      |> assert_has("h1", text: to_string(group.name))
+      |> assert_has("span", text: "Public Group")
+      |> assert_has("p", text: to_string(group.description))
+      |> assert_has("p", text: group.location)
       # No edit button for anonymous
-      refute html =~ "Edit Group"
+      |> refute_has("a", text: "Edit Group")
     end
 
     test "displays owner badge for group owner", %{
@@ -228,12 +190,10 @@ defmodule HuddlzWeb.GroupLiveTest do
       owner: owner,
       public_group: group
     } do
-      {:ok, _show_live, html} =
-        conn
-        |> login(owner)
-        |> live(~p"/groups/#{group.id}")
-
-      assert html =~ "Owner"
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.id}")
+      |> assert_has("span", text: "Owner")
     end
 
     test "redirects non-members from private groups", %{
@@ -241,13 +201,13 @@ defmodule HuddlzWeb.GroupLiveTest do
       non_member: non_member,
       private_group: group
     } do
-      {:error, {:redirect, %{to: path, flash: flash}}} =
+      session =
         conn
         |> login(non_member)
-        |> live(~p"/groups/#{group.id}")
-
-      assert path == ~p"/groups"
-      assert flash["error"] =~ "You don't have access to this private group"
+        |> visit(~p"/groups/#{group.id}")
+      
+      assert_path(session, ~p"/groups")
+      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~ "You don't have access to this private group"
     end
 
     test "allows owner to view private group", %{
@@ -255,37 +215,29 @@ defmodule HuddlzWeb.GroupLiveTest do
       owner: owner,
       private_group: group
     } do
-      {:ok, _show_live, html} =
-        conn
-        |> login(owner)
-        |> live(~p"/groups/#{group.id}")
-
-      assert html =~ to_string(group.name)
-      assert html =~ "Private Group"
-      assert html =~ "Owner"
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.id}")
+      |> assert_has("h1", text: to_string(group.name))
+      |> assert_has("span", text: "Private Group")
+      |> assert_has("span", text: "Owner")
     end
 
     test "handles non-existent group", %{conn: conn} do
-      {:error, {:redirect, %{to: path, flash: flash}}} =
-        live(conn, ~p"/groups/#{Ash.UUID.generate()}")
-
-      assert path == ~p"/groups"
-      assert flash["error"] =~ "Group not found"
+      session = conn |> visit(~p"/groups/#{Ash.UUID.generate()}")
+      
+      assert_path(session, ~p"/groups")
+      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~ "Group not found"
     end
 
     test "navigates back to groups index", %{
       conn: conn,
       public_group: group
     } do
-      {:ok, show_live, _html} = live(conn, ~p"/groups/#{group.id}")
-
-      assert {:ok, _index_live, html} =
-               show_live
-               |> element("a", "Back to groups")
-               |> render_click()
-               |> follow_redirect(conn, ~p"/groups")
-
-      assert html =~ "Groups"
+      conn
+      |> visit(~p"/groups/#{group.id}")
+      |> click_link("Back to groups")
+      |> assert_has("h1", text: "Groups")
     end
   end
 end
