@@ -1,7 +1,6 @@
 defmodule HuddlzWeb.HuddlLiveTest do
   use HuddlzWeb.ConnCase, async: true
 
-  import Phoenix.LiveViewTest
   import Huddlz.Generator
 
   describe "Huddl listing" do
@@ -25,15 +24,11 @@ defmodule HuddlzWeb.HuddlLiveTest do
           )
         )
 
-      {:ok, view, html} = live(conn, "/")
-
-      # Check that the page renders correctly
-      assert html =~ "Find your huddl"
-      assert html =~ "Search huddlz"
-
-      # The initial render won't have huddls because connected?(socket) is false
-      # We need to use render/1 to get the connected view
-      assert render(view) =~ public_huddl.title
+      conn
+      |> visit("/")
+      |> assert_has("h1", text: "Find your huddl")
+      |> assert_has("button", text: "Search")
+      |> assert_has("h3", text: public_huddl.title)
     end
 
     test "searches huddlz by title", %{conn: conn, host: host, public_group: public_group} do
@@ -61,15 +56,13 @@ defmodule HuddlzWeb.HuddlLiveTest do
           )
         )
 
-      {:ok, view, _html} = live(conn, "/")
-
-      # Search for "Elixir"
-      html = render_change(view, "search", %{"query" => "Elixir"})
-
+      conn
+      |> visit("/")
+      |> fill_in("Search huddlz", with: "Elixir")
       # Should find the Elixir huddl
-      assert html =~ "Elixir Programming Workshop"
+      |> assert_has("h3", text: "Elixir Programming Workshop")
       # Should not find the Python huddl
-      refute html =~ "Python Data Science"
+      |> refute_has("h3", text: "Python Data Science")
     end
 
     test "searches huddlz by description", %{conn: conn, host: host, public_group: public_group} do
@@ -97,15 +90,13 @@ defmodule HuddlzWeb.HuddlLiveTest do
           )
         )
 
-      {:ok, view, _html} = live(conn, "/")
-
-      # Search for content in description
-      html = render_change(view, "search", %{"query" => "Elixir patterns"})
-
+      conn
+      |> visit("/")
+      |> fill_in("Search huddlz", with: "Elixir patterns")
       # Should find the huddl with matching description
-      assert html =~ "Tech Talk"
+      |> assert_has("h3", text: "Tech Talk")
       # Should not find the other huddl
-      refute html =~ "Coffee Chat"
+      |> refute_has("h3", text: "Coffee Chat")
     end
 
     test "shows all huddlz when search is cleared", %{
@@ -136,26 +127,30 @@ defmodule HuddlzWeb.HuddlLiveTest do
           )
         )
 
-      {:ok, view, _html} = live(conn, "/")
-
-      # Get the connected view
-      html = render(view)
-
+      session =
+        conn
+        |> visit("/")
+      
       # Initially should see both huddlz
-      assert html =~ huddl1.title
-      assert html =~ huddl2.title
-
+      session
+      |> assert_has("h3", text: huddl1.title)
+      |> assert_has("h3", text: huddl2.title)
+      
       # Search for "Elixir"
-      html = render_change(view, "search", %{"query" => "Elixir"})
-      assert html =~ huddl1.title
-      refute html =~ huddl2.title
-
+      session2 =
+        session
+        |> fill_in("Search huddlz", with: "Elixir")
+      
+      session2
+      |> assert_has("h3", text: huddl1.title)
+      |> refute_has("h3", text: huddl2.title)
+      
       # Clear search
-      html = render_change(view, "search", %{"query" => ""})
-
+      session2
+      |> fill_in("Search huddlz", with: "")
       # Should see both huddlz again
-      assert html =~ huddl1.title
-      assert html =~ huddl2.title
+      |> assert_has("h3", text: huddl1.title)
+      |> assert_has("h3", text: huddl2.title)
     end
 
     test "shows 'No huddlz found' when search has no results", %{
@@ -173,13 +168,11 @@ defmodule HuddlzWeb.HuddlLiveTest do
         )
       )
 
-      {:ok, view, _html} = live(conn, "/")
-
-      # Search for something that doesn't exist
-      html = render_change(view, "search", %{"query" => "nonexistent12345"})
-
+      conn
+      |> visit("/")
+      |> fill_in("Search huddlz", with: "nonexistent12345")
       # Should show no results message
-      assert html =~ "No huddlz found"
+      |> assert_has("p", text: "No huddlz found")
     end
 
     test "search button triggers search via form submit", %{
@@ -209,15 +202,14 @@ defmodule HuddlzWeb.HuddlLiveTest do
           )
         )
 
-      {:ok, view, _html} = live(conn, "/")
-
-      # Submit the form with search query
-      html = render_submit(view, "search", %{"query" => "Elixir"})
-
+      conn
+      |> visit("/")
+      |> fill_in("Search huddlz", with: "Elixir")
+      |> click_button("Search")
       # Should find the Elixir huddl
-      assert html =~ "Elixir Programming Workshop"
+      |> assert_has("h3", text: "Elixir Programming Workshop")
       # Should not find the Python huddl
-      refute html =~ "Python Data Science"
+      |> refute_has("h3", text: "Python Data Science")
     end
 
     test "search is case-insensitive", %{conn: conn, host: host, public_group: public_group} do
@@ -236,20 +228,24 @@ defmodule HuddlzWeb.HuddlLiveTest do
           )
         )
 
-      {:ok, view, _html} = live(conn, "/")
-
+      session = conn |> visit("/")
+      
       # Test each case variation
-      html = render_change(view, "search", %{"query" => "elixir"})
-      assert html =~ "Elixir Programming Workshop", "Lowercase search should work"
-
-      html = render_change(view, "search", %{"query" => "ELIXIR"})
-      assert html =~ "Elixir Programming Workshop", "Uppercase search should work"
-
-      html = render_change(view, "search", %{"query" => "Elixir"})
-      assert html =~ "Elixir Programming Workshop", "Title case search should work"
-
-      html = render_change(view, "search", %{"query" => "eLiXiR"})
-      assert html =~ "Elixir Programming Workshop", "Mixed case search should work"
+      session
+      |> fill_in("Search huddlz", with: "elixir")
+      |> assert_has("h3", text: "Elixir Programming Workshop")
+      
+      session
+      |> fill_in("Search huddlz", with: "ELIXIR")
+      |> assert_has("h3", text: "Elixir Programming Workshop")
+      
+      session
+      |> fill_in("Search huddlz", with: "Elixir")
+      |> assert_has("h3", text: "Elixir Programming Workshop")
+      
+      session
+      |> fill_in("Search huddlz", with: "eLiXiR")
+      |> assert_has("h3", text: "Elixir Programming Workshop")
     end
 
     test "partial search matches work", %{conn: conn, host: host, public_group: public_group} do
@@ -264,14 +260,13 @@ defmodule HuddlzWeb.HuddlLiveTest do
           )
         )
 
-      {:ok, view, _html} = live(conn, "/")
-
+      session = conn |> visit("/")
+      
       # Test partial matches
       for query <- ["Eli", "Programming", "Work", "gram"] do
-        html = render_change(view, "search", %{"query" => query})
-
-        assert html =~ "Elixir Programming Workshop",
-               "Partial search '#{query}' should find the huddl"
+        session
+        |> fill_in("Search huddlz", with: query)
+        |> assert_has("h3", text: "Elixir Programming Workshop")
       end
     end
   end

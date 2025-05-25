@@ -100,7 +100,7 @@ defmodule HuddlListingSteps do
   end
 
   defstep "I should see a search form", context do
-    assert context.html =~ "Search huddlz"
+    assert context.html =~ "Search huddlz..."
     assert context.html =~ ~s(<input type="text")
     assert context.html =~ "Search"
     :ok
