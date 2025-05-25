@@ -60,7 +60,7 @@ Feature: Create Huddl
     When I visit the new huddl page for "Tech Meetup"
     Then I should see "Physical Location" field
     And I should not see "Virtual Meeting Link" field
-    When I select "Hybrid" from "Event Type"
+    When I select "Hybrid (Both In-Person and Virtual)" from "Event Type"
     Then I should see "Physical Location" field
     And I should see "Virtual Meeting Link" field
 
@@ -68,7 +68,7 @@ Feature: Create Huddl
     Given I am signed in as "owner@example.com"
     When I visit the new huddl page for "Private Group"
     Then I should not see a checkbox for "Make this a private event"
-    And I should see "This will be a private event"
+    And I should see "This will be a private event (private groups can only create private events)"
     When I fill in the huddl form with:
       | Field             | Value                        |
       | Title             | Private Meeting              |

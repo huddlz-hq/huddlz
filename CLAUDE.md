@@ -211,6 +211,11 @@ The development workflow combines GitHub Issues for tracking with local files fo
 2. **All Tests Pass**: `mix test` - Must have 100% pass rate, no skipped tests
 3. **Static Analysis**: `mix credo --strict` - Must pass with zero issues
 4. **Feature Tests**: `mix test test/features/` - All behavior tests must pass
+5. **Visual Verification**: Use Puppeteer to confirm features work in browser
+   - Navigate to `http://localhost:4000` (ensure `mix phx.server` is running)
+   - Test the implemented feature visually
+   - Especially important when tests are failing - verify implementation BEFORE debugging tests
+   - Document any UI/UX issues discovered
 
 The `/build` command automatically enforces these gates before marking any task as complete.
 

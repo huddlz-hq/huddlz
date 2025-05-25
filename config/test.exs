@@ -20,7 +20,7 @@ config :huddlz, Huddlz.Repo,
 config :huddlz, HuddlzWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "yR+dqFnLawZ7U9W6jp18CyH+bPO6t108hfKDstiG+2Oyl94zmTA+LUXXVu6gA5Q5",
-  server: false
+  server: true
 
 # In test we don't send emails
 config :huddlz, Huddlz.Mailer, adapter: Swoosh.Adapters.Test
@@ -43,3 +43,19 @@ config :ash, :missed_notifications, :ignore
 
 # Set environment to test for test-specific behavior
 config :huddlz, env: :test
+
+# Configure PhoenixTest endpoint
+config :phoenix_test, :endpoint, HuddlzWeb.Endpoint
+
+# Configure Wallaby
+config :wallaby,
+  driver: Wallaby.Chrome,
+  chrome: [
+    headless: true
+  ],
+  base_url: "http://localhost:4002"
+
+# For Wallaby tests, we'll conditionally enable the server in the test helper
+
+# Enable sandbox for Wallaby
+config :huddlz, :sandbox, Ecto.Adapters.SQL.Sandbox

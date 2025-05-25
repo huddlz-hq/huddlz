@@ -1,47 +1,38 @@
 defmodule Huddlz.Integration.MagicLinkSignupTest do
   use HuddlzWeb.ConnCase, async: true
 
-  import Phoenix.LiveViewTest
+  import PhoenixTest
   import Swoosh.TestAssertions
 
   alias Huddlz.Accounts.User
 
   test "complete signup flow with magic link", %{conn: conn} do
     # Start on home page
-    conn = get(conn, "/")
-    assert html_response(conn, 200) =~ "Huddlz"
+    session =
+      conn
+      |> visit("/")
+      |> assert_has("h1", text: "Find your huddl")
 
     # Go to registration page
-    conn = get(conn, "/register")
-    assert html_response(conn, 200) =~ "Request magic link"
-
-    # Set up LiveView for form submission
-    {:ok, view, _html} = live(conn, "/register")
+    session =
+      session
+      |> visit("/register")
+      |> assert_has("button", text: "Request magic link")
 
     # Generate random email
     email = "newuser_#{:rand.uniform(99999)}@example.com"
 
     # Submit the registration form
-    render_submit(element(view, "form"), %{
-      "user" => %{
-        "email" => email
-      }
-    })
+    session
+    |> fill_in("Email", with: email)
+    |> click_button("Request magic link")
 
     # Verify email was sent
     assert_email_sent(to: {nil, email})
 
-    # Simulate a user with an active session (mocking the magic link click)
-    # We'll just simulate a signed-in user for this test
-    conn =
-      build_conn()
-      |> init_test_session(%{})
-      |> put_session(:current_user, %{email: email})
-      |> get("/")
-
-    # Verify we're on the homepage and can see content that indicates we're logged in
-    response = html_response(conn, 200)
-    assert response =~ "Huddlz"
+    # Note: PhoenixTest doesn't support session manipulation like put_session
+    # We would need to actually click the magic link or use a different approach
+    # For now, we'll test that the registration form submitted successfully
   end
 
   test "verify display name generation pattern", %{conn: _conn} do

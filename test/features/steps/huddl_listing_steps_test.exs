@@ -1,12 +1,11 @@
 defmodule HuddlListingSteps do
   use Cucumber, feature: "huddl_listing.feature"
-  use HuddlzWeb.ConnCase, async: true
+  use HuddlzWeb.WallabyCase
 
-  import Phoenix.LiveViewTest
   import Huddlz.Generator
 
   # Background step: Create sample huddlz
-  defstep "there are upcoming huddlz in the system", %{conn: conn} do
+  defstep "there are upcoming huddlz in the system", %{session: session} do
     # Create a verified host who can create huddls
     host = generate(user(role: :verified))
 
@@ -53,65 +52,76 @@ defmodule HuddlListingSteps do
 
     huddlz = [huddl1, huddl2, elixir_huddl]
 
-    # Return the connection and huddl information
-    {:ok, %{conn: conn, huddlz: huddlz, huddlz_count: length(huddlz)}}
+    # Return the session and huddl information
+    {:ok, %{session: session, huddlz: huddlz, huddlz_count: length(huddlz)}}
   end
 
   # Visit landing page
-  defstep "I visit the landing page", context do
-    {:ok, live, html} = live(context.conn, "/")
-    {:ok, Map.merge(context, %{live: live, html: html})}
+  defstep "I visit the landing page", %{session: session} = context do
+    session = visit(session, "/")
+    {:ok, Map.merge(context, %{session: session})}
   end
 
   # Search for a term
-  defstep "I search for {string}", context do
-    term = List.first(context.args)
-    html = render_change(context.live, "search", %{"query" => term})
-    {:ok, Map.merge(context, %{html: html, search_term: term})}
+  defstep "I search for {string}", %{session: session, args: args} = context do
+    term = List.first(args)
+
+    # Try finding by placeholder since label might not match
+    session =
+      session
+      |> fill_in(css("input[placeholder*='Search']"), with: term)
+      |> click(button("Search"))
+
+    {:ok, Map.merge(context, %{session: session, search_term: term})}
   end
 
   # Clear search
-  defstep "I clear the search form", context do
-    html = render_change(context.live, "search", %{"query" => ""})
-    {:ok, Map.merge(context, %{html: html})}
+  defstep "I clear the search form", %{session: session} = context do
+    session =
+      session
+      |> fill_in(css("input[placeholder*='Search']"), with: "")
+      |> click(button("Search"))
+
+    {:ok, Map.merge(context, %{session: session})}
   end
 
   # Assertions
-  defstep "I should see a list of upcoming huddlz", context do
-    # Should not see the "no huddlz found" message
-    refute context.html =~ "No huddlz found"
+  defstep "I should see a list of upcoming huddlz", %{session: session} do
     # We know we're on the huddl list page if we see the right heading
-    assert context.html =~ "Find your huddl"
+    assert_has(session, css("h1", text: "Find your huddl"))
+    # Check that we see at least "Found X huddl" message
+    assert has?(session, css("body", text: "Found")) || has?(session, css("body", text: "huddl"))
     :ok
   end
 
-  defstep "I should see basic information for each huddl", context do
-    # Check that we can see at least one of the huddl titles
-    huddl_titles = Enum.map(context.huddlz, & &1.title)
+  defstep "I should see basic information for each huddl", %{session: session} = context do
+    # Check that we can see ALL the huddl titles we created
+    Enum.each(context.huddlz, fn huddl ->
+      assert_has(session, css("body", text: huddl.title))
+      # Also check we can see the description
+      assert_has(session, css("body", text: huddl.description))
+    end)
 
-    assert Enum.any?(huddl_titles, fn title ->
-             context.html =~ title
-           end),
-           "Expected to find at least one huddl title in the HTML"
+    # Check for date format presence (should see dates for events)
+    assert_has(session, css("body", text: ", 2025"))
 
-    # Check for date format presence (month and year)
-    assert context.html =~ ", 2025"
+    # Check we see the group name for at least one huddl
+    assert_has(session, css("body", text: "Group"))
     :ok
   end
 
-  defstep "I should see a search form", context do
-    assert context.html =~ "Search huddlz"
-    assert context.html =~ ~s(<input type="text")
-    assert context.html =~ "Search"
+  defstep "I should see a search form", %{session: session} do
+    # Check for the search input by placeholder
+    assert_has(session, css("input[placeholder*='Search']"))
+    assert_has(session, css("button", text: "Search"))
     :ok
   end
 
-  defstep "I should see huddlz matching {string}", context do
-    search_term = List.first(context.args)
+  defstep "I should see huddlz matching {string}", %{session: session, args: args} = context do
+    search_term = List.first(args)
 
     # Should see the search term in the results (we created a huddl with "Elixir" in title)
-    assert context.html =~ "Elixir Programming Workshop",
-           "Expected to find 'Elixir Programming Workshop' in search results"
+    assert_has(session, css("body", text: "Elixir Programming Workshop"))
 
     # Should not see huddlz that don't match the search term
     # The generated huddlz typically have random titles that don't contain "Elixir"
@@ -123,18 +133,22 @@ defmodule HuddlListingSteps do
       |> Enum.take(3)
 
     Enum.each(non_matching_titles, fn title ->
-      refute context.html =~ title,
-             "Did not expect to find '#{title}' in search results for '#{search_term}'"
+      refute_has(session, css("body", text: title))
     end)
 
     :ok
   end
 
-  defstep "I should see all upcoming huddlz again", context do
-    # In the real implementation, we'd see all original huddlz again
-    # For the test, we'll verify we're still on a page with huddlz
-    assert context.html =~ "Find your huddl"
-    refute context.html =~ "No huddlz found"
+  defstep "I should see all upcoming huddlz again", %{session: session} = context do
+    # After clearing search, we should see all the original huddlz again
+    # Verify we can see all three huddl titles that were created in setup
+    assert_has(session, css("h1", text: "Find your huddl"))
+
+    # Check that all the huddlz we created are visible again
+    Enum.each(context.huddlz, fn huddl ->
+      assert_has(session, css("body", text: huddl.title))
+    end)
+
     :ok
   end
 end
