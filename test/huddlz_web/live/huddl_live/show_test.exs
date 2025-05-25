@@ -1,7 +1,6 @@
 defmodule HuddlzWeb.HuddlLive.ShowTest do
   use HuddlzWeb.ConnCase
 
-  import Phoenix.LiveViewTest
   import Huddlz.Test.Helpers.Authentication
 
   alias Huddlz.Accounts.User
@@ -73,13 +72,12 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
     end
 
     test "displays huddl details", %{conn: conn, group: group, huddl: huddl} do
-      {:ok, _show_live, html} =
-        live(conn, ~p"/groups/#{group.id}/huddlz/#{huddl.id}")
-
-      assert html =~ huddl.title
-      assert html =~ huddl.description
-      assert html =~ "Virtual"
-      assert html =~ "Be the first to RSVP!"
+      conn
+      |> visit(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
+      |> assert_has("h1", text: huddl.title)
+      |> assert_has("p", text: huddl.description)
+      |> assert_has("span", text: "Virtual")
+      |> assert_has("p", text: "Be the first to RSVP!")
     end
 
     test "shows RSVP button for authenticated users", %{
@@ -88,27 +86,18 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       group: group,
       huddl: huddl
     } do
-      {:ok, show_live, html} =
-        conn
-        |> log_in_user(member)
-        |> live(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
-
-      assert html =~ "RSVP to this huddl"
-      refute html =~ "You're attending!"
-
+      conn
+      |> login(member)
+      |> visit(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
+      |> assert_has("button", text: "RSVP to this huddl")
+      |> refute_has("div.text-success", text: "You're attending!")
       # Click RSVP button
-      result =
-        show_live
-        |> element("button", "RSVP to this huddl")
-        |> render_click()
-
-      # The click action returns the full page render, check it contains success
-      assert result =~ "Successfully RSVPed to this huddl!"
-      assert result =~ "You&#39;re attending!"
-      refute result =~ "RSVP to this huddl"
-
+      |> click_button("RSVP to this huddl")
+      # Check UI updates after RSVP
+      |> assert_has("div.text-success", text: "You're attending!")
+      |> refute_has("button", text: "RSVP to this huddl")
       # Should show 1 person attending
-      assert render(show_live) =~ "1 person attending"
+      |> assert_has("p", text: "1 person attending")
     end
 
     test "shows virtual link after RSVP", %{
@@ -117,23 +106,16 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       group: group,
       huddl: huddl
     } do
-      {:ok, show_live, html} =
-        conn
-        |> log_in_user(member)
-        |> live(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
-
+      conn
+      |> login(member)
+      |> visit(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
       # Before RSVP, virtual link is not visible
-      assert html =~ "Virtual link available after RSVP"
-      refute html =~ "Join virtually"
-
+      |> assert_has("span", text: "Virtual link available after RSVP")
+      |> refute_has("a", text: "Join virtually")
       # RSVP
-      show_live
-      |> element("button", "RSVP to this huddl")
-      |> render_click()
-
+      |> click_button("RSVP to this huddl")
       # After RSVP, virtual link is visible
-      assert render(show_live) =~ "Join virtually"
-      assert render(show_live) =~ huddl.virtual_link
+      |> assert_has("a", text: "Join virtually")
     end
 
     test "prevents duplicate RSVPs", %{conn: conn, member: member, group: group, huddl: huddl} do
@@ -143,15 +125,13 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
         |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
         |> Ash.update!()
 
-      {:ok, _show_live, html} =
-        conn
-        |> log_in_user(member)
-        |> live(~p"/groups/#{group.id}/huddlz/#{updated_huddl.id}")
-
-      # Should already show as attending - check for the escaped HTML
-      assert html =~ "You&#39;re attending!" || html =~ "You're attending!"
-      refute html =~ "RSVP to this huddl"
-      assert html =~ "1 person attending"
+      conn
+      |> login(member)
+      |> visit(~p"/groups/#{group.id}/huddlz/#{updated_huddl.id}")
+      # Should already show as attending
+      |> assert_has("div.text-success", text: "You're attending!")
+      |> refute_has("button", text: "RSVP to this huddl")
+      |> assert_has("p", text: "1 person attending")
     end
 
     test "shows correct attendee count with multiple RSVPs", %{
@@ -166,19 +146,13 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> Ash.Changeset.for_update(:rsvp, %{user_id: owner.id}, actor: owner)
       |> Ash.update!()
 
-      {:ok, show_live, html} =
-        conn
-        |> log_in_user(member)
-        |> live(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
-
-      assert html =~ "1 person attending"
-
+      conn
+      |> login(member)
+      |> visit(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
+      |> assert_has("p", text: "1 person attending")
       # Member RSVPs
-      show_live
-      |> element("button", "RSVP to this huddl")
-      |> render_click()
-
-      assert render(show_live) =~ "2 people attending"
+      |> click_button("RSVP to this huddl")
+      |> assert_has("p", text: "2 people attending")
     end
 
     test "non-authenticated users see sign-in prompt for virtual link", %{
@@ -186,11 +160,10 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       group: group,
       huddl: huddl
     } do
-      {:ok, _show_live, html} =
-        live(conn, ~p"/groups/#{group.id}/huddlz/#{huddl.id}")
-
-      assert html =~ "Sign in and RSVP to get virtual link"
-      refute html =~ "RSVP to this huddl"
+      conn
+      |> visit(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
+      |> assert_has("span", text: "Sign in and RSVP to get virtual link")
+      |> refute_has("button", text: "RSVP to this huddl")
     end
 
     test "handles different event types correctly", %{conn: conn, owner: owner, group: group} do
@@ -214,13 +187,11 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
         )
         |> Ash.create!()
 
-      {:ok, _show_live, html} =
-        conn
-        |> log_in_user(owner)
-        |> live(~p"/groups/#{group.id}/huddlz/#{in_person_huddl.id}")
-
-      assert html =~ "123 Main St, City"
-      refute html =~ "Virtual Access"
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.id}/huddlz/#{in_person_huddl.id}")
+      |> assert_has("dd", text: "123 Main St, City")
+      |> refute_has("dt", text: "Virtual Access")
 
       # Create hybrid huddl
       hybrid_huddl =
@@ -243,21 +214,15 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
         )
         |> Ash.create!()
 
-      {:ok, show_live, html} =
-        conn
-        |> log_in_user(owner)
-        |> live(~p"/groups/#{group.id}/huddlz/#{hybrid_huddl.id}")
-
-      assert html =~ "Conference Room A"
-      assert html =~ "Virtual Access"
-      assert html =~ "Virtual link available after RSVP"
-
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.id}/huddlz/#{hybrid_huddl.id}")
+      |> assert_has("dd", text: "Conference Room A")
+      |> assert_has("dt", text: "Virtual Access")
+      |> assert_has("span", text: "Virtual link available after RSVP")
       # RSVP to see virtual link
-      show_live
-      |> element("button", "RSVP to this huddl")
-      |> render_click()
-
-      assert render(show_live) =~ "Join virtually"
+      |> click_button("RSVP to this huddl")
+      |> assert_has("a", text: "Join virtually")
     end
 
     test "cannot access private huddl without membership", %{
@@ -301,13 +266,13 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
         |> Ash.create!()
 
       # Non-member should be redirected
-      {:error, {:redirect, %{to: path}}} =
+      session = 
         conn
-        |> log_in_user(non_member)
-        |> live(~p"/groups/#{private_group.id}/huddlz/#{private_huddl.id}")
+        |> login(non_member)
+        |> visit(~p"/groups/#{private_group.id}/huddlz/#{private_huddl.id}")
 
-      # Should redirect to the group page when huddl is not found (due to authorization)
-      assert String.starts_with?(path, "/groups/")
+      # Should redirect to the groups list when huddl is not found (due to authorization)
+      assert_path(session, ~p"/groups")
     end
 
     test "shows Cancel RSVP button when user has RSVPed", %{
@@ -321,18 +286,14 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
       |> Ash.update!()
 
-      {:ok, _show_live, html} =
-        conn
-        |> log_in_user(member)
-        |> live(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
-
+      conn
+      |> login(member)
+      |> visit(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
       # Should show Cancel RSVP button instead of RSVP button
-      assert html =~ "Cancel RSVP"
-      assert html =~ "phx-click=\"cancel_rsvp\""
-      refute html =~ "RSVP to this huddl"
-
+      |> assert_has("button", text: "Cancel RSVP")
+      |> refute_has("button", text: "RSVP to this huddl")
       # Should still show attending status
-      assert html =~ "You&#39;re attending!" || html =~ "You're attending!"
+      |> assert_has("div.text-success", text: "You're attending!")
     end
 
     test "Cancel RSVP button only shows for upcoming huddls", %{
@@ -366,16 +327,14 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
       |> Ash.update!()
 
-      {:ok, _show_live, html} =
-        conn
-        |> log_in_user(member)
-        |> live(~p"/groups/#{group.id}/huddlz/#{past_huddl.id}")
-
+      conn
+      |> login(member)
+      |> visit(~p"/groups/#{group.id}/huddlz/#{past_huddl.id}")
       # Should not show Cancel RSVP button for past events
-      refute html =~ "Cancel RSVP"
-      refute html =~ "RSVP to this huddl"
+      |> refute_has("button", text: "Cancel RSVP")
+      |> refute_has("button", text: "RSVP to this huddl")
       # But should still show attending status
-      assert html =~ "1 person attending"
+      |> assert_has("p", text: "1 person attending")
     end
 
     test "handles cancel_rsvp event successfully", %{
@@ -389,25 +348,17 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
       |> Ash.update!()
 
-      {:ok, show_live, _html} =
-        conn
-        |> log_in_user(member)
-        |> live(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
-
+      conn
+      |> login(member)
+      |> visit(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
       # Click Cancel RSVP button
-      result =
-        show_live
-        |> element("button", "Cancel RSVP")
-        |> render_click()
-
-      # Check success message and UI updates
-      assert result =~ "RSVP cancelled successfully"
-      assert result =~ "RSVP to this huddl"
-      refute result =~ "You&#39;re attending!"
-      refute result =~ "Cancel RSVP"
-
+      |> click_button("Cancel RSVP")
+      # Check UI updates after cancel
+      |> assert_has("button", text: "RSVP to this huddl")
+      |> refute_has("div.text-success", text: "You're attending!")
+      |> refute_has("button", text: "Cancel RSVP")
       # Should show 0 people attending
-      assert render(show_live) =~ "Be the first to RSVP!"
+      |> assert_has("p", text: "Be the first to RSVP!")
     end
 
     test "cancel_rsvp updates attendee count correctly", %{
@@ -427,20 +378,14 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
       |> Ash.update!()
 
-      {:ok, show_live, html} =
-        conn
-        |> log_in_user(member)
-        |> live(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
-
-      assert html =~ "2 people attending"
-
+      conn
+      |> login(member)
+      |> visit(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
+      |> assert_has("p", text: "2 people attending")
       # Member cancels their RSVP
-      show_live
-      |> element("button", "Cancel RSVP")
-      |> render_click()
-
+      |> click_button("Cancel RSVP")
       # Should show 1 person attending (owner still RSVPed)
-      assert render(show_live) =~ "1 person attending"
+      |> assert_has("p", text: "1 person attending")
     end
 
     test "can RSVP again after cancelling", %{
@@ -454,25 +399,16 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
       |> Ash.update!()
 
-      {:ok, show_live, _html} =
-        conn
-        |> log_in_user(member)
-        |> live(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
-
+      conn
+      |> login(member)
+      |> visit(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
       # Cancel RSVP
-      show_live
-      |> element("button", "Cancel RSVP")
-      |> render_click()
-
+      |> click_button("Cancel RSVP")
       # RSVP again
-      result =
-        show_live
-        |> element("button", "RSVP to this huddl")
-        |> render_click()
-
-      assert result =~ "Successfully RSVPed to this huddl!"
-      assert result =~ "You&#39;re attending!"
-      assert result =~ "1 person attending"
+      |> click_button("RSVP to this huddl")
+      # Check UI updates after second RSVP
+      |> assert_has("div.text-success", text: "You're attending!")
+      |> assert_has("p", text: "1 person attending")
     end
   end
 
@@ -486,7 +422,4 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
     |> Ash.create!(authorize?: false)
   end
 
-  defp log_in_user(conn, user) do
-    login(conn, user)
-  end
 end

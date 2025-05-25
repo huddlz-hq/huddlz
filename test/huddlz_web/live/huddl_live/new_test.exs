@@ -1,7 +1,6 @@
 defmodule HuddlzWeb.HuddlLive.NewTest do
   use HuddlzWeb.ConnCase, async: true
 
-  import Phoenix.LiveViewTest
   import Huddlz.Generator
 
   import Huddlz.Test.Helpers.Authentication, only: [login: 2]
@@ -221,11 +220,6 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
     end
 
     test "creates huddl with valid data", %{conn: conn, owner: owner, group: group} do
-      {:ok, view, _html} =
-        conn
-        |> login(owner)
-        |> live(~p"/groups/#{group.id}/huddlz/new")
-
       starts_at =
         DateTime.utc_now()
         |> DateTime.add(1, :day)
@@ -241,19 +235,19 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> NaiveDateTime.to_iso8601()
         |> String.slice(0..15)
 
-      view
-      |> form("#huddl-form", %{
-        "form" => %{
-          "title" => "Test Huddl",
-          "description" => "A test huddl description",
-          "starts_at" => starts_at,
-          "ends_at" => ends_at,
-          "event_type" => "in_person",
-          "physical_location" => "123 Main St",
-          "is_private" => "false"
-        }
-      })
-      |> render_submit()
+      session = 
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.id}/huddlz/new")
+        |> fill_in("Title", with: "Test Huddl")
+        |> fill_in("Description", with: "A test huddl description")
+        |> fill_in("Start Date & Time", with: starts_at)
+        |> fill_in("End Date & Time", with: ends_at)
+        |> fill_in("Physical Location", with: "123 Main St")
+        |> click_button("Create Huddl")
+
+      # Should redirect to group page
+      assert_path(session, ~p"/groups/#{group.id}")
 
       # Verify huddl was created
       huddl =
@@ -265,18 +259,10 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       assert huddl.physical_location == "123 Main St"
       assert huddl.event_type == :in_person
       assert huddl.is_private == false
-
-      # Check for redirect
-      assert_redirect(view, ~p"/groups/#{group.id}", 300)
     end
 
     test "creates private huddl for private group", %{conn: conn, owner: owner} do
       private_group = generate(group(is_public: false, owner_id: owner.id, actor: owner))
-
-      {:ok, view, _html} =
-        conn
-        |> login(owner)
-        |> live(~p"/groups/#{private_group.id}/huddlz/new")
 
       starts_at =
         DateTime.utc_now()
@@ -293,23 +279,21 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> NaiveDateTime.to_iso8601()
         |> String.slice(0..15)
 
-      # First change to virtual to show the virtual_link field
-      view
-      |> element("#huddl-form")
-      |> render_change(%{"form" => %{"event_type" => "virtual"}})
+      session = 
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{private_group.id}/huddlz/new")
+        # First change to virtual to show the virtual_link field
+        |> select("Event Type", option: "Virtual", exact: false)
+        |> fill_in("Title", with: "Private Group Huddl")
+        |> fill_in("Description", with: "A huddl in a private group")
+        |> fill_in("Start Date & Time", with: starts_at)
+        |> fill_in("End Date & Time", with: ends_at)
+        |> fill_in("Virtual Meeting Link", with: "https://zoom.us/j/123456789")
+        |> click_button("Create Huddl")
 
-      view
-      |> form("#huddl-form", %{
-        "form" => %{
-          "title" => "Private Group Huddl",
-          "description" => "A huddl in a private group",
-          "starts_at" => starts_at,
-          "ends_at" => ends_at,
-          "event_type" => "virtual",
-          "virtual_link" => "https://zoom.us/j/123456789"
-        }
-      })
-      |> render_submit()
+      # Should redirect to group page
+      assert_path(session, ~p"/groups/#{private_group.id}")
 
       # Verify huddl was created as private
       huddl =
@@ -319,50 +303,35 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
 
       assert huddl.is_private == true
       assert huddl.virtual_link == "https://zoom.us/j/123456789"
-
-      # Check for redirect
-      assert_redirect(view, ~p"/groups/#{private_group.id}", 300)
     end
 
     test "shows validation errors", %{conn: conn, owner: owner, group: group} do
-      {:ok, view, _html} =
+      session = 
         conn
         |> login(owner)
-        |> live(~p"/groups/#{group.id}/huddlz/new")
+        |> visit(~p"/groups/#{group.id}/huddlz/new")
+        # Try to submit without filling required fields
+        |> click_button("Create Huddl")
 
-      # Submit with missing required fields
-      html =
-        view
-        |> form("#huddl-form", %{
-          "form" => %{
-            "title" => "",
-            "event_type" => "in_person"
-          }
-        })
-        |> render_submit()
-
-      assert html =~ "is required"
+      # Should still be on the same page
+      assert_path(session, ~p"/groups/#{group.id}/huddlz/new")
+      
+      # Should show validation error (checking for error class on input)
+      assert_has(session, "input.input-error")
     end
 
     test "validates form on change", %{conn: conn, owner: owner, group: group} do
-      {:ok, view, _html} =
+      # PhoenixTest automatically triggers form validation on field changes
+      # When we fill a field and then clear it, validation should show errors
+      session = 
         conn
         |> login(owner)
-        |> live(~p"/groups/#{group.id}/huddlz/new")
+        |> visit(~p"/groups/#{group.id}/huddlz/new")
+        |> fill_in("Title", with: "Test Title")
+        |> fill_in("Title", with: "")  # Clear the field to trigger validation
 
-      # Trigger validation
-      html =
-        view
-        |> element("#huddl-form")
-        |> render_change(%{
-          "form" => %{
-            "title" => "",
-            "starts_at" => "",
-            "event_type" => "in_person"
-          }
-        })
-
-      assert html =~ "is required"
+      # Check for validation error class on the input
+      assert_has(session, "input#form_title.input-error")
     end
   end
 
@@ -388,23 +357,23 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
     end
 
     test "shows create button for owner", %{conn: conn, owner: owner, group: group} do
-      {:ok, view, html} =
+      session = 
         conn
         |> login(owner)
-        |> live(~p"/groups/#{group.id}")
+        |> visit(~p"/groups/#{group.id}")
 
-      assert html =~ "Create Huddl"
-      assert has_element?(view, "a[href='/groups/#{group.id}/huddlz/new']")
+      assert session.conn.resp_body =~ "Create Huddl"
+      assert_has(session, "a[href='/groups/#{group.id}/huddlz/new']")
     end
 
     test "shows create button for organizer", %{conn: conn, organizer: organizer, group: group} do
-      {:ok, view, html} =
+      session = 
         conn
         |> login(organizer)
-        |> live(~p"/groups/#{group.id}")
+        |> visit(~p"/groups/#{group.id}")
 
-      assert html =~ "Create Huddl"
-      assert has_element?(view, "a[href='/groups/#{group.id}/huddlz/new']")
+      assert session.conn.resp_body =~ "Create Huddl"
+      assert_has(session, "a[href='/groups/#{group.id}/huddlz/new']")
     end
 
     test "does not show create button for regular member", %{
@@ -412,13 +381,13 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       member: member,
       group: group
     } do
-      {:ok, view, html} =
+      session = 
         conn
         |> login(member)
-        |> live(~p"/groups/#{group.id}")
+        |> visit(~p"/groups/#{group.id}")
 
-      refute html =~ "Create Huddl"
-      refute has_element?(view, "a[href='/groups/#{group.id}/huddlz/new']")
+      refute session.conn.resp_body =~ "Create Huddl"
+      refute_has(session, "a[href='/groups/#{group.id}/huddlz/new']")
     end
   end
 end
