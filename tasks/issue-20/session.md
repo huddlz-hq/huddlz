@@ -157,3 +157,38 @@ Key achievements:
 - PhoenixTest is properly configured but not actively used
 - Standard Phoenix testing approach maintained throughout
 - Ready for next task
+
+**14:15** - Created Checkpoint Commit
+- Committed current state with message: "wip(issue-20): revert to standard Phoenix testing with PhoenixTest configured"
+- State: 84 web tests passing, only 4 feature tests failing
+- This provides a clean checkpoint to return to
+- PhoenixTest is configured but not actively used
+- All tests use standard Phoenix testing approaches
+
+## Issue #20 Final Resolution - 2025-01-25 17:30
+
+### Status: CLOSED - Won't Implement
+
+After extensive exploration and testing, we discovered that:
+
+1. **PhoenixTest Limitation**: PhoenixTest cannot capture flash messages in LiveView, which is critical for our testing needs
+2. **Wallaby Alternative**: While Wallaby could capture flash messages, it requires radical codebase changes
+3. **Standard Approach Works**: The existing Phoenix.ConnTest and Phoenix.LiveViewTest are sufficient and recommended
+
+### Key Learnings
+
+1. **PhoenixTest is not a replacement**: It's a wrapper around Phoenix testing tools, not a replacement
+2. **Flash message testing**: This is a known limitation in PhoenixTest for LiveView
+3. **Testing consistency**: The perceived "inconsistency" between LiveView and controller testing is by design - they test different things
+4. **Cucumber tests**: The failing tests are due to missing step definitions, not testing framework issues
+
+### Current State
+
+- PhoenixTest is configured but not used
+- All tests use standard Phoenix testing approaches
+- 84 web tests passing, 4 Cucumber tests failing (missing step definitions)
+- No migration needed - standard approach is the recommended path
+
+### Recommendation
+
+Close issue #20 without implementing PhoenixTest migration. The standard Phoenix testing tools are the correct approach for this codebase.

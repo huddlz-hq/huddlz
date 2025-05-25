@@ -19,8 +19,10 @@ Feature: RSVP Cancellation
   Scenario: User cancels their RSVP to a huddl
     Given I am logged in as "member@example.com"
     And I am on the "Tech Meetup" group page
-    When I click on "Virtual Code Review"
     Then I should see "Virtual Code Review"
+    When I click "View Details"
+    Then I should be on the huddl page for "Virtual Code Review"
+    And I should see "Virtual Code Review"
     And I should see "Let's review some code"
     And I should see "RSVP to this huddl"
     
@@ -68,8 +70,8 @@ Feature: RSVP Cancellation
   Scenario: Cannot cancel RSVP for past events
     Given I am logged in as "member@example.com"
     And the following huddl exists in "Tech Meetup":
-      | title        | description    | event_type | starts_at      | ends_at        |
-      | Past Event   | Already done   | virtual    | yesterday 2pm  | yesterday 3pm  |
+      | title        | description    | event_type | starts_at      | ends_at        | virtual_link              |
+      | Past Event   | Already done   | virtual    | yesterday 2pm  | yesterday 3pm  | https://zoom.us/j/999999  |
     And I have RSVPed to "Past Event"
     When I visit the "Past Event" huddl page
     Then I should not see "Cancel RSVP"
