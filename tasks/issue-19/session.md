@@ -104,3 +104,26 @@ Steps completed:
 8. ✅ All tests still pass (29 feature tests)
 
 The shared authentication steps module is now ready to be used. It contains the two most commonly duplicated authentication steps.
+
+Task 2 completed and committed.
+
+### Task 3: Create shared navigation and UI steps module - Started 2025-05-26
+
+Creating the shared UI and navigation steps module to standardize common interaction patterns.
+
+Steps completed:
+1. ✅ Analyzed existing UI/navigation patterns across all step files
+2. ✅ Identified common patterns: clicking, content assertions, navigation, form interactions
+3. ✅ Created test/features/steps/shared_ui_steps.ex
+4. ✅ Implemented key shared steps:
+   - "I click {string}" - handles both links and buttons
+   - "I should see {string}" - general content assertion
+   - "I should see {string} in the flash" - standard flash message checking (addresses the main requirement!)
+   - "I visit {string}" - navigation to paths
+   - Navigation helpers for home page and navbar
+   - Form interaction helpers
+   - Button presence checks
+5. ✅ Module compiles successfully
+6. ✅ All tests still pass (29 feature tests)
+
+The flash message pattern "I should see 'foobar' in the flash" has been implemented as requested, providing the standard way to check flash messages that was the key driver for this refactoring.
