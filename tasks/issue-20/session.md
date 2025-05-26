@@ -563,3 +563,20 @@ Successfully migrated all 6 LiveView test files:
 4. **Flash Messages**: LiveView flash doesn't work the same way with PhoenixTest
 5. **Component Usage**: Should use core_components.ex for consistency
 6. **Automatic Behaviors**: PhoenixTest triggers phx-change automatically when filling fields
+
+## Migrating Cucumber Step Files to PhoenixTest - 2025-01-25 22:00
+
+### First Step File: huddl_listing_steps_test.exs
+
+**22:00** - Started migrating Cucumber step files
+- First file: huddl_listing_steps_test.exs (failing due to UI changes)
+- Removed Phoenix.LiveViewTest import
+- Updated all steps to use PhoenixTest patterns
+
+**Key Patterns Established**:
+1. Pattern match session from context: `%{session: session} = context`
+2. Always return updated session: `{:ok, Map.put(context, :session, session)}`
+3. Use PhoenixTest functions: `visit()`, `fill_in()`, `assert_has()`, `refute_has()`
+4. Chain assertions for cleaner code
+
+Status: ✅ All 3 tests passing (1 was previously failing)

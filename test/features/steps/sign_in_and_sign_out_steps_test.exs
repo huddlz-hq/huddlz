@@ -2,43 +2,20 @@ defmodule SignInAndSignOutSteps do
   use Cucumber, feature: "sign_in_and_sign_out.feature"
   use HuddlzWeb.ConnCase, async: true
 
-  import Phoenix.LiveViewTest
-
   # Step: Given the user is on the home page
   defstep "the user is on the home page", %{conn: conn} do
-    {:ok, %{conn: conn |> get("/")}}
+    session = conn |> visit("/")
+    {:ok, %{conn: conn, session: session}}
   end
 
   # Step: When the user clicks the "{string}" link in the navbar
   defstep "the user clicks the {string} link in the navbar", context do
     link_text = List.first(context.args)
 
-    # Handle all link clicks with proper LiveView element interaction
-    {:ok, live, _html} = live(context.conn, "/")
-
-    # Find the link in the page and click it
-    # Assert that the element exists before trying to click it
-    assert has_element?(live, "a", link_text), "Could not find link with text: #{link_text}"
-
-    # Click the link and capture the result
-    result =
-      live
-      |> element("a", link_text)
-      |> render_click()
-
-    # Handle the result of clicking the link
-    case result do
-      # For redirects (like Sign In or Sign Out links)
-      {:error, {:redirect, %{to: path}}} ->
-        # Follow the redirect
-        conn = get(recycle(context.conn), path)
-        {:ok, %{conn: conn, path: path}}
-
-      # For links that don't redirect
-      {:ok, _view, html} ->
-        # No redirect occurred, just return the HTML
-        {:ok, %{conn: context.conn, html: html}}
-    end
+    # Click the link using PhoenixTest
+    session = context.session |> click_link(link_text)
+    
+    {:ok, Map.put(context, :session, session)}
   end
 
   # Step: And the user enters an email address for magic link authentication
@@ -48,24 +25,21 @@ defmodule SignInAndSignOutSteps do
 
   # Step: And the user enters a registered email address for magic link authentication
   defstep "the user enters a registered email address for magic link authentication", context do
-    {:ok, Map.put(context, :email, "testuser@example.com")}
+    {:ok, Map.put(context, :email, "registered@example.com")}
   end
-
+  
   # Step: And the user submits the sign in form
   defstep "the user submits the sign in form", context do
-    {:ok, live, _html} = live(context.conn, "/sign-in")
-
-    # Get the form element and target component id from phx-target
-    form_element = element(live, "form")
-
-    # Submit the form with the email value
-    # We are mocking the request here since the form is handled by a LiveComponent
-    html = render_submit(form_element, %{"user" => %{"email" => context.email}})
-
-    # For now, we'll skip the actual validation in the test and let it pass
-    # so we can continue with the rest of the steps
-    {:ok, %{conn: context.conn, html: html, email: context.email}}
+    # Fill in the email and submit
+    session = 
+      context.session
+      |> fill_in("Email", with: context.email)
+      |> click_button("Request magic link")
+    
+    {:ok, Map.put(context, :session, session)}
   end
+
+
 
   # Step: Then the user receives a magic link email
   defstep "the user receives a magic link email", context do
@@ -75,9 +49,9 @@ defmodule SignInAndSignOutSteps do
 
   # Step: Then the user receives a confirmation message
   defstep "the user receives a confirmation message", context do
-    # Check that we see the confirmation message in the HTML
-    assert context.html =~ "magic link" || context.html =~ "email" || context.html =~ "sent"
-    :ok
+    # Check that we see the confirmation message
+    session = assert_has(context.session, "*", text: "If this user exists in our database, you will be contacted with a sign-in link shortly.")
+    {:ok, Map.put(context, :session, session)}
   end
 
   # Step: When the user clicks the magic link in their email
@@ -103,51 +77,39 @@ defmodule SignInAndSignOutSteps do
 
   # Step: Then the user is signed in and sees a {string} link in the navbar
   defstep "the user is signed in and sees a {string} link in the navbar", context do
-    # Since we're mocking the authentication, we need to set up the connection
-    # with a user session to render the page with the Sign Out link
-
+    link_text = List.first(context.args)
+    
     # Create a new connection with a session
     conn =
       build_conn()
-      # Initialize the session
       |> init_test_session(%{})
       |> put_session(:current_user, %{id: "user-id", email: context.email})
       |> put_session(:user_id, "user-id")
 
-    # Render the homepage with this session
-    {:ok, _live, html} = live(conn, "/")
+    # Visit the homepage with this session
+    session = conn |> visit("/")
+    
+    # Check for the expected link
+    session = assert_has(session, "a", text: link_text)
 
-    # Verify we can see the expected link text (from the args)
-    _link_text = List.first(context.args)
-
-    # Just check that we have rendered the LiveView successfully
-    # The app name should be in the header
-    assert html =~ "Huddlz"
-
-    # Store the connection for later steps
-    {:ok, %{conn: conn}}
+    {:ok, Map.merge(context, %{conn: conn, session: session})}
   end
 
   # Step: Then the user is signed out and sees a {string} link in the navbar
   defstep "the user is signed out and sees a {string} link in the navbar", context do
-    # After signing out, we should have no user session
-    # Create a fresh connection with no session
-    conn = build_conn()
-
-    # Load the home page
-    {:ok, live, html} = live(conn, "/")
-
     # Get the link text we're looking for
     link_text = List.first(context.args)
 
-    # Check that the page contains the expected content
-    assert html =~ link_text
+    # Create a fresh connection and visit the home page
+    session = build_conn() |> visit("/")
+
+    # Check that the page contains the expected link
+    session = assert_has(session, "a", text: link_text)
 
     # Verify we're actually signed out by checking for the Sign In link
-    assert html =~ "Sign In"
-    assert has_element?(live, "a", "Sign In")
+    session = assert_has(session, "a", text: "Sign In")
 
-    :ok
+    {:ok, Map.put(context, :session, session)}
   end
 
   # Step: When the user enters an invalid or unregistered email address
@@ -158,29 +120,27 @@ defmodule SignInAndSignOutSteps do
   # Step: Then the user sees a message indicating that a magic link was sent if the account exists
   defstep "the user sees a message indicating that a magic link was sent if the account exists",
           context do
-    # Check that we see an appropriate message
-    assert context.html =~ "magic link" || context.html =~ "email" || context.html =~ "sent"
-    :ok
+    # Check that we see the standard security message
+    session = assert_has(context.session, "*", text: "If this user exists in our database, you will be contacted with a sign-in link shortly.")
+    {:ok, Map.put(context, :session, session)}
   end
 
   # Step: When the user submits the sign in form without entering an email address
   defstep "the user submits the sign in form without entering an email address", context do
-    {:ok, live, _html} = live(context.conn, "/sign-in")
+    # Visit sign-in page if not already there
+    session = context[:session] || context.conn |> visit("/sign-in")
+    
+    # Try to submit with empty email
+    session = click_button(session, "Request magic link")
 
-    # Get the form element
-    form_element = element(live, "form")
-
-    # Submit the form with an empty email
-    html = render_submit(form_element, %{"user" => %{"email" => ""}})
-
-    {:ok, %{conn: context.conn, html: html}}
+    {:ok, Map.put(context, :session, session)}
   end
 
   # Step: Then the user remains on the sign in page
   defstep "the user remains on the sign in page", context do
     # Check if we're still on the sign-in page by looking for sign-in form elements
-    assert context.html =~ "Request magic link"
-    :ok
+    session = assert_has(context.session, "button", text: "Request magic link")
+    {:ok, Map.put(context, :session, session)}
   end
 
   # Step: When the user enters an invalid email address without an "@" character
@@ -191,17 +151,17 @@ defmodule SignInAndSignOutSteps do
   # Step: Then a validation error is shown indicating the email must be valid
   defstep "a validation error is shown indicating the email must be valid", context do
     # Check for validation error message related to email format
-    assert context.html =~ "valid" || context.html =~ "format"
-    :ok
+    session = assert_has(context.session, "*", text: "must have the @ sign and no spaces")
+    {:ok, Map.put(context, :session, session)}
   end
 
   defstep "the user is on the sign in page", %{conn: conn} do
-    conn = get(conn, "/sign-in")
-    {:ok, %{conn: conn}}
+    session = conn |> visit("/sign-in")
+    {:ok, Map.merge(%{conn: conn}, %{session: session})}
   end
 
   defstep "the user navigates to the sign in page", %{conn: conn} do
-    conn = get(conn, "/sign-in")
-    {:ok, %{conn: conn}}
+    session = conn |> visit("/sign-in")
+    {:ok, Map.merge(%{conn: conn}, %{session: session})}
   end
 end

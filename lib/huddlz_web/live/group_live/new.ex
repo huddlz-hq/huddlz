@@ -79,6 +79,7 @@ defmodule HuddlzWeb.GroupLive.New do
           <label class="block text-sm font-medium mb-2">Privacy</label>
           <div class="mt-2 space-y-2">
             <label class="flex items-center gap-3">
+              <input type="hidden" name={@form[:is_public].name} value="false" />
               <input
                 type="checkbox"
                 name={@form[:is_public].name}

@@ -2,7 +2,6 @@ defmodule RsvpCancellationSteps do
   use Cucumber, feature: "rsvp_cancellation.feature"
   use HuddlzWeb.ConnCase, async: true
 
-  import Phoenix.LiveViewTest
   import Huddlz.Generator
   import Huddlz.Test.Helpers.Authentication
   alias Huddlz.Communities.{Huddl, Group}
@@ -133,8 +132,10 @@ defmodule RsvpCancellationSteps do
     conn =
       context.conn
       |> login(user)
+    
+    session = conn |> visit("/")
 
-    {:ok, Map.merge(context, %{conn: conn, current_user: user})}
+    {:ok, Map.merge(context, %{conn: conn, session: session, current_user: user})}
   end
 
   defstep "I am on the {string} group page", context do
@@ -146,71 +147,37 @@ defmodule RsvpCancellationSteps do
       |> Ash.Query.load(:owner)
       |> Ash.read_one!(authorize?: false)
 
-    {:ok, live, _html} = live(context.conn, "/groups/#{group.id}")
-    {:ok, Map.put(context, :live, live)}
+    session = context.session |> visit("/groups/#{group.id}")
+    {:ok, Map.put(context, :session, session)}
   end
 
   defstep "I click on {string}", context do
     link_text = List.first(context.args)
     
-    result =
-      context.live
-      |> element("a", link_text)
-      |> render_click()
-
-    case result do
-      {:error, {:redirect, %{to: path}}} ->
-        {:ok, live, _html} = live(context.conn, path)
-        {:ok, Map.put(context, :live, live)}
-      
-      {:error, {:live_redirect, %{to: path}}} ->
-        {:ok, live, _html} = live(context.conn, path)
-        {:ok, Map.put(context, :live, live)}
-      
-      html when is_binary(html) ->
-        {:ok, Map.put(context, :html, html)}
-    end
+    session = click_link(context.session, link_text)
+    {:ok, Map.put(context, :session, session)}
   end
 
   defstep "I should see {string}", context do
     text = List.first(context.args)
-    html = render(context.live)
     
-    # Handle HTML entities - convert common ones
-    normalized_html = html
-      |> String.replace("&#39;", "'")
-      |> String.replace("&quot;", "\"")
-      |> String.replace("&amp;", "&")
-      |> String.replace("&lt;", "<")
-      |> String.replace("&gt;", ">")
-    
-    assert normalized_html =~ text
-    {:ok, context}
+    session = assert_has(context.session, "*", text: text)
+    {:ok, Map.put(context, :session, session)}
   end
 
   defstep "I should not see {string}", context do
     text = List.first(context.args)
-    html = render(context.live)
     
-    # Handle HTML entities - convert common ones
-    normalized_html = html
-      |> String.replace("&#39;", "'")
-      |> String.replace("&quot;", "\"")
-      |> String.replace("&amp;", "&")
-      |> String.replace("&lt;", "<")
-      |> String.replace("&gt;", ">")
-    
-    refute normalized_html =~ text
-    {:ok, context}
+    session = refute_has(context.session, "*", text: text)
+    {:ok, Map.put(context, :session, session)}
   end
 
   defstep "I should be on the huddl page for {string}", context do
     huddl_title = List.first(context.args)
     
     # Just verify we can see the huddl content - the navigation already happened
-    html = render(context.live)
-    assert html =~ huddl_title
-    {:ok, context}
+    session = assert_has(context.session, "*", text: huddl_title)
+    {:ok, Map.put(context, :session, session)}
   end
 
   defstep "I log out", context do
@@ -265,42 +232,24 @@ defmodule RsvpCancellationSteps do
       |> Ash.Query.load(:group)
       |> Ash.read_one!(actor: user)
 
-    {:ok, live, _html} =
-      context.conn
-      |> live("/groups/#{huddl.group_id}/huddlz/#{huddl.id}")
-
-    {:ok, Map.put(context, :live, live)}
+    session = context.session |> visit("/groups/#{huddl.group_id}/huddlz/#{huddl.id}")
+    {:ok, Map.put(context, :session, session)}
   end
 
   defstep "I click {string}", context do
     button_text = List.first(context.args)
 
     # Try button first, then link
-    result =
+    session =
       try do
-        context.live
-        |> element("button", button_text)
-        |> render_click()
+        click_button(context.session, button_text)
       rescue
         _ ->
           # If button fails, try link
-          context.live
-          |> element("a", button_text)
-          |> render_click()
+          click_link(context.session, button_text)
       end
 
-    case result do
-      {:error, {:redirect, %{to: path}}} ->
-        {:ok, live, _html} = live(context.conn, path)
-        {:ok, Map.put(context, :live, live)}
-      
-      {:error, {:live_redirect, %{to: path}}} ->
-        {:ok, live, _html} = live(context.conn, path)
-        {:ok, Map.put(context, :live, live)}
-      
-      html when is_binary(html) ->
-        {:ok, Map.put(context, :html, html)}
-    end
+    {:ok, Map.put(context, :session, session)}
   end
 
   # Helper functions
