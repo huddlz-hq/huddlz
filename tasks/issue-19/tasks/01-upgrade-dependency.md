@@ -1,9 +1,9 @@
 # Task 1: Upgrade cucumber dependency
 
-**Status**: pending
+**Status**: completed
 **Created**: 2025-05-24 14:05:00
-**Started**: -
-**Completed**: -
+**Started**: 2025-05-26
+**Completed**: 2025-05-26
 
 ## Purpose
 Upgrade the cucumber dependency from 0.1.0 to 0.2.0 to access the new shared steps functionality.
@@ -22,10 +22,10 @@ Upgrade the cucumber dependency from 0.1.0 to 0.2.0 to access the new shared ste
 - Changing test structure
 
 ## Implementation Checklist
-- [ ] Update cucumber version in mix.exs from ~> 0.1.0 to ~> 0.2.0
-- [ ] Run `mix deps.get` to fetch the new version
-- [ ] Run `mix compile` to ensure no compilation errors
-- [ ] Run `mix test test/features/` to verify all cucumber tests still pass
+- [x] Update cucumber version in mix.exs from ~> 0.1.0 to ~> 0.2.0
+- [x] Run `mix deps.get` to fetch the new version
+- [x] Run `mix compile` to ensure no compilation errors
+- [x] Run `mix test test/features/` to verify all cucumber tests still pass
 - [ ] Commit the dependency update
 
 ## Technical Details
