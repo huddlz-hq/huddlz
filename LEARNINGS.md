@@ -48,6 +48,13 @@ This document captures key insights, patterns, and best practices discovered dur
 ### Testing Strategies
 - Start with feature files using Gherkin syntax before writing implementation code
 - Focus on testing behavior, not implementation details
+- **PhoenixTest Migration**: When migrating from Phoenix.LiveViewTest to PhoenixTest:
+  - PhoenixTest is a wrapper, not a replacement - Phoenix.ConnTest remains in support files
+  - PhoenixTest cannot capture LiveView flash messages - test UI state changes instead
+  - Forms require proper labels with `for` attributes for PhoenixTest's `fill_in` to work
+  - Migrate entire files at once for consistency - don't mix testing approaches
+  - Use `assert_has` and `refute_has` for element assertions, not raw HTML checks
+  - See issue #20 learnings for detailed migration patterns
 - Structure Cucumber steps to be reusable across similar scenarios
 - Use generators for creating test data to avoid repetition
 - Separate UI testing from business logic testing
@@ -171,3 +178,20 @@ This document captures key insights, patterns, and best practices discovered dur
    - After solving a new problem, add the solution
 
 This document evolves over time. The goal is to build a knowledge base that improves future development efficiency and quality.
+
+## Issue #20: Use PhoenixTest - 2025-01-26
+
+### Context
+Migrated entire test suite from Phoenix.LiveViewTest/Phoenix.ConnTest to PhoenixTest for API consistency. Successfully migrated 200+ tests including all Cucumber step definitions, LiveView unit tests, and integration tests.
+
+### Key Learnings
+1. **Framework Understanding**: PhoenixTest is a wrapper around Phoenix test tools, not a replacement. Phoenix.ConnTest remains necessary in support files.
+2. **Test What Users See**: When framework limitations arise (like flash message capture), focus on testing visible UI changes rather than internal state.
+3. **Accessibility Drives Testability**: PhoenixTest's requirement for proper form labels improved our HTML semantics and accessibility.
+
+### Reusable Patterns
+- **Migration Pattern**: Commit to full file migration - mixing test approaches causes confusion
+- **Form Testing**: Use individual field interactions (`fill_in`, `select`, `click_button`) as PhoenixTest has no `fill_form` function
+- **Assertion Strategy**: Prefer `assert_has/refute_has` over raw HTML checks for cleaner, more maintainable tests
+
+See `tasks/issue-20/learnings.md` for full details including code examples and migration patterns.
