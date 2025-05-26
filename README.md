@@ -67,6 +67,8 @@ See [Development Lifecycle](docs/development_lifecycle.md) for detailed informat
 
 * [Vision](docs/vision.md) - Project vision and goals
 * [Testing](docs/testing.md) - Testing approach and guidelines
+* [Testing Approach](docs/testing_approach.md) - PhoenixTest patterns and best practices
+* [PhoenixTest Migration](docs/phoenix_test_migration.md) - Guide for migrating tests to PhoenixTest
 * [Development Lifecycle](docs/development_lifecycle.md) - Complete development workflow from requirements to implementation
 
 ## Deployment

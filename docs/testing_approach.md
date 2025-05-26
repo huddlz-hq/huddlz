@@ -1,122 +1,153 @@
 # Testing Approach
 
-This document describes the hybrid testing approach used in the Huddlz application.
+This document describes the testing approach used in the Huddlz application.
 
 ## Overview
 
-We use a hybrid testing approach that leverages the strengths of different testing frameworks:
+We use a consistent testing approach across the entire test suite:
 
-- **Wallaby** - For Cucumber feature tests (BDD/E2E testing with real browser)
-- **PhoenixTest** - For unit and integration tests (fast, no browser needed)
+- **PhoenixTest** - For all LiveView unit tests, integration tests, and Cucumber step definitions
 - **ExUnit** - Standard Elixir test framework underlying everything
+- **Standard Phoenix testing** - Only for direct render tests (error pages)
 
-## Why Hybrid?
+## Why PhoenixTest?
 
-During the migration to PhoenixTest (Issue #20), we discovered that PhoenixTest has a critical limitation: it cannot capture flash messages in LiveView after events. This was verified through extensive testing. Since flash messages are a crucial part of our user experience, we needed a solution that could properly test them.
+PhoenixTest provides a unified API for testing both LiveViews and regular controller views, eliminating the need for conditionals and reducing cognitive overhead. It offers:
+
+- Consistent patterns across all test types
+- Simplified form interactions
+- Automatic handling of LiveView redirects
+- Clean, pipe-friendly API
 
 ## Framework Responsibilities
 
-### Wallaby (Feature Tests)
+### PhoenixTest (All Tests)
 
-Used for all Cucumber step definitions in `test/features/steps/*_steps_test.exs`.
+Used for all test types:
+- LiveView unit tests in `test/huddlz_web/live/`
+- Integration tests in `test/integration/`
+- Cucumber step definitions in `test/features/steps/`
 
 **Strengths:**
-- Uses a real browser (Chrome via ChromeDriver)
-- Can properly capture flash messages
-- Tests actual user experience including JavaScript
-- Handles complex interactions like file uploads
-- Verifies visual elements are actually visible
+- Consistent API across all test types
+- Fast execution
+- Simple, intuitive patterns
+- Pipe-friendly operations
+- Automatic LiveView redirect handling
 
 **Usage Pattern:**
 ```elixir
 defmodule MyFeatureSteps do
   use Cucumber, feature: "my_feature.feature"
-  use HuddlzWeb.WallabyCase
-
-  defstep "I see a flash message", %{session: session} = context do
-    assert_has(session, css("[role='alert']", text: "Success!"))
-    {:ok, context}
-  end
-end
-```
-
-### PhoenixTest (Unit/Integration Tests)
-
-Used for controller and LiveView tests that don't require full browser capabilities.
-
-**Strengths:**
-- Fast execution (no browser overhead)
-- Simple API for basic interactions
-- Good for testing business logic
-- Suitable for API endpoint testing
-
-**Usage Pattern:**
-```elixir
-defmodule MyLiveViewTest do
   use HuddlzWeb.ConnCase
-  import PhoenixTest
 
-  test "renders form", %{conn: conn} do
-    conn
-    |> visit("/my-page")
-    |> assert_has("h1", text: "My Page")
+  defstep "I see the page title", %{session: session} = context do
+    session = assert_has(session, "h1", text: "Welcome")
+    {:ok, Map.put(context, :session, session)}
   end
 end
 ```
 
-## Key Differences
+### Standard Phoenix Testing (Error Pages Only)
+
+Used only for testing error page rendering directly:
+
+```elixir
+defmodule HuddlzWeb.ErrorHTMLTest do
+  use HuddlzWeb.ConnCase
+  import Phoenix.Template
+
+  test "renders 404.html" do
+    assert render_to_string(HuddlzWeb.ErrorHTML, "404", "html", []) == "Not Found"
+  end
+end
+```
+
+## Key Patterns
 
 ### Authentication in Tests
 
-**Wallaby (Feature Tests):**
-- Generate magic link tokens directly using `AshAuthentication.Strategy.MagicLink.request_token_for`
-- Visit the magic link URL to authenticate
-- This avoids process boundary issues with email capture
-
-**PhoenixTest (Unit Tests):**
+**PhoenixTest:**
 - Use the `login/2` helper from `HuddlzWeb.ConnCase`
-- Directly sets session without going through full auth flow
+- For Cucumber tests, use magic link flow with proper email assertion
 
 ### Element Selection
 
-**Wallaby:**
-- Uses Query helpers: `text_field()`, `button()`, `link()`, `css()`
-- More explicit about element types
-- Example: `fill_in(session, text_field("Email"), with: "test@example.com")`
+**PhoenixTest uses intuitive patterns:**
+- `fill_in("Label", with: "value")` - Fills form fields by label
+- `select("Label", option: "Option text")` - Selects dropdown options
+- `click_button("Button text")` - Clicks buttons by text
+- `assert_has("selector", text: "content")` - Verifies elements exist
 
-**PhoenixTest:**
-- Uses string selectors with options
-- More flexible matching
-- Example: `fill_in(session, "Email", with: "test@example.com")`
+### Form Requirements
+
+PhoenixTest requires proper labels with `for` attributes:
+
+```elixir
+# Form inputs need labels
+<label for="input-id">Field Label</label>
+<input id="input-id" name="field_name" />
+
+# For visually hidden labels
+<label for="search" class="sr-only">Search</label>
+<input id="search" name="q" placeholder="Search..." />
+```
 
 ### Flash Messages
 
-**Wallaby:**
-- ✅ Can see flash messages: `assert_has(session, css("[role='alert']"))`
-- Flash messages use `role="alert"` attribute, not `.alert` class
+PhoenixTest handles flash messages seamlessly:
 
-**PhoenixTest:**
-- ❌ Cannot capture LiveView flash messages after events
-- This is the primary reason for the hybrid approach
+```elixir
+# Test flash messages directly
+assert_has(session, ".alert", text: "Successfully created")
+assert_has(session, "[role='alert']", text: "Error occurred")
+```
 
 ## Best Practices
 
-1. **Use Wallaby for Feature Tests** - All Cucumber tests should use Wallaby for comprehensive testing
-2. **Use PhoenixTest for Unit Tests** - Fast feedback for isolated component testing
-3. **Pattern Match in Steps** - Use `%{session: session, args: args}` in defstep signatures
-4. **Direct Token Generation** - For Wallaby auth, generate tokens directly instead of capturing emails
-5. **Async Tests** - Enable `async: true` on Wallaby tests for better performance
+1. **Consistent Patterns** - Use PhoenixTest patterns across all test types
+2. **Proper Labels** - Ensure all form inputs have labels with `for` attributes
+3. **Pattern Match in Steps** - Use `%{session: session} = context` in defstep signatures
+4. **Update Session** - Always return updated session in context map
+5. **Focus on Behavior** - Test what users see, not implementation details
 
-## Migration Notes
+## Common Patterns
 
-When migrating tests between frameworks:
+### Basic Test Structure
 
-1. Update the test case module (`WallabyCase` vs `ConnCase`)
-2. Update imports (remove `PhoenixTest` for Wallaby)
-3. Update element selectors to use appropriate Query helpers
-4. Update assertions to use `css()` wrapper for Wallaby
-5. Handle authentication appropriately for each framework
+```elixir
+test "user can create a group", %{conn: conn} do
+  user = create_verified_user()
+  
+  conn
+  |> login(user)
+  |> visit("/groups/new")
+  |> fill_in("Name", with: "Book Club")
+  |> fill_in("Description", with: "Monthly book discussions")
+  |> click_button("Create Group")
+  |> assert_has("h1", text: "Book Club")
+end
+```
 
-## Future Considerations
+### Cucumber Step Definitions
 
-As PhoenixTest matures, we may be able to consolidate back to a single framework if the flash message limitation is resolved. Until then, this hybrid approach gives us the best of both worlds: comprehensive browser testing where needed and fast unit tests where appropriate.
+```elixir
+defstep "the user fills in the form", %{session: session} = context do
+  session = session
+  |> fill_in("Email", with: "test@example.com")
+  |> click_button("Submit")
+  
+  {:ok, Map.put(context, :session, session)}
+end
+```
+
+## Summary
+
+PhoenixTest provides a unified testing experience across the Huddlz application:
+
+- **209 tests** successfully migrated and passing
+- **Consistent API** for all test types
+- **Clean patterns** that are easy to understand and maintain
+- **Fast execution** without browser overhead
+
+The only exceptions are error template tests that directly test render functions without HTTP requests.

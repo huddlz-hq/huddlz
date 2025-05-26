@@ -155,8 +155,35 @@ end
 
 When testing LiveView components:
 
-1. Use `Phoenix.LiveViewTest` to interact with LiveView components
-2. Test user interactions with `render_click`, `render_submit`, and `render_change`
-3. Verify page content using string matching with `=~` operator
+1. Use `PhoenixTest` for all LiveView interactions (imported via `HuddlzWeb.ConnCase`)
+2. Test user interactions with `fill_in/3`, `select/3`, `click_button/2`, and `visit/2`
+3. Verify page content using `assert_has/3` and `refute_has/3`
 4. Structure assertions to verify behavior, not implementation
 5. Use background setup steps to establish a known state
+
+#### PhoenixTest Patterns
+
+```elixir
+# Basic navigation and assertions
+session = conn |> visit("/groups")
+assert_has(session, "h1", text: "Groups")
+
+# Form interactions
+session
+|> fill_in("Name", with: "Book Club")
+|> select("Group type", option: "Public")
+|> click_button("Create Group")
+|> assert_has(".alert", text: "Group created")
+
+# Authentication
+conn
+|> login(user)  # Helper from ConnCase
+|> visit("/protected/page")
+```
+
+**Note**: PhoenixTest requires proper labels with `for` attributes on form inputs. If your forms use placeholders without labels, add visually hidden labels:
+
+```html
+<label for="search-query" class="sr-only">Search</label>
+<input id="search-query" name="query" placeholder="Search..." />
+```

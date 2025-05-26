@@ -150,16 +150,30 @@ assert to_string(group.name) == "Test"
 
 ## Integration with LiveView Tests
 
-When testing LiveView components that use Ash resources:
+When testing LiveView components that use Ash resources with PhoenixTest:
 
 ```elixir
 test "displays group details", %{conn: conn, group: group} do
-  {:ok, _view, html} = live(conn, ~p"/groups/#{group.id}")
+  session = conn |> visit("/groups/#{group.id}")
   
   # Remember to convert CiString fields
-  assert html =~ to_string(group.name)
-  assert html =~ to_string(group.description)
+  assert_has(session, "h1", text: to_string(group.name))
+  assert_has(session, "p", text: to_string(group.description))
 end
+```
+
+PhoenixTest provides cleaner assertions than string matching:
+
+```elixir
+# Form interactions with Ash resources
+session
+|> fill_in("Name", with: "Updated Name")
+|> click_button("Save")
+|> assert_has(".alert", text: "Group updated")
+
+# Verify the Ash resource was updated
+group = Ash.get!(Group, group.id, authorize?: false)
+assert to_string(group.name) == "Updated Name"
 ```
 
 ## Cucumber/BDD Testing
