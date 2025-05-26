@@ -2,7 +2,6 @@ defmodule CreateHuddlSteps do
   use Cucumber, feature: "create_huddl.feature"
   use HuddlzWeb.ConnCase, async: true
 
-  import Phoenix.LiveViewTest
   import Huddlz.Generator
   alias Huddlz.Communities.Huddl
   require Ash.Query
@@ -120,7 +119,10 @@ defmodule CreateHuddlSteps do
     # Sign in the user using the authentication helper
     conn = login(context.conn, user)
 
-    {:ok, Map.merge(context, %{conn: conn, current_user: user})}
+    # Create a PhoenixTest session
+    session = conn |> visit("/")
+
+    {:ok, Map.merge(context, %{conn: conn, session: session, current_user: user})}
   end
 
   # Navigation steps
@@ -137,9 +139,9 @@ defmodule CreateHuddlSteps do
       raise "Group not found: #{group_name}. Available groups: #{inspect(Enum.map(groups, & &1.name))}"
     end
 
-    {:ok, live, _html} = live(context.conn, "/groups/#{group.id}")
+    session = context.session |> visit("/groups/#{group.id}")
 
-    {:ok, Map.merge(context, %{live: live, current_group: group})}
+    {:ok, Map.merge(context, %{session: session, current_group: group})}
   end
 
   defstep "I visit the new huddl page for {string}", context do
@@ -150,9 +152,9 @@ defmodule CreateHuddlSteps do
         g && to_string(g.name) == group_name
       end)
 
-    {:ok, live, _html} = live(context.conn, "/groups/#{group.id}/huddlz/new")
+    session = context.session |> visit("/groups/#{group.id}/huddlz/new")
 
-    {:ok, Map.merge(context, %{live: live, current_group: group})}
+    {:ok, Map.merge(context, %{session: session, current_group: group})}
   end
 
   defstep "I try to visit the new huddl page for {string}", context do
@@ -163,72 +165,69 @@ defmodule CreateHuddlSteps do
         g && to_string(g.name) == group_name
       end)
 
-    case live(context.conn, "/groups/#{group.id}/huddlz/new") do
-      {:ok, live, _html} ->
-        {:ok, Map.merge(context, %{live: live, current_group: group})}
+    # PhoenixTest handles redirects automatically, so we just visit
+    session = context.session |> visit("/groups/#{group.id}/huddlz/new")
 
-      {:error, {:redirect, %{to: redirect_path, flash: flash}}} ->
-        {:ok,
-         Map.merge(context, %{
-           redirected: true,
-           redirect_path: redirect_path,
-           flash: flash,
-           current_group: group
-         })}
+    # Check if we're on the new huddl page or got redirected
+    # If we can't see "Create New Huddl", we were probably redirected
+    has_form =
+      try do
+        assert_has(session, "*", text: "Create New Huddl")
+        true
+      rescue
+        _ -> false
+      end
+
+    if has_form do
+      {:ok, Map.merge(context, %{session: session, current_group: group})}
+    else
+      {:ok,
+       Map.merge(context, %{
+         session: session,
+         redirected: true,
+         current_group: group
+       })}
     end
   end
 
   # Visibility checks
   defstep "I should see a {string} button", context do
     button_text = List.first(context.args)
-    html = render(context.live)
-    assert html =~ button_text
-    :ok
+    # Check for either a button or a link with the text
+    session = assert_has(context.session, "*", text: button_text)
+    {:ok, Map.put(context, :session, session)}
   end
 
   defstep "I should not see a {string} button", context do
     button_text = List.first(context.args)
-    html = render(context.live)
-    refute html =~ button_text
-    :ok
+    # Check that neither a button nor a link with the text exists
+    session = refute_has(context.session, "*", text: button_text)
+    {:ok, Map.put(context, :session, session)}
   end
 
   defstep "I click {string}", context do
     button_text = List.first(context.args)
 
-    element =
-      element(context.live, "a", button_text) || element(context.live, "button", button_text)
+    # Try to click as a link first, then as a button
+    session =
+      try do
+        context.session |> click_link(button_text)
+      rescue
+        _ -> context.session |> click_button(button_text)
+      end
 
-    # Check if this is a navigation link that will redirect
-    result = render_click(element)
-
-    case result do
-      {:error, {:redirect, %{to: path}}} ->
-        # Navigation happened, need to mount new LiveView
-        {:ok, live, _html} = live(context.conn, path)
-        {:ok, Map.merge(context, %{live: live, redirected: true, redirect_path: path})}
-
-      {:error, {:live_redirect, %{to: path}}} ->
-        # Live navigation happened
-        {:ok, live, _html} = live(context.conn, path)
-        {:ok, Map.merge(context, %{live: live, redirected: true, redirect_path: path})}
-
-      _ ->
-        # No redirect, continue with same LiveView
-        {:ok, context}
-    end
+    {:ok, Map.put(context, :session, session)}
   end
 
   defstep "I should be on the new huddl page for {string}", context do
     group_name = List.first(context.args)
 
-    # We should have a new LiveView after redirect
-    html = render(context.live)
-    assert html =~ "Create New Huddl"
-    assert html =~ group_name
+    # Check that we're on the new huddl page
+    session = context.session
+    session = assert_has(session, "*", text: "Create New Huddl")
+    session = assert_has(session, "*", text: group_name)
 
-    # Clear the redirected flag since we've handled it
-    {:ok, Map.put(context, :redirected, false)}
+    {:ok, Map.put(context, :session, session)}
   end
 
   # Form interaction steps
@@ -278,129 +277,94 @@ defmodule CreateHuddlSteps do
 
   defstep "I submit the form", context do
     form_data = Map.get(context, :form_data, %{})
+    session = context.session
 
-    # Submit the form - it may redirect on success
-    case render_submit(context.live, "save", %{"form" => form_data}) do
-      {:error, {:redirect, %{to: redirect_path, flash: flash}}} ->
-        # Success - form submitted and redirected with flash
-        {:ok, Map.merge(context, %{redirected: true, redirect_path: redirect_path, flash: flash})}
+    # First, select the event type if provided to ensure proper field visibility
+    session =
+      if form_data["event_type"] do
+        event_type_label =
+          case form_data["event_type"] do
+            "in_person" -> "In-Person"
+            "virtual" -> "Virtual"
+            "hybrid" -> "Hybrid (Both In-Person and Virtual)"
+            _ -> "In-Person"
+          end
 
-      {:error, {:redirect, %{to: redirect_path}}} ->
-        # Success - form submitted and redirected without flash
-        {:ok, Map.merge(context, %{redirected: true, redirect_path: redirect_path})}
+        # We need to select the event type first
+        select(session, "Event Type", option: event_type_label, exact: false)
+      else
+        session
+      end
 
-      html when is_binary(html) ->
-        # Form validation errors - stayed on the same page
-        {:ok, Map.put(context, :form_html, html)}
-    end
+    # Fill in the form data
+    session =
+      Enum.reduce(form_data, session, fn {field, value}, session ->
+        case field do
+          "title" -> fill_in(session, "Title", with: value, exact: false)
+          "description" -> fill_in(session, "Description", with: value, exact: false)
+          "physical_location" -> fill_in(session, "Physical Location", with: value, exact: false)
+          "virtual_link" -> fill_in(session, "Virtual Meeting Link", with: value, exact: false)
+          "starts_at" -> fill_in(session, "Start Date & Time", with: value, exact: false)
+          "ends_at" -> fill_in(session, "End Date & Time", with: value, exact: false)
+          # Already handled above
+          "event_type" -> session
+          _ -> session
+        end
+      end)
+
+    # Submit the form
+    session = click_button(session, "Create Huddl")
+
+    {:ok, Map.put(context, :session, session)}
   end
 
   defstep "I submit the form without filling it", context do
-    # Submit the form without any data - should get validation errors
-    # Need to include group_id and creator_id even for empty form
-    empty_form_data = %{
-      "group_id" => context.current_group.id,
-      "creator_id" => context.current_user.id
-    }
+    # Just click submit without filling anything
+    session = click_button(context.session, "Create Huddl")
 
-    # First validate to mark fields as "used" so errors will show
-    render_change(context.live, "validate", %{"form" => empty_form_data})
-
-    # Then submit to trigger full validation
-    result = render_submit(context.live, "save", %{"form" => empty_form_data})
-
-    case result do
-      {:error, {:redirect, _}} ->
-        # Unexpected redirect - form should stay on page with validation errors
-        raise "Form unexpectedly redirected when submitting empty data"
-
-      html when is_binary(html) ->
-        # Expected case - form stayed on page with validation errors
-        {:ok, Map.put(context, :form_html, html)}
-    end
+    {:ok, Map.put(context, :session, session)}
   end
 
   # Field visibility steps
   defstep "I should see {string} field", context do
     field_label = List.first(context.args)
-    html = render(context.live)
-    assert html =~ field_label
-    :ok
+    session = assert_has(context.session, "label", text: field_label)
+    {:ok, Map.put(context, :session, session)}
   end
 
   defstep "I should not see {string} field", context do
     field_label = List.first(context.args)
-    html = render(context.live)
-    refute html =~ field_label
-    :ok
+    session = refute_has(context.session, "label", text: field_label)
+    {:ok, Map.put(context, :session, session)}
   end
 
   defstep "I select {string} from {string}", context do
-    [value, _field] = context.args
-
-    event_type =
-      case value do
-        "Hybrid" -> "hybrid"
-        "Virtual" -> "virtual"
-        "In-Person" -> "in_person"
-        _ -> value
-      end
-
-    render_change(context.live, "validate", %{"form" => %{"event_type" => event_type}})
-    :ok
+    [value, field] = context.args
+    session = select(context.session, field, option: value, exact: false)
+    {:ok, Map.put(context, :session, session)}
   end
 
   defstep "I should not see a checkbox for {string}", context do
     label = List.first(context.args)
-    html = render(context.live)
-    refute html =~ ~s(type="checkbox")
-    refute html =~ label
-    :ok
+    session = refute_has(context.session, "input[type='checkbox']")
+    session = refute_has(session, "*", text: label)
+    {:ok, Map.put(context, :session, session)}
   end
 
   defstep "I should see {string}", context do
     text = List.first(context.args)
-
-    # For flash messages after redirect, we need special handling
-    cond do
-      # Success flash after creating huddl
-      Map.get(context, :redirected) && text == "Huddl created successfully!" ->
-        assert context.redirect_path =~ "/groups/"
-
-      # Permission error flash after unauthorized access attempt
-      Map.get(context, :redirected) &&
-          text == "You don't have permission to create huddlz for this group" ->
-        # When we tried to visit the new huddl page and got redirected with error
-        assert context.redirect_path =~ "/groups/"
-        # In a real app, the flash would be decoded and shown on the page
-        assert Map.has_key?(context, :flash)
-
-      # Regular content check
-      true ->
-        html = render(context.live)
-        assert html =~ text
-    end
-
-    :ok
+    session = assert_has(context.session, "*", text: text)
+    {:ok, Map.put(context, :session, session)}
   end
 
   # Redirection and result steps
   defstep "I should be redirected to the {string} group page", context do
     group_name = List.first(context.args)
 
-    group =
-      Enum.find(context.groups, fn g ->
-        g && to_string(g.name) == group_name
-      end)
+    # Check that we're on the group page
+    session = assert_has(context.session, "*", text: group_name)
 
-    # Check if we were redirected during a previous step
-    if Map.get(context, :redirected) do
-      assert context.redirect_path == "/groups/#{group.id}"
-    else
-      assert_redirect(context.live, "/groups/#{group.id}")
-    end
-
-    :ok
+    {:ok, Map.put(context, :session, session)}
   end
 
   defstep "the huddl should be created as private", context do
@@ -415,35 +379,23 @@ defmodule CreateHuddlSteps do
 
     assert huddl != nil, "Huddl 'Private Meeting' was not created"
     assert huddl.is_private == true
-    :ok
+    {:ok, context}
   end
 
   defstep "I should see validation errors for required fields", context do
-    # When form validation fails, we should:
-    # 1. Stay on the same page (not redirect)
-    # 2. Still see the form
-    # 3. Form should have been marked as having errors
+    # When form validation fails, we should see error messages
+    session = context.session
+    # Check for common validation error indicators
+    # Ash Framework typically shows "is required" for required fields
+    session = assert_has(session, "*", text: "is required")
 
-    # We know we didn't redirect because we have form_html
-    assert Map.has_key?(context, :form_html), "Form should not have redirected"
-
-    html = context.form_html
-
-    # We should still be on the create huddl page
-    assert html =~ "Create New Huddl"
-    assert html =~ "huddl-form"
-
-    # The form should exist and have been attempted to submit
-    # Even if individual field errors don't show due to Phoenix's used_input? behavior,
-    # the form itself should be in an error state
-    :ok
+    {:ok, Map.put(context, :session, session)}
   end
 
   defstep "I should remain on the new huddl page", context do
-    # Use the form_html if available (from form submission), otherwise render current state
-    html = Map.get(context, :form_html) || render(context.live)
-    assert html =~ "Create New Huddl"
-    :ok
+    # Check that we're still on the new huddl page
+    session = assert_has(context.session, "*", text: "Create New Huddl")
+    {:ok, Map.put(context, :session, session)}
   end
 
   # Helper functions

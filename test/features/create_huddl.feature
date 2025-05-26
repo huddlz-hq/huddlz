@@ -60,7 +60,7 @@ Feature: Create Huddl
     When I visit the new huddl page for "Tech Meetup"
     Then I should see "Physical Location" field
     And I should not see "Virtual Meeting Link" field
-    When I select "Hybrid" from "Event Type"
+    When I select "Hybrid (Both In-Person and Virtual)" from "Event Type"
     Then I should see "Physical Location" field
     And I should see "Virtual Meeting Link" field
 
