@@ -130,21 +130,21 @@ defmodule HuddlzWeb.HuddlLiveTest do
       session =
         conn
         |> visit("/")
-      
+
       # Initially should see both huddlz
       session
       |> assert_has("h3", text: huddl1.title)
       |> assert_has("h3", text: huddl2.title)
-      
+
       # Search for "Elixir"
       session2 =
         session
         |> fill_in("Search huddlz", with: "Elixir")
-      
+
       session2
       |> assert_has("h3", text: huddl1.title)
       |> refute_has("h3", text: huddl2.title)
-      
+
       # Clear search
       session2
       |> fill_in("Search huddlz", with: "")
@@ -229,20 +229,20 @@ defmodule HuddlzWeb.HuddlLiveTest do
         )
 
       session = conn |> visit("/")
-      
+
       # Test each case variation
       session
       |> fill_in("Search huddlz", with: "elixir")
       |> assert_has("h3", text: "Elixir Programming Workshop")
-      
+
       session
       |> fill_in("Search huddlz", with: "ELIXIR")
       |> assert_has("h3", text: "Elixir Programming Workshop")
-      
+
       session
       |> fill_in("Search huddlz", with: "Elixir")
       |> assert_has("h3", text: "Elixir Programming Workshop")
-      
+
       session
       |> fill_in("Search huddlz", with: "eLiXiR")
       |> assert_has("h3", text: "Elixir Programming Workshop")
@@ -261,7 +261,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
         )
 
       session = conn |> visit("/")
-      
+
       # Test partial matches
       for query <- ["Eli", "Programming", "Work", "gram"] do
         session

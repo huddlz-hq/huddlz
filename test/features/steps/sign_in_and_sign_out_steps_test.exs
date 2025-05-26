@@ -14,7 +14,7 @@ defmodule SignInAndSignOutSteps do
 
     # Click the link using PhoenixTest
     session = context.session |> click_link(link_text)
-    
+
     {:ok, Map.put(context, :session, session)}
   end
 
@@ -27,19 +27,17 @@ defmodule SignInAndSignOutSteps do
   defstep "the user enters a registered email address for magic link authentication", context do
     {:ok, Map.put(context, :email, "registered@example.com")}
   end
-  
+
   # Step: And the user submits the sign in form
   defstep "the user submits the sign in form", context do
     # Fill in the email and submit
-    session = 
+    session =
       context.session
       |> fill_in("Email", with: context.email)
       |> click_button("Request magic link")
-    
+
     {:ok, Map.put(context, :session, session)}
   end
-
-
 
   # Step: Then the user receives a magic link email
   defstep "the user receives a magic link email", context do
@@ -50,7 +48,12 @@ defmodule SignInAndSignOutSteps do
   # Step: Then the user receives a confirmation message
   defstep "the user receives a confirmation message", context do
     # Check that we see the confirmation message
-    session = assert_has(context.session, "*", text: "If this user exists in our database, you will be contacted with a sign-in link shortly.")
+    session =
+      assert_has(context.session, "*",
+        text:
+          "If this user exists in our database, you will be contacted with a sign-in link shortly."
+      )
+
     {:ok, Map.put(context, :session, session)}
   end
 
@@ -78,7 +81,7 @@ defmodule SignInAndSignOutSteps do
   # Step: Then the user is signed in and sees a {string} link in the navbar
   defstep "the user is signed in and sees a {string} link in the navbar", context do
     link_text = List.first(context.args)
-    
+
     # Create a new connection with a session
     conn =
       build_conn()
@@ -88,7 +91,7 @@ defmodule SignInAndSignOutSteps do
 
     # Visit the homepage with this session
     session = conn |> visit("/")
-    
+
     # Check for the expected link
     session = assert_has(session, "a", text: link_text)
 
@@ -121,7 +124,12 @@ defmodule SignInAndSignOutSteps do
   defstep "the user sees a message indicating that a magic link was sent if the account exists",
           context do
     # Check that we see the standard security message
-    session = assert_has(context.session, "*", text: "If this user exists in our database, you will be contacted with a sign-in link shortly.")
+    session =
+      assert_has(context.session, "*",
+        text:
+          "If this user exists in our database, you will be contacted with a sign-in link shortly."
+      )
+
     {:ok, Map.put(context, :session, session)}
   end
 
@@ -129,7 +137,7 @@ defmodule SignInAndSignOutSteps do
   defstep "the user submits the sign in form without entering an email address", context do
     # Visit sign-in page if not already there
     session = context[:session] || context.conn |> visit("/sign-in")
-    
+
     # Try to submit with empty email
     session = click_button(session, "Request magic link")
 

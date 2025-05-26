@@ -4,6 +4,8 @@ defmodule CompleteSignupFlowSteps do
 
   import Swoosh.TestAssertions
 
+  alias Swoosh.Adapters.Local.Storage.Memory
+
   # Step: Given the user is on the home page
   defstep "the user is on the home page", %{conn: conn} do
     session = conn |> visit("/")
@@ -11,7 +13,8 @@ defmodule CompleteSignupFlowSteps do
   end
 
   # Step: When the user clicks the "Sign Up" link in the navbar
-  defstep "the user clicks the {string} link in the navbar", %{session: session, args: [link_text]} = context do
+  defstep "the user clicks the {string} link in the navbar",
+          %{session: session, args: [link_text]} = context do
     session = session |> click_link(link_text)
     {:ok, Map.put(context, :session, session)}
   end
@@ -30,15 +33,19 @@ defmodule CompleteSignupFlowSteps do
       session
       |> fill_in("Email", with: email)
       |> click_button("Request magic link")
-    
+
     {:ok, Map.put(context, :session, session)}
   end
 
   # Step: Then the user receives a confirmation message
   defstep "the user receives a confirmation message", %{session: session} = context do
     # Check for the specific confirmation message after requesting magic link
-    session = assert_has(session, "*", text: "If this user exists in our database, you will be contacted with a sign-in link shortly.")
-    
+    session =
+      assert_has(session, "*",
+        text:
+          "If this user exists in our database, you will be contacted with a sign-in link shortly."
+      )
+
     {:ok, Map.put(context, :session, session)}
   end
 
@@ -49,29 +56,32 @@ defmodule CompleteSignupFlowSteps do
     try do
       # Assert that an email was sent
       assert_email_sent(to: {nil, email})
-      
+
       # Get all emails to find ours
-      emails = Swoosh.Adapters.Local.Storage.Memory.all()
-      
+      emails = Memory.all()
+
       # Find the email sent to our user
-      email_struct = Enum.find(emails, fn e -> 
-        {nil, email} in e.to
-      end)
-      
+      email_struct =
+        Enum.find(emails, fn e ->
+          {nil, email} in e.to
+        end)
+
       if email_struct do
         # Extract the magic link from the email body
         body = email_struct.text_body || email_struct.html_body
-        
+
         # Extract the magic link URL from the body
         # Looking for a pattern like http://localhost:4000/auth/...
-        magic_link = 
+        magic_link =
           case Regex.run(~r{(https?://[^/]+/auth/[^\s"'<>]+)}, body) do
-            [_, url] -> url
-            _ -> 
+            [_, url] ->
+              url
+
+            _ ->
               # If no link found, that's OK - not all flows send links
               nil
           end
-        
+
         if magic_link do
           {:ok, Map.put(context, :magic_link, magic_link)}
         else
@@ -106,7 +116,7 @@ defmodule CompleteSignupFlowSteps do
     # The actual sign-in happens after the user is created in the database
     # Let's check if we're on a page that indicates we need to sign in again
     # or if we're already signed in
-    
+
     # Try to find evidence we're signed in by looking for elements only visible to signed-in users
     try do
       # Check for signed-in elements like "Sign Out" link

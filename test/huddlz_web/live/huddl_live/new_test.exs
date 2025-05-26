@@ -37,16 +37,17 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
     end
 
     test "owner can access huddl creation form", %{conn: conn, owner: owner, group: group} do
-      session = 
+      session =
         conn
         |> login(owner)
         |> visit(~p"/groups/#{group.id}/huddlz/new")
-      
+
       assert_has(session, "h1", text: "Create New Huddl")
       assert_has(session, "#huddl-form")
-      
+
       # The group name should be somewhere on the page
-      assert session.conn.resp_body =~ Phoenix.HTML.html_escape(to_string(group.name)) |> Phoenix.HTML.safe_to_string()
+      assert session.conn.resp_body =~
+               Phoenix.HTML.html_escape(to_string(group.name)) |> Phoenix.HTML.safe_to_string()
     end
 
     test "organizer can access huddl creation form", %{
@@ -54,16 +55,17 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       organizer: organizer,
       group: group
     } do
-      session = 
+      session =
         conn
         |> login(organizer)
         |> visit(~p"/groups/#{group.id}/huddlz/new")
-      
+
       assert_has(session, "h1", text: "Create New Huddl")
       assert_has(session, "#huddl-form")
-      
+
       # The group name should be somewhere on the page
-      assert session.conn.resp_body =~ Phoenix.HTML.html_escape(to_string(group.name)) |> Phoenix.HTML.safe_to_string()
+      assert session.conn.resp_body =~
+               Phoenix.HTML.html_escape(to_string(group.name)) |> Phoenix.HTML.safe_to_string()
     end
 
     test "regular member cannot access huddl creation form", %{
@@ -71,16 +73,17 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       member: member,
       group: group
     } do
-      session = 
+      session =
         conn
         |> login(member)
         |> visit(~p"/groups/#{group.id}/huddlz/new")
-      
+
       # Should redirect to group page
       assert_path(session, ~p"/groups/#{group.id}")
-      
+
       # Check flash message
-      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~ "You don't have permission to create huddlz for this group"
+      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~
+               "You don't have permission to create huddlz for this group"
     end
 
     test "non-member cannot access huddl creation form", %{
@@ -88,36 +91,37 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       non_member: non_member,
       group: group
     } do
-      session = 
+      session =
         conn
         |> login(non_member)
         |> visit(~p"/groups/#{group.id}/huddlz/new")
-      
+
       # Should redirect to group page
       assert_path(session, ~p"/groups/#{group.id}")
-      
+
       # Check flash message
-      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~ "You don't have permission to create huddlz for this group"
+      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~
+               "You don't have permission to create huddlz for this group"
     end
 
     test "redirects when group not found", %{conn: conn, owner: owner} do
-      session = 
+      session =
         conn
         |> login(owner)
         |> visit(~p"/groups/#{Ash.UUID.generate()}/huddlz/new")
-      
+
       # Should redirect to groups index
       assert_path(session, ~p"/groups")
-      
+
       # Check flash message
       assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~ "Group not found"
     end
 
     test "requires authentication", %{conn: conn, group: group} do
-      session = 
+      session =
         conn
         |> visit(~p"/groups/#{group.id}/huddlz/new")
-      
+
       # Should redirect to sign-in
       assert session.conn.request_path =~ "/sign-in"
     end
@@ -133,7 +137,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
     end
 
     test "shows all form fields", %{conn: conn, owner: owner, public_group: group} do
-      session = 
+      session =
         conn
         |> login(owner)
         |> visit(~p"/groups/#{group.id}/huddlz/new")
@@ -150,7 +154,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       owner: owner,
       public_group: group
     } do
-      session = 
+      session =
         conn
         |> login(owner)
         |> visit(~p"/groups/#{group.id}/huddlz/new")
@@ -164,7 +168,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       owner: owner,
       private_group: group
     } do
-      session = 
+      session =
         conn
         |> login(owner)
         |> visit(~p"/groups/#{group.id}/huddlz/new")
@@ -235,7 +239,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> NaiveDateTime.to_iso8601()
         |> String.slice(0..15)
 
-      session = 
+      session =
         conn
         |> login(owner)
         |> visit(~p"/groups/#{group.id}/huddlz/new")
@@ -279,7 +283,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> NaiveDateTime.to_iso8601()
         |> String.slice(0..15)
 
-      session = 
+      session =
         conn
         |> login(owner)
         |> visit(~p"/groups/#{private_group.id}/huddlz/new")
@@ -306,7 +310,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
     end
 
     test "shows validation errors", %{conn: conn, owner: owner, group: group} do
-      session = 
+      session =
         conn
         |> login(owner)
         |> visit(~p"/groups/#{group.id}/huddlz/new")
@@ -315,7 +319,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
 
       # Should still be on the same page
       assert_path(session, ~p"/groups/#{group.id}/huddlz/new")
-      
+
       # Should show validation error (checking for error class on input)
       assert_has(session, "input.input-error")
     end
@@ -323,12 +327,13 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
     test "validates form on change", %{conn: conn, owner: owner, group: group} do
       # PhoenixTest automatically triggers form validation on field changes
       # When we fill a field and then clear it, validation should show errors
-      session = 
+      session =
         conn
         |> login(owner)
         |> visit(~p"/groups/#{group.id}/huddlz/new")
         |> fill_in("Title", with: "Test Title")
-        |> fill_in("Title", with: "")  # Clear the field to trigger validation
+        # Clear the field to trigger validation
+        |> fill_in("Title", with: "")
 
       # Check for validation error class on the input
       assert_has(session, "input#form_title.input-error")
@@ -357,7 +362,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
     end
 
     test "shows create button for owner", %{conn: conn, owner: owner, group: group} do
-      session = 
+      session =
         conn
         |> login(owner)
         |> visit(~p"/groups/#{group.id}")
@@ -367,7 +372,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
     end
 
     test "shows create button for organizer", %{conn: conn, organizer: organizer, group: group} do
-      session = 
+      session =
         conn
         |> login(organizer)
         |> visit(~p"/groups/#{group.id}")
@@ -381,7 +386,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       member: member,
       group: group
     } do
-      session = 
+      session =
         conn
         |> login(member)
         |> visit(~p"/groups/#{group.id}")

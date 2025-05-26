@@ -82,27 +82,29 @@ defmodule HuddlListingSteps do
       session
       |> refute_has("p", text: "No huddlz found")
       |> assert_has("h1", text: "Find your huddl")
-    
+
     {:ok, Map.put(context, :session, session)}
   end
 
-  defstep "I should see basic information for each huddl", %{session: session, huddlz: huddlz} = context do
+  defstep "I should see basic information for each huddl",
+          %{session: session, huddlz: huddlz} = context do
     # Check that we can see at least one of the huddl titles
     huddl_titles = Enum.map(huddlz, & &1.title)
-    
+
     # With PhoenixTest, we need to check for specific elements
     # Let's verify at least one huddl title is present
-    found = Enum.any?(huddl_titles, fn title ->
-      try do
-        assert_has(session, "h3", text: title)
-        true
-      rescue
-        _ -> false
-      end
-    end)
-    
+    found =
+      Enum.any?(huddl_titles, fn title ->
+        try do
+          assert_has(session, "h3", text: title)
+          true
+        rescue
+          _ -> false
+        end
+      end)
+
     assert found, "Expected to find at least one huddl title"
-    
+
     {:ok, Map.put(context, :session, session)}
   end
 
@@ -111,11 +113,12 @@ defmodule HuddlListingSteps do
       session
       |> assert_has("input[placeholder='Search huddlz...']")
       |> assert_has("button", text: "Search")
-    
+
     {:ok, Map.put(context, :session, session)}
   end
 
-  defstep "I should see huddlz matching {string}", %{session: session, args: args, huddlz: huddlz} = context do
+  defstep "I should see huddlz matching {string}",
+          %{session: session, args: args, huddlz: huddlz} = context do
     search_term = List.first(args)
 
     # Should see the search term in the results (we created a huddl with "Elixir" in title)
@@ -130,9 +133,10 @@ defmodule HuddlListingSteps do
       # Just check a few
       |> Enum.take(3)
 
-    session = Enum.reduce(non_matching_titles, session, fn title, acc ->
-      refute_has(acc, "h3", text: title)
-    end)
+    session =
+      Enum.reduce(non_matching_titles, session, fn title, acc ->
+        refute_has(acc, "h3", text: title)
+      end)
 
     {:ok, Map.put(context, :session, session)}
   end
@@ -144,7 +148,7 @@ defmodule HuddlListingSteps do
       session
       |> assert_has("h1", text: "Find your huddl")
       |> refute_has("p", text: "No huddlz found")
-    
+
     {:ok, Map.put(context, :session, session)}
   end
 end

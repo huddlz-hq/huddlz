@@ -4,8 +4,8 @@ defmodule RsvpCancellationSteps do
 
   import Huddlz.Generator
   import Huddlz.Test.Helpers.Authentication
-  alias Huddlz.Communities.{Huddl, Group}
   alias Huddlz.Accounts.User
+  alias Huddlz.Communities.{Group, Huddl}
 
   require Ash.Query
 
@@ -96,9 +96,11 @@ defmodule RsvpCancellationSteps do
       |> Ash.read_one!(authorize?: false)
 
     starts_at = parse_relative_time(huddl_data["starts_at"])
-    ends_at = 
+
+    ends_at =
       case Map.get(huddl_data, "ends_at") do
-        nil -> DateTime.add(starts_at, 3600, :second)  # Default to 1 hour after start
+        # Default to 1 hour after start
+        nil -> DateTime.add(starts_at, 3600, :second)
         ends_at_str -> parse_relative_time(ends_at_str)
       end
 
@@ -132,7 +134,7 @@ defmodule RsvpCancellationSteps do
     conn =
       context.conn
       |> login(user)
-    
+
     session = conn |> visit("/")
 
     {:ok, Map.merge(context, %{conn: conn, session: session, current_user: user})}
@@ -153,28 +155,28 @@ defmodule RsvpCancellationSteps do
 
   defstep "I click on {string}", context do
     link_text = List.first(context.args)
-    
+
     session = click_link(context.session, link_text)
     {:ok, Map.put(context, :session, session)}
   end
 
   defstep "I should see {string}", context do
     text = List.first(context.args)
-    
+
     session = assert_has(context.session, "*", text: text)
     {:ok, Map.put(context, :session, session)}
   end
 
   defstep "I should not see {string}", context do
     text = List.first(context.args)
-    
+
     session = refute_has(context.session, "*", text: text)
     {:ok, Map.put(context, :session, session)}
   end
 
   defstep "I should be on the huddl page for {string}", context do
     huddl_title = List.first(context.args)
-    
+
     # Just verify we can see the huddl content - the navigation already happened
     session = assert_has(context.session, "*", text: huddl_title)
     {:ok, Map.put(context, :session, session)}

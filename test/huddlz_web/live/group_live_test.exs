@@ -89,9 +89,11 @@ defmodule HuddlzWeb.GroupLiveTest do
         conn
         |> login(regular)
         |> visit(~p"/groups/new")
-      
+
       assert_path(session, ~p"/groups")
-      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~ "You need to be a verified user to create groups"
+
+      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~
+               "You need to be a verified user to create groups"
     end
 
     test "creates group with valid data", %{conn: conn, verified: verified} do
@@ -104,7 +106,7 @@ defmodule HuddlzWeb.GroupLiveTest do
         |> fill_in("Location", with: "Test City")
         |> check("Public group (visible to everyone)")
         |> click_button("Create Group")
-      
+
       # Verify group was created
       group =
         Group
@@ -205,9 +207,11 @@ defmodule HuddlzWeb.GroupLiveTest do
         conn
         |> login(non_member)
         |> visit(~p"/groups/#{group.id}")
-      
+
       assert_path(session, ~p"/groups")
-      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~ "You don't have access to this private group"
+
+      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~
+               "You don't have access to this private group"
     end
 
     test "allows owner to view private group", %{
@@ -225,7 +229,7 @@ defmodule HuddlzWeb.GroupLiveTest do
 
     test "handles non-existent group", %{conn: conn} do
       session = conn |> visit(~p"/groups/#{Ash.UUID.generate()}")
-      
+
       assert_path(session, ~p"/groups")
       assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~ "Group not found"
     end

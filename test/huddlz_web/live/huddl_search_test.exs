@@ -178,9 +178,9 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> visit("/")
       |> fill_in("Search huddlz", with: "nonexistent")
       |> assert_has(
-           "p",
-           text: "No huddlz found matching your filters. Try adjusting your search criteria."
-         )
+        "p",
+        text: "No huddlz found matching your filters. Try adjusting your search criteria."
+      )
     end
   end
 

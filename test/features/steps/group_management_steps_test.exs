@@ -134,16 +134,16 @@ defmodule GroupManagementSteps do
 
   # Click actions
   defstep "I click {string}", %{args: [text]} = context do
-    session = 
+    session =
       try do
         # Try as a link first
         click_link(context.session, text)
       rescue
-        _ -> 
+        _ ->
           # Try as a button
           click_button(context.session, text)
       end
-    
+
     {:ok, Map.put(context, :session, session)}
   end
 

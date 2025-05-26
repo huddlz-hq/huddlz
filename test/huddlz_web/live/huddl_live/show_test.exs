@@ -266,7 +266,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
         |> Ash.create!()
 
       # Non-member should be redirected
-      session = 
+      session =
         conn
         |> login(non_member)
         |> visit(~p"/groups/#{private_group.id}/huddlz/#{private_huddl.id}")
@@ -421,5 +421,4 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
     })
     |> Ash.create!(authorize?: false)
   end
-
 end
