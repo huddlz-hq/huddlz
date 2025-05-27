@@ -8,7 +8,7 @@ defmodule CreateHuddlSteps do
 
   @tomorrow DateTime.utc_now() |> DateTime.add(1, :day)
 
-  # Background steps - users and groups
+  # Background steps
   defstep "the following users exist:", context do
     users =
       context.datatable.maps
