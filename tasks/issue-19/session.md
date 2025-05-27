@@ -127,3 +127,21 @@ Steps completed:
 6. ✅ All tests still pass (29 feature tests)
 
 The flash message pattern "I should see 'foobar' in the flash" has been implemented as requested, providing the standard way to check flash messages that was the key driver for this refactoring.
+
+Task 3 completed and committed.
+
+### Task 4: Refactor existing step files - Started 2025-05-26
+
+Now refactoring all step files to actually use the shared modules and remove duplicated code.
+
+**Working through compilation issues with cucumber 0.2.0's SharedSteps:**
+1. ✅ Created shared modules using Cucumber.SharedSteps 
+2. ✅ Fixed imports and compilation issues
+3. ✅ Discovered the shared steps work with `use` not `import`
+4. 🔄 COURSE CORRECTION: Cucumber.SharedSteps not working as documented
+   - The `use` macro from SharedSteps doesn't properly inject step definitions
+   - Reverted to keeping step definitions in each test file for now
+5. ✅ Restored all step definitions to create_huddl_steps_test.exs
+6. ✅ All 29 tests passing again
+
+The cucumber 0.2.0 SharedSteps feature appears to have issues. For now, we'll need to keep duplicated steps in each file.
