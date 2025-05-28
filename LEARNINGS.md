@@ -252,3 +252,20 @@ Migrated entire test suite from Phoenix.LiveViewTest/Phoenix.ConnTest to Phoenix
 - **Assertion Strategy**: Prefer `assert_has/refute_has` over raw HTML checks for cleaner, more maintainable tests
 
 See `tasks/issue-20/learnings.md` for full details including code examples and migration patterns.
+
+## Issue #26: Groups Should Have Slugs - 2025-05-28
+
+### Context
+Implemented human-readable URL slugs for groups, replacing UUID-based routes. Groups now use slugs like `/groups/phoenix-elixir-meetup` instead of `/groups/123e4567...`. Full unicode support via transliteration.
+
+### Key Learnings
+1. **Ash Migration Discipline**: NEVER manually edit Ash-generated migrations - it breaks snapshot tracking. For dev: delete data and regenerate. For production: use separate data migration scripts.
+2. **Unicode Excellence**: Slugify library handles international text beautifully - "北京用户组" → "bei-jing-yong-hu-zu", "Café München" → "cafe-munchen". Don't underestimate library capabilities.
+3. **Type Conversions**: Ash CiString must be converted to regular String for external libraries. Always check type compatibility at integration points.
+
+### Reusable Patterns
+- **Ash Change Modules**: Perfect for auto-generating derived attributes (like slugs from names)
+- **Seed Authorization**: Use `authorize?: false` for seed scripts that lack user context
+- **UI Without Libraries**: Project uses custom components - implement modals/forms with standard HTML
+
+See `tasks/issue-26/learnings.md` for full implementation details and code examples.
