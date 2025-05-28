@@ -34,7 +34,20 @@ This document captures key insights, patterns, and best practices discovered dur
   - In development: Delete data, regenerate clean migration
   - In production: Use separate data migration scripts
   - Manual edits break Ash's snapshot tracking system
+- **Ash Commands**: Use Ash-specific mix tasks instead of Ecto equivalents:
+  - `mix ash.reset` instead of `mix ecto.reset`
+  - `mix ash.setup` for initial setup
+  - `mix ash.codegen` to generate migrations
+  - `mix ash.migrate` to run migrations
+- **Change Modules**: Create custom change modules for complex attribute transformations:
+  - Example: GenerateSlug module for auto-generating URL slugs
+  - Handle type conversions (e.g., CiString to String) within change modules
+  - Change modules run during action execution, ensuring consistency
 - See `docs/ash_framework/resource_workflow.md` for the complete workflow guidance
+- **Seed Data Authorization**: Use `authorize?: false` when creating seed data:
+  - Seeds run without authenticated user context
+  - Pattern: `|> Ash.create(authorize?: false)`
+  - Only use in seed/setup scripts, never in production code
 
 ### Authentication
 - Use the DSL style for auth_overrides with `override` and `set` blocks
@@ -62,6 +75,21 @@ This document captures key insights, patterns, and best practices discovered dur
 - Leverage pattern matching for cleaner control flow instead of multiple conditionals
 - Use module attributes for configuration values that might change
 
+### UI Component Architecture
+- **No External Libraries**: Project uses custom components, not external UI libraries
+- **Component Location**: All reusable components in `core_components.ex`
+- **Form Handling**: Use raw `<form>` tags with Phoenix bindings:
+  - No `simple_form` helper - use standard form tags
+  - Form components use `Phoenix.HTML.FormField` for field management
+- **Modal Implementation**: Build modals with standard HTML/CSS:
+  - Use fixed positioning and z-index for overlay
+  - Click-away handling with `phx-click-away` or backdrop click events
+  - No modal component libraries needed
+- **Component Patterns**:
+  - Function components for stateless UI (e.g., `huddl_card`)
+  - Consistent prop naming with `attr` and `slot` declarations
+  - Use CSS classes from DaisyUI/Tailwind for styling
+
 ### Testing Strategies
 - Start with feature files using Gherkin syntax before writing implementation code
 - Focus on testing behavior, not implementation details
@@ -75,6 +103,18 @@ This document captures key insights, patterns, and best practices discovered dur
 - Structure Cucumber steps to be reusable across similar scenarios
 - Use generators for creating test data to avoid repetition
 - Separate UI testing from business logic testing
+- **Data Generation**:
+  - Centralize test data generation in `test/support/generator.ex`
+  - Reuse generators for both tests and seed data
+  - Use `StreamData` for randomization with control
+  - Use predictable test names (e.g., "Test Group 123") for stable slug generation
+  - Always provide an actor for Ash operations in generators
+  - Generate parent records first, then use IDs for relationships
+  - **Unicode Support**: Slugify properly handles unicode by transliterating to ASCII:
+    - "Café München" → "cafe-munchen"
+    - "北京用户组" → "bei-jing-yong-hu-zu" (Chinese to pinyin)
+    - "Москва Tech" → "moskva-tech" (Cyrillic to Latin)
+    - Random unicode from StreamData can produce unpredictable slugs, so use controlled test data
 - **Ash Testing Patterns**:
   - Always use `to_string()` when comparing CiString attributes in assertions
   - Use `authorize?: false` when testing data access patterns or queries
