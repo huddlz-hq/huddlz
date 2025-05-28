@@ -136,6 +136,17 @@ Based on user requirements and discussion:
 - `mix credo --strict` - zero issues
 - Ready to continue with routes/LiveView updates
 
+### Task 4: Update Routes and LiveViews ✅
+- Updated router to use `:slug` and `:group_slug` parameters
+- Updated GroupLive.Show to use `get_group_by_slug`
+- Updated GroupLive.Index links to use `group.slug`
+- Updated GroupLive.New redirect to use slug
+- Updated HuddlLive.New to handle `group_slug` parameter
+- Updated HuddlLive.Show to handle `group_slug` parameter
+- Fixed all internal navigation links to use slugs
+- Added `get_group_by_slug` helper functions where needed
+- Note: Tests are failing because they still use IDs - will fix after UI updates
+
 ### Design Decisions Made
 1. Use parameterized slug format (lowercase, hyphenated)
 2. Make slug a unique identity in Ash Framework

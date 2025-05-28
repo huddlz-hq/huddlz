@@ -16,8 +16,8 @@ defmodule HuddlzWeb.GroupLive.Show do
   end
 
   @impl true
-  def handle_params(%{"id" => id}, _, socket) do
-    with {:ok, group} <- get_group(id),
+  def handle_params(%{"slug" => slug}, _, socket) do
+    with {:ok, group} <- get_group_by_slug(slug),
          :ok <- check_group_access(group, socket.assigns.current_user) do
       members = get_members(group, socket.assigns.current_user)
 
@@ -71,7 +71,7 @@ defmodule HuddlzWeb.GroupLive.Show do
         <:actions>
           <%= if @current_user do %>
             <%= if @is_owner || @is_organizer do %>
-              <.link navigate={~p"/groups/#{@group.id}/huddlz/new"} class="btn btn-primary">
+              <.link navigate={~p"/groups/#{@group.slug}/huddlz/new"} class="btn btn-primary">
                 <.icon name="hero-plus" class="h-4 w-4" /> Create Huddl
               </.link>
             <% end %>
@@ -217,8 +217,12 @@ defmodule HuddlzWeb.GroupLive.Show do
     end
   end
 
-  defp get_group(id) do
-    case Ash.get(Group, id, load: [:owner], authorize?: false) do
+  defp get_group_by_slug(slug) do
+    case Group
+         |> Ash.Query.for_read(:get_by_slug, %{slug: slug})
+         |> Ash.Query.load(:owner)
+         |> Ash.read_one(authorize?: false) do
+      {:ok, nil} -> {:error, :not_found}
       {:ok, group} -> {:ok, group}
       {:error, _} -> {:error, :not_found}
     end

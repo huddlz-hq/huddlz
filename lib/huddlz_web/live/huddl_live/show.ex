@@ -15,8 +15,8 @@ defmodule HuddlzWeb.HuddlLive.Show do
   end
 
   @impl true
-  def handle_params(%{"group_id" => group_id, "id" => id}, _, socket) do
-    case get_huddl(id, group_id, socket.assigns.current_user) do
+  def handle_params(%{"group_slug" => group_slug, "id" => id}, _, socket) do
+    case get_huddl(id, group_slug, socket.assigns.current_user) do
       {:ok, huddl} ->
         has_rsvped = check_rsvp(huddl, socket.assigns.current_user)
 
@@ -30,7 +30,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
         {:noreply,
          socket
          |> put_flash(:error, "Huddl not found")
-         |> redirect(to: ~p"/groups/#{group_id}")}
+         |> redirect(to: ~p"/groups/#{group_slug}")}
 
       {:error, :not_authorized} ->
         {:noreply,
@@ -45,7 +45,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
     ~H"""
     <Layouts.app flash={@flash} current_user={@current_user}>
       <.link
-        navigate={~p"/groups/#{@huddl.group_id}"}
+        navigate={~p"/groups/#{@huddl.group.slug}"}
         class="text-sm font-semibold leading-6 hover:underline"
       >
         <.icon name="hero-arrow-left" class="h-3 w-3" /> Back to {@huddl.group.name}
@@ -169,7 +169,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
           <div class="mt-8">
             <h3>Group</h3>
-            <.link navigate={~p"/groups/#{@huddl.group_id}"} class="link link-primary">
+            <.link navigate={~p"/groups/#{@huddl.group.slug}"} class="link link-primary">
               {@huddl.group.name}
             </.link>
           </div>
@@ -233,14 +233,27 @@ defmodule HuddlzWeb.HuddlLive.Show do
     end
   end
 
-  defp get_huddl(id, group_id, user) do
-    case Huddl
-         |> Ash.Query.filter(id == ^id and group_id == ^group_id)
-         |> Ash.Query.load([:status, :visible_virtual_link, :group, :creator])
-         |> Ash.read_one(actor: user) do
+  defp get_huddl(id, group_slug, user) do
+    # First get the group by slug to get its ID
+    with {:ok, group} <- get_group_by_slug(group_slug) do
+      case Huddl
+           |> Ash.Query.filter(id == ^id and group_id == ^group.id)
+           |> Ash.Query.load([:status, :visible_virtual_link, :group, :creator])
+           |> Ash.read_one(actor: user) do
+        {:ok, nil} -> {:error, :not_found}
+        {:ok, huddl} -> {:ok, huddl}
+        {:error, _} -> {:error, :not_authorized}
+      end
+    end
+  end
+
+  defp get_group_by_slug(slug) do
+    case Huddlz.Communities.Group
+         |> Ash.Query.for_read(:get_by_slug, %{slug: slug})
+         |> Ash.read_one(authorize?: false) do
       {:ok, nil} -> {:error, :not_found}
-      {:ok, huddl} -> {:ok, huddl}
-      {:error, _} -> {:error, :not_authorized}
+      {:ok, group} -> {:ok, group}
+      {:error, _} -> {:error, :not_found}
     end
   end
 

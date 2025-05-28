@@ -53,7 +53,7 @@ defmodule HuddlzWeb.GroupLive.New do
         {:noreply,
          socket
          |> put_flash(:info, "Group created successfully")
-         |> redirect(to: ~p"/groups/#{group.id}")}
+         |> redirect(to: ~p"/groups/#{group.slug}")}
 
       {:error, form} ->
         {:noreply, assign(socket, :form, to_form(form))}
