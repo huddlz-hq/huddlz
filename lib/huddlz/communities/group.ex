@@ -19,9 +19,10 @@ defmodule Huddlz.Communities.Group do
 
     create :create_group do
       description "Create a new group"
-      accept [:name, :description, :location, :image_url, :is_public, :owner_id]
+      accept [:name, :description, :location, :image_url, :is_public, :owner_id, :slug]
 
       change Huddlz.Communities.Group.Changes.AddOwnerAsMember
+      change Huddlz.Communities.Group.Changes.GenerateSlug
     end
 
     read :search do
@@ -44,9 +45,20 @@ defmodule Huddlz.Communities.Group do
       filter expr(owner_id == ^arg(:owner_id))
     end
 
+    read :get_by_slug do
+      description "Get a group by its slug"
+
+      argument :slug, :string do
+        allow_nil? false
+      end
+
+      get? true
+      filter expr(slug == ^arg(:slug))
+    end
+
     update :update_details do
       description "Update group details"
-      accept [:name, :description, :location, :image_url, :is_public]
+      accept [:name, :description, :location, :image_url, :is_public, :slug]
     end
   end
 
@@ -102,6 +114,11 @@ defmodule Huddlz.Communities.Group do
       default true
     end
 
+    attribute :slug, :string do
+      allow_nil? false
+      public? true
+    end
+
     create_timestamp :created_at
     update_timestamp :updated_at
   end
@@ -126,5 +143,6 @@ defmodule Huddlz.Communities.Group do
 
   identities do
     identity :unique_name, [:name]
+    identity :unique_slug, [:slug]
   end
 end
