@@ -18,216 +18,296 @@ alias Huddlz.Communities.{Group, GroupMember, Huddl}
 
 if Enum.empty?(existing_groups) do
   IO.puts("Creating sample data...")
-  
+
   # Create admin user
-  {:ok, admin} = User
+  {:ok, admin} =
+    User
     |> Ash.Changeset.for_create(:create, %{
       email: "admin@example.com",
       role: :admin,
       display_name: "Admin User"
     })
     |> Ash.create(authorize?: false)
+
   IO.puts("Created admin user: #{admin.email}")
-  
+
   # Create some verified users
-  users = [
-    User
+  users =
+    [
+      User
       |> Ash.Changeset.for_create(:create, %{
         email: "alice@example.com",
         role: :verified,
         display_name: "Alice Johnson"
       })
       |> Ash.create(authorize?: false),
-    User
+      User
       |> Ash.Changeset.for_create(:create, %{
         email: "bob@example.com",
         role: :verified,
         display_name: "Bob Smith"
       })
       |> Ash.create(authorize?: false),
-    User
+      User
       |> Ash.Changeset.for_create(:create, %{
         email: "carol@example.com",
         role: :verified,
         display_name: "Carol Davis"
       })
       |> Ash.create(authorize?: false),
-    User
+      User
       |> Ash.Changeset.for_create(:create, %{
         email: "dave@example.com",
         role: :regular,
         display_name: "Dave Wilson"
       })
       |> Ash.create(authorize?: false),
-    User
+      User
       |> Ash.Changeset.for_create(:create, %{
         email: "eve@example.com",
         role: :regular,
         display_name: "Eve Brown"
       })
       |> Ash.create(authorize?: false)
-  ] |> Enum.map(fn {:ok, user} -> user end)
-  
+    ]
+    |> Enum.map(fn {:ok, user} -> user end)
+
   IO.puts("Created #{length(users)} sample users")
-  
+
   # Create some groups with meaningful names
   # Using Ash changesets directly to ensure slug generation works properly
   alice = Enum.at(users, 0)
   bob = Enum.at(users, 1)
   carol = Enum.at(users, 2)
-  
-  groups = [
-    Group
-      |> Ash.Changeset.for_create(:create_group, %{
-        name: "Phoenix Elixir Meetup",
-        description: "A group for Elixir enthusiasts in the Phoenix area. We meet monthly to discuss Elixir, Phoenix, LiveView, and more!",
-        location: "Phoenix, AZ",
-        is_public: true,
-        owner_id: alice.id
-      }, actor: alice)
+
+  groups =
+    [
+      Group
+      |> Ash.Changeset.for_create(
+        :create_group,
+        %{
+          name: "Phoenix Elixir Meetup",
+          description:
+            "A group for Elixir enthusiasts in the Phoenix area. We meet monthly to discuss Elixir, Phoenix, LiveView, and more!",
+          location: "Phoenix, AZ",
+          is_public: true,
+          owner_id: alice.id
+        },
+        actor: alice
+      )
       |> Ash.create(),
-    Group
-      |> Ash.Changeset.for_create(:create_group, %{
-        name: "Book Club Central",
-        description: "Join us for our weekly book discussions. We read everything from fiction to technical books.",
-        location: "Online",
-        is_public: true,
-        owner_id: bob.id
-      }, actor: bob)
+      Group
+      |> Ash.Changeset.for_create(
+        :create_group,
+        %{
+          name: "Book Club Central",
+          description:
+            "Join us for our weekly book discussions. We read everything from fiction to technical books.",
+          location: "Online",
+          is_public: true,
+          owner_id: bob.id
+        },
+        actor: bob
+      )
       |> Ash.create(),
-    Group
-      |> Ash.Changeset.for_create(:create_group, %{
-        name: "Hiking Adventures",
-        description: "Weekend hiking trips for all skill levels. Safety first, adventure always!",
-        location: "Various Trails",
-        is_public: true,
-        owner_id: carol.id
-      }, actor: carol)
+      Group
+      |> Ash.Changeset.for_create(
+        :create_group,
+        %{
+          name: "Hiking Adventures",
+          description:
+            "Weekend hiking trips for all skill levels. Safety first, adventure always!",
+          location: "Various Trails",
+          is_public: true,
+          owner_id: carol.id
+        },
+        actor: carol
+      )
       |> Ash.create(),
-    Group
-      |> Ash.Changeset.for_create(:create_group, %{
-        name: "Private Tech Talks",
-        description: "Exclusive tech talks for members only.",
-        location: "Tech Hub",
-        is_public: false,
-        owner_id: admin.id
-      }, actor: admin)
+      Group
+      |> Ash.Changeset.for_create(
+        :create_group,
+        %{
+          name: "Private Tech Talks",
+          description: "Exclusive tech talks for members only.",
+          location: "Tech Hub",
+          is_public: false,
+          owner_id: admin.id
+        },
+        actor: admin
+      )
       |> Ash.create()
-  ] |> Enum.map(fn {:ok, group} -> group end)
-  
+    ]
+    |> Enum.map(fn {:ok, group} -> group end)
+
   IO.puts("Created #{length(groups)} groups")
-  
+
   # Add some members to groups
   # Add users to Phoenix Elixir Meetup
   phoenix_group = Enum.at(groups, 0)
   dave = Enum.at(users, 3)
   eve = Enum.at(users, 4)
-  
-  {:ok, _} = GroupMember
-    |> Ash.Changeset.for_create(:add_member, %{
-      group_id: phoenix_group.id,
-      user_id: bob.id,
-      role: :organizer
-    }, actor: alice)
+
+  {:ok, _} =
+    GroupMember
+    |> Ash.Changeset.for_create(
+      :add_member,
+      %{
+        group_id: phoenix_group.id,
+        user_id: bob.id,
+        role: :organizer
+      },
+      actor: alice
+    )
     |> Ash.create()
-    
-  {:ok, _} = GroupMember
-    |> Ash.Changeset.for_create(:add_member, %{
-      group_id: phoenix_group.id,
-      user_id: carol.id,
-      role: :member
-    }, actor: alice)
+
+  {:ok, _} =
+    GroupMember
+    |> Ash.Changeset.for_create(
+      :add_member,
+      %{
+        group_id: phoenix_group.id,
+        user_id: carol.id,
+        role: :member
+      },
+      actor: alice
+    )
     |> Ash.create()
-    
-  {:ok, _} = GroupMember
-    |> Ash.Changeset.for_create(:add_member, %{
-      group_id: phoenix_group.id,
-      user_id: dave.id,
-      role: :member
-    }, actor: alice)
+
+  {:ok, _} =
+    GroupMember
+    |> Ash.Changeset.for_create(
+      :add_member,
+      %{
+        group_id: phoenix_group.id,
+        user_id: dave.id,
+        role: :member
+      },
+      actor: alice
+    )
     |> Ash.create()
-  
+
   # Add users to Book Club
   book_group = Enum.at(groups, 1)
-  {:ok, _} = GroupMember
-    |> Ash.Changeset.for_create(:add_member, %{
-      group_id: book_group.id,
-      user_id: alice.id,
-      role: :member
-    }, actor: bob)
+
+  {:ok, _} =
+    GroupMember
+    |> Ash.Changeset.for_create(
+      :add_member,
+      %{
+        group_id: book_group.id,
+        user_id: alice.id,
+        role: :member
+      },
+      actor: bob
+    )
     |> Ash.create()
-    
-  {:ok, _} = GroupMember
-    |> Ash.Changeset.for_create(:add_member, %{
-      group_id: book_group.id,
-      user_id: eve.id,
-      role: :member
-    }, actor: bob)
+
+  {:ok, _} =
+    GroupMember
+    |> Ash.Changeset.for_create(
+      :add_member,
+      %{
+        group_id: book_group.id,
+        user_id: eve.id,
+        role: :member
+      },
+      actor: bob
+    )
     |> Ash.create()
-  
+
   IO.puts("Added members to groups")
-  
+
   # Create some huddlz with meaningful titles
   hiking_group = Enum.at(groups, 2)
-  
-  huddlz = [
-    # Phoenix Elixir Meetup huddlz
-    Huddl
-      |> Ash.Changeset.for_create(:create, %{
-        title: "Introduction to LiveView Components",
-        description: "Learn how to build reusable LiveView components. We'll cover function components, live components, and when to use each.",
-        event_type: :hybrid,
-        starts_at: DateTime.add(DateTime.utc_now(), 7, :day) |> DateTime.truncate(:second),
-        ends_at: DateTime.add(DateTime.utc_now(), 7 * 24 * 3600 + 2 * 3600, :second) |> DateTime.truncate(:second),
-        physical_location: "TechHub Phoenix, 123 Main St",
-        virtual_link: "https://zoom.us/j/123456789",
-        group_id: phoenix_group.id,
-        creator_id: alice.id
-      }, actor: alice)
+
+  huddlz =
+    [
+      # Phoenix Elixir Meetup huddlz
+      Huddl
+      |> Ash.Changeset.for_create(
+        :create,
+        %{
+          title: "Introduction to LiveView Components",
+          description:
+            "Learn how to build reusable LiveView components. We'll cover function components, live components, and when to use each.",
+          event_type: :hybrid,
+          starts_at: DateTime.add(DateTime.utc_now(), 7, :day) |> DateTime.truncate(:second),
+          ends_at:
+            DateTime.add(DateTime.utc_now(), 7 * 24 * 3600 + 2 * 3600, :second)
+            |> DateTime.truncate(:second),
+          physical_location: "TechHub Phoenix, 123 Main St",
+          virtual_link: "https://zoom.us/j/123456789",
+          group_id: phoenix_group.id,
+          creator_id: alice.id
+        },
+        actor: alice
+      )
       |> Ash.create(),
-      
-    Huddl
-      |> Ash.Changeset.for_create(:create, %{
-        title: "Debugging Elixir Applications",
-        description: "Deep dive into debugging techniques for Elixir apps. Bring your toughest bugs!",
-        event_type: :virtual,
-        starts_at: DateTime.add(DateTime.utc_now(), 14, :day) |> DateTime.truncate(:second),
-        ends_at: DateTime.add(DateTime.utc_now(), 14 * 24 * 3600 + 3600, :second) |> DateTime.truncate(:second),
-        virtual_link: "https://meet.google.com/abc-defg-hij",
-        group_id: phoenix_group.id,
-        creator_id: bob.id
-      }, actor: bob)
+      Huddl
+      |> Ash.Changeset.for_create(
+        :create,
+        %{
+          title: "Debugging Elixir Applications",
+          description:
+            "Deep dive into debugging techniques for Elixir apps. Bring your toughest bugs!",
+          event_type: :virtual,
+          starts_at: DateTime.add(DateTime.utc_now(), 14, :day) |> DateTime.truncate(:second),
+          ends_at:
+            DateTime.add(DateTime.utc_now(), 14 * 24 * 3600 + 3600, :second)
+            |> DateTime.truncate(:second),
+          virtual_link: "https://meet.google.com/abc-defg-hij",
+          group_id: phoenix_group.id,
+          creator_id: bob.id
+        },
+        actor: bob
+      )
       |> Ash.create(),
-    
-    # Book Club huddlz
-    Huddl
-      |> Ash.Changeset.for_create(:create, %{
-        title: "Discussing 'The Phoenix Project'",
-        description: "This month we're reading 'The Phoenix Project'. Join us to discuss DevOps culture and lessons learned.",
-        event_type: :in_person,
-        starts_at: DateTime.add(DateTime.utc_now(), 5, :day) |> DateTime.truncate(:second),
-        ends_at: DateTime.add(DateTime.utc_now(), 5 * 24 * 3600 + 2 * 3600, :second) |> DateTime.truncate(:second),
-        physical_location: "Central Library, Meeting Room A",
-        group_id: book_group.id,
-        creator_id: bob.id
-      }, actor: bob)
+
+      # Book Club huddlz
+      Huddl
+      |> Ash.Changeset.for_create(
+        :create,
+        %{
+          title: "Discussing 'The Phoenix Project'",
+          description:
+            "This month we're reading 'The Phoenix Project'. Join us to discuss DevOps culture and lessons learned.",
+          event_type: :in_person,
+          starts_at: DateTime.add(DateTime.utc_now(), 5, :day) |> DateTime.truncate(:second),
+          ends_at:
+            DateTime.add(DateTime.utc_now(), 5 * 24 * 3600 + 2 * 3600, :second)
+            |> DateTime.truncate(:second),
+          physical_location: "Central Library, Meeting Room A",
+          group_id: book_group.id,
+          creator_id: bob.id
+        },
+        actor: bob
+      )
       |> Ash.create(),
-    
-    # Hiking Adventures huddlz
-    Huddl
-      |> Ash.Changeset.for_create(:create, %{
-        title: "Sunrise Hike at Camelback Mountain",
-        description: "Early morning hike to catch the sunrise. Moderate difficulty, bring water and snacks!",
-        event_type: :in_person,
-        starts_at: DateTime.add(DateTime.utc_now(), 3, :day) |> DateTime.truncate(:second),
-        ends_at: DateTime.add(DateTime.utc_now(), 3 * 24 * 3600 + 4 * 3600, :second) |> DateTime.truncate(:second),
-        physical_location: "Camelback Mountain Trailhead",
-        group_id: hiking_group.id,
-        creator_id: carol.id
-      }, actor: carol)
+
+      # Hiking Adventures huddlz
+      Huddl
+      |> Ash.Changeset.for_create(
+        :create,
+        %{
+          title: "Sunrise Hike at Camelback Mountain",
+          description:
+            "Early morning hike to catch the sunrise. Moderate difficulty, bring water and snacks!",
+          event_type: :in_person,
+          starts_at: DateTime.add(DateTime.utc_now(), 3, :day) |> DateTime.truncate(:second),
+          ends_at:
+            DateTime.add(DateTime.utc_now(), 3 * 24 * 3600 + 4 * 3600, :second)
+            |> DateTime.truncate(:second),
+          physical_location: "Camelback Mountain Trailhead",
+          group_id: hiking_group.id,
+          creator_id: carol.id
+        },
+        actor: carol
+      )
       |> Ash.create()
-  ] |> Enum.map(fn {:ok, huddl} -> huddl end)
-  
+    ]
+    |> Enum.map(fn {:ok, huddl} -> huddl end)
+
   IO.puts("Created #{length(huddlz)} huddlz")
   IO.puts("\nSeed data created successfully!")
   IO.puts("\nYou can log in with:")
