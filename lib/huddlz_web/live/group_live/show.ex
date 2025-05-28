@@ -12,7 +12,11 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, socket}
+    {:ok,
+     socket
+     |> assign(:show_edit_modal, false)
+     |> assign(:edit_form, nil)
+     |> assign(:slug_changed, false)}
   end
 
   @impl true
@@ -70,6 +74,12 @@ defmodule HuddlzWeb.GroupLive.Show do
         </:subtitle>
         <:actions>
           <%= if @current_user do %>
+            <%= if @is_owner do %>
+              <.button phx-click="open_edit_modal" class="btn btn-ghost">
+                <.icon name="hero-pencil" class="h-4 w-4" /> Edit Group
+              </.button>
+            <% end %>
+
             <%= if @is_owner || @is_organizer do %>
               <.link navigate={~p"/groups/#{@group.slug}/huddlz/new"} class="btn btn-primary">
                 <.icon name="hero-plus" class="h-4 w-4" /> Create Huddl
@@ -176,6 +186,85 @@ defmodule HuddlzWeb.GroupLive.Show do
           </div>
         </div>
       </div>
+
+      <%= if @show_edit_modal do %>
+        <div id="edit-group-modal" class="fixed inset-0 z-50 overflow-y-auto">
+          <div class="flex min-h-screen items-center justify-center p-4">
+            <div
+              class="fixed inset-0 bg-black/50 transition-opacity"
+              aria-hidden="true"
+              phx-click="close_edit_modal"
+            >
+            </div>
+
+            <div class="relative mx-auto w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
+              <.header>
+                Edit Group
+                <:subtitle>Update your group details</:subtitle>
+              </.header>
+
+              <form
+                id="edit-group-form"
+                phx-submit="update_group"
+                phx-change="validate_edit"
+                class="space-y-6 mt-6"
+              >
+                <.input field={@edit_form[:name]} type="text" label="Group Name" />
+                <.input field={@edit_form[:slug]} type="text" label="URL Slug" />
+                <%= if @slug_changed do %>
+                  <div class="rounded-md bg-yellow-50 p-4 mt-2">
+                    <div class="flex">
+                      <div class="flex-shrink-0">
+                        <.icon name="hero-exclamation-triangle" class="h-5 w-5 text-yellow-400" />
+                      </div>
+                      <div class="ml-3">
+                        <h3 class="text-sm font-medium text-yellow-800">
+                          Warning: URL Change
+                        </h3>
+                        <div class="mt-2 text-sm text-yellow-700">
+                          <p>Changing the slug will break existing links to this group.</p>
+                          <p class="mt-1">
+                            Old URL: <span class="font-mono">/groups/{@group.slug}</span>
+                          </p>
+                          <p>
+                            New URL: <span class="font-mono">/groups/{@edit_form[:slug].value}</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                <% end %>
+                <.input field={@edit_form[:description]} type="textarea" label="Description" />
+                <.input field={@edit_form[:location]} type="text" label="Location" />
+                <.input field={@edit_form[:image_url]} type="text" label="Image URL" />
+
+                <div>
+                  <label class="block text-sm font-medium mb-2">Privacy</label>
+                  <label class="flex items-center gap-3">
+                    <input type="hidden" name={@edit_form[:is_public].name} value="false" />
+                    <input
+                      type="checkbox"
+                      name={@edit_form[:is_public].name}
+                      id={@edit_form[:is_public].id}
+                      value="true"
+                      checked={@edit_form[:is_public].value == true}
+                      class="checkbox"
+                    />
+                    <span>Public group (visible to everyone)</span>
+                  </label>
+                </div>
+
+                <div class="flex gap-4 mt-6">
+                  <.button type="submit" phx-disable-with="Saving...">Save Changes</.button>
+                  <.button type="button" phx-click="close_edit_modal" class="btn-ghost">
+                    Cancel
+                  </.button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      <% end %>
     </Layouts.app>
     """
   end
@@ -214,6 +303,76 @@ defmodule HuddlzWeb.GroupLive.Show do
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to leave group")}
+    end
+  end
+
+  def handle_event("open_edit_modal", _, socket) do
+    form =
+      AshPhoenix.Form.for_update(socket.assigns.group, :update_details,
+        actor: socket.assigns.current_user,
+        forms: [auto?: true]
+      )
+      |> to_form()
+
+    {:noreply,
+     socket
+     |> assign(:show_edit_modal, true)
+     |> assign(:edit_form, form)
+     |> assign(:slug_changed, false)}
+  end
+
+  def handle_event("close_edit_modal", _, socket) do
+    {:noreply,
+     socket
+     |> assign(:show_edit_modal, false)
+     |> assign(:edit_form, nil)
+     |> assign(:slug_changed, false)}
+  end
+
+  def handle_event("validate_edit", %{"form" => params}, socket) do
+    form =
+      socket.assigns.edit_form.source
+      |> AshPhoenix.Form.validate(params)
+      |> to_form()
+
+    slug_changed = params["slug"] != socket.assigns.group.slug
+
+    {:noreply,
+     socket
+     |> assign(:edit_form, form)
+     |> assign(:slug_changed, slug_changed)}
+  end
+
+  def handle_event("update_group", %{"form" => params}, socket) do
+    case socket.assigns.group
+         |> Ash.Changeset.for_update(:update_details, params, actor: socket.assigns.current_user)
+         |> Ash.update() do
+      {:ok, updated_group} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Group updated successfully")
+         |> assign(:group, updated_group)
+         |> assign(:show_edit_modal, false)
+         |> assign(:edit_form, nil)
+         |> assign(:slug_changed, false)
+         |> then(fn s ->
+           if updated_group.slug != socket.assigns.group.slug do
+             push_navigate(s, to: ~p"/groups/#{updated_group.slug}")
+           else
+             s
+           end
+         end)}
+
+      {:error, changeset} ->
+        form =
+          AshPhoenix.Form.for_update(socket.assigns.group, :update_details,
+            errors: changeset.errors,
+            actor: socket.assigns.current_user,
+            forms: [auto?: true]
+          )
+          |> to_form()
+
+        {:noreply, assign(socket, :edit_form, form)}
     end
   end
 
@@ -329,7 +488,7 @@ defmodule HuddlzWeb.GroupLive.Show do
     |> Ash.Query.filter(group_id == ^group.id)
     |> Ash.Query.filter(starts_at > ^DateTime.utc_now())
     |> Ash.Query.sort(starts_at: :asc)
-    |> Ash.Query.load([:status, :visible_virtual_link])
+    |> Ash.Query.load([:status, :visible_virtual_link, :group])
     |> Ash.read!(actor: user)
   end
 end

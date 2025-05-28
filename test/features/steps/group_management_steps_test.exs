@@ -93,7 +93,7 @@ defmodule GroupManagementSteps do
     groups = Map.get(context, :groups, [])
     group = Enum.find(groups, fn g -> g.name |> to_string() == group_name end)
 
-    session = (context[:session] || context.conn) |> visit("/groups/#{group.id}")
+    session = (context[:session] || context.conn) |> visit("/groups/#{group.slug}")
     {:ok, Map.put(context, :session, session)}
   end
 

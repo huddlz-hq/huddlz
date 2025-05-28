@@ -39,6 +39,37 @@ defmodule HuddlzWeb.GroupLive.New do
   end
 
   @impl true
+  def handle_event("update_slug", %{"value" => name}, socket) do
+    # Only update slug if it hasn't been manually edited
+    current_form = socket.assigns.form
+
+    # Check if slug was manually edited by comparing with auto-generated version
+    current_slug = current_form[:slug].value || ""
+    auto_slug = Slug.slugify(name || "")
+
+    if current_slug == "" || current_slug == Slug.slugify(current_form[:name].value || "") do
+      # Slug is empty or matches auto-generated from previous name, so update it
+      params = %{
+        "name" => name,
+        "slug" => auto_slug,
+        "description" => current_form[:description].value,
+        "location" => current_form[:location].value,
+        "image_url" => current_form[:image_url].value,
+        "is_public" => to_string(current_form[:is_public].value)
+      }
+
+      form =
+        socket.assigns.form.source
+        |> AshPhoenix.Form.validate(params)
+
+      {:noreply, assign(socket, :form, to_form(form))}
+    else
+      # Slug was manually edited, don't update it
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
   def handle_event("save", params, socket) do
     # Extract form params, handling both wrapped and unwrapped formats
     form_params = Map.get(params, "form", params)
@@ -70,7 +101,24 @@ defmodule HuddlzWeb.GroupLive.New do
       </.header>
 
       <form id="group-form" phx-change="validate" phx-submit="save" class="space-y-6">
-        <.input field={@form[:name]} type="text" label="Group Name" required />
+        <.input field={@form[:name]} type="text" label="Group Name" required phx-keyup="update_slug" />
+
+        <div>
+          <.input
+            field={@form[:slug]}
+            type="text"
+            label="URL Slug"
+            placeholder="my-group-name"
+            pattern="[a-z0-9-]+"
+            title="Only lowercase letters, numbers, and hyphens allowed"
+            required
+          />
+          <p class="text-sm text-gray-600 mt-1">
+            Your group will be available at:
+            <span class="font-mono">/groups/{@form[:slug].value || "..."}</span>
+          </p>
+        </div>
+
         <.input field={@form[:description]} type="textarea" label="Description" />
         <.input field={@form[:location]} type="text" label="Location" />
         <.input field={@form[:image_url]} type="text" label="Image URL" />

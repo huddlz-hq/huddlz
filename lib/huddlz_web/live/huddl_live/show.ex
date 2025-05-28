@@ -192,7 +192,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
         {:ok, huddl} =
           get_huddl(
             socket.assigns.huddl.id,
-            socket.assigns.huddl.group_id,
+            socket.assigns.huddl.group.slug,
             socket.assigns.current_user
           )
 
@@ -215,7 +215,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
         {:ok, huddl} =
           get_huddl(
             socket.assigns.huddl.id,
-            socket.assigns.huddl.group_id,
+            socket.assigns.huddl.group.slug,
             socket.assigns.current_user
           )
 

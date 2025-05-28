@@ -73,7 +73,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
     test "displays huddl details", %{conn: conn, group: group, huddl: huddl} do
       conn
-      |> visit(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
       |> assert_has("h1", text: huddl.title)
       |> assert_has("p", text: huddl.description)
       |> assert_has("span", text: "Virtual")
@@ -88,7 +88,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
     } do
       conn
       |> login(member)
-      |> visit(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
       |> assert_has("button", text: "RSVP to this huddl")
       |> refute_has("div.text-success", text: "You're attending!")
       # Click RSVP button
@@ -108,7 +108,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
     } do
       conn
       |> login(member)
-      |> visit(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
       # Before RSVP, virtual link is not visible
       |> assert_has("span", text: "Virtual link available after RSVP")
       |> refute_has("a", text: "Join virtually")
@@ -127,7 +127,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       conn
       |> login(member)
-      |> visit(~p"/groups/#{group.id}/huddlz/#{updated_huddl.id}")
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{updated_huddl.id}")
       # Should already show as attending
       |> assert_has("div.text-success", text: "You're attending!")
       |> refute_has("button", text: "RSVP to this huddl")
@@ -148,7 +148,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       conn
       |> login(member)
-      |> visit(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
       |> assert_has("p", text: "1 person attending")
       # Member RSVPs
       |> click_button("RSVP to this huddl")
@@ -161,7 +161,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       huddl: huddl
     } do
       conn
-      |> visit(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
       |> assert_has("span", text: "Sign in and RSVP to get virtual link")
       |> refute_has("button", text: "RSVP to this huddl")
     end
@@ -189,7 +189,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       conn
       |> login(owner)
-      |> visit(~p"/groups/#{group.id}/huddlz/#{in_person_huddl.id}")
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{in_person_huddl.id}")
       |> assert_has("dd", text: "123 Main St, City")
       |> refute_has("dt", text: "Virtual Access")
 
@@ -216,7 +216,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       conn
       |> login(owner)
-      |> visit(~p"/groups/#{group.id}/huddlz/#{hybrid_huddl.id}")
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{hybrid_huddl.id}")
       |> assert_has("dd", text: "Conference Room A")
       |> assert_has("dt", text: "Virtual Access")
       |> assert_has("span", text: "Virtual link available after RSVP")
@@ -269,7 +269,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       session =
         conn
         |> login(non_member)
-        |> visit(~p"/groups/#{private_group.id}/huddlz/#{private_huddl.id}")
+        |> visit(~p"/groups/#{private_group.slug}/huddlz/#{private_huddl.id}")
 
       # Should redirect to the groups list when huddl is not found (due to authorization)
       assert_path(session, ~p"/groups")
@@ -288,7 +288,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       conn
       |> login(member)
-      |> visit(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
       # Should show Cancel RSVP button instead of RSVP button
       |> assert_has("button", text: "Cancel RSVP")
       |> refute_has("button", text: "RSVP to this huddl")
@@ -329,7 +329,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       conn
       |> login(member)
-      |> visit(~p"/groups/#{group.id}/huddlz/#{past_huddl.id}")
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{past_huddl.id}")
       # Should not show Cancel RSVP button for past events
       |> refute_has("button", text: "Cancel RSVP")
       |> refute_has("button", text: "RSVP to this huddl")
@@ -350,7 +350,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       conn
       |> login(member)
-      |> visit(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
       # Click Cancel RSVP button
       |> click_button("Cancel RSVP")
       # Check UI updates after cancel
@@ -380,7 +380,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       conn
       |> login(member)
-      |> visit(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
       |> assert_has("p", text: "2 people attending")
       # Member cancels their RSVP
       |> click_button("Cancel RSVP")
@@ -401,7 +401,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       conn
       |> login(member)
-      |> visit(~p"/groups/#{group.id}/huddlz/#{huddl.id}")
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
       # Cancel RSVP
       |> click_button("Cancel RSVP")
       # RSVP again

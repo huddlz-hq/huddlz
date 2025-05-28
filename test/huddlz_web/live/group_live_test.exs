@@ -113,7 +113,7 @@ defmodule HuddlzWeb.GroupLiveTest do
         |> Ash.Query.filter(name: "Test Group")
         |> Ash.read_one!()
 
-      assert_path(session, ~p"/groups/#{group.id}")
+      assert_path(session, ~p"/groups/#{group.slug}")
     end
 
     test "shows errors with invalid data", %{conn: conn, verified: verified} do
@@ -178,7 +178,7 @@ defmodule HuddlzWeb.GroupLiveTest do
       public_group: group
     } do
       conn
-      |> visit(~p"/groups/#{group.id}")
+      |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h1", text: to_string(group.name))
       |> assert_has("span", text: "Public Group")
       |> assert_has("p", text: to_string(group.description))
@@ -194,7 +194,7 @@ defmodule HuddlzWeb.GroupLiveTest do
     } do
       conn
       |> login(owner)
-      |> visit(~p"/groups/#{group.id}")
+      |> visit(~p"/groups/#{group.slug}")
       |> assert_has("span", text: "Owner")
     end
 
@@ -206,7 +206,7 @@ defmodule HuddlzWeb.GroupLiveTest do
       session =
         conn
         |> login(non_member)
-        |> visit(~p"/groups/#{group.id}")
+        |> visit(~p"/groups/#{group.slug}")
 
       assert_path(session, ~p"/groups")
 
@@ -221,7 +221,7 @@ defmodule HuddlzWeb.GroupLiveTest do
     } do
       conn
       |> login(owner)
-      |> visit(~p"/groups/#{group.id}")
+      |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h1", text: to_string(group.name))
       |> assert_has("span", text: "Private Group")
       |> assert_has("span", text: "Owner")
@@ -239,7 +239,7 @@ defmodule HuddlzWeb.GroupLiveTest do
       public_group: group
     } do
       conn
-      |> visit(~p"/groups/#{group.id}")
+      |> visit(~p"/groups/#{group.slug}")
       |> click_link("Back to groups")
       |> assert_has("h1", text: "Groups")
     end
