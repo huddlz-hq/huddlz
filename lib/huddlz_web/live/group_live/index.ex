@@ -76,7 +76,7 @@ defmodule HuddlzWeb.GroupLive.Index do
                     <.icon name="hero-map-pin" class="h-4 w-4" /> {group.location}
                   </p>
                   <div class="card-actions justify-end mt-4">
-                    <.link navigate={~p"/groups/#{group.id}"}>
+                    <.link navigate={~p"/groups/#{group.slug}"}>
                       <.button class="btn-sm">View Group</.button>
                     </.link>
                   </div>

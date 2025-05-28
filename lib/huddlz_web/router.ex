@@ -41,11 +41,11 @@ defmodule HuddlzWeb.Router do
       # Group routes
       live "/groups", GroupLive.Index, :index
       live "/groups/new", GroupLive.New, :new
-      live "/groups/:id", GroupLive.Show, :show
+      live "/groups/:slug", GroupLive.Show, :show
 
       # Huddl routes
-      live "/groups/:group_id/huddlz/new", HuddlLive.New, :new
-      live "/groups/:group_id/huddlz/:id", HuddlLive.Show, :show
+      live "/groups/:group_slug/huddlz/new", HuddlLive.New, :new
+      live "/groups/:group_slug/huddlz/:id", HuddlLive.Show, :show
     end
   end
 

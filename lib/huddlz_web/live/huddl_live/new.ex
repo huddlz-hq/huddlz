@@ -9,8 +9,8 @@ defmodule HuddlzWeb.HuddlLive.New do
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
 
   @impl true
-  def mount(%{"group_id" => group_id}, _session, socket) do
-    with {:ok, group} <- get_group(group_id),
+  def mount(%{"group_slug" => group_slug}, _session, socket) do
+    with {:ok, group} <- get_group_by_slug(group_slug),
          :ok <- check_can_create_huddl(group, socket.assigns.current_user) do
       # Initialize form with defaults
       form =
@@ -41,7 +41,7 @@ defmodule HuddlzWeb.HuddlLive.New do
         {:ok,
          socket
          |> put_flash(:error, "You don't have permission to create huddlz for this group")
-         |> redirect(to: ~p"/groups/#{group_id}")}
+         |> redirect(to: ~p"/groups/#{group_slug}")}
     end
   end
 
@@ -50,7 +50,7 @@ defmodule HuddlzWeb.HuddlLive.New do
     ~H"""
     <Layouts.app flash={@flash} current_user={@current_user}>
       <.link
-        navigate={~p"/groups/#{@group.id}"}
+        navigate={~p"/groups/#{@group.slug}"}
         class="text-sm font-semibold leading-6 hover:underline"
       >
         <.icon name="hero-arrow-left" class="h-3 w-3" /> Back to {@group.name}
@@ -120,7 +120,7 @@ defmodule HuddlzWeb.HuddlLive.New do
           <.button type="submit" phx-disable-with="Creating...">
             Create Huddl
           </.button>
-          <.link navigate={~p"/groups/#{@group.id}"} class="btn btn-ghost">
+          <.link navigate={~p"/groups/#{@group.slug}"} class="btn btn-ghost">
             Cancel
           </.link>
         </div>
@@ -184,15 +184,19 @@ defmodule HuddlzWeb.HuddlLive.New do
         {:noreply,
          socket
          |> put_flash(:info, "Huddl created successfully!")
-         |> redirect(to: ~p"/groups/#{socket.assigns.group.id}")}
+         |> redirect(to: ~p"/groups/#{socket.assigns.group.slug}")}
 
       {:error, form} ->
         {:noreply, assign(socket, :form, to_form(form))}
     end
   end
 
-  defp get_group(id) do
-    case Ash.get(Group, id, load: [:owner], authorize?: false) do
+  defp get_group_by_slug(slug) do
+    case Group
+         |> Ash.Query.for_read(:get_by_slug, %{slug: slug})
+         |> Ash.Query.load(:owner)
+         |> Ash.read_one(authorize?: false) do
+      {:ok, nil} -> {:error, :not_found}
       {:ok, group} -> {:ok, group}
       {:error, _} -> {:error, :not_found}
     end
