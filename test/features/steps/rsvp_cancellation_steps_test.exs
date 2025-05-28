@@ -149,7 +149,7 @@ defmodule RsvpCancellationSteps do
       |> Ash.Query.load(:owner)
       |> Ash.read_one!(authorize?: false)
 
-    session = context.session |> visit("/groups/#{group.id}")
+    session = context.session |> visit("/groups/#{group.slug}")
     {:ok, Map.put(context, :session, session)}
   end
 
@@ -234,7 +234,7 @@ defmodule RsvpCancellationSteps do
       |> Ash.Query.load(:group)
       |> Ash.read_one!(actor: user)
 
-    session = context.session |> visit("/groups/#{huddl.group_id}/huddlz/#{huddl.id}")
+    session = context.session |> visit("/groups/#{huddl.group.slug}/huddlz/#{huddl.id}")
     {:ok, Map.put(context, :session, session)}
   end
 

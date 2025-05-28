@@ -30,12 +30,29 @@ This document captures key insights, patterns, and best practices discovered dur
   3. Generate migrations last using `mix ash.codegen`
   4. Run migrations with `mix ash.migrate` (NEVER use `mix ecto.migrate`)
 - **IMPORTANT**: For Ash resources, always use `mix ash.migrate` instead of `mix ecto.migrate` to ensure proper handling of resource snapshots and extensions
+- **CRITICAL**: Never manually edit Ash-generated migrations. If data migration is needed:
+  - In development: Delete data, regenerate clean migration
+  - In production: Use separate data migration scripts
+  - Manual edits break Ash's snapshot tracking system
 - See `docs/ash_framework/resource_workflow.md` for the complete workflow guidance
 
 ### Authentication
 - Use the DSL style for auth_overrides with `override` and `set` blocks
 - Don't try to update users after authentication as this conflicts with Ash's permission system
 - When writing changesets in `before_action`, always include the context parameter: `fn changeset, _context ->`
+
+## Planning & Workflow
+
+### Planning Phase Requirements
+- **ALWAYS** gather user input before creating detailed plans
+- Ask clarifying questions about:
+  - Specific requirements and constraints
+  - Backward compatibility needs
+  - Data migration considerations
+  - UI/UX preferences
+  - Testing requirements
+- Document user responses in session notes
+- Only create task breakdown after understanding full context
 
 ## Development Patterns
 

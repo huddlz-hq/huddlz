@@ -139,7 +139,7 @@ defmodule CreateHuddlSteps do
       raise "Group not found: #{group_name}. Available groups: #{inspect(Enum.map(groups, & &1.name))}"
     end
 
-    session = context.session |> visit("/groups/#{group.id}")
+    session = context.session |> visit("/groups/#{group.slug}")
 
     {:ok, Map.merge(context, %{session: session, current_group: group})}
   end
@@ -152,7 +152,7 @@ defmodule CreateHuddlSteps do
         g && to_string(g.name) == group_name
       end)
 
-    session = context.session |> visit("/groups/#{group.id}/huddlz/new")
+    session = context.session |> visit("/groups/#{group.slug}/huddlz/new")
 
     {:ok, Map.merge(context, %{session: session, current_group: group})}
   end
@@ -166,7 +166,7 @@ defmodule CreateHuddlSteps do
       end)
 
     # PhoenixTest handles redirects automatically, so we just visit
-    session = context.session |> visit("/groups/#{group.id}/huddlz/new")
+    session = context.session |> visit("/groups/#{group.slug}/huddlz/new")
 
     # Check if we're on the new huddl page or got redirected
     # If we can't see "Create New Huddl", we were probably redirected

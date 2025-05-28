@@ -561,7 +561,7 @@ defmodule HuddlzWeb.CoreComponents do
               <% end %>
             </div>
             <.link
-              navigate={~p"/groups/#{@huddl.group_id}/huddlz/#{@huddl.id}"}
+              navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}"}
               class="btn btn-primary btn-sm"
             >
               View Details
