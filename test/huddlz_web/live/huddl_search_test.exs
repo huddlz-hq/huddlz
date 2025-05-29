@@ -117,6 +117,20 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> assert_has("h3", text: "Morning Yoga Session")
       |> assert_has("h3", text: "Virtual Book Club")
       |> refute_has("h3", text: "Hybrid Workshop")
+      # Past events should never show
+      |> refute_has("h3", text: "Past Event")
+    end
+
+    test "filters by date range - this month", %{conn: conn} do
+      conn
+      |> visit("/")
+      |> select("Date Range", option: "This Month")
+      # All future events within 30 days should show
+      |> assert_has("h3", text: "Morning Yoga Session")
+      |> assert_has("h3", text: "Virtual Book Club")
+      |> assert_has("h3", text: "Hybrid Workshop")
+      # Past events should never show
+      |> refute_has("h3", text: "Past Event")
     end
 
     test "combines multiple filters", %{conn: conn} do
