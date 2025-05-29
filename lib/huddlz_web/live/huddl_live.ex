@@ -8,31 +8,19 @@ defmodule HuddlzWeb.HuddlLive do
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
 
   def mount(_params, _session, socket) do
-    if connected?(socket) do
-      # Only get huddls when socket is connected to minimize load
-      upcoming_huddls =
-        Communities.get_upcoming!(actor: socket.assigns[:current_user])
-        |> Ash.load!([:status, :visible_virtual_link, :group])
+    # Always load upcoming huddls to avoid showing past events
+    upcoming_huddls =
+      Communities.get_upcoming!(actor: socket.assigns[:current_user])
+      |> Ash.load!([:status, :visible_virtual_link, :group])
 
-      {:ok,
-       assign(socket,
-         huddls: upcoming_huddls,
-         search_query: nil,
-         event_type_filter: nil,
-         date_filter: "upcoming",
-         sort_by: "date_asc"
-       )}
-    else
-      # Initial load - empty to speed up first render
-      {:ok,
-       assign(socket,
-         huddls: [],
-         search_query: nil,
-         event_type_filter: nil,
-         date_filter: "upcoming",
-         sort_by: "date_asc"
-       )}
-    end
+    {:ok,
+     assign(socket,
+       huddls: upcoming_huddls,
+       search_query: nil,
+       event_type_filter: nil,
+       date_filter: "upcoming",
+       sort_by: "date_asc"
+     )}
   end
 
   def handle_event("search", params, socket) do
@@ -91,11 +79,14 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   defp get_base_huddls(current_user, _query) do
+    # When there's no search query, get all huddls (not just upcoming)
+    # The date filter will be applied separately
     Huddlz.Communities.Huddl
     |> Ash.read!(actor: current_user)
   end
 
   defp apply_date_filter(huddls, "upcoming") do
+    # Always filter for upcoming events to ensure past events are excluded
     Enum.filter(huddls, fn huddl ->
       DateTime.compare(huddl.starts_at, DateTime.utc_now()) == :gt
     end)
