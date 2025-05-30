@@ -1,7 +1,6 @@
 defmodule HuddlzWeb.GroupLive.Edit do
   use HuddlzWeb, :live_view
 
-  alias Huddlz.Communities.Group
   alias HuddlzWeb.Layouts
 
   require Ash.Query
@@ -10,7 +9,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
 
   @impl true
   def mount(%{"slug" => slug}, _session, socket) do
-    with {:ok, group} <- get_group_by_slug(slug),
+    with {:ok, group} <- get_group_by_slug(slug, socket.assigns.current_user),
          :ok <- check_can_edit_group(group, socket.assigns.current_user) do
       form =
         AshPhoenix.Form.for_update(group, :update_details,
@@ -182,11 +181,8 @@ defmodule HuddlzWeb.GroupLive.Edit do
     end
   end
 
-  defp get_group_by_slug(slug) do
-    case Group
-         |> Ash.Query.for_read(:get_by_slug, %{slug: slug})
-         |> Ash.Query.load(:owner)
-         |> Ash.read_one(authorize?: false) do
+  defp get_group_by_slug(slug, actor) do
+    case Huddlz.Communities.get_by_slug(slug, actor: actor, load: [:owner]) do
       {:ok, nil} -> {:error, :not_found}
       {:ok, group} -> {:ok, group}
       {:error, _} -> {:error, :not_found}

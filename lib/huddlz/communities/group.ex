@@ -74,6 +74,11 @@ defmodule Huddlz.Communities.Group do
       authorize_if actor_attribute_equals(:role, :verified)
     end
 
+    # Only the owner can update group details
+    policy action(:update_details) do
+      authorize_if expr(owner_id == ^actor(:id))
+    end
+
     # Group owner can do anything with their groups (for non-create actions)
     policy action_type([:update, :destroy]) do
       # Explicitly forbid users that are not the owner

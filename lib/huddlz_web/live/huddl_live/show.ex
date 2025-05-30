@@ -234,26 +234,24 @@ defmodule HuddlzWeb.HuddlLive.Show do
   end
 
   defp get_huddl(id, group_slug, user) do
-    # First get the group by slug to get its ID
-    with {:ok, group} <- get_group_by_slug(group_slug) do
-      case Huddl
-           |> Ash.Query.filter(id == ^id and group_id == ^group.id)
-           |> Ash.Query.load([:status, :visible_virtual_link, :group, :creator])
-           |> Ash.read_one(actor: user) do
-        {:ok, nil} -> {:error, :not_found}
-        {:ok, huddl} -> {:ok, huddl}
-        {:error, _} -> {:error, :not_authorized}
-      end
-    end
-  end
+    # Get the huddl and verify it belongs to the group with the given slug
+    case Huddl
+         |> Ash.Query.filter(id == ^id)
+         |> Ash.Query.load([:status, :visible_virtual_link, :group, :creator])
+         |> Ash.read_one(actor: user) do
+      {:ok, nil} ->
+        {:error, :not_found}
 
-  defp get_group_by_slug(slug) do
-    case Huddlz.Communities.Group
-         |> Ash.Query.for_read(:get_by_slug, %{slug: slug})
-         |> Ash.read_one(authorize?: false) do
-      {:ok, nil} -> {:error, :not_found}
-      {:ok, group} -> {:ok, group}
-      {:error, _} -> {:error, :not_found}
+      {:ok, huddl} ->
+        # Verify the huddl belongs to the group with the given slug
+        if huddl.group.slug == group_slug do
+          {:ok, huddl}
+        else
+          {:error, :not_found}
+        end
+
+      {:error, _} ->
+        {:error, :not_authorized}
     end
   end
 

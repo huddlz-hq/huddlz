@@ -77,11 +77,7 @@ defmodule Huddlz.Generator do
       Group,
       :create_group,
       defaults: [
-        name:
-          StreamData.repeatedly(fn ->
-            # Generate a simple test group name to avoid unicode issues
-            "Test Group #{System.unique_integer([:positive])}"
-          end),
+        name: StreamData.repeatedly(fn -> Faker.Company.name() end),
         description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
         location: "Test Location",
         is_public: true,
@@ -129,11 +125,7 @@ defmodule Huddlz.Generator do
       Huddl,
       :create,
       defaults: [
-        title:
-          StreamData.repeatedly(fn ->
-            # Generate a simple test huddl title to avoid unicode issues
-            "Test Huddl #{System.unique_integer([:positive])}"
-          end),
+        title: StreamData.repeatedly(fn -> Faker.Company.bs() end),
         description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
         starts_at: start_time,
         ends_at: end_time,

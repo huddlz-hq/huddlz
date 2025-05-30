@@ -76,7 +76,7 @@ Feature: Group Management
     And I am signed in as "regular@example.com"
     When I visit the group page for "VIP Club"
     Then I should be redirected to "/groups"
-    And I should see "You don't have access to this private group"
+    And I should see "Group not found"
 
   Scenario: Group name is required
     Given I am signed in as "verified@example.com"

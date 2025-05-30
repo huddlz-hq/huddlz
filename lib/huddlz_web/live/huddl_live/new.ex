@@ -1,7 +1,7 @@
 defmodule HuddlzWeb.HuddlLive.New do
   use HuddlzWeb, :live_view
 
-  alias Huddlz.Communities.{Group, Huddl}
+  alias Huddlz.Communities.Huddl
   alias HuddlzWeb.Layouts
 
   require Ash.Query
@@ -10,7 +10,7 @@ defmodule HuddlzWeb.HuddlLive.New do
 
   @impl true
   def mount(%{"group_slug" => group_slug}, _session, socket) do
-    with {:ok, group} <- get_group_by_slug(group_slug),
+    with {:ok, group} <- get_group_by_slug(group_slug, socket.assigns.current_user),
          :ok <- check_can_create_huddl(group, socket.assigns.current_user) do
       # Initialize form with defaults
       form =
@@ -191,11 +191,8 @@ defmodule HuddlzWeb.HuddlLive.New do
     end
   end
 
-  defp get_group_by_slug(slug) do
-    case Group
-         |> Ash.Query.for_read(:get_by_slug, %{slug: slug})
-         |> Ash.Query.load(:owner)
-         |> Ash.read_one(authorize?: false) do
+  defp get_group_by_slug(slug, actor) do
+    case Huddlz.Communities.get_by_slug(slug, actor: actor, load: [:owner]) do
       {:ok, nil} -> {:error, :not_found}
       {:ok, group} -> {:ok, group}
       {:error, _} -> {:error, :not_found}

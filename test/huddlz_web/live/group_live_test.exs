@@ -211,7 +211,7 @@ defmodule HuddlzWeb.GroupLiveTest do
       assert_path(session, ~p"/groups")
 
       assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~
-               "You don't have access to this private group"
+               "Group not found"
     end
 
     test "allows owner to view private group", %{
