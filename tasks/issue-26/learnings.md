@@ -1,124 +1,169 @@
 # Learnings from Issue #26: Groups Should Have Slugs
 
-**Completed**: 2025-05-28
-**Duration**: Planned 6 tasks, completed in single session with additional unicode investigation
-**Complexity**: Medium - straightforward feature with Ash Framework integration challenges
+## Key Technical Learnings
 
-## Key Insights
+### 1. Never Manually Edit Ash Migrations
+**Mistake**: Manually edited a generated migration to handle existing data.
+**Problem**: This breaks Ash's snapshot tracking system, causing schema inconsistencies.
+**Solution**: 
+- In development: Delete data and regenerate clean migrations
+- In production: Use separate data migration scripts
+**Learning**: Ash migrations are immutable by design - respect this constraint.
 
-### 🎯 What Worked Well
-- **Slugify library integration** - Excellent unicode support via transliteration (e.g., "北京用户组" → "bei-jing-yong-hu-zu")
-- **Ash change modules** - Clean solution for auto-generating slugs during resource creation
-- **Incremental implementation** - Following the planned task sequence prevented major issues
-- **UI implementation without libraries** - Building modals with standard HTML/CSS worked perfectly
+### 2. Ash Framework vs Ecto Commands
+**Discovery**: Ash has its own command set that should be used instead of Ecto commands.
+- Use `mix ash.reset` not `mix ecto.reset`
+- Use `mix ash.migrate` not `mix ecto.migrate`
+- Use `mix ash.codegen` to generate migrations from resource changes
+**Learning**: Always use Ash-specific commands for Ash projects to maintain consistency.
 
-### 🔄 Course Corrections
-1. **Planning without user input** (Start of session)
-   - **Issue**: Started creating detailed plan before gathering requirements
-   - **Learning**: Always engage with user first to understand constraints and preferences
-   - **Result**: Better plan aligned with actual needs (no backward compatibility, etc.)
+### 3. Type Conversion for External Libraries
+**Issue**: Slugify couldn't handle Ash's CiString type directly.
+**Solution**: Convert CiString to regular string with `to_string()` before passing to external libraries.
+**Learning**: Be aware of custom Ash types and convert them when interfacing with standard Elixir libraries.
 
-2. **Manual Ash migration edit** (Task 3)
-   - **Issue**: Manually edited generated migration to handle existing data
-   - **Learning**: NEVER edit Ash migrations - breaks snapshot tracking
-   - **Solution**: Delete data and regenerate clean migration in dev
-   - **Future**: Would need separate data migration script for production
+### 4. Test Database Synchronization
+**Problem**: Test database retained stale schema from failed migration attempts.
+**Root Cause**: Multiple migration attempts left database in inconsistent state.
+**Solution**: Manually drop columns/indexes and clean schema_migrations table.
+**Prevention**: Always ensure clean rollback before re-running migrations.
 
-3. **Test database sync issues** (Task 3)
-   - **Issue**: Stale schema from previous migration attempts
-   - **Learning**: Always ensure clean rollback before re-running migrations
-   - **Solution**: Manual cleanup of database and schema_migrations table
+### 5. Seed Data Authorization
+**Discovery**: Seed scripts require `authorize?: false` when creating data.
+**Reason**: Seeds run without authenticated user context.
+**Pattern**: `|> Ash.create(authorize?: false)`
+**Learning**: Only bypass authorization in seed/setup scripts, never in production code.
 
-4. **Unicode in seed data** (Post-implementation)
-   - **Issue**: Random unicode from generator created strange slugs
-   - **Learning**: Slugify handles unicode perfectly - issue was random generation
-   - **Solution**: Use explicit names in seeds rather than generators
+## Process Improvements
 
-### ⚠️ Challenges & Solutions
-1. **Challenge**: CiString to String conversion for Slugify
-   **Solution**: Add `to_string()` in GenerateSlug change module
-   **Learning**: Always check type compatibility between libraries
+### 1. Planning Phase Must Include User Dialogue
+**Mistake**: Started creating detailed plans without gathering requirements.
+**Correction**: Always engage with user during `/plan` phase to understand:
+- Backward compatibility needs
+- Data migration constraints
+- Specific behavior requirements
+- Production vs development considerations
 
-2. **Challenge**: Component library assumptions (modal, simple_form)
-   **Solution**: Implement with standard HTML/CSS and Phoenix bindings
-   **Learning**: Don't assume external UI libraries - check project patterns first
+### 2. Test-After Approach with Ash
+**Constraint**: Can't easily test-first with Ash due to code generation requirements.
+**Approach**: 
+1. Implement resource changes
+2. Generate migrations
+3. Write comprehensive tests
+**Learning**: Adapt TDD practices to framework constraints while maintaining quality.
 
-3. **Challenge**: Seed data authorization errors
-   **Solution**: Use `authorize?: false` for seed operations
-   **Learning**: Seed scripts lack user context - bypass authorization appropriately
+### 3. Component Architecture Awareness
+**Discovery**: Project uses custom components, not external UI libraries.
+**Impact**: Had to replace undefined `modal` and `simple_form` components with standard HTML.
+**Learning**: Always check existing component patterns before assuming external libraries.
 
-### 🚀 Reusable Patterns
+## Feature-Specific Insights
 
-#### Pattern: Ash Change Module for Attribute Generation
-**Context**: Auto-generate derived attributes during resource actions
-**Implementation**:
+### 1. Slug Generation Strategy
+**Implemented**: Auto-generate from name on create, allow manual override.
+**UI Pattern**: 
+- Create: Auto-update slug as user types
+- Edit: Independent slug field with change warning
+**Learning**: Different behaviors for create vs edit improves user experience.
+
+### 2. Unicode Support Excellence
+**Discovery**: Slugify handles unicode beautifully through transliteration:
+- "Café München" → "cafe-munchen"
+- "北京用户组" → "bei-jing-yong-hu-zu"
+**Learning**: Don't assume limitations - test library capabilities thoroughly.
+
+### 3. Route Parameter Naming
+**Decision**: Use `:group_slug` instead of just `:slug` for clarity.
+**Benefit**: Self-documenting routes that are easier to understand.
+**Pattern**: `/groups/:group_slug/huddlz/:id`
+
+### 4. Relationship Loading for Slugs
+**Requirement**: Huddls need to load their group relationship to display slugs.
+**Solution**: Add `Ash.Query.load(:group)` where needed.
+**Learning**: Think about data requirements when changing primary identifiers.
+
+## Testing Insights
+
+### 1. Test Data Generation
+**Problem**: Random unicode from StreamData caused unpredictable slugs.
+**Solution**: Use predictable names in tests while keeping unicode test cases separate.
+**Learning**: Balance randomization with predictability for stable tests.
+
+### 2. Flexible Test Assertions
+**Problem**: Exact href matching broke when switching from IDs to slugs.
+**Solution**: Test for presence of elements rather than exact URLs.
+**Learning**: Write resilient tests that survive implementation changes.
+
+### 3. Comprehensive Test Coverage
+**Achievement**: Added specific unicode handling tests beyond basic functionality.
+**Result**: 262 tests covering edge cases and international support.
+**Learning**: Go beyond happy path - test international use cases.
+
+## Architecture Patterns
+
+### 1. Ash Resource Changes
+**Pattern**: Create dedicated change modules for reusable logic.
 ```elixir
 defmodule GenerateSlug do
   use Ash.Resource.Change
   
   def change(changeset, _opts, _context) do
-    if changeset.action.type == :create do
-      case {Ash.Changeset.get_attribute(changeset, :slug),
-            Ash.Changeset.get_attribute(changeset, :name)} do
-        {nil, name} when not is_nil(name) ->
-          slug = name |> to_string() |> Slug.slugify()
-          Ash.Changeset.change_attribute(changeset, :slug, slug)
-        _ ->
-          changeset
-      end
-    else
-      changeset
-    end
+    # Implementation
   end
 end
 ```
-**Benefits**: Centralized logic, works with Ash lifecycle, handles edge cases
+**Learning**: Encapsulate business logic in change modules for reusability.
 
-#### Pattern: Unicode-Safe Slug Generation
-**Context**: Supporting international group names
-**Implementation**: Slugify library with transliteration
-**Benefits**: 
-- Chinese → pinyin: "北京用户组" → "bei-jing-yong-hu-zu"
-- Cyrillic → Latin: "Москва Tech" → "moskva-tech"
-- Accents removed: "Café München" → "cafe-munchen"
+### 2. Custom Read Actions
+**Pattern**: Use `Ash.Query.for_read(:action_name, %{args})` for custom queries.
+**Example**: `get_by_slug` action with `get? true` for single record retrieval.
+**Learning**: Leverage Ash's action system instead of custom queries.
 
-## Process Insights
+### 3. Form State Management
+**Challenge**: Managing dynamic slug generation while allowing overrides.
+**Solution**: Track manual edits with socket assigns and conditional updates.
+**Learning**: Phoenix LiveView excels at complex form interactions.
 
-### Planning Accuracy
-- Estimated tasks: 6
-- Actual tasks: 6 + additional unicode investigation
-- Estimation accuracy: 90% (missed seed data complexity)
+## Documentation Discoveries
 
-### Time Analysis
-- Planned: Multi-session expected
-- Actual: Single session completion
-- Factors: Good library choice, clear requirements, incremental approach
+### 1. Puppeteer Login Flow
+**Challenge**: Magic link authentication in development environment.
+**Documented Process**:
+1. Request magic link
+2. Navigate to /dev/mailbox
+3. Click email row (not mailto link)
+4. Copy/navigate to magic link URL
+**Learning**: Document non-obvious development workflows for future sessions.
 
-### Quality Impact
-- Tests increased from 209 to 212
-- Zero regressions
-- Added unicode support beyond requirements
+### 2. UI Implementation Evolution
+**Journey**: From modal-based editing to dedicated edit page.
+**Reason**: Simplified slug field behavior and improved user experience.
+**Learning**: Don't hesitate to refactor UI when it improves clarity.
 
-## Recommendations
+## Summary of Best Practices
 
-### For Similar Features
-- Research library unicode support early - it's often better than expected
-- Use Ash change modules for derived attributes rather than controller logic
-- Test with international data to catch edge cases
-- Always verify seed data works with new attributes
+1. **Respect Framework Constraints**: Work with Ash's patterns, not against them
+2. **Type Safety**: Handle custom types when interfacing with external libraries
+3. **User-Centric Design**: Different behaviors for create vs edit operations
+4. **Comprehensive Testing**: Include edge cases and international scenarios
+5. **Clear Documentation**: Capture non-obvious workflows for future reference
+6. **Flexible Architecture**: Use framework features (changes, actions) for clean code
+7. **Process Discipline**: Always gather requirements before planning
 
-### For Process Improvement
-- Add "Unicode Support" as standard consideration for user-facing text
-- Document that project doesn't use external UI component libraries
-- Create checklist for Ash migration workflow to prevent manual edits
+## What Went Well
 
-### For Ash Framework Usage
-- Always use Ash-specific commands (`mix ash.reset`, not `mix ecto.reset`)
-- Never manually edit migrations - regenerate if needed
-- Remember `authorize?: false` for seed/setup scripts
-- Convert CiString to String when interfacing with external libraries
+- Successfully implemented slug feature with zero regressions
+- Excellent unicode support discovered and tested
+- Clean integration with existing permission model
+- Comprehensive test coverage (262 tests)
+- All quality gates passing
+- UI provides clear feedback and warnings
+- Documentation captured for future development
 
-## Follow-up Items
-- [ ] Consider adding slug history/redirects for future (when in production)
-- [ ] Document slug format requirements in user-facing help
-- [ ] Add property-based tests for slug generation edge cases
+## Areas for Future Consideration
+
+- Production data migration strategies for Ash projects
+- Automated testing of magic link authentication flows
+- Potential for slug history/redirects for changed slugs
+- SEO implications of slug changes
+- Performance impact of slug lookups vs UUID lookups

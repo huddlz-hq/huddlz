@@ -315,3 +315,42 @@ When encountering commands with a leading slash (like `/command`):
 
 - Never edit a migration file, only generate new migrations 
 - Because this is an Ash project, generate migrations using: `mix ash.codegen <name_of_change_to_resource>`
+
+## Puppeteer Login Instructions (IMPORTANT - USE THIS!)
+
+When testing with Puppeteer, use this exact process for magic link authentication:
+
+```javascript
+// 1. Navigate to home and click sign in
+await navigate("http://localhost:4000")
+await click('a[href="/sign-in"]')
+
+// 2. Enter email from seeds.exs
+await fill('input[name="user[email]"]', 'alice@example.com')
+// Other options: bob@example.com (verified), admin@example.com (admin)
+
+// 3. Request magic link
+await click('button[type="submit"]')
+
+// 4. Go to dev mailbox
+await navigate("http://localhost:4000/dev/mailbox")
+
+// 5. Click on the email row (NOT the mailto link!)
+// The first email in the list should be for the user you just requested
+await navigate("http://localhost:4000/dev/mailbox/[first-email-id]")
+
+// 6. The email body will show with the magic link visible
+// Either click the HTML body link or copy the magic link URL
+// The magic link format: http://localhost:4000/auth/user/magic_link/?token=...
+
+// 7. Navigate to the magic link URL
+await navigate("[copied magic link URL]")
+
+// You are now logged in!
+```
+
+**Important Notes:**
+- Magic link tokens expire quickly (within minutes)
+- If you get "Incorrect email or password", request a fresh magic link
+- The dev mailbox is only available in development environment
+- Always use emails from seeds.exs for consistent testing

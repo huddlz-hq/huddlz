@@ -262,10 +262,18 @@ Implemented human-readable URL slugs for groups, replacing UUID-based routes. Gr
 1. **Ash Migration Discipline**: NEVER manually edit Ash-generated migrations - it breaks snapshot tracking. For dev: delete data and regenerate. For production: use separate data migration scripts.
 2. **Unicode Excellence**: Slugify library handles international text beautifully - "北京用户组" → "bei-jing-yong-hu-zu", "Café München" → "cafe-munchen". Don't underestimate library capabilities.
 3. **Type Conversions**: Ash CiString must be converted to regular String for external libraries. Always check type compatibility at integration points.
+4. **Puppeteer Login Flow**: Magic link auth requires specific steps - documented in CLAUDE.md. Always use fresh tokens and navigate to mailbox detail page, not just the list.
 
 ### Reusable Patterns
 - **Ash Change Modules**: Perfect for auto-generating derived attributes (like slugs from names)
 - **Seed Authorization**: Use `authorize?: false` for seed scripts that lack user context
 - **UI Without Libraries**: Project uses custom components - implement modals/forms with standard HTML
+- **Form Simplification**: When resource handles attribute generation (force_change_attribute), simplify UI to show preview only
+
+### Additional Insights
+- **Ash vs Ecto Commands**: Always use `mix ash.*` commands (ash.reset, ash.migrate) not `mix ecto.*`
+- **Test Database Cleanup**: Failed migrations can leave test DB inconsistent - manually drop columns and clean schema_migrations
+- **UI Evolution**: Started with modal editing, moved to dedicated page for better UX
+- **Full URL Display**: Use `url(~p"/path")` helper to show proper localhost/production URLs
 
 See `tasks/issue-26/learnings.md` for full implementation details and code examples.
