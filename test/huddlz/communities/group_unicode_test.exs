@@ -37,17 +37,17 @@ defmodule Huddlz.Communities.GroupUnicodeTest do
       end
     end
 
-    test "allows custom unicode slugs" do
+    test "slugs are always auto-generated from name" do
       user = create_verified_user()
 
-      # User can provide a custom slug that will be used as-is
+      # Even if user provides a custom slug, it will be overridden
       {:ok, group} =
         Group
         |> Ash.Changeset.for_create(
           :create_group,
           %{
             name: "北京用户组",
-            # Custom slug instead of auto-generated
+            # Custom slug will be ignored due to force_change_attribute
             slug: "beijing-users",
             description: "Beijing user group",
             location: "Beijing",
@@ -58,7 +58,8 @@ defmodule Huddlz.Communities.GroupUnicodeTest do
         )
         |> Ash.create()
 
-      assert group.slug == "beijing-users"
+      # Slug should be auto-generated from name, not the custom value
+      assert group.slug == "bei-jing-yong-hu-zu"
     end
 
     test "handles empty slugs from unicode edge cases gracefully" do
