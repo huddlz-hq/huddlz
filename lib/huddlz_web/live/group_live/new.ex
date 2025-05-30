@@ -76,8 +76,8 @@ defmodule HuddlzWeb.GroupLive.New do
           <p class="text-sm text-gray-600">
             Your group will be available at:
           </p>
-          <p class="font-mono text-sm mt-1">
-            /groups/{(@form[:name].value || "") |> to_string() |> Slug.slugify() || "..."}
+          <p class="font-mono text-sm mt-1 break-all">
+            {url(~p"/groups/#{@form[:slug].value || "..."}")}
           </p>
         </div>
 

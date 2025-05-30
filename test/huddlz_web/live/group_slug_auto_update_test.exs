@@ -16,15 +16,16 @@ defmodule HuddlzWeb.GroupSlugAutoUpdateTest do
         |> login(user)
         |> live(~p"/groups/new")
 
-      # Type "A" - slug preview should show "a"
+      # Type "A" - too short, slug not generated yet
       html = render_change(view, "validate", %{"form" => %{"name" => "A"}})
-      assert html =~ "/groups/a"
+      assert html =~ "/groups/..."
+      assert html =~ "length must be greater than or equal to 3"
 
-      # Type "As" - slug preview should show "as"
+      # Type "As" - still too short
       html = render_change(view, "validate", %{"form" => %{"name" => "As"}})
-      assert html =~ "/groups/as"
+      assert html =~ "/groups/..."
 
-      # Type "Ash" - slug preview should show "ash"
+      # Type "Ash" - now valid, slug should be generated
       html = render_change(view, "validate", %{"form" => %{"name" => "Ash"}})
       assert html =~ "/groups/ash"
 
