@@ -76,7 +76,9 @@ defmodule HuddlzWeb.GroupLive.Edit do
           />
           <p class="text-sm text-gray-600 mt-1">
             Your group is available at:
-            <span class="font-mono">/groups/{@form[:slug].value || "..."}</span>
+          </p>
+          <p class="font-mono text-sm mt-1 break-all">
+            {url(~p"/groups/#{@form[:slug].value || "..."}")}
           </p>
 
           <%= if @slug_changed do %>
@@ -91,11 +93,11 @@ defmodule HuddlzWeb.GroupLive.Edit do
                   </h3>
                   <div class="mt-2 text-sm text-yellow-700">
                     <p>Changing the slug will break existing links to this group.</p>
-                    <p class="mt-1">
-                      Old URL: <span class="font-mono">/groups/{@original_slug}</span>
+                    <p class="mt-1 break-all">
+                      Old URL: <span class="font-mono">{url(~p"/groups/#{@original_slug}")}</span>
                     </p>
-                    <p>
-                      New URL: <span class="font-mono">/groups/{@form[:slug].value}</span>
+                    <p class="break-all">
+                      New URL: <span class="font-mono">{url(~p"/groups/#{@form[:slug].value}")}</span>
                     </p>
                   </div>
                 </div>
