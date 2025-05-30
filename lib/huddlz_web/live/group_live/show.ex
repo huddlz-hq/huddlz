@@ -1,9 +1,7 @@
 defmodule HuddlzWeb.GroupLive.Show do
   use HuddlzWeb, :live_view
 
-  alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupMember
-  alias Huddlz.Communities.Huddl
   alias HuddlzWeb.Layouts
 
   require Ash.Query
@@ -17,7 +15,7 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   @impl true
   def handle_params(%{"slug" => slug}, _, socket) do
-    with {:ok, group} <- get_group_by_slug(slug),
+    with {:ok, group} <- get_group_by_slug(slug, socket.assigns.current_user),
          :ok <- check_group_access(group, socket.assigns.current_user) do
       members = get_members(group, socket.assigns.current_user)
 
@@ -223,13 +221,11 @@ defmodule HuddlzWeb.GroupLive.Show do
     end
   end
 
-  defp get_group_by_slug(slug) do
-    case Group
-         |> Ash.Query.for_read(:get_by_slug, %{slug: slug})
-         |> Ash.Query.load(:owner)
-         |> Ash.read_one(authorize?: false) do
+  defp get_group_by_slug(slug, actor) do
+    case Huddlz.Communities.get_by_slug(slug, actor: actor, load: [:owner]) do
       {:ok, nil} -> {:error, :not_found}
       {:ok, group} -> {:ok, group}
+      {:error, %Ash.Error.Query.NotFound{}} -> {:error, :not_found}
       {:error, _} -> {:error, :not_found}
     end
   end
@@ -331,11 +327,9 @@ defmodule HuddlzWeb.GroupLive.Show do
   end
 
   defp get_group_huddlz(group, user) do
-    Huddl
-    |> Ash.Query.filter(group_id == ^group.id)
-    |> Ash.Query.filter(starts_at > ^DateTime.utc_now())
-    |> Ash.Query.sort(starts_at: :asc)
-    |> Ash.Query.load([:status, :visible_virtual_link, :group])
-    |> Ash.read!(actor: user)
+    Huddlz.Communities.get_group_huddlz!(group.id,
+      actor: user,
+      load: [:status, :visible_virtual_link, :group]
+    )
   end
 end

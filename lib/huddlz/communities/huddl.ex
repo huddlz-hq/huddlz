@@ -91,6 +91,16 @@ defmodule Huddlz.Communities.Huddl do
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
     end
 
+    read :by_group do
+      argument :group_id, :uuid do
+        allow_nil? false
+      end
+
+      filter expr(group_id == ^arg(:group_id) and starts_at > ^DateTime.utc_now())
+      prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
+      prepare build(sort: [starts_at: :asc])
+    end
+
     update :rsvp do
       description "RSVP to this huddl"
       require_atomic? false
@@ -206,6 +216,14 @@ defmodule Huddlz.Communities.Huddl do
 
     policy action(:search) do
       description "Users can search huddls they have access to"
+      # Public huddls in public groups
+      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
+      # Any huddl in a group they're a member of
+      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
+    end
+
+    policy action(:by_group) do
+      description "Users can view huddls by group if they have access"
       # Public huddls in public groups
       authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
       # Any huddl in a group they're a member of

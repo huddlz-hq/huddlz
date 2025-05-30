@@ -77,9 +77,6 @@ defmodule HuddlzWeb.HuddlLivePermissionsTest do
       group: group,
       huddl: huddl
     } do
-      # Regular users who are not members can see public huddls
-      # The policy allows them to RSVP, but the UI might not show the button
-      # if the LiveView doesn't properly detect the user is logged in
       conn
       |> login(user)
       |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")

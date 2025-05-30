@@ -11,6 +11,7 @@ defmodule Huddlz.Communities do
       define :get_upcoming, action: :upcoming
       define :search_huddlz, action: :search, args: [:query]
       define :get_by_status, action: :by_status, args: [:status]
+      define :get_group_huddlz, action: :by_group, args: [:group_id]
     end
 
     resource Huddlz.Communities.Group do
@@ -20,10 +21,11 @@ defmodule Huddlz.Communities do
 
       define :search_groups, action: :search, args: [:query]
       define :get_by_owner, action: :get_by_owner, args: [:owner_id]
+      define :get_by_slug, action: :get_by_slug, args: [:slug]
 
       define :update_details,
         action: :update_details,
-        args: [:name, :description, :location, :image_url, :is_public]
+        args: [:name, :description, :location, :image_url, :is_public, :slug]
     end
 
     resource Huddlz.Communities.GroupMember do

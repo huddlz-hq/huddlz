@@ -79,14 +79,11 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   defp get_base_huddls(current_user, _query) do
-    # When there's no search query, get all huddls (not just upcoming)
-    # The date filter will be applied separately
     Huddlz.Communities.Huddl
     |> Ash.read!(actor: current_user)
   end
 
   defp apply_date_filter(huddls, "upcoming") do
-    # Always filter for upcoming events to ensure past events are excluded
     Enum.filter(huddls, fn huddl ->
       DateTime.compare(huddl.starts_at, DateTime.utc_now()) == :gt
     end)
