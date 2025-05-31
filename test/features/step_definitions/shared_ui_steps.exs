@@ -1,4 +1,19 @@
 defmodule SharedUISteps do
+  @moduledoc """
+  Shared Cucumber step definitions for UI interactions and assertions.
+
+  This module provides reusable steps for:
+  - Navigation and page visits
+  - Clicking links and buttons
+  - Form interactions (filling fields, selecting options)
+  - Content assertions (seeing/not seeing text)
+  - Button visibility checks
+
+  All steps handle PhoenixTest sessions internally and maintain
+  proper context between steps.
+
+  See test/features/step_definitions/README.md for usage examples.
+  """
   use Cucumber.StepDefinition
   import PhoenixTest
 
@@ -8,7 +23,7 @@ defmodule SharedUISteps do
   # Navigation steps
   step "the user is on the home page", context do
     ensure_sandbox()
-    
+
     session = context[:session] || context[:conn] || build_conn()
     session = visit(session, "/")
 
@@ -17,7 +32,7 @@ defmodule SharedUISteps do
 
   step "I visit {string}", %{args: [path]} = context do
     ensure_sandbox()
-    
+
     session = context[:session] || context[:conn] || build_conn()
     session = visit(session, path)
 
