@@ -1,6 +1,15 @@
 defmodule SharedAuthSteps do
+  @moduledoc """
+  Shared Cucumber step definitions for authentication and user management.
+
+  This module provides reusable steps for:
+  - Creating test users with different roles (verified, regular, admin)
+  - Signing in users for authenticated scenarios
+
+  See test/features/step_definitions/README.md for usage examples.
+  """
   use Cucumber.StepDefinition
-  
+
   import Huddlz.Test.Helpers.Authentication
   import CucumberDatabaseHelper
 
@@ -8,7 +17,7 @@ defmodule SharedAuthSteps do
   step "the following users exist:", context do
     # Ensure sandbox is available for this step
     ensure_sandbox()
-    
+
     users =
       context.datatable.maps
       |> Enum.map(fn user_data ->
@@ -23,20 +32,20 @@ defmodule SharedAuthSteps do
         # Create user using Repo directly to work with sandbox
         uuid = Ecto.UUID.generate()
         {:ok, uuid_binary} = Ecto.UUID.dump(uuid)
-        
+
         attrs = %{
           id: uuid_binary,
           email: user_data["email"],
           display_name: user_data["display_name"] || "Test User",
           role: to_string(role)
         }
-        
-        {1, _} = 
+
+        {1, _} =
           Huddlz.Repo.insert_all(
             "users",
             [attrs]
           )
-          
+
         # Query the user back to get a proper struct
         Huddlz.Repo.get_by!(Huddlz.Accounts.User, email: user_data["email"])
       end)
