@@ -1,3 +1,4 @@
+@conn
 Feature: RSVP Cancellation
   As a user who has RSVPed to a huddl
   I want to be able to cancel my RSVP

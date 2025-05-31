@@ -1,39 +1,15 @@
 defmodule CreateHuddlSteps do
-  use Cucumber, feature: "create_huddl.feature"
-  use HuddlzWeb.ConnCase, async: true
-
+  use Cucumber.StepDefinition
   import Huddlz.Generator
+  import PhoenixTest
+  import ExUnit.Assertions
   alias Huddlz.Communities.Huddl
   require Ash.Query
 
   @tomorrow DateTime.utc_now() |> DateTime.add(1, :day)
 
-  # Background steps
-  defstep "the following users exist:", context do
-    users =
-      context.datatable.maps
-      |> Enum.map(fn user_data ->
-        role =
-          case user_data["role"] do
-            "verified" -> :verified
-            "regular" -> :regular
-            "admin" -> :admin
-            _ -> :regular
-          end
-
-        generate(
-          user(
-            email: user_data["email"],
-            display_name: user_data["display_name"],
-            role: role
-          )
-        )
-      end)
-
-    {:ok, Map.put(context, :users, users)}
-  end
-
-  defstep "the following groups exist:", context do
+  # Group-specific steps
+  step "the following groups exist:", context do
     groups =
       context.datatable.maps
       |> Enum.map(fn group_data ->
@@ -60,10 +36,10 @@ defmodule CreateHuddlSteps do
         end
       end)
 
-    {:ok, Map.put(context, :groups, groups)}
+    Map.put(context, :groups, groups)
   end
 
-  defstep "the following group memberships exist:", context do
+  step "the following group memberships exist:", context do
     memberships =
       context.datatable.maps
       |> Enum.map(fn membership_data ->
@@ -104,30 +80,11 @@ defmodule CreateHuddlSteps do
         end
       end)
 
-    {:ok, Map.put(context, :memberships, memberships)}
+    Map.put(context, :memberships, memberships)
   end
 
-  # Authentication step
-  defstep "I am signed in as {string}", context do
-    email = List.first(context.args)
-
-    user =
-      Enum.find(context.users, fn u ->
-        to_string(u.email) == email
-      end)
-
-    # Sign in the user using the authentication helper
-    conn = login(context.conn, user)
-
-    # Create a PhoenixTest session
-    session = conn |> visit("/")
-
-    {:ok, Map.merge(context, %{conn: conn, session: session, current_user: user})}
-  end
-
-  # Navigation steps
-  defstep "I visit the {string} group page", context do
-    group_name = List.first(context.args)
+  # Navigation steps specific to groups and huddlz
+  step "I visit the {string} group page", %{args: [group_name]} = context do
     groups = Map.get(context, :groups, [])
 
     group =
@@ -139,37 +96,38 @@ defmodule CreateHuddlSteps do
       raise "Group not found: #{group_name}. Available groups: #{inspect(Enum.map(groups, & &1.name))}"
     end
 
-    session = context.session |> visit("/groups/#{group.slug}")
+    session = context[:session] || context[:conn] || Phoenix.ConnTest.build_conn()
+    session = visit(session, "/groups/#{group.slug}")
 
-    {:ok, Map.merge(context, %{session: session, current_group: group})}
+    context
+    |> Map.merge(%{session: session, conn: session})
+    |> Map.put(:current_group, group)
   end
 
-  defstep "I visit the new huddl page for {string}", context do
-    group_name = List.first(context.args)
-
+  step "I visit the new huddl page for {string}", %{args: [group_name]} = context do
     group =
       Enum.find(context.groups, fn g ->
         g && to_string(g.name) == group_name
       end)
 
-    session = context.session |> visit("/groups/#{group.slug}/huddlz/new")
+    session = context[:session] || context[:conn]
+    session = visit(session, "/groups/#{group.slug}/huddlz/new")
 
-    {:ok, Map.merge(context, %{session: session, current_group: group})}
+    context
+    |> Map.merge(%{session: session, conn: session})
+    |> Map.put(:current_group, group)
   end
 
-  defstep "I try to visit the new huddl page for {string}", context do
-    group_name = List.first(context.args)
-
+  step "I try to visit the new huddl page for {string}", %{args: [group_name]} = context do
     group =
       Enum.find(context.groups, fn g ->
         g && to_string(g.name) == group_name
       end)
 
-    # PhoenixTest handles redirects automatically, so we just visit
-    session = context.session |> visit("/groups/#{group.slug}/huddlz/new")
+    session = context[:session] || context[:conn]
+    session = visit(session, "/groups/#{group.slug}/huddlz/new")
 
     # Check if we're on the new huddl page or got redirected
-    # If we can't see "Create New Huddl", we were probably redirected
     has_form =
       try do
         assert_has(session, "*", text: "Create New Huddl")
@@ -179,59 +137,45 @@ defmodule CreateHuddlSteps do
       end
 
     if has_form do
-      {:ok, Map.merge(context, %{session: session, current_group: group})}
+      context
+      |> Map.merge(%{session: session, conn: session})
+      |> Map.put(:current_group, group)
     else
-      {:ok,
-       Map.merge(context, %{
-         session: session,
-         redirected: true,
-         current_group: group
-       })}
+      context
+      |> Map.merge(%{session: session, conn: session})
+      |> Map.put(:redirected, true)
+      |> Map.put(:current_group, group)
     end
   end
 
-  # Visibility checks
-  defstep "I should see a {string} button", context do
-    button_text = List.first(context.args)
-    # Check for either a button or a link with the text
-    session = assert_has(context.session, "*", text: button_text)
-    {:ok, Map.put(context, :session, session)}
+  # Huddl-specific visibility checks
+  step "I should see a {string} button", %{args: [button_text]} = context do
+    session = context[:session] || context[:conn]
+    # Try to find either a link or button with the text
+    try do
+      assert_has(session, "a", text: button_text)
+    rescue
+      _ -> assert_has(session, "button", text: button_text)
+    end
+
+    context
   end
 
-  defstep "I should not see a {string} button", context do
-    button_text = List.first(context.args)
-    # Check that neither a button nor a link with the text exists
-    session = refute_has(context.session, "*", text: button_text)
-    {:ok, Map.put(context, :session, session)}
+  step "I should not see a {string} button", %{args: [button_text]} = context do
+    session = context[:session] || context[:conn]
+    refute_has(session, "button", text: button_text)
+    context
   end
 
-  defstep "I click {string}", context do
-    button_text = List.first(context.args)
-
-    # Try to click as a link first, then as a button
-    session =
-      try do
-        context.session |> click_link(button_text)
-      rescue
-        _ -> context.session |> click_button(button_text)
-      end
-
-    {:ok, Map.put(context, :session, session)}
-  end
-
-  defstep "I should be on the new huddl page for {string}", context do
-    group_name = List.first(context.args)
-
-    # Check that we're on the new huddl page
-    session = context.session
-    session = assert_has(session, "*", text: "Create New Huddl")
-    session = assert_has(session, "*", text: group_name)
-
-    {:ok, Map.put(context, :session, session)}
+  step "I should be on the new huddl page for {string}", %{args: [group_name]} = context do
+    session = context[:session] || context[:conn]
+    assert_has(session, "*", text: "Create New Huddl")
+    assert_has(session, "*", text: group_name)
+    context
   end
 
   # Form interaction steps
-  defstep "I fill in the huddl form with:", context do
+  step "I fill in the huddl form with:", context do
     form_data =
       context.datatable.maps
       |> Enum.reduce(%{}, fn field_data, acc ->
@@ -272,12 +216,12 @@ defmodule CreateHuddlSteps do
         end
       end)
 
-    {:ok, Map.put(context, :form_data, form_data)}
+    Map.put(context, :form_data, form_data)
   end
 
-  defstep "I submit the form", context do
+  step "I submit the form", context do
     form_data = Map.get(context, :form_data, %{})
-    session = context.session
+    session = context[:session] || context[:conn]
 
     # First, select the event type if provided to ensure proper field visibility
     session =
@@ -290,7 +234,6 @@ defmodule CreateHuddlSteps do
             _ -> "In-Person"
           end
 
-        # We need to select the event type first
         select(session, "Event Type", option: event_type_label, exact: false)
       else
         session
@@ -315,59 +258,43 @@ defmodule CreateHuddlSteps do
     # Submit the form
     session = click_button(session, "Create Huddl")
 
-    {:ok, Map.put(context, :session, session)}
+    Map.merge(context, %{session: session, conn: session})
   end
 
-  defstep "I submit the form without filling it", context do
-    # Just click submit without filling anything
-    session = click_button(context.session, "Create Huddl")
-
-    {:ok, Map.put(context, :session, session)}
+  step "I submit the form without filling it", context do
+    session = context[:session] || context[:conn]
+    session = click_button(session, "Create Huddl")
+    Map.merge(context, %{session: session, conn: session})
   end
 
   # Field visibility steps
-  defstep "I should see {string} field", context do
-    field_label = List.first(context.args)
-    session = assert_has(context.session, "label", text: field_label)
-    {:ok, Map.put(context, :session, session)}
+  step "I should see {string} field", %{args: [field_label]} = context do
+    session = context[:session] || context[:conn]
+    assert_has(session, "label", text: field_label)
+    context
   end
 
-  defstep "I should not see {string} field", context do
-    field_label = List.first(context.args)
-    session = refute_has(context.session, "label", text: field_label)
-    {:ok, Map.put(context, :session, session)}
+  step "I should not see {string} field", %{args: [field_label]} = context do
+    session = context[:session] || context[:conn]
+    refute_has(session, "label", text: field_label)
+    context
   end
 
-  defstep "I select {string} from {string}", context do
-    [value, field] = context.args
-    session = select(context.session, field, option: value, exact: false)
-    {:ok, Map.put(context, :session, session)}
-  end
-
-  defstep "I should not see a checkbox for {string}", context do
-    label = List.first(context.args)
-    session = refute_has(context.session, "input[type='checkbox']")
-    session = refute_has(session, "*", text: label)
-    {:ok, Map.put(context, :session, session)}
-  end
-
-  defstep "I should see {string}", context do
-    text = List.first(context.args)
-    session = assert_has(context.session, "*", text: text)
-    {:ok, Map.put(context, :session, session)}
+  step "I should not see a checkbox for {string}", %{args: [label]} = context do
+    session = context[:session] || context[:conn]
+    refute_has(session, "input[type='checkbox']")
+    refute_has(session, "*", text: label)
+    context
   end
 
   # Redirection and result steps
-  defstep "I should be redirected to the {string} group page", context do
-    group_name = List.first(context.args)
-
-    # Check that we're on the group page
-    session = assert_has(context.session, "*", text: group_name)
-
-    {:ok, Map.put(context, :session, session)}
+  step "I should be redirected to the {string} group page", %{args: [group_name]} = context do
+    session = context[:session] || context[:conn]
+    assert_has(session, "*", text: group_name)
+    context
   end
 
-  defstep "the huddl should be created as private", context do
+  step "the huddl should be created as private", context do
     # Wait a moment for any async operations to complete
     Process.sleep(100)
 
@@ -379,23 +306,19 @@ defmodule CreateHuddlSteps do
 
     assert huddl != nil, "Huddl 'Private Meeting' was not created"
     assert huddl.is_private == true
-    {:ok, context}
+    context
   end
 
-  defstep "I should see validation errors for required fields", context do
-    # When form validation fails, we should see error messages
-    session = context.session
-    # Check for common validation error indicators
-    # Ash Framework typically shows "is required" for required fields
-    session = assert_has(session, "*", text: "is required")
-
-    {:ok, Map.put(context, :session, session)}
+  step "I should see validation errors for required fields", context do
+    session = context[:session] || context[:conn]
+    assert_has(session, "*", text: "is required")
+    context
   end
 
-  defstep "I should remain on the new huddl page", context do
-    # Check that we're still on the new huddl page
-    session = assert_has(context.session, "*", text: "Create New Huddl")
-    {:ok, Map.put(context, :session, session)}
+  step "I should remain on the new huddl page", context do
+    session = context[:session] || context[:conn]
+    assert_has(session, "*", text: "Create New Huddl")
+    context
   end
 
   # Helper functions

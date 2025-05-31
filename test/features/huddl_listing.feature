@@ -1,3 +1,4 @@
+@conn
 Feature: Huddl Listing
   As a visitor to the website
   I want to see a list of upcoming huddls

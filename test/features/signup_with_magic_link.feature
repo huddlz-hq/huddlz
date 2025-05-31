@@ -1,3 +1,4 @@
+@conn
 Feature: Signup with Magic Link
 
   Scenario: User signs up with a new account

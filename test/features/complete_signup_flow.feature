@@ -1,3 +1,4 @@
+@conn
 Feature: Complete Signup Flow
   
   Scenario: User completes the entire signup flow including clicking the magic link
