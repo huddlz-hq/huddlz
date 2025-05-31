@@ -1,40 +1,18 @@
 defmodule RsvpCancellationSteps do
-  use Cucumber, feature: "rsvp_cancellation.feature"
-  use HuddlzWeb.ConnCase, async: true
-
+  use Cucumber.StepDefinition
+  import PhoenixTest
   import Huddlz.Generator
   import Huddlz.Test.Helpers.Authentication
+  import CucumberDatabaseHelper
+
   alias Huddlz.Accounts.User
   alias Huddlz.Communities.{Group, Huddl}
 
   require Ash.Query
 
-  # Background steps - users and groups
-  defstep "the following users exist:", context do
-    users =
-      context.datatable.maps
-      |> Enum.map(fn user_data ->
-        role =
-          case user_data["role"] do
-            "verified" -> :verified
-            "regular" -> :regular
-            "admin" -> :admin
-            _ -> :regular
-          end
-
-        generate(
-          user(
-            email: user_data["email"],
-            display_name: user_data["display_name"],
-            role: role
-          )
-        )
-      end)
-
-    {:ok, Map.put(context, :users, users)}
-  end
-
-  defstep "the following group exists:", context do
+  # Background steps - groups (users are in shared_auth_steps)
+  step "the following group exists:", context do
+    ensure_sandbox()
     group_data = hd(context.datatable.maps)
     owner_email = group_data["owner_email"]
 
@@ -55,12 +33,10 @@ defmodule RsvpCancellationSteps do
         )
       )
 
-    {:ok, Map.put(context, :group, group)}
+    Map.put(context, :group, group)
   end
 
-  defstep "{string} is a member of {string}", context do
-    [email, group_name] = context.args
-
+  step "{string} is a member of {string}", %{args: [email, group_name]} = context do
     user =
       User
       |> Ash.Query.filter(email == ^email)
@@ -82,11 +58,10 @@ defmodule RsvpCancellationSteps do
       )
     )
 
-    {:ok, context}
+    context
   end
 
-  defstep "the following huddl exists in {string}:", context do
-    group_name = List.first(context.args)
+  step "the following huddl exists in {string}:", %{args: [group_name]} = context do
     huddl_data = hd(context.datatable.maps)
 
     group =
@@ -120,75 +95,58 @@ defmodule RsvpCancellationSteps do
       )
     )
 
-    {:ok, context}
+    context
   end
 
-  defstep "I am logged in as {string}", context do
-    email = List.first(context.args)
-
+  step "I am logged in as {string}", %{args: [email]} = context do
     user =
       User
       |> Ash.Query.filter(email == ^email)
       |> Ash.read_one!(authorize?: false)
 
-    conn =
-      context.conn
+    session = context[:session] || context[:conn]
+
+    session =
+      session
       |> login(user)
 
-    session = conn |> visit("/")
+    session = session |> visit("/")
 
-    {:ok, Map.merge(context, %{conn: conn, session: session, current_user: user})}
+    Map.merge(context, %{session: session, conn: session, current_user: user})
   end
 
-  defstep "I am on the {string} group page", context do
-    group_name = List.first(context.args)
-
+  step "I am on the {string} group page", %{args: [group_name]} = context do
     group =
       Group
       |> Ash.Query.filter(name == ^group_name)
       |> Ash.Query.load(:owner)
       |> Ash.read_one!(authorize?: false)
 
-    session = context.session |> visit("/groups/#{group.slug}")
-    {:ok, Map.put(context, :session, session)}
+    session = context[:session] || context[:conn]
+    session = session |> visit("/groups/#{group.slug}")
+    Map.merge(context, %{session: session, conn: session})
   end
 
-  defstep "I click on {string}", context do
-    link_text = List.first(context.args)
-
-    session = click_link(context.session, link_text)
-    {:ok, Map.put(context, :session, session)}
+  step "I click on {string}", %{args: [link_text]} = context do
+    session = context[:session] || context[:conn]
+    session = click_link(session, link_text)
+    Map.merge(context, %{session: session, conn: session})
   end
 
-  defstep "I should see {string}", context do
-    text = List.first(context.args)
-
-    session = assert_has(context.session, "*", text: text)
-    {:ok, Map.put(context, :session, session)}
-  end
-
-  defstep "I should not see {string}", context do
-    text = List.first(context.args)
-
-    session = refute_has(context.session, "*", text: text)
-    {:ok, Map.put(context, :session, session)}
-  end
-
-  defstep "I should be on the huddl page for {string}", context do
-    huddl_title = List.first(context.args)
-
+  step "I should be on the huddl page for {string}", %{args: [huddl_title]} = context do
     # Just verify we can see the huddl content - the navigation already happened
-    session = assert_has(context.session, "*", text: huddl_title)
-    {:ok, Map.put(context, :session, session)}
+    session = context[:session] || context[:conn]
+    assert_has(session, "*", text: huddl_title)
+    context
   end
 
-  defstep "I log out", context do
-    {:ok, Map.put(context, :conn, build_conn())}
+  step "I log out", context do
+    conn = Phoenix.ConnTest.build_conn()
+    Map.merge(context, %{session: conn, conn: conn})
   end
 
   # Given steps
-  defstep "I have RSVPed to {string}", context do
-    huddl_title = List.first(context.args)
+  step "I have RSVPed to {string}", %{args: [huddl_title]} = context do
     user = context.current_user
 
     huddl =
@@ -200,12 +158,10 @@ defmodule RsvpCancellationSteps do
     |> Ash.Changeset.for_update(:rsvp, %{user_id: user.id}, actor: user)
     |> Ash.update!()
 
-    {:ok, context}
+    context
   end
 
-  defstep "{string} has RSVPed to {string}", context do
-    [email, huddl_title] = context.args
-
+  step "{string} has RSVPed to {string}", %{args: [email, huddl_title]} = context do
     user =
       User
       |> Ash.Query.filter(email == ^email)
@@ -220,12 +176,11 @@ defmodule RsvpCancellationSteps do
     |> Ash.Changeset.for_update(:rsvp, %{user_id: user.id}, actor: user)
     |> Ash.update!()
 
-    {:ok, context}
+    context
   end
 
   # When steps
-  defstep "I visit the {string} huddl page", context do
-    huddl_title = List.first(context.args)
+  step "I visit the {string} huddl page", %{args: [huddl_title]} = context do
     user = context.current_user
 
     huddl =
@@ -234,24 +189,9 @@ defmodule RsvpCancellationSteps do
       |> Ash.Query.load(:group)
       |> Ash.read_one!(actor: user)
 
-    session = context.session |> visit("/groups/#{huddl.group.slug}/huddlz/#{huddl.id}")
-    {:ok, Map.put(context, :session, session)}
-  end
-
-  defstep "I click {string}", context do
-    button_text = List.first(context.args)
-
-    # Try button first, then link
-    session =
-      try do
-        click_button(context.session, button_text)
-      rescue
-        _ ->
-          # If button fails, try link
-          click_link(context.session, button_text)
-      end
-
-    {:ok, Map.put(context, :session, session)}
+    session = context[:session] || context[:conn]
+    session = session |> visit("/groups/#{huddl.group.slug}/huddlz/#{huddl.id}")
+    Map.merge(context, %{session: session, conn: session})
   end
 
   # Helper functions

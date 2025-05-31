@@ -1,11 +1,13 @@
 defmodule HuddlListingSteps do
-  use Cucumber, feature: "huddl_listing.feature"
-  use HuddlzWeb.ConnCase, async: true
-
+  use Cucumber.StepDefinition
+  import PhoenixTest
   import Huddlz.Generator
+  import ExUnit.Assertions
+  import CucumberDatabaseHelper
 
   # Background step: Create sample huddlz
-  defstep "there are upcoming huddlz in the system", context do
+  step "there are upcoming huddlz in the system", context do
+    ensure_sandbox()
     # Create a verified host who can create huddls
     host = generate(user(role: :verified))
 
@@ -53,50 +55,48 @@ defmodule HuddlListingSteps do
     huddlz = [huddl1, huddl2, elixir_huddl]
 
     # Return the context with huddl information
-    {:ok, Map.merge(context, %{huddlz: huddlz, huddlz_count: length(huddlz)})}
+    Map.merge(context, %{huddlz: huddlz, huddlz_count: length(huddlz)})
   end
 
   # Visit landing page
-  defstep "I visit the landing page", %{conn: conn} = context do
-    session = conn |> visit("/")
-    {:ok, Map.merge(context, %{session: session})}
+  step "I visit the landing page", context do
+    conn = context.conn |> visit("/")
+    Map.put(context, :conn, conn)
   end
 
   # Search for a term
-  defstep "I search for {string}", %{session: session, args: args} = context do
-    term = List.first(args)
-    session = session |> fill_in("Search huddlz", with: term)
-    {:ok, Map.merge(context, %{session: session, search_term: term})}
+  step "I search for {string}", %{args: [term]} = context do
+    conn = context.conn |> fill_in("Search huddlz", with: term)
+    Map.merge(context, %{conn: conn, search_term: term})
   end
 
   # Clear search
-  defstep "I clear the search form", %{session: session} = context do
-    session = session |> fill_in("Search huddlz", with: "")
-    {:ok, Map.merge(context, %{session: session})}
+  step "I clear the search form", context do
+    conn = context.conn |> fill_in("Search huddlz", with: "")
+    Map.put(context, :conn, conn)
   end
 
   # Assertions
-  defstep "I should see a list of upcoming huddlz", %{session: session} = context do
+  step "I should see a list of upcoming huddlz", context do
     # Should not see the "no huddlz found" message and should see the heading
-    session =
-      session
+    conn =
+      context.conn
       |> refute_has("p", text: "No huddlz found")
       |> assert_has("h1", text: "Find your huddl")
 
-    {:ok, Map.put(context, :session, session)}
+    Map.put(context, :conn, conn)
   end
 
-  defstep "I should see basic information for each huddl",
-          %{session: session, huddlz: huddlz} = context do
+  step "I should see basic information for each huddl", context do
     # Check that we can see at least one of the huddl titles
-    huddl_titles = Enum.map(huddlz, & &1.title)
+    huddl_titles = Enum.map(context.huddlz, & &1.title)
 
     # With PhoenixTest, we need to check for specific elements
     # Let's verify at least one huddl title is present
     found =
       Enum.any?(huddl_titles, fn title ->
         try do
-          assert_has(session, "h3", text: title)
+          assert_has(context.conn, "h3", text: title)
           true
         rescue
           _ -> false
@@ -105,50 +105,49 @@ defmodule HuddlListingSteps do
 
     assert found, "Expected to find at least one huddl title"
 
-    {:ok, Map.put(context, :session, session)}
+    context
   end
 
-  defstep "I should see a search form", %{session: session} = context do
-    session =
-      session
-      |> assert_has("input[placeholder='Search huddlz...']")
-      |> assert_has("button", text: "Search")
+  step "I should see a search form", context do
+    session = context[:session] || context[:conn]
 
-    {:ok, Map.put(context, :session, session)}
+    session
+    |> assert_has("input[placeholder='Search huddlz...']")
+    |> assert_has("button", text: "Search")
+
+    context
   end
 
-  defstep "I should see huddlz matching {string}",
-          %{session: session, args: args, huddlz: huddlz} = context do
-    search_term = List.first(args)
-
+  step "I should see huddlz matching {string}",
+       %{args: [search_term]} = context do
     # Should see the search term in the results (we created a huddl with "Elixir" in title)
-    session = assert_has(session, "h3", text: "Elixir Programming Workshop")
+    conn = assert_has(context.conn, "h3", text: "Elixir Programming Workshop")
 
     # Should not see huddlz that don't match the search term
     # The generated huddlz typically have random titles that don't contain "Elixir"
     non_matching_titles =
-      huddlz
+      context.huddlz
       |> Enum.filter(fn h -> not String.contains?(h.title, search_term) end)
       |> Enum.map(& &1.title)
       # Just check a few
       |> Enum.take(3)
 
-    session =
-      Enum.reduce(non_matching_titles, session, fn title, acc ->
+    conn =
+      Enum.reduce(non_matching_titles, conn, fn title, acc ->
         refute_has(acc, "h3", text: title)
       end)
 
-    {:ok, Map.put(context, :session, session)}
+    Map.put(context, :conn, conn)
   end
 
-  defstep "I should see all upcoming huddlz again", %{session: session} = context do
+  step "I should see all upcoming huddlz again", context do
     # In the real implementation, we'd see all original huddlz again
     # For the test, we'll verify we're still on a page with huddlz
-    session =
-      session
+    conn =
+      context.conn
       |> assert_has("h1", text: "Find your huddl")
       |> refute_has("p", text: "No huddlz found")
 
-    {:ok, Map.put(context, :session, session)}
+    Map.put(context, :conn, conn)
   end
 end

@@ -1,3 +1,4 @@
+@conn
 Feature: User Sign In and Sign Out
 
   Scenario: User requests a magic link for an existing account
