@@ -390,22 +390,24 @@ defmodule Huddlz.Communities.Huddl do
   end
 
   calculations do
-    calculate :status, :atom, expr(
-      fragment(
-        """
-        CASE
-          WHEN ? > NOW() THEN ?::text
-          WHEN ? < NOW() THEN ?::text
-          ELSE ?::text
-        END
-        """,
-        starts_at,
-        "upcoming",
-        ends_at,
-        "completed",
-        "in_progress"
-      )
-    )
+    calculate :status,
+              :atom,
+              expr(
+                fragment(
+                  """
+                  CASE
+                    WHEN ? > NOW() THEN ?::text
+                    WHEN ? < NOW() THEN ?::text
+                    ELSE ?::text
+                  END
+                  """,
+                  starts_at,
+                  "upcoming",
+                  ends_at,
+                  "completed",
+                  "in_progress"
+                )
+              )
 
     calculate :visible_virtual_link, :string do
       calculation Huddlz.Communities.Huddl.Calculations.VisibleVirtualLink

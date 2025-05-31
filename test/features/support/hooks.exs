@@ -1,6 +1,6 @@
 defmodule CucumberHooks do
   use Cucumber.Hooks
-  
+
   # Hook for @conn tag - creates a Phoenix connection
   before_scenario "@conn", context do
     conn =

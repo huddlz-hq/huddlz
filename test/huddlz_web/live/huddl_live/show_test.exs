@@ -44,6 +44,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       # Create a virtual huddl
       starts_at = DateTime.add(DateTime.utc_now(), 1, :day)
+
       huddl =
         Huddl
         |> Ash.Changeset.for_create(
@@ -170,6 +171,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
     test "handles different event types correctly", %{conn: conn, owner: owner, group: group} do
       # Create in-person huddl
       in_person_starts_at = DateTime.add(DateTime.utc_now(), 1, :day)
+
       in_person_huddl =
         Huddl
         |> Ash.Changeset.for_create(
@@ -197,6 +199,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       # Create hybrid huddl
       hybrid_starts_at = DateTime.add(DateTime.utc_now(), 1, :day)
+
       hybrid_huddl =
         Huddl
         |> Ash.Changeset.for_create(
@@ -250,6 +253,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       # Create private huddl
       private_starts_at = DateTime.add(DateTime.utc_now(), 1, :day)
+
       private_huddl =
         Huddl
         |> Ash.Changeset.for_create(

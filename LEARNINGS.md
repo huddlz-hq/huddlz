@@ -277,3 +277,20 @@ Implemented human-readable URL slugs for groups, replacing UUID-based routes. Gr
 - **Full URL Display**: Use `url(~p"/path")` helper to show proper localhost/production URLs
 
 See `tasks/issue-26/learnings.md` for full implementation details and code examples.
+
+## Issue #19: Update to cucumber 0.2.0 - 2025-05-31
+
+### Context
+Upgraded cucumber from 0.1.0 to 0.4.0 (exceeding target 0.2.0) to implement shared step definitions and establish standard testing patterns. Eliminated duplication across 7 step definition files by creating SharedAuthSteps and SharedUISteps modules.
+
+### Key Learnings
+1. **Documentation Co-location**: Place documentation next to the code it describes (test/features/step_definitions/README.md) rather than in separate support directories. Improves discoverability.
+2. **Pattern Categories**: Shared cucumber steps naturally organize into clear categories - Authentication (user setup, sign-in), UI Navigation (clicking, visiting), Content Assertions (seeing text, flash messages), and Form Interactions.
+3. **Standard Vocabulary**: Establish consistent step patterns like "Then I should see {string} in the flash" to reduce implementation thrashing. Developers shouldn't have to figure out implementations for common tasks.
+
+### Reusable Patterns
+- **Shared Step Organization**: Group related steps in focused modules (SharedAuthSteps, SharedUISteps) with clear documentation and examples
+- **Generic vs Specific**: Keep shared steps domain-agnostic - authentication and UI patterns belong in shared modules, business logic stays in feature-specific files
+- **Flexible Implementation**: Support multiple existing patterns (e.g., both Ash.Seed and generate for user creation) rather than forcing uniformity
+
+See `tasks/issue-19/learnings.md` for full details including implementation patterns and recommendations.
