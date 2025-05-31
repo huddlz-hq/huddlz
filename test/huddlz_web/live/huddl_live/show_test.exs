@@ -43,6 +43,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> Ash.create!()
 
       # Create a virtual huddl
+      starts_at = DateTime.add(DateTime.utc_now(), 1, :day)
       huddl =
         Huddl
         |> Ash.Changeset.for_create(
@@ -50,8 +51,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
           %{
             title: "Virtual Meeting",
             description: "Join us for an online discussion",
-            starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-            ends_at: DateTime.add(DateTime.utc_now(), 2, :day),
+            starts_at: starts_at,
+            ends_at: DateTime.add(starts_at, 2, :hour),
             event_type: :virtual,
             virtual_link: "https://zoom.us/j/123456789",
             is_private: false,
@@ -168,6 +169,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
     test "handles different event types correctly", %{conn: conn, owner: owner, group: group} do
       # Create in-person huddl
+      in_person_starts_at = DateTime.add(DateTime.utc_now(), 1, :day)
       in_person_huddl =
         Huddl
         |> Ash.Changeset.for_create(
@@ -175,8 +177,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
           %{
             title: "In-Person Meetup",
             description: "Meet us at the coffee shop",
-            starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-            ends_at: DateTime.add(DateTime.utc_now(), 2, :day),
+            starts_at: in_person_starts_at,
+            ends_at: DateTime.add(in_person_starts_at, 2, :hour),
             event_type: :in_person,
             physical_location: "123 Main St, City",
             is_private: false,
@@ -194,6 +196,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> refute_has("dt", text: "Virtual Access")
 
       # Create hybrid huddl
+      hybrid_starts_at = DateTime.add(DateTime.utc_now(), 1, :day)
       hybrid_huddl =
         Huddl
         |> Ash.Changeset.for_create(
@@ -201,8 +204,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
           %{
             title: "Hybrid Event",
             description: "Join us in person or online",
-            starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-            ends_at: DateTime.add(DateTime.utc_now(), 2, :day),
+            starts_at: hybrid_starts_at,
+            ends_at: DateTime.add(hybrid_starts_at, 2, :hour),
             event_type: :hybrid,
             physical_location: "Conference Room A",
             virtual_link: "https://meet.example.com/hybrid",
@@ -246,6 +249,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
         |> Ash.create!()
 
       # Create private huddl
+      private_starts_at = DateTime.add(DateTime.utc_now(), 1, :day)
       private_huddl =
         Huddl
         |> Ash.Changeset.for_create(
@@ -253,8 +257,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
           %{
             title: "Private Event",
             description: "Members only event",
-            starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-            ends_at: DateTime.add(DateTime.utc_now(), 2, :day),
+            starts_at: private_starts_at,
+            ends_at: DateTime.add(private_starts_at, 2, :hour),
             event_type: :in_person,
             physical_location: "Secret Location",
             is_private: true,

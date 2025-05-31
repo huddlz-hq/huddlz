@@ -396,8 +396,8 @@ defmodule Huddlz.Communities.Huddl do
 
         Enum.map(records, fn record ->
           cond do
-            record.starts_at > now -> :upcoming
-            record.ends_at < now -> :completed
+            DateTime.compare(record.starts_at, now) == :gt -> :upcoming
+            DateTime.compare(record.ends_at, now) == :lt -> :completed
             true -> :in_progress
           end
         end)
