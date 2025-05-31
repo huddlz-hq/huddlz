@@ -390,19 +390,22 @@ defmodule Huddlz.Communities.Huddl do
   end
 
   calculations do
-    calculate :status, :atom do
-      calculation fn records, _context ->
-        now = DateTime.utc_now()
-
-        Enum.map(records, fn record ->
-          cond do
-            DateTime.compare(record.starts_at, now) == :gt -> :upcoming
-            DateTime.compare(record.ends_at, now) == :lt -> :completed
-            true -> :in_progress
-          end
-        end)
-      end
-    end
+    calculate :status, :atom, expr(
+      fragment(
+        """
+        CASE
+          WHEN ? > NOW() THEN ?::text
+          WHEN ? < NOW() THEN ?::text
+          ELSE ?::text
+        END
+        """,
+        starts_at,
+        "upcoming",
+        ends_at,
+        "completed",
+        "in_progress"
+      )
+    )
 
     calculate :visible_virtual_link, :string do
       calculation Huddlz.Communities.Huddl.Calculations.VisibleVirtualLink
