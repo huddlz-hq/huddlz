@@ -26,10 +26,8 @@ defmodule Mix.Tasks.RemoveTrailingWhitespace do
 
     files =
       Path.wildcard("**/*")
-      |> Enum.filter(&File.regular?/1)
       |> Enum.filter(fn path ->
-        ext = Path.extname(path)
-        ext in extensions
+        File.regular?(path) && Path.extname(path) in extensions
       end)
       |> Enum.reject(fn path ->
         Enum.any?(excluded_dirs, &String.starts_with?(path, &1 <> "/"))
