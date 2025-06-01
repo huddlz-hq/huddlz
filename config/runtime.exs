@@ -56,6 +56,8 @@ if config_env() == :prod do
 
   config :huddlz, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  # Configure RemoteIp to get correct client IPs from Render's proxy
+  # Render uses CF-Connecting-IP and X-Forwarded-For headers
   config :huddlz, HuddlzWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [
@@ -69,6 +71,7 @@ if config_env() == :prod do
     secret_key_base: secret_key_base,
     check_origin: ["https://huddlz.com", "https://#{host}"],
     force_ssl: [rewrite_on: [:x_forwarded_proto], hsts: true]
+
 
   config :huddlz,
     token_signing_secret:

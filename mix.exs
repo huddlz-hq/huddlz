@@ -83,7 +83,8 @@ defmodule Huddlz.MixProject do
       {:cucumber, "~> 0.4.0", only: [:dev, :test]},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:phoenix_test, "~> 0.6.0", only: :test},
-      {:slugify, "~> 1.3"}
+      {:slugify, "~> 1.3"},
+      {:remote_ip, "~> 1.1"}
     ]
   end
 
