@@ -51,13 +51,12 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
-  host = System.get_env("RENDER_EXTERNAL_HOSTNAME") || "huddlz.com"
+  # Use the custom domain for the canonical URL, not Render's hostname
+  host = System.get_env("PHX_HOST") || "huddlz.com"
   port = String.to_integer(System.get_env("PORT") || "4000")
 
   config :huddlz, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
-  # Configure RemoteIp to get correct client IPs from Render's proxy
-  # Render uses CF-Connecting-IP and X-Forwarded-For headers
   config :huddlz, HuddlzWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [
@@ -69,7 +68,7 @@ if config_env() == :prod do
       port: port
     ],
     secret_key_base: secret_key_base,
-    check_origin: ["https://huddlz.com", "https://www.huddlz.com", "https://#{host}"]
+    check_origin: ["https://#{host}"]
 
 
   config :huddlz,
