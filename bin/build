@@ -8,3 +8,6 @@ MIX_ENV=prod mix assets.build
 MIX_ENV=prod mix assets.deploy
 
 MIX_ENV=prod mix release --overwrite
+
+# Run migrations as part of the build process
+_build/prod/rel/huddlz/bin/migrate
