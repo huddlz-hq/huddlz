@@ -51,7 +51,7 @@ This document captures key development patterns, learnings, and best practices d
   ```elixir
   # Wrong
   assert error.message =~ "is required"
-  
+
   # Right
   assert error.field == :name
   ```

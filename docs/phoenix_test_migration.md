@@ -31,7 +31,7 @@ assert_has(session, "p", text: "Welcome")
 ```elixir
 {:ok, view, _html} = live(conn, "/groups/new")
 
-html = 
+html =
   view
   |> element("form")
   |> render_submit(%{
@@ -62,7 +62,7 @@ assert_has(session, ".alert", text: "Group created")
 {:ok, view, _html} = live(conn, "/huddls/new")
 
 # Change event type
-html = 
+html =
   view
   |> element("form")
   |> render_change(%{"huddl" => %{"type" => "virtual"}})
@@ -162,7 +162,7 @@ PhoenixTest uses CSS selectors:
 # Class selectors
 assert_has(session, ".alert.alert-success")
 
-# Attribute selectors  
+# Attribute selectors
 assert_has(session, "[data-role='admin-panel']")
 
 # Nested selectors

@@ -33,7 +33,7 @@ Add slug attribute to the Group resource with proper validations and actions.
      argument :slug, :string do
        allow_nil? false
      end
-     
+
      get? true
      filter expr(slug == ^arg(:slug))
    end

@@ -153,7 +153,7 @@ defmodule Helpcenter.KnowledgeBase.Category do
     domain: Helpcenter.KnowledgeBase,
     data_layer: AshPostgres.DataLayer,
     notifiers: Ash.Notifier.PubSub
-  
+
   preparations do
     prepare Helpcenter.Preparations.LimitTo5
     prepare Helpcenter.Preparations.MonthToDate

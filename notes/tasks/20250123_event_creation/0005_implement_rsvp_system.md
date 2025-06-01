@@ -6,13 +6,13 @@
 - Purpose: Allow users to RSVP to huddlz and track attendance count
 
 ## Task Boundaries
-- In scope: 
+- In scope:
   - RSVP action for users
   - Track RSVP count on huddlz
   - Show RSVP button/status on event display
   - Reveal virtual link after RSVP
   - Basic RSVP tracking (user has RSVPed or not)
-- Out of scope: 
+- Out of scope:
   - Displaying attendee lists
   - RSVP cancellation
   - Waitlists or capacity limits

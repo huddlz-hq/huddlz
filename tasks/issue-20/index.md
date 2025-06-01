@@ -86,7 +86,7 @@ This refactoring will make the Cucumber upgrade (issue #19) easier by:
 ## Task Breakdown
 
 1. ✅ **Add PhoenixTest and create POC**
-2. ✅ **Migrate Cucumber step definitions** 
+2. ✅ **Migrate Cucumber step definitions**
 3. ✅ **Migrate remaining tests**
 4. ✅ **Remove old test approaches entirely** (where possible)
 5. ✅ **Update documentation**

@@ -160,7 +160,7 @@ end
 # Apply based on attribute presence
 def change(changeset, _opts, _context) do
   name = Ash.Changeset.get_attribute(changeset, :name)
-  
+
   if name do
     # Apply change logic
   else
@@ -181,7 +181,7 @@ defmodule Helpcenter.Changes.Slugify do
     # Get options with defaults
     source_field = Keyword.get(opts, :source_field, :name)
     target_field = Keyword.get(opts, :target_field, :slug)
-    
+
     # Use options in change logic
     # ...
   end
@@ -257,13 +257,13 @@ defmodule Helpcenter.Changes.TrackArticleHistory do
             previous_content: Ash.Changeset.get_attribute(changeset, :content),
             changed_at: DateTime.utc_now()
           }
-          
+
           Helpcenter.KnowledgeBase.ArticleHistory
           |> Ash.Changeset.for_create(:create, history_attrs)
           |> Ash.create()
-          
+
           {:ok, updated_article}
-          
+
         error, _changeset ->
           error
       end)
@@ -285,7 +285,7 @@ defmodule Helpcenter.Changes.TrackEditor do
   def change(changeset, _opts, context) do
     # Get current user from context
     current_user = Map.get(context, :user)
-    
+
     if current_user do
       Ash.Changeset.force_change_attribute(changeset, :last_edited_by, current_user.id)
     else
@@ -305,7 +305,7 @@ defmodule Helpcenter.Changes.ValidateSlug do
 
   def change(changeset, _opts, _context) do
     slug = Ash.Changeset.get_attribute(changeset, :slug)
-    
+
     if slug && !String.match?(slug, ~r/^[a-z0-9-]+$/) do
       Ash.Changeset.add_error(changeset, :slug, "must contain only lowercase letters, numbers, and hyphens")
     else

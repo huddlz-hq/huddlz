@@ -20,7 +20,7 @@ Add the Slugify library to the project for consistent slug generation.
    ```elixir
    Slug.slugify("Hello World!")
    # Should return "hello-world"
-   
+
    Slug.slugify("Phoenix Elixir Meetup")
    # Should return "phoenix-elixir-meetup"
    ```

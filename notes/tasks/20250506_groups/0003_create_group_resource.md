@@ -6,12 +6,12 @@
 - Purpose: Define the core Group resource with all necessary attributes and relationships
 
 ## Task Boundaries
-- In scope: 
+- In scope:
   - Group schema definition with all required attributes
   - Relationships setup (owner, members)
   - Access control policies
   - Basic CRUD actions
-- Out of scope: 
+- Out of scope:
   - Migration generation (separate task)
   - UI implementation
   - Integration with huddlz
@@ -115,15 +115,15 @@ defmodule Huddlz.Communities.Group do
 
   actions do
     defaults [:create, :read, :update, :destroy]
-    
+
     create :create_group do
       description "Create a new group"
       accept [:name, :description, :location, :image_url, :is_public]
-      
+
       argument :owner_id, :uuid do
         allow_nil? false
       end
-      
+
       change manage_relationship(:owner_id, :owner, type: :append)
     end
   end
@@ -153,13 +153,13 @@ defmodule Huddlz.Communities.GroupMember do
 
   attributes do
     uuid_primary_key :id
-    
+
     attribute :role, :string do
       allow_nil? false
       default "member"
       constraints one_of: ["member", "admin"]
     end
-    
+
     create_timestamp :created_at
   end
 
@@ -169,7 +169,7 @@ defmodule Huddlz.Communities.GroupMember do
       allow_nil? false
       primary_key? false
     end
-    
+
     belongs_to :user, Huddlz.Accounts.User do
       attribute_type :uuid
       allow_nil? false

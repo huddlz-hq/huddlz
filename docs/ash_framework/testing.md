@@ -42,10 +42,10 @@ Always require Ash.Query before using query macros:
 ```elixir
 defmodule MyTest do
   use MyApp.DataCase
-  
+
   # ✅ Required for using Ash.Query macros
   require Ash.Query
-  
+
   test "filters groups by owner" do
     Group
     |> Ash.Query.filter(owner_id: user.id)
@@ -107,7 +107,7 @@ setup do
     owner_id: owner.id,
     actor: owner
   ))
-  
+
   %{owner: owner, group: group}
 end
 ```
@@ -155,7 +155,7 @@ When testing LiveView components that use Ash resources with PhoenixTest:
 ```elixir
 test "displays group details", %{conn: conn, group: group} do
   session = conn |> visit("/groups/#{group.id}")
-  
+
   # Remember to convert CiString fields
   assert_has(session, "h1", text: to_string(group.name))
   assert_has(session, "p", text: to_string(group.description))

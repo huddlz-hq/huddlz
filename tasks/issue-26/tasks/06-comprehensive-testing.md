@@ -30,9 +30,9 @@ test "enforces unique slugs" do
     slug: "test-group",
     owner_id: user.id
   })
-  
+
   {:error, changeset} = Group.create_group(%{
-    name: "Another Group", 
+    name: "Another Group",
     slug: "test-group",
     owner_id: user.id
   })
@@ -58,11 +58,11 @@ end
 
 test "auto-generates slug as user types", %{conn: conn} do
   {:ok, view, _html} = live(conn, ~p"/groups/new")
-  
+
   view
   |> form("#group-form", group: %{name: "Test Group Name"})
   |> render_change()
-  
+
   assert has_element?(view, "input[name='group[slug]'][value='test-group-name']")
 end
 ```

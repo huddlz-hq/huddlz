@@ -211,7 +211,7 @@ Based on user requirements and discussion:
 - All 209 tests now passing
 - Quality gates:
   - `mix format` - code formatted
-  - `mix credo --strict` - zero issues  
+  - `mix credo --strict` - zero issues
   - `mix test` - all tests passing
 3. Auto-generate slug from group name
 4. Handle conflicts with number suffix
@@ -239,7 +239,7 @@ Ready to begin implementation with Task 1: Add Slug Attribute to Group Resource
 
 All tasks have been successfully completed:
 1. ✅ Added Slugify dependency
-2. ✅ Updated Group resource with slug attribute  
+2. ✅ Updated Group resource with slug attribute
 3. ✅ Generated and ran Ash migration
 4. ✅ Updated routes and LiveViews to use slugs
 5. ✅ Updated UI forms with slug input/editing
@@ -393,7 +393,7 @@ To login to the Huddlz application for testing:
 9. Copy the full magic link URL and navigate to it directly
    - The link format: http://localhost:4000/auth/user/magic_link/?token=...
 
-Note: Magic link tokens may expire quickly. If you get "Incorrect email or password", 
+Note: Magic link tokens may expire quickly. If you get "Incorrect email or password",
 request a new magic link. The token in the URL must be fresh.
 
 ### Quality Gates

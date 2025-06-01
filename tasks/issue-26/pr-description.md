@@ -11,7 +11,7 @@ This PR implements human-readable URL slugs for groups, replacing UUID-based rou
 - Created `GenerateSlug` Ash change module that auto-generates slugs on group creation
 - Implemented unicode transliteration support ("Café München" → "cafe-munchen")
 
-### 2. Database Schema Updates  
+### 2. Database Schema Updates
 - Added `slug` attribute to Group resource with unique constraint
 - Generated Ash migration to add slug column and unique index
 - Updated seed data with meaningful group names that generate clean slugs

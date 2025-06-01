@@ -115,7 +115,7 @@ This project uses:
 
 #### Ash Framework
 
-For reference on working with Ash Framework, see the detailed documentation in the 
+For reference on working with Ash Framework, see the detailed documentation in the
 `docs/ash_framework/` directory, covering topics like:
 
 - `docs/ash_framework/relationships.md` - Working with relationships
@@ -177,7 +177,7 @@ The development workflow combines GitHub Issues for tracking with local files fo
    - **Role**: Expert Engineer
    - **Objective**: Meticulously implement code following test-driven development
    - **Usage**: `/build issue=123` (auto-detects next task) or `/build issue=123 task=2` (specific task)
-   - **Features**: 
+   - **Features**:
      - Reads from local task files for requirements
      - Auto-finds next pending task if not specified
      - Updates session.md with real-time progress
@@ -313,7 +313,7 @@ When encountering commands with a leading slash (like `/command`):
 
 ## Migration Guidelines
 
-- Never edit a migration file, only generate new migrations 
+- Never edit a migration file, only generate new migrations
 - Because this is an Ash project, generate migrations using: `mix ash.codegen <name_of_change_to_resource>`
 
 ## Puppeteer Login Instructions (IMPORTANT - USE THIS!)

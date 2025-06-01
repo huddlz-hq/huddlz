@@ -6,14 +6,14 @@
 - Purpose: Extend the existing Huddl resource with fields and relationships needed for event functionality
 
 ## Task Boundaries
-- In scope: 
+- In scope:
   - Add new attributes for events (dates, location, type, etc.)
   - Add relationship to group
   - Add relationship to creator (user)
   - Add RSVP tracking
   - Replace status field with calculated attribute
   - Add validations for dates and event types
-- Out of scope: 
+- Out of scope:
   - UI components
   - Complex RSVP logic
   - Notification system

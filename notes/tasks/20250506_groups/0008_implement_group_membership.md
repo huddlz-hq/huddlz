@@ -6,12 +6,12 @@
 - Purpose: Enable users to join and leave groups
 
 ## Task Boundaries
-- In scope: 
+- In scope:
   - Join public groups
   - Leave groups
   - View members list
   - Automatic membership for group creators
-- Out of scope: 
+- Out of scope:
   - Advanced membership management
   - Private group invitations (future enhancement)
   - Member roles beyond basic membership
@@ -66,47 +66,47 @@
 # In lib/huddlz/communities/group.ex
 actions do
   # Existing actions...
-  
+
   update :join_group do
     description "Join a group"
     argument :user_id, :uuid do
       allow_nil? false
     end
-    
+
     change manage_relationship(:user_id, :members, type: :append)
   end
-  
+
   update :leave_group do
     description "Leave a group"
     argument :user_id, :uuid do
       allow_nil? false
     end
-    
+
     change manage_relationship(:user_id, :members, type: :remove)
   end
-  
+
   # Override the create action to automatically add creator as member
   create :create_group do
     description "Create a new group"
     accept [:name, :description, :location, :image_url, :is_public]
-    
+
     argument :owner_id, :uuid do
       allow_nil? false
     end
-    
+
     change manage_relationship(:owner_id, :owner, type: :append)
-    
+
     # Also add owner as a member
     change after_action(fn changeset, result = %{} ->
       # Get the newly created group
       group = result.result
-      
+
       # Add owner as member
       Huddlz.Communities.Group
       |> Ash.get!(group.id)
       |> Ash.Changeset.for_update(:join_group, %{user_id: changeset.arguments.owner_id})
       |> Ash.update!()
-      
+
       # Return original result
       result
     end)
@@ -118,14 +118,14 @@ end
 ```elixir
 defmodule HuddlzWeb.GroupLive.Show do
   use HuddlzWeb, :live_view
-  
+
   def mount(%{"id" => id}, _session, socket) do
     group = get_group(id)
-    
+
     if group && (group.is_public || is_member?(group, socket.assigns.current_user)) do
       members = get_group_members(id)
-      
-      {:ok, 
+
+      {:ok,
         socket
         |> assign(:group, group)
         |> assign(:members, members)
@@ -133,31 +133,31 @@ defmodule HuddlzWeb.GroupLive.Show do
         |> assign(:is_owner, is_owner?(group, socket.assigns.current_user))
       }
     else
-      {:ok, 
+      {:ok,
         socket
         |> put_flash(:error, "You don't have access to this group")
         |> redirect(to: ~p"/groups")}
     end
   end
-  
+
   def handle_event("join", _, socket) do
     case join_group(socket.assigns.group.id, socket.assigns.current_user.id) do
       {:ok, _} ->
         group = get_group(socket.assigns.group.id)
         members = get_group_members(socket.assigns.group.id)
-        
-        {:noreply, 
+
+        {:noreply,
           socket
           |> put_flash(:info, "Successfully joined group")
           |> assign(:group, group)
           |> assign(:members, members)
           |> assign(:is_member, true)}
-          
+
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to join group")}
     end
   end
-  
+
   def handle_event("leave", _, socket) do
     if socket.assigns.is_owner do
       {:noreply, put_flash(socket, :error, "Group owners cannot leave their group")}
@@ -166,20 +166,20 @@ defmodule HuddlzWeb.GroupLive.Show do
         {:ok, _} ->
           group = get_group(socket.assigns.group.id)
           members = get_group_members(socket.assigns.group.id)
-          
-          {:noreply, 
+
+          {:noreply,
             socket
             |> put_flash(:info, "Successfully left group")
             |> assign(:group, group)
             |> assign(:members, members)
             |> assign(:is_member, false)}
-            
+
         {:error, _} ->
           {:noreply, put_flash(socket, :error, "Failed to leave group")}
       end
     end
   end
-  
+
   # Helper functions
   defp get_group(id) do
     Huddlz.Communities.Group
@@ -187,7 +187,7 @@ defmodule HuddlzWeb.GroupLive.Show do
     |> Ash.Query.load([:owner, :members])
     |> Ash.read_one!()
   end
-  
+
   defp get_group_members(group_id) do
     Huddlz.Communities.Group
     |> Ash.get!(group_id)
@@ -195,22 +195,22 @@ defmodule HuddlzWeb.GroupLive.Show do
     |> Ash.read_one!()
     |> Map.get(:members)
   end
-  
+
   defp is_member?(group, user) do
     user && Enum.any?(group.members || [], fn member -> member.id == user.id end)
   end
-  
+
   defp is_owner?(group, user) do
     user && group.owner && group.owner.id == user.id
   end
-  
+
   defp join_group(group_id, user_id) do
     Huddlz.Communities.Group
     |> Ash.get!(group_id)
     |> Ash.Changeset.for_update(:join_group, %{user_id: user_id})
     |> Ash.update()
   end
-  
+
   defp leave_group(group_id, user_id) do
     Huddlz.Communities.Group
     |> Ash.get!(group_id)
@@ -308,7 +308,7 @@ end
 
 ## Progress Tracking
 - [x] Add join_group action to GroupMember resource - Completed
-- [x] Add leave_group action to GroupMember resource - Completed  
+- [x] Add leave_group action to GroupMember resource - Completed
 - [x] Ensure group creator becomes a member automatically - Already implemented
 - [x] Create UI components for membership actions - Completed
 - [x] Implement members list view - Completed

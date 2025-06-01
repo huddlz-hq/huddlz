@@ -86,7 +86,7 @@ After examining the codebase, I found that:
 3. **User Experience:**
    - Need clear distinction between sign-up and sign-in flows
    - Need proper confirmation screens for sign-up completion
-   
+
 ## Solution Design
 
 Based on my analysis of the codebase and requirements, I propose the following implementation plan:
@@ -164,7 +164,7 @@ sequenceDiagram
     participant MagicLinkHandler
     participant DisplayNameForm
     participant Dashboard
-    
+
     User->>HomePage: Visits site
     HomePage->>User: Shows Sign Up button
     User->>SignUpPage: Clicks Sign Up

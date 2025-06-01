@@ -133,10 +133,10 @@ When adding new shared steps, follow these guidelines:
 ```elixir
 step "I do something with {string}", %{args: [value]} = context do
   session = context[:session] || context[:conn]
-  
+
   # Perform action
   session = some_action(session, value)
-  
+
   # Return updated context
   Map.merge(context, %{session: session, conn: session})
 end

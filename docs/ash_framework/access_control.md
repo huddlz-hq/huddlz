@@ -104,7 +104,7 @@ relationships do
     description "List of permissions assigned to this group"
     destination_attribute :group_id
   end
-  
+
   # Other relationships...
 end
 ```
@@ -211,29 +211,29 @@ Start with tests that verify:
 ```elixir
 defmodule Helpcenter.Accounts.AccessGroupLiveTest do
   use HelpcenterWeb.ConnCase, async: false
-  
+
   test "All resource actions can be listed for permissions" do
     assert Helpcenter.permissions() |> is_list()
   end
-  
+
   test "Group form renders successfully" do
     user = create_user()
-    
+
     assigns = %{
       actor: user,
       group_id: nil,
       id: Ash.UUIDv7.generate()
     }
-    
+
     html = render_component(HelpcenterWeb.Accounts.Groups.GroupForm, assigns)
-    
+
     # Verify form components
     assert html =~ "access-group-modal-button"
     assert html =~ "form[name]"
     assert html =~ "form[description]"
     assert html =~ gettext("Submit")
   end
-  
+
   # Additional tests...
 end
 ```
@@ -287,7 +287,7 @@ defmodule HelpcenterWeb.Accounts.Groups.GroupForm do
           <!-- Title based on new/edit mode -->
           <span :if={is_nil(@group_id)}>{gettext("New Access Group")}</span>
           <span :if={@group_id}>{@form.source.data.name}</span>
-          
+
           <!-- Subtitle based on new/edit mode -->
           <:subtitle :if={is_nil(@group_id)}>
             {gettext("Fill below form to create a new user access group")}
@@ -298,7 +298,7 @@ defmodule HelpcenterWeb.Accounts.Groups.GroupForm do
             )}
           </:subtitle>
         </.header>
-        
+
         <!-- Form -->
         <.simple_form
           for={@form}
@@ -401,7 +401,7 @@ defmodule HelpcenterWeb.Accounts.Groups.GroupsLive do
       <!-- Group create form -->
       <HelpcenterWeb.Accounts.Groups.GroupForm.form actor={@current_user} id={Ash.UUIDv7.generate()} />
     </div>
-    
+
     <!-- Group table -->
     <.table id="groups" rows={@groups}>
       <:col :let={group} label={gettext("Name")}>{group.name}</:col>
@@ -507,13 +507,13 @@ defmodule HelpcenterWeb.Accounts.Groups.GroupPermissionForm do
             />
             <span class="font-medium">{gettext("Select All Permissions")}</span>
           </label>
-          
+
           <!-- Save button -->
           <.button type="submit" phx-disable-with={gettext("Saving...")}>
             {gettext("Save Permissions")}
           </.button>
         </div>
-        
+
         <!-- Resource permissions table -->
         <.table id={"permissions-#{@group_id}"} rows={@resources}>
           <:col :let={resource} label={gettext("Resource")}>
@@ -523,7 +523,7 @@ defmodule HelpcenterWeb.Accounts.Groups.GroupPermissionForm do
           </:col>
           <:col :let={resource} label={gettext("Actions")}>
             <div class="flex flex-wrap gap-4">
-              <label 
+              <label
                 :for={action <- resource.actions}
                 class="flex items-center gap-2 text-sm leading-6 text-zinc-600"
               >
@@ -593,8 +593,8 @@ defmodule HelpcenterWeb.Accounts.Groups.GroupPermissionForm do
   end
 
   defp permission_checked?(%{name: action}, %{name: resource}, permissions) do
-    Enum.any?(permissions, fn p -> 
-      p.action == to_string(action) && p.resource == to_string(resource) 
+    Enum.any?(permissions, fn p ->
+      p.action == to_string(action) && p.resource == to_string(resource)
     end)
   end
 
@@ -616,33 +616,33 @@ defmodule Helpcenter.KnowledgeBase.Article do
     data_layer: AshPostgres.DataLayer
 
   # Resource definition...
-  
+
   actions do
     # Action definitions...
   end
-  
+
   # Define authorization policy
   policies do
     # Default policy - deny all
     policy always() do
       forbid_unless(actor_present())
     end
-    
+
     # Create policy
     policy action(:create) do
       authorize_if(Helpcenter.Accounts.Checks.Authorized)
     end
-    
+
     # Read policy
     policy action(:read) do
       authorize_if(Helpcenter.Accounts.Checks.Authorized)
     end
-    
+
     # Update policy
     policy action(:update) do
       authorize_if(Helpcenter.Accounts.Checks.Authorized)
     end
-    
+
     # Destroy policy
     policy action(:destroy) do
       authorize_if(Helpcenter.Accounts.Checks.Authorized)
