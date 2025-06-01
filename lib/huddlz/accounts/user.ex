@@ -50,14 +50,7 @@ defmodule Huddlz.Accounts.User do
     create :create do
       accept [:email, :display_name, :role]
 
-      change before_action(fn changeset, _context ->
-               if Ash.Changeset.get_attribute(changeset, :display_name) do
-                 changeset
-               else
-                 display_name = generate_random_display_name()
-                 Ash.Changeset.change_attribute(changeset, :display_name, display_name)
-               end
-             end)
+      change Huddlz.Accounts.User.Changes.SetDefaultDisplayName
     end
 
     read :get_by_subject do
@@ -105,17 +98,10 @@ defmodule Huddlz.Accounts.User do
 
       upsert? true
       upsert_identity :unique_email
-      upsert_fields [:email, :display_name]
+      upsert_fields [:email]
 
-      # Generate a random display name if one isn't provided
-      change before_action(fn changeset, _context ->
-               if Ash.Changeset.get_attribute(changeset, :display_name) do
-                 changeset
-               else
-                 display_name = generate_random_display_name()
-                 Ash.Changeset.change_attribute(changeset, :display_name, display_name)
-               end
-             end)
+      # Generate a random display name only for new users
+      change Huddlz.Accounts.User.Changes.SetDefaultDisplayName
 
       # Uses the information from the token to create or sign in the user
       change AshAuthentication.Strategy.MagicLink.SignInChange
@@ -206,38 +192,5 @@ defmodule Huddlz.Accounts.User do
 
   identities do
     identity :unique_email, [:email]
-  end
-
-  # Helper function to generate a random display name
-  def generate_random_display_name do
-    adjectives = [
-      "Happy",
-      "Clever",
-      "Gentle",
-      "Brave",
-      "Wise",
-      "Cool",
-      "Brilliant",
-      "Swift",
-      "Calm",
-      "Daring"
-    ]
-
-    nouns = [
-      "Dolphin",
-      "Tiger",
-      "Eagle",
-      "Panda",
-      "Wolf",
-      "Falcon",
-      "Bear",
-      "Fox",
-      "Lion",
-      "Hawk"
-    ]
-
-    random_number = :rand.uniform(999)
-
-    "#{Enum.random(adjectives)}#{Enum.random(nouns)}#{random_number}"
   end
 end

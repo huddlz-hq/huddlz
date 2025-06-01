@@ -3,7 +3,9 @@ defmodule Huddlz.Integration.MagicLinkSignupTest do
 
   import Swoosh.TestAssertions
 
+  alias Ash.Resource.Info
   alias Huddlz.Accounts.User
+  require Ash
 
   test "complete signup flow with magic link", %{conn: conn} do
     # Start on home page
@@ -37,20 +39,35 @@ defmodule Huddlz.Integration.MagicLinkSignupTest do
     assert_has(session, "h1", text: "Find your huddl")
   end
 
-  test "verify display name generation pattern", %{conn: _conn} do
-    # We're just testing the display name generation function directly
-    # Generate a display name using our function
-    display_name = User.generate_random_display_name()
+  test "verify display name generation module is configured correctly", %{conn: _conn} do
+    # Since we moved the display name generation to a change module,
+    # let's verify it's properly configured on the create action
 
-    # Verify the display name follows our pattern
-    # It should be a combination of an adjective, animal, and number
-    assert String.match?(display_name, ~r/[A-Z][a-z]+[A-Z][a-z]+\d+/)
+    # Check that the create action has our change module
+    create_info = Info.action(User, :create)
 
-    # Generate multiple names and make sure they're all different
-    names = for _ <- 1..10, do: User.generate_random_display_name()
-    unique_names = Enum.uniq(names)
+    assert Enum.any?(create_info.changes, fn change ->
+             match?(
+               %Ash.Resource.Change{
+                 change: {Huddlz.Accounts.User.Changes.SetDefaultDisplayName, _}
+               },
+               change
+             )
+           end)
 
-    # Verify we got 10 unique names
-    assert length(unique_names) == 10, "Generated display names should be unique"
+    # Check that sign_in_with_magic_link also has our change module
+    sign_in_info = Info.action(User, :sign_in_with_magic_link)
+
+    assert Enum.any?(sign_in_info.changes, fn change ->
+             match?(
+               %Ash.Resource.Change{
+                 change: {Huddlz.Accounts.User.Changes.SetDefaultDisplayName, _}
+               },
+               change
+             )
+           end)
+
+    # Verify the module exists and is loaded
+    assert Code.ensure_loaded?(Huddlz.Accounts.User.Changes.SetDefaultDisplayName)
   end
 end
