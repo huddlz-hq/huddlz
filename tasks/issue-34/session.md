@@ -74,3 +74,26 @@ Through careful questioning, we established:
 3. Updated tests to match refactored code
 
 **Result:** Cleaner architecture following established patterns, all tests still pass.
+
+### Task 2: Add profile icon and dropdown structure ✅
+
+**Changes Made:**
+1. Added profile icon with generic person SVG (hero-user) in navbar far right
+2. Implemented DaisyUI dropdown with proper classes and structure
+3. Moved Groups link to left side (desktop) and hamburger menu (mobile)
+4. Added responsive hamburger menu for mobile navigation
+5. Theme toggle moved from navbar to dropdown for logged-in users (becomes a perk)
+
+**Dropdown Contents:**
+- "Signed in as" with display name
+- Profile link (placeholder for now)
+- Admin Panel (conditional for admins)
+- Sign Out
+- Theme toggle (at very bottom, properly sized with scale-75)
+
+**Mobile Behavior:**
+- Hamburger menu on left → Logo → Profile icon on right
+- Dropdown works perfectly on mobile
+- Groups link hidden on desktop navbar, shown in hamburger
+
+**Quality Gates:** All tests pass (274 total), code formatted, credo strict passes.
