@@ -16,8 +16,10 @@ defmodule HuddlzWeb.Layouts do
     <header class="navbar bg-base-100 px-4 sm:px-6 lg:px-8 shadow">
       <div class="navbar-start">
         <a href="/" class="flex items-center gap-2">
-          <img src={~p"/images/logo.svg"} width="36" />
-          <span class="text-lg font-bold tracking-tight">Huddlz</span>
+          <div class="w-9 h-9 bg-primary rounded-lg flex items-center justify-center text-primary-content font-bold text-lg">
+            h
+          </div>
+          <span class="text-lg font-bold tracking-tight">huddlz</span>
         </a>
       </div>
       <div class="navbar-center">
