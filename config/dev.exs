@@ -84,4 +84,14 @@ config :phoenix_live_view,
   enable_expensive_runtime_checks: true
 
 # Disable swoosh api client as it is only required for production adapters.
+# To use SendGrid in development, comment out the line below and set SENDGRID_API_KEY
 config :swoosh, :api_client, false
+
+# Optional: Enable SendGrid in development
+# if sendgrid_api_key = System.get_env("SENDGRID_API_KEY") do
+#   config :huddlz, Huddlz.Mailer,
+#     adapter: Swoosh.Adapters.Sendgrid,
+#     api_key: sendgrid_api_key
+#
+#   config :swoosh, :api_client, Swoosh.ApiClient.Req
+# end

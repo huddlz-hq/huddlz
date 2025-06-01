@@ -73,7 +73,22 @@ See [Development Lifecycle](docs/development_lifecycle.md) for detailed informat
 
 ## Deployment
 
-Ready to run in production? Please [check the Phoenix deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+### Required Environment Variables
+
+The following environment variables must be set in production:
+
+* `DATABASE_URL` - PostgreSQL database connection string
+* `SECRET_KEY_BASE` - Secret key for session encryption (generate with `mix phx.gen.secret`)
+* `TOKEN_SIGNING_SECRET` - Secret for signing authentication tokens
+* `SENDGRID_API_KEY` - SendGrid API key for sending magic link emails (required for authentication)
+
+### Optional Environment Variables
+
+* `RENDER_EXTERNAL_HOSTNAME` - Hostname for the application (defaults to "huddlz.com")
+* `PORT` - Port to bind to (defaults to 4000)
+* `POOL_SIZE` - Database connection pool size (defaults to 10)
+
+Ready to run in production? Please [check the Phoenix deployment guides](https://hexdocs.pm/phoenix/deployment.html) for detailed instructions.
 
 ## License
 
