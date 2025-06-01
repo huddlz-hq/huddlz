@@ -179,7 +179,7 @@ defmodule HuddlzWeb.HuddlLive do
                   </option>
                 </select>
               </div>
-
+              
     <!-- Date Filter -->
               <div class="form-control">
                 <label for="date-range" class="label">
@@ -197,7 +197,7 @@ defmodule HuddlzWeb.HuddlLive do
                   </option>
                 </select>
               </div>
-
+              
     <!-- Sort By -->
               <div class="form-control">
                 <label for="sort-by" class="label">
@@ -217,7 +217,7 @@ defmodule HuddlzWeb.HuddlLive do
               </div>
             </div>
           </form>
-
+          
     <!-- Active Filters Display -->
           <%= if @search_query || @event_type_filter || @date_filter != "upcoming" || @sort_by != "date_asc" do %>
             <div class="mt-4 flex items-center gap-2">

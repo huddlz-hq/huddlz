@@ -54,4 +54,3 @@ defmodule Mix.Tasks.RemoveTrailingWhitespace do
     Mix.shell().info("   Total files checked: #{length(files)}")
   end
 end
-
