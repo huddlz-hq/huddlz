@@ -15,29 +15,73 @@ defmodule HuddlzWeb.Layouts do
     ~H"""
     <header class="navbar bg-base-100 px-4 sm:px-6 lg:px-8 shadow">
       <div class="navbar-start">
+        <div class="dropdown lg:hidden">
+          <label tabindex="0" class="btn btn-ghost btn-sm">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 6h16M4 12h8m-8 6h16"
+              />
+            </svg>
+          </label>
+          <ul
+            tabindex="0"
+            class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
+          >
+            <li><a href="/groups">Groups</a></li>
+          </ul>
+        </div>
         <a href="/" class="flex items-center gap-2">
           <div class="w-9 h-9 bg-primary rounded-lg flex items-center justify-center text-primary-content font-bold text-lg">
             h
           </div>
           <span class="text-lg font-bold tracking-tight">huddlz</span>
         </a>
-      </div>
-      <div class="navbar-center">
-        <nav class="flex items-center gap-4">
+        <nav class="hidden lg:flex items-center gap-4 ml-8">
           <a href="/groups" class="btn btn-ghost btn-sm">Groups</a>
-          <%= if @current_user && Huddlz.Accounts.admin?(@current_user) do %>
-            <a href="/admin" class="btn btn-ghost btn-sm">Admin Panel</a>
-          <% end %>
         </nav>
       </div>
+      <div class="navbar-center"></div>
       <div class="navbar-end flex items-center gap-4">
-        <.theme_toggle />
         <%= if @current_user do %>
-          <div class="flex items-center gap-3">
-            <span class="text-sm">{@current_user.display_name || @current_user.email}</span>
-            <a href="/sign-out" class="btn btn-outline btn-sm">Sign Out</a>
+          <div class="dropdown dropdown-end">
+            <label tabindex="0" class="btn btn-ghost btn-circle avatar">
+              <div class="w-10 rounded-full bg-base-300 flex items-center justify-center">
+                <.icon name="hero-user" class="h-6 w-6" />
+              </div>
+            </label>
+            <ul
+              tabindex="0"
+              class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
+            >
+              <li class="menu-title px-3 py-2">
+                <span class="text-xs opacity-60">Signed in as</span>
+                <span class="text-sm font-medium">
+                  {@current_user.display_name || @current_user.email}
+                </span>
+              </li>
+              <li><a>Profile</a></li>
+              <%= if Huddlz.Accounts.admin?(@current_user) do %>
+                <li><a href="/admin">Admin Panel</a></li>
+              <% end %>
+              <li class="mt-2"><a href="/sign-out">Sign Out</a></li>
+              <li class="px-2 py-2">
+                <div class="scale-75 origin-left">
+                  <.theme_toggle />
+                </div>
+              </li>
+            </ul>
           </div>
         <% else %>
+          <.theme_toggle />
           <a href="/register" class="btn btn-outline btn-sm">Sign Up</a>
           <a href="/sign-in" class="btn btn-primary btn-sm">Sign In</a>
         <% end %>

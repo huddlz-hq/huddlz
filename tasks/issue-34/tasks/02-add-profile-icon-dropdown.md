@@ -1,6 +1,6 @@
 # Task 2: Add profile icon and dropdown structure
 
-## Status: ⏳ Pending
+## Status: ✅ Completed
 
 ## Description
 Add a profile icon to the navbar and implement the basic dropdown structure. Also move the Groups link to the left side.
