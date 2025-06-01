@@ -67,7 +67,8 @@ if config_env() == :prod do
       port: port
     ],
     secret_key_base: secret_key_base,
-    check_origin: ["https://huddlz.com", "https://#{host}"]
+    check_origin: ["https://huddlz.com", "https://#{host}"],
+    force_ssl: [rewrite_on: [:x_forwarded_proto], hsts: true]
 
   config :huddlz,
     token_signing_secret:
