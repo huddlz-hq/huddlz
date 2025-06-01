@@ -2,9 +2,9 @@
 
 ## Parameters
 
-**Licensor**: Huddlz Project Contributors  
-**Licensed Work**: Huddlz - A social networking platform focusing on real-life connections  
-**Change Date**: 5 years from the release date of Huddlz v1.0.0  
+**Licensor**: Huddlz Project Contributors
+**Licensed Work**: Huddlz - A social networking platform focusing on real-life connections
+**Change Date**: 5 years from the release date of Huddlz v1.0.0
 **Change License**: Apache License, Version 2.0
 
 ## Terms

@@ -172,7 +172,7 @@ Add current team tracking and teams relationship to the User resource:
 # In the User resource
 attributes do
   # Other existing attributes
-  
+
   attribute :current_team, :string do
     description "The current team the user is accessing the app with"
   end
@@ -294,7 +294,7 @@ defmodule Helpcenter.Accounts.TeamTest do
     test "User team can be created" do
       # Create a user
       user = create_user()
-      
+
       # Create a team with the user as owner
       team_attrs = %{name: "Team 1", domain: "team_1", owner_user_id: user.id}
       {:ok, team} = Ash.create(Helpcenter.Accounts.Team, team_attrs)
@@ -353,19 +353,19 @@ defmodule Helpcenter.Accounts.Team.Changes.AssociateUserToTeam do
   enabling team listing for the owner.
   """
   use Ash.Resource.Change
-  
+
   def change(changeset, _opts, _context) do
     Ash.Changeset.after_action(changeset, &associate_owner_to_team/2)
   end
 
   defp associate_owner_to_team(_changeset, team) do
     params = %{user_id: team.owner_user_id, team_id: team.id}
-    
+
     {:ok, _user_team} =
       Helpcenter.Accounts.UserTeam
       |> Ash.Changeset.for_create(:create, params)
       |> Ash.create()
-      
+
     {:ok, team}
   end
 end
@@ -384,14 +384,14 @@ Create a change to update the owner's current_team field:
 # lib/helpcenter/accounts/team/changes/set_owner_current_team.ex
 defmodule Helpcenter.Accounts.Team.Changes.SetOwnerCurrentTeam do
   use Ash.Resource.Change
-  
+
   def change(changeset, _opts, _context) do
     Ash.Changeset.after_action(changeset, &set_owner_current_team/2)
   end
 
   defp set_owner_current_team(_changeset, team) do
     opts = [authorize?: false]
-    
+
     {:ok, _user} =
       Helpcenter.Accounts.User
       |> Ash.get!(team.owner_user_id, opts)
@@ -416,7 +416,7 @@ Add a supporting action to the User resource:
 # In lib/helpcenter/accounts/user.ex
 actions do
   # Other actions...
-  
+
   update :set_current_team do
     description "Sets the user's current team."
     argument :team, :string, allow_nil?: false, sensitive?: false
@@ -517,10 +517,10 @@ defmodule Helpcenter.Accounts.User do
     authorizers: [Ash.Policy.Authorizer],
     extensions: [AshAuthentication],
     data_layer: AshPostgres.DataLayer,
-    
+
     # Register notifier for post-registration actions
     notifiers: [Helpcenter.Accounts.User.Notifiers.CreatePersonalTeamNotification]
-    
+
   # Rest of resource definition...
 end
 ```

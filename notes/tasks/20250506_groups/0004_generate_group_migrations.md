@@ -6,11 +6,11 @@
 - Purpose: Create database migrations for the Group and GroupMember resources
 
 ## Task Boundaries
-- In scope: 
+- In scope:
   - Generate migrations for the groups table using Ash migrations
   - Generate migrations for the group_members table
   - Run the migrations
-- Out of scope: 
+- Out of scope:
   - Modifying the resource definitions after migration generation
   - Seed data creation
 
@@ -79,14 +79,14 @@ mix ash_postgres.migrate
 ### Human Verification (Required Before Next Task)
 - After completing the migration, ask the user:
   "I've generated and run the migrations for the Group and GroupMember resources. Could you please verify the database structure by:
-   1. Checking the resource snapshots 
+   1. Checking the resource snapshots
    2. Reviewing the migration files
    3. Connecting to the database to inspect the tables
    If everything looks good, I'll proceed to the next task."
 
 ## Progress Tracking
 1. Register resources in Communities domain - ✅ [Already completed]
-2. Generate snapshots of the new resources - ✅ [May 17, 2025] 
+2. Generate snapshots of the new resources - ✅ [May 17, 2025]
 3. Generate migrations from the resource snapshots - ✅ [May 17, 2025]
 4. Review generated migrations to ensure correctness - ✅ [May 17, 2025]
 5. Run the migrations - ✅ [May 17, 2025]

@@ -6,13 +6,13 @@
 - Purpose: Ensure only group owners and organizers can create events, and enforce visibility rules
 
 ## Task Boundaries
-- In scope: 
+- In scope:
   - Authorization checks for event creation
   - Enforce private group = private event rule
   - Implement public group private event option
   - Visibility rules for who can see events
   - Protect virtual link visibility
-- Out of scope: 
+- Out of scope:
   - RSVP permissions (next tasks)
   - Event editing permissions
   - UI changes (beyond hiding/showing based on permissions)

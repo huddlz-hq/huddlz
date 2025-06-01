@@ -29,11 +29,11 @@ Example:
 test "admin users can search other users" do
   admin = generate_admin_user()
   regular_user = generate_regular_user()
-  
+
   # Test from admin perspective
   assert Ash.can?(Huddlz.Accounts.User, :search_by_email, actor: admin)
-  
-  # Test from regular user perspective  
+
+  # Test from regular user perspective
   refute Ash.can?(Huddlz.Accounts.User, :search_by_email, actor: regular_user)
 end
 ```
@@ -59,11 +59,11 @@ For LiveViews that use Ash resources:
 1. Test authorization hooks:
 ```elixir
 test "non-admin users cannot access admin panel" do
-  conn = 
+  conn =
     conn
     |> login_as(regular_user)
     |> get("/admin")
-    
+
   assert redirected_to(conn) == "/"
 end
 ```
@@ -71,16 +71,16 @@ end
 2. Test data operations:
 ```elixir
 test "admin can update user roles" do
-  {:ok, view, _} = 
+  {:ok, view, _} =
     conn
-    |> login_as(admin_user) 
+    |> login_as(admin_user)
     |> live("/admin")
-    
+
   # Perform role update
   html = view
          |> element("form")
          |> render_submit(%{...})
-         
+
   # Assert changes
   assert html =~ "Role updated successfully"
 end

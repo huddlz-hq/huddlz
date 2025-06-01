@@ -6,12 +6,12 @@
 - Purpose: Create UI and functionality for admin and verified users to create groups
 
 ## Task Boundaries
-- In scope: 
+- In scope:
   - Group creation form for admins and verified users
   - Group validation
   - Public/private group settings
   - Link from groups page to creation page
-- Out of scope: 
+- Out of scope:
   - Group membership management
   - Group content creation
   - Group deletion
@@ -58,9 +58,9 @@
 # In lib/huddlz_web/router.ex
 scope "/", HuddlzWeb do
   pipe_through [:browser, :require_authenticated_user]
-  
+
   # Existing authenticated routes...
-  
+
   live "/groups", GroupLive.Index, :index
   live "/groups/new", GroupLive.New, :new
   live "/groups/:id", GroupLive.Show, :show
@@ -71,22 +71,22 @@ end
 ```elixir
 defmodule HuddlzWeb.GroupLive.Index do
   use HuddlzWeb, :live_view
-  
+
   def mount(_params, _session, socket) do
-    {:ok, 
+    {:ok,
       socket
       |> assign(:groups, list_groups())
       |> assign(:can_create_group, can_create_group?(socket.assigns.current_user))
     }
   end
-  
+
   defp list_groups do
     # If public groups, anyone can see them
     Huddlz.Communities.Group
     |> Ash.Query.filter(is_public == true)
     |> Ash.read!()
   end
-  
+
   defp can_create_group?(user) do
     user && user.role in ["admin", "verified"]
   end
@@ -97,43 +97,43 @@ end
 ```elixir
 defmodule HuddlzWeb.GroupLive.New do
   use HuddlzWeb, :live_view
-  
+
   def mount(_params, _session, socket) do
     # Check if user can create groups
-    if socket.assigns.current_user && 
+    if socket.assigns.current_user &&
        socket.assigns.current_user.role in ["admin", "verified"] do
-      
+
       changeset = Huddlz.Communities.Group
         |> Ash.Changeset.for_create(:create, %{})
-      
-      {:ok, 
+
+      {:ok,
         socket
         |> assign(:changeset, changeset)
       }
     else
-      {:ok, 
+      {:ok,
         socket
         |> put_flash(:error, "You need to be a verified user to create groups")
         |> redirect(to: ~p"/groups")}
     end
   end
-  
+
   def handle_event("save", %{"group" => group_params}, socket) do
     # Add owner from current user
     params = Map.put(group_params, "owner_id", socket.assigns.current_user.id)
-    
+
     case create_group(params) do
       {:ok, group} ->
         {:noreply,
           socket
           |> put_flash(:info, "Group created successfully")
           |> redirect(to: ~p"/groups/#{group.id}")}
-          
+
       {:error, changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
     end
   end
-  
+
   defp create_group(params) do
     Huddlz.Communities.Group
     |> Ash.Changeset.for_create(:create_group, params)
@@ -154,7 +154,7 @@ end
   <.input field={f[:description]} label="Description" type="textarea" />
   <.input field={f[:location]} label="Location" />
   <.input field={f[:image_url]} label="Image URL" />
-  
+
   <div class="space-y-2">
     <.label>Privacy</.label>
     <div class="flex items-center gap-4">
@@ -162,7 +162,7 @@ end
     </div>
     <.hint>Public groups are visible to everyone and anyone can join. Private groups require invitations.</.hint>
   </div>
-  
+
   <:actions>
     <.button type="submit" phx-disable-with="Creating...">Create Group</.button>
   </:actions>

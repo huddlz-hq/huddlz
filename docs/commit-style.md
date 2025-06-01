@@ -48,7 +48,7 @@ Related issue: #123 (if applicable)
 
 ## Guidelines
 
-1. **First line**: 
+1. **First line**:
    - Start with the type and scope
    - Use imperative, present tense: "add" not "added" or "adds"
    - Keep it under 70 characters

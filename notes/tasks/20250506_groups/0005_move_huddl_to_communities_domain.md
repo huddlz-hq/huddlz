@@ -6,11 +6,11 @@
 - Purpose: Move the Huddl resource from Huddls domain to Communities domain
 
 ## Task Boundaries
-- In scope: 
+- In scope:
   - Update the Huddl resource to belong to the Communities domain
   - Modify the Huddls domain to remove the resource
   - Update the Communities domain to include the Huddl resource
-- Out of scope: 
+- Out of scope:
   - Changing Huddl functionality or structure
   - Creating new migrations for Huddl
   - Modifying relationships between Huddl and other resources

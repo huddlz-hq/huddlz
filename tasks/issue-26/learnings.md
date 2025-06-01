@@ -5,7 +5,7 @@
 ### 1. Never Manually Edit Ash Migrations
 **Mistake**: Manually edited a generated migration to handle existing data.
 **Problem**: This breaks Ash's snapshot tracking system, causing schema inconsistencies.
-**Solution**: 
+**Solution**:
 - In development: Delete data and regenerate clean migrations
 - In production: Use separate data migration scripts
 **Learning**: Ash migrations are immutable by design - respect this constraint.
@@ -46,7 +46,7 @@
 
 ### 2. Test-After Approach with Ash
 **Constraint**: Can't easily test-first with Ash due to code generation requirements.
-**Approach**: 
+**Approach**:
 1. Implement resource changes
 2. Generate migrations
 3. Write comprehensive tests
@@ -61,7 +61,7 @@
 
 ### 1. Slug Generation Strategy
 **Implemented**: Auto-generate from name on create, allow manual override.
-**UI Pattern**: 
+**UI Pattern**:
 - Create: Auto-update slug as user types
 - Edit: Independent slug field with change warning
 **Learning**: Different behaviors for create vs edit improves user experience.
@@ -106,7 +106,7 @@
 ```elixir
 defmodule GenerateSlug do
   use Ash.Resource.Change
-  
+
   def change(changeset, _opts, _context) do
     # Implementation
   end

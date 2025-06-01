@@ -6,10 +6,10 @@
 - Purpose: Create a new domain to house both Groups and Huddls
 
 ## Task Boundaries
-- In scope: 
+- In scope:
   - Create new Communities domain structure
   - Set up domain configuration
-- Out of scope: 
+- Out of scope:
   - Moving Huddl resource (separate task)
   - Creating Group resource (separate task)
 

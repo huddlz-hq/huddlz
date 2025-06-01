@@ -6,13 +6,13 @@
 - Purpose: Display huddlz on group pages and create a main huddlz listing page
 
 ## Task Boundaries
-- In scope: 
+- In scope:
   - Show upcoming huddlz on group pages
   - Create main huddlz search/listing page
   - Display event details (without virtual link)
   - Show event status (upcoming/ongoing/past)
   - Basic event cards/list items
-- Out of scope: 
+- Out of scope:
   - RSVP functionality
   - Calendar views
   - Complex filtering (just basic for MVP)

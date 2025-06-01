@@ -12,7 +12,7 @@ flowchart TD
     plan["Plan"] --> build["Build"] --> verify["Verify"] --> reflect["Reflect"]
     reflect -.-> plan
   end
-  
+
   plan -.- role1["Role: Project Manager"]
   build -.- role2["Role: Expert Engineer"]
   verify -.- role3["Role: Senior Reviewer"]

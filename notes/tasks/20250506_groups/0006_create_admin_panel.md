@@ -6,12 +6,12 @@
 - Purpose: Create an admin panel for managing user permissions and viewing groups
 
 ## Task Boundaries
-- In scope: 
+- In scope:
   - Admin-only interface for managing users and permissions
   - User search functionality
   - User permission management (admin, verified, regular)
   - User role updating capability
-- Out of scope: 
+- Out of scope:
   - Advanced user management features
   - Group content moderation
   - Usage analytics
@@ -71,7 +71,7 @@ attributes do
     public? true
     description "User's display name shown in the UI"
   end
-  
+
   attribute :role, :string do
     allow_nil? false
     default "regular"
@@ -83,14 +83,14 @@ end
 # Add role update action
 actions do
   # Existing actions...
-  
+
   update :update_role do
     description "Update a user's role"
     argument :role, :string do
       allow_nil? false
       constraints one_of: ["regular", "verified", "admin"]
     end
-    
+
     change fn changeset, _context ->
       Ash.Changeset.change_attribute(changeset, :role, changeset.arguments.role)
     end
@@ -102,24 +102,24 @@ end
 ```elixir
 defmodule HuddlzWeb.AdminLive do
   use HuddlzWeb, :live_view
-  
+
   def mount(_params, _session, socket) do
     # Verify admin access
     if socket.assigns.current_user && socket.assigns.current_user.role == "admin" do
-      {:ok, assign(socket, 
+      {:ok, assign(socket,
         page_title: "Admin Panel",
         search_results: [],
         search_term: "",
         error_message: nil
       )}
     else
-      {:ok, 
+      {:ok,
         socket
         |> put_flash(:error, "You don't have permission to access this page")
         |> redirect(to: ~p"/")}
     end
   end
-  
+
   def handle_event("search", %{"search" => %{"term" => term}}, socket) do
     # Implement user search
     case search_users(term) do
@@ -129,32 +129,32 @@ defmodule HuddlzWeb.AdminLive do
         {:noreply, assign(socket, error_message: message)}
     end
   end
-  
+
   def handle_event("update_role", %{"id" => id, "role" => role}, socket) do
     # Implement role update
     case update_user_role(id, role) do
       {:ok, _} ->
         # Re-search to refresh the list
         {:ok, users} = search_users(socket.assigns.search_term)
-        {:noreply, 
+        {:noreply,
           socket
           |> put_flash(:info, "User role updated successfully")
           |> assign(search_results: users)}
-      
+
       {:error, message} ->
-        {:noreply, 
+        {:noreply,
           socket
           |> put_flash(:error, "Failed to update role: #{message}")}
     end
   end
-  
+
   # Helper functions for searching users and updating roles
   defp search_users(term) do
     Huddlz.Accounts.User
     |> Ash.Query.filter(like(email, ^"%#{term}%"))
     |> Ash.read()
   end
-  
+
   defp update_user_role(id, role) do
     Huddlz.Accounts.User
     |> Ash.get!(id)
@@ -169,9 +169,9 @@ end
 # In lib/huddlz_web/router.ex
 scope "/", HuddlzWeb do
   pipe_through [:browser, :require_authenticated_user]
-  
+
   # Existing authenticated routes...
-  
+
   # Admin routes - will be further restricted in the LiveView
   live "/admin", AdminLive, :index
 end

@@ -6,11 +6,11 @@
 - Purpose: Enable admins to manage user permissions required for group creation
 
 ## Task Boundaries
-- In scope: 
+- In scope:
   - Admin panel UI for user search
   - User role management (admin, verified, regular)
   - Admin-only access controls
-- Out of scope: 
+- Out of scope:
   - Full user management functionality
   - Advanced search filters
   - Bulk user operations
@@ -39,7 +39,7 @@
 - Add navigation links for admin users only
 
 ## Implementation Checklist
-1. Create a new LiveView module for admin panel 
+1. Create a new LiveView module for admin panel
 2. Implement user search by email functionality
 3. Display user information in a table format
 4. Add role editing controls with appropriate validations

@@ -47,16 +47,16 @@ When creating shared authentication steps across multiple test files:
 ```elixir
 defstep "I am signed in as {string}", %{session: session, args: args} = context do
   email = List.first(args)
-  
+
   # Full flow through UI
   session = visit(session, "/sign-in")
-  session = 
+  session =
     session
     |> fill_in(text_field("Email"), with: email)
     |> click(button("Request magic link"))
-  
+
   assert_has(session, css("[role='alert']", text: "you will be contacted"))
-  
+
   # Get actual email
   receive do
     {:email, %{to: [{_, to}], assigns: %{url: url}}} when to == email ->

@@ -46,14 +46,14 @@
 ```elixir
 defmodule SharedAuthSteps do
   use Cucumber.StepDefinition
-  
+
   # Group related steps together
   # User setup steps
   step "the following users exist:", %{args: [table]} = context do
     # Implementation
   end
-  
-  # Authentication steps  
+
+  # Authentication steps
   step "I am signed in as {string}", %{args: [email]} = context do
     # Implementation
   end
@@ -68,7 +68,7 @@ end
 ### Authentication Steps
 
 **Step**: `Given I am signed in as {string}`
-**Example**: 
+**Example**:
 ```gherkin
 Given I am signed in as "alice@example.com"
 ```

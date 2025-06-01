@@ -71,7 +71,7 @@ actions do
     :published,
     :category_id  # Added for category relationship
   ]
-  
+
   defaults [:create, :read, :update, :destroy]
 end
 ```

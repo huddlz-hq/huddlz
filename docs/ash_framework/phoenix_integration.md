@@ -95,7 +95,7 @@ Update your controller to use the aggregate instead of loading all related recor
 def home(conn, _params) do
   # Use the aggregate instead of loading all articles
   categories = Ash.read!(Category, load: :article_count)
-  
+
   render(conn, :home, layout: false, categories: categories)
 end
 ```
@@ -174,7 +174,7 @@ scope "/", HelpcenterWeb do
   # Add categories route
   scope "/categories" do
     live "/", CategoriesLive             # List all categories
-    live "/create", CreateCategoryLive   # Create new category 
+    live "/create", CreateCategoryLive   # Create new category
     live "/:category_id", EditCategoryLive # Edit existing category
   end
 
@@ -503,7 +503,7 @@ pub_sub do
   # Set a prefix for all events from this resource
   # This allows targeted subscriptions in LiveView
   prefix "categories"
-  
+
   # Define which events to publish and how to format their topics
   # This will publish events with topics like:
   #   "categories"
@@ -532,20 +532,20 @@ Update your LiveView to subscribe to PubSub events:
 defmodule HelpcenterWeb.CategoriesLive do
   use HelpcenterWeb, :live_view
   alias Helpcenter.KnowledgeBase.Category
-  
+
   def mount(_params, _session, socket) do
     # Initial data load
     socket = assign_categories(socket)
-    
+
     # Subscribe to all category events
     if connected?(socket) do
       topic = Ash.Notifier.PubSub.topic(Category)
       HelpcenterWeb.Endpoint.subscribe(topic)
     end
-    
+
     {:ok, socket}
   end
-  
+
   # Handle PubSub events for create
   def handle_info(%{topic: topic, event: %{action_type: :create}}, socket) do
     # Reload data when a category is created
@@ -553,7 +553,7 @@ defmodule HelpcenterWeb.CategoriesLive do
     |> assign_categories()
     |> noreply()
   end
-  
+
   # Handle PubSub events for update
   def handle_info(%{topic: topic, event: %{action_type: :update}}, socket) do
     # Reload data when a category is updated
@@ -561,7 +561,7 @@ defmodule HelpcenterWeb.CategoriesLive do
     |> assign_categories()
     |> noreply()
   end
-  
+
   # Handle PubSub events for destroy
   def handle_info(%{topic: topic, event: %{action_type: :destroy}}, socket) do
     # Reload data when a category is deleted
@@ -569,16 +569,16 @@ defmodule HelpcenterWeb.CategoriesLive do
     |> assign_categories()
     |> noreply()
   end
-  
+
   # Load categories from the database
   defp assign_categories(socket) do
     {:ok, categories} =
       Category
       |> Ash.read()
-      
+
     assign(socket, :categories, categories)
   end
-  
+
   # Rest of LiveView code...
 end
 ```
@@ -602,7 +602,7 @@ Example of optimized updating:
 ```elixir
 def handle_info(%{topic: topic, event: %{action_type: :update, data: updated_category}}, socket) do
   # Update just the specific category in the list
-  updated_categories = 
+  updated_categories =
     socket.assigns.categories
     |> Enum.map(fn category ->
       if category.id == updated_category.id do
@@ -611,7 +611,7 @@ def handle_info(%{topic: topic, event: %{action_type: :update, data: updated_cat
         category
       end
     end)
-    
+
   socket
   |> assign(:categories, updated_categories)
   |> noreply()

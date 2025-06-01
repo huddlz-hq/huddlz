@@ -18,7 +18,7 @@ This document covers how to implement authentication in Phoenix applications usi
 Ash Authentication provides a comprehensive authentication system for Ash Framework applications with minimal setup. It supports multiple authentication strategies including:
 
 - Password-based authentication
-- Magic link authentication 
+- Magic link authentication
 - OAuth providers
 - And more
 
@@ -100,7 +100,7 @@ For LiveView routes that require authentication, configure them within an authen
 ```elixir
 scope "/", HelpcenterWeb do
   pipe_through :browser
-  
+
   ash_authentication_live_session :authenticated_routes,
     on_mount: [{HelpcenterWeb.LiveUserAuth, :live_user_required}] do
     # Protected routes go here
@@ -127,7 +127,7 @@ To show authentication status in your templates, use the `@current_user` assign:
 <div class="flex items-center justify-between">
   <!-- Logo -->
   <div class="text-3xl font-bold text-yellow-500">Zippiker</div>
-  
+
   <!-- Authentication Section -->
   <div class="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
     <!-- Show if user is logged in -->
@@ -139,7 +139,7 @@ To show authentication status in your templates, use the `@current_user` assign:
         Sign Out
       </a>
     </div>
-    
+
     <!-- Show if user is not logged in -->
     <a :if={is_nil(@current_user)} href="/sign-in" class="rounded-lg bg-zinc-100 px-2 py-1 text-[0.8125rem] font-semibold text-zinc-900 hover:bg-zinc-200/80">
       Sign In
@@ -248,7 +248,7 @@ defmodule Helpcenter.Accounts.User do
         hashed_password_field :hashed_password
         confirmation_required? true
       end,
-      
+
       # Magic link strategy
       magic_link :magic_link do
         identity_field :email

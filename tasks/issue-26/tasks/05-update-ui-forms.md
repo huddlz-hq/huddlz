@@ -16,8 +16,8 @@ Add slug fields to group creation and editing forms with appropriate behavior.
 **Form structure:**
 ```elixir
 <.input field={f[:name]} type="text" label="Group Name" phx-keyup="update_slug" />
-<.input field={f[:slug]} type="text" label="URL Slug" 
-  placeholder="my-group-name" 
+<.input field={f[:slug]} type="text" label="URL Slug"
+  placeholder="my-group-name"
   pattern="[a-z0-9-]+"
   title="Only lowercase letters, numbers, and hyphens allowed" />
 <p class="text-sm text-gray-600 mt-1">
@@ -63,14 +63,14 @@ Hooks.SlugInput = {
   mounted() {
     const nameInput = document.getElementById("group_name")
     const slugInput = this.el
-    
+
     nameInput.addEventListener("input", (e) => {
       if (!slugInput.dataset.manual) {
         // Only auto-update if user hasn't manually edited
         this.pushEvent("generate_slug", {name: e.target.value})
       }
     })
-    
+
     slugInput.addEventListener("input", () => {
       slugInput.dataset.manual = "true"
     })

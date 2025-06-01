@@ -118,7 +118,7 @@ assert_has(session, "[role='alert']", text: "Error occurred")
 ```elixir
 test "user can create a group", %{conn: conn} do
   user = create_verified_user()
-  
+
   conn
   |> login(user)
   |> visit("/groups/new")
@@ -136,7 +136,7 @@ defstep "the user fills in the form", %{session: session} = context do
   session = session
   |> fill_in("Email", with: "test@example.com")
   |> click_button("Submit")
-  
+
   {:ok, Map.put(context, :session, session)}
 end
 ```

@@ -12,7 +12,7 @@ Fixed remaining Cucumber test failures after Wallaby migration. Tests were faili
 - Fixed user creation action from `:register_with_magic_link` to `:create`
 - Removed email assertion for new users (security feature)
 
-### 2. Signup with Magic Link Tests  
+### 2. Signup with Magic Link Tests
 - Updated button text from "Submit" to "Request magic link"
 - Fixed flash message assertion
 - Updated validation error handling (HTML5 validation prevents submission)
@@ -35,7 +35,7 @@ Fixed remaining Cucumber test failures after Wallaby migration. Tests were faili
    Query.xpath(~s|//a[contains(., "Create Huddl")]|)
    ```
 
-2. **Form Field Selectors**: 
+2. **Form Field Selectors**:
    - Search by placeholder: `css("input[placeholder*='Search']")`
    - Labels in spans: `css("span.fieldset-label", text: "Label")`
 

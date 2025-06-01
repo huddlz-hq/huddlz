@@ -6,13 +6,13 @@
 - Purpose: Build a LiveView form that allows owners/organizers to create huddlz for their groups
 
 ## Task Boundaries
-- In scope: 
+- In scope:
   - LiveView component for event creation
   - Form with all event fields
   - Dynamic field visibility based on event type
   - Basic form validation feedback
   - Success/error handling
-- Out of scope: 
+- Out of scope:
   - Access control (handled in next task)
   - Event listing/display
   - RSVP functionality

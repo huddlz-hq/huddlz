@@ -112,7 +112,7 @@ defmodule Huddlz.SoireeFixture do
   def create_sample_soirees(count \\ 3) do
     # Create test host with consistent email for lookup
     host = get_or_create_test_host("test.host@example.com")
-    
+
     # Create soirées with sequential information
     for i <- 1..count do
       create_soiree(%{
@@ -137,7 +137,7 @@ Example generator:
 ```elixir
 defmodule Huddlz.Soirees.Generators.SoireeGenerator do
   use Ash.Generator
-  
+
   def soiree(opts \\ []) do
     seed_generator(
       %Soiree{
