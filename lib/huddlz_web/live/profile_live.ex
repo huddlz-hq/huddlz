@@ -116,11 +116,7 @@ defmodule HuddlzWeb.ProfileLive do
 
   @impl true
   def handle_event("save", %{"form" => params}, socket) do
-    case socket.assigns.current_user
-         |> Ash.Changeset.for_update(:update_display_name, params,
-           actor: socket.assigns.current_user
-         )
-         |> Ash.update() do
+    case AshPhoenix.Form.submit(socket.assigns.form.source, params: params) do
       {:ok, updated_user} ->
         form =
           updated_user
@@ -138,26 +134,11 @@ defmodule HuddlzWeb.ProfileLive do
          |> assign(:current_user, updated_user)
          |> assign(:form, form)}
 
-      {:error, error} ->
-        errors =
-          case error do
-            %Ash.Changeset{errors: errors} -> errors
-            %Ash.Error.Invalid{errors: errors} -> errors
-            _ -> []
-          end
-
-        form =
-          AshPhoenix.Form.for_update(socket.assigns.current_user, :update_display_name,
-            errors: errors,
-            actor: socket.assigns.current_user,
-            forms: [auto?: true]
-          )
-          |> to_form()
-
+      {:error, form} ->
         {:noreply,
          socket
          |> put_flash(:error, "Failed to update display name. Please check the errors below.")
-         |> assign(:form, form)}
+         |> assign(:form, form |> to_form())}
     end
   end
 end
