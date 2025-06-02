@@ -13,14 +13,9 @@ defmodule CompleteSignupFlowSteps do
 
   # Step: And the user submits the sign up form
   step "the user submits the sign up form", context do
-    # Fill in email and submit form
     session = context[:session] || context[:conn]
 
-    # Navigate to registration page
-    session = session |> visit("/register")
-
     # Fill in the magic link email field
-    # The magic link form is the last form on the page, so we can use the last Email field
     session =
       session
       |> fill_in("#user-magic-link-request-magic-link_email", "Email", with: context.email)
