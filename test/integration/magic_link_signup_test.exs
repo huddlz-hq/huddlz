@@ -2,6 +2,7 @@ defmodule Huddlz.Integration.MagicLinkSignupTest do
   use HuddlzWeb.ConnCase, async: true
 
   import Swoosh.TestAssertions
+  import Huddlz.Test.Helpers.Authentication
 
   alias Huddlz.Accounts.User
   require Ash
@@ -42,8 +43,8 @@ defmodule Huddlz.Integration.MagicLinkSignupTest do
     # Create a new user without providing a display name
     email = "newuser#{System.unique_integer()}@example.com"
 
-    # Create an admin actor for the test
-    admin = Ash.Seed.seed!(User, %{email: "admin@test.com", role: :admin})
+    # Create an admin actor for the test using the generator
+    admin = create_user(%{role: :admin})
 
     # Use the :create action which includes SetDefaultDisplayName change
     user =
