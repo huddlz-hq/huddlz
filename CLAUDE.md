@@ -9,7 +9,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Run all tests: `mix test`
 - Run a single test file: `mix test path/to/test_file.exs`
 - Run a specific test: `mix test path/to/test_file.exs:line_number`
-- Run Cucumber features: `mix test test/features/`
+- Run Cucumber features: `mix test test/features/` (runs all compiled feature tests)
+  - Note: Cannot run `.feature` files directly with `mix test path/to/file.feature`
+  - Feature files are compiled to ExUnit tests at runtime by the Cucumber framework
 - Format code: `mix format` (always run before committing changes)
 - Run linter: `mix credo --strict` (always run before committing changes)
 
