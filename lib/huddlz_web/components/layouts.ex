@@ -68,7 +68,7 @@ defmodule HuddlzWeb.Layouts do
                   {@current_user.display_name || @current_user.email}
                 </span>
               </li>
-              <li><a>Profile</a></li>
+              <li><a href="/profile">Profile</a></li>
               <%= if Huddlz.Accounts.admin?(@current_user) do %>
                 <li><a href="/admin">Admin Panel</a></li>
               <% end %>

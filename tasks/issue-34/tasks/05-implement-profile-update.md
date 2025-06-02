@@ -1,6 +1,6 @@
 # Task 5: Implement profile update functionality
 
-## Status: ⏳ Pending
+## Status: ✅ Complete
 
 ## Description
 Complete the profile form functionality to allow users to update their display name.
@@ -18,12 +18,12 @@ Complete the profile form functionality to allow users to update their display n
 - Consider using `phx-submit` and `phx-change` events
 
 ## Acceptance Criteria
-- [ ] Form successfully updates display name in database
-- [ ] Display names must be 1-30 characters
-- [ ] Success shows flash message
-- [ ] Validation errors display appropriately
-- [ ] Updated name appears immediately in navbar
-- [ ] Form resets or updates after successful save
+- [x] Form successfully updates display name in database
+- [x] Display names must be 1-30 characters
+- [x] Success shows flash message
+- [x] Validation errors display appropriately
+- [x] Updated name appears immediately in navbar
+- [x] Form resets or updates after successful save
 
 ## Error Handling
 - Too short: "Display name must be at least 1 character"

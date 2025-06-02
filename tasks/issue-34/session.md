@@ -97,3 +97,42 @@ Through careful questioning, we established:
 - Groups link hidden on desktop navbar, shown in hamburger
 
 **Quality Gates:** All tests pass (274 total), code formatted, credo strict passes.
+
+### Task 3: Populate dropdown menu and move items ✅
+
+**Changes Made:**
+1. Added href="/profile" to the Profile link in dropdown
+2. Verified Admin Panel is conditional (already implemented in task 2)
+3. Verified theme toggle is in dropdown at the bottom (already implemented in task 2)
+4. Verified Sign Out link is present (already implemented in task 2)
+
+**Note:** Most of task 3 was completed during task 2 implementation. Only needed to add the /profile href.
+
+**Quality Gates:** All tests pass (274 total), code formatted, credo strict passes.
+
+### Task 4: Create basic profile LiveView ✅
+
+**Changes Made:**
+1. Created `lib/huddlz_web/live/profile_live.ex` with:
+   - Authentication requirement via `on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}`
+   - Form showing current display name
+   - Account information section (email, role)
+   - Placeholder event handlers for validate/save
+
+2. Added route to router:
+   - `/profile` route in authenticated_routes live_session
+   - Properly requires authentication
+
+3. Created test file with comprehensive coverage:
+   - Authentication requirement test
+   - Display of user information
+   - Form presence and structure
+   - Placeholder for save functionality
+
+**UI Design:**
+- Card-based layout with two sections
+- Display Name editing in top card
+- Account info (read-only) in bottom card
+- Clean DaisyUI styling with proper spacing
+
+**Quality Gates:** All tests pass (278 total), code formatted, credo strict passes.
