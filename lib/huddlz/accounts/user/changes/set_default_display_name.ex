@@ -7,10 +7,7 @@ defmodule Huddlz.Accounts.User.Changes.SetDefaultDisplayName do
 
   @impl true
   def change(changeset, _opts, _context) do
-    # Check if this is a new user (no id means it's an insert, not an update)
-    is_new_user = !changeset.data.id
-
-    if is_new_user and !Ash.Changeset.get_attribute(changeset, :display_name) do
+    if changeset.action_type == :create and !Ash.Changeset.get_attribute(changeset, :display_name) do
       display_name = generate_random_display_name()
       Ash.Changeset.change_attribute(changeset, :display_name, display_name)
     else

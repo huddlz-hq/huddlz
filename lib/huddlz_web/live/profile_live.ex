@@ -83,6 +83,21 @@ defmodule HuddlzWeb.ProfileLive do
               </div>
             </div>
           </div>
+
+          <div class="mt-6 card bg-base-100 shadow-xl">
+            <div class="card-body">
+              <h2 class="card-title">Preferences</h2>
+              <div class="space-y-4">
+                <div>
+                  <h3 class="font-semibold mb-2">Theme</h3>
+                  <p class="text-sm text-base-content/70 mb-3">
+                    Choose your preferred color scheme
+                  </p>
+                  <Layouts.theme_toggle />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </Layouts.app>

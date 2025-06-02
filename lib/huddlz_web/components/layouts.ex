@@ -73,11 +73,6 @@ defmodule HuddlzWeb.Layouts do
                 <li><a href="/admin">Admin Panel</a></li>
               <% end %>
               <li class="mt-2"><a href="/sign-out">Sign Out</a></li>
-              <li class="px-2 py-2">
-                <div class="scale-75 origin-left">
-                  <.theme_toggle />
-                </div>
-              </li>
             </ul>
           </div>
         <% else %>
