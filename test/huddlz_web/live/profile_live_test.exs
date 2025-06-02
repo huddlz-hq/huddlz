@@ -54,9 +54,9 @@ defmodule HuddlzWeb.ProfileLiveTest do
       conn = login(conn, user)
       {:ok, view, _html} = live(conn, ~p"/profile")
 
-      # Test too short (less than 3 characters)
+      # Test empty (not allowed)
       view
-      |> form("form[phx-submit=\"save\"]", %{"form[display_name]" => "AB"})
+      |> form("form[phx-submit=\"save\"]", %{"form[display_name]" => ""})
       |> render_submit()
 
       assert render(view) =~ "Failed to update display name"
@@ -69,6 +69,13 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> render_submit()
 
       assert render(view) =~ "Failed to update display name"
+
+      # Test single character (should be allowed)
+      view
+      |> form("form[phx-submit=\"save\"]", %{"form[display_name]" => "A"})
+      |> render_submit()
+
+      assert render(view) =~ "Display name updated successfully"
     end
 
     test "display name validation on change", %{conn: conn, user: user} do

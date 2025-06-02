@@ -24,9 +24,9 @@ Feature: User Profile Management
     Then I should see "Display name updated successfully"
     And the display name field should contain "Alice Cooper"
 
-  Scenario: Display name validation - too short
+  Scenario: Display name validation - empty
     Given I am on my profile page
-    When I fill in "Display Name" with "AB"
+    When I fill in "Display Name" with ""
     And I click the "Save Changes" button
     Then I should see "Failed to update display name"
     And I should not see "Display name updated successfully"
