@@ -41,7 +41,7 @@ Feature: Password Authentication
     And I fill in the password form with:
       | password              | NewPassword123! |
       | password_confirmation | NewPassword123! |
-    And I click "Set Password" 
+    And I submit the password form
     Then I should see "Password updated successfully"
 
   Scenario: User changes existing password

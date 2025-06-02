@@ -28,7 +28,9 @@ defmodule Huddlz.Test.Helpers.Authentication do
     |> Helpers.store_in_session(user)
   end
 
-  def create_user(opts \\ %{}) do
+  def create_user(opts \\ []) do
+    # Convert map to keyword list if needed
+    opts = if is_map(opts), do: Map.to_list(opts), else: opts
     Huddlz.Generator.generate(Huddlz.Generator.user(opts))
   end
 end
