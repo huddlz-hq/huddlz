@@ -44,7 +44,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> fill_in("Display Name", with: new_name)
       |> click_button("Save Changes")
       |> assert_has("*", text: "Display name updated successfully")
-      |> assert_has("input[name=\"form[display_name]\"][value=\"#{new_name}\"]")
+      |> assert_has(~s|input[name="form[display_name]"][value="#{new_name}"]|)
     end
 
     test "validates display name length", %{conn: conn, user: user} do
