@@ -20,8 +20,12 @@ defmodule Huddlz.Accounts.User.Senders.SendMagicLinkEmail do
         email -> email
       end
 
+    config = Application.get_env(:huddlz, :email)
+    from_name = config[:from_name] || "huddlz support"
+    from_address = config[:from_address] || "support@huddlz.com"
+
     new()
-    |> from({"micah@huddlz.com", "micah@huddlz.com"})
+    |> from({from_name, from_address})
     |> to(to_string(email))
     |> subject("Your login link")
     |> html_body(body(token: token, email: email))

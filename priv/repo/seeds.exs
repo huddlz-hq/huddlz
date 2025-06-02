@@ -30,12 +30,13 @@ if Enum.empty?(existing_groups) do
         display_name: display_name
       })
       |> Ash.create(authorize?: false)
-    
+
     if role != :regular do
       {:ok, user} =
         user
         |> Ash.Changeset.for_update(:update, %{role: role, confirmed_at: DateTime.utc_now()})
         |> Ash.update(authorize?: false)
+
       user
     else
       # Confirm regular users too
@@ -43,6 +44,7 @@ if Enum.empty?(existing_groups) do
         user
         |> Ash.Changeset.for_update(:update, %{confirmed_at: DateTime.utc_now()})
         |> Ash.update(authorize?: false)
+
       user
     end
   end
@@ -57,7 +59,7 @@ if Enum.empty?(existing_groups) do
   carol = create_user.("carol@example.com", "Carol Davis", :verified)
   dave = create_user.("dave@example.com", "Dave Wilson", :regular)
   eve = create_user.("eve@example.com", "Eve Brown", :regular)
-  
+
   users = [alice, bob, carol, dave, eve]
   IO.puts("Created #{length(users)} sample users")
 
@@ -293,7 +295,11 @@ if Enum.empty?(existing_groups) do
   IO.puts("\nSeed data created successfully!")
   IO.puts("\nYou can log in with:")
   IO.puts("  Admin: admin@example.com (password: Password123!)")
-  IO.puts("  Users: alice@example.com, bob@example.com, carol@example.com (password: Password123!)")
+
+  IO.puts(
+    "  Users: alice@example.com, bob@example.com, carol@example.com (password: Password123!)"
+  )
+
   IO.puts("\nGroup slugs:")
   Enum.each(groups, fn g -> IO.puts("  /groups/#{g.slug} - #{g.name}") end)
 else
