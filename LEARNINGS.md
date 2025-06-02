@@ -148,6 +148,23 @@ This document captures key insights, patterns, and best practices discovered dur
 ### Accessibility
 - *Add insights about accessibility patterns here*
 
+## Issue #34: User Profiles - January 6, 2025
+
+### Context
+Implemented user profile management feature and fixed a critical bug where users were getting new random display names on every login.
+
+### Key Learnings
+1. **Upsert Fields Gotcha**: In Ash actions, `upsert_fields` determines which fields get updated during upsert operations. Including fields like `:display_name` caused them to be overwritten on every login.
+2. **New Record Detection**: In Ash change modules, check `!changeset.data.id` to determine if a record is new (nil id = new record).
+3. **AshPhoenix Form Handling**: Use `AshPhoenix.Form.submit` for cleaner form handling instead of manual changeset manipulation - provides better error extraction and validation.
+
+### Reusable Patterns
+- **Conditional Change Modules**: Extract complex conditional logic into Ash change modules for reusability and testability
+- **DaisyUI Dropdown Navigation**: Responsive profile dropdown pattern that works seamlessly on mobile and desktop
+- **Theme Toggle as Feature**: Strategic product decision to make theme customization a "logged-in user perk" to encourage signups
+
+See `tasks/issue-34/learnings.md` for full details.
+
 ## Workflow Improvements
 
 ### Development Process
