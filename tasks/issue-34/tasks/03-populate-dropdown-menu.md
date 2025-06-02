@@ -1,6 +1,6 @@
 # Task 3: Populate dropdown menu and move items
 
-## Status: ⏳ Pending
+## Status: ✅ Completed
 
 ## Description
 Complete the dropdown menu with all required items and move existing navbar items into it.

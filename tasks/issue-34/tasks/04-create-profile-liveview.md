@@ -1,6 +1,6 @@
 # Task 4: Create basic profile LiveView
 
-## Status: ⏳ Pending
+## Status: ✅ Completed
 
 ## Description
 Create a new LiveView for the user profile page with basic structure and authentication.

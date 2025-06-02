@@ -14,6 +14,7 @@ defmodule Huddlz.Accounts do
       define :search_by_email, action: :search_by_email, args: [:email]
       define :update_role, action: :update_role, args: [:role]
       define :get_by_email, action: :get_by_email, args: [:email]
+      define :update_display_name, action: :update_display_name, args: [:display_name]
     end
   end
 
