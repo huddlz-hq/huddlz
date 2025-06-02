@@ -5,7 +5,7 @@
 ### Requirements Discovery
 Through careful questioning, we established:
 
-1. **Privacy Philosophy**: 
+1. **Privacy Philosophy**:
    - Initially considered "Anonymous" as default name
    - Discussed various anonymous identifier schemes
    - Decided to keep current "ColorAnimal123" format but fix the bug
@@ -62,7 +62,7 @@ Through careful questioning, we established:
 
 **Changes Made:**
 1. Created `lib/huddlz/accounts/user/changes/set_default_display_name.ex`
-   - Implements `use Ash.Resource.Change` 
+   - Implements `use Ash.Resource.Change`
    - Moved display name generation logic from User resource
    - Checks action type and new user status properly
 

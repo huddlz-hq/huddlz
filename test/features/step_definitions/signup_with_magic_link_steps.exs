@@ -29,7 +29,7 @@ defmodule SignupWithMagicLinkSteps do
     session =
       session
       |> visit("/register")
-      |> fill_in("Email", with: context.email)
+      |> fill_in("#user-magic-link-request-magic-link_email", "Email", with: context.email)
       |> submit()
 
     # Continue with the test

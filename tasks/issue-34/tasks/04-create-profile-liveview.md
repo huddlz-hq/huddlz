@@ -7,7 +7,7 @@ Create a new LiveView for the user profile page with basic structure and authent
 
 ## Requirements
 1. Create new LiveView module for profile page
-2. Add route at `/profile` 
+2. Add route at `/profile`
 3. Require authentication (redirect if not logged in)
 4. Set up basic page structure with form
 
