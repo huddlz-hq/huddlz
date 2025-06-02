@@ -29,8 +29,7 @@ defmodule Huddlz.Test.Helpers.Authentication do
   end
 
   def create_user(opts \\ []) do
-    # Convert map to keyword list if needed
-    opts = if is_map(opts), do: Map.to_list(opts), else: opts
+    opts = Enum.into(opts, [])
     Huddlz.Generator.generate(Huddlz.Generator.user(opts))
   end
 end
