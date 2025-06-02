@@ -23,6 +23,24 @@ defmodule Huddlz.Generator do
   end
 
   @doc """
+  Create a user with password authentication.
+  """
+  def user_with_password(opts \\ []) do
+    password = opts[:password] || "Password123!"
+
+    changeset_generator(
+      User,
+      :register_with_password,
+      defaults: [
+        email: StreamData.repeatedly(fn -> Faker.Internet.email() end),
+        password: password,
+        password_confirmation: password
+      ],
+      overrides: Keyword.drop(opts, [:password])
+    )
+  end
+
+  @doc """
   Create a group membership with given attributes.
   """
   def group_member(opts \\ []) do

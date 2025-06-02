@@ -20,9 +20,10 @@ defmodule SignInAndSignOutSteps do
     # Fill in the email and submit
     session = context[:session] || context[:conn]
 
+    # Fill in the magic link email field using its ID selector
     session =
       session
-      |> fill_in("Email", with: context.email)
+      |> fill_in("#user-magic-link-request-magic-link_email", "Email", with: context.email)
       |> click_button("Request magic link")
 
     Map.merge(context, %{session: session, conn: session})
