@@ -54,12 +54,18 @@ defmodule SharedUISteps do
   step "I click {string}", %{args: [text]} = context do
     session = context[:session] || context[:conn]
 
-    # Try clicking as link first, then as button
+    # Special handling for "Forgot your password?" which might appear multiple times
     session =
-      try do
-        click_link(session, text)
-      rescue
-        _ -> click_button(session, text)
+      if text == "Forgot your password?" do
+        # Click the first instance of the link
+        click_link(session, text, at: 0)
+      else
+        # Try clicking as link first, then as button
+        try do
+          click_link(session, text)
+        rescue
+          _ -> click_button(session, text)
+        end
       end
 
     Map.merge(context, %{session: session, conn: session})

@@ -70,8 +70,10 @@ defmodule Huddlz.Accounts.User do
     defaults [:read]
 
     create :create do
-      accept [:email, :display_name, :role]
-
+      # For testing/seeding only - use authentication actions in production
+      primary? true
+      accept [:email, :display_name, :role, :confirmed_at, :hashed_password]
+      
       change Huddlz.Accounts.User.Changes.SetDefaultDisplayName
     end
 
@@ -355,6 +357,11 @@ defmodule Huddlz.Accounts.User do
       authorize_if always()
     end
 
+    policy action(:create) do
+      description "Direct creation only for testing/seeding (use authorize?: false)"
+      forbid_if always()
+    end
+
     policy action(:register_with_password) do
       description "Anyone can register with password"
       authorize_if always()
@@ -416,7 +423,10 @@ defmodule Huddlz.Accounts.User do
       sensitive? true
     end
 
-    attribute :confirmed_at, :utc_datetime_usec
+    attribute :confirmed_at, :utc_datetime_usec do
+      # Allow setting for testing/seeding purposes
+      public? true
+    end
   end
 
   relationships do

@@ -11,12 +11,16 @@ defmodule Huddlz.Generator do
 
   @doc """
   Create a user with given attributes.
+  By default, users are confirmed. Pass confirmed_at: nil for unconfirmed users.
   """
   def user(opts \\ []) do
     seed_generator(
       %User{
         email: StreamData.repeatedly(fn -> Faker.Internet.email() end),
-        role: :regular
+        display_name: StreamData.repeatedly(fn -> Faker.Person.name() end),
+        role: :regular,
+        # By default, test users are confirmed
+        confirmed_at: DateTime.utc_now()
       },
       overrides: opts
     )

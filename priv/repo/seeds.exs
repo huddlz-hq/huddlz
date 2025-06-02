@@ -19,67 +19,50 @@ alias Huddlz.Communities.{Group, GroupMember, Huddl}
 if Enum.empty?(existing_groups) do
   IO.puts("Creating sample data...")
 
-  # Create admin user
-  {:ok, admin} =
-    User
-    |> Ash.Changeset.for_create(:create, %{
-      email: "admin@example.com",
-      role: :admin,
-      display_name: "Admin User"
-    })
-    |> Ash.create(authorize?: false)
+  # Helper function to create a user with password and update role
+  create_user = fn email, display_name, role ->
+    {:ok, user} =
+      User
+      |> Ash.Changeset.for_create(:register_with_password, %{
+        email: email,
+        password: "Password123!",
+        password_confirmation: "Password123!",
+        display_name: display_name
+      })
+      |> Ash.create(authorize?: false)
+    
+    if role != :regular do
+      {:ok, user} =
+        user
+        |> Ash.Changeset.for_update(:update, %{role: role, confirmed_at: DateTime.utc_now()})
+        |> Ash.update(authorize?: false)
+      user
+    else
+      # Confirm regular users too
+      {:ok, user} =
+        user
+        |> Ash.Changeset.for_update(:update, %{confirmed_at: DateTime.utc_now()})
+        |> Ash.update(authorize?: false)
+      user
+    end
+  end
 
+  # Create admin user
+  admin = create_user.("admin@example.com", "Admin User", :admin)
   IO.puts("Created admin user: #{admin.email}")
 
   # Create some verified users
-  users =
-    [
-      User
-      |> Ash.Changeset.for_create(:create, %{
-        email: "alice@example.com",
-        role: :verified,
-        display_name: "Alice Johnson"
-      })
-      |> Ash.create(authorize?: false),
-      User
-      |> Ash.Changeset.for_create(:create, %{
-        email: "bob@example.com",
-        role: :verified,
-        display_name: "Bob Smith"
-      })
-      |> Ash.create(authorize?: false),
-      User
-      |> Ash.Changeset.for_create(:create, %{
-        email: "carol@example.com",
-        role: :verified,
-        display_name: "Carol Davis"
-      })
-      |> Ash.create(authorize?: false),
-      User
-      |> Ash.Changeset.for_create(:create, %{
-        email: "dave@example.com",
-        role: :regular,
-        display_name: "Dave Wilson"
-      })
-      |> Ash.create(authorize?: false),
-      User
-      |> Ash.Changeset.for_create(:create, %{
-        email: "eve@example.com",
-        role: :regular,
-        display_name: "Eve Brown"
-      })
-      |> Ash.create(authorize?: false)
-    ]
-    |> Enum.map(fn {:ok, user} -> user end)
-
+  alice = create_user.("alice@example.com", "Alice Johnson", :verified)
+  bob = create_user.("bob@example.com", "Bob Smith", :verified)
+  carol = create_user.("carol@example.com", "Carol Davis", :verified)
+  dave = create_user.("dave@example.com", "Dave Wilson", :regular)
+  eve = create_user.("eve@example.com", "Eve Brown", :regular)
+  
+  users = [alice, bob, carol, dave, eve]
   IO.puts("Created #{length(users)} sample users")
 
   # Create some groups with meaningful names
   # Using Ash changesets directly to ensure slug generation works properly
-  alice = Enum.at(users, 0)
-  bob = Enum.at(users, 1)
-  carol = Enum.at(users, 2)
-
   groups =
     [
       Group
@@ -145,8 +128,6 @@ if Enum.empty?(existing_groups) do
   # Add some members to groups
   # Add users to Phoenix Elixir Meetup
   phoenix_group = Enum.at(groups, 0)
-  dave = Enum.at(users, 3)
-  eve = Enum.at(users, 4)
 
   {:ok, _} =
     GroupMember
@@ -311,8 +292,8 @@ if Enum.empty?(existing_groups) do
   IO.puts("Created #{length(huddlz)} huddlz")
   IO.puts("\nSeed data created successfully!")
   IO.puts("\nYou can log in with:")
-  IO.puts("  Admin: admin@example.com")
-  IO.puts("  Users: alice@example.com, bob@example.com, carol@example.com")
+  IO.puts("  Admin: admin@example.com (password: Password123!)")
+  IO.puts("  Users: alice@example.com, bob@example.com, carol@example.com (password: Password123!)")
   IO.puts("\nGroup slugs:")
   Enum.each(groups, fn g -> IO.puts("  /groups/#{g.slug} - #{g.name}") end)
 else
