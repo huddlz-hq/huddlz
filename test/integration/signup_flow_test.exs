@@ -17,7 +17,7 @@ defmodule Huddlz.Integration.SignupFlowTest do
 
     # Submit the registration form
     session
-    |> fill_in("Email", with: email)
+    |> fill_in("#user-magic-link-request-magic-link_email", "Email", with: email)
     |> click_button("Request magic link")
 
     # Verify email was sent
@@ -44,7 +44,7 @@ defmodule Huddlz.Integration.SignupFlowTest do
     # Submit the form with invalid email
     session =
       session
-      |> fill_in("Email", with: email)
+      |> fill_in("#user-magic-link-request-magic-link_email", "Email", with: email)
       |> click_button("Request magic link")
 
     # Check for validation message

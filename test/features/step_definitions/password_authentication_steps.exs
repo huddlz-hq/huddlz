@@ -83,8 +83,8 @@ defmodule PasswordAuthenticationSteps do
   end
 
   step "I am signed in as {string} without a password", %{args: [email]} = context do
-    # Create user without password
-    user = generate(user(email: email))
+    # Create user without password and confirm them
+    user = generate(user(email: email, confirmed_at: DateTime.utc_now()))
 
     # Generate token using proper method
     {:ok, token, _claims} = AshAuthentication.Jwt.token_for_user(user)

@@ -21,7 +21,7 @@ defmodule Huddlz.Integration.MagicLinkSignupTest do
 
     # Submit the registration form
     session
-    |> fill_in("Email", with: email)
+    |> fill_in("#user-magic-link-request-magic-link_email", "Email", with: email)
     |> click_button("Request magic link")
 
     # Verify email was sent
