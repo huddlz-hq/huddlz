@@ -311,3 +311,20 @@ Upgraded cucumber from 0.1.0 to 0.4.0 (exceeding target 0.2.0) to implement shar
 - **Flexible Implementation**: Support multiple existing patterns (e.g., both Ash.Seed and generate for user creation) rather than forcing uniformity
 
 See `tasks/issue-19/learnings.md` for full details including implementation patterns and recommendations.
+
+## Issue #27: Password Authentication - June 2, 2025
+
+### Context
+Added password authentication alongside existing magic link authentication using Ash Authentication's built-in strategies. Users can now choose between authentication methods without disrupting existing users.
+
+### Key Learnings
+1. **Ash Generators Do Heavy Lifting**: Always verify what Ash generators create first - they often provide 90% of needed functionality including routes, actions, and basic UI
+2. **Multi-Form Testing Strategy**: Use ID-based selectors (`#form-field-id`) instead of label-based selectors when pages have multiple forms with similar fields. PhoenixTest syntax: `fill_in("#id", "Label", with: value)`
+3. **Conditional Actions Pattern**: Design separate actions for different user states (e.g., `set_password` vs `change_password`) rather than overloading single actions with complex logic
+
+### Reusable Patterns
+- **Multi-Form Field Selection**: Always assign unique IDs to form fields when multiple forms exist on a page
+- **Test Helpers for Auth Methods**: Create specific helpers like `user_with_password` to explicitly set up different authentication states
+- **State-Based UI Logic**: Use conditional action selection based on resource state (e.g., presence of hashed_password field)
+
+See `tasks/issue-27/learnings.md` for full details including implementation patterns and testing strategies.
