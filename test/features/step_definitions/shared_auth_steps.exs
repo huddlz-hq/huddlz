@@ -61,10 +61,11 @@ defmodule SharedAuthSteps do
       end)
 
     # Initialize connection if not present
-    conn = case context[:conn] do
-      %Plug.Conn{} = conn -> conn
-      _ -> Phoenix.ConnTest.build_conn()
-    end
+    conn =
+      case context[:conn] do
+        %Plug.Conn{} = conn -> conn
+        _ -> Phoenix.ConnTest.build_conn()
+      end
 
     # Sign in the user using the authentication helper
     conn = login(conn, user)

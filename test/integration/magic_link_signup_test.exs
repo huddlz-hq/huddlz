@@ -3,7 +3,6 @@ defmodule Huddlz.Integration.MagicLinkSignupTest do
 
   import Swoosh.TestAssertions
 
-  alias Ash.Resource.Info
   alias Huddlz.Accounts.User
   require Ash
 
@@ -39,35 +38,33 @@ defmodule Huddlz.Integration.MagicLinkSignupTest do
     assert_has(session, "h1", text: "Find your huddl")
   end
 
-  test "verify display name generation module is configured correctly", %{conn: _conn} do
-    # Since we moved the display name generation to a change module,
-    # let's verify it's properly configured on the create action
+  test "verify display name is generated for new users", %{conn: _conn} do
+    # Create a new user without providing a display name
+    email = "newuser#{System.unique_integer()}@example.com"
 
-    # Check that the create action has our change module
-    create_info = Info.action(User, :create)
+    # Create an admin actor for the test
+    admin = Ash.Seed.seed!(User, %{email: "admin@test.com", role: :admin})
 
-    assert Enum.any?(create_info.changes, fn change ->
-             match?(
-               %Ash.Resource.Change{
-                 change: {Huddlz.Accounts.User.Changes.SetDefaultDisplayName, _}
-               },
-               change
-             )
-           end)
+    # Use the :create action which includes SetDefaultDisplayName change
+    user =
+      User
+      |> Ash.Changeset.for_create(
+        :create,
+        %{
+          email: email,
+          role: :regular
+          # Note: not providing display_name
+        },
+        actor: admin
+      )
+      |> Ash.create!()
 
-    # Check that sign_in_with_magic_link also has our change module
-    sign_in_info = Info.action(User, :sign_in_with_magic_link)
+    # Verify that a display name was generated
+    assert user.display_name != nil
+    assert user.display_name != ""
 
-    assert Enum.any?(sign_in_info.changes, fn change ->
-             match?(
-               %Ash.Resource.Change{
-                 change: {Huddlz.Accounts.User.Changes.SetDefaultDisplayName, _}
-               },
-               change
-             )
-           end)
-
-    # Verify the module exists and is loaded
-    assert Code.ensure_loaded?(Huddlz.Accounts.User.Changes.SetDefaultDisplayName)
+    # Verify the display name follows the expected pattern
+    assert user.display_name =~ ~r/^[A-Z][a-z]+[A-Z][a-z]+\d+$/,
+           "Display name should match pattern like 'BraveEagle123'"
   end
 end
