@@ -123,7 +123,8 @@ defmodule Huddlz.Accounts.User do
       description "Update a user's display_name"
       accept [:display_name]
 
-      validate string_length(:display_name, min: 3, max: 30)
+      validate attribute_does_not_equal(:display_name, "")
+      validate string_length(:display_name, min: 1, max: 30)
     end
 
     update :update_role do
@@ -177,7 +178,7 @@ defmodule Huddlz.Accounts.User do
       description "Name the user wants others to identify them as"
       allow_nil? true
       public? true
-      constraints min_length: 3, max_length: 30
+      constraints min_length: 1, max_length: 30
     end
 
     attribute :role, Huddlz.Accounts.Role do
