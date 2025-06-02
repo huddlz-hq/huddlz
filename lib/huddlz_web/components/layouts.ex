@@ -72,7 +72,7 @@ defmodule HuddlzWeb.Layouts do
               <%= if Huddlz.Accounts.admin?(@current_user) do %>
                 <li><a href="/admin">Admin Panel</a></li>
               <% end %>
-              <li class="mt-2"><a href="/sign-out">Sign Out</a></li>
+              <li><a href="/sign-out">Sign Out</a></li>
             </ul>
           </div>
         <% else %>
