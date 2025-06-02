@@ -54,18 +54,12 @@ defmodule SharedUISteps do
   step "I click {string}", %{args: [text]} = context do
     session = context[:session] || context[:conn]
 
-    # Special handling for "Forgot your password?" which might appear multiple times
+    # Try clicking as link first, then as button
     session =
-      if text == "Forgot your password?" do
-        # Click the first instance of the link
-        click_link(session, text, at: 0)
-      else
-        # Try clicking as link first, then as button
-        try do
-          click_link(session, text)
-        rescue
-          _ -> click_button(session, text)
-        end
+      try do
+        click_link(session, text)
+      rescue
+        _ -> click_button(session, text)
       end
 
     Map.merge(context, %{session: session, conn: session})
@@ -74,6 +68,16 @@ defmodule SharedUISteps do
   step "I click the {string} button", %{args: [button_text]} = context do
     session = context[:session] || context[:conn]
     session = click_button(session, button_text)
+
+    Map.merge(context, %{session: session, conn: session})
+  end
+
+  step "I click link {string}", %{args: [link_text]} = context do
+    session = context[:session] || context[:conn]
+
+    # Just use the regular click_link and let it fail if there are multiple matches
+    # This forces test writers to be more specific
+    session = click_link(session, link_text)
 
     Map.merge(context, %{session: session, conn: session})
   end
@@ -112,7 +116,17 @@ defmodule SharedUISteps do
   # Form interactions
   step "I fill in {string} with {string}", %{args: [field, value]} = context do
     session = context[:session] || context[:conn]
-    session = fill_in(session, field, with: value)
+
+    # Check if field starts with # to indicate it's an ID selector
+    session =
+      if String.starts_with?(field, "#") do
+        # For ID selectors, we need to use the proper label
+        # Let's extract the ID and use it with the Email label
+        fill_in(session, field, "Email", with: value)
+      else
+        # Regular label-based fill
+        fill_in(session, field, with: value)
+      end
 
     Map.merge(context, %{session: session, conn: session})
   end

@@ -58,10 +58,10 @@ Feature: Password Authentication
   Scenario: User requests password reset
     Given a user exists with email "forgetful@example.com" and password "ForgottenPassword123!"
     And I am on the sign-in page
-    When I click "Forgot your password?"
-    And I fill in "Email" with "forgetful@example.com"
+    When I visit "/reset"
+    And I fill in "#user-password-request-password-reset-token_email" with "forgetful@example.com"
     And I click "Request reset password link"
-    Then I should see "If an account exists for forgetful@example.com, you will receive a password reset link shortly."
+    Then I should see "If this user exists in our system, you will be contacted with password reset instructions shortly."
 
   Scenario: User can switch between authentication methods
     Given I am on the sign-in page

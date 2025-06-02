@@ -3,7 +3,6 @@ defmodule PasswordAuthenticationSteps do
 
   import PhoenixTest
   import Huddlz.Generator
-  import Swoosh.TestAssertions
   import ExUnit.Assertions
 
   step "I am on the registration page", context do
@@ -86,28 +85,28 @@ defmodule PasswordAuthenticationSteps do
 
   step "I am signed in as {string} without a password", %{args: [email]} = context do
     session = context[:session] || context[:conn]
-    
+
     # Request magic link (this will create user if they don't exist)
-    session = 
+    session =
       session
       |> visit("/register")
       |> fill_in("#user-magic-link-request-magic-link_email", "Email", with: email)
       |> click_button("Request magic link")
-    
+
     # Capture the magic link email
     magic_link =
       Swoosh.TestAssertions.assert_email_sent(fn sent_email ->
         assert sent_email.to == [{"", email}]
-        
+
         case Regex.run(~r{(https?://[^/]+/auth/[^\s"'<>]+)}, sent_email.html_body) do
           [_, url] -> url
           _ -> raise "Magic link not found in email body"
         end
       end)
-    
+
     # Visit the magic link to complete sign-in
     session = session |> visit(magic_link)
-    
+
     {:ok, Map.merge(context, %{session: session, conn: session})}
   end
 
@@ -140,25 +139,24 @@ defmodule PasswordAuthenticationSteps do
 
     session = context[:session] || context[:conn]
 
-    # Fill in each field individually
-    # Since we can't scope to a specific form, we'll rely on unique field labels
+    # Use within to scope to the password form by its ID
     session =
-      Enum.reduce(table_rows, session, fn [field, value], sess ->
-        case field do
-          "current_password" ->
-            # For users without password, this field won't exist
-            sess  # Skip for now, as this test doesn't have it
+      within(session, "#password-form", fn sess ->
+        Enum.reduce(table_rows, sess, fn [field, value], s ->
+          case field do
+            "current_password" ->
+              fill_in(s, "Current Password", with: value)
 
-          "password" ->
-            # First try with the exact label from the form
-            fill_in(sess, "New Password", with: value)
+            "password" ->
+              fill_in(s, "New Password", with: value)
 
-          "password_confirmation" ->
-            fill_in(sess, "Confirm New Password", with: value)
+            "password_confirmation" ->
+              fill_in(s, "Confirm New Password", with: value)
 
-          _ ->
-            sess
-        end
+            _ ->
+              s
+          end
+        end)
       end)
 
     {:ok, Map.merge(context, %{session: session, conn: session})}
@@ -166,10 +164,10 @@ defmodule PasswordAuthenticationSteps do
 
   step "I submit the password form", context do
     session = context[:session] || context[:conn]
-    
+
     # Click the submit button which should submit the form
     session = click_button(session, "Set Password")
-    
+
     {:ok, Map.merge(context, %{session: session, conn: session})}
   end
 

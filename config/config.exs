@@ -70,6 +70,11 @@ config :huddlz, HuddlzWeb.Endpoint,
 # at the `config/runtime.exs`.
 config :huddlz, Huddlz.Mailer, adapter: Swoosh.Adapters.Local
 
+# Configure email settings
+config :huddlz, :email,
+  from_address: "support@huddlz.com",
+  from_name: "huddlz support"
+
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.17.11",

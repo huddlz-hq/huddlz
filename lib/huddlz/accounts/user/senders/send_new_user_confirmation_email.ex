@@ -12,9 +12,12 @@ defmodule Huddlz.Accounts.User.Senders.SendNewUserConfirmationEmail do
 
   @impl true
   def send(user, token, _) do
+    config = Application.get_env(:huddlz, :email)
+    from_name = config[:from_name] || "huddlz support"
+    from_address = config[:from_address] || "support@huddlz.com"
+
     new()
-    # TODO: Replace with your email
-    |> from({"noreply", "noreply@example.com"})
+    |> from({from_name, from_address})
     |> to(to_string(user.email))
     |> subject("Confirm your email address")
     |> html_body(body(token: token))

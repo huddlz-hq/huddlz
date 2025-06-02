@@ -126,7 +126,7 @@ defmodule HuddlzWeb.ProfileLive do
               </p>
 
               <%= if @show_password_form do %>
-                <form phx-submit="update_password" phx-change="validate_password">
+                <form id="password-form" phx-submit="update_password" phx-change="validate_password">
                   <%= if @current_user.hashed_password do %>
                     <.input
                       field={@password_form[:current_password]}
