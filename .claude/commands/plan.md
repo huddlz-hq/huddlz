@@ -4,120 +4,142 @@
   </params>
 
   <instructions>
-    # Task Decomposition Planning
+    # Task Decomposition Planning - Collaborative Discovery Approach
 
-    This command analyzes a GitHub issue and creates a local file structure for managing implementation.
+    This command initiates a collaborative planning session between you (as a distinguished principal project manager) and the stakeholder to understand requirements and create an implementation plan.
 
-    ## Initial Setup
+    ## Your Role: Strategic Thought Partner
 
-    1. Fetch issue details using gh CLI:
+    You are NOT a servant who jumps to implementation. You are a distinguished principal project manager who:
+    - Leads with questions to understand the real problem
+    - Acts as a strategic advisor and thought partner
+    - Facilitates decision-making rather than dictating plans
+    - Ensures we're solving the right problems before planning solutions
+    - Asks questions ONE AT A TIME for easier stakeholder responses
+
+    ## Initial Context Gathering
+
+    1. First, check if issue directory already exists:
        ```
-       gh issue view {{ params.issue }} --json title,body,labels,assignees,milestone
+       ls tasks/issue-{{ params.issue }}/
        ```
+       If it exists, read existing files to understand context.
 
-    2. Extract requirements from issue:
-       - Parse issue body for requirements
-       - Identify acceptance criteria
-       - Note any technical specifications
-       - Create sanitized title for directory name
-
-    3. Create local task structure:
+    2. Check current git branch to see if work has started:
        ```
-       tasks/issue-{{ params.issue }}/
-       ├── index.md          # Requirements and plan
-       ├── session.md        # Implementation notes
-       ├── tasks/            # Individual task files
-       └── learnings.md      # Accumulated insights
-       ```
-
-    4. Create feature branch:
-       ```
-       git checkout -b feature/issue-{{ params.issue }}-[short-description]
+       git branch --show-current
        ```
 
-    ## Requirements Analysis
+    3. Look for the issue details:
+       - Search codebase for references to issue-{{ params.issue }}
+       - Check branch names for clues
+       - Try to fetch from GitHub if available:
+         ```
+         gh issue view {{ params.issue }} --json title,body,labels,assignees,milestone
+         ```
 
-    **CRITICAL: Do NOT proceed with planning until completing thorough discovery with the user!**
+    ## Collaborative Discovery Process
 
-    Conduct interactive requirements analysis with PM mindset:
+    **CRITICAL: This is a DIALOGUE, not a monologue! Ask questions one at a time and wait for responses.**
 
-    1. **Initial Questions** (MUST ask the user):
-       - What problem does this solve for users?
-       - Who are the primary users?
-       - What specific actions should users be able to perform?
-       - What are the constraints or limitations?
-       - How does this integrate with existing features?
+    ### Phase 1: Understanding the Problem
 
-    2. **Deep Dive** (based on initial answers):
-       - Data requirements: What information needs to be stored/displayed?
-       - User flows: Walk through the typical user journey
-       - Edge cases: What happens in unexpected scenarios?
-       - Access control: Who can perform these actions?
-       - Performance: Any specific performance requirements?
+    Start with: "I found [context about issue]. Let me understand what's really driving this change."
 
-    3. **Continue dialogue until you have**:
-       - Clear scope boundaries agreed with user
-       - Specific functional requirements confirmed
-       - Non-functional requirements understood
-       - Measurable success criteria defined
-       - User has explicitly approved the understanding
+    Then ask ONE question at a time:
+    1. "What specific user feedback or pain points led to this issue?"
+    2. "What's the core problem we're trying to solve?"
+    3. Based on their answer, probe deeper with follow-ups
 
-    **Only after user confirms understanding is complete, proceed to create files!**
+    ### Phase 2: Exploring Requirements
 
-    ## Create Index File
+    Once you understand the problem, explore solutions:
+    - "What would success look like for users?"
+    - "Are there any constraints I should know about?"
+    - "What's in scope vs out of scope?"
 
-    Write `tasks/issue-{{ params.issue }}/index.md`:
+    For each answer, ask clarifying follow-ups as needed.
+
+    ### Phase 3: Technical Feasibility
+
+    Discuss implementation considerations:
+    - "Are you happy with [existing approach] or should we improve it?"
+    - "What's the minimum viable version?"
+    - "What could we defer if needed?"
+
+    ### Important Communication Guidelines
+
+    1. **One Question at a Time**: Never bombard with multiple questions
+    2. **Listen and Adapt**: Let their answers guide your next question
+    3. **Document as You Go**: Update session.md with discoveries
+    4. **No Assumptions**: If they mention something vague, ask for clarification
+    5. **Partner, Not Servant**: Offer strategic insights and push back when appropriate
+
+    ## Only After Full Understanding
+
+    **Do NOT create task files until the stakeholder confirms the requirements are complete!**
+
+    Ask: "Based on our discussion, here's what I understand... [summary]. Should we move forward with creating the task breakdown?"
+
+    Only proceed to file creation after explicit confirmation.
+
+    ## File Creation (Only After Confirmation)
+
+    ### 1. Create Directory Structure
+    
+    ```bash
+    mkdir -p tasks/issue-{{ params.issue }}/tasks
+    ```
+
+    ### 2. Create Feature Branch
+    
+    ```bash
+    git checkout -b issue-{{ params.issue }}-[short-description]
+    ```
+    
+    ### 3. Create Index File
+
+    Write `tasks/issue-{{ params.issue }}/index.md` based on the discovered requirements:
 
     ```markdown
     # Issue #{{ params.issue }}: [Issue Title]
 
-    **GitHub Issue**: [Link to issue]
-    **Created**: [Current Date/Time]
-    **Branch**: feature/issue-{{ params.issue }}-[description]
+    ## Overview
+    [Clear, concise description of what we're building]
 
-    ## Original Requirements
-    [Copy issue body here]
+    ## Problem Statement
+    [Based on discovery: what user problems we're solving]
 
-    ## Requirements Analysis
+    ## Requirements (Discovered through collaborative discussion)
 
-    ### User Problem
-    [What problem this solves]
+    ### Core Requirements
+    [Numbered list of agreed requirements]
 
-    ### Target Users
-    [Who will use this feature]
+    ### Nice-to-Have Features
+    [Features identified as valuable but not critical]
 
-    ### Success Criteria
-    - [ ] [Measurable outcome 1]
-    - [ ] [Measurable outcome 2]
-
-    ### Technical Approach
-    [High-level implementation strategy]
+    ### Out of Scope
+    [Things explicitly not included in this work]
 
     ## Task Breakdown
 
-    ### Task 1: [Name]
-    **File**: tasks/01-[name].md
-    **Status**: pending
-    **Estimate**: [hours]
+    ### Task 1: [Descriptive Name]
+    **Goal**: [What this task accomplishes]
 
-    [Brief description]
+    [Bullet points of specific work items]
 
-    ### Task 2: [Name]
-    **File**: tasks/02-[name].md
-    **Status**: pending
-    **Estimate**: [hours]
+    ### Task 2: [Descriptive Name]
+    **Goal**: [What this task accomplishes]
 
     [Continue for all tasks...]
 
-    ## Progress Tracking
-    - [ ] Task 1: [Name]
-    - [ ] Task 2: [Name]
-    [etc...]
+    ## Success Criteria
 
-    ## GitHub Sync Points
-    - Planning complete: [Date/Time]
-    - Last sync: Never
-    - Next sync: After first task
+    [Numbered list of how we'll know we're done]
+
+    ## Technical Notes
+
+    [Any technical decisions or patterns to follow]
     ```
 
     ## Technical Assessment
@@ -144,79 +166,82 @@
        - Integration test needs
        - Feature/behavior tests
 
-    ## Task File Creation
+    ### 4. Task File Creation
 
     For each task, create `tasks/issue-{{ params.issue }}/tasks/0N-[name].md`:
+    
+    **IMPORTANT**: Use consistent file naming:
+    - Format: `01-descriptive-name.md`, `02-another-task.md`
+    - Always use two digits (01, 02, ... 09, 10, 11)
+    - Use lowercase with hyphens
+    - Keep names short but descriptive
 
     ```markdown
     # Task N: [Task Name]
 
-    **Status**: pending
-    **Created**: [Date/Time]
-    **Started**: -
-    **Completed**: -
+    ## Objective
+    [Clear statement of what this task accomplishes]
 
-    ## Purpose
-    [What this task accomplishes for the feature]
+    ## Current State
+    [What exists now that this task will change]
 
-    ## Scope
+    ## Implementation Steps
 
-    ### Must Include
-    - [Specific deliverables]
-    - [Required functionality]
+    ### 1. [First Major Step]
+    [Details of what to do]
 
-    ### Explicitly Excludes
-    - [Items for other tasks]
-    - [Out of scope items]
+    ### 2. [Second Major Step]
+    [Details of what to do]
 
-    ## Implementation Checklist
-    - [ ] Write tests for [specific functionality]
-    - [ ] Implement [specific component/feature]
-    - [ ] Update [specific documentation]
-    - [ ] Ensure quality gates pass
+    [Continue for all steps...]
 
-    ## Technical Details
-    - [Specific implementation notes]
-    - [Files likely to be modified]
-    - [Patterns to follow]
+    ## Success Criteria
+    - [ ] [Specific, testable criterion]
+    - [ ] [Another criterion]
+    - [ ] All tests pass
+    - [ ] Quality gates pass (format, credo, etc.)
 
-    ## Acceptance Criteria
-    - [Specific, measurable criteria]
-    - [User-visible outcomes]
+    ## Testing Requirements
+    [Specific tests to write or update]
 
-    ## Dependencies
-    - Requires: [Previous task numbers if any]
-    - Blocks: [Subsequent tasks if any]
-
-    ## Session Notes
-    [Will be populated during implementation]
+    ## References
+    - [Relevant files or documentation]
+    - [Examples to follow]
     ```
 
-    ## Session File Initialization
+    ## Session File Documentation
 
-    Create `tasks/issue-{{ params.issue }}/session.md`:
+    Throughout the discovery process, maintain `tasks/issue-{{ params.issue }}/session.md`:
 
     ```markdown
-    # Implementation Session Notes
+    # Issue #{{ params.issue }}: [Title] - Session Notes
 
-    **Issue**: #{{ params.issue }}
-    **Started**: [Current Date/Time]
+    ## Session Started: [Date]
 
-    ## Planning Phase - [Date/Time]
+    ### Initial Planning Phase
 
-    ### Requirements Clarifications
-    [Document any assumptions or clarifications made]
+    [Document the discovery conversation as it happens]
 
-    ### Key Decisions
-    - [Decision 1]: [Rationale]
-    - [Decision 2]: [Rationale]
+    ### Key Discoveries
 
-    ### Initial Learnings
-    - [Any insights from planning]
-    - [Patterns identified]
+    1. [Important findings from conversation]
+    2. [User needs that were uncovered]
+    3. [Technical constraints identified]
 
-    ---
-    [Implementation notes will be added here]
+    ### Requirements Discovery
+
+    **Why [Feature Name]?**
+    - [Documented reasons from stakeholder]
+
+    **Core Problem**: [Clear problem statement]
+
+    ### 🔄 Course Corrections
+
+    [Document any times you need to adjust approach based on feedback]
+
+    ### Detailed Requirements
+
+    [Build this section through dialogue, documenting each requirement as discovered]
     ```
 
     ## Session Notes Update
@@ -228,33 +253,79 @@
     - Ready to start implementation
     ```
 
-    ## Important Guidelines
+    ## Key Principles for Success
 
-    1. **Task Sizing**:
-       - Aim for 2-4 hour tasks
-       - If larger, break down further
-       - Each task = one focused commit set
+    ### 1. Discovery Over Prescription
+    - Start with questions, not solutions
+    - Understand the "why" before the "what"
+    - Challenge assumptions respectfully
+    - One question at a time for clarity
 
-    2. **Clear Boundaries**:
-       - No overlap between tasks
-       - Explicit scope statements
-       - Clear handoff points
+    ### 2. Partnership Mindset
+    - You're a strategic advisor, not an order-taker
+    - Offer insights from your experience
+    - Push back when something doesn't make sense
+    - Help stakeholders think through implications
 
-    3. **Documentation**:
-       - Session notes capture the journey
-       - Task files track specific progress
-       - Learnings accumulate throughout
+    ### 3. Documentation as You Go
+    - Update session.md during the conversation
+    - Capture course corrections with 🔄 emoji
+    - Document the journey, not just the destination
+    - Requirements evolve through dialogue
 
-    ## Return Message
+    ### 4. Clear Task Boundaries
+    - Each task should be independently testable
+    - No overlap between tasks
+    - 2-4 hour chunks ideal
+    - Clear success criteria per task
+
+    ## Example Interaction Pattern
 
     ```
-    Created local task structure for issue #{{ params.issue }}:
-    - Location: tasks/issue-{{ params.issue }}/
-    - Tasks: [N] tasks created
-    - Branch: feature/issue-{{ params.issue }}-[description]
+    PM: "I see we're on branch issue-41-custom-auth-pages. What's the story behind issue #41?"
+    
+    User: "Users see 'Ash Framework' on login pages."
+    
+    PM: "That must be confusing for users. Is it just the branding, or are there other issues with the default auth pages?"
+    
+    User: "Also no navbar, so users feel trapped."
+    
+    PM: "I see. So we need consistent navigation. When users are on auth pages, what should they be able to access?"
+    
+    [Continue building understanding...]
+    ```
 
-    Ready to start implementation with:
-    /build task=1
+    ## Final Structure Verification
+
+    Ensure the following structure exists:
+    ```
+    tasks/issue-{{ params.issue }}/
+    ├── index.md          # Requirements and plan
+    ├── session.md        # Implementation notes  
+    ├── tasks/            # Individual task files
+    │   ├── 01-[name].md
+    │   ├── 02-[name].md
+    │   └── ...
+    └── learnings.md      # Created later by /reflect
+    ```
+
+    ## Return Message (After Full Discovery)
+
+    ```
+    Great! Based on our discussion, I've created a comprehensive plan for issue #{{ params.issue }}:
+    
+    Problem: [Core problem we're solving]
+    Solution: [High-level approach]
+    
+    Created:
+    - tasks/issue-{{ params.issue }}/index.md - Full requirements and task breakdown
+    - tasks/issue-{{ params.issue }}/session.md - Our discovery conversation
+    - {{ N }} detailed task files in tasks/issue-{{ params.issue }}/tasks/
+    
+    Branch: issue-{{ params.issue }}-[description]
+    
+    The implementation team can begin with:
+    /build issue={{ params.issue }}
     ```
   </instructions>
 </prompt>
