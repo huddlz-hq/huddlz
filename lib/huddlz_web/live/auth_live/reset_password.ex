@@ -100,18 +100,17 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
   def handle_event("request_reset", %{"form" => params}, socket) do
     form = socket.assigns.form.source |> Form.validate(params)
 
-    case Form.submit(form, params: params) do
+    # Use Ash.run_action for this action type
+    input = Ash.ActionInput.for_action(User, :request_password_reset_token, params)
+    
+    case Ash.run_action(input) do
       :ok ->
         # Always show success message for security (don't reveal if email exists)
         {:noreply, assign(socket, :submitted, true)}
 
-      {:ok, _} ->
-        # Also handle the {:ok, result} case
+      {:error, _} ->
+        # Also show success for security (don't reveal if email exists)
         {:noreply, assign(socket, :submitted, true)}
-
-      {:error, form} ->
-        # This shouldn't happen as the action always succeeds
-        {:noreply, assign(socket, form: to_form(form))}
     end
   end
 end

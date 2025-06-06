@@ -116,8 +116,7 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Password reset successfully. You are now signed in.")
-         |> redirect(to: "/auth/user/password/sign_in?token=#{token}")}
+         |> redirect(to: "/auth/user/password/sign_in_with_token?token=#{token}")}
 
       {:error, form} ->
         handle_reset_error(socket, form)
