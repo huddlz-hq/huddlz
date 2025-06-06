@@ -10,7 +10,7 @@ Feature: Password Authentication
       | email                    | newuser@example.com    |
       | password                 | SuperSecret123!        |
       | password_confirmation    | SuperSecret123!        |
-    And I click "Register"
+    And I click "Create account"
     Then I should be signed in
     And I should see "Find your huddl"
 
@@ -20,7 +20,7 @@ Feature: Password Authentication
     When I fill in the password sign-in form with:
       | email    | existing@example.com |
       | password | Password123!         |
-    And I click "Sign in"
+    And I submit the password sign-in form
     Then I should be signed in
     And I should see "Find your huddl"
 
@@ -30,8 +30,8 @@ Feature: Password Authentication
     When I fill in the password sign-in form with:
       | email    | existing@example.com |
       | password | WrongPassword        |
-    And I click "Sign in"
-    Then I should see "Email or password was incorrect"
+    And I submit the password sign-in form
+    Then I should see "Incorrect email or password"
     And I should not be signed in
 
   Scenario: User sets password in profile
@@ -59,9 +59,9 @@ Feature: Password Authentication
     Given a user exists with email "forgetful@example.com" and password "ForgottenPassword123!"
     And I am on the sign-in page
     When I visit "/reset"
-    And I fill in "#user-password-request-password-reset-token_email" with "forgetful@example.com"
-    And I click "Request reset password link"
-    Then I should see "If this user exists in our system, you will be contacted with password reset instructions shortly."
+    And I fill in "Email" with "forgetful@example.com" within "#reset-password-form"
+    And I click "Send reset instructions"
+    Then I should see "If an account exists for that email, you will receive password reset instructions shortly."
 
   Scenario: User can switch between authentication methods
     Given I am on the sign-in page
@@ -69,4 +69,3 @@ Feature: Password Authentication
     And I should see the magic link form
     When I am on the registration page
     Then I should see the password registration form
-    And I should see the magic link registration form

@@ -372,6 +372,16 @@ defmodule Huddlz.Accounts.User do
       authorize_if always()
     end
 
+    policy action(:request_magic_link) do
+      description "Anyone can request a magic link"
+      authorize_if always()
+    end
+
+    policy action(:sign_in_with_magic_link) do
+      description "Anyone can sign in with a magic link"
+      authorize_if always()
+    end
+
     policy action(:request_password_reset_token) do
       description "Anyone can request a password reset"
       authorize_if always()

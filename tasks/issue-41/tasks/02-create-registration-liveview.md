@@ -1,5 +1,9 @@
 # Task 2: Create Registration LiveView
 
+**Status**: completed
+**Started**: 2025-01-06 11:36 AM
+**Completed**: 2025-01-06 12:20 PM
+
 ## Objective
 
 Create a custom registration page that focuses on password-based registration with a clean, user-friendly interface.

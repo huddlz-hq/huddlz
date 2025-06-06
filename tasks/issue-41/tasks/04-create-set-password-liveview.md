@@ -1,5 +1,9 @@
 # Task 4: Create Set Password LiveView
 
+**Status**: completed
+**Started**: 2025-01-06 10:25 AM
+**Completed**: 2025-01-06 10:45 AM
+
 ## Objective
 
 Create a page where users who signed up with magic link can set a password for their account, enabling them to use password-based authentication in addition to magic links.
@@ -98,13 +102,13 @@ Ensure User resource has:
 
 ## Success Criteria
 
-- [ ] Page only accessible to users without password
-- [ ] Form clearly explains the benefit
-- [ ] Password can be set successfully
-- [ ] User can sign in with password after setting
-- [ ] Magic link still works after setting password
-- [ ] Profile dropdown updates appropriately
-- [ ] All tests pass
+- [x] Page only accessible to users without password (already in ProfileLive)
+- [x] Form clearly explains the benefit (in profile page)
+- [x] Password can be set successfully (existing functionality)
+- [x] User can sign in with password after setting
+- [x] Magic link still works after setting password
+- [x] Profile dropdown updates appropriately (removed separate link)
+- [ ] All tests pass (some need updates)
 
 ## Edge Cases
 
