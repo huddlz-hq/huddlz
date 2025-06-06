@@ -15,18 +15,21 @@ defmodule CompleteSignupFlowSteps do
   step "the user submits the sign up form", context do
     session = context[:session] || context[:conn]
 
-    # Fill in the magic link email field
+    # Submit the magic link form (available on both registration and sign-in pages)
     session =
       session
-      |> fill_in("#user-magic-link-request-magic-link_email", "Email", with: context.email)
-      |> click_button("Request magic link")
+      |> within("#magic-link-form", fn session ->
+        session
+        |> fill_in("Email", with: context.email)
+        |> click_button("Request magic link")
+      end)
 
     Map.merge(context, %{session: session, conn: session})
   end
 
   # Step: Then the user receives a confirmation message
   step "the user receives a confirmation message", context do
-    # Check for the specific confirmation message after requesting magic link
+    # Check for the magic link confirmation message
     session = context[:session] || context[:conn]
 
     assert_has(session, "*",

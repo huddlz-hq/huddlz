@@ -158,13 +158,13 @@ defmodule HuddlzWeb.ProfileLive do
                       Cancel
                     </button>
                     <button type="submit" class="btn btn-primary">
-                      {if @current_user.hashed_password, do: "Update", else: "Set"} Password
+                      <%= if @current_user.hashed_password, do: "Update Password", else: "Set Password" %>
                     </button>
                   </div>
                 </form>
               <% else %>
                 <button class="btn btn-primary" phx-click="show_password_form">
-                  {if @current_user.hashed_password, do: "Change", else: "Set"} Password
+                  <%= if @current_user.hashed_password, do: "Change Password", else: "Set Password" %>
                 </button>
               <% end %>
             </div>

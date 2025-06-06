@@ -29,8 +29,11 @@ defmodule SignupWithMagicLinkSteps do
     session =
       session
       |> visit("/register")
-      |> fill_in("#user-magic-link-request-magic-link_email", "Email", with: context.email)
-      |> submit()
+      |> within("#magic-link-form", fn session ->
+        session
+        |> fill_in("Email", with: context.email)
+        |> click_button("Request magic link")
+      end)
 
     # Continue with the test
     Map.merge(context, %{session: session, conn: session, email: context.email})

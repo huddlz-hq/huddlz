@@ -20,11 +20,14 @@ defmodule SignInAndSignOutSteps do
     # Fill in the email and submit
     session = context[:session] || context[:conn]
 
-    # Fill in the magic link email field using its ID selector
+    # Use the magic link form specifically
     session =
       session
-      |> fill_in("#user-magic-link-request-magic-link_email", "Email", with: context.email)
-      |> click_button("Request magic link")
+      |> within("#magic-link-form", fn session ->
+        session
+        |> fill_in("Email", with: context.email)
+        |> click_button("Request magic link")
+      end)
 
     Map.merge(context, %{session: session, conn: session})
   end
@@ -132,11 +135,18 @@ defmodule SignInAndSignOutSteps do
 
   # Step: Then a validation error is shown indicating the email must be valid
   step "a validation error is shown indicating the email must be valid", context do
-    # With AshAuthentication, invalid emails might show a generic security message
-    # or stay on the same page without submitting
+    # With server-side validation, we should see validation errors
     session = context[:session] || context[:conn]
-    # Check that we're still on the sign-in page (form didn't submit)
+    
+    # The form should still be visible
+    assert_has(session, "#magic-link-form")
+    
+    # The button should still say "Request magic link" (not changed to "Magic link sent!")
     assert_has(session, "button", text: "Request magic link")
+    
+    # There should be an error message about invalid email format
+    assert_has(session, "*", text: "must match the pattern")
+    
     context
   end
 

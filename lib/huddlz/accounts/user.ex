@@ -138,6 +138,7 @@ defmodule Huddlz.Accounts.User do
     action :request_magic_link do
       argument :email, :ci_string do
         allow_nil? false
+        constraints match: ~S/^[^\s]+@[^\s]+$/
       end
 
       run AshAuthentication.Strategy.MagicLink.Request
@@ -414,6 +415,7 @@ defmodule Huddlz.Accounts.User do
     attribute :email, :ci_string do
       allow_nil? false
       public? true
+      constraints match: ~S/^[^\s]+@[^\s]+$/
     end
 
     attribute :display_name, :string do

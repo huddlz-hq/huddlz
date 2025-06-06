@@ -62,7 +62,7 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
               >
                 <.input
                   field={@form[:email]}
-                  type="email"
+                  type="text"
                   label="Email"
                   placeholder="you@example.com"
                   required

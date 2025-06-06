@@ -28,11 +28,8 @@ defmodule HuddlzWeb.AuthLive.SignIn do
               id="password-sign-in-form"
               phx-submit="sign_in_with_password"
               phx-change="validate_password"
-              phx-trigger-action={@trigger_action}
-              action={~p"/auth/user/password/sign_in"}
-              method="post"
             >
-              <.input field={f[:email]} type="email" label="Email" required />
+              <.input field={f[:email]} type="text" label="Email" required />
               <.input field={f[:password]} type="password" label="Password" required />
 
               <div class="mt-6">
@@ -67,7 +64,7 @@ defmodule HuddlzWeb.AuthLive.SignIn do
               phx-submit="request_magic_link"
               phx-change="validate_magic_link"
             >
-              <.input field={f[:email]} type="email" label="Email" required />
+              <.input field={f[:email]} type="text" label="Email" required />
 
               <div class="mt-6">
                 <.button phx-disable-with="Sending magic link..." class="w-full" variant="primary">
@@ -93,11 +90,29 @@ defmodule HuddlzWeb.AuthLive.SignIn do
 
   @impl true
   def mount(_params, _session, socket) do
+    # Get the password strategy to pass proper context
+    strategy = AshAuthentication.Info.strategy!(User, :password)
+    
+    # Build context like the default Ash auth does
+    context = %{
+      strategy: strategy,
+      private: %{ash_authentication?: true}
+    }
+    
+    # Add token_type if sign_in_tokens are enabled
+    context = 
+      if Map.get(strategy, :sign_in_tokens_enabled?) do
+        Map.put(context, :token_type, :sign_in)
+      else
+        context
+      end
+    
     password_form =
       User
       |> Form.for_action(:sign_in_with_password,
         as: "user",
-        actor: socket.assigns[:current_user]
+        actor: socket.assigns[:current_user],
+        context: context
       )
       |> to_form()
 
@@ -120,39 +135,60 @@ defmodule HuddlzWeb.AuthLive.SignIn do
 
   @impl true
   def handle_event("sign_in_with_password", %{"user" => params}, socket) do
-    # Validate the form first
-    form =
-      socket.assigns.password_form.source
-      |> Form.validate(params)
-      |> to_form()
+    # Check if sign_in_tokens are enabled
+    strategy = AshAuthentication.Info.strategy!(User, :password)
+    
+    if Map.get(strategy, :sign_in_tokens_enabled?) do
+      # Handle sign-in with tokens (like default Ash auth)
+      case Form.submit(socket.assigns.password_form.source, params: params, read_one?: true) do
+        {:ok, user} ->
+          # Get the sign-in token from metadata
+          token = user.__metadata__.token
+          
+          # Redirect to the sign-in URL with the token
+          {:noreply,
+           redirect(socket,
+             to: "/auth/user/password/sign_in_with_token?token=#{token}"
+           )}
 
-    if form.source.valid? do
-      # The password form needs to be submitted to the auth controller
-      # so we trigger the form action
-      {:noreply,
-       socket
-       |> assign(:password_form, form)
-       |> assign(:trigger_action, true)}
+        {:error, form} ->
+          # Clear the password field on error
+          {:noreply,
+           socket
+           |> put_flash(:error, "Incorrect email or password")
+           |> assign(:password_form,
+             to_form(Form.clear_value(form, :password))
+           )}
+      end
     else
-      {:noreply, assign(socket, :password_form, form)}
+      # Original phx-trigger-action behavior
+      form =
+        socket.assigns.password_form.source
+        |> Form.validate(params)
+        |> to_form()
+
+      if form.source.valid? do
+        {:noreply,
+         socket
+         |> assign(:password_form, form)
+         |> assign(:trigger_action, true)}
+      else
+        {:noreply, assign(socket, :password_form, form)}
+      end
     end
   end
 
   @impl true
   def handle_event("request_magic_link", %{"magic_link" => params}, socket) do
-    email = params["email"] || ""
+    form =
+      socket.assigns.magic_link_form.source
+      |> Form.validate(params)
+      |> to_form()
 
-    # If email is empty, don't submit
-    if email == "" do
-      form =
-        socket.assigns.magic_link_form.source
-        |> Form.validate(params, errors: true)
-        |> to_form()
-
-      {:noreply, assign(socket, :magic_link_form, form)}
-    else
+    # Check if the form is valid
+    if form.source.valid? do
       # Use Ash to run the action
-      input = Ash.ActionInput.for_action(User, :request_magic_link, %{email: email})
+      input = Ash.ActionInput.for_action(User, :request_magic_link, params)
 
       case Ash.run_action(input) do
         :ok ->
@@ -165,8 +201,17 @@ defmodule HuddlzWeb.AuthLive.SignIn do
              "If this user exists in our database, you will be contacted with a sign-in link shortly."
            )}
 
+        {:error, %Ash.Error.Invalid{} = error} ->
+          # If we get validation errors from Ash, show them
+          form =
+            socket.assigns.magic_link_form.source
+            |> Form.errors(error.errors)
+            |> to_form()
+
+          {:noreply, assign(socket, :magic_link_form, form)}
+
         {:error, _} ->
-          # Still show success for security
+          # For other errors, show success for security
           {:noreply,
            socket
            |> assign(:magic_link_sent, true)
@@ -175,6 +220,9 @@ defmodule HuddlzWeb.AuthLive.SignIn do
              "If this user exists in our database, you will be contacted with a sign-in link shortly."
            )}
       end
+    else
+      # Form is not valid, show errors
+      {:noreply, assign(socket, :magic_link_form, form)}
     end
   end
 

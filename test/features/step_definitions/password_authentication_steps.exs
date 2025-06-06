@@ -125,6 +125,9 @@ defmodule PasswordAuthenticationSteps do
         |> click_button("Sign in")
       end)
 
+    # Follow redirect to home page after successful sign-in
+    session = visit(session, "/")
+
     {:ok, Map.merge(context, %{session: session, conn: session, current_user: user})}
   end
 
@@ -181,48 +184,16 @@ defmodule PasswordAuthenticationSteps do
         click_button(s, "Sign in")
       end)
 
-    # Wait a moment for the form to process
-    Process.sleep(100)
-
-    # The form uses phx-trigger-action which might not work perfectly in tests
-    # If we're still on the sign-in page, the authentication failed
-    # Let's check if there's an error message
-    if PhoenixTest.Driver.render_html(session) =~ "Sign in to your account" do
-      # Still on sign-in page - authentication failed
-      # This might be because the form didn't submit properly in the test
-      # For now, just return the session as is
-      {:ok, Map.merge(context, %{session: session, conn: session})}
-    else
-      # Successfully signed in and redirected
-      {:ok, Map.merge(context, %{session: session, conn: session})}
-    end
+    # PhoenixTest should handle redirects automatically
+    {:ok, Map.merge(context, %{session: session, conn: session})}
   end
 
   step "I should be signed in", context do
     session = context[:session] || context[:conn]
     
-    # After registration/sign-in, the form redirects to auth controller
-    # The controller signs in the user and redirects to home page
-    # We need to follow the redirect to the home page
-    session = 
-      case session do
-        %PhoenixTest.Static{} ->
-          # We got redirected out of LiveView, visit the home page
-          visit(session, "/")
-        _ ->
-          session
-      end
-    
-    # Now check for signed-in state on the home page
-    # The user menu is a button with a dropdown, look for the avatar button
-    # Also accept finding "Sign Out" in the dropdown menu as proof of being signed in
-    try do
-      assert_has(session, "button.avatar")
-    rescue
-      _ ->
-        # Alternative: check for the huddl search page content
-        assert_has(session, "h1", text: "Find your huddl")
-    end
+    # The old test just checked for "Sign Out" link
+    # Our custom navigation has it in a dropdown menu
+    assert_has(session, "a", text: "Sign Out")
 
     {:ok, Map.merge(context, %{session: session, conn: session})}
   end
