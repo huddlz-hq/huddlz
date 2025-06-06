@@ -78,6 +78,20 @@ defmodule PasswordAuthenticationSteps do
     {:ok, context}
   end
 
+  step "a confirmed user exists with email {string} and password {string}",
+       %{args: [email, password]} = context do
+    # Generate a user with password and immediately confirm them
+    user = generate(user_with_password(email: email, password: password))
+    
+    # Manually update the user to be confirmed since the generator doesn't have confirm action
+    # We'll use Ecto directly since Ash doesn't have a simple update action for this
+    user
+    |> Ecto.Changeset.change(%{confirmed_at: DateTime.utc_now()})
+    |> Huddlz.Repo.update!()
+    
+    {:ok, context}
+  end
+
   step "I am signed in as {string} without a password", %{args: [email]} = context do
     session = context[:session] || context[:conn]
 
@@ -233,4 +247,81 @@ defmodule PasswordAuthenticationSteps do
     assert_has(session, "button", text: "Request magic link")
     {:ok, context}
   end
+
+  step "I should receive a password reset email for {string}", %{args: [email]} = context do
+    # Wait a moment for email to be sent
+    Process.sleep(200)
+    
+    # Debug - let's see what emails were sent
+    # First try to assert any email was sent at all
+    try do
+      Swoosh.TestAssertions.assert_email_sent()
+    rescue
+      _ -> 
+        raise "No emails were sent at all! Password reset didn't trigger email."
+    end
+    
+    # Now find the password reset email among potentially multiple emails
+    # We'll use a try/rescue pattern to check for the email
+    try do
+      reset_link =
+        Swoosh.TestAssertions.assert_email_sent(fn sent_email ->
+          # This function needs to return truthy only for the email we want
+          if sent_email.to == [{"", email}] && sent_email.subject == "Reset your password" do
+            # Extract the reset link if this is the right email
+            case Regex.run(~r{(https?://[^/]+/reset/[^\s"'<>]+)}, sent_email.html_body) do
+              [_, url] -> url
+              _ -> false
+            end
+          else
+            false
+          end
+        end)
+      
+      {:ok, Map.put(context, :reset_link, reset_link)}
+    rescue
+      _ ->
+        # If the email wasn't found, that means it wasn't sent
+        raise "No password reset email found for #{email}. Check that the user exists and password reset was triggered."
+    end
+  end
+
+  step "I click the password reset link in the email", context do
+    session = context[:session] || context[:conn]
+    reset_link = context[:reset_link] || raise "No reset link found in context"
+    
+    session = visit(session, reset_link)
+    {:ok, Map.merge(context, %{session: session, conn: session})}
+  end
+
+  step "I should be on the password reset confirmation page", context do
+    session = context[:session] || context[:conn]
+    assert_has(session, "h2", text: "Set new password")
+    assert_has(session, "#reset-password-confirm-form")
+    {:ok, context}
+  end
+
+  step "I fill in the new password form with:", context do
+    table_rows = context[:datatable][:raw] || context[:datatable][:rows] || []
+    session = context[:session] || context[:conn]
+
+    session =
+      within(session, "#reset-password-confirm-form", fn sess ->
+        Enum.reduce(table_rows, sess, fn [field, value], s ->
+          case field do
+            "password" ->
+              fill_in(s, "New password", with: value)
+
+            "password_confirmation" ->
+              fill_in(s, "Confirm new password", with: value)
+
+            _ ->
+              s
+          end
+        end)
+      end)
+
+    {:ok, Map.merge(context, %{session: session, conn: session})}
+  end
+
 end

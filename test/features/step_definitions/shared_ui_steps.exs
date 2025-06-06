@@ -16,6 +16,7 @@ defmodule SharedUISteps do
   """
   use Cucumber.StepDefinition
   import PhoenixTest
+  import ExUnit.Assertions
 
   import Phoenix.ConnTest, only: [build_conn: 0]
   import CucumberDatabaseHelper

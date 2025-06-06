@@ -63,6 +63,29 @@ Feature: Password Authentication
     And I click "Send reset instructions"
     Then I should see "If an account exists for that email, you will receive password reset instructions shortly."
 
+  Scenario: User completes password reset via email link
+    Given a confirmed user exists with email "reset@example.com" and password "OldPassword123!"
+    When I visit "/reset"
+    And I fill in "Email" with "reset@example.com" within "#reset-password-form"
+    And I click "Send reset instructions"
+    Then I should receive a password reset email for "reset@example.com"
+    When I click the password reset link in the email
+    Then I should be on the password reset confirmation page
+    When I fill in the new password form with:
+      | password              | NewSecurePassword123! |
+      | password_confirmation | NewSecurePassword123! |
+    And I click "Reset password"
+    Then I should see "Your password has successfully been reset"
+    And I should be signed in
+    # Verify the password was actually changed by signing out and back in
+    When I click "Sign Out"
+    And I am on the sign-in page
+    And I fill in the password sign-in form with:
+      | email    | reset@example.com     |
+      | password | NewSecurePassword123! |
+    And I submit the password sign-in form
+    Then I should be signed in
+
   Scenario: User can switch between authentication methods
     Given I am on the sign-in page
     Then I should see the password sign-in form
