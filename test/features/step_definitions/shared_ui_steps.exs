@@ -59,7 +59,9 @@ defmodule SharedUISteps do
       try do
         click_link(session, text)
       rescue
-        _ -> click_button(session, text)
+        _ -> 
+          # For buttons, we need to handle LiveView phx-click events
+          click_button(session, text)
       end
 
     Map.merge(context, %{session: session, conn: session})
@@ -127,6 +129,18 @@ defmodule SharedUISteps do
         # Regular label-based fill
         fill_in(session, field, with: value)
       end
+
+    Map.merge(context, %{session: session, conn: session})
+  end
+
+  step "I fill in {string} with {string} within {string}",
+       %{args: [field, value, scope]} = context do
+    session = context[:session] || context[:conn]
+
+    session =
+      within(session, scope, fn session ->
+        fill_in(session, field, with: value)
+      end)
 
     Map.merge(context, %{session: session, conn: session})
   end

@@ -57,24 +57,27 @@ defmodule HuddlzWeb.Router do
     auth_routes AuthController, Huddlz.Accounts.User, path: "/auth"
     sign_out_route AuthController
 
-    # Remove these if you'd like to use your own authentication views
-    sign_in_route register_path: "/register",
-                  reset_path: "/reset",
-                  auth_routes_prefix: "/auth",
-                  on_mount: [{HuddlzWeb.LiveUserAuth, :live_no_user}],
-                  overrides: [
-                    HuddlzWeb.AuthOverrides,
-                    AshAuthentication.Phoenix.Overrides.Default
-                  ]
-
     # Remove this if you do not want to use the reset password feature
-    reset_route auth_routes_prefix: "/auth",
-                overrides: [HuddlzWeb.AuthOverrides, AshAuthentication.Phoenix.Overrides.Default]
+    # Commented out because we have custom reset password pages
+    # reset_route auth_routes_prefix: "/auth",
+    #             overrides: [HuddlzWeb.AuthOverrides, AshAuthentication.Phoenix.Overrides.Default]
 
     # Remove this if you do not use the confirmation strategy
     confirm_route Huddlz.Accounts.User, :confirm_new_user,
       auth_routes_prefix: "/auth",
       overrides: [HuddlzWeb.AuthOverrides, AshAuthentication.Phoenix.Overrides.Default]
+
+    # Custom authentication pages
+    ash_authentication_live_session :custom_auth_routes,
+      on_mount: [{HuddlzWeb.LiveUserAuth, :live_no_user}] do
+      # Custom sign-in page overrides the default
+      live "/sign-in", AuthLive.SignIn, :index
+      # Custom registration page
+      live "/register", AuthLive.Register, :index
+      # Custom password reset page
+      live "/reset", AuthLive.ResetPassword, :index
+      live "/reset/:token", AuthLive.ResetPasswordConfirm, :confirm
+    end
   end
 
   # Other scopes may use custom stacks.

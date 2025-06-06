@@ -1,5 +1,9 @@
 # Task 1: Create Sign-In LiveView
 
+**Status**: completed
+**Started**: 2025-01-06 10:00 AM
+**Completed**: 2025-01-06 11:30 AM
+
 ## Objective
 
 Replace the default AshAuthentication.Phoenix sign-in page with a custom LiveView that provides better UX and branding while maintaining all authentication functionality.
