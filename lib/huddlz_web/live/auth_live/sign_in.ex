@@ -28,6 +28,9 @@ defmodule HuddlzWeb.AuthLive.SignIn do
               id="password-sign-in-form"
               phx-submit="sign_in_with_password"
               phx-change="validate_password"
+              phx-trigger-action={@trigger_action}
+              action="/auth/user/password/sign_in"
+              method="post"
             >
               <.input field={f[:email]} type="text" label="Email" required />
               <.input field={f[:password]} type="password" label="Password" required />
@@ -135,24 +138,20 @@ defmodule HuddlzWeb.AuthLive.SignIn do
 
   @impl true
   def handle_event("sign_in_with_password", %{"user" => params}, socket) do
-    # Check if sign_in_tokens are enabled
+    # Match Ash's sign-in form behavior exactly
     strategy = AshAuthentication.Info.strategy!(User, :password)
-
+    
     if Map.get(strategy, :sign_in_tokens_enabled?) do
-      # Handle sign-in with tokens (like default Ash auth)
+      # Token-based sign in (Ash's default behavior)
       case Form.submit(socket.assigns.password_form.source, params: params, read_one?: true) do
         {:ok, user} ->
-          # Get the sign-in token from metadata
           token = user.__metadata__.token
-
-          # Redirect to the sign-in URL with the token
           {:noreply,
            redirect(socket,
              to: "/auth/user/password/sign_in_with_token?token=#{token}"
            )}
 
         {:error, form} ->
-          # Clear the password field on error
           {:noreply,
            socket
            |> put_flash(:error, "Incorrect email or password")
@@ -162,20 +161,18 @@ defmodule HuddlzWeb.AuthLive.SignIn do
            )}
       end
     else
-      # Original phx-trigger-action behavior
+      # Direct form submission with phx-trigger-action
       form =
         socket.assigns.password_form.source
         |> Form.validate(params)
         |> to_form()
 
-      if form.source.valid? do
-        {:noreply,
-         socket
-         |> assign(:password_form, form)
-         |> assign(:trigger_action, true)}
-      else
-        {:noreply, assign(socket, :password_form, form)}
-      end
+      socket =
+        socket
+        |> assign(:password_form, form)
+        |> assign(:trigger_action, form.source.valid?)
+
+      {:noreply, socket}
     end
   end
 

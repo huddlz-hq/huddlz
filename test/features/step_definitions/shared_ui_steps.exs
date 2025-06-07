@@ -59,9 +59,7 @@ defmodule SharedUISteps do
       try do
         click_link(session, text)
       rescue
-        _ ->
-          # For buttons, we need to handle LiveView phx-click events
-          click_button(session, text)
+        _ -> click_button(session, text)
       end
 
     Map.merge(context, %{session: session, conn: session})

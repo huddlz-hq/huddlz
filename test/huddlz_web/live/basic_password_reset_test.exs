@@ -35,7 +35,7 @@ defmodule HuddlzWeb.BasicPasswordResetTest do
       token =
         assert_email_sent(fn email ->
           if email.subject == "Reset your password" do
-            case Regex.run(~r{/reset/([^\s"'<>?]+)}, email.html_body) do
+            case Regex.run(~r{/password-reset/([^\s"'<>?]+)}, email.html_body) do
               [_, t] -> t
               _ -> false
             end
@@ -123,7 +123,7 @@ defmodule HuddlzWeb.BasicPasswordResetTest do
       token =
         assert_email_sent(fn email ->
           if email.subject == "Reset your password" do
-            case Regex.run(~r{/reset/([^\s"'<>?]+)}, email.html_body) do
+            case Regex.run(~r{/password-reset/([^\s"'<>?]+)}, email.html_body) do
               [_, t] -> t
               _ -> false
             end
