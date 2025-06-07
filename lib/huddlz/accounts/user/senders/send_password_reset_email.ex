@@ -25,7 +25,7 @@ defmodule Huddlz.Accounts.User.Senders.SendPasswordResetEmail do
   end
 
   defp body(params) do
-    url = url(~p"/reset/#{params[:token]}")
+    url = url(~p"/password-reset/#{params[:token]}")
 
     """
     <p>Click this link to reset your password:</p>

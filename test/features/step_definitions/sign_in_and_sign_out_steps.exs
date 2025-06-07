@@ -106,7 +106,7 @@ defmodule SignInAndSignOutSteps do
         "If this user exists in our database, you will be contacted with a sign-in link shortly."
     )
 
-    context
+    {:ok, context}
   end
 
   # Step: When the user submits the sign in form without entering an email address
@@ -125,7 +125,7 @@ defmodule SignInAndSignOutSteps do
     # Check if we're still on the sign-in page by looking for sign-in form elements
     session = context[:session] || context[:conn]
     assert_has(session, "button", text: "Request magic link")
-    context
+    {:ok, context}
   end
 
   # Step: When the user enters an invalid email address without an "@" character
@@ -147,7 +147,7 @@ defmodule SignInAndSignOutSteps do
     # There should be an error message about invalid email format
     assert_has(session, "*", text: "must match the pattern")
 
-    context
+    {:ok, %{session: session}}
   end
 
   step "the user is on the sign in page", context do
