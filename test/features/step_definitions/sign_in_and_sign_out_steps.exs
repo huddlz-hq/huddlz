@@ -137,16 +137,16 @@ defmodule SignInAndSignOutSteps do
   step "a validation error is shown indicating the email must be valid", context do
     # With server-side validation, we should see validation errors
     session = context[:session] || context[:conn]
-    
+
     # The form should still be visible
     assert_has(session, "#magic-link-form")
-    
+
     # The button should still say "Request magic link" (not changed to "Magic link sent!")
     assert_has(session, "button", text: "Request magic link")
-    
+
     # There should be an error message about invalid email format
     assert_has(session, "*", text: "must match the pattern")
-    
+
     context
   end
 

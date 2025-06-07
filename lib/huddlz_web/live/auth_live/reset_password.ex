@@ -98,11 +98,11 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
   end
 
   def handle_event("request_reset", %{"form" => params}, socket) do
-    form = socket.assigns.form.source |> Form.validate(params)
+    _form = socket.assigns.form.source |> Form.validate(params)
 
     # Use Ash.run_action for this action type
     input = Ash.ActionInput.for_action(User, :request_password_reset_token, params)
-    
+
     case Ash.run_action(input) do
       :ok ->
         # Always show success message for security (don't reveal if email exists)

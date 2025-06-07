@@ -82,13 +82,13 @@ defmodule PasswordAuthenticationSteps do
        %{args: [email, password]} = context do
     # Generate a user with password and immediately confirm them
     user = generate(user_with_password(email: email, password: password))
-    
+
     # Manually update the user to be confirmed since the generator doesn't have confirm action
     # We'll use Ecto directly since Ash doesn't have a simple update action for this
     user
     |> Ecto.Changeset.change(%{confirmed_at: DateTime.utc_now()})
     |> Huddlz.Repo.update!()
-    
+
     {:ok, context}
   end
 
@@ -204,7 +204,7 @@ defmodule PasswordAuthenticationSteps do
 
   step "I should be signed in", context do
     session = context[:session] || context[:conn]
-    
+
     # The old test just checked for "Sign Out" link
     # Our custom navigation has it in a dropdown menu
     assert_has(session, "a", text: "Sign Out")
@@ -251,16 +251,16 @@ defmodule PasswordAuthenticationSteps do
   step "I should receive a password reset email for {string}", %{args: [email]} = context do
     # Wait a moment for email to be sent
     Process.sleep(200)
-    
+
     # Debug - let's see what emails were sent
     # First try to assert any email was sent at all
     try do
       Swoosh.TestAssertions.assert_email_sent()
     rescue
-      _ -> 
-        raise "No emails were sent at all! Password reset didn't trigger email."
+      _e ->
+        reraise "No emails were sent at all! Password reset didn't trigger email.", __STACKTRACE__
     end
-    
+
     # Now find the password reset email among potentially multiple emails
     # We'll use a try/rescue pattern to check for the email
     try do
@@ -277,19 +277,22 @@ defmodule PasswordAuthenticationSteps do
             false
           end
         end)
-      
+
       {:ok, Map.put(context, :reset_link, reset_link)}
     rescue
-      _ ->
+      _e ->
         # If the email wasn't found, that means it wasn't sent
-        raise "No password reset email found for #{email}. Check that the user exists and password reset was triggered."
+        reraise "No password reset email found for #{email}. Check that the user exists and password reset was triggered.", __STACKTRACE__
     end
   end
 
   step "I click the password reset link in the email", context do
     session = context[:session] || context[:conn]
     reset_link = context[:reset_link] || raise "No reset link found in context"
-    
+
+    # Add a small delay to ensure token is fully processed
+    Process.sleep(100)
+
     session = visit(session, reset_link)
     {:ok, Map.merge(context, %{session: session, conn: session})}
   end
@@ -323,5 +326,4 @@ defmodule PasswordAuthenticationSteps do
 
     {:ok, Map.merge(context, %{session: session, conn: session})}
   end
-
 end

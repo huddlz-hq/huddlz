@@ -7,15 +7,26 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
 
   @impl true
   def mount(%{"token" => token}, _session, socket) do
+    # Get the password strategy for proper context
+    strategy = AshAuthentication.Info.strategy!(User, :password)
+    domain = AshAuthentication.Info.authentication_domain!(User)
+
     # Create form for reset_password_with_token action with token pre-filled
     form =
-      Form.for_action(User, :reset_password_with_token, params: %{"reset_token" => token})
+      Form.for_action(User, :reset_password_with_token,
+        params: %{"reset_token" => token},
+        domain: domain,
+        as: "user",
+        id: "user-password-reset_password_with_token",
+        context: %{strategy: strategy, private: %{ash_authentication?: true}}
+      )
 
     {:ok,
      socket
      |> assign(:form, to_form(form))
      |> assign(:token, token)
-     |> assign(:token_valid, true)}
+     |> assign(:token_valid, true)
+     |> assign(:trigger_action, false)}
   end
 
   def mount(_params, _session, socket) do
@@ -35,15 +46,21 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
               <h2 class="card-title text-2xl mb-4">Set new password</h2>
 
               <.form
+                :let={f}
                 for={@form}
                 phx-change="validate"
                 phx-submit="reset_password"
+                phx-trigger-action={if @trigger_action, do: "true", else: "false"}
+                action="/auth/user/password/reset"
+                method="post"
                 id="reset-password-confirm-form"
               >
-                <.input field={@form[:password]} type="password" label="New password" required />
+                <input type="hidden" name="user[reset_token]" value={@token} />
+
+                <.input field={f[:password]} type="password" label="New password" required />
 
                 <.input
-                  field={@form[:password_confirmation]}
+                  field={f[:password_confirmation]}
                   type="password"
                   label="Confirm new password"
                   required
@@ -93,43 +110,25 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
   end
 
   @impl true
-  def handle_event("validate", %{"form" => params}, socket) do
-    form = socket.assigns.form.source |> Form.validate(params)
+  def handle_event("validate", %{"user" => params}, socket) do
+    form = socket.assigns.form.source |> Form.validate(params, errors: false)
     {:noreply, assign(socket, form: to_form(form))}
   end
 
-  def handle_event("reset_password", %{"form" => params}, socket) do
-    form = socket.assigns.form.source |> Form.validate(params)
+  def handle_event("reset_password", params, socket) do
+    # Extract the user params from the form submission
+    user_params = Map.get(params, "user", %{})
 
-    if form.valid? do
-      handle_valid_reset_form(socket, form, params)
-    else
-      {:noreply, assign(socket, form: to_form(form))}
-    end
-  end
+    # Add the reset token to the params if not present
+    user_params = Map.put_new(user_params, "reset_token", socket.assigns.token)
 
-  defp handle_valid_reset_form(socket, form, params) do
-    case Form.submit(form, params: params) do
-      {:ok, result} ->
-        # Password reset successful, sign them in with the token
-        token = result.__metadata__.token
+    form = socket.assigns.form.source |> Form.validate(user_params)
 
-        {:noreply,
-         socket
-         |> redirect(to: "/auth/user/password/sign_in_with_token?token=#{token}")}
+    socket =
+      socket
+      |> assign(:form, to_form(form))
+      |> assign(:trigger_action, form.valid?)
 
-      {:error, form} ->
-        handle_reset_error(socket, form)
-    end
-  end
-
-  defp handle_reset_error(socket, form) do
-    errors = Form.errors(form)
-
-    if Keyword.has_key?(errors, :reset_token) do
-      {:noreply, assign(socket, :token_valid, false)}
-    else
-      {:noreply, assign(socket, form: to_form(form))}
-    end
+    {:noreply, socket}
   end
 end
