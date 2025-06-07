@@ -75,9 +75,7 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
                 </div>
               </.form>
 
-              <div class="divider">or</div>
-
-              <div class="text-center">
+              <div class="text-center mt-6">
                 <span class="text-sm">Remember your password? </span>
                 <.link navigate="/sign-in" class="link link-primary text-sm">
                   Sign in
