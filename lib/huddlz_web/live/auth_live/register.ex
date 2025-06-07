@@ -52,16 +52,23 @@ defmodule HuddlzWeb.AuthLive.Register do
     ~H"""
     <.app flash={@flash} current_user={assigns[:current_user]}>
       <div class="mx-auto max-w-md">
+        <.header class="text-center">
+          Create your account
+          <:subtitle>
+            Sign up to start creating and joining huddlz
+          </:subtitle>
+        </.header>
+
+        <%!-- Password Registration Form --%>
         <div class="card bg-base-100 shadow-xl">
           <div class="card-body">
-            <h2 class="card-title text-center text-2xl font-bold">Create your account</h2>
+            <h2 class="card-title">Sign up with password</h2>
 
             <.form
               for={@form}
               id="registration-form"
               phx-change="validate"
               phx-submit="register"
-              class="space-y-4"
             >
               <.input
                 field={@form[:email]}
@@ -82,8 +89,8 @@ defmodule HuddlzWeb.AuthLive.Register do
                   autocomplete="new-password"
                   phx-debounce="blur"
                 />
-                <div class="mt-1 text-sm text-base-content/70">
-                  <p>Password must be at least 8 characters long</p>
+                <div class="text-xs text-gray-600 mt-1 mb-4">
+                  Password must be at least 8 characters long
                 </div>
               </div>
 
@@ -97,48 +104,50 @@ defmodule HuddlzWeb.AuthLive.Register do
                 phx-debounce="blur"
               />
 
-              <.button type="submit" phx-disable-with="Creating account..." class="btn-primary w-full">
-                Create account
-              </.button>
-            </.form>
-
-            <div class="divider">OR</div>
-
-            <%!-- Magic Link Option --%>
-            <div class="card bg-base-200">
-              <div class="card-body">
-                <h3 class="font-semibold mb-2">Sign up with magic link</h3>
-                <p class="text-sm text-base-content/70 mb-4">
-                  We'll send you an email with a secure link to create your account.
-                </p>
-
-                <.form
-                  :let={f}
-                  for={@magic_link_form}
-                  id="magic-link-form"
-                  phx-submit="request_magic_link"
-                  phx-change="validate_magic_link"
-                >
-                  <.input field={f[:email]} type="text" label="Email" required />
-
-                  <div class="mt-4">
-                    <.button phx-disable-with="Sending magic link..." class="w-full">
-                      {if @magic_link_sent, do: "Magic link sent!", else: "Request magic link"}
-                    </.button>
-                  </div>
-                </.form>
+              <div class="mt-6">
+                <.button type="submit" phx-disable-with="Creating account..." class="w-full">
+                  Create account
+                </.button>
               </div>
-            </div>
-
-            <div class="text-center mt-6">
-              <p class="text-base-content/70">
-                Already have an account?
-                <.link navigate="/sign-in" class="link link-primary">
-                  Sign in
-                </.link>
-              </p>
-            </div>
+            </.form>
           </div>
+        </div>
+
+        <div class="divider my-8">OR</div>
+
+        <%!-- Magic Link Form --%>
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title">Sign up with magic link</h2>
+            <p class="text-sm text-base-content/70">
+              We'll send you an email with a secure link to create your account.
+            </p>
+
+            <.form
+              :let={f}
+              for={@magic_link_form}
+              id="magic-link-form"
+              phx-submit="request_magic_link"
+              phx-change="validate_magic_link"
+            >
+              <.input field={f[:email]} type="text" label="Email" required />
+
+              <div class="mt-6">
+                <.button phx-disable-with="Sending magic link..." class="w-full" variant="primary">
+                  {if @magic_link_sent, do: "Magic link sent!", else: "Request magic link"}
+                </.button>
+              </div>
+            </.form>
+          </div>
+        </div>
+
+        <div class="text-center mt-8">
+          <span class="text-sm text-base-content/70">
+            Already have an account?
+          </span>
+          <a href="/sign-in" class="link link-primary text-sm ml-1">
+            Sign in
+          </a>
         </div>
       </div>
     </.app>
