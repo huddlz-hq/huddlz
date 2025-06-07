@@ -64,12 +64,7 @@ defmodule HuddlzWeb.AuthLive.Register do
           <div class="card-body">
             <h2 class="card-title">Sign up with password</h2>
 
-            <.form
-              for={@form}
-              id="registration-form"
-              phx-change="validate"
-              phx-submit="register"
-            >
+            <.form for={@form} id="registration-form" phx-change="validate" phx-submit="register">
               <.input
                 field={@form[:email]}
                 type="text"

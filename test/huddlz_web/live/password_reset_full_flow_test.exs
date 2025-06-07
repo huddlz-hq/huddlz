@@ -87,7 +87,8 @@ defmodule HuddlzWeb.PasswordResetFullFlowTest do
 
       # Should redirect to home with success message
       assert redirected_to(conn) == "/"
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) == 
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
                "Your password has successfully been reset"
 
       # Verify password was changed by trying to sign in with new password
@@ -106,10 +107,10 @@ defmodule HuddlzWeb.PasswordResetFullFlowTest do
       # When visiting with an invalid token, the form is shown
       # but submission will fail
       session = visit(conn, "/password-reset/invalid-token-123")
-      
+
       # Should show the password reset form
       assert_has(session, "h2", text: "Set new password")
-      
+
       # Try to submit with the invalid token
       conn =
         build_conn()

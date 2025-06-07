@@ -282,7 +282,8 @@ defmodule PasswordAuthenticationSteps do
     rescue
       _e ->
         # If the email wasn't found, that means it wasn't sent
-        reraise "No password reset email found for #{email}. Check that the user exists and password reset was triggered.", __STACKTRACE__
+        reraise "No password reset email found for #{email}. Check that the user exists and password reset was triggered.",
+                __STACKTRACE__
     end
   end
 
