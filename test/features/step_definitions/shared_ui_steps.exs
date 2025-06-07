@@ -16,7 +16,6 @@ defmodule SharedUISteps do
   """
   use Cucumber.StepDefinition
   import PhoenixTest
-  import ExUnit.Assertions
 
   import Phoenix.ConnTest, only: [build_conn: 0]
   import CucumberDatabaseHelper
@@ -60,7 +59,7 @@ defmodule SharedUISteps do
       try do
         click_link(session, text)
       rescue
-        _ -> 
+        _ ->
           # For buttons, we need to handle LiveView phx-click events
           click_button(session, text)
       end

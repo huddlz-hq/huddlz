@@ -20,13 +20,12 @@ defmodule Huddlz.Integration.MagicLinkSignupTest do
     email = "newuser_#{:rand.uniform(99999)}@example.com"
 
     # Submit the magic link form
-    session =
+    session
+    |> within("#magic-link-form", fn session ->
       session
-      |> within("#magic-link-form", fn session ->
-        session
-        |> fill_in("Email", with: email)
-        |> click_button("Request magic link")
-      end)
+      |> fill_in("Email", with: email)
+      |> click_button("Request magic link")
+    end)
 
     # Verify email was sent
     assert_email_sent(to: {nil, email})

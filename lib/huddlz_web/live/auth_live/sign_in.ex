@@ -92,21 +92,21 @@ defmodule HuddlzWeb.AuthLive.SignIn do
   def mount(_params, _session, socket) do
     # Get the password strategy to pass proper context
     strategy = AshAuthentication.Info.strategy!(User, :password)
-    
+
     # Build context like the default Ash auth does
     context = %{
       strategy: strategy,
       private: %{ash_authentication?: true}
     }
-    
+
     # Add token_type if sign_in_tokens are enabled
-    context = 
+    context =
       if Map.get(strategy, :sign_in_tokens_enabled?) do
         Map.put(context, :token_type, :sign_in)
       else
         context
       end
-    
+
     password_form =
       User
       |> Form.for_action(:sign_in_with_password,
@@ -137,14 +137,14 @@ defmodule HuddlzWeb.AuthLive.SignIn do
   def handle_event("sign_in_with_password", %{"user" => params}, socket) do
     # Check if sign_in_tokens are enabled
     strategy = AshAuthentication.Info.strategy!(User, :password)
-    
+
     if Map.get(strategy, :sign_in_tokens_enabled?) do
       # Handle sign-in with tokens (like default Ash auth)
       case Form.submit(socket.assigns.password_form.source, params: params, read_one?: true) do
         {:ok, user} ->
           # Get the sign-in token from metadata
           token = user.__metadata__.token
-          
+
           # Redirect to the sign-in URL with the token
           {:noreply,
            redirect(socket,
@@ -156,7 +156,8 @@ defmodule HuddlzWeb.AuthLive.SignIn do
           {:noreply,
            socket
            |> put_flash(:error, "Incorrect email or password")
-           |> assign(:password_form,
+           |> assign(
+             :password_form,
              to_form(Form.clear_value(form, :password))
            )}
       end
