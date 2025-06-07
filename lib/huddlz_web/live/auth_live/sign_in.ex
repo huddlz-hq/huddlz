@@ -140,12 +140,13 @@ defmodule HuddlzWeb.AuthLive.SignIn do
   def handle_event("sign_in_with_password", %{"user" => params}, socket) do
     # Match Ash's sign-in form behavior exactly
     strategy = AshAuthentication.Info.strategy!(User, :password)
-    
+
     if Map.get(strategy, :sign_in_tokens_enabled?) do
       # Token-based sign in (Ash's default behavior)
       case Form.submit(socket.assigns.password_form.source, params: params, read_one?: true) do
         {:ok, user} ->
           token = user.__metadata__.token
+
           {:noreply,
            redirect(socket,
              to: "/auth/user/password/sign_in_with_token?token=#{token}"
