@@ -10,6 +10,8 @@ defmodule Huddlz.Communities.Huddl do
     authorizers: [Ash.Policy.Authorizer],
     primary_read_warning?: false
 
+  require Ash.Query
+
   postgres do
     table "huddlz"
     repo Huddlz.Repo
@@ -74,7 +76,11 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     read :upcoming do
-      filter expr(starts_at > ^DateTime.utc_now())
+      prepare fn query, _ ->
+        now = DateTime.utc_now()
+        Ash.Query.filter(query, expr(starts_at > ^now))
+      end
+
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
     end
 
