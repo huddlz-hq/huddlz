@@ -57,8 +57,9 @@ defmodule HuddlzWeb.Router do
     auth_routes AuthController, Huddlz.Accounts.User, path: "/auth"
     sign_out_route AuthController
 
-    # reset_route auth_routes_prefix: "/auth",
-    #             overrides: [HuddlzWeb.AuthOverrides, AshAuthentication.Phoenix.Overrides.Default]
+    reset_route path: "/password-reset",
+                auth_routes_prefix: "/auth",
+                overrides: [HuddlzWeb.AuthOverrides, AshAuthentication.Phoenix.Overrides.Default]
 
     # Remove this if you do not use the confirmation strategy
     confirm_route Huddlz.Accounts.User, :confirm_new_user,
@@ -75,8 +76,6 @@ defmodule HuddlzWeb.Router do
       # Custom password reset page
       live "/reset", AuthLive.ResetPassword, :index
       live "/reset/:token", AuthLive.ResetPasswordConfirm, :confirm
-      # Also handle the URL that Ash generates in emails
-      live "/password-reset/:token", AuthLive.ResetPasswordConfirm, :confirm
     end
   end
 

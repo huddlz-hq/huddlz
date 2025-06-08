@@ -91,7 +91,9 @@ defmodule HuddlzWeb.BasicPasswordResetTest do
 
       # Should redirect to sign-in with error
       assert redirected_to(conn) == "/sign-in"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Incorrect email or password"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "The password reset link is invalid or has expired. Please request a new one."
     end
 
     test "LiveView form submission reaches controller", %{conn: conn} do

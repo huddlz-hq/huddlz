@@ -17,7 +17,7 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
         params: %{"reset_token" => token},
         domain: domain,
         as: "user",
-        id: "user-password-reset_password_with_token",
+        id: "user-password-reset-password-with-token",
         context: %{strategy: strategy, private: %{ash_authentication?: true}}
       )
 
@@ -50,12 +50,13 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
                 for={@form}
                 phx-change="validate"
                 phx-submit="reset_password"
-                phx-trigger-action={if @trigger_action, do: "true", else: "false"}
-                action="/auth/user/password/reset"
-                method="post"
                 id="reset-password-confirm-form"
               >
-                <input type="hidden" name="user[reset_token]" value={@token} />
+                <input
+                  type="hidden"
+                  name={Phoenix.HTML.Form.input_name(f, :reset_token)}
+                  value={@token}
+                />
 
                 <.input field={f[:password]} type="password" label="New password" required />
 
@@ -124,11 +125,25 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
 
     form = socket.assigns.form.source |> Form.validate(user_params)
 
-    socket =
-      socket
-      |> assign(:form, to_form(form))
-      |> assign(:trigger_action, form.valid?)
+    if form.valid? do
+      case Form.submit(form) do
+        {:ok, user} ->
+          # Generate a token for the user to sign them in
+          {:ok, token} =
+            AshAuthentication.Jwt.token_for_user(user, %{"purpose" => "user"})
 
-    {:noreply, socket}
+          socket =
+            socket
+            |> put_flash(:info, "Your password has successfully been reset")
+            |> redirect(to: "/auth/user/password/sign_in_with_token?token=#{token}")
+
+          {:noreply, socket}
+
+        {:error, form} ->
+          {:noreply, assign(socket, form: to_form(form))}
+      end
+    else
+      {:noreply, assign(socket, form: to_form(form))}
+    end
   end
 end

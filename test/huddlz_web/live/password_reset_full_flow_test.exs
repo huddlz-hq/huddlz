@@ -60,16 +60,17 @@ defmodule HuddlzWeb.PasswordResetFullFlowTest do
       # Visit the reset link
       session = visit(conn, reset_path)
 
-      # Should be on the password reset confirmation page
-      assert_has(session, "h2", text: "Set new password")
+      # Should be on the password reset confirmation page (default Ash page)
+      # The default Ash page has a different button text
+      assert_has(session, "button", text: "Reset password with token")
 
       # Fill in the new password form
       # Note: We can't test the actual form submission because PhoenixTest
       # doesn't execute JavaScript that handles phx-trigger-action
       # But we can verify the form is rendered correctly
-      assert_has(session, "#reset-password-confirm-form")
-      assert_has(session, "input[type='password'][name='user[password]']")
-      assert_has(session, "input[type='password'][name='user[password_confirmation]']")
+      # The default Ash form has different IDs
+      assert_has(session, "form[action*='/auth/user/password/reset']")
+      assert_has(session, "input[type='password']")
       assert_has(session, "button", text: "Reset password")
 
       # Test that we can submit directly to the controller endpoint
@@ -108,8 +109,8 @@ defmodule HuddlzWeb.PasswordResetFullFlowTest do
       # but submission will fail
       session = visit(conn, "/password-reset/invalid-token-123")
 
-      # Should show the password reset form
-      assert_has(session, "h2", text: "Set new password")
+      # Should show the default Ash password reset form
+      assert_has(session, "button", text: "Reset password with token")
 
       # Try to submit with the invalid token
       conn =
@@ -125,7 +126,9 @@ defmodule HuddlzWeb.PasswordResetFullFlowTest do
 
       # Should redirect to sign-in with error
       assert redirected_to(conn) == "/sign-in"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Incorrect email or password"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "The password reset link is invalid or has expired. Please request a new one."
     end
   end
 end
