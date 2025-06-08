@@ -337,16 +337,16 @@ await click('button[type="submit"]')
 // 4. Go to dev mailbox
 await navigate("http://localhost:4000/dev/mailbox")
 
-// 5. Click on the email row (NOT the mailto link!)
-// The first email in the list should be for the user you just requested
-await navigate("http://localhost:4000/dev/mailbox/[first-email-id]")
+// 5. Click on the email (the first one should be your magic link email)
+await click('a[href*="/dev/mailbox/"]')
 
-// 6. The email body will show with the magic link visible
-// Either click the HTML body link or copy the magic link URL
-// The magic link format: http://localhost:4000/auth/user/magic_link/?token=...
+// 6. Navigate to the HTML view to get clickable links
+// Get the current URL and append /html
+await evaluate(() => window.location.href + '/html')
+// Or manually navigate: await navigate("http://localhost:4000/dev/mailbox/[email-id]/html")
 
-// 7. Navigate to the magic link URL
-await navigate("[copied magic link URL]")
+// 7. Click the magic link directly
+await click('a[href*="/auth/user/magic_link"]')
 
 // You are now logged in!
 ```
@@ -356,3 +356,40 @@ await navigate("[copied magic link URL]")
 - If you get "Incorrect email or password", request a fresh magic link
 - The dev mailbox is only available in development environment
 - Always use emails from seeds.exs for consistent testing
+- The `/html` view makes all email links clickable
+
+## Development Mailbox Navigation (IMPORTANT)
+
+The development mailbox at `/dev/mailbox` provides two ways to view emails:
+
+### Method 1: HTML View (Recommended - Clickable Links!)
+
+1. **Go to mailbox**: Navigate to `http://localhost:4000/dev/mailbox`
+2. **Click on an email**: Click the subject/sender to view email details
+3. **Navigate to HTML view**: Add `/html` to the URL or look for the HTML link
+   - Example: `http://localhost:4000/dev/mailbox/[email-id]/html`
+4. **Click links directly**: In the HTML view, all links are clickable!
+
+```javascript
+// Example: Following a password reset link
+await navigate("http://localhost:4000/dev/mailbox")
+await click('a[href*="/dev/mailbox/"]')  // Click the email
+
+// Navigate to the HTML view
+await navigate("http://localhost:4000/dev/mailbox/[email-id]/html")
+
+// Now you can click the reset link directly!
+await click('a[href*="/password-reset/"]')
+```
+
+### Method 2: Text View (Default)
+
+The default email detail view shows HTML as plain text:
+- Links are visible but NOT clickable
+- You must manually copy/navigate to URLs
+- This is less convenient than the HTML view
+
+**Key Points:**
+- Always use the `/html` route for emails with links
+- The HTML view renders the email as the user would see it
+- All links in HTML view are clickable and functional

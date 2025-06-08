@@ -269,7 +269,7 @@ defmodule PasswordAuthenticationSteps do
           # This function needs to return truthy only for the email we want
           if sent_email.to == [{"", email}] && sent_email.subject == "Reset your password" do
             # Extract the reset link if this is the right email
-            case Regex.run(~r{(https?://[^/]+/reset/[^\s"'<>]+)}, sent_email.html_body) do
+            case Regex.run(~r{(https?://[^/]+/password-reset/[^\s"'<>]+)}, sent_email.html_body) do
               [_, url] -> url
               _ -> false
             end
@@ -300,8 +300,9 @@ defmodule PasswordAuthenticationSteps do
 
   step "I should be on the password reset confirmation page", context do
     session = context[:session] || context[:conn]
-    assert_has(session, "h2", text: "Set new password")
-    assert_has(session, "#reset-password-confirm-form")
+    # Using default Ash Authentication reset page now
+    # Just verify we can see the form
+    assert_has(session, "button", text: "Reset password with token")
     {:ok, context}
   end
 

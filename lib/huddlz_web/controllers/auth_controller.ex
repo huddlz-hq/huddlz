@@ -43,6 +43,9 @@ defmodule HuddlzWeb.AuthController do
           You can confirm your account using the link we sent to you, or by resetting your password.
           """
 
+        {{:password, :reset}, _} ->
+          "The password reset link is invalid or has expired. Please request a new one."
+
         _ ->
           "Incorrect email or password"
       end
