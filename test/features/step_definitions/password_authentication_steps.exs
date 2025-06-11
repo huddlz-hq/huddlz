@@ -116,8 +116,11 @@ defmodule PasswordAuthenticationSteps do
         end
       end)
 
-    # Visit the magic link to complete sign-in
+    # Visit the magic link
     session = session |> visit(magic_link)
+
+    # Click the "Sign in" button on the interaction page
+    session = session |> click_button("Sign in")
 
     {:ok, Map.merge(context, %{session: session, conn: session})}
   end
@@ -183,8 +186,17 @@ defmodule PasswordAuthenticationSteps do
   step "I submit the password form", context do
     session = context[:session] || context[:conn]
 
-    # Click the submit button which should submit the form
-    session = click_button(session, "Set Password")
+    # Click the submit button within the password form
+    # The button text changes based on whether user has a password
+    session =
+      within(session, "#password-form", fn s ->
+        # Try both possible button texts
+        try do
+          click_button(s, "Set Password")
+        rescue
+          _ -> click_button(s, "Update Password")
+        end
+      end)
 
     {:ok, Map.merge(context, %{session: session, conn: session})}
   end

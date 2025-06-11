@@ -3,7 +3,6 @@ defmodule SignInAndSignOutSteps do
   import PhoenixTest
   import ExUnit.Assertions
   import Phoenix.ConnTest, only: [build_conn: 0]
-  import Plug.Test, only: [init_test_session: 2]
 
   # Step: And the user enters an email address for magic link authentication
   step "the user enters an email address for magic link authentication", context do
@@ -37,20 +36,23 @@ defmodule SignInAndSignOutSteps do
 
   # Step: When the user clicks the magic link in their email
   step "the user clicks the magic link in their email", context do
-    # In Cucumber, we should have received an email message from the previous step
-    # For a simpler test, we'll bypass the actual token extraction
+    # Extract the magic link from the email
+    magic_link =
+      Swoosh.TestAssertions.assert_email_sent(fn sent_email ->
+        assert sent_email.to == [{"", context.email}]
 
-    # Create a session that simulates a signed-in user
-    session =
-      build_conn()
-      # Initialize the session
-      |> init_test_session(%{})
-      |> Plug.Conn.put_session(:current_user, %{id: "user-id", email: context.email})
-      # Navigate to home page
-      |> visit("/")
+        case Regex.run(~r{(https?://[^/]+/auth/[^\s"'<>]+)}, sent_email.html_body) do
+          [_, url] -> url
+          _ -> raise "Magic link not found in email body"
+        end
+      end)
 
-    # Verify we're on the homepage
-    assert session.request_path == "/"
+    # Visit the magic link
+    session = context[:session] || context[:conn]
+    session = session |> visit(magic_link)
+
+    # Click the "Sign in" button on the interaction page
+    session = session |> click_button("Sign in")
 
     # Return the connection for the next steps
     Map.merge(context, %{session: session, conn: session})
@@ -59,15 +61,8 @@ defmodule SignInAndSignOutSteps do
   # Step: Then the user is signed in and sees a {string} link in the navbar
   step "the user is signed in and sees a {string} link in the navbar",
        %{args: [link_text]} = context do
-    # Create a new connection with a session
-    session =
-      build_conn()
-      |> init_test_session(%{})
-      |> Plug.Conn.put_session(:current_user, %{id: "user-id", email: context.email})
-      |> Plug.Conn.put_session(:user_id, "user-id")
-
-    # Visit the homepage with this session
-    session = session |> visit("/")
+    # Use the existing session from previous steps
+    session = context[:session] || context[:conn]
 
     # Check for the expected link
     assert_has(session, "a", text: link_text)
