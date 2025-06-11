@@ -61,7 +61,10 @@ defmodule CompleteSignupFlowSteps do
   # Step: When the user clicks the magic link in the email
   step "the user clicks the magic link in the email", context do
     session = context[:session] || context[:conn]
+
+    # Visit the magic link URL
     session = session |> visit(context.magic_link)
+
     Map.merge(context, %{session: session, conn: session})
   end
 

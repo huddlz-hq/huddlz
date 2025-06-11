@@ -9,5 +9,6 @@ Feature: Complete Signup Flow
     Then the user receives a confirmation message
     And the user receives a magic link email
     When the user clicks the magic link in the email
+    And I click "Sign in"
     Then the user is successfully signed in
     And the user can see their personal dashboard
