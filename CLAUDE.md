@@ -117,6 +117,8 @@ This project uses:
 
 #### Ash Framework
 
+**IMPORTANT**: Always refer to `rules.md` for comprehensive Ash Framework usage rules and patterns. This file contains critical guidelines for working with Ash that must be followed.
+
 For reference on working with Ash Framework, see the detailed documentation in the
 `docs/ash_framework/` directory, covering topics like:
 
