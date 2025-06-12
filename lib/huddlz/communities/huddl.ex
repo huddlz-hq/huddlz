@@ -399,20 +399,11 @@ defmodule Huddlz.Communities.Huddl do
     calculate :status,
               :atom,
               expr(
-                fragment(
-                  """
-                  CASE
-                    WHEN ? > NOW() THEN ?::text
-                    WHEN ? < NOW() THEN ?::text
-                    ELSE ?::text
-                  END
-                  """,
-                  starts_at,
-                  "upcoming",
-                  ends_at,
-                  "completed",
-                  "in_progress"
-                )
+                cond do
+                  starts_at > now() -> :upcoming
+                  ends_at < now() -> :completed
+                  true -> :in_progress
+                end
               )
 
     calculate :visible_virtual_link, :string do
