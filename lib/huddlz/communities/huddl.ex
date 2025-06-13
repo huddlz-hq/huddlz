@@ -419,6 +419,17 @@ defmodule Huddlz.Communities.Huddl do
     calculate :visible_virtual_link, :string do
       calculation Huddlz.Communities.Huddl.Calculations.VisibleVirtualLink
     end
+
+    calculate :actor_is_member, :boolean do
+      description "Whether the current actor is a member of the huddl's group"
+      calculation Huddlz.Communities.Huddl.Calculations.ActorIsMember
+    end
+
+    calculate :is_publicly_visible,
+              :boolean,
+              expr(is_private == false and group.is_public == true),
+              description:
+                "Whether the huddl is visible to everyone (public huddl in public group)"
   end
 
   identities do

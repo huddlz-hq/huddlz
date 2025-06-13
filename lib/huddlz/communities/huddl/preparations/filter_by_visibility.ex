@@ -4,44 +4,31 @@ defmodule Huddlz.Communities.Huddl.Preparations.FilterByVisibility do
   - Public huddls in public groups are visible to everyone
   - Private huddls are only visible to group members
   - All huddls in private groups are only visible to group members
+
+  This preparation leverages Ash calculations and relationships for a more
+  declarative approach to visibility filtering.
   """
   use Ash.Resource.Preparation
-
-  alias Huddlz.Communities.GroupMember
   require Ash.Query
 
   def prepare(query, _opts, %{actor: nil}) do
     # Non-authenticated users can only see public events in public groups
+    # Use the is_publicly_visible calculation
     query
-    |> Ash.Query.load(:group)
-    |> Ash.Query.filter(is_private == false and group.is_public == true)
+    |> Ash.Query.load([:group, :is_publicly_visible])
+    |> Ash.Query.filter(is_publicly_visible == true)
   end
 
   def prepare(query, _opts, %{actor: actor}) do
-    # Get groups where the user is a member
-    member_group_ids =
-      GroupMember
-      |> Ash.Query.for_read(:get_by_user, %{user_id: actor.id}, authorize?: false)
-      |> Ash.Query.select([:group_id])
-      |> Ash.read!()
-      |> Enum.map(& &1.group_id)
-
-    # Load the group relationship
-    query = Ash.Query.load(query, :group)
-
-    # Users can see:
-    # 1. Public events in public groups
-    # 2. All events in groups they're members of
-    if Enum.empty?(member_group_ids) do
-      # User is not a member of any groups, can only see public events
-      query
-      |> Ash.Query.filter(is_private == false and group.is_public == true)
-    else
-      query
-      |> Ash.Query.filter(
-        group_id in ^member_group_ids or
-          (is_private == false and group.is_public == true)
-      )
-    end
+    # For authenticated users, we can use a more elegant approach
+    # leveraging Ash's relationship filtering
+    query
+    |> Ash.Query.load([:group, :is_publicly_visible])
+    |> Ash.Query.filter(
+      # Either the huddl is publicly visible
+      # Or the actor is a member of the group (using exists on the relationship)
+      is_publicly_visible == true or
+        exists(group.members, id == ^actor.id)
+    )
   end
 end
