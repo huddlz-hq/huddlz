@@ -81,17 +81,17 @@ defmodule ViewPastHuddlzSteps do
 
     future_huddl = Ash.load!(future_huddl, :group, actor: host)
 
-    {:ok, %{
-      host: host,
-      public_group: public_group,
-      past_huddlz: past_huddlz,
-      future_huddl: future_huddl
-    }}
+    {:ok,
+     %{
+       host: host,
+       public_group: public_group,
+       past_huddlz: past_huddlz,
+       future_huddl: future_huddl
+     }}
   end
 
   # Create a private group with past huddlz for member testing
   step "I am a member of a private group with past huddlz", %{current_user: user} do
-
     # Create a private group owned by someone else
     owner = generate(user(role: :verified))
     private_group = generate(group(owner_id: owner.id, is_public: false, actor: owner))
@@ -126,10 +126,11 @@ defmodule ViewPastHuddlzSteps do
     # Verify the private past huddl was created properly
     assert DateTime.compare(private_past_huddl.starts_at, DateTime.utc_now()) == :lt
 
-    {:ok, %{
-      private_group: private_group,
-      private_past_huddl: private_past_huddl
-    }}
+    {:ok,
+     %{
+       private_group: private_group,
+       private_past_huddl: private_past_huddl
+     }}
   end
 
   # Create a private group the user is NOT a member of
@@ -154,10 +155,11 @@ defmodule ViewPastHuddlzSteps do
         )
       )
 
-    {:ok, %{
-      non_member_group: private_group,
-      non_member_past_huddl: private_past_huddl
-    }}
+    {:ok,
+     %{
+       non_member_group: private_group,
+       non_member_past_huddl: private_past_huddl
+     }}
   end
 
   # Visit home page
@@ -191,7 +193,10 @@ defmodule ViewPastHuddlzSteps do
     :ok
   end
 
-  step "I should not see future huddlz in the past section", %{conn: conn, future_huddl: future_huddl} do
+  step "I should not see future huddlz in the past section", %{
+    conn: conn,
+    future_huddl: future_huddl
+  } do
     # When filtering by past events, future events should not be shown
     conn = refute_has(conn, "h3", text: future_huddl.title)
     {:ok, %{conn: conn}}
@@ -205,7 +210,10 @@ defmodule ViewPastHuddlzSteps do
     :ok
   end
 
-  step "I should see past huddlz from my private group", %{conn: conn, private_past_huddl: private_past_huddl} do
+  step "I should see past huddlz from my private group", %{
+    conn: conn,
+    private_past_huddl: private_past_huddl
+  } do
     # Check if the private huddl title appears on the page
     conn = assert_has(conn, "h3", text: private_past_huddl.title)
     {:ok, %{conn: conn}}
@@ -228,7 +236,10 @@ defmodule ViewPastHuddlzSteps do
     :ok
   end
 
-  step "I should not see past huddlz from the private group", %{conn: conn, non_member_past_huddl: non_member_past_huddl} do
+  step "I should not see past huddlz from the private group", %{
+    conn: conn,
+    non_member_past_huddl: non_member_past_huddl
+  } do
     # Verify we cannot see the private group's past huddl
     conn = refute_has(conn, "h3", text: non_member_past_huddl.title)
     {:ok, %{conn: conn}}

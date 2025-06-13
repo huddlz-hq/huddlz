@@ -76,12 +76,12 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     read :upcoming do
-      filter expr(starts_at > now())
+      filter expr(ends_at > now())
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
     end
 
     read :past do
-      filter expr(starts_at < now())
+      filter expr(ends_at < now())
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
       prepare build(sort: [starts_at: :desc])
     end
@@ -408,12 +408,12 @@ defmodule Huddlz.Communities.Huddl do
   calculations do
     calculate :status, :atom do
       calculation expr(
-        cond do
-          starts_at > now() -> :upcoming
-          ends_at < now() -> :completed
-          true -> :in_progress
-        end
-      )
+                    cond do
+                      starts_at > now() -> :upcoming
+                      ends_at < now() -> :completed
+                      true -> :in_progress
+                    end
+                  )
     end
 
     calculate :visible_virtual_link, :string do
