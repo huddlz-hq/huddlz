@@ -38,7 +38,7 @@ defmodule Huddlz.Communities.Huddl.Checks.GroupMember do
   defp check_membership(actor, group_id) when is_binary(group_id) do
     GroupMember
     |> Ash.Query.for_read(:read, %{}, authorize?: false)
-    |> Ash.Query.filter(group_id: group_id, user_id: actor.id)
+    |> Ash.Query.filter(group_id == ^group_id and user_id == ^actor.id)
     |> Ash.exists?()
   end
 

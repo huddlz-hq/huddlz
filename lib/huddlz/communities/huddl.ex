@@ -76,12 +76,14 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     read :upcoming do
-      prepare fn query, _ ->
-        now = DateTime.utc_now()
-        Ash.Query.filter(query, expr(starts_at > ^now))
-      end
-
+      filter expr(starts_at > now())
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
+    end
+
+    read :past do
+      filter expr(starts_at < now())
+      prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
+      prepare build(sort: [starts_at: :desc])
     end
 
     read :search do
@@ -214,6 +216,14 @@ defmodule Huddlz.Communities.Huddl do
 
     policy action(:upcoming) do
       description "Users can view upcoming huddls they have access to"
+      # Public huddls in public groups
+      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
+      # Any huddl in a group they're a member of
+      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
+    end
+
+    policy action(:past) do
+      description "Users can view past huddls they have access to"
       # Public huddls in public groups
       authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
       # Any huddl in a group they're a member of
