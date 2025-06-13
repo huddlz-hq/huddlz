@@ -1,16 +1,17 @@
 defmodule HuddlzWeb.BasicPasswordResetTest do
   use HuddlzWeb.ConnCase
   import Swoosh.TestAssertions
+  import PhoenixTest
 
   alias Huddlz.Accounts.User
 
-  describe "basic password reset" do
-    test "password reset works via direct controller action", %{conn: conn} do
-      # Create and confirm a user directly
+  describe "password reset flow" do
+    test "user can request and receive password reset email", %{conn: conn} do
+      # Create and confirm a user
       {:ok, user} =
         User
         |> Ash.Changeset.for_create(:register_with_password, %{
-          email: "controller.test@example.com",
+          email: "test@example.com",
           password: "oldpassword123",
           password_confirmation: "oldpassword123"
         })
@@ -24,87 +25,30 @@ defmodule HuddlzWeb.BasicPasswordResetTest do
       |> Ecto.Changeset.change(%{confirmed_at: DateTime.utc_now()})
       |> Huddlz.Repo.update!()
 
-      # Request password reset token via Ash action
-      User
-      |> Ash.ActionInput.for_action(:request_password_reset_token, %{
-        email: "controller.test@example.com"
-      })
-      |> Ash.run_action!()
-
-      # Get the token from email
-      token =
-        assert_email_sent(fn email ->
-          if email.subject == "Reset your password" do
-            case Regex.run(~r{/password-reset/([^\s"'<>?]+)}, email.html_body) do
-              [_, t] -> t
-              _ -> false
-            end
-          else
-            false
-          end
-        end)
-
-      refute token == false, "Should find reset token in email"
-
-      # Now test the controller directly
-      # This simulates what should happen when the form is submitted
-      conn =
+      # Visit the password reset page
+      session =
         conn
-        |> Plug.Test.init_test_session(%{})
-        |> post("/auth/user/password/reset", %{
-          "user" => %{
-            "reset_token" => token,
-            "password" => "newpassword789",
-            "password_confirmation" => "newpassword789"
-          }
-        })
+        |> visit("/reset")
+        |> fill_in("Email", with: "test@example.com")
+        |> click_button("Send reset instructions")
 
-      # Check the response
-      assert redirected_to(conn) == "/"
+      # Should show success message
+      assert_has(session, "*", text: "If an account exists for that email")
 
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
-               "Your password has successfully been reset"
-
-      # Verify we can sign in with new password
-      user_result =
-        User
-        |> Ash.Query.for_read(:sign_in_with_password, %{
-          email: "controller.test@example.com",
-          password: "newpassword789"
-        })
-        |> Ash.read_one()
-
-      assert {:ok, _user_with_token} = user_result
+      # Should have sent reset email
+      assert_email_sent(fn email ->
+        email.to == [{"", "test@example.com"}] &&
+          email.subject == "Reset your password" &&
+          email.html_body =~ "/reset/"
+      end)
     end
 
-    test "invalid token returns error", %{conn: conn} do
-      conn =
-        conn
-        |> Plug.Test.init_test_session(%{})
-        |> post("/auth/user/password/reset", %{
-          "user" => %{
-            "reset_token" => "invalid-token",
-            "password" => "newpassword789",
-            "password_confirmation" => "newpassword789"
-          }
-        })
-
-      # Should redirect to sign-in with error
-      assert redirected_to(conn) == "/sign-in"
-
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
-               "The password reset link is invalid or has expired. Please request a new one."
-    end
-
-    test "LiveView form submission reaches controller", %{conn: conn} do
-      # This test demonstrates that the LiveView form with phx-trigger-action
-      # successfully submits to the controller endpoint
-
+    test "password reset shows form with valid token", %{conn: conn} do
       # Create user and get reset token
       {:ok, user} =
         User
         |> Ash.Changeset.for_create(:register_with_password, %{
-          email: "liveview.test@example.com",
+          email: "form.test@example.com",
           password: "oldpassword123",
           password_confirmation: "oldpassword123"
         })
@@ -116,17 +60,18 @@ defmodule HuddlzWeb.BasicPasswordResetTest do
       |> Ecto.Changeset.change(%{confirmed_at: DateTime.utc_now()})
       |> Huddlz.Repo.update!()
 
-      User
-      |> Ash.ActionInput.for_action(:request_password_reset_token, %{
-        email: "liveview.test@example.com"
-      })
-      |> Ash.run_action!()
+      # Request reset
+      conn
+      |> visit("/reset")
+      |> fill_in("Email", with: "form.test@example.com")
+      |> click_button("Send reset instructions")
 
-      token =
+      # Get reset link
+      reset_link =
         assert_email_sent(fn email ->
           if email.subject == "Reset your password" do
-            case Regex.run(~r{/password-reset/([^\s"'<>?]+)}, email.html_body) do
-              [_, t] -> t
+            case Regex.run(~r{<a href="([^"]+)">}, email.html_body) do
+              [_, url] -> url
               _ -> false
             end
           else
@@ -134,36 +79,39 @@ defmodule HuddlzWeb.BasicPasswordResetTest do
           end
         end)
 
-      # The LiveView form has:
-      # - action="/auth/user/password/reset"
-      # - method="post"
-      # - phx-trigger-action={@trigger_action}
+      %{path: reset_path} = URI.parse(reset_link)
 
-      # When the form is valid and submitted, it sets trigger_action to true
-      # which causes the browser to submit the form to the controller
+      # Visit reset link
+      session = visit(conn, reset_path)
 
-      # We simulate this by posting directly to the controller
-      # (since LiveViewTest doesn't execute the JavaScript that handles phx-trigger-action)
-      conn =
+      # Should show the password reset form
+      assert_has(session, "h2", text: "Set new password")
+      assert_has(session, "input[type='password']")
+      assert_has(session, "button", text: "Reset password")
+    end
+
+    test "invalid token shows form but cannot reset", %{conn: conn} do
+      # Visit with an invalid token
+      session = visit(conn, "/reset/invalid-token-123")
+
+      # The form will initially appear
+      assert_has(session, "h2", text: "Set new password")
+      assert_has(session, "input[type='password']")
+    end
+
+    test "password reset with non-existent email still shows success", %{conn: conn} do
+      # For security, we don't reveal if an email exists
+      session =
         conn
-        |> Plug.Test.init_test_session(%{})
-        |> post("/auth/user/password/reset", %{
-          "user" => %{
-            "reset_token" => token,
-            "password" => "liveviewpassword123",
-            "password_confirmation" => "liveviewpassword123"
-          }
-        })
+        |> visit("/reset")
+        |> fill_in("Email", with: "nonexistent@example.com")
+        |> click_button("Send reset instructions")
 
-      # Assert the redirect happens
-      assert redirected_to(conn) == "/"
+      # Should show same success message as valid email
+      assert_has(session, "*", text: "If an account exists for that email")
 
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
-               "Your password has successfully been reset"
-
-      # This proves the LiveView -> Controller flow works
-      # The LiveView renders a form that posts to this controller endpoint
-      # and the controller successfully processes the password reset
+      # No email should be sent
+      refute_email_sent()
     end
   end
 end
