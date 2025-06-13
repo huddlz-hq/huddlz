@@ -151,34 +151,46 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
     form = socket.assigns.form.source |> Form.validate(user_params)
 
     if form.valid? do
-      case Form.submit(form, params: user_params) do
-        {:ok, user} ->
-          # Generate a token for the user to sign them in
-          {:ok, token} = AshAuthentication.Jwt.token_for_user(user, %{"purpose" => "user"})
+      handle_valid_form_submission(form, user_params, socket)
+    else
+      {:noreply, assign(socket, form: to_form(form))}
+    end
+  end
 
-          socket =
-            socket
-            |> put_flash(:info, "Your password has successfully been reset")
-            |> redirect(to: "/auth/user/password/sign_in_with_token?token=#{token}")
+  defp handle_valid_form_submission(form, user_params, socket) do
+    case Form.submit(form, params: user_params) do
+      {:ok, user} ->
+        handle_successful_reset(user, socket)
 
-          {:noreply, socket}
+      {:error, form} ->
+        handle_reset_error(form, socket)
+    end
+  end
 
-        {:error, form} ->
-          # Check if this is an invalid token error
-          errors = AshPhoenix.Form.errors(form)
+  defp handle_successful_reset(user, socket) do
+    # Generate a token for the user to sign them in
+    {:ok, token} = AshAuthentication.Jwt.token_for_user(user, %{"purpose" => "user"})
 
-          invalid_token? =
-            Enum.any?(errors, fn {field, msg} ->
-              field == :reset_token ||
-                String.contains?(to_string(msg), ["invalid", "expired", "stale"])
-            end)
+    socket =
+      socket
+      |> put_flash(:info, "Your password has successfully been reset")
+      |> redirect(to: "/auth/user/password/sign_in_with_token?token=#{token}")
 
-          if invalid_token? do
-            {:noreply, assign(socket, :token_valid, false)}
-          else
-            {:noreply, assign(socket, form: to_form(form))}
-          end
-      end
+    {:noreply, socket}
+  end
+
+  defp handle_reset_error(form, socket) do
+    # Check if this is an invalid token error
+    errors = AshPhoenix.Form.errors(form)
+
+    invalid_token? =
+      Enum.any?(errors, fn {field, msg} ->
+        field == :reset_token ||
+          String.contains?(to_string(msg), ["invalid", "expired", "stale"])
+      end)
+
+    if invalid_token? do
+      {:noreply, assign(socket, :token_valid, false)}
     else
       {:noreply, assign(socket, form: to_form(form))}
     end
