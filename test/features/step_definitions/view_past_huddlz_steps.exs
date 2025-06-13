@@ -16,54 +16,45 @@ defmodule ViewPastHuddlzSteps do
     # Create a public group
     public_group = generate(group(owner_id: host.id, is_public: true, actor: host))
 
-    # Create past huddlz with different dates using Ash.Seed
+    # Create past huddlz with different dates using the past_huddl generator
     past_huddl_1_day =
-      Ash.Seed.seed!(Huddlz.Communities.Huddl, %{
-        id: Ecto.UUID.generate(),
-        group_id: public_group.id,
-        creator_id: host.id,
-        is_private: false,
-        title: "Yesterday's Workshop",
-        description: "A workshop that happened yesterday",
-        starts_at: DateTime.add(DateTime.utc_now(), -1, :day),
-        ends_at: DateTime.add(DateTime.utc_now(), -1, :day) |> DateTime.add(2, :hour),
-        event_type: :in_person,
-        physical_location: "123 Main St, Anytown, USA",
-        rsvp_count: 0,
-        thumbnail_url: "https://placehold.co/600x400/FF0000/FFFFFF?text=Past"
-      })
+      generate(
+        past_huddl(
+          group_id: public_group.id,
+          creator_id: host.id,
+          is_private: false,
+          title: "Yesterday's Workshop",
+          description: "A workshop that happened yesterday",
+          starts_at: DateTime.add(DateTime.utc_now(), -1, :day),
+          ends_at: DateTime.add(DateTime.utc_now(), -1, :day) |> DateTime.add(2, :hour)
+        )
+      )
 
     past_huddl_1_week =
-      Ash.Seed.seed!(Huddlz.Communities.Huddl, %{
-        id: Ecto.UUID.generate(),
-        group_id: public_group.id,
-        creator_id: host.id,
-        is_private: false,
-        title: "Last Week's Meetup",
-        description: "A meetup from last week",
-        starts_at: DateTime.add(DateTime.utc_now(), -7, :day),
-        ends_at: DateTime.add(DateTime.utc_now(), -7, :day) |> DateTime.add(3, :hour),
-        event_type: :in_person,
-        physical_location: "123 Main St, Anytown, USA",
-        rsvp_count: 0,
-        thumbnail_url: "https://placehold.co/600x400/00FF00/FFFFFF?text=Past"
-      })
+      generate(
+        past_huddl(
+          group_id: public_group.id,
+          creator_id: host.id,
+          is_private: false,
+          title: "Last Week's Meetup",
+          description: "A meetup from last week",
+          starts_at: DateTime.add(DateTime.utc_now(), -7, :day),
+          ends_at: DateTime.add(DateTime.utc_now(), -7, :day) |> DateTime.add(3, :hour)
+        )
+      )
 
     past_huddl_1_month =
-      Ash.Seed.seed!(Huddlz.Communities.Huddl, %{
-        id: Ecto.UUID.generate(),
-        group_id: public_group.id,
-        creator_id: host.id,
-        is_private: false,
-        title: "Monthly Retrospective",
-        description: "Our monthly retrospective from last month",
-        starts_at: DateTime.add(DateTime.utc_now(), -30, :day),
-        ends_at: DateTime.add(DateTime.utc_now(), -30, :day) |> DateTime.add(1, :hour),
-        event_type: :in_person,
-        physical_location: "123 Main St, Anytown, USA",
-        rsvp_count: 0,
-        thumbnail_url: "https://placehold.co/600x400/0000FF/FFFFFF?text=Past"
-      })
+      generate(
+        past_huddl(
+          group_id: public_group.id,
+          creator_id: host.id,
+          is_private: false,
+          title: "Monthly Retrospective",
+          description: "Our monthly retrospective from last month",
+          starts_at: DateTime.add(DateTime.utc_now(), -30, :day),
+          ends_at: DateTime.add(DateTime.utc_now(), -30, :day) |> DateTime.add(1, :hour)
+        )
+      )
 
     # Create a future huddl for contrast
     future_huddl =
@@ -154,22 +145,19 @@ defmodule ViewPastHuddlzSteps do
     owner = generate(user(role: :verified))
     private_group = generate(group(owner_id: owner.id, is_public: false, actor: owner))
 
-    # Create past huddl in the private group
+    # Create past huddl in the private group using the generator
     private_past_huddl =
-      Ash.Seed.seed!(Huddlz.Communities.Huddl, %{
-        id: Ecto.UUID.generate(),
-        group_id: private_group.id,
-        creator_id: owner.id,
-        is_private: true,
-        title: "Secret Past Meeting",
-        description: "A secret meeting that happened",
-        starts_at: DateTime.add(DateTime.utc_now(), -3, :day),
-        ends_at: DateTime.add(DateTime.utc_now(), -3, :day) |> DateTime.add(1, :hour),
-        event_type: :in_person,
-        physical_location: "123 Main St, Anytown, USA",
-        rsvp_count: 0,
-        thumbnail_url: "https://placehold.co/600x400/FFFF00/000000?text=Secret"
-      })
+      generate(
+        past_huddl(
+          group_id: private_group.id,
+          creator_id: owner.id,
+          is_private: true,
+          title: "Secret Past Meeting",
+          description: "A secret meeting that happened",
+          starts_at: DateTime.add(DateTime.utc_now(), -3, :day),
+          ends_at: DateTime.add(DateTime.utc_now(), -3, :day) |> DateTime.add(1, :hour)
+        )
+      )
 
     Map.merge(context, %{
       non_member_group: private_group,
