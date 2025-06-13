@@ -417,7 +417,15 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     calculate :visible_virtual_link, :string do
-      calculation Huddlz.Communities.Huddl.Calculations.VisibleVirtualLink
+      description "Returns the virtual link only if the actor has RSVPed to the huddl"
+
+      calculation expr(
+                    if exists(attendees, user_id == ^actor(:id)) do
+                      virtual_link
+                    else
+                      nil
+                    end
+                  )
     end
 
     calculate :actor_is_member, :boolean do
