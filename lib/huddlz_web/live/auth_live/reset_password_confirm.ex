@@ -7,6 +7,8 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
 
   @impl true
   def mount(%{"token" => token}, _session, socket) do
+    # For now, we'll assume all tokens are potentially valid and let
+    # the form submission handle validation
     # Get the password strategy for proper context
     strategy = AshAuthentication.Info.strategy!(User, :password)
     domain = AshAuthentication.Info.authentication_domain!(User)
@@ -25,8 +27,7 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
      socket
      |> assign(:form, to_form(form))
      |> assign(:token, token)
-     |> assign(:token_valid, true)
-     |> assign(:trigger_action, false)}
+     |> assign(:token_valid, true)}
   end
 
   def mount(_params, _session, socket) do
@@ -58,24 +59,48 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
                   value={@token}
                 />
 
-                <.input field={f[:password]} type="password" label="New password" required />
+                <%= if f[:reset_token].errors != [] do %>
+                  <div class="alert alert-error mb-4">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="stroke-current shrink-0 h-6 w-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <span>This password reset link is invalid or has expired.</span>
+                  </div>
+                  <div class="form-control mt-4">
+                    <.link navigate="/reset" class="btn btn-primary">
+                      Request new reset link
+                    </.link>
+                  </div>
+                <% else %>
+                  <.input field={f[:password]} type="password" label="New password" required />
 
-                <.input
-                  field={f[:password_confirmation]}
-                  type="password"
-                  label="Confirm new password"
-                  required
-                />
+                  <.input
+                    field={f[:password_confirmation]}
+                    type="password"
+                    label="Confirm new password"
+                    required
+                  />
 
-                <div class="text-xs text-gray-600 mt-1 mb-4">
-                  Password must be at least 8 characters long
-                </div>
+                  <div class="text-xs text-gray-600 mt-1 mb-4">
+                    Password must be at least 8 characters long
+                  </div>
 
-                <div class="form-control mt-6">
-                  <.button phx-disable-with="Resetting..." class="btn btn-primary">
-                    Reset password
-                  </.button>
-                </div>
+                  <div class="form-control mt-6">
+                    <.button phx-disable-with="Resetting..." class="btn btn-primary">
+                      Reset password
+                    </.button>
+                  </div>
+                <% end %>
               </.form>
             <% else %>
               <h2 class="card-title text-2xl mb-4">Invalid reset link</h2>
@@ -126,11 +151,10 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
     form = socket.assigns.form.source |> Form.validate(user_params)
 
     if form.valid? do
-      case Form.submit(form) do
+      case Form.submit(form, params: user_params) do
         {:ok, user} ->
           # Generate a token for the user to sign them in
-          {:ok, token} =
-            AshAuthentication.Jwt.token_for_user(user, %{"purpose" => "user"})
+          {:ok, token} = AshAuthentication.Jwt.token_for_user(user, %{"purpose" => "user"})
 
           socket =
             socket
@@ -140,7 +164,20 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
           {:noreply, socket}
 
         {:error, form} ->
-          {:noreply, assign(socket, form: to_form(form))}
+          # Check if this is an invalid token error
+          errors = AshPhoenix.Form.errors(form)
+
+          invalid_token? =
+            Enum.any?(errors, fn {field, msg} ->
+              field == :reset_token ||
+                String.contains?(to_string(msg), ["invalid", "expired", "stale"])
+            end)
+
+          if invalid_token? do
+            {:noreply, assign(socket, :token_valid, false)}
+          else
+            {:noreply, assign(socket, form: to_form(form))}
+          end
       end
     else
       {:noreply, assign(socket, form: to_form(form))}
