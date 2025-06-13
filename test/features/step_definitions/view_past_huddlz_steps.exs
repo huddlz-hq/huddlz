@@ -192,10 +192,19 @@ defmodule ViewPastHuddlzSteps do
     {:ok, %{conn: conn}}
   end
 
-  step "the past huddlz should be sorted newest first" do
-    # Sorting is handled by the backend query (starts_at: :desc)
-    # PhoenixTest doesn't provide easy access to element ordering in DOM
-    # This is covered by unit tests on the query itself
+  step "the past huddlz should be sorted newest first", %{
+    conn: conn,
+    past_huddlz: past_huddlz
+  } do
+    # Verify all past huddlz are visible
+    # While we can't easily check DOM ordering with PhoenixTest,
+    # we can ensure all events are present (backend handles sorting)
+    Enum.each(past_huddlz, fn huddl ->
+      assert_has(conn, "h3", text: huddl.title)
+    end)
+
+    # The actual sorting order is tested at the query level
+    # This step ensures the data is displayed correctly
     :ok
   end
 
