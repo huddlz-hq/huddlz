@@ -111,6 +111,50 @@ defmodule Huddlz.Generator do
   end
 
   @doc """
+  Create a past huddl using seed_generator (bypasses validations).
+  Use this for creating test data with past dates.
+  """
+  def past_huddl(opts \\ []) do
+    # Default group_id and creator_id if not provided
+    group_id =
+      opts[:group_id] ||
+        once(:default_group_id, fn ->
+          generate(group()).id
+        end)
+
+    creator_id =
+      opts[:creator_id] ||
+        once(:default_creator_id, fn ->
+          generate(user(role: :verified)).id
+        end)
+
+    # Default to 2 days ago
+    default_starts_at = DateTime.add(DateTime.utc_now(), -2, :day)
+    default_ends_at = DateTime.add(default_starts_at, 2, :hour)
+
+    seed_generator(
+      %Huddl{
+        title: StreamData.repeatedly(fn -> Faker.Company.bs() end),
+        description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
+        starts_at: default_starts_at,
+        ends_at: default_ends_at,
+        event_type: :in_person,
+        physical_location: StreamData.repeatedly(fn -> Faker.Address.street_address() end),
+        virtual_link: nil,
+        is_private: false,
+        rsvp_count: 0,
+        thumbnail_url:
+          StreamData.repeatedly(fn ->
+            "https://placehold.co/600x400/#{random_hex_color()}/FFFFFF?text=Past+Huddl"
+          end),
+        group_id: group_id,
+        creator_id: creator_id
+      },
+      overrides: opts
+    )
+  end
+
+  @doc """
   Create a huddl with random data.
   """
   def huddl(opts \\ []) do

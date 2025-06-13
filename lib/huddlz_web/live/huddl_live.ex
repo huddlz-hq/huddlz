@@ -3,6 +3,7 @@ defmodule HuddlzWeb.HuddlLive do
 
   alias Huddlz.Communities
   alias HuddlzWeb.Layouts
+  require Ash.Query
 
   # Authentication is optional - show cards to all but require auth for joining
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
@@ -66,12 +67,24 @@ defmodule HuddlzWeb.HuddlLive do
       current_user: current_user
     } = socket.assigns
 
-    current_user
-    |> get_base_huddls(query)
-    |> apply_date_filter(date_filter)
+    # Use the appropriate read action based on date filter
+    base_huddls =
+      case date_filter do
+        "past" ->
+          Huddlz.Communities.Huddl
+          |> Ash.Query.for_read(:past, %{}, actor: current_user)
+          |> Ash.read!(actor: current_user)
+
+        _ ->
+          current_user
+          |> get_base_huddls(query)
+          |> apply_date_filter(date_filter)
+      end
+
+    base_huddls
     |> apply_event_type_filter(event_type)
     |> apply_sorting(sort_by)
-    |> Ash.load!([:status, :visible_virtual_link, :group])
+    |> Ash.load!([:status, :visible_virtual_link, :group], actor: current_user)
   end
 
   defp get_base_huddls(current_user, query) when is_binary(query) and query != "" do
@@ -106,6 +119,12 @@ defmodule HuddlzWeb.HuddlLive do
     Enum.filter(huddls, fn huddl ->
       DateTime.compare(huddl.starts_at, now) == :gt &&
         DateTime.compare(huddl.starts_at, month_end) != :gt
+    end)
+  end
+
+  defp apply_date_filter(huddls, "past") do
+    Enum.filter(huddls, fn huddl ->
+      DateTime.compare(huddl.starts_at, DateTime.utc_now()) == :lt
     end)
   end
 
@@ -194,6 +213,9 @@ defmodule HuddlzWeb.HuddlLive do
                   </option>
                   <option value="this_month" selected={@date_filter == "this_month"}>
                     This Month
+                  </option>
+                  <option value="past" selected={@date_filter == "past"}>
+                    Past Events
                   </option>
                 </select>
               </div>

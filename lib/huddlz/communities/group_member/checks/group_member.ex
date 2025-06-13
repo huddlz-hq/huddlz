@@ -15,15 +15,9 @@ defmodule Huddlz.Communities.GroupMember.Checks.GroupMember do
   @impl true
   def match?(actor, %{subject: %{arguments: %{group_id: group_id}}}, _opts)
       when not is_nil(actor) and not is_nil(group_id) do
-    query =
-      GroupMember
-      |> Ash.Query.filter(group_id: group_id, user_id: actor.id)
-      |> Ash.Query.limit(1)
-
-    case Ash.read(query, actor: actor) do
-      {:ok, [%GroupMember{}]} -> true
-      _ -> false
-    end
+    GroupMember
+    |> Ash.Query.filter(group_id == ^group_id and user_id == ^actor.id)
+    |> Ash.exists?(actor: actor)
   end
 
   def match?(_actor, _params, _opts) do

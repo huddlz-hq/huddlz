@@ -21,9 +21,9 @@ defmodule Huddlz.Communities.Huddl.Preparations.FilterByVisibility do
     # Get groups where the user is a member
     member_group_ids =
       GroupMember
-      |> Ash.Query.for_read(:read, %{}, actor: actor, authorize?: false)
-      |> Ash.Query.filter(user_id: actor.id)
-      |> Ash.read!(actor: actor, authorize?: false)
+      |> Ash.Query.for_read(:get_by_user, %{user_id: actor.id}, authorize?: false)
+      |> Ash.Query.select([:group_id])
+      |> Ash.read!()
       |> Enum.map(& &1.group_id)
 
     # Load the group relationship
