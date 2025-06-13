@@ -10,7 +10,7 @@ huddlz is a social networking platform focused on facilitating real-life meetups
 
 - **Huddl Listing** - Discover upcoming discussion events directly on the landing page
 - **Search Functionality** - Find huddls by keyword across titles and descriptions
-- **Magic Link Authentication** - Secure, passwordless login via email
+- **Password Authentication** - Secure login with password reset functionality
 
 ### Project Status
 
@@ -21,7 +21,7 @@ Huddlz is under active development. The landing page with huddl listings has bee
 - **Backend**: Elixir with Phoenix Framework
 - **Frontend**: Phoenix LiveView for interactive UI components
 - **Data Layer**: Ash Framework for domain modeling
-- **Authentication**: Ash Authentication with magic link email login
+- **Authentication**: Ash Authentication with password-based login
 - **Database**: PostgreSQL
 - **Testing**: Cucumber/Gherkin for behavior-driven development
 
@@ -80,7 +80,7 @@ The following environment variables must be set in production:
 * `DATABASE_URL` - PostgreSQL database connection string
 * `SECRET_KEY_BASE` - Secret key for session encryption (generate with `mix phx.gen.secret`)
 * `TOKEN_SIGNING_SECRET` - Secret for signing authentication tokens
-* `SENDGRID_API_KEY` - SendGrid API key for sending magic link emails (required for authentication)
+* `SENDGRID_API_KEY` - SendGrid API key for sending emails (required for password reset functionality)
 
 ### Optional Environment Variables
 

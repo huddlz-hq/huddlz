@@ -32,18 +32,9 @@ defmodule HuddlzWeb.AuthLive.Register do
         context: context
       )
 
-    magic_link_form =
-      User
-      |> Form.for_action(:request_magic_link,
-        as: "magic_link"
-      )
-      |> to_form()
-
     {:ok,
      socket
      |> assign(check_errors: false)
-     |> assign(:magic_link_sent, false)
-     |> assign(:magic_link_form, magic_link_form)
      |> assign_form(password_form)}
   end
 
@@ -108,34 +99,6 @@ defmodule HuddlzWeb.AuthLive.Register do
           </div>
         </div>
 
-        <div class="divider my-8">OR</div>
-
-        <%!-- Magic Link Form --%>
-        <div class="card bg-base-100 shadow-xl">
-          <div class="card-body">
-            <h2 class="card-title">Sign up with magic link</h2>
-            <p class="text-sm text-base-content/70">
-              We'll send you an email with a secure link to create your account.
-            </p>
-
-            <.form
-              :let={f}
-              for={@magic_link_form}
-              id="magic-link-form"
-              phx-submit="request_magic_link"
-              phx-change="validate_magic_link"
-            >
-              <.input field={f[:email]} type="text" label="Email" required />
-
-              <div class="mt-6">
-                <.button phx-disable-with="Sending magic link..." class="w-full" variant="primary">
-                  {if @magic_link_sent, do: "Magic link sent!", else: "Request magic link"}
-                </.button>
-              </div>
-            </.form>
-          </div>
-        </div>
-
         <div class="text-center mt-8">
           <span class="text-sm text-base-content/70">
             Already have an account?
@@ -177,64 +140,6 @@ defmodule HuddlzWeb.AuthLive.Register do
       end
 
     {:noreply, socket}
-  end
-
-  @impl true
-  def handle_event("request_magic_link", %{"magic_link" => params}, socket) do
-    form =
-      socket.assigns.magic_link_form.source
-      |> Form.validate(params)
-      |> to_form()
-
-    # Check if the form is valid
-    if form.source.valid? do
-      # Use Ash to run the action
-      input = Ash.ActionInput.for_action(User, :request_magic_link, params)
-
-      case Ash.run_action(input) do
-        :ok ->
-          # Always show success to prevent email enumeration
-          {:noreply,
-           socket
-           |> assign(:magic_link_sent, true)
-           |> put_flash(
-             :info,
-             "If this user exists in our database, you will be contacted with a sign-in link shortly."
-           )}
-
-        {:error, %Ash.Error.Invalid{} = error} ->
-          # If we get validation errors from Ash, show them
-          form =
-            socket.assigns.magic_link_form.source
-            |> Form.errors(error.errors)
-            |> to_form()
-
-          {:noreply, assign(socket, :magic_link_form, form)}
-
-        {:error, _} ->
-          # For other errors, show success for security
-          {:noreply,
-           socket
-           |> assign(:magic_link_sent, true)
-           |> put_flash(
-             :info,
-             "If this user exists in our database, you will be contacted with a sign-in link shortly."
-           )}
-      end
-    else
-      # Form is not valid, show errors
-      {:noreply, assign(socket, :magic_link_form, form)}
-    end
-  end
-
-  @impl true
-  def handle_event("validate_magic_link", %{"magic_link" => params}, socket) do
-    form =
-      socket.assigns.magic_link_form.source
-      |> Form.validate(params, errors: true)
-      |> to_form()
-
-    {:noreply, assign(socket, :magic_link_form, form)}
   end
 
   defp handle_form_submission(socket, form) do
