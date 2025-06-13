@@ -85,7 +85,9 @@ defmodule HuddlzWeb.HuddlSearchTest do
     test "searches by title", %{conn: conn} do
       conn
       |> visit("/")
-      |> fill_in("Search huddlz", with: "Yoga")
+      |> within("#search-form", fn conn ->
+        conn |> fill_in("Search huddlz", with: "Yoga")
+      end)
       |> assert_has("h3", text: "Morning Yoga Session")
       |> refute_has("h3", text: "Virtual Book Club")
       |> refute_has("h3", text: "Hybrid Workshop")
@@ -94,7 +96,9 @@ defmodule HuddlzWeb.HuddlSearchTest do
     test "searches by description", %{conn: conn} do
       conn
       |> visit("/")
-      |> fill_in("Search huddlz", with: "programming")
+      |> within("#search-form", fn conn ->
+        conn |> fill_in("Search huddlz", with: "programming")
+      end)
       |> assert_has("h3", text: "Hybrid Workshop")
       |> refute_has("h3", text: "Morning Yoga Session")
       |> refute_has("h3", text: "Virtual Book Club")
@@ -103,16 +107,20 @@ defmodule HuddlzWeb.HuddlSearchTest do
     test "filters by event type", %{conn: conn} do
       conn
       |> visit("/")
-      |> select("Event Type", option: "Virtual")
+      |> within("#filters-form", fn conn ->
+        conn |> select("Event Type", option: "Virtual")
+      end)
       |> assert_has("h3", text: "Virtual Book Club")
+      |> assert_has("h3", text: "Hybrid Workshop")  # Hybrid matches both filters
       |> refute_has("h3", text: "Morning Yoga Session")
-      |> refute_has("h3", text: "Hybrid Workshop")
     end
 
     test "filters by date range - this week", %{conn: conn} do
       conn
       |> visit("/")
-      |> select("Date Range", option: "This Week")
+      |> within("#filters-form", fn conn ->
+        conn |> select("Date Range", option: "This Week")
+      end)
       # Only events within 7 days should show
       |> assert_has("h3", text: "Morning Yoga Session")
       |> assert_has("h3", text: "Virtual Book Club")
@@ -124,7 +132,9 @@ defmodule HuddlzWeb.HuddlSearchTest do
     test "filters by date range - this month", %{conn: conn} do
       conn
       |> visit("/")
-      |> select("Date Range", option: "This Month")
+      |> within("#filters-form", fn conn ->
+        conn |> select("Date Range", option: "This Month")
+      end)
       # All future events within 30 days should show
       |> assert_has("h3", text: "Morning Yoga Session")
       |> assert_has("h3", text: "Virtual Book Club")
@@ -136,9 +146,14 @@ defmodule HuddlzWeb.HuddlSearchTest do
     test "combines multiple filters", %{conn: conn} do
       conn
       |> visit("/")
-      |> fill_in("Search huddlz", with: "book")
-      |> select("Event Type", option: "Virtual")
-      |> select("Date Range", option: "This Week")
+      |> within("#search-form", fn conn ->
+        conn |> fill_in("Search huddlz", with: "book")
+      end)
+      |> within("#filters-form", fn conn ->
+        conn
+        |> select("Event Type", option: "Virtual")
+        |> select("Date Range", option: "This Week")
+      end)
       |> assert_has("h3", text: "Virtual Book Club")
       |> refute_has("h3", text: "Morning Yoga Session")
       |> refute_has("h3", text: "Hybrid Workshop")
@@ -147,8 +162,12 @@ defmodule HuddlzWeb.HuddlSearchTest do
     test "displays active filters", %{conn: conn} do
       conn
       |> visit("/")
-      |> fill_in("Search huddlz", with: "book")
-      |> select("Event Type", option: "Virtual")
+      |> within("#search-form", fn conn ->
+        conn |> fill_in("Search huddlz", with: "book")
+      end)
+      |> within("#filters-form", fn conn ->
+        conn |> select("Event Type", option: "Virtual")
+      end)
       |> assert_has(".badge", text: "Search: book")
       |> assert_has(".badge", text: "Type: Virtual")
     end
@@ -157,8 +176,12 @@ defmodule HuddlzWeb.HuddlSearchTest do
       conn
       |> visit("/")
       # Apply filters
-      |> fill_in("Search huddlz", with: "book")
-      |> select("Event Type", option: "Virtual")
+      |> within("#search-form", fn conn ->
+        conn |> fill_in("Search huddlz", with: "book")
+      end)
+      |> within("#filters-form", fn conn ->
+        conn |> select("Event Type", option: "Virtual")
+      end)
       # Clear filters
       |> click_button("Clear all")
       # All huddlz should be visible again
@@ -171,8 +194,10 @@ defmodule HuddlzWeb.HuddlSearchTest do
       conn
       |> visit("/")
       |> assert_has("div", text: "Found 3 huddlz")
-      |> select("Event Type", option: "Virtual")
-      |> assert_has("div", text: "Found 1 huddl")
+      |> within("#filters-form", fn conn ->
+        conn |> select("Event Type", option: "Virtual")
+      end)
+      |> assert_has("div", text: "Found 2 huddlz")  # Virtual Book Club + Hybrid Workshop
     end
 
     test "sorts by date descending", %{conn: conn} do
@@ -180,7 +205,9 @@ defmodule HuddlzWeb.HuddlSearchTest do
       conn
       |> visit("/")
       |> assert_has("select#sort-by")
-      |> select("Sort By", option: "Date (Latest First)")
+      |> within("#filters-form", fn conn ->
+        conn |> select("Sort By", option: "Date (Latest First)")
+      end)
       # Verify all huddlz are still displayed
       |> assert_has("h3", text: "Morning Yoga Session")
       |> assert_has("h3", text: "Virtual Book Club")
@@ -190,7 +217,9 @@ defmodule HuddlzWeb.HuddlSearchTest do
     test "shows no results message with active filters", %{conn: conn} do
       conn
       |> visit("/")
-      |> fill_in("Search huddlz", with: "nonexistent")
+      |> within("#search-form", fn conn ->
+        conn |> fill_in("Search huddlz", with: "nonexistent")
+      end)
       |> assert_has(
         "p",
         text: "No huddlz found matching your filters. Try adjusting your search criteria."

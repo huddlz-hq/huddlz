@@ -9,96 +9,182 @@ defmodule HuddlzWeb.HuddlLive do
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
 
   def mount(_params, _session, socket) do
-    # Always load upcoming huddls to avoid showing past events
-    upcoming_huddls =
-      Communities.get_upcoming!(actor: socket.assigns[:current_user])
+    # Load all huddls initially (both past and upcoming for filtering)
+    all_huddls =
+      Huddlz.Communities.Huddl
+      |> Ash.read!(actor: socket.assigns[:current_user])
       |> Ash.load!([:status, :visible_virtual_link, :group])
+
+    # Filter to show only upcoming and in-progress events by default
+    upcoming_huddls =
+      Enum.filter(all_huddls, fn huddl ->
+        DateTime.compare(huddl.ends_at, DateTime.utc_now()) == :gt
+      end)
 
     {:ok,
      assign(socket,
+       # Search inputs
+       keyword_search: "",
+       location_search: "",
+
+       # Filters
+       date_filter: "any_day",
+       type_filter: "any_type",
+       distance_filter: "25",
+
+       # Results
        huddls: upcoming_huddls,
-       search_query: nil,
-       event_type_filter: nil,
-       date_filter: "upcoming",
-       sort_by: "date_asc"
+       # Keep reference to all for filtering
+       all_huddls: all_huddls,
+       search_performed: false,
+
+       # Geolocation data (to be implemented)
+       user_location: nil,
+       location_error: nil
      )}
   end
 
   def handle_event("search", params, socket) do
-    query = params["query"]
-    event_type = params["event_type"]
-    date_filter = params["date_filter"] || "upcoming"
-    sort_by = params["sort_by"] || "date_asc"
-
     socket =
       socket
-      |> assign(search_query: query)
-      |> assign(event_type_filter: event_type)
-      |> assign(date_filter: date_filter)
-      |> assign(sort_by: sort_by)
-      |> apply_filters()
+      |> assign(
+        keyword_search: params["keyword"] || "",
+        location_search: params["location"] || "",
+        search_performed: true
+      )
+      |> perform_search()
 
     {:noreply, socket}
   end
 
-  def handle_event("clear_filters", _params, socket) do
+  def handle_event("update_filters", params, socket) do
     socket =
       socket
-      |> assign(search_query: nil)
-      |> assign(event_type_filter: nil)
-      |> assign(date_filter: "upcoming")
-      |> assign(sort_by: "date_asc")
-      |> apply_filters()
+      |> assign(
+        date_filter: params["date_filter"] || socket.assigns.date_filter,
+        type_filter: params["type_filter"] || socket.assigns.type_filter,
+        distance_filter: params["distance_filter"] || socket.assigns.distance_filter
+      )
+      |> perform_search()
 
     {:noreply, socket}
   end
 
-  defp apply_filters(socket) do
-    huddls = get_filtered_huddls(socket)
+  def handle_event("clear_search", _params, socket) do
+    # Reset to show only upcoming and in-progress huddls
+    upcoming_huddls =
+      Enum.filter(socket.assigns.all_huddls, fn huddl ->
+        DateTime.compare(huddl.ends_at, DateTime.utc_now()) == :gt
+      end)
+
+    {:noreply,
+     assign(socket,
+       keyword_search: "",
+       location_search: "",
+       date_filter: "any_day",
+       type_filter: "any_type",
+       distance_filter: "25",
+       huddls: upcoming_huddls,
+       search_performed: false
+     )}
+  end
+
+  def handle_event("clear_filter", %{"filter" => filter}, socket) do
+    socket =
+      case filter do
+        "keyword" ->
+          assign(socket, keyword_search: "")
+
+        "type" ->
+          assign(socket, type_filter: "any_type")
+
+        "date" ->
+          assign(socket, date_filter: "any_day")
+
+        _ ->
+          socket
+      end
+      |> perform_search()
+
+    {:noreply, socket}
+  end
+
+  defp perform_search(socket) do
+    %{
+      keyword_search: keyword,
+      location_search: _location,
+      date_filter: date_filter,
+      type_filter: type_filter,
+      distance_filter: _distance,
+      current_user: current_user,
+      all_huddls: all_huddls
+    } = socket.assigns
+
+    # For now, we'll implement basic search without geolocation
+    # TODO: Implement geolocation-based filtering
+
+    huddls =
+      if keyword == "" do
+        all_huddls
+      else
+        Communities.search_huddlz!(keyword, actor: current_user)
+      end
+      |> apply_date_filter(date_filter)
+      |> apply_type_filter(type_filter)
+      |> Ash.load!([:status, :visible_virtual_link, :group], actor: current_user)
+
     assign(socket, huddls: huddls)
   end
 
-  defp get_filtered_huddls(socket) do
-    %{
-      search_query: query,
-      event_type_filter: event_type,
-      date_filter: date_filter,
-      sort_by: sort_by,
-      current_user: current_user
-    } = socket.assigns
+  defp apply_date_filter(huddls, "any_day") do
+    # Show upcoming and in-progress events by default for "any day"
+    now = DateTime.utc_now()
 
-    # Use the appropriate read action based on date filter
-    base_huddls =
-      case date_filter do
-        "past" ->
-          Huddlz.Communities.Huddl
-          |> Ash.Query.for_read(:past, %{}, actor: current_user)
-          |> Ash.read!(actor: current_user)
-
-        _ ->
-          current_user
-          |> get_base_huddls(query)
-          |> apply_date_filter(date_filter)
-      end
-
-    base_huddls
-    |> apply_event_type_filter(event_type)
-    |> apply_sorting(sort_by)
-    |> Ash.load!([:status, :visible_virtual_link, :group], actor: current_user)
-  end
-
-  defp get_base_huddls(current_user, query) when is_binary(query) and query != "" do
-    Communities.search_huddlz!(query, actor: current_user)
-  end
-
-  defp get_base_huddls(current_user, _query) do
-    Huddlz.Communities.Huddl
-    |> Ash.read!(actor: current_user)
-  end
-
-  defp apply_date_filter(huddls, "upcoming") do
     Enum.filter(huddls, fn huddl ->
-      DateTime.compare(huddl.starts_at, DateTime.utc_now()) == :gt
+      DateTime.compare(huddl.ends_at, now) == :gt
+    end)
+  end
+
+  defp apply_date_filter(huddls, "past_events") do
+    # Show only past events (events that have ended)
+    now = DateTime.utc_now()
+
+    huddls
+    |> Enum.filter(fn huddl ->
+      DateTime.compare(huddl.ends_at, now) == :lt
+    end)
+    |> Enum.sort_by(& &1.starts_at, {:desc, DateTime})
+  end
+
+  defp apply_date_filter(huddls, "starting_soon") do
+    # Within next 7 days
+    now = DateTime.utc_now()
+    week_later = DateTime.add(now, 7 * 24 * 60 * 60, :second)
+
+    Enum.filter(huddls, fn huddl ->
+      DateTime.compare(huddl.starts_at, now) == :gt &&
+        DateTime.compare(huddl.starts_at, week_later) != :gt
+    end)
+  end
+
+  defp apply_date_filter(huddls, "today") do
+    today_start = DateTime.new!(Date.utc_today(), ~T[00:00:00], "Etc/UTC")
+    today_end = DateTime.new!(Date.utc_today(), ~T[23:59:59], "Etc/UTC")
+
+    Enum.filter(huddls, fn huddl ->
+      DateTime.compare(huddl.starts_at, today_start) != :lt &&
+        DateTime.compare(huddl.starts_at, today_end) != :gt
+    end)
+  end
+
+  defp apply_date_filter(huddls, "tomorrow") do
+    tomorrow = Date.add(Date.utc_today(), 1)
+    tomorrow_start = DateTime.new!(tomorrow, ~T[00:00:00], "Etc/UTC")
+    tomorrow_end = DateTime.new!(tomorrow, ~T[23:59:59], "Etc/UTC")
+
+    Enum.filter(huddls, fn huddl ->
+      DateTime.compare(huddl.starts_at, tomorrow_start) != :lt &&
+        DateTime.compare(huddl.starts_at, tomorrow_end) != :gt
     end)
   end
 
@@ -112,191 +198,454 @@ defmodule HuddlzWeb.HuddlLive do
     end)
   end
 
+  defp apply_date_filter(huddls, "this_weekend") do
+    today = Date.utc_today()
+    days_until_saturday = rem(6 - Date.day_of_week(today), 7)
+    saturday = Date.add(today, days_until_saturday)
+    sunday = Date.add(saturday, 1)
+
+    saturday_start = DateTime.new!(saturday, ~T[00:00:00], "Etc/UTC")
+    sunday_end = DateTime.new!(sunday, ~T[23:59:59], "Etc/UTC")
+
+    Enum.filter(huddls, fn huddl ->
+      DateTime.compare(huddl.starts_at, saturday_start) != :lt &&
+        DateTime.compare(huddl.starts_at, sunday_end) != :gt
+    end)
+  end
+
+  defp apply_date_filter(huddls, "next_week") do
+    today = Date.utc_today()
+    days_until_next_monday = rem(8 - Date.day_of_week(today), 7)
+    next_monday = Date.add(today, days_until_next_monday)
+    next_sunday = Date.add(next_monday, 6)
+
+    monday_start = DateTime.new!(next_monday, ~T[00:00:00], "Etc/UTC")
+    sunday_end = DateTime.new!(next_sunday, ~T[23:59:59], "Etc/UTC")
+
+    Enum.filter(huddls, fn huddl ->
+      DateTime.compare(huddl.starts_at, monday_start) != :lt &&
+        DateTime.compare(huddl.starts_at, sunday_end) != :gt
+    end)
+  end
+
   defp apply_date_filter(huddls, "this_month") do
     now = DateTime.utc_now()
-    month_end = DateTime.add(now, 30 * 24 * 60 * 60, :second)
+    month_later = DateTime.add(now, 30 * 24 * 60 * 60, :second)
 
     Enum.filter(huddls, fn huddl ->
       DateTime.compare(huddl.starts_at, now) == :gt &&
-        DateTime.compare(huddl.starts_at, month_end) != :gt
+        DateTime.compare(huddl.starts_at, month_later) != :gt
     end)
   end
 
-  defp apply_date_filter(huddls, "past") do
+  defp apply_type_filter(huddls, "any_type"), do: huddls
+
+  defp apply_type_filter(huddls, "online") do
     Enum.filter(huddls, fn huddl ->
-      DateTime.compare(huddl.starts_at, DateTime.utc_now()) == :lt
+      huddl.event_type in [:virtual, :hybrid]
     end)
   end
 
-  defp apply_date_filter(huddls, _), do: huddls
-
-  defp apply_event_type_filter(huddls, event_type)
-       when is_binary(event_type) and event_type != "" do
+  defp apply_type_filter(huddls, "in_person") do
     Enum.filter(huddls, fn huddl ->
-      to_string(huddl.event_type) == event_type
+      huddl.event_type in [:in_person, :hybrid]
     end)
-  end
-
-  defp apply_event_type_filter(huddls, _), do: huddls
-
-  defp apply_sorting(huddls, "date_desc") do
-    Enum.sort_by(huddls, & &1.starts_at, {:desc, DateTime})
-  end
-
-  defp apply_sorting(huddls, "recent") do
-    Enum.sort_by(huddls, & &1.inserted_at, {:desc, DateTime})
-  end
-
-  defp apply_sorting(huddls, _) do
-    # Default to date_asc
-    Enum.sort_by(huddls, & &1.starts_at, {:asc, DateTime})
   end
 
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} current_user={@current_user}>
-      <div class="container mx-auto px-4 py-8">
-        <div class="mb-8">
-          <h1 class="text-3xl font-bold mb-4">Find your huddl</h1>
-          <p class="text-lg text-base-content/80">
+      <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Search Header -->
+        <div class="mb-6">
+          <h1 class="text-3xl font-bold mb-2">Find your huddl</h1>
+          <p class="text-base text-base-content/70">
             Find and join engaging discussion events with interesting people
           </p>
-
-          <form phx-change="search" phx-submit="search" class="mt-6 space-y-4">
-            <div class="flex gap-2">
-              <label for="search-query" class="sr-only">Search huddlz</label>
-              <input
-                id="search-query"
-                type="text"
-                name="query"
-                value={@search_query}
-                placeholder="Search huddlz..."
-                phx-debounce="300"
-                class="flex-grow px-4 py-2 border rounded focus:outline-none bg-base-100 text-base-content"
-              />
-              <button type="submit" class="btn btn-primary px-4 py-2">
-                Search
-              </button>
+        </div>
+        
+    <!-- Search Form -->
+        <form id="search-form" phx-change="search" phx-submit="search" class="mb-6">
+          <div class="flex flex-col lg:flex-row gap-4">
+            <!-- Search Input Group -->
+            <div class="flex-1">
+              <div class="join w-full">
+                <!-- Keyword Search -->
+                <div class="flex-1 relative">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                    <svg
+                      class="h-5 w-5 text-base-content/50"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                      />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    id="keyword-search"
+                    name="keyword"
+                    value={@keyword_search}
+                    placeholder="Search huddlz..."
+                    phx-debounce="300"
+                    class="input input-bordered join-item w-full pl-10"
+                  />
+                  <label for="keyword-search" class="sr-only">Search huddlz</label>
+                </div>
+                
+    <!-- Location Search -->
+                <div class="flex-1 relative">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                    <svg
+                      class="h-5 w-5 text-base-content/50"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                      />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    id="location-search"
+                    name="location"
+                    value={@location_search}
+                    placeholder="City or zip code"
+                    class="input input-bordered join-item w-full pl-10"
+                    disabled
+                    title="Location search coming soon"
+                  />
+                  <label for="location-search" class="sr-only">City or zip code</label>
+                </div>
+                
+    <!-- Search Button -->
+                <button type="submit" class="btn btn-primary join-item">
+                  Search huddlz
+                </button>
+              </div>
             </div>
-
-            <div class="flex flex-wrap gap-4">
-              <!-- Event Type Filter -->
-              <div class="form-control">
-                <label for="event-type" class="label">
-                  <span class="label-text">Event Type</span>
-                </label>
-                <select id="event-type" name="event_type" class="select select-bordered">
-                  <option value="">All Types</option>
-                  <option value="in_person" selected={@event_type_filter == "in_person"}>
-                    In Person
-                  </option>
-                  <option value="virtual" selected={@event_type_filter == "virtual"}>
-                    Virtual
-                  </option>
-                  <option value="hybrid" selected={@event_type_filter == "hybrid"}>
-                    Hybrid
-                  </option>
-                </select>
-              </div>
-              
-    <!-- Date Filter -->
-              <div class="form-control">
-                <label for="date-range" class="label">
-                  <span class="label-text">Date Range</span>
-                </label>
-                <select id="date-range" name="date_filter" class="select select-bordered">
-                  <option value="upcoming" selected={@date_filter == "upcoming"}>
-                    All Upcoming
-                  </option>
-                  <option value="this_week" selected={@date_filter == "this_week"}>
-                    This Week
-                  </option>
-                  <option value="this_month" selected={@date_filter == "this_month"}>
-                    This Month
-                  </option>
-                  <option value="past" selected={@date_filter == "past"}>
-                    Past Events
-                  </option>
-                </select>
-              </div>
-              
+          </div>
+        </form>
+        
+    <!-- Filters and Controls -->
+        <form id="filters-form" phx-change="update_filters" class="mb-6 space-y-4">
+          <!-- Filter Row -->
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Date Range Filter -->
+            <label for="date-range" class="sr-only">Date Range</label>
+            <select
+              id="date-range"
+              name="date_filter"
+              class="select select-bordered select-sm"
+            >
+              <option value="any_day" selected={@date_filter == "any_day"}>Any day</option>
+              <option value="starting_soon" selected={@date_filter == "starting_soon"}>
+                Starting soon
+              </option>
+              <option value="today" selected={@date_filter == "today"}>Today</option>
+              <option value="tomorrow" selected={@date_filter == "tomorrow"}>Tomorrow</option>
+              <option value="this_week" selected={@date_filter == "this_week"}>This Week</option>
+              <option value="this_weekend" selected={@date_filter == "this_weekend"}>
+                This weekend
+              </option>
+              <option value="next_week" selected={@date_filter == "next_week"}>Next week</option>
+              <option value="this_month" selected={@date_filter == "this_month"}>This Month</option>
+              <option value="past_events" selected={@date_filter == "past_events"}>
+                Past events
+              </option>
+            </select>
+            
+    <!-- Event Type Filter -->
+            <label for="event-type" class="sr-only">Event Type</label>
+            <select
+              id="event-type"
+              name="type_filter"
+              class="select select-bordered select-sm"
+            >
+              <option value="any_type" selected={@type_filter == "any_type"}>Any type</option>
+              <option value="online" selected={@type_filter == "online"}>Virtual</option>
+              <option value="in_person" selected={@type_filter == "in_person"}>In person</option>
+            </select>
+            
+    <!-- Distance Filter (disabled) -->
+            <select class="select select-bordered select-sm" disabled>
+              <option>Within {@distance_filter} miles</option>
+            </select>
+            
     <!-- Sort By -->
-              <div class="form-control">
-                <label for="sort-by" class="label">
-                  <span class="label-text">Sort By</span>
-                </label>
-                <select id="sort-by" name="sort_by" class="select select-bordered">
-                  <option value="date_asc" selected={@sort_by == "date_asc"}>
-                    Date (Earliest First)
-                  </option>
-                  <option value="date_desc" selected={@sort_by == "date_desc"}>
-                    Date (Latest First)
-                  </option>
-                  <option value="recent" selected={@sort_by == "recent"}>
-                    Recently Added
-                  </option>
-                </select>
-              </div>
-            </div>
-          </form>
+            <label for="sort-by" class="sr-only">Sort By</label>
+            <select id="sort-by" name="sort_by" class="select select-bordered select-sm ml-auto">
+              <option value="date_asc">Date (Latest First)</option>
+              <option value="date_desc">Date (Earliest First)</option>
+            </select>
+          </div>
           
     <!-- Active Filters Display -->
-          <%= if @search_query || @event_type_filter || @date_filter != "upcoming" || @sort_by != "date_asc" do %>
-            <div class="mt-4 flex items-center gap-2">
-              <span class="text-sm">Active filters:</span>
-              <%= if @search_query do %>
-                <span class="badge badge-primary">Search: {@search_query}</span>
-              <% end %>
-              <%= if @event_type_filter do %>
-                <span class="badge badge-primary">Type: {humanize_filter(@event_type_filter)}</span>
-              <% end %>
-              <%= if @date_filter != "upcoming" do %>
-                <span class="badge badge-primary">Date: {humanize_filter(@date_filter)}</span>
-              <% end %>
-              <%= if @sort_by != "date_asc" do %>
-                <span class="badge badge-primary">Sort: {humanize_filter(@sort_by)}</span>
-              <% end %>
-              <button phx-click="clear_filters" class="btn btn-xs btn-ghost">
+          <div class="flex flex-wrap items-center gap-2">
+            <%= if @keyword_search != "" do %>
+              <div class="badge badge-outline gap-2">
+                Search: {@keyword_search}
+                <button
+                  phx-click="clear_filter"
+                  phx-value-filter="keyword"
+                  class="btn btn-ghost btn-xs btn-circle"
+                >
+                  ×
+                </button>
+              </div>
+            <% end %>
+            
+    <%= if @type_filter != "any_type" do %>
+              <div class="badge badge-outline gap-2">
+                Type: {type_filter_label(@type_filter)}
+                <button
+                  phx-click="clear_filter"
+                  phx-value-filter="type"
+                  class="btn btn-ghost btn-xs btn-circle"
+                >
+                  ×
+                </button>
+              </div>
+            <% end %>
+            
+    <%= if @date_filter != "any_day" do %>
+              <div class="badge badge-outline gap-2">
+                Date: {date_filter_label(@date_filter)}
+                <button
+                  phx-click="clear_filter"
+                  phx-value-filter="date"
+                  class="btn btn-ghost btn-xs btn-circle"
+                >
+                  ×
+                </button>
+              </div>
+            <% end %>
+            
+    <!-- Clear All Button -->
+            <%= if @keyword_search != "" || @date_filter != "any_day" || @type_filter != "any_type" do %>
+              <button phx-click="clear_search" class="btn btn-sm btn-ghost">
                 Clear all
               </button>
-            </div>
-          <% end %>
-        </div>
-
-        <div class="w-full">
-          <!-- Results count -->
-          <div class="mb-4 text-sm text-base-content/70">
-            Found {length(@huddls)} {if length(@huddls) == 1, do: "huddl", else: "huddlz"}
+            <% end %>
           </div>
-
-          <%= if Enum.empty?(@huddls) do %>
-            <div class="text-center py-12 bg-base-200 rounded-lg">
-              <p class="text-lg text-base-content/70">
-                <%= if @search_query || @event_type_filter || @date_filter != "upcoming" do %>
-                  No huddlz found matching your filters. Try adjusting your search criteria.
-                <% else %>
-                  No huddlz found. Check back soon!
-                <% end %>
-              </p>
-            </div>
-          <% else %>
-            <div class="space-y-4">
-              <%= for huddl <- @huddls do %>
-                <.huddl_card huddl={huddl} show_group={true} />
-              <% end %>
-            </div>
-          <% end %>
+        </form>
+        
+    <!-- Results Count -->
+        <div class="mb-4 text-sm text-base-content/70">
+          Found {length(@huddls)} {if length(@huddls) == 1, do: "huddl", else: "huddlz"}
         </div>
+
+        <%= if Enum.empty?(@huddls) do %>
+          <div class="text-center py-16 bg-base-200 rounded-lg">
+            <svg
+              class="mx-auto h-12 w-12 text-base-content/30 mb-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <p class="text-lg text-base-content/70 mb-2">
+              <%= if @keyword_search != "" || @date_filter != "any_day" || @type_filter != "any_type" do %>
+                No huddlz found matching your filters. Try adjusting your search criteria.
+              <% else %>
+                No huddlz found matching your search
+              <% end %>
+            </p>
+            <%= if @keyword_search == "" && @date_filter == "any_day" && @type_filter == "any_type" do %>
+              <p class="text-sm text-base-content/50">
+                Try adjusting your filters or search terms
+              </p>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <%= for huddl <- @huddls do %>
+              <.link navigate={"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"} class="block">
+                <div class="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
+                  <!-- Event Image -->
+                  <%= if huddl.thumbnail_url do %>
+                    <figure class="relative h-48">
+                      <img
+                        src={huddl.thumbnail_url}
+                        alt={huddl.title}
+                        class="w-full h-full object-cover"
+                      />
+                      <%= if huddl.event_type in [:virtual, :hybrid] do %>
+                        <div class="absolute top-2 right-2 badge badge-primary badge-sm">
+                          <svg
+                            class="h-3 w-3 mr-1"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                            />
+                          </svg>
+                          Online link
+                        </div>
+                      <% end %>
+                    </figure>
+                  <% else %>
+                    <div class="relative h-48 bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                      <svg
+                        class="h-16 w-16 text-base-content/30"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                        />
+                      </svg>
+                      <%= if huddl.event_type in [:virtual, :hybrid] do %>
+                        <div class="absolute top-2 right-2 badge badge-primary badge-sm">
+                          <svg
+                            class="h-3 w-3 mr-1"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                            />
+                          </svg>
+                          Online link
+                        </div>
+                      <% end %>
+                    </div>
+                  <% end %>
+
+                  <div class="card-body">
+                    <!-- Date and Time -->
+                    <div class="text-sm text-primary font-medium mb-1">
+                      {Calendar.strftime(huddl.starts_at, "%a, %b %d · %I:%M %p")}
+                    </div>
+                    
+    <!-- Title -->
+                    <h3 class="card-title text-lg line-clamp-2">
+                      {huddl.title}
+                    </h3>
+                    
+    <!-- Group Name -->
+                    <p class="text-sm text-base-content/70">
+                      {huddl.group.name}
+                    </p>
+                    
+    <!-- Location/Type -->
+                    <div class="text-sm text-base-content/60 mt-2">
+                      <%= case huddl.event_type do %>
+                        <% :in_person -> %>
+                          <div class="flex items-center gap-1">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                              />
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                            </svg>
+                            {huddl.physical_location}
+                          </div>
+                        <% :virtual -> %>
+                          <div class="flex items-center gap-1">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                              />
+                            </svg>
+                            Online event
+                          </div>
+                        <% :hybrid -> %>
+                          <div class="flex items-center gap-1">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                              />
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                            </svg>
+                            {huddl.physical_location} + Online
+                          </div>
+                      <% end %>
+                    </div>
+                    
+    <!-- Attendee Count -->
+                    <div class="text-sm text-base-content/60 mt-auto pt-2">
+                      {huddl.rsvp_count} {if huddl.rsvp_count == 1, do: "attendee", else: "attendees"}
+                    </div>
+                  </div>
+                </div>
+              </.link>
+            <% end %>
+          </div>
+        <% end %>
       </div>
     </Layouts.app>
     """
   end
 
-  defp humanize_filter(filter) do
-    filter
-    |> to_string()
-    |> String.replace("_", " ")
-    |> String.split(" ")
-    |> Enum.map_join(" ", &String.capitalize/1)
-  end
+  defp date_filter_label("any_day"), do: "Any day"
+  defp date_filter_label("starting_soon"), do: "Starting soon"
+  defp date_filter_label("today"), do: "Today"
+  defp date_filter_label("tomorrow"), do: "Tomorrow"
+  defp date_filter_label("this_week"), do: "This Week"
+  defp date_filter_label("this_weekend"), do: "This weekend"
+  defp date_filter_label("next_week"), do: "Next week"
+  defp date_filter_label("this_month"), do: "This Month"
+  defp date_filter_label("past_events"), do: "Past events"
+  defp date_filter_label(_), do: "Any day"
+
+  defp type_filter_label("any_type"), do: "Any type"
+  defp type_filter_label("online"), do: "Virtual"
+  defp type_filter_label("in_person"), do: "In person"
+  defp type_filter_label(_), do: "Any type"
 end

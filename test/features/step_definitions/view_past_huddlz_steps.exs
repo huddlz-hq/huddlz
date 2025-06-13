@@ -173,8 +173,9 @@ defmodule ViewPastHuddlzSteps do
 
   # Select from date filter
   step "I select {string} from the date filter", %{args: [option], conn: conn} do
-    # Select the date filter option which automatically triggers the form change event
-    conn = conn |> select("Date Range", option: option)
+    # Use the select element by its label
+    option_text = if option == "Past Events", do: "Past events", else: option
+    conn = conn |> select("Date Range", option: option_text)
     {:ok, %{conn: conn}}
   end
 
