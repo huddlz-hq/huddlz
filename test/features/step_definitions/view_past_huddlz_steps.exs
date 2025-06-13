@@ -7,7 +7,7 @@ defmodule ViewPastHuddlzSteps do
   require Ash.Query
 
   # Background step: Create past and future huddlz
-  step "there are past and future huddlz in the system", context do
+  step "there are past and future huddlz in the system" do
     ensure_sandbox()
 
     # Create a verified host who can create huddls
@@ -81,21 +81,16 @@ defmodule ViewPastHuddlzSteps do
 
     future_huddl = Ash.load!(future_huddl, :group, actor: host)
 
-    Map.merge(context, %{
+    {:ok, %{
       host: host,
       public_group: public_group,
       past_huddlz: past_huddlz,
       future_huddl: future_huddl
-    })
+    }}
   end
 
   # Create a private group with past huddlz for member testing
-  step "I am a member of a private group with past huddlz", context do
-    # Don't call ensure_sandbox() again - it's already called in the sign-in step
-    # Multiple calls might create separate transactions
-
-    # Get the current user from context
-    user = context.current_user
+  step "I am a member of a private group with past huddlz", %{current_user: user} do
 
     # Create a private group owned by someone else
     owner = generate(user(role: :verified))
@@ -131,14 +126,14 @@ defmodule ViewPastHuddlzSteps do
     # Verify the private past huddl was created properly
     assert DateTime.compare(private_past_huddl.starts_at, DateTime.utc_now()) == :lt
 
-    Map.merge(context, %{
+    {:ok, %{
       private_group: private_group,
       private_past_huddl: private_past_huddl
-    })
+    }}
   end
 
   # Create a private group the user is NOT a member of
-  step "there is a private group with past huddlz I'm not a member of", context do
+  step "there is a private group with past huddlz I'm not a member of" do
     ensure_sandbox()
 
     # Create a private group owned by someone else
@@ -159,32 +154,30 @@ defmodule ViewPastHuddlzSteps do
         )
       )
 
-    Map.merge(context, %{
+    {:ok, %{
       non_member_group: private_group,
       non_member_past_huddl: private_past_huddl
-    })
+    }}
   end
 
   # Visit home page
-  step "I visit the home page", context do
-    conn = context.conn |> visit("/")
-    Map.put(context, :conn, conn)
+  step "I visit the home page", %{conn: conn} do
+    conn = conn |> visit("/")
+    {:ok, %{conn: conn}}
   end
 
   # Select from date filter
-  step "I select {string} from the date filter", %{args: [option]} = context do
+  step "I select {string} from the date filter", %{args: [option], conn: conn} do
     # Select the date filter option which automatically triggers the form change event
-    conn = context.conn |> select("Date Range", option: option)
-    Map.put(context, :conn, conn)
+    conn = conn |> select("Date Range", option: option)
+    {:ok, %{conn: conn}}
   end
 
   # Assertions for seeing past huddlz
-  step "I should see past huddlz", context do
-    conn = context.conn
-
+  step "I should see past huddlz", %{conn: conn, past_huddlz: past_huddlz} do
     # Check for at least one past huddl title in the card
     found_past_huddl =
-      Enum.any?(context.past_huddlz, fn huddl ->
+      Enum.any?(past_huddlz, fn huddl ->
         try do
           assert_has(conn, "h3", text: huddl.title)
           true
@@ -195,35 +188,33 @@ defmodule ViewPastHuddlzSteps do
 
     assert found_past_huddl, "Expected to find at least one past huddl"
 
-    context
+    :ok
   end
 
-  step "I should not see future huddlz in the past section", context do
+  step "I should not see future huddlz in the past section", %{conn: conn, future_huddl: future_huddl} do
     # When filtering by past events, future events should not be shown
-    conn = refute_has(context.conn, "h3", text: context.future_huddl.title)
-    Map.put(context, :conn, conn)
+    conn = refute_has(conn, "h3", text: future_huddl.title)
+    {:ok, %{conn: conn}}
   end
 
-  step "the past huddlz should be sorted newest first", context do
+  step "the past huddlz should be sorted newest first" do
     # Since the past huddlz are sorted by starts_at desc in the backend,
     # we just need to verify they appear in the correct order
     # The newest (Yesterday's Workshop) should appear before older ones
 
-    context
+    :ok
   end
 
-  step "I should see past huddlz from my private group", context do
+  step "I should see past huddlz from my private group", %{conn: conn, private_past_huddl: private_past_huddl} do
     # Check if the private huddl title appears on the page
-    conn = assert_has(context.conn, "h3", text: context.private_past_huddl.title)
-    Map.put(context, :conn, conn)
+    conn = assert_has(conn, "h3", text: private_past_huddl.title)
+    {:ok, %{conn: conn}}
   end
 
-  step "I should see past huddlz from public groups", context do
-    conn = context.conn
-
+  step "I should see past huddlz from public groups", %{conn: conn, past_huddlz: past_huddlz} do
     # Check for at least one public past huddl
     found_public_past =
-      Enum.any?(context.past_huddlz, fn huddl ->
+      Enum.any?(past_huddlz, fn huddl ->
         try do
           assert_has(conn, "h3", text: huddl.title)
           true
@@ -234,26 +225,25 @@ defmodule ViewPastHuddlzSteps do
 
     assert found_public_past, "Expected to find at least one public past huddl"
 
-    context
+    :ok
   end
 
-  step "I should not see past huddlz from the private group", context do
+  step "I should not see past huddlz from the private group", %{conn: conn, non_member_past_huddl: non_member_past_huddl} do
     # Verify we cannot see the private group's past huddl
-    conn = refute_has(context.conn, "h3", text: context.non_member_past_huddl.title)
-    Map.put(context, :conn, conn)
+    conn = refute_has(conn, "h3", text: non_member_past_huddl.title)
+    {:ok, %{conn: conn}}
   end
 
-  step "I should not see any private huddlz", context do
+  step "I should not see any private huddlz" do
     # Verify that no private huddlz are visible to anonymous users
     # All created private huddlz have "Private" in their title
     # Check that no h3 elements contain "Private" in their text
     # Since we can't use PhoenixTest.text/1, we'll check differently
-    conn = context.conn
 
     # Get all h3 elements and check their text content
     # For now, we'll trust the visibility filters are working
     # and just ensure we don't have the specific private huddl titles
 
-    Map.put(context, :conn, conn)
+    :ok
   end
 end
