@@ -54,17 +54,6 @@ defmodule HuddlzWeb.Router do
   scope "/", HuddlzWeb do
     pipe_through :browser
 
-    # Magic link sign-in route - must be placed before auth_routes
-    magic_sign_in_route(
-      Huddlz.Accounts.User,
-      :magic_link,
-      auth_routes_prefix: "/auth",
-      overrides: [HuddlzWeb.AuthOverrides, AshAuthentication.Phoenix.Overrides.Default],
-      path: "/auth/user/magic_link",
-      token_as_route_param?: false,
-      live_view: HuddlzWeb.AuthLive.MagicLinkSignIn
-    )
-
     auth_routes AuthController, Huddlz.Accounts.User, path: "/auth"
     sign_out_route AuthController
 

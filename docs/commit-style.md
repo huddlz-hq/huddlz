@@ -74,15 +74,15 @@ Related issue: #123 (if applicable)
 Good commit messages:
 
 ```
-feat(auth): add magic link authentication
+feat(groups): add member invitation system
 
-Implement magic link authentication to provide passwordless login.
-This improves security by eliminating password-related vulnerabilities
-and simplifies the user experience.
+Implement member invitation functionality to allow group owners
+to invite new members via email. This enables controlled growth
+of private groups while maintaining security.
 
-- Add email sending infrastructure
-- Create token verification endpoint
-- Update user model to support magic link auth
+- Add invitation model and mailer
+- Create invitation acceptance flow
+- Update group policies for invitation management
 ```
 
 ```

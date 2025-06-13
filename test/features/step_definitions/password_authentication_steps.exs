@@ -3,7 +3,6 @@ defmodule PasswordAuthenticationSteps do
 
   import PhoenixTest
   import Huddlz.Generator
-  import ExUnit.Assertions
 
   step "I am on the registration page", context do
     session = context[:session] || context[:conn]
@@ -90,39 +89,6 @@ defmodule PasswordAuthenticationSteps do
     |> Huddlz.Repo.update!()
 
     {:ok, context}
-  end
-
-  step "I am signed in as {string} without a password", %{args: [email]} = context do
-    session = context[:session] || context[:conn]
-
-    # Go to sign-in page and request magic link
-    session =
-      session
-      |> visit("/sign-in")
-      |> within("#magic-link-form", fn s ->
-        s
-        |> fill_in("Email", with: email)
-        |> click_button("Request magic link")
-      end)
-
-    # Capture the magic link email
-    magic_link =
-      Swoosh.TestAssertions.assert_email_sent(fn sent_email ->
-        assert sent_email.to == [{"", email}]
-
-        case Regex.run(~r{(https?://[^/]+/auth/[^\s"'<>]+)}, sent_email.html_body) do
-          [_, url] -> url
-          _ -> raise "Magic link not found in email body"
-        end
-      end)
-
-    # Visit the magic link
-    session = session |> visit(magic_link)
-
-    # Click the "Sign in" button on the interaction page
-    session = session |> click_button("Sign in")
-
-    {:ok, Map.merge(context, %{session: session, conn: session})}
   end
 
   step "I am signed in as {string} with password {string}",
@@ -238,25 +204,12 @@ defmodule PasswordAuthenticationSteps do
     {:ok, context}
   end
 
-  step "I should see the magic link form", context do
-    session = context[:session] || context[:conn]
-    assert_has(session, "form#magic-link-form")
-    assert_has(session, "h2", text: "Sign in with magic link")
-    {:ok, context}
-  end
-
   step "I should see the password registration form", context do
     session = context[:session] || context[:conn]
     assert_has(session, "form#registration-form")
     assert_has(session, "input#user_email")
     assert_has(session, "input#user_password")
     assert_has(session, "input#user_password_confirmation")
-    {:ok, context}
-  end
-
-  step "I should see the magic link registration form", context do
-    session = context[:session] || context[:conn]
-    assert_has(session, "button", text: "Request magic link")
     {:ok, context}
   end
 

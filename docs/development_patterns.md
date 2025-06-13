@@ -19,12 +19,8 @@ This document captures key development patterns, learnings, and best practices d
 
 ### Authentication Styling
 
-- **Do**: Use the DSL style for auth_overrides with `override` and `set` blocks:
-  ```elixir
-  override AshAuthentication.Phoenix.Components.MagicLink do
-    set :disable_button_text, "Sending magic link..."
-  end
-  ```
+- **Do**: Use the DSL style for auth_overrides with `override` and `set` blocks
+- **Example**: Override default component behaviors and text for better UX
 
 ## Testing Patterns
 

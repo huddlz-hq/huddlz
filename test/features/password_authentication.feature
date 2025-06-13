@@ -34,16 +34,6 @@ Feature: Password Authentication
     Then I should see "Incorrect email or password"
     And I should not be signed in
 
-  Scenario: User sets password in profile
-    Given I am signed in as "magicuser@example.com" without a password
-    When I go to my profile page
-    And I click "Set Password"
-    And I fill in the password form with:
-      | password              | NewPassword123! |
-      | password_confirmation | NewPassword123! |
-    And I submit the password form
-    Then I should see "Password updated successfully"
-
   Scenario: User changes existing password
     Given I am signed in as "pwduser@example.com" with password "OldPassword123!"
     When I go to my profile page
@@ -75,9 +65,8 @@ Feature: Password Authentication
     # test/huddlz_web/live/password_reset_full_flow_test.exs due to PhoenixTest
     # limitations with phx-trigger-action JavaScript behavior
 
-  Scenario: User can switch between authentication methods
+  Scenario: User can access authentication pages
     Given I am on the sign-in page
     Then I should see the password sign-in form
-    And I should see the magic link form
     When I am on the registration page
     Then I should see the password registration form

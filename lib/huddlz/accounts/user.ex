@@ -22,7 +22,7 @@ defmodule Huddlz.Accounts.User do
         confirm_on_update? false
         require_interaction? true
         confirmed_at_field :confirmed_at
-        auto_confirm_actions [:sign_in_with_magic_link, :reset_password_with_token]
+        auto_confirm_actions [:reset_password_with_token]
         sender Huddlz.Accounts.User.Senders.SendNewUserConfirmationEmail
       end
     end
@@ -36,14 +36,6 @@ defmodule Huddlz.Accounts.User do
     end
 
     strategies do
-      magic_link do
-        identity_field :email
-        registration_enabled? true
-        require_interaction? true
-
-        sender Huddlz.Accounts.User.Senders.SendMagicLinkEmail
-      end
-
       password :password do
         identity_field :email
         hash_provider AshAuthentication.BcryptProvider
@@ -106,43 +98,6 @@ defmodule Huddlz.Accounts.User do
 
       filter expr(contains(email, ^arg(:email)))
       prepare Huddlz.Accounts.User.Preparations.AdminOnlySearch
-    end
-
-    create :sign_in_with_magic_link do
-      description "Sign in or register a user with magic link."
-
-      argument :token, :string do
-        description "The token from the magic link that was sent to the user"
-        allow_nil? false
-      end
-
-      argument :display_name, :string do
-        description "The user's display name"
-        allow_nil? true
-      end
-
-      upsert? true
-      upsert_identity :unique_email
-      upsert_fields [:email]
-
-      # Generate a random display name only for new users
-      change Huddlz.Accounts.User.Changes.SetDefaultDisplayName
-
-      # Uses the information from the token to create or sign in the user
-      change AshAuthentication.Strategy.MagicLink.SignInChange
-
-      metadata :token, :string do
-        allow_nil? false
-      end
-    end
-
-    action :request_magic_link do
-      argument :email, :ci_string do
-        allow_nil? false
-        constraints match: ~S/^[^\s]+@[^\s]+$/
-      end
-
-      run AshAuthentication.Strategy.MagicLink.Request
     end
 
     update :update_display_name do
@@ -273,6 +228,9 @@ defmodule Huddlz.Accounts.User do
       # Sets the email from the argument
       change set_attribute(:email, arg(:email))
 
+      # Generate a random display name if none provided
+      change Huddlz.Accounts.User.Changes.SetDefaultDisplayName
+
       # Hashes the provided password
       change AshAuthentication.Strategy.Password.HashPasswordChange
 
@@ -371,16 +329,6 @@ defmodule Huddlz.Accounts.User do
 
     policy action(:sign_in_with_password) do
       description "Anyone can attempt to sign in with password"
-      authorize_if always()
-    end
-
-    policy action(:request_magic_link) do
-      description "Anyone can request a magic link"
-      authorize_if always()
-    end
-
-    policy action(:sign_in_with_magic_link) do
-      description "Anyone can sign in with a magic link"
       authorize_if always()
     end
 
