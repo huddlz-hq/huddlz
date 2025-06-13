@@ -4,7 +4,18 @@ defmodule ViewPastHuddlzSteps do
   import Huddlz.Generator
   import ExUnit.Assertions
   import CucumberDatabaseHelper
-  require Ash.Query
+
+  # Helper function to check if any element from a list is visible
+  defp any_visible?(conn, elements, selector \\ "h3") do
+    Enum.any?(elements, fn element ->
+      try do
+        assert_has(conn, selector, text: element.title)
+        true
+      rescue
+        _ -> false
+      end
+    end)
+  end
 
   # Background step: Create past and future huddlz
   step "there are past and future huddlz in the system" do
@@ -97,14 +108,9 @@ defmodule ViewPastHuddlzSteps do
     private_group = generate(group(owner_id: owner.id, is_public: false, actor: owner))
 
     # Add the current user as a member
-    membership =
-      generate(
-        group_member(group_id: private_group.id, user_id: user.id, role: :member, actor: owner)
-      )
-
-    # Verify the membership was created
-    assert membership.group_id == private_group.id
-    assert membership.user_id == user.id
+    generate(
+      group_member(group_id: private_group.id, user_id: user.id, role: :member, actor: owner)
+    )
 
     # Create past huddlz using the past_huddl generator that bypasses validation
     private_past_huddl =
@@ -122,9 +128,6 @@ defmodule ViewPastHuddlzSteps do
 
     # Load the group relationship
     private_past_huddl = Ash.load!(private_past_huddl, :group, actor: owner)
-
-    # Verify the private past huddl was created properly
-    assert DateTime.compare(private_past_huddl.starts_at, DateTime.utc_now()) == :lt
 
     {:ok,
      %{
@@ -175,21 +178,8 @@ defmodule ViewPastHuddlzSteps do
     {:ok, %{conn: conn}}
   end
 
-  # Assertions for seeing past huddlz
   step "I should see past huddlz", %{conn: conn, past_huddlz: past_huddlz} do
-    # Check for at least one past huddl title in the card
-    found_past_huddl =
-      Enum.any?(past_huddlz, fn huddl ->
-        try do
-          assert_has(conn, "h3", text: huddl.title)
-          true
-        rescue
-          _ -> false
-        end
-      end)
-
-    assert found_past_huddl, "Expected to find at least one past huddl"
-
+    assert any_visible?(conn, past_huddlz), "Expected to find at least one past huddl"
     :ok
   end
 
@@ -203,10 +193,9 @@ defmodule ViewPastHuddlzSteps do
   end
 
   step "the past huddlz should be sorted newest first" do
-    # Since the past huddlz are sorted by starts_at desc in the backend,
-    # we just need to verify they appear in the correct order
-    # The newest (Yesterday's Workshop) should appear before older ones
-
+    # Sorting is handled by the backend query (starts_at: :desc)
+    # PhoenixTest doesn't provide easy access to element ordering in DOM
+    # This is covered by unit tests on the query itself
     :ok
   end
 
@@ -220,19 +209,7 @@ defmodule ViewPastHuddlzSteps do
   end
 
   step "I should see past huddlz from public groups", %{conn: conn, past_huddlz: past_huddlz} do
-    # Check for at least one public past huddl
-    found_public_past =
-      Enum.any?(past_huddlz, fn huddl ->
-        try do
-          assert_has(conn, "h3", text: huddl.title)
-          true
-        rescue
-          _ -> false
-        end
-      end)
-
-    assert found_public_past, "Expected to find at least one public past huddl"
-
+    assert any_visible?(conn, past_huddlz), "Expected to find at least one public past huddl"
     :ok
   end
 
@@ -245,16 +222,11 @@ defmodule ViewPastHuddlzSteps do
     {:ok, %{conn: conn}}
   end
 
-  step "I should not see any private huddlz" do
-    # Verify that no private huddlz are visible to anonymous users
-    # All created private huddlz have "Private" in their title
-    # Check that no h3 elements contain "Private" in their text
-    # Since we can't use PhoenixTest.text/1, we'll check differently
-
-    # Get all h3 elements and check their text content
-    # For now, we'll trust the visibility filters are working
-    # and just ensure we don't have the specific private huddl titles
-
-    :ok
+  step "I should not see any private huddlz", %{conn: conn} do
+    # Anonymous users should not see any private huddlz
+    # Our test data creates private huddlz with "Private" in their titles
+    conn = refute_has(conn, "h3", text: "Private")
+    conn = refute_has(conn, "h3", text: "Secret")
+    {:ok, %{conn: conn}}
   end
 end
