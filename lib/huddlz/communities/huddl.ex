@@ -406,15 +406,15 @@ defmodule Huddlz.Communities.Huddl do
   end
 
   calculations do
-    calculate :status,
-              :atom,
-              expr(
-                cond do
-                  starts_at > now() -> :upcoming
-                  ends_at < now() -> :completed
-                  true -> :in_progress
-                end
-              )
+    calculate :status, :atom do
+      calculation expr(
+        cond do
+          starts_at > now() -> :upcoming
+          ends_at < now() -> :completed
+          true -> :in_progress
+        end
+      )
+    end
 
     calculate :visible_virtual_link, :string do
       calculation Huddlz.Communities.Huddl.Calculations.VisibleVirtualLink
@@ -425,11 +425,10 @@ defmodule Huddlz.Communities.Huddl do
       calculation Huddlz.Communities.Huddl.Calculations.ActorIsMember
     end
 
-    calculate :is_publicly_visible,
-              :boolean,
-              expr(is_private == false and group.is_public == true),
-              description:
-                "Whether the huddl is visible to everyone (public huddl in public group)"
+    calculate :is_publicly_visible, :boolean do
+      description "Whether the huddl is visible to everyone (public huddl in public group)"
+      calculation expr(is_private == false and group.is_public == true)
+    end
   end
 
   identities do
