@@ -30,7 +30,7 @@ Current authentication setup:
 
 Created comprehensive plan with 5 tasks:
 1. Create Sign-In LiveView
-2. Create Registration LiveView  
+2. Create Registration LiveView
 3. Create Password Reset LiveView
 4. Create Set Password LiveView
 5. Update Navigation and Polish
@@ -108,7 +108,7 @@ Starting implementation of custom sign-in page.
 - Used AshPhoenix.Form for form handling
 - Added proper mount and event handlers
 
-#### 3. Created Sign-In Template  
+#### 3. Created Sign-In Template
 - `lib/huddlz_web/live/auth_live/sign_in.html.heex`
 - Used DaisyUI card components for form containers
 - Used CoreComponents helpers for inputs and buttons
@@ -283,7 +283,7 @@ Used Puppeteer to verify:
    ```elixir
    # Access form.source for validation
    form = socket.assigns.form.source |> Form.validate(params)
-   
+
    # Check form.valid? on AshPhoenix.Form, not Phoenix.HTML.Form
    if form.valid? do
    ```
@@ -573,7 +573,7 @@ The authentication flows themselves work correctly - this is a test maintenance 
 
 ### Root Causes
 
-1. **Design Decision Mismatch**: 
+1. **Design Decision Mismatch**:
    - Integration tests assume magic link is available on registration page
    - We implemented password-only registration per the requirements
 

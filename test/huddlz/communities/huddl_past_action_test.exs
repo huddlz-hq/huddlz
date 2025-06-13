@@ -9,49 +9,53 @@ defmodule Huddlz.Communities.HuddlPastActionTest do
     test "returns huddlz sorted by starts_at descending" do
       # Create a verified user who can see huddlz
       user = generate(user(role: :verified))
-      
+
       # Create a public group
       group = generate(group(owner_id: user.id, is_public: true, actor: user))
 
       # Create past huddlz with different start times
-      old_huddl = generate(
-        past_huddl(
-          group_id: group.id,
-          creator_id: user.id,
-          title: "Old Event",
-          starts_at: DateTime.add(DateTime.utc_now(), -30, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), -29, :day)
+      old_huddl =
+        generate(
+          past_huddl(
+            group_id: group.id,
+            creator_id: user.id,
+            title: "Old Event",
+            starts_at: DateTime.add(DateTime.utc_now(), -30, :day),
+            ends_at: DateTime.add(DateTime.utc_now(), -29, :day)
+          )
         )
-      )
 
-      middle_huddl = generate(
-        past_huddl(
-          group_id: group.id,
-          creator_id: user.id,
-          title: "Middle Event",
-          starts_at: DateTime.add(DateTime.utc_now(), -7, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), -6, :day)
+      middle_huddl =
+        generate(
+          past_huddl(
+            group_id: group.id,
+            creator_id: user.id,
+            title: "Middle Event",
+            starts_at: DateTime.add(DateTime.utc_now(), -7, :day),
+            ends_at: DateTime.add(DateTime.utc_now(), -6, :day)
+          )
         )
-      )
 
-      recent_huddl = generate(
-        past_huddl(
-          group_id: group.id,
-          creator_id: user.id,
-          title: "Recent Event",
-          starts_at: DateTime.add(DateTime.utc_now(), -2, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), -1, :day)
+      recent_huddl =
+        generate(
+          past_huddl(
+            group_id: group.id,
+            creator_id: user.id,
+            title: "Recent Event",
+            starts_at: DateTime.add(DateTime.utc_now(), -2, :day),
+            ends_at: DateTime.add(DateTime.utc_now(), -1, :day)
+          )
         )
-      )
 
       # Query using the past action
-      {:ok, past_huddlz} = Huddl
+      {:ok, past_huddlz} =
+        Huddl
         |> Ash.Query.for_read(:past, %{}, actor: user)
         |> Ash.read()
 
       # Verify the order - newest first
       assert length(past_huddlz) >= 3
-      
+
       # Find our test huddlz in the results
       huddl_ids = Enum.map(past_huddlz, & &1.id)
       recent_index = Enum.find_index(huddl_ids, &(&1 == recent_huddl.id))
@@ -68,41 +72,45 @@ defmodule Huddlz.Communities.HuddlPastActionTest do
       group = generate(group(owner_id: user.id, is_public: true, actor: user))
 
       # Create a huddl that has started but not ended (in progress)
-      in_progress_huddl = generate(
-        past_huddl(
-          group_id: group.id,
-          creator_id: user.id,
-          title: "In Progress Event",
-          starts_at: DateTime.add(DateTime.utc_now(), -1, :hour),
-          ends_at: DateTime.add(DateTime.utc_now(), 1, :hour)
+      in_progress_huddl =
+        generate(
+          past_huddl(
+            group_id: group.id,
+            creator_id: user.id,
+            title: "In Progress Event",
+            starts_at: DateTime.add(DateTime.utc_now(), -1, :hour),
+            ends_at: DateTime.add(DateTime.utc_now(), 1, :hour)
+          )
         )
-      )
 
       # Create a huddl that has ended
-      ended_huddl = generate(
-        past_huddl(
-          group_id: group.id,
-          creator_id: user.id,
-          title: "Ended Event",
-          starts_at: DateTime.add(DateTime.utc_now(), -3, :hour),
-          ends_at: DateTime.add(DateTime.utc_now(), -1, :hour)
+      ended_huddl =
+        generate(
+          past_huddl(
+            group_id: group.id,
+            creator_id: user.id,
+            title: "Ended Event",
+            starts_at: DateTime.add(DateTime.utc_now(), -3, :hour),
+            ends_at: DateTime.add(DateTime.utc_now(), -1, :hour)
+          )
         )
-      )
 
       # Create a future huddl
-      future_huddl = generate(
-        huddl(
-          group_id: group.id,
-          creator_id: user.id,
-          title: "Future Event",
-          starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), 2, :day),
-          actor: user
+      future_huddl =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: user.id,
+            title: "Future Event",
+            starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
+            ends_at: DateTime.add(DateTime.utc_now(), 2, :day),
+            actor: user
+          )
         )
-      )
 
       # Query using the past action
-      {:ok, past_huddlz} = Huddl
+      {:ok, past_huddlz} =
+        Huddl
         |> Ash.Query.for_read(:past, %{}, actor: user)
         |> Ash.read()
 
