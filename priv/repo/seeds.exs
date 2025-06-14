@@ -31,22 +31,24 @@ if Enum.empty?(existing_groups) do
       })
       |> Ash.create(authorize?: false)
 
-    if role != :regular do
-      {:ok, user} =
-        user
-        |> Ash.Changeset.for_update(:update, %{role: role, confirmed_at: DateTime.utc_now()})
-        |> Ash.update(authorize?: false)
+    user =
+      if role != :regular do
+        {:ok, user} =
+          user
+          |> Ash.Changeset.for_update(:update_role, %{role: role})
+          |> Ash.update(authorize?: false)
 
-      user
-    else
-      # Confirm regular users too
-      {:ok, user} =
         user
-        |> Ash.Changeset.for_update(:update, %{confirmed_at: DateTime.utc_now()})
-        |> Ash.update(authorize?: false)
+      else
+        user
+      end
 
+    {:ok, user} =
       user
-    end
+      |> Ash.Changeset.for_update(:update_confirmed_at, %{confirmed_at: DateTime.utc_now()})
+      |> Ash.update(authorize?: false)
+
+    user
   end
 
   # Create admin user

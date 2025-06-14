@@ -129,4 +129,34 @@ defmodule Huddlz.Accounts.UserTest do
              end)
     end
   end
+
+  describe "user confirmation" do
+    test "update_role" do
+      email = "test-#{:rand.uniform(99999)}@example.com"
+
+      role = :regular
+      user = Ash.Seed.seed!(User, %{email: email})
+
+      {:ok, user} =
+        user
+        |> Ash.Changeset.for_update(:update_role, %{role: role})
+        |> Ash.update(authorize?: false)
+
+      assert user.role == role
+    end
+
+    test "update_confirmed_at" do
+      email = "test-#{:rand.uniform(99999)}@example.com"
+
+      confirmed_at = DateTime.utc_now()
+      user = Ash.Seed.seed!(User, %{email: email})
+
+      {:ok, user} =
+        user
+        |> Ash.Changeset.for_update(:update_confirmed_at, %{confirmed_at: confirmed_at})
+        |> Ash.update(authorize?: false)
+
+      assert user.confirmed_at == confirmed_at
+    end
+  end
 end

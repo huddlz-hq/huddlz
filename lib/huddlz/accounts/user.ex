@@ -108,6 +108,11 @@ defmodule Huddlz.Accounts.User do
       validate string_length(:display_name, min: 1, max: 30)
     end
 
+    update :update_confirmed_at do
+      description "Update a user's confirmed_at"
+      accept [:confirmed_at]
+    end
+
     update :update_role do
       description "Update a user's role"
       accept [:role]
@@ -212,6 +217,10 @@ defmodule Huddlz.Accounts.User do
         allow_nil? false
       end
 
+      argument :display_name, :string do
+        allow_nil? true
+      end
+
       argument :password, :string do
         description "The proposed password for the user, in plain text."
         allow_nil? false
@@ -227,6 +236,9 @@ defmodule Huddlz.Accounts.User do
 
       # Sets the email from the argument
       change set_attribute(:email, arg(:email))
+
+      # Sets the display name from the argument
+      change set_attribute(:display_name, arg(:display_name))
 
       # Generate a random display name if none provided
       change Huddlz.Accounts.User.Changes.SetDefaultDisplayName
