@@ -12,6 +12,7 @@ defmodule Huddlz.Accounts do
     resource Huddlz.Accounts.User do
       # Define proper code interfaces for actions
       define :search_by_email, action: :search_by_email, args: [:email]
+      define :update_confirmed_at, action: :update_confirmed_at, args: [:confirmed_at]
       define :update_role, action: :update_role, args: [:role]
       define :get_by_email, action: :get_by_email, args: [:email]
       define :update_display_name, action: :update_display_name, args: [:display_name]
