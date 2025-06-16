@@ -149,11 +149,9 @@ defmodule HuddlzWeb.HuddlLive do
     # Show only past events (events that have ended)
     now = DateTime.utc_now()
 
-    huddls
-    |> Enum.filter(fn huddl ->
+    Enum.filter(huddls, fn huddl ->
       DateTime.compare(huddl.ends_at, now) == :lt
     end)
-    |> Enum.sort_by(& &1.starts_at, {:desc, DateTime})
   end
 
   defp apply_date_filter(huddls, "starting_soon") do
@@ -350,11 +348,7 @@ defmodule HuddlzWeb.HuddlLive do
           <div class="flex flex-wrap items-center gap-2">
             <!-- Date Range Filter -->
             <label for="date-range" class="sr-only">Date Range</label>
-            <select
-              id="date-range"
-              name="date_filter"
-              class="select select-bordered select-sm"
-            >
+            <select id="date-range" name="date_filter" class="select select-bordered select-sm">
               <option value="any_day" selected={@date_filter == "any_day"}>Any day</option>
               <option value="starting_soon" selected={@date_filter == "starting_soon"}>
                 Starting soon
@@ -374,11 +368,7 @@ defmodule HuddlzWeb.HuddlLive do
             
     <!-- Event Type Filter -->
             <label for="event-type" class="sr-only">Event Type</label>
-            <select
-              id="event-type"
-              name="type_filter"
-              class="select select-bordered select-sm"
-            >
+            <select id="event-type" name="type_filter" class="select select-bordered select-sm">
               <option value="any_type" selected={@type_filter == "any_type"}>Any type</option>
               <option value="online" selected={@type_filter == "online"}>Virtual</option>
               <option value="in_person" selected={@type_filter == "in_person"}>In person</option>
@@ -387,13 +377,6 @@ defmodule HuddlzWeb.HuddlLive do
     <!-- Distance Filter (disabled) -->
             <select class="select select-bordered select-sm" disabled>
               <option>Within {@distance_filter} miles</option>
-            </select>
-            
-    <!-- Sort By -->
-            <label for="sort-by" class="sr-only">Sort By</label>
-            <select id="sort-by" name="sort_by" class="select select-bordered select-sm ml-auto">
-              <option value="date_asc">Date (Latest First)</option>
-              <option value="date_desc">Date (Earliest First)</option>
             </select>
           </div>
           
@@ -411,8 +394,8 @@ defmodule HuddlzWeb.HuddlLive do
                 </button>
               </div>
             <% end %>
-            
-    <%= if @type_filter != "any_type" do %>
+
+            <%= if @type_filter != "any_type" do %>
               <div class="badge badge-outline gap-2">
                 Type: {type_filter_label(@type_filter)}
                 <button
@@ -424,8 +407,8 @@ defmodule HuddlzWeb.HuddlLive do
                 </button>
               </div>
             <% end %>
-            
-    <%= if @date_filter != "any_day" do %>
+
+            <%= if @date_filter != "any_day" do %>
               <div class="badge badge-outline gap-2">
                 Date: {date_filter_label(@date_filter)}
                 <button

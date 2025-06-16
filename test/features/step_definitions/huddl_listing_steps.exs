@@ -66,21 +66,23 @@ defmodule HuddlListingSteps do
 
   # Search for a term
   step "I search for {string}", %{args: [term]} = context do
-    conn = 
-      context.conn 
+    conn =
+      context.conn
       |> within("#search-form", fn conn ->
         conn |> fill_in("Search huddlz", with: term)
       end)
+
     Map.merge(context, %{conn: conn, search_term: term})
   end
 
   # Clear search
   step "I clear the search form", context do
-    conn = 
-      context.conn 
+    conn =
+      context.conn
       |> within("#search-form", fn conn ->
         conn |> fill_in("Search huddlz", with: "")
       end)
+
     Map.put(context, :conn, conn)
   end
 

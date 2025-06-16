@@ -111,7 +111,8 @@ defmodule HuddlzWeb.HuddlSearchTest do
         conn |> select("Event Type", option: "Virtual")
       end)
       |> assert_has("h3", text: "Virtual Book Club")
-      |> assert_has("h3", text: "Hybrid Workshop")  # Hybrid matches both filters
+      # Hybrid matches both filters
+      |> assert_has("h3", text: "Hybrid Workshop")
       |> refute_has("h3", text: "Morning Yoga Session")
     end
 
@@ -197,21 +198,8 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> within("#filters-form", fn conn ->
         conn |> select("Event Type", option: "Virtual")
       end)
-      |> assert_has("div", text: "Found 2 huddlz")  # Virtual Book Club + Hybrid Workshop
-    end
-
-    test "sorts by date descending", %{conn: conn} do
-      # Verify sort dropdown exists and can be changed
-      conn
-      |> visit("/")
-      |> assert_has("select#sort-by")
-      |> within("#filters-form", fn conn ->
-        conn |> select("Sort By", option: "Date (Latest First)")
-      end)
-      # Verify all huddlz are still displayed
-      |> assert_has("h3", text: "Morning Yoga Session")
-      |> assert_has("h3", text: "Virtual Book Club")
-      |> assert_has("h3", text: "Hybrid Workshop")
+      # Virtual Book Club + Hybrid Workshop
+      |> assert_has("div", text: "Found 2 huddlz")
     end
 
     test "shows no results message with active filters", %{conn: conn} do
