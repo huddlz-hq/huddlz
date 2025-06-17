@@ -204,7 +204,8 @@ defmodule Huddlz.Generator do
         rsvp_count: 0
       ],
       overrides: opts,
-      actor: actor
+      actor: actor,
+      skip_unknown_inputs: [:coordinates]
     )
   end
 

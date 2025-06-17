@@ -46,3 +46,6 @@ config :huddlz, env: :test
 
 # Configure PhoenixTest
 config :phoenix_test, :endpoint, HuddlzWeb.Endpoint
+
+# Use mock geocoding service in tests to avoid HTTP requests
+config :huddlz, :geocoding_module, Huddlz.Geocoding.Mock

@@ -44,6 +44,7 @@ defmodule Huddlz.Communities.Huddl do
       ]
 
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
+      change Huddlz.Communities.Huddl.Changes.GeocodeLocation
     end
 
     update :update do
@@ -63,6 +64,7 @@ defmodule Huddlz.Communities.Huddl do
       ]
 
       require_atomic? false
+      change Huddlz.Communities.Huddl.Changes.GeocodeLocation
     end
 
     read :by_status do
@@ -94,6 +96,33 @@ defmodule Huddlz.Communities.Huddl do
       filter expr(
                is_nil(^arg(:query)) or contains(title, ^arg(:query)) or
                  contains(description, ^arg(:query))
+             )
+
+      prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
+    end
+
+    read :search_by_location do
+      argument :latitude, :float do
+        allow_nil? false
+      end
+
+      argument :longitude, :float do
+        allow_nil? false
+      end
+
+      argument :radius_miles, :integer do
+        default 25
+        allow_nil? false
+      end
+
+      filter expr(
+               fragment(
+                 "ST_DWithin(?::geography, ST_MakePoint(?, ?)::geography, ?)",
+                 coordinates,
+                 ^arg(:longitude),
+                 ^arg(:latitude),
+                 ^arg(:radius_miles) * 1609.34
+               )
              )
 
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
@@ -238,6 +267,14 @@ defmodule Huddlz.Communities.Huddl do
       authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
     end
 
+    policy action(:search_by_location) do
+      description "Users can search huddls by location they have access to"
+      # Public huddls in public groups
+      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
+      # Any huddl in a group they're a member of
+      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
+    end
+
     policy action(:by_group) do
       description "Users can view huddls by group if they have access"
       # Public huddls in public groups
@@ -364,6 +401,10 @@ defmodule Huddlz.Communities.Huddl do
       allow_nil? true
     end
 
+    attribute :coordinates, :geometry do
+      allow_nil? true
+    end
+
     attribute :virtual_link, :string do
       allow_nil? true
       sensitive? true
@@ -436,6 +477,27 @@ defmodule Huddlz.Communities.Huddl do
     calculate :is_publicly_visible, :boolean do
       description "Whether the huddl is visible to everyone (public huddl in public group)"
       calculation expr(is_private == false and group.is_public == true)
+    end
+
+    calculate :distance_miles, :float do
+      description "Distance in miles from a given point (requires latitude and longitude arguments)"
+
+      argument :latitude, :float do
+        allow_nil? false
+      end
+
+      argument :longitude, :float do
+        allow_nil? false
+      end
+
+      calculation expr(
+                    fragment(
+                      "ST_Distance(?::geography, ST_MakePoint(?, ?)::geography) / 1609.34",
+                      coordinates,
+                      ^arg(:longitude),
+                      ^arg(:latitude)
+                    )
+                  )
     end
   end
 

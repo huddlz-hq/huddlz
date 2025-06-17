@@ -219,7 +219,7 @@ if Enum.empty?(existing_groups) do
           ends_at:
             DateTime.add(DateTime.utc_now(), 7 * 24 * 3600 + 2 * 3600, :second)
             |> DateTime.truncate(:second),
-          physical_location: "TechHub Phoenix, 123 Main St",
+          physical_location: "111 W Monroe St, Phoenix, AZ 85003",
           virtual_link: "https://zoom.us/j/123456789",
           group_id: phoenix_group.id,
           creator_id: alice.id
@@ -260,7 +260,7 @@ if Enum.empty?(existing_groups) do
           ends_at:
             DateTime.add(DateTime.utc_now(), 5 * 24 * 3600 + 2 * 3600, :second)
             |> DateTime.truncate(:second),
-          physical_location: "Central Library, Meeting Room A",
+          physical_location: "1221 N Central Ave, Phoenix, AZ 85004",
           group_id: book_group.id,
           creator_id: bob.id
         },
@@ -281,11 +281,69 @@ if Enum.empty?(existing_groups) do
           ends_at:
             DateTime.add(DateTime.utc_now(), 3 * 24 * 3600 + 4 * 3600, :second)
             |> DateTime.truncate(:second),
-          physical_location: "Camelback Mountain Trailhead",
+          physical_location: "4925 E McDonald Dr, Phoenix, AZ 85018",
           group_id: hiking_group.id,
           creator_id: carol.id
         },
         actor: carol
+      )
+      |> Ash.create(),
+
+      # Additional huddls in different locations for testing
+      Huddl
+      |> Ash.Changeset.for_create(
+        :create,
+        %{
+          title: "Coffee & Code",
+          description: "Casual coding session at a local coffee shop. Bring your laptop!",
+          event_type: :in_person,
+          starts_at: DateTime.add(DateTime.utc_now(), 2, :day) |> DateTime.truncate(:second),
+          ends_at:
+            DateTime.add(DateTime.utc_now(), 2 * 24 * 3600 + 3 * 3600, :second)
+            |> DateTime.truncate(:second),
+          physical_location: "3300 N 7th St, Phoenix, AZ 85014",
+          group_id: phoenix_group.id,
+          creator_id: alice.id
+        },
+        actor: alice
+      )
+      |> Ash.create(),
+      Huddl
+      |> Ash.Changeset.for_create(
+        :create,
+        %{
+          title: "Desert Botanical Garden Walk",
+          description: "Explore native desert plants and discuss conservation.",
+          event_type: :in_person,
+          starts_at: DateTime.add(DateTime.utc_now(), 6, :day) |> DateTime.truncate(:second),
+          ends_at:
+            DateTime.add(DateTime.utc_now(), 6 * 24 * 3600 + 2 * 3600, :second)
+            |> DateTime.truncate(:second),
+          physical_location: "1201 N Galvin Pkwy, Phoenix, AZ 85008",
+          group_id: hiking_group.id,
+          creator_id: carol.id
+        },
+        actor: carol
+      )
+      |> Ash.create(),
+
+      # Huddl in Scottsdale for distance testing
+      Huddl
+      |> Ash.Changeset.for_create(
+        :create,
+        %{
+          title: "Tech Talk: AI and Machine Learning",
+          description: "Discussion on latest trends in AI/ML. Networking afterwards.",
+          event_type: :in_person,
+          starts_at: DateTime.add(DateTime.utc_now(), 10, :day) |> DateTime.truncate(:second),
+          ends_at:
+            DateTime.add(DateTime.utc_now(), 10 * 24 * 3600 + 2 * 3600, :second)
+            |> DateTime.truncate(:second),
+          physical_location: "7014 E Camelback Rd, Scottsdale, AZ 85251",
+          group_id: phoenix_group.id,
+          creator_id: bob.id
+        },
+        actor: bob
       )
       |> Ash.create()
     ]

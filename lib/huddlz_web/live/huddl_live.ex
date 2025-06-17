@@ -76,6 +76,7 @@ defmodule HuddlzWeb.HuddlLive do
       Enum.filter(socket.assigns.all_huddls, fn huddl ->
         DateTime.compare(huddl.ends_at, DateTime.utc_now()) == :gt
       end)
+      |> Ash.load!([:status, :visible_virtual_link, :group], actor: socket.assigns[:current_user])
 
     {:noreply,
      assign(socket,
@@ -101,6 +102,9 @@ defmodule HuddlzWeb.HuddlLive do
         "date" ->
           assign(socket, date_filter: "any_day")
 
+        "location" ->
+          assign(socket, location_search: "", distance_filter: "25")
+
         _ ->
           socket
       end
@@ -112,28 +116,90 @@ defmodule HuddlzWeb.HuddlLive do
   defp perform_search(socket) do
     %{
       keyword_search: keyword,
-      location_search: _location,
+      location_search: location,
       date_filter: date_filter,
       type_filter: type_filter,
-      distance_filter: _distance,
+      distance_filter: distance,
       current_user: current_user,
       all_huddls: all_huddls
     } = socket.assigns
 
-    # For now, we'll implement basic search without geolocation
-    # TODO: Implement geolocation-based filtering
-
+    # Start with keyword search or all huddls
     huddls =
       if keyword == "" do
         all_huddls
       else
         Communities.search_huddlz!(keyword, actor: current_user)
       end
+
+    # Apply location filter if location is provided
+    huddls = apply_location_filter(huddls, location, distance, current_user)
+
+    # Apply remaining filters
+    huddls =
+      huddls
       |> apply_date_filter(date_filter)
       |> apply_type_filter(type_filter)
       |> Ash.load!([:status, :visible_virtual_link, :group], actor: current_user)
 
+    # Calculate distances if location search was used
+    huddls = load_distances(huddls, location, current_user)
+
     assign(socket, huddls: huddls)
+  end
+
+  defp apply_location_filter(huddls, "", _distance, _current_user), do: huddls
+
+  defp apply_location_filter(huddls, location, distance, current_user) do
+    case Huddlz.Geocoding.geocode(location) do
+      {:ok, %{lat: lat, lng: lng}} ->
+        filter_by_location(huddls, lat, lng, distance, current_user)
+
+      {:error, _reason} ->
+        # If geocoding fails, show no results
+        []
+    end
+  end
+
+  defp filter_by_location(huddls, lat, lng, distance, current_user) do
+    radius = String.to_integer(distance)
+
+    # Get huddls within radius using PostGIS
+    location_huddls =
+      Huddlz.Communities.Huddl
+      |> Ash.Query.for_read(:search_by_location, %{
+        latitude: lat,
+        longitude: lng,
+        radius_miles: radius
+      })
+      |> Ash.read!(actor: current_user)
+
+    # Intersect with existing results
+    location_ids = MapSet.new(location_huddls, & &1.id)
+    Enum.filter(huddls, fn h -> MapSet.member?(location_ids, h.id) end)
+  end
+
+  defp load_distances(huddls, "", _current_user), do: huddls
+
+  defp load_distances(huddls, location, current_user) do
+    case Huddlz.Geocoding.geocode(location) do
+      {:ok, %{lat: lat, lng: lng}} ->
+        load_and_sort_by_distance(huddls, lat, lng, current_user)
+
+      _ ->
+        huddls
+    end
+  end
+
+  defp load_and_sort_by_distance(huddls, lat, lng, current_user) do
+    Ash.load!(
+      huddls,
+      [
+        distance_miles: %{latitude: lat, longitude: lng}
+      ],
+      actor: current_user
+    )
+    |> Enum.sort_by(& &1.distance_miles)
   end
 
   defp apply_date_filter(huddls, "any_day") do
@@ -327,8 +393,7 @@ defmodule HuddlzWeb.HuddlLive do
                     value={@location_search}
                     placeholder="City or zip code"
                     class="input input-bordered join-item w-full pl-10"
-                    disabled
-                    title="Location search coming soon"
+                    phx-debounce="300"
                   />
                   <label for="location-search" class="sr-only">City or zip code</label>
                 </div>
@@ -374,9 +439,19 @@ defmodule HuddlzWeb.HuddlLive do
               <option value="in_person" selected={@type_filter == "in_person"}>In person</option>
             </select>
             
-    <!-- Distance Filter (disabled) -->
-            <select class="select select-bordered select-sm" disabled>
-              <option>Within {@distance_filter} miles</option>
+    <!-- Distance Filter -->
+            <label for="distance-filter" class="sr-only">Distance</label>
+            <select
+              id="distance-filter"
+              name="distance_filter"
+              class="select select-bordered select-sm"
+              disabled={@location_search == ""}
+            >
+              <option value="5" selected={@distance_filter == "5"}>Within 5 miles</option>
+              <option value="10" selected={@distance_filter == "10"}>Within 10 miles</option>
+              <option value="25" selected={@distance_filter == "25"}>Within 25 miles</option>
+              <option value="50" selected={@distance_filter == "50"}>Within 50 miles</option>
+              <option value="100" selected={@distance_filter == "100"}>Within 100 miles</option>
             </select>
           </div>
           
@@ -420,9 +495,22 @@ defmodule HuddlzWeb.HuddlLive do
                 </button>
               </div>
             <% end %>
+
+            <%= if @location_search != "" do %>
+              <div class="badge badge-outline gap-2">
+                Location: {@location_search} ({@distance_filter} mi)
+                <button
+                  phx-click="clear_filter"
+                  phx-value-filter="location"
+                  class="btn btn-ghost btn-xs btn-circle"
+                >
+                  ×
+                </button>
+              </div>
+            <% end %>
             
     <!-- Clear All Button -->
-            <%= if @keyword_search != "" || @date_filter != "any_day" || @type_filter != "any_type" do %>
+            <%= if @keyword_search != "" || @date_filter != "any_day" || @type_filter != "any_type" || @location_search != "" do %>
               <button phx-click="clear_search" class="btn btn-sm btn-ghost">
                 Clear all
               </button>
@@ -566,7 +654,16 @@ defmodule HuddlzWeb.HuddlLive do
                                 d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                               />
                             </svg>
-                            {huddl.physical_location}
+                            <span>
+                              {huddl.physical_location}
+                              <%= if Map.has_key?(huddl, :distance_miles) && 
+                                     huddl.distance_miles && 
+                                     !match?(%Ash.NotLoaded{}, huddl.distance_miles) do %>
+                                <span class="text-primary">
+                                  · {Float.round(huddl.distance_miles, 1)} mi
+                                </span>
+                              <% end %>
+                            </span>
                           </div>
                         <% :virtual -> %>
                           <div class="flex items-center gap-1">
@@ -596,7 +693,16 @@ defmodule HuddlzWeb.HuddlLive do
                                 d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                               />
                             </svg>
-                            {huddl.physical_location} + Online
+                            <span>
+                              {huddl.physical_location} + Online
+                              <%= if Map.has_key?(huddl, :distance_miles) && 
+                                     huddl.distance_miles && 
+                                     !match?(%Ash.NotLoaded{}, huddl.distance_miles) do %>
+                                <span class="text-primary">
+                                  · {Float.round(huddl.distance_miles, 1)} mi
+                                </span>
+                              <% end %>
+                            </span>
                           </div>
                       <% end %>
                     </div>

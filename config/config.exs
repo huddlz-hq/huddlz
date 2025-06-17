@@ -50,6 +50,9 @@ config :huddlz,
   generators: [timestamp_type: :utc_datetime],
   ash_domains: [Huddlz.Accounts, Huddlz.Communities]
 
+# Configure Repo to use PostGIS types
+config :huddlz, Huddlz.Repo, types: Huddlz.PostgresTypes
+
 # Configures the endpoint
 config :huddlz, HuddlzWeb.Endpoint,
   url: [host: "localhost"],
@@ -103,6 +106,17 @@ config :logger, :default_formatter,
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
+
+# Geo configuration
+config :geo_postgis, json_library: Jason
+
+# Ash custom types for geometry
+config :ash, :custom_types,
+  geometry: AshGeo.Geometry,
+  geo_json: AshGeo.GeoJson,
+  geo_wkt: AshGeo.GeoWkt,
+  geo_wkb: AshGeo.GeoWkb,
+  geo_any: AshGeo.GeoAny
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
