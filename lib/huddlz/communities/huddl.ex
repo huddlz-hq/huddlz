@@ -67,67 +67,6 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Communities.Huddl.Changes.GeocodeLocation
     end
 
-    read :by_status do
-      argument :status, :atom do
-        allow_nil? false
-        constraints one_of: [:draft, :upcoming, :in_progress, :completed, :cancelled]
-      end
-
-      filter expr(status == ^arg(:status))
-      prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
-    end
-
-    read :upcoming do
-      filter expr(ends_at > now())
-      prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
-    end
-
-    read :past do
-      filter expr(ends_at < now())
-      prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
-      prepare build(sort: [starts_at: :desc])
-    end
-
-    read :search do
-      argument :query, :ci_string do
-        allow_nil? true
-      end
-
-      filter expr(
-               is_nil(^arg(:query)) or contains(title, ^arg(:query)) or
-                 contains(description, ^arg(:query))
-             )
-
-      prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
-    end
-
-    read :search_by_location do
-      argument :latitude, :float do
-        allow_nil? false
-      end
-
-      argument :longitude, :float do
-        allow_nil? false
-      end
-
-      argument :radius_miles, :integer do
-        default 25
-        allow_nil? false
-      end
-
-      filter expr(
-               fragment(
-                 "ST_DWithin(?::geography, ST_MakePoint(?, ?)::geography, ?)",
-                 coordinates,
-                 ^arg(:longitude),
-                 ^arg(:latitude),
-                 ^arg(:radius_miles) * 1609.34
-               )
-             )
-
-      prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
-    end
-
     read :by_group do
       argument :group_id, :uuid do
         allow_nil? false
@@ -138,44 +77,67 @@ defmodule Huddlz.Communities.Huddl do
       prepare build(sort: [starts_at: :asc])
     end
 
+    read :advanced_search do
+      argument :query, :ci_string do
+        allow_nil? true
+      end
+
+      argument :date_filter, :atom do
+        allow_nil? true
+
+        constraints one_of: [
+                      :any_day,
+                      :past_events,
+                      :starting_soon,
+                      :today,
+                      :tomorrow,
+                      :this_week,
+                      :this_weekend,
+                      :next_week,
+                      :this_month
+                    ]
+
+        default :any_day
+      end
+
+      argument :type_filter, :atom do
+        allow_nil? true
+        constraints one_of: [:any_type, :online, :in_person]
+        default :any_type
+      end
+
+      argument :latitude, :float do
+        allow_nil? true
+      end
+
+      argument :longitude, :float do
+        allow_nil? true
+      end
+
+      argument :radius_miles, :integer do
+        allow_nil? true
+        default 25
+      end
+
+      argument :status_filter, :atom do
+        allow_nil? true
+        constraints one_of: [:any_status, :draft, :upcoming, :in_progress, :completed, :cancelled]
+        default :any_status
+      end
+
+      prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
+      prepare Huddlz.Communities.Huddl.Preparations.ApplySearchFilters
+    end
+
     update :rsvp do
       description "RSVP to this huddl"
       require_atomic? false
 
-      # Accept the user_id as an argument
       argument :user_id, :uuid do
         allow_nil? false
       end
 
-      # Custom change to handle RSVP
-      change fn changeset, _context ->
-        user_id = Ash.Changeset.get_argument(changeset, :user_id)
-        huddl_id = changeset.data.id
-
-        # Check if already RSVPed
-        existing =
-          Huddlz.Communities.HuddlAttendee
-          |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl_id, user_id: user_id})
-          |> Ash.read_one(authorize?: false)
-
-        case existing do
-          {:ok, nil} ->
-            # Create RSVP
-            Huddlz.Communities.HuddlAttendee
-            |> Ash.Changeset.for_create(:rsvp, %{huddl_id: huddl_id, user_id: user_id})
-            |> Ash.create!(authorize?: false)
-
-            # Increment count
-            Ash.Changeset.change_attribute(changeset, :rsvp_count, changeset.data.rsvp_count + 1)
-
-          {:ok, _} ->
-            # Already RSVPed, no change needed
-            changeset
-
-          {:error, error} ->
-            Ash.Changeset.add_error(changeset, error)
-        end
-      end
+      change Huddlz.Communities.Huddl.Changes.CreateRsvp
     end
 
     update :cancel_rsvp do
@@ -187,37 +149,7 @@ defmodule Huddlz.Communities.Huddl do
         allow_nil? false
       end
 
-      # Custom change to handle cancellation
-      change fn changeset, _context ->
-        user_id = Ash.Changeset.get_argument(changeset, :user_id)
-        huddl_id = changeset.data.id
-
-        # Find the existing RSVP
-        existing =
-          Huddlz.Communities.HuddlAttendee
-          |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl_id, user_id: user_id})
-          |> Ash.read_one(authorize?: false)
-
-        case existing do
-          {:ok, nil} ->
-            # No RSVP to cancel, return unchanged
-            changeset
-
-          {:ok, attendee} ->
-            # Delete the attendee record
-            Ash.destroy!(attendee, authorize?: false)
-
-            # Decrement count
-            Ash.Changeset.change_attribute(
-              changeset,
-              :rsvp_count,
-              max(changeset.data.rsvp_count - 1, 0)
-            )
-
-          {:error, error} ->
-            Ash.Changeset.add_error(changeset, error)
-        end
-      end
+      change Huddlz.Communities.Huddl.Changes.DeleteRsvp
     end
   end
 
@@ -243,38 +175,6 @@ defmodule Huddlz.Communities.Huddl do
       authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
     end
 
-    policy action(:upcoming) do
-      description "Users can view upcoming huddls they have access to"
-      # Public huddls in public groups
-      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
-      # Any huddl in a group they're a member of
-      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
-    end
-
-    policy action(:past) do
-      description "Users can view past huddls they have access to"
-      # Public huddls in public groups
-      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
-      # Any huddl in a group they're a member of
-      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
-    end
-
-    policy action(:search) do
-      description "Users can search huddls they have access to"
-      # Public huddls in public groups
-      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
-      # Any huddl in a group they're a member of
-      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
-    end
-
-    policy action(:search_by_location) do
-      description "Users can search huddls by location they have access to"
-      # Public huddls in public groups
-      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
-      # Any huddl in a group they're a member of
-      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
-    end
-
     policy action(:by_group) do
       description "Users can view huddls by group if they have access"
       # Public huddls in public groups
@@ -283,8 +183,9 @@ defmodule Huddlz.Communities.Huddl do
       authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
     end
 
-    policy action(:by_status) do
-      description "Users can filter huddls by status"
+    # Advanced search policy
+    policy action(:advanced_search) do
+      description "Users can use advanced search"
       # Public huddls in public groups
       authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
       # Any huddl in a group they're a member of

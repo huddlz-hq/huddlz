@@ -1,7 +1,6 @@
 defmodule HuddlzWeb.HuddlLive do
   use HuddlzWeb, :live_view
 
-  alias Huddlz.Communities
   alias HuddlzWeb.Layouts
   require Ash.Query
 
@@ -9,17 +8,16 @@ defmodule HuddlzWeb.HuddlLive do
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
 
   def mount(_params, _session, socket) do
-    # Load all huddls initially (both past and upcoming for filtering)
-    all_huddls =
+    # Use advanced_search to get upcoming huddls by default
+    huddls =
       Huddlz.Communities.Huddl
+      |> Ash.Query.for_read(:advanced_search, %{
+        date_filter: :any_day,
+        type_filter: :any_type,
+        status_filter: :any_status
+      })
       |> Ash.read!(actor: socket.assigns[:current_user])
-      |> Ash.load!([:status, :visible_virtual_link, :group])
-
-    # Filter to show only upcoming and in-progress events by default
-    upcoming_huddls =
-      Enum.filter(all_huddls, fn huddl ->
-        DateTime.compare(huddl.ends_at, DateTime.utc_now()) == :gt
-      end)
+      |> Ash.load!([:status, :visible_virtual_link, :group], actor: socket.assigns[:current_user])
 
     {:ok,
      assign(socket,
@@ -33,12 +31,10 @@ defmodule HuddlzWeb.HuddlLive do
        distance_filter: "25",
 
        # Results
-       huddls: upcoming_huddls,
-       # Keep reference to all for filtering
-       all_huddls: all_huddls,
+       huddls: huddls,
        search_performed: false,
 
-       # Geolocation data (to be implemented)
+       # Geolocation data
        user_location: nil,
        location_error: nil
      )}
@@ -71,11 +67,15 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   def handle_event("clear_search", _params, socket) do
-    # Reset to show only upcoming and in-progress huddls
-    upcoming_huddls =
-      Enum.filter(socket.assigns.all_huddls, fn huddl ->
-        DateTime.compare(huddl.ends_at, DateTime.utc_now()) == :gt
-      end)
+    # Reset to default search showing upcoming huddls
+    huddls =
+      Huddlz.Communities.Huddl
+      |> Ash.Query.for_read(:advanced_search, %{
+        date_filter: :any_day,
+        type_filter: :any_type,
+        status_filter: :any_status
+      })
+      |> Ash.read!(actor: socket.assigns[:current_user])
       |> Ash.load!([:status, :visible_virtual_link, :group], actor: socket.assigns[:current_user])
 
     {:noreply,
@@ -85,7 +85,7 @@ defmodule HuddlzWeb.HuddlLive do
        date_filter: "any_day",
        type_filter: "any_type",
        distance_filter: "25",
-       huddls: upcoming_huddls,
+       huddls: huddls,
        search_performed: false
      )}
   end
@@ -120,200 +120,59 @@ defmodule HuddlzWeb.HuddlLive do
       date_filter: date_filter,
       type_filter: type_filter,
       distance_filter: distance,
-      current_user: current_user,
-      all_huddls: all_huddls
+      current_user: current_user
     } = socket.assigns
 
-    # Start with keyword search or all huddls
-    huddls =
-      if keyword == "" do
-        all_huddls
-      else
-        Communities.search_huddlz!(keyword, actor: current_user)
-      end
-
-    # Apply location filter if location is provided
-    huddls = apply_location_filter(huddls, location, distance, current_user)
-
-    # Apply remaining filters
-    huddls =
-      huddls
-      |> apply_date_filter(date_filter)
-      |> apply_type_filter(type_filter)
-      |> Ash.load!([:status, :visible_virtual_link, :group], actor: current_user)
-
-    # Calculate distances if location search was used
-    huddls = load_distances(huddls, location, current_user)
-
-    assign(socket, huddls: huddls)
-  end
-
-  defp apply_location_filter(huddls, "", _distance, _current_user), do: huddls
-
-  defp apply_location_filter(huddls, location, distance, current_user) do
-    case Huddlz.Geocoding.geocode(location) do
-      {:ok, %{lat: lat, lng: lng}} ->
-        filter_by_location(huddls, lat, lng, distance, current_user)
-
-      {:error, _reason} ->
-        # If geocoding fails, show no results
-        []
-    end
-  end
-
-  defp filter_by_location(huddls, lat, lng, distance, current_user) do
+    # Convert string filters to atoms
+    date_filter_atom = String.to_existing_atom(date_filter)
+    type_filter_atom = String.to_existing_atom(type_filter)
     radius = String.to_integer(distance)
 
-    # Get huddls within radius using PostGIS
-    location_huddls =
+    # Handle location geocoding
+    {lat, lng} =
+      if location == "" do
+        {nil, nil}
+      else
+        case Huddlz.Geocoding.geocode(location) do
+          {:ok, %{lat: lat, lng: lng}} -> {lat, lng}
+          {:error, _} -> {nil, nil}
+        end
+      end
+
+    # Build query using advanced_search
+    query =
       Huddlz.Communities.Huddl
-      |> Ash.Query.for_read(:search_by_location, %{
+      |> Ash.Query.for_read(:advanced_search, %{
+        query: if(keyword == "", do: nil, else: keyword),
+        date_filter: date_filter_atom,
+        type_filter: type_filter_atom,
         latitude: lat,
         longitude: lng,
         radius_miles: radius
       })
-      |> Ash.read!(actor: current_user)
 
-    # Intersect with existing results
-    location_ids = MapSet.new(location_huddls, & &1.id)
-    Enum.filter(huddls, fn h -> MapSet.member?(location_ids, h.id) end)
-  end
+    # Execute query
+    huddls = Ash.read!(query, actor: current_user)
 
-  defp load_distances(huddls, "", _current_user), do: huddls
+    # Load relationships and distance calculation if location search
+    huddls =
+      if lat && lng do
+        Ash.load!(
+          huddls,
+          [
+            :status,
+            :visible_virtual_link,
+            :group,
+            distance_miles: %{latitude: lat, longitude: lng}
+          ],
+          actor: current_user
+        )
+        |> Enum.sort_by(& &1.distance_miles)
+      else
+        Ash.load!(huddls, [:status, :visible_virtual_link, :group], actor: current_user)
+      end
 
-  defp load_distances(huddls, location, current_user) do
-    case Huddlz.Geocoding.geocode(location) do
-      {:ok, %{lat: lat, lng: lng}} ->
-        load_and_sort_by_distance(huddls, lat, lng, current_user)
-
-      _ ->
-        huddls
-    end
-  end
-
-  defp load_and_sort_by_distance(huddls, lat, lng, current_user) do
-    Ash.load!(
-      huddls,
-      [
-        distance_miles: %{latitude: lat, longitude: lng}
-      ],
-      actor: current_user
-    )
-    |> Enum.sort_by(& &1.distance_miles)
-  end
-
-  defp apply_date_filter(huddls, "any_day") do
-    # Show upcoming and in-progress events by default for "any day"
-    now = DateTime.utc_now()
-
-    Enum.filter(huddls, fn huddl ->
-      DateTime.compare(huddl.ends_at, now) == :gt
-    end)
-  end
-
-  defp apply_date_filter(huddls, "past_events") do
-    # Show only past events (events that have ended)
-    now = DateTime.utc_now()
-
-    Enum.filter(huddls, fn huddl ->
-      DateTime.compare(huddl.ends_at, now) == :lt
-    end)
-  end
-
-  defp apply_date_filter(huddls, "starting_soon") do
-    # Within next 7 days
-    now = DateTime.utc_now()
-    week_later = DateTime.add(now, 7 * 24 * 60 * 60, :second)
-
-    Enum.filter(huddls, fn huddl ->
-      DateTime.compare(huddl.starts_at, now) == :gt &&
-        DateTime.compare(huddl.starts_at, week_later) != :gt
-    end)
-  end
-
-  defp apply_date_filter(huddls, "today") do
-    today_start = DateTime.new!(Date.utc_today(), ~T[00:00:00], "Etc/UTC")
-    today_end = DateTime.new!(Date.utc_today(), ~T[23:59:59], "Etc/UTC")
-
-    Enum.filter(huddls, fn huddl ->
-      DateTime.compare(huddl.starts_at, today_start) != :lt &&
-        DateTime.compare(huddl.starts_at, today_end) != :gt
-    end)
-  end
-
-  defp apply_date_filter(huddls, "tomorrow") do
-    tomorrow = Date.add(Date.utc_today(), 1)
-    tomorrow_start = DateTime.new!(tomorrow, ~T[00:00:00], "Etc/UTC")
-    tomorrow_end = DateTime.new!(tomorrow, ~T[23:59:59], "Etc/UTC")
-
-    Enum.filter(huddls, fn huddl ->
-      DateTime.compare(huddl.starts_at, tomorrow_start) != :lt &&
-        DateTime.compare(huddl.starts_at, tomorrow_end) != :gt
-    end)
-  end
-
-  defp apply_date_filter(huddls, "this_week") do
-    now = DateTime.utc_now()
-    week_end = DateTime.add(now, 7 * 24 * 60 * 60, :second)
-
-    Enum.filter(huddls, fn huddl ->
-      DateTime.compare(huddl.starts_at, now) == :gt &&
-        DateTime.compare(huddl.starts_at, week_end) != :gt
-    end)
-  end
-
-  defp apply_date_filter(huddls, "this_weekend") do
-    today = Date.utc_today()
-    days_until_saturday = rem(6 - Date.day_of_week(today), 7)
-    saturday = Date.add(today, days_until_saturday)
-    sunday = Date.add(saturday, 1)
-
-    saturday_start = DateTime.new!(saturday, ~T[00:00:00], "Etc/UTC")
-    sunday_end = DateTime.new!(sunday, ~T[23:59:59], "Etc/UTC")
-
-    Enum.filter(huddls, fn huddl ->
-      DateTime.compare(huddl.starts_at, saturday_start) != :lt &&
-        DateTime.compare(huddl.starts_at, sunday_end) != :gt
-    end)
-  end
-
-  defp apply_date_filter(huddls, "next_week") do
-    today = Date.utc_today()
-    days_until_next_monday = rem(8 - Date.day_of_week(today), 7)
-    next_monday = Date.add(today, days_until_next_monday)
-    next_sunday = Date.add(next_monday, 6)
-
-    monday_start = DateTime.new!(next_monday, ~T[00:00:00], "Etc/UTC")
-    sunday_end = DateTime.new!(next_sunday, ~T[23:59:59], "Etc/UTC")
-
-    Enum.filter(huddls, fn huddl ->
-      DateTime.compare(huddl.starts_at, monday_start) != :lt &&
-        DateTime.compare(huddl.starts_at, sunday_end) != :gt
-    end)
-  end
-
-  defp apply_date_filter(huddls, "this_month") do
-    now = DateTime.utc_now()
-    month_later = DateTime.add(now, 30 * 24 * 60 * 60, :second)
-
-    Enum.filter(huddls, fn huddl ->
-      DateTime.compare(huddl.starts_at, now) == :gt &&
-        DateTime.compare(huddl.starts_at, month_later) != :gt
-    end)
-  end
-
-  defp apply_type_filter(huddls, "any_type"), do: huddls
-
-  defp apply_type_filter(huddls, "online") do
-    Enum.filter(huddls, fn huddl ->
-      huddl.event_type in [:virtual, :hybrid]
-    end)
-  end
-
-  defp apply_type_filter(huddls, "in_person") do
-    Enum.filter(huddls, fn huddl ->
-      huddl.event_type in [:in_person, :hybrid]
-    end)
+    assign(socket, huddls: huddls)
   end
 
   def render(assigns) do
@@ -656,8 +515,8 @@ defmodule HuddlzWeb.HuddlLive do
                             </svg>
                             <span>
                               {huddl.physical_location}
-                              <%= if Map.has_key?(huddl, :distance_miles) && 
-                                     huddl.distance_miles && 
+                              <%= if Map.has_key?(huddl, :distance_miles) &&
+                                     huddl.distance_miles &&
                                      !match?(%Ash.NotLoaded{}, huddl.distance_miles) do %>
                                 <span class="text-primary">
                                   · {Float.round(huddl.distance_miles, 1)} mi
@@ -695,8 +554,8 @@ defmodule HuddlzWeb.HuddlLive do
                             </svg>
                             <span>
                               {huddl.physical_location} + Online
-                              <%= if Map.has_key?(huddl, :distance_miles) && 
-                                     huddl.distance_miles && 
+                              <%= if Map.has_key?(huddl, :distance_miles) &&
+                                     huddl.distance_miles &&
                                      !match?(%Ash.NotLoaded{}, huddl.distance_miles) do %>
                                 <span class="text-primary">
                                   · {Float.round(huddl.distance_miles, 1)} mi

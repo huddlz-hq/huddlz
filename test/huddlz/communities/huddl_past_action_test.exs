@@ -5,8 +5,8 @@ defmodule Huddlz.Communities.HuddlPastActionTest do
 
   alias Huddlz.Communities.Huddl
 
-  describe "past action" do
-    test "returns huddlz sorted by starts_at descending" do
+  describe "past events filter in advanced_search" do
+    test "returns past huddlz sorted by starts_at descending" do
       # Create a verified user who can see huddlz
       user = generate(user(role: :verified))
 
@@ -47,10 +47,10 @@ defmodule Huddlz.Communities.HuddlPastActionTest do
           )
         )
 
-      # Query using the past action
+      # Query using advanced_search with past_events filter
       {:ok, past_huddlz} =
         Huddl
-        |> Ash.Query.for_read(:past, %{}, actor: user)
+        |> Ash.Query.for_read(:advanced_search, %{date_filter: :past_events}, actor: user)
         |> Ash.read()
 
       # Verify the order - newest first
@@ -67,7 +67,7 @@ defmodule Huddlz.Communities.HuddlPastActionTest do
       assert middle_index < old_index
     end
 
-    test "only returns events that have ended" do
+    test "past_events filter only returns events that have ended" do
       user = generate(user(role: :verified))
       group = generate(group(owner_id: user.id, is_public: true, actor: user))
 
@@ -108,10 +108,10 @@ defmodule Huddlz.Communities.HuddlPastActionTest do
           )
         )
 
-      # Query using the past action
+      # Query using advanced_search with past_events filter
       {:ok, past_huddlz} =
         Huddl
-        |> Ash.Query.for_read(:past, %{}, actor: user)
+        |> Ash.Query.for_read(:advanced_search, %{date_filter: :past_events}, actor: user)
         |> Ash.read()
 
       past_huddl_ids = Enum.map(past_huddlz, & &1.id)
