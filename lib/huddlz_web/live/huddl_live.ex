@@ -9,16 +9,28 @@ defmodule HuddlzWeb.HuddlLive do
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
 
   def mount(_params, _session, socket) do
-    # Load upcoming huddls (includes in-progress)
-    huddls =
-      Communities.search_huddlz!(nil, :upcoming, nil,
+    # Load upcoming huddls (includes in-progress) with pagination
+    page =
+      Communities.search_huddlz(nil, :upcoming, nil,
         actor: socket.assigns[:current_user],
-        load: [:status, :visible_virtual_link, :group]
+        page: [limit: 20, count: true]
       )
+
+    huddls =
+      case page do
+        {:ok, %{results: results}} ->
+          Ash.load!(results, [:status, :visible_virtual_link, :group],
+            actor: socket.assigns[:current_user]
+          )
+
+        _ ->
+          []
+      end
 
     {:ok,
      assign(socket,
        huddls: huddls,
+       page_info: extract_page_info(page),
        search_query: nil,
        event_type_filter: nil,
        date_filter: "upcoming"
@@ -34,11 +46,22 @@ defmodule HuddlzWeb.HuddlLive do
     event_type_atom = if event_type && event_type != "", do: String.to_atom(event_type), else: nil
     date_filter_atom = String.to_atom(date_filter)
 
-    huddls =
-      Communities.search_huddlz!(query, date_filter_atom, event_type_atom,
+    page =
+      Communities.search_huddlz(query, date_filter_atom, event_type_atom,
         actor: socket.assigns[:current_user],
-        load: [:status, :visible_virtual_link, :group]
+        page: [limit: 20, count: true]
       )
+
+    huddls =
+      case page do
+        {:ok, %{results: results}} ->
+          Ash.load!(results, [:status, :visible_virtual_link, :group],
+            actor: socket.assigns[:current_user]
+          )
+
+        _ ->
+          []
+      end
 
     socket =
       socket
@@ -46,16 +69,28 @@ defmodule HuddlzWeb.HuddlLive do
       |> assign(event_type_filter: event_type)
       |> assign(date_filter: date_filter)
       |> assign(huddls: huddls)
+      |> assign(page_info: extract_page_info(page))
 
     {:noreply, socket}
   end
 
   def handle_event("clear_filters", _params, socket) do
-    huddls =
-      Communities.search_huddlz!(nil, :upcoming, nil,
+    page =
+      Communities.search_huddlz(nil, :upcoming, nil,
         actor: socket.assigns[:current_user],
-        load: [:status, :visible_virtual_link, :group]
+        page: [limit: 20, count: true]
       )
+
+    huddls =
+      case page do
+        {:ok, %{results: results}} ->
+          Ash.load!(results, [:status, :visible_virtual_link, :group],
+            actor: socket.assigns[:current_user]
+          )
+
+        _ ->
+          []
+      end
 
     socket =
       socket
@@ -63,6 +98,47 @@ defmodule HuddlzWeb.HuddlLive do
       |> assign(event_type_filter: nil)
       |> assign(date_filter: "upcoming")
       |> assign(huddls: huddls)
+      |> assign(page_info: extract_page_info(page))
+
+    {:noreply, socket}
+  end
+
+  def handle_event("change_page", %{"page" => page_str}, socket) do
+    page_num = String.to_integer(page_str)
+    offset = (page_num - 1) * 20
+
+    # Convert filter values to atoms
+    event_type_atom =
+      if socket.assigns.event_type_filter && socket.assigns.event_type_filter != "",
+        do: String.to_atom(socket.assigns.event_type_filter),
+        else: nil
+
+    date_filter_atom = String.to_atom(socket.assigns.date_filter)
+
+    page =
+      Communities.search_huddlz(
+        socket.assigns.search_query,
+        date_filter_atom,
+        event_type_atom,
+        actor: socket.assigns[:current_user],
+        page: [limit: 20, offset: offset, count: true]
+      )
+
+    huddls =
+      case page do
+        {:ok, %{results: results}} ->
+          Ash.load!(results, [:status, :visible_virtual_link, :group],
+            actor: socket.assigns[:current_user]
+          )
+
+        _ ->
+          []
+      end
+
+    socket =
+      socket
+      |> assign(huddls: huddls)
+      |> assign(page_info: Map.put(extract_page_info(page), :current_page, page_num))
 
     {:noreply, socket}
   end
@@ -176,6 +252,15 @@ defmodule HuddlzWeb.HuddlLive do
                 <.huddl_card huddl={huddl} show_group={true} />
               <% end %>
             </div>
+            
+    <!-- Pagination -->
+            <%= if @page_info.total_pages > 1 do %>
+              <.pagination
+                current_page={@page_info.current_page}
+                total_pages={@page_info.total_pages}
+                event_name="change_page"
+              />
+            <% end %>
           <% end %>
         </div>
       </div>
@@ -189,5 +274,24 @@ defmodule HuddlzWeb.HuddlLive do
     |> String.replace("_", " ")
     |> String.split(" ")
     |> Enum.map_join(" ", &String.capitalize/1)
+  end
+
+  defp extract_page_info({:ok, %Ash.Page.Offset{count: count, limit: limit, offset: offset}}) do
+    total_pages = if count && count > 0, do: ceil(count / limit), else: 1
+    current_page = if offset && limit > 0, do: div(offset, limit) + 1, else: 1
+
+    %{
+      total_pages: total_pages,
+      current_page: current_page,
+      total_count: count || 0
+    }
+  end
+
+  defp extract_page_info(_) do
+    %{
+      total_pages: 1,
+      current_page: 1,
+      total_count: 0
+    }
   end
 end

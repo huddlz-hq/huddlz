@@ -427,10 +427,13 @@ defmodule HuddlzWeb.GroupLive.Show do
   defp get_upcoming_group_huddlz(group, user, opts) do
     limit = Keyword.get(opts, :limit, 10)
 
-    Huddlz.Communities.Huddl
-    |> Ash.Query.for_read(:by_group, %{group_id: group.id}, actor: user)
-    |> Ash.Query.limit(limit)
-    |> Ash.read!(actor: user)
+    page =
+      Huddlz.Communities.Huddl
+      |> Ash.Query.for_read(:by_group, %{group_id: group.id}, actor: user)
+      |> Ash.Query.page(limit: limit)
+      |> Ash.read!(actor: user)
+
+    page.results
     |> Ash.load!([:status, :visible_virtual_link, :group], actor: user)
   end
 
@@ -439,23 +442,25 @@ defmodule HuddlzWeb.GroupLive.Show do
     per_page = Keyword.get(opts, :per_page, 10)
     offset = (page - 1) * per_page
 
-    # Build the base query for past events in this group
-    base_query =
+    # Use Ash pagination with offset
+    page_result =
       Huddlz.Communities.Huddl
       |> Ash.Query.for_read(:past_by_group, %{group_id: group.id}, actor: user)
-
-    # Get total count for pagination
-    total_count = Ash.count!(base_query, actor: user)
-    total_pages = ceil(total_count / per_page)
-
-    # Get paginated results
-    past_huddlz =
-      base_query
-      |> Ash.Query.offset(offset)
-      |> Ash.Query.limit(per_page)
+      |> Ash.Query.page(limit: per_page, offset: offset, count: true)
       |> Ash.read!(actor: user)
+
+    # Load additional fields on the results
+    loaded_results =
+      page_result.results
       |> Ash.load!([:status, :visible_virtual_link, :group], actor: user)
 
-    {past_huddlz, total_pages}
+    total_pages =
+      if page_result.count && page_result.count > 0 do
+        ceil(page_result.count / per_page)
+      else
+        1
+      end
+
+    {loaded_results, total_pages}
   end
 end

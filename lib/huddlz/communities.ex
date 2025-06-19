@@ -12,7 +12,8 @@ defmodule Huddlz.Communities do
 
       define :search_huddlz,
         action: :search,
-        args: [:query, {:optional, :date_filter}, {:optional, :event_type}]
+        args: [:query, {:optional, :date_filter}, {:optional, :event_type}],
+        get?: false
 
       define :get_by_status, action: :by_status, args: [:status]
       define :get_group_huddlz, action: :by_group, args: [:group_id]
