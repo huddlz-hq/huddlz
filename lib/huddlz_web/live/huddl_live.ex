@@ -13,7 +13,7 @@ defmodule HuddlzWeb.HuddlLive do
     page =
       Communities.search_huddlz(nil, :upcoming, nil,
         actor: socket.assigns[:current_user],
-        page: [limit: 20, count: true]
+        page: [limit: 20, offset: 0, count: true]
       )
 
     huddls =
@@ -49,7 +49,7 @@ defmodule HuddlzWeb.HuddlLive do
     page =
       Communities.search_huddlz(query, date_filter_atom, event_type_atom,
         actor: socket.assigns[:current_user],
-        page: [limit: 20, count: true]
+        page: [limit: 20, offset: 0, count: true]
       )
 
     huddls =
@@ -78,7 +78,7 @@ defmodule HuddlzWeb.HuddlLive do
     page =
       Communities.search_huddlz(nil, :upcoming, nil,
         actor: socket.assigns[:current_user],
-        page: [limit: 20, count: true]
+        page: [limit: 20, offset: 0, count: true]
       )
 
     huddls =
@@ -283,6 +283,16 @@ defmodule HuddlzWeb.HuddlLive do
     %{
       total_pages: total_pages,
       current_page: current_page,
+      total_count: count || 0
+    }
+  end
+
+  defp extract_page_info({:ok, %Ash.Page.Keyset{count: count, limit: limit}}) do
+    total_pages = if count && count > 0, do: ceil(count / limit), else: 1
+
+    %{
+      total_pages: total_pages,
+      current_page: 1,
       total_count: count || 0
     }
   end
