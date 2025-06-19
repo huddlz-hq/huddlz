@@ -200,28 +200,35 @@ if Enum.empty?(existing_groups) do
   huddlz = []
 
   # Phoenix Elixir Meetup huddlz (many events)
-  phoenix_huddlz = 
+  phoenix_huddlz =
     Enum.map(1..15, fn i ->
       days_offset = i * 3
       event_type = Enum.random([:in_person, :virtual, :hybrid])
-      
+
       # Set location fields based on event type
-      {physical_location, virtual_link} = 
+      {physical_location, virtual_link} =
         case event_type do
-          :in_person -> {"TechHub Phoenix, 123 Main St", nil}
-          :virtual -> {nil, "https://zoom.us/j/#{:rand.uniform(999999999)}"}
-          :hybrid -> {"TechHub Phoenix, 123 Main St", "https://zoom.us/j/#{:rand.uniform(999999999)}"}
+          :in_person ->
+            {"TechHub Phoenix, 123 Main St", nil}
+
+          :virtual ->
+            {nil, "https://zoom.us/j/#{:rand.uniform(999_999_999)}"}
+
+          :hybrid ->
+            {"TechHub Phoenix, 123 Main St", "https://zoom.us/j/#{:rand.uniform(999_999_999)}"}
         end
-      
-      {:ok, huddl} = 
+
+      {:ok, huddl} =
         Huddl
         |> Ash.Changeset.for_create(
           :create,
           %{
             title: "Phoenix Elixir Meetup ##{i}",
-            description: "Join us for our regular meetup discussing Elixir, Phoenix, and LiveView topics.",
+            description:
+              "Join us for our regular meetup discussing Elixir, Phoenix, and LiveView topics.",
             event_type: event_type,
-            starts_at: DateTime.add(DateTime.utc_now(), days_offset, :day) |> DateTime.truncate(:second),
+            starts_at:
+              DateTime.add(DateTime.utc_now(), days_offset, :day) |> DateTime.truncate(:second),
             ends_at:
               DateTime.add(DateTime.utc_now(), days_offset * 24 * 3600 + 2 * 3600, :second)
               |> DateTime.truncate(:second),
@@ -233,19 +240,32 @@ if Enum.empty?(existing_groups) do
           actor: alice
         )
         |> Ash.create()
+
       huddl
     end)
 
   # Book Club past events (to test past events pagination)
-  books = ["1984", "Dune", "The Hobbit", "Clean Code", "Design Patterns", "The Pragmatic Programmer", 
-           "Elixir in Action", "Programming Phoenix", "Domain Driven Design", "The Phoenix Project",
-           "Sapiens", "Atomic Habits"]
-  
-  book_past_huddlz = 
+  books = [
+    "1984",
+    "Dune",
+    "The Hobbit",
+    "Clean Code",
+    "Design Patterns",
+    "The Pragmatic Programmer",
+    "Elixir in Action",
+    "Programming Phoenix",
+    "Domain Driven Design",
+    "The Phoenix Project",
+    "Sapiens",
+    "Atomic Habits"
+  ]
+
+  book_past_huddlz =
     Enum.map(1..12, fn i ->
       days_ago = i * 7
       book_title = Enum.at(books, i - 1) || "Mystery Book #{i}"
-      {:ok, huddl} = 
+
+      {:ok, huddl} =
         Huddl
         |> Ash.Changeset.for_create(
           :create,
@@ -253,7 +273,8 @@ if Enum.empty?(existing_groups) do
             title: "Book Club: #{book_title}",
             description: "Our weekly book discussion. Bring your thoughts and favorite quotes!",
             event_type: :in_person,
-            starts_at: DateTime.add(DateTime.utc_now(), -days_ago, :day) |> DateTime.truncate(:second),
+            starts_at:
+              DateTime.add(DateTime.utc_now(), -days_ago, :day) |> DateTime.truncate(:second),
             ends_at:
               DateTime.add(DateTime.utc_now(), -days_ago * 24 * 3600 + 2 * 3600, :second)
               |> DateTime.truncate(:second),
@@ -264,51 +285,66 @@ if Enum.empty?(existing_groups) do
           actor: bob
         )
         |> Ash.create()
+
       huddl
     end)
 
   # Hiking Adventures mixed events
-  trails = ["Camelback Mountain", "Piestewa Peak", "South Mountain", "McDowell Mountains", 
-            "Superstition Mountains", "Papago Park", "Pinnacle Peak", "Tom's Thumb Trail"]
-  
-  hiking_huddlz = 
+  trails = [
+    "Camelback Mountain",
+    "Piestewa Peak",
+    "South Mountain",
+    "McDowell Mountains",
+    "Superstition Mountains",
+    "Papago Park",
+    "Pinnacle Peak",
+    "Tom's Thumb Trail"
+  ]
+
+  hiking_huddlz =
     Enum.map(1..8, fn i ->
       # Mix of past and future events
       days_offset = if i <= 4, do: i * 4, else: -(i - 4) * 5
       trail_name = Enum.at(trails, i - 1) || "Mystery Trail #{i}"
-      difficulty = Enum.at(["beginner-friendly", "moderate", "challenging", "moderate"], rem(i - 1, 4))
-      
-      {:ok, huddl} = 
+
+      difficulty =
+        Enum.at(["beginner-friendly", "moderate", "challenging", "moderate"], rem(i - 1, 4))
+
+      {:ok, huddl} =
         Huddl
         |> Ash.Changeset.for_create(
           :create,
           %{
             title: "Hike: #{trail_name}",
-            description: "Join us for a #{difficulty} hike. Don't forget water and sun protection!",
+            description:
+              "Join us for a #{difficulty} hike. Don't forget water and sun protection!",
             event_type: :in_person,
-            starts_at: DateTime.add(DateTime.utc_now(), days_offset, :day) |> DateTime.truncate(:second),
+            starts_at:
+              DateTime.add(DateTime.utc_now(), days_offset, :day) |> DateTime.truncate(:second),
             ends_at:
               DateTime.add(DateTime.utc_now(), days_offset * 24 * 3600 + 4 * 3600, :second)
               |> DateTime.truncate(:second),
-            physical_location: "#{Enum.at(["North", "South", "East", "West"], rem(i - 1, 4))} Trailhead Parking",
+            physical_location:
+              "#{Enum.at(["North", "South", "East", "West"], rem(i - 1, 4))} Trailhead Parking",
             group_id: hiking_group.id,
             creator_id: carol.id
           },
           actor: carol
         )
         |> Ash.create()
+
       huddl
     end)
 
   # Add some in-progress events (starting within the last 2 hours)
   live_topics = ["Elixir Workshop", "Phoenix LiveView Demo", "OTP Basics"]
-  
-  in_progress_huddlz = 
+
+  in_progress_huddlz =
     Enum.map(1..3, fn i ->
       minutes_ago = i * 30
       topic = Enum.at(live_topics, i - 1)
-      
-      {:ok, huddl} = 
+
+      {:ok, huddl} =
         Huddl
         |> Ash.Changeset.for_create(
           :create,
@@ -316,7 +352,9 @@ if Enum.empty?(existing_groups) do
             title: "LIVE NOW: #{topic}",
             description: "This event is currently in progress! Join us now.",
             event_type: :virtual,
-            starts_at: DateTime.add(DateTime.utc_now(), -minutes_ago, :minute) |> DateTime.truncate(:second),
+            starts_at:
+              DateTime.add(DateTime.utc_now(), -minutes_ago, :minute)
+              |> DateTime.truncate(:second),
             ends_at:
               DateTime.add(DateTime.utc_now(), 120 - minutes_ago, :minute)
               |> DateTime.truncate(:second),
@@ -327,17 +365,24 @@ if Enum.empty?(existing_groups) do
           actor: alice
         )
         |> Ash.create()
+
       huddl
     end)
 
   # Some private group events (won't show in public search)
-  tech_topics = ["AI/ML", "Blockchain", "Quantum Computing", "Cybersecurity", "Cloud Architecture"]
-  
-  private_huddlz = 
+  tech_topics = [
+    "AI/ML",
+    "Blockchain",
+    "Quantum Computing",
+    "Cybersecurity",
+    "Cloud Architecture"
+  ]
+
+  private_huddlz =
     Enum.map(1..5, fn i ->
       topic = Enum.at(tech_topics, i - 1)
-      
-      {:ok, huddl} = 
+
+      {:ok, huddl} =
         Huddl
         |> Ash.Changeset.for_create(
           :create,
@@ -345,7 +390,8 @@ if Enum.empty?(existing_groups) do
             title: "Private Tech Talk: #{topic}",
             description: "Exclusive tech talk for members only.",
             event_type: :hybrid,
-            starts_at: DateTime.add(DateTime.utc_now(), i * 5, :day) |> DateTime.truncate(:second),
+            starts_at:
+              DateTime.add(DateTime.utc_now(), i * 5, :day) |> DateTime.truncate(:second),
             ends_at:
               DateTime.add(DateTime.utc_now(), i * 5 * 24 * 3600 + 3600, :second)
               |> DateTime.truncate(:second),
@@ -358,10 +404,12 @@ if Enum.empty?(existing_groups) do
           actor: admin
         )
         |> Ash.create()
+
       huddl
     end)
 
-  huddlz = phoenix_huddlz ++ book_past_huddlz ++ hiking_huddlz ++ in_progress_huddlz ++ private_huddlz
+  huddlz =
+    phoenix_huddlz ++ book_past_huddlz ++ hiking_huddlz ++ in_progress_huddlz ++ private_huddlz
 
   IO.puts("Created #{length(huddlz)} huddlz")
   IO.puts("\nSeed data created successfully!")
