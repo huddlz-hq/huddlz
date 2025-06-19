@@ -6,8 +6,8 @@ Feature: View In-Progress Huddlz
 
   Background:
     Given the following users exist:
-      | email              | display_name | role    |
-      | user@example.com   | Test User    | regular |
+      | email            | display_name | role    |
+      | user@example.com | Test User    | regular |
     And there are huddlz in different states:
       | title                    | state        |
       | Future Workshop          | future       |
@@ -20,9 +20,6 @@ Feature: View In-Progress Huddlz
     And I should see "Future Workshop" in the upcoming section
     And I should not see "Just Ended" in the upcoming section
 
-  Scenario: In-progress huddlz do not appear in past events
+  Scenario: Past events are not shown on the home page
     When I visit the home page
-    And I select "Past Events" from the date filter
-    Then I should see "Just Ended"
-    And I should not see "Currently Happening"
-    And I should not see "Future Workshop"
+    Then I should not see "Just Ended" in the upcoming section

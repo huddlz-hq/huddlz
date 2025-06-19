@@ -9,14 +9,16 @@ defmodule HuddlzWeb.HuddlLive do
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
 
   def mount(_params, _session, socket) do
-    # Always load upcoming huddls to avoid showing past events
-    upcoming_huddls =
-      Communities.get_upcoming!(actor: socket.assigns[:current_user])
-      |> Ash.load!([:status, :visible_virtual_link, :group])
+    # Load upcoming huddls (includes in-progress)
+    huddls =
+      Communities.search_huddlz!(nil, :upcoming, nil,
+        actor: socket.assigns[:current_user],
+        load: [:status, :visible_virtual_link, :group]
+      )
 
     {:ok,
      assign(socket,
-       huddls: upcoming_huddls,
+       huddls: huddls,
        search_query: nil,
        event_type_filter: nil,
        date_filter: "upcoming"
@@ -28,115 +30,41 @@ defmodule HuddlzWeb.HuddlLive do
     event_type = params["event_type"]
     date_filter = params["date_filter"] || "upcoming"
 
+    # Convert string values to atoms for the search action
+    event_type_atom = if event_type && event_type != "", do: String.to_atom(event_type), else: nil
+    date_filter_atom = String.to_atom(date_filter)
+
+    huddls =
+      Communities.search_huddlz!(query, date_filter_atom, event_type_atom,
+        actor: socket.assigns[:current_user],
+        load: [:status, :visible_virtual_link, :group]
+      )
+
     socket =
       socket
       |> assign(search_query: query)
       |> assign(event_type_filter: event_type)
       |> assign(date_filter: date_filter)
-      |> apply_filters()
+      |> assign(huddls: huddls)
 
     {:noreply, socket}
   end
 
   def handle_event("clear_filters", _params, socket) do
+    huddls =
+      Communities.search_huddlz!(nil, :upcoming, nil,
+        actor: socket.assigns[:current_user],
+        load: [:status, :visible_virtual_link, :group]
+      )
+
     socket =
       socket
       |> assign(search_query: nil)
       |> assign(event_type_filter: nil)
       |> assign(date_filter: "upcoming")
-      |> apply_filters()
+      |> assign(huddls: huddls)
 
     {:noreply, socket}
-  end
-
-  defp apply_filters(socket) do
-    huddls = get_filtered_huddls(socket)
-    assign(socket, huddls: huddls)
-  end
-
-  defp get_filtered_huddls(socket) do
-    %{
-      search_query: query,
-      event_type_filter: event_type,
-      date_filter: date_filter,
-      current_user: current_user
-    } = socket.assigns
-
-    # Use the appropriate read action based on date filter
-    base_huddls =
-      case date_filter do
-        "past" ->
-          Huddlz.Communities.Huddl
-          |> Ash.Query.for_read(:past, %{}, actor: current_user)
-          |> Ash.read!(actor: current_user)
-
-        _ ->
-          current_user
-          |> get_base_huddls(query)
-          |> apply_date_filter(date_filter)
-      end
-
-    base_huddls
-    |> apply_event_type_filter(event_type)
-    |> apply_default_sorting()
-    |> Ash.load!([:status, :visible_virtual_link, :group], actor: current_user)
-  end
-
-  defp get_base_huddls(current_user, query) when is_binary(query) and query != "" do
-    Communities.search_huddlz!(query, actor: current_user)
-  end
-
-  defp get_base_huddls(current_user, _query) do
-    Huddlz.Communities.Huddl
-    |> Ash.read!(actor: current_user)
-  end
-
-  defp apply_date_filter(huddls, "upcoming") do
-    Enum.filter(huddls, fn huddl ->
-      DateTime.compare(huddl.starts_at, DateTime.utc_now()) == :gt
-    end)
-  end
-
-  defp apply_date_filter(huddls, "this_week") do
-    now = DateTime.utc_now()
-    week_end = DateTime.add(now, 7 * 24 * 60 * 60, :second)
-
-    Enum.filter(huddls, fn huddl ->
-      DateTime.compare(huddl.starts_at, now) == :gt &&
-        DateTime.compare(huddl.starts_at, week_end) != :gt
-    end)
-  end
-
-  defp apply_date_filter(huddls, "this_month") do
-    now = DateTime.utc_now()
-    month_end = DateTime.add(now, 30 * 24 * 60 * 60, :second)
-
-    Enum.filter(huddls, fn huddl ->
-      DateTime.compare(huddl.starts_at, now) == :gt &&
-        DateTime.compare(huddl.starts_at, month_end) != :gt
-    end)
-  end
-
-  defp apply_date_filter(huddls, "past") do
-    Enum.filter(huddls, fn huddl ->
-      DateTime.compare(huddl.starts_at, DateTime.utc_now()) == :lt
-    end)
-  end
-
-  defp apply_date_filter(huddls, _), do: huddls
-
-  defp apply_event_type_filter(huddls, event_type)
-       when is_binary(event_type) and event_type != "" do
-    Enum.filter(huddls, fn huddl ->
-      to_string(huddl.event_type) == event_type
-    end)
-  end
-
-  defp apply_event_type_filter(huddls, _), do: huddls
-
-  defp apply_default_sorting(huddls) do
-    # Always sort by date ascending (earliest first)
-    Enum.sort_by(huddls, & &1.starts_at, {:asc, DateTime})
   end
 
   def render(assigns) do
@@ -200,9 +128,6 @@ defmodule HuddlzWeb.HuddlLive do
                   </option>
                   <option value="this_month" selected={@date_filter == "this_month"}>
                     This Month
-                  </option>
-                  <option value="past" selected={@date_filter == "past"}>
-                    Past Events
                   </option>
                 </select>
               </div>

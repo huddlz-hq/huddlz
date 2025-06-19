@@ -4,6 +4,11 @@ defmodule ViewInProgressHuddlzSteps do
   import Huddlz.Generator
   import CucumberDatabaseHelper
 
+  step "I visit the home page", %{conn: conn} do
+    conn = conn |> visit("/")
+    {:ok, %{conn: conn}}
+  end
+
   step "there are huddlz in different states:", %{datatable: datatable} do
     ensure_sandbox()
 
