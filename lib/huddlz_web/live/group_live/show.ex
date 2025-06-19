@@ -19,7 +19,8 @@ defmodule HuddlzWeb.GroupLive.Show do
          :ok <- check_group_access(group, socket.assigns.current_user) do
       members = get_members(group, socket.assigns.current_user)
 
-      huddlz = get_group_huddlz(group, socket.assigns.current_user)
+      # Load upcoming events (limited to 10)
+      upcoming_huddlz = get_upcoming_group_huddlz(group, socket.assigns.current_user, limit: 10)
 
       {:noreply,
        socket
@@ -30,7 +31,11 @@ defmodule HuddlzWeb.GroupLive.Show do
        |> assign(:is_member, member?(group, socket.assigns.current_user))
        |> assign(:is_owner, owner?(group, socket.assigns.current_user))
        |> assign(:is_organizer, organizer?(group, socket.assigns.current_user))
-       |> assign(:huddlz, huddlz)}
+       |> assign(:active_tab, "upcoming")
+       |> assign(:upcoming_huddlz, upcoming_huddlz)
+       |> assign(:past_huddlz, [])
+       |> assign(:past_page, 1)
+       |> assign(:past_total_pages, 0)}
     else
       {:error, :not_found} ->
         {:noreply,
@@ -41,7 +46,7 @@ defmodule HuddlzWeb.GroupLive.Show do
       {:error, :not_authorized} ->
         {:noreply,
          socket
-         |> put_flash(:error, "You don't have access to this private group")
+         |> put_flash(:error, "Group not found")
          |> redirect(to: ~p"/groups")}
     end
   end
@@ -144,16 +149,59 @@ defmodule HuddlzWeb.GroupLive.Show do
           </div>
 
           <div class="mt-8">
-            <h3>Upcoming Huddlz</h3>
-            <%= if Enum.empty?(@huddlz) do %>
-              <p class="text-gray-600 mt-4">No upcoming huddlz scheduled.</p>
-            <% else %>
-              <div class="mt-4 space-y-4">
-                <%= for huddl <- @huddlz do %>
-                  <.huddl_card huddl={huddl} />
+            <h3>Events</h3>
+            
+    <!-- Tabs -->
+            <div class="tabs tabs-boxed mt-4">
+              <button
+                class={["tab", if(@active_tab == "upcoming", do: "tab-active", else: "")]}
+                phx-click="switch_tab"
+                phx-value-tab="upcoming"
+              >
+                Upcoming Events
+              </button>
+              <button
+                class={["tab", if(@active_tab == "past", do: "tab-active", else: "")]}
+                phx-click="switch_tab"
+                phx-value-tab="past"
+              >
+                Past Events
+              </button>
+            </div>
+            
+    <!-- Tab Content -->
+            <div class="mt-6">
+              <%= if @active_tab == "upcoming" do %>
+                <%= if Enum.empty?(@upcoming_huddlz) do %>
+                  <p class="text-gray-600 mt-4">No upcoming huddlz scheduled.</p>
+                <% else %>
+                  <div class="space-y-4">
+                    <%= for huddl <- @upcoming_huddlz do %>
+                      <.huddl_card huddl={huddl} />
+                    <% end %>
+                  </div>
                 <% end %>
-              </div>
-            <% end %>
+              <% else %>
+                <%= if Enum.empty?(@past_huddlz) do %>
+                  <p class="text-gray-600 mt-4">No past huddlz found.</p>
+                <% else %>
+                  <div class="space-y-4">
+                    <%= for huddl <- @past_huddlz do %>
+                      <.huddl_card huddl={huddl} />
+                    <% end %>
+                  </div>
+                  
+    <!-- Pagination -->
+                  <%= if @past_total_pages > 1 do %>
+                    <.pagination
+                      current_page={@past_page}
+                      total_pages={@past_total_pages}
+                      event_name="change_past_page"
+                    />
+                  <% end %>
+                <% end %>
+              <% end %>
+            </div>
           </div>
 
           <div class="mt-8">
@@ -185,6 +233,56 @@ defmodule HuddlzWeb.GroupLive.Show do
   end
 
   @impl true
+  def handle_event("switch_tab", %{"tab" => tab}, socket) do
+    socket =
+      case tab do
+        "upcoming" ->
+          socket
+          |> assign(:active_tab, "upcoming")
+
+        "past" ->
+          # Load first page of past events when switching to past tab
+          {past_huddlz, total_pages} =
+            get_past_group_huddlz_paginated(
+              socket.assigns.group,
+              socket.assigns.current_user,
+              page: 1,
+              per_page: 10
+            )
+
+          socket
+          |> assign(:active_tab, "past")
+          |> assign(:past_huddlz, past_huddlz)
+          |> assign(:past_page, 1)
+          |> assign(:past_total_pages, total_pages)
+
+        _ ->
+          socket
+      end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("change_past_page", %{"page" => page_str}, socket) do
+    page = String.to_integer(page_str)
+
+    {past_huddlz, total_pages} =
+      get_past_group_huddlz_paginated(
+        socket.assigns.group,
+        socket.assigns.current_user,
+        page: page,
+        per_page: 10
+      )
+
+    socket =
+      socket
+      |> assign(:past_huddlz, past_huddlz)
+      |> assign(:past_page, page)
+      |> assign(:past_total_pages, total_pages)
+
+    {:noreply, socket}
+  end
+
   def handle_event("join_group", _, socket) do
     case join_group(socket.assigns.group, socket.assigns.current_user) do
       {:ok, _} ->
@@ -326,10 +424,38 @@ defmodule HuddlzWeb.GroupLive.Show do
     |> Ash.destroy(action: :leave_group, actor: user)
   end
 
-  defp get_group_huddlz(group, user) do
-    Huddlz.Communities.get_group_huddlz!(group.id,
-      actor: user,
-      load: [:status, :visible_virtual_link, :group]
-    )
+  defp get_upcoming_group_huddlz(group, user, opts) do
+    limit = Keyword.get(opts, :limit, 10)
+
+    Huddlz.Communities.Huddl
+    |> Ash.Query.for_read(:by_group, %{group_id: group.id}, actor: user)
+    |> Ash.Query.limit(limit)
+    |> Ash.read!(actor: user)
+    |> Ash.load!([:status, :visible_virtual_link, :group], actor: user)
+  end
+
+  defp get_past_group_huddlz_paginated(group, user, opts) do
+    page = Keyword.get(opts, :page, 1)
+    per_page = Keyword.get(opts, :per_page, 10)
+    offset = (page - 1) * per_page
+
+    # Build the base query for past events in this group
+    base_query =
+      Huddlz.Communities.Huddl
+      |> Ash.Query.for_read(:past_by_group, %{group_id: group.id}, actor: user)
+
+    # Get total count for pagination
+    total_count = Ash.count!(base_query, actor: user)
+    total_pages = ceil(total_count / per_page)
+
+    # Get paginated results
+    past_huddlz =
+      base_query
+      |> Ash.Query.offset(offset)
+      |> Ash.Query.limit(per_page)
+      |> Ash.read!(actor: user)
+      |> Ash.load!([:status, :visible_virtual_link, :group], actor: user)
+
+    {past_huddlz, total_pages}
   end
 end

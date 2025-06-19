@@ -466,6 +466,90 @@ defmodule HuddlzWeb.CoreComponents do
   end
 
   @doc """
+  Renders pagination controls.
+
+  ## Examples
+
+      <.pagination current_page={@page} total_pages={@total_pages} event_name="change_page" />
+  """
+  attr :current_page, :integer, required: true
+  attr :total_pages, :integer, required: true
+  attr :event_name, :string, required: true
+  attr :class, :string, default: nil
+
+  def pagination(assigns) do
+    ~H"""
+    <div class={["flex justify-center mt-6", @class]}>
+      <div class="join">
+        <!-- Previous button -->
+        <button
+          :if={@current_page > 1}
+          class="join-item btn btn-sm"
+          phx-click={@event_name}
+          phx-value-page={@current_page - 1}
+        >
+          <.icon name="hero-chevron-left" class="h-4 w-4" /> Previous
+        </button>
+        
+    <!-- Page numbers -->
+        <%= for page <- pagination_range(@current_page, @total_pages) do %>
+          <%= if page == :ellipsis do %>
+            <span class="join-item btn btn-sm btn-disabled">...</span>
+          <% else %>
+            <button
+              class={[
+                "join-item btn btn-sm",
+                if(page == @current_page, do: "btn-active", else: "")
+              ]}
+              phx-click={@event_name}
+              phx-value-page={page}
+            >
+              {page}
+            </button>
+          <% end %>
+        <% end %>
+        
+    <!-- Next button -->
+        <button
+          :if={@current_page < @total_pages}
+          class="join-item btn btn-sm"
+          phx-click={@event_name}
+          phx-value-page={@current_page + 1}
+        >
+          Next <.icon name="hero-chevron-right" class="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+    """
+  end
+
+  # Helper function to generate pagination range
+  defp pagination_range(_current_page, total_pages) when total_pages <= 7 do
+    1..total_pages |> Enum.to_list()
+  end
+
+  defp pagination_range(current_page, total_pages) do
+    cond do
+      current_page <= 4 ->
+        [1, 2, 3, 4, 5, :ellipsis, total_pages]
+
+      current_page >= total_pages - 3 ->
+        [
+          1,
+          :ellipsis,
+          total_pages - 4,
+          total_pages - 3,
+          total_pages - 2,
+          total_pages - 1,
+          total_pages
+        ]
+
+      true ->
+        [1, :ellipsis, current_page - 1, current_page, current_page + 1, :ellipsis, total_pages]
+    end
+  end
+
+  @doc """
   Renders a huddl card.
 
   ## Examples

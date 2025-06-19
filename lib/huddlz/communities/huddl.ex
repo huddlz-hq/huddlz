@@ -78,6 +78,7 @@ defmodule Huddlz.Communities.Huddl do
     read :upcoming do
       filter expr(ends_at > now())
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
+      prepare build(sort: [starts_at: :asc])
     end
 
     read :past do
@@ -91,12 +92,20 @@ defmodule Huddlz.Communities.Huddl do
         allow_nil? true
       end
 
-      filter expr(
-               is_nil(^arg(:query)) or contains(title, ^arg(:query)) or
-                 contains(description, ^arg(:query))
-             )
+      argument :date_filter, :atom do
+        allow_nil? false
+        default :upcoming
+        constraints one_of: [:upcoming, :this_week, :this_month, :past, :all]
+      end
+
+      argument :event_type, :atom do
+        allow_nil? true
+        constraints one_of: [:in_person, :virtual, :hybrid]
+      end
 
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
+      prepare Huddlz.Communities.Huddl.Preparations.ApplySearchFilters
+      prepare build(sort: [starts_at: :asc])
     end
 
     read :by_group do
@@ -107,6 +116,16 @@ defmodule Huddlz.Communities.Huddl do
       filter expr(group_id == ^arg(:group_id) and starts_at > ^DateTime.utc_now())
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
       prepare build(sort: [starts_at: :asc])
+    end
+
+    read :past_by_group do
+      argument :group_id, :uuid do
+        allow_nil? false
+      end
+
+      filter expr(group_id == ^arg(:group_id) and ends_at < ^DateTime.utc_now())
+      prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
+      prepare build(sort: [starts_at: :desc])
     end
 
     update :rsvp do
@@ -240,6 +259,14 @@ defmodule Huddlz.Communities.Huddl do
 
     policy action(:by_group) do
       description "Users can view huddls by group if they have access"
+      # Public huddls in public groups
+      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
+      # Any huddl in a group they're a member of
+      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
+    end
+
+    policy action(:past_by_group) do
+      description "Users can view past huddls by group if they have access"
       # Public huddls in public groups
       authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
       # Any huddl in a group they're a member of

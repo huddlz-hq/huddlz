@@ -9,9 +9,14 @@ defmodule Huddlz.Communities do
   resources do
     resource Huddlz.Communities.Huddl do
       define :get_upcoming, action: :upcoming
-      define :search_huddlz, action: :search, args: [:query]
+
+      define :search_huddlz,
+        action: :search,
+        args: [:query, {:optional, :date_filter}, {:optional, :event_type}]
+
       define :get_by_status, action: :by_status, args: [:status]
       define :get_group_huddlz, action: :by_group, args: [:group_id]
+      define :get_past_group_huddlz, action: :past_by_group, args: [:group_id]
     end
 
     resource Huddlz.Communities.Group do
