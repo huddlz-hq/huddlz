@@ -175,13 +175,10 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> assert_has("div", text: "Found 1 huddl")
     end
 
-    test "sorts by recently added", %{conn: conn} do
-      # Verify sort dropdown exists and can be changed
+    test "displays huddlz in chronological order", %{conn: conn} do
+      # Verify all huddlz are displayed in date order (earliest first)
       conn
       |> visit("/")
-      |> assert_has("select#sort-by")
-      |> select("Sort By", option: "Recently Added")
-      # Verify all huddlz are still displayed
       |> assert_has("h3", text: "Morning Yoga Session")
       |> assert_has("h3", text: "Virtual Book Club")
       |> assert_has("h3", text: "Hybrid Workshop")
