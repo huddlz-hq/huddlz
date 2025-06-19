@@ -21,32 +21,22 @@ if Enum.empty?(existing_groups) do
 
   # Helper function to create a user with password and update role
   create_user = fn email, display_name, role ->
+    # Use the create action which accepts all fields we need
+    # First hash the password
+    hashed_password = Bcrypt.hash_pwd_salt("Password123!")
+
     {:ok, user} =
       User
-      |> Ash.Changeset.for_create(:register_with_password, %{
+      |> Ash.Changeset.for_create(:create, %{
         email: email,
-        password: "Password123!",
-        password_confirmation: "Password123!",
-        display_name: display_name
+        display_name: display_name,
+        role: role,
+        confirmed_at: DateTime.utc_now(),
+        hashed_password: hashed_password
       })
       |> Ash.create(authorize?: false)
 
-    if role != :regular do
-      {:ok, user} =
-        user
-        |> Ash.Changeset.for_update(:update, %{role: role, confirmed_at: DateTime.utc_now()})
-        |> Ash.update(authorize?: false)
-
-      user
-    else
-      # Confirm regular users too
-      {:ok, user} =
-        user
-        |> Ash.Changeset.for_update(:update, %{confirmed_at: DateTime.utc_now()})
-        |> Ash.update(authorize?: false)
-
-      user
-    end
+    user
   end
 
   # Create admin user
