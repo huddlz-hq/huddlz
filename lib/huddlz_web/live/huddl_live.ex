@@ -19,8 +19,7 @@ defmodule HuddlzWeb.HuddlLive do
        huddls: upcoming_huddls,
        search_query: nil,
        event_type_filter: nil,
-       date_filter: "upcoming",
-       sort_by: "date_asc"
+       date_filter: "upcoming"
      )}
   end
 
@@ -28,14 +27,12 @@ defmodule HuddlzWeb.HuddlLive do
     query = params["query"]
     event_type = params["event_type"]
     date_filter = params["date_filter"] || "upcoming"
-    sort_by = params["sort_by"] || "date_asc"
 
     socket =
       socket
       |> assign(search_query: query)
       |> assign(event_type_filter: event_type)
       |> assign(date_filter: date_filter)
-      |> assign(sort_by: sort_by)
       |> apply_filters()
 
     {:noreply, socket}
@@ -47,7 +44,6 @@ defmodule HuddlzWeb.HuddlLive do
       |> assign(search_query: nil)
       |> assign(event_type_filter: nil)
       |> assign(date_filter: "upcoming")
-      |> assign(sort_by: "date_asc")
       |> apply_filters()
 
     {:noreply, socket}
@@ -63,7 +59,6 @@ defmodule HuddlzWeb.HuddlLive do
       search_query: query,
       event_type_filter: event_type,
       date_filter: date_filter,
-      sort_by: sort_by,
       current_user: current_user
     } = socket.assigns
 
@@ -83,7 +78,7 @@ defmodule HuddlzWeb.HuddlLive do
 
     base_huddls
     |> apply_event_type_filter(event_type)
-    |> apply_sorting(sort_by)
+    |> apply_default_sorting()
     |> Ash.load!([:status, :visible_virtual_link, :group], actor: current_user)
   end
 
@@ -139,12 +134,8 @@ defmodule HuddlzWeb.HuddlLive do
 
   defp apply_event_type_filter(huddls, _), do: huddls
 
-  defp apply_sorting(huddls, "recent") do
-    Enum.sort_by(huddls, & &1.inserted_at, {:desc, DateTime})
-  end
-
-  defp apply_sorting(huddls, _) do
-    # Default to date_asc
+  defp apply_default_sorting(huddls) do
+    # Always sort by date ascending (earliest first)
     Enum.sort_by(huddls, & &1.starts_at, {:asc, DateTime})
   end
 
@@ -215,26 +206,11 @@ defmodule HuddlzWeb.HuddlLive do
                   </option>
                 </select>
               </div>
-              
-    <!-- Sort By -->
-              <div class="form-control">
-                <label for="sort-by" class="label">
-                  <span class="label-text">Sort By</span>
-                </label>
-                <select id="sort-by" name="sort_by" class="select select-bordered">
-                  <option value="date_asc" selected={@sort_by == "date_asc"}>
-                    Date (Earliest First)
-                  </option>
-                  <option value="recent" selected={@sort_by == "recent"}>
-                    Recently Added
-                  </option>
-                </select>
-              </div>
             </div>
           </form>
           
     <!-- Active Filters Display -->
-          <%= if @search_query || @event_type_filter || @date_filter != "upcoming" || @sort_by != "date_asc" do %>
+          <%= if @search_query || @event_type_filter || @date_filter != "upcoming" do %>
             <div class="mt-4 flex items-center gap-2">
               <span class="text-sm">Active filters:</span>
               <%= if @search_query do %>
@@ -245,9 +221,6 @@ defmodule HuddlzWeb.HuddlLive do
               <% end %>
               <%= if @date_filter != "upcoming" do %>
                 <span class="badge badge-primary">Date: {humanize_filter(@date_filter)}</span>
-              <% end %>
-              <%= if @sort_by != "date_asc" do %>
-                <span class="badge badge-primary">Sort: {humanize_filter(@sort_by)}</span>
               <% end %>
               <button phx-click="clear_filters" class="btn btn-xs btn-ghost">
                 Clear all
