@@ -43,8 +43,10 @@ defmodule HuddlzWeb.HuddlLive do
     date_filter = params["date_filter"] || "upcoming"
 
     # Convert string values to atoms for the search action
-    event_type_atom = if event_type && event_type != "", do: String.to_atom(event_type), else: nil
-    date_filter_atom = String.to_atom(date_filter)
+    event_type_atom =
+      if event_type && event_type != "", do: String.to_existing_atom(event_type), else: nil
+
+    date_filter_atom = String.to_existing_atom(date_filter)
 
     page =
       Communities.search_huddlz(query, date_filter_atom, event_type_atom,
