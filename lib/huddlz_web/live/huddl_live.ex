@@ -139,10 +139,6 @@ defmodule HuddlzWeb.HuddlLive do
 
   defp apply_event_type_filter(huddls, _), do: huddls
 
-  defp apply_sorting(huddls, "date_desc") do
-    Enum.sort_by(huddls, & &1.starts_at, {:desc, DateTime})
-  end
-
   defp apply_sorting(huddls, "recent") do
     Enum.sort_by(huddls, & &1.inserted_at, {:desc, DateTime})
   end
@@ -228,9 +224,6 @@ defmodule HuddlzWeb.HuddlLive do
                 <select id="sort-by" name="sort_by" class="select select-bordered">
                   <option value="date_asc" selected={@sort_by == "date_asc"}>
                     Date (Earliest First)
-                  </option>
-                  <option value="date_desc" selected={@sort_by == "date_desc"}>
-                    Date (Latest First)
                   </option>
                   <option value="recent" selected={@sort_by == "recent"}>
                     Recently Added
