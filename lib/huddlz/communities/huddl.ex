@@ -103,6 +103,12 @@ defmodule Huddlz.Communities.Huddl do
         constraints one_of: [:in_person, :virtual, :hybrid]
       end
 
+      pagination keyset?: true,
+                 offset?: true,
+                 countable: true,
+                 required?: false,
+                 default_limit: 20
+
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
       prepare Huddlz.Communities.Huddl.Preparations.ApplySearchFilters
       prepare build(sort: [starts_at: :asc])
@@ -114,6 +120,13 @@ defmodule Huddlz.Communities.Huddl do
       end
 
       filter expr(group_id == ^arg(:group_id) and starts_at > ^DateTime.utc_now())
+
+      pagination keyset?: true,
+                 offset?: true,
+                 countable: true,
+                 required?: false,
+                 default_limit: 10
+
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
       prepare build(sort: [starts_at: :asc])
     end
@@ -124,6 +137,13 @@ defmodule Huddlz.Communities.Huddl do
       end
 
       filter expr(group_id == ^arg(:group_id) and ends_at < ^DateTime.utc_now())
+
+      pagination keyset?: true,
+                 offset?: true,
+                 countable: true,
+                 required?: false,
+                 default_limit: 10
+
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
       prepare build(sort: [starts_at: :desc])
     end
