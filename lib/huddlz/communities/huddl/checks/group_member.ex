@@ -7,39 +7,36 @@ defmodule Huddlz.Communities.Huddl.Checks.GroupMember do
   alias Huddlz.Communities.GroupMember
   require Ash.Query
 
+  @impl true
   def describe(_opts) do
     "actor is a member of the group"
   end
 
+  @impl true
   def match?(nil, _context, _opts), do: false
 
-  def match?(_actor, %{resource: _resource, query: %Ash.Query{}}, _opts) do
-    # For queries, we'll handle this through preparations
-    true
-  end
+  @impl true
+  def match?(actor, context, _opts) do
+    group_id = get_group_id(context)
 
-  def match?(actor, %{resource: _resource, changeset: %Ash.Changeset{data: huddl}}, _opts) do
-    check_membership(actor, huddl.group_id)
-  end
-
-  def match?(actor, %{resource: _resource} = context, _opts) do
-    # Try to get the huddl
-    case Map.get(context, :record) do
-      %{group_id: group_id} ->
-        check_membership(actor, group_id)
-
-      _ ->
-        false
+    if group_id do
+      check_membership(actor, group_id)
+    else
+      # For queries without a specific record, we allow and let query filters handle it
+      match?(:query, context.type)
     end
   end
 
-  def match?(_actor, _context, _opts), do: false
+  # Extract group_id from various contexts
+  defp get_group_id(%{changeset: %{data: %{group_id: group_id}}}), do: group_id
+  defp get_group_id(%{record: %{group_id: group_id}}), do: group_id
+  defp get_group_id(_), do: nil
 
-  defp check_membership(actor, group_id) when is_binary(group_id) do
+  # Check if the actor is a member of the group
+  defp check_membership(%{id: user_id}, group_id) when is_binary(group_id) do
     GroupMember
-    |> Ash.Query.for_read(:read, %{}, authorize?: false)
-    |> Ash.Query.filter(group_id == ^group_id and user_id == ^actor.id)
-    |> Ash.exists?()
+    |> Ash.Query.filter(group_id == ^group_id and user_id == ^user_id)
+    |> Ash.exists?(authorize?: false)
   end
 
   defp check_membership(_actor, _group_id), do: false
