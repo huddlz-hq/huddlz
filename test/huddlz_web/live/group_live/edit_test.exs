@@ -5,8 +5,8 @@ defmodule HuddlzWeb.GroupLive.EditTest do
 
   describe "Edit Group" do
     setup do
-      owner = generate(user(role: :verified))
-      non_owner = generate(user(role: :verified))
+      owner = generate(user(role: :user))
+      non_owner = generate(user(role: :user))
 
       group =
         generate(

@@ -10,8 +10,8 @@ defmodule HuddlzWeb.GroupLiveTest do
   describe "Index" do
     setup do
       admin = generate(user(role: :admin))
-      verified = generate(user(role: :verified))
-      regular = generate(user(role: :regular))
+      verified = generate(user(role: :user))
+      regular = generate(user(role: :user))
 
       public_group = generate(group(is_public: true, owner_id: verified.id, actor: verified))
       private_group = generate(group(is_public: false, owner_id: admin.id, actor: admin))
@@ -33,7 +33,7 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> refute_has("a", text: "New Group")
     end
 
-    test "shows New Group button for verified users", %{conn: conn, verified: verified} do
+    test "shows New Group button for users", %{conn: conn, verified: verified} do
       conn
       |> login(verified)
       |> visit(~p"/groups")
@@ -47,11 +47,11 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> assert_has("a", text: "New Group")
     end
 
-    test "does not show New Group button for regular users", %{conn: conn, regular: regular} do
+    test "shows New Group button for all users", %{conn: conn, regular: regular} do
       conn
       |> login(regular)
       |> visit(~p"/groups")
-      |> refute_has("a", text: "New Group")
+      |> assert_has("a", text: "New Group")
     end
 
     test "navigates to new group page", %{conn: conn, verified: verified} do
@@ -66,13 +66,13 @@ defmodule HuddlzWeb.GroupLiveTest do
   describe "New" do
     setup do
       admin = generate(user(role: :admin))
-      verified = generate(user(role: :verified))
-      regular = generate(user(role: :regular))
+      verified = generate(user(role: :user))
+      regular = generate(user(role: :user))
 
       %{admin: admin, verified: verified, regular: regular}
     end
 
-    test "renders form for verified users", %{conn: conn, verified: verified} do
+    test "renders form for users", %{conn: conn, verified: verified} do
       conn
       |> login(verified)
       |> visit(~p"/groups/new")
@@ -84,16 +84,11 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> assert_has("label", text: "Privacy")
     end
 
-    test "redirects regular users", %{conn: conn, regular: regular} do
-      session =
-        conn
-        |> login(regular)
-        |> visit(~p"/groups/new")
-
-      assert_path(session, ~p"/groups")
-
-      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~
-               "You need to be a verified user to create groups"
+    test "allows all users to create groups", %{conn: conn, regular: regular} do
+      conn
+      |> login(regular)
+      |> visit(~p"/groups/new")
+      |> assert_has("h1", text: "Create a New Group")
     end
 
     test "creates group with valid data", %{conn: conn, verified: verified} do
@@ -138,9 +133,9 @@ defmodule HuddlzWeb.GroupLiveTest do
 
   describe "Show" do
     setup do
-      owner = generate(user(role: :verified))
-      member = generate(user(role: :regular))
-      non_member = generate(user(role: :regular))
+      owner = generate(user(role: :user))
+      member = generate(user(role: :user))
+      non_member = generate(user(role: :user))
 
       public_group =
         generate(

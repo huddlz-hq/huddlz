@@ -4,8 +4,8 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
 
   describe "Group show page tabs" do
     setup do
-      # Create a verified user who can create groups and huddls
-      user = generate(user(role: :verified))
+      # Create a user who can create groups and huddls
+      user = generate(user(role: :user))
 
       # Create a public group
       group = generate(group(owner_id: user.id, is_public: true, actor: user))
@@ -182,8 +182,8 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
 
   describe "Group show page tabs with private groups" do
     setup do
-      user = generate(user(role: :verified))
-      non_member = generate(user(role: :verified))
+      user = generate(user(role: :user))
+      non_member = generate(user(role: :user))
 
       # Create a private group
       private_group = generate(group(owner_id: user.id, is_public: false, actor: user))

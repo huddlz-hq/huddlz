@@ -1,6 +1,6 @@
-defmodule Huddlz.Communities.GroupMember.Checks.VerifiedNonMemberPublicGroup do
+defmodule Huddlz.Communities.GroupMember.Checks.NonMemberPublicGroup do
   @moduledoc """
-  Check if the actor is a verified non-member trying to access a public group.
+  Check if the actor is a non-member trying to access a public group.
   """
   use Ash.Policy.SimpleCheck
 
@@ -8,14 +8,14 @@ defmodule Huddlz.Communities.GroupMember.Checks.VerifiedNonMemberPublicGroup do
 
   @impl true
   def describe(_opts) do
-    "actor is a verified non-member accessing a public group"
+    "actor is a non-member accessing a public group"
   end
 
   @impl true
   def match?(actor, %{subject: %{arguments: %{group_id: group_id}}}, _opts)
       when is_map(actor) and is_binary(group_id) do
-    with true <- actor.role == :verified,
-         {:ok, group} <- Ash.get(Huddlz.Communities.Group, group_id, actor: actor),
+    # Allow any logged-in user to access public groups
+    with {:ok, group} <- Ash.get(Huddlz.Communities.Group, group_id, actor: actor),
          true <- group.is_public do
       # Check if the user is NOT a member of this group
       not_member?(group_id, actor.id)

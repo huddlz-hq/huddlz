@@ -1,6 +1,6 @@
 defmodule Huddlz.Communities.GroupMember.Validations.VerifiedForElevatedRoles do
   @moduledoc """
-  Validates that only verified users can be assigned as owner or organizer.
+  Validates that users exist before being assigned as owner or organizer.
   """
   use Ash.Resource.Validation
 
@@ -15,15 +15,13 @@ defmodule Huddlz.Communities.GroupMember.Validations.VerifiedForElevatedRoles do
     end
   end
 
-  defp validate_elevated_role(changeset, role) do
+  defp validate_elevated_role(changeset, _role) do
     user_id = Ash.Changeset.get_argument(changeset, :user_id)
 
-    with {:ok, user} <- Ash.get(Huddlz.Accounts.User, user_id, authorize?: false),
-         true <- user.role in [:verified, :admin] do
-      :ok
-    else
+    # Allow any user to be owner/organizer
+    case Ash.get(Huddlz.Accounts.User, user_id, authorize?: false) do
       {:ok, _user} ->
-        {:error, field: :role, message: "Only verified users can be assigned as #{role}"}
+        :ok
 
       _ ->
         {:error, field: :user_id, message: "User not found"}

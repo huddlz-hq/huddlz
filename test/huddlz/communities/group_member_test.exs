@@ -13,7 +13,7 @@ defmodule Huddlz.Communities.GroupMemberTest do
           user(
             email: "membership-owner@example.com",
             display_name: "Membership Owner",
-            role: :verified
+            role: :user
           )
         )
 
@@ -25,7 +25,7 @@ defmodule Huddlz.Communities.GroupMemberTest do
           user(
             email: "member-user@example.com",
             display_name: "Member User",
-            role: :regular
+            role: :user
           )
         )
 
@@ -35,7 +35,7 @@ defmodule Huddlz.Communities.GroupMemberTest do
           user(
             email: "non-member@example.com",
             display_name: "Non Member User",
-            role: :regular
+            role: :user
           )
         )
 
@@ -145,8 +145,8 @@ defmodule Huddlz.Communities.GroupMemberTest do
 
   describe "membership visibility" do
     test "owner and organizer can see all members in public and private groups" do
-      owner = generate(user(role: :verified))
-      organizer = generate(user(role: :verified))
+      owner = generate(user(role: :user))
+      organizer = generate(user(role: :user))
 
       public_group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
       private_group = generate(group(is_public: false, owner_id: owner.id, actor: owner))
@@ -196,8 +196,8 @@ defmodule Huddlz.Communities.GroupMemberTest do
     end
 
     test "verified member can see all members in public and private groups" do
-      owner = generate(user(role: :verified))
-      verified_member = generate(user(role: :verified))
+      owner = generate(user(role: :user))
+      verified_member = generate(user(role: :user))
 
       public_group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
       private_group = generate(group(is_public: false, owner_id: owner.id, actor: owner))
@@ -223,8 +223,8 @@ defmodule Huddlz.Communities.GroupMemberTest do
 
       # Add more members to reach expected count of 4
       # Owner is automatically added, so we need 2 more members per group
-      member2 = generate(user(role: :verified))
-      member3 = generate(user(role: :regular))
+      member2 = generate(user(role: :user))
+      member3 = generate(user(role: :user))
 
       generate(
         group_member(
@@ -277,8 +277,8 @@ defmodule Huddlz.Communities.GroupMemberTest do
     end
 
     test "regular member can only see count in public and private groups" do
-      owner = generate(user(role: :verified))
-      regular_member = generate(user(role: :regular))
+      owner = generate(user(role: :user))
+      regular_member = generate(user(role: :user))
 
       public_group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
       private_group = generate(group(is_public: false, owner_id: owner.id, actor: owner))
@@ -319,10 +319,10 @@ defmodule Huddlz.Communities.GroupMemberTest do
 
     test "verified non-member can see all members in public group, not in private group" do
       # Create test users
-      owner = generate(user(role: :verified))
-      member1 = generate(user(role: :verified))
-      member2 = generate(user(role: :regular))
-      verified_non_member = generate(user(role: :verified))
+      owner = generate(user(role: :user))
+      member1 = generate(user(role: :user))
+      member2 = generate(user(role: :user))
+      verified_non_member = generate(user(role: :user))
 
       # Create groups
       public_group = generate(group(is_public: true, owner_id: owner.id, actor: owner))

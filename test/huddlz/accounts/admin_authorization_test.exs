@@ -18,20 +18,20 @@ defmodule Huddlz.Accounts.AdminAuthorizationTest do
         role: :admin
       })
 
-    # Create a regular user for testing
+    # Create a user for testing
     regular_user =
       Ash.Seed.seed!(User, %{
         email: "regular-test-auth@example.com",
         display_name: "Regular Test Auth",
-        role: :regular
+        role: :user
       })
 
-    # Create a verified user for testing
+    # Create a user for testing
     verified_user =
       Ash.Seed.seed!(User, %{
         email: "verified-test-auth@example.com",
         display_name: "Verified Test Auth",
-        role: :verified
+        role: :user
       })
 
     {:ok, %{admin: admin_user, regular: regular_user, verified: verified_user}}
@@ -54,7 +54,7 @@ defmodule Huddlz.Accounts.AdminAuthorizationTest do
       assert {:ok, results} = Accounts.search_by_email("example", actor: admin)
       assert is_list(results)
 
-      # Regular and verified users receive empty results for security
+      # Regular and users receive empty results for security
       assert {:ok, []} = Accounts.search_by_email("example", actor: regular)
       assert {:ok, []} = Accounts.search_by_email("example", actor: verified)
 
@@ -72,7 +72,7 @@ defmodule Huddlz.Accounts.AdminAuthorizationTest do
       assert Accounts.check_permission(:update_role, regular) == false
       assert Accounts.check_permission(:update_role, verified) == false
 
-      # Test that regular users cannot update roles
+      # Test that users cannot update roles
       assert_raise Ash.Error.Forbidden, fn ->
         Accounts.update_role!(verified, :regular, actor: regular)
       end

@@ -22,7 +22,7 @@ defmodule ViewPastHuddlzSteps do
     ensure_sandbox()
 
     # Create a verified host who can create huddls
-    host = generate(user(role: :verified))
+    host = generate(user(role: :user))
 
     # Create a public group
     public_group = generate(group(owner_id: host.id, is_public: true, actor: host))
@@ -104,7 +104,7 @@ defmodule ViewPastHuddlzSteps do
   # Create a private group with past huddlz for member testing
   step "I am a member of a private group with past huddlz", %{current_user: user} do
     # Create a private group owned by someone else
-    owner = generate(user(role: :verified))
+    owner = generate(user(role: :user))
     private_group = generate(group(owner_id: owner.id, is_public: false, actor: owner))
 
     # Add the current user as a member
@@ -141,7 +141,7 @@ defmodule ViewPastHuddlzSteps do
     ensure_sandbox()
 
     # Create a private group owned by someone else
-    owner = generate(user(role: :verified))
+    owner = generate(user(role: :user))
     private_group = generate(group(owner_id: owner.id, is_public: false, actor: owner))
 
     # Create past huddl in the private group using the generator
@@ -251,7 +251,7 @@ defmodule ViewPastHuddlzSteps do
     ensure_sandbox()
 
     # Create a verified host who can create huddls
-    host = generate(user(role: :verified))
+    host = generate(user(role: :user))
 
     # Create a public group
     public_group = generate(group(owner_id: host.id, is_public: true, actor: host))

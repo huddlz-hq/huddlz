@@ -5,12 +5,12 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
 
   describe "Group member list visibility and permissions" do
     setup do
-      owner = generate(user(role: :verified))
-      organizer = generate(user(role: :verified))
-      verified_member = generate(user(role: :verified))
-      regular_member = generate(user(role: :regular))
-      verified_non_member = generate(user(role: :verified))
-      regular_non_member = generate(user(role: :regular))
+      owner = generate(user(role: :user))
+      organizer = generate(user(role: :user))
+      verified_member = generate(user(role: :user))
+      regular_member = generate(user(role: :user))
+      verified_non_member = generate(user(role: :user))
+      regular_non_member = generate(user(role: :user))
 
       # Groups are automatically created with owner membership
       public_group =
@@ -146,7 +146,7 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       |> login(member)
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: "Members list is only visible to verified users.")
+      |> assert_has("p", text: "Members list is only visible to users.")
     end
 
     test "verified non-member can see member list in public group", %{
@@ -170,7 +170,7 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       |> login(user)
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: "Members list is only visible to verified users.")
+      |> assert_has("p", text: "Members list is only visible to users.")
     end
 
     test "owner can see full member list in private group", %{
@@ -218,7 +218,7 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       |> login(member)
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: "Members list is only visible to verified users.")
+      |> assert_has("p", text: "Members list is only visible to users.")
     end
 
     test "verified non-member cannot access private group", %{
@@ -252,7 +252,7 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       conn
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: "Members list is only visible to verified users.")
+      |> assert_has("p", text: "Members list is only visible to users.")
     end
 
     test "anonymous user cannot access private group", %{conn: conn, private_group: group} do

@@ -14,12 +14,12 @@ defmodule Huddlz.Accounts.UserTest do
           role: :admin
         })
 
-      # Create a regular user with a unique test marker in the email
+      # Create a user with a unique test marker in the email
       regular_user =
         Ash.Seed.seed!(User, %{
           email: "regular-search-unique@example.com",
           display_name: "Regular Search Test",
-          role: :regular
+          role: :user
         })
 
       # Verify the users exist in our test database
@@ -40,20 +40,20 @@ defmodule Huddlz.Accounts.UserTest do
           role: :admin
         })
 
-      # Create a regular user
+      # Create a user
       regular_user =
         Ash.Seed.seed!(User, %{
           email: "regular-role-test@example.com",
           display_name: "Regular Role Test",
-          role: :regular
+          role: :user
         })
 
-      # Create a verified user
+      # Create a user
       verified_user =
         Ash.Seed.seed!(User, %{
           email: "verified-role-test@example.com",
           display_name: "Verified Role Test",
-          role: :verified
+          role: :user
         })
 
       # Verify our permission check helper works correctly
@@ -61,7 +61,7 @@ defmodule Huddlz.Accounts.UserTest do
       assert Accounts.check_permission(:update_role, regular_user) == false
       assert Accounts.check_permission(:update_role, verified_user) == false
 
-      # Verify our policy is working as intended - regular and verified users cannot update roles
+      # Verify our policy is working as intended - regular and users cannot update roles
       assert_raise Ash.Error.Forbidden, fn ->
         Accounts.update_role!(regular_user, :verified, actor: regular_user)
       end
@@ -84,7 +84,7 @@ defmodule Huddlz.Accounts.UserTest do
         Ash.Seed.seed!(User, %{
           email: "regular-read-test@example.com",
           display_name: "Regular Read Test",
-          role: :regular
+          role: :user
         })
 
       # Test permission with our helper function
@@ -104,7 +104,7 @@ defmodule Huddlz.Accounts.UserTest do
         Ash.Seed.seed!(User, %{
           email: email,
           display_name: original_display_name,
-          role: :regular
+          role: :user
         })
 
       # Verify user was created correctly

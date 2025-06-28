@@ -102,7 +102,8 @@ defmodule HuddlzWeb.GroupLive.Index do
 
   defp can_create_group?(nil), do: false
 
-  defp can_create_group?(user) do
-    user.role in [:admin, :verified]
+  defp can_create_group?(_user) do
+    # All logged-in users can create groups
+    true
   end
 end

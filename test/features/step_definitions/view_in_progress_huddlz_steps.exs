@@ -13,7 +13,7 @@ defmodule ViewInProgressHuddlzSteps do
     ensure_sandbox()
 
     # Create a verified host
-    host = generate(user(role: :verified))
+    host = generate(user(role: :user))
 
     # Create a public group
     public_group = generate(group(owner_id: host.id, is_public: true, actor: host))

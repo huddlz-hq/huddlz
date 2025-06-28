@@ -9,9 +9,9 @@ defmodule Huddlz.Communities.GroupMember do
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer]
 
+  alias Huddlz.Communities.GroupMember.Checks.GroupMember
   alias Huddlz.Communities.GroupMember.Checks.GroupOrganizer
   alias Huddlz.Communities.GroupMember.Checks.GroupOwner
-  alias Huddlz.Communities.GroupMember.Checks.GroupVerifiedMember
   alias Huddlz.Communities.GroupMember.Checks.PublicGroup
 
   postgres do
@@ -138,8 +138,8 @@ defmodule Huddlz.Communities.GroupMember do
     policy action(:get_by_group) do
       authorize_if GroupOwner
       authorize_if GroupOrganizer
-      authorize_if GroupVerifiedMember
-      authorize_if Huddlz.Communities.GroupMember.Checks.VerifiedNonMemberPublicGroup
+      authorize_if GroupMember
+      authorize_if Huddlz.Communities.GroupMember.Checks.NonMemberPublicGroup
 
       # Explicitly forbid everyone else
       forbid_if always()

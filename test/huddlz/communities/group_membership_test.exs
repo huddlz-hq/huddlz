@@ -10,8 +10,8 @@ defmodule Huddlz.Communities.GroupMembershipTest do
   describe "join_group/2" do
     setup do
       admin = user_fixture(%{role: :admin})
-      verified_user = user_fixture(%{role: :verified})
-      regular_user = user_fixture(%{role: :regular})
+      verified_user = user_fixture(%{role: :user})
+      regular_user = user_fixture(%{role: :user})
 
       public_group = group_fixture(admin, %{is_public: true})
       private_group = group_fixture(admin, %{is_public: false})
@@ -79,7 +79,7 @@ defmodule Huddlz.Communities.GroupMembershipTest do
   describe "leave_group/2" do
     setup do
       admin = user_fixture(%{role: :admin})
-      verified_user = user_fixture(%{role: :verified})
+      verified_user = user_fixture(%{role: :user})
 
       public_group = group_fixture(admin, %{is_public: true})
 

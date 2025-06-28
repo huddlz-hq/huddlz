@@ -217,13 +217,12 @@ defmodule HuddlzWeb.GroupLive.Show do
                           <span class="text-xs font-normal text-gray-500">(Owner)</span>
                         <% end %>
                       </p>
-                      <p class="text-sm text-gray-500">{member.email}</p>
                     </div>
                   </div>
                 <% end %>
               </div>
             <% else %>
-              <p class="text-gray-600">Members list is only visible to verified users.</p>
+              <p class="text-gray-600">Please sign in to see the member list.</p>
             <% end %>
           </div>
         </div>
@@ -364,23 +363,24 @@ defmodule HuddlzWeb.GroupLive.Show do
     end
   end
 
-  defp can_see_members?(group, current_user) do
-    owner_or_organizer?(group, current_user) ||
-      verified_member?(group, current_user) ||
-      verified_non_member_of_public_group?(group, current_user)
+  defp can_see_members?(_group, current_user) do
+    # All logged-in users can see member lists
+    current_user != nil
   end
 
   defp owner_or_organizer?(group, current_user) do
     owner?(group, current_user) || organizer?(group, current_user)
   end
 
-  defp verified_member?(group, current_user) do
-    member?(group, current_user) && current_user && current_user.role == :verified
-  end
+  # No longer needed - all users can see members
+  # defp verified_member?(group, current_user) do
+  #   member?(group, current_user) && current_user && current_user.role == :verified
+  # end
 
-  defp verified_non_member_of_public_group?(group, current_user) do
-    group.is_public && current_user && current_user.role == :verified
-  end
+  # No longer needed - all users can see members
+  # defp verified_non_member_of_public_group?(group, current_user) do
+  #   group.is_public && current_user && current_user.role == :verified
+  # end
 
   defp load_members(group) do
     GroupMember

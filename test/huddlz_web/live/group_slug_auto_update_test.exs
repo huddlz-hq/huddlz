@@ -6,7 +6,7 @@ defmodule HuddlzWeb.GroupSlugAutoUpdateTest do
 
   describe "Group slug auto-generation" do
     setup do
-      user = generate(user(role: :verified))
+      user = generate(user(role: :user))
       %{user: user}
     end
 

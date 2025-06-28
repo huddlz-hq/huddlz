@@ -2,7 +2,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
   use HuddlzWeb.ConnCase
 
   setup do
-    user = generate(user(role: :verified))
+    user = generate(user(role: :user))
     group = generate(group(owner_id: user.id, is_public: true, actor: user))
 
     # Create 22 public upcoming huddlz to trigger pagination (20 per page)
@@ -141,7 +141,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
 
     test "pagination persists with filters", %{conn: conn} do
       # Create enough virtual events to paginate
-      user = generate(user(role: :verified))
+      user = generate(user(role: :user))
       group = generate(group(owner_id: user.id, is_public: true, actor: user))
 
       for i <- 1..25 do
@@ -204,7 +204,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
 
     test "handles exactly 20 results", %{conn: conn} do
       # Clear existing data and create exactly 20 huddlz
-      user = generate(user(role: :verified))
+      user = generate(user(role: :user))
       group = generate(group(owner_id: user.id, is_public: true, actor: user))
 
       # First, create a unique search term

@@ -11,11 +11,11 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
 
   describe "mount and authorization" do
     setup do
-      owner = generate(user(role: :verified))
-      organizer = generate(user(role: :verified))
-      member = generate(user(role: :verified))
-      regular = generate(user(role: :regular))
-      non_member = generate(user(role: :verified))
+      owner = generate(user(role: :user))
+      organizer = generate(user(role: :user))
+      member = generate(user(role: :user))
+      regular = generate(user(role: :user))
+      non_member = generate(user(role: :user))
 
       group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
 
@@ -129,7 +129,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
 
   describe "form rendering" do
     setup do
-      owner = generate(user(role: :verified))
+      owner = generate(user(role: :user))
       public_group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
       private_group = generate(group(is_public: false, owner_id: owner.id, actor: owner))
 
@@ -181,7 +181,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
 
   describe "dynamic field visibility" do
     setup do
-      owner = generate(user(role: :verified))
+      owner = generate(user(role: :user))
       group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
       %{owner: owner, group: group}
     end
@@ -218,7 +218,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
 
   describe "form submission" do
     setup do
-      owner = generate(user(role: :verified))
+      owner = generate(user(role: :user))
       group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
       %{owner: owner, group: group}
     end
@@ -342,9 +342,9 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
 
   describe "create huddl button on group page" do
     setup do
-      owner = generate(user(role: :verified))
-      organizer = generate(user(role: :verified))
-      member = generate(user(role: :verified))
+      owner = generate(user(role: :user))
+      organizer = generate(user(role: :user))
+      member = generate(user(role: :user))
       group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
 
       generate(

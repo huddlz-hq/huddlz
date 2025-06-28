@@ -14,15 +14,18 @@ defmodule Huddlz.Generator do
   By default, users are confirmed. Pass confirmed_at: nil for unconfirmed users.
   """
   def user(opts \\ []) do
+    # Default role to :user if not specified
+    default_opts = [role: :user]
+    merged_opts = Keyword.merge(default_opts, opts)
+
     seed_generator(
       %User{
         email: StreamData.repeatedly(fn -> Faker.Internet.email() end),
         display_name: StreamData.repeatedly(fn -> Faker.Person.name() end),
-        role: :regular,
         # By default, test users are confirmed
         confirmed_at: DateTime.utc_now()
       },
-      overrides: opts
+      overrides: merged_opts
     )
   end
 

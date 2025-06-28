@@ -8,8 +8,8 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
 
   describe "group visibility and access" do
     setup do
-      owner = generate(user(role: :verified))
-      viewer = generate(user(role: :regular))
+      owner = generate(user(role: :user))
+      viewer = generate(user(role: :user))
 
       public_group =
         generate(
@@ -69,7 +69,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
 
   describe "group creation validation" do
     setup do
-      actor = generate(user(role: :verified))
+      actor = generate(user(role: :user))
       %{actor: actor}
     end
 
@@ -179,7 +179,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
 
   describe "group queries" do
     setup do
-      owner1 = generate(user(role: :verified))
+      owner1 = generate(user(role: :user))
       owner2 = generate(user(role: :admin))
 
       groups = [
@@ -231,7 +231,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
 
   describe "update_details action" do
     setup do
-      owner = generate(user(role: :verified))
+      owner = generate(user(role: :user))
 
       group =
         generate(

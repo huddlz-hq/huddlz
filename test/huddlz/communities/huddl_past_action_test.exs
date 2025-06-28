@@ -7,8 +7,8 @@ defmodule Huddlz.Communities.HuddlPastActionTest do
 
   describe "past action" do
     test "returns huddlz sorted by starts_at descending" do
-      # Create a verified user who can see huddlz
-      user = generate(user(role: :verified))
+      # Create a user who can see huddlz
+      user = generate(user(role: :user))
 
       # Create a public group
       group = generate(group(owner_id: user.id, is_public: true, actor: user))
@@ -68,7 +68,7 @@ defmodule Huddlz.Communities.HuddlPastActionTest do
     end
 
     test "only returns events that have ended" do
-      user = generate(user(role: :verified))
+      user = generate(user(role: :user))
       group = generate(group(owner_id: user.id, is_public: true, actor: user))
 
       # Create a huddl that has started but not ended (in progress)

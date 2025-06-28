@@ -6,9 +6,9 @@ defmodule HuddlzWeb.HuddlLivePermissionsTest do
 
   describe "Huddl RSVP and permissions" do
     setup do
-      owner = generate(user(role: :verified))
-      member = generate(user(role: :verified))
-      regular = generate(user(role: :regular))
+      owner = generate(user(role: :user))
+      member = generate(user(role: :user))
+      :user = generate(user(role: :user))
 
       group =
         generate(
@@ -71,7 +71,7 @@ defmodule HuddlzWeb.HuddlLivePermissionsTest do
       |> assert_has("span", text: "Virtual link available after RSVP")
     end
 
-    test "regular user can see public huddl in public group", %{
+    test "user can see public huddl in public group", %{
       conn: conn,
       regular: user,
       group: group,
