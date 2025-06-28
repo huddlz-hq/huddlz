@@ -664,7 +664,7 @@ defmodule HuddlzWeb.CoreComponents do
       status_badge_class(@status),
       @class
     ]}>
-      {@status |> to_string() |> String.capitalize()}
+      {@status |> to_string() |> String.replace("_", " ") |> String.capitalize()}
     </span>
     """
   end

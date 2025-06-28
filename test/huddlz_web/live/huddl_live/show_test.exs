@@ -418,6 +418,34 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has("div.text-success", text: "You're attending!")
       |> assert_has("p", text: "1 person attending")
     end
+
+    test "rendering type and status badges correctly", %{conn: conn, owner: owner, group: group} do
+      # Create in-person in-progress huddl
+      in_person_huddl =
+        Huddl
+        |> Ash.Changeset.for_create(
+          :create,
+          %{
+            title: "In-Person Meetup",
+            description: "Meet us at the coffee shop",
+            starts_at: DateTime.add(DateTime.utc_now(), -1, :hour),
+            ends_at: DateTime.add(DateTime.utc_now(), 1, :hour),
+            event_type: :in_person,
+            physical_location: "123 Main St, City",
+            is_private: false,
+            group_id: group.id,
+            creator_id: owner.id
+          },
+          actor: owner
+        )
+        |> Ash.create!()
+
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{in_person_huddl.id}")
+      |> assert_has(".badge", text: "In progress")
+      |> assert_has(".badge", text: "In person")
+    end
   end
 
   defp create_verified_user do
