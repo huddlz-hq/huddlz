@@ -131,7 +131,7 @@ defmodule Huddlz.Communities.GroupMembershipPermissionsTest do
       assert length(result) > 0
     end
 
-    test "regular non-member can see member list in public group", %{
+    test "regular non-member cannot see member list in public group", %{
       public_group: group,
       regular: user
     } do
@@ -140,8 +140,8 @@ defmodule Huddlz.Communities.GroupMembershipPermissionsTest do
         |> Ash.Query.for_read(:get_by_group, %{group_id: group.id})
         |> Ash.read!(actor: user)
 
-      # Just the owner
-      assert length(result) == 1
+      # Non-members cannot see member lists
+      assert result == []
     end
 
     test "verified non-member cannot see member list in private group", %{private_group: group} do

@@ -319,7 +319,7 @@ defmodule Huddlz.Communities.GroupMemberTest do
       assert length(private_result) == 2
     end
 
-    test "verified non-member can see all members in public group, not in private group" do
+    test "verified non-member cannot see members in any group" do
       # Create test users
       owner = generate(user(role: :user))
       member1 = generate(user(role: :user))
@@ -348,14 +348,14 @@ defmodule Huddlz.Communities.GroupMemberTest do
         group_member(group_id: private_group.id, user_id: member2.id, role: :member, actor: owner)
       )
 
-      # According to the access matrix, verified non-members can see members in public groups
+      # Non-members cannot see members in public groups anymore
       public_result =
         GroupMember
         |> Ash.Query.for_read(:get_by_group, %{group_id: public_group.id})
         |> Ash.read!(actor: verified_non_member)
 
-      # Should see owner + 2 members = 3 total
-      assert length(public_result) == 3
+      # Should see no members
+      assert public_result == []
 
       # But not in private groups - should return empty list
       private_result =

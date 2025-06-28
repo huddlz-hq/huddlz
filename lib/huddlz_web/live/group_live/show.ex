@@ -222,7 +222,11 @@ defmodule HuddlzWeb.GroupLive.Show do
                 <% end %>
               </div>
             <% else %>
-              <p class="text-gray-600">Please sign in to see the member list.</p>
+              <%= if @current_user do %>
+                <p class="text-gray-600">Only members can see the member list.</p>
+              <% else %>
+                <p class="text-gray-600">Please sign in to see the member list.</p>
+              <% end %>
             <% end %>
           </div>
         </div>
@@ -357,25 +361,26 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   defp get_members(group, current_user) do
     if can_see_members?(group, current_user) do
-      load_members(group)
+      load_members(group, current_user)
     else
       nil
     end
   end
 
-  defp can_see_members?(_group, current_user) do
-    # All logged-in users can see member lists
-    current_user != nil
+  defp can_see_members?(group, current_user) do
+    # Only members can see member lists
+    current_user != nil && member?(group, current_user)
   end
 
   # Removed unused functions after simplifying role system
-  # All logged-in users can now see member lists
+  # Only members can see member lists
 
-  defp load_members(group) do
+  defp load_members(group, current_user) do
+    # Use get_by_group action which enforces authorization
     GroupMember
-    |> Ash.Query.filter(group_id == ^group.id)
+    |> Ash.Query.for_read(:get_by_group, %{group_id: group.id})
     |> Ash.Query.load(:user)
-    |> Ash.read!(authorize?: false)
+    |> Ash.read!(actor: current_user)
     |> Enum.map(& &1.user)
   end
 
