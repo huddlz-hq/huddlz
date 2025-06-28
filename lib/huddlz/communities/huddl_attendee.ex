@@ -94,11 +94,14 @@ defmodule Huddlz.Communities.HuddlAttendee do
       authorize_if relates_to_actor_via(:user)
     end
 
-    # Reading attendees follows same rules as viewing members
-    # All logged-in users can see attendee lists
+    # Only attendees and group owners/organizers can see who's attending
     policy action(:by_huddl) do
-      # This will be checked at the LiveView level based on group membership
-      authorize_if always()
+      # Allow if the actor is attending this huddl
+      authorize_if Huddlz.Communities.HuddlAttendee.Checks.IsAttendee
+      # Or if they're the group owner/organizer
+      authorize_if Huddlz.Communities.HuddlAttendee.Checks.IsGroupOwnerOrOrganizer
+      # Explicitly forbid if neither condition is met
+      forbid_if always()
     end
 
     # Users can see their own RSVPs

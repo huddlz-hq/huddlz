@@ -464,12 +464,196 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
     end
   end
 
+  describe "attendee list authorization" do
+    setup do
+      # Create users
+      owner = create_verified_user()
+      organizer = create_verified_user()
+      member = create_verified_user()
+      attendee = create_verified_user()
+      non_attendee = create_verified_user()
+
+      # Create group
+      group =
+        Group
+        |> Ash.Changeset.for_create(
+          :create_group,
+          %{
+            name: "Test Group",
+            description: "A test group",
+            is_public: true,
+            owner_id: owner.id
+          },
+          actor: owner
+        )
+        |> Ash.create!()
+
+      # Add organizer to group
+      GroupMember
+      |> Ash.Changeset.for_create(
+        :add_member,
+        %{
+          group_id: group.id,
+          user_id: organizer.id,
+          role: "organizer"
+        },
+        actor: owner
+      )
+      |> Ash.create!()
+
+      # Add member to group
+      GroupMember
+      |> Ash.Changeset.for_create(
+        :add_member,
+        %{
+          group_id: group.id,
+          user_id: member.id,
+          role: "member"
+        },
+        actor: owner
+      )
+      |> Ash.create!()
+
+      # Create huddl
+      huddl =
+        Huddl
+        |> Ash.Changeset.for_create(
+          :create,
+          %{
+            title: "Test Huddl",
+            description: "A test huddl",
+            starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
+            ends_at: DateTime.add(DateTime.utc_now(), 2, :day),
+            event_type: :virtual,
+            virtual_link: "https://zoom.us/j/123456",
+            is_private: false,
+            group_id: group.id,
+            creator_id: owner.id
+          },
+          actor: owner
+        )
+        |> Ash.create!()
+
+      # Have attendee RSVP to the huddl
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{user_id: attendee.id}, actor: attendee)
+      |> Ash.update!()
+
+      %{
+        owner: owner,
+        organizer: organizer,
+        member: member,
+        attendee: attendee,
+        non_attendee: non_attendee,
+        group: group,
+        huddl: huddl
+      }
+    end
+
+    test "attendee can see attendee list", %{attendee: attendee, huddl: huddl} do
+      # Attendee can see who's attending
+      result =
+        HuddlAttendee
+        |> Ash.Query.for_read(:by_huddl, %{huddl_id: huddl.id})
+        |> Ash.read(actor: attendee)
+
+      assert {:ok, attendees} = result
+      assert length(attendees) == 1
+      assert hd(attendees).user_id == attendee.id
+    end
+
+    test "group owner can see attendee list", %{owner: owner, huddl: huddl, attendee: attendee} do
+      # Group owner can see who's attending
+      result =
+        HuddlAttendee
+        |> Ash.Query.for_read(:by_huddl, %{huddl_id: huddl.id})
+        |> Ash.read(actor: owner)
+
+      assert {:ok, attendees} = result
+      assert length(attendees) == 1
+      assert hd(attendees).user_id == attendee.id
+    end
+
+    test "group organizer can see attendee list", %{
+      organizer: organizer,
+      huddl: huddl,
+      attendee: attendee
+    } do
+      # Group organizer can see who's attending
+      result =
+        HuddlAttendee
+        |> Ash.Query.for_read(:by_huddl, %{huddl_id: huddl.id})
+        |> Ash.read(actor: organizer)
+
+      assert {:ok, attendees} = result
+      assert length(attendees) == 1
+      assert hd(attendees).user_id == attendee.id
+    end
+
+    test "group member who is not attending cannot see attendee list", %{
+      member: member,
+      huddl: huddl
+    } do
+      # Group member who hasn't RSVPed cannot see attendee list
+      result =
+        HuddlAttendee
+        |> Ash.Query.for_read(:by_huddl, %{huddl_id: huddl.id})
+        |> Ash.read(actor: member)
+
+      assert {:ok, []} = result
+    end
+
+    test "non-attendee cannot see attendee list", %{non_attendee: non_attendee, huddl: huddl} do
+      # Non-attendee cannot see attendee list
+      result =
+        HuddlAttendee
+        |> Ash.Query.for_read(:by_huddl, %{huddl_id: huddl.id})
+        |> Ash.read(actor: non_attendee)
+
+      assert {:ok, []} = result
+    end
+
+    test "anonymous user cannot see attendee list", %{huddl: huddl} do
+      # Anonymous user cannot see attendee list
+      result =
+        HuddlAttendee
+        |> Ash.Query.for_read(:by_huddl, %{huddl_id: huddl.id})
+        |> Ash.read(actor: nil)
+
+      assert {:ok, []} = result
+    end
+
+    test "admin can see attendee list", %{huddl: huddl, attendee: attendee} do
+      admin = create_admin_user()
+
+      # Admin can see attendee list
+      result =
+        HuddlAttendee
+        |> Ash.Query.for_read(:by_huddl, %{huddl_id: huddl.id})
+        |> Ash.read(actor: admin)
+
+      assert {:ok, attendees} = result
+      assert length(attendees) == 1
+      assert hd(attendees).user_id == attendee.id
+    end
+  end
+
   defp create_verified_user do
     User
     |> Ash.Changeset.for_create(:create, %{
       email: "user#{System.unique_integer()}@example.com",
       display_name: "Test User",
       role: :user
+    })
+    |> Ash.create!(authorize?: false)
+  end
+
+  defp create_admin_user do
+    User
+    |> Ash.Changeset.for_create(:create, %{
+      email: "admin#{System.unique_integer()}@example.com",
+      display_name: "Admin User",
+      role: :admin
     })
     |> Ash.create!(authorize?: false)
   end
