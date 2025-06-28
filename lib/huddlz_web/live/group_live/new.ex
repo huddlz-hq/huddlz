@@ -9,7 +9,7 @@ defmodule HuddlzWeb.GroupLive.New do
   @impl true
   def mount(_params, _session, socket) do
     # Check if user can create groups
-    if can_create_group?(socket.assigns.current_user) do
+    if Ash.can?({Group, :create_group}, socket.assigns.current_user) do
       # Create a new changeset for the form
       form =
         AshPhoenix.Form.for_create(Group, :create_group,
@@ -113,11 +113,5 @@ defmodule HuddlzWeb.GroupLive.New do
       </form>
     </Layouts.app>
     """
-  end
-
-  defp can_create_group?(nil), do: false
-
-  defp can_create_group?(user) do
-    user.role in [:admin, :user]
   end
 end
