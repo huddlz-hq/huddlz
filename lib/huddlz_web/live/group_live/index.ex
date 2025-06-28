@@ -14,7 +14,7 @@ defmodule HuddlzWeb.GroupLive.Index do
     {:ok,
      socket
      |> assign(:groups, groups)
-     |> assign(:can_create_group, can_create_group?(socket.assigns.current_user))}
+     |> assign(:can_create_group, Ash.can?({Group, :create_group}, socket.assigns.current_user))}
   end
 
   @impl true
@@ -98,12 +98,5 @@ defmodule HuddlzWeb.GroupLive.Index do
     |> Ash.read!()
   rescue
     _ -> []
-  end
-
-  defp can_create_group?(nil), do: false
-
-  defp can_create_group?(_user) do
-    # All logged-in users can create groups
-    true
   end
 end
