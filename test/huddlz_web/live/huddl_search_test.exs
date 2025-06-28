@@ -167,6 +167,45 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> assert_has("h3", text: "Hybrid Workshop")
     end
 
+    test "only showing applied filters as active", %{conn: conn} do
+      conn
+      |> visit("/")
+      # No filters applied initially
+      |> refute_has(".badge", text: "Search:")
+      |> refute_has(".badge", text: "Type:")
+      |> refute_has(".badge", text: "Date:")
+      # Select Event Type
+      |> select("Event Type", option: "Virtual")
+      |> refute_has(".badge", text: "Search:")
+      |> assert_has(".badge", text: "Type: Virtual")
+      |> refute_has(".badge", text: "Date:")
+      # Apply Search
+      |> fill_in("Search huddlz", with: "book")
+      |> assert_has(".badge", text: "Search: book")
+      |> assert_has(".badge", text: "Type: Virtual")
+      |> refute_has(".badge", text: "Date:")
+      # Select Date Range
+      |> select("Date Range", option: "This Week")
+      |> assert_has(".badge", text: "Search: book")
+      |> assert_has(".badge", text: "Type: Virtual")
+      |> assert_has(".badge", text: "Date: This Week")
+      # Clear Date Range
+      |> select("Date Range", option: "All Upcoming")
+      |> assert_has(".badge", text: "Search: book")
+      |> assert_has(".badge", text: "Type: Virtual")
+      |> refute_has(".badge", text: "Date:")
+      # Clear Search
+      |> fill_in("Search huddlz", with: "")
+      |> refute_has(".badge", text: "Search:")
+      |> assert_has(".badge", text: "Type: Virtual")
+      |> refute_has(".badge", text: "Date:")
+      # Clear Event Type
+      |> select("Event Type", option: "All Types")
+      |> refute_has(".badge", text: "Search:")
+      |> refute_has(".badge", text: "Type:")
+      |> refute_has(".badge", text: "Date:")
+    end
+
     test "shows result count", %{conn: conn} do
       conn
       |> visit("/")

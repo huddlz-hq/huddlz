@@ -38,8 +38,8 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   def handle_event("search", params, socket) do
-    query = params["query"]
-    event_type = params["event_type"]
+    query = if params["query"] != "", do: params["query"], else: nil
+    event_type = if params["event_type"] != "", do: params["event_type"], else: nil
     date_filter = params["date_filter"] || "upcoming"
 
     # Convert string values to atoms for the search action
