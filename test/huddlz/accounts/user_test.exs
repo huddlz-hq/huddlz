@@ -26,10 +26,10 @@ defmodule Huddlz.Accounts.UserTest do
       assert admin_user.id != nil
       assert regular_user.id != nil
 
-      # Test that our permission check helper works correctly
-      assert Accounts.check_permission(:search_by_email, admin_user) == true
+      # Test that our permission check works correctly using Ash's generated functions
+      assert Accounts.can_search_by_email?(admin_user, "test@example.com")
       # All users can now search by email
-      assert Accounts.check_permission(:search_by_email, regular_user) == true
+      assert Accounts.can_search_by_email?(regular_user, "test@example.com")
     end
 
     test "non-admin users cannot update roles" do
@@ -88,9 +88,9 @@ defmodule Huddlz.Accounts.UserTest do
           role: :user
         })
 
-      # Test permission with our helper function
-      assert Accounts.check_permission(:read, admin_user) == true
-      assert Accounts.check_permission(:read, regular_user) == true
+      # Test permission using Ash's can? function for read action
+      assert Ash.can?({Accounts.User, :read}, admin_user)
+      assert Ash.can?({Accounts.User, :read}, regular_user)
     end
   end
 
