@@ -6,11 +6,11 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
   require Ash.Query
 
   setup do
-    owner = generate(user(role: :user))
-    organizer = generate(user(role: :user))
-    member = generate(user(role: :user))
-    :user = generate(user(role: :user))
-    outsider = generate(user(role: :user))
+    owner = generate(user())
+    organizer = generate(user())
+    member = generate(user())
+    regular = generate(user())
+    outsider = generate(user())
 
     # Groups are automatically created with owner membership
     public_group =

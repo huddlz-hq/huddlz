@@ -39,14 +39,10 @@ defmodule Huddlz.Accounts.AdminAuthorizationTest do
 
   describe "admin permissions" do
     test "admin authorization checks", %{admin: admin, regular: regular, verified: verified} do
-      # Test role helper functions
-      assert Accounts.admin?(admin)
-      refute Accounts.admin?(regular)
-      refute Accounts.admin?(verified)
-
-      assert Accounts.verified?(admin)
-      assert Accounts.verified?(verified)
-      refute Accounts.verified?(regular)
+      # Test using Ash's built-in authorization
+      assert admin.role == :admin
+      assert regular.role == :user
+      assert verified.role == :user
     end
 
     test "admin users can search by email", %{admin: admin, regular: regular, verified: verified} do
@@ -67,14 +63,14 @@ defmodule Huddlz.Accounts.AdminAuthorizationTest do
       regular: regular,
       verified: verified
     } do
-      # Directly test the helper function
-      assert Accounts.check_permission(:update_role, admin) == true
-      assert Accounts.check_permission(:update_role, regular) == false
-      assert Accounts.check_permission(:update_role, verified) == false
+      # Use Ash's can? to test permissions
+      assert Ash.can?({User, :update_role}, admin)
+      refute Ash.can?({User, :update_role}, regular)
+      refute Ash.can?({User, :update_role}, verified)
 
       # Test that users cannot update roles
       assert_raise Ash.Error.Forbidden, fn ->
-        Accounts.update_role!(verified, :regular, actor: regular)
+        Accounts.update_role!(verified, :admin, actor: regular)
       end
     end
   end

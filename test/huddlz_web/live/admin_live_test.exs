@@ -44,7 +44,7 @@ defmodule HuddlzWeb.AdminLiveTest do
       |> assert_path(~p"/sign-in")
     end
 
-    test "redirects if user is a user", %{conn: conn, regular_user: regular_user} do
+    test "redirects if user is a non-admin user", %{conn: conn, regular_user: regular_user} do
       # With user in session, should redirect to home
       conn
       |> login(regular_user)
@@ -52,8 +52,8 @@ defmodule HuddlzWeb.AdminLiveTest do
       |> assert_path(~p"/")
     end
 
-    test "redirects if user is a user", %{conn: conn, verified_user: verified_user} do
-      # Even users (who aren't admins) should be redirected
+    test "redirects all non-admin users", %{conn: conn, verified_user: verified_user} do
+      # All non-admin users should be redirected
       conn
       |> login(verified_user)
       |> visit(~p"/admin")

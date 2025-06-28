@@ -95,7 +95,7 @@ defmodule Huddlz.Communities.HuddlAttendee do
     end
 
     # Reading attendees follows same rules as viewing members
-    # Only verified users or group members can see attendee lists
+    # All logged-in users can see attendee lists
     policy action(:by_huddl) do
       # This will be checked at the LiveView level based on group membership
       authorize_if always()

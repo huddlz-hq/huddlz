@@ -89,13 +89,13 @@ defmodule Huddlz.Generator do
     actor =
       opts[:actor] ||
         once(:default_actor, fn ->
-          generate(user(role: opts[:actor_role] || :verified))
+          generate(user(role: opts[:actor_role] || :user))
         end)
 
     owner_id =
       opts[:owner_id] ||
         once(:default_owner_id, fn ->
-          generate(user(role: :verified)).id
+          generate(user()).id
         end)
 
     changeset_generator(
@@ -128,7 +128,7 @@ defmodule Huddlz.Generator do
     creator_id =
       opts[:creator_id] ||
         once(:default_creator_id, fn ->
-          generate(user(role: :verified)).id
+          generate(user(role: :user)).id
         end)
 
     # Default to 2 days ago
@@ -164,19 +164,19 @@ defmodule Huddlz.Generator do
     actor =
       opts[:actor] ||
         once(:default_actor, fn ->
-          generate(user(role: opts[:actor_role] || :verified))
+          generate(user(role: opts[:actor_role] || :user))
         end)
 
     creator_id =
       opts[:creator_id] ||
         once(:default_creator_id, fn ->
-          generate(user(role: :verified)).id
+          generate(user(role: :user)).id
         end)
 
     group_id =
       opts[:group_id] ||
         once(:default_group_id, fn ->
-          owner = generate(user(role: :verified))
+          owner = generate(user(role: :user))
           generate(group(owner_id: owner.id, is_public: true, actor: owner)).id
         end)
 
@@ -218,7 +218,7 @@ defmodule Huddlz.Generator do
     email = email || Faker.Internet.email()
 
     host =
-      user(email: email, role: :verified)
+      user(email: email, role: :user)
       |> generate()
 
     # Create a public group for the host

@@ -21,7 +21,7 @@ Feature: Group Management
     Given I am signed in as "regular@example.com"
     When I visit the groups page
     Then I should see "Groups"
-    And I should not see "New Group"
+    And I should see "New Group"
 
   Scenario: Viewing groups page as a verified user
     Given I am signed in as "verified@example.com"
@@ -58,11 +58,11 @@ Feature: Group Management
     And I should see "Secret Society"
     And I should see "Private Group"
 
-  Scenario: Regular users cannot create groups
+  Scenario: Regular users can create groups
     Given I am signed in as "regular@example.com"
     When I visit "/groups/new"
-    Then I should be redirected to "/groups"
-    And I should see "You need to be a verified user to create groups"
+    Then I should see "New Group"
+    And I should see "Create a New Group"
 
   Scenario: Viewing a public group as a visitor
     Given a public group "Book Club" exists with owner "verified@example.com"

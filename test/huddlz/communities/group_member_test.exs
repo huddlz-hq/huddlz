@@ -276,7 +276,7 @@ defmodule Huddlz.Communities.GroupMemberTest do
       assert length(private_result) == 4
     end
 
-    test "regular member can only see count in public and private groups" do
+    test "regular member can see all members in public and private groups" do
       owner = generate(user(role: :user))
       regular_member = generate(user(role: :user))
 
@@ -302,7 +302,7 @@ defmodule Huddlz.Communities.GroupMemberTest do
         )
       )
 
-      # Should only see count, not member list (simulate by expecting empty list or forbidden)
+      # Now regular members can see all members
       public_result =
         GroupMember
         |> Ash.Query.for_read(:get_by_group, %{group_id: public_group.id})
@@ -313,8 +313,10 @@ defmodule Huddlz.Communities.GroupMemberTest do
         |> Ash.Query.for_read(:get_by_group, %{group_id: private_group.id})
         |> Ash.read!(actor: regular_member)
 
-      assert public_result == []
-      assert private_result == []
+      # owner + member
+      assert length(public_result) == 2
+      # owner + member
+      assert length(private_result) == 2
     end
 
     test "verified non-member can see all members in public group, not in private group" do

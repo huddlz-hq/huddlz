@@ -61,8 +61,7 @@ defmodule HuddlzWeb.ProfileLive do
                     <span class={[
                       "badge",
                       @current_user.role == :admin && "badge-primary",
-                      @current_user.role == :verified && "badge-success",
-                      @current_user.role == :regular && "badge-neutral"
+                      @current_user.role == :user && "badge-neutral"
                     ]}>
                       {@current_user.role |> to_string() |> String.capitalize()}
                     </span>

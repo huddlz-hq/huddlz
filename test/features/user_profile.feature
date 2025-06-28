@@ -7,7 +7,7 @@ Feature: User Profile Management
   Background:
     Given the following users exist:
       | email                | role     | display_name    |
-      | alice@example.com    | verified | BraveEagle726   |
+      | alice@example.com    | user     | BraveEagle726   |
     And I am signed in as "alice@example.com"
 
   Scenario: Viewing my profile
@@ -15,7 +15,6 @@ Feature: User Profile Management
     Then I should see "Profile Settings"
     And I should see my current display name
     And I should see "alice@example.com"
-    And I should see "Verified" badge
 
   Scenario: Updating my display name
     Given I am on my profile page
