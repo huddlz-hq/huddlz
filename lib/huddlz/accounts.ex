@@ -17,15 +17,4 @@ defmodule Huddlz.Accounts do
       define :update_display_name, action: :update_display_name, args: [:display_name]
     end
   end
-
-  @doc """
-  Check if a user has permission for a specific action using Ash's built-in authorization.
-  """
-  def check_permission(action, actor) when is_atom(action) do
-    case action do
-      :search_by_email -> Ash.can?({Huddlz.Accounts.User, :search_by_email}, actor)
-      :read -> Ash.can?({Huddlz.Accounts.User, :read}, actor)
-      _ -> false
-    end
-  end
 end
