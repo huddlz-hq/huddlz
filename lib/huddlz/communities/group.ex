@@ -68,10 +68,9 @@ defmodule Huddlz.Communities.Group do
       authorize_if always()
     end
 
-    # Only verified users can create groups, regular users cannot
+    # All logged-in users can create groups
     policy action(:create_group) do
-      forbid_if actor_attribute_equals(:role, :regular)
-      authorize_if actor_attribute_equals(:role, :verified)
+      authorize_if actor_attribute_equals(:role, :user)
     end
 
     # Only the owner can update group details

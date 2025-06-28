@@ -18,20 +18,14 @@ defmodule Huddlz.Accounts do
     end
   end
 
-  # Helper functions for role checking
-  def admin?(nil), do: false
-  def admin?(user) when is_struct(user), do: user.role == :admin
-
-  def verified?(nil), do: false
-  def verified?(user) when is_struct(user), do: user.role == :verified || user.role == :admin
-
-  # Helper function to check if a user can perform an action
-  def check_permission(action, user) do
-    # For admin-specific actions, directly check user's role
+  @doc """
+  Check if a user has permission for a specific action using Ash's built-in authorization.
+  """
+  def check_permission(action, actor) when is_atom(action) do
     case action do
-      :update_role -> admin?(user)
-      :search_by_email -> admin?(user)
-      _ -> Ash.can?({Huddlz.Accounts.User, action}, user, pre_flight?: false)
+      :search_by_email -> Ash.can?({Huddlz.Accounts.User, :search_by_email}, actor)
+      :read -> Ash.can?({Huddlz.Accounts.User, :read}, actor)
+      _ -> false
     end
   end
 end

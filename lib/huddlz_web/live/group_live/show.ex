@@ -368,19 +368,8 @@ defmodule HuddlzWeb.GroupLive.Show do
     current_user != nil
   end
 
-  defp owner_or_organizer?(group, current_user) do
-    owner?(group, current_user) || organizer?(group, current_user)
-  end
-
-  # No longer needed - all users can see members
-  # defp verified_member?(group, current_user) do
-  #   member?(group, current_user) && current_user && current_user.role == :verified
-  # end
-
-  # No longer needed - all users can see members
-  # defp verified_non_member_of_public_group?(group, current_user) do
-  #   group.is_public && current_user && current_user.role == :verified
-  # end
+  # Removed unused functions after simplifying role system
+  # All logged-in users can now see member lists
 
   defp load_members(group) do
     GroupMember

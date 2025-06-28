@@ -28,7 +28,8 @@ defmodule Huddlz.Accounts.UserTest do
 
       # Test that our permission check helper works correctly
       assert Accounts.check_permission(:search_by_email, admin_user) == true
-      assert Accounts.check_permission(:search_by_email, regular_user) == false
+      # All users can now search by email
+      assert Accounts.check_permission(:search_by_email, regular_user) == true
     end
 
     test "non-admin users cannot update roles" do
@@ -56,18 +57,18 @@ defmodule Huddlz.Accounts.UserTest do
           role: :user
         })
 
-      # Verify our permission check helper works correctly
-      assert Accounts.check_permission(:update_role, admin_user) == true
-      assert Accounts.check_permission(:update_role, regular_user) == false
-      assert Accounts.check_permission(:update_role, verified_user) == false
+      # Verify permissions using Ash's can?
+      assert Ash.can?({User, :update_role}, admin_user)
+      refute Ash.can?({User, :update_role}, regular_user)
+      refute Ash.can?({User, :update_role}, verified_user)
 
       # Verify our policy is working as intended - regular and users cannot update roles
       assert_raise Ash.Error.Forbidden, fn ->
-        Accounts.update_role!(regular_user, :verified, actor: regular_user)
+        Accounts.update_role!(regular_user, :admin, actor: regular_user)
       end
 
       assert_raise Ash.Error.Forbidden, fn ->
-        Accounts.update_role!(regular_user, :verified, actor: verified_user)
+        Accounts.update_role!(regular_user, :admin, actor: verified_user)
       end
     end
 

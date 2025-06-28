@@ -6,9 +6,9 @@ defmodule HuddlzWeb.HuddlLivePermissionsTest do
 
   describe "Huddl RSVP and permissions" do
     setup do
-      owner = generate(user(role: :user))
-      member = generate(user(role: :user))
-      :user = generate(user(role: :user))
+      owner = generate(user())
+      member = generate(user())
+      regular = generate(user())
 
       group =
         generate(

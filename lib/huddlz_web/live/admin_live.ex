@@ -129,12 +129,7 @@ defmodule HuddlzWeb.AdminLive do
                           <form phx-submit="update_role" class="flex items-center">
                             <input type="hidden" name="user_id" value={user.id} />
                             <select name="role" class="select select-sm mr-2">
-                              <option value="regular" selected={user.role == :regular}>
-                                Regular
-                              </option>
-                              <option value="verified" selected={user.role == :verified}>
-                                Verified
-                              </option>
+                              <option value="user" selected={user.role == :user}>User</option>
                               <option value="admin" selected={user.role == :admin}>Admin</option>
                             </select>
                             <button type="submit" class="btn btn-primary btn-sm">Update</button>
@@ -155,6 +150,5 @@ defmodule HuddlzWeb.AdminLive do
 
   # Helper function to determine badge color based on role
   defp role_badge_class(:admin), do: "badge-primary"
-  defp role_badge_class(:verified), do: "badge-secondary"
-  defp role_badge_class(:regular), do: "badge-ghost"
+  defp role_badge_class(:user), do: "badge-ghost"
 end

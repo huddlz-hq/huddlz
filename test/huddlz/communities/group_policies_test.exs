@@ -55,14 +55,14 @@ defmodule Huddlz.Communities.GroupPoliciesTest do
       assert fetched_group.id == group.id
     end
 
-    test "anyone can get a group by slug - user", %{group: group, regular_user: user} do
+    test "anyone can get a group by slug - regular user", %{group: group, regular_user: user} do
       assert {:ok, fetched_group} =
                Huddlz.Communities.get_by_slug(group.slug, actor: user)
 
       assert fetched_group.id == group.id
     end
 
-    test "anyone can get a group by slug - user", %{group: group, verified_user: user} do
+    test "anyone can get a group by slug - verified user", %{group: group, verified_user: user} do
       assert {:ok, fetched_group} =
                Huddlz.Communities.get_by_slug(group.slug, actor: user)
 
@@ -146,8 +146,8 @@ defmodule Huddlz.Communities.GroupPoliciesTest do
       assert to_string(group.name) == "Admin Group"
     end
 
-    test "user cannot create group", %{regular_user: user} do
-      assert {:error, %Ash.Error.Forbidden{}} =
+    test "regular user can create group", %{regular_user: user} do
+      assert {:ok, group} =
                Group
                |> Ash.Changeset.for_create(:create_group, %{
                  name: "New Group",
@@ -157,6 +157,9 @@ defmodule Huddlz.Communities.GroupPoliciesTest do
                  owner_id: user.id
                })
                |> Ash.create(actor: user)
+
+      assert to_string(group.name) == "New Group"
+      assert group.owner_id == user.id
     end
   end
 end

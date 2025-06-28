@@ -24,7 +24,7 @@ defmodule HuddlzWeb.GroupLive.New do
     else
       {:ok,
        socket
-       |> put_flash(:error, "You need to be a verified user to create groups")
+       |> put_flash(:error, "You need to be logged in to create groups")
        |> redirect(to: ~p"/groups")}
     end
   end
@@ -118,6 +118,6 @@ defmodule HuddlzWeb.GroupLive.New do
   defp can_create_group?(nil), do: false
 
   defp can_create_group?(user) do
-    user.role in [:admin, :verified]
+    user.role in [:admin, :user]
   end
 end

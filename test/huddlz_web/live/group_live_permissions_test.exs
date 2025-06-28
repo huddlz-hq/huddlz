@@ -110,7 +110,7 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: to_string(owner.email))
+      |> assert_has("p", text: owner.display_name)
     end
 
     test "organizer can see full member list in public group", %{
@@ -122,7 +122,7 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       |> login(organizer)
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: to_string(organizer.email))
+      |> assert_has("p", text: organizer.display_name)
     end
 
     test "verified member can see full member list in public group", %{
@@ -134,10 +134,10 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       |> login(member)
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: to_string(member.email))
+      |> assert_has("p", text: member.display_name)
     end
 
-    test "regular member cannot see member list in public group", %{
+    test "regular member can see member list in public group", %{
       conn: conn,
       regular_member: member,
       public_group: group
@@ -146,7 +146,7 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       |> login(member)
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: "Members list is only visible to users.")
+      |> assert_has("p", text: member.display_name)
     end
 
     test "verified non-member can see member list in public group", %{
@@ -161,16 +161,17 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       |> assert_has("span", text: "(Owner)")
     end
 
-    test "regular non-member cannot see member list in public group", %{
+    test "regular non-member can see member list in public group", %{
       conn: conn,
       regular_non_member: user,
-      public_group: group
+      public_group: group,
+      owner: owner
     } do
       conn
       |> login(user)
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: "Members list is only visible to users.")
+      |> assert_has("p", text: owner.display_name)
     end
 
     test "owner can see full member list in private group", %{
@@ -182,7 +183,7 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: to_string(owner.email))
+      |> assert_has("p", text: owner.display_name)
     end
 
     test "organizer can see full member list in private group", %{
@@ -194,7 +195,7 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       |> login(organizer)
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: to_string(organizer.email))
+      |> assert_has("p", text: organizer.display_name)
     end
 
     test "verified member can see full member list in private group", %{
@@ -206,10 +207,10 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       |> login(member)
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: to_string(member.email))
+      |> assert_has("p", text: member.display_name)
     end
 
-    test "regular member cannot see member list in private group", %{
+    test "regular member can see member list in private group", %{
       conn: conn,
       regular_member: member,
       private_group: group
@@ -218,7 +219,7 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       |> login(member)
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: "Members list is only visible to users.")
+      |> assert_has("p", text: member.display_name)
     end
 
     test "verified non-member cannot access private group", %{
@@ -252,7 +253,7 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       conn
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: "Members list is only visible to users.")
+      |> assert_has("p", text: "Please sign in to see the member list.")
     end
 
     test "anonymous user cannot access private group", %{conn: conn, private_group: group} do

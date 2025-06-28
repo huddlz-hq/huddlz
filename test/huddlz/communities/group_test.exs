@@ -54,7 +54,7 @@ defmodule Huddlz.Communities.GroupTest do
       assert group.owner_id == verified_user.id
     end
 
-    test "users cannot create groups" do
+    test "all users can create groups" do
       # Create a user
       regular_user =
         Ash.Seed.seed!(User, %{
@@ -63,16 +63,18 @@ defmodule Huddlz.Communities.GroupTest do
           role: :user
         })
 
-      # Regular user should not be able to create a group
-      {:error, %Ash.Error.Forbidden{}} =
-        Group
-        |> Ash.Changeset.for_create(:create_group, %{
-          name: "Regular Created Group",
-          description: "A test group created by a user",
-          is_public: true,
-          owner_id: regular_user.id
-        })
-        |> Ash.create(actor: regular_user)
+      # All users can now create groups
+      assert {:ok, group} =
+               Group
+               |> Ash.Changeset.for_create(:create_group, %{
+                 name: "Regular Created Group",
+                 description: "A test group created by a user",
+                 is_public: true,
+                 owner_id: regular_user.id
+               })
+               |> Ash.create(actor: regular_user)
+
+      assert to_string(group.name) == "Regular Created Group"
     end
   end
 
@@ -121,29 +123,30 @@ defmodule Huddlz.Communities.GroupTest do
       assert {:ok, _} = Ash.get(Group, private_group.id, actor: regular_user)
     end
 
-    test "only users can be assigned as owner" do
-      regular_user = generate(user(role: :user))
-      # Verified user can be owner (shown in setup)
+    test "all users can be assigned as owner" do
+      regular_user = generate(user())
 
-      # Regular user should not be able to create a group with themselves as owner
-      {:error, %Ash.Error.Forbidden{}} =
-        Group
-        |> Ash.Changeset.for_create(:create_group, %{
-          name: "Cannot Create Group",
-          description: "This should fail",
-          is_public: true,
-          owner_id: regular_user.id
-        })
-        |> Ash.create(actor: regular_user)
+      # All users can now create groups and be owners
+      assert {:ok, group} =
+               Group
+               |> Ash.Changeset.for_create(:create_group, %{
+                 name: "User Owned Group",
+                 description: "A group owned by a regular user",
+                 is_public: true,
+                 owner_id: regular_user.id
+               })
+               |> Ash.create(actor: regular_user)
+
+      assert group.owner_id == regular_user.id
     end
 
-    test "only users can be assigned as organizer" do
+    test "all users can be assigned as organizer" do
       owner = generate(user(role: :user))
       public_group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
       _verified_user = generate(user(role: :user))
       regular_user2 = generate(user(role: :user))
-      # Attempt to make a user an organizer should fail
-      {:error, _error} =
+      # All users can now be organizers
+      {:ok, _member} =
         Huddlz.Communities.GroupMember
         |> Ash.Changeset.for_create(:add_member, %{
           group_id: public_group.id,
@@ -204,7 +207,7 @@ defmodule Huddlz.Communities.GroupTest do
         |> Ash.Query.for_read(:get_by_group, %{group_id: public_group.id})
         |> Ash.read!(actor: organizer)
 
-      members_:user =
+      members_verified =
         Huddlz.Communities.GroupMember
         |> Ash.Query.for_read(:get_by_group, %{group_id: public_group.id})
         |> Ash.read!(actor: verified_member)
@@ -221,21 +224,21 @@ defmodule Huddlz.Communities.GroupTest do
       assert length(members_verified) == 4
       assert length(verified_non_member_view) == 4
 
-      # Regular member should not be able to see members (gets empty list due to policy filtering)
+      # All users can now see members
       regular_member_result =
         Huddlz.Communities.GroupMember
         |> Ash.Query.for_read(:get_by_group, %{group_id: public_group.id})
         |> Ash.read!(actor: regular_member)
 
-      assert regular_member_result == []
+      assert length(regular_member_result) == 4
 
-      # Regular non-member should not be able to see members
+      # All users can now see members
       regular_non_member_result =
         Huddlz.Communities.GroupMember
         |> Ash.Query.for_read(:get_by_group, %{group_id: public_group.id})
         |> Ash.read!(actor: regular_non_member)
 
-      assert regular_non_member_result == []
+      assert length(regular_non_member_result) == 4
     end
 
     test "member visibility follows access control rules for private groups" do
@@ -290,7 +293,7 @@ defmodule Huddlz.Communities.GroupTest do
         |> Ash.read!(actor: organizer)
 
       # Verified member can see all members
-      members_:user =
+      members_verified =
         Huddlz.Communities.GroupMember
         |> Ash.Query.for_read(:get_by_group, %{group_id: private_group.id})
         |> Ash.read!(actor: verified_member)
@@ -300,13 +303,13 @@ defmodule Huddlz.Communities.GroupTest do
       assert length(members_organizer) == 4
       assert length(members_verified) == 4
 
-      # Regular member should not be able to see members (gets empty list due to policy filtering)
+      # Regular member can now see members
       regular_member_result =
         Huddlz.Communities.GroupMember
         |> Ash.Query.for_read(:get_by_group, %{group_id: private_group.id})
         |> Ash.read!(actor: regular_member)
 
-      assert regular_member_result == []
+      assert length(regular_member_result) == 4
 
       # Verified non-member should not be able to see members of private groups
       verified_non_member_result =

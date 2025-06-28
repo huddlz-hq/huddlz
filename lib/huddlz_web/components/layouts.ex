@@ -69,7 +69,7 @@ defmodule HuddlzWeb.Layouts do
                 </span>
               </li>
               <li><a href="/profile">Profile</a></li>
-              <%= if Huddlz.Accounts.admin?(@current_user) do %>
+              <%= if @current_user.role == :admin do %>
                 <li><a href="/admin">Admin Panel</a></li>
               <% end %>
               <li><a href="/sign-out">Sign Out</a></li>
