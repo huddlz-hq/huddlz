@@ -42,7 +42,7 @@ defmodule Huddlz.Communities.GroupMember do
       change manage_relationship(:user_id, :user, type: :append)
       change set_attribute(:role, arg(:role))
 
-      validate Huddlz.Communities.GroupMember.Validations.VerifiedForElevatedRoles
+      validate Huddlz.Communities.GroupMember.Validations.UserExistsForRole
     end
 
     destroy :remove_member do
