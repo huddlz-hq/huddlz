@@ -30,13 +30,13 @@ defmodule Huddlz.Communities.GroupTest do
       assert group.owner_id == admin_user.id
     end
 
-    test "verified users can create groups" do
-      # Create a verified user
+    test "users can create groups" do
+      # Create a user
       verified_user =
         Ash.Seed.seed!(User, %{
           email: "verified-group-creation@example.com",
           display_name: "Verified Group Creator",
-          role: :verified
+          role: :user
         })
 
       # Verified user should be able to create a group
@@ -44,7 +44,7 @@ defmodule Huddlz.Communities.GroupTest do
         Group
         |> Ash.Changeset.for_create(:create_group, %{
           name: "Verified Created Group",
-          description: "A test group created by a verified user",
+          description: "A test group created by a user",
           is_public: true,
           owner_id: verified_user.id
         })
@@ -54,13 +54,13 @@ defmodule Huddlz.Communities.GroupTest do
       assert group.owner_id == verified_user.id
     end
 
-    test "regular users cannot create groups" do
-      # Create a regular user
+    test "users cannot create groups" do
+      # Create a user
       regular_user =
         Ash.Seed.seed!(User, %{
           email: "regular-group-creation@example.com",
           display_name: "Regular Group Creator",
-          role: :regular
+          role: :user
         })
 
       # Regular user should not be able to create a group
@@ -68,7 +68,7 @@ defmodule Huddlz.Communities.GroupTest do
         Group
         |> Ash.Changeset.for_create(:create_group, %{
           name: "Regular Created Group",
-          description: "A test group created by a regular user",
+          description: "A test group created by a user",
           is_public: true,
           owner_id: regular_user.id
         })
@@ -83,10 +83,10 @@ defmodule Huddlz.Communities.GroupTest do
       admin_user = generate(user(role: :admin))
       {:ok, _} = Ash.get(Group, public_group.id, actor: admin_user)
 
-      verified_user = generate(user(role: :verified))
+      verified_user = generate(user(role: :user))
       {:ok, _} = Ash.get(Group, public_group.id, actor: verified_user)
 
-      regular_user = generate(user(role: :regular))
+      regular_user = generate(user(role: :user))
       {:ok, _} = Ash.get(Group, public_group.id, actor: regular_user)
     end
 
@@ -102,18 +102,18 @@ defmodule Huddlz.Communities.GroupTest do
       private_group = generate(group(is_public: false))
 
       # Regular user should not be able to read the private group
-      regular_user = generate(user(role: :regular))
+      regular_user = generate(user(role: :user))
 
       assert {:error, _error} =
                Ash.get(Group, private_group.id, actor: regular_user)
     end
 
     test "members of private group can see the group" do
-      owner = generate(user(role: :verified))
+      owner = generate(user(role: :user))
       private_group = generate(group(is_public: false, owner_id: owner.id, actor: owner))
 
       # Regular user should not be able to read the private group
-      regular_user = generate(user(role: :regular))
+      regular_user = generate(user(role: :user))
 
       _group_membership =
         generate(group_member(group_id: private_group.id, user_id: regular_user.id, actor: owner))
@@ -121,8 +121,8 @@ defmodule Huddlz.Communities.GroupTest do
       assert {:ok, _} = Ash.get(Group, private_group.id, actor: regular_user)
     end
 
-    test "only verified users can be assigned as owner" do
-      regular_user = generate(user(role: :regular))
+    test "only users can be assigned as owner" do
+      regular_user = generate(user(role: :user))
       # Verified user can be owner (shown in setup)
 
       # Regular user should not be able to create a group with themselves as owner
@@ -137,12 +137,12 @@ defmodule Huddlz.Communities.GroupTest do
         |> Ash.create(actor: regular_user)
     end
 
-    test "only verified users can be assigned as organizer" do
-      owner = generate(user(role: :verified))
+    test "only users can be assigned as organizer" do
+      owner = generate(user(role: :user))
       public_group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
-      _verified_user = generate(user(role: :verified))
-      regular_user2 = generate(user(role: :regular))
-      # Attempt to make a regular user an organizer should fail
+      _verified_user = generate(user(role: :user))
+      regular_user2 = generate(user(role: :user))
+      # Attempt to make a user an organizer should fail
       {:error, _error} =
         Huddlz.Communities.GroupMember
         |> Ash.Changeset.for_create(:add_member, %{
@@ -155,12 +155,12 @@ defmodule Huddlz.Communities.GroupTest do
 
     test "member visibility follows access control rules for public groups" do
       # Create users
-      owner = generate(user(role: :verified))
-      verified_member = generate(user(role: :verified))
-      organizer = generate(user(role: :verified))
-      regular_non_member = generate(user(role: :regular))
-      regular_member = generate(user(role: :regular))
-      verified_non_member = generate(user(role: :verified))
+      owner = generate(user(role: :user))
+      verified_member = generate(user(role: :user))
+      organizer = generate(user(role: :user))
+      regular_non_member = generate(user(role: :user))
+      regular_member = generate(user(role: :user))
+      verified_non_member = generate(user(role: :user))
 
       # Create public group
       public_group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
@@ -204,7 +204,7 @@ defmodule Huddlz.Communities.GroupTest do
         |> Ash.Query.for_read(:get_by_group, %{group_id: public_group.id})
         |> Ash.read!(actor: organizer)
 
-      members_verified =
+      members_:user =
         Huddlz.Communities.GroupMember
         |> Ash.Query.for_read(:get_by_group, %{group_id: public_group.id})
         |> Ash.read!(actor: verified_member)
@@ -240,12 +240,12 @@ defmodule Huddlz.Communities.GroupTest do
 
     test "member visibility follows access control rules for private groups" do
       # Create users
-      owner = generate(user(role: :verified))
-      verified_member = generate(user(role: :verified))
-      organizer = generate(user(role: :verified))
-      regular_member = generate(user(role: :regular))
-      verified_non_member = generate(user(role: :verified))
-      regular_non_member = generate(user(role: :regular))
+      owner = generate(user(role: :user))
+      verified_member = generate(user(role: :user))
+      organizer = generate(user(role: :user))
+      regular_member = generate(user(role: :user))
+      verified_non_member = generate(user(role: :user))
+      regular_non_member = generate(user(role: :user))
 
       # Create private group
       private_group = generate(group(is_public: false, owner_id: owner.id, actor: owner))
@@ -290,7 +290,7 @@ defmodule Huddlz.Communities.GroupTest do
         |> Ash.read!(actor: organizer)
 
       # Verified member can see all members
-      members_verified =
+      members_:user =
         Huddlz.Communities.GroupMember
         |> Ash.Query.for_read(:get_by_group, %{group_id: private_group.id})
         |> Ash.read!(actor: verified_member)
@@ -333,7 +333,7 @@ defmodule Huddlz.Communities.GroupTest do
         Ash.Seed.seed!(User, %{
           email: "group-owner@example.com",
           display_name: "Group Owner",
-          role: :verified
+          role: :user
         })
 
       # Create another user
@@ -341,7 +341,7 @@ defmodule Huddlz.Communities.GroupTest do
         Ash.Seed.seed!(User, %{
           email: "other-user@example.com",
           display_name: "Other User",
-          role: :verified
+          role: :user
         })
 
       # Create a group
@@ -388,7 +388,7 @@ defmodule Huddlz.Communities.GroupTest do
         Ash.Seed.seed!(User, %{
           email: "search-test-owner@example.com",
           display_name: "Search Test Owner",
-          role: :verified
+          role: :user
         })
 
       # Create some groups with distinctive names and descriptions for search testing

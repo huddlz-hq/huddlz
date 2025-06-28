@@ -425,7 +425,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
     |> Ash.Changeset.for_create(:create, %{
       email: "user#{System.unique_integer()}@example.com",
       display_name: "Test User",
-      role: :verified
+      role: :user
     })
     |> Ash.create!(authorize?: false)
   end

@@ -17,19 +17,19 @@ defmodule HuddlzWeb.AdminLiveTest do
         display_name: "Admin User"
       })
 
-    # Create regular user
+    # Create user
     regular_user =
       Ash.Seed.seed!(User, %{
         email: @regular_email,
-        role: :regular,
+        role: :user,
         display_name: "Regular User"
       })
 
-    # Create verified user (has more permissions than regular but not admin)
+    # Create user (has more permissions than regular but not admin)
     verified_user =
       Ash.Seed.seed!(User, %{
         email: @verified_email,
-        role: :verified,
+        role: :user,
         display_name: "Verified User"
       })
 
@@ -44,16 +44,16 @@ defmodule HuddlzWeb.AdminLiveTest do
       |> assert_path(~p"/sign-in")
     end
 
-    test "redirects if user is a regular user", %{conn: conn, regular_user: regular_user} do
-      # With regular user in session, should redirect to home
+    test "redirects if user is a user", %{conn: conn, regular_user: regular_user} do
+      # With user in session, should redirect to home
       conn
       |> login(regular_user)
       |> visit(~p"/admin")
       |> assert_path(~p"/")
     end
 
-    test "redirects if user is a verified user", %{conn: conn, verified_user: verified_user} do
-      # Even verified users (who aren't admins) should be redirected
+    test "redirects if user is a user", %{conn: conn, verified_user: verified_user} do
+      # Even users (who aren't admins) should be redirected
       conn
       |> login(verified_user)
       |> visit(~p"/admin")
@@ -118,7 +118,7 @@ defmodule HuddlzWeb.AdminLiveTest do
       # Verify user is displayed in the initial list
       |> assert_has("td", text: to_string(regular_user.email))
       |> assert_has("td", text: regular_user.display_name)
-      |> assert_has("span", text: "regular")
+      |> assert_has("span", text: "user")
     end
 
     test "can search users by partial email", %{admin_conn: conn, verified_user: verified_user} do
@@ -134,7 +134,7 @@ defmodule HuddlzWeb.AdminLiveTest do
       # Verify user is displayed in the initial list
       |> assert_has("td", text: to_string(verified_user.email))
       |> assert_has("td", text: verified_user.display_name)
-      |> assert_has("span.badge", text: "verified")
+      |> assert_has("span.badge", text: "user")
     end
 
     test "shows no results message when no users match search", %{admin_conn: conn} do

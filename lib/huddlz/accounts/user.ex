@@ -377,7 +377,7 @@ defmodule Huddlz.Accounts.User do
     attribute :role, Huddlz.Accounts.Role do
       description "User's role determines their permissions in the system"
       allow_nil? false
-      default :regular
+      default :user
     end
 
     attribute :hashed_password, :string do

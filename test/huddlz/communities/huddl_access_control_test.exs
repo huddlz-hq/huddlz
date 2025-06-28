@@ -8,10 +8,10 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
 
   describe "create authorization" do
     setup do
-      owner = generate(user(role: :verified))
-      organizer = generate(user(role: :verified))
-      member = generate(user(role: :verified))
-      non_member = generate(user(role: :verified))
+      owner = generate(user(role: :user))
+      organizer = generate(user(role: :user))
+      member = generate(user(role: :user))
+      non_member = generate(user(role: :user))
       admin = generate(user(role: :admin))
 
       group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
@@ -144,7 +144,7 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
 
   describe "force private for private groups" do
     test "private groups create private huddls even if is_private is false" do
-      owner = generate(user(role: :verified))
+      owner = generate(user(role: :user))
       private_group = generate(group(is_public: false, owner_id: owner.id, actor: owner))
 
       assert {:ok, huddl} =
@@ -172,7 +172,7 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
     end
 
     test "public groups respect is_private setting" do
-      owner = generate(user(role: :verified))
+      owner = generate(user(role: :user))
       public_group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
 
       # Test with is_private = false
@@ -223,9 +223,9 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
 
   describe "read authorization and visibility" do
     setup do
-      owner = generate(user(role: :verified))
-      member = generate(user(role: :verified))
-      non_member = generate(user(role: :verified))
+      owner = generate(user(role: :user))
+      member = generate(user(role: :user))
+      non_member = generate(user(role: :user))
 
       public_group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
       private_group = generate(group(is_public: false, owner_id: owner.id, actor: owner))
@@ -312,9 +312,9 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
 
   describe "virtual link visibility" do
     setup do
-      owner = generate(user(role: :verified))
-      member = generate(user(role: :verified))
-      non_member = generate(user(role: :verified))
+      owner = generate(user(role: :user))
+      member = generate(user(role: :user))
+      non_member = generate(user(role: :user))
 
       group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
       generate(group_member(group_id: group.id, user_id: member.id, role: :member, actor: owner))
@@ -400,9 +400,9 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
 
   describe "update and destroy authorization" do
     setup do
-      owner = generate(user(role: :verified))
-      organizer = generate(user(role: :verified))
-      member = generate(user(role: :verified))
+      owner = generate(user(role: :user))
+      organizer = generate(user(role: :user))
+      member = generate(user(role: :user))
       admin = generate(user(role: :admin))
 
       group = generate(group(is_public: true, owner_id: owner.id, actor: owner))

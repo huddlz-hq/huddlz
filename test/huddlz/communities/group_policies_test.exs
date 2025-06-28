@@ -10,21 +10,21 @@ defmodule Huddlz.Communities.GroupPoliciesTest do
       Ash.Seed.seed!(User, %{
         email: "owner@example.com",
         display_name: "Owner User",
-        role: :verified
+        role: :user
       })
 
     verified_user =
       Ash.Seed.seed!(User, %{
         email: "verified@example.com",
         display_name: "Verified User",
-        role: :verified
+        role: :user
       })
 
     regular_user =
       Ash.Seed.seed!(User, %{
         email: "regular@example.com",
         display_name: "Regular User",
-        role: :regular
+        role: :user
       })
 
     # Create a test group
@@ -55,14 +55,14 @@ defmodule Huddlz.Communities.GroupPoliciesTest do
       assert fetched_group.id == group.id
     end
 
-    test "anyone can get a group by slug - regular user", %{group: group, regular_user: user} do
+    test "anyone can get a group by slug - user", %{group: group, regular_user: user} do
       assert {:ok, fetched_group} =
                Huddlz.Communities.get_by_slug(group.slug, actor: user)
 
       assert fetched_group.id == group.id
     end
 
-    test "anyone can get a group by slug - verified user", %{group: group, verified_user: user} do
+    test "anyone can get a group by slug - user", %{group: group, verified_user: user} do
       assert {:ok, fetched_group} =
                Huddlz.Communities.get_by_slug(group.slug, actor: user)
 
@@ -99,7 +99,7 @@ defmodule Huddlz.Communities.GroupPoliciesTest do
                |> Ash.update(actor: user)
     end
 
-    test "regular user cannot update group details", %{group: group, regular_user: user} do
+    test "user cannot update group details", %{group: group, regular_user: user} do
       assert {:error, %Ash.Error.Forbidden{}} =
                group
                |> Ash.Changeset.for_update(:update_details, %{name: "Updated Name"})
@@ -108,7 +108,7 @@ defmodule Huddlz.Communities.GroupPoliciesTest do
   end
 
   describe "create_group policy" do
-    test "verified user can create group", %{verified_user: user} do
+    test "user can create group", %{verified_user: user} do
       assert {:ok, group} =
                Group
                |> Ash.Changeset.for_create(:create_group, %{
@@ -146,7 +146,7 @@ defmodule Huddlz.Communities.GroupPoliciesTest do
       assert to_string(group.name) == "Admin Group"
     end
 
-    test "regular user cannot create group", %{regular_user: user} do
+    test "user cannot create group", %{regular_user: user} do
       assert {:error, %Ash.Error.Forbidden{}} =
                Group
                |> Ash.Changeset.for_create(:create_group, %{

@@ -5,8 +5,8 @@ defmodule HuddlzWeb.GroupEditLinkTest do
 
   describe "Edit Group link on show page" do
     setup do
-      owner = generate(user(role: :verified))
-      member = generate(user(role: :verified))
+      owner = generate(user(role: :user))
+      member = generate(user(role: :user))
 
       group =
         generate(

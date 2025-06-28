@@ -3,7 +3,7 @@ defmodule SharedAuthSteps do
   Shared Cucumber step definitions for authentication and user management.
 
   This module provides reusable steps for:
-  - Creating test users with different roles (verified, regular, admin)
+  - Creating test users with different roles (user, admin)
   - Signing in users for authenticated scenarios
 
   See test/features/step_definitions/README.md for usage examples.
@@ -23,10 +23,8 @@ defmodule SharedAuthSteps do
       |> Enum.map(fn user_data ->
         role =
           case user_data["role"] do
-            "verified" -> :verified
-            "regular" -> :regular
             "admin" -> :admin
-            _ -> :regular
+            _ -> :user
           end
 
         # Create user using Repo directly to work with sandbox

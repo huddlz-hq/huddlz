@@ -6,7 +6,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
   describe "Huddl listing" do
     setup do
       # Create a public group with a verified owner for all tests
-      host = generate(user(role: :verified))
+      host = generate(user(role: :user))
       public_group = generate(group(is_public: true, owner_id: host.id, actor: host))
 
       %{host: host, public_group: public_group}

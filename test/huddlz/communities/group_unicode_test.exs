@@ -89,7 +89,7 @@ defmodule Huddlz.Communities.GroupUnicodeTest do
       Huddlz.Accounts.User
       |> Ash.Changeset.for_create(:create, %{
         email: "test#{System.unique_integer([:positive])}@example.com",
-        role: :verified,
+        role: :user,
         display_name: "Test User"
       })
       |> Ash.create(authorize?: false)

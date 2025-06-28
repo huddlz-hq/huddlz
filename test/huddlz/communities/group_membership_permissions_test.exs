@@ -7,9 +7,9 @@ defmodule Huddlz.Communities.GroupMembershipPermissionsTest do
 
   setup do
     admin = generate(user(role: :admin))
-    verified = generate(user(role: :verified))
-    regular = generate(user(role: :regular))
-    outsider = generate(user(role: :regular))
+    verified = generate(user())
+    regular = generate(user())
+    outsider = generate(user())
 
     # Groups are automatically created with owner membership
     public_group =
@@ -33,7 +33,7 @@ defmodule Huddlz.Communities.GroupMembershipPermissionsTest do
   end
 
   describe "join_group action" do
-    test "regular user cannot join private group", %{regular: user, private_group: group} do
+    test "user cannot join private group", %{regular: user, private_group: group} do
       assert {:error, %Ash.Error.Forbidden{}} =
                GroupMember
                |> Ash.Changeset.for_create(:join_group, %{group_id: group.id, user_id: user.id},
@@ -42,9 +42,9 @@ defmodule Huddlz.Communities.GroupMembershipPermissionsTest do
                |> Ash.create()
     end
 
-    test "verified user can join public group", %{public_group: group} do
-      # Create a new verified user who isn't already a member
-      new_verified = generate(user(role: :verified))
+    test "user can join public group", %{public_group: group} do
+      # Create a new user who isn't already a member
+      new_verified = generate(user())
 
       assert {:ok, membership} =
                GroupMember
@@ -60,8 +60,8 @@ defmodule Huddlz.Communities.GroupMembershipPermissionsTest do
   end
 
   describe "add_member action" do
-    test "regular user cannot add organizer to group", %{regular: user, public_group: group} do
-      new_verified = generate(user(role: :verified))
+    test "user cannot add organizer to group", %{regular: user, public_group: group} do
+      new_verified = generate(user())
 
       assert {:error, %Ash.Error.Forbidden{}} =
                GroupMember
@@ -73,13 +73,13 @@ defmodule Huddlz.Communities.GroupMembershipPermissionsTest do
                |> Ash.create()
     end
 
-    test "verified user (non-owner member) cannot add organizer to group", %{
+    test "user (non-owner member) cannot add organizer to group", %{
       verified: owner,
       public_group: group
     } do
-      # Create a new verified user who is not the owner
-      new_verified_member = generate(user(role: :verified))
-      new_verified_to_add = generate(user(role: :verified))
+      # Create a new user who is not the owner
+      new_verified_member = generate(user(role: :user))
+      new_verified_to_add = generate(user(role: :user))
 
       # Add new_verified_member as a regular member first
       generate(
@@ -103,7 +103,7 @@ defmodule Huddlz.Communities.GroupMembershipPermissionsTest do
     end
 
     test "group owner can add organizer to group", %{verified: owner, public_group: group} do
-      new_verified = generate(user(role: :verified))
+      new_verified = generate(user())
 
       assert {:ok, membership} =
                GroupMember
@@ -144,8 +144,8 @@ defmodule Huddlz.Communities.GroupMembershipPermissionsTest do
     end
 
     test "verified non-member cannot see member list in private group", %{private_group: group} do
-      # Create a new verified user who is not a member
-      non_member = generate(user(role: :verified))
+      # Create a new user who is not a member
+      non_member = generate(user(role: :user))
 
       result =
         GroupMember
@@ -160,7 +160,7 @@ defmodule Huddlz.Communities.GroupMembershipPermissionsTest do
       regular: user,
       verified: owner
     } do
-      # Add regular user as member (owner must add them)
+      # Add user as member (owner must add them)
       {:ok, _} =
         GroupMember
         |> Ash.Changeset.for_create(
@@ -179,8 +179,8 @@ defmodule Huddlz.Communities.GroupMembershipPermissionsTest do
     end
 
     test "organizer can see all members in public group", %{public_group: group, verified: owner} do
-      # Add a new verified user as organizer
-      new_organizer = generate(user(role: :verified))
+      # Add a new user as organizer
+      new_organizer = generate(user(role: :user))
 
       {:ok, _} =
         GroupMember
@@ -203,7 +203,7 @@ defmodule Huddlz.Communities.GroupMembershipPermissionsTest do
 
   describe "remove_member action" do
     test "owner can remove member", %{public_group: group, verified: owner, regular: member} do
-      # Add regular user as member
+      # Add user as member
       {:ok, membership} =
         GroupMember
         |> Ash.Changeset.for_create(
@@ -232,7 +232,7 @@ defmodule Huddlz.Communities.GroupMembershipPermissionsTest do
       regular: member
     } do
       # Create another user to be removed
-      another_member = generate(user(role: :regular))
+      another_member = generate(user(role: :user))
 
       # Add both as members
       {:ok, _} =

@@ -43,12 +43,12 @@ if Enum.empty?(existing_groups) do
   admin = create_user.("admin@example.com", "Admin User", :admin)
   IO.puts("Created admin user: #{admin.email}")
 
-  # Create some verified users
-  alice = create_user.("alice@example.com", "Alice Johnson", :verified)
-  bob = create_user.("bob@example.com", "Bob Smith", :verified)
-  carol = create_user.("carol@example.com", "Carol Davis", :verified)
-  dave = create_user.("dave@example.com", "Dave Wilson", :regular)
-  eve = create_user.("eve@example.com", "Eve Brown", :regular)
+  # Create some users
+  alice = create_user.("alice@example.com", "Alice Johnson", :user)
+  bob = create_user.("bob@example.com", "Bob Smith", :user)
+  carol = create_user.("carol@example.com", "Carol Davis", :user)
+  dave = create_user.("dave@example.com", "Dave Wilson", :user)
+  eve = create_user.("eve@example.com", "Eve Brown", :user)
 
   users = [alice, bob, carol, dave, eve]
   IO.puts("Created #{length(users)} sample users")

@@ -9,7 +9,7 @@ defmodule HuddlListingSteps do
   step "there are upcoming huddlz in the system", context do
     ensure_sandbox()
     # Create a verified host who can create huddls
-    host = generate(user(role: :verified))
+    host = generate(user(role: :user))
 
     # Create a public group owned by the host
     public_group = generate(group(owner_id: host.id, is_public: true, actor: host))

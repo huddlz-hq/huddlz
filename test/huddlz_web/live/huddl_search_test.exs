@@ -2,7 +2,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
   use HuddlzWeb.ConnCase
 
   setup do
-    user = generate(user(role: :verified))
+    user = generate(user(role: :user))
     group = generate(group(owner_id: user.id, is_public: true, actor: user))
 
     # Create various huddlz for testing
@@ -197,7 +197,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
   describe "access control" do
     test "only shows public huddlz to non-members", %{conn: conn, user: owner} do
-      other_user = generate(user(role: :verified))
+      other_user = generate(user(role: :user))
       private_group = generate(group(owner_id: owner.id, is_public: false, actor: owner))
 
       _private_huddl =
