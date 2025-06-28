@@ -149,7 +149,7 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       |> assert_has("p", text: member.display_name)
     end
 
-    test "verified non-member can see member list in public group", %{
+    test "verified non-member cannot see member list in public group", %{
       conn: conn,
       verified_non_member: user,
       public_group: group
@@ -158,20 +158,19 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       |> login(user)
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h3", text: "Members")
-      |> assert_has("span", text: "(Owner)")
+      |> assert_has("p", text: "Only members can see the member list.")
     end
 
-    test "regular non-member can see member list in public group", %{
+    test "regular non-member cannot see member list in public group", %{
       conn: conn,
       regular_non_member: user,
-      public_group: group,
-      owner: owner
+      public_group: group
     } do
       conn
       |> login(user)
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: owner.display_name)
+      |> assert_has("p", text: "Only members can see the member list.")
     end
 
     test "owner can see full member list in private group", %{

@@ -139,9 +139,8 @@ defmodule Huddlz.Communities.GroupMember do
       authorize_if GroupOwner
       authorize_if GroupOrganizer
       authorize_if GroupMember
-      authorize_if Huddlz.Communities.GroupMember.Checks.NonMemberPublicGroup
 
-      # Explicitly forbid everyone else
+      # Explicitly forbid everyone else (non-members cannot see member lists)
       forbid_if always()
     end
   end

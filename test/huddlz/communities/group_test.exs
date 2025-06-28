@@ -196,7 +196,7 @@ defmodule Huddlz.Communities.GroupTest do
         )
       )
 
-      # All verified roles can see members of public groups
+      # Only members can see member lists
       members_owner =
         Huddlz.Communities.GroupMember
         |> Ash.Query.for_read(:get_by_group, %{group_id: public_group.id})
@@ -212,19 +212,20 @@ defmodule Huddlz.Communities.GroupTest do
         |> Ash.Query.for_read(:get_by_group, %{group_id: public_group.id})
         |> Ash.read!(actor: verified_member)
 
-      # Verified non-member should also see members of public groups
+      # Non-members cannot see members of public groups
       verified_non_member_view =
         Huddlz.Communities.GroupMember
         |> Ash.Query.for_read(:get_by_group, %{group_id: public_group.id})
         |> Ash.read!(actor: verified_non_member)
 
-      # All should see the same member list (owner + organizer + verified_member + regular_member = 4)
+      # Members should see the same member list (owner + organizer + verified_member + regular_member = 4)
       assert length(members_owner) == 4
       assert length(members_organizer) == 4
       assert length(members_verified) == 4
-      assert length(verified_non_member_view) == 4
+      # Non-members see empty list
+      assert verified_non_member_view == []
 
-      # All users can now see members
+      # Regular members can see members
       regular_member_result =
         Huddlz.Communities.GroupMember
         |> Ash.Query.for_read(:get_by_group, %{group_id: public_group.id})
@@ -232,13 +233,13 @@ defmodule Huddlz.Communities.GroupTest do
 
       assert length(regular_member_result) == 4
 
-      # All users can now see members
+      # Non-members cannot see members
       regular_non_member_result =
         Huddlz.Communities.GroupMember
         |> Ash.Query.for_read(:get_by_group, %{group_id: public_group.id})
         |> Ash.read!(actor: regular_non_member)
 
-      assert length(regular_non_member_result) == 4
+      assert regular_non_member_result == []
     end
 
     test "member visibility follows access control rules for private groups" do
