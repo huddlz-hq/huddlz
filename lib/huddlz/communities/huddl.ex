@@ -119,7 +119,7 @@ defmodule Huddlz.Communities.Huddl do
         allow_nil? false
       end
 
-      filter expr(group_id == ^arg(:group_id) and starts_at > ^DateTime.utc_now())
+      filter expr(group_id == ^arg(:group_id) and starts_at > now())
 
       pagination keyset?: true,
                  offset?: true,
@@ -136,7 +136,7 @@ defmodule Huddlz.Communities.Huddl do
         allow_nil? false
       end
 
-      filter expr(group_id == ^arg(:group_id) and ends_at < ^DateTime.utc_now())
+      filter expr(group_id == ^arg(:group_id) and ends_at < now())
 
       pagination keyset?: true,
                  offset?: true,
