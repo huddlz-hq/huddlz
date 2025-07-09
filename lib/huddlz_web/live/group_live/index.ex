@@ -57,11 +57,13 @@ defmodule HuddlzWeb.GroupLive.Index do
           <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             <%= for group <- @groups do %>
               <div class="card bg-base-100 shadow-xl">
-                <%= if group.image_url do %>
-                  <figure>
+                <figure>
+                  <%= if group.image_url do %>
                     <img src={group.image_url} alt={group.name} class="h-48 w-full object-cover" />
-                  </figure>
-                <% end %>
+                  <% else %>
+                    <img src={"https://placehold.co/600x400/orange/white?text=#{group.name}"} alt={group.name} class="h-48 w-full object-cover" />
+                  <% end %>
+                </figure>
                 <div class="card-body">
                   <h2 class="card-title">
                     {group.name}
