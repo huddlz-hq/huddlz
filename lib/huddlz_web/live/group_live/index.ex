@@ -61,7 +61,11 @@ defmodule HuddlzWeb.GroupLive.Index do
                   <%= if group.image_url do %>
                     <img src={group.image_url} alt={group.name} class="h-48 w-full object-cover" />
                   <% else %>
-                    <img src={"https://placehold.co/600x400/orange/white?text=#{group.name}"} alt={group.name} class="h-48 w-full object-cover" />
+                    <img
+                      src={"https://placehold.co/600x400/orange/white?text=#{group.name}"}
+                      alt={group.name}
+                      class="h-48 w-full object-cover"
+                    />
                   <% end %>
                 </figure>
                 <div class="card-body">
