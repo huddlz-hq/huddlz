@@ -48,5 +48,7 @@ defmodule Huddlz.Communities do
       define :get_user_rsvps, action: :by_user, args: [:user_id]
       define :check_user_rsvp, action: :check_rsvp, args: [:huddl_id, :user_id]
     end
+
+    resource Huddlz.Communities.HuddlTemplate
   end
 end

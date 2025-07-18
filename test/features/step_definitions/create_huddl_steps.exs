@@ -213,6 +213,13 @@ defmodule CreateHuddlSteps do
 
           "Virtual Link" ->
             Map.put(acc, "virtual_link", value)
+
+          "Frequency" ->
+            Map.put(acc, "frequency", value)
+
+          "Repeat Until" ->
+            repeat_until = parse_relative_time(value)
+            Map.put(acc, "repeat_until", DateTime.to_iso8601(repeat_until))
         end
       end)
 
@@ -249,6 +256,8 @@ defmodule CreateHuddlSteps do
           "virtual_link" -> fill_in(session, "Virtual Meeting Link", with: value, exact: false)
           "starts_at" -> fill_in(session, "Start Date & Time", with: value, exact: false)
           "ends_at" -> fill_in(session, "End Date & Time", with: value, exact: false)
+          "frequency" -> select(session, "Frequency", option: value, exact: false)
+          "repeat_until" -> fill_in(session, "Repeat Until", with: value, exact: false)
           # Already handled above
           "event_type" -> session
           _ -> session
@@ -282,7 +291,6 @@ defmodule CreateHuddlSteps do
 
   step "I should not see a checkbox for {string}", %{args: [label]} = context do
     session = context[:session] || context[:conn]
-    refute_has(session, "input[type='checkbox']")
     refute_has(session, "*", text: label)
     context
   end
@@ -291,6 +299,20 @@ defmodule CreateHuddlSteps do
   step "I should be redirected to the {string} group page", %{args: [group_name]} = context do
     session = context[:session] || context[:conn]
     assert_has(session, "*", text: group_name)
+    context
+  end
+
+  step "the huddl {string} should be created {int} times", %{args: [text, count]} = context do
+    # Wait a moment for any async operations to complete
+    Process.sleep(100)
+
+    huddlz =
+      Huddl
+      |> Ash.Query.filter(title == ^text)
+      |> Ash.read!(actor: context.current_user, authorize?: true)
+
+    assert length(huddlz) == count, "Expected #{count} huddlz, got #{length(huddlz)}"
+
     context
   end
 
@@ -343,5 +365,13 @@ defmodule CreateHuddlSteps do
     @tomorrow
     |> DateTime.add(hour, :hour)
     |> DateTime.add(minute, :minute)
+  end
+
+  defp parse_relative_time("two months") do
+    DateTime.utc_now() |> DateTime.add(60, :day)
+  end
+
+  defp parse_relative_time("three months") do
+    DateTime.utc_now() |> DateTime.add(90, :day)
   end
 end

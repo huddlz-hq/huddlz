@@ -56,6 +56,46 @@ Feature: Create Huddl
     Then I should be redirected to the "Tech Meetup" group page
     And I should see "Huddl created successfully!"
 
+  Scenario: Owner creates a monthly recurring huddl
+    Given I am signed in as "owner@example.com"
+    When I visit the "Tech Meetup" group page
+    Then I should see a "Create Huddl" button
+    When I click "Create Huddl"
+    Then I should be on the new huddl page for "Tech Meetup"
+    When I check "Make this a recurring event"
+    When I fill in the huddl form with:
+      | Field             | Value                       |
+      | Title             | Monthly Tech Talk           |
+      | Description       | Discussion about new tech   |
+      | Start Date & Time | tomorrow at 6:00 PM         |
+      | End Date & Time   | tomorrow at 8:00 PM         |
+      | Event Type        | In-Person                   |
+      | Physical Location | 123 Main St, Tech City      |
+      | Frequency         | Monthly                     |
+      | Repeat Until      | two months                  |
+    And I submit the form
+    Then the huddl "Monthly Tech Talk" should be created 2 times
+
+  Scenario: Owner creates a weekly recurring huddl
+    Given I am signed in as "owner@example.com"
+    When I visit the "Tech Meetup" group page
+    Then I should see a "Create Huddl" button
+    When I click "Create Huddl"
+    Then I should be on the new huddl page for "Tech Meetup"
+    When I check "Make this a recurring event"
+    When I fill in the huddl form with:
+      | Field             | Value                       |
+      | Title             | Weekly Tech Talk            |
+      | Description       | Discussion about new tech   |
+      | Start Date & Time | tomorrow at 6:00 PM         |
+      | End Date & Time   | tomorrow at 8:00 PM         |
+      | Event Type        | In-Person                   |
+      | Physical Location | 123 Main St, Tech City      |
+      | Frequency         | Weekly                      |
+      | Repeat Until      | two months                  |
+    And I submit the form
+    Then the huddl "Weekly Tech Talk" should be created 9 times
+
   Scenario: Creating a hybrid huddl shows both location fields
     Given I am signed in as "owner@example.com"
     When I visit the new huddl page for "Tech Meetup"

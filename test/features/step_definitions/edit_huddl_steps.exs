@@ -2,8 +2,9 @@ defmodule EditHuddlSteps do
   use Cucumber.StepDefinition
   import CucumberDatabaseHelper
   import Huddlz.Generator
-  alias Huddlz.Communities.Huddl
+  import ExUnit.Assertions
   import PhoenixTest
+  alias Huddlz.Communities.Huddl
   require Ash.Query
 
   step "the following huddlz exist:", context do
@@ -22,13 +23,20 @@ defmodule EditHuddlSteps do
             group(owner_id: host.id, name: huddl_data["group_name"], is_public: true, actor: host)
           )
 
+        is_recurring = huddl_data["recurring"] == "Yes"
+        frequency = "monthly"
+        repeat_until = DateTime.utc_now() |> DateTime.add(60, :day)
+
         generate(
           huddl(
             group_id: group.id,
             creator_id: host.id,
             is_private: false,
             title: huddl_data["name"],
-            actor: host
+            actor: host,
+            is_recurring: is_recurring,
+            frequency: frequency,
+            repeat_until: repeat_until
           )
         )
       end)
@@ -45,6 +53,17 @@ defmodule EditHuddlSteps do
   step "I should be redirected to the {string} huddl page", %{args: [huddl_name]} = context do
     session = context[:session] || context[:conn]
     assert_has(session, "*", text: huddl_name)
+    context
+  end
+
+  step "other {string} huddlz should still exist", %{args: [text]} = context do
+    huddlz =
+      Huddl
+      |> Ash.Query.filter(title == ^text)
+      |> Ash.read!(actor: context.current_user, authorize?: true)
+
+    assert length(huddlz) >= 1, "Expected at least 1 huddl, got 0"
+
     context
   end
 
@@ -78,6 +97,8 @@ defmodule EditHuddlSteps do
           "virtual_link" -> fill_in(session, "Virtual Meeting Link", with: value, exact: false)
           "starts_at" -> fill_in(session, "Start Date & Time", with: value, exact: false)
           "ends_at" -> fill_in(session, "End Date & Time", with: value, exact: false)
+          "frequency" -> select(session, "Frequency", option: value, exact: false)
+          "repeat_until" -> fill_in(session, "Repeat Until", with: value, exact: false)
           # Already handled above
           "event_type" -> session
           _ -> session
@@ -101,6 +122,12 @@ defmodule EditHuddlSteps do
 
     session = context[:session] || context[:conn]
     session = session |> visit("/groups/#{huddl.group.slug}/huddlz/#{huddl.id}/edit")
+    Map.merge(context, %{session: session, conn: session})
+  end
+
+  step "I choose {string}", %{args: [label]} = context do
+    session = context[:session] || context[:conn]
+    session = choose(session, label)
     Map.merge(context, %{session: session, conn: session})
   end
 end
