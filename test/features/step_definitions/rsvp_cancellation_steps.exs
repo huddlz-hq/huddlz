@@ -187,7 +187,8 @@ defmodule RsvpCancellationSteps do
       Huddl
       |> Ash.Query.filter(title == ^huddl_title)
       |> Ash.Query.load(:group)
-      |> Ash.read_one!(actor: user)
+      |> Ash.read!(actor: user)
+      |> List.first()
 
     session = context[:session] || context[:conn]
     session = session |> visit("/groups/#{huddl.group.slug}/huddlz/#{huddl.id}")

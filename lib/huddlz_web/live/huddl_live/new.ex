@@ -72,6 +72,24 @@ defmodule HuddlzWeb.HuddlLive.New do
           <.input field={@form[:ends_at]} type="datetime-local" label="End Date & Time" required />
         </div>
 
+        <.input field={@form[:is_recurring]} type="checkbox" label="Make this a recurring event" />
+
+        <%= if @form[:is_recurring].value do %>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <.input
+              field={@form[:frequency]}
+              type="select"
+              label="Frequency"
+              options={[
+                {"Weekly", "weekly"},
+                {"Monthly", "monthly"}
+              ]}
+              required
+            />
+            <.input field={@form[:repeat_until]} type="date" label="Repeat Until" required />
+          </div>
+        <% end %>
+
         <.input
           field={@form[:event_type]}
           type="select"

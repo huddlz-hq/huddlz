@@ -40,10 +40,16 @@ defmodule Huddlz.Communities.Huddl do
         :rsvp_count,
         :thumbnail_url,
         :creator_id,
-        :group_id
+        :group_id,
+        :huddl_template_id
       ]
 
+      argument :is_recurring, :boolean, default: false
+      argument :repeat_until, :date, allow_nil?: true
+      argument :frequency, :string, allow_nil?: true
+
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
+      change Huddlz.Communities.Huddl.Changes.AddHuddlTemplate
     end
 
     update :update do
@@ -59,10 +65,21 @@ defmodule Huddlz.Communities.Huddl do
         :virtual_link,
         :is_private,
         :rsvp_count,
-        :thumbnail_url
+        :thumbnail_url,
+        :huddl_template_id
       ]
 
+      argument :repeat_until, :date
+      argument :frequency, :string
+
+      argument :edit_type, :string do
+        constraints allow_empty?: true
+        default "instance"
+      end
+
       require_atomic? false
+
+      change Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz
     end
 
     read :by_status do
@@ -447,6 +464,12 @@ defmodule Huddlz.Communities.Huddl do
       primary_key? false
     end
 
+    belongs_to :huddl_template, Huddlz.Communities.HuddlTemplate do
+      attribute_type :uuid
+      allow_nil? true
+      primary_key? false
+    end
+
     has_many :attendees, Huddlz.Communities.HuddlAttendee do
       destination_attribute :huddl_id
     end
@@ -484,9 +507,5 @@ defmodule Huddlz.Communities.Huddl do
       description "Whether the huddl is visible to everyone (public huddl in public group)"
       calculation expr(is_private == false and group.is_public == true)
     end
-  end
-
-  identities do
-    identity :unique_title_per_creator, [:creator_id, :title]
   end
 end
