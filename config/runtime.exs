@@ -125,19 +125,16 @@ if config_env() == :prod do
   #
   # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
 
-  # Configure SendGrid for production emails (required for magic link authentication)
-  sendgrid_api_key =
-    System.get_env("SENDGRID_API_KEY") ||
+  # Configure Gmail for production emails (required for magic link authentication)
+  gmail_access_token =
+    System.get_env("GMAIL_ACCESS_TOKEN") ||
       raise """
-      environment variable SENDGRID_API_KEY is missing.
+      environment variable GMAIL_ACCESS_TOKEN is missing.
       This is required for magic link authentication to work.
-      Get your API key from https://sendgrid.com/
+      You need an OAuth2 access token with 'gmail.compose' scope.
       """
 
   config :huddlz, Huddlz.Mailer,
-    adapter: Swoosh.Adapters.Sendgrid,
-    api_key: sendgrid_api_key
-
-  # Configure Swoosh API client to use Req (already included in deps)
-  config :swoosh, :api_client, Swoosh.ApiClient.Req
+    adapter: Swoosh.Adapters.Gmail,
+    access_token: gmail_access_token
 end
