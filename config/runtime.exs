@@ -125,18 +125,27 @@ if config_env() == :prod do
   #
   # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
 
-  # Configure SendGrid for production emails (required for magic link authentication)
-  sendgrid_api_key =
-    System.get_env("SENDGRID_API_KEY") ||
+  # Configure Mailgun for production emails (required for magic link authentication)
+  mailgun_api_key =
+    System.get_env("MAILGUN_API_KEY") ||
       raise """
-      environment variable SENDGRID_API_KEY is missing.
+      environment variable MAILGUN_API_KEY is missing.
       This is required for magic link authentication to work.
-      Get your API key from https://sendgrid.com/
+      Get your API key from https://mailgun.com/
+      """
+
+  mailgun_domain =
+    System.get_env("MAILGUN_DOMAIN") ||
+      raise """
+      environment variable MAILGUN_DOMAIN is missing.
+      This is your verified domain in Mailgun.
+      Example: mg.yourdomain.com
       """
 
   config :huddlz, Huddlz.Mailer,
-    adapter: Swoosh.Adapters.Sendgrid,
-    api_key: sendgrid_api_key
+    adapter: Swoosh.Adapters.Mailgun,
+    api_key: mailgun_api_key,
+    domain: mailgun_domain
 
   # Configure Swoosh API client to use Req (already included in deps)
   config :swoosh, :api_client, Swoosh.ApiClient.Req
