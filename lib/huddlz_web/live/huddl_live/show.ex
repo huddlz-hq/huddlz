@@ -24,7 +24,8 @@ defmodule HuddlzWeb.HuddlLive.Show do
          socket
          |> assign(:page_title, huddl.title)
          |> assign(:huddl, huddl)
-         |> assign(:has_rsvped, has_rsvped)}
+         |> assign(:has_rsvped, has_rsvped)
+         |> assign(:is_creator, creator?(huddl, socket.assigns.current_user))}
 
       {:error, :not_found} ->
         {:noreply,
@@ -61,6 +62,14 @@ defmodule HuddlzWeb.HuddlLive.Show do
           <% end %>
         </:subtitle>
         <:actions>
+          <%= if @is_creator do %>
+            <.link
+              navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}/edit"}
+              class="btn btn-ghost"
+            >
+              <.icon name="hero-pencil" class="h-4 w-4" /> Edit Huddl
+            </.link>
+          <% end %>
           <%= if @current_user && @huddl.status == :upcoming do %>
             <%= if @has_rsvped do %>
               <div class="flex items-center gap-4">
@@ -253,6 +262,12 @@ defmodule HuddlzWeb.HuddlLive.Show do
       {:error, _} ->
         {:error, :not_authorized}
     end
+  end
+
+  defp creator?(_huddl, nil), do: false
+
+  defp creator?(huddl, user) do
+    huddl.creator_id == user.id
   end
 
   defp check_rsvp(_huddl, nil), do: false
