@@ -69,6 +69,13 @@ defmodule HuddlzWeb.HuddlLive.Show do
             >
               <.icon name="hero-pencil" class="h-4 w-4" /> Edit Huddl
             </.link>
+            <button
+              phx-click="delete_huddl"
+              data-confirm="Are you sure you want to delete this huddl?"
+              class="btn btn-ghost bg-red-500 text-white hover:bg-red-300"
+            >
+              <.icon name="hero-trash" class="h-4 w-4" /> Delete Huddl
+            </button>
           <% end %>
           <%= if @current_user && @huddl.status == :upcoming do %>
             <%= if @has_rsvped do %>
@@ -240,6 +247,15 @@ defmodule HuddlzWeb.HuddlLive.Show do
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to cancel RSVP. Please try again.")}
     end
+  end
+
+  def handle_event("delete_huddl", _, socket) do
+    Ash.destroy!(socket.assigns.huddl, actor: socket.assigns.current_user)
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "Huddl deleted successfully!")
+     |> redirect(to: ~p"/groups/#{socket.assigns.huddl.group.slug}")}
   end
 
   defp get_huddl(id, group_slug, user) do
