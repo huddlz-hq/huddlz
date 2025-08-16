@@ -32,7 +32,20 @@ defmodule Huddlz.Communities.Group do
         allow_nil? false
       end
 
-      filter expr(contains(name, ^arg(:query)) or contains(description, ^arg(:query)))
+      # Use trigram similarity for better search matching
+      filter expr(
+               trigram_similarity(name, ^arg(:query)) > 0.1 or
+                 trigram_similarity(description, ^arg(:query)) > 0.1
+             )
+
+      # Load and sort by relevance
+      prepare fn query, _ ->
+        query_arg = query.arguments.query
+
+        query
+        |> Ash.Query.load(search_relevance: [query: query_arg])
+        |> Ash.Query.sort(search_relevance: {%{query: query_arg}, :desc}, name: :asc)
+      end
     end
 
     read :get_by_owner do
@@ -142,6 +155,18 @@ defmodule Huddlz.Communities.Group do
 
     has_many :huddlz, Huddlz.Communities.Huddl do
       destination_attribute :group_id
+    end
+  end
+
+  calculations do
+    calculate :search_relevance, :float do
+      argument :query, :string, allow_nil?: false
+
+      calculation expr(
+                    # Weight name matches higher (0.7) than description matches (0.3)
+                    trigram_similarity(name, ^arg(:query)) * 0.7 +
+                      trigram_similarity(description, ^arg(:query)) * 0.3
+                  )
     end
   end
 
