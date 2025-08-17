@@ -31,8 +31,8 @@ if config_env() == :prod do
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
   config :huddlz, Huddlz.Repo,
-    ssl: true,
-    ssl_opts: [verify: :verify_none],
+    # ssl: true,
+    # ssl_opts: [verify: :verify_none],
     url: database_url,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
     # For machines with several cores, consider starting multiple pools of `pool_size`
@@ -51,7 +51,6 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
-  # Use the custom domain for the canonical URL, not Render's hostname
   host = System.get_env("PHX_HOST") || "huddlz.com"
   port = String.to_integer(System.get_env("PORT") || "4000")
 
