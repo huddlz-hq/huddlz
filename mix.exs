@@ -89,8 +89,7 @@ defmodule Huddlz.MixProject do
       {:remote_ip, "~> 1.1"},
       # Geocoding and spatial data
       {:geo, "~> 3.6"},
-      {:geo_postgis, "~> 3.7"},
-      {:googlemaps, "~> 0.11"}
+      {:geo_postgis, "~> 3.7"}
     ]
   end
 
