@@ -44,6 +44,7 @@ defmodule Huddlz.Communities.Huddl do
       ]
 
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
+      change Huddlz.Communities.Huddl.Changes.GeocodeLocation
     end
 
     update :update do
@@ -63,6 +64,7 @@ defmodule Huddlz.Communities.Huddl do
       ]
 
       require_atomic? false
+      change Huddlz.Communities.Huddl.Changes.GeocodeLocation
     end
 
     read :by_status do
@@ -101,6 +103,19 @@ defmodule Huddlz.Communities.Huddl do
       argument :event_type, :atom do
         allow_nil? true
         constraints one_of: [:in_person, :virtual, :hybrid]
+      end
+      
+      argument :latitude, :float do
+        allow_nil? true
+      end
+      
+      argument :longitude, :float do
+        allow_nil? true
+      end
+      
+      argument :radius_miles, :integer do
+        allow_nil? true
+        default 25
       end
 
       pagination keyset?: true,
@@ -430,6 +445,10 @@ defmodule Huddlz.Communities.Huddl do
       allow_nil? true
     end
 
+    attribute :coordinates, Huddlz.Types.Geometry do
+      allow_nil? true
+    end
+
     create_timestamp :inserted_at
     update_timestamp :updated_at
   end
@@ -483,6 +502,27 @@ defmodule Huddlz.Communities.Huddl do
     calculate :is_publicly_visible, :boolean do
       description "Whether the huddl is visible to everyone (public huddl in public group)"
       calculation expr(is_private == false and group.is_public == true)
+    end
+
+    calculate :distance_miles, :float do
+      description "Distance in miles from a given point"
+      
+      argument :latitude, :float do
+        allow_nil? false
+      end
+      
+      argument :longitude, :float do
+        allow_nil? false
+      end
+      
+      calculation expr(
+        fragment(
+          "ST_Distance(?::geography, ST_MakePoint(?, ?)::geography) / 1609.344",
+          coordinates,
+          ^arg(:longitude),
+          ^arg(:latitude)
+        )
+      )
     end
   end
 
