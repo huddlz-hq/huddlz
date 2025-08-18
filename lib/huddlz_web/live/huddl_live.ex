@@ -254,7 +254,7 @@ defmodule HuddlzWeb.HuddlLive do
                 value={@search_query}
                 placeholder="Search huddlz..."
                 phx-debounce="300"
-                class="flex-grow px-4 py-2 border rounded focus:outline-none bg-base-100 text-base-content"
+                class="input input-bordered flex-grow"
               />
 
               <label for="location-search" class="sr-only">Location</label>
@@ -265,7 +265,7 @@ defmodule HuddlzWeb.HuddlLive do
                 value={@location_search}
                 placeholder="City or address..."
                 phx-debounce="300"
-                class="w-64 px-4 py-2 border rounded focus:outline-none bg-base-100 text-base-content"
+                class="input input-bordered w-64"
               />
 
               <label for="radius-select" class="sr-only">Search Radius</label>
@@ -277,7 +277,7 @@ defmodule HuddlzWeb.HuddlLive do
                 <option value="100" selected={@search_radius == 100}>100 miles</option>
               </select>
 
-              <button type="submit" class="btn btn-primary px-4 py-2">
+              <button type="submit" class="btn btn-primary">
                 Search
               </button>
             </div>
