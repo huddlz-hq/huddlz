@@ -43,12 +43,29 @@ if Enum.empty?(existing_groups) do
   admin = create_user.("admin@example.com", "Admin User", :admin)
   IO.puts("Created admin user: #{admin.email}")
 
-  # Create some users
+  # Create some users with location preferences
   alice = create_user.("alice@example.com", "Alice Johnson", :user)
   bob = create_user.("bob@example.com", "Bob Smith", :user)
   carol = create_user.("carol@example.com", "Carol Davis", :user)
   dave = create_user.("dave@example.com", "Dave Wilson", :user)
   eve = create_user.("eve@example.com", "Eve Brown", :user)
+  
+  # Set location preferences for some users
+  {:ok, alice} =
+    alice
+    |> Ash.Changeset.for_update(:update_location_preferences, %{
+      default_location_address: "San Francisco, CA",
+      default_search_radius: 25
+    })
+    |> Ash.update(authorize?: false)
+  
+  {:ok, bob} =
+    bob
+    |> Ash.Changeset.for_update(:update_location_preferences, %{
+      default_location_address: "New York, NY",
+      default_search_radius: 50
+    })
+    |> Ash.update(authorize?: false)
 
   users = [alice, bob, carol, dave, eve]
   IO.puts("Created #{length(users)} sample users")
@@ -61,10 +78,10 @@ if Enum.empty?(existing_groups) do
       |> Ash.Changeset.for_create(
         :create_group,
         %{
-          name: "Phoenix Elixir Meetup",
+          name: "San Francisco Elixir Meetup",
           description:
-            "A group for Elixir enthusiasts in the Phoenix area. We meet monthly to discuss Elixir, Phoenix, LiveView, and more!",
-          location: "Phoenix, AZ",
+            "A group for Elixir enthusiasts in the San Francisco Bay Area. We meet monthly to discuss Elixir, Phoenix, LiveView, and more!",
+          location: "San Francisco, CA",
           is_public: true,
           owner_id: alice.id
         },
@@ -78,7 +95,7 @@ if Enum.empty?(existing_groups) do
           name: "Book Club Central",
           description:
             "Join us for our weekly book discussions. We read everything from fiction to technical books.",
-          location: "Online",
+          location: "New York, NY",
           is_public: true,
           owner_id: bob.id
         },
@@ -92,7 +109,7 @@ if Enum.empty?(existing_groups) do
           name: "Hiking Adventures",
           description:
             "Weekend hiking trips for all skill levels. Safety first, adventure always!",
-          location: "Various Trails",
+          location: "Los Angeles, CA",
           is_public: true,
           owner_id: carol.id
         },
@@ -105,7 +122,7 @@ if Enum.empty?(existing_groups) do
         %{
           name: "Private Tech Talks",
           description: "Exclusive tech talks for members only.",
-          location: "Tech Hub",
+          location: "Austin, TX",
           is_public: false,
           owner_id: admin.id
         },
@@ -118,15 +135,15 @@ if Enum.empty?(existing_groups) do
   IO.puts("Created #{length(groups)} groups")
 
   # Add some members to groups
-  # Add users to Phoenix Elixir Meetup
-  phoenix_group = Enum.at(groups, 0)
+  # Add users to San Francisco Elixir Meetup
+  sf_group = Enum.at(groups, 0)
 
   {:ok, _} =
     GroupMember
     |> Ash.Changeset.for_create(
       :add_member,
       %{
-        group_id: phoenix_group.id,
+        group_id: sf_group.id,
         user_id: bob.id,
         role: :organizer
       },
@@ -139,7 +156,7 @@ if Enum.empty?(existing_groups) do
     |> Ash.Changeset.for_create(
       :add_member,
       %{
-        group_id: phoenix_group.id,
+        group_id: sf_group.id,
         user_id: carol.id,
         role: :member
       },
@@ -152,7 +169,7 @@ if Enum.empty?(existing_groups) do
     |> Ash.Changeset.for_create(
       :add_member,
       %{
-        group_id: phoenix_group.id,
+        group_id: sf_group.id,
         user_id: dave.id,
         role: :member
       },
@@ -199,23 +216,30 @@ if Enum.empty?(existing_groups) do
   # Create a mix of upcoming, past, and in-progress events
   huddlz = []
 
-  # Phoenix Elixir Meetup huddlz (many events)
-  phoenix_huddlz =
+  # San Francisco Elixir Meetup huddlz (many events)
+  sf_huddlz =
     Enum.map(1..15, fn i ->
       days_offset = i * 3
       event_type = Enum.random([:in_person, :virtual, :hybrid])
 
       # Set location fields based on event type
+      # Use locations that are in our mock geocoding service
       {physical_location, virtual_link} =
         case event_type do
           :in_person ->
-            {"TechHub Phoenix, 123 Main St", nil}
+            # Rotate between different SF locations
+            location = Enum.random([
+              "San Francisco, CA",
+              "123 Market Street, San Francisco, CA",
+              "Golden Gate Park, San Francisco, CA"
+            ])
+            {location, nil}
 
           :virtual ->
             {nil, "https://zoom.us/j/#{:rand.uniform(999_999_999)}"}
 
           :hybrid ->
-            {"TechHub Phoenix, 123 Main St", "https://zoom.us/j/#{:rand.uniform(999_999_999)}"}
+            {"San Francisco, CA", "https://zoom.us/j/#{:rand.uniform(999_999_999)}"}
         end
 
       {:ok, huddl} =
@@ -223,7 +247,7 @@ if Enum.empty?(existing_groups) do
         |> Ash.Changeset.for_create(
           :create,
           %{
-            title: "Phoenix Elixir Meetup ##{i}",
+            title: "SF Elixir Meetup ##{i}",
             description:
               "Join us for our regular meetup discussing Elixir, Phoenix, and LiveView topics.",
             event_type: event_type,
@@ -234,7 +258,7 @@ if Enum.empty?(existing_groups) do
               |> DateTime.truncate(:second),
             physical_location: physical_location,
             virtual_link: virtual_link,
-            group_id: phoenix_group.id,
+            group_id: sf_group.id,
             creator_id: Enum.random([alice.id, bob.id])
           },
           actor: alice
@@ -278,7 +302,7 @@ if Enum.empty?(existing_groups) do
             ends_at:
               DateTime.add(DateTime.utc_now(), -days_ago * 24 * 3600 + 2 * 3600, :second)
               |> DateTime.truncate(:second),
-            physical_location: "Central Library, Meeting Room #{Enum.random(["A", "B", "C"])}",
+            physical_location: "New York, NY",
             group_id: book_group.id,
             creator_id: bob.id
           },
@@ -291,14 +315,14 @@ if Enum.empty?(existing_groups) do
 
   # Hiking Adventures mixed events
   trails = [
-    "Camelback Mountain",
-    "Piestewa Peak",
-    "South Mountain",
-    "McDowell Mountains",
-    "Superstition Mountains",
-    "Papago Park",
-    "Pinnacle Peak",
-    "Tom's Thumb Trail"
+    "Griffith Observatory Trail",
+    "Runyon Canyon",
+    "Hollywood Sign Trail",
+    "Temescal Canyon",
+    "Solstice Canyon",
+    "Will Rogers State Park",
+    "Franklin Canyon",
+    "Malibu Creek Trail"
   ]
 
   hiking_huddlz =
@@ -324,8 +348,7 @@ if Enum.empty?(existing_groups) do
             ends_at:
               DateTime.add(DateTime.utc_now(), days_offset * 24 * 3600 + 4 * 3600, :second)
               |> DateTime.truncate(:second),
-            physical_location:
-              "#{Enum.at(["North", "South", "East", "West"], rem(i - 1, 4))} Trailhead Parking",
+            physical_location: "Los Angeles, CA",
             group_id: hiking_group.id,
             creator_id: carol.id
           },
@@ -359,7 +382,7 @@ if Enum.empty?(existing_groups) do
               DateTime.add(DateTime.utc_now(), 120 - minutes_ago, :minute)
               |> DateTime.truncate(:second),
             virtual_link: "https://zoom.us/j/live#{i}",
-            group_id: phoenix_group.id,
+            group_id: sf_group.id,
             creator_id: alice.id
           },
           actor: alice
@@ -395,7 +418,7 @@ if Enum.empty?(existing_groups) do
             ends_at:
               DateTime.add(DateTime.utc_now(), i * 5 * 24 * 3600 + 3600, :second)
               |> DateTime.truncate(:second),
-            physical_location: "Tech Hub Conference Room",
+            physical_location: "Austin, TX",
             virtual_link: "https://privatemeeting.example.com/#{i}",
             group_id: private_group.id,
             creator_id: admin.id,
@@ -409,7 +432,7 @@ if Enum.empty?(existing_groups) do
     end)
 
   huddlz =
-    phoenix_huddlz ++ book_past_huddlz ++ hiking_huddlz ++ in_progress_huddlz ++ private_huddlz
+    sf_huddlz ++ book_past_huddlz ++ hiking_huddlz ++ in_progress_huddlz ++ private_huddlz
 
   IO.puts("Created #{length(huddlz)} huddlz")
   IO.puts("\nSeed data created successfully!")
