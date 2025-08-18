@@ -166,7 +166,7 @@ defmodule HuddlzWeb.HuddlLocationSearchTest do
         )
 
       # Update the user to set the coordinates (normally done through the action)
-      {:ok, _} =
+      _updated_user =
         Huddlz.Accounts.User
         |> Ash.get!(user_with_location.id, authorize?: false)
         |> Ash.Changeset.for_update(:update_location_preferences, %{
@@ -193,7 +193,7 @@ defmodule HuddlzWeb.HuddlLocationSearchTest do
           )
         )
 
-      {:ok, _} =
+      _updated_user =
         Huddlz.Accounts.User
         |> Ash.get!(user_with_location.id, authorize?: false)
         |> Ash.Changeset.for_update(:update_location_preferences, %{
