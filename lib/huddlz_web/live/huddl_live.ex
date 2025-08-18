@@ -9,12 +9,12 @@ defmodule HuddlzWeb.HuddlLive do
 
   def mount(_params, _session, socket) do
     # Get user's default location if they're logged in
-    {default_location, default_radius} =
-      if socket.assigns[:current_user] do
+    {default_location, default_radius, location_source} =
+      if socket.assigns[:current_user] && socket.assigns.current_user.default_location_address do
         {socket.assigns.current_user.default_location_address,
-         socket.assigns.current_user.default_search_radius || 25}
+         socket.assigns.current_user.default_search_radius || 25, :default}
       else
-        {nil, 25}
+        {nil, 25, :none}
       end
 
     # Perform initial search with user's default location if available
@@ -37,7 +37,8 @@ defmodule HuddlzWeb.HuddlLive do
        location_search: default_location || "",
        search_radius: default_radius,
        location_error: nil,
-       showing_location_results: default_location != nil
+       showing_location_results: default_location != nil,
+       location_source: location_source
      )}
   end
 

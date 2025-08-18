@@ -34,8 +34,8 @@ defmodule Huddlz.Communities.Group do
 
       # Use trigram similarity for better search matching
       filter expr(
-               trigram_similarity(name, ^arg(:query)) > 0.1 or
-                 trigram_similarity(description, ^arg(:query)) > 0.1
+               fragment("similarity(?, ?) > ?", name, ^arg(:query), 0.1) or
+                 fragment("similarity(?, ?) > ?", description, ^arg(:query), 0.1)
              )
 
       # Load and sort by relevance
@@ -164,8 +164,15 @@ defmodule Huddlz.Communities.Group do
 
       calculation expr(
                     # Weight name matches higher (0.7) than description matches (0.3)
-                    trigram_similarity(name, ^arg(:query)) * 0.7 +
-                      trigram_similarity(description, ^arg(:query)) * 0.3
+                    fragment(
+                      "similarity(?, ?) * ? + similarity(?, ?) * ?",
+                      name,
+                      ^arg(:query),
+                      0.7,
+                      description,
+                      ^arg(:query),
+                      0.3
+                    )
                   )
     end
   end

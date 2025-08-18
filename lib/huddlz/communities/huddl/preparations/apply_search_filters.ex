@@ -37,10 +37,10 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
 
     if lat && lng do
       # Filter huddls within the specified radius
-      # Only include huddls that have coordinates (exclude those where geocoding failed)
+      # Include virtual events (no coordinates) and events within radius
       Ash.Query.filter(
         query,
-        not is_nil(coordinates) and
+        is_nil(coordinates) or
           fragment(
             "ST_DWithin(?::geography, ST_MakePoint(?, ?)::geography, ?)",
             coordinates,
