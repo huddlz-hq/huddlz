@@ -86,7 +86,10 @@ defmodule Huddlz.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:phoenix_test, "~> 0.6.0", only: :test},
       {:slugify, "~> 1.3"},
-      {:remote_ip, "~> 1.1"}
+      {:remote_ip, "~> 1.1"},
+      # Geocoding and spatial data
+      {:geo, "~> 3.6"},
+      {:geo_postgis, "~> 3.7"}
     ]
   end
 

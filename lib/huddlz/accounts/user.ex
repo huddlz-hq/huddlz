@@ -113,6 +113,36 @@ defmodule Huddlz.Accounts.User do
       accept [:role]
     end
 
+    update :update_location_preferences do
+      description "Update user's default location preferences"
+      accept [:default_location_address, :default_search_radius]
+      require_atomic? false
+
+      change fn changeset, _ ->
+        if Ash.Changeset.changing_attribute?(changeset, :default_location_address) do
+          case Ash.Changeset.get_attribute(changeset, :default_location_address) do
+            nil ->
+              Ash.Changeset.change_attribute(changeset, :default_location, nil)
+
+            "" ->
+              Ash.Changeset.change_attribute(changeset, :default_location, nil)
+
+            address ->
+              case Huddlz.Geocoding.geocode(address) do
+                {:ok, %{lat: lat, lng: lng}} ->
+                  point = %Geo.Point{coordinates: {lng, lat}, srid: 4326}
+                  Ash.Changeset.change_attribute(changeset, :default_location, point)
+
+                {:error, _} ->
+                  changeset
+              end
+          end
+        else
+          changeset
+        end
+      end
+    end
+
     update :change_password do
       # Use this action to allow users to change their password by providing
       # their current password and a new password.
@@ -387,6 +417,22 @@ defmodule Huddlz.Accounts.User do
     attribute :confirmed_at, :utc_datetime_usec do
       # Allow setting for testing/seeding purposes
       public? true
+    end
+
+    attribute :default_location, Huddlz.Types.Geometry do
+      description "User's default location for search"
+      allow_nil? true
+    end
+
+    attribute :default_location_address, :string do
+      description "Human-readable address for default location"
+      allow_nil? true
+    end
+
+    attribute :default_search_radius, :integer do
+      description "Default search radius in miles"
+      allow_nil? true
+      default 25
     end
   end
 

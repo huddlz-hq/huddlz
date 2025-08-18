@@ -24,7 +24,7 @@ jobs:
     # Additional services can be defined here if required.
     services:
       db:
-        image: postgres:17
+        image: postgis/postgis:16-3.5
         ports: ['5432:5432']
         env:
           POSTGRES_PASSWORD: postgres

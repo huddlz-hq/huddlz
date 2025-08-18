@@ -1,6 +1,7 @@
 defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
   @moduledoc """
-  Applies search filters to huddl queries including text search, date filtering, and event type filtering.
+  Applies search filters to huddl queries including text search, date filtering, 
+  event type filtering, and location-based filtering.
   """
   use Ash.Resource.Preparation
   require Ash.Query
@@ -8,6 +9,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
   def prepare(query, _opts, _context) do
     query
     |> apply_text_filter()
+    |> apply_location_filter()
     |> apply_date_filter()
     |> apply_event_type_filter()
   end
@@ -25,6 +27,31 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
           query,
           contains(title, ^search_query) or contains(description, ^search_query)
         )
+    end
+  end
+
+  defp apply_location_filter(query) do
+    lat = Ash.Query.get_argument(query, :latitude)
+    lng = Ash.Query.get_argument(query, :longitude)
+    radius = Ash.Query.get_argument(query, :radius_miles) || 25
+
+    if lat && lng do
+      # Filter huddls within the specified radius
+      # Include virtual events (no coordinates) and events within radius
+      Ash.Query.filter(
+        query,
+        is_nil(coordinates) or
+          fragment(
+            "ST_DWithin(?::geography, ST_MakePoint(?, ?)::geography, ?)",
+            coordinates,
+            ^lng,
+            ^lat,
+            # Convert miles to meters
+            ^(radius * 1609.344)
+          )
+      )
+    else
+      query
     end
   end
 
