@@ -1,7 +1,6 @@
 defmodule HuddlzWeb.HuddlLive do
   use HuddlzWeb, :live_view
 
-  alias Huddlz.Communities
   alias HuddlzWeb.Layouts
   require Ash.Query
 
@@ -104,12 +103,13 @@ defmodule HuddlzWeb.HuddlLive do
 
     # Determine location to use
     location = 
-      if socket.assigns.location_search != "" do
-        socket.assigns.location_search
-      elsif socket.assigns[:current_user] && socket.assigns.current_user.default_location_address do
-        socket.assigns.current_user.default_location_address
-      else
-        nil
+      cond do
+        socket.assigns.location_search != "" ->
+          socket.assigns.location_search
+        socket.assigns[:current_user] && socket.assigns.current_user.default_location_address ->
+          socket.assigns.current_user.default_location_address
+        true ->
+          nil
       end
 
     huddls = perform_search(
@@ -161,7 +161,10 @@ defmodule HuddlzWeb.HuddlLive do
 
     # Execute the query and load relationships
     case Ash.read(query, actor: actor, page: [limit: 20, offset: offset]) do
-      {:ok, results} ->
+      {:ok, page} ->
+        # Extract results from the page
+        results = page.results
+        
         # Load relationships and distance if searching by location
         loads = [:status, :visible_virtual_link, :group]
         
@@ -179,17 +182,6 @@ defmodule HuddlzWeb.HuddlLive do
     end
   end
 
-  defp extract_page_info({:ok, %{count: count, results: results}}) do
-    %{
-      total_count: count,
-      current_page: 1,
-      total_pages: ceil(count / 20),
-      has_next: length(results) == 20,
-      has_prev: false
-    }
-  end
-
-  defp extract_page_info(_), do: %{total_count: 0, current_page: 1, total_pages: 0, has_next: false, has_prev: false}
 
   defp humanize_filter("in_person"), do: "In Person"
   defp humanize_filter("virtual"), do: "Virtual"
@@ -353,7 +345,7 @@ defmodule HuddlzWeb.HuddlLive do
             <!-- Huddl Cards Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <%= for huddl <- @huddls do %>
-                <.link navigate={~p"/huddlz/#{huddl.id}"}>
+                <.link navigate={~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"}>
                   <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow cursor-pointer">
                     <%= if huddl.thumbnail_url do %>
                       <figure>
