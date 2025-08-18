@@ -5,7 +5,7 @@ defmodule Huddlz.Repo do
   @impl true
   def installed_extensions do
     # Add extensions here, and the migration generator will install them.
-    ["ash-functions", "citext", "pg_trgm"]
+    ["ash-functions", "citext", "pg_trgm", "postgis"]
   end
 
   # Don't open unnecessary transactions
@@ -17,6 +17,12 @@ defmodule Huddlz.Repo do
 
   @impl true
   def min_pg_version do
-    %Version{major: 17, minor: 4, patch: 0}
+    %Version{major: 16, minor: 0, patch: 0}
+  end
+
+  @impl true
+  def init(_, config) do
+    config = Keyword.put(config, :types, Huddlz.PostgresTypes)
+    {:ok, config}
   end
 end
