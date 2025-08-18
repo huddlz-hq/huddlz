@@ -267,7 +267,8 @@ defmodule HuddlzWeb.HuddlLive do
                 class="w-64 px-4 py-2 border rounded focus:outline-none bg-base-100 text-base-content"
               />
 
-              <select name="radius" class="select select-bordered">
+              <label for="radius-select" class="sr-only">Search Radius</label>
+              <select id="radius-select" name="radius" class="select select-bordered">
                 <option value="5" selected={@search_radius == 5}>5 miles</option>
                 <option value="10" selected={@search_radius == 10}>10 miles</option>
                 <option value="25" selected={@search_radius == 25}>25 miles</option>
