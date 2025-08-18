@@ -353,12 +353,12 @@ defmodule HuddlzWeb.HuddlLive do
                       </figure>
                     <% end %>
                     <div class="card-body">
-                      <h2 class="card-title">
+                      <h3 class="card-title">
                         {huddl.title}
                         <%= if huddl.status == :in_progress do %>
                           <span class="badge badge-success">In Progress</span>
                         <% end %>
-                      </h2>
+                      </h3>
                       
                       <div class="flex items-center gap-2 text-sm text-base-content/70">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
