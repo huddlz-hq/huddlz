@@ -390,7 +390,7 @@ defmodule HuddlzWeb.HuddlLive do
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                           </svg>
                           <span class="truncate">{huddl.physical_location}</span>
-                          <%= if Map.has_key?(huddl, :distance_miles) && huddl.distance_miles do %>
+                          <%= if is_float(huddl.distance_miles) do %>
                             <span class="text-xs">({Float.round(huddl.distance_miles, 1)} mi)</span>
                           <% end %>
                         </div>
