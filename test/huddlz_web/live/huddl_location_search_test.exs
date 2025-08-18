@@ -94,7 +94,7 @@ defmodule HuddlzWeb.HuddlLocationSearchTest do
       # Search near San Francisco with small radius
       conn
       |> visit("/")
-      |> fill_in("location-search", with: "San Francisco, CA")
+      |> fill_in("City or address...", with: "San Francisco, CA")
       |> select("radius", option: "10 miles")
       |> click_button("Search")
       |> assert_has("h3", text: "SF Tech Meetup")
@@ -105,7 +105,7 @@ defmodule HuddlzWeb.HuddlLocationSearchTest do
     test "shows distance in search results when searching by location", %{conn: conn} do
       conn
       |> visit("/")
-      |> fill_in("location-search", with: "San Francisco, CA")
+      |> fill_in("City or address...", with: "San Francisco, CA")
       |> click_button("Search")
       |> assert_has("span", text: ~r/\d+\.\d+ mi/)
     end
@@ -113,7 +113,7 @@ defmodule HuddlzWeb.HuddlLocationSearchTest do
     test "shows contextual no results message for location searches", %{conn: conn} do
       conn
       |> visit("/")
-      |> fill_in("location-search", with: "Austin, TX")
+      |> fill_in("City or address...", with: "Austin, TX")
       |> select("radius", option: "5 miles")
       |> click_button("Search")
       |> assert_has("p", text: ~r/No huddlz found within 5 miles of Austin, TX/)
@@ -122,7 +122,7 @@ defmodule HuddlzWeb.HuddlLocationSearchTest do
     test "shows location filter badge when searching by location", %{conn: conn} do
       conn
       |> visit("/")
-      |> fill_in("location-search", with: "New York, NY")
+      |> fill_in("City or address...", with: "New York, NY")
       |> click_button("Search")
       |> assert_has(".badge", text: "Near: New York, NY")
     end
@@ -131,7 +131,7 @@ defmodule HuddlzWeb.HuddlLocationSearchTest do
       conn
       |> visit("/")
       |> fill_in("Search huddlz", with: "Tech")
-      |> fill_in("location-search", with: "San Francisco, CA")
+      |> fill_in("City or address...", with: "San Francisco, CA")
       |> select("radius", option: "50 miles")
       |> click_button("Search")
       |> assert_has("h3", text: "SF Tech Meetup")
@@ -142,7 +142,7 @@ defmodule HuddlzWeb.HuddlLocationSearchTest do
     test "clears location filter when clear all is clicked", %{conn: conn} do
       conn
       |> visit("/")
-      |> fill_in("location-search", with: "San Francisco, CA")
+      |> fill_in("City or address...", with: "San Francisco, CA")
       |> click_button("Search")
       |> assert_has(".badge", text: "Near: San Francisco, CA")
       |> click_button("Clear all")
@@ -205,7 +205,7 @@ defmodule HuddlzWeb.HuddlLocationSearchTest do
       conn
       |> login(user_with_location)
       |> visit("/")
-      |> fill_in("location-search", with: "New York, NY")
+      |> fill_in("City or address...", with: "New York, NY")
       |> click_button("Search")
       # Should show NYC, not SF
       |> assert_has(".badge", text: "Near: New York, NY")
@@ -217,7 +217,7 @@ defmodule HuddlzWeb.HuddlLocationSearchTest do
     test "virtual events appear regardless of location search", %{conn: conn} do
       conn
       |> visit("/")
-      |> fill_in("location-search", with: "Tokyo, Japan")
+      |> fill_in("City or address...", with: "Tokyo, Japan")
       |> select("radius", option: "5 miles")
       |> click_button("Search")
       # Virtual events should still show since they have no physical location
@@ -227,11 +227,10 @@ defmodule HuddlzWeb.HuddlLocationSearchTest do
     test "virtual events don't show distance in results", %{conn: conn} do
       conn
       |> visit("/")
-      |> fill_in("location-search", with: "San Francisco, CA")
+      |> fill_in("City or address...", with: "San Francisco, CA")
       |> click_button("Search")
       # Virtual huddl card should not have distance indicator
       |> assert_has("h3", text: "Virtual Coding Session")
-      # TODO: More specific assertion to ensure distance not shown for virtual
     end
   end
 end

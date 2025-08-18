@@ -35,16 +35,16 @@ defmodule Huddlz.Geocoding.Mock do
   def geocode(address) when is_binary(address) do
     # Normalize the address for case-insensitive matching
     normalized = String.trim(address)
-    
+
     case Map.get(@known_locations, normalized) do
       nil ->
         # For unknown addresses in tests, generate a predictable coordinate
         # based on the hash of the address
         hash = :erlang.phash2(normalized, 1000)
-        lat = 30.0 + (hash / 100.0)
-        lng = -90.0 - (hash / 100.0)
+        lat = 30.0 + hash / 100.0
+        lng = -90.0 - hash / 100.0
         {:ok, %{lat: lat, lng: lng}}
-      
+
       coordinates ->
         {:ok, coordinates}
     end
@@ -53,12 +53,12 @@ defmodule Huddlz.Geocoding.Mock do
   @impl true
   def reverse_geocode(lat, lng) when is_number(lat) and is_number(lng) do
     # Find the closest known location
-    closest = 
+    closest =
       @known_locations
       |> Enum.min_by(fn {_address, %{lat: loc_lat, lng: loc_lng}} ->
         :math.sqrt(:math.pow(lat - loc_lat, 2) + :math.pow(lng - loc_lng, 2))
       end)
-    
+
     case closest do
       {address, _} -> {:ok, address}
       _ -> {:ok, "#{lat}, #{lng}"}

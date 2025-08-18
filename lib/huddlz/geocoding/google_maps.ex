@@ -9,14 +9,14 @@ defmodule Huddlz.Geocoding.GoogleMaps do
   @impl true
   def geocode(address) when is_binary(address) do
     api_key = get_api_key()
-    
+
     case Req.get(@geocoding_url, params: %{address: address, key: api_key}) do
       {:ok, %{status: 200, body: body}} ->
         parse_geocoding_response(body)
-      
+
       {:ok, %{status: status}} ->
         {:error, "Geocoding API returned status #{status}"}
-      
+
       {:error, reason} ->
         {:error, reason}
     end
@@ -25,14 +25,14 @@ defmodule Huddlz.Geocoding.GoogleMaps do
   @impl true
   def reverse_geocode(lat, lng) when is_number(lat) and is_number(lng) do
     api_key = get_api_key()
-    
+
     case Req.get(@geocoding_url, params: %{latlng: "#{lat},#{lng}", key: api_key}) do
       {:ok, %{status: 200, body: body}} ->
         parse_reverse_geocoding_response(body)
-      
+
       {:ok, %{status: status}} ->
         {:error, "Reverse geocoding API returned status #{status}"}
-      
+
       {:error, reason} ->
         {:error, reason}
     end
@@ -47,7 +47,7 @@ defmodule Huddlz.Geocoding.GoogleMaps do
         }
       }
     } = result
-    
+
     {:ok, %{lat: lat, lng: lng}}
   end
 

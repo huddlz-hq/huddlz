@@ -9,7 +9,7 @@ defmodule HuddlzWeb.HuddlLive do
 
   def mount(_params, _session, socket) do
     # Get user's default location if they're logged in
-    {default_location, default_radius} = 
+    {default_location, default_radius} =
       if socket.assigns[:current_user] do
         {socket.assigns.current_user.default_location_address,
          socket.assigns.current_user.default_search_radius || 25}
@@ -18,7 +18,15 @@ defmodule HuddlzWeb.HuddlLive do
       end
 
     # Perform initial search with user's default location if available
-    huddls = perform_search(nil, :upcoming, nil, default_location, default_radius, socket.assigns[:current_user])
+    huddls =
+      perform_search(
+        nil,
+        :upcoming,
+        nil,
+        default_location,
+        default_radius,
+        socket.assigns[:current_user]
+      )
 
     {:ok,
      assign(socket,
@@ -34,37 +42,26 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   def handle_event("search", params, socket) do
-    query = if params["query"] != "", do: params["query"], else: nil
-    event_type = if params["event_type"] != "", do: params["event_type"], else: nil
-    date_filter = params["date_filter"] || "upcoming"
-    location = if params["location"] != "", do: params["location"], else: nil
-    radius = String.to_integer(params["radius"] || "25")
+    search_params = parse_search_params(params)
+    {location_to_use, location_source} = determine_location(search_params.location, socket)
 
-    # Convert string values to atoms for the search action
-    event_type_atom =
-      if event_type && event_type != "", do: String.to_existing_atom(event_type), else: nil
-    date_filter_atom = String.to_existing_atom(date_filter)
-
-    # If no location provided, check for user's default
-    {location_to_use, location_source} = 
-      cond do
-        location ->
-          {location, :explicit}
-        socket.assigns[:current_user] && socket.assigns.current_user.default_location_address ->
-          {socket.assigns.current_user.default_location_address, :default}
-        true ->
-          {nil, :none}
-      end
-
-    huddls = perform_search(query, date_filter_atom, event_type_atom, location_to_use, radius, socket.assigns[:current_user])
+    huddls =
+      perform_search(
+        search_params.query,
+        search_params.date_filter_atom,
+        search_params.event_type_atom,
+        location_to_use,
+        search_params.radius,
+        socket.assigns[:current_user]
+      )
 
     socket =
       socket
-      |> assign(search_query: query)
-      |> assign(event_type_filter: event_type)
-      |> assign(date_filter: date_filter)
-      |> assign(location_search: location || "")
-      |> assign(search_radius: radius)
+      |> assign(search_query: search_params.query)
+      |> assign(event_type_filter: search_params.event_type)
+      |> assign(date_filter: search_params.date_filter)
+      |> assign(location_search: search_params.location || "")
+      |> assign(search_radius: search_params.radius)
       |> assign(huddls: huddls)
       |> assign(showing_location_results: location_to_use != nil)
       |> assign(location_source: location_source)
@@ -102,25 +99,28 @@ defmodule HuddlzWeb.HuddlLive do
     date_filter_atom = String.to_atom(socket.assigns.date_filter)
 
     # Determine location to use
-    location = 
+    location =
       cond do
         socket.assigns.location_search != "" ->
           socket.assigns.location_search
+
         socket.assigns[:current_user] && socket.assigns.current_user.default_location_address ->
           socket.assigns.current_user.default_location_address
+
         true ->
           nil
       end
 
-    huddls = perform_search(
-      socket.assigns.search_query,
-      date_filter_atom,
-      event_type_atom,
-      location,
-      socket.assigns.search_radius,
-      socket.assigns[:current_user],
-      offset: offset
-    )
+    huddls =
+      perform_search(
+        socket.assigns.search_query,
+        date_filter_atom,
+        event_type_atom,
+        location,
+        socket.assigns.search_radius,
+        socket.assigns[:current_user],
+        offset: offset
+      )
 
     socket =
       socket
@@ -129,11 +129,47 @@ defmodule HuddlzWeb.HuddlLive do
     {:noreply, socket}
   end
 
+  defp parse_search_params(params) do
+    query = if params["query"] != "", do: params["query"], else: nil
+    event_type = if params["event_type"] != "", do: params["event_type"], else: nil
+    date_filter = params["date_filter"] || "upcoming"
+    location = if params["location"] != "", do: params["location"], else: nil
+    radius = String.to_integer(params["radius"] || "25")
+
+    event_type_atom =
+      if event_type && event_type != "", do: String.to_existing_atom(event_type), else: nil
+
+    date_filter_atom = String.to_existing_atom(date_filter)
+
+    %{
+      query: query,
+      event_type: event_type,
+      event_type_atom: event_type_atom,
+      date_filter: date_filter,
+      date_filter_atom: date_filter_atom,
+      location: location,
+      radius: radius
+    }
+  end
+
+  defp determine_location(location, socket) do
+    cond do
+      location ->
+        {location, :explicit}
+
+      socket.assigns[:current_user] && socket.assigns.current_user.default_location_address ->
+        {socket.assigns.current_user.default_location_address, :default}
+
+      true ->
+        {nil, :none}
+    end
+  end
+
   defp perform_search(query, date_filter, event_type, location, radius, actor, opts \\ []) do
     offset = Keyword.get(opts, :offset, 0)
-    
+
     # Geocode location if provided
-    {lat, lng} = 
+    {lat, lng} =
       if location do
         case Huddlz.Geocoding.geocode(location) do
           {:ok, %{lat: lat, lng: lng}} -> {lat, lng}
@@ -144,18 +180,19 @@ defmodule HuddlzWeb.HuddlLive do
       end
 
     # Build the query for the search action
-    args = %{
-      query: query,
-      date_filter: date_filter,
-      event_type: event_type,
-      latitude: lat,
-      longitude: lng,
-      radius_miles: radius
-    }
-    |> Enum.reject(fn {_, v} -> is_nil(v) end)
-    |> Map.new()
+    args =
+      %{
+        query: query,
+        date_filter: date_filter,
+        event_type: event_type,
+        latitude: lat,
+        longitude: lng,
+        radius_miles: radius
+      }
+      |> Enum.reject(fn {_, v} -> is_nil(v) end)
+      |> Map.new()
 
-    query = 
+    query =
       Huddlz.Communities.Huddl
       |> Ash.Query.for_read(:search, args)
 
@@ -164,24 +201,23 @@ defmodule HuddlzWeb.HuddlLive do
       {:ok, page} ->
         # Extract results from the page
         results = page.results
-        
+
         # Load relationships and distance if searching by location
         loads = [:status, :visible_virtual_link, :group]
-        
-        loads = 
+
+        loads =
           if lat && lng do
             loads ++ [distance_miles: %{latitude: lat, longitude: lng}]
           else
             loads
           end
-        
+
         Ash.load!(results, loads, actor: actor)
-      
+
       _ ->
         []
     end
   end
-
 
   defp humanize_filter("in_person"), do: "In Person"
   defp humanize_filter("virtual"), do: "Virtual"
@@ -219,7 +255,7 @@ defmodule HuddlzWeb.HuddlLive do
                 phx-debounce="300"
                 class="flex-grow px-4 py-2 border rounded focus:outline-none bg-base-100 text-base-content"
               />
-              
+
               <label for="location-search" class="sr-only">Location</label>
               <input
                 id="location-search"
@@ -230,7 +266,7 @@ defmodule HuddlzWeb.HuddlLive do
                 phx-debounce="300"
                 class="w-64 px-4 py-2 border rounded focus:outline-none bg-base-100 text-base-content"
               />
-              
+
               <select name="radius" class="select select-bordered">
                 <option value="5" selected={@search_radius == 5}>5 miles</option>
                 <option value="10" selected={@search_radius == 10}>10 miles</option>
@@ -238,7 +274,7 @@ defmodule HuddlzWeb.HuddlLive do
                 <option value="50" selected={@search_radius == 50}>50 miles</option>
                 <option value="100" selected={@search_radius == 100}>100 miles</option>
               </select>
-              
+
               <button type="submit" class="btn btn-primary px-4 py-2">
                 Search
               </button>
@@ -264,7 +300,7 @@ defmodule HuddlzWeb.HuddlLive do
                 </select>
               </div>
               
-              <!-- Date Filter -->
+    <!-- Date Filter -->
               <div class="form-control">
                 <label for="date-range" class="label">
                   <span class="label-text">Date Range</span>
@@ -290,7 +326,7 @@ defmodule HuddlzWeb.HuddlLive do
             </div>
           </form>
           
-          <!-- Active Filters Display -->
+    <!-- Active Filters Display -->
           <%= if @search_query || @event_type_filter || @date_filter != "upcoming" || @showing_location_results do %>
             <div class="mt-4 flex items-center gap-2">
               <span class="text-sm">Active filters:</span>
@@ -305,7 +341,9 @@ defmodule HuddlzWeb.HuddlLive do
               <% end %>
               <%= if @showing_location_results do %>
                 <span class="badge badge-primary">
-                  Near: {if @location_search != "", do: @location_search, else: @current_user.default_location_address}
+                  Near: {if @location_search != "",
+                    do: @location_search,
+                    else: @current_user.default_location_address}
                   <%= if assigns[:location_source] == :default do %>
                     (default)
                   <% end %>
@@ -323,7 +361,9 @@ defmodule HuddlzWeb.HuddlLive do
           <div class="mb-4 text-sm text-base-content/70">
             Found {length(@huddls)} {if length(@huddls) == 1, do: "huddl", else: "huddlz"}
             <%= if @showing_location_results do %>
-              near {if @location_search != "", do: @location_search, else: @current_user.default_location_address}
+              near {if @location_search != "",
+                do: @location_search,
+                else: @current_user.default_location_address}
             <% end %>
           </div>
 
@@ -332,7 +372,9 @@ defmodule HuddlzWeb.HuddlLive do
               <p class="text-lg text-base-content/70">
                 <%= if @search_query || @event_type_filter || @date_filter != "upcoming" || @showing_location_results do %>
                   <%= if @showing_location_results do %>
-                    No huddlz found within {@search_radius} miles of {if @location_search != "", do: @location_search, else: @current_user.default_location_address}. Try adjusting your search criteria.
+                    No huddlz found within {@search_radius} miles of {if @location_search != "",
+                      do: @location_search,
+                      else: @current_user.default_location_address}. Try adjusting your search criteria.
                   <% else %>
                     No huddlz found matching your filters. Try adjusting your search criteria.
                   <% end %>
@@ -349,7 +391,11 @@ defmodule HuddlzWeb.HuddlLive do
                   <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow cursor-pointer">
                     <%= if huddl.thumbnail_url do %>
                       <figure>
-                        <img src={huddl.thumbnail_url} alt={huddl.title} class="w-full h-48 object-cover" />
+                        <img
+                          src={huddl.thumbnail_url}
+                          alt={huddl.title}
+                          class="w-full h-48 object-cover"
+                        />
                       </figure>
                     <% end %>
                     <div class="card-body">
@@ -359,17 +405,27 @@ defmodule HuddlzWeb.HuddlLive do
                           <span class="badge badge-success">In Progress</span>
                         <% end %>
                       </h3>
-                      
+
                       <div class="flex items-center gap-2 text-sm text-base-content/70">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                          />
                         </svg>
                         {huddl.group.name}
                       </div>
 
                       <div class="flex items-center gap-2 text-sm text-base-content/70">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
                         </svg>
                         {Calendar.strftime(huddl.starts_at, "%b %d, %Y at %I:%M %p")}
                       </div>
@@ -386,8 +442,18 @@ defmodule HuddlzWeb.HuddlLive do
                       <%= if huddl.physical_location do %>
                         <div class="flex items-center gap-2 text-sm text-base-content/70">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                            />
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
                           </svg>
                           <span class="truncate">{huddl.physical_location}</span>
                           <%= if is_float(huddl.distance_miles) do %>
@@ -404,7 +470,9 @@ defmodule HuddlzWeb.HuddlLive do
 
                       <div class="card-actions justify-between items-center mt-4">
                         <div class="text-sm text-base-content/70">
-                          {huddl.rsvp_count} {if huddl.rsvp_count == 1, do: "attendee", else: "attendees"}
+                          {huddl.rsvp_count} {if huddl.rsvp_count == 1,
+                            do: "attendee",
+                            else: "attendees"}
                         </div>
                         <div class="btn btn-primary btn-sm">View Details</div>
                       </div>

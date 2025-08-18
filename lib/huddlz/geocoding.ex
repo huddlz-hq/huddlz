@@ -8,7 +8,7 @@ defmodule Huddlz.Geocoding do
 
   @doc """
   Geocodes an address string into coordinates.
-  
+
   Returns `{:ok, %{lat: float, lng: float}}` on success,
   or `{:error, reason}` on failure.
   """
@@ -18,7 +18,7 @@ defmodule Huddlz.Geocoding do
 
   @doc """
   Reverse geocodes coordinates into an address string.
-  
+
   Returns `{:ok, address}` on success,
   or `{:error, reason}` on failure.
   """

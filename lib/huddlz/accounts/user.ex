@@ -117,22 +117,22 @@ defmodule Huddlz.Accounts.User do
       description "Update user's default location preferences"
       accept [:default_location_address, :default_search_radius]
       require_atomic? false
-      
+
       change fn changeset, _ ->
         if Ash.Changeset.changing_attribute?(changeset, :default_location_address) do
           case Ash.Changeset.get_attribute(changeset, :default_location_address) do
             nil ->
               Ash.Changeset.change_attribute(changeset, :default_location, nil)
-            
+
             "" ->
               Ash.Changeset.change_attribute(changeset, :default_location, nil)
-            
+
             address ->
               case Huddlz.Geocoding.geocode(address) do
                 {:ok, %{lat: lat, lng: lng}} ->
                   point = %Geo.Point{coordinates: {lng, lat}, srid: 4326}
                   Ash.Changeset.change_attribute(changeset, :default_location, point)
-                
+
                 {:error, _} ->
                   changeset
               end

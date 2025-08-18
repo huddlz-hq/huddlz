@@ -12,11 +12,11 @@ defmodule Huddlz.Communities.Huddl.Changes.GeocodeLocation do
         nil ->
           # Clear coordinates if location is removed
           Ash.Changeset.change_attribute(changeset, :coordinates, nil)
-        
+
         "" ->
           # Clear coordinates if location is empty
           Ash.Changeset.change_attribute(changeset, :coordinates, nil)
-        
+
         location ->
           geocode_and_set_coordinates(changeset, location)
       end
@@ -29,10 +29,11 @@ defmodule Huddlz.Communities.Huddl.Changes.GeocodeLocation do
     case Huddlz.Geocoding.geocode(location) do
       {:ok, %{lat: lat, lng: lng}} ->
         point = %Geo.Point{coordinates: {lng, lat}, srid: 4326}
+
         changeset
         |> Ash.Changeset.change_attribute(:coordinates, point)
         |> Ash.Changeset.put_context(:geocoding_status, :success)
-      
+
       {:error, reason} ->
         # Don't fail the changeset, but track the error for optional display
         changeset

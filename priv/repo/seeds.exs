@@ -49,7 +49,7 @@ if Enum.empty?(existing_groups) do
   carol = create_user.("carol@example.com", "Carol Davis", :user)
   dave = create_user.("dave@example.com", "Dave Wilson", :user)
   eve = create_user.("eve@example.com", "Eve Brown", :user)
-  
+
   # Set location preferences for some users
   {:ok, alice} =
     alice
@@ -58,7 +58,7 @@ if Enum.empty?(existing_groups) do
       default_search_radius: 25
     })
     |> Ash.update(authorize?: false)
-  
+
   {:ok, bob} =
     bob
     |> Ash.Changeset.for_update(:update_location_preferences, %{
@@ -228,11 +228,13 @@ if Enum.empty?(existing_groups) do
         case event_type do
           :in_person ->
             # Rotate between different SF locations
-            location = Enum.random([
-              "San Francisco, CA",
-              "123 Market Street, San Francisco, CA",
-              "Golden Gate Park, San Francisco, CA"
-            ])
+            location =
+              Enum.random([
+                "San Francisco, CA",
+                "123 Market Street, San Francisco, CA",
+                "Golden Gate Park, San Francisco, CA"
+              ])
+
             {location, nil}
 
           :virtual ->

@@ -104,15 +104,15 @@ defmodule Huddlz.Communities.Huddl do
         allow_nil? true
         constraints one_of: [:in_person, :virtual, :hybrid]
       end
-      
+
       argument :latitude, :float do
         allow_nil? true
       end
-      
+
       argument :longitude, :float do
         allow_nil? true
       end
-      
+
       argument :radius_miles, :integer do
         allow_nil? true
         default 25
@@ -506,23 +506,23 @@ defmodule Huddlz.Communities.Huddl do
 
     calculate :distance_miles, :float do
       description "Distance in miles from a given point"
-      
+
       argument :latitude, :float do
         allow_nil? false
       end
-      
+
       argument :longitude, :float do
         allow_nil? false
       end
-      
+
       calculation expr(
-        fragment(
-          "ST_Distance(?::geography, ST_MakePoint(?, ?)::geography) / 1609.344",
-          coordinates,
-          ^arg(:longitude),
-          ^arg(:latitude)
-        )
-      )
+                    fragment(
+                      "ST_Distance(?::geography, ST_MakePoint(?, ?)::geography) / 1609.344",
+                      coordinates,
+                      ^arg(:longitude),
+                      ^arg(:latitude)
+                    )
+                  )
     end
   end
 

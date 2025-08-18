@@ -34,20 +34,21 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
     lat = Ash.Query.get_argument(query, :latitude)
     lng = Ash.Query.get_argument(query, :longitude)
     radius = Ash.Query.get_argument(query, :radius_miles) || 25
-    
+
     if lat && lng do
       # Filter huddls within the specified radius
       # Only include huddls that have coordinates (exclude those where geocoding failed)
       Ash.Query.filter(
         query,
         not is_nil(coordinates) and
-        fragment(
-          "ST_DWithin(?::geography, ST_MakePoint(?, ?)::geography, ?)",
-          coordinates,
-          ^lng,
-          ^lat,
-          ^(radius * 1609.344)  # Convert miles to meters
-        )
+          fragment(
+            "ST_DWithin(?::geography, ST_MakePoint(?, ?)::geography, ?)",
+            coordinates,
+            ^lng,
+            ^lat,
+            # Convert miles to meters
+            ^(radius * 1609.344)
+          )
       )
     else
       query
