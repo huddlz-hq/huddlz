@@ -116,6 +116,7 @@ defmodule Huddlz.Accounts.User do
     update :update_location_preferences do
       description "Update user's default location preferences"
       accept [:default_location_address, :default_search_radius]
+      require_atomic? false
       
       change fn changeset, _ ->
         if Ash.Changeset.changing_attribute?(changeset, :default_location_address) do
