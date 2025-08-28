@@ -57,10 +57,8 @@ end
 **Implementation**:
 ```heex
 <div class="dropdown dropdown-end">
-  <label tabindex="0" class="btn btn-ghost btn-circle avatar">
-    <div class="w-10 rounded-full bg-base-300 flex items-center justify-center">
-      <.icon name="hero-user" class="h-6 w-6" />
-    </div>
+  <label tabindex="0" class="btn btn-ghost btn-circle avatar rounded-full bg-base-300">
+    <.icon name="hero-user" class="h-6 w-6" />
   </label>
   <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
     <!-- menu items -->
