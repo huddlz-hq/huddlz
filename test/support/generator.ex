@@ -204,7 +204,9 @@ defmodule Huddlz.Generator do
         event_type: :in_person,
         physical_location: "123 Main St, Anytown, USA",
         is_private: false,
-        rsvp_count: 0
+        rsvp_count: 0,
+        huddl_template_id: nil,
+        is_recurring: false
       ],
       overrides: opts,
       actor: actor

@@ -24,6 +24,17 @@ defmodule HuddlzWeb.HuddlLive.Edit do
             forms: [auto?: true]
           )
 
+        form =
+          if huddl.huddl_template_id do
+            AshPhoenix.Form.validate(form, %{
+              is_recurring: true,
+              repeat_until: huddl.huddl_template.repeat_until,
+              frequency: huddl.huddl_template.frequency
+            })
+          else
+            form
+          end
+
         {:noreply,
          socket
          |> assign(:page_title, huddl.title)
@@ -69,6 +80,52 @@ defmodule HuddlzWeb.HuddlLive.Edit do
           <.input field={@form[:starts_at]} type="datetime-local" label="Start Date & Time" required />
           <.input field={@form[:ends_at]} type="datetime-local" label="End Date & Time" required />
         </div>
+
+        <%= if @huddl.huddl_template_id do %>
+          <p>This is a recurring huddl. Please select which huddlz to update</p>
+          <div class="form-control">
+            <div>
+              <input
+                id="form_edit_type_instance"
+                type="radio"
+                name="form[edit_type]"
+                class="radio"
+                value="instance"
+                checked={AshPhoenix.Form.value(@form.source, :edit_type) == "instance"}
+              />
+              <label class="label cursor-pointer" for="form_edit_type_instance">
+                This huddl only
+              </label>
+            </div>
+            <div>
+              <input
+                id="form_edit_type_all"
+                type="radio"
+                name="form[edit_type]"
+                class="radio"
+                value="all"
+                checked={AshPhoenix.Form.value(@form.source, :edit_type) == "all"}
+              />
+              <label class="label cursor-pointer" for="form_edit_type_all">
+                This and future huddlz in series
+              </label>
+            </div>
+          </div>
+
+          <div class={"grid gap-4 sm:grid-cols-2 #{@form[:edit_type].value == "instance" && "hidden"}"}>
+            <.input
+              field={@form[:frequency]}
+              type="select"
+              label="Frequency"
+              options={[
+                {"Weekly", "weekly"},
+                {"Monthly", "monthly"}
+              ]}
+              required
+            />
+            <.input field={@form[:repeat_until]} type="date" label="Repeat Until" required />
+          </div>
+        <% end %>
 
         <.input
           field={@form[:event_type]}
@@ -152,9 +209,8 @@ defmodule HuddlzWeb.HuddlLive.Edit do
       |> assign(:show_physical_location, event_type in ["in_person", "hybrid"])
       |> assign(:show_virtual_link, event_type in ["virtual", "hybrid"])
 
-    # Also run validation
     form =
-      AshPhoenix.Form.validate(socket.assigns.form, params)
+      AshPhoenix.Form.update_params(socket.assigns.form, &Map.merge(&1, params))
 
     {:noreply, assign(socket, :form, to_form(form))}
   end
@@ -196,7 +252,13 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     # Get the huddl and verify it belongs to the group with the given slug
     case Huddl
          |> Ash.Query.filter(id == ^id)
-         |> Ash.Query.load([:status, :visible_virtual_link, :group, :creator])
+         |> Ash.Query.load([
+           :creator,
+           :group,
+           :huddl_template,
+           :status,
+           :visible_virtual_link
+         ])
          |> Ash.read_one(actor: user) do
       {:ok, nil} ->
         {:error, :not_found}
