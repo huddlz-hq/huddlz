@@ -75,8 +75,8 @@ defmodule HuddlzWeb.CoreComponents do
           <p>{msg}</p>
         </div>
         <div class="flex-1" />
-        <button type="button" class="group self-start cursor-pointer" aria-label={gettext("close")}>
-          <.icon name="hero-x-mark-solid" class="size-5 opacity-40 group-hover:opacity-70" />
+        <button type="button" class="btn btn-ghost btn-sm btn-circle" aria-label={gettext("close")}>
+          <.icon name="hero-x-mark-solid" class="size-4" />
         </button>
       </div>
     </div>
@@ -565,7 +565,7 @@ defmodule HuddlzWeb.CoreComponents do
     ~H"""
     <div
       class={[
-        "flex flex-col md:flex-row bg-base-100 rounded-lg shadow-sm overflow-hidden",
+        "card card-side bg-base-100 shadow-md",
         @class
       ]}
       {@rest}
@@ -585,10 +585,10 @@ defmodule HuddlzWeb.CoreComponents do
           <.huddl_type_badge type={@huddl.event_type} />
         </div>
       </div>
-      <div class="flex-1 p-4">
+      <div class="card-body">
         <div class="flex flex-col h-full justify-between">
           <div>
-            <h3 class="text-xl font-semibold mb-2">{@huddl.title}</h3>
+            <h3 class="card-title">{@huddl.title}</h3>
             <%= if @show_group && Map.has_key?(@huddl, :group) do %>
               <p class="text-sm text-base-content/70 mb-1">
                 <.icon name="hero-user-group" class="h-4 w-4 inline" />
@@ -632,7 +632,7 @@ defmodule HuddlzWeb.CoreComponents do
               <% end %>
             </div>
           </div>
-          <div class="flex justify-between items-center mt-4">
+          <div class="card-actions justify-between items-center mt-4">
             <div>
               <%= if @huddl.is_private do %>
                 <span class="badge badge-neutral badge-sm">Private</span>
