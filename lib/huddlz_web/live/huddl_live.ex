@@ -165,9 +165,9 @@ defmodule HuddlzWeb.HuddlLive do
                 value={@search_query}
                 placeholder="Search huddlz..."
                 phx-debounce="300"
-                class="flex-grow px-4 py-2 border rounded focus:outline-none bg-base-100 text-base-content"
+                class="flex-grow input input-bordered"
               />
-              <button type="submit" class="btn btn-primary px-4 py-2">
+              <button type="submit" class="btn btn-primary">
                 Search
               </button>
             </div>
