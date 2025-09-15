@@ -43,15 +43,19 @@ defmodule HuddlzWeb.GroupLive.Index do
 
       <div class="mt-8">
         <%= if @groups == [] do %>
-          <div class="text-center py-12">
-            <p class="text-gray-500">No groups found.</p>
-            <%= if @can_create_group do %>
-              <p class="mt-2">
-                <.link navigate={~p"/groups/new"} class="text-primary hover:underline">
-                  Create the first group
-                </.link>
-              </p>
-            <% end %>
+          <div class="hero min-h-[200px] bg-base-200 rounded-box">
+            <div class="hero-content text-center">
+              <div>
+                <p class="text-lg text-base-content/60">No groups found.</p>
+                <%= if @can_create_group do %>
+                  <p class="mt-4">
+                    <.link navigate={~p"/groups/new"} class="link link-primary">
+                      Create the first group
+                    </.link>
+                  </p>
+                <% end %>
+              </div>
+            </div>
           </div>
         <% else %>
           <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -74,14 +78,16 @@ defmodule HuddlzWeb.GroupLive.Index do
                     <%= if group.is_public do %>
                       <div class="badge badge-secondary">Public</div>
                     <% else %>
-                      <div class="badge">Private</div>
+                      <div class="badge badge-ghost">Private</div>
                     <% end %>
                   </h2>
-                  <p>{group.description || "No description provided."}</p>
-                  <p :if={group.location} class="text-sm text-gray-500">
-                    <.icon name="hero-map-pin" class="h-4 w-4" /> {group.location}
+                  <p class="text-base-content/70">
+                    {group.description || "No description provided."}
                   </p>
-                  <div class="card-actions justify-end mt-4">
+                  <p :if={group.location} class="text-sm text-base-content/60">
+                    <.icon name="hero-map-pin" class="h-4 w-4 inline" /> {group.location}
+                  </p>
+                  <div class="card-actions justify-end">
                     <.link navigate={~p"/groups/#{group.slug}"}>
                       <.button class="btn-sm">View Group</.button>
                     </.link>
