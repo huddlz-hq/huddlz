@@ -47,7 +47,18 @@
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+### Core Principles Compliance
+- [ ] **Test-First Development**: All features have tests defined before implementation
+- [ ] **User-Centric Design**: Feature facilitates real-world connections
+- [ ] **Privacy by Design**: User data control mechanisms identified
+- [ ] **Consistent Terminology**: Using "huddl/huddlz" terminology only
+- [ ] **Simplicity Over Complexity**: Starting with simplest viable solution
+
+### Quality Gates Readiness
+- [ ] Testing approach defined (Cucumber/ExUnit)
+- [ ] Code formatting pipeline ready (mix format)
+- [ ] Static analysis configured (mix credo --strict)
+- [ ] Performance targets specified (<200ms p95)
 
 ## Project Structure
 
@@ -216,4 +227,4 @@ directories captured above]
 - [ ] Complexity deviations documented
 
 ---
-*Based on Constitution v2.1.1 - See `/memory/constitution.md`*
+*Based on Constitution v1.0.0 - See `.specify/memory/constitution.md`*
