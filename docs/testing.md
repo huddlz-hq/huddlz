@@ -1,7 +1,5 @@
 # Test-First Development with Cucumber
 
-> **See Also**: For Ash Framework-specific testing patterns, see [docs/ash_framework/testing.md](ash_framework/testing.md)
-
 We practice test-first development by starting with a feature description before writing any implementation code. Features are described in plain language using Gherkin syntax, making them easy to understand and review.
 
 ## Example Workflow
