@@ -2,6 +2,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
   use HuddlzWeb.ConnCase
 
   import Huddlz.Test.Helpers.Authentication
+  import Huddlz.Generator
 
   alias Huddlz.Accounts.User
   alias Huddlz.Communities.Group
@@ -43,8 +44,6 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> Ash.create!()
 
       # Create a virtual huddl
-      starts_at = DateTime.add(DateTime.utc_now(), 1, :day)
-
       huddl =
         Huddl
         |> Ash.Changeset.for_create(
@@ -52,8 +51,9 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
           %{
             title: "Virtual Meeting",
             description: "Join us for an online discussion",
-            starts_at: starts_at,
-            ends_at: DateTime.add(starts_at, 2, :hour),
+            date: Date.add(Date.utc_today(), 1),
+            start_time: ~T[14:00:00],
+            duration_minutes: 120,
             event_type: :virtual,
             virtual_link: "https://zoom.us/j/123456789",
             is_private: false,
@@ -170,8 +170,6 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
     test "handles different event types correctly", %{conn: conn, owner: owner, group: group} do
       # Create in-person huddl
-      in_person_starts_at = DateTime.add(DateTime.utc_now(), 1, :day)
-
       in_person_huddl =
         Huddl
         |> Ash.Changeset.for_create(
@@ -179,8 +177,9 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
           %{
             title: "In-Person Meetup",
             description: "Meet us at the coffee shop",
-            starts_at: in_person_starts_at,
-            ends_at: DateTime.add(in_person_starts_at, 2, :hour),
+            date: Date.add(Date.utc_today(), 1),
+            start_time: ~T[14:00:00],
+            duration_minutes: 120,
             event_type: :in_person,
             physical_location: "123 Main St, City",
             is_private: false,
@@ -198,8 +197,6 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> refute_has("dt", text: "Virtual Access")
 
       # Create hybrid huddl
-      hybrid_starts_at = DateTime.add(DateTime.utc_now(), 1, :day)
-
       hybrid_huddl =
         Huddl
         |> Ash.Changeset.for_create(
@@ -207,8 +204,9 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
           %{
             title: "Hybrid Event",
             description: "Join us in person or online",
-            starts_at: hybrid_starts_at,
-            ends_at: DateTime.add(hybrid_starts_at, 2, :hour),
+            date: Date.add(Date.utc_today(), 2),
+            start_time: ~T[15:00:00],
+            duration_minutes: 120,
             event_type: :hybrid,
             physical_location: "Conference Room A",
             virtual_link: "https://meet.example.com/hybrid",
@@ -252,8 +250,6 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
         |> Ash.create!()
 
       # Create private huddl
-      private_starts_at = DateTime.add(DateTime.utc_now(), 1, :day)
-
       private_huddl =
         Huddl
         |> Ash.Changeset.for_create(
@@ -261,8 +257,9 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
           %{
             title: "Private Event",
             description: "Members only event",
-            starts_at: private_starts_at,
-            ends_at: DateTime.add(private_starts_at, 2, :hour),
+            date: Date.add(Date.utc_today(), 3),
+            start_time: ~T[16:00:00],
+            duration_minutes: 120,
             event_type: :in_person,
             physical_location: "Secret Location",
             is_private: true,
@@ -312,10 +309,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
     } do
       # Create a past huddl
       past_huddl =
-        Huddl
-        |> Ash.Changeset.for_create(
-          :create,
-          %{
+        generate(
+          past_huddl(
             title: "Past Event",
             description: "This already happened",
             starts_at: DateTime.add(DateTime.utc_now(), -2, :day),
@@ -325,10 +320,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             is_private: false,
             group_id: group.id,
             creator_id: owner.id
-          },
-          actor: owner
+          )
         )
-        |> Ash.create!()
 
       # RSVP to the past huddl (directly in database since it's past)
       past_huddl
@@ -422,10 +415,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
     test "rendering type and status badges correctly", %{conn: conn, owner: owner, group: group} do
       # Create in-person in-progress huddl
       in_person_huddl =
-        Huddl
-        |> Ash.Changeset.for_create(
-          :create,
-          %{
+        generate(
+          past_huddl(
             title: "In-Person Meetup",
             description: "Meet us at the coffee shop",
             starts_at: DateTime.add(DateTime.utc_now(), -1, :hour),
@@ -435,10 +426,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             is_private: false,
             group_id: group.id,
             creator_id: owner.id
-          },
-          actor: owner
+          )
         )
-        |> Ash.create!()
 
       conn
       |> login(owner)

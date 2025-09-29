@@ -180,11 +180,14 @@ defmodule Huddlz.Generator do
           generate(group(owner_id: owner.id, is_public: true, actor: owner)).id
         end)
 
-    # Generate random dates in the future
+    # Generate random dates in the future using the new virtual argument pattern
     days_ahead = :rand.uniform(30)
     hours_duration = :rand.uniform(4)
-    start_time = DateTime.add(DateTime.utc_now(), days_ahead, :day)
-    end_time = DateTime.add(start_time, hours_duration, :hour)
+
+    # Calculate date and time for the new virtual arguments
+    future_date = Date.add(Date.utc_today(), days_ahead)
+    start_time = ~T[14:00:00]
+    duration_minutes = hours_duration * 60
 
     # Generate a thumbnail URL
     thumbnail_url =
@@ -196,8 +199,10 @@ defmodule Huddlz.Generator do
       defaults: [
         title: StreamData.repeatedly(fn -> Faker.Company.bs() end),
         description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
-        starts_at: start_time,
-        ends_at: end_time,
+        # Use virtual arguments instead of starts_at/ends_at
+        date: future_date,
+        start_time: start_time,
+        duration_minutes: duration_minutes,
         thumbnail_url: thumbnail_url,
         creator_id: creator_id,
         group_id: group_id,

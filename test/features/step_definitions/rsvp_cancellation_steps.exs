@@ -82,18 +82,41 @@ defmodule RsvpCancellationSteps do
     virtual_link = Map.get(huddl_data, "virtual_link")
     event_type = String.to_atom(huddl_data["event_type"])
 
-    generate(
-      huddl(
-        title: huddl_data["title"],
-        description: huddl_data["description"],
-        event_type: event_type,
-        starts_at: starts_at,
-        ends_at: ends_at,
-        virtual_link: virtual_link,
-        group_id: group.id,
-        actor: group.owner
+    # Check if this is a past event and use appropriate generator
+    if DateTime.compare(starts_at, DateTime.utc_now()) == :lt do
+      # Past event - use past_huddl generator which bypasses validation
+      generate(
+        past_huddl(
+          title: huddl_data["title"],
+          description: huddl_data["description"],
+          event_type: event_type,
+          starts_at: starts_at,
+          ends_at: ends_at,
+          virtual_link: virtual_link,
+          group_id: group.id,
+          creator_id: group.owner.id
+        )
       )
-    )
+    else
+      # Future event - convert to virtual arguments
+      date = DateTime.to_date(starts_at)
+      start_time = DateTime.to_time(starts_at)
+      duration_minutes = div(DateTime.diff(ends_at, starts_at, :second), 60)
+
+      generate(
+        huddl(
+          title: huddl_data["title"],
+          description: huddl_data["description"],
+          event_type: event_type,
+          date: date,
+          start_time: start_time,
+          duration_minutes: duration_minutes,
+          virtual_link: virtual_link,
+          group_id: group.id,
+          actor: group.owner
+        )
+      )
+    end
 
     context
   end

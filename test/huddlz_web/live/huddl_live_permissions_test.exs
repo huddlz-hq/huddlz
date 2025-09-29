@@ -30,9 +30,6 @@ defmodule HuddlzWeb.HuddlLivePermissionsTest do
       )
 
       # Create a virtual huddl with explicit future dates
-      starts_at = DateTime.add(DateTime.utc_now(), 7, :day) |> DateTime.truncate(:second)
-      ends_at = DateTime.add(starts_at, 2, :hour) |> DateTime.truncate(:second)
-
       huddl =
         generate(
           huddl(
@@ -43,8 +40,9 @@ defmodule HuddlzWeb.HuddlLivePermissionsTest do
             group_id: group.id,
             creator_id: owner.id,
             is_private: false,
-            starts_at: starts_at,
-            ends_at: ends_at,
+            date: Date.add(Date.utc_today(), 7),
+            start_time: ~T[14:00:00],
+            duration_minutes: 120,
             actor: owner
           )
         )

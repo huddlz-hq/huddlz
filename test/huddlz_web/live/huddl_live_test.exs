@@ -213,8 +213,6 @@ defmodule HuddlzWeb.HuddlLiveTest do
     end
 
     test "search is case-insensitive", %{conn: conn, host: host, public_group: public_group} do
-      future_date = DateTime.add(DateTime.utc_now(), 7, :day)
-
       _elixir_huddl =
         generate(
           huddl(
@@ -222,8 +220,9 @@ defmodule HuddlzWeb.HuddlLiveTest do
             creator_id: host.id,
             is_private: false,
             title: "Elixir Programming Workshop",
-            starts_at: future_date,
-            ends_at: DateTime.add(future_date, 2, :hour),
+            date: Date.add(Date.utc_today(), 7),
+            start_time: ~T[14:00:00],
+            duration_minutes: 120,
             actor: host
           )
         )

@@ -144,8 +144,10 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
 
       assert_has(session, "input[name='form[title]']")
       assert_has(session, "textarea[name='form[description]']")
-      assert_has(session, "input[name='form[starts_at]'][type='datetime-local']")
-      assert_has(session, "input[name='form[ends_at]'][type='datetime-local']")
+      # New date/time/duration fields
+      assert_has(session, "input[name='form[date]'][type='date']")
+      assert_has(session, "input[name='form[start_time]']")
+      assert_has(session, "select[name='form[duration_minutes]']")
       assert_has(session, "select[name='form[event_type]']")
     end
 
@@ -224,20 +226,9 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
     end
 
     test "creates huddl with valid data", %{conn: conn, owner: owner, group: group} do
-      starts_at =
-        DateTime.utc_now()
-        |> DateTime.add(1, :day)
-        |> DateTime.to_naive()
-        |> NaiveDateTime.to_iso8601()
-        |> String.slice(0..15)
-
-      ends_at =
-        DateTime.utc_now()
-        |> DateTime.add(1, :day)
-        |> DateTime.add(2, :hour)
-        |> DateTime.to_naive()
-        |> NaiveDateTime.to_iso8601()
-        |> String.slice(0..15)
+      tomorrow = Date.utc_today() |> Date.add(1)
+      date = Date.to_iso8601(tomorrow)
+      time = "14:30"
 
       session =
         conn
@@ -245,8 +236,9 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> visit(~p"/groups/#{group.slug}/huddlz/new")
         |> fill_in("Title", with: "Test Huddl")
         |> fill_in("Description", with: "A test huddl description")
-        |> fill_in("Start Date & Time", with: starts_at)
-        |> fill_in("End Date & Time", with: ends_at)
+        |> fill_in("Date", with: date)
+        |> fill_in("Start Time", with: time)
+        |> select("Duration", option: "2 hours")
         |> fill_in("Physical Location", with: "123 Main St")
         |> click_button("Create Huddl")
 
@@ -263,25 +255,20 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       assert huddl.physical_location == "123 Main St"
       assert huddl.event_type == :in_person
       assert huddl.is_private == false
+
+      # Verify the calculated times
+      assert DateTime.to_date(huddl.starts_at) == tomorrow
+      # Verify duration is 2 hours
+      duration_minutes = DateTime.diff(huddl.ends_at, huddl.starts_at, :minute)
+      assert duration_minutes == 120
     end
 
     test "creates private huddl for private group", %{conn: conn, owner: owner} do
       private_group = generate(group(is_public: false, owner_id: owner.id, actor: owner))
 
-      starts_at =
-        DateTime.utc_now()
-        |> DateTime.add(1, :day)
-        |> DateTime.to_naive()
-        |> NaiveDateTime.to_iso8601()
-        |> String.slice(0..15)
-
-      ends_at =
-        DateTime.utc_now()
-        |> DateTime.add(1, :day)
-        |> DateTime.add(2, :hour)
-        |> DateTime.to_naive()
-        |> NaiveDateTime.to_iso8601()
-        |> String.slice(0..15)
+      tomorrow = Date.utc_today() |> Date.add(1)
+      date = Date.to_iso8601(tomorrow)
+      time = "14:30"
 
       session =
         conn
@@ -291,8 +278,9 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> select("Event Type", option: "Virtual", exact: false)
         |> fill_in("Title", with: "Private Group Huddl")
         |> fill_in("Description", with: "A huddl in a private group")
-        |> fill_in("Start Date & Time", with: starts_at)
-        |> fill_in("End Date & Time", with: ends_at)
+        |> fill_in("Date", with: date)
+        |> fill_in("Start Time", with: time)
+        |> select("Duration", option: "2 hours")
         |> fill_in("Virtual Meeting Link", with: "https://zoom.us/j/123456789")
         |> click_button("Create Huddl")
 
@@ -337,6 +325,137 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
 
       # Check for validation error class on the input
       assert_has(session, "input#form_title.input-error")
+    end
+  end
+
+  describe "date/time/duration validation" do
+    setup do
+      owner = generate(user(role: :user))
+      group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+      %{owner: owner, group: group}
+    end
+
+    test "validates date must be in the future", %{conn: conn, owner: owner, group: group} do
+      yesterday = Date.utc_today() |> Date.add(-1)
+      date = Date.to_iso8601(yesterday)
+
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/new")
+        |> fill_in("Title", with: "Test Huddl")
+        |> fill_in("Date", with: date)
+        |> fill_in("Start Time", with: "14:30")
+        |> select("Duration", option: "1 hour")
+        |> fill_in("Physical Location", with: "123 Main St")
+        |> click_button("Create Huddl")
+
+      # Should still be on the same page with error
+      assert_path(session, ~p"/groups/#{group.slug}/huddlz/new")
+
+      # Should show validation error
+      assert_has(session, "*", text: "must be in the future")
+    end
+
+    test "accepts manual time entry outside of 15-minute increments", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      tomorrow = Date.utc_today() |> Date.add(1)
+      date = Date.to_iso8601(tomorrow)
+
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/new")
+        |> fill_in("Title", with: "Test Huddl with Manual Time")
+        |> fill_in("Date", with: date)
+        # Enter a time that's not on a 15-minute increment
+        |> fill_in("Start Time", with: "09:47")
+        |> select("Duration", option: "1 hour")
+        |> fill_in("Physical Location", with: "123 Main St")
+        |> click_button("Create Huddl")
+
+      # Should redirect to group page (successful creation)
+      assert_path(session, ~p"/groups/#{group.slug}")
+
+      # Verify huddl was created with the exact time
+      huddl =
+        Huddl
+        |> Ash.Query.filter(title == "Test Huddl with Manual Time" and group_id == ^group.id)
+        |> Ash.read_one!(actor: owner)
+
+      # Check that the time has minutes = 47
+      assert huddl.starts_at.minute == 47
+    end
+
+    test "calculates end time correctly from duration", %{conn: conn, owner: owner, group: group} do
+      tomorrow = Date.utc_today() |> Date.add(1)
+      date = Date.to_iso8601(tomorrow)
+
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/new")
+        |> fill_in("Title", with: "Test Duration Calculation")
+        |> fill_in("Date", with: date)
+        |> fill_in("Start Time", with: "15:00")
+        |> select("Duration", option: "1.5 hours")
+        |> fill_in("Physical Location", with: "123 Main St")
+
+      # Check that end time is displayed on the form
+      assert session.conn.resp_body =~ "Ends at:"
+
+      session = click_button(session, "Create Huddl")
+
+      # Should redirect to group page
+      assert_path(session, ~p"/groups/#{group.slug}")
+
+      # Verify huddl was created with correct duration
+      huddl =
+        Huddl
+        |> Ash.Query.filter(title == "Test Duration Calculation" and group_id == ^group.id)
+        |> Ash.read_one!(actor: owner)
+
+      # Verify duration is 90 minutes (1.5 hours)
+      duration_minutes = DateTime.diff(huddl.ends_at, huddl.starts_at, :minute)
+      assert duration_minutes == 90
+    end
+
+    test "handles day boundary crossing for long durations", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      tomorrow = Date.utc_today() |> Date.add(1)
+      date = Date.to_iso8601(tomorrow)
+
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/new")
+        |> fill_in("Title", with: "Test Day Boundary")
+        |> fill_in("Date", with: date)
+        |> fill_in("Start Time", with: "23:00")
+        |> select("Duration", option: "6 hours")
+        |> fill_in("Physical Location", with: "123 Main St")
+        |> click_button("Create Huddl")
+
+      # Should redirect to group page
+      assert_path(session, ~p"/groups/#{group.slug}")
+
+      # Verify huddl was created
+      huddl =
+        Huddl
+        |> Ash.Query.filter(title == "Test Day Boundary" and group_id == ^group.id)
+        |> Ash.read_one!(actor: owner)
+
+      # Verify end time is on the next day
+      assert Date.diff(DateTime.to_date(huddl.ends_at), DateTime.to_date(huddl.starts_at)) == 1
+      # Verify duration is 6 hours
+      duration_minutes = DateTime.diff(huddl.ends_at, huddl.starts_at, :minute)
+      assert duration_minutes == 360
     end
   end
 

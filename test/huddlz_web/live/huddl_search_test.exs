@@ -14,8 +14,9 @@ defmodule HuddlzWeb.HuddlSearchTest do
           title: "Morning Yoga Session",
           description: "Start your day with relaxation",
           event_type: :in_person,
-          starts_at: DateTime.add(DateTime.utc_now(), 2 * 24 * 60 * 60, :second),
-          ends_at: DateTime.add(DateTime.utc_now(), 2 * 24 * 60 * 60 + 3600, :second),
+          date: Date.add(Date.utc_today(), 2),
+          start_time: ~T[09:00:00],
+          duration_minutes: 60,
           is_private: false,
           actor: user
         )
@@ -30,8 +31,9 @@ defmodule HuddlzWeb.HuddlSearchTest do
           description: "Discuss latest tech books",
           event_type: :virtual,
           virtual_link: "https://zoom.us/meeting/123",
-          starts_at: DateTime.add(DateTime.utc_now(), 5 * 24 * 60 * 60, :second),
-          ends_at: DateTime.add(DateTime.utc_now(), 5 * 24 * 60 * 60 + 3600, :second),
+          date: Date.add(Date.utc_today(), 5),
+          start_time: ~T[19:00:00],
+          duration_minutes: 60,
           is_private: false,
           actor: user
         )
@@ -47,8 +49,9 @@ defmodule HuddlzWeb.HuddlSearchTest do
           event_type: :hybrid,
           physical_location: "123 Tech St",
           virtual_link: "https://zoom.us/meeting/456",
-          starts_at: DateTime.add(DateTime.utc_now(), 10 * 24 * 60 * 60, :second),
-          ends_at: DateTime.add(DateTime.utc_now(), 10 * 24 * 60 * 60 + 3600, :second),
+          date: Date.add(Date.utc_today(), 10),
+          start_time: ~T[14:00:00],
+          duration_minutes: 120,
           is_private: false,
           actor: user
         )
@@ -57,15 +60,14 @@ defmodule HuddlzWeb.HuddlSearchTest do
     # Create a past huddl that shouldn't appear
     _past_huddl =
       generate(
-        huddl(
+        past_huddl(
           group_id: group.id,
           creator_id: user.id,
           title: "Past Event",
           event_type: :in_person,
-          starts_at: DateTime.add(DateTime.utc_now(), -2 * 24 * 60 * 60, :second),
-          ends_at: DateTime.add(DateTime.utc_now(), -2 * 24 * 60 * 60 + 3600, :second),
-          is_private: false,
-          actor: user
+          starts_at: DateTime.add(DateTime.utc_now(), -2, :day),
+          ends_at: DateTime.add(DateTime.utc_now(), -2, :day) |> DateTime.add(1, :hour),
+          is_private: false
         )
       )
 
