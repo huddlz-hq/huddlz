@@ -287,9 +287,15 @@ defmodule HuddlzWeb.HuddlLive.New do
   end
 
   defp parse_time(time_str) do
-    # Parse time string in format HH:MM
+    # Parse time string in format HH:MM or HH:MM:SS
     case String.split(time_str, ":") do
       [hour_str, minute_str] ->
+        with {hour, ""} <- Integer.parse(hour_str),
+             {minute, ""} <- Integer.parse(minute_str) do
+          Time.new(hour, minute, 0)
+        end
+
+      [hour_str, minute_str, _second_str] ->
         with {hour, ""} <- Integer.parse(hour_str),
              {minute, ""} <- Integer.parse(minute_str) do
           Time.new(hour, minute, 0)

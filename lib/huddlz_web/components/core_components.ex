@@ -736,31 +736,11 @@ defmodule HuddlzWeb.CoreComponents do
   attr :rest, :global
 
   def date_picker(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
-    # Get field-level errors
-    field_errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
-
-    # Also check for form-level errors that mention this field
-    field_name = field.field
-
-    form_errors =
-      case field.form.errors do
-        errors when is_list(errors) ->
-          errors
-          |> Enum.filter(fn
-            {^field_name, _} -> true
-            _ -> false
-          end)
-          |> Enum.map(fn {_, err} -> err end)
-
-        _ ->
-          []
-      end
-
-    all_errors = field_errors ++ form_errors
+    errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
 
     assigns
     |> assign(field: nil, id: assigns.id || field.id)
-    |> assign(:errors, Enum.map(all_errors, &translate_error(&1)))
+    |> assign(:errors, Enum.map(errors, &translate_error(&1)))
     |> assign_new(:name, fn -> field.name end)
     |> assign_new(:value, fn -> field.value end)
     |> date_picker()
