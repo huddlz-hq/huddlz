@@ -44,10 +44,21 @@ defmodule Huddlz.Communities.Huddl do
         :huddl_template_id
       ]
 
+      # Virtual arguments for form inputs
+      argument :date, :date, allow_nil?: true
+      argument :start_time, :time, allow_nil?: true
+
+      argument :duration_minutes, :integer do
+        allow_nil? true
+        constraints min: 15, max: 1440
+      end
+
       argument :is_recurring, :boolean, default: false
       argument :repeat_until, :date, allow_nil?: true
       argument :frequency, :string, allow_nil?: true
 
+      validate Huddlz.Communities.Huddl.Validations.FutureDateValidation
+      change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.AddHuddlTemplate
     end
@@ -69,6 +80,15 @@ defmodule Huddlz.Communities.Huddl do
         :huddl_template_id
       ]
 
+      # Virtual arguments for form inputs
+      argument :date, :date, allow_nil?: true
+      argument :start_time, :time, allow_nil?: true
+
+      argument :duration_minutes, :integer do
+        allow_nil? true
+        constraints min: 15, max: 1440
+      end
+
       argument :repeat_until, :date
       argument :frequency, :string
 
@@ -79,6 +99,7 @@ defmodule Huddlz.Communities.Huddl do
 
       require_atomic? false
 
+      change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz
     end
 
@@ -353,29 +374,7 @@ defmodule Huddlz.Communities.Huddl do
     end
   end
 
-  changes do
-    change fn changeset, _ ->
-      # Only validate future start date on create
-      if changeset.action == :create do
-        case Ash.Changeset.get_attribute(changeset, :starts_at) do
-          nil ->
-            changeset
-
-          starts_at ->
-            if DateTime.compare(starts_at, DateTime.utc_now()) == :lt do
-              Ash.Changeset.add_error(changeset,
-                field: :starts_at,
-                message: "must be in the future"
-              )
-            else
-              changeset
-            end
-        end
-      else
-        changeset
-      end
-    end
-  end
+  # changes section removed - validation is handled by FutureDateValidation module
 
   validations do
     validate compare(:ends_at, greater_than: :starts_at) do

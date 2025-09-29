@@ -13,14 +13,17 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       # Create upcoming huddls (future events)
       upcoming_huddls =
         Enum.map(1..12, fn i ->
+          future_date = Date.add(Date.utc_today(), i)
+
           generate(
             huddl(
               group_id: group.id,
               creator_id: user.id,
               is_private: false,
               title: "Upcoming Event #{i}",
-              starts_at: DateTime.add(DateTime.utc_now(), i, :day),
-              ends_at: DateTime.add(DateTime.utc_now(), i, :day) |> DateTime.add(1, :hour),
+              date: future_date,
+              start_time: ~T[14:00:00],
+              duration_minutes: 60,
               actor: user
             )
           )

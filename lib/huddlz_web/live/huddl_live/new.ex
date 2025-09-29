@@ -13,13 +13,19 @@ defmodule HuddlzWeb.HuddlLive.New do
     with {:ok, group} <- get_group_by_slug(group_slug, socket.assigns.current_user),
          :ok <- check_can_create_huddl(group, socket.assigns.current_user) do
       # Initialize form with defaults
+      tomorrow = Date.utc_today() |> Date.add(1)
+      default_time = ~T[14:00:00]
+
       form =
         AshPhoenix.Form.for_create(Huddl, :create,
           domain: Huddlz.Communities,
           actor: socket.assigns.current_user,
           params: %{
             "group_id" => group.id,
-            "creator_id" => socket.assigns.current_user.id
+            "creator_id" => socket.assigns.current_user.id,
+            "date" => Date.to_iso8601(tomorrow),
+            "start_time" => Time.to_iso8601(default_time) |> String.slice(0..4),
+            "duration_minutes" => "60"
           }
         )
 
@@ -29,7 +35,8 @@ defmodule HuddlzWeb.HuddlLive.New do
        |> assign(:group, group)
        |> assign(:form, to_form(form))
        |> assign(:show_virtual_link, false)
-       |> assign(:show_physical_location, true)}
+       |> assign(:show_physical_location, true)
+       |> assign(:calculated_end_time, calculate_end_time(tomorrow, default_time, 60))}
     else
       {:error, :not_found} ->
         {:ok,
@@ -68,9 +75,18 @@ defmodule HuddlzWeb.HuddlLive.New do
         <.input field={@form[:description]} type="textarea" label="Description" rows="4" />
 
         <div class="grid gap-4 sm:grid-cols-2">
-          <.input field={@form[:starts_at]} type="datetime-local" label="Start Date & Time" required />
-          <.input field={@form[:ends_at]} type="datetime-local" label="End Date & Time" required />
+          <.date_picker field={@form[:date]} label="Date" />
+          <.time_picker field={@form[:start_time]} label="Start Time" />
         </div>
+
+        <.duration_picker field={@form[:duration_minutes]} label="Duration" />
+
+        <%= if @calculated_end_time do %>
+          <div class="alert alert-info">
+            <.icon name="hero-clock" class="h-5 w-5" />
+            <span>Ends at: {@calculated_end_time}</span>
+          </div>
+        <% end %>
 
         <.input field={@form[:is_recurring]} type="checkbox" label="Make this a recurring event" />
 
@@ -157,8 +173,24 @@ defmodule HuddlzWeb.HuddlLive.New do
       |> assign(:show_physical_location, event_type in ["in_person", "hybrid"])
       |> assign(:show_virtual_link, event_type in ["virtual", "hybrid"])
 
-    form =
-      AshPhoenix.Form.validate(socket.assigns.form, params)
+    # Calculate end time if we have date, time, and duration
+    socket =
+      case {params["date"], params["start_time"], params["duration_minutes"]} do
+        {date_str, time_str, duration_str}
+        when date_str != "" and time_str != "" and duration_str != "" ->
+          with {:ok, date} <- Date.from_iso8601(date_str),
+               {:ok, time} <- parse_time(time_str),
+               {duration, ""} <- Integer.parse(duration_str) do
+            assign(socket, :calculated_end_time, calculate_end_time(date, time, duration))
+          else
+            _ -> socket
+          end
+
+        _ ->
+          socket
+      end
+
+    form = AshPhoenix.Form.validate(socket.assigns.form, params)
 
     {:noreply, assign(socket, :form, to_form(form))}
   end
@@ -235,5 +267,36 @@ defmodule HuddlzWeb.HuddlLive.New do
     Huddlz.Communities.GroupMember
     |> Ash.Query.filter(group_id == ^group.id and user_id == ^user.id and role == :organizer)
     |> Ash.exists?(authorize?: false)
+  end
+
+  defp calculate_end_time(date, time, duration_minutes) do
+    with {:ok, starts_at} <- DateTime.new(date, time, "Etc/UTC") do
+      ends_at = DateTime.add(starts_at, duration_minutes, :minute)
+
+      # Format the end time nicely
+      if Date.compare(DateTime.to_date(ends_at), date) == :eq do
+        # Same day
+        Calendar.strftime(ends_at, "%I:%M %p")
+      else
+        # Next day
+        Calendar.strftime(ends_at, "%I:%M %p (next day)")
+      end
+    else
+      _ -> nil
+    end
+  end
+
+  defp parse_time(time_str) do
+    # Parse time string in format HH:MM
+    case String.split(time_str, ":") do
+      [hour_str, minute_str] ->
+        with {hour, ""} <- Integer.parse(hour_str),
+             {minute, ""} <- Integer.parse(minute_str) do
+          Time.new(hour, minute, 0)
+        end
+
+      _ ->
+        :error
+    end
   end
 end

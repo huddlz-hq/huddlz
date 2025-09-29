@@ -716,4 +716,208 @@ defmodule HuddlzWeb.CoreComponents do
   defp format_time_only(datetime) do
     Calendar.strftime(datetime, "%I:%M %p")
   end
+
+  @doc """
+  Renders a date picker input.
+
+  ## Examples
+
+      <.date_picker field={@form[:date]} />
+      <.date_picker name="event_date" value={@date} />
+  """
+  attr :id, :any, default: nil
+  attr :name, :any
+  attr :label, :string, default: "Date"
+  attr :value, :any
+  attr :field, Phoenix.HTML.FormField, doc: "a form field struct retrieved from the form"
+  attr :errors, :list, default: []
+  attr :min, :string, default: nil, doc: "minimum date (e.g., today's date)"
+  attr :class, :string, default: nil
+  attr :rest, :global
+
+  def date_picker(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
+    # Get field-level errors
+    field_errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
+
+    # Also check for form-level errors that mention this field
+    field_name = field.field
+
+    form_errors =
+      case field.form.errors do
+        errors when is_list(errors) ->
+          errors
+          |> Enum.filter(fn
+            {^field_name, _} -> true
+            _ -> false
+          end)
+          |> Enum.map(fn {_, err} -> err end)
+
+        _ ->
+          []
+      end
+
+    all_errors = field_errors ++ form_errors
+
+    assigns
+    |> assign(field: nil, id: assigns.id || field.id)
+    |> assign(:errors, Enum.map(all_errors, &translate_error(&1)))
+    |> assign_new(:name, fn -> field.name end)
+    |> assign_new(:value, fn -> field.value end)
+    |> date_picker()
+  end
+
+  def date_picker(assigns) do
+    assigns = assign_new(assigns, :min, fn -> Date.utc_today() |> Date.to_iso8601() end)
+
+    ~H"""
+    <fieldset class="fieldset mb-4">
+      <label for={@id} class="fieldset-label">{@label}</label>
+      <div class="relative">
+        <input
+          type="date"
+          id={@id}
+          name={@name}
+          value={@value}
+          min={@min}
+          class={[
+            "input input-bordered w-full pr-10",
+            @errors != [] && "input-error"
+          ]}
+          {@rest}
+        />
+        <.icon
+          name="hero-calendar-days"
+          class="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/50 pointer-events-none"
+        />
+      </div>
+      <span :for={msg <- @errors} class="fieldset-error">
+        {msg}
+      </span>
+    </fieldset>
+    """
+  end
+
+  @doc """
+  Renders a time picker with 15-minute increments and manual entry.
+
+  ## Examples
+
+      <.time_picker field={@form[:start_time]} />
+      <.time_picker name="start_time" value={@time} />
+  """
+  attr :id, :any, default: nil
+  attr :name, :any
+  attr :label, :string, default: "Start Time"
+  attr :value, :any
+  attr :field, Phoenix.HTML.FormField, doc: "a form field struct retrieved from the form"
+  attr :errors, :list, default: []
+  attr :class, :string, default: nil
+  attr :rest, :global
+
+  def time_picker(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
+    errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
+
+    assigns
+    |> assign(field: nil, id: assigns.id || field.id)
+    |> assign(:errors, Enum.map(errors, &translate_error(&1)))
+    |> assign_new(:name, fn -> field.name end)
+    |> assign_new(:value, fn -> field.value end)
+    |> time_picker()
+  end
+
+  def time_picker(assigns) do
+    ~H"""
+    <fieldset class="fieldset mb-4">
+      <label for={@id} class="fieldset-label">{@label}</label>
+      <input
+        type="time"
+        id={@id}
+        name={@name}
+        value={@value}
+        list={"time-options-#{@id}"}
+        class={[
+          @class || "input input-bordered w-full",
+          @errors != [] && "input-error"
+        ]}
+        {@rest}
+      />
+      <datalist id={"time-options-#{@id}"}>
+        <%= for hour <- 0..23, minute <- [0, 15, 30, 45] do %>
+          <option value={time_option_value(hour, minute)} />
+        <% end %>
+      </datalist>
+      <span :for={msg <- @errors} class="fieldset-error">
+        {msg}
+      </span>
+      <span class="text-sm text-base-content/70 mt-1">
+        Select from dropdown or type any time
+      </span>
+    </fieldset>
+    """
+  end
+
+  @doc """
+  Renders a duration picker with preset options.
+
+  ## Examples
+
+      <.duration_picker field={@form[:duration_minutes]} />
+      <.duration_picker name="duration" value={60} />
+  """
+  attr :id, :any, default: nil
+  attr :name, :any
+  attr :label, :string, default: "Duration"
+  attr :value, :any
+  attr :field, Phoenix.HTML.FormField, doc: "a form field struct retrieved from the form"
+  attr :errors, :list, default: []
+  attr :class, :string, default: nil
+  attr :rest, :global
+
+  def duration_picker(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
+    errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
+
+    assigns
+    |> assign(field: nil, id: assigns.id || field.id)
+    |> assign(:errors, Enum.map(errors, &translate_error(&1)))
+    |> assign_new(:name, fn -> field.name end)
+    |> assign_new(:value, fn -> field.value end)
+    |> duration_picker()
+  end
+
+  def duration_picker(assigns) do
+    ~H"""
+    <fieldset class="fieldset mb-4">
+      <label for={@id} class="fieldset-label">{@label}</label>
+      <select
+        id={@id}
+        name={@name}
+        class={[
+          @class || "select select-bordered w-full",
+          @errors != [] && "select-error"
+        ]}
+        {@rest}
+      >
+        <option value="">Select duration...</option>
+        <option value="30" selected={@value == 30}>30 minutes</option>
+        <option value="60" selected={@value == 60}>1 hour</option>
+        <option value="90" selected={@value == 90}>1.5 hours</option>
+        <option value="120" selected={@value == 120}>2 hours</option>
+        <option value="150" selected={@value == 150}>2.5 hours</option>
+        <option value="180" selected={@value == 180}>3 hours</option>
+        <option value="240" selected={@value == 240}>4 hours</option>
+        <option value="360" selected={@value == 360}>6 hours</option>
+      </select>
+      <span :for={msg <- @errors} class="fieldset-error">
+        {msg}
+      </span>
+    </fieldset>
+    """
+  end
+
+  # Helper function for time picker options
+  defp time_option_value(hour, minute) do
+    hour_str = hour |> Integer.to_string() |> String.pad_leading(2, "0")
+    minute_str = minute |> Integer.to_string() |> String.pad_leading(2, "0")
+    "#{hour_str}:#{minute_str}"
+  end
 end

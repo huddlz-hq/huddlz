@@ -47,18 +47,26 @@
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-### Core Principles Compliance
-- [ ] **Test-First Development**: All features have tests defined before implementation
-- [ ] **User-Centric Design**: Feature facilitates real-world connections
-- [ ] **Privacy by Design**: User data control mechanisms identified
-- [ ] **Consistent Terminology**: Using "huddl/huddlz" terminology only
-- [ ] **Simplicity Over Complexity**: Starting with simplest viable solution
+**Resource-First Development**:
+- [ ] All features start with Ash resource definitions
+- [ ] Resource structure defined before implementation
 
-### Quality Gates Readiness
-- [ ] Testing approach defined (Cucumber/ExUnit)
-- [ ] Code formatting pipeline ready (mix format)
-- [ ] Static analysis configured (mix credo --strict)
-- [ ] Performance targets specified (<200ms p95)
+**Test-After-Resource Pattern**:
+- [ ] Tests planned for all resource actions
+- [ ] Permission matrix tests included
+
+**Comprehensive Permissions**:
+- [ ] Permissions matrix documented for all actions
+- [ ] Edge cases identified for testing
+
+**Multi-Endpoint Planning**:
+- [ ] JSON API endpoints considered
+- [ ] GraphQL endpoints considered
+- [ ] MCP tool endpoints considered
+
+**Migration-Driven Evolution**:
+- [ ] All schema changes via Ash migrations
+- [ ] No manual database modifications
 
 ## Project Structure
 
@@ -227,4 +235,4 @@ directories captured above]
 - [ ] Complexity deviations documented
 
 ---
-*Based on Constitution v1.0.0 - See `.specify/memory/constitution.md`*
+*Based on Constitution v1.0.0 - See `/memory/constitution.md`*

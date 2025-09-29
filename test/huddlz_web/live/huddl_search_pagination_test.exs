@@ -16,8 +16,9 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
           title: "Test Huddl #{i}",
           description: "Test event number #{i}",
           event_type: event_type,
-          starts_at: DateTime.add(DateTime.utc_now(), i * 24 * 60 * 60, :second),
-          ends_at: DateTime.add(DateTime.utc_now(), i * 24 * 60 * 60 + 3600, :second),
+          date: Date.add(Date.utc_today(), i),
+          start_time: ~T[14:00:00],
+          duration_minutes: 60,
           is_private: false,
           actor: user
         }
@@ -43,16 +44,15 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
     # Create some past events that shouldn't appear
     for i <- 1..5 do
       generate(
-        huddl(
+        past_huddl(
           group_id: group.id,
           creator_id: user.id,
           title: "Past Event #{i}",
           event_type: :in_person,
           physical_location: "456 Past St",
-          starts_at: DateTime.add(DateTime.utc_now(), -i * 24 * 60 * 60, :second),
-          ends_at: DateTime.add(DateTime.utc_now(), -i * 24 * 60 * 60 + 3600, :second),
-          is_private: false,
-          actor: user
+          starts_at: DateTime.add(DateTime.utc_now(), -i, :day),
+          ends_at: DateTime.add(DateTime.utc_now(), -i, :day) |> DateTime.add(1, :hour),
+          is_private: false
         )
       )
     end

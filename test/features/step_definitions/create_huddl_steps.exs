@@ -189,13 +189,39 @@ defmodule CreateHuddlSteps do
           "Description" ->
             Map.put(acc, "description", value)
 
+          "Date" ->
+            date = parse_relative_date(value)
+            Map.put(acc, "date", Date.to_iso8601(date))
+
+          "Start Time" ->
+            Map.put(acc, "start_time", value)
+
+          "Duration" ->
+            Map.put(acc, "duration_minutes", parse_duration_to_minutes(value))
+
+          # Legacy support for old test format
           "Start Date & Time" ->
             start_time = parse_relative_time(value)
-            Map.put(acc, "starts_at", DateTime.to_iso8601(start_time))
+            date = DateTime.to_date(start_time)
+            time = DateTime.to_time(start_time)
+
+            acc
+            |> Map.put("date", Date.to_iso8601(date))
+            |> Map.put("start_time", Time.to_iso8601(time) |> String.slice(0..4))
 
           "End Date & Time" ->
-            end_time = parse_relative_time(value)
-            Map.put(acc, "ends_at", DateTime.to_iso8601(end_time))
+            # Calculate duration from start and end times if both exist
+            if Map.has_key?(acc, "date") && Map.has_key?(acc, "start_time") do
+              end_time = parse_relative_time(value)
+
+              start_time =
+                parse_relative_time(field_data["Start Date & Time"] || "Tomorrow at 2:00 PM")
+
+              duration_minutes = DateTime.diff(end_time, start_time, :minute)
+              Map.put(acc, "duration_minutes", Integer.to_string(duration_minutes))
+            else
+              acc
+            end
 
           "Event Type" ->
             event_type =
@@ -250,17 +276,46 @@ defmodule CreateHuddlSteps do
     session =
       Enum.reduce(form_data, session, fn {field, value}, session ->
         case field do
-          "title" -> fill_in(session, "Title", with: value, exact: false)
-          "description" -> fill_in(session, "Description", with: value, exact: false)
-          "physical_location" -> fill_in(session, "Physical Location", with: value, exact: false)
-          "virtual_link" -> fill_in(session, "Virtual Meeting Link", with: value, exact: false)
-          "starts_at" -> fill_in(session, "Start Date & Time", with: value, exact: false)
-          "ends_at" -> fill_in(session, "End Date & Time", with: value, exact: false)
-          "frequency" -> select(session, "Frequency", option: value, exact: false)
-          "repeat_until" -> fill_in(session, "Repeat Until", with: value, exact: false)
+          "title" ->
+            fill_in(session, "Title", with: value, exact: false)
+
+          "description" ->
+            fill_in(session, "Description", with: value, exact: false)
+
+          "physical_location" ->
+            fill_in(session, "Physical Location", with: value, exact: false)
+
+          "virtual_link" ->
+            fill_in(session, "Virtual Meeting Link", with: value, exact: false)
+
+          "date" ->
+            fill_in(session, "Date", with: value, exact: false)
+
+          "start_time" ->
+            fill_in(session, "Start Time", with: value, exact: false)
+
+          "duration_minutes" ->
+            select(session, "Duration", option: format_duration_option(value), exact: false)
+
+          # Legacy fields - no longer used in the new form
+          "starts_at" ->
+            session
+
+          "ends_at" ->
+            session
+
+          "frequency" ->
+            select(session, "Frequency", option: value, exact: false)
+
+          "repeat_until" ->
+            fill_in(session, "Repeat Until", with: value, exact: false)
+
           # Already handled above
-          "event_type" -> session
-          _ -> session
+          "event_type" ->
+            session
+
+          _ ->
+            session
         end
       end)
 
@@ -344,6 +399,10 @@ defmodule CreateHuddlSteps do
   end
 
   # Helper functions
+  defp parse_relative_time("Tomorrow at " <> time) do
+    parse_relative_time("tomorrow at " <> time)
+  end
+
   defp parse_relative_time("tomorrow at " <> time) do
     [hour_str, minute_str, period] =
       case String.split(time, ~r/[:\s]+/) do
@@ -373,5 +432,69 @@ defmodule CreateHuddlSteps do
 
   defp parse_relative_time("three months") do
     DateTime.utc_now() |> DateTime.add(90, :day)
+  end
+
+  # Parse relative date strings like "tomorrow"
+  defp parse_relative_date("tomorrow") do
+    Date.utc_today() |> Date.add(1)
+  end
+
+  defp parse_relative_date("today") do
+    Date.utc_today()
+  end
+
+  defp parse_relative_date(date_str) do
+    case Date.from_iso8601(date_str) do
+      {:ok, date} -> date
+      # Default to tomorrow
+      _ -> Date.utc_today() |> Date.add(1)
+    end
+  end
+
+  # Parse duration strings to minutes
+  defp parse_duration_to_minutes("30 minutes"), do: "30"
+  defp parse_duration_to_minutes("1 hour"), do: "60"
+  defp parse_duration_to_minutes("1.5 hours"), do: "90"
+  defp parse_duration_to_minutes("2 hours"), do: "120"
+  defp parse_duration_to_minutes("2.5 hours"), do: "150"
+  defp parse_duration_to_minutes("3 hours"), do: "180"
+  defp parse_duration_to_minutes("4 hours"), do: "240"
+  defp parse_duration_to_minutes("6 hours"), do: "360"
+
+  defp parse_duration_to_minutes(minutes_str) when is_binary(minutes_str) do
+    # Try to parse as integer
+    case Integer.parse(minutes_str) do
+      {minutes, _} -> Integer.to_string(minutes)
+      # Default to 1 hour
+      _ -> "60"
+    end
+  end
+
+  defp parse_duration_to_minutes(minutes) when is_integer(minutes), do: Integer.to_string(minutes)
+
+  # Format duration for select option
+  defp format_duration_option("30"), do: "30 minutes"
+  defp format_duration_option("60"), do: "1 hour"
+  defp format_duration_option("90"), do: "1.5 hours"
+  defp format_duration_option("120"), do: "2 hours"
+  defp format_duration_option("150"), do: "2.5 hours"
+  defp format_duration_option("180"), do: "3 hours"
+  defp format_duration_option("240"), do: "4 hours"
+  defp format_duration_option("360"), do: "6 hours"
+
+  defp format_duration_option(minutes_str) do
+    # Fallback to the closest option
+    minutes = String.to_integer(minutes_str)
+
+    cond do
+      minutes <= 30 -> "30 minutes"
+      minutes <= 60 -> "1 hour"
+      minutes <= 90 -> "1.5 hours"
+      minutes <= 120 -> "2 hours"
+      minutes <= 150 -> "2.5 hours"
+      minutes <= 180 -> "3 hours"
+      minutes <= 240 -> "4 hours"
+      true -> "6 hours"
+    end
   end
 end
