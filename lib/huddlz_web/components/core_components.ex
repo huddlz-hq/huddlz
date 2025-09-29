@@ -770,9 +770,7 @@ defmodule HuddlzWeb.CoreComponents do
           class="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/50 pointer-events-none"
         />
       </div>
-      <span :for={msg <- @errors} class="fieldset-error">
-        {msg}
-      </span>
+      <.error :for={msg <- @errors}>{msg}</.error>
     </fieldset>
     """
   end
@@ -826,9 +824,7 @@ defmodule HuddlzWeb.CoreComponents do
           <option value={time_option_value(hour, minute)} />
         <% end %>
       </datalist>
-      <span :for={msg <- @errors} class="fieldset-error">
-        {msg}
-      </span>
+      <.error :for={msg <- @errors}>{msg}</.error>
       <span class="text-sm text-base-content/70 mt-1">
         Select from dropdown or type any time
       </span>
@@ -887,9 +883,7 @@ defmodule HuddlzWeb.CoreComponents do
         <option value="240" selected={@value == 240}>4 hours</option>
         <option value="360" selected={@value == 360}>6 hours</option>
       </select>
-      <span :for={msg <- @errors} class="fieldset-error">
-        {msg}
-      </span>
+      <.error :for={msg <- @errors}>{msg}</.error>
     </fieldset>
     """
   end
