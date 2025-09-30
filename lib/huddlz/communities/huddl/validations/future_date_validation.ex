@@ -19,31 +19,23 @@ defmodule Huddlz.Communities.Huddl.Validations.FutureDateValidation do
 
   @impl true
   def validate(changeset, _opts, _context) do
-    # Only validate on create
-    if changeset.action.name == :create do
-      date = Ash.Changeset.get_argument(changeset, :date)
-      start_time = Ash.Changeset.get_argument(changeset, :start_time)
+    with true <- changeset.action.name == :create,
+         date when not is_nil(date) <- Ash.Changeset.get_argument(changeset, :date),
+         start_time when not is_nil(start_time) <- Ash.Changeset.get_argument(changeset, :start_time),
+         {:ok, starts_at} <- DateTime.new(date, start_time, "Etc/UTC") do
+      validate_future_datetime(starts_at)
+    else
+      _ -> :ok
+    end
+  end
 
-      # Only validate if we have both date and time
-      if date && start_time do
-        case DateTime.new(date, start_time, "Etc/UTC") do
-          {:ok, starts_at} ->
-            if DateTime.compare(starts_at, DateTime.utc_now()) == :lt do
-              {:error,
-               InvalidArgument.exception(
-                 field: :date,
-                 message: "must be in the future"
-               )}
-            else
-              :ok
-            end
-
-          _ ->
-            :ok
-        end
-      else
-        :ok
-      end
+  defp validate_future_datetime(starts_at) do
+    if DateTime.compare(starts_at, DateTime.utc_now()) == :lt do
+      {:error,
+       InvalidArgument.exception(
+         field: :date,
+         message: "must be in the future"
+       )}
     else
       :ok
     end
