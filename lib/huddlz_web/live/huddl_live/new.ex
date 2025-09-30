@@ -116,7 +116,6 @@ defmodule HuddlzWeb.HuddlLive.New do
             {"Hybrid (Both In-Person and Virtual)", "hybrid"}
           ]}
           required
-          phx-change="event_type_changed"
         />
 
         <%= if @show_physical_location do %>
@@ -195,22 +194,6 @@ defmodule HuddlzWeb.HuddlLive.New do
     {:noreply, assign(socket, :form, to_form(form))}
   end
 
-  def handle_event("event_type_changed", %{"form" => params}, socket) do
-    event_type = params["event_type"]
-
-    # Update visibility based on event type
-    socket =
-      socket
-      |> assign(:show_physical_location, event_type in ["in_person", "hybrid"])
-      |> assign(:show_virtual_link, event_type in ["virtual", "hybrid"])
-
-    # Also run validation
-    form =
-      AshPhoenix.Form.validate(socket.assigns.form, params)
-
-    {:noreply, assign(socket, :form, to_form(form))}
-  end
-
   def handle_event("save", %{"form" => params}, socket) do
     # Set is_private to true for private groups
     params =
@@ -270,19 +253,21 @@ defmodule HuddlzWeb.HuddlLive.New do
   end
 
   defp calculate_end_time(date, time, duration_minutes) do
-    with {:ok, starts_at} <- DateTime.new(date, time, "Etc/UTC") do
-      ends_at = DateTime.add(starts_at, duration_minutes, :minute)
+    case DateTime.new(date, time, "Etc/UTC") do
+      {:ok, starts_at} ->
+        ends_at = DateTime.add(starts_at, duration_minutes, :minute)
 
-      # Format the end time nicely
-      if Date.compare(DateTime.to_date(ends_at), date) == :eq do
-        # Same day
-        Calendar.strftime(ends_at, "%I:%M %p")
-      else
-        # Next day
-        Calendar.strftime(ends_at, "%I:%M %p (next day)")
-      end
-    else
-      _ -> nil
+        # Format the end time nicely
+        if Date.compare(DateTime.to_date(ends_at), date) == :eq do
+          # Same day
+          Calendar.strftime(ends_at, "%I:%M %p")
+        else
+          # Next day
+          Calendar.strftime(ends_at, "%I:%M %p (next day)")
+        end
+
+      _ ->
+        nil
     end
   end
 
