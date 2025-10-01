@@ -13,7 +13,8 @@ defmodule HuddlzWeb.BasicPasswordResetTest do
         |> Ash.Changeset.for_create(:register_with_password, %{
           email: "test@example.com",
           password: "oldpassword123",
-          password_confirmation: "oldpassword123"
+          password_confirmation: "oldpassword123",
+          display_name: "Test User"
         })
         |> Ash.create()
 
@@ -50,7 +51,8 @@ defmodule HuddlzWeb.BasicPasswordResetTest do
         |> Ash.Changeset.for_create(:register_with_password, %{
           email: "form.test@example.com",
           password: "oldpassword123",
-          password_confirmation: "oldpassword123"
+          password_confirmation: "oldpassword123",
+          display_name: "Form Test User"
         })
         |> Ash.create()
 

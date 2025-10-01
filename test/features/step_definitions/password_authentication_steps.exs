@@ -30,6 +30,9 @@ defmodule PasswordAuthenticationSteps do
             "email" ->
               fill_in(s, "Email", with: value)
 
+            "display_name" ->
+              fill_in(s, "Display Name", with: value)
+
             "password" ->
               fill_in(s, "Password", with: value)
 

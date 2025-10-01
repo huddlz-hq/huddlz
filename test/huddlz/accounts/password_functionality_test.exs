@@ -11,7 +11,8 @@ defmodule Huddlz.Accounts.PasswordFunctionalityTest do
                |> Ash.Changeset.for_create(:register_with_password, %{
                  email: "test@example.com",
                  password: "SuperSecret123!",
-                 password_confirmation: "SuperSecret123!"
+                 password_confirmation: "SuperSecret123!",
+                 display_name: "Test User"
                })
                |> Ash.create()
 
@@ -26,7 +27,8 @@ defmodule Huddlz.Accounts.PasswordFunctionalityTest do
                |> Ash.Changeset.for_create(:register_with_password, %{
                  email: "test@example.com",
                  password: "SuperSecret123!",
-                 password_confirmation: "DifferentPassword"
+                 password_confirmation: "DifferentPassword",
+                 display_name: "Test User"
                })
                |> Ash.create()
 
@@ -39,7 +41,8 @@ defmodule Huddlz.Accounts.PasswordFunctionalityTest do
                |> Ash.Changeset.for_create(:register_with_password, %{
                  email: "test@example.com",
                  password: "short",
-                 password_confirmation: "short"
+                 password_confirmation: "short",
+                 display_name: "Test User"
                })
                |> Ash.create()
 

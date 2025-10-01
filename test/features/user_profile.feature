@@ -27,14 +27,14 @@ Feature: User Profile Management
     Given I am on my profile page
     When I fill in "Display Name" with ""
     And I click the "Save Changes" button
-    Then I should see "Failed to update display name"
+    Then I should see "Failed to update display name. Please check the errors below."
     And I should not see "Display name updated successfully"
 
   Scenario: Display name validation - too long
     Given I am on my profile page
-    When I fill in "Display Name" with "This is a very long display name that exceeds thirty characters"
+    When I fill in "Display Name" with "This is a very long display name that definitely exceeds the seventy character maximum length allowed"
     And I click the "Save Changes" button
-    Then I should see "Failed to update display name"
+    Then I should see "Failed to update display name. Please check the errors below."
     And I should not see "Display name updated successfully"
 
   Scenario: Accessing profile from navbar

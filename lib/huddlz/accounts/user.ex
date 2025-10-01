@@ -105,7 +105,7 @@ defmodule Huddlz.Accounts.User do
       accept [:display_name]
 
       validate attribute_does_not_equal(:display_name, "")
-      validate string_length(:display_name, min: 1, max: 30)
+      validate string_length(:display_name, min: 1, max: 70)
     end
 
     update :update_role do
@@ -225,11 +225,17 @@ defmodule Huddlz.Accounts.User do
         sensitive? true
       end
 
+      argument :display_name, :string do
+        description "The display name the user wants to be identified as."
+        allow_nil? false
+        constraints min_length: 1, max_length: 70
+      end
+
       # Sets the email from the argument
       change set_attribute(:email, arg(:email))
 
-      # Generate a random display name if none provided
-      change Huddlz.Accounts.User.Changes.SetDefaultDisplayName
+      # Sets the display name from the argument
+      change set_attribute(:display_name, arg(:display_name))
 
       # Hashes the provided password
       change AshAuthentication.Strategy.Password.HashPasswordChange
@@ -369,9 +375,9 @@ defmodule Huddlz.Accounts.User do
 
     attribute :display_name, :string do
       description "Name the user wants others to identify them as"
-      allow_nil? true
+      allow_nil? false
       public? true
-      constraints min_length: 1, max_length: 30
+      constraints min_length: 1, max_length: 70
     end
 
     attribute :role, Huddlz.Accounts.Role do

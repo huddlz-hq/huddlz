@@ -8,6 +8,7 @@ Feature: Password Authentication
     Given I am on the registration page
     When I fill in the password registration form with:
       | email                    | newuser@example.com    |
+      | display_name             | New User               |
       | password                 | SuperSecret123!        |
       | password_confirmation    | SuperSecret123!        |
     And I click "Create account"

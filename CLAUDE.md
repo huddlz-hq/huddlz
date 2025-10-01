@@ -41,6 +41,13 @@ This is a web application written using the Phoenix web framework.
 - If you override the default input classes (`<.input class="myclass px-2 py-1 rounded-lg">)`) class with your own values, no default classes are inherited, so your
 custom classes must fully style the input
 
+### Form Validation Guidelines
+
+- **Prefer Ash validation over HTML5 validation** for consistent error display across all validation scenarios
+- **Avoid using HTML5 `required` attributes** on form inputs - instead rely on Ash's validation rules (e.g., `allow_nil? false`, `constraints: [min_length: 1]`)
+- This ensures error messages are displayed consistently whether the field is blank, too short, invalid format, etc.
+- AshPhoenix forms automatically display validation errors from the resource, providing a unified user experience
+
 ### JS and CSS guidelines
 
 - **Use Tailwind CSS classes and custom CSS rules** to create polished, responsive, and visually stunning interfaces.

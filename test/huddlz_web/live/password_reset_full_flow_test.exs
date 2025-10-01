@@ -13,7 +13,8 @@ defmodule HuddlzWeb.PasswordResetFullFlowTest do
         |> Ash.Changeset.for_create(:register_with_password, %{
           email: "reset.flow@example.com",
           password: "oldpassword123",
-          password_confirmation: "oldpassword123"
+          password_confirmation: "oldpassword123",
+          display_name: "Reset Flow User"
         })
         |> Ash.create()
 
