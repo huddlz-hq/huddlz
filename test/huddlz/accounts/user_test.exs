@@ -1,6 +1,5 @@
 defmodule Huddlz.Accounts.UserTest do
   use Huddlz.DataCase, async: true
-  alias Ash.Resource.Info
   alias Huddlz.Accounts
   alias Huddlz.Accounts.User
 
@@ -110,24 +109,6 @@ defmodule Huddlz.Accounts.UserTest do
 
       # Verify user was created correctly
       assert user.display_name == original_display_name
-    end
-
-    test "new users get a random display name if none provided (via :create action)" do
-      # Test that the SetDefaultDisplayName change module exists
-      assert Code.ensure_loaded?(Huddlz.Accounts.User.Changes.SetDefaultDisplayName)
-
-      # Verify the :create action (used for seeding) has the SetDefaultDisplayName change
-      info = Info.action(User, :create)
-
-      # The create action should have the SetDefaultDisplayName change for seeding/testing
-      assert Enum.any?(info.changes, fn change ->
-               match?(
-                 %Ash.Resource.Change{
-                   change: {Huddlz.Accounts.User.Changes.SetDefaultDisplayName, _}
-                 },
-                 change
-               )
-             end)
     end
   end
 

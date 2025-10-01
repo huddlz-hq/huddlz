@@ -22,7 +22,6 @@ defmodule Huddlz.Generator do
       %User{
         email: StreamData.repeatedly(fn -> Faker.Internet.email() end),
         display_name: StreamData.repeatedly(fn -> Faker.Person.name() end),
-        # By default, test users are confirmed
         confirmed_at: DateTime.utc_now()
       },
       overrides: merged_opts
@@ -40,6 +39,7 @@ defmodule Huddlz.Generator do
       :register_with_password,
       defaults: [
         email: StreamData.repeatedly(fn -> Faker.Internet.email() end),
+        display_name: StreamData.repeatedly(fn -> Faker.Person.name() end),
         password: password,
         password_confirmation: password
       ],
