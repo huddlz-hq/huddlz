@@ -205,10 +205,7 @@ defmodule Huddlz.Accounts.User do
 
     create :register_with_password do
       description "Register a new user with a email and password."
-
-      argument :email, :ci_string do
-        allow_nil? false
-      end
+      accept [:email, :display_name]
 
       argument :password, :string do
         description "The proposed password for the user, in plain text."
@@ -222,18 +219,6 @@ defmodule Huddlz.Accounts.User do
         allow_nil? false
         sensitive? true
       end
-
-      argument :display_name, :string do
-        description "The display name the user wants to be identified as."
-        allow_nil? false
-        constraints min_length: 1, max_length: 70
-      end
-
-      # Sets the email from the argument
-      change set_attribute(:email, arg(:email))
-
-      # Sets the display name from the argument
-      change set_attribute(:display_name, arg(:display_name))
 
       # Hashes the provided password
       change AshAuthentication.Strategy.Password.HashPasswordChange
