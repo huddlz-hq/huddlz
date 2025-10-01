@@ -21,7 +21,8 @@ defmodule Huddlz.Communities.Huddl.Validations.FutureDateValidation do
   def validate(changeset, _opts, _context) do
     with true <- changeset.action.name == :create,
          date when not is_nil(date) <- Ash.Changeset.get_argument(changeset, :date),
-         start_time when not is_nil(start_time) <- Ash.Changeset.get_argument(changeset, :start_time),
+         start_time when not is_nil(start_time) <-
+           Ash.Changeset.get_argument(changeset, :start_time),
          {:ok, starts_at} <- DateTime.new(date, start_time, "Etc/UTC") do
       validate_future_datetime(starts_at)
     else
