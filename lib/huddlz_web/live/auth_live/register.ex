@@ -2,6 +2,7 @@ defmodule HuddlzWeb.AuthLive.Register do
   use HuddlzWeb, :live_view
 
   alias AshPhoenix.Form
+  alias Huddlz.Accounts.DisplayNameGenerator
   alias Huddlz.Accounts.User
   import HuddlzWeb.Layouts
   require Ash
@@ -61,9 +62,25 @@ defmodule HuddlzWeb.AuthLive.Register do
                 type="text"
                 label="Email"
                 placeholder="you@example.com"
-                required
                 autocomplete="email"
               />
+
+              <div>
+                <.input
+                  field={@form[:display_name]}
+                  type="text"
+                  label="Display Name"
+                  placeholder="First and Last Name"
+                  autocomplete="name"
+                />
+                <button
+                  type="button"
+                  phx-click="generate_display_name"
+                  class="btn btn-ghost btn-sm mt-1"
+                >
+                  <.icon name="hero-arrow-path" class="h-4 w-4" /> Generate Random Name
+                </button>
+              </div>
 
               <div>
                 <.input
@@ -71,7 +88,6 @@ defmodule HuddlzWeb.AuthLive.Register do
                   type="password"
                   label="Password"
                   placeholder="At least 8 characters"
-                  required
                   autocomplete="new-password"
                   phx-debounce="blur"
                 />
@@ -85,7 +101,6 @@ defmodule HuddlzWeb.AuthLive.Register do
                 type="password"
                 label="Confirm Password"
                 placeholder="Type your password again"
-                required
                 autocomplete="new-password"
                 phx-debounce="blur"
               />
@@ -110,6 +125,23 @@ defmodule HuddlzWeb.AuthLive.Register do
       </div>
     </.app>
     """
+  end
+
+  @impl true
+  def handle_event("generate_display_name", _params, socket) do
+    # Generate a new random display name
+    new_display_name = DisplayNameGenerator.generate()
+
+    # Get current form params and update display_name
+    current_params = Form.params(socket.assigns.form.source)
+    updated_params = Map.put(current_params, "display_name", new_display_name)
+
+    # Validate the form with the new display_name
+    form =
+      socket.assigns.form.source
+      |> Form.validate(updated_params)
+
+    {:noreply, assign_form(socket, form)}
   end
 
   @impl true
