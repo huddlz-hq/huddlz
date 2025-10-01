@@ -66,8 +66,6 @@ defmodule Huddlz.Accounts.User do
       # For testing/seeding only - use authentication actions in production
       primary? true
       accept [:email, :display_name, :role, :confirmed_at, :hashed_password]
-
-      change Huddlz.Accounts.User.Changes.SetDefaultDisplayName
     end
 
     read :get_by_subject do
