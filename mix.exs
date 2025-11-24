@@ -18,7 +18,8 @@ defmodule Huddlz.MixProject do
   def cli do
     [
       preferred_envs: [
-        "test.watch": :test
+        "test.watch": :test,
+        precommit: :test
       ]
     ]
   end
@@ -62,8 +63,8 @@ defmodule Huddlz.MixProject do
       {:postgrex, ">= 0.0.0"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 1.0.9"},
-      {:floki, "~> 0.37.1", only: :test},
+      {:phoenix_live_view, "~> 1.1.17"},
+      {:floki, "~> 0.38", only: :test},
       {:phoenix_live_dashboard, "~> 0.8.3"},
       {:esbuild, "~> 0.9", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.3", runtime: Mix.env() == :dev},
@@ -78,13 +79,13 @@ defmodule Huddlz.MixProject do
       {:req, "~> 0.5"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
-      {:gettext, "~> 0.26"},
+      {:gettext, "~> 1.0.2"},
       {:jason, "~> 1.2"},
-      {:dns_cluster, "~> 0.1.1"},
+      {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
       {:cucumber, "~> 0.4.0", only: [:dev, :test]},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:phoenix_test, "~> 0.6.0", only: :test},
+      {:phoenix_test, "~> 0.9.0", only: :test},
       {:slugify, "~> 1.3"},
       {:remote_ip, "~> 1.1"}
     ]
@@ -108,6 +109,13 @@ defmodule Huddlz.MixProject do
         "tailwind huddlz --minify",
         "esbuild huddlz --minify",
         "phx.digest"
+      ],
+      precommit: [
+        "compile --warnings-as-errors",
+        "format",
+        "deps.unlock --unused",
+        "test",
+        "credo --strict"
       ]
     ]
   end
