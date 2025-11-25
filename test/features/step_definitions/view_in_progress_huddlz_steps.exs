@@ -2,7 +2,6 @@ defmodule ViewInProgressHuddlzSteps do
   use Cucumber.StepDefinition
   import PhoenixTest
   import Huddlz.Generator
-  import CucumberDatabaseHelper
 
   step "I visit the home page", %{conn: conn} do
     conn = conn |> visit("/")
@@ -10,8 +9,6 @@ defmodule ViewInProgressHuddlzSteps do
   end
 
   step "there are huddlz in different states:", %{datatable: datatable} do
-    ensure_sandbox()
-
     # Create a verified host
     host = generate(user(role: :user))
 

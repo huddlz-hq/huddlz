@@ -1,5 +1,5 @@
 defmodule HuddlzWeb.ProfileLiveTest do
-  use HuddlzWeb.ConnCase
+  use HuddlzWeb.ConnCase, async: true
 
   import PhoenixTest
   import Huddlz.Test.Helpers.Authentication

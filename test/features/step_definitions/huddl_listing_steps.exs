@@ -3,11 +3,9 @@ defmodule HuddlListingSteps do
   import PhoenixTest
   import Huddlz.Generator
   import ExUnit.Assertions
-  import CucumberDatabaseHelper
 
   # Background step: Create sample huddlz
   step "there are upcoming huddlz in the system", context do
-    ensure_sandbox()
     # Create a verified host who can create huddls
     host = generate(user(role: :user))
 

@@ -1,4 +1,4 @@
-@conn
+@async @database @conn
 Feature: Password Authentication
   As a user
   I want to be able to sign up and sign in with a password

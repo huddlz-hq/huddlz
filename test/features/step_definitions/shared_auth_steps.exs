@@ -11,13 +11,9 @@ defmodule SharedAuthSteps do
   use Cucumber.StepDefinition
 
   import Huddlz.Test.Helpers.Authentication
-  import CucumberDatabaseHelper
 
   # Common step for creating users from data table
   step "the following users exist:", context do
-    # Ensure sandbox is available for this step
-    ensure_sandbox()
-
     users =
       context.datatable.maps
       |> Enum.map(fn user_data ->

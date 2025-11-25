@@ -1,5 +1,5 @@
 defmodule Huddlz.Communities.HuddlPastActionTest do
-  use Huddlz.DataCase
+  use Huddlz.DataCase, async: true
 
   import Huddlz.Generator
 

@@ -1,9 +1,15 @@
 defmodule CucumberHooks do
   use Cucumber.Hooks
 
-  # Hook that runs before every scenario to ensure database is set up
-  before_scenario context do
-    CucumberDatabaseHelper.ensure_sandbox()
+  alias Ecto.Adapters.SQL.Sandbox
+
+  # Hook for @database tag - sets up database sandbox
+  before_scenario "@database", context do
+    case Sandbox.checkout(Huddlz.Repo) do
+      :ok -> :ok
+      {:already, :owner} -> :ok
+    end
+
     {:ok, context}
   end
 

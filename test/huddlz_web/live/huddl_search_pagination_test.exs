@@ -1,5 +1,5 @@
 defmodule HuddlzWeb.HuddlSearchPaginationTest do
-  use HuddlzWeb.ConnCase
+  use HuddlzWeb.ConnCase, async: true
 
   setup do
     user = generate(user(role: :user))

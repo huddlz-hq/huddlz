@@ -1,4 +1,4 @@
-@conn
+@async @database @conn
 Feature: View In-Progress Huddlz
   As a user
   I want to see huddlz that are currently in progress

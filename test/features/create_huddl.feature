@@ -1,4 +1,4 @@
-@conn
+@async @database @conn
 Feature: Create Huddl
   As a group owner or organizer
   I want to create huddlz for my groups

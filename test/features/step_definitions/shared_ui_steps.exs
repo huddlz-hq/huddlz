@@ -18,12 +18,9 @@ defmodule SharedUISteps do
   import PhoenixTest
 
   import Phoenix.ConnTest, only: [build_conn: 0]
-  import CucumberDatabaseHelper
 
   # Navigation steps
   step "the user is on the home page", context do
-    ensure_sandbox()
-
     session = context[:session] || context[:conn] || build_conn()
     session = visit(session, "/")
 
@@ -31,8 +28,6 @@ defmodule SharedUISteps do
   end
 
   step "I visit {string}", %{args: [path]} = context do
-    ensure_sandbox()
-
     session = context[:session] || context[:conn] || build_conn()
     session = visit(session, path)
 

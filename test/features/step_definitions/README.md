@@ -167,7 +167,7 @@ If you're updating tests that use the old patterns:
 
 **Context/session issues:**
 - Always preserve session/conn in returned context
-- Use `ensure_sandbox()` for database operations
+- Database sandbox is automatically set up by the `@database` tag hook in `hooks.exs`
 
 **PhoenixTest conflicts:**
 - Shared steps handle PhoenixTest internally

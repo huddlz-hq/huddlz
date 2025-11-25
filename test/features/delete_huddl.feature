@@ -1,4 +1,4 @@
-@conn
+@async @database @conn
 Feature: Delete Huddl
   As a group owner or organizer
   I want to delete huddlz for my groups

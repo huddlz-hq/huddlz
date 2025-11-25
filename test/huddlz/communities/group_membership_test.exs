@@ -1,5 +1,5 @@
 defmodule Huddlz.Communities.GroupMembershipTest do
-  use Huddlz.DataCase
+  use Huddlz.DataCase, async: true
 
   alias Huddlz.Accounts.User
   alias Huddlz.Communities.Group

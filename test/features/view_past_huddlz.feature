@@ -1,4 +1,4 @@
-@conn
+@async @database @conn
 Feature: View Past Huddlz on Group Pages
   As a user
   I want to see past huddlz on group pages

@@ -1,4 +1,4 @@
-@conn
+@async @database @conn
 Feature: User Sign In and Sign Out
 
   Scenario: User signs in with password

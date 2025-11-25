@@ -1,5 +1,5 @@
 defmodule HuddlzWeb.BasicPasswordResetTest do
-  use HuddlzWeb.ConnCase
+  use HuddlzWeb.ConnCase, async: true
   import Swoosh.TestAssertions
   import PhoenixTest
 
