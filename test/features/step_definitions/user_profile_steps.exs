@@ -4,11 +4,9 @@ defmodule UserProfileSteps do
   """
   use Cucumber.StepDefinition
   import PhoenixTest
-  import CucumberDatabaseHelper
 
   # Given steps
   step "I am on my profile page", context do
-    ensure_sandbox()
     session = visit(context.session, "/profile")
     Map.put(context, :session, session)
   end

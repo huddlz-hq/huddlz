@@ -1,5 +1,5 @@
 defmodule Huddlz.Accounts.PasswordFunctionalityTest do
-  use Huddlz.DataCase
+  use Huddlz.DataCase, async: true
 
   alias Huddlz.Accounts.User
   import Huddlz.Generator

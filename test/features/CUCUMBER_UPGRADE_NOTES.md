@@ -1,47 +1,39 @@
-# Cucumber 0.4.0 Upgrade Notes
+# Cucumber Upgrade Notes
 
-## Changes Made
+## Current Version
 
-### 1. Removed @async tags from feature files
-- All feature files had `@async @database @conn` tags
-- Removed `@async` to prevent concurrent test execution issues
-- Removed `@database` since sandbox setup moved to step definitions
+Using cucumber 0.4.2 which includes the hook execution order fix, ensuring `before_scenario` hooks run reliably before any step definitions.
 
-### 2. Created database helper module
-- Created `test/features/support/database_helper.exs`
-- Provides `ensure_sandbox/0` function for consistent sandbox setup
-- Handles both new checkouts and existing ownership
+## Feature Tags
 
-### 3. Updated shared auth steps
-- Replaced `generate()` with direct database inserts to avoid transaction issues
-- Used `Repo.insert_all/2` with proper UUID binary formatting
-- Added `ensure_sandbox()` call at the beginning of user creation step
+All feature files use these tags:
+- `@async` - Enables parallel test execution
+- `@database` - Sets up database sandbox for the scenario
+- `@conn` - Creates a Phoenix test connection
 
-### 4. Updated all step definitions
-- Added `import CucumberDatabaseHelper` to all step definition modules that need database access
-- Added `ensure_sandbox()` calls in steps that visit pages or create data
-- Key files updated:
-  - `shared_ui_steps.exs` - for page visits
-  - `shared_auth_steps.exs` - for user creation
-  - `huddl_listing_steps.exs` - for test data setup
-  - `rsvp_cancellation_steps.exs` - for test data setup
+Example:
+```gherkin
+@async @database @conn
+Feature: My Feature
+```
 
-### 5. Simplified hooks
-- Removed complex sandbox setup from `hooks.exs`
-- Kept only the `@conn` tag hook for Phoenix connection setup
+## Hooks
 
-## Key Issues Resolved
+Hooks are defined in `test/features/support/hooks.exs`:
 
-1. **Sandbox Ownership Errors**: Cucumber 0.4.0 runs each scenario in a separate process, making shared context difficult. Solved by ensuring sandbox in each step that needs it.
+- `@database` hook - Checks out an Ecto sandbox for the test process
+- `@conn` hook - Creates a Phoenix test connection with initialized session
 
-2. **Ash Transaction Errors**: Ash's `generate()` function spawns processes for transactions. Replaced with direct database operations.
+## Key Design Decisions
 
-3. **UUID Format Errors**: PostgreSQL expects binary UUIDs. Used `Ecto.UUID.dump/1` to convert string UUIDs to binary format.
+1. **No shared sandbox mode** - Each test gets its own exclusive sandbox checkout, enabling proper isolation for async tests.
 
-## Remaining Failures
+2. **Tag-based setup** - Database and connection setup are opt-in via tags, keeping concerns separated.
 
-3 tests are failing due to missing UI elements:
-- RSVP cancellation tests can't find "Cancel RSVP" button
-- One test expects "You're attending!" text that isn't present
+3. **Hooks handle infrastructure** - Step definitions focus on business logic, not test setup.
 
-These appear to be actual application issues, not test infrastructure problems.
+## Notes
+
+- Ash's `generate()` function works correctly with the sandbox
+- Direct `Repo.insert_all/2` is used in some steps to avoid Ash transaction overhead
+- PostgreSQL expects binary UUIDs - use `Ecto.UUID.dump/1` when inserting directly

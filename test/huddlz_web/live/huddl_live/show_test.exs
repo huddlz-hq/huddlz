@@ -1,5 +1,5 @@
 defmodule HuddlzWeb.HuddlLive.ShowTest do
-  use HuddlzWeb.ConnCase
+  use HuddlzWeb.ConnCase, async: true
 
   import Huddlz.Test.Helpers.Authentication
   import Huddlz.Generator

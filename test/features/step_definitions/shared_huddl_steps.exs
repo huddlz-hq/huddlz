@@ -1,11 +1,8 @@
 defmodule SharedHuddlSteps do
   use Cucumber.StepDefinition
-  import CucumberDatabaseHelper
   import Huddlz.Generator
 
   step "the following huddlz exist:", context do
-    ensure_sandbox()
-
     huddlz =
       context.datatable.maps
       |> Enum.map(fn huddl_data ->

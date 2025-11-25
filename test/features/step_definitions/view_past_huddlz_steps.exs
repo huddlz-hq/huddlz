@@ -3,7 +3,6 @@ defmodule ViewPastHuddlzSteps do
   import PhoenixTest
   import Huddlz.Generator
   import ExUnit.Assertions
-  import CucumberDatabaseHelper
 
   # Helper function to check if any element from a list is visible
   defp any_visible?(conn, elements, selector \\ "h3") do
@@ -19,8 +18,6 @@ defmodule ViewPastHuddlzSteps do
 
   # Background step: Create groups with past and future huddlz
   step "there are groups with past and future huddlz in the system" do
-    ensure_sandbox()
-
     # Create a verified host who can create huddls
     host = generate(user(role: :user))
 
@@ -138,8 +135,6 @@ defmodule ViewPastHuddlzSteps do
 
   # Create a private group the user is NOT a member of
   step "there is a private group with past huddlz I'm not a member of" do
-    ensure_sandbox()
-
     # Create a private group owned by someone else
     owner = generate(user(role: :user))
     private_group = generate(group(owner_id: owner.id, is_public: false, actor: owner))
@@ -248,8 +243,6 @@ defmodule ViewPastHuddlzSteps do
 
   # New steps for pagination testing
   step "there is a public group with many past huddlz" do
-    ensure_sandbox()
-
     # Create a verified host who can create huddls
     host = generate(user(role: :user))
 

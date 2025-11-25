@@ -1,4 +1,4 @@
-@conn
+@async @database @conn
 Feature: Group Management
   As a verified user or admin
   I want to create and manage groups

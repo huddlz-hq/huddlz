@@ -3,7 +3,6 @@ defmodule RsvpCancellationSteps do
   import PhoenixTest
   import Huddlz.Generator
   import Huddlz.Test.Helpers.Authentication
-  import CucumberDatabaseHelper
 
   alias Huddlz.Accounts.User
   alias Huddlz.Communities.{Group, Huddl}
@@ -12,7 +11,6 @@ defmodule RsvpCancellationSteps do
 
   # Background steps - groups (users are in shared_auth_steps)
   step "the following group exists:", context do
-    ensure_sandbox()
     group_data = hd(context.datatable.maps)
     owner_email = group_data["owner_email"]
 

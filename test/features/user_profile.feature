@@ -1,4 +1,4 @@
-@conn
+@async @database @conn
 Feature: User Profile Management
   As a logged-in user
   I want to manage my profile

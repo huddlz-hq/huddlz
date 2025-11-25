@@ -1,5 +1,5 @@
 defmodule Huddlz.Communities.GroupUnicodeTest do
-  use Huddlz.DataCase
+  use Huddlz.DataCase, async: true
   alias Huddlz.Communities.Group
 
   describe "unicode group names" do
