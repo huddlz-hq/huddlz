@@ -11,7 +11,11 @@ defmodule Huddlz.MixProject do
       consolidate_protocols: Mix.env() != :dev,
       aliases: aliases(),
       deps: deps(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      test_ignore_filters: [
+        ~r/features\/step_definitions/,
+        ~r/features\/support/
+      ]
     ]
   end
 
@@ -83,7 +87,7 @@ defmodule Huddlz.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
-      {:cucumber, "~> 0.4.2", only: [:dev, :test]},
+      {:cucumber, "~> 0.7.0", only: [:dev, :test]},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:phoenix_test, "~> 0.9.0", only: :test},
       {:slugify, "~> 1.3"},
