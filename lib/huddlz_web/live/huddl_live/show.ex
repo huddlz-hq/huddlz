@@ -122,7 +122,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
               <h3>Details</h3>
               <dl class="space-y-2">
                 <div>
-                  <dt class="font-medium text-gray-500">When</dt>
+                  <dt class="font-medium text-base-content/70">When</dt>
                   <dd class="flex items-center gap-2">
                     <.icon name="hero-calendar" class="h-4 w-4" />
                     {format_datetime(@huddl.starts_at)}
@@ -134,7 +134,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
                 <%= if @huddl.event_type in [:in_person, :hybrid] && @huddl.physical_location do %>
                   <div>
-                    <dt class="font-medium text-gray-500">Where</dt>
+                    <dt class="font-medium text-base-content/70">Where</dt>
                     <dd class="flex items-center gap-2">
                       <.icon name="hero-map-pin" class="h-4 w-4" />
                       {@huddl.physical_location}
@@ -144,7 +144,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
                 <%= if @huddl.event_type in [:virtual, :hybrid] do %>
                   <div>
-                    <dt class="font-medium text-gray-500">Virtual Access</dt>
+                    <dt class="font-medium text-base-content/70">Virtual Access</dt>
                     <dd class="flex items-center gap-2">
                       <.icon name="hero-video-camera" class="h-4 w-4" />
                       <%= if @huddl.visible_virtual_link do %>

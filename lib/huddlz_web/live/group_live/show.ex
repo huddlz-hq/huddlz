@@ -138,11 +138,11 @@ defmodule HuddlzWeb.GroupLive.Show do
             <h3>Group Details</h3>
             <dl class="grid gap-4 sm:grid-cols-2">
               <div>
-                <dt class="font-medium text-gray-500">Created</dt>
+                <dt class="font-medium text-base-content/70">Created</dt>
                 <dd>{format_date(@group.created_at)}</dd>
               </div>
               <div>
-                <dt class="font-medium text-gray-500">Owner</dt>
+                <dt class="font-medium text-base-content/70">Owner</dt>
                 <dd>{@group.owner.display_name || @group.owner.email}</dd>
               </div>
             </dl>
@@ -173,7 +173,7 @@ defmodule HuddlzWeb.GroupLive.Show do
             <div class="mt-6">
               <%= if @active_tab == "upcoming" do %>
                 <%= if Enum.empty?(@upcoming_huddlz) do %>
-                  <p class="text-gray-600 mt-4">No upcoming huddlz scheduled.</p>
+                  <p class="text-base-content/80 mt-4">No upcoming huddlz scheduled.</p>
                 <% else %>
                   <div class="space-y-4">
                     <%= for huddl <- @upcoming_huddlz do %>
@@ -183,7 +183,7 @@ defmodule HuddlzWeb.GroupLive.Show do
                 <% end %>
               <% else %>
                 <%= if Enum.empty?(@past_huddlz) do %>
-                  <p class="text-gray-600 mt-4">No past huddlz found.</p>
+                  <p class="text-base-content/80 mt-4">No past huddlz found.</p>
                 <% else %>
                   <div class="space-y-4">
                     <%= for huddl <- @past_huddlz do %>
@@ -214,7 +214,7 @@ defmodule HuddlzWeb.GroupLive.Show do
                       <p class="font-medium">
                         {member.display_name || "User"}
                         <%= if member.id == @group.owner_id do %>
-                          <span class="text-xs font-normal text-gray-500">(Owner)</span>
+                          <span class="text-xs font-normal text-base-content/70">(Owner)</span>
                         <% end %>
                       </p>
                     </div>
@@ -223,9 +223,9 @@ defmodule HuddlzWeb.GroupLive.Show do
               </div>
             <% else %>
               <%= if @current_user do %>
-                <p class="text-gray-600">Only members can see the member list.</p>
+                <p class="text-base-content/80">Only members can see the member list.</p>
               <% else %>
-                <p class="text-gray-600">Please sign in to see the member list.</p>
+                <p class="text-base-content/80">Please sign in to see the member list.</p>
               <% end %>
             <% end %>
           </div>

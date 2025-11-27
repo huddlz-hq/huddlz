@@ -73,7 +73,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
             title="Only lowercase letters, numbers, and hyphens allowed"
             required
           />
-          <p class="text-sm text-gray-600 mt-1">
+          <p class="text-sm text-base-content/80 mt-1">
             Your group is available at:
           </p>
           <p class="font-mono text-sm mt-1 break-all">
@@ -111,23 +111,10 @@ defmodule HuddlzWeb.GroupLive.Edit do
 
         <div>
           <label class="block text-sm font-medium mb-2">Privacy</label>
-          <div class="mt-2 space-y-2">
-            <label class="flex items-center gap-3">
-              <input type="hidden" name={@form[:is_public].name} value="false" />
-              <input
-                type="checkbox"
-                name={@form[:is_public].name}
-                id={@form[:is_public].id}
-                value="true"
-                checked={@form[:is_public].value == true}
-                class="checkbox"
-              />
-              <span>Public group (visible to everyone)</span>
-            </label>
-            <p class="text-sm text-gray-500">
-              Public groups are visible to all users. Private groups are only visible to members.
-            </p>
-          </div>
+          <.input field={@form[:is_public]} type="checkbox" label="Public group (visible to everyone)" />
+          <p class="text-sm text-base-content/70">
+            Public groups are visible to all users. Private groups are only visible to members.
+          </p>
         </div>
 
         <div class="flex gap-4">
