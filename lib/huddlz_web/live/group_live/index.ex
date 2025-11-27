@@ -1,4 +1,7 @@
 defmodule HuddlzWeb.GroupLive.Index do
+  @moduledoc """
+  LiveView for listing and searching groups.
+  """
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities.Group

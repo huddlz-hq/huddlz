@@ -1,4 +1,7 @@
 defmodule HuddlzWeb.HuddlLive.Edit do
+  @moduledoc """
+  LiveView for editing an existing huddl's details.
+  """
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities.Huddl

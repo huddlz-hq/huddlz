@@ -1,4 +1,7 @@
 defmodule HuddlzWeb.ProfileLive do
+  @moduledoc """
+  LiveView for viewing and editing user profile settings.
+  """
   use HuddlzWeb, :live_view
 
   alias HuddlzWeb.Layouts

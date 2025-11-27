@@ -1,4 +1,7 @@
 defmodule HuddlzWeb.AuthLive.ResetPassword do
+  @moduledoc """
+  LiveView for requesting a password reset token via email.
+  """
   use HuddlzWeb, :live_view
   alias AshPhoenix.Form
   alias Huddlz.Accounts.User

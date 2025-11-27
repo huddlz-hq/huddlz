@@ -1,4 +1,7 @@
 defmodule HuddlzWeb.AdminLive do
+  @moduledoc """
+  LiveView for admin user management and role assignment.
+  """
   use HuddlzWeb, :live_view
 
   alias Huddlz.Accounts

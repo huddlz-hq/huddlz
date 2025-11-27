@@ -1,4 +1,7 @@
 defmodule HuddlzWeb.GroupLive.Show do
+  @moduledoc """
+  LiveView for displaying a group's details, members, and huddlz.
+  """
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities.GroupMember

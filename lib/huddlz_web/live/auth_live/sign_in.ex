@@ -1,4 +1,7 @@
 defmodule HuddlzWeb.AuthLive.SignIn do
+  @moduledoc """
+  LiveView for user sign-in with email and password authentication.
+  """
   use HuddlzWeb, :live_view
 
   alias AshPhoenix.Form

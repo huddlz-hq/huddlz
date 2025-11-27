@@ -1,4 +1,7 @@
 defmodule HuddlzWeb.GroupLive.Edit do
+  @moduledoc """
+  LiveView for editing an existing group's details.
+  """
   use HuddlzWeb, :live_view
 
   alias HuddlzWeb.Layouts
@@ -111,7 +114,11 @@ defmodule HuddlzWeb.GroupLive.Edit do
 
         <div>
           <label class="block text-sm font-medium mb-2">Privacy</label>
-          <.input field={@form[:is_public]} type="checkbox" label="Public group (visible to everyone)" />
+          <.input
+            field={@form[:is_public]}
+            type="checkbox"
+            label="Public group (visible to everyone)"
+          />
           <p class="text-sm text-base-content/70">
             Public groups are visible to all users. Private groups are only visible to members.
           </p>
