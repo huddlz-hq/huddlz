@@ -18,35 +18,30 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   @impl true
   def handle_params(%{"slug" => slug}, _, socket) do
-    with {:ok, group} <- get_group_by_slug(slug, socket.assigns.current_user),
-         :ok <- check_group_access(group, socket.assigns.current_user) do
-      members = get_members(group, socket.assigns.current_user)
+    # Ash policies handle read authorization - not_found covers both missing and unauthorized
+    case get_group_by_slug(slug, socket.assigns.current_user) do
+      {:ok, group} ->
+        members = get_members(group, socket.assigns.current_user)
 
-      # Load upcoming events (limited to 10)
-      upcoming_huddlz = get_upcoming_group_huddlz(group, socket.assigns.current_user, limit: 10)
+        # Load upcoming events (limited to 10)
+        upcoming_huddlz = get_upcoming_group_huddlz(group, socket.assigns.current_user, limit: 10)
 
-      {:noreply,
-       socket
-       |> assign(:page_title, group.name)
-       |> assign(:group, group)
-       |> assign(:members, members)
-       |> assign(:member_count, get_member_count(group))
-       |> assign(:is_member, member?(group, socket.assigns.current_user))
-       |> assign(:is_owner, owner?(group, socket.assigns.current_user))
-       |> assign(:is_organizer, organizer?(group, socket.assigns.current_user))
-       |> assign(:active_tab, "upcoming")
-       |> assign(:upcoming_huddlz, upcoming_huddlz)
-       |> assign(:past_huddlz, [])
-       |> assign(:past_page, 1)
-       |> assign(:past_total_pages, 0)}
-    else
-      {:error, :not_found} ->
         {:noreply,
          socket
-         |> put_flash(:error, "Group not found")
-         |> redirect(to: ~p"/groups")}
+         |> assign(:page_title, group.name)
+         |> assign(:group, group)
+         |> assign(:members, members)
+         |> assign(:member_count, get_member_count(group))
+         |> assign(:is_member, member?(group, socket.assigns.current_user))
+         |> assign(:is_owner, owner?(group, socket.assigns.current_user))
+         |> assign(:is_organizer, organizer?(group, socket.assigns.current_user))
+         |> assign(:active_tab, "upcoming")
+         |> assign(:upcoming_huddlz, upcoming_huddlz)
+         |> assign(:past_huddlz, [])
+         |> assign(:past_page, 1)
+         |> assign(:past_total_pages, 0)}
 
-      {:error, :not_authorized} ->
+      {:error, _reason} ->
         {:noreply,
          socket
          |> put_flash(:error, "Group not found")
@@ -294,16 +289,6 @@ defmodule HuddlzWeb.GroupLive.Show do
       {:ok, group} -> {:ok, group}
       {:error, %Ash.Error.Query.NotFound{}} -> {:error, :not_found}
       {:error, _} -> {:error, :not_found}
-    end
-  end
-
-  defp check_group_access(group, user) do
-    cond do
-      group.is_public -> :ok
-      user == nil -> {:error, :not_authorized}
-      owner?(group, user) -> :ok
-      member?(group, user) -> :ok
-      true -> {:error, :not_authorized}
     end
   end
 

@@ -13,33 +13,11 @@ defmodule HuddlzWeb.HuddlLive.New do
 
   @impl true
   def mount(%{"group_slug" => group_slug}, _session, socket) do
-    with {:ok, group} <- get_group_by_slug(group_slug, socket.assigns.current_user),
-         :ok <- check_can_create_huddl(group, socket.assigns.current_user) do
-      # Initialize form with defaults
-      tomorrow = Date.utc_today() |> Date.add(1)
-      default_time = ~T[14:00:00]
+    user = socket.assigns.current_user
 
-      form =
-        AshPhoenix.Form.for_create(Huddl, :create,
-          domain: Huddlz.Communities,
-          actor: socket.assigns.current_user,
-          params: %{
-            "group_id" => group.id,
-            "creator_id" => socket.assigns.current_user.id,
-            "date" => Date.to_iso8601(tomorrow),
-            "start_time" => Time.to_iso8601(default_time) |> String.slice(0..4),
-            "duration_minutes" => "60"
-          }
-        )
-
-      {:ok,
-       socket
-       |> assign(:page_title, "Create New Huddl")
-       |> assign(:group, group)
-       |> assign(:form, to_form(form))
-       |> assign(:show_virtual_link, false)
-       |> assign(:show_physical_location, true)
-       |> assign(:calculated_end_time, calculate_end_time(tomorrow, default_time, 60))}
+    with {:ok, group} <- get_group_by_slug(group_slug, user),
+         :ok <- authorize_create(group, user) do
+      {:ok, assign_create_form(socket, group, user)}
     else
       {:error, :not_found} ->
         {:ok,
@@ -53,6 +31,38 @@ defmodule HuddlzWeb.HuddlLive.New do
          |> put_flash(:error, "You don't have permission to create huddlz for this group")
          |> redirect(to: ~p"/groups/#{group_slug}")}
     end
+  end
+
+  defp authorize_create(group, user) do
+    if Ash.can?({Huddl, :create, %{group_id: group.id}}, user),
+      do: :ok,
+      else: {:error, :not_authorized}
+  end
+
+  defp assign_create_form(socket, group, user) do
+    tomorrow = Date.utc_today() |> Date.add(1)
+    default_time = ~T[14:00:00]
+
+    form =
+      AshPhoenix.Form.for_create(Huddl, :create,
+        domain: Huddlz.Communities,
+        actor: user,
+        params: %{
+          "group_id" => group.id,
+          "creator_id" => user.id,
+          "date" => Date.to_iso8601(tomorrow),
+          "start_time" => Time.to_iso8601(default_time) |> String.slice(0..4),
+          "duration_minutes" => "60"
+        }
+      )
+
+    socket
+    |> assign(:page_title, "Create New Huddl")
+    |> assign(:group, group)
+    |> assign(:form, to_form(form))
+    |> assign(:show_virtual_link, false)
+    |> assign(:show_physical_location, true)
+    |> assign(:calculated_end_time, calculate_end_time(tomorrow, default_time, 60))
   end
 
   @impl true
@@ -233,26 +243,6 @@ defmodule HuddlzWeb.HuddlLive.New do
       {:ok, group} -> {:ok, group}
       {:error, _} -> {:error, :not_found}
     end
-  end
-
-  defp check_can_create_huddl(group, user) do
-    # For now, just check if user is owner or organizer
-    # Access control will be properly implemented in task 3
-    cond do
-      owner?(group, user) -> :ok
-      organizer?(group, user) -> :ok
-      true -> {:error, :not_authorized}
-    end
-  end
-
-  defp owner?(group, user) do
-    group.owner_id == user.id
-  end
-
-  defp organizer?(group, user) do
-    Huddlz.Communities.GroupMember
-    |> Ash.Query.filter(group_id == ^group.id and user_id == ^user.id and role == :organizer)
-    |> Ash.exists?(authorize?: false)
   end
 
   defp calculate_end_time(date, time, duration_minutes) do

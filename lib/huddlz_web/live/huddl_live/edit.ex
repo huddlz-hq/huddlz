@@ -18,35 +18,12 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
   @impl true
   def handle_params(%{"group_slug" => group_slug, "id" => id}, _, socket) do
-    case get_huddl(id, group_slug, socket.assigns.current_user) do
-      {:ok, huddl} ->
-        form =
-          AshPhoenix.Form.for_update(huddl, :update,
-            domain: Huddlz.Communities,
-            actor: socket.assigns.current_user,
-            forms: [auto?: true]
-          )
+    user = socket.assigns.current_user
 
-        form =
-          if huddl.huddl_template_id do
-            AshPhoenix.Form.validate(form, %{
-              is_recurring: true,
-              repeat_until: huddl.huddl_template.repeat_until,
-              frequency: huddl.huddl_template.frequency
-            })
-          else
-            form
-          end
-
-        {:noreply,
-         socket
-         |> assign(:page_title, huddl.title)
-         |> assign(:group_slug, group_slug)
-         |> assign(:huddl, huddl)
-         |> assign(:show_physical_location, !!huddl.physical_location)
-         |> assign(:show_virtual_link, !!huddl.virtual_link)
-         |> assign(:form, to_form(form))}
-
+    with {:ok, huddl} <- get_huddl(id, group_slug, user),
+         :ok <- authorize_edit(huddl, user) do
+      {:noreply, assign_edit_form(socket, huddl, group_slug, user)}
+    else
       {:error, :not_found} ->
         {:noreply,
          socket
@@ -58,6 +35,41 @@ defmodule HuddlzWeb.HuddlLive.Edit do
          socket
          |> put_flash(:error, "You don't have permission to edit this huddl")
          |> redirect(to: ~p"/groups/#{group_slug}/huddlz/#{id}")}
+    end
+  end
+
+  defp authorize_edit(huddl, user) do
+    if Ash.can?({huddl, :update}, user), do: :ok, else: {:error, :not_authorized}
+  end
+
+  defp assign_edit_form(socket, huddl, group_slug, user) do
+    form =
+      AshPhoenix.Form.for_update(huddl, :update,
+        domain: Huddlz.Communities,
+        actor: user,
+        forms: [auto?: true]
+      )
+
+    form = maybe_add_recurring_fields(form, huddl)
+
+    socket
+    |> assign(:page_title, huddl.title)
+    |> assign(:group_slug, group_slug)
+    |> assign(:huddl, huddl)
+    |> assign(:show_physical_location, !!huddl.physical_location)
+    |> assign(:show_virtual_link, !!huddl.virtual_link)
+    |> assign(:form, to_form(form))
+  end
+
+  defp maybe_add_recurring_fields(form, huddl) do
+    if huddl.huddl_template_id do
+      AshPhoenix.Form.validate(form, %{
+        is_recurring: true,
+        repeat_until: huddl.huddl_template.repeat_until,
+        frequency: huddl.huddl_template.frequency
+      })
+    else
+      form
     end
   end
 
@@ -253,6 +265,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
   defp get_huddl(id, group_slug, user) do
     # Get the huddl and verify it belongs to the group with the given slug
+    # Authorization is handled by Ash policies via Ash.can? in handle_params
     case Huddl
          |> Ash.Query.filter(id == ^id)
          |> Ash.Query.load([
@@ -267,22 +280,15 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         {:error, :not_found}
 
       {:ok, huddl} ->
-        verify_group_and_ownership(huddl, user, group_slug)
+        # Verify the huddl belongs to the group in the URL
+        if huddl.group.slug == group_slug do
+          {:ok, huddl}
+        else
+          {:error, :not_found}
+        end
 
       {:error, _} ->
-        {:error, :not_authorized}
-    end
-  end
-
-  defp verify_group_and_ownership(huddl, user, group_slug) do
-    if huddl.group.slug == group_slug && huddl.creator_id == user.id do
-      {:ok, huddl}
-    else
-      if huddl.group.slug != group_slug do
         {:error, :not_found}
-      else
-        {:error, :not_authorized}
-      end
     end
   end
 end

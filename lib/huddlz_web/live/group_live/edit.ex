@@ -12,22 +12,11 @@ defmodule HuddlzWeb.GroupLive.Edit do
 
   @impl true
   def mount(%{"slug" => slug}, _session, socket) do
-    with {:ok, group} <- get_group_by_slug(slug, socket.assigns.current_user),
-         :ok <- check_can_edit_group(group, socket.assigns.current_user) do
-      form =
-        AshPhoenix.Form.for_update(group, :update_details,
-          actor: socket.assigns.current_user,
-          forms: [auto?: true]
-        )
-        |> to_form()
+    user = socket.assigns.current_user
 
-      {:ok,
-       socket
-       |> assign(:page_title, "Edit Group")
-       |> assign(:group, group)
-       |> assign(:form, form)
-       |> assign(:original_slug, group.slug)
-       |> assign(:slug_changed, false)}
+    with {:ok, group} <- get_group_by_slug(slug, user),
+         :ok <- authorize_edit(group, user) do
+      {:ok, assign_edit_form(socket, group)}
     else
       {:error, :not_found} ->
         {:ok,
@@ -41,6 +30,26 @@ defmodule HuddlzWeb.GroupLive.Edit do
          |> put_flash(:error, "You don't have permission to edit this group")
          |> redirect(to: ~p"/groups/#{slug}")}
     end
+  end
+
+  defp authorize_edit(group, user) do
+    if Ash.can?({group, :update_details}, user), do: :ok, else: {:error, :not_authorized}
+  end
+
+  defp assign_edit_form(socket, group) do
+    form =
+      AshPhoenix.Form.for_update(group, :update_details,
+        actor: socket.assigns.current_user,
+        forms: [auto?: true]
+      )
+      |> to_form()
+
+    socket
+    |> assign(:page_title, "Edit Group")
+    |> assign(:group, group)
+    |> assign(:form, form)
+    |> assign(:original_slug, group.slug)
+    |> assign(:slug_changed, false)
   end
 
   @impl true
@@ -180,14 +189,6 @@ defmodule HuddlzWeb.GroupLive.Edit do
       {:ok, nil} -> {:error, :not_found}
       {:ok, group} -> {:ok, group}
       {:error, _} -> {:error, :not_found}
-    end
-  end
-
-  defp check_can_edit_group(group, user) do
-    if group.owner_id == user.id do
-      :ok
-    else
-      {:error, :not_authorized}
     end
   end
 end
