@@ -21,25 +21,24 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     user = socket.assigns.current_user
 
     with {:ok, huddl} <- get_huddl(id, group_slug, user),
-         :ok <- authorize_edit(huddl, user) do
+         :ok <- authorize({huddl, :update}, user) do
       {:noreply, assign_edit_form(socket, huddl, group_slug, user)}
     else
       {:error, :not_found} ->
         {:noreply,
-         socket
-         |> put_flash(:error, "Huddl not found")
-         |> redirect(to: ~p"/groups/#{group_slug}")}
+         handle_error(socket, :not_found,
+           resource_name: "Huddl",
+           fallback_path: ~p"/groups/#{group_slug}"
+         )}
 
       {:error, :not_authorized} ->
         {:noreply,
-         socket
-         |> put_flash(:error, "You don't have permission to edit this huddl")
-         |> redirect(to: ~p"/groups/#{group_slug}/huddlz/#{id}")}
+         handle_error(socket, :not_authorized,
+           resource_name: "huddl",
+           action: "edit",
+           resource_path: ~p"/groups/#{group_slug}/huddlz/#{id}"
+         )}
     end
-  end
-
-  defp authorize_edit(huddl, user) do
-    if Ash.can?({huddl, :update}, user), do: :ok, else: {:error, :not_authorized}
   end
 
   defp assign_edit_form(socket, huddl, group_slug, user) do

@@ -16,27 +16,20 @@ defmodule HuddlzWeb.HuddlLive.New do
     user = socket.assigns.current_user
 
     with {:ok, group} <- get_group_by_slug(group_slug, user),
-         :ok <- authorize_create(group, user) do
+         :ok <- authorize({Huddl, :create, %{group_id: group.id}}, user) do
       {:ok, assign_create_form(socket, group, user)}
     else
       {:error, :not_found} ->
         {:ok,
-         socket
-         |> put_flash(:error, "Group not found")
-         |> redirect(to: ~p"/groups")}
+         handle_error(socket, :not_found, resource_name: "Group", fallback_path: ~p"/groups")}
 
       {:error, :not_authorized} ->
         {:ok,
-         socket
-         |> put_flash(:error, "You don't have permission to create huddlz for this group")
-         |> redirect(to: ~p"/groups/#{group_slug}")}
+         handle_error(socket, :not_authorized,
+           message: "You don't have permission to create huddlz for this group",
+           resource_path: ~p"/groups/#{group_slug}"
+         )}
     end
-  end
-
-  defp authorize_create(group, user) do
-    if Ash.can?({Huddl, :create, %{group_id: group.id}}, user),
-      do: :ok,
-      else: {:error, :not_authorized}
   end
 
   defp assign_create_form(socket, group, user) do

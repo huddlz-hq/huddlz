@@ -32,15 +32,18 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
       {:error, :not_found} ->
         {:noreply,
-         socket
-         |> put_flash(:error, "Huddl not found")
-         |> redirect(to: ~p"/groups/#{group_slug}")}
+         handle_error(socket, :not_found,
+           resource_name: "Huddl",
+           fallback_path: ~p"/groups/#{group_slug}"
+         )}
 
       {:error, :not_authorized} ->
         {:noreply,
-         socket
-         |> put_flash(:error, "You don't have access to this huddl")
-         |> redirect(to: ~p"/groups")}
+         handle_error(socket, :not_authorized,
+           resource_name: "huddl",
+           action: "access",
+           fallback_path: ~p"/groups"
+         )}
     end
   end
 
