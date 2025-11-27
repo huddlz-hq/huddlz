@@ -72,7 +72,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
             <button
               phx-click="delete_huddl"
               data-confirm="Are you sure you want to delete this huddl?"
-              class="btn btn-ghost bg-red-500 text-white hover:bg-red-300"
+              class="btn btn-error"
             >
               <.icon name="hero-trash" class="h-4 w-4" /> Delete Huddl
             </button>
