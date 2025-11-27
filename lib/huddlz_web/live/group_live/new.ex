@@ -72,8 +72,8 @@ defmodule HuddlzWeb.GroupLive.New do
       <form id="group-form" phx-change="validate" phx-submit="save" class="space-y-6">
         <.input field={@form[:name]} type="text" label="Group Name" required />
 
-        <div class="rounded-md bg-gray-50 p-4">
-          <p class="text-sm text-gray-600">
+        <div class="rounded-md bg-base-200 p-4">
+          <p class="text-sm text-base-content/80">
             Your group will be available at:
           </p>
           <p class="font-mono text-sm mt-1 break-all">
@@ -87,23 +87,10 @@ defmodule HuddlzWeb.GroupLive.New do
 
         <div>
           <label class="block text-sm font-medium mb-2">Privacy</label>
-          <div class="mt-2 space-y-2">
-            <label class="flex items-center gap-3">
-              <input type="hidden" name={@form[:is_public].name} value="false" />
-              <input
-                type="checkbox"
-                name={@form[:is_public].name}
-                id={@form[:is_public].id}
-                value="true"
-                checked={AshPhoenix.Form.value(@form.source, :is_public) == true}
-                class="checkbox"
-              />
-              <span>Public group (visible to everyone)</span>
-            </label>
-            <p class="text-sm text-gray-500">
-              Public groups are visible to all users. Private groups are only visible to members.
-            </p>
-          </div>
+          <.input field={@form[:is_public]} type="checkbox" label="Public group (visible to everyone)" />
+          <p class="text-sm text-base-content/70">
+            Public groups are visible to all users. Private groups are only visible to members.
+          </p>
         </div>
 
         <div class="flex gap-4">
