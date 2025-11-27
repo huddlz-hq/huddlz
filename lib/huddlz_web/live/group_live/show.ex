@@ -43,9 +43,7 @@ defmodule HuddlzWeb.GroupLive.Show do
 
       {:error, _reason} ->
         {:noreply,
-         socket
-         |> put_flash(:error, "Group not found")
-         |> redirect(to: ~p"/groups")}
+         handle_error(socket, :not_found, resource_name: "Group", fallback_path: ~p"/groups")}
     end
   end
 

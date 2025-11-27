@@ -15,25 +15,21 @@ defmodule HuddlzWeb.GroupLive.Edit do
     user = socket.assigns.current_user
 
     with {:ok, group} <- get_group_by_slug(slug, user),
-         :ok <- authorize_edit(group, user) do
+         :ok <- authorize({group, :update_details}, user) do
       {:ok, assign_edit_form(socket, group)}
     else
       {:error, :not_found} ->
         {:ok,
-         socket
-         |> put_flash(:error, "Group not found")
-         |> redirect(to: ~p"/groups")}
+         handle_error(socket, :not_found, resource_name: "Group", fallback_path: ~p"/groups")}
 
       {:error, :not_authorized} ->
         {:ok,
-         socket
-         |> put_flash(:error, "You don't have permission to edit this group")
-         |> redirect(to: ~p"/groups/#{slug}")}
+         handle_error(socket, :not_authorized,
+           resource_name: "group",
+           action: "edit",
+           resource_path: ~p"/groups/#{slug}"
+         )}
     end
-  end
-
-  defp authorize_edit(group, user) do
-    if Ash.can?({group, :update_details}, user), do: :ok, else: {:error, :not_authorized}
   end
 
   defp assign_edit_form(socket, group) do

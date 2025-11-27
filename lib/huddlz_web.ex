@@ -52,6 +52,9 @@ defmodule HuddlzWeb do
     quote do
       use Phoenix.LiveView
 
+      # LiveView-specific helpers for error handling
+      import HuddlzWeb.Live.ErrorHelpers
+
       unquote(html_helpers())
     end
   end
