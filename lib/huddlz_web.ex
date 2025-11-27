@@ -86,6 +86,7 @@ defmodule HuddlzWeb do
       import Phoenix.HTML
       # Core UI components
       import HuddlzWeb.CoreComponents
+      import HuddlzWeb.CommunityComponents
 
       # Common modules used in templates
       alias HuddlzWeb.Layouts

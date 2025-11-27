@@ -175,63 +175,26 @@ defmodule HuddlzWeb.GroupLive.Show do
     <!-- Tab Content -->
             <div class="mt-6">
               <%= if @active_tab == "upcoming" do %>
-                <%= if Enum.empty?(@upcoming_huddlz) do %>
-                  <p class="text-base-content/80 mt-4">No upcoming huddlz scheduled.</p>
-                <% else %>
-                  <div class="space-y-4">
-                    <%= for huddl <- @upcoming_huddlz do %>
-                      <.huddl_card huddl={huddl} />
-                    <% end %>
-                  </div>
-                <% end %>
+                <.huddl_list huddlz={@upcoming_huddlz} empty_message="No upcoming huddlz scheduled." />
               <% else %>
-                <%= if Enum.empty?(@past_huddlz) do %>
-                  <p class="text-base-content/80 mt-4">No past huddlz found.</p>
-                <% else %>
-                  <div class="space-y-4">
-                    <%= for huddl <- @past_huddlz do %>
-                      <.huddl_card huddl={huddl} />
-                    <% end %>
-                  </div>
-                  
-    <!-- Pagination -->
-                  <%= if @past_total_pages > 1 do %>
-                    <.pagination
-                      current_page={@past_page}
-                      total_pages={@past_total_pages}
-                      event_name="change_past_page"
-                    />
-                  <% end %>
+                <.huddl_list huddlz={@past_huddlz} empty_message="No past huddlz found." />
+                <%= if @past_total_pages > 1 do %>
+                  <.pagination
+                    current_page={@past_page}
+                    total_pages={@past_total_pages}
+                    event_name="change_past_page"
+                  />
                 <% end %>
               <% end %>
             </div>
           </div>
 
-          <div class="mt-8">
-            <h3>Members ({@member_count})</h3>
-            <%= if @members do %>
-              <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <%= for member <- @members do %>
-                  <div class="flex items-center gap-3 rounded-lg border p-3">
-                    <div class="flex-1">
-                      <p class="font-medium">
-                        {member.display_name || "User"}
-                        <%= if member.id == @group.owner_id do %>
-                          <span class="text-xs font-normal text-base-content/70">(Owner)</span>
-                        <% end %>
-                      </p>
-                    </div>
-                  </div>
-                <% end %>
-              </div>
-            <% else %>
-              <%= if @current_user do %>
-                <p class="text-base-content/80">Only members can see the member list.</p>
-              <% else %>
-                <p class="text-base-content/80">Please sign in to see the member list.</p>
-              <% end %>
-            <% end %>
-          </div>
+          <.member_list
+            members={@members}
+            member_count={@member_count}
+            owner_id={@group.owner_id}
+            current_user={@current_user}
+          />
         </div>
       </div>
     </Layouts.app>
