@@ -1,4 +1,7 @@
 defmodule HuddlzWeb.HuddlLive.New do
+  @moduledoc """
+  LiveView for creating a new huddl within a group.
+  """
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities.Huddl

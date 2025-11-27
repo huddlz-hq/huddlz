@@ -1,4 +1,7 @@
 defmodule HuddlzWeb.HuddlLive do
+  @moduledoc """
+  LiveView for searching and filtering huddlz across all groups.
+  """
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities

@@ -1,4 +1,7 @@
 defmodule HuddlzWeb.GroupLive.New do
+  @moduledoc """
+  LiveView for creating a new group.
+  """
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities.Group
@@ -87,7 +90,11 @@ defmodule HuddlzWeb.GroupLive.New do
 
         <div>
           <label class="block text-sm font-medium mb-2">Privacy</label>
-          <.input field={@form[:is_public]} type="checkbox" label="Public group (visible to everyone)" />
+          <.input
+            field={@form[:is_public]}
+            type="checkbox"
+            label="Public group (visible to everyone)"
+          />
           <p class="text-sm text-base-content/70">
             Public groups are visible to all users. Private groups are only visible to members.
           </p>

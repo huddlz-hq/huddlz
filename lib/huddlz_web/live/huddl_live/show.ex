@@ -1,4 +1,7 @@
 defmodule HuddlzWeb.HuddlLive.Show do
+  @moduledoc """
+  LiveView for displaying a huddl's details, RSVP status, and attendee count.
+  """
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities.Huddl

@@ -1,4 +1,7 @@
 defmodule HuddlzWeb.AuthLive.Register do
+  @moduledoc """
+  LiveView for new user registration with email, password, and display name.
+  """
   use HuddlzWeb, :live_view
 
   alias AshPhoenix.Form
