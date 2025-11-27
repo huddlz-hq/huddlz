@@ -143,7 +143,7 @@ defmodule HuddlzWeb.HuddlLive.New do
             label="Make this a private event (only visible to group members)"
           />
         <% else %>
-          <p class="text-sm text-gray-600">
+          <p class="text-sm text-base-content/80">
             <.icon name="hero-lock-closed" class="h-4 w-4 inline" />
             This will be a private event (private groups can only create private events)
           </p>

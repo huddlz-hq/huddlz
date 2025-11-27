@@ -91,7 +91,7 @@ defmodule HuddlzWeb.AuthLive.Register do
                   autocomplete="new-password"
                   phx-debounce="blur"
                 />
-                <div class="text-xs text-gray-600 mt-1 mb-4">
+                <div class="text-xs text-base-content/80 mt-1 mb-4">
                   Password must be at least 8 characters long
                 </div>
               </div>
