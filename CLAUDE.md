@@ -78,8 +78,8 @@ custom classes must fully style the input
 <!-- usage-rules-header -->
 # Usage Rules
 
-**IMPORTANT**: Consult these usage rules early and often when working with the packages listed below. 
-Before attempting to use any of these packages or to discover if you should use them, review their 
+**IMPORTANT**: Consult these usage rules early and often when working with the packages listed below.
+Before attempting to use any of these packages or to discover if you should use them, review their
 usage rules to understand the correct patterns, conventions, and best practices.
 <!-- usage-rules-header-end -->
 
