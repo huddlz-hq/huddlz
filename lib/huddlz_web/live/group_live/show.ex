@@ -149,7 +149,7 @@ defmodule HuddlzWeb.GroupLive.Show do
 
           <div class="mt-8">
             <h3>Events</h3>
-            
+
     <!-- Tabs -->
             <div class="tabs tabs-boxed mt-4">
               <button
@@ -167,7 +167,7 @@ defmodule HuddlzWeb.GroupLive.Show do
                 Past Events
               </button>
             </div>
-            
+
     <!-- Tab Content -->
             <div class="mt-6">
               <%= if @active_tab == "upcoming" do %>

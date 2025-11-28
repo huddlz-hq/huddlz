@@ -582,7 +582,7 @@ defmodule HuddlzWeb.CoreComponents do
         >
           <.icon name="hero-chevron-left" class="h-4 w-4" /> Previous
         </button>
-        
+
     <!-- Page numbers -->
         <%= for page <- pagination_range(@current_page, @total_pages) do %>
           <%= if page == :ellipsis do %>
@@ -600,7 +600,7 @@ defmodule HuddlzWeb.CoreComponents do
             </button>
           <% end %>
         <% end %>
-        
+
     <!-- Next button -->
         <button
           :if={@current_page < @total_pages}
