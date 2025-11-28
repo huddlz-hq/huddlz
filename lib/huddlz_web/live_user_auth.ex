@@ -12,7 +12,8 @@ defmodule HuddlzWeb.LiveUserAuth do
   # To use, place the following at the top of that liveview:
   # on_mount {HuddlzWeb.LiveUserAuth, :current_user}
   def on_mount(:current_user, _params, session, socket) do
-    {:cont, LiveSession.assign_new_resources(socket, session)}
+    socket = LiveSession.assign_new_resources(socket, session)
+    {:cont, maybe_load_profile_picture(socket)}
   end
 
   def on_mount(:live_user_optional, _params, _session, socket) do
@@ -48,4 +49,18 @@ defmodule HuddlzWeb.LiveUserAuth do
       {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/sign-in")}
     end
   end
+
+  def on_mount(:load_profile_picture, _params, _session, socket) do
+    {:cont, maybe_load_profile_picture(socket)}
+  end
+
+  defp maybe_load_profile_picture(%{assigns: %{current_user: user}} = socket)
+       when not is_nil(user) do
+    case Ash.load(user, [:current_profile_picture_url], actor: user) do
+      {:ok, loaded_user} -> assign(socket, :current_user, loaded_user)
+      _ -> socket
+    end
+  end
+
+  defp maybe_load_profile_picture(socket), do: socket
 end

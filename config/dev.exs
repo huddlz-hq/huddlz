@@ -87,6 +87,9 @@ config :phoenix_live_view,
 # To use SendGrid in development, comment out the line below and set SENDGRID_API_KEY
 config :swoosh, :api_client, false
 
+# Local file storage for development
+config :huddlz, :storage, adapter: :local
+
 # Optional: Enable SendGrid in development
 # if sendgrid_api_key = System.get_env("SENDGRID_API_KEY") do
 #   config :huddlz, Huddlz.Mailer,

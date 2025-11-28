@@ -139,7 +139,10 @@ defmodule HuddlzWeb.GroupLive.Show do
               </div>
               <div>
                 <dt class="font-medium text-base-content/70">Owner</dt>
-                <dd>{@group.owner.display_name || @group.owner.email}</dd>
+                <dd class="flex items-center gap-2 mt-1">
+                  <.avatar user={@group.owner} size={:xs} />
+                  <span>{@group.owner.display_name || @group.owner.email}</span>
+                </dd>
               </div>
             </dl>
           </div>
@@ -328,7 +331,7 @@ defmodule HuddlzWeb.GroupLive.Show do
     # Use get_by_group action which enforces authorization
     GroupMember
     |> Ash.Query.for_read(:get_by_group, %{group_id: group.id})
-    |> Ash.Query.load(:user)
+    |> Ash.Query.load(user: [:current_profile_picture_url])
     |> Ash.read!(actor: current_user)
     |> Enum.map(& &1.user)
   end

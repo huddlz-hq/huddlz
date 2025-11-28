@@ -148,4 +148,10 @@ if config_env() == :prod do
 
   # Configure Swoosh API client to use Req (already included in deps)
   config :swoosh, :api_client, Swoosh.ApiClient.Req
+
+  # Tigris S3 Storage - env vars set automatically by `fly storage create`
+  config :huddlz, :storage,
+    adapter: :s3,
+    bucket: System.get_env("BUCKET_NAME"),
+    endpoint: System.get_env("AWS_ENDPOINT_URL_S3")
 end

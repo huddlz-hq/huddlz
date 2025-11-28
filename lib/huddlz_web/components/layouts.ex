@@ -53,8 +53,8 @@ defmodule HuddlzWeb.Layouts do
       <div class="navbar-end flex items-center gap-4">
         <%= if @current_user do %>
           <div class="dropdown dropdown-end">
-            <label tabindex="0" class="btn btn-ghost btn-circle avatar rounded-full bg-base-300">
-              <.icon name="hero-user" class="h-6 w-6" />
+            <label tabindex="0" class="btn btn-ghost btn-circle avatar">
+              <.avatar user={@current_user} size={:sm} />
             </label>
             <ul
               tabindex="0"

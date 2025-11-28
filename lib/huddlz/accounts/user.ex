@@ -383,6 +383,17 @@ defmodule Huddlz.Accounts.User do
     has_many :rsvps, Huddlz.Communities.HuddlAttendee do
       destination_attribute :user_id
     end
+
+    has_many :profile_pictures, Huddlz.Accounts.ProfilePicture do
+      destination_attribute :user_id
+    end
+  end
+
+  aggregates do
+    first :current_profile_picture_url, :profile_pictures, :storage_path do
+      description "Returns the storage path of the user's current profile picture"
+      sort inserted_at: :desc
+    end
   end
 
   identities do
