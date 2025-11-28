@@ -4,39 +4,53 @@ defmodule HuddlzWeb.ProfileLive do
   """
   use HuddlzWeb, :live_view
 
+  alias Huddlz.Storage.ProfilePictures
   alias HuddlzWeb.Layouts
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
 
   @impl true
   def mount(_params, _session, socket) do
+    user = socket.assigns.current_user
+
     form =
-      socket.assigns.current_user
+      user
       |> AshPhoenix.Form.for_update(:update_display_name,
         domain: Huddlz.Accounts,
         forms: [auto?: true],
-        actor: socket.assigns.current_user
+        actor: user
       )
       |> to_form()
 
     action =
-      if socket.assigns.current_user.hashed_password, do: :change_password, else: :set_password
+      if user.hashed_password, do: :change_password, else: :set_password
 
     password_form =
-      socket.assigns.current_user
+      user
       |> AshPhoenix.Form.for_update(action,
         domain: Huddlz.Accounts,
         forms: [auto?: true],
-        actor: socket.assigns.current_user
+        actor: user
       )
       |> to_form()
+
+    # Load user with profile picture calculation
+    {:ok, user_with_avatar} =
+      Ash.load(user, [:current_profile_picture_url], actor: user)
 
     {:ok,
      socket
      |> assign(:page_title, "Profile")
      |> assign(:form, form)
      |> assign(:password_form, password_form)
-     |> assign(:show_password_form, false)}
+     |> assign(:show_password_form, false)
+     |> assign(:current_user, user_with_avatar)
+     |> assign(:avatar_error, nil)
+     |> allow_upload(:avatar,
+       accept: ~w(.jpg .jpeg .png .webp),
+       max_entries: 1,
+       max_file_size: 5_000_000
+     )}
   end
 
   @impl true
@@ -51,6 +65,99 @@ defmodule HuddlzWeb.ProfileLive do
 
         <div class="mt-8">
           <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+              <h2 class="card-title">Profile Picture</h2>
+              <p class="text-base-content/70 mb-4">
+                Upload a profile picture to personalize your account.
+              </p>
+
+              <div class="flex items-start gap-6">
+                <div class="flex-shrink-0">
+                  <.avatar user={@current_user} size={:xl} />
+                </div>
+
+                <div class="flex-1 space-y-4">
+                  <form id="avatar-form" phx-submit="save_avatar" phx-change="validate_avatar">
+                    <div
+                      class="border-2 border-dashed border-base-300 rounded-lg p-4 text-center hover:border-primary transition-colors"
+                      phx-drop-target={@uploads.avatar.ref}
+                    >
+                      <.live_file_input upload={@uploads.avatar} class="hidden" />
+                      <label
+                        for={@uploads.avatar.ref}
+                        class="cursor-pointer flex flex-col items-center"
+                      >
+                        <.icon name="hero-cloud-arrow-up" class="w-8 h-8 text-base-content/50 mb-2" />
+                        <span class="text-sm text-base-content/70">
+                          Click to upload or drag and drop
+                        </span>
+                        <span class="text-xs text-base-content/50 mt-1">
+                          JPG, PNG, or WebP (max 5MB)
+                        </span>
+                      </label>
+                    </div>
+
+                    <%= if @avatar_error do %>
+                      <p class="text-error text-sm mt-2">{@avatar_error}</p>
+                    <% end %>
+
+                    <%= for entry <- @uploads.avatar.entries do %>
+                      <div class="mt-3 flex items-center gap-3 p-3 bg-base-200 rounded-lg">
+                        <.live_img_preview entry={entry} class="w-12 h-12 rounded-full object-cover" />
+                        <div class="flex-1 min-w-0">
+                          <p class="text-sm font-medium truncate">{entry.client_name}</p>
+                          <div class="w-full bg-base-300 rounded-full h-1.5 mt-1">
+                            <div
+                              class="bg-primary h-1.5 rounded-full transition-all"
+                              style={"width: #{entry.progress}%"}
+                            >
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          phx-click="cancel_avatar_upload"
+                          phx-value-ref={entry.ref}
+                          class="btn btn-ghost btn-sm btn-circle"
+                        >
+                          <.icon name="hero-x-mark" class="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <%= for err <- upload_errors(@uploads.avatar, entry) do %>
+                        <p class="text-error text-sm mt-1">{upload_error_to_string(err)}</p>
+                      <% end %>
+                    <% end %>
+
+                    <%= for err <- upload_errors(@uploads.avatar) do %>
+                      <p class="text-error text-sm mt-2">{upload_error_to_string(err)}</p>
+                    <% end %>
+
+                    <div class="flex gap-2 mt-4">
+                      <%= if @uploads.avatar.entries != [] do %>
+                        <button type="submit" class="btn btn-primary btn-sm">
+                          <.icon name="hero-check" class="w-4 h-4 mr-1" /> Save
+                        </button>
+                      <% end %>
+
+                      <%= if @current_user.current_profile_picture_url do %>
+                        <button
+                          type="button"
+                          phx-click="remove_avatar"
+                          class="btn btn-ghost btn-sm text-error"
+                          data-confirm="Are you sure you want to remove your profile picture?"
+                        >
+                          <.icon name="hero-trash" class="w-4 h-4 mr-1" /> Remove
+                        </button>
+                      <% end %>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 card bg-base-100 shadow-xl">
             <div class="card-body">
               <h2 class="card-title">Account Information</h2>
               <div class="space-y-3">
@@ -278,4 +385,134 @@ defmodule HuddlzWeb.ProfileLive do
          |> assign(:password_form, form |> to_form())}
     end
   end
+
+  @impl true
+  def handle_event("validate_avatar", _params, socket) do
+    {:noreply, assign(socket, :avatar_error, nil)}
+  end
+
+  @impl true
+  def handle_event("cancel_avatar_upload", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :avatar, ref)}
+  end
+
+  @impl true
+  def handle_event("save_avatar", _params, socket) do
+    user = socket.assigns.current_user
+
+    case uploaded_entries(socket, :avatar) do
+      {[_ | _], []} ->
+        process_avatar_upload(socket, user)
+
+      {[], _} ->
+        {:noreply, assign(socket, :avatar_error, "Please select a file to upload")}
+    end
+  end
+
+  @impl true
+  def handle_event("remove_avatar", _params, socket) do
+    user = socket.assigns.current_user
+
+    case Huddlz.Accounts.get_current_profile_picture(user.id, actor: user) do
+      {:ok, profile_picture} when not is_nil(profile_picture) ->
+        # Delete from storage
+        ProfilePictures.delete(profile_picture.storage_path)
+
+        # Delete the record
+        case Huddlz.Accounts.delete_profile_picture(profile_picture, actor: user) do
+          :ok ->
+            # Reload user to clear the profile picture
+            {:ok, updated_user} =
+              Ash.load(user, [:current_profile_picture_url], actor: user)
+
+            {:noreply,
+             socket
+             |> put_flash(:info, "Profile picture removed")
+             |> assign(:current_user, updated_user)}
+
+          {:error, _} ->
+            {:noreply,
+             socket
+             |> put_flash(:error, "Failed to remove profile picture")}
+        end
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  defp process_avatar_upload(socket, user) do
+    result =
+      consume_uploaded_entries(socket, :avatar, fn %{path: path}, entry ->
+        store_avatar_file(path, entry, user.id)
+      end)
+
+    handle_upload_result(socket, user, result)
+  end
+
+  defp store_avatar_file(path, entry, user_id) do
+    case ProfilePictures.store(path, entry.client_name, entry.client_type, user_id) do
+      {:ok, storage_path} ->
+        {:ok,
+         {:success,
+          %{
+            storage_path: storage_path,
+            filename: entry.client_name,
+            content_type: entry.client_type,
+            size_bytes: entry.client_size
+          }}}
+
+      {:error, reason} ->
+        # Always return {:ok, _} from consume callback, wrap errors for handling
+        {:ok, {:error, reason}}
+    end
+  end
+
+  defp handle_upload_result(socket, user, [{:success, metadata}]) do
+    case create_profile_picture_record(user, metadata) do
+      {:ok, _} ->
+        {:noreply, reload_user_avatar(socket, user, "Profile picture updated successfully")}
+
+      {:error, _} ->
+        {:noreply,
+         assign(socket, :avatar_error, "Failed to save profile picture. Please try again.")}
+    end
+  end
+
+  defp handle_upload_result(socket, _user, [{:error, reason}]) do
+    {:noreply, assign(socket, :avatar_error, "Upload failed: #{reason}")}
+  end
+
+  defp handle_upload_result(socket, _user, []) do
+    {:noreply, socket}
+  end
+
+  defp create_profile_picture_record(user, metadata) do
+    Huddlz.Accounts.create_profile_picture(
+      %{
+        filename: metadata.filename,
+        content_type: metadata.content_type,
+        size_bytes: metadata.size_bytes,
+        storage_path: metadata.storage_path,
+        user_id: user.id
+      },
+      actor: user
+    )
+  end
+
+  defp reload_user_avatar(socket, user, flash_message) do
+    {:ok, updated_user} = Ash.load(user, [:current_profile_picture_url], actor: user)
+
+    socket
+    |> put_flash(:info, flash_message)
+    |> assign(:current_user, updated_user)
+  end
+
+  defp upload_error_to_string(:too_large), do: "File is too large (max 5MB)"
+
+  defp upload_error_to_string(:not_accepted),
+    do: "Invalid file type. Please use JPG, PNG, or WebP"
+
+  defp upload_error_to_string(:too_many_files), do: "Only one file can be uploaded at a time"
+  defp upload_error_to_string(err), do: "Upload error: #{inspect(err)}"
 end

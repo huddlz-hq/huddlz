@@ -4,7 +4,7 @@ defmodule HuddlzWeb.CommunityComponents do
   """
   use Phoenix.Component
 
-  import HuddlzWeb.CoreComponents, only: [huddl_card: 1]
+  import HuddlzWeb.CoreComponents, only: [huddl_card: 1, avatar: 1]
 
   @doc """
   Renders a list of huddlz with empty state handling.
@@ -45,6 +45,7 @@ defmodule HuddlzWeb.CommunityComponents do
   def member_card(assigns) do
     ~H"""
     <div class="flex items-center gap-3 rounded-lg border p-3">
+      <.avatar user={@member} size={:sm} />
       <div class="flex-1">
         <p class="font-medium">
           {@member.display_name || "User"}

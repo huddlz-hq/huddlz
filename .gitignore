@@ -42,3 +42,6 @@ npm-debug.log
 .*.env
 
 .playwright-mcp/
+
+# User uploads (development only)
+/priv/static/uploads/

@@ -16,5 +16,12 @@ defmodule Huddlz.Accounts do
       define :get_by_email, action: :get_by_email, args: [:email]
       define :update_display_name, action: :update_display_name, args: [:display_name]
     end
+
+    resource Huddlz.Accounts.ProfilePicture do
+      define :create_profile_picture, action: :create
+      define :get_current_profile_picture, action: :get_current_for_user, args: [:user_id]
+      define :list_profile_pictures, action: :list_for_user, args: [:user_id]
+      define :delete_profile_picture, action: :destroy
+    end
   end
 end

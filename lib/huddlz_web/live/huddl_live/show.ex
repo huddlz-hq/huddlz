@@ -198,7 +198,10 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
           <div class="mt-8">
             <h3>Organized by</h3>
-            <p>{@huddl.creator.display_name || @huddl.creator.email}</p>
+            <div class="flex items-center gap-3 mt-2">
+              <.avatar user={@huddl.creator} size={:sm} />
+              <span>{@huddl.creator.display_name || @huddl.creator.email}</span>
+            </div>
           </div>
         </div>
       </div>

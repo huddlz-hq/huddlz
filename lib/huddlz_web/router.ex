@@ -24,7 +24,8 @@ defmodule HuddlzWeb.Router do
   scope "/", HuddlzWeb do
     pipe_through :browser
 
-    ash_authentication_live_session :authenticated_routes do
+    ash_authentication_live_session :authenticated_routes,
+      on_mount: {HuddlzWeb.LiveUserAuth, :load_profile_picture} do
       # in each liveview, add one of the following at the top of the module:
       #
       # If an authenticated user must be present:
