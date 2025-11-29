@@ -150,8 +150,22 @@ if config_env() == :prod do
   config :swoosh, :api_client, Swoosh.ApiClient.Req
 
   # Tigris S3 Storage - env vars set automatically by `fly storage create`
+  bucket_name =
+    System.get_env("BUCKET_NAME") ||
+      raise "environment variable BUCKET_NAME is missing"
+
+  aws_endpoint =
+    System.get_env("AWS_ENDPOINT_URL_S3") ||
+      raise "environment variable AWS_ENDPOINT_URL_S3 is missing"
+
+  # These are used by req_s3 for authentication
+  System.get_env("AWS_ACCESS_KEY_ID") ||
+    raise "environment variable AWS_ACCESS_KEY_ID is missing"
+
+  System.get_env("AWS_SECRET_ACCESS_KEY") ||
+    raise "environment variable AWS_SECRET_ACCESS_KEY is missing"
+
   config :huddlz, :storage,
-    adapter: :s3,
-    bucket: System.get_env("BUCKET_NAME"),
-    endpoint: System.get_env("AWS_ENDPOINT_URL_S3")
+    bucket: bucket_name,
+    endpoint: aws_endpoint
 end
