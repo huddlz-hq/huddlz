@@ -73,3 +73,24 @@ Feature: Profile Picture Management
       | alice@example.com   | /uploads/profile_pictures/alice/avatar.jpg        |
     When I visit the huddl "Test Huddl" page
     Then I should see the creator avatar with image
+
+  Scenario: Avatar shows initials after profile picture is removed
+    Given the following profile pictures exist:
+      | user_email          | storage_path                                      |
+      | alice@example.com   | /uploads/profile_pictures/alice/avatar.jpg        |
+    When I visit "/profile"
+    And I click "Remove"
+    Then I should see "Profile picture removed"
+    And I should see the avatar fallback showing initials
+
+  Scenario: Removing profile picture shows initials not previous picture
+    Given the following profile pictures exist:
+      | user_email          | storage_path                                      |
+      | alice@example.com   | /uploads/profile_pictures/alice/first.jpg        |
+    And the following profile pictures exist:
+      | user_email          | storage_path                                      |
+      | alice@example.com   | /uploads/profile_pictures/alice/second.jpg       |
+    When I visit "/profile"
+    And I click "Remove"
+    Then I should see "Profile picture removed"
+    And I should see the avatar fallback showing initials

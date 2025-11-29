@@ -393,6 +393,7 @@ defmodule Huddlz.Accounts.User do
     first :current_profile_picture_url, :profile_pictures, :storage_path do
       description "Returns the storage path of the user's current profile picture"
       sort inserted_at: :desc
+      filter expr(is_nil(deleted_at))
     end
   end
 

@@ -22,6 +22,7 @@ defmodule Huddlz.Accounts do
       define :get_current_profile_picture, action: :get_current_for_user, args: [:user_id]
       define :list_profile_pictures, action: :list_for_user, args: [:user_id]
       define :delete_profile_picture, action: :destroy
+      define :soft_delete_profile_picture, action: :soft_delete
     end
   end
 end
