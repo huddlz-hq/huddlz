@@ -495,7 +495,8 @@ defmodule HuddlzWeb.CoreComponents do
 
   defp get_avatar_url(nil), do: nil
 
-  defp get_avatar_url(%{current_profile_picture_url: url}) when is_binary(url) do
+  defp get_avatar_url(%{current_profile_picture_url: url})
+       when is_binary(url) and url != "" do
     ProfilePictures.url(url)
   end
 

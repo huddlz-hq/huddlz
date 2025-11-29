@@ -32,8 +32,11 @@ defmodule ProfilePictureSteps do
   # Then steps
   step "I should see the avatar fallback showing initials", context do
     # The avatar component shows initials when no profile picture is set
-    # Look for the avatar element with initials (not an img tag)
-    assert_has(context.session, "[class*='rounded-full']")
+    # Verify no profile picture image is shown in the main content area
+    session = context[:session] || context[:conn]
+    refute_has(session, "main img[src*='/uploads/profile_pictures/']")
+    # Verify we see the initials "AU" (Alice User) in the avatar
+    assert_has(session, "[class*='rounded-full']", text: "AU")
     context
   end
 

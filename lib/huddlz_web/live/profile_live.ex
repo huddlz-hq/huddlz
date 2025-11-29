@@ -413,31 +413,36 @@ defmodule HuddlzWeb.ProfileLive do
   def handle_event("remove_avatar", _params, socket) do
     user = socket.assigns.current_user
 
-    case Huddlz.Accounts.get_current_profile_picture(user.id, actor: user) do
-      {:ok, profile_picture} when not is_nil(profile_picture) ->
-        # Delete from storage
-        ProfilePictures.delete(profile_picture.storage_path)
+    # Soft-delete all profile pictures for the user
+    case soft_delete_all_profile_pictures(user) do
+      :ok ->
+        # Reload user to clear the profile picture
+        {:ok, updated_user} =
+          Ash.load(user, [:current_profile_picture_url], actor: user)
 
-        # Delete the record
-        case Huddlz.Accounts.delete_profile_picture(profile_picture, actor: user) do
-          :ok ->
-            # Reload user to clear the profile picture
-            {:ok, updated_user} =
-              Ash.load(user, [:current_profile_picture_url], actor: user)
+        {:noreply,
+         socket
+         |> put_flash(:info, "Profile picture removed")
+         |> assign(:current_user, updated_user)}
 
-            {:noreply,
-             socket
-             |> put_flash(:info, "Profile picture removed")
-             |> assign(:current_user, updated_user)}
+      {:error, _} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Failed to remove profile picture")}
+    end
+  end
 
-          {:error, _} ->
-            {:noreply,
-             socket
-             |> put_flash(:error, "Failed to remove profile picture")}
-        end
+  defp soft_delete_all_profile_pictures(user) do
+    case Huddlz.Accounts.list_profile_pictures(user.id, actor: user) do
+      {:ok, pictures} ->
+        Enum.each(pictures, fn picture ->
+          Huddlz.Accounts.soft_delete_profile_picture(picture, actor: user)
+        end)
 
-      _ ->
-        {:noreply, socket}
+        :ok
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -469,6 +474,9 @@ defmodule HuddlzWeb.ProfileLive do
   end
 
   defp handle_upload_result(socket, user, [{:success, metadata}]) do
+    # Soft-delete existing pictures before creating new one
+    soft_delete_all_profile_pictures(user)
+
     case create_profile_picture_record(user, metadata) do
       {:ok, _} ->
         {:noreply, reload_user_avatar(socket, user, "Profile picture updated successfully")}

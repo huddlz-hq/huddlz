@@ -11,6 +11,11 @@ defmodule Huddlz.Application do
       HuddlzWeb.Telemetry,
       Huddlz.Repo,
       {DNSCluster, query: Application.get_env(:huddlz, :dns_cluster_query) || :ignore},
+      {Oban,
+       AshOban.config(
+         Application.fetch_env!(:huddlz, :ash_domains),
+         Application.fetch_env!(:huddlz, Oban)
+       )},
       {Phoenix.PubSub, name: Huddlz.PubSub},
       # Start a worker by calling: Huddlz.Worker.start_link(arg)
       # {Huddlz.Worker, arg},
