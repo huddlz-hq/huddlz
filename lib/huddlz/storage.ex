@@ -22,38 +22,27 @@ defmodule Huddlz.Storage do
   @doc "Check if a file exists at the given path"
   @callback exists?(path) :: boolean()
 
+  @adapter Application.compile_env(:huddlz, [:storage, :adapter], Huddlz.Storage.S3)
+
   @doc """
   Store a file from source_path to storage_path.
   """
   def put(source_path, storage_path, content_type) do
-    adapter().put(source_path, storage_path, content_type)
+    @adapter.put(source_path, storage_path, content_type)
   end
 
   @doc """
   Delete a file at the given path.
   """
-  def delete(path) do
-    adapter().delete(path)
-  end
+  def delete(path), do: @adapter.delete(path)
 
   @doc """
   Get the public URL for a file.
   """
-  def url(path) do
-    adapter().url(path)
-  end
+  def url(path), do: @adapter.url(path)
 
   @doc """
   Check if a file exists.
   """
-  def exists?(path) do
-    adapter().exists?(path)
-  end
-
-  defp adapter do
-    case Application.get_env(:huddlz, :storage)[:adapter] do
-      :s3 -> Huddlz.Storage.S3
-      _ -> Huddlz.Storage.Local
-    end
-  end
+  def exists?(path), do: @adapter.exists?(path)
 end
