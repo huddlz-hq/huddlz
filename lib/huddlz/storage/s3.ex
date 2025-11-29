@@ -83,20 +83,12 @@ defmodule Huddlz.Storage.S3 do
   end
 
   defp bucket_name do
-    Application.get_env(:huddlz, :storage)[:bucket] ||
-      raise "Missing :bucket configuration for S3 storage"
+    Application.get_env(:huddlz, :storage)[:bucket]
   end
 
   defp endpoint_host do
-    endpoint = Application.get_env(:huddlz, :storage)[:endpoint]
-
-    if endpoint do
-      endpoint
-      |> String.replace_prefix("https://", "")
-      |> String.replace_prefix("http://", "")
-    else
-      "fly.storage.tigris.dev"
-    end
+    Application.get_env(:huddlz, :storage)[:endpoint]
+    |> String.replace_prefix("https://", "")
   end
 
   # Normalize path to S3 key format (no leading slash)
