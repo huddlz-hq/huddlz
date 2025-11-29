@@ -149,7 +149,7 @@ defmodule HuddlzWeb.GroupLive.Show do
 
           <div class="mt-8">
             <h3>Events</h3>
-
+            
     <!-- Tabs -->
             <div class="tabs tabs-boxed mt-4">
               <button
@@ -167,7 +167,7 @@ defmodule HuddlzWeb.GroupLive.Show do
                 Past Events
               </button>
             </div>
-
+            
     <!-- Tab Content -->
             <div class="mt-6">
               <%= if @active_tab == "upcoming" do %>
@@ -285,7 +285,10 @@ defmodule HuddlzWeb.GroupLive.Show do
   end
 
   defp get_group_by_slug(slug, actor) do
-    case Huddlz.Communities.get_by_slug(slug, actor: actor, load: [:owner]) do
+    case Huddlz.Communities.get_by_slug(slug,
+           actor: actor,
+           load: [owner: [:current_profile_picture_url]]
+         ) do
       {:ok, nil} -> {:error, :not_found}
       {:ok, group} -> {:ok, group}
       {:error, %Ash.Error.Query.NotFound{}} -> {:error, :not_found}

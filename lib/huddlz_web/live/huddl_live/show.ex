@@ -271,7 +271,12 @@ defmodule HuddlzWeb.HuddlLive.Show do
     # Get the huddl and verify it belongs to the group with the given slug
     case Huddl
          |> Ash.Query.filter(id == ^id)
-         |> Ash.Query.load([:status, :visible_virtual_link, :group, :creator])
+         |> Ash.Query.load([
+           :status,
+           :visible_virtual_link,
+           :group,
+           creator: [:current_profile_picture_url]
+         ])
          |> Ash.read_one(actor: user) do
       {:ok, nil} ->
         {:error, :not_found}
