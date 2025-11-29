@@ -87,8 +87,15 @@ config :phoenix_live_view,
 # To use SendGrid in development, comment out the line below and set SENDGRID_API_KEY
 config :swoosh, :api_client, false
 
-# Local file storage for development
-config :huddlz, :storage, adapter: :local
+config :huddlz, :storage, adapter: Huddlz.Storage.Local
+
+# To use S3/Tigris in development:
+# 1. Set BUCKET_NAME and AWS_ENDPOINT_URL_S3 environment variables
+# 2. Uncomment the config below and comment out the Local adapter above
+# config :huddlz, :storage,
+#   adapter: Huddlz.Storage.S3,
+#   bucket: System.get_env("BUCKET_NAME"),
+#   endpoint: System.get_env("AWS_ENDPOINT_URL_S3")
 
 # Optional: Enable SendGrid in development
 # if sendgrid_api_key = System.get_env("SENDGRID_API_KEY") do

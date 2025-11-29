@@ -48,4 +48,4 @@ config :huddlz, env: :test
 config :phoenix_test, :endpoint, HuddlzWeb.Endpoint
 
 # Local file storage for tests
-config :huddlz, :storage, adapter: :local
+config :huddlz, :storage, adapter: Huddlz.Storage.Local
