@@ -1,7 +1,9 @@
 defmodule Huddlz.Accounts.ProfilePictureTest do
   use Huddlz.DataCase, async: true
+  use Oban.Testing, repo: Huddlz.Repo
 
   alias Huddlz.Accounts
+  alias Huddlz.Accounts.ProfilePicture
   alias Huddlz.Accounts.User
 
   describe "create profile picture" do
@@ -266,6 +268,192 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
 
       {:ok, loaded_user} = Ash.load(user, [:current_profile_picture_url], actor: user)
       assert loaded_user.current_profile_picture_url == nil
+    end
+  end
+
+  describe "soft_delete action" do
+    test "soft-delete sets deleted_at timestamp" do
+      user =
+        Ash.Seed.seed!(User, %{
+          email: "user-softdelete@example.com",
+          display_name: "Soft Delete User",
+          role: :user
+        })
+
+      {:ok, picture} =
+        Accounts.create_profile_picture(
+          %{
+            filename: "to-soft-delete.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/profile_pictures/#{user.id}/to-soft-delete.jpg",
+            user_id: user.id
+          },
+          actor: user
+        )
+
+      assert is_nil(picture.deleted_at)
+
+      {:ok, soft_deleted} = Accounts.soft_delete_profile_picture(picture, actor: user)
+
+      assert not is_nil(soft_deleted.deleted_at)
+    end
+
+    test "soft-deleted pictures are excluded from current picture queries" do
+      user =
+        Ash.Seed.seed!(User, %{
+          email: "user-softdelete-exclude@example.com",
+          display_name: "Soft Delete Exclude User",
+          role: :user
+        })
+
+      {:ok, picture} =
+        Accounts.create_profile_picture(
+          %{
+            filename: "will-be-excluded.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/profile_pictures/#{user.id}/will-be-excluded.jpg",
+            user_id: user.id
+          },
+          actor: user
+        )
+
+      # Before soft-delete, picture is current
+      {:ok, current} = Accounts.get_current_profile_picture(user.id, actor: user)
+      assert current.id == picture.id
+
+      # After soft-delete, picture is excluded
+      {:ok, _} = Accounts.soft_delete_profile_picture(picture, actor: user)
+
+      assert {:error, %Ash.Error.Invalid{}} =
+               Accounts.get_current_profile_picture(user.id, actor: user)
+    end
+
+    test "soft-delete enqueues cleanup job" do
+      user =
+        Ash.Seed.seed!(User, %{
+          email: "user-oban-enqueue@example.com",
+          display_name: "Oban Enqueue User",
+          role: :user
+        })
+
+      {:ok, picture} =
+        Accounts.create_profile_picture(
+          %{
+            filename: "oban-test.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/profile_pictures/#{user.id}/oban-test.jpg",
+            user_id: user.id
+          },
+          actor: user
+        )
+
+      {:ok, _} = Accounts.soft_delete_profile_picture(picture, actor: user)
+
+      # Assert that a job was enqueued in the profile_picture_cleanup queue
+      assert_enqueued(
+        worker: Huddlz.Workers.ProfilePictureCleanup,
+        queue: :profile_picture_cleanup
+      )
+    end
+
+    test "users cannot soft-delete other users' profile pictures" do
+      user1 =
+        Ash.Seed.seed!(User, %{
+          email: "user1-softdelete@example.com",
+          display_name: "User One Soft",
+          role: :user
+        })
+
+      user2 =
+        Ash.Seed.seed!(User, %{
+          email: "user2-softdelete@example.com",
+          display_name: "User Two Soft",
+          role: :user
+        })
+
+      {:ok, picture} =
+        Accounts.create_profile_picture(
+          %{
+            filename: "user2-pic.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/profile_pictures/#{user2.id}/user2-pic.jpg",
+            user_id: user2.id
+          },
+          actor: user2
+        )
+
+      assert_raise Ash.Error.Forbidden, fn ->
+        Accounts.soft_delete_profile_picture!(picture, actor: user1)
+      end
+    end
+  end
+
+  describe "hard_delete action (background cleanup)" do
+    test "hard_delete removes record from database" do
+      user =
+        Ash.Seed.seed!(User, %{
+          email: "user-harddelete@example.com",
+          display_name: "Hard Delete User",
+          role: :user
+        })
+
+      {:ok, picture} =
+        Accounts.create_profile_picture(
+          %{
+            filename: "to-hard-delete.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/profile_pictures/#{user.id}/to-hard-delete.jpg",
+            user_id: user.id
+          },
+          actor: user
+        )
+
+      # Soft-delete first (simulates real flow)
+      {:ok, soft_deleted} = Accounts.soft_delete_profile_picture(picture, actor: user)
+
+      # Hard delete (as background job would do - no actor)
+      assert :ok = Ash.destroy(soft_deleted, action: :hard_delete)
+
+      # Record should be completely gone
+      assert {:error, _} = Ash.get(ProfilePicture, picture.id, action: :read)
+    end
+
+    test "running the cleanup job deletes soft-deleted picture from storage and database" do
+      user =
+        Ash.Seed.seed!(User, %{
+          email: "user-cleanup-job@example.com",
+          display_name: "Cleanup Job User",
+          role: :user
+        })
+
+      storage_path = "/uploads/profile_pictures/#{user.id}/cleanup-job-test.jpg"
+
+      {:ok, picture} =
+        Accounts.create_profile_picture(
+          %{
+            filename: "cleanup-job-test.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: storage_path,
+            user_id: user.id
+          },
+          actor: user
+        )
+
+      # Soft-delete enqueues the job
+      {:ok, _} = Accounts.soft_delete_profile_picture(picture, actor: user)
+
+      # Drain the queue to run the job
+      # This will execute the hard_delete action which deletes from storage
+      Oban.drain_queue(queue: :profile_picture_cleanup)
+
+      # Record should be gone from database
+      assert {:error, _} = Ash.get(ProfilePicture, picture.id, action: :read)
     end
   end
 end
