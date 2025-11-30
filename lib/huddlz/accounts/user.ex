@@ -390,8 +390,8 @@ defmodule Huddlz.Accounts.User do
   end
 
   aggregates do
-    first :current_profile_picture_url, :profile_pictures, :storage_path do
-      description "Returns the storage path of the user's current profile picture"
+    first :current_profile_picture_url, :profile_pictures, :thumbnail_path do
+      description "Returns the thumbnail path of the user's current profile picture"
       sort inserted_at: :desc
       filter expr(is_nil(deleted_at))
     end

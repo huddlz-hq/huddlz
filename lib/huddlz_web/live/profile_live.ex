@@ -457,14 +457,15 @@ defmodule HuddlzWeb.ProfileLive do
 
   defp store_avatar_file(path, entry, user_id) do
     case ProfilePictures.store(path, entry.client_name, entry.client_type, user_id) do
-      {:ok, storage_path} ->
+      {:ok, %{storage_path: storage_path, thumbnail_path: thumbnail_path, size_bytes: size_bytes}} ->
         {:ok,
          {:success,
           %{
             storage_path: storage_path,
+            thumbnail_path: thumbnail_path,
             filename: entry.client_name,
             content_type: entry.client_type,
-            size_bytes: entry.client_size
+            size_bytes: size_bytes
           }}}
 
       {:error, reason} ->
@@ -502,6 +503,7 @@ defmodule HuddlzWeb.ProfileLive do
         content_type: metadata.content_type,
         size_bytes: metadata.size_bytes,
         storage_path: metadata.storage_path,
+        thumbnail_path: metadata.thumbnail_path,
         user_id: user.id
       },
       actor: user

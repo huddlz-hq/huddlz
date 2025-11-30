@@ -25,6 +25,34 @@ Huddlz is under active development. The landing page with huddl listings has bee
 - **Database**: PostgreSQL
 - **Testing**: Cucumber/Gherkin for behavior-driven development
 
+## Dependencies
+
+### System Dependencies
+
+**macOS:**
+```bash
+brew bundle  # or: brew install vips
+```
+
+**Ubuntu/Debian:**
+```bash
+apt install libvips-dev
+```
+
+**Fedora:**
+```bash
+dnf install vips-devel
+```
+
+### Language Runtimes
+
+This project uses [mise](https://mise.jdx.dev/) for version management:
+```bash
+mise install
+```
+
+This installs Elixir 1.19.3 (OTP 28) and Erlang 28.1.1 as specified in `.mise.toml`.
+
 ## Getting Started
 
 To start your Phoenix server:

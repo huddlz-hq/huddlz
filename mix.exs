@@ -84,6 +84,7 @@ defmodule Huddlz.MixProject do
       {:swoosh, "~> 1.16"},
       {:req, "~> 0.5"},
       {:req_s3, "~> 0.2"},
+      {:image, "~> 0.62"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 1.0.2"},
