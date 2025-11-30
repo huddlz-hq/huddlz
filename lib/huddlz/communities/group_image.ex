@@ -211,8 +211,12 @@ defmodule Huddlz.Communities.GroupImage do
     end
 
     # Group owners can soft-delete their group's images
+    # For pending images (no group), any authenticated user can soft-delete
     policy action(:soft_delete) do
-      description "Only group owners can soft-delete their group's images"
+      description "Group owners can soft-delete their group's images; authenticated users can soft-delete pending images"
+      # Allow if the image has no group (pending) and actor is present
+      authorize_if expr(is_nil(group_id) and not is_nil(^actor(:id)))
+      # Allow if the actor is the owner of the group
       authorize_if relates_to_actor_via([:group, :owner])
     end
 
