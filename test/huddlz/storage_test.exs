@@ -83,7 +83,7 @@ defmodule Huddlz.StorageTest do
       {:ok, test_id: test_id, user_id: user_id}
     end
 
-    test "store/4 stores file from source path and returns storage path", %{
+    test "store/4 stores file from source path and returns storage metadata", %{
       test_id: test_id,
       user_id: user_id
     } do
@@ -99,17 +99,27 @@ defmodule Huddlz.StorageTest do
       on_exit(fn -> File.rm(temp_path) end)
 
       # Call store with (source_path, original_filename, content_type, user_id)
-      assert {:ok, storage_path} =
+      assert {:ok, metadata} =
                ProfilePictures.store(temp_path, "avatar.png", "image/png", user_id)
 
-      # Verify the storage path format
+      # Verify the metadata structure
+      assert %{storage_path: storage_path, thumbnail_path: thumbnail_path, size_bytes: size} =
+               metadata
+
       assert storage_path =~ "/uploads/profile_pictures/#{user_id}/"
       assert storage_path =~ ~r/\.png$/
+      assert thumbnail_path =~ "/uploads/profile_pictures/#{user_id}/"
+      assert thumbnail_path =~ ~r/_thumb\.jpg$/
+      assert size == byte_size(png_content)
 
-      # Verify the file was actually copied
+      # Verify the original file was stored
       full_path = Path.join("priv/static", storage_path)
       assert File.exists?(full_path)
       assert File.read!(full_path) == png_content
+
+      # Verify the thumbnail was stored
+      thumb_full_path = Path.join("priv/static", thumbnail_path)
+      assert File.exists?(thumb_full_path)
     end
 
     test "store/4 rejects invalid file extensions", %{test_id: test_id, user_id: user_id} do

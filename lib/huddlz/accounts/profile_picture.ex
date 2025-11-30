@@ -46,7 +46,7 @@ defmodule Huddlz.Accounts.ProfilePicture do
     create :create do
       description "Upload a new profile picture for a user"
       primary? true
-      accept [:filename, :content_type, :size_bytes, :storage_path, :user_id]
+      accept [:filename, :content_type, :size_bytes, :storage_path, :thumbnail_path, :user_id]
     end
 
     read :get_current_for_user do
@@ -87,10 +87,18 @@ defmodule Huddlz.Accounts.ProfilePicture do
         Ash.Changeset.before_action(changeset, fn changeset ->
           record = changeset.data
 
+          # Delete original
           case ProfilePictures.delete(record.storage_path) do
-            :ok -> changeset
+            :ok -> :ok
             {:error, reason} -> raise "Storage delete failed: #{inspect(reason)}"
           end
+
+          # Delete thumbnail (if exists) - ignore errors for orphaned thumbnails
+          if record.thumbnail_path do
+            ProfilePictures.delete(record.thumbnail_path)
+          end
+
+          changeset
         end)
       end
     end
@@ -155,7 +163,13 @@ defmodule Huddlz.Accounts.ProfilePicture do
     attribute :storage_path, :string do
       allow_nil? false
       public? true
-      description "Path to the file in the storage system (S3, local, etc.)"
+      description "Path to the original file in the storage system (S3, local, etc.)"
+    end
+
+    attribute :thumbnail_path, :string do
+      allow_nil? true
+      public? true
+      description "Path to the resized thumbnail in storage"
     end
 
     create_timestamp :inserted_at

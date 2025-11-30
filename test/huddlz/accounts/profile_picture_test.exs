@@ -232,7 +232,7 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
   end
 
   describe "current_profile_picture_url calculation" do
-    test "returns storage path of most recent profile picture" do
+    test "returns thumbnail path of most recent profile picture" do
       user =
         Ash.Seed.seed!(User, %{
           email: "user-calc@example.com",
@@ -241,6 +241,7 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
         })
 
       storage_path = "/uploads/profile_pictures/#{user.id}/latest.jpg"
+      thumbnail_path = "/uploads/profile_pictures/#{user.id}/latest_thumb.jpg"
 
       {:ok, _picture} =
         Accounts.create_profile_picture(
@@ -249,13 +250,14 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
             content_type: "image/jpeg",
             size_bytes: 1000,
             storage_path: storage_path,
+            thumbnail_path: thumbnail_path,
             user_id: user.id
           },
           actor: user
         )
 
       {:ok, loaded_user} = Ash.load(user, [:current_profile_picture_url], actor: user)
-      assert loaded_user.current_profile_picture_url == storage_path
+      assert loaded_user.current_profile_picture_url == thumbnail_path
     end
 
     test "returns nil when user has no profile picture" do

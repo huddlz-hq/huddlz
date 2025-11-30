@@ -1,9 +1,10 @@
 defmodule Huddlz.Storage.ProfilePictures do
   @moduledoc """
   High-level helper for profile picture storage operations.
-  Handles path generation, validation, and storage.
+  Handles path generation, validation, thumbnail creation, and storage.
   """
 
+  alias Huddlz.ImageProcessing
   alias Huddlz.Storage
 
   @prefix "profile_pictures"
@@ -12,7 +13,8 @@ defmodule Huddlz.Storage.ProfilePictures do
 
   @doc """
   Store a profile picture for a user from a source file path.
-  Returns {:ok, storage_path} or {:error, reason}.
+  Creates a thumbnail and stores both original and thumbnail.
+  Returns {:ok, %{storage_path: ..., thumbnail_path: ..., size_bytes: ...}} or {:error, reason}.
 
   ## Parameters
   - source_path: Path to the temp file from upload
@@ -24,8 +26,34 @@ defmodule Huddlz.Storage.ProfilePictures do
     with :ok <- validate_extension(original_filename),
          {:ok, %{size: size}} <- File.stat(source_path),
          :ok <- validate_file_size(size),
-         storage_path <- generate_path(user_id, original_filename) do
-      Storage.put(source_path, storage_path, content_type)
+         {:ok, image_binary} <- File.read(source_path),
+         {:ok, thumbnail_binary} <- ImageProcessing.create_thumbnail(image_binary),
+         storage_path = generate_path(user_id, original_filename),
+         thumbnail_path = generate_thumbnail_path(storage_path),
+         {:ok, _} <- Storage.put(source_path, storage_path, content_type),
+         :ok <- store_thumbnail(thumbnail_binary, thumbnail_path) do
+      {:ok,
+       %{
+         storage_path: storage_path,
+         thumbnail_path: thumbnail_path,
+         size_bytes: size
+       }}
+    end
+  end
+
+  defp store_thumbnail(binary, path) do
+    # Write thumbnail to a temp file, then store it
+    temp_path = Path.join(System.tmp_dir!(), "thumb_#{:erlang.unique_integer([:positive])}.jpg")
+
+    try do
+      File.write!(temp_path, binary)
+
+      case Storage.put(temp_path, path, "image/jpeg") do
+        {:ok, _} -> :ok
+        {:error, reason} -> {:error, reason}
+      end
+    after
+      File.rm(temp_path)
     end
   end
 
@@ -52,6 +80,14 @@ defmodule Huddlz.Storage.ProfilePictures do
     ext = Path.extname(original_filename) |> String.downcase()
     uuid = Ecto.UUID.generate()
     "/uploads/#{@prefix}/#{user_id}/#{uuid}#{ext}"
+  end
+
+  @doc """
+  Generate the thumbnail path from an original storage path.
+  Replaces the extension with _thumb.jpg
+  """
+  def generate_thumbnail_path(original_path) do
+    String.replace(original_path, ~r/\.\w+$/, "_thumb.jpg")
   end
 
   @doc """

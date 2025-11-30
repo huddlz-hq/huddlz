@@ -14,12 +14,17 @@ defmodule ProfilePictureSteps do
     for row <- context.datatable.maps do
       user = Huddlz.Repo.get_by!(User, email: row["user_email"])
 
+      storage_path = row["storage_path"]
+      # Generate thumbnail path from storage path (same pattern as real uploads)
+      thumbnail_path = String.replace(storage_path, ~r/\.\w+$/, "_thumb.jpg")
+
       Accounts.create_profile_picture!(
         %{
           filename: "avatar.jpg",
           content_type: "image/jpeg",
           size_bytes: 1000,
-          storage_path: row["storage_path"],
+          storage_path: storage_path,
+          thumbnail_path: thumbnail_path,
           user_id: user.id
         },
         actor: user
@@ -32,9 +37,9 @@ defmodule ProfilePictureSteps do
   # Then steps
   step "I should see the avatar fallback showing initials", context do
     # The avatar component shows initials when no profile picture is set
-    # Verify no profile picture image is shown in the main content area
+    # Verify no thumbnail image is shown in the main content area
     session = context[:session] || context[:conn]
-    refute_has(session, "main img[src*='/uploads/profile_pictures/']")
+    refute_has(session, "main img[src*='_thumb.jpg']")
     # Verify we see the initials "AU" (Alice User) in the avatar
     assert_has(session, "[class*='rounded-full']", text: "AU")
     context
@@ -42,7 +47,8 @@ defmodule ProfilePictureSteps do
 
   step "I should see the navbar avatar with image", context do
     # The navbar avatar should contain an img tag when user has profile picture
-    assert_has(context.session, "header img[src*='/uploads/profile_pictures/']")
+    # Now looking for thumbnail paths which end with _thumb.jpg
+    assert_has(context.session, "header img[src*='_thumb.jpg']")
     context
   end
 
@@ -55,16 +61,18 @@ defmodule ProfilePictureSteps do
 
   step "I should see the member avatar with image", context do
     # The member section should contain an img tag when user has profile picture
+    # Now looking for thumbnail paths which end with _thumb.jpg
     session = context[:session] || context[:conn]
-    assert_has(session, "main img[src*='/uploads/profile_pictures/']")
+    assert_has(session, "main img[src*='_thumb.jpg']")
     context
   end
 
   step "I should see the owner avatar with image", context do
     # The owner in Group Details section should show profile picture image
     # The owner section is in a definition list (dl) with "Owner" label
+    # Now looking for thumbnail paths which end with _thumb.jpg
     session = context[:session] || context[:conn]
-    assert_has(session, "dd img[src*='/uploads/profile_pictures/']")
+    assert_has(session, "dd img[src*='_thumb.jpg']")
     context
   end
 
@@ -102,9 +110,10 @@ defmodule ProfilePictureSteps do
 
   step "I should see the creator avatar with image", context do
     # The creator/organizer section should show profile picture image
+    # Now looking for thumbnail paths which end with _thumb.jpg
     session = context[:session] || context[:conn]
     # Look for the "Organized by" section which contains the creator avatar
-    assert_has(session, "main img[src*='/uploads/profile_pictures/']")
+    assert_has(session, "main img[src*='_thumb.jpg']")
     context
   end
 end
