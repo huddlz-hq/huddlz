@@ -103,15 +103,21 @@ defmodule HuddlzWeb.GroupLive.Show do
       </.header>
 
       <div class="mt-8">
-        <%= if @group.current_image_url do %>
-          <div class="mb-6">
+        <div class="mb-6">
+          <%= if @group.current_image_url do %>
             <img
               src={GroupImages.url(@group.current_image_url)}
               alt={@group.name}
               class="w-full max-w-2xl aspect-video object-cover rounded-lg shadow-lg"
             />
-          </div>
-        <% end %>
+          <% else %>
+            <div class="w-full max-w-2xl aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg shadow-lg flex items-center justify-center">
+              <span class="text-4xl font-bold text-base-content/40 text-center px-8 line-clamp-2">
+                {@group.name}
+              </span>
+            </div>
+          <% end %>
+        </div>
 
         <div class="prose max-w-none">
           <div class="grid gap-6 md:grid-cols-2">

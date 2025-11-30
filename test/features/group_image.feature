@@ -125,10 +125,11 @@ Feature: Group Image Management
     When I visit the group page for "Display Image Group"
     Then I should see the group image
 
-  Scenario: Group without image shows placeholder
+  Scenario: Group without image shows placeholder with group name
     Given a public group "No Image Display Group" exists with owner "owner@example.com"
     When I visit the group page for "No Image Display Group"
     Then I should not see the group image
+    And I should see the group name "No Image Display Group" in the placeholder
 
   # ===== Permissions =====
 
