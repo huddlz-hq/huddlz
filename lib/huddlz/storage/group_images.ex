@@ -44,6 +44,35 @@ defmodule Huddlz.Storage.GroupImages do
     end
   end
 
+  @doc """
+  Store a pending group image (no group_id yet).
+  Creates a thumbnail and stores both original and thumbnail in a pending path.
+  Returns {:ok, %{storage_path: ..., thumbnail_path: ..., size_bytes: ...}} or {:error, reason}.
+
+  ## Parameters
+  - source_path: Path to the temp file from upload
+  - original_filename: Original filename from the client
+  - content_type: MIME type of the file
+  """
+  def store_pending(source_path, original_filename, content_type) do
+    with :ok <- validate_extension(original_filename),
+         {:ok, %{size: size}} <- File.stat(source_path),
+         :ok <- validate_file_size(size),
+         {:ok, image_binary} <- File.read(source_path),
+         {:ok, thumbnail_binary} <- ImageProcessing.create_banner_thumbnail(image_binary),
+         storage_path = generate_pending_path(original_filename),
+         thumbnail_path = generate_thumbnail_path(storage_path),
+         {:ok, _} <- Storage.put(source_path, storage_path, content_type),
+         :ok <- store_thumbnail(thumbnail_binary, thumbnail_path) do
+      {:ok,
+       %{
+         storage_path: storage_path,
+         thumbnail_path: thumbnail_path,
+         size_bytes: size
+       }}
+    end
+  end
+
   defp store_thumbnail(binary, path) do
     # Write thumbnail to a temp file, then store it
     temp_path = Path.join(System.tmp_dir!(), "thumb_#{:erlang.unique_integer([:positive])}.jpg")
@@ -83,6 +112,16 @@ defmodule Huddlz.Storage.GroupImages do
     ext = Path.extname(original_filename) |> String.downcase()
     uuid = Ecto.UUID.generate()
     "/uploads/#{@prefix}/#{group_id}/#{uuid}#{ext}"
+  end
+
+  @doc """
+  Generate a unique storage path for a pending group image.
+  Format: /uploads/group_images/pending/{uuid}.{ext}
+  """
+  def generate_pending_path(original_filename) do
+    ext = Path.extname(original_filename) |> String.downcase()
+    uuid = Ecto.UUID.generate()
+    "/uploads/#{@prefix}/pending/#{uuid}#{ext}"
   end
 
   @doc """

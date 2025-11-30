@@ -36,8 +36,11 @@ defmodule Huddlz.Communities do
 
     resource Huddlz.Communities.GroupImage do
       define :create_group_image, action: :create
+      define :create_pending_group_image, action: :create_pending
+      define :assign_group_image_to_group, action: :assign_to_group, args: [:group_id]
       define :get_current_group_image, action: :get_current_for_group, args: [:group_id]
       define :list_group_images, action: :list_for_group, args: [:group_id]
+      define :get_orphaned_pending_images, action: :orphaned_pending
       define :delete_group_image, action: :destroy
       define :soft_delete_group_image, action: :soft_delete
     end

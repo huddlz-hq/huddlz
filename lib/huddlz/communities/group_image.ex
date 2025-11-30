@@ -37,6 +37,16 @@ defmodule Huddlz.Communities.GroupImage do
         log_final_error? true
         worker_module_name Huddlz.Workers.GroupImageCleanup
       end
+
+      trigger :cleanup_orphaned_images do
+        action :cleanup_orphaned
+        # Run every hour to clean up pending images older than 24 hours
+        scheduler_cron "0 * * * *"
+        queue :group_image_cleanup
+        read_action :orphaned_pending
+        worker_module_name Huddlz.Workers.GroupImageOrphanedCleanup
+        scheduler_module_name Huddlz.Workers.GroupImageOrphanedCleanupScheduler
+      end
     end
   end
 
@@ -47,6 +57,12 @@ defmodule Huddlz.Communities.GroupImage do
       description "Upload a new image for a group"
       primary? true
       accept [:filename, :content_type, :size_bytes, :storage_path, :thumbnail_path, :group_id]
+    end
+
+    create :create_pending do
+      description "Create a pending image during eager upload (group_id = nil)"
+      accept [:filename, :content_type, :size_bytes, :storage_path, :thumbnail_path]
+      # group_id intentionally not accepted - stays nil for pending images
     end
 
     read :get_current_for_group do
@@ -77,6 +93,49 @@ defmodule Huddlz.Communities.GroupImage do
       accept []
       change set_attribute(:deleted_at, &DateTime.utc_now/0)
       change run_oban_trigger(:cleanup_storage)
+    end
+
+    update :assign_to_group do
+      description "Assign a pending image to a group"
+
+      argument :group_id, :uuid do
+        allow_nil? false
+      end
+
+      validate attributes_absent(:group_id),
+        message: "can only assign unassigned images"
+
+      change set_attribute(:group_id, arg(:group_id))
+    end
+
+    read :orphaned_pending do
+      description "Find pending images (no group_id) older than 24 hours"
+      filter expr(is_nil(group_id) and inserted_at < ago(24, :hour))
+      pagination keyset?: true
+    end
+
+    destroy :cleanup_orphaned do
+      description "Delete orphaned pending image and its storage files"
+      require_atomic? false
+
+      change fn changeset, _context ->
+        Ash.Changeset.before_action(changeset, fn changeset ->
+          record = changeset.data
+
+          # Delete original
+          case GroupImages.delete(record.storage_path) do
+            :ok -> :ok
+            {:error, reason} -> raise "Storage delete failed: #{inspect(reason)}"
+          end
+
+          # Delete thumbnail if exists
+          if record.thumbnail_path do
+            GroupImages.delete(record.thumbnail_path)
+          end
+
+          changeset
+        end)
+      end
     end
 
     destroy :hard_delete do
@@ -114,6 +173,30 @@ defmodule Huddlz.Communities.GroupImage do
     policy action(:create) do
       description "Only group owners can upload images for their groups"
       authorize_if Huddlz.Communities.GroupImage.Checks.IsGroupOwner
+    end
+
+    # Any authenticated user can create pending images (no group yet)
+    policy action(:create_pending) do
+      description "Authenticated users can create pending images"
+      authorize_if actor_present()
+    end
+
+    # Group owners can assign pending images to their groups
+    policy action(:assign_to_group) do
+      description "Only group owners can assign images to their groups"
+      authorize_if Huddlz.Communities.GroupImage.Checks.IsGroupOwner
+    end
+
+    # Cleanup runs without actor (Oban job)
+    policy action(:cleanup_orphaned) do
+      description "Orphan cleanup is called by background jobs"
+      authorize_if always()
+    end
+
+    # Read orphaned pending doesn't need authorization - used by Oban
+    policy action(:orphaned_pending) do
+      description "Read orphaned pending images for cleanup"
+      authorize_if always()
     end
 
     # Anyone can read group images (they're public)
@@ -185,7 +268,8 @@ defmodule Huddlz.Communities.GroupImage do
   relationships do
     belongs_to :group, Huddlz.Communities.Group do
       attribute_type :uuid
-      allow_nil? false
+      # Allow nil for pending images (not yet assigned to a group)
+      allow_nil? true
       public? true
     end
   end

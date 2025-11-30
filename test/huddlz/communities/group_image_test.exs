@@ -547,4 +547,318 @@ defmodule Huddlz.Communities.GroupImageTest do
       assert reloaded_group.current_image_url == nil
     end
   end
+
+  describe "create_pending action (eager upload)" do
+    test "any authenticated user can create a pending image" do
+      user =
+        Ash.Seed.seed!(User, %{
+          email: "pending-user@example.com",
+          display_name: "Pending User",
+          role: :user
+        })
+
+      attrs = %{
+        filename: "pending.jpg",
+        content_type: "image/jpeg",
+        size_bytes: 50_000,
+        storage_path: "/uploads/group_images/pending/test-uuid.jpg",
+        thumbnail_path: "/uploads/group_images/pending/test-uuid_thumb.jpg"
+      }
+
+      assert {:ok, pending_image} = Communities.create_pending_group_image(attrs, actor: user)
+      assert pending_image.filename == "pending.jpg"
+      assert pending_image.group_id == nil
+    end
+
+    test "pending images have nil group_id" do
+      user =
+        Ash.Seed.seed!(User, %{
+          email: "pending-nil-group@example.com",
+          display_name: "Pending Nil Group",
+          role: :user
+        })
+
+      {:ok, pending_image} =
+        Communities.create_pending_group_image(
+          %{
+            filename: "no-group.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/group_images/pending/no-group.jpg"
+          },
+          actor: user
+        )
+
+      assert is_nil(pending_image.group_id)
+    end
+
+    test "pending images are excluded from get_current_for_group" do
+      owner =
+        Ash.Seed.seed!(User, %{
+          email: "owner-pending-exclude@example.com",
+          display_name: "Pending Exclude Owner",
+          role: :user
+        })
+
+      group =
+        Ash.Seed.seed!(Group, %{
+          name: "Test Group Pending Exclude",
+          slug: "test-group-pending-exclude",
+          is_public: true,
+          owner_id: owner.id
+        })
+
+      # Create a pending image (not assigned to the group)
+      {:ok, _pending} =
+        Communities.create_pending_group_image(
+          %{
+            filename: "pending.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/group_images/pending/pending.jpg"
+          },
+          actor: owner
+        )
+
+      # Should not find any current image for the group
+      assert {:error, %Ash.Error.Invalid{}} =
+               Communities.get_current_group_image(group.id, actor: owner)
+    end
+  end
+
+  describe "assign_to_group action" do
+    test "group owner can assign a pending image to their group" do
+      owner =
+        Ash.Seed.seed!(User, %{
+          email: "owner-assign@example.com",
+          display_name: "Assign Owner",
+          role: :user
+        })
+
+      group =
+        Ash.Seed.seed!(Group, %{
+          name: "Test Group Assign",
+          slug: "test-group-assign",
+          is_public: true,
+          owner_id: owner.id
+        })
+
+      {:ok, pending_image} =
+        Communities.create_pending_group_image(
+          %{
+            filename: "to-assign.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/group_images/pending/to-assign.jpg"
+          },
+          actor: owner
+        )
+
+      assert is_nil(pending_image.group_id)
+
+      {:ok, assigned_image} =
+        Communities.assign_group_image_to_group(pending_image, group.id, actor: owner)
+
+      assert assigned_image.group_id == group.id
+    end
+
+    test "non-owner cannot assign image to group they don't own" do
+      owner =
+        Ash.Seed.seed!(User, %{
+          email: "owner-assign-block@example.com",
+          display_name: "Assign Block Owner",
+          role: :user
+        })
+
+      other_user =
+        Ash.Seed.seed!(User, %{
+          email: "other-assign-block@example.com",
+          display_name: "Other Assign Block",
+          role: :user
+        })
+
+      group =
+        Ash.Seed.seed!(Group, %{
+          name: "Test Group Assign Block",
+          slug: "test-group-assign-block",
+          is_public: true,
+          owner_id: owner.id
+        })
+
+      {:ok, pending_image} =
+        Communities.create_pending_group_image(
+          %{
+            filename: "blocked.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/group_images/pending/blocked.jpg"
+          },
+          actor: other_user
+        )
+
+      assert_raise Ash.Error.Forbidden, fn ->
+        Communities.assign_group_image_to_group!(pending_image, group.id, actor: other_user)
+      end
+    end
+
+    test "cannot assign an already assigned image" do
+      owner =
+        Ash.Seed.seed!(User, %{
+          email: "owner-double-assign@example.com",
+          display_name: "Double Assign Owner",
+          role: :user
+        })
+
+      group1 =
+        Ash.Seed.seed!(Group, %{
+          name: "Test Group Double Assign 1",
+          slug: "test-group-double-assign-1",
+          is_public: true,
+          owner_id: owner.id
+        })
+
+      group2 =
+        Ash.Seed.seed!(Group, %{
+          name: "Test Group Double Assign 2",
+          slug: "test-group-double-assign-2",
+          is_public: true,
+          owner_id: owner.id
+        })
+
+      {:ok, pending_image} =
+        Communities.create_pending_group_image(
+          %{
+            filename: "double.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/group_images/pending/double.jpg"
+          },
+          actor: owner
+        )
+
+      # First assignment succeeds
+      {:ok, assigned_image} =
+        Communities.assign_group_image_to_group(pending_image, group1.id, actor: owner)
+
+      # Second assignment fails
+      assert {:error, %Ash.Error.Invalid{}} =
+               Communities.assign_group_image_to_group(assigned_image, group2.id, actor: owner)
+    end
+  end
+
+  describe "orphaned_pending action" do
+    test "finds pending images older than 24 hours" do
+      user =
+        Ash.Seed.seed!(User, %{
+          email: "orphan-test@example.com",
+          display_name: "Orphan Test",
+          role: :user
+        })
+
+      # Create a pending image and manually backdate it
+      {:ok, pending_image} =
+        Communities.create_pending_group_image(
+          %{
+            filename: "orphaned.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/group_images/pending/orphaned-#{System.unique_integer()}.jpg"
+          },
+          actor: user
+        )
+
+      # Backdate the image to 25 hours ago
+      old_time = DateTime.add(DateTime.utc_now(), -25, :hour)
+      {:ok, uuid_binary} = Ecto.UUID.dump(pending_image.id)
+
+      Huddlz.Repo.query!(
+        "UPDATE group_images SET inserted_at = $1 WHERE id = $2",
+        [old_time, uuid_binary]
+      )
+
+      # Query for orphaned images (uses Ash without actor for Oban context)
+      orphaned =
+        GroupImage
+        |> Ash.Query.for_read(:orphaned_pending)
+        |> Ash.read!(page: [limit: 100])
+
+      assert Enum.any?(orphaned.results, fn img -> img.id == pending_image.id end)
+    end
+
+    test "does not find pending images less than 24 hours old" do
+      user =
+        Ash.Seed.seed!(User, %{
+          email: "recent-orphan@example.com",
+          display_name: "Recent Orphan",
+          role: :user
+        })
+
+      {:ok, pending_image} =
+        Communities.create_pending_group_image(
+          %{
+            filename: "recent.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/group_images/pending/recent-#{System.unique_integer()}.jpg"
+          },
+          actor: user
+        )
+
+      orphaned =
+        GroupImage
+        |> Ash.Query.for_read(:orphaned_pending)
+        |> Ash.read!(page: [limit: 100])
+
+      refute Enum.any?(orphaned.results, fn img -> img.id == pending_image.id end)
+    end
+
+    test "does not find assigned images even if old" do
+      owner =
+        Ash.Seed.seed!(User, %{
+          email: "assigned-old@example.com",
+          display_name: "Assigned Old",
+          role: :user
+        })
+
+      group =
+        Ash.Seed.seed!(Group, %{
+          name: "Test Group Assigned Old",
+          slug: "test-group-assigned-old",
+          is_public: true,
+          owner_id: owner.id
+        })
+
+      {:ok, pending_image} =
+        Communities.create_pending_group_image(
+          %{
+            filename: "assigned-old.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path:
+              "/uploads/group_images/pending/assigned-old-#{System.unique_integer()}.jpg"
+          },
+          actor: owner
+        )
+
+      # Assign to group
+      {:ok, assigned_image} =
+        Communities.assign_group_image_to_group(pending_image, group.id, actor: owner)
+
+      # Backdate the image
+      old_time = DateTime.add(DateTime.utc_now(), -25, :hour)
+      {:ok, uuid_binary} = Ecto.UUID.dump(assigned_image.id)
+
+      Huddlz.Repo.query!(
+        "UPDATE group_images SET inserted_at = $1 WHERE id = $2",
+        [old_time, uuid_binary]
+      )
+
+      orphaned =
+        GroupImage
+        |> Ash.Query.for_read(:orphaned_pending)
+        |> Ash.read!(page: [limit: 100])
+
+      refute Enum.any?(orphaned.results, fn img -> img.id == assigned_image.id end)
+    end
+  end
 end
