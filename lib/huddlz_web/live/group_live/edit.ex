@@ -4,6 +4,8 @@ defmodule HuddlzWeb.GroupLive.Edit do
   """
   use HuddlzWeb, :live_view
 
+  alias Huddlz.Communities
+  alias Huddlz.Communities.GroupImage
   alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
 
@@ -48,12 +50,97 @@ defmodule HuddlzWeb.GroupLive.Edit do
     |> assign(:original_slug, group.slug)
     |> assign(:slug_changed, false)
     |> assign(:image_error, nil)
+    |> assign(:pending_image_id, nil)
+    |> assign(:pending_preview_url, nil)
+    |> assign(:upload_processing, false)
     |> allow_upload(:group_image,
       accept: ~w(.jpg .jpeg .png .webp),
       max_entries: 1,
-      max_file_size: 5_000_000
+      max_file_size: 5_000_000,
+      auto_upload: true,
+      progress: &handle_upload_progress/3
     )
   end
+
+  defp handle_upload_progress(:group_image, entry, socket) do
+    if entry.done? do
+      {:noreply, process_eager_upload(socket)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  defp process_eager_upload(socket) do
+    # Clean up previous pending image if user re-uploads
+    socket = cleanup_pending_image(socket)
+    socket = assign(socket, :upload_processing, true)
+
+    result =
+      consume_uploaded_entries(socket, :group_image, fn %{path: path}, entry ->
+        store_and_create_pending_image(path, entry, socket.assigns.current_user)
+      end)
+
+    socket = assign(socket, :upload_processing, false)
+    apply_upload_result(socket, result)
+  end
+
+  defp store_and_create_pending_image(path, entry, user) do
+    with {:ok, metadata} <- GroupImages.store_pending(path, entry.client_name, entry.client_type),
+         {:ok, image} <- create_pending_image_record(entry, metadata, user) do
+      {:ok, {:success, image.id, metadata.thumbnail_path}}
+    else
+      {:error, reason} -> {:ok, {:error, reason}}
+    end
+  end
+
+  defp create_pending_image_record(entry, metadata, user) do
+    Communities.create_pending_group_image(
+      %{
+        filename: entry.client_name,
+        content_type: entry.client_type,
+        size_bytes: metadata.size_bytes,
+        storage_path: metadata.storage_path,
+        thumbnail_path: metadata.thumbnail_path
+      },
+      actor: user
+    )
+  end
+
+  defp apply_upload_result(socket, result) do
+    case result do
+      [{:success, image_id, thumbnail_path}] ->
+        socket
+        |> assign(:pending_image_id, image_id)
+        |> assign(:pending_preview_url, GroupImages.url(thumbnail_path))
+        |> assign(:image_error, nil)
+
+      [{:error, reason}] ->
+        assign(socket, :image_error, format_error(reason))
+
+      [] ->
+        socket
+    end
+  end
+
+  defp cleanup_pending_image(socket) do
+    case socket.assigns[:pending_image_id] do
+      nil ->
+        socket
+
+      image_id ->
+        # Soft-delete previous pending image (will be cleaned up by Oban job)
+        with {:ok, image} <- Ash.get(GroupImage, image_id),
+             true <- is_nil(image.group_id) do
+          Communities.soft_delete_group_image(image, actor: socket.assigns.current_user)
+        end
+
+        assign(socket, pending_image_id: nil, pending_preview_url: nil)
+    end
+  end
+
+  defp format_error(:invalid_extension), do: "Invalid file type. Please use JPG, PNG, or WebP"
+  defp format_error(msg) when is_binary(msg), do: msg
+  defp format_error(_), do: "Upload failed"
 
   @impl true
   def render(assigns) do
@@ -129,27 +216,49 @@ defmodule HuddlzWeb.GroupLive.Edit do
             Upload a banner image for your group (16:9 ratio recommended).
           </p>
 
-          <%= if @group.current_image_url && @uploads.group_image.entries == [] do %>
+          <%= if @pending_preview_url do %>
             <div class="mb-4">
               <div class="relative inline-block">
                 <img
-                  src={GroupImages.url(@group.current_image_url)}
-                  alt={@group.name}
+                  src={@pending_preview_url}
+                  alt="New image preview"
                   class="rounded-lg max-w-md aspect-video object-cover"
                 />
                 <button
                   type="button"
-                  phx-click="remove_image"
+                  phx-click="cancel_pending_image"
                   class="absolute top-2 right-2 btn btn-circle btn-sm btn-error"
-                  data-confirm="Are you sure you want to remove this image?"
                 >
-                  <.icon name="hero-trash" class="w-4 h-4" />
+                  <.icon name="hero-x-mark" class="w-4 h-4" />
                 </button>
               </div>
-              <p class="text-sm text-base-content/70 mt-2">
-                Current image. Upload a new one to replace it.
+              <p class="text-sm text-success mt-2 flex items-center gap-1">
+                <.icon name="hero-check-circle" class="w-4 h-4" /> New image uploaded. Save to apply.
               </p>
             </div>
+          <% else %>
+            <%= if @group.current_image_url && @uploads.group_image.entries == [] do %>
+              <div class="mb-4">
+                <div class="relative inline-block">
+                  <img
+                    src={GroupImages.url(@group.current_image_url)}
+                    alt={@group.name}
+                    class="rounded-lg max-w-md aspect-video object-cover"
+                  />
+                  <button
+                    type="button"
+                    phx-click="remove_image"
+                    class="absolute top-2 right-2 btn btn-circle btn-sm btn-error"
+                    data-confirm="Are you sure you want to remove this image?"
+                  >
+                    <.icon name="hero-trash" class="w-4 h-4" />
+                  </button>
+                </div>
+                <p class="text-sm text-base-content/70 mt-2">
+                  Current image. Upload a new one to replace it.
+                </p>
+              </div>
+            <% end %>
           <% end %>
 
           <div
@@ -252,6 +361,11 @@ defmodule HuddlzWeb.GroupLive.Edit do
   end
 
   @impl true
+  def handle_event("cancel_pending_image", _params, socket) do
+    {:noreply, cleanup_pending_image(socket)}
+  end
+
+  @impl true
   def handle_event("remove_image", _params, socket) do
     group = socket.assigns.group
     user = socket.assigns.current_user
@@ -280,8 +394,8 @@ defmodule HuddlzWeb.GroupLive.Edit do
          |> Ash.Changeset.for_update(:update_details, params, actor: socket.assigns.current_user)
          |> Ash.update() do
       {:ok, updated_group} ->
-        # Handle image upload if present
-        socket = process_group_image_upload(socket, updated_group)
+        # Assign pending image to the group if one was uploaded
+        assign_pending_image_to_group(socket, updated_group)
 
         {:noreply,
          socket
@@ -301,42 +415,20 @@ defmodule HuddlzWeb.GroupLive.Edit do
     end
   end
 
-  defp process_group_image_upload(socket, group) do
-    case uploaded_entries(socket, :group_image) do
-      {[_ | _], []} ->
-        # Soft-delete existing images before creating new
+  defp assign_pending_image_to_group(socket, group) do
+    case socket.assigns[:pending_image_id] do
+      nil ->
+        :ok
+
+      image_id ->
+        # Soft-delete existing images before assigning new one
         soft_delete_all_group_images(group, socket.assigns.current_user)
 
-        consume_uploaded_entries(socket, :group_image, fn %{path: path}, entry ->
-          store_group_image(path, entry, group.id, socket.assigns.current_user)
-        end)
-
-        socket
-
-      {[], _} ->
-        socket
-    end
-  end
-
-  defp store_group_image(path, entry, group_id, user) do
-    case GroupImages.store(path, entry.client_name, entry.client_type, group_id) do
-      {:ok, %{storage_path: storage_path, thumbnail_path: thumbnail_path, size_bytes: size_bytes}} ->
-        Huddlz.Communities.create_group_image(
-          %{
-            filename: entry.client_name,
-            content_type: entry.client_type,
-            size_bytes: size_bytes,
-            storage_path: storage_path,
-            thumbnail_path: thumbnail_path,
-            group_id: group_id
-          },
-          actor: user
-        )
-
-        {:ok, :success}
-
-      {:error, reason} ->
-        {:ok, {:error, reason}}
+        with {:ok, image} <- Ash.get(GroupImage, image_id) do
+          Communities.assign_group_image_to_group(image, group.id,
+            actor: socket.assigns.current_user
+          )
+        end
     end
   end
 

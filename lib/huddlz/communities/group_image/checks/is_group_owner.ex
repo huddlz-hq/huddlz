@@ -16,7 +16,11 @@ defmodule Huddlz.Communities.GroupImage.Checks.IsGroupOwner do
   def match?(nil, _context, _opts), do: false
 
   def match?(actor, %{changeset: changeset}, _opts) do
-    group_id = Ash.Changeset.get_attribute(changeset, :group_id)
+    # Check argument first (for assign_to_group action), then attribute (for create action)
+    group_id =
+      Ash.Changeset.get_argument(changeset, :group_id) ||
+        Ash.Changeset.get_attribute(changeset, :group_id)
+
     group_owner?(actor, group_id)
   end
 
