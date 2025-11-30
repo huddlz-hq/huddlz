@@ -74,7 +74,9 @@ defmodule HuddlzWeb.GroupLive.Index do
                     />
                   <% else %>
                     <div class="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
-                      <.icon name="hero-user-group" class="w-12 h-12 text-base-content/30" />
+                      <span class="text-2xl font-bold text-base-content/40 text-center px-4 line-clamp-2">
+                        {group.name}
+                      </span>
                     </div>
                   <% end %>
                 </figure>

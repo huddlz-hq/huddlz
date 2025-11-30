@@ -145,6 +145,15 @@ defmodule GroupImageSteps do
     context
   end
 
+  step "I should see the group name {string} in the placeholder",
+       %{args: [group_name]} = context do
+    session = context[:session] || context[:conn]
+
+    # The placeholder div should contain the group name
+    assert_has(session, "div.aspect-video span", text: group_name)
+    context
+  end
+
   step "I should be redirected to the group page", context do
     session = context[:session] || context[:conn]
     group = context[:current_group]
