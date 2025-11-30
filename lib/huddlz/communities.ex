@@ -45,6 +45,17 @@ defmodule Huddlz.Communities do
       define :soft_delete_group_image, action: :soft_delete
     end
 
+    resource Huddlz.Communities.HuddlImage do
+      define :create_huddl_image, action: :create
+      define :create_pending_huddl_image, action: :create_pending, args: [:group_id]
+      define :assign_huddl_image_to_huddl, action: :assign_to_huddl, args: [:huddl_id]
+      define :get_current_huddl_image, action: :get_current_for_huddl, args: [:huddl_id]
+      define :list_huddl_images, action: :list_for_huddl, args: [:huddl_id]
+      define :get_orphaned_pending_huddl_images, action: :orphaned_pending
+      define :delete_huddl_image, action: :destroy
+      define :soft_delete_huddl_image, action: :soft_delete
+    end
+
     resource Huddlz.Communities.GroupMember do
       define :add_member, action: :add_member, args: [:group_id, :user_id, :role]
       define :remove_member, action: :remove_member, args: [:group_id, :user_id]

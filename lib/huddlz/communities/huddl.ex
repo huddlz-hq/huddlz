@@ -472,6 +472,10 @@ defmodule Huddlz.Communities.Huddl do
     has_many :attendees, Huddlz.Communities.HuddlAttendee do
       destination_attribute :huddl_id
     end
+
+    has_many :huddl_images, Huddlz.Communities.HuddlImage do
+      destination_attribute :huddl_id
+    end
   end
 
   calculations do
@@ -505,6 +509,19 @@ defmodule Huddlz.Communities.Huddl do
     calculate :is_publicly_visible, :boolean do
       description "Whether the huddl is visible to everyone (public huddl in public group)"
       calculation expr(is_private == false and group.is_public == true)
+    end
+
+    calculate :display_image_url, :string do
+      description "Returns huddl's image, falling back to group image if none"
+      calculation Huddlz.Communities.Huddl.Calculations.DisplayImageUrl
+    end
+  end
+
+  aggregates do
+    first :current_image_url, :huddl_images, :thumbnail_path do
+      description "Returns the thumbnail path of the huddl's current image"
+      sort inserted_at: :desc
+      filter expr(is_nil(deleted_at))
     end
   end
 end

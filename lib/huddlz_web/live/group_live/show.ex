@@ -390,7 +390,7 @@ defmodule HuddlzWeb.GroupLive.Show do
       |> Ash.read!(actor: user)
 
     page.results
-    |> Ash.load!([:status, :visible_virtual_link, :group], actor: user)
+    |> Ash.load!([:status, :visible_virtual_link, :display_image_url, :group], actor: user)
   end
 
   defp get_past_group_huddlz_paginated(group, user, opts) do
@@ -408,7 +408,7 @@ defmodule HuddlzWeb.GroupLive.Show do
     # Load additional fields on the results
     loaded_results =
       page_result.results
-      |> Ash.load!([:status, :visible_virtual_link, :group], actor: user)
+      |> Ash.load!([:status, :visible_virtual_link, :display_image_url, :group], actor: user)
 
     total_pages =
       if page_result.count && page_result.count > 0 do

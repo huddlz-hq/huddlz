@@ -22,7 +22,7 @@ defmodule HuddlzWeb.HuddlLive do
     huddls =
       case page do
         {:ok, %{results: results}} ->
-          Ash.load!(results, [:status, :visible_virtual_link, :group],
+          Ash.load!(results, [:status, :visible_virtual_link, :display_image_url, :group],
             actor: socket.assigns[:current_user]
           )
 
@@ -60,7 +60,7 @@ defmodule HuddlzWeb.HuddlLive do
     huddls =
       case page do
         {:ok, %{results: results}} ->
-          Ash.load!(results, [:status, :visible_virtual_link, :group],
+          Ash.load!(results, [:status, :visible_virtual_link, :display_image_url, :group],
             actor: socket.assigns[:current_user]
           )
 
@@ -89,7 +89,7 @@ defmodule HuddlzWeb.HuddlLive do
     huddls =
       case page do
         {:ok, %{results: results}} ->
-          Ash.load!(results, [:status, :visible_virtual_link, :group],
+          Ash.load!(results, [:status, :visible_virtual_link, :display_image_url, :group],
             actor: socket.assigns[:current_user]
           )
 
@@ -132,7 +132,7 @@ defmodule HuddlzWeb.HuddlLive do
     huddls =
       case page do
         {:ok, %{results: results}} ->
-          Ash.load!(results, [:status, :visible_virtual_link, :group],
+          Ash.load!(results, [:status, :visible_virtual_link, :display_image_url, :group],
             actor: socket.assigns[:current_user]
           )
 
