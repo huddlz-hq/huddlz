@@ -5,6 +5,7 @@ defmodule HuddlzWeb.GroupLive.Index do
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities.Group
+  alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
   require Ash.Query
 
@@ -64,15 +65,17 @@ defmodule HuddlzWeb.GroupLive.Index do
           <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             <%= for group <- @groups do %>
               <div class="card bg-base-100 shadow-xl">
-                <figure>
-                  <%= if group.image_url do %>
-                    <img src={group.image_url} alt={group.name} class="h-48 w-full object-cover" />
-                  <% else %>
+                <figure class="aspect-video">
+                  <%= if group.current_image_url do %>
                     <img
-                      src={"https://placehold.co/600x400/orange/white?text=#{group.name}"}
+                      src={GroupImages.url(group.current_image_url)}
                       alt={group.name}
-                      class="h-48 w-full object-cover"
+                      class="w-full h-full object-cover"
                     />
+                  <% else %>
+                    <div class="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                      <.icon name="hero-user-group" class="w-12 h-12 text-base-content/30" />
+                    </div>
                   <% end %>
                 </figure>
                 <div class="card-body">
@@ -110,6 +113,7 @@ defmodule HuddlzWeb.GroupLive.Index do
     # Later we can add filtering based on user's memberships
     Group
     |> Ash.Query.filter(is_public: true)
+    |> Ash.Query.load(:current_image_url)
     |> Ash.read!()
   rescue
     _ -> []
