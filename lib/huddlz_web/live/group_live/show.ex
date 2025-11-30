@@ -5,6 +5,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities.GroupMember
+  alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
 
   require Ash.Query
@@ -102,12 +103,12 @@ defmodule HuddlzWeb.GroupLive.Show do
       </.header>
 
       <div class="mt-8">
-        <%= if @group.image_url do %>
+        <%= if @group.current_image_url do %>
           <div class="mb-6">
             <img
-              src={@group.image_url}
+              src={GroupImages.url(@group.current_image_url)}
               alt={@group.name}
-              class="w-full max-w-2xl rounded-lg shadow-lg"
+              class="w-full max-w-2xl aspect-video object-cover rounded-lg shadow-lg"
             />
           </div>
         <% end %>
@@ -287,7 +288,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   defp get_group_by_slug(slug, actor) do
     case Huddlz.Communities.get_by_slug(slug,
            actor: actor,
-           load: [owner: [:current_profile_picture_url]]
+           load: [:current_image_url, owner: [:current_profile_picture_url]]
          ) do
       {:ok, nil} -> {:error, :not_found}
       {:ok, group} -> {:ok, group}

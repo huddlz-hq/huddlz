@@ -80,7 +80,7 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> assert_has("label", text: "Group Name")
       |> assert_has("label", text: "Description")
       |> assert_has("label", text: "Location")
-      |> assert_has("label", text: "Image URL")
+      |> assert_has("label", text: "Group Image")
       |> assert_has("label", text: "Privacy")
     end
 

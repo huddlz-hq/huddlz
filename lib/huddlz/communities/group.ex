@@ -19,7 +19,7 @@ defmodule Huddlz.Communities.Group do
 
     create :create_group do
       description "Create a new group"
-      accept [:name, :description, :location, :image_url, :is_public, :owner_id, :slug]
+      accept [:name, :description, :location, :is_public, :owner_id, :slug]
 
       change Huddlz.Communities.Group.Changes.AddOwnerAsMember
       change Huddlz.Communities.Group.Changes.GenerateSlug
@@ -71,7 +71,7 @@ defmodule Huddlz.Communities.Group do
 
     update :update_details do
       description "Update group details"
-      accept [:name, :description, :location, :image_url, :is_public, :slug]
+      accept [:name, :description, :location, :is_public, :slug]
     end
   end
 
@@ -122,10 +122,6 @@ defmodule Huddlz.Communities.Group do
       allow_nil? true
     end
 
-    attribute :image_url, :string do
-      allow_nil? true
-    end
-
     attribute :is_public, :boolean do
       allow_nil? false
       default true
@@ -156,6 +152,10 @@ defmodule Huddlz.Communities.Group do
     has_many :huddlz, Huddlz.Communities.Huddl do
       destination_attribute :group_id
     end
+
+    has_many :group_images, Huddlz.Communities.GroupImage do
+      destination_attribute :group_id
+    end
   end
 
   calculations do
@@ -167,6 +167,14 @@ defmodule Huddlz.Communities.Group do
                     trigram_similarity(name, ^arg(:query)) * 0.7 +
                       trigram_similarity(description, ^arg(:query)) * 0.3
                   )
+    end
+  end
+
+  aggregates do
+    first :current_image_url, :group_images, :thumbnail_path do
+      description "Returns the thumbnail path of the group's current image"
+      sort inserted_at: :desc
+      filter expr(is_nil(deleted_at))
     end
   end
 

@@ -12,7 +12,7 @@ config :ash_oban, pro?: false
 config :huddlz, Oban,
   engine: Oban.Engines.Basic,
   notifier: Oban.Notifiers.Postgres,
-  queues: [default: 10, profile_picture_cleanup: 5],
+  queues: [default: 10, profile_picture_cleanup: 5, group_image_cleanup: 5],
   repo: Huddlz.Repo,
   plugins: [{Oban.Plugins.Cron, []}]
 

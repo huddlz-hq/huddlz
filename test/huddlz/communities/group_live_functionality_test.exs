@@ -164,7 +164,6 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
           name: "Full Details Group",
           description: "A group with all details",
           location: "San Francisco, CA",
-          image_url: "https://example.com/image.jpg",
           is_public: false,
           owner_id: actor.id
         })
@@ -172,7 +171,6 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
 
       assert to_string(group.description) == "A group with all details"
       assert group.location == "San Francisco, CA"
-      assert group.image_url == "https://example.com/image.jpg"
       assert group.is_public == false
     end
   end

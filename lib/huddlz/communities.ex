@@ -23,7 +23,7 @@ defmodule Huddlz.Communities do
     resource Huddlz.Communities.Group do
       define :create_group,
         action: :create_group,
-        args: [:name, :description, :location, :image_url, :is_public, :owner_id]
+        args: [:name, :description, :location, :is_public, :owner_id]
 
       define :search_groups, action: :search, args: [:query]
       define :get_by_owner, action: :get_by_owner, args: [:owner_id]
@@ -31,7 +31,15 @@ defmodule Huddlz.Communities do
 
       define :update_details,
         action: :update_details,
-        args: [:name, :description, :location, :image_url, :is_public, :slug]
+        args: [:name, :description, :location, :is_public, :slug]
+    end
+
+    resource Huddlz.Communities.GroupImage do
+      define :create_group_image, action: :create
+      define :get_current_group_image, action: :get_current_for_group, args: [:group_id]
+      define :list_group_images, action: :list_for_group, args: [:group_id]
+      define :delete_group_image, action: :destroy
+      define :soft_delete_group_image, action: :soft_delete
     end
 
     resource Huddlz.Communities.GroupMember do
