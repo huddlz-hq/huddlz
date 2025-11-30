@@ -29,6 +29,7 @@ defmodule HuddlzWeb.CoreComponents do
   use Phoenix.Component
   use Gettext, backend: HuddlzWeb.Gettext
 
+  alias Huddlz.Storage.HuddlImages
   alias Huddlz.Storage.ProfilePictures
 
   alias Phoenix.HTML.Form
@@ -664,11 +665,17 @@ defmodule HuddlzWeb.CoreComponents do
       {@rest}
     >
       <div class="w-full md:w-48 h-32 md:h-auto relative bg-base-200">
-        <%= if @huddl.thumbnail_url do %>
-          <img src={@huddl.thumbnail_url} alt={@huddl.title} class="w-full h-full object-cover" />
+        <%= if @huddl.display_image_url do %>
+          <img
+            src={HuddlImages.url(@huddl.display_image_url)}
+            alt={@huddl.title}
+            class="w-full h-full object-cover"
+          />
         <% else %>
-          <div class="w-full h-full flex items-center justify-center bg-base-300">
-            <span class="text-base-content/80 font-medium">No image</span>
+          <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-secondary/20">
+            <span class="text-base-content/40 font-medium text-center px-2 line-clamp-2">
+              {@huddl.title}
+            </span>
           </div>
         <% end %>
         <div class="absolute top-2 right-2">

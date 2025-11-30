@@ -6,6 +6,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.HuddlAttendee
+  alias Huddlz.Storage.HuddlImages
   alias HuddlzWeb.Layouts
 
   require Ash.Query
@@ -107,10 +108,10 @@ defmodule HuddlzWeb.HuddlLive.Show do
       </.header>
 
       <div class="mt-8">
-        <%= if @huddl.thumbnail_url do %>
+        <%= if @huddl.display_image_url do %>
           <div class="mb-6">
             <img
-              src={@huddl.thumbnail_url}
+              src={HuddlImages.url(@huddl.display_image_url)}
               alt={@huddl.title}
               class="w-full max-w-2xl rounded-lg shadow-lg"
             />
@@ -274,6 +275,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
          |> Ash.Query.load([
            :status,
            :visible_virtual_link,
+           :display_image_url,
            :group,
            creator: [:current_profile_picture_url]
          ])
