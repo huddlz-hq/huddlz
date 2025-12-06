@@ -95,7 +95,8 @@ defmodule Huddlz.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:phoenix_test, "~> 0.9.0", only: :test},
       {:slugify, "~> 1.3"},
-      {:remote_ip, "~> 1.1"}
+      {:remote_ip, "~> 1.1"},
+      {:envious, "~> 1.0"}
     ]
   end
 
@@ -107,7 +108,15 @@ defmodule Huddlz.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get", "ash.setup", "assets.setup", "assets.build", "run priv/repo/seeds.exs"],
+      setup: [
+        "cmd cp -n .dev.env.example .dev.env 2>/dev/null || true",
+        "cmd cp -n .test.env.example .test.env 2>/dev/null || true",
+        "deps.get",
+        "ash.setup",
+        "assets.setup",
+        "assets.build",
+        "run priv/repo/seeds.exs"
+      ],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ash.setup --quiet", "test"],
