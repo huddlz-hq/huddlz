@@ -214,7 +214,7 @@ defmodule Huddlz.Communities.Huddl do
             |> Ash.create!(authorize?: false)
 
             # Increment count
-            Ash.Changeset.change_attribute(changeset, :rsvp_count, changeset.data.rsvp_count + 1)
+            Ash.Changeset.atomic_update(changeset, :rsvp_count, expr(rsvp_count + 1))
 
           {:ok, _} ->
             # Already RSVPed, no change needed
@@ -256,11 +256,7 @@ defmodule Huddlz.Communities.Huddl do
             Ash.destroy!(attendee, authorize?: false)
 
             # Decrement count
-            Ash.Changeset.change_attribute(
-              changeset,
-              :rsvp_count,
-              max(changeset.data.rsvp_count - 1, 0)
-            )
+            Ash.Changeset.atomic_update(changeset, :rsvp_count, expr(rsvp_count - 1))
 
           {:error, error} ->
             Ash.Changeset.add_error(changeset, error)
