@@ -269,4 +269,50 @@ defmodule HuddlzWeb.HuddlLiveTest do
       end
     end
   end
+
+  describe "Groups fallback" do
+    setup do
+      host = generate(user(role: :user))
+      %{host: host}
+    end
+
+    test "shows groups when no huddlz exist", %{conn: conn, host: host} do
+      generate(group(is_public: true, owner_id: host.id, actor: host, name: "Elixir Club"))
+
+      conn
+      |> visit("/")
+      |> assert_has("h2", text: "Groups you can explore")
+      |> assert_has("h3", text: "Elixir Club")
+    end
+
+    test "hides groups section when huddlz exist", %{conn: conn, host: host} do
+      public_group = generate(group(is_public: true, owner_id: host.id, actor: host))
+
+      generate(
+        huddl(
+          group_id: public_group.id,
+          creator_id: host.id,
+          is_private: false,
+          title: "Active Huddl",
+          actor: host
+        )
+      )
+
+      conn
+      |> visit("/")
+      |> assert_has("h3", text: "Active Huddl")
+      |> refute_has("h2", text: "Groups you can explore")
+    end
+
+    test "group cards link to group detail page", %{conn: conn, host: host} do
+      group =
+        generate(
+          group(is_public: true, owner_id: host.id, actor: host, name: "Linked Group Test")
+        )
+
+      conn
+      |> visit("/")
+      |> assert_has("a[href='/groups/#{group.slug}']")
+    end
+  end
 end

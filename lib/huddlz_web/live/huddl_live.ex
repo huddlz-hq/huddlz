@@ -5,6 +5,8 @@ defmodule HuddlzWeb.HuddlLive do
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities
+  alias Huddlz.Communities.Group
+  alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
   require Ash.Query
 
@@ -30,9 +32,12 @@ defmodule HuddlzWeb.HuddlLive do
           []
       end
 
+    groups = list_public_groups()
+
     {:ok,
      assign(socket,
        huddls: huddls,
+       groups: groups,
        page_info: extract_page_info(page),
        search_query: nil,
        event_type_filter: nil,
@@ -151,82 +156,81 @@ defmodule HuddlzWeb.HuddlLive do
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} current_user={@current_user}>
-      <div class="container mx-auto px-4 py-8">
-        <div class="mb-8">
-          <h1 class="text-3xl font-bold mb-4">Find your huddl</h1>
-          <p class="text-lg text-base-content/80">
-            Find and join engaging discussion events with interesting people
-          </p>
+      <div class="container mx-auto px-4 py-4">
+        <div class="mb-6">
+          <h1 class="text-2xl font-bold mb-4">Find your huddl</h1>
 
-          <form phx-change="search" phx-submit="search" class="mt-6 space-y-4">
-            <div class="flex gap-2">
-              <label for="search-query" class="sr-only">Search huddlz</label>
-              <input
-                id="search-query"
-                type="text"
-                name="query"
-                value={@search_query}
-                placeholder="Search huddlz..."
-                phx-debounce="300"
-                class="flex-grow input input-bordered"
-              />
-              <button type="submit" class="btn btn-primary">
+          <form phx-change="search" phx-submit="search">
+            <div class="flex flex-wrap items-end gap-2">
+              <div class="flex-grow min-w-[200px]">
+                <label for="search-query" class="sr-only">Search huddlz</label>
+                <input
+                  id="search-query"
+                  type="text"
+                  name="query"
+                  value={@search_query}
+                  placeholder="Search huddlz..."
+                  phx-debounce="300"
+                  class="w-full h-12 px-4 rounded-lg border border-base-300 bg-base-100 text-base focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                />
+              </div>
+              <label for="event-type" class="sr-only">Event Type</label>
+              <select
+                id="event-type"
+                name="event_type"
+                class="h-12 px-3 rounded-lg border border-base-300 bg-base-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+              >
+                <option value="">All Types</option>
+                <option value="in_person" selected={@event_type_filter == "in_person"}>
+                  In Person
+                </option>
+                <option value="virtual" selected={@event_type_filter == "virtual"}>
+                  Virtual
+                </option>
+                <option value="hybrid" selected={@event_type_filter == "hybrid"}>
+                  Hybrid
+                </option>
+              </select>
+              <label for="date-range" class="sr-only">Date Range</label>
+              <select
+                id="date-range"
+                name="date_filter"
+                class="h-12 px-3 rounded-lg border border-base-300 bg-base-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+              >
+                <option value="upcoming" selected={@date_filter == "upcoming"}>
+                  All Upcoming
+                </option>
+                <option value="this_week" selected={@date_filter == "this_week"}>
+                  This Week
+                </option>
+                <option value="this_month" selected={@date_filter == "this_month"}>
+                  This Month
+                </option>
+              </select>
+              <button
+                type="submit"
+                class="h-12 px-6 rounded-lg bg-primary text-primary-content font-medium hover:brightness-110 active:scale-[0.98] transition-all"
+              >
                 Search
               </button>
             </div>
-
-            <div class="flex flex-wrap gap-4">
-              <!-- Event Type Filter -->
-              <div class="form-control">
-                <label for="event-type" class="label">
-                  <span class="label-text">Event Type</span>
-                </label>
-                <select id="event-type" name="event_type" class="select select-bordered">
-                  <option value="">All Types</option>
-                  <option value="in_person" selected={@event_type_filter == "in_person"}>
-                    In Person
-                  </option>
-                  <option value="virtual" selected={@event_type_filter == "virtual"}>
-                    Virtual
-                  </option>
-                  <option value="hybrid" selected={@event_type_filter == "hybrid"}>
-                    Hybrid
-                  </option>
-                </select>
-              </div>
-              
-    <!-- Date Filter -->
-              <div class="form-control">
-                <label for="date-range" class="label">
-                  <span class="label-text">Date Range</span>
-                </label>
-                <select id="date-range" name="date_filter" class="select select-bordered">
-                  <option value="upcoming" selected={@date_filter == "upcoming"}>
-                    All Upcoming
-                  </option>
-                  <option value="this_week" selected={@date_filter == "this_week"}>
-                    This Week
-                  </option>
-                  <option value="this_month" selected={@date_filter == "this_month"}>
-                    This Month
-                  </option>
-                </select>
-              </div>
-            </div>
           </form>
-          
-    <!-- Active Filters Display -->
+
           <%= if @search_query || @event_type_filter || @date_filter != "upcoming" do %>
-            <div class="mt-4 flex items-center gap-2">
-              <span class="text-sm">Active filters:</span>
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+              <span class="text-sm text-base-content/60">Filters:</span>
               <%= if @search_query do %>
-                <span class="badge badge-primary">Search: {@search_query}</span>
+                <span class="badge badge-primary badge-sm">Search: {@search_query}</span>
               <% end %>
               <%= if @event_type_filter do %>
-                <span class="badge badge-primary">Type: {humanize_filter(@event_type_filter)}</span>
+                <span class="badge badge-primary badge-sm">
+                  Type: {humanize_filter(@event_type_filter)}
+                </span>
               <% end %>
               <%= if @date_filter != "upcoming" do %>
-                <span class="badge badge-primary">Date: {humanize_filter(@date_filter)}</span>
+                <span class="badge badge-primary badge-sm">
+                  Date: {humanize_filter(@date_filter)}
+                </span>
               <% end %>
               <button phx-click="clear_filters" class="btn btn-xs btn-ghost">
                 Clear all
@@ -236,29 +240,72 @@ defmodule HuddlzWeb.HuddlLive do
         </div>
 
         <div class="w-full">
-          <!-- Results count -->
-          <div class="mb-4 text-sm text-base-content/70">
-            Found {length(@huddls)} {if length(@huddls) == 1, do: "huddl", else: "huddlz"}
-          </div>
-
           <%= if Enum.empty?(@huddls) do %>
-            <div class="text-center py-12 bg-base-200 rounded-lg">
-              <p class="text-lg text-base-content/70">
-                <%= if @search_query || @event_type_filter || @date_filter != "upcoming" do %>
+            <%= if @search_query || @event_type_filter || @date_filter != "upcoming" do %>
+              <div class="text-center py-12 bg-base-200 rounded-lg">
+                <p class="text-lg text-base-content/70">
                   No huddlz found matching your filters. Try adjusting your search criteria.
-                <% else %>
-                  No huddlz found. Check back soon!
-                <% end %>
-              </p>
-            </div>
+                </p>
+              </div>
+            <% else %>
+              <div class="text-center py-8">
+                <p class="text-base-content/60">No upcoming huddlz right now.</p>
+              </div>
+
+              <%= if @groups != [] do %>
+                <div class="mt-6" id="groups-fallback">
+                  <h2 class="text-lg font-semibold mb-4">Groups you can explore</h2>
+                  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <%= for group <- @groups do %>
+                      <.link
+                        navigate={~p"/groups/#{group.slug}"}
+                        class="card bg-base-100 shadow-md hover:shadow-lg transition-shadow"
+                      >
+                        <figure class="aspect-video">
+                          <%= if group.current_image_url do %>
+                            <img
+                              src={GroupImages.url(group.current_image_url)}
+                              alt={group.name}
+                              class="w-full h-full object-cover"
+                            />
+                          <% else %>
+                            <div class="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                              <span class="text-xl font-bold text-base-content/30 text-center px-4 line-clamp-2">
+                                {group.name}
+                              </span>
+                            </div>
+                          <% end %>
+                        </figure>
+                        <div class="card-body p-4">
+                          <h3 class="font-semibold">{group.name}</h3>
+                          <p class="text-sm text-base-content/60 line-clamp-2">
+                            {group.description || "No description provided."}
+                          </p>
+                          <p :if={group.location} class="text-xs text-base-content/50 mt-1">
+                            <.icon name="hero-map-pin" class="h-3 w-3 inline" /> {group.location}
+                          </p>
+                        </div>
+                      </.link>
+                    <% end %>
+                  </div>
+                  <div class="text-center mt-4">
+                    <.link navigate={~p"/groups"} class="text-sm text-primary hover:underline">
+                      View all groups
+                    </.link>
+                  </div>
+                </div>
+              <% end %>
+            <% end %>
           <% else %>
+            <div class="mb-4 text-sm text-base-content/60">
+              Found {length(@huddls)} {if length(@huddls) == 1, do: "huddl", else: "huddlz"}
+            </div>
             <div class="space-y-4">
               <%= for huddl <- @huddls do %>
                 <.huddl_card huddl={huddl} show_group={true} />
               <% end %>
             </div>
-            
-    <!-- Pagination -->
+
             <%= if @page_info.total_pages > 1 do %>
               <.pagination
                 current_page={@page_info.current_page}
@@ -308,5 +355,15 @@ defmodule HuddlzWeb.HuddlLive do
       current_page: 1,
       total_count: 0
     }
+  end
+
+  defp list_public_groups do
+    Group
+    |> Ash.Query.filter(is_public: true)
+    |> Ash.Query.load(:current_image_url)
+    |> Ash.Query.limit(6)
+    |> Ash.read!()
+  rescue
+    _ -> []
   end
 end
