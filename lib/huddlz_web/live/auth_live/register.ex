@@ -7,6 +7,7 @@ defmodule HuddlzWeb.AuthLive.Register do
   alias AshPhoenix.Form
   alias Huddlz.Accounts.DisplayNameGenerator
   alias Huddlz.Accounts.User
+  alias HuddlzWeb.Components.AddressInputLive
   import HuddlzWeb.Layouts
   require Ash
 
@@ -39,6 +40,9 @@ defmodule HuddlzWeb.AuthLive.Register do
     {:ok,
      socket
      |> assign(check_errors: false)
+     |> assign(show_address_section: false)
+     |> assign(address_data: nil)
+     |> assign(address_display: nil)
      |> assign_form(password_form)}
   end
 
@@ -108,6 +112,42 @@ defmodule HuddlzWeb.AuthLive.Register do
                 phx-debounce="blur"
               />
 
+              <%!-- Optional Address Section --%>
+              <div class="mt-4 border-t border-base-300 pt-4">
+                <button
+                  type="button"
+                  phx-click="toggle_address_section"
+                  class="flex items-center gap-2 text-sm text-base-content/70 hover:text-base-content transition-colors"
+                >
+                  <.icon
+                    name={
+                      if @show_address_section, do: "hero-chevron-down", else: "hero-chevron-right"
+                    }
+                    class="h-4 w-4"
+                  />
+                  <.icon name="hero-map-pin" class="h-4 w-4" /> Add your location (optional)
+                </button>
+
+                <%= if @show_address_section do %>
+                  <div class="mt-3">
+                    <.live_component
+                      module={AddressInputLive}
+                      id="registration-address"
+                      label="Your Address"
+                      value={@address_display}
+                      on_select={fn address -> send(self(), {:address_selected, address}) end}
+                      on_clear={fn -> send(self(), :address_cleared) end}
+                    />
+
+                    <%= if @address_data do %>
+                      <div class="flex items-center gap-2 text-sm text-success mt-2">
+                        <.icon name="hero-check-circle" class="h-4 w-4" /> Location saved
+                      </div>
+                    <% end %>
+                  </div>
+                <% end %>
+              </div>
+
               <div class="mt-6">
                 <.button type="submit" phx-disable-with="Creating account..." class="w-full">
                   Create account
@@ -128,6 +168,11 @@ defmodule HuddlzWeb.AuthLive.Register do
       </div>
     </.app>
     """
+  end
+
+  @impl true
+  def handle_event("toggle_address_section", _params, socket) do
+    {:noreply, assign(socket, show_address_section: !socket.assigns.show_address_section)}
   end
 
   @impl true
@@ -177,6 +222,37 @@ defmodule HuddlzWeb.AuthLive.Register do
     {:noreply, socket}
   end
 
+  # Handle geocoding messages from AddressInputLive component
+  @impl true
+  def handle_info({:do_search, component_id, query}, socket) do
+    result = Huddlz.Geocoding.autocomplete(query)
+    socket = AddressInputLive.handle_search_results(socket, component_id, result)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:do_place_details, component_id, place_id}, socket) do
+    result = Huddlz.Geocoding.place_details(place_id)
+    socket = AddressInputLive.handle_place_details(socket, component_id, result)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:address_selected, address_data}, socket) do
+    {:noreply,
+     socket
+     |> assign(address_data: address_data)
+     |> assign(address_display: address_data.formatted_address)}
+  end
+
+  @impl true
+  def handle_info(:address_cleared, socket) do
+    {:noreply,
+     socket
+     |> assign(address_data: nil)
+     |> assign(address_display: nil)}
+  end
+
   defp handle_form_submission(socket, form) do
     case Form.submit(form, params: nil) do
       {:ok, result} ->
@@ -191,6 +267,11 @@ defmodule HuddlzWeb.AuthLive.Register do
   end
 
   defp handle_successful_registration(socket, result) do
+    # Create address if one was provided (do this before redirecting)
+    if socket.assigns.address_data do
+      create_user_address(result.id, socket.assigns.address_data)
+    end
+
     # Get the token from the metadata
     token = result.__metadata__.token
 
@@ -205,6 +286,28 @@ defmodule HuddlzWeb.AuthLive.Register do
       )
       |> redirect(to: "/sign-in")
     end
+  end
+
+  defp create_user_address(user_id, address_data) do
+    attrs = %{
+      user_id: user_id,
+      formatted_address: address_data.formatted_address,
+      latitude: address_data.latitude,
+      longitude: address_data.longitude,
+      street_number: address_data[:street_number],
+      street_name: address_data[:street_name],
+      city: address_data[:city],
+      state: address_data[:state],
+      postal_code: address_data[:postal_code],
+      country: address_data[:country],
+      country_name: address_data[:country_name],
+      place_id: address_data[:place_id]
+    }
+
+    # Create without actor (user just registered, no session yet)
+    Huddlz.Accounts.UserAddress
+    |> Ash.Changeset.for_create(:create, attrs)
+    |> Ash.create(authorize?: false)
   end
 
   defp assign_form(socket, form) do

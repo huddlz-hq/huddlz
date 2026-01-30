@@ -28,3 +28,6 @@ config :swoosh, :api_client, false
 # Adapters (compile-time)
 config :huddlz, :storage, adapter: Huddlz.Storage.Local
 config :huddlz, Huddlz.Repo, pool: Ecto.Adapters.SQL.Sandbox
+
+# Use mock for geocoding service in tests
+config :huddlz, :geocoding_service, Huddlz.Geocoding.Mock

@@ -5,6 +5,7 @@ defmodule HuddlzWeb.ProfileLive do
   use HuddlzWeb, :live_view
 
   alias Huddlz.Storage.ProfilePictures
+  alias HuddlzWeb.Components.AddressInputLive
   alias HuddlzWeb.Layouts
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
@@ -38,6 +39,13 @@ defmodule HuddlzWeb.ProfileLive do
     {:ok, user_with_avatar} =
       Ash.load(user, [:current_profile_picture_url], actor: user)
 
+    # Load user's address if exists
+    user_address =
+      case Huddlz.Accounts.get_user_address(user.id, actor: user) do
+        {:ok, address} -> address
+        _ -> nil
+      end
+
     {:ok,
      socket
      |> assign(:page_title, "Profile")
@@ -46,11 +54,31 @@ defmodule HuddlzWeb.ProfileLive do
      |> assign(:show_password_form, false)
      |> assign(:current_user, user_with_avatar)
      |> assign(:avatar_error, nil)
+     |> assign(:user_address, user_address)
+     |> assign(:address_data, if(user_address, do: address_to_map(user_address), else: nil))
+     |> assign(:address_display, if(user_address, do: user_address.formatted_address, else: nil))
+     |> assign(:editing_address, false)
      |> allow_upload(:avatar,
        accept: ~w(.jpg .jpeg .png .webp),
        max_entries: 1,
        max_file_size: 5_000_000
      )}
+  end
+
+  defp address_to_map(address) do
+    %{
+      formatted_address: address.formatted_address,
+      latitude: address.latitude,
+      longitude: address.longitude,
+      street_number: address.street_number,
+      street_name: address.street_name,
+      city: address.city,
+      state: address.state,
+      postal_code: address.postal_code,
+      country: address.country,
+      country_name: address.country_name,
+      place_id: address.place_id
+    }
   end
 
   @impl true
@@ -206,6 +234,78 @@ defmodule HuddlzWeb.ProfileLive do
             </div>
           </div>
 
+          <%!-- Location Card --%>
+          <div class="mt-6 card bg-base-100 shadow-xl">
+            <div class="card-body">
+              <h2 class="card-title">Location</h2>
+              <p class="text-base-content/70 mb-4">
+                Your location helps find nearby huddlz and connect with local groups.
+              </p>
+
+              <%= if @user_address && !@editing_address do %>
+                <%!-- Display current address --%>
+                <div class="flex items-start justify-between gap-4">
+                  <div class="flex items-start gap-3">
+                    <.icon name="hero-map-pin" class="h-5 w-5 text-primary mt-0.5" />
+                    <div>
+                      <p class="font-medium">{@user_address.formatted_address}</p>
+                      <%= if @user_address.city && @user_address.state do %>
+                        <p class="text-sm text-base-content/70">
+                          {@user_address.city}, {@user_address.state}
+                        </p>
+                      <% end %>
+                    </div>
+                  </div>
+                  <div class="flex gap-2">
+                    <button type="button" phx-click="edit_address" class="btn btn-ghost btn-sm">
+                      <.icon name="hero-pencil" class="h-4 w-4" /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      phx-click="remove_address"
+                      class="btn btn-ghost btn-sm text-error"
+                      data-confirm="Are you sure you want to remove your location?"
+                    >
+                      <.icon name="hero-trash" class="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              <% else %>
+                <%!-- Address input form --%>
+                <.live_component
+                  module={AddressInputLive}
+                  id="profile-address"
+                  label="Your Address"
+                  value={@address_display}
+                  on_select={fn address -> send(self(), {:address_selected, address}) end}
+                  on_clear={fn -> send(self(), :address_cleared) end}
+                />
+
+                <%= if @address_data do %>
+                  <div class="flex items-center gap-2 text-sm text-success mt-2">
+                    <.icon name="hero-check-circle" class="h-4 w-4" /> Location updated
+                  </div>
+                <% end %>
+
+                <div class="card-actions justify-end mt-4">
+                  <%= if @editing_address && @user_address do %>
+                    <button type="button" phx-click="cancel_edit_address" class="btn btn-ghost">
+                      Cancel
+                    </button>
+                  <% end %>
+                  <button
+                    type="button"
+                    phx-click="save_address"
+                    class="btn btn-primary"
+                    disabled={@address_data == nil}
+                  >
+                    {if @user_address, do: "Update", else: "Save"} Location
+                  </button>
+                </div>
+              <% end %>
+            </div>
+          </div>
+
           <div class="mt-6 card bg-base-100 shadow-xl">
             <div class="card-body">
               <h2 class="card-title">Preferences</h2>
@@ -346,6 +446,83 @@ defmodule HuddlzWeb.ProfileLive do
      |> assign(:password_form, password_form)}
   end
 
+  # Address event handlers
+  @impl true
+  def handle_event("edit_address", _params, socket) do
+    {:noreply, assign(socket, editing_address: true)}
+  end
+
+  @impl true
+  def handle_event("cancel_edit_address", _params, socket) do
+    address = socket.assigns.user_address
+
+    {:noreply,
+     socket
+     |> assign(editing_address: false)
+     |> assign(address_display: if(address, do: address.formatted_address, else: nil))
+     |> assign(address_data: if(address, do: address_to_map(address), else: nil))}
+  end
+
+  @impl true
+  def handle_event("save_address", _params, socket) do
+    user = socket.assigns.current_user
+    address_data = socket.assigns.address_data
+
+    attrs = %{
+      formatted_address: address_data.formatted_address,
+      latitude: address_data.latitude,
+      longitude: address_data.longitude,
+      street_number: address_data[:street_number],
+      street_name: address_data[:street_name],
+      city: address_data[:city],
+      state: address_data[:state],
+      postal_code: address_data[:postal_code],
+      country: address_data[:country],
+      country_name: address_data[:country_name],
+      place_id: address_data[:place_id]
+    }
+
+    result =
+      case socket.assigns.user_address do
+        nil ->
+          Huddlz.Accounts.create_user_address(Map.put(attrs, :user_id, user.id), actor: user)
+
+        existing ->
+          Huddlz.Accounts.update_user_address(existing, attrs, actor: user)
+      end
+
+    case result do
+      {:ok, address} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Location saved successfully")
+         |> assign(user_address: address)
+         |> assign(editing_address: false)}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to save location")}
+    end
+  end
+
+  @impl true
+  def handle_event("remove_address", _params, socket) do
+    user = socket.assigns.current_user
+
+    case Huddlz.Accounts.delete_user_address(socket.assigns.user_address, actor: user) do
+      :ok ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Location removed")
+         |> assign(user_address: nil)
+         |> assign(address_data: nil)
+         |> assign(address_display: nil)
+         |> assign(editing_address: false)}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to remove location")}
+    end
+  end
+
   @impl true
   def handle_event("validate_password", %{"form" => params}, socket) do
     form =
@@ -430,6 +607,37 @@ defmodule HuddlzWeb.ProfileLive do
          socket
          |> put_flash(:error, "Failed to remove profile picture")}
     end
+  end
+
+  # Handle geocoding messages from AddressInputLive component
+  @impl true
+  def handle_info({:do_search, component_id, query}, socket) do
+    result = Huddlz.Geocoding.autocomplete(query)
+    socket = AddressInputLive.handle_search_results(socket, component_id, result)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:do_place_details, component_id, place_id}, socket) do
+    result = Huddlz.Geocoding.place_details(place_id)
+    socket = AddressInputLive.handle_place_details(socket, component_id, result)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:address_selected, address_data}, socket) do
+    {:noreply,
+     socket
+     |> assign(address_data: address_data)
+     |> assign(address_display: address_data.formatted_address)}
+  end
+
+  @impl true
+  def handle_info(:address_cleared, socket) do
+    {:noreply,
+     socket
+     |> assign(address_data: nil)
+     |> assign(address_display: nil)}
   end
 
   defp soft_delete_all_profile_pictures(user) do

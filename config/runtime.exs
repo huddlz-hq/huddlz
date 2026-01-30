@@ -9,6 +9,13 @@ if File.exists?(env_file) do
   env_file |> File.read!() |> parse!() |> System.put_env()
 end
 
+# Load local overrides if they exist (for feature branches)
+local_env_file = ".#{config_env()}.env.local"
+
+if File.exists?(local_env_file) do
+  local_env_file |> File.read!() |> parse!() |> System.put_env()
+end
+
 # Server mode (only parse if set, nil would raise)
 if phx_server = optional("PHX_SERVER") do
   config :huddlz, HuddlzWeb.Endpoint, server: true
@@ -102,4 +109,12 @@ if config_env() == :prod do
   config :huddlz, :storage,
     bucket: required!("BUCKET_NAME"),
     endpoint: required!("AWS_ENDPOINT_URL_S3")
+end
+
+# =============================================================================
+# Google Maps Configuration (optional - for address geocoding)
+# =============================================================================
+
+if google_maps_api_key = optional("GOOGLE_MAPS_API_KEY") do
+  config :huddlz, :google_maps, api_key: google_maps_api_key
 end

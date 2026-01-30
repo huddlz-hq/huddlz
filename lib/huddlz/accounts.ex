@@ -24,5 +24,12 @@ defmodule Huddlz.Accounts do
       define :delete_profile_picture, action: :destroy
       define :soft_delete_profile_picture, action: :soft_delete
     end
+
+    resource Huddlz.Accounts.UserAddress do
+      define :create_user_address, action: :create
+      define :update_user_address, action: :update
+      define :get_user_address, action: :get_for_user, args: [:user_id]
+      define :delete_user_address, action: :destroy
+    end
   end
 end

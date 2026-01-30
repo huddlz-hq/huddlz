@@ -387,6 +387,10 @@ defmodule Huddlz.Accounts.User do
     has_many :profile_pictures, Huddlz.Accounts.ProfilePicture do
       destination_attribute :user_id
     end
+
+    has_one :address, Huddlz.Accounts.UserAddress do
+      destination_attribute :user_id
+    end
   end
 
   aggregates do
