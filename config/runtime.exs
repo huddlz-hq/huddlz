@@ -50,10 +50,6 @@ config :huddlz, HuddlzWeb.Endpoint,
   secret_key_base: secret_key_base,
   check_origin: if(check_origin, do: [scheme <> "://" <> host], else: false)
 
-if scheme == "https" do
-  config :huddlz, HuddlzWeb.Endpoint, force_ssl: [rewrite_on: [:x_forwarded_proto], hsts: true]
-end
-
 # =============================================================================
 # Application Configuration (all environments)
 # =============================================================================
