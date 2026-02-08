@@ -482,7 +482,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         |> Ash.Query.filter(is_nil(group_id) and is_nil(deleted_at))
         |> Ash.read!(authorize?: false)
 
-      assert length(pending_images) >= 1
+      assert pending_images != []
       assert Enum.all?(pending_images, fn img -> img.group_id == nil end)
     end
   end

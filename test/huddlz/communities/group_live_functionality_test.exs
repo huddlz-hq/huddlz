@@ -202,17 +202,17 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
       assert Enum.all?(groups, &(&1.owner_id == owner1.id))
     end
 
-    test "can search by name", %{groups: [alpha | _]} do
+    test "can search by name", %{groups: [alpha | _], owner1: owner1} do
       {:ok, groups} =
-        Huddlz.Communities.search_groups("Alpha", actor: alpha.owner)
+        Huddlz.Communities.search_groups("Alpha", actor: owner1)
 
       assert length(groups) == 1
       assert hd(groups).id == alpha.id
     end
 
-    test "search is case-insensitive", %{groups: [alpha | _]} do
+    test "search is case-insensitive", %{groups: [alpha | _], owner1: owner1} do
       {:ok, groups} =
-        Huddlz.Communities.search_groups("alpha", actor: alpha.owner)
+        Huddlz.Communities.search_groups("alpha", actor: owner1)
 
       assert length(groups) == 1
       assert hd(groups).id == alpha.id

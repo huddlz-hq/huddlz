@@ -51,11 +51,7 @@ defmodule HuddlzWeb.AdminLive do
            Ash.get(Huddlz.Accounts.User, user_id, actor: socket.assigns.current_user),
          {:ok, updated_user} <-
            Accounts.update_role(user, role_atom, actor: socket.assigns.current_user) do
-      # Update the user in the list
-      updated_users =
-        Enum.map(socket.assigns.users, fn user ->
-          if user.id == updated_user.id, do: updated_user, else: user
-        end)
+      updated_users = replace_user(socket.assigns.users, updated_user)
 
       {:noreply,
        socket
@@ -68,6 +64,12 @@ defmodule HuddlzWeb.AdminLive do
       {:error, _reason} ->
         {:noreply, put_flash(socket, :error, "Failed to update user role")}
     end
+  end
+
+  defp replace_user(users, updated_user) do
+    Enum.map(users, fn user ->
+      if user.id == updated_user.id, do: updated_user, else: user
+    end)
   end
 
   @impl true
