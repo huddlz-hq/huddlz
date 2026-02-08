@@ -51,7 +51,7 @@ This project uses [mise](https://mise.jdx.dev/) for version management:
 mise install
 ```
 
-This installs Elixir 1.19.3 (OTP 28) and Erlang 28.1.1 as specified in `.mise.toml`.
+This installs Elixir 1.19.5 (OTP 28) and Erlang 28.1.1 as specified in `.mise.toml`.
 
 ## Getting Started
 
