@@ -27,8 +27,7 @@ config :huddlz, Huddlz.Repo,
   url: database_url,
   pool_size: pool_size,
   socket_options: if(ecto_ipv6, do: [:inet6], else: []),
-  ssl: ecto_ssl,
-  ssl_opts: if(ecto_ssl, do: [verify: :verify_none], else: [])
+  ssl: if(ecto_ssl, do: [verify: :verify_none], else: false)
 
 # =============================================================================
 # Endpoint Configuration (all environments)
