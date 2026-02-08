@@ -13,7 +13,7 @@ Feature: View Past Huddlz on Group Pages
 
   Scenario: View past huddlz in public groups
     When I visit a public group page
-    And I click on the "Past Events" tab
+    And I click on the "Past" tab
     Then I should see past huddlz for that group
     And I should not see future huddlz in the past section
     And the past huddlz should be sorted newest first
@@ -22,7 +22,7 @@ Feature: View Past Huddlz on Group Pages
     Given I am signed in as "member@example.com"
     And I am a member of a private group with past huddlz
     When I visit that private group page
-    And I click on the "Past Events" tab
+    And I click on the "Past" tab
     Then I should see past huddlz from my private group
 
   Scenario: Non-members cannot see private groups
@@ -34,12 +34,12 @@ Feature: View Past Huddlz on Group Pages
 
   Scenario: Anonymous users can see past public huddlz
     When I visit a public group page
-    And I click on the "Past Events" tab
+    And I click on the "Past" tab
     Then I should see past huddlz from that public group
 
   Scenario: Pagination works for past events
     Given there is a public group with many past huddlz
     When I visit that group page
-    And I click on the "Past Events" tab
+    And I click on the "Past" tab
     Then I should see pagination controls
     And I should see at most 10 past events per page

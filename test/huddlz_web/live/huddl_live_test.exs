@@ -26,7 +26,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
 
       conn
       |> visit("/")
-      |> assert_has("h1", text: "Find your huddl")
+      |> assert_has("input[placeholder='Find your huddl']")
       |> assert_has("button", text: "Search")
       |> assert_has("h3", text: public_huddl.title)
     end

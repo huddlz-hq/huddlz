@@ -52,32 +52,36 @@ defmodule HuddlzWeb.GroupLive.Show do
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} current_user={@current_user}>
-      <.link navigate={~p"/groups"} class="text-sm font-semibold leading-6 hover:underline">
-        <.icon name="hero-arrow-left" class="h-3 w-3" /> Back to groups
-      </.link>
-
       <.header>
         {@group.name}
         <:subtitle>
-          <%= if @group.is_public do %>
-            <span class="badge badge-secondary">Public Group</span>
-          <% else %>
-            <span class="badge">Private Group</span>
+          <%= if !@group.is_public do %>
+            <span class="text-xs px-2.5 py-1 bg-base-300 text-base-content/50 font-medium">
+              Private
+            </span>
           <% end %>
           <%= if @is_owner do %>
-            <span class="badge badge-primary ml-2">Owner</span>
+            <span class="text-xs px-2.5 py-1 bg-primary/10 text-primary font-medium">
+              Owner
+            </span>
           <% end %>
         </:subtitle>
         <:actions>
           <%= if @current_user do %>
             <%= if @is_owner do %>
-              <.link navigate={~p"/groups/#{@group.slug}/edit"} class="btn btn-ghost">
+              <.link
+                navigate={~p"/groups/#{@group.slug}/edit"}
+                class="inline-flex items-center gap-1.5 text-sm font-medium text-base-content/50 hover:text-base-content transition-colors"
+              >
                 <.icon name="hero-pencil" class="h-4 w-4" /> Edit Group
               </.link>
             <% end %>
 
             <%= if @is_owner || @is_organizer do %>
-              <.link navigate={~p"/groups/#{@group.slug}/huddlz/new"} class="btn btn-primary">
+              <.link
+                navigate={~p"/groups/#{@group.slug}/huddlz/new"}
+                class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-content text-sm font-medium btn-neon"
+              >
                 <.icon name="hero-plus" class="h-4 w-4" /> Create Huddl
               </.link>
             <% end %>
@@ -108,10 +112,10 @@ defmodule HuddlzWeb.GroupLive.Show do
             <img
               src={GroupImages.url(@group.current_image_url)}
               alt={@group.name}
-              class="w-full max-w-2xl aspect-video object-cover rounded-lg shadow-lg"
+              class="w-full aspect-video object-cover overflow-hidden"
             />
           <% else %>
-            <div class="w-full max-w-2xl aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg shadow-lg flex items-center justify-center">
+            <div class="w-full aspect-video bg-base-100 overflow-hidden flex items-center justify-center">
               <span class="text-4xl font-bold text-base-content/40 text-center px-8 line-clamp-2">
                 {@group.name}
               </span>
@@ -119,63 +123,50 @@ defmodule HuddlzWeb.GroupLive.Show do
           <% end %>
         </div>
 
-        <div class="prose max-w-none">
-          <div class="grid gap-6 md:grid-cols-2">
-            <div>
-              <h3>Description</h3>
-              <p>{@group.description || "No description provided."}</p>
-            </div>
+        <div>
+          <p class="text-base-content/60">
+            {@group.description || "No description provided."}
+          </p>
 
-            <%= if @group.location do %>
-              <div>
-                <h3>Location</h3>
-                <p class="flex items-center gap-2">
-                  <.icon name="hero-map-pin" class="h-5 w-5" />
-                  {@group.location}
-                </p>
-              </div>
-            <% end %>
-          </div>
+          <%= if @group.location do %>
+            <p class="flex items-center gap-2 text-base-content/50 mt-2">
+              <.icon name="hero-map-pin" class="h-4 w-4" />
+              {@group.location}
+            </p>
+          <% end %>
 
           <div class="mt-8">
-            <h3>Group Details</h3>
-            <dl class="grid gap-4 sm:grid-cols-2">
-              <div>
-                <dt class="font-medium text-base-content/70">Created</dt>
-                <dd>{format_date(@group.created_at)}</dd>
-              </div>
-              <div>
-                <dt class="font-medium text-base-content/70">Owner</dt>
-                <dd class="flex items-center gap-2 mt-1">
-                  <.avatar user={@group.owner} size={:xs} />
-                  <span>{@group.owner.display_name || @group.owner.email}</span>
-                </dd>
-              </div>
-            </dl>
-          </div>
+            <h3 class="font-display text-lg tracking-tight text-glow">Huddlz</h3>
 
-          <div class="mt-8">
-            <h3>Events</h3>
-            
-    <!-- Tabs -->
-            <div class="tabs tabs-boxed mt-4">
+            <div class="flex gap-4 mt-4">
               <button
-                class={["tab", if(@active_tab == "upcoming", do: "tab-active", else: "")]}
+                class={[
+                  "text-sm font-medium transition-colors pb-1",
+                  if(@active_tab == "upcoming",
+                    do: "text-primary border-b border-primary",
+                    else: "text-base-content/40 hover:text-base-content"
+                  )
+                ]}
                 phx-click="switch_tab"
                 phx-value-tab="upcoming"
               >
-                Upcoming Events
+                Upcoming
               </button>
               <button
-                class={["tab", if(@active_tab == "past", do: "tab-active", else: "")]}
+                class={[
+                  "text-sm font-medium transition-colors pb-1",
+                  if(@active_tab == "past",
+                    do: "text-primary border-b border-primary",
+                    else: "text-base-content/40 hover:text-base-content"
+                  )
+                ]}
                 phx-click="switch_tab"
                 phx-value-tab="past"
               >
-                Past Events
+                Past
               </button>
             </div>
-            
-    <!-- Tab Content -->
+
             <div class="mt-6">
               <%= if @active_tab == "upcoming" do %>
                 <.huddl_list huddlz={@upcoming_huddlz} empty_message="No upcoming huddlz scheduled." />
@@ -315,10 +306,6 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   defp owner?(group, user) do
     group.owner_id == user.id
-  end
-
-  defp format_date(datetime) do
-    Calendar.strftime(datetime, "%B %d, %Y")
   end
 
   defp get_members(group, current_user) do

@@ -43,7 +43,6 @@ Feature: Group Management
     Then I should see "Group created successfully"
     And I should see "Tech Enthusiasts"
     And I should see "A group for tech lovers"
-    And I should see "Public Group"
 
   Scenario: Creating a private group as an admin
     Given I am signed in as "admin@example.com"
@@ -56,7 +55,7 @@ Feature: Group Management
     And I click "Create Group"
     Then I should see "Group created successfully"
     And I should see "Secret Society"
-    And I should see "Private Group"
+    And I should see "Private"
 
   Scenario: Regular users can create groups
     Given I am signed in as "regular@example.com"
@@ -70,7 +69,6 @@ Feature: Group Management
     Then I should see "Book Club"
     When I click on the group "Book Club"
     Then I should see "Book Club"
-    And I should see "Public Group"
 
   Scenario: Cannot view private group as non-member
     Given a private group "VIP Club" exists with owner "admin@example.com"

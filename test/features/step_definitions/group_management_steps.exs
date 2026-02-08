@@ -94,10 +94,10 @@ defmodule GroupManagementSteps do
   end
 
   # Click actions specific to groups
-  step "I click on the group {string}", %{args: [_group_name]} = context do
-    # The View Group button is wrapped in a link, so we click the link
+  step "I click on the group {string}", %{args: [group_name]} = context do
+    # The entire group card is a clickable link
     session = context[:session] || context[:conn]
-    session = click_link(session, "View Group")
+    session = click_link(session, group_name)
     Map.merge(context, %{session: session, conn: session})
   end
 

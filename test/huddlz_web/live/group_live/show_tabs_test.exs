@@ -60,7 +60,7 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       {:ok, view, _html} = live(conn, ~p"/groups/#{group.slug}")
 
       # Check that upcoming tab is active by default
-      assert has_element?(view, "button.tab.tab-active", "Upcoming Events")
+      assert has_element?(view, "button.text-primary", "Upcoming")
 
       # Check that upcoming events are displayed (limited to 10)
       upcoming_titles = upcoming_huddls |> Enum.take(10) |> Enum.map(& &1.title)
@@ -77,11 +77,11 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
     test "switches to past events tab when clicked", %{conn: conn, group: group} do
       {:ok, view, _html} = live(conn, ~p"/groups/#{group.slug}")
 
-      # Click on the Past Events tab
-      view |> element("button", "Past Events") |> render_click()
+      # Click on the Past tab
+      view |> element("button", "Past") |> render_click()
 
       # Check that past tab is now active
-      assert has_element?(view, "button.tab.tab-active", "Past Events")
+      assert has_element?(view, "button.text-primary", "Past")
 
       # Check that past events are displayed
       assert has_element?(view, "h3", "Past Event 1")
@@ -92,11 +92,10 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       {:ok, view, _html} = live(conn, ~p"/groups/#{group.slug}")
 
       # Switch to past events tab
-      view |> element("button", "Past Events") |> render_click()
+      view |> element("button", "Past") |> render_click()
 
       # Check that pagination controls are present
-      assert has_element?(view, ".join")
-      assert has_element?(view, "button", "Next")
+      assert has_element?(view, "button[phx-click=change_past_page]")
 
       # Check that only 10 events are displayed on first page
       assert has_element?(view, "h3", "Past Event 1")
@@ -108,13 +107,13 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       {:ok, view, _html} = live(conn, ~p"/groups/#{group.slug}")
 
       # Switch to past events tab
-      view |> element("button", "Past Events") |> render_click()
+      view |> element("button", "Past") |> render_click()
 
-      # Click next page
-      view |> element("button", "Next") |> render_click()
+      # Click next page (page 2 button)
+      view |> element("button", "2") |> render_click()
 
       # Check that we're on page 2
-      assert has_element?(view, "button.btn-active", "2")
+      assert has_element?(view, "button.bg-primary", "2")
 
       # Check that events 11-20 are displayed
       assert has_element?(view, "h3", "Past Event 11")
@@ -127,13 +126,13 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       {:ok, view, _html} = live(conn, ~p"/groups/#{group.slug}")
 
       # Switch to past events tab
-      view |> element("button", "Past Events") |> render_click()
+      view |> element("button", "Past") |> render_click()
 
       # Click on page 3
       view |> element("button", "3") |> render_click()
 
       # Check that we're on page 3
-      assert has_element?(view, "button.btn-active", "3")
+      assert has_element?(view, "button.bg-primary", "3")
 
       # Check that events 21-25 are displayed (last page)
       assert has_element?(view, "h3", "Past Event 21")
@@ -148,7 +147,7 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       {:ok, view, _html} = live(conn, ~p"/groups/#{new_group.slug}")
 
       # Switch to past events tab
-      view |> element("button", "Past Events") |> render_click()
+      view |> element("button", "Past") |> render_click()
 
       # Check that no past events message is displayed
       assert has_element?(view, "p", "No past huddlz found.")
@@ -171,15 +170,15 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       {:ok, view, _html} = live(conn, ~p"/groups/#{group.slug}")
 
       # Start on upcoming tab
-      assert has_element?(view, "button.tab.tab-active", "Upcoming Events")
+      assert has_element?(view, "button.text-primary", "Upcoming")
 
       # Switch to past events tab
-      view |> element("button", "Past Events") |> render_click()
-      assert has_element?(view, "button.tab.tab-active", "Past Events")
+      view |> element("button", "Past") |> render_click()
+      assert has_element?(view, "button.text-primary", "Past")
 
       # Switch back to upcoming events tab
-      view |> element("button", "Upcoming Events") |> render_click()
-      assert has_element?(view, "button.tab.tab-active", "Upcoming Events")
+      view |> element("button", "Upcoming") |> render_click()
+      assert has_element?(view, "button.text-primary", "Upcoming")
     end
   end
 
@@ -218,8 +217,8 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       {:ok, view, _html} = live(conn, ~p"/groups/#{private_group.slug}")
 
       # Check that tabs are present
-      assert has_element?(view, "button", "Upcoming Events")
-      assert has_element?(view, "button", "Past Events")
+      assert has_element?(view, "button", "Upcoming")
+      assert has_element?(view, "button", "Past")
     end
   end
 end

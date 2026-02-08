@@ -275,7 +275,7 @@ defmodule ViewPastHuddlzSteps do
 
   step "I should see pagination controls", %{conn: conn} do
     # Check for pagination controls
-    assert_has(conn, ".join")
+    assert_has(conn, "button[phx-click=change_past_page]")
     :ok
   end
 

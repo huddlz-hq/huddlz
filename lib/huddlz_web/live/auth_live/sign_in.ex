@@ -13,51 +13,50 @@ defmodule HuddlzWeb.AuthLive.SignIn do
     ~H"""
     <.app flash={@flash} current_user={assigns[:current_user]}>
       <div class="mx-auto max-w-md">
-        <.header class="text-center">
-          Sign in to your account
-          <:subtitle>
-            Welcome back! Please sign in to continue.
-          </:subtitle>
-        </.header>
+        <h1 class="font-display text-2xl tracking-tight text-center">Sign in to your account</h1>
+        <p class="text-center text-base-content/40 mt-2">Welcome back!</p>
 
         <%!-- Password Sign In Form --%>
-        <div class="card bg-base-100 shadow-xl">
-          <div class="card-body">
-            <h2 class="card-title">Sign in with password</h2>
+        <div class="border border-base-300 p-6 mt-8">
+          <h2 class="font-display text-xl mb-4">Sign in with password</h2>
 
-            <.form
-              :let={f}
-              for={@password_form}
-              id="password-sign-in-form"
-              phx-submit="sign_in_with_password"
-              phx-change="validate_password"
-              phx-trigger-action={@trigger_action}
-              action="/auth/user/password/sign_in"
-              method="post"
-            >
-              <.input field={f[:email]} type="text" label="Email" required />
-              <.input field={f[:password]} type="password" label="Password" required />
+          <.form
+            :let={f}
+            for={@password_form}
+            id="password-sign-in-form"
+            phx-submit="sign_in_with_password"
+            phx-change="validate_password"
+            phx-trigger-action={@trigger_action}
+            action="/auth/user/password/sign_in"
+            method="post"
+          >
+            <.input field={f[:email]} type="email" label="Email" autocomplete="email" />
+            <.input
+              field={f[:password]}
+              type="password"
+              label="Password"
+              autocomplete="current-password"
+            />
 
-              <div class="mt-6">
-                <.button phx-disable-with="Signing in..." class="w-full">
-                  Sign in
-                </.button>
-              </div>
-            </.form>
-
-            <div class="text-sm mt-4">
-              <a href="/reset" class="link link-primary">
-                Forgot your password?
-              </a>
+            <div class="mt-6">
+              <.button phx-disable-with="Signing in..." class="w-full">
+                Sign in
+              </.button>
             </div>
+          </.form>
+
+          <div class="text-sm mt-4">
+            <a href="/reset" class="text-primary hover:underline font-medium">
+              Forgot your password?
+            </a>
           </div>
         </div>
 
         <div class="text-center mt-8">
-          <span class="text-sm text-base-content/70">
+          <span class="text-sm text-base-content/50">
             Don't have an account?
           </span>
-          <a href="/register" class="link link-primary text-sm ml-1">
+          <a href="/register" class="text-primary hover:underline font-medium text-sm ml-1">
             Sign up
           </a>
         </div>

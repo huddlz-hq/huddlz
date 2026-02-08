@@ -13,7 +13,7 @@ Feature: Password Authentication
       | password_confirmation    | SuperSecret123!        |
     And I click "Create account"
     Then I should be signed in
-    And I should see "Find your huddl"
+    And I should see "huddlz"
 
   Scenario: User signs in with password
     Given a user exists with email "existing@example.com" and password "Password123!"
@@ -23,7 +23,7 @@ Feature: Password Authentication
       | password | Password123!         |
     And I submit the password sign-in form
     Then I should be signed in
-    And I should see "Find your huddl"
+    And I should see "huddlz"
 
   Scenario: User fails to sign in with wrong password
     Given a user exists with email "existing@example.com" and password "Password123!"
@@ -38,7 +38,6 @@ Feature: Password Authentication
   Scenario: User changes existing password
     Given I am signed in as "pwduser@example.com" with password "OldPassword123!"
     When I go to my profile page
-    And I click "Change Password"
     And I fill in the password form with:
       | current_password      | OldPassword123! |
       | password              | NewPassword123! |

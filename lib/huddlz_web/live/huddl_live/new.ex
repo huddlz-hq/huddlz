@@ -195,19 +195,21 @@ defmodule HuddlzWeb.HuddlLive.New do
         <.input field={@form[:description]} type="textarea" label="Description" rows="4" />
 
         <div>
-          <label class="block text-sm font-medium mb-2">Huddl Image</label>
-          <p class="text-base-content/70 text-sm mb-3">
+          <label class="mono-label text-primary/70 mb-2 block">
+            Huddl Image
+          </label>
+          <p class="text-base-content/50 text-sm mb-3">
             Upload a banner image for this huddl. If none is provided, the group image will be used.
           </p>
 
           <div
-            class="border-2 border-dashed border-base-300 rounded-lg p-4 text-center hover:border-primary transition-colors"
+            class="border border-dashed border-base-300 p-4 text-center hover:border-primary transition-colors"
             phx-drop-target={@uploads.huddl_image.ref}
           >
             <.live_file_input upload={@uploads.huddl_image} class="hidden" />
             <label for={@uploads.huddl_image.ref} class="cursor-pointer flex flex-col items-center">
               <.icon name="hero-photo" class="w-8 h-8 text-base-content/50 mb-2" />
-              <span class="text-sm text-base-content/70">
+              <span class="text-sm text-base-content/50">
                 Click to upload or drag and drop
               </span>
               <span class="text-xs text-base-content/50 mt-1">
@@ -221,7 +223,7 @@ defmodule HuddlzWeb.HuddlLive.New do
           <% end %>
 
           <%= if @pending_preview_url do %>
-            <div class="mt-3 flex items-center gap-3 p-3 bg-base-200 rounded-lg">
+            <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
               <img src={@pending_preview_url} class="w-20 h-12 rounded object-cover" alt="Preview" />
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-success flex items-center gap-1">
@@ -231,14 +233,14 @@ defmodule HuddlzWeb.HuddlLive.New do
               <button
                 type="button"
                 phx-click="cancel_pending_image"
-                class="btn btn-ghost btn-sm btn-circle"
+                class="p-1 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
               >
                 <.icon name="hero-x-mark" class="w-4 h-4" />
               </button>
             </div>
           <% else %>
             <%= for entry <- @uploads.huddl_image.entries do %>
-              <div class="mt-3 flex items-center gap-3 p-3 bg-base-200 rounded-lg">
+              <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
                 <.live_img_preview entry={entry} class="w-20 h-12 rounded object-cover" />
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium truncate">{entry.client_name}</p>
@@ -254,7 +256,7 @@ defmodule HuddlzWeb.HuddlLive.New do
                   type="button"
                   phx-click="cancel_image_upload"
                   phx-value-ref={entry.ref}
-                  class="btn btn-ghost btn-sm btn-circle"
+                  class="p-1 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
                 >
                   <.icon name="hero-x-mark" class="w-4 h-4" />
                 </button>
@@ -279,7 +281,7 @@ defmodule HuddlzWeb.HuddlLive.New do
         <.duration_picker field={@form[:duration_minutes]} label="Duration" />
 
         <%= if @calculated_end_time do %>
-          <div class="alert alert-info">
+          <div class="border border-primary/20 p-3 bg-primary/5 flex items-center gap-2 text-sm">
             <.icon name="hero-clock" class="h-5 w-5" />
             <span>Ends at: {@calculated_end_time}</span>
           </div>
@@ -340,7 +342,7 @@ defmodule HuddlzWeb.HuddlLive.New do
             label="Make this a private event (only visible to group members)"
           />
         <% else %>
-          <p class="text-sm text-base-content/80">
+          <p class="text-sm text-base-content/60">
             <.icon name="hero-lock-closed" class="h-4 w-4 inline" />
             This will be a private event (private groups can only create private events)
           </p>
@@ -350,7 +352,10 @@ defmodule HuddlzWeb.HuddlLive.New do
           <.button type="submit" phx-disable-with="Creating...">
             Create Huddl
           </.button>
-          <.link navigate={~p"/groups/#{@group.slug}"} class="btn btn-ghost">
+          <.link
+            navigate={~p"/groups/#{@group.slug}"}
+            class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
+          >
             Cancel
           </.link>
         </div>

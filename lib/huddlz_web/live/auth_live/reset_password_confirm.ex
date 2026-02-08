@@ -44,94 +44,77 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
     ~H"""
     <.app flash={@flash} current_user={assigns[:current_user]}>
       <div class="max-w-md mx-auto">
-        <div class="card bg-base-100 shadow-xl">
-          <div class="card-body">
-            <%= if @token_valid do %>
-              <h2 class="card-title text-2xl mb-4">Set new password</h2>
+        <div class="border border-base-300 p-6">
+          <%= if @token_valid do %>
+            <h2 class="font-display text-2xl tracking-tight mb-4">Set new password</h2>
 
-              <.form
-                :let={f}
-                for={@form}
-                phx-change="validate"
-                phx-submit="reset_password"
-                id="reset-password-confirm-form"
-              >
-                <input
-                  type="hidden"
-                  name={Phoenix.HTML.Form.input_name(f, :reset_token)}
-                  value={@token}
+            <.form
+              :let={f}
+              for={@form}
+              phx-change="validate"
+              phx-submit="reset_password"
+              id="reset-password-confirm-form"
+            >
+              <input
+                type="hidden"
+                name={Phoenix.HTML.Form.input_name(f, :reset_token)}
+                value={@token}
+              />
+
+              <%= if f[:reset_token].errors != [] do %>
+                <div class="border border-error/30 p-4 bg-error/5 flex items-start gap-3 mb-4">
+                  <.icon name="hero-x-circle" class="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
+                  <span class="text-sm">This password reset link is invalid or has expired.</span>
+                </div>
+                <div class="mt-4">
+                  <.link
+                    navigate="/reset"
+                    class="block text-center text-primary hover:underline font-medium"
+                  >
+                    Request new reset link
+                  </.link>
+                </div>
+              <% else %>
+                <.input
+                  field={f[:password]}
+                  type="password"
+                  label="New password"
+                  autocomplete="new-password"
                 />
 
-                <%= if f[:reset_token].errors != [] do %>
-                  <div class="alert alert-error mb-4">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      class="stroke-current shrink-0 h-6 w-6"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <span>This password reset link is invalid or has expired.</span>
-                  </div>
-                  <div class="form-control mt-4">
-                    <.link navigate="/reset" class="btn btn-primary">
-                      Request new reset link
-                    </.link>
-                  </div>
-                <% else %>
-                  <.input field={f[:password]} type="password" label="New password" required />
+                <.input
+                  field={f[:password_confirmation]}
+                  type="password"
+                  label="Confirm new password"
+                  autocomplete="new-password"
+                />
 
-                  <.input
-                    field={f[:password_confirmation]}
-                    type="password"
-                    label="Confirm new password"
-                    required
-                  />
+                <div class="text-xs text-base-content/60 mt-1 mb-4">
+                  Password must be at least 8 characters long
+                </div>
 
-                  <div class="text-xs text-base-content/80 mt-1 mb-4">
-                    Password must be at least 8 characters long
-                  </div>
+                <div class="mt-6">
+                  <.button phx-disable-with="Resetting..." class="w-full">
+                    Reset password
+                  </.button>
+                </div>
+              <% end %>
+            </.form>
+          <% else %>
+            <h2 class="font-display text-2xl tracking-tight mb-4">Invalid reset link</h2>
 
-                  <div class="form-control mt-6">
-                    <.button phx-disable-with="Resetting..." class="btn btn-primary">
-                      Reset password
-                    </.button>
-                  </div>
-                <% end %>
-              </.form>
-            <% else %>
-              <h2 class="card-title text-2xl mb-4">Invalid reset link</h2>
+            <div class="border border-error/30 p-4 bg-error/5 flex items-start gap-3">
+              <.icon name="hero-x-circle" class="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
+              <span class="text-sm">This password reset link is invalid or has expired.</span>
+            </div>
 
-              <div class="alert alert-error">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="stroke-current shrink-0 h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <span>This password reset link is invalid or has expired.</span>
-              </div>
-
-              <div class="form-control mt-6">
-                <.link navigate="/reset" class="btn btn-primary">
-                  Request new reset link
-                </.link>
-              </div>
-            <% end %>
-          </div>
+            <.link
+              navigate="/reset"
+              class="block text-center text-primary hover:underline font-medium mt-6"
+            >
+              Request new reset link
+            </.link>
+          <% end %>
         </div>
       </div>
     </.app>

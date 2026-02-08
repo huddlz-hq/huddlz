@@ -76,26 +76,33 @@ defmodule HuddlzWeb.AdminLive do
     <Layouts.app flash={@flash} current_user={@current_user}>
       <div class="container mx-auto p-4 sm:p-6 lg:p-8">
         <div class="mb-8">
-          <h1 class="text-3xl font-bold">Admin Panel</h1>
+          <h1 class="font-display text-2xl tracking-tight">Admin Panel</h1>
         </div>
 
-        <div class="card bg-base-100 shadow-xl">
-          <div class="card-body">
-            <h2 class="card-title mb-4">User Management</h2>
+        <div class="border border-base-300">
+          <div class="p-6">
+            <h2 class="font-display text-lg tracking-tight text-glow mb-4">User Management</h2>
 
             <form phx-submit="search" class="mb-6">
-              <div class="join w-full">
+              <div class="flex gap-2 w-full">
                 <input
                   type="text"
                   name="query"
                   value={@search_query}
                   placeholder="Search users by email..."
-                  class="input input-bordered join-item flex-grow"
+                  class="flex-1 border border-base-300 px-4 py-2.5 bg-base-100 text-sm focus:border-primary focus:ring-1 focus:ring-primary/30 transition-colors"
                 />
-                <button type="submit" class="btn btn-primary join-item">
+                <button
+                  type="submit"
+                  class="px-5 py-2.5 bg-primary text-primary-content text-sm font-medium btn-neon"
+                >
                   Search
                 </button>
-                <button type="button" phx-click="clear_search" class="btn btn-secondary join-item">
+                <button
+                  type="button"
+                  phx-click="clear_search"
+                  class="px-5 py-2.5 border border-base-300 text-sm font-medium hover:border-primary/30 transition-colors"
+                >
                   Clear
                 </button>
               </div>
@@ -103,50 +110,50 @@ defmodule HuddlzWeb.AdminLive do
 
             <%= if @search_performed do %>
               <%= if Enum.empty?(@users) do %>
-                <div class="alert alert-info">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    class="stroke-current shrink-0 w-6 h-6"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    >
-                    </path>
-                  </svg>
+                <div class="border border-primary/20 p-4 bg-primary/5 flex items-start gap-3">
+                  <.icon
+                    name="hero-information-circle"
+                    class="w-5 h-5 text-primary flex-shrink-0 mt-0.5"
+                  />
                   <span>No users found matching your search criteria.</span>
                 </div>
               <% else %>
                 <div class="overflow-x-auto">
-                  <table class="table table-zebra">
+                  <table class="w-full">
                     <thead>
-                      <tr>
-                        <th>Email</th>
-                        <th>Display Name</th>
-                        <th>Role</th>
-                        <th>Actions</th>
+                      <tr class="text-left mono-label text-primary/70 border-b border-base-300">
+                        <th class="px-4 py-3">Email</th>
+                        <th class="px-4 py-3">Display Name</th>
+                        <th class="px-4 py-3">Role</th>
+                        <th class="px-4 py-3">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       <%= for user <- @users do %>
-                        <tr>
-                          <td>{user.email}</td>
-                          <td>{user.display_name || "—"}</td>
-                          <td>
-                            <span class={"badge #{role_badge_class(user.role)}"}>{user.role}</span>
+                        <tr class="border-b border-base-300 hover:bg-base-300/50 transition-colors">
+                          <td class="px-4 py-3 text-sm">{user.email}</td>
+                          <td class="px-4 py-3 text-sm">{user.display_name || "—"}</td>
+                          <td class="px-4 py-3 text-sm">
+                            <span class={"text-xs px-2.5 py-1 font-medium #{if user.role == :admin, do: "bg-primary/10 text-primary", else: "bg-base-300 text-base-content/50"}"}>
+                              {user.role}
+                            </span>
                           </td>
-                          <td>
+                          <td class="px-4 py-3 text-sm">
                             <form phx-submit="update_role" class="flex items-center gap-2">
                               <input type="hidden" name="user_id" value={user.id} />
-                              <select name="role" class="select select-bordered select-sm">
+                              <select
+                                name="role"
+                                class="border border-base-300 px-2 py-1 text-sm bg-base-100 focus:border-primary transition-colors"
+                              >
                                 <option value="user" selected={user.role == :user}>User</option>
                                 <option value="admin" selected={user.role == :admin}>Admin</option>
                               </select>
-                              <button type="submit" class="btn btn-primary btn-sm">Update</button>
+                              <button
+                                type="submit"
+                                class="px-3 py-1 bg-primary text-primary-content text-xs font-medium btn-neon transition-all"
+                              >
+                                Update
+                              </button>
                             </form>
                           </td>
                         </tr>
@@ -162,8 +169,4 @@ defmodule HuddlzWeb.AdminLive do
     </Layouts.app>
     """
   end
-
-  # Helper function to determine badge color based on role
-  defp role_badge_class(:admin), do: "badge-primary"
-  defp role_badge_class(:user), do: "badge-ghost"
 end

@@ -206,11 +206,13 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         <.input field={@form[:description]} type="textarea" label="Description" rows="4" />
 
         <div>
-          <label class="block text-sm font-medium mb-2">Huddl Image</label>
+          <label class="mono-label text-primary/70 mb-2 block">
+            Huddl Image
+          </label>
 
           <%= cond do %>
             <% @pending_preview_url -> %>
-              <div class="mb-3 flex items-center gap-3 p-3 bg-base-200 rounded-lg">
+              <div class="mb-3 flex items-center gap-3 p-3 bg-base-200">
                 <img src={@pending_preview_url} class="w-20 h-12 rounded object-cover" alt="Preview" />
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium text-success flex items-center gap-1">
@@ -220,13 +222,13 @@ defmodule HuddlzWeb.HuddlLive.Edit do
                 <button
                   type="button"
                   phx-click="cancel_pending_image"
-                  class="btn btn-ghost btn-sm btn-circle"
+                  class="p-1 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
                 >
                   <.icon name="hero-x-mark" class="w-4 h-4" />
                 </button>
               </div>
             <% @huddl.current_image_url -> %>
-              <div class="mb-3 flex items-center gap-3 p-3 bg-base-200 rounded-lg">
+              <div class="mb-3 flex items-center gap-3 p-3 bg-base-200">
                 <img
                   src={HuddlImages.url(@huddl.current_image_url)}
                   class="w-20 h-12 rounded object-cover"
@@ -238,42 +240,42 @@ defmodule HuddlzWeb.HuddlLive.Edit do
                 <button
                   type="button"
                   phx-click="remove_current_image"
-                  class="btn btn-ghost btn-sm btn-circle text-error"
+                  class="p-1 hover:bg-base-300 text-base-content/50 hover:text-error transition-colors"
                   title="Remove image"
                 >
                   <.icon name="hero-trash" class="w-4 h-4" />
                 </button>
               </div>
             <% @huddl.group.current_image_url -> %>
-              <div class="mb-3 flex items-center gap-3 p-3 bg-base-200/50 rounded-lg border border-dashed border-base-300">
+              <div class="mb-3 flex items-center gap-3 p-3 bg-base-200/50 border border-dashed border-base-300">
                 <img
                   src={GroupImages.url(@huddl.group.current_image_url)}
                   class="w-20 h-12 rounded object-cover opacity-70"
                   alt="Group image"
                 />
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm text-base-content/70">(Using group image)</p>
+                  <p class="text-sm text-base-content/50">(Using group image)</p>
                 </div>
               </div>
             <% true -> %>
-              <div class="mb-3 flex items-center gap-3 p-3 bg-base-200/50 rounded-lg border border-dashed border-base-300">
-                <div class="w-20 h-12 rounded bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+              <div class="mb-3 flex items-center gap-3 p-3 bg-base-200/50 border border-dashed border-base-300">
+                <div class="w-20 h-12 rounded bg-base-100 flex items-center justify-center">
                   <.icon name="hero-photo" class="w-6 h-6 text-base-content/30" />
                 </div>
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm text-base-content/70">(No image)</p>
+                  <p class="text-sm text-base-content/50">(No image)</p>
                 </div>
               </div>
           <% end %>
 
           <div
-            class="border-2 border-dashed border-base-300 rounded-lg p-4 text-center hover:border-primary transition-colors"
+            class="border border-dashed border-base-300 p-4 text-center hover:border-primary transition-colors"
             phx-drop-target={@uploads.huddl_image.ref}
           >
             <.live_file_input upload={@uploads.huddl_image} class="hidden" />
             <label for={@uploads.huddl_image.ref} class="cursor-pointer flex flex-col items-center">
               <.icon name="hero-arrow-up-tray" class="w-6 h-6 text-base-content/50 mb-2" />
-              <span class="text-sm text-base-content/70">
+              <span class="text-sm text-base-content/50">
                 Upload new image
               </span>
               <span class="text-xs text-base-content/50 mt-1">
@@ -287,7 +289,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
           <% end %>
 
           <%= for entry <- @uploads.huddl_image.entries do %>
-            <div class="mt-3 flex items-center gap-3 p-3 bg-base-200 rounded-lg">
+            <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
               <.live_img_preview entry={entry} class="w-20 h-12 rounded object-cover" />
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium truncate">{entry.client_name}</p>
@@ -303,7 +305,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
                 type="button"
                 phx-click="cancel_image_upload"
                 phx-value-ref={entry.ref}
-                class="btn btn-ghost btn-sm btn-circle"
+                class="p-1 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
               >
                 <.icon name="hero-x-mark" class="w-4 h-4" />
               </button>
@@ -326,17 +328,17 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
         <%= if @huddl.huddl_template_id do %>
           <p>This is a recurring huddl. Please select which huddlz to update</p>
-          <div class="form-control">
+          <div>
             <div>
               <input
                 id="form_edit_type_instance"
                 type="radio"
                 name="form[edit_type]"
-                class="radio"
+                class="w-4 h-4 accent-primary"
                 value="instance"
                 checked={AshPhoenix.Form.value(@form.source, :edit_type) == "instance"}
               />
-              <label class="label cursor-pointer" for="form_edit_type_instance">
+              <label class="text-sm font-medium cursor-pointer ml-2" for="form_edit_type_instance">
                 This huddl only
               </label>
             </div>
@@ -345,11 +347,11 @@ defmodule HuddlzWeb.HuddlLive.Edit do
                 id="form_edit_type_all"
                 type="radio"
                 name="form[edit_type]"
-                class="radio"
+                class="w-4 h-4 accent-primary"
                 value="all"
                 checked={AshPhoenix.Form.value(@form.source, :edit_type) == "all"}
               />
-              <label class="label cursor-pointer" for="form_edit_type_all">
+              <label class="text-sm font-medium cursor-pointer ml-2" for="form_edit_type_all">
                 This and future huddlz in series
               </label>
             </div>
@@ -408,7 +410,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
             label="Make this a private event (only visible to group members)"
           />
         <% else %>
-          <p class="text-sm text-base-content/80">
+          <p class="text-sm text-base-content/60">
             <.icon name="hero-lock-closed" class="h-4 w-4 inline" />
             This will be a private event (private groups can only create private events)
           </p>
@@ -418,7 +420,10 @@ defmodule HuddlzWeb.HuddlLive.Edit do
           <.button type="submit" phx-disable-with="Creating...">
             Save Huddl
           </.button>
-          <.link navigate={~p"/groups/#{@group_slug}/huddlz/#{@huddl.id}"} class="btn btn-ghost">
+          <.link
+            navigate={~p"/groups/#{@group_slug}/huddlz/#{@huddl.id}"}
+            class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
+          >
             Cancel
           </.link>
         </div>

@@ -43,13 +43,14 @@ defmodule HuddlzWeb.ProfileLive do
      |> assign(:page_title, "Profile")
      |> assign(:form, form)
      |> assign(:password_form, password_form)
-     |> assign(:show_password_form, false)
      |> assign(:current_user, user_with_avatar)
      |> assign(:avatar_error, nil)
      |> allow_upload(:avatar,
        accept: ~w(.jpg .jpeg .png .webp),
        max_entries: 1,
-       max_file_size: 5_000_000
+       max_file_size: 5_000_000,
+       auto_upload: true,
+       progress: &handle_upload_progress/3
      )}
   end
 
@@ -57,227 +58,149 @@ defmodule HuddlzWeb.ProfileLive do
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} current_user={@current_user}>
-      <div class="max-w-2xl mx-auto">
-        <.header>
-          Profile Settings
-          <:subtitle>Manage your profile information</:subtitle>
-        </.header>
+      <.header>
+        Profile Settings
+        <:subtitle>Manage your profile information</:subtitle>
+      </.header>
 
-        <div class="mt-8">
-          <div class="card bg-base-100 shadow-xl">
-            <div class="card-body">
-              <h2 class="card-title">Profile Picture</h2>
-              <p class="text-base-content/70 mb-4">
-                Upload a profile picture to personalize your account.
-              </p>
+      <div class="mt-8">
+        <h2 class="font-display text-lg tracking-tight text-glow">Profile Picture</h2>
+        <p class="text-base-content/50 mb-4">
+          Upload a profile picture to personalize your account.
+        </p>
 
-              <div class="flex items-start gap-6">
-                <div class="flex-shrink-0">
-                  <.avatar user={@current_user} size={:xl} />
-                </div>
-
-                <div class="flex-1 space-y-4">
-                  <form id="avatar-form" phx-submit="save_avatar" phx-change="validate_avatar">
-                    <div
-                      class="border-2 border-dashed border-base-300 rounded-lg p-4 text-center hover:border-primary transition-colors"
-                      phx-drop-target={@uploads.avatar.ref}
-                    >
-                      <.live_file_input upload={@uploads.avatar} class="hidden" />
-                      <label
-                        for={@uploads.avatar.ref}
-                        class="cursor-pointer flex flex-col items-center"
-                      >
-                        <.icon name="hero-cloud-arrow-up" class="w-8 h-8 text-base-content/50 mb-2" />
-                        <span class="text-sm text-base-content/70">
-                          Click to upload or drag and drop
-                        </span>
-                        <span class="text-xs text-base-content/50 mt-1">
-                          JPG, PNG, or WebP (max 5MB)
-                        </span>
-                      </label>
-                    </div>
-
-                    <%= if @avatar_error do %>
-                      <p class="text-error text-sm mt-2">{@avatar_error}</p>
-                    <% end %>
-
-                    <%= for entry <- @uploads.avatar.entries do %>
-                      <div class="mt-3 flex items-center gap-3 p-3 bg-base-200 rounded-lg">
-                        <.live_img_preview entry={entry} class="w-12 h-12 rounded-full object-cover" />
-                        <div class="flex-1 min-w-0">
-                          <p class="text-sm font-medium truncate">{entry.client_name}</p>
-                          <div class="w-full bg-base-300 rounded-full h-1.5 mt-1">
-                            <div
-                              class="bg-primary h-1.5 rounded-full transition-all"
-                              style={"width: #{entry.progress}%"}
-                            >
-                            </div>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          phx-click="cancel_avatar_upload"
-                          phx-value-ref={entry.ref}
-                          class="btn btn-ghost btn-sm btn-circle"
-                        >
-                          <.icon name="hero-x-mark" class="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      <%= for err <- upload_errors(@uploads.avatar, entry) do %>
-                        <p class="text-error text-sm mt-1">{upload_error_to_string(err)}</p>
-                      <% end %>
-                    <% end %>
-
-                    <%= for err <- upload_errors(@uploads.avatar) do %>
-                      <p class="text-error text-sm mt-2">{upload_error_to_string(err)}</p>
-                    <% end %>
-
-                    <div class="flex gap-2 mt-4">
-                      <%= if @uploads.avatar.entries != [] do %>
-                        <button type="submit" class="btn btn-primary btn-sm">
-                          <.icon name="hero-check" class="w-4 h-4 mr-1" /> Save
-                        </button>
-                      <% end %>
-
-                      <%= if @current_user.current_profile_picture_url do %>
-                        <button
-                          type="button"
-                          phx-click="remove_avatar"
-                          class="btn btn-ghost btn-sm text-error"
-                          data-confirm="Are you sure you want to remove your profile picture?"
-                        >
-                          <.icon name="hero-trash" class="w-4 h-4 mr-1" /> Remove
-                        </button>
-                      <% end %>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </div>
+        <div class="relative inline-block">
+          <div class="relative">
+            <.avatar user={@current_user} size={:xl} />
+            <button
+              type="button"
+              phx-click={JS.toggle(to: "#avatar-menu")}
+              class="absolute bottom-0 right-0 w-6 h-6 flex items-center justify-center bg-base-200 border border-base-300 text-primary cursor-pointer"
+            >
+              <.icon name="hero-pencil" class="w-3 h-3" />
+            </button>
           </div>
 
-          <div class="mt-6 card bg-base-100 shadow-xl">
-            <div class="card-body">
-              <h2 class="card-title">Account Information</h2>
-              <div class="space-y-3">
-                <div>
-                  <span class="font-semibold">Email:</span>
-                  <span class="ml-2 text-base-content/70">{@current_user.email}</span>
-                </div>
-                <div>
-                  <span class="font-semibold">Role:</span>
-                  <span class="ml-2">
-                    <span class={[
-                      "badge",
-                      @current_user.role == :admin && "badge-primary",
-                      @current_user.role == :user && "badge-neutral"
-                    ]}>
-                      {@current_user.role |> to_string() |> String.capitalize()}
-                    </span>
-                  </span>
-                </div>
-              </div>
-            </div>
+          <div
+            id="avatar-menu"
+            class="hidden absolute left-0 mt-2 w-48 border border-base-300 bg-base-200 z-10"
+            phx-click-away={JS.hide(to: "#avatar-menu")}
+          >
+            <label
+              for={@uploads.avatar.ref}
+              class="block w-full text-left px-4 py-2 text-sm hover:text-primary cursor-pointer transition-colors"
+              phx-click={JS.hide(to: "#avatar-menu")}
+            >
+              Upload a photo...
+            </label>
+            <%= if @current_user.current_profile_picture_url do %>
+              <button
+                type="button"
+                phx-click="remove_avatar"
+                data-confirm="Are you sure you want to remove your profile picture?"
+                class="block w-full text-left px-4 py-2 text-sm text-error hover:text-error/70 transition-colors"
+              >
+                <span>Remove</span>
+              </button>
+            <% end %>
           </div>
 
-          <div class="mt-6 card bg-base-100 shadow-xl">
-            <div class="card-body">
-              <h2 class="card-title">Display Name</h2>
-              <p class="text-base-content/70 mb-4">
-                This is how other users will see you on the platform.
-              </p>
+          <form id="avatar-form" phx-change="validate_avatar" class="hidden">
+            <.live_file_input upload={@uploads.avatar} />
+          </form>
+        </div>
 
-              <form phx-submit="save" phx-change="validate">
-                <.input
-                  field={@form[:display_name]}
-                  type="text"
-                  label="Display Name"
-                  placeholder="Enter your display name"
-                  required
-                />
+        <%= if @avatar_error do %>
+          <p class="text-error text-sm mt-2">{@avatar_error}</p>
+        <% end %>
 
-                <div class="card-actions justify-end mt-6">
-                  <button type="submit" class="btn btn-primary">
-                    Save Changes
-                  </button>
-                </div>
-              </form>
+        <div class="mt-10">
+          <h2 class="font-display text-lg tracking-tight text-glow">Account Information</h2>
+          <div class="mt-4 space-y-3">
+            <div class="flex items-center gap-3">
+              <span class="w-16 mono-label text-primary/70">Email</span>
+              <span class="text-base-content/50">{@current_user.email}</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="w-16 mono-label text-primary/70">Role</span>
+              <span class={[
+                "text-xs px-2.5 py-1 font-medium",
+                @current_user.role == :admin && "bg-primary/10 text-primary",
+                @current_user.role == :user && "bg-base-300 text-base-content/50"
+              ]}>
+                {@current_user.role |> to_string() |> String.capitalize()}
+              </span>
             </div>
           </div>
+        </div>
 
-          <div class="mt-6 card bg-base-100 shadow-xl">
-            <div class="card-body">
-              <h2 class="card-title">Preferences</h2>
-              <div class="space-y-4">
-                <div>
-                  <h3 class="font-semibold mb-2">Theme</h3>
-                  <p class="text-sm text-base-content/70 mb-3">
-                    Choose your preferred color scheme
-                  </p>
-                  <Layouts.theme_toggle />
-                </div>
-              </div>
+        <div class="mt-10">
+          <h2 class="font-display text-lg tracking-tight text-glow">Display Name</h2>
+          <p class="text-base-content/50 mb-4">
+            This is how other users will see you on the platform.
+          </p>
+
+          <form phx-submit="save" phx-change="validate">
+            <.input
+              field={@form[:display_name]}
+              type="text"
+              label="Display Name"
+              placeholder="Enter your display name"
+            />
+
+            <div class="mt-4">
+              <.button type="submit">
+                Save Changes
+              </.button>
             </div>
-          </div>
+          </form>
+        </div>
 
-          <div class="mt-6 card bg-base-100 shadow-xl">
-            <div class="card-body">
-              <h2 class="card-title">
-                {if @current_user.hashed_password, do: "Change", else: "Set"} Password
-              </h2>
-              <p class="text-base-content/70 mb-4">
-                <%= if @current_user.hashed_password do %>
-                  Update your password to keep your account secure.
-                <% else %>
-                  Set a password to enable password-based sign in.
-                <% end %>
-              </p>
+        <div class="mt-10">
+          <h2 class="font-display text-lg tracking-tight text-glow">
+            {if @current_user.hashed_password, do: "Change", else: "Set"} Password
+          </h2>
+          <p class="text-base-content/50 mb-4">
+            <%= if @current_user.hashed_password do %>
+              Update your password to keep your account secure.
+            <% else %>
+              Set a password to enable password-based sign in.
+            <% end %>
+          </p>
 
-              <%= if @show_password_form do %>
-                <form id="password-form" phx-submit="update_password" phx-change="validate_password">
-                  <%= if @current_user.hashed_password do %>
-                    <.input
-                      field={@password_form[:current_password]}
-                      type="password"
-                      label="Current Password"
-                      placeholder="Enter your current password"
-                      required
-                    />
-                  <% end %>
+          <form id="password-form" phx-submit="update_password" phx-change="validate_password">
+            <%= if @current_user.hashed_password do %>
+              <.input
+                field={@password_form[:current_password]}
+                type="password"
+                label="Current Password"
+                placeholder="Enter your current password"
+                autocomplete="current-password"
+              />
+            <% end %>
 
-                  <.input
-                    field={@password_form[:password]}
-                    type="password"
-                    label="New Password"
-                    placeholder="Enter your new password"
-                    required
-                  />
+            <.input
+              field={@password_form[:password]}
+              type="password"
+              label="New Password"
+              placeholder="Enter your new password"
+              autocomplete="new-password"
+            />
 
-                  <.input
-                    field={@password_form[:password_confirmation]}
-                    type="password"
-                    label="Confirm New Password"
-                    placeholder="Confirm your new password"
-                    required
-                  />
+            <.input
+              field={@password_form[:password_confirmation]}
+              type="password"
+              label="Confirm New Password"
+              placeholder="Confirm your new password"
+              autocomplete="new-password"
+            />
 
-                  <div class="card-actions justify-end mt-6 gap-2">
-                    <button type="button" class="btn btn-ghost" phx-click="cancel_password">
-                      Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                      {if @current_user.hashed_password, do: "Update", else: "Set"} Password
-                    </button>
-                  </div>
-                </form>
-              <% else %>
-                <button class="btn btn-primary" phx-click="show_password_form">
-                  {if @current_user.hashed_password, do: "Change", else: "Set"} Password
-                </button>
-              <% end %>
+            <div class="mt-4">
+              <.button type="submit">
+                {if @current_user.hashed_password, do: "Update", else: "Set"} Password
+              </.button>
             </div>
-          </div>
+          </form>
         </div>
       </div>
     </Layouts.app>
@@ -322,31 +245,6 @@ defmodule HuddlzWeb.ProfileLive do
   end
 
   @impl true
-  def handle_event("show_password_form", _params, socket) do
-    {:noreply, assign(socket, :show_password_form, true)}
-  end
-
-  @impl true
-  def handle_event("cancel_password", _params, socket) do
-    action =
-      if socket.assigns.current_user.hashed_password, do: :change_password, else: :set_password
-
-    password_form =
-      socket.assigns.current_user
-      |> AshPhoenix.Form.for_update(action,
-        domain: Huddlz.Accounts,
-        forms: [auto?: true],
-        actor: socket.assigns.current_user
-      )
-      |> to_form()
-
-    {:noreply,
-     socket
-     |> assign(:show_password_form, false)
-     |> assign(:password_form, password_form)}
-  end
-
-  @impl true
   def handle_event("validate_password", %{"form" => params}, socket) do
     form =
       socket.assigns.password_form.source
@@ -375,8 +273,7 @@ defmodule HuddlzWeb.ProfileLive do
          socket
          |> put_flash(:info, "Password updated successfully")
          |> assign(:current_user, updated_user)
-         |> assign(:password_form, password_form)
-         |> assign(:show_password_form, false)}
+         |> assign(:password_form, password_form)}
 
       {:error, form} ->
         {:noreply,
@@ -389,24 +286,6 @@ defmodule HuddlzWeb.ProfileLive do
   @impl true
   def handle_event("validate_avatar", _params, socket) do
     {:noreply, assign(socket, :avatar_error, nil)}
-  end
-
-  @impl true
-  def handle_event("cancel_avatar_upload", %{"ref" => ref}, socket) do
-    {:noreply, cancel_upload(socket, :avatar, ref)}
-  end
-
-  @impl true
-  def handle_event("save_avatar", _params, socket) do
-    user = socket.assigns.current_user
-
-    case uploaded_entries(socket, :avatar) do
-      {[_ | _], []} ->
-        process_avatar_upload(socket, user)
-
-      {[], _} ->
-        {:noreply, assign(socket, :avatar_error, "Please select a file to upload")}
-    end
   end
 
   @impl true
@@ -446,39 +325,38 @@ defmodule HuddlzWeb.ProfileLive do
     end
   end
 
-  defp process_avatar_upload(socket, user) do
+  defp handle_upload_progress(:avatar, entry, socket) do
+    if entry.done? do
+      process_auto_upload(socket)
+    else
+      {:noreply, socket}
+    end
+  end
+
+  defp process_auto_upload(socket) do
+    user = socket.assigns.current_user
+
     result =
-      consume_uploaded_entries(socket, :avatar, fn %{path: path}, entry ->
-        store_avatar_file(path, entry, user.id)
+      consume_uploaded_entries(socket, :avatar, fn %{path: path}, e ->
+        case ProfilePictures.store(path, e.client_name, e.client_type, user.id) do
+          {:ok, metadata} -> {:ok, {:success, metadata, e}}
+          {:error, reason} -> {:ok, {:error, reason}}
+        end
       end)
 
     handle_upload_result(socket, user, result)
   end
 
-  defp store_avatar_file(path, entry, user_id) do
-    case ProfilePictures.store(path, entry.client_name, entry.client_type, user_id) do
-      {:ok, %{storage_path: storage_path, thumbnail_path: thumbnail_path, size_bytes: size_bytes}} ->
-        {:ok,
-         {:success,
-          %{
-            storage_path: storage_path,
-            thumbnail_path: thumbnail_path,
-            filename: entry.client_name,
-            content_type: entry.client_type,
-            size_bytes: size_bytes
-          }}}
-
-      {:error, reason} ->
-        # Always return {:ok, _} from consume callback, wrap errors for handling
-        {:ok, {:error, reason}}
-    end
-  end
-
-  defp handle_upload_result(socket, user, [{:success, metadata}]) do
-    # Soft-delete existing pictures before creating new one
+  defp handle_upload_result(socket, user, [{:success, metadata, e}]) do
     soft_delete_all_profile_pictures(user)
 
-    case create_profile_picture_record(user, metadata) do
+    case create_profile_picture_record(user, %{
+           filename: e.client_name,
+           content_type: e.client_type,
+           size_bytes: metadata.size_bytes,
+           storage_path: metadata.storage_path,
+           thumbnail_path: metadata.thumbnail_path
+         }) do
       {:ok, _} ->
         {:noreply, reload_user_avatar(socket, user, "Profile picture updated successfully")}
 
@@ -517,12 +395,4 @@ defmodule HuddlzWeb.ProfileLive do
     |> put_flash(:info, flash_message)
     |> assign(:current_user, updated_user)
   end
-
-  defp upload_error_to_string(:too_large), do: "File is too large (max 5MB)"
-
-  defp upload_error_to_string(:not_accepted),
-    do: "Invalid file type. Please use JPG, PNG, or WebP"
-
-  defp upload_error_to_string(:too_many_files), do: "Only one file can be uploaded at a time"
-  defp upload_error_to_string(err), do: "Upload error: #{inspect(err)}"
 end

@@ -13,83 +13,126 @@ defmodule HuddlzWeb.Layouts do
 
   def app(assigns) do
     ~H"""
-    <header class="navbar bg-base-100 px-4 sm:px-6 lg:px-8 shadow">
-      <div class="navbar-start">
-        <div class="dropdown lg:hidden">
-          <label tabindex="0" class="btn btn-ghost btn-sm">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+    <header class="bg-base-100/95 backdrop-blur-sm border-b border-base-300 sticky top-0 z-50 px-4 sm:px-6 lg:px-8">
+      <nav class="mx-auto max-w-6xl">
+        <div class="flex h-14 items-center justify-between">
+          <%!-- Logo + nav links --%>
+          <div class="flex items-center gap-8">
+            <a href="/" class="flex items-center group">
+              <span class="font-display text-lg tracking-tighter text-glow">huddlz</span>
+            </a>
+            <div class="hidden md:flex items-center gap-1">
+              <a
+                href="/groups"
+                class="px-3 py-1.5 text-sm font-medium text-base-content/50 hover:text-primary transition-colors"
+              >
+                Groups
+              </a>
+            </div>
+          </div>
+
+          <%!-- Right side --%>
+          <div class="flex items-center gap-3">
+            <%= if @current_user do %>
+              <div class="dropdown dropdown-end">
+                <label tabindex="0" class="cursor-pointer">
+                  <div class="ring-1 ring-base-300 hover:ring-primary transition-colors">
+                    <.avatar user={@current_user} size={:sm} />
+                  </div>
+                </label>
+                <ul
+                  tabindex="0"
+                  class="dropdown-content mt-3 z-[1] p-1 border border-primary/20 bg-base-200 w-56 shadow-xl shadow-primary/5"
+                >
+                  <li class="px-3 py-2.5 border-b border-base-300">
+                    <span class="mono-label text-primary/60">
+                      Signed in as
+                    </span>
+                    <p class="text-sm font-medium truncate mt-0.5">
+                      {@current_user.display_name || @current_user.email}
+                    </p>
+                  </li>
+                  <li>
+                    <a
+                      href="/profile"
+                      class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-base-300 hover:text-primary transition-colors"
+                    >
+                      <.icon name="hero-user" class="w-4 h-4 text-base-content/40" /> Profile
+                    </a>
+                  </li>
+                  <%= if @current_user.role == :admin do %>
+                    <li>
+                      <a
+                        href="/admin"
+                        class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-base-300 hover:text-primary transition-colors"
+                      >
+                        <.icon name="hero-shield-check" class="w-4 h-4 text-base-content/40" />
+                        Admin Panel
+                      </a>
+                    </li>
+                  <% end %>
+                  <li class="border-t border-base-300 mt-1 pt-1">
+                    <a
+                      href="/sign-out"
+                      class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-base-300 text-error transition-colors"
+                    >
+                      <.icon name="hero-arrow-right-on-rectangle" class="w-4 h-4" /> Sign Out
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            <% else %>
+              <a
+                href="/register"
+                class="px-4 py-1.5 text-sm font-medium border border-base-300 hover:border-primary hover:text-primary btn-neon transition-colors"
+              >
+                Sign Up
+              </a>
+              <a
+                href="/sign-in"
+                class="px-4 py-1.5 text-sm font-medium bg-primary text-primary-content btn-neon"
+              >
+                Sign In
+              </a>
+            <% end %>
+            <%!-- Mobile menu button --%>
+            <button
+              class="md:hidden p-1.5 hover:bg-base-300 transition-colors"
+              onclick="document.getElementById('mobile-menu').classList.toggle('hidden')"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 6h16M4 12h8m-8 6h16"
-              />
-            </svg>
-          </label>
-          <ul
-            tabindex="0"
-            class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
-          >
-            <li><a href="/groups">Groups</a></li>
-          </ul>
+              <.icon name="hero-bars-3" class="w-5 h-5" />
+            </button>
+          </div>
         </div>
-        <a href="/" class="flex items-center gap-2">
-          <div class="w-9 h-9 bg-primary rounded-lg flex items-center justify-center text-primary-content font-bold text-lg">
-            h
-          </div>
-          <span class="text-lg font-bold tracking-tight">huddlz</span>
-        </a>
-        <nav class="hidden lg:flex items-center gap-4 ml-8">
-          <a href="/groups" class="btn btn-ghost btn-sm">Groups</a>
-        </nav>
+        <%!-- Mobile menu --%>
+        <div id="mobile-menu" class="hidden md:hidden border-t border-base-300 py-2 pb-3">
+          <a href="/groups" class="block px-3 py-2 text-sm hover:bg-base-300 hover:text-primary">
+            Groups
+          </a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="px-4 py-8 sm:px-6 lg:px-8">
+      <div class="mx-auto max-w-6xl">
+        <.flash_group flash={@flash} />
+        {render_slot(@inner_block)}
       </div>
-      <div class="navbar-center"></div>
-      <div class="navbar-end flex items-center gap-4">
-        <%= if @current_user do %>
-          <div class="dropdown dropdown-end">
-            <label tabindex="0" class="btn btn-ghost btn-circle avatar">
-              <.avatar user={@current_user} size={:sm} />
-            </label>
-            <ul
-              tabindex="0"
-              class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
-            >
-              <li class="menu-title px-3 py-2">
-                <span class="text-xs opacity-60">Signed in as</span>
-                <span class="text-sm font-medium">
-                  {@current_user.display_name || @current_user.email}
-                </span>
-              </li>
-              <li><a href="/profile">Profile</a></li>
-              <%= if @current_user.role == :admin do %>
-                <li><a href="/admin">Admin Panel</a></li>
-              <% end %>
-              <li><a href="/sign-out">Sign Out</a></li>
-            </ul>
-          </div>
-        <% else %>
-          <.theme_toggle />
-          <a href="/register" class="btn btn-outline btn-sm">Sign Up</a>
-          <a href="/sign-in" class="btn btn-primary btn-sm">Sign In</a>
-        <% end %>
+    </main>
+
+    <footer class="border-t border-base-300 px-4 sm:px-6 lg:px-8">
+      <div class="mx-auto max-w-6xl py-6 flex items-center justify-between">
+        <span class="text-xs text-base-content/30">huddlz</span>
         <a
           href="https://github.com/huddlz-hq/huddlz"
-          class="text-gray-900"
-          title="Contribute on GitHub"
+          class="flex items-center gap-1.5 text-xs text-base-content/30 hover:text-primary transition-colors"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            height="20"
+            height="14"
             viewBox="0 0 16 16"
-            width="20"
+            width="14"
             aria-hidden="true"
-            class="size-5"
           >
             <path
               fill="currentColor"
@@ -97,17 +140,10 @@ defmodule HuddlzWeb.Layouts do
             >
             </path>
           </svg>
+          Contribute on GitHub
         </a>
       </div>
-    </header>
-
-    <main class="px-4 py-8 sm:px-6 lg:px-8">
-      <div class="mx-auto max-w-screen-2xl space-y-4">
-        {render_slot(@inner_block)}
-      </div>
-    </main>
-
-    <.flash_group flash={@flash} />
+    </footer>
     """
   end
 
@@ -150,40 +186,6 @@ defmodule HuddlzWeb.Layouts do
         {gettext("Hang in there while we get back on track")}
         <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 motion-safe:animate-spin" />
       </.flash>
-    </div>
-    """
-  end
-
-  @doc """
-  Provides dark vs light theme toggle based on themes defined in app.css.
-
-  See <head> in root.html.heex which applies the theme before page load.
-  """
-  def theme_toggle(assigns) do
-    ~H"""
-    <div class="card relative flex flex-row items-center border-2 border-base-300 bg-base-300 rounded-full">
-      <div class="absolute w-1/3 h-full rounded-full border-1 border-base-200 bg-base-100 brightness-200 left-0 [[data-theme=light]_&]:left-1/3 [[data-theme=dark]_&]:left-2/3 transition-[left]" />
-
-      <button
-        phx-click={JS.dispatch("phx:set-theme", detail: %{theme: "system"})}
-        class="btn btn-ghost btn-sm w-1/3"
-      >
-        <.icon name="hero-computer-desktop-micro" class="size-4" />
-      </button>
-
-      <button
-        phx-click={JS.dispatch("phx:set-theme", detail: %{theme: "light"})}
-        class="btn btn-ghost btn-sm w-1/3"
-      >
-        <.icon name="hero-sun-micro" class="size-4" />
-      </button>
-
-      <button
-        phx-click={JS.dispatch("phx:set-theme", detail: %{theme: "dark"})}
-        class="btn btn-ghost btn-sm w-1/3"
-      >
-        <.icon name="hero-moon-micro" class="size-4" />
-      </button>
     </div>
     """
   end
