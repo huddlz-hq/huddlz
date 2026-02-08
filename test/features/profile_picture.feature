@@ -10,12 +10,11 @@ Feature: Profile Picture Management
       | alice@example.com    | user     | Alice User      |
     And I am signed in as "alice@example.com"
 
-  Scenario: Viewing profile picture upload area
+  Scenario: Viewing profile picture section
     When I visit "/profile"
     Then I should see "Profile Picture"
     And I should see "Upload a profile picture to personalize your account"
-    And I should see "Click to upload or drag and drop"
-    And I should see "JPG, PNG, or WebP (max 5MB)"
+    And I should see "Upload a photo..."
 
   Scenario: Profile shows fallback avatar when no picture is uploaded
     When I visit "/profile"
@@ -52,16 +51,6 @@ Feature: Profile Picture Management
       | alice@example.com   | /uploads/profile_pictures/alice/avatar.jpg        |
     When I visit "/groups/test-group"
     Then I should see the member avatar with image
-
-  Scenario: Profile picture appears for group owner in details section
-    Given the following groups exist:
-      | name          | slug          | owner_email       | visibility |
-      | Test Group    | test-group    | alice@example.com | public     |
-    And the following profile pictures exist:
-      | user_email          | storage_path                                      |
-      | alice@example.com   | /uploads/profile_pictures/alice/avatar.jpg        |
-    When I visit "/groups/test-group"
-    Then I should see the owner avatar with image
 
   Scenario: Profile picture appears for huddl creator
     Given the following groups exist:

@@ -77,4 +77,4 @@ Feature: RSVP Cancellation
     When I visit the "Past Event" huddl page
     Then I should not see "Cancel RSVP"
     And I should not see "RSVP to this huddl"
-    But I should see "1 person attending"
+    But I should see "1 person attended"

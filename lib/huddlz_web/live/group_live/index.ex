@@ -47,25 +47,24 @@ defmodule HuddlzWeb.GroupLive.Index do
 
       <div class="mt-8">
         <%= if @groups == [] do %>
-          <div class="hero min-h-[200px] bg-base-200 rounded-box">
-            <div class="hero-content text-center">
-              <div>
-                <p class="text-lg text-base-content/60">No groups found.</p>
-                <%= if @can_create_group do %>
-                  <p class="mt-4">
-                    <.link navigate={~p"/groups/new"} class="link link-primary">
-                      Create the first group
-                    </.link>
-                  </p>
-                <% end %>
-              </div>
-            </div>
+          <div class="border border-dashed border-base-300 p-12 text-center">
+            <p class="text-lg text-base-content/40">No groups found.</p>
+            <%= if @can_create_group do %>
+              <p class="mt-4">
+                <.link navigate={~p"/groups/new"} class="text-primary hover:underline font-medium">
+                  Create the first group
+                </.link>
+              </p>
+            <% end %>
           </div>
         <% else %>
           <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             <%= for group <- @groups do %>
-              <div class="card bg-base-100 shadow-xl">
-                <figure class="aspect-video">
+              <.link
+                navigate={~p"/groups/#{group.slug}"}
+                class="border border-base-300 overflow-hidden hover:border-primary/30 transition-colors group"
+              >
+                <div class="aspect-video overflow-hidden">
                   <%= if group.current_image_url do %>
                     <img
                       src={GroupImages.url(group.current_image_url)}
@@ -73,35 +72,23 @@ defmodule HuddlzWeb.GroupLive.Index do
                       class="w-full h-full object-cover"
                     />
                   <% else %>
-                    <div class="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
-                      <span class="text-2xl font-bold text-base-content/40 text-center px-4 line-clamp-2">
+                    <div class="w-full h-full bg-base-100 flex items-center justify-center">
+                      <span class="text-2xl font-bold text-base-content/30 text-center px-4 line-clamp-2">
                         {group.name}
                       </span>
                     </div>
                   <% end %>
-                </figure>
-                <div class="card-body">
-                  <h2 class="card-title">
-                    {group.name}
-                    <%= if group.is_public do %>
-                      <div class="badge badge-secondary">Public</div>
-                    <% else %>
-                      <div class="badge badge-ghost">Private</div>
-                    <% end %>
-                  </h2>
-                  <p class="text-base-content/70">
+                </div>
+                <div class="p-4">
+                  <h2 class="font-semibold">{group.name}</h2>
+                  <p class="text-sm text-base-content/40 line-clamp-2">
                     {group.description || "No description provided."}
                   </p>
-                  <p :if={group.location} class="text-sm text-base-content/60">
-                    <.icon name="hero-map-pin" class="h-4 w-4 inline" /> {group.location}
+                  <p :if={group.location} class="text-xs text-base-content/50 mt-1">
+                    <.icon name="hero-map-pin" class="h-3 w-3 inline" /> {group.location}
                   </p>
-                  <div class="card-actions justify-end">
-                    <.link navigate={~p"/groups/#{group.slug}"}>
-                      <.button class="btn-sm">View Group</.button>
-                    </.link>
-                  </div>
                 </div>
-              </div>
+              </.link>
             <% end %>
           </div>
         <% end %>

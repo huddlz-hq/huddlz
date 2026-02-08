@@ -18,77 +18,39 @@
   themes: false;
 }
 
-/* daisyUI theme plugin. You can update this file by fetching the latest version with:
-  curl -sLO https://github.com/saadeghi/daisyui/releases/latest/download/daisyui-theme.js
-  We ship with two themes, a light one inspired on Phoenix colors and a dark one inspired
-  on Elixir colors. Build your own at: https://daisyui.com/theme-generator/ */
+/* ===== CYBERPUNK BRUTALIST DARK THEME ===== */
 @plugin "../vendor/daisyui-theme" {
   name: "dark";
-  default: false;
+  default: true;
   prefersdark: true;
   color-scheme: "dark";
-  --color-base-100: oklch(30.33% 0.016 252.42);
-  --color-base-200: oklch(25.26% 0.014 253.1);
-  --color-base-300: oklch(20.15% 0.012 254.09);
-  --color-base-content: oklch(97.807% 0.029 256.847);
-  --color-primary: oklch(58% 0.233 277.117);
-  --color-primary-content: oklch(96% 0.018 272.314);
-  --color-secondary: oklch(58% 0.233 277.117);
-  --color-secondary-content: oklch(96% 0.018 272.314);
-  --color-accent: oklch(60% 0.25 292.717);
-  --color-accent-content: oklch(96% 0.016 293.756);
-  --color-neutral: oklch(37% 0.044 257.287);
-  --color-neutral-content: oklch(98% 0.003 247.858);
-  --color-info: oklch(58% 0.158 241.966);
-  --color-info-content: oklch(97% 0.013 236.62);
-  --color-success: oklch(60% 0.118 184.704);
-  --color-success-content: oklch(98% 0.014 180.72);
-  --color-warning: oklch(66% 0.179 58.318);
-  --color-warning-content: oklch(98% 0.022 95.277);
-  --color-error: oklch(58% 0.253 17.585);
-  --color-error-content: oklch(96% 0.015 12.422);
-  --radius-selector: 0.25rem;
-  --radius-field: 0.25rem;
-  --radius-box: 0.5rem;
-  --size-selector: 0.21875rem;
-  --size-field: 0.21875rem;
-  --border: 1.5px;
-  --depth: 1;
-  --noise: 0;
-}
-
-@plugin "../vendor/daisyui-theme" {
-  name: "light";
-  default: true;
-  prefersdark: false;
-  color-scheme: "light";
-  --color-base-100: oklch(98% 0 0);
-  --color-base-200: oklch(96% 0.001 286.375);
-  --color-base-300: oklch(92% 0.004 286.32);
-  --color-base-content: oklch(21% 0.006 285.885);
-  --color-primary: oklch(70% 0.213 47.604);
-  --color-primary-content: oklch(98% 0.016 73.684);
-  --color-secondary: oklch(55% 0.027 264.364);
-  --color-secondary-content: oklch(98% 0.002 247.839);
-  --color-accent: oklch(0% 0 0);
-  --color-accent-content: oklch(100% 0 0);
-  --color-neutral: oklch(44% 0.017 285.786);
-  --color-neutral-content: oklch(98% 0 0);
-  --color-info: oklch(62% 0.214 259.815);
-  --color-info-content: oklch(97% 0.014 254.604);
-  --color-success: oklch(70% 0.14 182.503);
-  --color-success-content: oklch(98% 0.014 180.72);
-  --color-warning: oklch(66% 0.179 58.318);
-  --color-warning-content: oklch(98% 0.022 95.277);
-  --color-error: oklch(65% 0.241 354.308);
-  --color-error-content: oklch(97% 0.014 343.198);
-  --radius-selector: 0.25rem;
-  --radius-field: 0.25rem;
-  --radius-box: 0.5rem;
-  --size-selector: 0.21875rem;
-  --size-field: 0.21875rem;
-  --border: 1.5px;
-  --depth: 1;
+  --color-base-100: oklch(8% 0.01 270);
+  --color-base-200: oklch(11% 0.012 270);
+  --color-base-300: oklch(18% 0.015 270);
+  --color-base-content: oklch(93% 0.005 270);
+  --color-primary: oklch(75% 0.18 195);
+  --color-primary-content: oklch(8% 0.01 270);
+  --color-secondary: oklch(65% 0.25 340);
+  --color-secondary-content: oklch(8% 0.01 270);
+  --color-accent: oklch(93% 0.005 270);
+  --color-accent-content: oklch(8% 0.01 270);
+  --color-neutral: oklch(22% 0.01 270);
+  --color-neutral-content: oklch(85% 0.005 270);
+  --color-info: oklch(70% 0.15 230);
+  --color-info-content: oklch(8% 0.01 270);
+  --color-success: oklch(72% 0.2 155);
+  --color-success-content: oklch(8% 0.01 270);
+  --color-warning: oklch(78% 0.18 80);
+  --color-warning-content: oklch(8% 0.01 270);
+  --color-error: oklch(65% 0.25 25);
+  --color-error-content: oklch(95% 0.01 25);
+  --radius-selector: 0rem;
+  --radius-field: 0.125rem;
+  --radius-box: 0.125rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
   --noise: 0;
 }
 
@@ -100,4 +62,81 @@
 /* Make LiveView wrapper divs transparent for layout */
 [data-phx-session] { display: contents }
 
-/* This file is for your main application CSS */
+/* ===== CYBERPUNK BRUTALIST GLOBAL STYLES ===== */
+
+/* Typography */
+@utility font-display {
+  font-family: 'Space Mono', 'Courier New', monospace;
+}
+
+@utility font-body {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+html {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Neon glow effect for containers */
+@utility neon-glow {
+  box-shadow: 0 0 8px oklch(75% 0.18 195 / 0.4), 0 0 20px oklch(75% 0.18 195 / 0.1);
+}
+
+/* Neon text glow */
+@utility text-glow {
+  text-shadow: 0 0 10px oklch(75% 0.18 195 / 0.4);
+}
+
+/* Button hover: neon border glow */
+@utility btn-neon {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  &:hover {
+    box-shadow: 0 0 12px oklch(75% 0.18 195 / 0.4);
+    border-color: oklch(75% 0.18 195);
+  }
+  &:active {
+    box-shadow: 0 0 4px oklch(75% 0.18 195 / 0.2);
+  }
+}
+
+/* Monospace label utility */
+@utility mono-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Scanline overlay */
+@utility scanlines {
+  position: relative;
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      oklch(0% 0 0 / 0.03) 0px,
+      oklch(0% 0 0 / 0.03) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  }
+}
+
+/* Subtle glitch on hover */
+@keyframes cb-glitch {
+  0%, 100% { transform: translate(0); }
+  20% { transform: translate(-1px, 1px); }
+  40% { transform: translate(1px, -1px); }
+  60% { transform: translate(-1px, 0); }
+  80% { transform: translate(1px, 0); }
+}
+
+@utility glitch-hover {
+  &:hover {
+    animation: cb-glitch 0.3s ease-in-out;
+  }
+}

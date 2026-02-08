@@ -207,8 +207,8 @@ defmodule HuddlzWeb.GroupLive.New do
       <form id="group-form" phx-change="validate" phx-submit="save" class="space-y-6">
         <.input field={@form[:name]} type="text" label="Group Name" required />
 
-        <div class="rounded-md bg-base-200 p-4">
-          <p class="text-sm text-base-content/80">
+        <div class="border border-base-300 p-4 bg-base-200/50">
+          <p class="text-sm text-base-content/60">
             Your group will be available at:
           </p>
           <p class="font-mono text-sm mt-1 break-all">
@@ -220,19 +220,21 @@ defmodule HuddlzWeb.GroupLive.New do
         <.input field={@form[:location]} type="text" label="Location" />
 
         <div>
-          <label class="block text-sm font-medium mb-2">Group Image</label>
-          <p class="text-base-content/70 text-sm mb-3">
+          <label class="mono-label text-primary/70 mb-2 block">
+            Group Image
+          </label>
+          <p class="text-base-content/50 text-sm mb-3">
             Upload a banner image for your group (16:9 ratio recommended).
           </p>
 
           <div
-            class="border-2 border-dashed border-base-300 rounded-lg p-4 text-center hover:border-primary transition-colors"
+            class="border border-dashed border-base-300 p-4 text-center hover:border-primary transition-colors"
             phx-drop-target={@uploads.group_image.ref}
           >
             <.live_file_input upload={@uploads.group_image} class="hidden" />
             <label for={@uploads.group_image.ref} class="cursor-pointer flex flex-col items-center">
               <.icon name="hero-photo" class="w-8 h-8 text-base-content/50 mb-2" />
-              <span class="text-sm text-base-content/70">
+              <span class="text-sm text-base-content/50">
                 Click to upload or drag and drop
               </span>
               <span class="text-xs text-base-content/50 mt-1">
@@ -246,7 +248,7 @@ defmodule HuddlzWeb.GroupLive.New do
           <% end %>
 
           <%= if @pending_preview_url do %>
-            <div class="mt-3 flex items-center gap-3 p-3 bg-base-200 rounded-lg">
+            <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
               <img src={@pending_preview_url} class="w-20 h-12 rounded object-cover" alt="Preview" />
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-success flex items-center gap-1">
@@ -256,14 +258,14 @@ defmodule HuddlzWeb.GroupLive.New do
               <button
                 type="button"
                 phx-click="cancel_pending_image"
-                class="btn btn-ghost btn-sm btn-circle"
+                class="p-1 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
               >
                 <.icon name="hero-x-mark" class="w-4 h-4" />
               </button>
             </div>
           <% else %>
             <%= for entry <- @uploads.group_image.entries do %>
-              <div class="mt-3 flex items-center gap-3 p-3 bg-base-200 rounded-lg">
+              <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
                 <.live_img_preview entry={entry} class="w-20 h-12 rounded object-cover" />
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium truncate">{entry.client_name}</p>
@@ -279,7 +281,7 @@ defmodule HuddlzWeb.GroupLive.New do
                   type="button"
                   phx-click="cancel_image_upload"
                   phx-value-ref={entry.ref}
-                  class="btn btn-ghost btn-sm btn-circle"
+                  class="p-1 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
                 >
                   <.icon name="hero-x-mark" class="w-4 h-4" />
                 </button>
@@ -297,20 +299,27 @@ defmodule HuddlzWeb.GroupLive.New do
         </div>
 
         <div>
-          <label class="block text-sm font-medium mb-2">Privacy</label>
+          <label class="mono-label text-primary/70 mb-2 block">
+            Privacy
+          </label>
           <.input
             field={@form[:is_public]}
             type="checkbox"
             label="Public group (visible to everyone)"
           />
-          <p class="text-sm text-base-content/70">
+          <p class="text-sm text-base-content/50">
             Public groups are visible to all users. Private groups are only visible to members.
           </p>
         </div>
 
         <div class="flex gap-4">
           <.button type="submit" phx-disable-with="Creating...">Create Group</.button>
-          <.link navigate={~p"/groups"} class="btn btn-ghost">Cancel</.link>
+          <.link
+            navigate={~p"/groups"}
+            class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
+          >
+            Cancel
+          </.link>
         </div>
       </form>
     </Layouts.app>

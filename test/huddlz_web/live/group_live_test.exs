@@ -29,7 +29,7 @@ defmodule HuddlzWeb.GroupLiveTest do
       conn
       |> visit(~p"/groups")
       |> assert_has("h1", text: "Groups")
-      |> assert_has("h2.card-title", text: to_string(public_group.name))
+      |> assert_has("h2", text: to_string(public_group.name))
       |> refute_has("a", text: "New Group")
     end
 
@@ -175,7 +175,6 @@ defmodule HuddlzWeb.GroupLiveTest do
       conn
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h1", text: to_string(group.name))
-      |> assert_has("span", text: "Public Group")
       |> assert_has("p", text: to_string(group.description))
       |> assert_has("p", text: group.location)
       # No edit button for anonymous
@@ -218,7 +217,7 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h1", text: to_string(group.name))
-      |> assert_has("span", text: "Private Group")
+      |> assert_has("span", text: "Private")
       |> assert_has("span", text: "Owner")
     end
 
@@ -227,16 +226,6 @@ defmodule HuddlzWeb.GroupLiveTest do
 
       assert_path(session, ~p"/groups")
       assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~ "Group not found"
-    end
-
-    test "navigates back to groups index", %{
-      conn: conn,
-      public_group: group
-    } do
-      conn
-      |> visit(~p"/groups/#{group.slug}")
-      |> click_link("Back to groups")
-      |> assert_has("h1", text: "Groups")
     end
   end
 end

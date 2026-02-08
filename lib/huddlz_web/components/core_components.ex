@@ -63,22 +63,29 @@ defmodule HuddlzWeb.CoreComponents do
       id={@id}
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
       role="alert"
-      class="toast toast-top toast-end z-50"
+      class="w-full cursor-pointer mb-4"
       {@rest}
     >
       <div class={[
-        "alert w-80 sm:w-96 max-w-80 sm:max-w-96 text-wrap",
-        @kind == :info && "alert-info",
-        @kind == :error && "alert-error"
+        "flex items-center gap-3 border px-4 py-3 text-sm",
+        @kind == :info && "border-primary/30 bg-primary/5 text-primary",
+        @kind == :error && "border-error/30 bg-error/5 text-error"
       ]}>
+        <div class={[
+          "w-1 self-stretch",
+          @kind == :info && "bg-primary",
+          @kind == :error && "bg-error"
+        ]} />
         <.icon :if={@kind == :info} name="hero-information-circle-mini" class="size-5 shrink-0" />
         <.icon :if={@kind == :error} name="hero-exclamation-circle-mini" class="size-5 shrink-0" />
-        <div>
-          <p :if={@title} class="font-semibold">{@title}</p>
-          <p>{msg}</p>
-        </div>
-        <div class="flex-1" />
-        <button type="button" class="btn btn-ghost btn-sm btn-circle" aria-label={gettext("close")}>
+        <span class="flex-1">
+          <span :if={@title} class="font-semibold">{@title}: </span>{msg}
+        </span>
+        <button
+          type="button"
+          class="opacity-50 hover:opacity-100 transition-opacity"
+          aria-label={gettext("close")}
+        >
           <.icon name="hero-x-mark-solid" class="size-4" />
         </button>
       </div>
@@ -100,18 +107,34 @@ defmodule HuddlzWeb.CoreComponents do
   slot :inner_block, required: true
 
   def button(%{rest: rest} = assigns) do
-    variants = %{"primary" => "btn-primary", nil => "btn-primary btn-soft"}
+    variants = %{
+      "primary" => "bg-primary text-primary-content border border-primary btn-neon",
+      nil => "bg-transparent text-primary border border-primary/40 btn-neon hover:bg-primary/10"
+    }
+
     assigns = assign(assigns, :class, Map.fetch!(variants, assigns[:variant]))
 
     if rest[:href] || rest[:navigate] || rest[:patch] do
       ~H"""
-      <.link class={["btn", @class]} {@rest}>
+      <.link
+        class={[
+          "inline-flex items-center justify-center gap-2 px-5 py-2 text-sm font-medium tracking-wide uppercase font-display",
+          @class
+        ]}
+        {@rest}
+      >
         {render_slot(@inner_block)}
       </.link>
       """
     else
       ~H"""
-      <button class={["btn", @class]} {@rest}>
+      <button
+        class={[
+          "inline-flex items-center justify-center gap-2 px-5 py-2 text-sm font-medium tracking-wide uppercase font-display",
+          @class
+        ]}
+        {@rest}
+      >
         {render_slot(@inner_block)}
       </button>
       """
@@ -187,34 +210,43 @@ defmodule HuddlzWeb.CoreComponents do
       end)
 
     ~H"""
-    <fieldset class="fieldset mb-2">
-      <label>
+    <div class="mb-3">
+      <label class="flex items-center gap-2.5 cursor-pointer">
         <input type="hidden" name={@name} value="false" disabled={@rest[:disabled]} />
-        <span class="fieldset-label">
-          <input
-            type="checkbox"
-            id={@id}
-            name={@name}
-            value="true"
-            checked={@checked}
-            class={@class || "checkbox checkbox-sm"}
-            {@rest}
-          />{@label}
-        </span>
+        <input
+          type="checkbox"
+          id={@id}
+          name={@name}
+          value="true"
+          checked={@checked}
+          class={@class || "checkbox checkbox-sm checkbox-primary"}
+          {@rest}
+        />
+        <span class="text-sm font-medium">{@label}</span>
       </label>
       <.error :for={msg <- @errors}>{msg}</.error>
-    </fieldset>
+    </div>
     """
   end
 
   def input(%{type: "select"} = assigns) do
     ~H"""
-    <fieldset class="fieldset mb-2">
-      <label :if={@label} for={@id} class="fieldset-label mb-1">{@label}</label>
+    <div class="mb-3">
+      <label
+        :if={@label}
+        for={@id}
+        class="mono-label text-primary/70 mb-1.5 block"
+      >
+        {@label}
+      </label>
       <select
         id={@id}
         name={@name}
-        class={[@class || "w-full select", @errors != [] && (@error_class || "select-error")]}
+        class={[
+          @class ||
+            "w-full h-10 border-0 border-b border-base-300 bg-transparent focus:border-primary focus:ring-0 focus:outline-none text-base-content text-sm",
+          @errors != [] && (@error_class || "border-error")
+        ]}
         multiple={@multiple}
         {@rest}
       >
@@ -222,46 +254,60 @@ defmodule HuddlzWeb.CoreComponents do
         {Phoenix.HTML.Form.options_for_select(@options, @value)}
       </select>
       <.error :for={msg <- @errors}>{msg}</.error>
-    </fieldset>
+    </div>
     """
   end
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
-    <fieldset class="fieldset mb-2">
-      <label :if={@label} for={@id} class="fieldset-label mb-1">{@label}</label>
+    <div class="mb-3">
+      <label
+        :if={@label}
+        for={@id}
+        class="mono-label text-primary/70 mb-1.5 block"
+      >
+        {@label}
+      </label>
       <textarea
         id={@id}
         name={@name}
         class={[
-          @class || "w-full textarea",
-          @errors != [] && (@error_class || "textarea-error")
+          @class ||
+            "w-full py-2 border-0 border-b border-base-300 bg-transparent focus:border-primary focus:ring-0 focus:outline-none text-base-content text-sm",
+          @errors != [] && (@error_class || "border-error")
         ]}
         {@rest}
       >{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
       <.error :for={msg <- @errors}>{msg}</.error>
-    </fieldset>
+    </div>
     """
   end
 
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <fieldset class="fieldset mb-2">
-      <label :if={@label} for={@id} class="fieldset-label mb-1">{@label}</label>
+    <div class="mb-3">
+      <label
+        :if={@label}
+        for={@id}
+        class="mono-label text-primary/70 mb-1.5 block"
+      >
+        {@label}
+      </label>
       <input
         type={@type}
         name={@name}
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
-          @class || "w-full input",
-          @errors != [] && (@error_class || "input-error")
+          @class ||
+            "w-full h-10 border-0 border-b border-base-300 bg-transparent focus:border-primary focus:ring-0 focus:outline-none text-base-content text-sm",
+          @errors != [] && (@error_class || "border-error")
         ]}
         {@rest}
       />
       <.error :for={msg <- @errors}>{msg}</.error>
-    </fieldset>
+    </div>
     """
   end
 
@@ -269,7 +315,7 @@ defmodule HuddlzWeb.CoreComponents do
   defp error(assigns) do
     ~H"""
     <p class="mt-1.5 flex gap-2 items-center text-sm text-error">
-      <.icon name="hero-exclamation-circle-mini" class="size-5" />
+      <.icon name="hero-exclamation-circle-mini" class="size-4" />
       {render_slot(@inner_block)}
     </p>
     """
@@ -286,16 +332,16 @@ defmodule HuddlzWeb.CoreComponents do
 
   def header(assigns) do
     ~H"""
-    <header class={[@actions != [] && "flex items-center justify-between gap-6", "pb-4", @class]}>
+    <header class={[@actions != [] && "flex items-center justify-between gap-6", "pb-6", @class]}>
       <div>
-        <h1 class="text-lg font-semibold leading-8">
+        <h1 class="font-display text-2xl md:text-3xl tracking-tight text-base-content text-glow">
           {render_slot(@inner_block)}
         </h1>
-        <p :if={@subtitle != []} class="text-sm text-base-content/70">
+        <p :if={@subtitle != []} class="mt-1 text-sm text-base-content/40">
           {render_slot(@subtitle)}
         </p>
       </div>
-      <div class="flex-none">{render_slot(@actions)}</div>
+      <div class="flex-none flex items-center gap-3">{render_slot(@actions)}</div>
     </header>
     """
   end
@@ -332,34 +378,45 @@ defmodule HuddlzWeb.CoreComponents do
       end
 
     ~H"""
-    <table class="table table-zebra">
-      <thead>
-        <tr>
-          <th :for={col <- @col}>{col[:label]}</th>
-          <th :if={@action != []}>
-            <span class="sr-only">{gettext("Actions")}</span>
-          </th>
-        </tr>
-      </thead>
-      <tbody id={@id} phx-update={is_struct(@rows, Phoenix.LiveView.LiveStream) && "stream"}>
-        <tr :for={row <- @rows} id={@row_id && @row_id.(row)}>
-          <td
-            :for={col <- @col}
-            phx-click={@row_click && @row_click.(row)}
-            class={@row_click && "hover:cursor-pointer"}
+    <div class="overflow-x-auto border border-base-300">
+      <table class="table">
+        <thead>
+          <tr class="border-b border-base-300">
+            <th
+              :for={col <- @col}
+              class="mono-label text-primary/60 bg-base-200/30"
+            >
+              {col[:label]}
+            </th>
+            <th :if={@action != []} class="bg-base-200/50">
+              <span class="sr-only">{gettext("Actions")}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody id={@id} phx-update={is_struct(@rows, Phoenix.LiveView.LiveStream) && "stream"}>
+          <tr
+            :for={row <- @rows}
+            id={@row_id && @row_id.(row)}
+            class="border-b border-base-300 hover:bg-base-300/30 transition-colors"
           >
-            {render_slot(col, @row_item.(row))}
-          </td>
-          <td :if={@action != []} class="w-0 font-semibold">
-            <div class="flex gap-4">
-              <%= for action <- @action do %>
-                {render_slot(action, @row_item.(row))}
-              <% end %>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            <td
+              :for={col <- @col}
+              phx-click={@row_click && @row_click.(row)}
+              class={[@row_click && "hover:cursor-pointer", "py-3"]}
+            >
+              {render_slot(col, @row_item.(row))}
+            </td>
+            <td :if={@action != []} class="w-0 font-semibold py-3">
+              <div class="flex gap-3">
+                <%= for action <- @action do %>
+                  {render_slot(action, @row_item.(row))}
+                <% end %>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
     """
   end
 
@@ -459,7 +516,7 @@ defmodule HuddlzWeb.CoreComponents do
 
     ~H"""
     <div class={[
-      "rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden",
+      "flex items-center justify-center flex-shrink-0 overflow-hidden",
       @size_class,
       @class
     ]}>
@@ -471,7 +528,7 @@ defmodule HuddlzWeb.CoreComponents do
             {@initials}
           </div>
         <% true -> %>
-          <div class="w-full h-full flex items-center justify-center bg-base-300 text-base-content/70">
+          <div class="w-full h-full flex items-center justify-center bg-base-300 text-base-content/50">
             <.icon name="hero-user" class={@icon_size} />
           </div>
       <% end %>
@@ -535,16 +592,6 @@ defmodule HuddlzWeb.CoreComponents do
   Translates an error message using gettext.
   """
   def translate_error({msg, opts}) do
-    # When using gettext, we typically pass the strings we want
-    # to translate as a static argument:
-    #
-    #     # Translate the number of files with plural rules
-    #     dngettext("errors", "1 file", "%{count} files", count)
-    #
-    # However the error messages in our forms and APIs are generated
-    # dynamically, so we need to translate them by calling Gettext
-    # with our gettext backend as first argument. Translations are
-    # available in the errors.po file (as we use the "errors" domain).
     if count = opts[:count] do
       Gettext.dngettext(HuddlzWeb.Gettext, "errors", msg, msg, count, opts)
     else
@@ -573,27 +620,28 @@ defmodule HuddlzWeb.CoreComponents do
 
   def pagination(assigns) do
     ~H"""
-    <div class={["flex justify-center mt-6", @class]}>
-      <div class="join">
-        <!-- Previous button -->
+    <div class={["flex justify-center mt-8", @class]}>
+      <div class="flex items-center gap-1">
         <button
           :if={@current_page > 1}
-          class="join-item btn btn-sm"
+          class="px-3 py-1.5 text-sm font-medium border border-base-300 btn-neon transition-colors"
           phx-click={@event_name}
           phx-value-page={@current_page - 1}
         >
-          <.icon name="hero-chevron-left" class="h-4 w-4" /> Previous
+          <.icon name="hero-chevron-left" class="h-4 w-4" />
         </button>
-        
-    <!-- Page numbers -->
+
         <%= for page <- pagination_range(@current_page, @total_pages) do %>
           <%= if page == :ellipsis do %>
-            <span class="join-item btn btn-sm btn-disabled">...</span>
+            <span class="px-2 text-base-content/40">...</span>
           <% else %>
             <button
               class={[
-                "join-item btn btn-sm",
-                if(page == @current_page, do: "btn-active", else: "")
+                "w-8 h-8 text-sm font-medium font-display transition-colors",
+                if(page == @current_page,
+                  do: "bg-primary text-primary-content neon-glow",
+                  else: "hover:bg-base-300"
+                )
               ]}
               phx-click={@event_name}
               phx-value-page={page}
@@ -602,15 +650,14 @@ defmodule HuddlzWeb.CoreComponents do
             </button>
           <% end %>
         <% end %>
-        
-    <!-- Next button -->
+
         <button
           :if={@current_page < @total_pages}
-          class="join-item btn btn-sm"
+          class="px-3 py-1.5 text-sm font-medium border border-base-300 btn-neon transition-colors"
           phx-click={@event_name}
           phx-value-page={@current_page + 1}
         >
-          Next <.icon name="hero-chevron-right" class="h-4 w-4" />
+          <.icon name="hero-chevron-right" class="h-4 w-4" />
         </button>
       </div>
     </div>
@@ -659,12 +706,12 @@ defmodule HuddlzWeb.CoreComponents do
     ~H"""
     <div
       class={[
-        "card card-side bg-base-100 shadow-md",
+        "flex flex-col md:flex-row border border-base-300 overflow-hidden bg-base-200 hover:border-primary/50 transition-colors",
         @class
       ]}
       {@rest}
     >
-      <div class="w-full md:w-48 h-32 md:h-auto relative bg-base-200">
+      <div class="w-full md:w-48 h-36 md:h-auto relative bg-base-200 flex-shrink-0">
         <%= if @huddl.display_image_url do %>
           <img
             src={HuddlImages.url(@huddl.display_image_url)}
@@ -672,77 +719,65 @@ defmodule HuddlzWeb.CoreComponents do
             class="w-full h-full object-cover"
           />
         <% else %>
-          <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-secondary/20">
-            <span class="text-base-content/40 font-medium text-center px-2 line-clamp-2">
+          <div class="w-full h-full flex items-center justify-center bg-base-100">
+            <span class="text-base-content/30 font-display text-lg text-center px-3 line-clamp-2">
               {@huddl.title}
             </span>
           </div>
         <% end %>
-        <div class="absolute top-2 right-2">
+        <div :if={@huddl.status not in [:upcoming, :completed]} class="absolute top-2 right-2">
           <.huddl_status_badge status={@huddl.status} />
         </div>
-        <div class="absolute top-2 left-2">
-          <.huddl_type_badge type={@huddl.event_type} />
-        </div>
       </div>
-      <div class="card-body">
+      <div class="flex-1 p-5">
         <div class="flex flex-col h-full justify-between">
           <div>
-            <h3 class="card-title">{@huddl.title}</h3>
+            <h3 class="font-display text-lg tracking-tight">{@huddl.title}</h3>
             <%= if @show_group && Map.has_key?(@huddl, :group) do %>
-              <p class="text-sm text-base-content/70 mb-1">
-                <.icon name="hero-user-group" class="h-4 w-4 inline" />
+              <p class="text-xs text-base-content/50 mt-0.5 flex items-center gap-1">
+                <.icon name="hero-user-group" class="h-3 w-3" />
                 {@huddl.group.name}
               </p>
             <% end %>
-            <p class="text-base-content/80 mb-2">
+            <p class="text-sm text-base-content/40 mt-2 line-clamp-2">
               {truncate(@huddl.description || "No description provided", 150)}
             </p>
-            <div class="space-y-1 text-sm text-base-content/70">
-              <div class="flex items-center gap-2">
-                <.icon name="hero-calendar" class="h-4 w-4" />
+            <div class="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-base-content/50">
+              <span class="flex items-center gap-1">
+                <.icon name={type_icon(@huddl.event_type)} class="h-3.5 w-3.5" />
+                {@huddl.event_type |> to_string() |> String.replace("_", " ") |> String.capitalize()}
+              </span>
+              <span class="flex items-center gap-1">
+                <.icon name="hero-calendar" class="h-3.5 w-3.5" />
                 {format_datetime(@huddl.starts_at)}
-                <%= if @huddl.ends_at do %>
-                  - {format_time_only(@huddl.ends_at)}
-                <% end %>
-              </div>
+              </span>
               <%= if @huddl.event_type in [:in_person, :hybrid] && @huddl.physical_location do %>
-                <div class="flex items-center gap-2">
-                  <.icon name="hero-map-pin" class="h-4 w-4" />
+                <span class="flex items-center gap-1">
+                  <.icon name="hero-map-pin" class="h-3.5 w-3.5" />
                   {@huddl.physical_location}
-                </div>
-              <% end %>
-              <%= if @huddl.event_type in [:virtual, :hybrid] do %>
-                <div class="flex items-center gap-2">
-                  <.icon name="hero-video-camera" class="h-4 w-4" />
-                  <%= if @huddl.visible_virtual_link do %>
-                    <a href={@huddl.visible_virtual_link} target="_blank" class="link link-primary">
-                      Join virtually
-                    </a>
-                  <% else %>
-                    <span class="text-base-content/50">Virtual link available after RSVP</span>
-                  <% end %>
-                </div>
+                </span>
               <% end %>
               <%= if @huddl.rsvp_count > 0 do %>
-                <div class="flex items-center gap-2">
-                  <.icon name="hero-user-group" class="h-4 w-4" />
+                <span class="flex items-center gap-1">
+                  <.icon name="hero-user-group" class="h-3.5 w-3.5" />
                   {@huddl.rsvp_count} attending
-                </div>
+                </span>
               <% end %>
             </div>
           </div>
-          <div class="card-actions justify-between items-center mt-4">
-            <div>
+          <div class="flex items-center justify-between mt-4 pt-3 border-t border-base-300">
+            <div class="flex items-center gap-2">
               <%= if @huddl.is_private do %>
-                <span class="badge badge-neutral badge-sm">Private</span>
+                <span class="text-xs px-2 py-0.5 bg-base-300 text-base-content/50">
+                  Private
+                </span>
               <% end %>
             </div>
             <.link
               navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}"}
-              class="btn btn-primary btn-sm"
+              class="text-sm font-medium text-primary hover:underline"
             >
-              View Details
+              View Details →
             </.link>
           </div>
         </div>
@@ -760,7 +795,7 @@ defmodule HuddlzWeb.CoreComponents do
   def huddl_status_badge(assigns) do
     ~H"""
     <span class={[
-      "badge badge-sm font-semibold",
+      "text-xs px-2 py-0.5 font-medium border border-current/20",
       status_badge_class(@status),
       @class
     ]}>
@@ -778,25 +813,25 @@ defmodule HuddlzWeb.CoreComponents do
   def huddl_type_badge(assigns) do
     ~H"""
     <span class={[
-      "badge badge-sm",
+      "text-xs px-2 py-0.5 font-medium inline-flex items-center gap-1 border border-current/20",
       type_badge_class(@type),
       @class
     ]}>
-      <.icon name={type_icon(@type)} class="h-3 w-3 mr-1" />
+      <.icon name={type_icon(@type)} class="h-3 w-3" />
       {@type |> to_string() |> String.replace("_", " ") |> String.capitalize()}
     </span>
     """
   end
 
-  defp status_badge_class(:upcoming), do: "badge-primary"
-  defp status_badge_class(:in_progress), do: "badge-success"
-  defp status_badge_class(:completed), do: "badge-neutral"
-  defp status_badge_class(_), do: "badge-ghost"
+  defp status_badge_class(:upcoming), do: "bg-primary/10 text-primary"
+  defp status_badge_class(:in_progress), do: "bg-success/10 text-success"
+  defp status_badge_class(:completed), do: "bg-base-200 text-base-content/50"
+  defp status_badge_class(_), do: "bg-base-200 text-base-content/50"
 
-  defp type_badge_class(:in_person), do: "badge-info"
-  defp type_badge_class(:virtual), do: "badge-warning"
-  defp type_badge_class(:hybrid), do: "badge-accent"
-  defp type_badge_class(_), do: "badge-ghost"
+  defp type_badge_class(:in_person), do: "bg-info/10 text-info"
+  defp type_badge_class(:virtual), do: "bg-warning/10 text-warning"
+  defp type_badge_class(:hybrid), do: "bg-secondary/10 text-secondary"
+  defp type_badge_class(_), do: "bg-base-200 text-base-content/50"
 
   defp type_icon(:in_person), do: "hero-map-pin"
   defp type_icon(:virtual), do: "hero-video-camera"
@@ -811,10 +846,6 @@ defmodule HuddlzWeb.CoreComponents do
 
   defp format_datetime(datetime) do
     Calendar.strftime(datetime, "%b %d, %Y · %I:%M %p")
-  end
-
-  defp format_time_only(datetime) do
-    Calendar.strftime(datetime, "%I:%M %p")
   end
 
   @doc """
@@ -851,7 +882,12 @@ defmodule HuddlzWeb.CoreComponents do
 
     ~H"""
     <fieldset class="fieldset mb-4">
-      <label for={@id} class="fieldset-label">{@label}</label>
+      <label
+        for={@id}
+        class="mono-label text-primary/70 mb-1.5 block"
+      >
+        {@label}
+      </label>
       <div class="relative">
         <input
           type="date"
@@ -860,14 +896,14 @@ defmodule HuddlzWeb.CoreComponents do
           value={@value}
           min={@min}
           class={[
-            "input input-bordered w-full pr-10",
-            @errors != [] && "input-error"
+            "input border border-base-300 bg-base-100/5 w-full pr-10 focus:border-primary focus:ring-0 text-base-content",
+            @errors != [] && "border-error"
           ]}
           {@rest}
         />
         <.icon
           name="hero-calendar-days"
-          class="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/50 pointer-events-none"
+          class="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-base-content/40 pointer-events-none"
         />
       </div>
       <.error :for={msg <- @errors}>{msg}</.error>
@@ -906,7 +942,12 @@ defmodule HuddlzWeb.CoreComponents do
   def time_picker(assigns) do
     ~H"""
     <fieldset class="fieldset mb-4">
-      <label for={@id} class="fieldset-label">{@label}</label>
+      <label
+        for={@id}
+        class="mono-label text-primary/70 mb-1.5 block"
+      >
+        {@label}
+      </label>
       <input
         type="time"
         id={@id}
@@ -914,8 +955,9 @@ defmodule HuddlzWeb.CoreComponents do
         value={@value}
         list={"time-options-#{@id}"}
         class={[
-          @class || "input input-bordered w-full",
-          @errors != [] && "input-error"
+          @class ||
+            "input border border-base-300 bg-base-100/5 w-full focus:border-primary focus:ring-0 text-base-content",
+          @errors != [] && "border-error"
         ]}
         {@rest}
       />
@@ -925,7 +967,7 @@ defmodule HuddlzWeb.CoreComponents do
         <% end %>
       </datalist>
       <.error :for={msg <- @errors}>{msg}</.error>
-      <span class="text-sm text-base-content/70 mt-1">
+      <span class="text-xs text-base-content/50 mt-1">
         Select from dropdown or type any time
       </span>
     </fieldset>
@@ -963,13 +1005,19 @@ defmodule HuddlzWeb.CoreComponents do
   def duration_picker(assigns) do
     ~H"""
     <fieldset class="fieldset mb-4">
-      <label for={@id} class="fieldset-label">{@label}</label>
+      <label
+        for={@id}
+        class="mono-label text-primary/70 mb-1.5 block"
+      >
+        {@label}
+      </label>
       <select
         id={@id}
         name={@name}
         class={[
-          @class || "select select-bordered w-full",
-          @errors != [] && "select-error"
+          @class ||
+            "select border border-base-300 bg-base-100/5 w-full focus:border-primary focus:ring-0 text-base-content",
+          @errors != [] && "border-error"
         ]}
         {@rest}
       >

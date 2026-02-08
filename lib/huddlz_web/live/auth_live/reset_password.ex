@@ -23,69 +23,56 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
     ~H"""
     <.app flash={@flash} current_user={assigns[:current_user]}>
       <div class="max-w-md mx-auto">
-        <div class="card bg-base-100 shadow-xl">
-          <div class="card-body">
-            <h2 class="card-title text-2xl mb-4">Reset your password</h2>
+        <div class="border border-base-300 p-6">
+          <h2 class="font-display text-2xl tracking-tight mb-4">Reset your password</h2>
 
-            <%= if @submitted do %>
-              <div class="alert alert-success">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="stroke-current shrink-0 h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <span>
-                  If an account exists for that email, you will receive password reset instructions shortly.
-                </span>
+          <%= if @submitted do %>
+            <div class="border border-success/30 p-4 bg-success/5 flex items-start gap-3">
+              <.icon name="hero-check-circle" class="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
+              <span class="text-sm">
+                If an account exists for that email, you will receive password reset instructions shortly.
+              </span>
+            </div>
+
+            <.link
+              navigate="/sign-in"
+              class="block text-center text-primary hover:underline font-medium mt-6"
+            >
+              Back to sign in
+            </.link>
+          <% else %>
+            <p class="text-sm mb-6 text-base-content/50">
+              Enter your email address and we'll send you instructions to reset your password.
+            </p>
+
+            <.form
+              for={@form}
+              phx-change="validate"
+              phx-submit="request_reset"
+              id="reset-password-form"
+            >
+              <.input
+                field={@form[:email]}
+                type="email"
+                label="Email"
+                placeholder="you@example.com"
+                autocomplete="email"
+              />
+
+              <div class="mt-6">
+                <.button phx-disable-with="Sending..." class="w-full">
+                  Send reset instructions
+                </.button>
               </div>
+            </.form>
 
-              <div class="form-control mt-6">
-                <.link navigate="/sign-in" class="btn btn-ghost">
-                  Back to sign in
-                </.link>
-              </div>
-            <% else %>
-              <p class="text-sm mb-6">
-                Enter your email address and we'll send you instructions to reset your password.
-              </p>
-
-              <.form
-                for={@form}
-                phx-change="validate"
-                phx-submit="request_reset"
-                id="reset-password-form"
-              >
-                <.input
-                  field={@form[:email]}
-                  type="text"
-                  label="Email"
-                  placeholder="you@example.com"
-                  required
-                />
-
-                <div class="form-control mt-6">
-                  <.button phx-disable-with="Sending..." class="btn btn-primary">
-                    Send reset instructions
-                  </.button>
-                </div>
-              </.form>
-
-              <div class="text-center mt-6">
-                <span class="text-sm">Remember your password? </span>
-                <.link navigate="/sign-in" class="link link-primary text-sm">
-                  Sign in
-                </.link>
-              </div>
-            <% end %>
-          </div>
+            <div class="text-center mt-6">
+              <span class="text-sm text-base-content/50">Remember your password? </span>
+              <.link navigate="/sign-in" class="text-primary hover:underline font-medium text-sm">
+                Sign in
+              </.link>
+            </div>
+          <% end %>
         </div>
       </div>
     </.app>

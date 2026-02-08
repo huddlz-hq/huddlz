@@ -309,7 +309,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       assert_path(session, ~p"/groups/#{group.slug}/huddlz/new")
 
       # Should show validation error (checking for error class on input)
-      assert_has(session, "input.input-error")
+      assert_has(session, "input.border-error")
     end
 
     test "validates form on change", %{conn: conn, owner: owner, group: group} do
@@ -324,7 +324,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> fill_in("Title", with: "")
 
       # Check for validation error class on the input
-      assert_has(session, "input#form_title.input-error")
+      assert_has(session, "input#form_title.border-error")
     end
   end
 

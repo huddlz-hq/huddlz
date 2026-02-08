@@ -9,7 +9,7 @@ Feature: User Sign In and Sign Out
     And the user enters "Password123!" in the password field
     And the user submits the password sign in form
     Then the user should be signed in
-    And the user should see "Find your huddl"
+    And the user should see "huddlz"
 
   Scenario: User tries to sign in with wrong password
     Given a user exists with email "test@example.com" and password "Password123!"

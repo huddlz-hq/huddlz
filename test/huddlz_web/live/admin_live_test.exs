@@ -134,7 +134,7 @@ defmodule HuddlzWeb.AdminLiveTest do
       # Verify user is displayed in the initial list
       |> assert_has("td", text: to_string(verified_user.email))
       |> assert_has("td", text: verified_user.display_name)
-      |> assert_has("span.badge", text: "user")
+      |> assert_has("span", text: "user")
     end
 
     test "shows no results message when no users match search", %{admin_conn: conn} do

@@ -151,8 +151,8 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> visit("/")
       |> fill_in("Search huddlz", with: "book")
       |> select("Event Type", option: "Virtual")
-      |> assert_has(".badge", text: "Search: book")
-      |> assert_has(".badge", text: "Type: Virtual")
+      |> assert_has("span", text: "Search: book")
+      |> assert_has("span", text: "Type: Virtual")
     end
 
     test "clears all filters", %{conn: conn} do
@@ -173,39 +173,39 @@ defmodule HuddlzWeb.HuddlSearchTest do
       conn
       |> visit("/")
       # No filters applied initially
-      |> refute_has(".badge", text: "Search:")
-      |> refute_has(".badge", text: "Type:")
-      |> refute_has(".badge", text: "Date:")
+      |> refute_has("span", text: "Search:")
+      |> refute_has("span", text: "Type:")
+      |> refute_has("span", text: "Date:")
       # Select Event Type
       |> select("Event Type", option: "Virtual")
-      |> refute_has(".badge", text: "Search:")
-      |> assert_has(".badge", text: "Type: Virtual")
-      |> refute_has(".badge", text: "Date:")
+      |> refute_has("span", text: "Search:")
+      |> assert_has("span", text: "Type: Virtual")
+      |> refute_has("span", text: "Date:")
       # Apply Search
       |> fill_in("Search huddlz", with: "book")
-      |> assert_has(".badge", text: "Search: book")
-      |> assert_has(".badge", text: "Type: Virtual")
-      |> refute_has(".badge", text: "Date:")
+      |> assert_has("span", text: "Search: book")
+      |> assert_has("span", text: "Type: Virtual")
+      |> refute_has("span", text: "Date:")
       # Select Date Range
       |> select("Date Range", option: "This Week")
-      |> assert_has(".badge", text: "Search: book")
-      |> assert_has(".badge", text: "Type: Virtual")
-      |> assert_has(".badge", text: "Date: This Week")
+      |> assert_has("span", text: "Search: book")
+      |> assert_has("span", text: "Type: Virtual")
+      |> assert_has("span", text: "Date: This Week")
       # Clear Date Range
       |> select("Date Range", option: "All Upcoming")
-      |> assert_has(".badge", text: "Search: book")
-      |> assert_has(".badge", text: "Type: Virtual")
-      |> refute_has(".badge", text: "Date:")
+      |> assert_has("span", text: "Search: book")
+      |> assert_has("span", text: "Type: Virtual")
+      |> refute_has("span", text: "Date:")
       # Clear Search
       |> fill_in("Search huddlz", with: "")
-      |> refute_has(".badge", text: "Search:")
-      |> assert_has(".badge", text: "Type: Virtual")
-      |> refute_has(".badge", text: "Date:")
+      |> refute_has("span", text: "Search:")
+      |> assert_has("span", text: "Type: Virtual")
+      |> refute_has("span", text: "Date:")
       # Clear Event Type
       |> select("Event Type", option: "All Types")
-      |> refute_has(".badge", text: "Search:")
-      |> refute_has(".badge", text: "Type:")
-      |> refute_has(".badge", text: "Date:")
+      |> refute_has("span", text: "Search:")
+      |> refute_has("span", text: "Type:")
+      |> refute_has("span", text: "Date:")
     end
 
     test "shows result count", %{conn: conn} do

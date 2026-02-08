@@ -175,7 +175,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
             title="Only lowercase letters, numbers, and hyphens allowed"
             required
           />
-          <p class="text-sm text-base-content/80 mt-1">
+          <p class="text-sm text-base-content/60 mt-1">
             Your group is available at:
           </p>
           <p class="font-mono text-sm mt-1 break-all">
@@ -183,16 +183,16 @@ defmodule HuddlzWeb.GroupLive.Edit do
           </p>
 
           <%= if @slug_changed do %>
-            <div class="rounded-md bg-yellow-50 p-4 mt-2">
+            <div class="border border-warning/30 p-4 bg-warning/5 mt-2">
               <div class="flex">
                 <div class="flex-shrink-0">
-                  <.icon name="hero-exclamation-triangle" class="h-5 w-5 text-yellow-400" />
+                  <.icon name="hero-exclamation-triangle" class="h-5 w-5 text-warning" />
                 </div>
                 <div class="ml-3">
-                  <h3 class="text-sm font-medium text-yellow-800">
+                  <h3 class="text-sm font-medium text-warning">
                     Warning: URL Change
                   </h3>
-                  <div class="mt-2 text-sm text-yellow-700">
+                  <div class="mt-2 text-sm text-base-content/50">
                     <p>Changing the slug will break existing links to this group.</p>
                     <p class="mt-1 break-all">
                       Old URL: <span class="font-mono">{url(~p"/groups/#{@original_slug}")}</span>
@@ -211,8 +211,10 @@ defmodule HuddlzWeb.GroupLive.Edit do
         <.input field={@form[:location]} type="text" label="Location" />
 
         <div>
-          <label class="block text-sm font-medium mb-2">Group Image</label>
-          <p class="text-base-content/70 text-sm mb-3">
+          <label class="mono-label text-primary/70 mb-2 block">
+            Group Image
+          </label>
+          <p class="text-base-content/50 text-sm mb-3">
             Upload a banner image for your group (16:9 ratio recommended).
           </p>
 
@@ -222,12 +224,12 @@ defmodule HuddlzWeb.GroupLive.Edit do
                 <img
                   src={@pending_preview_url}
                   alt="New image preview"
-                  class="rounded-lg max-w-md aspect-video object-cover"
+                  class="max-w-md aspect-video object-cover"
                 />
                 <button
                   type="button"
                   phx-click="cancel_pending_image"
-                  class="absolute top-2 right-2 btn btn-circle btn-sm btn-error"
+                  class="absolute top-2 right-2 p-1.5 bg-error/10 text-error hover:bg-error/20 transition-colors"
                 >
                   <.icon name="hero-x-mark" class="w-4 h-4" />
                 </button>
@@ -243,18 +245,18 @@ defmodule HuddlzWeb.GroupLive.Edit do
                   <img
                     src={GroupImages.url(@group.current_image_url)}
                     alt={@group.name}
-                    class="rounded-lg max-w-md aspect-video object-cover"
+                    class="max-w-md aspect-video object-cover"
                   />
                   <button
                     type="button"
                     phx-click="remove_image"
-                    class="absolute top-2 right-2 btn btn-circle btn-sm btn-error"
+                    class="absolute top-2 right-2 p-1.5 bg-error/10 text-error hover:bg-error/20 transition-colors"
                     data-confirm="Are you sure you want to remove this image?"
                   >
                     <.icon name="hero-trash" class="w-4 h-4" />
                   </button>
                 </div>
-                <p class="text-sm text-base-content/70 mt-2">
+                <p class="text-sm text-base-content/50 mt-2">
                   Current image. Upload a new one to replace it.
                 </p>
               </div>
@@ -262,13 +264,13 @@ defmodule HuddlzWeb.GroupLive.Edit do
           <% end %>
 
           <div
-            class="border-2 border-dashed border-base-300 rounded-lg p-4 text-center hover:border-primary transition-colors"
+            class="border border-dashed border-base-300 p-4 text-center hover:border-primary transition-colors"
             phx-drop-target={@uploads.group_image.ref}
           >
             <.live_file_input upload={@uploads.group_image} class="hidden" />
             <label for={@uploads.group_image.ref} class="cursor-pointer flex flex-col items-center">
               <.icon name="hero-photo" class="w-8 h-8 text-base-content/50 mb-2" />
-              <span class="text-sm text-base-content/70">
+              <span class="text-sm text-base-content/50">
                 Click to upload or drag and drop
               </span>
               <span class="text-xs text-base-content/50 mt-1">
@@ -282,7 +284,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
           <% end %>
 
           <%= for entry <- @uploads.group_image.entries do %>
-            <div class="mt-3 flex items-center gap-3 p-3 bg-base-200 rounded-lg">
+            <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
               <.live_img_preview entry={entry} class="w-20 h-12 rounded object-cover" />
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium truncate">{entry.client_name}</p>
@@ -298,7 +300,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
                 type="button"
                 phx-click="cancel_image_upload"
                 phx-value-ref={entry.ref}
-                class="btn btn-ghost btn-sm btn-circle"
+                class="p-1 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
               >
                 <.icon name="hero-x-mark" class="w-4 h-4" />
               </button>
@@ -315,13 +317,15 @@ defmodule HuddlzWeb.GroupLive.Edit do
         </div>
 
         <div>
-          <label class="block text-sm font-medium mb-2">Privacy</label>
+          <label class="mono-label text-primary/70 mb-2 block">
+            Privacy
+          </label>
           <.input
             field={@form[:is_public]}
             type="checkbox"
             label="Public group (visible to everyone)"
           />
-          <p class="text-sm text-base-content/70">
+          <p class="text-sm text-base-content/50">
             Public groups are visible to all users. Private groups are only visible to members.
           </p>
         </div>
@@ -330,7 +334,10 @@ defmodule HuddlzWeb.GroupLive.Edit do
           <.button type="submit" phx-disable-with="Saving...">
             Save Changes
           </.button>
-          <.link navigate={~p"/groups/#{@original_slug}"} class="btn btn-ghost">
+          <.link
+            navigate={~p"/groups/#{@original_slug}"}
+            class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
+          >
             Cancel
           </.link>
         </div>

@@ -41,7 +41,7 @@ defmodule ProfilePictureSteps do
     session = context[:session] || context[:conn]
     refute_has(session, "main img[src*='_thumb.jpg']")
     # Verify we see the initials "AU" (Alice User) in the avatar
-    assert_has(session, "[class*='rounded-full']", text: "AU")
+    assert_has(session, "[class*='overflow-hidden']", text: "AU")
     context
   end
 

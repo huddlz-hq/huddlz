@@ -80,7 +80,7 @@ defmodule HuddlListingSteps do
     conn =
       context.conn
       |> refute_has("p", text: "No huddlz found")
-      |> assert_has("h1", text: "Find your huddl")
+      |> assert_has("input[placeholder='Find your huddl']")
 
     Map.put(context, :conn, conn)
   end
@@ -110,7 +110,7 @@ defmodule HuddlListingSteps do
     session = context[:session] || context[:conn]
 
     session
-    |> assert_has("input[placeholder='Search huddlz...']")
+    |> assert_has("input[placeholder='Find your huddl']")
     |> assert_has("button", text: "Search")
 
     context
@@ -143,7 +143,7 @@ defmodule HuddlListingSteps do
     # For the test, we'll verify we're still on a page with huddlz
     conn =
       context.conn
-      |> assert_has("h1", text: "Find your huddl")
+      |> assert_has("input[placeholder='Find your huddl']")
       |> refute_has("p", text: "No huddlz found")
 
     Map.put(context, :conn, conn)

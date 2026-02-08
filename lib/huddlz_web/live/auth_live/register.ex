@@ -47,81 +47,77 @@ defmodule HuddlzWeb.AuthLive.Register do
     ~H"""
     <.app flash={@flash} current_user={assigns[:current_user]}>
       <div class="mx-auto max-w-md">
-        <.header class="text-center">
-          Create your account
-          <:subtitle>
-            Sign up to start creating and joining huddlz
-          </:subtitle>
-        </.header>
+        <h1 class="font-display text-2xl tracking-tight text-center">Create your account</h1>
+        <p class="text-center text-base-content/40 mt-2">
+          Sign up to start creating and joining huddlz
+        </p>
 
         <%!-- Password Registration Form --%>
-        <div class="card bg-base-100 shadow-xl">
-          <div class="card-body">
-            <h2 class="card-title">Sign up with password</h2>
+        <div class="border border-base-300 p-6 mt-8">
+          <h2 class="font-display text-xl mb-4">Sign up with password</h2>
 
-            <.form for={@form} id="registration-form" phx-change="validate" phx-submit="register">
+          <.form for={@form} id="registration-form" phx-change="validate" phx-submit="register">
+            <.input
+              field={@form[:email]}
+              type="email"
+              label="Email"
+              placeholder="you@example.com"
+              autocomplete="email"
+            />
+
+            <div>
               <.input
-                field={@form[:email]}
+                field={@form[:display_name]}
                 type="text"
-                label="Email"
-                placeholder="you@example.com"
-                autocomplete="email"
+                label="Display Name"
+                placeholder="First and Last Name"
+                autocomplete="name"
               />
+              <button
+                type="button"
+                phx-click="generate_display_name"
+                class="text-xs text-primary hover:underline font-medium inline-flex items-center gap-1 mt-1"
+              >
+                <.icon name="hero-arrow-path" class="h-4 w-4" /> Generate Random Name
+              </button>
+            </div>
 
-              <div>
-                <.input
-                  field={@form[:display_name]}
-                  type="text"
-                  label="Display Name"
-                  placeholder="First and Last Name"
-                  autocomplete="name"
-                />
-                <button
-                  type="button"
-                  phx-click="generate_display_name"
-                  class="btn btn-ghost btn-sm mt-1"
-                >
-                  <.icon name="hero-arrow-path" class="h-4 w-4" /> Generate Random Name
-                </button>
-              </div>
-
-              <div>
-                <.input
-                  field={@form[:password]}
-                  type="password"
-                  label="Password"
-                  placeholder="At least 8 characters"
-                  autocomplete="new-password"
-                  phx-debounce="blur"
-                />
-                <div class="text-xs text-base-content/80 mt-1 mb-4">
-                  Password must be at least 8 characters long
-                </div>
-              </div>
-
+            <div>
               <.input
-                field={@form[:password_confirmation]}
+                field={@form[:password]}
                 type="password"
-                label="Confirm Password"
-                placeholder="Type your password again"
+                label="Password"
+                placeholder="At least 8 characters"
                 autocomplete="new-password"
                 phx-debounce="blur"
               />
-
-              <div class="mt-6">
-                <.button type="submit" phx-disable-with="Creating account..." class="w-full">
-                  Create account
-                </.button>
+              <div class="text-xs text-base-content/60 mt-1 mb-4">
+                Password must be at least 8 characters long
               </div>
-            </.form>
-          </div>
+            </div>
+
+            <.input
+              field={@form[:password_confirmation]}
+              type="password"
+              label="Confirm Password"
+              placeholder="Type your password again"
+              autocomplete="new-password"
+              phx-debounce="blur"
+            />
+
+            <div class="mt-6">
+              <.button type="submit" phx-disable-with="Creating account..." class="w-full">
+                Create account
+              </.button>
+            </div>
+          </.form>
         </div>
 
         <div class="text-center mt-8">
-          <span class="text-sm text-base-content/70">
+          <span class="text-sm text-base-content/50">
             Already have an account?
           </span>
-          <a href="/sign-in" class="link link-primary text-sm ml-1">
+          <a href="/sign-in" class="text-primary hover:underline font-medium text-sm ml-1">
             Sign in
           </a>
         </div>
