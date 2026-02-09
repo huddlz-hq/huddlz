@@ -213,7 +213,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
           <%= cond do %>
             <% @pending_preview_url -> %>
               <div class="mb-3 flex items-center gap-3 p-3 bg-base-200">
-                <img src={@pending_preview_url} class="w-20 h-12 rounded object-cover" alt="Preview" />
+                <img src={@pending_preview_url} class="w-32 aspect-video object-cover" alt="Preview" />
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium text-success flex items-center gap-1">
                     <.icon name="hero-check-circle" class="w-4 h-4" /> New image uploaded
@@ -231,7 +231,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
               <div class="mb-3 flex items-center gap-3 p-3 bg-base-200">
                 <img
                   src={HuddlImages.url(@huddl.current_image_url)}
-                  class="w-20 h-12 rounded object-cover"
+                  class="w-32 aspect-video object-cover"
                   alt="Current image"
                 />
                 <div class="flex-1 min-w-0">
@@ -250,7 +250,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
               <div class="mb-3 flex items-center gap-3 p-3 bg-base-200/50 border border-dashed border-base-300">
                 <img
                   src={GroupImages.url(@huddl.group.current_image_url)}
-                  class="w-20 h-12 rounded object-cover opacity-70"
+                  class="w-32 aspect-video object-cover opacity-70"
                   alt="Group image"
                 />
                 <div class="flex-1 min-w-0">
@@ -259,7 +259,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
               </div>
             <% true -> %>
               <div class="mb-3 flex items-center gap-3 p-3 bg-base-200/50 border border-dashed border-base-300">
-                <div class="w-20 h-12 rounded bg-base-100 flex items-center justify-center">
+                <div class="w-32 aspect-video bg-base-100 flex items-center justify-center">
                   <.icon name="hero-photo" class="w-6 h-6 text-base-content/30" />
                 </div>
                 <div class="flex-1 min-w-0">
@@ -290,7 +290,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
           <%= for entry <- @uploads.huddl_image.entries do %>
             <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
-              <.live_img_preview entry={entry} class="w-20 h-12 rounded object-cover" />
+              <.live_img_preview entry={entry} class="w-32 aspect-video object-cover" />
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium truncate">{entry.client_name}</p>
                 <div class="w-full bg-base-300 rounded-full h-1.5 mt-1">

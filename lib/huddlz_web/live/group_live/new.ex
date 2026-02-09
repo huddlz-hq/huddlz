@@ -249,7 +249,7 @@ defmodule HuddlzWeb.GroupLive.New do
 
           <%= if @pending_preview_url do %>
             <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
-              <img src={@pending_preview_url} class="w-20 h-12 rounded object-cover" alt="Preview" />
+              <img src={@pending_preview_url} class="w-32 aspect-video object-cover" alt="Preview" />
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-success flex items-center gap-1">
                   <.icon name="hero-check-circle" class="w-4 h-4" /> Image uploaded
@@ -266,7 +266,7 @@ defmodule HuddlzWeb.GroupLive.New do
           <% else %>
             <%= for entry <- @uploads.group_image.entries do %>
               <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
-                <.live_img_preview entry={entry} class="w-20 h-12 rounded object-cover" />
+                <.live_img_preview entry={entry} class="w-32 aspect-video object-cover" />
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium truncate">{entry.client_name}</p>
                   <div class="w-full bg-base-300 rounded-full h-1.5 mt-1">

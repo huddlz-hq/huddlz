@@ -6,7 +6,6 @@ defmodule HuddlzWeb.HuddlLive do
 
   alias Huddlz.Communities
   alias Huddlz.Communities.Group
-  alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
   require Ash.Query
 
@@ -260,37 +259,9 @@ defmodule HuddlzWeb.HuddlLive do
                   <h2 class="font-display text-lg tracking-tight text-glow mb-4">
                     Groups you can explore
                   </h2>
-                  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     <%= for group <- @groups do %>
-                      <.link
-                        navigate={~p"/groups/#{group.slug}"}
-                        class="border border-base-300 overflow-hidden hover:border-primary/30 transition-colors group"
-                      >
-                        <div class="aspect-video overflow-hidden">
-                          <%= if group.current_image_url do %>
-                            <img
-                              src={GroupImages.url(group.current_image_url)}
-                              alt={group.name}
-                              class="w-full h-full object-cover"
-                            />
-                          <% else %>
-                            <div class="w-full h-full bg-base-100 flex items-center justify-center">
-                              <span class="text-xl font-bold text-base-content/30 text-center px-4 line-clamp-2">
-                                {group.name}
-                              </span>
-                            </div>
-                          <% end %>
-                        </div>
-                        <div class="p-4">
-                          <h3 class="font-semibold">{group.name}</h3>
-                          <p class="text-sm text-base-content/40 line-clamp-2">
-                            {group.description || "No description provided."}
-                          </p>
-                          <p :if={group.location} class="text-xs text-base-content/50 mt-1">
-                            <.icon name="hero-map-pin" class="h-3 w-3 inline" /> {group.location}
-                          </p>
-                        </div>
-                      </.link>
+                      <.group_card group={group} />
                     <% end %>
                   </div>
                   <div class="text-center mt-4">
@@ -310,7 +281,7 @@ defmodule HuddlzWeb.HuddlLive do
                 do: "huddl",
                 else: "huddlz"}
             </div>
-            <div class="space-y-4">
+            <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               <%= for huddl <- @huddls do %>
                 <.huddl_card huddl={huddl} show_group={true} />
               <% end %>

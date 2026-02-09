@@ -704,14 +704,15 @@ defmodule HuddlzWeb.CoreComponents do
 
   def huddl_card(assigns) do
     ~H"""
-    <div
+    <.link
+      navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}"}
       class={[
-        "flex flex-col md:flex-row border border-base-300 overflow-hidden bg-base-200 hover:border-primary/50 transition-colors",
+        "border border-base-300 overflow-hidden hover:border-primary/30 transition-colors group flex flex-col",
         @class
       ]}
       {@rest}
     >
-      <div class="w-full md:w-48 h-36 md:h-auto relative bg-base-200 flex-shrink-0">
+      <div class="aspect-video overflow-hidden relative bg-base-200 flex-shrink-0">
         <%= if @huddl.display_image_url do %>
           <img
             src={HuddlImages.url(@huddl.display_image_url)}
@@ -728,61 +729,47 @@ defmodule HuddlzWeb.CoreComponents do
         <div :if={@huddl.status not in [:upcoming, :completed]} class="absolute top-2 right-2">
           <.huddl_status_badge status={@huddl.status} />
         </div>
-      </div>
-      <div class="flex-1 p-5">
-        <div class="flex flex-col h-full justify-between">
-          <div>
-            <h3 class="font-display text-lg tracking-tight">{@huddl.title}</h3>
-            <%= if @show_group && Map.has_key?(@huddl, :group) do %>
-              <p class="text-xs text-base-content/50 mt-0.5 flex items-center gap-1">
-                <.icon name="hero-user-group" class="h-3 w-3" />
-                {@huddl.group.name}
-              </p>
-            <% end %>
-            <p class="text-sm text-base-content/40 mt-2 line-clamp-2">
-              {truncate(@huddl.description || "No description provided", 150)}
-            </p>
-            <div class="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-base-content/50">
-              <span class="flex items-center gap-1">
-                <.icon name={type_icon(@huddl.event_type)} class="h-3.5 w-3.5" />
-                {@huddl.event_type |> to_string() |> String.replace("_", " ") |> String.capitalize()}
-              </span>
-              <span class="flex items-center gap-1">
-                <.icon name="hero-calendar" class="h-3.5 w-3.5" />
-                {format_datetime(@huddl.starts_at)}
-              </span>
-              <%= if @huddl.event_type in [:in_person, :hybrid] && @huddl.physical_location do %>
-                <span class="flex items-center gap-1">
-                  <.icon name="hero-map-pin" class="h-3.5 w-3.5" />
-                  {@huddl.physical_location}
-                </span>
-              <% end %>
-              <%= if @huddl.rsvp_count > 0 do %>
-                <span class="flex items-center gap-1">
-                  <.icon name="hero-user-group" class="h-3.5 w-3.5" />
-                  {@huddl.rsvp_count} attending
-                </span>
-              <% end %>
-            </div>
-          </div>
-          <div class="flex items-center justify-between mt-4 pt-3 border-t border-base-300">
-            <div class="flex items-center gap-2">
-              <%= if @huddl.is_private do %>
-                <span class="text-xs px-2 py-0.5 bg-base-300 text-base-content/50">
-                  Private
-                </span>
-              <% end %>
-            </div>
-            <.link
-              navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}"}
-              class="text-sm font-medium text-primary hover:underline"
-            >
-              View Details →
-            </.link>
-          </div>
+        <div :if={@huddl.is_private} class="absolute top-2 left-2">
+          <span class="text-xs px-2 py-0.5 bg-base-300/80 text-base-content/50">
+            Private
+          </span>
         </div>
       </div>
-    </div>
+      <div class="p-4 flex-1 flex flex-col">
+        <h3 class="font-display tracking-tight">{@huddl.title}</h3>
+        <%= if @show_group && Map.has_key?(@huddl, :group) do %>
+          <p class="text-xs text-base-content/50 mt-0.5 flex items-center gap-1">
+            <.icon name="hero-user-group" class="h-3 w-3" />
+            {@huddl.group.name}
+          </p>
+        <% end %>
+        <p class="text-sm text-base-content/40 mt-1 line-clamp-2">
+          {truncate(@huddl.description || "No description provided", 150)}
+        </p>
+        <div class="flex flex-wrap gap-x-3 gap-y-1 mt-3 text-xs text-base-content/50">
+          <span class="flex items-center gap-1">
+            <.icon name={type_icon(@huddl.event_type)} class="h-3.5 w-3.5" />
+            {@huddl.event_type |> to_string() |> String.replace("_", " ") |> String.capitalize()}
+          </span>
+          <span class="flex items-center gap-1">
+            <.icon name="hero-calendar" class="h-3.5 w-3.5" />
+            {format_datetime(@huddl.starts_at)}
+          </span>
+          <%= if @huddl.event_type in [:in_person, :hybrid] && @huddl.physical_location do %>
+            <span class="flex items-center gap-1">
+              <.icon name="hero-map-pin" class="h-3.5 w-3.5" />
+              {@huddl.physical_location}
+            </span>
+          <% end %>
+          <%= if @huddl.rsvp_count > 0 do %>
+            <span class="flex items-center gap-1">
+              <.icon name="hero-user-group" class="h-3.5 w-3.5" />
+              {@huddl.rsvp_count} attending
+            </span>
+          <% end %>
+        </div>
+      </div>
+    </.link>
     """
   end
 
