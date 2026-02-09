@@ -21,7 +21,7 @@ Feature: RSVP Cancellation
     Given I am logged in as "member@example.com"
     And I am on the "Tech Meetup" group page
     Then I should see "Virtual Code Review"
-    When I click "View Details"
+    When I click "Virtual Code Review"
     Then I should be on the huddl page for "Virtual Code Review"
     And I should see "Virtual Code Review"
     And I should see "Let's review some code"

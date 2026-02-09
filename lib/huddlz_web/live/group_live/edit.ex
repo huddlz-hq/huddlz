@@ -285,7 +285,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
 
           <%= for entry <- @uploads.group_image.entries do %>
             <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
-              <.live_img_preview entry={entry} class="w-20 h-12 rounded object-cover" />
+              <.live_img_preview entry={entry} class="w-32 aspect-video object-cover" />
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium truncate">{entry.client_name}</p>
                 <div class="w-full bg-base-300 rounded-full h-1.5 mt-1">

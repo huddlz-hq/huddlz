@@ -3,8 +3,11 @@ defmodule HuddlzWeb.CommunityComponents do
   Reusable UI components for communities domain (groups and huddlz).
   """
   use Phoenix.Component
+  use HuddlzWeb, :verified_routes
 
   import HuddlzWeb.CoreComponents, only: [huddl_card: 1, avatar: 1, icon: 1]
+
+  alias Huddlz.Storage.GroupImages
 
   @doc """
   Renders a list of huddlz with empty state handling.
@@ -23,9 +26,82 @@ defmodule HuddlzWeb.CommunityComponents do
     <%= if Enum.empty?(@huddlz) do %>
       <p class="text-base-content/50 mt-4 text-sm">{@empty_message}</p>
     <% else %>
-      <div class="space-y-4">
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <%= for huddl <- @huddlz do %>
           <.huddl_card huddl={huddl} show_group={@show_group} />
+        <% end %>
+      </div>
+    <% end %>
+    """
+  end
+
+  @doc """
+  Renders a group card with 16:9 banner image and content below.
+
+  ## Examples
+
+      <.group_card group={group} />
+  """
+  attr :group, :map, required: true
+  attr :class, :string, default: nil
+  attr :rest, :global
+
+  def group_card(assigns) do
+    ~H"""
+    <.link
+      navigate={~p"/groups/#{@group.slug}"}
+      class={[
+        "border border-base-300 overflow-hidden hover:border-primary/30 transition-colors group flex flex-col",
+        @class
+      ]}
+      {@rest}
+    >
+      <div class="aspect-video overflow-hidden relative bg-base-200 flex-shrink-0">
+        <%= if @group.current_image_url do %>
+          <img
+            src={GroupImages.url(@group.current_image_url)}
+            alt={@group.name}
+            class="w-full h-full object-cover"
+          />
+        <% else %>
+          <div class="w-full h-full bg-base-100 flex items-center justify-center">
+            <span class="text-2xl font-bold text-base-content/30 text-center px-4 line-clamp-2">
+              {@group.name}
+            </span>
+          </div>
+        <% end %>
+      </div>
+      <div class="p-4 flex-1">
+        <h2 class="font-display tracking-tight">{@group.name}</h2>
+        <p class="text-sm text-base-content/40 line-clamp-2 mt-1">
+          {@group.description || "No description provided."}
+        </p>
+        <p :if={@group.location} class="text-xs text-base-content/50 mt-2 flex items-center gap-1">
+          <.icon name="hero-map-pin" class="h-3 w-3" /> {@group.location}
+        </p>
+      </div>
+    </.link>
+    """
+  end
+
+  @doc """
+  Renders a grid of group cards with empty state handling.
+
+  ## Examples
+
+      <.group_list groups={@groups} empty_message="No groups found." />
+  """
+  attr :groups, :list, required: true
+  attr :empty_message, :string, default: "No groups found."
+
+  def group_list(assigns) do
+    ~H"""
+    <%= if Enum.empty?(@groups) do %>
+      <p class="text-base-content/50 mt-4 text-sm">{@empty_message}</p>
+    <% else %>
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <%= for group <- @groups do %>
+          <.group_card group={group} />
         <% end %>
       </div>
     <% end %>

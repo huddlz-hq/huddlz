@@ -282,7 +282,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
       conn
       |> visit("/")
       |> assert_has("h2", text: "Groups you can explore")
-      |> assert_has("h3", text: "Elixir Club")
+      |> assert_has("h2", text: "Elixir Club")
     end
 
     test "hides groups section when huddlz exist", %{conn: conn, host: host} do
