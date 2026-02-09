@@ -38,8 +38,9 @@ http_ip = optional("PHX_IP", "::") |> ip!()
 scheme = optional("PHX_SCHEME", "https")
 check_origin = optional("PHX_CHECK_ORIGIN", "true") |> boolean!()
 
-# URL port should be the standard port for the scheme (443 for https, 80 for http)
-url_port = if scheme == "https", do: 443, else: 80
+# In production (https), use standard port 443 (behind reverse proxy).
+# In development (http), use the actual server port (e.g., 4000).
+url_port = if scheme == "https", do: 443, else: port
 
 config :huddlz, HuddlzWeb.Endpoint,
   url: [host: host, port: url_port, scheme: scheme],
