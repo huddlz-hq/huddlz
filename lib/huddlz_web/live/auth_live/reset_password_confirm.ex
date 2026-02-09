@@ -10,33 +10,37 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
 
   @impl true
   def mount(%{"token" => token}, _session, socket) do
-    # For now, we'll assume all tokens are potentially valid and let
-    # the form submission handle validation
-    # Get the password strategy for proper context
     strategy = AshAuthentication.Info.strategy!(User, :password)
     domain = AshAuthentication.Info.authentication_domain!(User)
 
-    # Create form for reset_password_with_token action with token pre-filled
-    form =
-      Form.for_action(User, :reset_password_with_token,
-        params: %{"reset_token" => token},
-        domain: domain,
-        as: "user",
-        id: "user-password-reset-password-with-token",
-        context: %{strategy: strategy, private: %{ash_authentication?: true}}
-      )
+    with {:ok, %{"sub" => subject}, _resource} <- AshAuthentication.Jwt.verify(token, User),
+         {:ok, user} <- AshAuthentication.subject_to_user(subject, User) do
+      form =
+        Form.for_update(user, :reset_password_with_token,
+          params: %{"reset_token" => token},
+          domain: domain,
+          as: "user",
+          id: "user-password-reset-password-with-token",
+          context: %{strategy: strategy, private: %{ash_authentication?: true}}
+        )
 
-    {:ok,
-     socket
-     |> assign(:form, to_form(form))
-     |> assign(:token, token)
-     |> assign(:token_valid, true)}
+      {:ok,
+       socket
+       |> assign(:form, to_form(form))
+       |> assign(:token, token)
+       |> assign(:token_valid, true)
+       |> assign(:trigger_action, false)}
+    else
+      _ ->
+        {:ok, assign(socket, token_valid: false, trigger_action: false)}
+    end
   end
 
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:token_valid, false)}
+     |> assign(:token_valid, false)
+     |> assign(:trigger_action, false)}
   end
 
   @impl true
@@ -53,6 +57,9 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
               for={@form}
               phx-change="validate"
               phx-submit="reset_password"
+              phx-trigger-action={@trigger_action}
+              action="/auth/user/password/reset"
+              method="POST"
               id="reset-password-confirm-form"
             >
               <input
@@ -127,58 +134,15 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
     {:noreply, assign(socket, form: to_form(form))}
   end
 
-  def handle_event("reset_password", params, socket) do
-    # Extract the user params from the form submission
-    user_params = Map.get(params, "user", %{})
-
-    # Add the reset token to the params if not present
-    user_params = Map.put_new(user_params, "reset_token", socket.assigns.token)
-
-    form = socket.assigns.form.source |> Form.validate(user_params)
-
-    if form.valid? do
-      handle_valid_form_submission(form, user_params, socket)
-    else
-      {:noreply, assign(socket, form: to_form(form))}
-    end
-  end
-
-  defp handle_valid_form_submission(form, user_params, socket) do
-    case Form.submit(form, params: user_params) do
-      {:ok, user} ->
-        handle_successful_reset(user, socket)
-
-      {:error, form} ->
-        handle_reset_error(form, socket)
-    end
-  end
-
-  defp handle_successful_reset(user, socket) do
-    # Generate a token for the user to sign them in
-    {:ok, token} = AshAuthentication.Jwt.token_for_user(user, %{"purpose" => "user"})
+  def handle_event("reset_password", %{"user" => params}, socket) do
+    params = Map.put_new(params, "reset_token", socket.assigns.token)
+    form = socket.assigns.form.source |> Form.validate(params)
 
     socket =
       socket
-      |> put_flash(:info, "Your password has successfully been reset")
-      |> redirect(to: "/auth/user/password/sign_in_with_token?token=#{token}")
+      |> assign(:form, to_form(form))
+      |> assign(:trigger_action, form.valid?)
 
     {:noreply, socket}
-  end
-
-  defp handle_reset_error(form, socket) do
-    # Check if this is an invalid token error
-    errors = AshPhoenix.Form.errors(form)
-
-    invalid_token? =
-      Enum.any?(errors, fn {field, msg} ->
-        field == :reset_token ||
-          String.contains?(to_string(msg), ["invalid", "expired", "stale"])
-      end)
-
-    if invalid_token? do
-      {:noreply, assign(socket, :token_valid, false)}
-    else
-      {:noreply, assign(socket, form: to_form(form))}
-    end
   end
 end

@@ -61,9 +61,34 @@ Feature: Password Authentication
     Then I should receive a password reset email for "reset@example.com"
     When I click the password reset link in the email
     Then I should be on the password reset confirmation page
-    # Note: Full password reset flow including form submission is tested in
-    # test/huddlz_web/live/password_reset_full_flow_test.exs due to PhoenixTest
-    # limitations with phx-trigger-action JavaScript behavior
+    When I fill in the new password form with:
+      | password              | NewSecurePass456! |
+      | password_confirmation | NewSecurePass456! |
+    And I submit the password reset form
+    Then I should see "Your password has successfully been reset"
+
+  Scenario: User can sign in with new password after reset
+    Given a confirmed user exists with email "resetpwd@example.com" and password "OldPassword123!"
+    When I visit "/reset"
+    And I fill in "Email" with "resetpwd@example.com" within "#reset-password-form"
+    And I click "Send reset instructions"
+    Then I should receive a password reset email for "resetpwd@example.com"
+    When I click the password reset link in the email
+    And I fill in the new password form with:
+      | password              | NewSecurePass456! |
+      | password_confirmation | NewSecurePass456! |
+    And I submit the password reset form
+    Then I should see "Your password has successfully been reset"
+    When I am on the sign-in page
+    And I fill in the password sign-in form with:
+      | email    | resetpwd@example.com |
+      | password | NewSecurePass456!    |
+    And I submit the password sign-in form
+    Then I should be signed in
+
+  Scenario: User visits password reset with invalid token
+    When I visit "/reset/invalid-token-here"
+    Then I should see "This password reset link is invalid or has expired"
 
   Scenario: User can access authentication pages
     Given I am on the sign-in page

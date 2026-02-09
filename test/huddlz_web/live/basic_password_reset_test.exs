@@ -92,13 +92,13 @@ defmodule HuddlzWeb.BasicPasswordResetTest do
       assert_has(session, "button", text: "Reset password")
     end
 
-    test "invalid token shows form but cannot reset", %{conn: conn} do
-      # Visit with an invalid token
+    test "invalid token shows error immediately", %{conn: conn} do
+      # Visit with an invalid token - now caught on mount
       session = visit(conn, "/reset/invalid-token-123")
 
-      # The form will initially appear
-      assert_has(session, "h2", text: "Set new password")
-      assert_has(session, "input[type='password']")
+      # Should show the invalid state immediately
+      assert_has(session, "h2", text: "Invalid reset link")
+      assert_has(session, "*", text: "This password reset link is invalid or has expired")
     end
 
     test "password reset with non-existent email still shows success", %{conn: conn} do
