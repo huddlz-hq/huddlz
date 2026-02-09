@@ -274,6 +274,17 @@ defmodule PasswordAuthenticationSteps do
     {:ok, context}
   end
 
+  step "I submit the password reset form", context do
+    session = context[:session] || context[:conn]
+
+    session =
+      within(session, "#reset-password-confirm-form", fn s ->
+        click_button(s, "Reset password")
+      end)
+
+    {:ok, Map.merge(context, %{session: session, conn: session})}
+  end
+
   step "I fill in the new password form with:", context do
     table_rows = context[:datatable][:raw] || context[:datatable][:rows] || []
     session = context[:session] || context[:conn]
