@@ -21,13 +21,11 @@ end
 database_url = required!("DATABASE_URL")
 pool_size = optional("POOL_SIZE", "10") |> integer!()
 ecto_ipv6 = optional("ECTO_IPV6", "false") |> boolean!()
-ecto_ssl = optional("ECTO_SSL", "true") |> boolean!()
 
 config :huddlz, Huddlz.Repo,
   url: database_url,
   pool_size: pool_size,
-  socket_options: if(ecto_ipv6, do: [:inet6], else: []),
-  ssl: if(ecto_ssl, do: [verify: :verify_none], else: false)
+  socket_options: if(ecto_ipv6, do: [:inet6], else: [])
 
 # =============================================================================
 # Endpoint Configuration (all environments)
