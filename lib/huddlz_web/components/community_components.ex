@@ -5,9 +5,10 @@ defmodule HuddlzWeb.CommunityComponents do
   use Phoenix.Component
   use HuddlzWeb, :verified_routes
 
-  import HuddlzWeb.CoreComponents, only: [huddl_card: 1, avatar: 1, icon: 1]
+  import HuddlzWeb.CoreComponents, only: [avatar: 1, icon: 1]
 
   alias Huddlz.Storage.GroupImages
+  alias Huddlz.Storage.HuddlImages
 
   @doc """
   Renders a list of huddlz with empty state handling.
@@ -109,6 +110,126 @@ defmodule HuddlzWeb.CommunityComponents do
   end
 
   @doc """
+  Renders a huddl card with 16:9 banner image and content below.
+
+  ## Examples
+
+      <.huddl_card huddl={@huddl} />
+  """
+  attr :huddl, :map, required: true
+  attr :show_group, :boolean, default: false
+  attr :class, :string, default: nil
+  attr :rest, :global
+
+  def huddl_card(assigns) do
+    ~H"""
+    <.link
+      navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}"}
+      class={[
+        "border border-base-300 overflow-hidden hover:border-primary/30 transition-colors group flex flex-col",
+        @class
+      ]}
+      {@rest}
+    >
+      <div class="aspect-video overflow-hidden relative bg-base-200 flex-shrink-0">
+        <%= if @huddl.display_image_url do %>
+          <img
+            src={HuddlImages.url(@huddl.display_image_url)}
+            alt={@huddl.title}
+            class="w-full h-full object-cover"
+          />
+        <% else %>
+          <div class="w-full h-full flex items-center justify-center bg-base-100">
+            <span class="text-base-content/30 font-display text-lg text-center px-3 line-clamp-2">
+              {@huddl.title}
+            </span>
+          </div>
+        <% end %>
+        <div :if={@huddl.status not in [:upcoming, :completed]} class="absolute top-2 right-2">
+          <.huddl_status_badge status={@huddl.status} />
+        </div>
+        <div :if={@huddl.is_private} class="absolute top-2 left-2">
+          <span class="text-xs px-2 py-0.5 bg-base-300/80 text-base-content/50">
+            Private
+          </span>
+        </div>
+      </div>
+      <div class="p-4 flex-1 flex flex-col">
+        <h3 class="font-display tracking-tight">{@huddl.title}</h3>
+        <%= if @show_group && Map.has_key?(@huddl, :group) do %>
+          <p class="text-xs text-base-content/50 mt-0.5 flex items-center gap-1">
+            <.icon name="hero-user-group" class="h-3 w-3" />
+            {@huddl.group.name}
+          </p>
+        <% end %>
+        <p class="text-sm text-base-content/40 mt-1 line-clamp-2">
+          {truncate(@huddl.description || "No description provided", 150)}
+        </p>
+        <div class="flex flex-wrap gap-x-3 gap-y-1 mt-3 text-xs text-base-content/50">
+          <span class="flex items-center gap-1">
+            <.icon name={type_icon(@huddl.event_type)} class="h-3.5 w-3.5" />
+            {@huddl.event_type |> to_string() |> String.replace("_", " ") |> String.capitalize()}
+          </span>
+          <span class="flex items-center gap-1">
+            <.icon name="hero-calendar" class="h-3.5 w-3.5" />
+            {format_datetime(@huddl.starts_at)}
+          </span>
+          <%= if @huddl.event_type in [:in_person, :hybrid] && @huddl.physical_location do %>
+            <span class="flex items-center gap-1">
+              <.icon name="hero-map-pin" class="h-3.5 w-3.5" />
+              {@huddl.physical_location}
+            </span>
+          <% end %>
+          <%= if @huddl.rsvp_count > 0 do %>
+            <span class="flex items-center gap-1">
+              <.icon name="hero-user-group" class="h-3.5 w-3.5" />
+              {@huddl.rsvp_count} attending
+            </span>
+          <% end %>
+        </div>
+      </div>
+    </.link>
+    """
+  end
+
+  @doc """
+  Renders a huddl status badge.
+  """
+  attr :status, :atom, required: true
+  attr :class, :string, default: nil
+
+  def huddl_status_badge(assigns) do
+    ~H"""
+    <span class={[
+      "text-xs px-2 py-0.5 font-medium border border-current/20",
+      status_badge_class(@status),
+      @class
+    ]}>
+      {@status |> to_string() |> String.replace("_", " ") |> String.capitalize()}
+    </span>
+    """
+  end
+
+  @doc """
+  Renders a huddl type badge.
+  """
+  attr :type, :atom, required: true
+  attr :class, :string, default: nil
+
+  def huddl_type_badge(assigns) do
+    ~H"""
+    <span class={[
+      "text-xs px-2 py-0.5 font-medium inline-flex items-center gap-1 border border-current/20",
+      type_badge_class(@type),
+      @class
+    ]}>
+      <.icon name={type_icon(@type)} class="h-3 w-3" />
+      {@type |> to_string() |> String.replace("_", " ") |> String.capitalize()}
+    </span>
+    """
+  end
+
+  @doc """
   Renders a member card showing user display name and optional owner badge.
 
   ## Examples
@@ -177,5 +298,32 @@ defmodule HuddlzWeb.CommunityComponents do
       <% end %>
     </div>
     """
+  end
+
+  # Huddl helper functions
+
+  defp status_badge_class(:upcoming), do: "bg-primary/10 text-primary"
+  defp status_badge_class(:in_progress), do: "bg-success/10 text-success"
+  defp status_badge_class(:completed), do: "bg-base-200 text-base-content/50"
+  defp status_badge_class(_), do: "bg-base-200 text-base-content/50"
+
+  defp type_badge_class(:in_person), do: "bg-info/10 text-info"
+  defp type_badge_class(:virtual), do: "bg-warning/10 text-warning"
+  defp type_badge_class(:hybrid), do: "bg-secondary/10 text-secondary"
+  defp type_badge_class(_), do: "bg-base-200 text-base-content/50"
+
+  defp type_icon(:in_person), do: "hero-map-pin"
+  defp type_icon(:virtual), do: "hero-video-camera"
+  defp type_icon(:hybrid), do: "hero-globe-alt"
+  defp type_icon(_), do: "hero-calendar"
+
+  defp truncate(text, max_length) when is_binary(text) and byte_size(text) > max_length do
+    String.slice(text, 0, max_length) <> "..."
+  end
+
+  defp truncate(text, _), do: text
+
+  defp format_datetime(datetime) do
+    Calendar.strftime(datetime, "%b %d, %Y · %I:%M %p")
   end
 end
