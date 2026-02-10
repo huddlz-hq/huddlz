@@ -8,6 +8,7 @@ defmodule Huddlz.Communities do
 
   resources do
     resource Huddlz.Communities.Huddl do
+      define :get_huddl, action: :read, get_by: [:id]
       define :get_upcoming, action: :upcoming
 
       define :search_huddlz,
@@ -18,6 +19,9 @@ defmodule Huddlz.Communities do
       define :get_by_status, action: :by_status, args: [:status]
       define :get_group_huddlz, action: :by_group, args: [:group_id]
       define :get_past_group_huddlz, action: :past_by_group, args: [:group_id]
+      define :rsvp_huddl, action: :rsvp, args: [:user_id]
+      define :cancel_rsvp_huddl, action: :cancel_rsvp, args: [:user_id]
+      define :destroy_huddl, action: :destroy
     end
 
     resource Huddlz.Communities.Group do

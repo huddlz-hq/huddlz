@@ -82,11 +82,11 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
       |> Ash.update!()
 
       # Initial count should be 2
-      huddl_after_rsvps = Ash.reload!(huddl)
-      assert huddl_after_rsvps.rsvp_count == 2
+      assert rsvp_count(huddl) == 2
 
       # Cancel owner's RSVP
-      huddl_after_rsvps
+      huddl
+      |> Ash.reload!()
       |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: owner.id}, actor: owner)
       |> Ash.update!()
 
@@ -97,8 +97,7 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
       |> Ash.update!()
 
       # Final count should be 0
-      final_huddl = Ash.reload!(huddl)
-      assert final_huddl.rsvp_count == 0
+      assert rsvp_count(huddl) == 0
     end
 
     test "cancelling RSVP for event that starts in 1 minute still works", %{
@@ -132,16 +131,19 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
       |> Ash.update!()
 
       # Should still be able to cancel
-      updated_huddl =
-        huddl
-        |> Ash.reload!()
-        |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: member.id}, actor: member)
-        |> Ash.update!()
+      huddl
+      |> Ash.reload!()
+      |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.update!()
 
-      assert updated_huddl.rsvp_count == 0
+      assert rsvp_count(huddl) == 0
     end
 
-    test "RSVP count never goes negative", %{member: member, owner: owner, group: group} do
+    test "RSVP count is always consistent with attendee records", %{
+      member: member,
+      owner: owner,
+      group: group
+    } do
       huddl =
         Huddl
         |> Ash.Changeset.for_create(
@@ -155,45 +157,33 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
             virtual_link: "https://zoom.us/j/counttest",
             is_private: false,
             group_id: group.id,
-            creator_id: owner.id,
-            rsvp_count: 0
+            creator_id: owner.id
           },
           actor: owner
         )
         |> Ash.create!()
 
-      # Try to cancel without RSVPing first
-      result =
-        huddl
-        |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: member.id}, actor: member)
-        |> Ash.update!()
-
-      assert result.rsvp_count == 0
-
-      # Manually corrupt the count (simulate database inconsistency)
+      # Try to cancel without RSVPing first - count stays at 0
       huddl
-      |> Ecto.Changeset.change(%{rsvp_count: 0})
-      |> Huddlz.Repo.update!()
+      |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.update!()
 
-      # RSVP to create an attendee record
+      assert rsvp_count(huddl) == 0
+
+      # RSVP then cancel - count is always consistent
       huddl
       |> Ash.reload!()
       |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
       |> Ash.update!()
 
-      # Reset count to 0 to simulate inconsistency
+      assert rsvp_count(huddl) == 1
+
       huddl
-      |> Ecto.Changeset.change(%{rsvp_count: 0})
-      |> Huddlz.Repo.update!()
+      |> Ash.reload!()
+      |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.update!()
 
-      # Cancel should not make it negative
-      result =
-        huddl
-        |> Ash.reload!()
-        |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: member.id}, actor: member)
-        |> Ash.update!()
-
-      assert result.rsvp_count == 0
+      assert rsvp_count(huddl) == 0
     end
 
     test "admin can see RSVP cancellations work correctly", %{
@@ -231,6 +221,7 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
       admin_view =
         Huddl
         |> Ash.Query.filter(id == ^huddl.id)
+        |> Ash.Query.load(:rsvp_count)
         |> Ash.read_one!(actor: admin)
 
       assert admin_view.rsvp_count == 1
@@ -245,10 +236,16 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
       admin_view_after =
         Huddl
         |> Ash.Query.filter(id == ^huddl.id)
+        |> Ash.Query.load(:rsvp_count)
         |> Ash.read_one!(actor: admin)
 
       assert admin_view_after.rsvp_count == 0
     end
+  end
+
+  # Helper to load the rsvp_count aggregate from the database
+  defp rsvp_count(huddl) do
+    huddl |> Ash.reload!() |> Ash.load!(:rsvp_count, authorize?: false) |> Map.get(:rsvp_count)
   end
 
   defp create_verified_user do
