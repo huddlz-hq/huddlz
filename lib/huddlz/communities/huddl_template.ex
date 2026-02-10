@@ -6,7 +6,8 @@ defmodule Huddlz.Communities.HuddlTemplate do
   use Ash.Resource,
     otp_app: :huddlz,
     domain: Huddlz.Communities,
-    data_layer: AshPostgres.DataLayer
+    data_layer: AshPostgres.DataLayer,
+    authorizers: [Ash.Policy.Authorizer]
 
   postgres do
     table "huddl_templates"
@@ -36,6 +37,21 @@ defmodule Huddlz.Communities.HuddlTemplate do
       ]
 
       require_atomic? false
+    end
+  end
+
+  policies do
+    bypass actor_attribute_equals(:role, :admin) do
+      authorize_if always()
+    end
+
+    # Templates are managed internally; require admin for direct access
+    policy action_type([:create, :update, :destroy]) do
+      forbid_if always()
+    end
+
+    policy action_type(:read) do
+      authorize_if always()
     end
   end
 

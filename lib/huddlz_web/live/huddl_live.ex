@@ -23,7 +23,9 @@ defmodule HuddlzWeb.HuddlLive do
     huddls =
       case page do
         {:ok, %{results: results}} ->
-          Ash.load!(results, [:status, :visible_virtual_link, :display_image_url, :group],
+          Ash.load!(
+            results,
+            [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group],
             actor: socket.assigns[:current_user]
           )
 
@@ -64,7 +66,9 @@ defmodule HuddlzWeb.HuddlLive do
     huddls =
       case page do
         {:ok, %{results: results}} ->
-          Ash.load!(results, [:status, :visible_virtual_link, :display_image_url, :group],
+          Ash.load!(
+            results,
+            [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group],
             actor: socket.assigns[:current_user]
           )
 
@@ -93,7 +97,9 @@ defmodule HuddlzWeb.HuddlLive do
     huddls =
       case page do
         {:ok, %{results: results}} ->
-          Ash.load!(results, [:status, :visible_virtual_link, :display_image_url, :group],
+          Ash.load!(
+            results,
+            [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group],
             actor: socket.assigns[:current_user]
           )
 
@@ -136,7 +142,9 @@ defmodule HuddlzWeb.HuddlLive do
     huddls =
       case page do
         {:ok, %{results: results}} ->
-          Ash.load!(results, [:status, :visible_virtual_link, :display_image_url, :group],
+          Ash.load!(
+            results,
+            [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group],
             actor: socket.assigns[:current_user]
           )
 
@@ -339,12 +347,13 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   defp list_public_groups do
-    Group
-    |> Ash.Query.filter(is_public: true)
-    |> Ash.Query.load(:current_image_url)
-    |> Ash.Query.limit(6)
-    |> Ash.read!()
-  rescue
-    _ -> []
+    case Group
+         |> Ash.Query.filter(is_public: true)
+         |> Ash.Query.load(:current_image_url)
+         |> Ash.Query.limit(6)
+         |> Ash.read() do
+      {:ok, groups} -> groups
+      {:error, _} -> []
+    end
   end
 end

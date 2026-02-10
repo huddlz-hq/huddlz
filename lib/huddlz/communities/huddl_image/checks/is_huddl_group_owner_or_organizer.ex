@@ -56,7 +56,7 @@ defmodule Huddlz.Communities.HuddlImage.Checks.IsHuddlGroupOwnerOrOrganizer do
         GroupMember
         |> Ash.Query.for_read(:read, %{}, authorize?: false)
         |> Ash.Query.filter(group_id: group.id, user_id: actor.id, role: :organizer)
-        |> Ash.exists?()
+        |> Ash.exists?(authorize?: false)
 
       _ ->
         false

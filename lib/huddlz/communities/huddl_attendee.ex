@@ -94,6 +94,12 @@ defmodule Huddlz.Communities.HuddlAttendee do
       authorize_if relates_to_actor_via(:user)
     end
 
+    # Allow the default read action (used by aggregates like rsvp_count)
+    policy action(:read) do
+      description "Allow reads for aggregates and internal use"
+      authorize_if always()
+    end
+
     # Only attendees and group owners/organizers can see who's attending
     policy action(:by_huddl) do
       # Allow if the actor is attending this huddl

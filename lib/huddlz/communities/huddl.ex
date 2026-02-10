@@ -10,8 +10,6 @@ defmodule Huddlz.Communities.Huddl do
     authorizers: [Ash.Policy.Authorizer],
     primary_read_warning?: false
 
-  require Ash.Query
-
   postgres do
     table "huddlz"
     repo Huddlz.Repo
@@ -37,7 +35,6 @@ defmodule Huddlz.Communities.Huddl do
         :physical_location,
         :virtual_link,
         :is_private,
-        :rsvp_count,
         :thumbnail_url,
         :creator_id,
         :group_id,
@@ -75,7 +72,6 @@ defmodule Huddlz.Communities.Huddl do
         :physical_location,
         :virtual_link,
         :is_private,
-        :rsvp_count,
         :thumbnail_url,
         :huddl_template_id
       ]
@@ -190,78 +186,22 @@ defmodule Huddlz.Communities.Huddl do
       description "RSVP to this huddl"
       require_atomic? false
 
-      # Accept the user_id as an argument
       argument :user_id, :uuid do
         allow_nil? false
       end
 
-      # Custom change to handle RSVP
-      change fn changeset, _context ->
-        user_id = Ash.Changeset.get_argument(changeset, :user_id)
-        huddl_id = changeset.data.id
-
-        # Check if already RSVPed
-        existing =
-          Huddlz.Communities.HuddlAttendee
-          |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl_id, user_id: user_id})
-          |> Ash.read_one(authorize?: false)
-
-        case existing do
-          {:ok, nil} ->
-            # Create RSVP
-            Huddlz.Communities.HuddlAttendee
-            |> Ash.Changeset.for_create(:rsvp, %{huddl_id: huddl_id, user_id: user_id})
-            |> Ash.create!(authorize?: false)
-
-            # Increment count
-            Ash.Changeset.atomic_update(changeset, :rsvp_count, expr(rsvp_count + 1))
-
-          {:ok, _} ->
-            # Already RSVPed, no change needed
-            changeset
-
-          {:error, error} ->
-            Ash.Changeset.add_error(changeset, error)
-        end
-      end
+      change Huddlz.Communities.Huddl.Changes.Rsvp
     end
 
     update :cancel_rsvp do
       description "Cancel RSVP to this huddl"
       require_atomic? false
 
-      # Accept the user_id as an argument
       argument :user_id, :uuid do
         allow_nil? false
       end
 
-      # Custom change to handle cancellation
-      change fn changeset, _context ->
-        user_id = Ash.Changeset.get_argument(changeset, :user_id)
-        huddl_id = changeset.data.id
-
-        # Find the existing RSVP
-        existing =
-          Huddlz.Communities.HuddlAttendee
-          |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl_id, user_id: user_id})
-          |> Ash.read_one(authorize?: false)
-
-        case existing do
-          {:ok, nil} ->
-            # No RSVP to cancel, return unchanged
-            changeset
-
-          {:ok, attendee} ->
-            # Delete the attendee record
-            Ash.destroy!(attendee, authorize?: false)
-
-            # Decrement count
-            Ash.Changeset.atomic_update(changeset, :rsvp_count, expr(rsvp_count - 1))
-
-          {:error, error} ->
-            Ash.Changeset.add_error(changeset, error)
-        end
-      end
+      change Huddlz.Communities.Huddl.Changes.CancelRsvp
     end
   end
 
@@ -278,95 +218,38 @@ defmodule Huddlz.Communities.Huddl do
       authorize_if Huddlz.Communities.Huddl.Checks.GroupOwnerOrOrganizer
     end
 
-    # Read policies
-    policy action(:read) do
-      description "Users can read huddls they have access to"
-      # Public huddls in public groups
-      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
-      # Any huddl in a group they're a member of
-      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
-    end
-
-    policy action(:upcoming) do
-      description "Users can view upcoming huddls they have access to"
-      # Public huddls in public groups
-      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
-      # Any huddl in a group they're a member of
-      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
-    end
-
-    policy action(:past) do
-      description "Users can view past huddls they have access to"
-      # Public huddls in public groups
-      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
-      # Any huddl in a group they're a member of
-      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
-    end
-
-    policy action(:search) do
-      description "Users can search huddls they have access to"
-      # Public huddls in public groups
-      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
-      # Any huddl in a group they're a member of
-      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
-    end
-
-    policy action(:by_group) do
-      description "Users can view huddls by group if they have access"
-      # Public huddls in public groups
-      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
-      # Any huddl in a group they're a member of
-      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
-    end
-
-    policy action(:past_by_group) do
-      description "Users can view past huddls by group if they have access"
-      # Public huddls in public groups
-      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
-      # Any huddl in a group they're a member of
-      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
-    end
-
-    policy action(:by_status) do
-      description "Users can filter huddls by status"
-      # Public huddls in public groups
-      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
-      # Any huddl in a group they're a member of
-      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
+    # Read policies - visibility filtering is handled by the FilterByVisibility preparation
+    # on each read action, which adds database-level filters. We authorize all reads here
+    # and rely on the preparation to restrict results.
+    policy action_type(:read) do
+      description "Users can read huddlz they have access to (filtered by preparation)"
+      authorize_if always()
     end
 
     # RSVP policies
     policy action(:rsvp) do
-      description "Users can RSVP to huddls they have access to"
-      # User must be RSVPing for themselves
+      description "Users can RSVP to huddlz they have access to"
       forbid_unless expr(^arg(:user_id) == ^actor(:id))
-      # Public huddls in public groups
-      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
-      # Any huddl in a group they're a member of
-      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
+      authorize_if expr(is_private == false and group.is_public == true)
+      authorize_if expr(exists(group.members, id == ^actor(:id)))
     end
 
     # Cancel RSVP policies
     policy action(:cancel_rsvp) do
       description "Users can cancel their own RSVPs"
-      # User must be cancelling their own RSVP
       forbid_unless expr(^arg(:user_id) == ^actor(:id))
-      # Public huddls in public groups
-      authorize_if Huddlz.Communities.Huddl.Checks.PublicHuddl
-      # Any huddl in a group they're a member of
-      authorize_if Huddlz.Communities.Huddl.Checks.GroupMember
+      authorize_if expr(is_private == false and group.is_public == true)
+      authorize_if expr(exists(group.members, id == ^actor(:id)))
     end
 
-    # Update policies
-    policy action(:update) do
-      description "Only group owners and organizers can update huddls"
-      authorize_if Huddlz.Communities.Huddl.Checks.GroupOwnerOrOrganizer
-    end
+    # Update and delete policies
+    policy action([:update, :destroy]) do
+      description "Only group owners and organizers can update or delete huddlz"
+      authorize_if expr(group.owner_id == ^actor(:id))
 
-    # Delete policies
-    policy action(:destroy) do
-      description "Only group owners and organizers can delete huddls"
-      authorize_if Huddlz.Communities.Huddl.Checks.GroupOwnerOrOrganizer
+      authorize_if expr(
+                     exists(group.group_members, user_id == ^actor(:id) and role == :organizer)
+                   )
     end
   end
 
@@ -431,11 +314,6 @@ defmodule Huddlz.Communities.Huddl do
     attribute :is_private, :boolean do
       allow_nil? false
       default false
-    end
-
-    attribute :rsvp_count, :integer do
-      allow_nil? false
-      default 0
     end
 
     attribute :thumbnail_url, :string do
@@ -514,6 +392,8 @@ defmodule Huddlz.Communities.Huddl do
   end
 
   aggregates do
+    count :rsvp_count, :attendees
+
     first :current_image_url, :huddl_images, :thumbnail_path do
       description "Returns the thumbnail path of the huddl's current image"
       sort inserted_at: :desc

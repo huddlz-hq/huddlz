@@ -4,12 +4,9 @@ defmodule HuddlzWeb.HuddlLive.Show do
   """
   use HuddlzWeb, :live_view
 
-  alias Huddlz.Communities.Huddl
-  alias Huddlz.Communities.HuddlAttendee
+  alias Huddlz.Communities
   alias Huddlz.Storage.HuddlImages
   alias HuddlzWeb.Layouts
-
-  require Ash.Query
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
 
@@ -231,20 +228,17 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   @impl true
   def handle_event("rsvp", _, socket) do
-    case rsvp_to_huddl(socket.assigns.huddl, socket.assigns.current_user) do
+    huddl = socket.assigns.huddl
+    user = socket.assigns.current_user
+
+    case Communities.rsvp_huddl(huddl, user.id, actor: user) do
       {:ok, _} ->
-        # Reload the huddl to get updated RSVP count and visible_virtual_link
-        {:ok, huddl} =
-          get_huddl(
-            socket.assigns.huddl.id,
-            socket.assigns.huddl.group.slug,
-            socket.assigns.current_user
-          )
+        {:ok, reloaded} = reload_huddl(huddl, user)
 
         {:noreply,
          socket
          |> put_flash(:info, "Successfully RSVPed to this huddl!")
-         |> assign(:huddl, huddl)
+         |> assign(:huddl, reloaded)
          |> assign(:has_rsvped, true)}
 
       {:error, _} ->
@@ -254,20 +248,17 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   @impl true
   def handle_event("cancel_rsvp", _, socket) do
-    case cancel_rsvp(socket.assigns.huddl, socket.assigns.current_user) do
+    huddl = socket.assigns.huddl
+    user = socket.assigns.current_user
+
+    case Communities.cancel_rsvp_huddl(huddl, user.id, actor: user) do
       {:ok, _} ->
-        # Reload the huddl to get updated RSVP count
-        {:ok, huddl} =
-          get_huddl(
-            socket.assigns.huddl.id,
-            socket.assigns.huddl.group.slug,
-            socket.assigns.current_user
-          )
+        {:ok, reloaded} = reload_huddl(huddl, user)
 
         {:noreply,
          socket
          |> put_flash(:info, "RSVP cancelled successfully")
-         |> assign(:huddl, huddl)
+         |> assign(:huddl, reloaded)
          |> assign(:has_rsvped, false)}
 
       {:error, %Ash.Error.Forbidden{}} ->
@@ -279,40 +270,60 @@ defmodule HuddlzWeb.HuddlLive.Show do
   end
 
   def handle_event("delete_huddl", _, socket) do
-    Ash.destroy!(socket.assigns.huddl, actor: socket.assigns.current_user)
+    huddl = socket.assigns.huddl
+    user = socket.assigns.current_user
 
-    {:noreply,
-     socket
-     |> put_flash(:info, "Huddl deleted successfully!")
-     |> redirect(to: ~p"/groups/#{socket.assigns.huddl.group.slug}")}
+    case Communities.destroy_huddl(huddl, actor: user) do
+      :ok ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Huddl deleted successfully!")
+         |> redirect(to: ~p"/groups/#{huddl.group.slug}")}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to delete huddl.")}
+    end
   end
 
   defp get_huddl(id, group_slug, user) do
-    # Get the huddl and verify it belongs to the group with the given slug
-    case Huddl
-         |> Ash.Query.filter(id == ^id)
-         |> Ash.Query.load([
-           :status,
-           :visible_virtual_link,
-           :display_image_url,
-           :group,
-           creator: [:current_profile_picture_url]
-         ])
-         |> Ash.read_one(actor: user) do
-      {:ok, nil} ->
-        {:error, :not_found}
-
+    case Communities.get_huddl(id,
+           load: [
+             :status,
+             :rsvp_count,
+             :visible_virtual_link,
+             :display_image_url,
+             :group,
+             creator: [:current_profile_picture_url]
+           ],
+           actor: user
+         ) do
       {:ok, huddl} ->
-        # Verify the huddl belongs to the group with the given slug
         if huddl.group.slug == group_slug do
           {:ok, huddl}
         else
           {:error, :not_found}
         end
 
+      {:error, %Ash.Error.Query.NotFound{}} ->
+        {:error, :not_found}
+
       {:error, _} ->
         {:error, :not_authorized}
     end
+  end
+
+  defp reload_huddl(huddl, user) do
+    Communities.get_huddl(huddl.id,
+      load: [
+        :status,
+        :rsvp_count,
+        :visible_virtual_link,
+        :display_image_url,
+        :group,
+        creator: [:current_profile_picture_url]
+      ],
+      actor: user
+    )
   end
 
   defp creator?(_huddl, nil), do: false
@@ -324,25 +335,11 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp check_rsvp(_huddl, nil), do: false
 
   defp check_rsvp(huddl, user) do
-    case HuddlAttendee
-         |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl.id, user_id: user.id})
-         |> Ash.read_one(actor: user) do
-      {:ok, nil} -> false
-      {:ok, _} -> true
+    case Communities.check_user_rsvp(huddl.id, user.id, actor: user) do
+      {:ok, []} -> false
+      {:ok, [_ | _]} -> true
       {:error, _} -> false
     end
-  end
-
-  defp rsvp_to_huddl(huddl, user) do
-    huddl
-    |> Ash.Changeset.for_update(:rsvp, %{user_id: user.id}, actor: user)
-    |> Ash.update()
-  end
-
-  defp cancel_rsvp(huddl, user) do
-    huddl
-    |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: user.id}, actor: user)
-    |> Ash.update()
   end
 
   defp format_datetime(datetime) do

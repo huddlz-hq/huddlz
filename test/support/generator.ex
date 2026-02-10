@@ -145,7 +145,6 @@ defmodule Huddlz.Generator do
         physical_location: StreamData.repeatedly(fn -> Faker.Address.street_address() end),
         virtual_link: nil,
         is_private: false,
-        rsvp_count: 0,
         thumbnail_url:
           StreamData.repeatedly(fn ->
             "https://placehold.co/600x400/#{random_hex_color()}/FFFFFF?text=Past+Huddl"
@@ -209,7 +208,6 @@ defmodule Huddlz.Generator do
         event_type: :in_person,
         physical_location: "123 Main St, Anytown, USA",
         is_private: false,
-        rsvp_count: 0,
         huddl_template_id: nil,
         is_recurring: false
       ],
