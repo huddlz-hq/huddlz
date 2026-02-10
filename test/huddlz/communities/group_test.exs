@@ -1,19 +1,12 @@
 defmodule Huddlz.Communities.GroupTest do
   use Huddlz.DataCase, async: true
 
-  alias Huddlz.Accounts.User
   alias Huddlz.Communities
   alias Huddlz.Communities.Group
 
   describe "group creation" do
     test "admin users can create groups" do
-      # Create an admin user
-      admin_user =
-        Ash.Seed.seed!(User, %{
-          email: "admin-group-creation@example.com",
-          display_name: "Admin Group Creator",
-          role: :admin
-        })
+      admin_user = generate(user(role: :admin))
 
       # Admin should be able to create a group
       {:ok, group} =
@@ -31,13 +24,7 @@ defmodule Huddlz.Communities.GroupTest do
     end
 
     test "users can create groups" do
-      # Create a user
-      verified_user =
-        Ash.Seed.seed!(User, %{
-          email: "verified-group-creation@example.com",
-          display_name: "Verified Group Creator",
-          role: :user
-        })
+      verified_user = generate(user(role: :user))
 
       # Verified user should be able to create a group
       {:ok, group} =
@@ -55,13 +42,7 @@ defmodule Huddlz.Communities.GroupTest do
     end
 
     test "all users can create groups" do
-      # Create a user
-      regular_user =
-        Ash.Seed.seed!(User, %{
-          email: "regular-group-creation@example.com",
-          display_name: "Regular Group Creator",
-          role: :user
-        })
+      regular_user = generate(user(role: :user))
 
       # All users can now create groups
       assert {:ok, group} =
@@ -332,32 +313,9 @@ defmodule Huddlz.Communities.GroupTest do
 
   describe "group management" do
     setup do
-      # Create a group owner
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "group-owner@example.com",
-          display_name: "Group Owner",
-          role: :user
-        })
-
-      # Create another user
-      other_user =
-        Ash.Seed.seed!(User, %{
-          email: "other-user@example.com",
-          display_name: "Other User",
-          role: :user
-        })
-
-      # Create a group
-      {:ok, group} =
-        Group
-        |> Ash.Changeset.for_create(:create_group, %{
-          name: "Test Management Group",
-          description: "A group for testing management functions",
-          is_public: true,
-          owner_id: owner.id
-        })
-        |> Ash.create(actor: owner)
+      owner = generate(user(role: :user))
+      other_user = generate(user(role: :user))
+      group = generate(group(name: "Test Management Group", owner_id: owner.id, actor: owner))
 
       {:ok, %{owner: owner, other_user: other_user, group: group}}
     end
@@ -388,12 +346,7 @@ defmodule Huddlz.Communities.GroupTest do
   describe "group search" do
     setup do
       # Create a user to own the groups
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "search-test-owner@example.com",
-          display_name: "Search Test Owner",
-          role: :user
-        })
+      owner = generate(user(role: :user))
 
       # Create some groups with distinctive names and descriptions for search testing
       {:ok, group1} =

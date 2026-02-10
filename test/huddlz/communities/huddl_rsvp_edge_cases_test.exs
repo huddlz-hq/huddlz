@@ -1,7 +1,6 @@
 defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
   use Huddlz.DataCase, async: true
 
-  alias Huddlz.Accounts.User
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Communities.Huddl
@@ -10,8 +9,8 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
 
   describe "RSVP cancellation edge cases" do
     setup do
-      owner = create_verified_user()
-      member = create_verified_user()
+      owner = generate(user(role: :user))
+      member = generate(user(role: :user))
 
       group =
         Group
@@ -191,7 +190,7 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
       owner: owner,
       group: group
     } do
-      admin = create_admin_user()
+      admin = generate(user(role: :admin))
 
       huddl =
         Huddl
@@ -246,25 +245,5 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
   # Helper to load the rsvp_count aggregate from the database
   defp rsvp_count(huddl) do
     huddl |> Ash.reload!() |> Ash.load!(:rsvp_count, authorize?: false) |> Map.get(:rsvp_count)
-  end
-
-  defp create_verified_user do
-    User
-    |> Ash.Changeset.for_create(:create, %{
-      email: "user#{System.unique_integer()}@example.com",
-      display_name: "Test User",
-      role: :user
-    })
-    |> Ash.create!(authorize?: false)
-  end
-
-  defp create_admin_user do
-    User
-    |> Ash.Changeset.for_create(:create, %{
-      email: "admin#{System.unique_integer()}@example.com",
-      display_name: "Admin User",
-      role: :admin
-    })
-    |> Ash.create!(authorize?: false)
   end
 end

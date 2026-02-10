@@ -1,7 +1,6 @@
 defmodule Huddlz.Communities.GroupMembershipTest do
   use Huddlz.DataCase, async: true
 
-  alias Huddlz.Accounts.User
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupMember
 
@@ -9,12 +8,12 @@ defmodule Huddlz.Communities.GroupMembershipTest do
 
   describe "join_group/2" do
     setup do
-      admin = user_fixture(%{role: :admin})
-      verified_user = user_fixture(%{role: :user})
-      regular_user = user_fixture(%{role: :user})
+      admin = generate(user(role: :admin))
+      verified_user = generate(user(role: :user))
+      regular_user = generate(user(role: :user))
 
-      public_group = group_fixture(admin, %{is_public: true})
-      private_group = group_fixture(admin, %{is_public: false})
+      public_group = generate(group(is_public: true, owner_id: admin.id, actor: admin))
+      private_group = generate(group(is_public: false, owner_id: admin.id, actor: admin))
 
       %{
         admin: admin,
@@ -78,10 +77,10 @@ defmodule Huddlz.Communities.GroupMembershipTest do
 
   describe "leave_group/2" do
     setup do
-      admin = user_fixture(%{role: :admin})
-      verified_user = user_fixture(%{role: :user})
+      admin = generate(user(role: :admin))
+      verified_user = generate(user(role: :user))
 
-      public_group = group_fixture(admin, %{is_public: true})
+      public_group = generate(group(is_public: true, owner_id: admin.id, actor: admin))
 
       # Add verified_user to the group
       {:ok, _} =
@@ -154,7 +153,7 @@ defmodule Huddlz.Communities.GroupMembershipTest do
 
   describe "group creator membership" do
     test "owner is automatically added as member when creating group" do
-      admin = user_fixture(%{role: :admin})
+      admin = generate(user(role: :admin))
 
       {:ok, group} =
         Group
@@ -178,34 +177,5 @@ defmodule Huddlz.Communities.GroupMembershipTest do
 
       assert membership.role == :owner
     end
-  end
-
-  defp user_fixture(attrs) do
-    Ash.Seed.seed!(User, %{
-      email: "test-#{:rand.uniform(100_000)}@example.com",
-      display_name: "Test User",
-      role: Map.get(attrs, :role, :regular)
-    })
-  end
-
-  defp group_fixture(owner, attrs) do
-    {:ok, group} =
-      Group
-      |> Ash.Changeset.for_create(
-        :create_group,
-        Map.merge(
-          %{
-            name: "Test Group #{:rand.uniform(100_000)}",
-            description: "A test group",
-            is_public: true,
-            owner_id: owner.id
-          },
-          attrs
-        ),
-        actor: owner
-      )
-      |> Ash.create()
-
-    group
   end
 end

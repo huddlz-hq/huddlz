@@ -1,7 +1,6 @@
 defmodule Huddlz.Communities.HuddlRsvpTest do
   use Huddlz.DataCase, async: true
 
-  alias Huddlz.Accounts.User
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Communities.Huddl
@@ -11,10 +10,9 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
 
   describe "RSVP functionality" do
     setup do
-      # Create users
-      owner = create_verified_user()
-      member = create_verified_user()
-      non_member = create_verified_user()
+      owner = generate(user(role: :user))
+      member = generate(user(role: :user))
+      non_member = generate(user(role: :user))
 
       # Create group
       group =
@@ -224,8 +222,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
     end
 
     test "cannot RSVP to private huddl in private group without membership" do
-      owner = create_verified_user()
-      non_member = create_verified_user()
+      owner = generate(user(role: :user))
+      non_member = generate(user(role: :user))
 
       # Create private group
       private_group =
@@ -274,10 +272,9 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
 
   describe "RSVP cancellation functionality" do
     setup do
-      # Create users
-      owner = create_verified_user()
-      member = create_verified_user()
-      other_user = create_verified_user()
+      owner = generate(user(role: :user))
+      member = generate(user(role: :user))
+      other_user = generate(user(role: :user))
 
       # Create group
       group =
@@ -457,12 +454,11 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
 
   describe "attendee list authorization" do
     setup do
-      # Create users
-      owner = create_verified_user()
-      organizer = create_verified_user()
-      member = create_verified_user()
-      attendee = create_verified_user()
-      non_attendee = create_verified_user()
+      owner = generate(user(role: :user))
+      organizer = generate(user(role: :user))
+      member = generate(user(role: :user))
+      attendee = generate(user(role: :user))
+      non_attendee = generate(user(role: :user))
 
       # Create group
       group =
@@ -615,7 +611,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
     end
 
     test "admin can see attendee list", %{huddl: huddl, attendee: attendee} do
-      admin = create_admin_user()
+      admin = generate(user(role: :admin))
 
       # Admin can see attendee list
       result =
@@ -632,25 +628,5 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
   # Helper to load the rsvp_count aggregate from the database
   defp rsvp_count(huddl) do
     huddl |> Ash.reload!() |> Ash.load!(:rsvp_count, authorize?: false) |> Map.get(:rsvp_count)
-  end
-
-  defp create_verified_user do
-    User
-    |> Ash.Changeset.for_create(:create, %{
-      email: "user#{System.unique_integer()}@example.com",
-      display_name: "Test User",
-      role: :user
-    })
-    |> Ash.create!(authorize?: false)
-  end
-
-  defp create_admin_user do
-    User
-    |> Ash.Changeset.for_create(:create, %{
-      email: "admin#{System.unique_integer()}@example.com",
-      display_name: "Admin User",
-      role: :admin
-    })
-    |> Ash.create!(authorize?: false)
   end
 end
