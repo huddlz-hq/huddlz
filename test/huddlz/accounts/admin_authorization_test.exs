@@ -10,29 +10,9 @@ defmodule Huddlz.Accounts.AdminAuthorizationTest do
   alias Huddlz.Accounts.User
 
   setup do
-    # Create an admin user for testing
-    admin_user =
-      Ash.Seed.seed!(User, %{
-        email: "admin-test-auth@example.com",
-        display_name: "Admin Test Auth",
-        role: :admin
-      })
-
-    # Create a user for testing
-    regular_user =
-      Ash.Seed.seed!(User, %{
-        email: "regular-test-auth@example.com",
-        display_name: "Regular Test Auth",
-        role: :user
-      })
-
-    # Create a user for testing
-    verified_user =
-      Ash.Seed.seed!(User, %{
-        email: "verified-test-auth@example.com",
-        display_name: "Verified Test Auth",
-        role: :user
-      })
+    admin_user = generate(user(role: :admin))
+    regular_user = generate(user(role: :user))
+    verified_user = generate(user(role: :user))
 
     {:ok, %{admin: admin_user, regular: regular_user, verified: verified_user}}
   end

@@ -2,27 +2,13 @@ defmodule Huddlz.Communities.GroupImageTest do
   use Huddlz.DataCase, async: true
   use Oban.Testing, repo: Huddlz.Repo
 
-  alias Huddlz.Accounts.User
   alias Huddlz.Communities
-  alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupImage
 
   describe "create group image" do
     test "group owner can create a group image" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-group-image@example.com",
-          display_name: "Group Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group for Images",
-          slug: "test-group-images",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       attrs = %{
         filename: "banner.jpg",
@@ -41,27 +27,9 @@ defmodule Huddlz.Communities.GroupImageTest do
     end
 
     test "non-owner cannot create group image" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-no-access@example.com",
-          display_name: "Group Owner",
-          role: :user
-        })
-
-      other_user =
-        Ash.Seed.seed!(User, %{
-          email: "other-user@example.com",
-          display_name: "Other User",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group No Access",
-          slug: "test-group-no-access",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      other_user = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       attrs = %{
         filename: "banner.jpg",
@@ -77,27 +45,9 @@ defmodule Huddlz.Communities.GroupImageTest do
     end
 
     test "admin can create group image for any group" do
-      admin =
-        Ash.Seed.seed!(User, %{
-          email: "admin-group-image@example.com",
-          display_name: "Admin User",
-          role: :admin
-        })
-
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-for-admin@example.com",
-          display_name: "Group Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Admin",
-          slug: "test-group-admin",
-          is_public: true,
-          owner_id: owner.id
-        })
+      admin = generate(user(role: :admin))
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       attrs = %{
         filename: "admin-banner.jpg",
@@ -114,20 +64,8 @@ defmodule Huddlz.Communities.GroupImageTest do
 
   describe "get current group image" do
     test "returns the most recent image for a group" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-current@example.com",
-          display_name: "Current Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Current",
-          slug: "test-group-current",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       # Create first image
       {:ok, _img1} =
@@ -164,20 +102,8 @@ defmodule Huddlz.Communities.GroupImageTest do
     end
 
     test "returns error when group has no image" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-noimage@example.com",
-          display_name: "No Image Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group No Image",
-          slug: "test-group-no-image",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       assert {:error, %Ash.Error.Invalid{}} =
                Communities.get_current_group_image(group.id, actor: owner)
@@ -186,20 +112,8 @@ defmodule Huddlz.Communities.GroupImageTest do
 
   describe "list group images" do
     test "lists all images for a group" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-list@example.com",
-          display_name: "List Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group List",
-          slug: "test-group-list",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       for i <- 1..3 do
         Communities.create_group_image!(
@@ -221,20 +135,8 @@ defmodule Huddlz.Communities.GroupImageTest do
 
   describe "soft_delete action" do
     test "soft-delete sets deleted_at timestamp" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-softdelete@example.com",
-          display_name: "Soft Delete Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Soft Delete",
-          slug: "test-group-softdelete",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       {:ok, image} =
         Communities.create_group_image(
@@ -256,20 +158,8 @@ defmodule Huddlz.Communities.GroupImageTest do
     end
 
     test "soft-deleted images are excluded from current image queries" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-softdelete-exclude@example.com",
-          display_name: "Soft Delete Exclude Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Soft Delete Exclude",
-          slug: "test-group-softdelete-exclude",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       {:ok, image} =
         Communities.create_group_image(
@@ -295,20 +185,8 @@ defmodule Huddlz.Communities.GroupImageTest do
     end
 
     test "soft-delete enqueues cleanup job" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-oban-enqueue@example.com",
-          display_name: "Oban Enqueue Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Oban",
-          slug: "test-group-oban",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       {:ok, image} =
         Communities.create_group_image(
@@ -332,27 +210,9 @@ defmodule Huddlz.Communities.GroupImageTest do
     end
 
     test "non-owner cannot soft-delete group images" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner1-softdelete@example.com",
-          display_name: "Owner One Soft",
-          role: :user
-        })
-
-      other_user =
-        Ash.Seed.seed!(User, %{
-          email: "other-softdelete@example.com",
-          display_name: "Other Soft",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Other Soft Delete",
-          slug: "test-group-other-softdelete",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      other_user = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       {:ok, image} =
         Communities.create_group_image(
@@ -374,20 +234,8 @@ defmodule Huddlz.Communities.GroupImageTest do
 
   describe "hard_delete action (background cleanup)" do
     test "hard_delete removes record from database" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-harddelete@example.com",
-          display_name: "Hard Delete Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Hard Delete",
-          slug: "test-group-harddelete",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       {:ok, image} =
         Communities.create_group_image(
@@ -412,20 +260,8 @@ defmodule Huddlz.Communities.GroupImageTest do
     end
 
     test "running the cleanup job deletes soft-deleted image from database" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-cleanup-job@example.com",
-          display_name: "Cleanup Job Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Cleanup Job",
-          slug: "test-group-cleanup-job",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       {:ok, image} =
         Communities.create_group_image(
@@ -452,20 +288,8 @@ defmodule Huddlz.Communities.GroupImageTest do
 
   describe "current_image_url aggregate" do
     test "returns thumbnail path of most recent group image" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-aggregate@example.com",
-          display_name: "Aggregate Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Aggregate",
-          slug: "test-group-aggregate",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       thumbnail_path = "/uploads/group_images/#{group.id}/latest_thumb.jpg"
 
@@ -487,40 +311,16 @@ defmodule Huddlz.Communities.GroupImageTest do
     end
 
     test "returns nil when group has no image" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-aggregate-none@example.com",
-          display_name: "Aggregate None Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Aggregate None",
-          slug: "test-group-aggregate-none",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       {:ok, loaded_group} = Ash.load(group, [:current_image_url], actor: owner)
       assert loaded_group.current_image_url == nil
     end
 
     test "excludes soft-deleted images from aggregate" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-aggregate-deleted@example.com",
-          display_name: "Aggregate Deleted Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Aggregate Deleted",
-          slug: "test-group-aggregate-deleted",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       {:ok, image} =
         Communities.create_group_image(
@@ -550,12 +350,7 @@ defmodule Huddlz.Communities.GroupImageTest do
 
   describe "create_pending action (eager upload)" do
     test "any authenticated user can create a pending image" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "pending-user@example.com",
-          display_name: "Pending User",
-          role: :user
-        })
+      user = generate(user())
 
       attrs = %{
         filename: "pending.jpg",
@@ -571,12 +366,7 @@ defmodule Huddlz.Communities.GroupImageTest do
     end
 
     test "pending images have nil group_id" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "pending-nil-group@example.com",
-          display_name: "Pending Nil Group",
-          role: :user
-        })
+      user = generate(user())
 
       {:ok, pending_image} =
         Communities.create_pending_group_image(
@@ -593,20 +383,8 @@ defmodule Huddlz.Communities.GroupImageTest do
     end
 
     test "pending images are excluded from get_current_for_group" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-pending-exclude@example.com",
-          display_name: "Pending Exclude Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Pending Exclude",
-          slug: "test-group-pending-exclude",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       # Create a pending image (not assigned to the group)
       {:ok, _pending} =
@@ -628,20 +406,8 @@ defmodule Huddlz.Communities.GroupImageTest do
 
   describe "assign_to_group action" do
     test "group owner can assign a pending image to their group" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-assign@example.com",
-          display_name: "Assign Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Assign",
-          slug: "test-group-assign",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       {:ok, pending_image} =
         Communities.create_pending_group_image(
@@ -663,27 +429,9 @@ defmodule Huddlz.Communities.GroupImageTest do
     end
 
     test "non-owner cannot assign image to group they don't own" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-assign-block@example.com",
-          display_name: "Assign Block Owner",
-          role: :user
-        })
-
-      other_user =
-        Ash.Seed.seed!(User, %{
-          email: "other-assign-block@example.com",
-          display_name: "Other Assign Block",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Assign Block",
-          slug: "test-group-assign-block",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      other_user = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       {:ok, pending_image} =
         Communities.create_pending_group_image(
@@ -702,28 +450,9 @@ defmodule Huddlz.Communities.GroupImageTest do
     end
 
     test "cannot assign an already assigned image" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-double-assign@example.com",
-          display_name: "Double Assign Owner",
-          role: :user
-        })
-
-      group1 =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Double Assign 1",
-          slug: "test-group-double-assign-1",
-          is_public: true,
-          owner_id: owner.id
-        })
-
-      group2 =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Double Assign 2",
-          slug: "test-group-double-assign-2",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group1 = generate(group(owner_id: owner.id, actor: owner))
+      group2 = generate(group(owner_id: owner.id, actor: owner))
 
       {:ok, pending_image} =
         Communities.create_pending_group_image(
@@ -748,12 +477,7 @@ defmodule Huddlz.Communities.GroupImageTest do
 
   describe "orphaned_pending action" do
     test "finds pending images older than 24 hours" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "orphan-test@example.com",
-          display_name: "Orphan Test",
-          role: :user
-        })
+      user = generate(user())
 
       # Create a pending image and manually backdate it
       {:ok, pending_image} =
@@ -786,12 +510,7 @@ defmodule Huddlz.Communities.GroupImageTest do
     end
 
     test "does not find pending images less than 24 hours old" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "recent-orphan@example.com",
-          display_name: "Recent Orphan",
-          role: :user
-        })
+      user = generate(user())
 
       {:ok, pending_image} =
         Communities.create_pending_group_image(
@@ -813,20 +532,8 @@ defmodule Huddlz.Communities.GroupImageTest do
     end
 
     test "does not find assigned images even if old" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "assigned-old@example.com",
-          display_name: "Assigned Old",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Assigned Old",
-          slug: "test-group-assigned-old",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       {:ok, pending_image} =
         Communities.create_pending_group_image(

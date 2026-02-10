@@ -4,16 +4,10 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
 
   alias Huddlz.Accounts
   alias Huddlz.Accounts.ProfilePicture
-  alias Huddlz.Accounts.User
 
   describe "create profile picture" do
     test "users can create their own profile picture" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "user-profile-pic@example.com",
-          display_name: "Profile Pic User",
-          role: :user
-        })
+      user = generate(user())
 
       attrs = %{
         filename: "avatar.jpg",
@@ -31,19 +25,8 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
     end
 
     test "users cannot create profile pictures for other users" do
-      user1 =
-        Ash.Seed.seed!(User, %{
-          email: "user1-profile@example.com",
-          display_name: "User One",
-          role: :user
-        })
-
-      user2 =
-        Ash.Seed.seed!(User, %{
-          email: "user2-profile@example.com",
-          display_name: "User Two",
-          role: :user
-        })
+      user1 = generate(user())
+      user2 = generate(user())
 
       attrs = %{
         filename: "avatar.jpg",
@@ -59,19 +42,8 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
     end
 
     test "admins can create profile pictures for any user" do
-      admin =
-        Ash.Seed.seed!(User, %{
-          email: "admin-profile@example.com",
-          display_name: "Admin User",
-          role: :admin
-        })
-
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "user-for-admin@example.com",
-          display_name: "Regular User",
-          role: :user
-        })
+      admin = generate(user(role: :admin))
+      user = generate(user())
 
       attrs = %{
         filename: "avatar.jpg",
@@ -88,12 +60,7 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
 
   describe "get current profile picture" do
     test "returns the most recent profile picture for a user" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "user-current@example.com",
-          display_name: "Current User",
-          role: :user
-        })
+      user = generate(user())
 
       # Create first profile picture
       {:ok, _pic1} =
@@ -130,12 +97,7 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
     end
 
     test "returns error when user has no profile picture" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "user-nopic@example.com",
-          display_name: "No Pic User",
-          role: :user
-        })
+      user = generate(user())
 
       # get? true actions return NotFound error when nothing is found
       assert {:error, %Ash.Error.Invalid{}} =
@@ -145,12 +107,7 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
 
   describe "list profile pictures" do
     test "lists all profile pictures for a user" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "user-list@example.com",
-          display_name: "List User",
-          role: :user
-        })
+      user = generate(user())
 
       # Create multiple profile pictures
       for i <- 1..3 do
@@ -173,12 +130,7 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
 
   describe "delete profile picture" do
     test "users can delete their own profile pictures" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "user-delete@example.com",
-          display_name: "Delete User",
-          role: :user
-        })
+      user = generate(user())
 
       {:ok, picture} =
         Accounts.create_profile_picture(
@@ -199,19 +151,8 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
     end
 
     test "users cannot delete other users' profile pictures" do
-      user1 =
-        Ash.Seed.seed!(User, %{
-          email: "user1-delete@example.com",
-          display_name: "User One",
-          role: :user
-        })
-
-      user2 =
-        Ash.Seed.seed!(User, %{
-          email: "user2-delete@example.com",
-          display_name: "User Two",
-          role: :user
-        })
+      user1 = generate(user())
+      user2 = generate(user())
 
       {:ok, picture} =
         Accounts.create_profile_picture(
@@ -233,12 +174,7 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
 
   describe "current_profile_picture_url calculation" do
     test "returns thumbnail path of most recent profile picture" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "user-calc@example.com",
-          display_name: "Calc User",
-          role: :user
-        })
+      user = generate(user())
 
       storage_path = "/uploads/profile_pictures/#{user.id}/latest.jpg"
       thumbnail_path = "/uploads/profile_pictures/#{user.id}/latest_thumb.jpg"
@@ -261,12 +197,7 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
     end
 
     test "returns nil when user has no profile picture" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "user-nocal@example.com",
-          display_name: "No Calc User",
-          role: :user
-        })
+      user = generate(user())
 
       {:ok, loaded_user} = Ash.load(user, [:current_profile_picture_url], actor: user)
       assert loaded_user.current_profile_picture_url == nil
@@ -275,12 +206,7 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
 
   describe "soft_delete action" do
     test "soft-delete sets deleted_at timestamp" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "user-softdelete@example.com",
-          display_name: "Soft Delete User",
-          role: :user
-        })
+      user = generate(user())
 
       {:ok, picture} =
         Accounts.create_profile_picture(
@@ -302,12 +228,7 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
     end
 
     test "soft-deleted pictures are excluded from current picture queries" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "user-softdelete-exclude@example.com",
-          display_name: "Soft Delete Exclude User",
-          role: :user
-        })
+      user = generate(user())
 
       {:ok, picture} =
         Accounts.create_profile_picture(
@@ -333,12 +254,7 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
     end
 
     test "soft-delete enqueues cleanup job" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "user-oban-enqueue@example.com",
-          display_name: "Oban Enqueue User",
-          role: :user
-        })
+      user = generate(user())
 
       {:ok, picture} =
         Accounts.create_profile_picture(
@@ -362,19 +278,8 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
     end
 
     test "users cannot soft-delete other users' profile pictures" do
-      user1 =
-        Ash.Seed.seed!(User, %{
-          email: "user1-softdelete@example.com",
-          display_name: "User One Soft",
-          role: :user
-        })
-
-      user2 =
-        Ash.Seed.seed!(User, %{
-          email: "user2-softdelete@example.com",
-          display_name: "User Two Soft",
-          role: :user
-        })
+      user1 = generate(user())
+      user2 = generate(user())
 
       {:ok, picture} =
         Accounts.create_profile_picture(
@@ -396,12 +301,7 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
 
   describe "hard_delete action (background cleanup)" do
     test "hard_delete removes record from database" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "user-harddelete@example.com",
-          display_name: "Hard Delete User",
-          role: :user
-        })
+      user = generate(user())
 
       {:ok, picture} =
         Accounts.create_profile_picture(
@@ -426,12 +326,7 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
     end
 
     test "running the cleanup job deletes soft-deleted picture from storage and database" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "user-cleanup-job@example.com",
-          display_name: "Cleanup Job User",
-          role: :user
-        })
+      user = generate(user())
 
       storage_path = "/uploads/profile_pictures/#{user.id}/cleanup-job-test.jpg"
 

@@ -10,6 +10,7 @@ defmodule SharedAuthSteps do
   """
   use Cucumber.StepDefinition
 
+  import Huddlz.Generator
   import Huddlz.Test.Helpers.Authentication
 
   # Common step for creating users from data table
@@ -23,25 +24,13 @@ defmodule SharedAuthSteps do
             _ -> :user
           end
 
-        # Create user using Repo directly to work with sandbox
-        uuid = Ecto.UUID.generate()
-        {:ok, uuid_binary} = Ecto.UUID.dump(uuid)
-
-        attrs = %{
-          id: uuid_binary,
-          email: user_data["email"],
-          display_name: user_data["display_name"] || "Test User",
-          role: to_string(role)
-        }
-
-        {1, _} =
-          Huddlz.Repo.insert_all(
-            "users",
-            [attrs]
+        generate(
+          user(
+            email: user_data["email"],
+            display_name: user_data["display_name"] || "Test User",
+            role: role
           )
-
-        # Query the user back to get a proper struct
-        Huddlz.Repo.get_by!(Huddlz.Accounts.User, email: user_data["email"])
+        )
       end)
 
     Map.put(context, :users, users)

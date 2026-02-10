@@ -5,21 +5,8 @@ defmodule Huddlz.Accounts.UserTest do
 
   describe "user policies" do
     test "admin users can search by email" do
-      # Create an admin user with a unique test marker in the email
-      admin_user =
-        Ash.Seed.seed!(User, %{
-          email: "admin-search-unique@example.com",
-          display_name: "Admin Search Test",
-          role: :admin
-        })
-
-      # Create a user with a unique test marker in the email
-      regular_user =
-        Ash.Seed.seed!(User, %{
-          email: "regular-search-unique@example.com",
-          display_name: "Regular Search Test",
-          role: :user
-        })
+      admin_user = generate(user(email: "admin-search-unique@example.com", role: :admin))
+      regular_user = generate(user(email: "regular-search-unique@example.com", role: :user))
 
       # Verify the users exist in our test database
       assert admin_user.id != nil
@@ -32,29 +19,9 @@ defmodule Huddlz.Accounts.UserTest do
     end
 
     test "non-admin users cannot update roles" do
-      # Create an admin user
-      admin_user =
-        Ash.Seed.seed!(User, %{
-          email: "admin-role-test@example.com",
-          display_name: "Admin Role Test",
-          role: :admin
-        })
-
-      # Create a user
-      regular_user =
-        Ash.Seed.seed!(User, %{
-          email: "regular-role-test@example.com",
-          display_name: "Regular Role Test",
-          role: :user
-        })
-
-      # Create a user
-      verified_user =
-        Ash.Seed.seed!(User, %{
-          email: "verified-role-test@example.com",
-          display_name: "Verified Role Test",
-          role: :user
-        })
+      admin_user = generate(user(role: :admin))
+      regular_user = generate(user(role: :user))
+      verified_user = generate(user(role: :user))
 
       # Verify permissions using Ash's can?
       assert Ash.can?({User, :update_role}, admin_user)
@@ -72,20 +39,8 @@ defmodule Huddlz.Accounts.UserTest do
     end
 
     test "all users can read users" do
-      # Create users with different roles
-      admin_user =
-        Ash.Seed.seed!(User, %{
-          email: "admin-read-test@example.com",
-          display_name: "Admin Read Test",
-          role: :admin
-        })
-
-      regular_user =
-        Ash.Seed.seed!(User, %{
-          email: "regular-read-test@example.com",
-          display_name: "Regular Read Test",
-          role: :user
-        })
+      admin_user = generate(user(role: :admin))
+      regular_user = generate(user(role: :user))
 
       # Test permission using Ash's can? function for read action
       assert Ash.can?({Accounts.User, :read}, admin_user)
@@ -95,17 +50,8 @@ defmodule Huddlz.Accounts.UserTest do
 
   describe "display name tests" do
     test "users get a default display name on registration" do
-      # Create a user with a known display name
-      email = "test-#{:rand.uniform(99999)}@example.com"
       original_display_name = "TestUser#{:rand.uniform(999)}"
-
-      # Create user using Ash.Seed
-      user =
-        Ash.Seed.seed!(User, %{
-          email: email,
-          display_name: original_display_name,
-          role: :user
-        })
+      user = generate(user(display_name: original_display_name))
 
       # Verify user was created correctly
       assert user.display_name == original_display_name
@@ -259,19 +205,13 @@ defmodule Huddlz.Accounts.UserTest do
 
   describe "update_display_name action" do
     test "user can update their own display_name" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "update#{:rand.uniform(99999)}@example.com",
-          display_name: "Original Name"
-        })
+      user = generate(user(display_name: "Original Name"))
 
       updated_user =
         user
         |> Ash.Changeset.for_update(
           :update_display_name,
-          %{
-            display_name: "New Name"
-          },
+          %{display_name: "New Name"},
           actor: user
         )
         |> Ash.update!()
@@ -280,25 +220,14 @@ defmodule Huddlz.Accounts.UserTest do
     end
 
     test "user cannot update another user's display_name" do
-      user1 =
-        Ash.Seed.seed!(User, %{
-          email: "user1update#{:rand.uniform(99999)}@example.com",
-          display_name: "User 1"
-        })
-
-      user2 =
-        Ash.Seed.seed!(User, %{
-          email: "user2update#{:rand.uniform(99999)}@example.com",
-          display_name: "User 2"
-        })
+      user1 = generate(user(display_name: "User 1"))
+      user2 = generate(user(display_name: "User 2"))
 
       assert_raise Ash.Error.Forbidden, fn ->
         user1
         |> Ash.Changeset.for_update(
           :update_display_name,
-          %{
-            display_name: "Hacked Name"
-          },
+          %{display_name: "Hacked Name"},
           actor: user2
         )
         |> Ash.update!()
@@ -306,21 +235,14 @@ defmodule Huddlz.Accounts.UserTest do
     end
 
     test "update with max length (70 chars) succeeds" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "maxupdate#{:rand.uniform(99999)}@example.com",
-          display_name: "Short"
-        })
-
+      user = generate(user(display_name: "Short"))
       long_name = String.duplicate("A", 70)
 
       updated_user =
         user
         |> Ash.Changeset.for_update(
           :update_display_name,
-          %{
-            display_name: long_name
-          },
+          %{display_name: long_name},
           actor: user
         )
         |> Ash.update!()
@@ -330,19 +252,13 @@ defmodule Huddlz.Accounts.UserTest do
     end
 
     test "update with empty display_name fails" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "emptyupdate#{:rand.uniform(99999)}@example.com",
-          display_name: "Original Name"
-        })
+      user = generate(user(display_name: "Original Name"))
 
       assert_raise Ash.Error.Invalid, fn ->
         user
         |> Ash.Changeset.for_update(
           :update_display_name,
-          %{
-            display_name: ""
-          },
+          %{display_name: ""},
           actor: user
         )
         |> Ash.update!()
@@ -350,21 +266,14 @@ defmodule Huddlz.Accounts.UserTest do
     end
 
     test "update with over-length display_name fails" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "toolongupdate#{:rand.uniform(99999)}@example.com",
-          display_name: "Original Name"
-        })
-
+      user = generate(user(display_name: "Original Name"))
       long_name = String.duplicate("A", 71)
 
       assert_raise Ash.Error.Invalid, fn ->
         user
         |> Ash.Changeset.for_update(
           :update_display_name,
-          %{
-            display_name: long_name
-          },
+          %{display_name: long_name},
           actor: user
         )
         |> Ash.update!()
@@ -372,11 +281,7 @@ defmodule Huddlz.Accounts.UserTest do
     end
 
     test "unauthenticated update fails" do
-      user =
-        Ash.Seed.seed!(User, %{
-          email: "noactor#{:rand.uniform(99999)}@example.com",
-          display_name: "Original Name"
-        })
+      user = generate(user(display_name: "Original Name"))
 
       assert_raise Ash.Error.Forbidden, fn ->
         user
@@ -388,26 +293,15 @@ defmodule Huddlz.Accounts.UserTest do
     end
 
     test "duplicate display_names are allowed" do
-      user1 =
-        Ash.Seed.seed!(User, %{
-          email: "dup1#{:rand.uniform(99999)}@example.com",
-          display_name: "Unique Name 1"
-        })
-
-      user2 =
-        Ash.Seed.seed!(User, %{
-          email: "dup2#{:rand.uniform(99999)}@example.com",
-          display_name: "Unique Name 2"
-        })
+      user1 = generate(user(display_name: "Unique Name 1"))
+      user2 = generate(user(display_name: "Unique Name 2"))
 
       # Update user2 to have same name as user1
       updated_user2 =
         user2
         |> Ash.Changeset.for_update(
           :update_display_name,
-          %{
-            display_name: "Unique Name 1"
-          },
+          %{display_name: "Unique Name 1"},
           actor: user2
         )
         |> Ash.update!()

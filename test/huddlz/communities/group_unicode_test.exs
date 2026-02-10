@@ -4,7 +4,7 @@ defmodule Huddlz.Communities.GroupUnicodeTest do
 
   describe "unicode group names" do
     test "handles unicode characters in group names correctly" do
-      user = create_verified_user()
+      user = generate(user(role: :user))
 
       test_cases = [
         {"Café München", "cafe-munchen"},
@@ -38,7 +38,7 @@ defmodule Huddlz.Communities.GroupUnicodeTest do
     end
 
     test "slugs are always auto-generated from name" do
-      user = create_verified_user()
+      user = generate(user(role: :user))
 
       # Even if user provides a custom slug, it will be overridden
       {:ok, group} =
@@ -63,7 +63,7 @@ defmodule Huddlz.Communities.GroupUnicodeTest do
     end
 
     test "handles empty slugs from unicode edge cases gracefully" do
-      user = create_verified_user()
+      user = generate(user(role: :user))
 
       # If somehow a name produces an empty slug, it should fail validation
       assert {:error, _} =
@@ -82,18 +82,5 @@ defmodule Huddlz.Communities.GroupUnicodeTest do
                )
                |> Ash.create()
     end
-  end
-
-  defp create_verified_user do
-    {:ok, user} =
-      Huddlz.Accounts.User
-      |> Ash.Changeset.for_create(:create, %{
-        email: "test#{System.unique_integer([:positive])}@example.com",
-        role: :user,
-        display_name: "Test User"
-      })
-      |> Ash.create(authorize?: false)
-
-    user
   end
 end

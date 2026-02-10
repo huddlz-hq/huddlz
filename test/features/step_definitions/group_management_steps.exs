@@ -2,8 +2,9 @@ defmodule GroupManagementSteps do
   use Cucumber.StepDefinition
   import PhoenixTest
 
+  import Huddlz.Generator
+
   alias Huddlz.Accounts.User
-  alias Huddlz.Communities.Group
 
   require Ash.Query
 
@@ -17,21 +18,17 @@ defmodule GroupManagementSteps do
 
     is_public = visibility == "public"
 
-    # Create group using Ash create action
     group =
-      Group
-      |> Ash.Changeset.for_create(
-        :create_group,
-        %{
+      generate(
+        group(
           name: name,
           description: "#{name} description",
           is_public: is_public,
           owner_id: owner.id,
-          location: "Test Location"
-        },
-        actor: owner
+          location: "Test Location",
+          actor: owner
+        )
       )
-      |> Ash.create!()
 
     groups = Map.get(context, :groups, [])
     Map.put(context, :groups, [group | groups])

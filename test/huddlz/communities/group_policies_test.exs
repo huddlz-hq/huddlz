@@ -1,43 +1,24 @@
 defmodule Huddlz.Communities.GroupPoliciesTest do
   use Huddlz.DataCase, async: true
 
-  alias Huddlz.Accounts.User
   alias Huddlz.Communities.Group
 
   setup do
-    # Create test users
-    owner =
-      Ash.Seed.seed!(User, %{
-        email: "owner@example.com",
-        display_name: "Owner User",
-        role: :user
-      })
+    owner = generate(user(role: :user))
+    verified_user = generate(user(role: :user))
+    regular_user = generate(user(role: :user))
 
-    verified_user =
-      Ash.Seed.seed!(User, %{
-        email: "verified@example.com",
-        display_name: "Verified User",
-        role: :user
-      })
-
-    regular_user =
-      Ash.Seed.seed!(User, %{
-        email: "regular@example.com",
-        display_name: "Regular User",
-        role: :user
-      })
-
-    # Create a test group
-    {:ok, group} =
-      Group
-      |> Ash.Changeset.for_create(:create_group, %{
-        name: "Test Group",
-        description: "A test group",
-        location: "Test Location",
-        is_public: true,
-        owner_id: owner.id
-      })
-      |> Ash.create(actor: owner)
+    group =
+      generate(
+        group(
+          name: "Test Group",
+          description: "A test group",
+          location: "Test Location",
+          is_public: true,
+          owner_id: owner.id,
+          actor: owner
+        )
+      )
 
     %{
       owner: owner,
@@ -125,12 +106,7 @@ defmodule Huddlz.Communities.GroupPoliciesTest do
     end
 
     test "admin can create group" do
-      admin =
-        Ash.Seed.seed!(User, %{
-          email: "admin-policy@example.com",
-          display_name: "Admin User",
-          role: :admin
-        })
+      admin = generate(user(role: :admin))
 
       assert {:ok, group} =
                Group

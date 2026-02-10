@@ -2,41 +2,14 @@ defmodule Huddlz.Communities.HuddlImageTest do
   use Huddlz.DataCase, async: true
   use Oban.Testing, repo: Huddlz.Repo
 
-  alias Huddlz.Accounts.User
   alias Huddlz.Communities
-  alias Huddlz.Communities.Group
-  alias Huddlz.Communities.GroupMember
-  alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.HuddlImage
 
   describe "create huddl image" do
     test "group owner can create a huddl image" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-huddl-image@example.com",
-          display_name: "Huddl Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group for Huddl Images",
-          slug: "test-group-huddl-images",
-          is_public: true,
-          owner_id: owner.id
-        })
-
-      huddl =
-        Ash.Seed.seed!(Huddl, %{
-          title: "Test Huddl with Image",
-          description: "A huddl to test images",
-          starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), 1, :day) |> DateTime.add(2, :hour),
-          event_type: :in_person,
-          physical_location: "Test Location",
-          group_id: group.id,
-          creator_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       attrs = %{
         filename: "huddl-banner.jpg",
@@ -55,45 +28,24 @@ defmodule Huddlz.Communities.HuddlImageTest do
     end
 
     test "organizer can create huddl image" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-organizer-img@example.com",
-          display_name: "Owner",
-          role: :user
-        })
+      owner = generate(user(role: :user))
+      organizer = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
-      organizer =
-        Ash.Seed.seed!(User, %{
-          email: "organizer-img@example.com",
-          display_name: "Organizer",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Organizer Image",
-          slug: "test-group-organizer-image",
-          is_public: true,
-          owner_id: owner.id
-        })
-
-      Ash.Seed.seed!(GroupMember, %{
-        group_id: group.id,
-        user_id: organizer.id,
-        role: :organizer
-      })
+      generate(
+        group_member(group_id: group.id, user_id: organizer.id, role: "organizer", actor: owner)
+      )
 
       huddl =
-        Ash.Seed.seed!(Huddl, %{
-          title: "Organizer Huddl Image",
-          description: "Test",
-          starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), 1, :day) |> DateTime.add(2, :hour),
-          event_type: :virtual,
-          virtual_link: "https://example.com",
-          group_id: group.id,
-          creator_id: organizer.id
-        })
+        generate(
+          past_huddl(
+            group_id: group.id,
+            creator_id: organizer.id,
+            event_type: :virtual,
+            virtual_link: "https://example.com",
+            physical_location: nil
+          )
+        )
 
       attrs = %{
         filename: "organizer.jpg",
@@ -108,45 +60,12 @@ defmodule Huddlz.Communities.HuddlImageTest do
     end
 
     test "regular member cannot create huddl image" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-member-block@example.com",
-          display_name: "Owner",
-          role: :user
-        })
+      owner = generate(user(role: :user))
+      member = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      generate(group_member(group_id: group.id, user_id: member.id, role: "member", actor: owner))
 
-      member =
-        Ash.Seed.seed!(User, %{
-          email: "member-block@example.com",
-          display_name: "Member",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Member Block",
-          slug: "test-group-member-block",
-          is_public: true,
-          owner_id: owner.id
-        })
-
-      Ash.Seed.seed!(GroupMember, %{
-        group_id: group.id,
-        user_id: member.id,
-        role: :member
-      })
-
-      huddl =
-        Ash.Seed.seed!(Huddl, %{
-          title: "Member Block Huddl",
-          description: "Test",
-          starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), 1, :day) |> DateTime.add(2, :hour),
-          event_type: :in_person,
-          physical_location: "Somewhere",
-          group_id: group.id,
-          creator_id: owner.id
-        })
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       attrs = %{
         filename: "member.jpg",
@@ -162,39 +81,10 @@ defmodule Huddlz.Communities.HuddlImageTest do
     end
 
     test "admin can create huddl image for any huddl" do
-      admin =
-        Ash.Seed.seed!(User, %{
-          email: "admin-huddl-image@example.com",
-          display_name: "Admin User",
-          role: :admin
-        })
-
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-for-admin-huddl@example.com",
-          display_name: "Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Admin Huddl",
-          slug: "test-group-admin-huddl",
-          is_public: true,
-          owner_id: owner.id
-        })
-
-      huddl =
-        Ash.Seed.seed!(Huddl, %{
-          title: "Admin Huddl Image",
-          description: "Test",
-          starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), 1, :day) |> DateTime.add(2, :hour),
-          event_type: :in_person,
-          physical_location: "Somewhere",
-          group_id: group.id,
-          creator_id: owner.id
-        })
+      admin = generate(user(role: :admin))
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       attrs = %{
         filename: "admin-banner.jpg",
@@ -211,32 +101,9 @@ defmodule Huddlz.Communities.HuddlImageTest do
 
   describe "get current huddl image" do
     test "returns the most recent image for a huddl" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-current-huddl@example.com",
-          display_name: "Current Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Current Huddl",
-          slug: "test-group-current-huddl",
-          is_public: true,
-          owner_id: owner.id
-        })
-
-      huddl =
-        Ash.Seed.seed!(Huddl, %{
-          title: "Current Image Huddl",
-          description: "Test",
-          starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), 1, :day) |> DateTime.add(2, :hour),
-          event_type: :in_person,
-          physical_location: "Somewhere",
-          group_id: group.id,
-          creator_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       # Create first image
       {:ok, _img1} =
@@ -272,32 +139,9 @@ defmodule Huddlz.Communities.HuddlImageTest do
     end
 
     test "returns error when huddl has no image" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-noimage-huddl@example.com",
-          display_name: "No Image Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group No Image Huddl",
-          slug: "test-group-no-image-huddl",
-          is_public: true,
-          owner_id: owner.id
-        })
-
-      huddl =
-        Ash.Seed.seed!(Huddl, %{
-          title: "No Image Huddl",
-          description: "Test",
-          starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), 1, :day) |> DateTime.add(2, :hour),
-          event_type: :in_person,
-          physical_location: "Somewhere",
-          group_id: group.id,
-          creator_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       assert {:error, %Ash.Error.Invalid{}} =
                Communities.get_current_huddl_image(huddl.id, actor: owner)
@@ -306,32 +150,9 @@ defmodule Huddlz.Communities.HuddlImageTest do
 
   describe "soft_delete action" do
     test "soft-delete sets deleted_at timestamp" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-softdelete-huddl@example.com",
-          display_name: "Soft Delete Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Soft Delete Huddl",
-          slug: "test-group-softdelete-huddl",
-          is_public: true,
-          owner_id: owner.id
-        })
-
-      huddl =
-        Ash.Seed.seed!(Huddl, %{
-          title: "Soft Delete Huddl",
-          description: "Test",
-          starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), 1, :day) |> DateTime.add(2, :hour),
-          event_type: :in_person,
-          physical_location: "Somewhere",
-          group_id: group.id,
-          creator_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       {:ok, image} =
         Communities.create_huddl_image(
@@ -353,32 +174,9 @@ defmodule Huddlz.Communities.HuddlImageTest do
     end
 
     test "soft-delete enqueues cleanup job" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-oban-huddl@example.com",
-          display_name: "Oban Huddl Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Oban Huddl",
-          slug: "test-group-oban-huddl",
-          is_public: true,
-          owner_id: owner.id
-        })
-
-      huddl =
-        Ash.Seed.seed!(Huddl, %{
-          title: "Oban Huddl",
-          description: "Test",
-          starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), 1, :day) |> DateTime.add(2, :hour),
-          event_type: :in_person,
-          physical_location: "Somewhere",
-          group_id: group.id,
-          creator_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       {:ok, image} =
         Communities.create_huddl_image(
@@ -403,32 +201,9 @@ defmodule Huddlz.Communities.HuddlImageTest do
 
   describe "current_image_url aggregate" do
     test "returns thumbnail path of most recent huddl image" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-aggregate-huddl@example.com",
-          display_name: "Aggregate Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Aggregate Huddl",
-          slug: "test-group-aggregate-huddl",
-          is_public: true,
-          owner_id: owner.id
-        })
-
-      huddl =
-        Ash.Seed.seed!(Huddl, %{
-          title: "Aggregate Huddl",
-          description: "Test",
-          starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), 1, :day) |> DateTime.add(2, :hour),
-          event_type: :in_person,
-          physical_location: "Somewhere",
-          group_id: group.id,
-          creator_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       thumbnail_path = "/uploads/huddl_images/#{huddl.id}/latest_thumb.jpg"
 
@@ -450,32 +225,9 @@ defmodule Huddlz.Communities.HuddlImageTest do
     end
 
     test "returns nil when huddl has no image" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-aggregate-none-huddl@example.com",
-          display_name: "Aggregate None Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Aggregate None Huddl",
-          slug: "test-group-aggregate-none-huddl",
-          is_public: true,
-          owner_id: owner.id
-        })
-
-      huddl =
-        Ash.Seed.seed!(Huddl, %{
-          title: "No Image Aggregate Huddl",
-          description: "Test",
-          starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), 1, :day) |> DateTime.add(2, :hour),
-          event_type: :in_person,
-          physical_location: "Somewhere",
-          group_id: group.id,
-          creator_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       {:ok, loaded_huddl} = Ash.load(huddl, [:current_image_url], actor: owner)
       assert loaded_huddl.current_image_url == nil
@@ -484,20 +236,8 @@ defmodule Huddlz.Communities.HuddlImageTest do
 
   describe "display_image_url calculation (fallback chain)" do
     test "returns huddl image when available" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-display-huddl@example.com",
-          display_name: "Display Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Display Huddl",
-          slug: "test-group-display-huddl",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       # Add group image
       Communities.create_group_image!(
@@ -512,17 +252,7 @@ defmodule Huddlz.Communities.HuddlImageTest do
         actor: owner
       )
 
-      huddl =
-        Ash.Seed.seed!(Huddl, %{
-          title: "Display Huddl",
-          description: "Test",
-          starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), 1, :day) |> DateTime.add(2, :hour),
-          event_type: :in_person,
-          physical_location: "Somewhere",
-          group_id: group.id,
-          creator_id: owner.id
-        })
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       huddl_thumb = "/uploads/huddl_images/#{huddl.id}/huddl_thumb.jpg"
 
@@ -544,20 +274,8 @@ defmodule Huddlz.Communities.HuddlImageTest do
     end
 
     test "falls back to group image when huddl has no image" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-fallback-group@example.com",
-          display_name: "Fallback Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Fallback",
-          slug: "test-group-fallback",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       group_thumb = "/uploads/group_images/#{group.id}/group_thumb.jpg"
 
@@ -573,49 +291,16 @@ defmodule Huddlz.Communities.HuddlImageTest do
         actor: owner
       )
 
-      huddl =
-        Ash.Seed.seed!(Huddl, %{
-          title: "Fallback Huddl",
-          description: "Test",
-          starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), 1, :day) |> DateTime.add(2, :hour),
-          event_type: :in_person,
-          physical_location: "Somewhere",
-          group_id: group.id,
-          creator_id: owner.id
-        })
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       {:ok, loaded_huddl} = Ash.load(huddl, [:display_image_url], actor: owner)
       assert loaded_huddl.display_image_url == group_thumb
     end
 
     test "returns nil when neither huddl nor group has image" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-no-fallback@example.com",
-          display_name: "No Fallback Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group No Fallback",
-          slug: "test-group-no-fallback",
-          is_public: true,
-          owner_id: owner.id
-        })
-
-      huddl =
-        Ash.Seed.seed!(Huddl, %{
-          title: "No Fallback Huddl",
-          description: "Test",
-          starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), 1, :day) |> DateTime.add(2, :hour),
-          event_type: :in_person,
-          physical_location: "Somewhere",
-          group_id: group.id,
-          creator_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       {:ok, loaded_huddl} = Ash.load(huddl, [:display_image_url], actor: owner)
       assert loaded_huddl.display_image_url == nil
@@ -624,33 +309,10 @@ defmodule Huddlz.Communities.HuddlImageTest do
 
   describe "create_pending action (group member only)" do
     test "group member can create a pending image" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-pending-huddl@example.com",
-          display_name: "Owner",
-          role: :user
-        })
-
-      member =
-        Ash.Seed.seed!(User, %{
-          email: "member-pending-huddl@example.com",
-          display_name: "Member",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Pending Huddl",
-          slug: "test-group-pending-huddl",
-          is_public: true,
-          owner_id: owner.id
-        })
-
-      Ash.Seed.seed!(GroupMember, %{
-        group_id: group.id,
-        user_id: member.id,
-        role: :member
-      })
+      owner = generate(user(role: :user))
+      member = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      generate(group_member(group_id: group.id, user_id: member.id, role: "member", actor: owner))
 
       attrs = %{
         filename: "pending.jpg",
@@ -668,27 +330,9 @@ defmodule Huddlz.Communities.HuddlImageTest do
     end
 
     test "non-member cannot create pending image" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-nonmember-pending@example.com",
-          display_name: "Owner",
-          role: :user
-        })
-
-      non_member =
-        Ash.Seed.seed!(User, %{
-          email: "nonmember-pending@example.com",
-          display_name: "Non Member",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Nonmember Pending",
-          slug: "test-group-nonmember-pending",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      non_member = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       attrs = %{
         filename: "blocked.jpg",
@@ -703,20 +347,8 @@ defmodule Huddlz.Communities.HuddlImageTest do
     end
 
     test "pending images have nil huddl_id" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-nil-huddl@example.com",
-          display_name: "Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Nil Huddl",
-          slug: "test-group-nil-huddl",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       {:ok, pending_image} =
         Communities.create_pending_huddl_image(
@@ -736,32 +368,9 @@ defmodule Huddlz.Communities.HuddlImageTest do
 
   describe "assign_to_huddl action" do
     test "group owner can assign a pending image to their huddl" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-assign-huddl@example.com",
-          display_name: "Assign Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Assign Huddl",
-          slug: "test-group-assign-huddl",
-          is_public: true,
-          owner_id: owner.id
-        })
-
-      huddl =
-        Ash.Seed.seed!(Huddl, %{
-          title: "Assign Huddl",
-          description: "Test",
-          starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), 1, :day) |> DateTime.add(2, :hour),
-          event_type: :in_person,
-          physical_location: "Somewhere",
-          group_id: group.id,
-          creator_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       {:ok, pending_image} =
         Communities.create_pending_huddl_image(
@@ -784,45 +393,11 @@ defmodule Huddlz.Communities.HuddlImageTest do
     end
 
     test "regular member cannot assign image to huddl they don't own" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-assign-block-huddl@example.com",
-          display_name: "Owner",
-          role: :user
-        })
-
-      member =
-        Ash.Seed.seed!(User, %{
-          email: "member-assign-block@example.com",
-          display_name: "Member",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Assign Block Huddl",
-          slug: "test-group-assign-block-huddl",
-          is_public: true,
-          owner_id: owner.id
-        })
-
-      Ash.Seed.seed!(GroupMember, %{
-        group_id: group.id,
-        user_id: member.id,
-        role: :member
-      })
-
-      huddl =
-        Ash.Seed.seed!(Huddl, %{
-          title: "Assign Block Huddl",
-          description: "Test",
-          starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), 1, :day) |> DateTime.add(2, :hour),
-          event_type: :in_person,
-          physical_location: "Somewhere",
-          group_id: group.id,
-          creator_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      member = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      generate(group_member(group_id: group.id, user_id: member.id, role: "member", actor: owner))
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       {:ok, pending_image} =
         Communities.create_pending_huddl_image(
@@ -842,44 +417,10 @@ defmodule Huddlz.Communities.HuddlImageTest do
     end
 
     test "cannot assign an already assigned image" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "owner-double-assign-huddl@example.com",
-          display_name: "Double Assign Owner",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Double Assign Huddl",
-          slug: "test-group-double-assign-huddl",
-          is_public: true,
-          owner_id: owner.id
-        })
-
-      huddl1 =
-        Ash.Seed.seed!(Huddl, %{
-          title: "Double Assign Huddl 1",
-          description: "Test",
-          starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), 1, :day) |> DateTime.add(2, :hour),
-          event_type: :in_person,
-          physical_location: "Somewhere",
-          group_id: group.id,
-          creator_id: owner.id
-        })
-
-      huddl2 =
-        Ash.Seed.seed!(Huddl, %{
-          title: "Double Assign Huddl 2",
-          description: "Test",
-          starts_at: DateTime.add(DateTime.utc_now(), 2, :day),
-          ends_at: DateTime.add(DateTime.utc_now(), 2, :day) |> DateTime.add(2, :hour),
-          event_type: :in_person,
-          physical_location: "Somewhere else",
-          group_id: group.id,
-          creator_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      huddl1 = generate(past_huddl(group_id: group.id, creator_id: owner.id))
+      huddl2 = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       {:ok, pending_image} =
         Communities.create_pending_huddl_image(
@@ -905,20 +446,8 @@ defmodule Huddlz.Communities.HuddlImageTest do
 
   describe "orphaned_pending action" do
     test "finds pending images older than 24 hours" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "orphan-huddl-test@example.com",
-          display_name: "Orphan Test",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Orphan Huddl",
-          slug: "test-group-orphan-huddl",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       {:ok, pending_image} =
         Communities.create_pending_huddl_image(
@@ -951,20 +480,8 @@ defmodule Huddlz.Communities.HuddlImageTest do
     end
 
     test "does not find pending images less than 24 hours old" do
-      owner =
-        Ash.Seed.seed!(User, %{
-          email: "recent-orphan-huddl@example.com",
-          display_name: "Recent Orphan",
-          role: :user
-        })
-
-      group =
-        Ash.Seed.seed!(Group, %{
-          name: "Test Group Recent Orphan Huddl",
-          slug: "test-group-recent-orphan-huddl",
-          is_public: true,
-          owner_id: owner.id
-        })
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
 
       {:ok, pending_image} =
         Communities.create_pending_huddl_image(
