@@ -1,8 +1,11 @@
 defmodule HuddlzWeb.ProfileLiveTest do
   use HuddlzWeb.ConnCase, async: true
 
+  import Mox
   import PhoenixTest
   import Huddlz.Test.Helpers.Authentication
+
+  setup :verify_on_exit!
 
   setup do
     user = create_user(%{display_name: "Test User"})
@@ -80,6 +83,65 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> visit("/profile")
       |> fill_in("Display Name", with: "")
       |> assert_has("form")
+    end
+  end
+
+  describe "Home location" do
+    test "shows home location form", %{conn: conn, user: user} do
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> assert_has("h2", text: "Home Location")
+      |> assert_has("input[name=\"form[home_location]\"]")
+      |> assert_has("button", text: "Save Location")
+    end
+
+    test "shows error when geocoding is unavailable", %{conn: conn, user: user} do
+      stub(Huddlz.MockGeocoding, :geocode, fn _address -> {:error, :no_api_key} end)
+
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> fill_in("City / Region", with: "Austin, TX")
+      |> click_button("Save Location")
+      |> assert_has("p", text: "Location search is currently unavailable")
+    end
+
+    test "shows error when location is not found", %{conn: conn, user: user} do
+      stub(Huddlz.MockGeocoding, :geocode, fn _address -> {:error, :not_found} end)
+
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> fill_in("City / Region", with: "xyznonexistent123")
+      |> click_button("Save Location")
+      |> assert_has("p", text: "Could not find that location")
+    end
+
+    test "saves location successfully when geocoding works", %{conn: conn, user: user} do
+      stub(Huddlz.MockGeocoding, :geocode, fn "Austin, TX" ->
+        {:ok, %{latitude: 30.2672, longitude: -97.7431}}
+      end)
+
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> fill_in("City / Region", with: "Austin, TX")
+      |> click_button("Save Location")
+      |> assert_has("*", text: "Home location updated")
+    end
+
+    test "clears error when user types in location field", %{conn: conn, user: user} do
+      stub(Huddlz.MockGeocoding, :geocode, fn _address -> {:error, :not_found} end)
+
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> fill_in("City / Region", with: "bad location")
+      |> click_button("Save Location")
+      |> assert_has("p", text: "Could not find that location")
+      |> fill_in("City / Region", with: "trying again")
+      |> refute_has("p", text: "Could not find that location")
     end
   end
 end

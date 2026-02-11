@@ -10,6 +10,8 @@ defmodule CucumberHooks do
       {:already, :owner} -> :ok
     end
 
+    Mox.stub_with(Huddlz.MockGeocoding, Huddlz.GeocodingStub)
+
     {:ok, context}
   end
 

@@ -36,6 +36,7 @@ defmodule HuddlzWeb.ConnCase do
 
   setup tags do
     Huddlz.DataCase.setup_sandbox(tags)
+    if Code.ensure_loaded?(Mox), do: apply(Mox, :stub_with, [Huddlz.MockGeocoding, Huddlz.GeocodingStub])
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end

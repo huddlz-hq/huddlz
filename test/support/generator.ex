@@ -246,6 +246,43 @@ defmodule Huddlz.Generator do
     {host, huddlz}
   end
 
+  @doc """
+  Create a huddl at a specific location using seed_generator (bypasses geocoding).
+  Pass latitude and longitude directly.
+  """
+  def huddl_at_location(opts \\ []) do
+    group_id =
+      opts[:group_id] ||
+        once(:default_group_id, fn ->
+          generate(group()).id
+        end)
+
+    creator_id =
+      opts[:creator_id] ||
+        once(:default_creator_id, fn ->
+          generate(user(role: :user)).id
+        end)
+
+    days_ahead = :rand.uniform(30)
+    default_starts_at = DateTime.add(DateTime.utc_now(), days_ahead, :day)
+    default_ends_at = DateTime.add(default_starts_at, 2, :hour)
+
+    seed_generator(
+      %Huddl{
+        title: StreamData.repeatedly(fn -> Faker.Company.bs() end),
+        description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
+        starts_at: default_starts_at,
+        ends_at: default_ends_at,
+        event_type: :in_person,
+        physical_location: "123 Main St, Anytown, USA",
+        is_private: false,
+        group_id: group_id,
+        creator_id: creator_id
+      },
+      overrides: opts
+    )
+  end
+
   # Helper function to generate random hex color
   defp random_hex_color do
     ["3D8BFD", "6610F2", "6F42C1", "D63384", "DC3545", "FD7E14", "FFC107", "198754"]

@@ -3,6 +3,7 @@
   "installed": [
     "ash-functions",
     "citext",
-    "pg_trgm"
+    "pg_trgm",
+    "postgis"
   ]
 }

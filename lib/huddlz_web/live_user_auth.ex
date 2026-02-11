@@ -56,7 +56,11 @@ defmodule HuddlzWeb.LiveUserAuth do
 
   defp maybe_load_profile_picture(%{assigns: %{current_user: user}} = socket)
        when not is_nil(user) do
-    case Ash.load(user, [:current_profile_picture_url], actor: user) do
+    case Ash.load(
+           user,
+           [:current_profile_picture_url, :home_location, :home_latitude, :home_longitude],
+           actor: user
+         ) do
       {:ok, loaded_user} -> assign(socket, :current_user, loaded_user)
       _ -> socket
     end

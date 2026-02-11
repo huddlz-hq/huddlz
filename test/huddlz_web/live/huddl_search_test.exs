@@ -1,6 +1,10 @@
 defmodule HuddlzWeb.HuddlSearchTest do
   use HuddlzWeb.ConnCase, async: true
 
+  import Mox
+
+  setup :verify_on_exit!
+
   setup do
     user = generate(user(role: :user))
     group = generate(group(owner_id: user.id, is_public: true, actor: user))
@@ -257,6 +261,39 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> login(other_user)
       |> visit("/")
       |> refute_has("h3", text: "Private Event")
+    end
+  end
+
+  describe "location search errors" do
+    test "shows error when geocoding is unavailable", %{conn: conn} do
+      stub(Huddlz.MockGeocoding, :geocode, fn _address -> {:error, :no_api_key} end)
+
+      conn
+      |> visit("/")
+      |> fill_in("Location", with: "Austin, TX")
+      |> click_button("Search")
+      |> assert_has("*", text: "Location search is currently unavailable")
+    end
+
+    test "shows error when location is not found", %{conn: conn} do
+      stub(Huddlz.MockGeocoding, :geocode, fn _address -> {:error, :not_found} end)
+
+      conn
+      |> visit("/")
+      |> fill_in("Location", with: "xyznonexistent123")
+      |> click_button("Search")
+      |> assert_has("*", text: "Could not find that location")
+    end
+
+    test "still shows huddlz when location geocoding fails", %{conn: conn} do
+      stub(Huddlz.MockGeocoding, :geocode, fn _address -> {:error, :no_api_key} end)
+
+      conn
+      |> visit("/")
+      |> fill_in("Location", with: "Austin, TX")
+      |> click_button("Search")
+      |> assert_has("h3", text: "Morning Yoga Session")
+      |> assert_has("h3", text: "Virtual Book Club")
     end
   end
 end

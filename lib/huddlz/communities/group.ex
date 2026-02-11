@@ -12,6 +12,13 @@ defmodule Huddlz.Communities.Group do
   postgres do
     table "groups"
     repo Huddlz.Repo
+
+    custom_indexes do
+      index "ST_MakePoint(longitude, latitude)",
+        name: "groups_location_gist_index",
+        using: "GIST",
+        where: "latitude IS NOT NULL AND longitude IS NOT NULL"
+    end
   end
 
   actions do
@@ -23,6 +30,7 @@ defmodule Huddlz.Communities.Group do
 
       change Huddlz.Communities.Group.Changes.AddOwnerAsMember
       change Huddlz.Communities.Group.Changes.GenerateSlug
+      change Huddlz.Communities.Group.Changes.GeocodeLocation
     end
 
     read :search do
@@ -72,6 +80,9 @@ defmodule Huddlz.Communities.Group do
     update :update_details do
       description "Update group details"
       accept [:name, :description, :location, :is_public, :slug]
+      require_atomic? false
+
+      change Huddlz.Communities.Group.Changes.GeocodeLocation
     end
   end
 
@@ -130,6 +141,16 @@ defmodule Huddlz.Communities.Group do
     attribute :slug, :string do
       allow_nil? false
       public? true
+    end
+
+    attribute :latitude, :float do
+      allow_nil? true
+      description "Geocoded latitude of group location"
+    end
+
+    attribute :longitude, :float do
+      allow_nil? true
+      description "Geocoded longitude of group location"
     end
 
     create_timestamp :created_at
