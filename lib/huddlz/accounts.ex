@@ -15,6 +15,10 @@ defmodule Huddlz.Accounts do
       define :update_role, action: :update_role, args: [:role]
       define :get_by_email, action: :get_by_email, args: [:email]
       define :update_display_name, action: :update_display_name, args: [:display_name]
+
+      define :update_home_location,
+        action: :update_home_location,
+        args: [:home_location, :home_latitude, :home_longitude]
     end
 
     resource Huddlz.Accounts.ProfilePicture do

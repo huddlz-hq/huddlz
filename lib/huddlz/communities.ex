@@ -4,7 +4,8 @@ defmodule Huddlz.Communities do
   """
 
   use Ash.Domain,
-    otp_app: :huddlz
+    otp_app: :huddlz,
+    extensions: [AshJsonApi.Domain, AshGraphql.Domain]
 
   resources do
     resource Huddlz.Communities.Huddl do
@@ -13,7 +14,14 @@ defmodule Huddlz.Communities do
 
       define :search_huddlz,
         action: :search,
-        args: [:query, {:optional, :date_filter}, {:optional, :event_type}],
+        args: [
+          :query,
+          {:optional, :date_filter},
+          {:optional, :event_type},
+          {:optional, :search_latitude},
+          {:optional, :search_longitude},
+          {:optional, :distance_miles}
+        ],
         get?: false
 
       define :get_by_status, action: :by_status, args: [:status]

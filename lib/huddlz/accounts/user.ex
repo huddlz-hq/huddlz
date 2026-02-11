@@ -106,6 +106,11 @@ defmodule Huddlz.Accounts.User do
       validate string_length(:display_name, min: 1, max: 70)
     end
 
+    update :update_home_location do
+      description "Update a user's home location for search pre-fill"
+      accept [:home_location, :home_latitude, :home_longitude]
+    end
+
     update :update_role do
       description "Update a user's role"
       accept [:role]
@@ -336,6 +341,11 @@ defmodule Huddlz.Accounts.User do
       authorize_if expr(id == ^actor(:id))
     end
 
+    policy action(:update_home_location) do
+      description "Users can update their own home location"
+      authorize_if expr(id == ^actor(:id))
+    end
+
     policy action(:change_password) do
       description "Users can change their own password"
       authorize_if expr(id == ^actor(:id))
@@ -376,6 +386,21 @@ defmodule Huddlz.Accounts.User do
     attribute :confirmed_at, :utc_datetime_usec do
       # Allow setting for testing/seeding purposes
       public? true
+    end
+
+    attribute :home_location, :string do
+      description "User's home city/region for pre-filling location search"
+      allow_nil? true
+      public? true
+      constraints max_length: 200
+    end
+
+    attribute :home_latitude, :float do
+      allow_nil? true
+    end
+
+    attribute :home_longitude, :float do
+      allow_nil? true
     end
   end
 

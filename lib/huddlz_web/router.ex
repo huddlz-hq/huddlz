@@ -5,6 +5,10 @@ defmodule HuddlzWeb.Router do
 
   import AshAuthentication.Plug.Helpers
 
+  pipeline :graphql do
+    plug AshGraphql.Plug
+  end
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -19,6 +23,27 @@ defmodule HuddlzWeb.Router do
     plug :accepts, ["json"]
     plug :load_from_bearer
     plug :set_actor, :user
+  end
+
+  scope "/gql" do
+    pipe_through [:graphql]
+
+    forward "/playground", Absinthe.Plug.GraphiQL,
+      schema: Module.concat(["HuddlzWeb.GraphqlSchema"]),
+      socket: Module.concat(["HuddlzWeb.GraphqlSocket"]),
+      interface: :simple
+
+    forward "/", Absinthe.Plug, schema: Module.concat(["HuddlzWeb.GraphqlSchema"])
+  end
+
+  scope "/api/json" do
+    pipe_through [:api]
+
+    forward "/swaggerui", OpenApiSpex.Plug.SwaggerUI,
+      path: "/api/json/open_api",
+      default_model_expand_depth: 4
+
+    forward "/", HuddlzWeb.AshJsonApiRouter
   end
 
   scope "/", HuddlzWeb do

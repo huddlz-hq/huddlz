@@ -8,11 +8,39 @@ defmodule Huddlz.Communities.Huddl do
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshJsonApi.Resource, AshGraphql.Resource],
     primary_read_warning?: false
+
+  graphql do
+    type :huddl
+
+    queries do
+      get :get_huddl, :read
+      list :search_huddlz, :search
+    end
+  end
+
+  json_api do
+    type "huddl"
+
+    routes do
+      base "/huddlz"
+
+      get :read
+      index :search
+    end
+  end
 
   postgres do
     table "huddlz"
     repo Huddlz.Repo
+
+    custom_indexes do
+      index "ST_MakePoint(longitude, latitude)",
+        name: "huddlz_location_gist_index",
+        using: "GIST",
+        where: "latitude IS NOT NULL AND longitude IS NOT NULL"
+    end
   end
 
   actions do
@@ -58,6 +86,8 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.AddHuddlTemplate
+      change Huddlz.Communities.Huddl.Changes.GeocodeLocation
+      change Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup
     end
 
     update :update do
@@ -97,6 +127,8 @@ defmodule Huddlz.Communities.Huddl do
 
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz
+      change Huddlz.Communities.Huddl.Changes.GeocodeLocation
+      change Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup
     end
 
     read :by_status do
@@ -135,6 +167,15 @@ defmodule Huddlz.Communities.Huddl do
       argument :event_type, :atom do
         allow_nil? true
         constraints one_of: [:in_person, :virtual, :hybrid]
+      end
+
+      argument :search_latitude, :float, allow_nil?: true
+      argument :search_longitude, :float, allow_nil?: true
+
+      argument :distance_miles, :integer do
+        allow_nil? true
+        default 25
+        constraints min: 5, max: 100
       end
 
       pagination keyset?: true,
@@ -318,6 +359,16 @@ defmodule Huddlz.Communities.Huddl do
 
     attribute :thumbnail_url, :string do
       allow_nil? true
+    end
+
+    attribute :latitude, :float do
+      allow_nil? true
+      description "Geocoded latitude of physical_location or inherited from group"
+    end
+
+    attribute :longitude, :float do
+      allow_nil? true
+      description "Geocoded longitude of physical_location or inherited from group"
     end
 
     create_timestamp :inserted_at
