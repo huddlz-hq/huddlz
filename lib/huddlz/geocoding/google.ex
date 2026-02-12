@@ -8,30 +8,44 @@ defmodule Huddlz.Geocoding.Google do
   @geocoding_url "https://maps.googleapis.com/maps/api/geocode/json"
 
   @impl true
-  def geocode(address) when is_binary(address) and byte_size(address) > 0 do
-    case api_key() do
-      nil ->
-        {:error, :no_api_key}
+  def geocode(address) when is_binary(address) do
+    address = String.trim(address)
 
-      key ->
-        case Req.get(@geocoding_url, params: [address: address, key: key]) do
-          {:ok, %{status: 200, body: %{"status" => "OK", "results" => [result | _]}}} ->
-            %{"geometry" => %{"location" => %{"lat" => lat, "lng" => lng}}} = result
-            {:ok, %{latitude: lat, longitude: lng}}
-
-          {:ok, %{status: 200, body: %{"status" => "ZERO_RESULTS"}}} ->
-            {:error, :not_found}
-
-          {:ok, %{status: 200, body: %{"status" => status}}} ->
-            {:error, {:api_error, status}}
-
-          {:error, reason} ->
-            {:error, {:request_failed, reason}}
-        end
+    if byte_size(address) == 0 do
+      {:error, :invalid_address}
+    else
+      do_geocode(address)
     end
   end
 
   def geocode(_), do: {:error, :invalid_address}
+
+  defp do_geocode(address) do
+    address
+    |> fetch_coordinates(api_key())
+    |> parse_response()
+  end
+
+  defp fetch_coordinates(address, key) do
+    Req.get(@geocoding_url, params: [address: address, key: key])
+  end
+
+  defp parse_response({:ok, %{status: 200, body: %{"status" => "OK", "results" => [result | _]}}}) do
+    %{"geometry" => %{"location" => %{"lat" => lat, "lng" => lng}}} = result
+    {:ok, %{latitude: lat, longitude: lng}}
+  end
+
+  defp parse_response({:ok, %{status: 200, body: %{"status" => "ZERO_RESULTS"}}}) do
+    {:error, :not_found}
+  end
+
+  defp parse_response({:ok, %{status: 200, body: %{"status" => status}}}) do
+    {:error, {:api_error, status}}
+  end
+
+  defp parse_response({:error, reason}) do
+    {:error, {:request_failed, reason}}
+  end
 
   defp api_key do
     Application.get_env(:huddlz, :google_maps)[:api_key]

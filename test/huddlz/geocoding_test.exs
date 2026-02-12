@@ -29,4 +29,19 @@ defmodule Huddlz.GeocodingTest do
       assert distance < 2500
     end
   end
+
+  describe "error_message/1" do
+    test "returns location not found message for :not_found" do
+      assert Huddlz.Geocoding.error_message(:not_found) ==
+               "Could not find that location. Try a more specific address."
+    end
+
+    test "returns unavailable message for other reasons" do
+      assert Huddlz.Geocoding.error_message({:api_error, "REQUEST_DENIED"}) ==
+               "Location search is currently unavailable."
+
+      assert Huddlz.Geocoding.error_message({:request_failed, :timeout}) ==
+               "Location search is currently unavailable."
+    end
+  end
 end

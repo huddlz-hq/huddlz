@@ -17,6 +17,13 @@ defmodule Huddlz.Geocoding do
   def geocode(address), do: @adapter.geocode(address)
 
   @doc """
+  Returns a user-facing error message for geocoding failures.
+  """
+  @spec error_message(atom()) :: String.t()
+  def error_message(:not_found), do: "Could not find that location. Try a more specific address."
+  def error_message(_), do: "Location search is currently unavailable."
+
+  @doc """
   Calculate the distance in miles between two coordinate pairs using the Haversine formula.
   """
   @spec distance_miles({float(), float()}, {float(), float()}) :: float()

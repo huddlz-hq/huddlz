@@ -266,7 +266,9 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
   describe "location search errors" do
     test "shows error when geocoding is unavailable", %{conn: conn} do
-      stub(Huddlz.MockGeocoding, :geocode, fn _address -> {:error, :no_api_key} end)
+      stub(Huddlz.MockGeocoding, :geocode, fn _address ->
+        {:error, {:request_failed, :timeout}}
+      end)
 
       conn
       |> visit("/")
@@ -286,7 +288,9 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
 
     test "still shows huddlz when location geocoding fails", %{conn: conn} do
-      stub(Huddlz.MockGeocoding, :geocode, fn _address -> {:error, :no_api_key} end)
+      stub(Huddlz.MockGeocoding, :geocode, fn _address ->
+        {:error, {:request_failed, :timeout}}
+      end)
 
       conn
       |> visit("/")
