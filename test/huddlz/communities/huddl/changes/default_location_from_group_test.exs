@@ -67,5 +67,68 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroupTest do
       assert in_person_huddl.latitude == 29.7604
       assert in_person_huddl.longitude == -95.3698
     end
+
+    test "virtual huddl with group that has no coordinates stays nil" do
+      # Group geocoding fails so group has no coordinates
+      stub(Huddlz.MockGeocoding, :geocode, fn _address ->
+        {:error, :not_found}
+      end)
+
+      owner = generate(user(role: :user))
+
+      group =
+        generate(group(owner_id: owner.id, is_public: true, location: "Nowhere", actor: owner))
+
+      assert is_nil(group.latitude)
+      assert is_nil(group.longitude)
+
+      virtual_huddl =
+        generate(
+          huddl(
+            event_type: :virtual,
+            virtual_link: "https://zoom.us/test",
+            physical_location: nil,
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner
+          )
+        )
+
+      assert is_nil(virtual_huddl.latitude)
+      assert is_nil(virtual_huddl.longitude)
+    end
+
+    test "hybrid huddl does not inherit group location" do
+      stub(Huddlz.MockGeocoding, :geocode, fn
+        "Austin, TX" -> {:ok, %{latitude: 30.2672, longitude: -97.7431}}
+        _ -> {:error, :not_found}
+      end)
+
+      owner = generate(user(role: :user))
+
+      group =
+        generate(group(owner_id: owner.id, is_public: true, location: "Austin, TX", actor: owner))
+
+      assert group.latitude == 30.2672
+
+      # Hybrid huddl with no physical_location — geocoding will fail,
+      # but DefaultLocationFromGroup should NOT kick in (only for virtual)
+      hybrid_huddl =
+        generate(
+          huddl(
+            event_type: :hybrid,
+            virtual_link: "https://zoom.us/test",
+            physical_location: "Unknown Place",
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner
+          )
+        )
+
+      # Geocoding failed for "Unknown Place", so lat/lng should be nil
+      # (not inherited from group because event_type is :hybrid)
+      assert is_nil(hybrid_huddl.latitude)
+      assert is_nil(hybrid_huddl.longitude)
+    end
   end
 end

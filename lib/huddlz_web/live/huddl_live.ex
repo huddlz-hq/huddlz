@@ -156,15 +156,15 @@ defmodule HuddlzWeb.HuddlLive do
           location_active: true
         )
 
-      {:error, :not_found} ->
+      {:error, reason} ->
         socket
-        |> put_flash(:error, "Could not find that location. Try a more specific address.")
-        |> assign(location_text: location_text, location_lat: nil, location_lng: nil, location_active: false)
-
-      {:error, _} ->
-        socket
-        |> put_flash(:error, "Location search is currently unavailable.")
-        |> assign(location_text: location_text, location_lat: nil, location_lng: nil, location_active: false)
+        |> put_flash(:error, Huddlz.Geocoding.error_message(reason))
+        |> assign(
+          location_text: location_text,
+          location_lat: nil,
+          location_lng: nil,
+          location_active: false
+        )
     end
   end
 

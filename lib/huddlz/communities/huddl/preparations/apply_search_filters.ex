@@ -5,6 +5,8 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
   use Ash.Resource.Preparation
   require Ash.Query
 
+  @meters_per_mile 1609.344
+
   def prepare(query, _opts, _context) do
     query
     |> apply_text_filter()
@@ -70,7 +72,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
     distance_miles = Ash.Query.get_argument(query, :distance_miles)
 
     if lat && lng do
-      distance_meters = (distance_miles || 25) * 1609.344
+      distance_meters = distance_miles * @meters_per_mile
 
       Ash.Query.filter(
         query,

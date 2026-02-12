@@ -317,11 +317,8 @@ defmodule HuddlzWeb.ProfileLive do
         submit_params = Map.merge(params, %{"home_latitude" => lat, "home_longitude" => lng})
         save_location_form(socket, submit_params)
 
-      {:error, :not_found} ->
-        {:noreply, assign(socket, :location_error, "Could not find that location. Try a more specific address.")}
-
-      {:error, _reason} ->
-        {:noreply, assign(socket, :location_error, "Location search is currently unavailable. Please try again later.")}
+      {:error, reason} ->
+        {:noreply, assign(socket, :location_error, Huddlz.Geocoding.error_message(reason))}
     end
   end
 

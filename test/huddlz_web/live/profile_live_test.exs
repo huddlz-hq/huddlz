@@ -97,7 +97,9 @@ defmodule HuddlzWeb.ProfileLiveTest do
     end
 
     test "shows error when geocoding is unavailable", %{conn: conn, user: user} do
-      stub(Huddlz.MockGeocoding, :geocode, fn _address -> {:error, :no_api_key} end)
+      stub(Huddlz.MockGeocoding, :geocode, fn _address ->
+        {:error, {:request_failed, :timeout}}
+      end)
 
       conn
       |> login(user)
