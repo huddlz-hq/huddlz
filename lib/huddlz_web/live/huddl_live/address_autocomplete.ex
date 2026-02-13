@@ -36,27 +36,13 @@ defmodule HuddlzWeb.HuddlLive.AddressAutocomplete do
 
       defp maybe_autocomplete_address(socket, text)
            when is_binary(text) and byte_size(text) >= 2 do
-        case Huddlz.Places.autocomplete(
-               text,
-               socket.assigns.address_session_token,
-               types: []
-             ) do
-          {:ok, suggestions} ->
-            Phoenix.Component.assign(socket,
-              address_suggestions: suggestions,
-              show_address_suggestions: suggestions != [],
-              address_loading: false,
-              address_error: nil
-            )
+        session_token = socket.assigns.address_session_token
 
-          {:error, reason} ->
-            Phoenix.Component.assign(socket,
-              address_suggestions: [],
-              show_address_suggestions: false,
-              address_loading: false,
-              address_error: Huddlz.Places.error_message(reason)
-            )
-        end
+        socket
+        |> Phoenix.Component.assign(address_loading: true)
+        |> start_async(:autocomplete_address, fn ->
+          Huddlz.Places.autocomplete(text, session_token, types: [])
+        end)
       end
 
       defp maybe_autocomplete_address(socket, _text) do
@@ -66,6 +52,31 @@ defmodule HuddlzWeb.HuddlLive.AddressAutocomplete do
           address_loading: false,
           address_error: nil
         )
+      end
+
+      @impl true
+      def handle_async(:autocomplete_address, {:ok, {:ok, suggestions}}, socket) do
+        {:noreply,
+         Phoenix.Component.assign(socket,
+           address_suggestions: suggestions,
+           show_address_suggestions: suggestions != [],
+           address_loading: false,
+           address_error: nil
+         )}
+      end
+
+      def handle_async(:autocomplete_address, {:ok, {:error, reason}}, socket) do
+        {:noreply,
+         Phoenix.Component.assign(socket,
+           address_suggestions: [],
+           show_address_suggestions: false,
+           address_loading: false,
+           address_error: Huddlz.Places.error_message(reason)
+         )}
+      end
+
+      def handle_async(:autocomplete_address, {:exit, _reason}, socket) do
+        {:noreply, Phoenix.Component.assign(socket, address_loading: false)}
       end
     end
   end

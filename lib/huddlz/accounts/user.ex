@@ -397,10 +397,12 @@ defmodule Huddlz.Accounts.User do
 
     attribute :home_latitude, :float do
       allow_nil? true
+      constraints min: -90, max: 90
     end
 
     attribute :home_longitude, :float do
       allow_nil? true
+      constraints min: -180, max: 180
     end
   end
 

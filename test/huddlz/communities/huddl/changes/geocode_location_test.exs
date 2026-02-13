@@ -54,13 +54,15 @@ defmodule Huddlz.Communities.Huddl.Changes.GeocodeLocationTest do
       assert is_nil(huddl.longitude)
     end
 
-    test "nil physical_location sets lat/lng to nil" do
-      stub(Huddlz.MockGeocoding, :geocode, fn _address ->
-        {:ok, %{latitude: 30.2672, longitude: -97.7431}}
-      end)
-
+    test "nil physical_location does not trigger geocoding" do
       owner = generate(user(role: :user))
       group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+
+      # After group creation, set up an expect that geocode should NOT be called
+      # for the virtual huddl with nil physical_location
+      expect(Huddlz.MockGeocoding, :geocode, 0, fn _address ->
+        {:ok, %{latitude: 30.2672, longitude: -97.7431}}
+      end)
 
       huddl =
         generate(
@@ -74,9 +76,6 @@ defmodule Huddlz.Communities.Huddl.Changes.GeocodeLocationTest do
           )
         )
 
-      # Virtual huddl may get coordinates from group via DefaultLocationFromGroup,
-      # but its own geocoding should not have been triggered for nil physical_location
-      # The group's coordinates may be inherited — so we just verify the change ran without error
       assert is_struct(huddl, Huddlz.Communities.Huddl)
     end
   end

@@ -917,6 +917,7 @@ defmodule HuddlzWeb.CoreComponents do
           placeholder={@placeholder}
           phx-debounce="300"
           autocomplete="off"
+          data-testid="location-input"
           class="w-full h-10 pl-6 border-0 border-b border-base-300 bg-transparent focus:border-primary focus:ring-0 focus:outline-none text-base-content text-sm"
         />
         <.icon

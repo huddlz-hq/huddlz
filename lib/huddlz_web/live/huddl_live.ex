@@ -226,25 +226,37 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   defp maybe_autocomplete_location(socket, location_text) do
-    case Huddlz.Places.autocomplete(location_text, socket.assigns.location_session_token) do
-      {:ok, suggestions} ->
-        assign(socket,
-          location_text: location_text,
-          location_suggestions: suggestions,
-          show_location_suggestions: true,
-          location_loading: false,
-          location_error: nil
-        )
+    session_token = socket.assigns.location_session_token
 
-      {:error, reason} ->
-        assign(socket,
-          location_text: location_text,
-          location_suggestions: [],
-          show_location_suggestions: false,
-          location_loading: false,
-          location_error: Huddlz.Places.error_message(reason)
-        )
-    end
+    socket
+    |> assign(location_text: location_text, location_loading: true)
+    |> start_async(:autocomplete_location, fn ->
+      Huddlz.Places.autocomplete(location_text, session_token)
+    end)
+  end
+
+  def handle_async(:autocomplete_location, {:ok, {:ok, suggestions}}, socket) do
+    {:noreply,
+     assign(socket,
+       location_suggestions: suggestions,
+       show_location_suggestions: true,
+       location_loading: false,
+       location_error: nil
+     )}
+  end
+
+  def handle_async(:autocomplete_location, {:ok, {:error, reason}}, socket) do
+    {:noreply,
+     assign(socket,
+       location_suggestions: [],
+       show_location_suggestions: false,
+       location_loading: false,
+       location_error: Huddlz.Places.error_message(reason)
+     )}
+  end
+
+  def handle_async(:autocomplete_location, {:exit, _reason}, socket) do
+    {:noreply, assign(socket, location_loading: false)}
   end
 
   defp load_results_with_distances({:ok, %{results: results}}, socket) do
@@ -391,7 +403,10 @@ defmodule HuddlzWeb.HuddlLive do
                 </span>
               <% end %>
               <%= if @location_active do %>
-                <span class="text-xs px-2.5 py-1 bg-primary/10 text-primary font-medium inline-flex items-center gap-1">
+                <span
+                  data-testid="location-badge"
+                  class="text-xs px-2.5 py-1 bg-primary/10 text-primary font-medium inline-flex items-center gap-1"
+                >
                   <.icon name="hero-map-pin" class="h-3 w-3" />
                   {@location_text} · {@distance_miles} mi
                 </span>

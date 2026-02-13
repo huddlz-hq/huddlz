@@ -3,16 +3,13 @@ defmodule LocationAutocompleteSteps do
   import Mox
   import PhoenixTest
 
+  @location_labels ["City / Region", "Location", "Physical Location"]
+
   step "I type {string} in the location field", %{args: [text]} = context do
     setup_autocomplete_stub(text)
     session = context[:session] || context[:conn]
 
-    session =
-      try do
-        fill_in(session, "City / Region", with: text)
-      rescue
-        _ -> fill_in(session, "Location", with: text)
-      end
+    session = fill_in_location(session, text, @location_labels)
 
     Map.merge(context, %{session: session, conn: session})
   end
@@ -32,14 +29,24 @@ defmodule LocationAutocompleteSteps do
 
   step "the location filter should be active with {string}", %{args: [text]} = context do
     session = context[:session] || context[:conn]
-    assert_has(session, "span", text: text)
+    assert_has(session, "[data-testid='location-badge']", text: text)
     context
   end
 
   step "the location filter should not be active", context do
     session = context[:session] || context[:conn]
-    refute_has(session, "span", text: "hero-map-pin")
+    refute_has(session, "[data-testid='location-badge']")
     context
+  end
+
+  defp fill_in_location(session, text, [label]) do
+    fill_in(session, label, with: text)
+  end
+
+  defp fill_in_location(session, text, [label | rest]) do
+    fill_in(session, label, with: text)
+  rescue
+    _ -> fill_in_location(session, text, rest)
   end
 
   defp setup_autocomplete_stub(text) do
