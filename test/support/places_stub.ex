@@ -7,7 +7,7 @@ defmodule Huddlz.PlacesStub do
   @behaviour Huddlz.Places
 
   @impl true
-  def autocomplete(_query, _session_token), do: {:ok, []}
+  def autocomplete(_query, _session_token, _opts), do: {:ok, []}
 
   @impl true
   def place_details(_place_id, _session_token), do: {:error, :not_found}

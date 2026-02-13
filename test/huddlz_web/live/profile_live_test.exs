@@ -97,7 +97,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
     end
 
     test "shows suggestions when typing", %{conn: conn, user: user} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn "saint", _token ->
+      stub(Huddlz.MockPlaces, :autocomplete, fn "saint", _token, _opts ->
         {:ok,
          [
            %{
@@ -117,7 +117,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
     end
 
     test "selecting a suggestion and saving", %{conn: conn, user: user} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn "saint", _token ->
+      stub(Huddlz.MockPlaces, :autocomplete, fn "saint", _token, _opts ->
         {:ok,
          [
            %{
@@ -169,7 +169,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
     end
 
     test "handles autocomplete API errors", %{conn: conn, user: user} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token ->
+      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
         {:error, {:request_failed, :timeout}}
       end)
 
@@ -181,7 +181,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
     end
 
     test "clears error when user types in location field", %{conn: conn, user: user} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token ->
+      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
         {:error, {:request_failed, :timeout}}
       end)
 
@@ -192,7 +192,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> assert_has("p", text: "Location search is currently unavailable")
 
       # Stub returns ok now — typing clears the error
-      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token -> {:ok, []} end)
+      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts -> {:ok, []} end)
 
       conn
       |> login(user)

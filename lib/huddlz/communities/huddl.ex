@@ -18,6 +18,11 @@ defmodule Huddlz.Communities.Huddl do
       get :get_huddl, :read
       list :search_huddlz, :search
     end
+
+    mutations do
+      create :create_huddl, :create
+      update :update_huddl, :update
+    end
   end
 
   json_api do
@@ -28,6 +33,8 @@ defmodule Huddlz.Communities.Huddl do
 
       get :read
       index :search
+      post :create
+      patch :update
     end
   end
 
