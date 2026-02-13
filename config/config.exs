@@ -89,6 +89,9 @@ config :huddlz,
 # Geocoding adapter (compile-time)
 config :huddlz, :geocoding, adapter: Huddlz.Geocoding.Google
 
+# Places autocomplete adapter (compile-time)
+config :huddlz, :places, adapter: Huddlz.Places.Google
+
 # Configures the endpoint
 config :huddlz, HuddlzWeb.Endpoint,
   url: [host: "localhost"],

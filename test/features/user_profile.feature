@@ -43,3 +43,16 @@ Feature: User Profile Management
     When I visit "/profile"
     Then I should see "Profile Settings"
     And I should see "Manage your profile information"
+
+  Scenario: Setting home location with autocomplete
+    Given I am on my profile page
+    When I type "saint" in the location field
+    Then I should see location suggestions
+    When I select "Saint Augustine" from the location suggestions
+    And I click the "Save Location" button
+    Then I should see "Home location updated"
+
+  Scenario: No location suggestions for unrecognized input
+    Given I am on my profile page
+    When I type "xyznonexistent" in the location field
+    Then I should see "No locations found"

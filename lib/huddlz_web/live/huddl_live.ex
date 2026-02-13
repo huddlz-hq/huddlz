@@ -35,6 +35,11 @@ defmodule HuddlzWeb.HuddlLive do
         location_lng: location_lng,
         location_active: location_active,
         distance_miles: 25,
+        location_suggestions: [],
+        show_location_suggestions: false,
+        location_loading: false,
+        location_error: nil,
+        location_session_token: Ecto.UUID.generate(),
         groups: list_public_groups()
       )
 
@@ -47,12 +52,12 @@ defmodule HuddlzWeb.HuddlLive do
     query = if params["query"] != "", do: params["query"], else: nil
     event_type = if params["event_type"] != "", do: params["event_type"], else: nil
     date_filter = params["date_filter"] || "upcoming"
-    location_text = params["location"]
+    location_text = params["location"] || ""
     distance_miles = parse_distance(params["distance_miles"])
 
     socket =
       socket
-      |> maybe_geocode_location(location_text)
+      |> maybe_autocomplete_location(location_text)
       |> assign(search_query: query)
       |> assign(event_type_filter: event_type)
       |> assign(date_filter: date_filter)
@@ -60,6 +65,45 @@ defmodule HuddlzWeb.HuddlLive do
       |> perform_search()
 
     {:noreply, socket}
+  end
+
+  def handle_event(
+        "select_location",
+        %{"place-id" => place_id, "display-text" => display_text},
+        socket
+      ) do
+    case Huddlz.Places.place_details(place_id, socket.assigns.location_session_token) do
+      {:ok, %{latitude: lat, longitude: lng}} ->
+        socket =
+          socket
+          |> assign(
+            location_text: display_text,
+            location_lat: lat,
+            location_lng: lng,
+            location_active: true,
+            location_suggestions: [],
+            show_location_suggestions: false,
+            location_loading: false,
+            location_error: nil,
+            location_session_token: Ecto.UUID.generate()
+          )
+          |> perform_search()
+
+        {:noreply, socket}
+
+      {:error, reason} ->
+        {:noreply,
+         assign(socket,
+           location_error: Huddlz.Places.error_message(reason),
+           location_suggestions: [],
+           show_location_suggestions: false,
+           location_loading: false
+         )}
+    end
+  end
+
+  def handle_event("dismiss_suggestions", _params, socket) do
+    {:noreply, assign(socket, show_location_suggestions: false)}
   end
 
   def handle_event("clear_filters", _params, socket) do
@@ -73,7 +117,12 @@ defmodule HuddlzWeb.HuddlLive do
         location_lat: nil,
         location_lng: nil,
         location_active: false,
-        distance_miles: 25
+        distance_miles: 25,
+        location_suggestions: [],
+        show_location_suggestions: false,
+        location_loading: false,
+        location_error: nil,
+        location_session_token: Ecto.UUID.generate()
       )
       |> perform_search()
 
@@ -127,43 +176,44 @@ defmodule HuddlzWeb.HuddlLive do
     |> assign(page_info: page_info)
   end
 
-  defp maybe_geocode_location(socket, "") do
+  defp maybe_autocomplete_location(socket, "") do
     assign(socket,
       location_text: nil,
-      location_lat: nil,
-      location_lng: nil,
-      location_active: false
+      location_suggestions: [],
+      show_location_suggestions: false,
+      location_loading: false,
+      location_error: nil
     )
   end
 
-  defp maybe_geocode_location(socket, location_text) do
-    current = socket.assigns.location_text || ""
-
-    if location_text == current do
-      socket
-    else
-      geocode_location(socket, location_text)
-    end
+  defp maybe_autocomplete_location(socket, location_text) when byte_size(location_text) < 2 do
+    assign(socket,
+      location_text: location_text,
+      location_suggestions: [],
+      show_location_suggestions: false,
+      location_loading: false,
+      location_error: nil
+    )
   end
 
-  defp geocode_location(socket, location_text) do
-    case Huddlz.Geocoding.geocode(location_text) do
-      {:ok, %{latitude: lat, longitude: lng}} ->
+  defp maybe_autocomplete_location(socket, location_text) do
+    case Huddlz.Places.autocomplete(location_text, socket.assigns.location_session_token) do
+      {:ok, suggestions} ->
         assign(socket,
           location_text: location_text,
-          location_lat: lat,
-          location_lng: lng,
-          location_active: true
+          location_suggestions: suggestions,
+          show_location_suggestions: true,
+          location_loading: false,
+          location_error: nil
         )
 
       {:error, reason} ->
-        socket
-        |> put_flash(:error, Huddlz.Geocoding.error_message(reason))
-        |> assign(
+        assign(socket,
           location_text: location_text,
-          location_lat: nil,
-          location_lng: nil,
-          location_active: false
+          location_suggestions: [],
+          show_location_suggestions: false,
+          location_loading: false,
+          location_error: Huddlz.Places.error_message(reason)
         )
     end
   end
@@ -261,20 +311,18 @@ defmodule HuddlzWeb.HuddlLive do
               </button>
             </div>
             <div class="flex flex-wrap items-end gap-2 mt-2">
-              <div class="flex-grow min-w-[200px] relative">
-                <label for="location-input" class="sr-only">Location</label>
-                <.icon
-                  name="hero-map-pin"
-                  class="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-4 text-base-content/30"
-                />
-                <input
-                  id="location-input"
-                  type="text"
+              <div class="flex-grow min-w-[200px]">
+                <.location_autocomplete
+                  id="location-autocomplete"
                   name="location"
                   value={@location_text}
+                  label="Location"
+                  label_class="sr-only"
                   placeholder="City, State"
-                  phx-debounce="800"
-                  class="w-full h-12 pl-6 pr-4 border-0 border-b border-base-300 bg-transparent text-base focus:outline-none focus:ring-0 focus:border-primary transition-colors placeholder:text-base-content/30"
+                  suggestions={@location_suggestions}
+                  show_suggestions={@show_location_suggestions}
+                  loading={@location_loading}
+                  error={@location_error}
                 />
               </div>
               <label for="distance-radius" class="sr-only">Distance</label>

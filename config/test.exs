@@ -28,4 +28,5 @@ config :swoosh, :api_client, false
 # Adapters (compile-time)
 config :huddlz, :storage, adapter: Huddlz.Storage.Local
 config :huddlz, :geocoding, adapter: Huddlz.MockGeocoding
+config :huddlz, :places, adapter: Huddlz.MockPlaces
 config :huddlz, Huddlz.Repo, pool: Ecto.Adapters.SQL.Sandbox

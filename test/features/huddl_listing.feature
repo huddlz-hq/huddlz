@@ -23,3 +23,22 @@ Feature: Huddl Listing
     And I search for "something"
     And I clear the search form
     Then I should see all upcoming huddlz again
+
+  Scenario: Search by location with autocomplete
+    When I visit the landing page
+    And I type "aus" in the location field
+    Then I should see location suggestions
+    When I select "Austin" from the location suggestions
+    Then the location filter should be active with "Austin, TX, USA"
+
+  Scenario: No location suggestions for gibberish
+    When I visit the landing page
+    And I type "xyznonexistent" in the location field
+    Then I should see "No locations found"
+
+  Scenario: Clear location filter
+    When I visit the landing page
+    And I type "aus" in the location field
+    And I select "Austin" from the location suggestions
+    And I clear the search form
+    Then the location filter should not be active
