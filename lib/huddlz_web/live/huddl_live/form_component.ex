@@ -22,7 +22,7 @@ defmodule HuddlzWeb.HuddlLive.FormComponent do
 
   def huddl_form_fields(assigns) do
     ~H"""
-    <.input field={@form[:title]} type="text" label="Title" required />
+    <.input field={@form[:title]} type="text" label="Title" />
     <.input field={@form[:description]} type="textarea" label="Description" rows="4" />
 
     {render_slot(@image_section)}
@@ -52,7 +52,6 @@ defmodule HuddlzWeb.HuddlLive.FormComponent do
         {"Virtual", "virtual"},
         {"Hybrid (Both In-Person and Virtual)", "hybrid"}
       ]}
-      required
     />
 
     <%= if @show_physical_location do %>

@@ -6,6 +6,8 @@ defmodule HuddlzWeb.Router do
   import AshAuthentication.Plug.Helpers
 
   pipeline :graphql do
+    plug :load_from_bearer
+    plug :set_actor, :user
     plug AshGraphql.Plug
   end
 
@@ -31,7 +33,7 @@ defmodule HuddlzWeb.Router do
     forward "/playground", Absinthe.Plug.GraphiQL,
       schema: Module.concat(["HuddlzWeb.GraphqlSchema"]),
       socket: Module.concat(["HuddlzWeb.GraphqlSocket"]),
-      interface: :simple
+      interface: :playground
 
     forward "/", Absinthe.Plug, schema: Module.concat(["HuddlzWeb.GraphqlSchema"])
   end
@@ -50,7 +52,7 @@ defmodule HuddlzWeb.Router do
     pipe_through :browser
 
     ash_authentication_live_session :authenticated_routes,
-      on_mount: {HuddlzWeb.LiveUserAuth, :load_profile_picture} do
+      on_mount: {HuddlzWeb.LiveUserAuth, :load_user_details} do
       # in each liveview, add one of the following at the top of the module:
       #
       # If an authenticated user must be present:

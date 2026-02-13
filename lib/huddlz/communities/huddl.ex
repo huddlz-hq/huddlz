@@ -371,11 +371,13 @@ defmodule Huddlz.Communities.Huddl do
     attribute :latitude, :float do
       allow_nil? true
       description "Geocoded latitude of physical_location or inherited from group"
+      constraints min: -90, max: 90
     end
 
     attribute :longitude, :float do
       allow_nil? true
       description "Geocoded longitude of physical_location or inherited from group"
+      constraints min: -180, max: 180
     end
 
     create_timestamp :inserted_at

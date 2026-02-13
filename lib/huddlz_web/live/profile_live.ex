@@ -182,7 +182,7 @@ defmodule HuddlzWeb.ProfileLive do
             Set your home city to pre-fill location search when browsing huddlz.
           </p>
 
-          <form phx-submit="save_location" phx-change="validate_location">
+          <.form for={@location_form} phx-submit="save_location" phx-change="validate_location">
             <div class="flex items-end gap-3">
               <div class="flex-1">
                 <.location_autocomplete
@@ -213,7 +213,7 @@ defmodule HuddlzWeb.ProfileLive do
                 Save Location
               </.button>
             </div>
-          </form>
+          </.form>
         </div>
 
         <div class="mt-10">
@@ -501,23 +501,38 @@ defmodule HuddlzWeb.ProfileLive do
   end
 
   defp maybe_autocomplete_location(socket, location_text) do
-    case Huddlz.Places.autocomplete(location_text, socket.assigns.location_session_token) do
-      {:ok, suggestions} ->
-        assign(socket,
-          location_suggestions: suggestions,
-          show_location_suggestions: true,
-          location_loading: false,
-          location_error: nil
-        )
+    session_token = socket.assigns.location_session_token
 
-      {:error, reason} ->
-        assign(socket,
-          location_suggestions: [],
-          show_location_suggestions: false,
-          location_loading: false,
-          location_error: Huddlz.Places.error_message(reason)
-        )
-    end
+    socket
+    |> assign(location_loading: true)
+    |> start_async(:autocomplete_location, fn ->
+      Huddlz.Places.autocomplete(location_text, session_token)
+    end)
+  end
+
+  @impl true
+  def handle_async(:autocomplete_location, {:ok, {:ok, suggestions}}, socket) do
+    {:noreply,
+     assign(socket,
+       location_suggestions: suggestions,
+       show_location_suggestions: true,
+       location_loading: false,
+       location_error: nil
+     )}
+  end
+
+  def handle_async(:autocomplete_location, {:ok, {:error, reason}}, socket) do
+    {:noreply,
+     assign(socket,
+       location_suggestions: [],
+       show_location_suggestions: false,
+       location_loading: false,
+       location_error: Huddlz.Places.error_message(reason)
+     )}
+  end
+
+  def handle_async(:autocomplete_location, {:exit, _reason}, socket) do
+    {:noreply, assign(socket, location_loading: false)}
   end
 
   defp geocode_for_profile(nil), do: {:error, :invalid_address}

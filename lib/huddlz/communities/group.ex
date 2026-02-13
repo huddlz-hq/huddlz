@@ -146,11 +146,13 @@ defmodule Huddlz.Communities.Group do
     attribute :latitude, :float do
       allow_nil? true
       description "Geocoded latitude of group location"
+      constraints min: -90, max: 90
     end
 
     attribute :longitude, :float do
       allow_nil? true
       description "Geocoded longitude of group location"
+      constraints min: -180, max: 180
     end
 
     create_timestamp :created_at
