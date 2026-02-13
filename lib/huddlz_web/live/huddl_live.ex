@@ -48,20 +48,49 @@ defmodule HuddlzWeb.HuddlLive do
     {:ok, socket}
   end
 
-  def handle_event("search", params, socket) do
+  def handle_event("filter_change", params, socket) do
     query = if params["query"] != "", do: params["query"], else: nil
     event_type = if params["event_type"] != "", do: params["event_type"], else: nil
     date_filter = params["date_filter"] || "upcoming"
     location_text = params["location"] || ""
     distance_miles = parse_distance(params["distance_miles"])
 
+    # Only trigger autocomplete when the location text actually changed
+    current_location = socket.assigns.location_text || ""
+
+    socket =
+      if location_text != current_location do
+        socket
+        |> assign(location_active: false, location_lat: nil, location_lng: nil)
+        |> maybe_autocomplete_location(location_text)
+      else
+        socket
+      end
+
     socket =
       socket
-      |> maybe_autocomplete_location(location_text)
       |> assign(search_query: query)
       |> assign(event_type_filter: event_type)
       |> assign(date_filter: date_filter)
       |> assign(distance_miles: distance_miles)
+      |> perform_search()
+
+    {:noreply, socket}
+  end
+
+  def handle_event("search", params, socket) do
+    query = if params["query"] != "", do: params["query"], else: nil
+    event_type = if params["event_type"] != "", do: params["event_type"], else: nil
+    date_filter = params["date_filter"] || "upcoming"
+    distance_miles = parse_distance(params["distance_miles"])
+
+    socket =
+      socket
+      |> assign(search_query: query)
+      |> assign(event_type_filter: event_type)
+      |> assign(date_filter: date_filter)
+      |> assign(distance_miles: distance_miles)
+      |> assign(show_location_suggestions: false)
       |> perform_search()
 
     {:noreply, socket}
@@ -256,7 +285,7 @@ defmodule HuddlzWeb.HuddlLive do
     <Layouts.app flash={@flash} current_user={@current_user}>
       <div>
         <div class="mb-8">
-          <form phx-change="search" phx-submit="search">
+          <form phx-change="filter_change" phx-submit="search">
             <div class="flex flex-wrap items-end gap-2">
               <div class="flex-grow min-w-[200px]">
                 <label for="search-query" class="sr-only">Search huddlz</label>

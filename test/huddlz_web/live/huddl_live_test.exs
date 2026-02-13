@@ -2,6 +2,9 @@ defmodule HuddlzWeb.HuddlLiveTest do
   use HuddlzWeb.ConnCase, async: true
 
   import Huddlz.Generator
+  import Mox
+
+  setup :verify_on_exit!
 
   describe "Huddl listing" do
     setup do
@@ -267,6 +270,65 @@ defmodule HuddlzWeb.HuddlLiveTest do
         |> fill_in("Search huddlz", with: query)
         |> assert_has("h3", text: "Elixir Programming Workshop")
       end
+    end
+  end
+
+  describe "location search" do
+    setup do
+      host = generate(user(role: :user))
+      public_group = generate(group(is_public: true, owner_id: host.id, actor: host))
+      %{host: host, public_group: public_group}
+    end
+
+    test "clicking Search does not open location suggestions", %{
+      conn: conn,
+      host: host,
+      public_group: public_group
+    } do
+      stub(Huddlz.MockPlaces, :autocomplete, fn
+        "Austin, TX", _token, _opts ->
+          {:ok,
+           [
+             %{
+               place_id: "p1",
+               display_text: "Austin, TX, USA",
+               main_text: "Austin",
+               secondary_text: "TX, USA"
+             }
+           ]}
+
+        _, _token, _opts ->
+          {:ok, []}
+      end)
+
+      stub(Huddlz.MockPlaces, :place_details, fn "p1", _token ->
+        {:ok, %{latitude: 30.2672, longitude: -97.7431}}
+      end)
+
+      generate(
+        huddl(
+          group_id: public_group.id,
+          creator_id: host.id,
+          is_private: false,
+          title: "Austin Meetup",
+          physical_location: "123 Main St, Austin, TX",
+          actor: host
+        )
+      )
+
+      # Select a location from suggestions
+      session =
+        conn
+        |> visit("/")
+        |> fill_in("Location", with: "Austin, TX")
+        |> click_button("Austin")
+
+      # The location should be active (filter badge shows)
+      assert_has(session, "*", text: "Austin, TX, USA")
+
+      # Click Search button - should NOT reopen suggestions
+      session = click_button(session, "Search")
+      refute_has(session, "#location-autocomplete button", text: "Austin")
     end
   end
 

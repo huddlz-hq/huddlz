@@ -8,6 +8,7 @@ defmodule Huddlz.Geocoding.Google do
   @geocoding_url "https://maps.googleapis.com/maps/api/geocode/json"
 
   @accepted_types ~w(
+    street_address route premise subpremise
     locality sublocality neighborhood postal_code
     administrative_area_level_2 administrative_area_level_3
     sublocality_level_1 sublocality_level_2
@@ -33,7 +34,15 @@ defmodule Huddlz.Geocoding.Google do
   end
 
   defp fetch_coordinates(address, key) do
-    Req.get(@geocoding_url, params: [address: address, key: key])
+    opts = [params: [address: address, key: key]] ++ req_test_options()
+    Req.get(@geocoding_url, opts)
+  end
+
+  defp req_test_options do
+    case Application.get_env(:huddlz, :geocoding_req_plug) do
+      nil -> []
+      plug -> [plug: plug]
+    end
   end
 
   defp parse_response({:ok, %{status: 200, body: %{"status" => "OK", "results" => results}}}) do
