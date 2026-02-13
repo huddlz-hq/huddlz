@@ -60,6 +60,11 @@ defmodule HuddlzWeb.ProfileLive do
      |> assign(:current_user, user_with_avatar)
      |> assign(:avatar_error, nil)
      |> assign(:location_error, nil)
+     |> assign(:location_suggestions, [])
+     |> assign(:show_location_suggestions, false)
+     |> assign(:location_loading, false)
+     |> assign(:location_session_token, Ecto.UUID.generate())
+     |> assign(:selected_place_coords, nil)
      |> allow_upload(:avatar,
        accept: ~w(.jpg .jpeg .png .webp),
        max_entries: 1,
@@ -180,11 +185,16 @@ defmodule HuddlzWeb.ProfileLive do
           <form phx-submit="save_location" phx-change="validate_location">
             <div class="flex items-end gap-3">
               <div class="flex-1">
-                <.input
-                  field={@location_form[:home_location]}
-                  type="text"
+                <.location_autocomplete
+                  id="profile-location-autocomplete"
+                  name="form[home_location]"
+                  value={@location_form[:home_location].value}
                   label="City / Region"
                   placeholder="e.g. Austin, TX"
+                  suggestions={@location_suggestions}
+                  show_suggestions={@show_location_suggestions}
+                  loading={@location_loading}
+                  error={@location_error}
                 />
               </div>
               <%= if @current_user.home_location do %>
@@ -197,10 +207,6 @@ defmodule HuddlzWeb.ProfileLive do
                 </button>
               <% end %>
             </div>
-
-            <%= if @location_error do %>
-              <p class="text-error text-sm mt-2">{@location_error}</p>
-            <% end %>
 
             <div class="mt-4">
               <.button type="submit">
@@ -305,21 +311,79 @@ defmodule HuddlzWeb.ProfileLive do
       |> AshPhoenix.Form.validate(params)
       |> to_form()
 
-    {:noreply, socket |> assign(:location_form, form) |> assign(:location_error, nil)}
+    location_text = params["home_location"] || ""
+
+    socket =
+      socket
+      |> assign(:location_form, form)
+      |> assign(:location_error, nil)
+      |> maybe_autocomplete_location(location_text)
+
+    {:noreply, socket}
   end
 
   @impl true
   def handle_event("save_location", %{"form" => params}, socket) do
     location_text = params["home_location"]
 
-    case geocode_for_profile(location_text) do
-      {:ok, lat, lng} ->
+    case socket.assigns.selected_place_coords do
+      {lat, lng} ->
         submit_params = Map.merge(params, %{"home_latitude" => lat, "home_longitude" => lng})
-        save_location_form(socket, submit_params)
+
+        socket
+        |> assign(:selected_place_coords, nil)
+        |> save_location_form(submit_params)
+
+      nil ->
+        case geocode_for_profile(location_text) do
+          {:ok, lat, lng} ->
+            submit_params = Map.merge(params, %{"home_latitude" => lat, "home_longitude" => lng})
+            save_location_form(socket, submit_params)
+
+          {:error, reason} ->
+            {:noreply, assign(socket, :location_error, Huddlz.Geocoding.error_message(reason))}
+        end
+    end
+  end
+
+  @impl true
+  def handle_event(
+        "select_location",
+        %{"place-id" => place_id, "display-text" => display_text},
+        socket
+      ) do
+    case Huddlz.Places.place_details(place_id, socket.assigns.location_session_token) do
+      {:ok, %{latitude: lat, longitude: lng}} ->
+        form =
+          socket.assigns.location_form.source
+          |> AshPhoenix.Form.validate(%{"home_location" => display_text})
+          |> to_form()
+
+        {:noreply,
+         assign(socket,
+           location_form: form,
+           selected_place_coords: {lat, lng},
+           location_suggestions: [],
+           show_location_suggestions: false,
+           location_loading: false,
+           location_error: nil,
+           location_session_token: Ecto.UUID.generate()
+         )}
 
       {:error, reason} ->
-        {:noreply, assign(socket, :location_error, Huddlz.Geocoding.error_message(reason))}
+        {:noreply,
+         assign(socket,
+           location_error: Huddlz.Places.error_message(reason),
+           location_suggestions: [],
+           show_location_suggestions: false,
+           location_loading: false
+         )}
     end
+  end
+
+  @impl true
+  def handle_event("dismiss_suggestions", _params, socket) do
+    {:noreply, assign(socket, show_location_suggestions: false)}
   end
 
   @impl true
@@ -341,7 +405,11 @@ defmodule HuddlzWeb.ProfileLive do
          socket
          |> put_flash(:info, "Home location cleared")
          |> assign(:current_user, updated_user)
-         |> assign(:location_form, location_form)}
+         |> assign(:location_form, location_form)
+         |> assign(:selected_place_coords, nil)
+         |> assign(:location_suggestions, [])
+         |> assign(:show_location_suggestions, false)
+         |> assign(:location_session_token, Ecto.UUID.generate())}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to clear location")}
@@ -412,6 +480,43 @@ defmodule HuddlzWeb.ProfileLive do
         {:noreply,
          socket
          |> put_flash(:error, "Failed to remove profile picture")}
+    end
+  end
+
+  defp maybe_autocomplete_location(socket, "") do
+    assign(socket,
+      location_suggestions: [],
+      show_location_suggestions: false,
+      location_loading: false,
+      selected_place_coords: nil
+    )
+  end
+
+  defp maybe_autocomplete_location(socket, location_text) when byte_size(location_text) < 2 do
+    assign(socket,
+      location_suggestions: [],
+      show_location_suggestions: false,
+      location_loading: false
+    )
+  end
+
+  defp maybe_autocomplete_location(socket, location_text) do
+    case Huddlz.Places.autocomplete(location_text, socket.assigns.location_session_token) do
+      {:ok, suggestions} ->
+        assign(socket,
+          location_suggestions: suggestions,
+          show_location_suggestions: true,
+          location_loading: false,
+          location_error: nil
+        )
+
+      {:error, reason} ->
+        assign(socket,
+          location_suggestions: [],
+          show_location_suggestions: false,
+          location_loading: false,
+          location_error: Huddlz.Places.error_message(reason)
+        )
     end
   end
 

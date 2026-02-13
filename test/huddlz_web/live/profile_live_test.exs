@@ -96,7 +96,66 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> assert_has("button", text: "Save Location")
     end
 
-    test "shows error when geocoding is unavailable", %{conn: conn, user: user} do
+    test "shows suggestions when typing", %{conn: conn, user: user} do
+      stub(Huddlz.MockPlaces, :autocomplete, fn "saint", _token ->
+        {:ok,
+         [
+           %{
+             place_id: "p1",
+             display_text: "Saint Augustine, FL, USA",
+             main_text: "Saint Augustine",
+             secondary_text: "FL, USA"
+           }
+         ]}
+      end)
+
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> fill_in("City / Region", with: "saint")
+      |> assert_has("button", text: "Saint Augustine")
+    end
+
+    test "selecting a suggestion and saving", %{conn: conn, user: user} do
+      stub(Huddlz.MockPlaces, :autocomplete, fn "saint", _token ->
+        {:ok,
+         [
+           %{
+             place_id: "p1",
+             display_text: "Saint Augustine, FL, USA",
+             main_text: "Saint Augustine",
+             secondary_text: "FL, USA"
+           }
+         ]}
+      end)
+
+      stub(Huddlz.MockPlaces, :place_details, fn "p1", _token ->
+        {:ok, %{latitude: 29.89, longitude: -81.31}}
+      end)
+
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> fill_in("City / Region", with: "saint")
+      |> click_button("Saint Augustine")
+      |> click_button("Save Location")
+      |> assert_has("*", text: "Home location updated")
+    end
+
+    test "fallback to geocoding when user types without selecting", %{conn: conn, user: user} do
+      stub(Huddlz.MockGeocoding, :geocode, fn "Austin, TX" ->
+        {:ok, %{latitude: 30.27, longitude: -97.74}}
+      end)
+
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> fill_in("City / Region", with: "Austin, TX")
+      |> click_button("Save Location")
+      |> assert_has("*", text: "Home location updated")
+    end
+
+    test "shows error when geocoding fallback fails", %{conn: conn, user: user} do
       stub(Huddlz.MockGeocoding, :geocode, fn _address ->
         {:error, {:request_failed, :timeout}}
       end)
@@ -109,41 +168,37 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> assert_has("p", text: "Location search is currently unavailable")
     end
 
-    test "shows error when location is not found", %{conn: conn, user: user} do
-      stub(Huddlz.MockGeocoding, :geocode, fn _address -> {:error, :not_found} end)
-
-      conn
-      |> login(user)
-      |> visit("/profile")
-      |> fill_in("City / Region", with: "xyznonexistent123")
-      |> click_button("Save Location")
-      |> assert_has("p", text: "Could not find that location")
-    end
-
-    test "saves location successfully when geocoding works", %{conn: conn, user: user} do
-      stub(Huddlz.MockGeocoding, :geocode, fn "Austin, TX" ->
-        {:ok, %{latitude: 30.2672, longitude: -97.7431}}
+    test "handles autocomplete API errors", %{conn: conn, user: user} do
+      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token ->
+        {:error, {:request_failed, :timeout}}
       end)
 
       conn
       |> login(user)
       |> visit("/profile")
-      |> fill_in("City / Region", with: "Austin, TX")
-      |> click_button("Save Location")
-      |> assert_has("*", text: "Home location updated")
+      |> fill_in("City / Region", with: "austin")
+      |> assert_has("p", text: "Location search is currently unavailable")
     end
 
     test "clears error when user types in location field", %{conn: conn, user: user} do
-      stub(Huddlz.MockGeocoding, :geocode, fn _address -> {:error, :not_found} end)
+      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token ->
+        {:error, {:request_failed, :timeout}}
+      end)
 
       conn
       |> login(user)
       |> visit("/profile")
       |> fill_in("City / Region", with: "bad location")
-      |> click_button("Save Location")
-      |> assert_has("p", text: "Could not find that location")
+      |> assert_has("p", text: "Location search is currently unavailable")
+
+      # Stub returns ok now — typing clears the error
+      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token -> {:ok, []} end)
+
+      conn
+      |> login(user)
+      |> visit("/profile")
       |> fill_in("City / Region", with: "trying again")
-      |> refute_has("p", text: "Could not find that location")
+      |> refute_has("p", text: "Location search is currently unavailable")
     end
   end
 end

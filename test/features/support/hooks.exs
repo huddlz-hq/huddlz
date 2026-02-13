@@ -11,6 +11,7 @@ defmodule CucumberHooks do
     end
 
     Mox.stub_with(Huddlz.MockGeocoding, Huddlz.GeocodingStub)
+    Mox.stub_with(Huddlz.MockPlaces, Huddlz.PlacesStub)
 
     {:ok, context}
   end
