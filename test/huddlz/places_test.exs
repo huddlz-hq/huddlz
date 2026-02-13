@@ -7,7 +7,7 @@ defmodule Huddlz.PlacesTest do
 
   describe "autocomplete/2" do
     test "delegates to adapter" do
-      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token ->
+      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token, _opts ->
         {:ok,
          [
            %{
@@ -23,7 +23,7 @@ defmodule Huddlz.PlacesTest do
     end
 
     test "returns error from adapter" do
-      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token ->
+      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
         {:error, {:request_failed, :timeout}}
       end)
 

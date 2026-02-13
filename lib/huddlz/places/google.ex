@@ -8,16 +8,19 @@ defmodule Huddlz.Places.Google do
   @autocomplete_url "https://places.googleapis.com/v1/places:autocomplete"
 
   @impl true
-  def autocomplete(query, _session_token) when is_binary(query) and byte_size(query) < 2 do
+  def autocomplete(query, _session_token, _opts) when is_binary(query) and byte_size(query) < 2 do
     {:ok, []}
   end
 
-  def autocomplete(query, session_token) when is_binary(query) do
+  def autocomplete(query, session_token, opts) when is_binary(query) do
+    types = Keyword.get(opts, :types, ["locality"])
+
     body = %{
       input: query,
-      includedPrimaryTypes: ["locality"],
       sessionToken: session_token
     }
+
+    body = if types != [], do: Map.put(body, :includedPrimaryTypes, types), else: body
 
     case Req.post(@autocomplete_url,
            json: body,
@@ -40,7 +43,7 @@ defmodule Huddlz.Places.Google do
     end
   end
 
-  def autocomplete(_, _), do: {:ok, []}
+  def autocomplete(_, _, _), do: {:ok, []}
 
   @impl true
   def place_details(place_id, session_token) when is_binary(place_id) do

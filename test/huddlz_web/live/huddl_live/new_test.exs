@@ -2,10 +2,13 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
   use HuddlzWeb.ConnCase, async: true
 
   import Huddlz.Generator
+  import Mox
 
   import Huddlz.Test.Helpers.Authentication, only: [login: 2]
 
   alias Huddlz.Communities.Huddl
+
+  setup :verify_on_exit!
 
   require Ash.Query
 
@@ -310,6 +313,44 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
 
       # Should show validation error (checking for error class on input)
       assert_has(session, "input.border-error")
+    end
+
+    test "selecting a location suggestion preserves other form fields", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      stub(Huddlz.MockPlaces, :autocomplete, fn "austin coffee", _token, _opts ->
+        {:ok,
+         [
+           %{
+             place_id: "p1",
+             display_text: "Austin Coffee, Austin, TX, USA",
+             main_text: "Austin Coffee",
+             secondary_text: "Austin, TX, USA"
+           }
+         ]}
+      end)
+
+      tomorrow = Date.utc_today() |> Date.add(1) |> Date.to_iso8601()
+
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/huddlz/new")
+      |> fill_in("Title", with: "My New Huddl")
+      |> fill_in("Date", with: tomorrow)
+      |> fill_in("Start Time", with: "15:00")
+      |> select("Duration", option: "2 hours")
+      |> fill_in("Physical Location", with: "austin coffee")
+      |> click_button("Austin Coffee")
+      # Location should be populated
+      |> assert_has(
+        "input[name='form[physical_location]'][value='Austin Coffee, Austin, TX, USA']"
+      )
+      # Other form fields must be preserved
+      |> assert_has("input[name='form[title]'][value='My New Huddl']")
+      |> assert_has("input[name='form[date]'][value='#{tomorrow}']")
+      |> assert_has("select[name='form[duration_minutes]'] option[value='120'][selected]")
     end
 
     test "validates form on change", %{conn: conn, owner: owner, group: group} do

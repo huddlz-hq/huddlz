@@ -3,6 +3,10 @@ defmodule HuddlzWeb.HuddlLive.New do
   LiveView for creating a new huddl within a group.
   """
   use HuddlzWeb, :live_view
+  use HuddlzWeb.HuddlLive.AddressAutocomplete
+
+  import HuddlzWeb.HuddlLive.FormHelpers
+  import HuddlzWeb.HuddlLive.FormComponent
 
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
@@ -74,6 +78,7 @@ defmodule HuddlzWeb.HuddlLive.New do
     |> assign(:show_virtual_link, false)
     |> assign(:show_physical_location, true)
     |> assign(:calculated_end_time, calculate_end_time(tomorrow, default_time, 60))
+    |> assign_address_autocomplete()
   end
 
   defp handle_upload_progress(:huddl_image, entry, socket) do
@@ -85,7 +90,6 @@ defmodule HuddlzWeb.HuddlLive.New do
   end
 
   defp process_eager_upload(socket) do
-    # Clean up previous pending image if user re-uploads
     socket = cleanup_pending_image(socket)
     socket = assign(socket, :upload_processing, true)
 
@@ -148,7 +152,6 @@ defmodule HuddlzWeb.HuddlLive.New do
         socket
 
       image_id ->
-        # Soft-delete previous pending image (will be cleaned up by Oban job)
         with {:ok, image} <- Ash.get(HuddlImage, image_id),
              true <- is_nil(image.huddl_id) do
           Communities.soft_delete_huddl_image(image, actor: socket.assigns.current_user)
@@ -191,174 +194,139 @@ defmodule HuddlzWeb.HuddlLive.New do
       </.header>
 
       <.form for={@form} id="huddl-form" phx-change="validate" phx-submit="save" class="space-y-6">
-        <.input field={@form[:title]} type="text" label="Title" required />
-        <.input field={@form[:description]} type="textarea" label="Description" rows="4" />
+        <.huddl_form_fields
+          form={@form}
+          show_physical_location={@show_physical_location}
+          show_virtual_link={@show_virtual_link}
+          calculated_end_time={@calculated_end_time}
+          address_suggestions={@address_suggestions}
+          show_address_suggestions={@show_address_suggestions}
+          address_loading={@address_loading}
+          address_error={@address_error}
+          is_public={@group.is_public}
+        >
+          <:image_section>
+            <div>
+              <label class="mono-label text-primary/70 mb-2 block">
+                Huddl Image
+              </label>
+              <p class="text-base-content/50 text-sm mb-3">
+                Upload a banner image for this huddl. If none is provided, the group image will be used.
+              </p>
 
-        <div>
-          <label class="mono-label text-primary/70 mb-2 block">
-            Huddl Image
-          </label>
-          <p class="text-base-content/50 text-sm mb-3">
-            Upload a banner image for this huddl. If none is provided, the group image will be used.
-          </p>
-
-          <div
-            class="border border-dashed border-base-300 p-4 text-center hover:border-primary transition-colors"
-            phx-drop-target={@uploads.huddl_image.ref}
-          >
-            <.live_file_input upload={@uploads.huddl_image} class="hidden" />
-            <label for={@uploads.huddl_image.ref} class="cursor-pointer flex flex-col items-center">
-              <.icon name="hero-photo" class="w-8 h-8 text-base-content/50 mb-2" />
-              <span class="text-sm text-base-content/50">
-                Click to upload or drag and drop
-              </span>
-              <span class="text-xs text-base-content/50 mt-1">
-                JPG, PNG, or WebP (max 5MB)
-              </span>
-            </label>
-          </div>
-
-          <%= if @image_error do %>
-            <p class="text-error text-sm mt-2">{@image_error}</p>
-          <% end %>
-
-          <%= if @pending_preview_url do %>
-            <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
-              <img src={@pending_preview_url} class="w-32 aspect-video object-cover" alt="Preview" />
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-success flex items-center gap-1">
-                  <.icon name="hero-check-circle" class="w-4 h-4" /> Image uploaded
-                </p>
-              </div>
-              <button
-                type="button"
-                phx-click="cancel_pending_image"
-                class="p-1 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
+              <div
+                class="border border-dashed border-base-300 p-4 text-center hover:border-primary transition-colors"
+                phx-drop-target={@uploads.huddl_image.ref}
               >
-                <.icon name="hero-x-mark" class="w-4 h-4" />
-              </button>
-            </div>
-          <% else %>
-            <%= for entry <- @uploads.huddl_image.entries do %>
-              <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
-                <.live_img_preview entry={entry} class="w-32 aspect-video object-cover" />
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium truncate">{entry.client_name}</p>
-                  <div class="w-full bg-base-300 rounded-full h-1.5 mt-1">
-                    <div
-                      class="bg-primary h-1.5 rounded-full transition-all"
-                      style={"width: #{entry.progress}%"}
-                    >
-                    </div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  phx-click="cancel_image_upload"
-                  phx-value-ref={entry.ref}
-                  class="p-1 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
+                <.live_file_input upload={@uploads.huddl_image} class="hidden" />
+                <label
+                  for={@uploads.huddl_image.ref}
+                  class="cursor-pointer flex flex-col items-center"
                 >
-                  <.icon name="hero-x-mark" class="w-4 h-4" />
-                </button>
+                  <.icon name="hero-photo" class="w-8 h-8 text-base-content/50 mb-2" />
+                  <span class="text-sm text-base-content/50">
+                    Click to upload or drag and drop
+                  </span>
+                  <span class="text-xs text-base-content/50 mt-1">
+                    JPG, PNG, or WebP (max 5MB)
+                  </span>
+                </label>
               </div>
 
-              <%= for err <- upload_errors(@uploads.huddl_image, entry) do %>
-                <p class="text-error text-sm mt-1">{upload_error_to_string(err)}</p>
+              <%= if @image_error do %>
+                <p class="text-error text-sm mt-2">{@image_error}</p>
               <% end %>
+
+              <%= if @pending_preview_url do %>
+                <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
+                  <img
+                    src={@pending_preview_url}
+                    class="w-32 aspect-video object-cover"
+                    alt="Preview"
+                  />
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-success flex items-center gap-1">
+                      <.icon name="hero-check-circle" class="w-4 h-4" /> Image uploaded
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    phx-click="cancel_pending_image"
+                    class="p-1 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
+                  >
+                    <.icon name="hero-x-mark" class="w-4 h-4" />
+                  </button>
+                </div>
+              <% else %>
+                <%= for entry <- @uploads.huddl_image.entries do %>
+                  <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
+                    <.live_img_preview entry={entry} class="w-32 aspect-video object-cover" />
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium truncate">{entry.client_name}</p>
+                      <div class="w-full bg-base-300 rounded-full h-1.5 mt-1">
+                        <div
+                          class="bg-primary h-1.5 rounded-full transition-all"
+                          style={"width: #{entry.progress}%"}
+                        >
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      phx-click="cancel_image_upload"
+                      phx-value-ref={entry.ref}
+                      class="p-1 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
+                    >
+                      <.icon name="hero-x-mark" class="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <%= for err <- upload_errors(@uploads.huddl_image, entry) do %>
+                    <p class="text-error text-sm mt-1">{upload_error_to_string(err)}</p>
+                  <% end %>
+                <% end %>
+              <% end %>
+
+              <%= for err <- upload_errors(@uploads.huddl_image) do %>
+                <p class="text-error text-sm mt-2">{upload_error_to_string(err)}</p>
+              <% end %>
+            </div>
+          </:image_section>
+
+          <:recurring_section>
+            <.input field={@form[:is_recurring]} type="checkbox" label="Make this a recurring event" />
+
+            <%= if @form[:is_recurring].value do %>
+              <div class="grid gap-4 sm:grid-cols-2">
+                <.input
+                  field={@form[:frequency]}
+                  type="select"
+                  label="Frequency"
+                  options={[
+                    {"Weekly", "weekly"},
+                    {"Monthly", "monthly"}
+                  ]}
+                  required
+                />
+                <.input field={@form[:repeat_until]} type="date" label="Repeat Until" required />
+              </div>
             <% end %>
-          <% end %>
+          </:recurring_section>
 
-          <%= for err <- upload_errors(@uploads.huddl_image) do %>
-            <p class="text-error text-sm mt-2">{upload_error_to_string(err)}</p>
-          <% end %>
-        </div>
-
-        <div class="grid gap-4 sm:grid-cols-2">
-          <.date_picker field={@form[:date]} label="Date" />
-          <.time_picker field={@form[:start_time]} label="Start Time" />
-        </div>
-
-        <.duration_picker field={@form[:duration_minutes]} label="Duration" />
-
-        <%= if @calculated_end_time do %>
-          <div class="border border-primary/20 p-3 bg-primary/5 flex items-center gap-2 text-sm">
-            <.icon name="hero-clock" class="h-5 w-5" />
-            <span>Ends at: {@calculated_end_time}</span>
-          </div>
-        <% end %>
-
-        <.input field={@form[:is_recurring]} type="checkbox" label="Make this a recurring event" />
-
-        <%= if @form[:is_recurring].value do %>
-          <div class="grid gap-4 sm:grid-cols-2">
-            <.input
-              field={@form[:frequency]}
-              type="select"
-              label="Frequency"
-              options={[
-                {"Weekly", "weekly"},
-                {"Monthly", "monthly"}
-              ]}
-              required
-            />
-            <.input field={@form[:repeat_until]} type="date" label="Repeat Until" required />
-          </div>
-        <% end %>
-
-        <.input
-          field={@form[:event_type]}
-          type="select"
-          label="Event Type"
-          options={[
-            {"In-Person", "in_person"},
-            {"Virtual", "virtual"},
-            {"Hybrid (Both In-Person and Virtual)", "hybrid"}
-          ]}
-          required
-        />
-
-        <%= if @show_physical_location do %>
-          <.input
-            field={@form[:physical_location]}
-            type="text"
-            label="Physical Location"
-            placeholder="e.g., 123 Main St, City, State"
-          />
-        <% end %>
-
-        <%= if @show_virtual_link do %>
-          <.input
-            field={@form[:virtual_link]}
-            type="text"
-            label="Virtual Meeting Link"
-            placeholder="e.g., https://zoom.us/j/123456789"
-          />
-        <% end %>
-
-        <%= if @group.is_public do %>
-          <.input
-            field={@form[:is_private]}
-            type="checkbox"
-            label="Make this a private event (only visible to group members)"
-          />
-        <% else %>
-          <p class="text-sm text-base-content/60">
-            <.icon name="hero-lock-closed" class="h-4 w-4 inline" />
-            This will be a private event (private groups can only create private events)
-          </p>
-        <% end %>
-
-        <div class="flex gap-4">
-          <.button type="submit" phx-disable-with="Creating...">
-            Create Huddl
-          </.button>
-          <.link
-            navigate={~p"/groups/#{@group.slug}"}
-            class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
-          >
-            Cancel
-          </.link>
-        </div>
+          <:actions>
+            <div class="flex gap-4">
+              <.button type="submit" phx-disable-with="Creating...">
+                Create Huddl
+              </.button>
+              <.link
+                navigate={~p"/groups/#{@group.slug}"}
+                class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
+              >
+                Cancel
+              </.link>
+            </div>
+          </:actions>
+        </.huddl_form_fields>
       </.form>
     </Layouts.app>
     """
@@ -376,38 +344,26 @@ defmodule HuddlzWeb.HuddlLive.New do
 
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
-    event_type = Map.get(params, "event_type", "in_person")
-
-    # Update visibility based on event type
     socket =
       socket
-      |> assign(:show_physical_location, event_type in ["in_person", "hybrid"])
-      |> assign(:show_virtual_link, event_type in ["virtual", "hybrid"])
+      |> update_event_type_visibility(params)
+      |> update_calculated_end_time(params)
 
-    # Calculate end time if we have date, time, and duration
+    # Address autocomplete
+    location_text = Map.get(params, "physical_location", "")
+
     socket =
-      case {params["date"], params["start_time"], params["duration_minutes"]} do
-        {date_str, time_str, duration_str}
-        when date_str != "" and time_str != "" and duration_str != "" ->
-          with {:ok, date} <- Date.from_iso8601(date_str),
-               {:ok, time} <- parse_time(time_str),
-               {duration, ""} <- Integer.parse(duration_str) do
-            assign(socket, :calculated_end_time, calculate_end_time(date, time, duration))
-          else
-            _ -> socket
-          end
-
-        _ ->
-          socket
+      if socket.assigns.show_physical_location do
+        maybe_autocomplete_address(socket, location_text)
+      else
+        socket
       end
 
     form = AshPhoenix.Form.validate(socket.assigns.form, params)
-
     {:noreply, assign(socket, :form, to_form(form))}
   end
 
   def handle_event("save", %{"form" => params}, socket) do
-    # Set is_private to true for private groups
     params =
       if socket.assigns.group.is_public do
         params
@@ -415,7 +371,6 @@ defmodule HuddlzWeb.HuddlLive.New do
         Map.put(params, "is_private", "true")
       end
 
-    # Add group_id and creator_id to params
     params =
       params
       |> Map.put("group_id", socket.assigns.group.id)
@@ -426,7 +381,6 @@ defmodule HuddlzWeb.HuddlLive.New do
            actor: socket.assigns.current_user
          ) do
       {:ok, huddl} ->
-        # Assign pending image to the new huddl if one was uploaded
         assign_pending_image_to_huddl(socket, huddl)
 
         {:noreply,
@@ -458,45 +412,6 @@ defmodule HuddlzWeb.HuddlLive.New do
       {:ok, nil} -> {:error, :not_found}
       {:ok, group} -> {:ok, group}
       {:error, _} -> {:error, :not_found}
-    end
-  end
-
-  defp calculate_end_time(date, time, duration_minutes) do
-    case DateTime.new(date, time, "Etc/UTC") do
-      {:ok, starts_at} ->
-        ends_at = DateTime.add(starts_at, duration_minutes, :minute)
-
-        # Format the end time nicely
-        if Date.compare(DateTime.to_date(ends_at), date) == :eq do
-          # Same day
-          Calendar.strftime(ends_at, "%I:%M %p")
-        else
-          # Next day
-          Calendar.strftime(ends_at, "%I:%M %p (next day)")
-        end
-
-      _ ->
-        nil
-    end
-  end
-
-  defp parse_time(time_str) do
-    # Parse time string in format HH:MM or HH:MM:SS
-    case String.split(time_str, ":") do
-      [hour_str, minute_str] ->
-        with {hour, ""} <- Integer.parse(hour_str),
-             {minute, ""} <- Integer.parse(minute_str) do
-          Time.new(hour, minute, 0)
-        end
-
-      [hour_str, minute_str, _second_str] ->
-        with {hour, ""} <- Integer.parse(hour_str),
-             {minute, ""} <- Integer.parse(minute_str) do
-          Time.new(hour, minute, 0)
-        end
-
-      _ ->
-        :error
     end
   end
 end

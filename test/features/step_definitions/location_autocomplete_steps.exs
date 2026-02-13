@@ -45,7 +45,7 @@ defmodule LocationAutocompleteSteps do
   defp setup_autocomplete_stub(text) do
     case text do
       "aus" ->
-        stub(Huddlz.MockPlaces, :autocomplete, fn _, _token ->
+        stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
           {:ok,
            [
              %{
@@ -58,7 +58,7 @@ defmodule LocationAutocompleteSteps do
         end)
 
       "saint" ->
-        stub(Huddlz.MockPlaces, :autocomplete, fn _, _token ->
+        stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
           {:ok,
            [
              %{
@@ -71,7 +71,7 @@ defmodule LocationAutocompleteSteps do
         end)
 
       _ ->
-        stub(Huddlz.MockPlaces, :autocomplete, fn _, _token -> {:ok, []} end)
+        stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts -> {:ok, []} end)
     end
   end
 

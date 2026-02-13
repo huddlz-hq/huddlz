@@ -13,8 +13,8 @@ defmodule Huddlz.Places do
 
   @type coordinates :: %{latitude: float(), longitude: float()}
 
-  @doc "Autocomplete a location query, returning matching city suggestions."
-  @callback autocomplete(query :: String.t(), session_token :: String.t()) ::
+  @doc "Autocomplete a location query, returning matching place suggestions."
+  @callback autocomplete(query :: String.t(), session_token :: String.t(), opts :: keyword()) ::
               {:ok, [suggestion()]} | {:error, term()}
 
   @doc "Get coordinates for a place by its place_id."
@@ -23,7 +23,8 @@ defmodule Huddlz.Places do
 
   @adapter Application.compile_env(:huddlz, [:places, :adapter], Huddlz.Places.Google)
 
-  def autocomplete(query, session_token), do: @adapter.autocomplete(query, session_token)
+  def autocomplete(query, session_token, opts \\ []),
+    do: @adapter.autocomplete(query, session_token, opts)
 
   def place_details(place_id, session_token), do: @adapter.place_details(place_id, session_token)
 

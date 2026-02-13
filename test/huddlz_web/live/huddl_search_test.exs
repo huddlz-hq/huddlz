@@ -266,7 +266,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
   describe "location autocomplete" do
     test "shows suggestions when typing a location", %{conn: conn} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token ->
+      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token, _opts ->
         {:ok,
          [
            %{
@@ -285,7 +285,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
 
     test "selecting a suggestion activates location filter", %{conn: conn} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token ->
+      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token, _opts ->
         {:ok,
          [
            %{
@@ -316,7 +316,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
 
     test "shows no locations found for unmatched queries", %{conn: conn} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn "xyzabc", _token ->
+      stub(Huddlz.MockPlaces, :autocomplete, fn "xyzabc", _token, _opts ->
         {:ok, []}
       end)
 
@@ -327,7 +327,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
 
     test "handles autocomplete API errors gracefully", %{conn: conn} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token ->
+      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
         {:error, {:request_failed, :timeout}}
       end)
 
@@ -338,7 +338,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
 
     test "handles place details errors gracefully", %{conn: conn} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token ->
+      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token, _opts ->
         {:ok,
          [
            %{
@@ -362,7 +362,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
 
     test "clearing filters clears location", %{conn: conn} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token ->
+      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token, _opts ->
         {:ok,
          [
            %{
@@ -388,7 +388,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
 
     test "still shows huddlz when autocomplete returns no results", %{conn: conn} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token ->
+      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
         {:ok, []}
       end)
 
