@@ -5,11 +5,14 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
   use Ash.Resource.Preparation
   require Ash.Query
 
+  @meters_per_mile 1609.344
+
   def prepare(query, _opts, _context) do
     query
     |> apply_text_filter()
     |> apply_date_filter()
     |> apply_event_type_filter()
+    |> apply_location_filter()
   end
 
   defp apply_text_filter(query) do
@@ -60,6 +63,30 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
     case Ash.Query.get_argument(query, :event_type) do
       nil -> query
       event_type -> Ash.Query.filter(query, event_type == ^event_type)
+    end
+  end
+
+  defp apply_location_filter(query) do
+    lat = Ash.Query.get_argument(query, :search_latitude)
+    lng = Ash.Query.get_argument(query, :search_longitude)
+    distance_miles = Ash.Query.get_argument(query, :distance_miles)
+
+    if lat && lng do
+      distance_meters = distance_miles * @meters_per_mile
+
+      Ash.Query.filter(
+        query,
+        fragment(
+          "ST_DWithin(ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?)",
+          longitude,
+          latitude,
+          ^lng,
+          ^lat,
+          ^distance_meters
+        )
+      )
+    else
+      query
     end
   end
 end

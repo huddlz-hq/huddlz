@@ -1,6 +1,10 @@
 defmodule HuddlzWeb.HuddlSearchTest do
   use HuddlzWeb.ConnCase, async: true
 
+  import Mox
+
+  setup :verify_on_exit!
+
   setup do
     user = generate(user(role: :user))
     group = generate(group(owner_id: user.id, is_public: true, actor: user))
@@ -257,6 +261,142 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> login(other_user)
       |> visit("/")
       |> refute_has("h3", text: "Private Event")
+    end
+  end
+
+  describe "location autocomplete" do
+    test "shows suggestions when typing a location", %{conn: conn} do
+      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token, _opts ->
+        {:ok,
+         [
+           %{
+             place_id: "p1",
+             display_text: "Austin, TX, USA",
+             main_text: "Austin",
+             secondary_text: "TX, USA"
+           }
+         ]}
+      end)
+
+      conn
+      |> visit("/")
+      |> fill_in("Location", with: "aus")
+      |> assert_has("button", text: "Austin")
+    end
+
+    test "selecting a suggestion activates location filter", %{conn: conn} do
+      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token, _opts ->
+        {:ok,
+         [
+           %{
+             place_id: "p1",
+             display_text: "Austin, TX, USA",
+             main_text: "Austin",
+             secondary_text: "TX, USA"
+           }
+         ]}
+      end)
+
+      stub(Huddlz.MockPlaces, :place_details, fn "p1", _token ->
+        {:ok, %{latitude: 30.27, longitude: -97.74}}
+      end)
+
+      conn
+      |> visit("/")
+      |> fill_in("Location", with: "aus")
+      |> click_button("Austin")
+      |> assert_has("span", text: "Austin, TX, USA")
+    end
+
+    test "no suggestions for short queries", %{conn: conn} do
+      conn
+      |> visit("/")
+      |> fill_in("Location", with: "a")
+      |> refute_has("button[phx-click='select_location']")
+    end
+
+    test "shows no locations found for unmatched queries", %{conn: conn} do
+      stub(Huddlz.MockPlaces, :autocomplete, fn "xyzabc", _token, _opts ->
+        {:ok, []}
+      end)
+
+      conn
+      |> visit("/")
+      |> fill_in("Location", with: "xyzabc")
+      |> assert_has("p", text: "No locations found")
+    end
+
+    test "handles autocomplete API errors gracefully", %{conn: conn} do
+      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
+        {:error, {:request_failed, :timeout}}
+      end)
+
+      conn
+      |> visit("/")
+      |> fill_in("Location", with: "austin")
+      |> assert_has("p", text: "Location search is currently unavailable")
+    end
+
+    test "handles place details errors gracefully", %{conn: conn} do
+      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token, _opts ->
+        {:ok,
+         [
+           %{
+             place_id: "p1",
+             display_text: "Austin, TX, USA",
+             main_text: "Austin",
+             secondary_text: "TX, USA"
+           }
+         ]}
+      end)
+
+      stub(Huddlz.MockPlaces, :place_details, fn "p1", _token ->
+        {:error, {:request_failed, :timeout}}
+      end)
+
+      conn
+      |> visit("/")
+      |> fill_in("Location", with: "aus")
+      |> click_button("Austin")
+      |> assert_has("p", text: "Location search is currently unavailable")
+    end
+
+    test "clearing filters clears location", %{conn: conn} do
+      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token, _opts ->
+        {:ok,
+         [
+           %{
+             place_id: "p1",
+             display_text: "Austin, TX, USA",
+             main_text: "Austin",
+             secondary_text: "TX, USA"
+           }
+         ]}
+      end)
+
+      stub(Huddlz.MockPlaces, :place_details, fn "p1", _token ->
+        {:ok, %{latitude: 30.27, longitude: -97.74}}
+      end)
+
+      conn
+      |> visit("/")
+      |> fill_in("Location", with: "aus")
+      |> click_button("Austin")
+      |> assert_has("span", text: "Austin, TX, USA")
+      |> click_button("Clear all")
+      |> refute_has("span", text: "Austin, TX, USA")
+    end
+
+    test "still shows huddlz when autocomplete returns no results", %{conn: conn} do
+      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
+        {:ok, []}
+      end)
+
+      conn
+      |> visit("/")
+      |> fill_in("Location", with: "xyzabc")
+      |> assert_has("h3", text: "Morning Yoga Session")
+      |> assert_has("h3", text: "Virtual Book Club")
     end
   end
 end

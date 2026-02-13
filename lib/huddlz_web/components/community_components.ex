@@ -118,6 +118,7 @@ defmodule HuddlzWeb.CommunityComponents do
   """
   attr :huddl, :map, required: true
   attr :show_group, :boolean, default: false
+  attr :distance, :float, default: nil
   attr :class, :string, default: nil
   attr :rest, :global
 
@@ -184,6 +185,12 @@ defmodule HuddlzWeb.CommunityComponents do
             <span class="flex items-center gap-1">
               <.icon name="hero-user-group" class="h-3.5 w-3.5" />
               {@huddl.rsvp_count} attending
+            </span>
+          <% end %>
+          <%= if @distance do %>
+            <span class="flex items-center gap-1 text-primary/70">
+              <.icon name="hero-map-pin" class="h-3.5 w-3.5" />
+              {format_distance(@distance)}
             </span>
           <% end %>
         </div>
@@ -326,4 +333,7 @@ defmodule HuddlzWeb.CommunityComponents do
   defp format_datetime(datetime) do
     Calendar.strftime(datetime, "%b %d, %Y · %I:%M %p")
   end
+
+  defp format_distance(miles) when miles < 1, do: "< 1 mi"
+  defp format_distance(miles), do: "#{Float.round(miles * 1.0, 1)} mi"
 end

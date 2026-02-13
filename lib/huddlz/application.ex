@@ -21,7 +21,9 @@ defmodule Huddlz.Application do
       # {Huddlz.Worker, arg},
       # Start to serve requests, typically the last entry
       HuddlzWeb.Endpoint,
-      {AshAuthentication.Supervisor, [otp_app: :huddlz]}
+      {AshAuthentication.Supervisor, [otp_app: :huddlz]},
+      {Absinthe.Subscription, HuddlzWeb.Endpoint},
+      AshGraphql.Subscription.Batcher
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

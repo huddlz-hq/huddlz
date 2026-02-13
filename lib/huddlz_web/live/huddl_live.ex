@@ -13,67 +13,58 @@ defmodule HuddlzWeb.HuddlLive do
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
 
   def mount(_params, _session, socket) do
-    # Load upcoming huddls (includes in-progress) with pagination
-    page =
-      Communities.search_huddlz(nil, :upcoming, nil,
-        actor: socket.assigns[:current_user],
-        page: [limit: 20, offset: 0, count: true]
-      )
+    user = socket.assigns[:current_user]
 
-    huddls =
-      case page do
-        {:ok, %{results: results}} ->
-          Ash.load!(
-            results,
-            [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group],
-            actor: socket.assigns[:current_user]
-          )
-
-        _ ->
-          []
+    # Pre-fill location from user profile if available
+    {location_text, location_lat, location_lng} =
+      if user && user.home_location do
+        {user.home_location, user.home_latitude, user.home_longitude}
+      else
+        {nil, nil, nil}
       end
 
-    groups = list_public_groups()
+    location_active = not is_nil(location_lat) and not is_nil(location_lng)
 
-    {:ok,
-     assign(socket,
-       huddls: huddls,
-       groups: groups,
-       page_info: extract_page_info(page),
-       search_query: nil,
-       event_type_filter: nil,
-       date_filter: "upcoming"
-     )}
+    socket =
+      assign(socket,
+        search_query: nil,
+        event_type_filter: nil,
+        date_filter: "upcoming",
+        location_text: location_text,
+        location_lat: location_lat,
+        location_lng: location_lng,
+        location_active: location_active,
+        distance_miles: 25,
+        location_suggestions: [],
+        show_location_suggestions: false,
+        location_loading: false,
+        location_error: nil,
+        location_session_token: Ecto.UUID.generate(),
+        groups: list_public_groups()
+      )
+
+    socket = perform_search(socket)
+
+    {:ok, socket}
   end
 
-  def handle_event("search", params, socket) do
+  def handle_event("filter_change", params, socket) do
     query = if params["query"] != "", do: params["query"], else: nil
     event_type = if params["event_type"] != "", do: params["event_type"], else: nil
     date_filter = params["date_filter"] || "upcoming"
+    location_text = params["location"] || ""
+    distance_miles = parse_distance(params["distance_miles"])
 
-    # Convert string values to atoms for the search action
-    event_type_atom =
-      if event_type && event_type != "", do: String.to_existing_atom(event_type), else: nil
+    # Only trigger autocomplete when the location text actually changed
+    current_location = socket.assigns.location_text || ""
 
-    date_filter_atom = String.to_existing_atom(date_filter)
-
-    page =
-      Communities.search_huddlz(query, date_filter_atom, event_type_atom,
-        actor: socket.assigns[:current_user],
-        page: [limit: 20, offset: 0, count: true]
-      )
-
-    huddls =
-      case page do
-        {:ok, %{results: results}} ->
-          Ash.load!(
-            results,
-            [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group],
-            actor: socket.assigns[:current_user]
-          )
-
-        _ ->
-          []
+    socket =
+      if location_text != current_location do
+        socket
+        |> assign(location_active: false, location_lat: nil, location_lng: nil)
+        |> maybe_autocomplete_location(location_text)
+      else
+        socket
       end
 
     socket =
@@ -81,91 +72,232 @@ defmodule HuddlzWeb.HuddlLive do
       |> assign(search_query: query)
       |> assign(event_type_filter: event_type)
       |> assign(date_filter: date_filter)
-      |> assign(huddls: huddls)
-      |> assign(page_info: extract_page_info(page))
+      |> assign(distance_miles: distance_miles)
+      |> perform_search()
 
     {:noreply, socket}
   end
 
-  def handle_event("clear_filters", _params, socket) do
-    page =
-      Communities.search_huddlz(nil, :upcoming, nil,
-        actor: socket.assigns[:current_user],
-        page: [limit: 20, offset: 0, count: true]
-      )
-
-    huddls =
-      case page do
-        {:ok, %{results: results}} ->
-          Ash.load!(
-            results,
-            [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group],
-            actor: socket.assigns[:current_user]
-          )
-
-        _ ->
-          []
-      end
+  def handle_event("search", params, socket) do
+    query = if params["query"] != "", do: params["query"], else: nil
+    event_type = if params["event_type"] != "", do: params["event_type"], else: nil
+    date_filter = params["date_filter"] || "upcoming"
+    distance_miles = parse_distance(params["distance_miles"])
 
     socket =
       socket
-      |> assign(search_query: nil)
-      |> assign(event_type_filter: nil)
-      |> assign(date_filter: "upcoming")
-      |> assign(huddls: huddls)
-      |> assign(page_info: extract_page_info(page))
+      |> assign(search_query: query)
+      |> assign(event_type_filter: event_type)
+      |> assign(date_filter: date_filter)
+      |> assign(distance_miles: distance_miles)
+      |> assign(show_location_suggestions: false)
+      |> perform_search()
+
+    {:noreply, socket}
+  end
+
+  def handle_event(
+        "select_location",
+        %{"place-id" => place_id, "display-text" => display_text},
+        socket
+      ) do
+    case Huddlz.Places.place_details(place_id, socket.assigns.location_session_token) do
+      {:ok, %{latitude: lat, longitude: lng}} ->
+        socket =
+          socket
+          |> assign(
+            location_text: display_text,
+            location_lat: lat,
+            location_lng: lng,
+            location_active: true,
+            location_suggestions: [],
+            show_location_suggestions: false,
+            location_loading: false,
+            location_error: nil,
+            location_session_token: Ecto.UUID.generate()
+          )
+          |> perform_search()
+
+        {:noreply, socket}
+
+      {:error, reason} ->
+        {:noreply,
+         assign(socket,
+           location_error: Huddlz.Places.error_message(reason),
+           location_suggestions: [],
+           show_location_suggestions: false,
+           location_loading: false
+         )}
+    end
+  end
+
+  def handle_event("dismiss_suggestions", _params, socket) do
+    {:noreply, assign(socket, show_location_suggestions: false)}
+  end
+
+  def handle_event("clear_filters", _params, socket) do
+    socket =
+      socket
+      |> assign(
+        search_query: nil,
+        event_type_filter: nil,
+        date_filter: "upcoming",
+        location_text: nil,
+        location_lat: nil,
+        location_lng: nil,
+        location_active: false,
+        distance_miles: 25,
+        location_suggestions: [],
+        show_location_suggestions: false,
+        location_loading: false,
+        location_error: nil,
+        location_session_token: Ecto.UUID.generate()
+      )
+      |> perform_search()
 
     {:noreply, socket}
   end
 
   def handle_event("change_page", %{"page" => page_str}, socket) do
     page_num = String.to_integer(page_str)
-    offset = (page_num - 1) * 20
+    socket = perform_search(socket, offset: (page_num - 1) * 20)
+    {:noreply, socket}
+  end
 
-    # Convert filter values to atoms
+  defp perform_search(socket, opts \\ []) do
+    offset = Keyword.get(opts, :offset, 0)
+
     event_type_atom =
       if socket.assigns.event_type_filter && socket.assigns.event_type_filter != "",
-        do: String.to_atom(socket.assigns.event_type_filter),
+        do: String.to_existing_atom(socket.assigns.event_type_filter),
         else: nil
 
-    date_filter_atom = String.to_atom(socket.assigns.date_filter)
+    date_filter_atom = String.to_existing_atom(socket.assigns.date_filter)
+
+    {search_lat, search_lng, distance} =
+      if socket.assigns.location_active do
+        {socket.assigns.location_lat, socket.assigns.location_lng, socket.assigns.distance_miles}
+      else
+        {nil, nil, nil}
+      end
 
     page =
       Communities.search_huddlz(
         socket.assigns.search_query,
         date_filter_atom,
         event_type_atom,
+        search_lat,
+        search_lng,
+        distance,
         actor: socket.assigns[:current_user],
         page: [limit: 20, offset: offset, count: true]
       )
 
-    huddls =
-      case page do
-        {:ok, %{results: results}} ->
-          Ash.load!(
-            results,
-            [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group],
-            actor: socket.assigns[:current_user]
-          )
+    {huddls, distances} = load_results_with_distances(page, socket)
 
-        _ ->
-          []
-      end
+    page_info = extract_page_info(page)
 
-    socket =
-      socket
-      |> assign(huddls: huddls)
-      |> assign(page_info: Map.put(extract_page_info(page), :current_page, page_num))
+    page_info =
+      if offset > 0, do: Map.put(page_info, :current_page, div(offset, 20) + 1), else: page_info
 
-    {:noreply, socket}
+    socket
+    |> assign(huddls: Enum.zip(huddls, distances))
+    |> assign(page_info: page_info)
   end
+
+  defp maybe_autocomplete_location(socket, "") do
+    assign(socket,
+      location_text: nil,
+      location_suggestions: [],
+      show_location_suggestions: false,
+      location_loading: false,
+      location_error: nil
+    )
+  end
+
+  defp maybe_autocomplete_location(socket, location_text) when byte_size(location_text) < 2 do
+    assign(socket,
+      location_text: location_text,
+      location_suggestions: [],
+      show_location_suggestions: false,
+      location_loading: false,
+      location_error: nil
+    )
+  end
+
+  defp maybe_autocomplete_location(socket, location_text) do
+    session_token = socket.assigns.location_session_token
+
+    socket
+    |> assign(location_text: location_text, location_loading: true)
+    |> start_async(:autocomplete_location, fn ->
+      Huddlz.Places.autocomplete(location_text, session_token)
+    end)
+  end
+
+  def handle_async(:autocomplete_location, {:ok, {:ok, suggestions}}, socket) do
+    {:noreply,
+     assign(socket,
+       location_suggestions: suggestions,
+       show_location_suggestions: true,
+       location_loading: false,
+       location_error: nil
+     )}
+  end
+
+  def handle_async(:autocomplete_location, {:ok, {:error, reason}}, socket) do
+    {:noreply,
+     assign(socket,
+       location_suggestions: [],
+       show_location_suggestions: false,
+       location_loading: false,
+       location_error: Huddlz.Places.error_message(reason)
+     )}
+  end
+
+  def handle_async(:autocomplete_location, {:exit, _reason}, socket) do
+    {:noreply, assign(socket, location_loading: false)}
+  end
+
+  defp load_results_with_distances({:ok, %{results: results}}, socket) do
+    loaded =
+      Ash.load!(
+        results,
+        [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group],
+        actor: socket.assigns[:current_user]
+      )
+
+    dists = compute_distances(loaded, socket)
+    {loaded, dists}
+  end
+
+  defp load_results_with_distances(_, _socket), do: {[], []}
+
+  defp compute_distances(huddls, %{assigns: %{location_active: false}}) do
+    List.duplicate(nil, length(huddls))
+  end
+
+  defp compute_distances(huddls, %{assigns: assigns}) do
+    origin = {assigns.location_lat, assigns.location_lng}
+
+    Enum.map(huddls, fn h ->
+      if h.latitude && h.longitude,
+        do: Huddlz.Geocoding.distance_miles(origin, {h.latitude, h.longitude}),
+        else: nil
+    end)
+  end
+
+  defp parse_distance(nil), do: 25
+  defp parse_distance(""), do: 25
+  defp parse_distance(val) when is_binary(val), do: String.to_integer(val)
+  defp parse_distance(val) when is_integer(val), do: val
 
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} current_user={@current_user}>
       <div>
         <div class="mb-8">
-          <form phx-change="search" phx-submit="search">
+          <form phx-change="filter_change" phx-submit="search">
             <div class="flex flex-wrap items-end gap-2">
               <div class="flex-grow min-w-[200px]">
                 <label for="search-query" class="sr-only">Search huddlz</label>
@@ -219,9 +351,40 @@ defmodule HuddlzWeb.HuddlLive do
                 Search
               </button>
             </div>
+            <div class="flex flex-wrap items-end gap-2 mt-2">
+              <div class="flex-grow min-w-[200px]">
+                <.location_autocomplete
+                  id="location-autocomplete"
+                  name="location"
+                  value={@location_text}
+                  label="Location"
+                  label_class="sr-only"
+                  placeholder="City, State"
+                  suggestions={@location_suggestions}
+                  show_suggestions={@show_location_suggestions}
+                  loading={@location_loading}
+                  error={@location_error}
+                />
+              </div>
+              <label for="distance-radius" class="sr-only">Distance</label>
+              <select
+                id="distance-radius"
+                name="distance_miles"
+                disabled={!@location_active}
+                class={[
+                  "h-12 px-3 border border-base-300 bg-base-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors",
+                  !@location_active && "opacity-50"
+                ]}
+              >
+                <option value="10" selected={@distance_miles == 10}>10 miles</option>
+                <option value="25" selected={@distance_miles == 25}>25 miles</option>
+                <option value="50" selected={@distance_miles == 50}>50 miles</option>
+                <option value="100" selected={@distance_miles == 100}>100 miles</option>
+              </select>
+            </div>
           </form>
 
-          <%= if @search_query || @event_type_filter || @date_filter != "upcoming" do %>
+          <%= if @search_query || @event_type_filter || @date_filter != "upcoming" || @location_active do %>
             <div class="mt-3 flex flex-wrap items-center gap-2">
               <span class="text-sm text-base-content/40">Filters:</span>
               <%= if @search_query do %>
@@ -239,6 +402,15 @@ defmodule HuddlzWeb.HuddlLive do
                   Date: {humanize_filter(@date_filter)}
                 </span>
               <% end %>
+              <%= if @location_active do %>
+                <span
+                  data-testid="location-badge"
+                  class="text-xs px-2.5 py-1 bg-primary/10 text-primary font-medium inline-flex items-center gap-1"
+                >
+                  <.icon name="hero-map-pin" class="h-3 w-3" />
+                  {@location_text} · {@distance_miles} mi
+                </span>
+              <% end %>
               <button
                 phx-click="clear_filters"
                 class="text-xs text-primary hover:underline font-medium"
@@ -251,7 +423,7 @@ defmodule HuddlzWeb.HuddlLive do
 
         <div class="w-full">
           <%= if Enum.empty?(@huddls) do %>
-            <%= if @search_query || @event_type_filter || @date_filter != "upcoming" do %>
+            <%= if @search_query || @event_type_filter || @date_filter != "upcoming" || @location_active do %>
               <div class="border border-dashed border-base-300 p-12 text-center">
                 <p class="text-lg text-base-content/50">
                   No huddlz found matching your filters. Try adjusting your search criteria.
@@ -290,8 +462,8 @@ defmodule HuddlzWeb.HuddlLive do
                 else: "huddlz"}
             </div>
             <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              <%= for huddl <- @huddls do %>
-                <.huddl_card huddl={huddl} show_group={true} />
+              <%= for {huddl, distance} <- @huddls do %>
+                <.huddl_card huddl={huddl} show_group={true} distance={distance} />
               <% end %>
             </div>
 

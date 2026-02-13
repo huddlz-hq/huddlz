@@ -883,4 +883,73 @@ defmodule HuddlzWeb.CoreComponents do
     minute_str = minute |> Integer.to_string() |> String.pad_leading(2, "0")
     "#{hour_str}:#{minute_str}"
   end
+
+  @doc """
+  Renders a location autocomplete input with suggestions dropdown.
+  """
+  attr :id, :string, required: true
+  attr :name, :string, required: true
+  attr :value, :string, default: ""
+  attr :label, :string, default: nil
+  attr :label_class, :string, default: "mono-label text-primary/70 mb-1.5 block"
+  attr :placeholder, :string, default: "Search for a city..."
+  attr :suggestions, :list, default: []
+  attr :show_suggestions, :boolean, default: false
+  attr :loading, :boolean, default: false
+  attr :error, :string, default: nil
+
+  def location_autocomplete(assigns) do
+    ~H"""
+    <div class="relative" id={@id} phx-click-away="dismiss_suggestions">
+      <label :if={@label} for={"#{@id}-input"} class={@label_class}>
+        {@label}
+      </label>
+      <div class="relative">
+        <.icon
+          name="hero-map-pin"
+          class="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40"
+        />
+        <input
+          type="text"
+          id={"#{@id}-input"}
+          name={@name}
+          value={@value}
+          placeholder={@placeholder}
+          phx-debounce="300"
+          autocomplete="off"
+          data-testid="location-input"
+          class="w-full h-10 pl-6 border-0 border-b border-base-300 bg-transparent focus:border-primary focus:ring-0 focus:outline-none text-base-content text-sm"
+        />
+        <.icon
+          :if={@loading}
+          name="hero-arrow-path"
+          class="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40 animate-spin"
+        />
+      </div>
+      <div
+        :if={@show_suggestions && @suggestions != []}
+        class="absolute z-50 w-full mt-1 border border-base-300 bg-base-200 max-h-60 overflow-y-auto"
+      >
+        <button
+          :for={s <- @suggestions}
+          type="button"
+          phx-click="select_location"
+          phx-value-place-id={s.place_id}
+          phx-value-display-text={s.display_text}
+          class="w-full text-left px-4 py-3 hover:bg-primary/10 border-b border-base-300 last:border-b-0 transition-colors"
+        >
+          <span class="font-medium text-base-content">{s.main_text}</span>
+          <span class="text-sm text-base-content/50 ml-1">{s.secondary_text}</span>
+        </button>
+      </div>
+      <p
+        :if={@show_suggestions && @suggestions == [] && !@loading}
+        class="absolute z-50 w-full mt-1 px-4 py-3 border border-base-300 bg-base-200 text-sm text-base-content/50"
+      >
+        No locations found
+      </p>
+      <p :if={@error} class="mt-1 text-sm text-error">{@error}</p>
+    </div>
+    """
+  end
 end

@@ -13,7 +13,7 @@ defmodule HuddlzWeb.LiveUserAuth do
   # on_mount {HuddlzWeb.LiveUserAuth, :current_user}
   def on_mount(:current_user, _params, session, socket) do
     socket = LiveSession.assign_new_resources(socket, session)
-    {:cont, maybe_load_profile_picture(socket)}
+    {:cont, maybe_load_user_details(socket)}
   end
 
   def on_mount(:live_user_optional, _params, _session, socket) do
@@ -50,17 +50,21 @@ defmodule HuddlzWeb.LiveUserAuth do
     end
   end
 
-  def on_mount(:load_profile_picture, _params, _session, socket) do
-    {:cont, maybe_load_profile_picture(socket)}
+  def on_mount(:load_user_details, _params, _session, socket) do
+    {:cont, maybe_load_user_details(socket)}
   end
 
-  defp maybe_load_profile_picture(%{assigns: %{current_user: user}} = socket)
+  defp maybe_load_user_details(%{assigns: %{current_user: user}} = socket)
        when not is_nil(user) do
-    case Ash.load(user, [:current_profile_picture_url], actor: user) do
+    case Ash.load(
+           user,
+           [:current_profile_picture_url, :home_location, :home_latitude, :home_longitude],
+           actor: user
+         ) do
       {:ok, loaded_user} -> assign(socket, :current_user, loaded_user)
       _ -> socket
     end
   end
 
-  defp maybe_load_profile_picture(socket), do: socket
+  defp maybe_load_user_details(socket), do: socket
 end

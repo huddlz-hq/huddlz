@@ -40,7 +40,6 @@ defmodule Huddlz.MixProject do
 
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(:dev), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
   # Specifies your project dependencies.
@@ -48,6 +47,10 @@ defmodule Huddlz.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:absinthe_phoenix, "~> 2.0"},
+      {:open_api_spex, "~> 3.0"},
+      {:ash_graphql, "~> 1.0"},
+      {:ash_json_api, "~> 1.0"},
       {:oban, "~> 2.0"},
       {:ash_oban, "~> 0.6"},
       {:usage_rules, "~> 0.1", only: [:dev]},
@@ -91,7 +94,8 @@ defmodule Huddlz.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
-      {:cucumber, "~> 0.8.0", only: [:dev, :test]},
+      {:cucumber, "~> 0.9.0", only: [:dev, :test]},
+      {:mox, "~> 1.0", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:phoenix_test, "~> 0.9.0", only: :test},
       {:slugify, "~> 1.3"},

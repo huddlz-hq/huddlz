@@ -7,6 +7,16 @@
 # General application configuration
 import Config
 
+config :ash_graphql, authorize_update_destroy_with_error?: true
+
+config :mime,
+  extensions: %{"json" => "application/vnd.api+json"},
+  types: %{"application/vnd.api+json" => ["json"]}
+
+config :ash_json_api,
+  show_public_calculations_when_loaded?: false,
+  authorize_update_destroy_with_error?: true
+
 config :ash_oban, pro?: false
 
 config :huddlz, Oban,
@@ -37,6 +47,8 @@ config :spark,
     remove_parens?: true,
     "Ash.Resource": [
       section_order: [
+        :graphql,
+        :json_api,
         :authentication,
         :tokens,
         :postgres,
@@ -56,13 +68,29 @@ config :spark,
         :identities
       ]
     ],
-    "Ash.Domain": [section_order: [:resources, :policies, :authorization, :domain, :execution]]
+    "Ash.Domain": [
+      section_order: [
+        :graphql,
+        :json_api,
+        :resources,
+        :policies,
+        :authorization,
+        :domain,
+        :execution
+      ]
+    ]
   ]
 
 config :huddlz,
   ecto_repos: [Huddlz.Repo],
   generators: [timestamp_type: :utc_datetime],
   ash_domains: [Huddlz.Accounts, Huddlz.Communities]
+
+# Geocoding adapter (compile-time)
+config :huddlz, :geocoding, adapter: Huddlz.Geocoding.Google
+
+# Places autocomplete adapter (compile-time)
+config :huddlz, :places, adapter: Huddlz.Places.Google
 
 # Configures the endpoint
 config :huddlz, HuddlzWeb.Endpoint,

@@ -88,6 +88,12 @@ config :huddlz, Huddlz.Mailer, mailer_opts
 # Storage Configuration (adapter set in compile-time configs)
 # =============================================================================
 
+# =============================================================================
+# Google Maps Configuration (geocoding)
+# =============================================================================
+
+config :huddlz, :google_maps, api_key: required!("GOOGLE_MAPS_API_KEY")
+
 if config_env() == :prod do
   required!("AWS_ACCESS_KEY_ID")
   required!("AWS_SECRET_ACCESS_KEY")

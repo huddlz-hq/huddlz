@@ -36,6 +36,10 @@ defmodule HuddlzWeb.ConnCase do
 
   setup tags do
     Huddlz.DataCase.setup_sandbox(tags)
+
+    Mox.stub_with(Huddlz.MockGeocoding, Huddlz.GeocodingStub)
+    Mox.stub_with(Huddlz.MockPlaces, Huddlz.PlacesStub)
+
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end
