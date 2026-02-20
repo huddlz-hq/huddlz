@@ -40,5 +40,5 @@ Feature: Huddl Listing
     When I visit the landing page
     And I type "aus" in the location field
     And I select "Austin" from the location suggestions
-    And I clear the search form
+    And I click the "Clear all" button
     Then the location filter should not be active

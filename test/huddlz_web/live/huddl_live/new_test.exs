@@ -3,6 +3,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
 
   import Huddlz.Generator
   import Mox
+  import Phoenix.LiveViewTest
 
   import Huddlz.Test.Helpers.Authentication, only: [login: 2]
 
@@ -242,8 +243,11 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> fill_in("Date", with: date)
         |> fill_in("Start Time", with: time)
         |> select("Duration", option: "2 hours")
-        |> fill_in("Physical Location", with: "123 Main St")
-        |> click_button("Create Huddl")
+
+      # Set physical location through autocomplete component
+      select_physical_location(session.view, "123 Main St")
+
+      session = click_button(session, "Create Huddl")
 
       # Should redirect to group page
       assert_path(session, ~p"/groups/#{group.slug}")
@@ -334,23 +338,41 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
 
       tomorrow = Date.utc_today() |> Date.add(1) |> Date.to_iso8601()
 
-      conn
-      |> login(owner)
-      |> visit(~p"/groups/#{group.slug}/huddlz/new")
-      |> fill_in("Title", with: "My New Huddl")
-      |> fill_in("Date", with: tomorrow)
-      |> fill_in("Start Time", with: "15:00")
-      |> select("Duration", option: "2 hours")
-      |> fill_in("Physical Location", with: "austin coffee")
-      |> click_button("Austin Coffee")
-      # Location should be populated
-      |> assert_has(
-        "input[name='form[physical_location]'][value='Austin Coffee, Austin, TX, USA']"
-      )
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/new")
+        |> fill_in("Title", with: "My New Huddl")
+        |> fill_in("Date", with: tomorrow)
+        |> fill_in("Start Time", with: "15:00")
+        |> select("Duration", option: "2 hours")
+
+      view = session.view
+
+      view
+      |> element("#address-autocomplete-input")
+      |> render_change(%{"address-autocomplete_search" => "austin coffee"})
+
+      render_async(view)
+
+      view |> element("[role='option']", "Austin Coffee") |> render_click()
+      render(view)
+
+      # Location should be in selected state
+      assert has_element?(
+               view,
+               "[data-testid='location-display']",
+               "Austin Coffee, Austin, TX, USA"
+             )
+
       # Other form fields must be preserved
-      |> assert_has("input[name='form[title]'][value='My New Huddl']")
-      |> assert_has("input[name='form[date]'][value='#{tomorrow}']")
-      |> assert_has("select[name='form[duration_minutes]'] option[value='120'][selected]")
+      assert has_element?(view, "input[name='form[title]'][value='My New Huddl']")
+      assert has_element?(view, "input[name='form[date]'][value='#{tomorrow}']")
+
+      assert has_element?(
+               view,
+               "select[name='form[duration_minutes]'] option[value='120'][selected]"
+             )
     end
 
     test "validates form on change", %{conn: conn, owner: owner, group: group} do
@@ -388,8 +410,10 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> fill_in("Date", with: date)
         |> fill_in("Start Time", with: "14:30")
         |> select("Duration", option: "1 hour")
-        |> fill_in("Physical Location", with: "123 Main St")
-        |> click_button("Create Huddl")
+
+      select_physical_location(session.view, "123 Main St")
+
+      session = click_button(session, "Create Huddl")
 
       # Should still be on the same page with error
       assert_path(session, ~p"/groups/#{group.slug}/huddlz/new")
@@ -415,8 +439,10 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         # Enter a time that's not on a 15-minute increment
         |> fill_in("Start Time", with: "09:47")
         |> select("Duration", option: "1 hour")
-        |> fill_in("Physical Location", with: "123 Main St")
-        |> click_button("Create Huddl")
+
+      select_physical_location(session.view, "123 Main St")
+
+      session = click_button(session, "Create Huddl")
 
       # Should redirect to group page (successful creation)
       assert_path(session, ~p"/groups/#{group.slug}")
@@ -443,7 +469,8 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> fill_in("Date", with: date)
         |> fill_in("Start Time", with: "15:00")
         |> select("Duration", option: "1.5 hours")
-        |> fill_in("Physical Location", with: "123 Main St")
+
+      select_physical_location(session.view, "123 Main St")
 
       # Check that end time is displayed on the form
       assert session.conn.resp_body =~ "Ends at:"
@@ -480,8 +507,10 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> fill_in("Date", with: date)
         |> fill_in("Start Time", with: "23:00")
         |> select("Duration", option: "6 hours")
-        |> fill_in("Physical Location", with: "123 Main St")
-        |> click_button("Create Huddl")
+
+      select_physical_location(session.view, "123 Main St")
+
+      session = click_button(session, "Create Huddl")
 
       # Should redirect to group page
       assert_path(session, ~p"/groups/#{group.slug}")
@@ -556,5 +585,31 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       refute session.conn.resp_body =~ "Create Huddl"
       refute_has(session, "a[href='/groups/#{group.slug}/huddlz/new']")
     end
+  end
+
+  # Helper to select a physical location through the autocomplete component
+  defp select_physical_location(view, text) do
+    stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
+      {:ok,
+       [
+         %{
+           place_id: "test-place",
+           display_text: text,
+           main_text: text,
+           secondary_text: ""
+         }
+       ]}
+    end)
+
+    search = String.slice(text, 0, 3)
+
+    view
+    |> element("#address-autocomplete-input")
+    |> render_change(%{"address-autocomplete_search" => search})
+
+    render_async(view)
+
+    view |> element("[role='option']", text) |> render_click()
+    render(view)
   end
 end

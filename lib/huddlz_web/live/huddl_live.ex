@@ -12,6 +12,7 @@ defmodule HuddlzWeb.HuddlLive do
   # Authentication is optional - show cards to all but require auth for joining
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
 
+  @impl true
   def mount(_params, _session, socket) do
     user = socket.assigns[:current_user]
 
@@ -35,11 +36,6 @@ defmodule HuddlzWeb.HuddlLive do
         location_lng: location_lng,
         location_active: location_active,
         distance_miles: 25,
-        location_suggestions: [],
-        show_location_suggestions: false,
-        location_loading: false,
-        location_error: nil,
-        location_session_token: Ecto.UUID.generate(),
         groups: list_public_groups()
       )
 
@@ -48,24 +44,12 @@ defmodule HuddlzWeb.HuddlLive do
     {:ok, socket}
   end
 
+  @impl true
   def handle_event("filter_change", params, socket) do
     query = if params["query"] != "", do: params["query"], else: nil
     event_type = if params["event_type"] != "", do: params["event_type"], else: nil
     date_filter = params["date_filter"] || "upcoming"
-    location_text = params["location"] || ""
     distance_miles = parse_distance(params["distance_miles"])
-
-    # Only trigger autocomplete when the location text actually changed
-    current_location = socket.assigns.location_text || ""
-
-    socket =
-      if location_text != current_location do
-        socket
-        |> assign(location_active: false, location_lat: nil, location_lng: nil)
-        |> maybe_autocomplete_location(location_text)
-      else
-        socket
-      end
 
     socket =
       socket
@@ -90,52 +74,19 @@ defmodule HuddlzWeb.HuddlLive do
       |> assign(event_type_filter: event_type)
       |> assign(date_filter: date_filter)
       |> assign(distance_miles: distance_miles)
-      |> assign(show_location_suggestions: false)
       |> perform_search()
 
     {:noreply, socket}
   end
 
-  def handle_event(
-        "select_location",
-        %{"place-id" => place_id, "display-text" => display_text},
-        socket
-      ) do
-    case Huddlz.Places.place_details(place_id, socket.assigns.location_session_token) do
-      {:ok, %{latitude: lat, longitude: lng}} ->
-        socket =
-          socket
-          |> assign(
-            location_text: display_text,
-            location_lat: lat,
-            location_lng: lng,
-            location_active: true,
-            location_suggestions: [],
-            show_location_suggestions: false,
-            location_loading: false,
-            location_error: nil,
-            location_session_token: Ecto.UUID.generate()
-          )
-          |> perform_search()
-
-        {:noreply, socket}
-
-      {:error, reason} ->
-        {:noreply,
-         assign(socket,
-           location_error: Huddlz.Places.error_message(reason),
-           location_suggestions: [],
-           show_location_suggestions: false,
-           location_loading: false
-         )}
-    end
-  end
-
-  def handle_event("dismiss_suggestions", _params, socket) do
-    {:noreply, assign(socket, show_location_suggestions: false)}
-  end
-
   def handle_event("clear_filters", _params, socket) do
+    send_update(HuddlzWeb.Live.LocationAutocomplete,
+      id: "location-autocomplete",
+      value: nil,
+      latitude: nil,
+      longitude: nil
+    )
+
     socket =
       socket
       |> assign(
@@ -146,12 +97,7 @@ defmodule HuddlzWeb.HuddlLive do
         location_lat: nil,
         location_lng: nil,
         location_active: false,
-        distance_miles: 25,
-        location_suggestions: [],
-        show_location_suggestions: false,
-        location_loading: false,
-        location_error: nil,
-        location_session_token: Ecto.UUID.generate()
+        distance_miles: 25
       )
       |> perform_search()
 
@@ -205,58 +151,37 @@ defmodule HuddlzWeb.HuddlLive do
     |> assign(page_info: page_info)
   end
 
-  defp maybe_autocomplete_location(socket, "") do
-    assign(socket,
-      location_text: nil,
-      location_suggestions: [],
-      show_location_suggestions: false,
-      location_loading: false,
-      location_error: nil
-    )
+  @impl true
+  def handle_info(
+        {:location_selected, "location-autocomplete",
+         %{display_text: text, latitude: lat, longitude: lng}},
+        socket
+      ) do
+    socket =
+      socket
+      |> assign(
+        location_text: text,
+        location_lat: lat,
+        location_lng: lng,
+        location_active: true
+      )
+      |> perform_search()
+
+    {:noreply, socket}
   end
 
-  defp maybe_autocomplete_location(socket, location_text) when byte_size(location_text) < 2 do
-    assign(socket,
-      location_text: location_text,
-      location_suggestions: [],
-      show_location_suggestions: false,
-      location_loading: false,
-      location_error: nil
-    )
-  end
+  def handle_info({:location_cleared, "location-autocomplete"}, socket) do
+    socket =
+      socket
+      |> assign(
+        location_text: nil,
+        location_lat: nil,
+        location_lng: nil,
+        location_active: false
+      )
+      |> perform_search()
 
-  defp maybe_autocomplete_location(socket, location_text) do
-    session_token = socket.assigns.location_session_token
-
-    socket
-    |> assign(location_text: location_text, location_loading: true)
-    |> start_async(:autocomplete_location, fn ->
-      Huddlz.Places.autocomplete(location_text, session_token)
-    end)
-  end
-
-  def handle_async(:autocomplete_location, {:ok, {:ok, suggestions}}, socket) do
-    {:noreply,
-     assign(socket,
-       location_suggestions: suggestions,
-       show_location_suggestions: true,
-       location_loading: false,
-       location_error: nil
-     )}
-  end
-
-  def handle_async(:autocomplete_location, {:ok, {:error, reason}}, socket) do
-    {:noreply,
-     assign(socket,
-       location_suggestions: [],
-       show_location_suggestions: false,
-       location_loading: false,
-       location_error: Huddlz.Places.error_message(reason)
-     )}
-  end
-
-  def handle_async(:autocomplete_location, {:exit, _reason}, socket) do
-    {:noreply, assign(socket, location_loading: false)}
+    {:noreply, socket}
   end
 
   defp load_results_with_distances({:ok, %{results: results}}, socket) do
@@ -292,6 +217,7 @@ defmodule HuddlzWeb.HuddlLive do
   defp parse_distance(val) when is_binary(val), do: String.to_integer(val)
   defp parse_distance(val) when is_integer(val), do: val
 
+  @impl true
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} current_user={@current_user}>
@@ -353,17 +279,16 @@ defmodule HuddlzWeb.HuddlLive do
             </div>
             <div class="flex flex-wrap items-end gap-2 mt-2">
               <div class="flex-grow min-w-[200px]">
-                <.location_autocomplete
+                <.live_component
+                  module={HuddlzWeb.Live.LocationAutocomplete}
                   id="location-autocomplete"
-                  name="location"
+                  field_name="location"
                   value={@location_text}
+                  latitude={@location_lat}
+                  longitude={@location_lng}
                   label="Location"
                   label_class="sr-only"
                   placeholder="City, State"
-                  suggestions={@location_suggestions}
-                  show_suggestions={@show_location_suggestions}
-                  loading={@location_loading}
-                  error={@location_error}
                 />
               </div>
               <label for="distance-radius" class="sr-only">Distance</label>

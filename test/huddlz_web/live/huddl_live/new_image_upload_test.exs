@@ -5,12 +5,15 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
   use HuddlzWeb.ConnCase, async: true
 
   import Huddlz.Generator
+  import Mox
   import Phoenix.LiveViewTest
 
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.HuddlImage
 
   require Ash.Query
+
+  setup :verify_on_exit!
 
   @test_image_path "test/fixtures/test_image.jpg"
 
@@ -41,6 +44,9 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
         |> login(owner)
         |> live(~p"/groups/#{group.slug}/huddlz/new")
 
+      # Set physical location through autocomplete component
+      select_physical_location(view, "Test Location")
+
       view
       |> form("#huddl-form", %{
         "form" => %{
@@ -49,8 +55,7 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
           "date" => Date.to_iso8601(tomorrow),
           "start_time" => "14:00",
           "duration_minutes" => "60",
-          "event_type" => "in_person",
-          "physical_location" => "Test Location"
+          "event_type" => "in_person"
         }
       })
       |> render_submit()
@@ -126,6 +131,9 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
       # Should show uploaded confirmation
       assert render(view) =~ "Image uploaded"
 
+      # Set physical location through autocomplete component
+      select_physical_location(view, "Test Location")
+
       # Submit form with required fields
       view
       |> form("#huddl-form", %{
@@ -135,8 +143,7 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
           "date" => Date.to_iso8601(tomorrow),
           "start_time" => "14:00",
           "duration_minutes" => "60",
-          "event_type" => "in_person",
-          "physical_location" => "Test Location"
+          "event_type" => "in_person"
         }
       })
       |> render_submit()
@@ -179,5 +186,31 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
       # Should no longer show uploaded
       refute render(view) =~ "Image uploaded"
     end
+  end
+
+  # Helper to select a physical location through the autocomplete component
+  defp select_physical_location(view, text) do
+    stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
+      {:ok,
+       [
+         %{
+           place_id: "test-place",
+           display_text: text,
+           main_text: text,
+           secondary_text: ""
+         }
+       ]}
+    end)
+
+    search = String.slice(text, 0, 3)
+
+    view
+    |> element("#address-autocomplete-input")
+    |> render_change(%{"address-autocomplete_search" => search})
+
+    render_async(view)
+
+    view |> element("[role='option']", text) |> render_click()
+    render(view)
   end
 end
