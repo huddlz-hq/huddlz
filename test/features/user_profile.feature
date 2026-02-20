@@ -49,8 +49,25 @@ Feature: User Profile Management
     When I type "saint" in the location field
     Then I should see location suggestions
     When I select "Saint Augustine" from the location suggestions
-    And I click the "Save Location" button
     Then I should see "Home location updated"
+
+  Scenario: Editing an already-set home location
+    Given I am on my profile page
+    When I type "saint" in the location field
+    And I select "Saint Augustine" from the location suggestions
+    Then I should see "Home location updated"
+    When I click on the selected location to edit it
+    And I type "aus" in the location field
+    And I select "Austin" from the location suggestions
+    Then I should see "Home location updated"
+
+  Scenario: Clearing home location
+    Given I am on my profile page
+    When I type "saint" in the location field
+    And I select "Saint Augustine" from the location suggestions
+    Then I should see "Home location updated"
+    When I clear the selected location
+    Then I should see "Home location cleared"
 
   Scenario: No location suggestions for unrecognized input
     Given I am on my profile page

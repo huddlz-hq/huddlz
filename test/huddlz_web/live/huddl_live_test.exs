@@ -3,6 +3,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
 
   import Huddlz.Generator
   import Mox
+  import Phoenix.LiveViewTest
 
   setup :verify_on_exit!
 
@@ -286,7 +287,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
       public_group: public_group
     } do
       stub(Huddlz.MockPlaces, :autocomplete, fn
-        "Austin, TX", _token, _opts ->
+        _text, _token, _opts ->
           {:ok,
            [
              %{
@@ -296,9 +297,6 @@ defmodule HuddlzWeb.HuddlLiveTest do
                secondary_text: "TX, USA"
              }
            ]}
-
-        _, _token, _opts ->
-          {:ok, []}
       end)
 
       stub(Huddlz.MockPlaces, :place_details, fn "p1", _token ->
@@ -316,19 +314,25 @@ defmodule HuddlzWeb.HuddlLiveTest do
         )
       )
 
-      # Select a location from suggestions
-      session =
-        conn
-        |> visit("/")
-        |> fill_in("Location", with: "Austin, TX")
-        |> click_button("Austin")
+      # Select a location via the component
+      session = conn |> visit("/")
+      view = session.view
 
-      # The location should be active (filter badge shows)
-      assert_has(session, "*", text: "Austin, TX, USA")
+      view
+      |> element("#location-autocomplete-input")
+      |> render_change(%{"location-autocomplete_search" => "aus"})
+
+      render_async(view)
+
+      view |> element("[role='option']", "Austin") |> render_click()
+      render_async(view)
+
+      # The location should be active (in selected state)
+      assert has_element?(view, "[data-testid='location-display']", "Austin, TX, USA")
 
       # Click Search button - should NOT reopen suggestions
-      session = click_button(session, "Search")
-      refute_has(session, "#location-autocomplete button", text: "Austin")
+      session |> click_button("Search")
+      refute has_element?(view, "[role='option']")
     end
   end
 

@@ -3,7 +3,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   LiveView for editing an existing huddl's details.
   """
   use HuddlzWeb, :live_view
-  use HuddlzWeb.HuddlLive.AddressAutocomplete
 
   import HuddlzWeb.HuddlLive.FormHelpers
   import HuddlzWeb.HuddlLive.FormComponent
@@ -97,7 +96,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     |> assign(:show_virtual_link, huddl.event_type in [:virtual, :hybrid])
     |> assign(:calculated_end_time, calculate_end_time(date, start_time, duration_minutes))
     |> assign(:form, to_form(form))
-    |> assign_address_autocomplete()
   end
 
   defp maybe_add_recurring_params(params, huddl) do
@@ -226,10 +224,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
           show_physical_location={@show_physical_location}
           show_virtual_link={@show_virtual_link}
           calculated_end_time={@calculated_end_time}
-          address_suggestions={@address_suggestions}
-          show_address_suggestions={@show_address_suggestions}
-          address_loading={@address_loading}
-          address_error={@address_error}
+          physical_location_value={AshPhoenix.Form.value(@form.source, :physical_location) || ""}
           is_public={@huddl.group.is_public}
         >
           <:image_section>
@@ -465,16 +460,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
       |> update_event_type_visibility(params)
       |> update_calculated_end_time(params)
 
-    # Address autocomplete
-    location_text = Map.get(params, "physical_location", "")
-
-    socket =
-      if socket.assigns.show_physical_location do
-        maybe_autocomplete_address(socket, location_text)
-      else
-        socket
-      end
-
     form = AshPhoenix.Form.validate(socket.assigns.form, params)
     {:noreply, assign(socket, :form, to_form(form))}
   end
@@ -511,6 +496,21 @@ defmodule HuddlzWeb.HuddlLive.Edit do
       {:error, form} ->
         {:noreply, assign(socket, :form, to_form(form))}
     end
+  end
+
+  @impl true
+  def handle_info({:location_selected, "address-autocomplete", %{display_text: text}}, socket) do
+    current_params = socket.assigns.form.source.params || %{}
+    updated_params = Map.put(current_params, "physical_location", text)
+    form = AshPhoenix.Form.validate(socket.assigns.form, updated_params)
+    {:noreply, assign(socket, :form, to_form(form))}
+  end
+
+  def handle_info({:location_cleared, "address-autocomplete"}, socket) do
+    current_params = socket.assigns.form.source.params || %{}
+    updated_params = Map.put(current_params, "physical_location", "")
+    form = AshPhoenix.Form.validate(socket.assigns.form, updated_params)
+    {:noreply, assign(socket, :form, to_form(form))}
   end
 
   defp assign_pending_image_to_huddl(socket, huddl) do

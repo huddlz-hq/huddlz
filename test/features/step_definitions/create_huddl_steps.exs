@@ -2,7 +2,9 @@ defmodule CreateHuddlSteps do
   use Cucumber.StepDefinition
   import Huddlz.Generator
   import PhoenixTest
+  import Phoenix.LiveViewTest
   import ExUnit.Assertions
+  import Mox
   alias Huddlz.Communities.Huddl
   require Ash.Query
 
@@ -283,7 +285,33 @@ defmodule CreateHuddlSteps do
             fill_in(session, "Description", with: value, exact: false)
 
           "physical_location" ->
-            fill_in(session, "Physical Location", with: value, exact: false)
+            # Physical Location is a LiveComponent autocomplete.
+            # Simulate the selection flow by triggering the component directly.
+            stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
+              {:ok,
+               [
+                 %{
+                   place_id: "test-place",
+                   display_text: value,
+                   main_text: value,
+                   secondary_text: ""
+                 }
+               ]}
+            end)
+
+            view = session.view
+            search_text = String.slice(value, 0, 3)
+
+            view
+            |> element("#address-autocomplete-input")
+            |> render_change(%{"address-autocomplete_search" => search_text})
+
+            render_async(view)
+
+            view |> element("[role='option']", value) |> render_click()
+            # Process the handle_info from the component
+            render(view)
+            session
 
           "virtual_link" ->
             fill_in(session, "Virtual Meeting Link", with: value, exact: false)

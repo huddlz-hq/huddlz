@@ -3,6 +3,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
 
   import Mox
   import PhoenixTest
+  import Phoenix.LiveViewTest
   import Huddlz.Test.Helpers.Authentication
 
   setup :verify_on_exit!
@@ -87,13 +88,12 @@ defmodule HuddlzWeb.ProfileLiveTest do
   end
 
   describe "Home location" do
-    test "shows home location form", %{conn: conn, user: user} do
+    test "shows home location section", %{conn: conn, user: user} do
       conn
       |> login(user)
       |> visit("/profile")
       |> assert_has("h2", text: "Home Location")
-      |> assert_has("input[name=\"form[home_location]\"]")
-      |> assert_has("button", text: "Save Location")
+      |> assert_has("#profile-location")
     end
 
     test "shows suggestions when typing", %{conn: conn, user: user} do
@@ -109,14 +109,19 @@ defmodule HuddlzWeb.ProfileLiveTest do
          ]}
       end)
 
-      conn
-      |> login(user)
-      |> visit("/profile")
-      |> fill_in("City / Region", with: "saint")
-      |> assert_has("button", text: "Saint Augustine")
+      session = conn |> login(user) |> visit("/profile")
+      view = session.view
+
+      view
+      |> element("#profile-location-input")
+      |> render_change(%{"profile-location_search" => "saint"})
+
+      render_async(view)
+
+      assert has_element?(view, "[role='option']", "Saint Augustine")
     end
 
-    test "selecting a suggestion and saving", %{conn: conn, user: user} do
+    test "selecting a suggestion saves location", %{conn: conn, user: user} do
       stub(Huddlz.MockPlaces, :autocomplete, fn "saint", _token, _opts ->
         {:ok,
          [
@@ -133,39 +138,19 @@ defmodule HuddlzWeb.ProfileLiveTest do
         {:ok, %{latitude: 29.89, longitude: -81.31}}
       end)
 
-      conn
-      |> login(user)
-      |> visit("/profile")
-      |> fill_in("City / Region", with: "saint")
-      |> click_button("Saint Augustine")
-      |> click_button("Save Location")
-      |> assert_has("*", text: "Home location updated")
-    end
+      session = conn |> login(user) |> visit("/profile")
+      view = session.view
 
-    test "fallback to geocoding when user types without selecting", %{conn: conn, user: user} do
-      stub(Huddlz.MockGeocoding, :geocode, fn "Austin, TX" ->
-        {:ok, %{latitude: 30.27, longitude: -97.74}}
-      end)
+      view
+      |> element("#profile-location-input")
+      |> render_change(%{"profile-location_search" => "saint"})
 
-      conn
-      |> login(user)
-      |> visit("/profile")
-      |> fill_in("City / Region", with: "Austin, TX")
-      |> click_button("Save Location")
-      |> assert_has("*", text: "Home location updated")
-    end
+      render_async(view)
 
-    test "shows error when geocoding fallback fails", %{conn: conn, user: user} do
-      stub(Huddlz.MockGeocoding, :geocode, fn _address ->
-        {:error, {:request_failed, :timeout}}
-      end)
+      view |> element("[role='option']", "Saint Augustine") |> render_click()
+      render_async(view)
 
-      conn
-      |> login(user)
-      |> visit("/profile")
-      |> fill_in("City / Region", with: "Austin, TX")
-      |> click_button("Save Location")
-      |> assert_has("p", text: "Location search is currently unavailable")
+      assert render(view) =~ "Home location updated"
     end
 
     test "handles autocomplete API errors", %{conn: conn, user: user} do
@@ -173,11 +158,16 @@ defmodule HuddlzWeb.ProfileLiveTest do
         {:error, {:request_failed, :timeout}}
       end)
 
-      conn
-      |> login(user)
-      |> visit("/profile")
-      |> fill_in("City / Region", with: "austin")
-      |> assert_has("p", text: "Location search is currently unavailable")
+      session = conn |> login(user) |> visit("/profile")
+      view = session.view
+
+      view
+      |> element("#profile-location-input")
+      |> render_change(%{"profile-location_search" => "austin"})
+
+      render_async(view)
+
+      assert has_element?(view, "p", "Location search is currently unavailable")
     end
 
     test "clears error when user types in location field", %{conn: conn, user: user} do
@@ -185,20 +175,27 @@ defmodule HuddlzWeb.ProfileLiveTest do
         {:error, {:request_failed, :timeout}}
       end)
 
-      conn
-      |> login(user)
-      |> visit("/profile")
-      |> fill_in("City / Region", with: "bad location")
-      |> assert_has("p", text: "Location search is currently unavailable")
+      session = conn |> login(user) |> visit("/profile")
+      view = session.view
+
+      view
+      |> element("#profile-location-input")
+      |> render_change(%{"profile-location_search" => "bad location"})
+
+      render_async(view)
+
+      assert has_element?(view, "p", "Location search is currently unavailable")
 
       # Stub returns ok now — typing clears the error
       stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts -> {:ok, []} end)
 
-      conn
-      |> login(user)
-      |> visit("/profile")
-      |> fill_in("City / Region", with: "trying again")
-      |> refute_has("p", text: "Location search is currently unavailable")
+      view
+      |> element("#profile-location-input")
+      |> render_change(%{"profile-location_search" => "trying again"})
+
+      render_async(view)
+
+      refute has_element?(view, "p", "Location search is currently unavailable")
     end
   end
 end

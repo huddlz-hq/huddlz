@@ -11,10 +11,7 @@ defmodule HuddlzWeb.HuddlLive.FormComponent do
   attr :show_physical_location, :boolean, default: true
   attr :show_virtual_link, :boolean, default: false
   attr :calculated_end_time, :string, default: nil
-  attr :address_suggestions, :list, default: []
-  attr :show_address_suggestions, :boolean, default: false
-  attr :address_loading, :boolean, default: false
-  attr :address_error, :string, default: nil
+  attr :physical_location_value, :string, default: ""
   attr :is_public, :boolean, required: true
   slot :image_section, required: true
   slot :recurring_section, required: true
@@ -55,16 +52,16 @@ defmodule HuddlzWeb.HuddlLive.FormComponent do
     />
 
     <%= if @show_physical_location do %>
-      <.location_autocomplete
+      <.live_component
+        module={HuddlzWeb.Live.LocationAutocomplete}
         id="address-autocomplete"
-        name="form[physical_location]"
-        value={AshPhoenix.Form.value(@form.source, :physical_location) || ""}
+        field_name="form[physical_location]"
+        value={@physical_location_value}
         label="Physical Location"
         placeholder="Search for an address or venue..."
-        suggestions={@address_suggestions}
-        show_suggestions={@show_address_suggestions}
-        loading={@address_loading}
-        error={@address_error}
+        types={[]}
+        fetch_coordinates={false}
+        show_clear={false}
       />
     <% end %>
 

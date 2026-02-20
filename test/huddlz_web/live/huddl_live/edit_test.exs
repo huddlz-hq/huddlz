@@ -4,6 +4,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
   import Huddlz.Generator
   import Huddlz.Test.Helpers.Authentication, only: [login: 2]
   import Mox
+  import Phoenix.LiveViewTest
 
   alias Huddlz.Communities.Huddl
 
@@ -352,11 +353,20 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
           {:ok, []}
       end)
 
-      conn
-      |> login(owner)
-      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
-      |> fill_in("Physical Location", with: "austin coffee")
-      |> assert_has("button", text: "Austin Coffee")
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+
+      view = session.view
+
+      view
+      |> element("#address-autocomplete-input")
+      |> render_change(%{"address-autocomplete_search" => "austin coffee"})
+
+      render_async(view)
+
+      assert has_element?(view, "[role='option']", "Austin Coffee")
     end
 
     test "selecting a suggestion preserves other form fields", %{
@@ -383,19 +393,33 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
 
       expected_date = DateTime.to_date(huddl.starts_at) |> Date.to_iso8601()
 
-      conn
-      |> login(owner)
-      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
-      |> fill_in("Title", with: "My Updated Title")
-      |> fill_in("Physical Location", with: "austin coffee")
-      |> click_button("Austin Coffee")
-      # Location should be populated
-      |> assert_has(
-        "input[name='form[physical_location]'][value='Austin Coffee, Austin, TX, USA']"
-      )
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+        |> fill_in("Title", with: "My Updated Title")
+
+      view = session.view
+
+      view
+      |> element("#address-autocomplete-input")
+      |> render_change(%{"address-autocomplete_search" => "austin coffee"})
+
+      render_async(view)
+
+      view |> element("[role='option']", "Austin Coffee") |> render_click()
+      render(view)
+
+      # Location should be in selected state with display text
+      assert has_element?(
+               view,
+               "[data-testid='location-display']",
+               "Austin Coffee, Austin, TX, USA"
+             )
+
       # Other form fields must be preserved
-      |> assert_has("input[name='form[title]'][value='My Updated Title']")
-      |> assert_has("input[name='form[date]'][value='#{expected_date}']")
+      assert has_element?(view, "input[name='form[title]'][value='My Updated Title']")
+      assert has_element?(view, "input[name='form[date]'][value='#{expected_date}']")
     end
 
     test "selecting a suggestion populates the field", %{
@@ -420,14 +444,27 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
           {:ok, []}
       end)
 
-      conn
-      |> login(owner)
-      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
-      |> fill_in("Physical Location", with: "austin coffee")
-      |> click_button("Austin Coffee")
-      |> assert_has(
-        "input[name='form[physical_location]'][value='Austin Coffee, Austin, TX, USA']"
-      )
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+
+      view = session.view
+
+      view
+      |> element("#address-autocomplete-input")
+      |> render_change(%{"address-autocomplete_search" => "austin coffee"})
+
+      render_async(view)
+
+      view |> element("[role='option']", "Austin Coffee") |> render_click()
+      render(view)
+
+      # Component is in selected state - hidden input carries the value
+      assert has_element?(
+               view,
+               "input[name='form[physical_location]'][value='Austin Coffee, Austin, TX, USA']"
+             )
     end
   end
 end

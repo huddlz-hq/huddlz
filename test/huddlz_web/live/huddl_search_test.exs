@@ -2,6 +2,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
   use HuddlzWeb.ConnCase, async: true
 
   import Mox
+  import Phoenix.LiveViewTest
 
   setup :verify_on_exit!
 
@@ -278,10 +279,15 @@ defmodule HuddlzWeb.HuddlSearchTest do
          ]}
       end)
 
-      conn
-      |> visit("/")
-      |> fill_in("Location", with: "aus")
-      |> assert_has("button", text: "Austin")
+      {:ok, view, _html} = live(conn, "/")
+
+      view
+      |> element("#location-autocomplete-input")
+      |> render_change(%{"location-autocomplete_search" => "aus"})
+
+      render_async(view)
+
+      assert has_element?(view, "button", "Austin")
     end
 
     test "selecting a suggestion activates location filter", %{conn: conn} do
@@ -301,18 +307,29 @@ defmodule HuddlzWeb.HuddlSearchTest do
         {:ok, %{latitude: 30.27, longitude: -97.74}}
       end)
 
-      conn
-      |> visit("/")
-      |> fill_in("Location", with: "aus")
-      |> click_button("Austin")
-      |> assert_has("span", text: "Austin, TX, USA")
+      {:ok, view, _html} = live(conn, "/")
+
+      view
+      |> element("#location-autocomplete-input")
+      |> render_change(%{"location-autocomplete_search" => "aus"})
+
+      render_async(view)
+
+      view |> element("button", "Austin") |> render_click()
+      render_async(view)
+
+      html = render(view)
+      assert html =~ "Austin, TX, USA"
     end
 
     test "no suggestions for short queries", %{conn: conn} do
-      conn
-      |> visit("/")
-      |> fill_in("Location", with: "a")
-      |> refute_has("button[phx-click='select_location']")
+      {:ok, view, _html} = live(conn, "/")
+
+      view
+      |> element("#location-autocomplete-input")
+      |> render_change(%{"location-autocomplete_search" => "a"})
+
+      refute has_element?(view, "#location-autocomplete-listbox")
     end
 
     test "shows no locations found for unmatched queries", %{conn: conn} do
@@ -320,10 +337,15 @@ defmodule HuddlzWeb.HuddlSearchTest do
         {:ok, []}
       end)
 
-      conn
-      |> visit("/")
-      |> fill_in("Location", with: "xyzabc")
-      |> assert_has("p", text: "No locations found")
+      {:ok, view, _html} = live(conn, "/")
+
+      view
+      |> element("#location-autocomplete-input")
+      |> render_change(%{"location-autocomplete_search" => "xyzabc"})
+
+      render_async(view)
+
+      assert has_element?(view, "p", "No locations found")
     end
 
     test "handles autocomplete API errors gracefully", %{conn: conn} do
@@ -331,10 +353,15 @@ defmodule HuddlzWeb.HuddlSearchTest do
         {:error, {:request_failed, :timeout}}
       end)
 
-      conn
-      |> visit("/")
-      |> fill_in("Location", with: "austin")
-      |> assert_has("p", text: "Location search is currently unavailable")
+      {:ok, view, _html} = live(conn, "/")
+
+      view
+      |> element("#location-autocomplete-input")
+      |> render_change(%{"location-autocomplete_search" => "austin"})
+
+      render_async(view)
+
+      assert has_element?(view, "p", "Location search is currently unavailable")
     end
 
     test "handles place details errors gracefully", %{conn: conn} do
@@ -354,11 +381,18 @@ defmodule HuddlzWeb.HuddlSearchTest do
         {:error, {:request_failed, :timeout}}
       end)
 
-      conn
-      |> visit("/")
-      |> fill_in("Location", with: "aus")
-      |> click_button("Austin")
-      |> assert_has("p", text: "Location search is currently unavailable")
+      {:ok, view, _html} = live(conn, "/")
+
+      view
+      |> element("#location-autocomplete-input")
+      |> render_change(%{"location-autocomplete_search" => "aus"})
+
+      render_async(view)
+
+      view |> element("button", "Austin") |> render_click()
+      render_async(view)
+
+      assert has_element?(view, "p", "Location search is currently unavailable")
     end
 
     test "clearing filters clears location", %{conn: conn} do
@@ -378,13 +412,24 @@ defmodule HuddlzWeb.HuddlSearchTest do
         {:ok, %{latitude: 30.27, longitude: -97.74}}
       end)
 
-      conn
-      |> visit("/")
-      |> fill_in("Location", with: "aus")
-      |> click_button("Austin")
-      |> assert_has("span", text: "Austin, TX, USA")
-      |> click_button("Clear all")
-      |> refute_has("span", text: "Austin, TX, USA")
+      {:ok, view, _html} = live(conn, "/")
+
+      view
+      |> element("#location-autocomplete-input")
+      |> render_change(%{"location-autocomplete_search" => "aus"})
+
+      render_async(view)
+
+      view |> element("button", "Austin") |> render_click()
+      render_async(view)
+
+      html = render(view)
+      assert html =~ "Austin, TX, USA"
+
+      view |> element("button", "Clear all") |> render_click()
+
+      html = render(view)
+      refute html =~ "Austin, TX, USA"
     end
 
     test "still shows huddlz when autocomplete returns no results", %{conn: conn} do
@@ -392,11 +437,193 @@ defmodule HuddlzWeb.HuddlSearchTest do
         {:ok, []}
       end)
 
-      conn
-      |> visit("/")
-      |> fill_in("Location", with: "xyzabc")
-      |> assert_has("h3", text: "Morning Yoga Session")
-      |> assert_has("h3", text: "Virtual Book Club")
+      {:ok, view, _html} = live(conn, "/")
+
+      view
+      |> element("#location-autocomplete-input")
+      |> render_change(%{"location-autocomplete_search" => "xyzabc"})
+
+      render_async(view)
+
+      html = render(view)
+      assert html =~ "Morning Yoga Session"
+      assert html =~ "Virtual Book Club"
+    end
+
+    test "clear location button removes location filter", %{conn: conn} do
+      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token, _opts ->
+        {:ok,
+         [
+           %{
+             place_id: "p1",
+             display_text: "Austin, TX, USA",
+             main_text: "Austin",
+             secondary_text: "TX, USA"
+           }
+         ]}
+      end)
+
+      stub(Huddlz.MockPlaces, :place_details, fn "p1", _token ->
+        {:ok, %{latitude: 30.27, longitude: -97.74}}
+      end)
+
+      {:ok, view, _html} = live(conn, "/")
+
+      view
+      |> element("#location-autocomplete-input")
+      |> render_change(%{"location-autocomplete_search" => "aus"})
+
+      render_async(view)
+
+      view |> element("button", "Austin") |> render_click()
+      render_async(view)
+
+      html = render(view)
+      assert html =~ "Austin, TX, USA"
+
+      view |> element("[aria-label='Clear location']") |> render_click()
+
+      html = render(view)
+      refute html =~ "Austin, TX, USA"
+      assert html =~ "Morning Yoga Session"
+    end
+
+    test "clear location button doesn't affect other filters", %{conn: conn} do
+      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token, _opts ->
+        {:ok,
+         [
+           %{
+             place_id: "p1",
+             display_text: "Austin, TX, USA",
+             main_text: "Austin",
+             secondary_text: "TX, USA"
+           }
+         ]}
+      end)
+
+      stub(Huddlz.MockPlaces, :place_details, fn "p1", _token ->
+        {:ok, %{latitude: 30.27, longitude: -97.74}}
+      end)
+
+      {:ok, view, _html} = live(conn, "/")
+
+      # Apply text search filter
+      view |> form("form", %{"query" => "Yoga"}) |> render_change()
+
+      # Select location via component
+      view
+      |> element("#location-autocomplete-input")
+      |> render_change(%{"location-autocomplete_search" => "aus"})
+
+      render_async(view)
+
+      view |> element("button", "Austin") |> render_click()
+      render_async(view)
+
+      html = render(view)
+      assert html =~ "Austin, TX, USA"
+      assert html =~ "Search: Yoga"
+
+      # Clear just the location
+      view |> element("[aria-label='Clear location']") |> render_click()
+
+      html = render(view)
+      refute html =~ "Austin, TX, USA"
+      assert html =~ "Search: Yoga"
+    end
+  end
+
+  describe "keyboard navigation" do
+    setup %{conn: conn} do
+      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token, _opts ->
+        {:ok,
+         [
+           %{
+             place_id: "p1",
+             display_text: "Austin, TX, USA",
+             main_text: "Austin",
+             secondary_text: "TX, USA"
+           },
+           %{
+             place_id: "p2",
+             display_text: "Austin, MN, USA",
+             main_text: "Austin",
+             secondary_text: "MN, USA"
+           }
+         ]}
+      end)
+
+      %{conn: conn}
+    end
+
+    test "ArrowDown highlights suggestions sequentially", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/")
+
+      view
+      |> element("#location-autocomplete-input")
+      |> render_change(%{"location-autocomplete_search" => "aus"})
+
+      render_async(view)
+
+      view
+      |> element("#location-autocomplete-input")
+      |> render_keydown(%{"key" => "ArrowDown"})
+
+      html = render(view)
+      assert html =~ ~s(id="location-autocomplete-option-0")
+      assert html =~ "bg-primary/20 border-l-primary"
+
+      view
+      |> element("#location-autocomplete-input")
+      |> render_keydown(%{"key" => "ArrowDown"})
+
+      html = render(view)
+      assert html =~ ~s(id="location-autocomplete-option-1")
+    end
+
+    test "Escape closes suggestions", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/")
+
+      view
+      |> element("#location-autocomplete-input")
+      |> render_change(%{"location-autocomplete_search" => "aus"})
+
+      render_async(view)
+
+      assert has_element?(view, "#location-autocomplete-listbox")
+
+      view
+      |> element("#location-autocomplete-input")
+      |> render_keydown(%{"key" => "Escape"})
+
+      refute has_element?(view, "#location-autocomplete-listbox")
+    end
+
+    test "Enter with highlighted suggestion selects it", %{conn: conn} do
+      stub(Huddlz.MockPlaces, :place_details, fn "p1", _token ->
+        {:ok, %{latitude: 30.27, longitude: -97.74}}
+      end)
+
+      {:ok, view, _html} = live(conn, "/")
+
+      view
+      |> element("#location-autocomplete-input")
+      |> render_change(%{"location-autocomplete_search" => "aus"})
+
+      render_async(view)
+
+      view
+      |> element("#location-autocomplete-input")
+      |> render_keydown(%{"key" => "ArrowDown"})
+
+      view
+      |> element("#location-autocomplete-input")
+      |> render_keydown(%{"key" => "Enter"})
+
+      render_async(view)
+
+      html = render(view)
+      assert html =~ "Austin, TX, USA"
     end
   end
 end

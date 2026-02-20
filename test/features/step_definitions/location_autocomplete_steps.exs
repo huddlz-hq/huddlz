@@ -2,28 +2,63 @@ defmodule LocationAutocompleteSteps do
   use Cucumber.StepDefinition
   import Mox
   import PhoenixTest
+  import Phoenix.LiveViewTest
 
-  @location_labels ["City / Region", "Location", "Physical Location"]
+  @component_ids ["location-autocomplete", "profile-location", "address-autocomplete"]
 
   step "I type {string} in the location field", %{args: [text]} = context do
     setup_autocomplete_stub(text)
     session = context[:session] || context[:conn]
+    view = session.view
 
-    session = fill_in_location(session, text, @location_labels)
+    # Find which location component is on the page and trigger its search event
+    component_id = find_component_id(view)
+    input_name = "#{component_id}_search"
+
+    view
+    |> element("##{component_id}-input")
+    |> render_change(%{input_name => text})
+
+    render_async(view)
 
     Map.merge(context, %{session: session, conn: session})
   end
 
   step "I should see location suggestions", context do
     session = context[:session] || context[:conn]
-    assert_has(session, "[phx-click='select_location']")
+    assert_has(session, "[role='option']")
     context
   end
 
   step "I select {string} from the location suggestions", %{args: [text]} = context do
     setup_place_details_stub()
     session = context[:session] || context[:conn]
-    session = click_button(session, text)
+    view = session.view
+
+    # Click the suggestion button via LiveViewTest (handles phx-target)
+    view |> element("[role='option']", text) |> render_click()
+
+    # Wait for async place_details if applicable
+    render_async(view)
+
+    Map.merge(context, %{session: session, conn: session})
+  end
+
+  step "I click on the selected location to edit it", context do
+    session = context[:session] || context[:conn]
+    view = session.view
+
+    view |> element("[data-testid='location-selected'] [role='button']") |> render_click()
+
+    Map.merge(context, %{session: session, conn: session})
+  end
+
+  step "I clear the selected location", context do
+    session = context[:session] || context[:conn]
+    view = session.view
+
+    view |> element("[aria-label='Clear location']") |> render_click()
+
     Map.merge(context, %{session: session, conn: session})
   end
 
@@ -39,14 +74,11 @@ defmodule LocationAutocompleteSteps do
     context
   end
 
-  defp fill_in_location(session, text, [label]) do
-    fill_in(session, label, with: text)
-  end
+  defp find_component_id(view) do
+    html = render(view)
 
-  defp fill_in_location(session, text, [label | rest]) do
-    fill_in(session, label, with: text)
-  rescue
-    _ -> fill_in_location(session, text, rest)
+    Enum.find(@component_ids, fn id -> html =~ ~s(id="#{id}-input") end) ||
+      raise "Could not find any location autocomplete component on the page"
   end
 
   defp setup_autocomplete_stub(text) do
