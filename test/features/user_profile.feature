@@ -69,6 +69,14 @@ Feature: User Profile Management
     When I clear the selected location
     Then I should see "Home location cleared"
 
+  Scenario: Selecting a location suggestion with keyboard
+    Given I am on my profile page
+    When I type "saint" in the location field
+    Then I should see location suggestions
+    When I press the down arrow to highlight a suggestion
+    And I press enter to select the highlighted suggestion
+    Then I should see "Home location updated"
+
   Scenario: No location suggestions for unrecognized input
     Given I am on my profile page
     When I type "xyznonexistent" in the location field

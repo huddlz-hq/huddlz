@@ -178,7 +178,7 @@ defmodule HuddlzWeb.ProfileLive do
             Set your home city to pre-fill location search when browsing huddlz.
           </p>
 
-          <form phx-change="noop" phx-submit="noop">
+          <form phx-change="noop" phx-submit="location_enter">
             <div class="flex items-end gap-3">
               <div class="flex-1">
                 <.live_component
@@ -329,6 +329,16 @@ defmodule HuddlzWeb.ProfileLive do
 
   @impl true
   def handle_event("noop", _params, socket), do: {:noreply, socket}
+
+  @impl true
+  def handle_event("location_enter", _params, socket) do
+    send_update(HuddlzWeb.Live.LocationAutocomplete,
+      id: "profile-location",
+      trigger_enter: true
+    )
+
+    {:noreply, socket}
+  end
 
   @impl true
   def handle_event("validate_avatar", _params, socket) do

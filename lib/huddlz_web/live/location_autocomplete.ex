@@ -52,8 +52,12 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
      )}
   end
 
+  def update(%{trigger_enter: true}, socket) do
+    {:ok, try_select_highlighted(socket)}
+  end
+
   def update(assigns, socket) do
-    socket = assign(socket, Map.drop(assigns, [:value, :latitude, :longitude]))
+    socket = assign(socket, Map.drop(assigns, [:value, :latitude, :longitude, :trigger_enter]))
 
     socket =
       if socket.assigns.initialized do
@@ -115,7 +119,13 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
 
   def render(assigns) do
     ~H"""
-    <div id={@id} class="relative" phx-click-away="dismiss" phx-target={@myself}>
+    <div
+      id={@id}
+      class="relative"
+      phx-click-away="dismiss"
+      phx-target={@myself}
+      phx-hook="LocationAutocomplete"
+    >
       <label :if={@label} for={"#{@id}-input"} class={@label_class}>
         {@label}
       </label>
@@ -207,12 +217,15 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
             type="button"
             id={"#{@id}-option-#{idx}"}
             role="option"
+            data-index={idx}
+            data-place-id={s.place_id}
+            data-display-text={s.display_text}
             phx-click="select"
             phx-value-place-id={s.place_id}
             phx-value-display-text={s.display_text}
             phx-target={@myself}
             class={[
-              "w-full text-left px-4 py-3 border-b border-base-300 last:border-b-0 transition-all cursor-pointer",
+              "w-full text-left px-4 py-3 border-b border-base-300 last:border-b-0 cursor-pointer",
               "border-l-2 border-l-transparent hover:bg-primary/20 hover:border-l-primary",
               idx == @suggestion_index && "bg-primary/20 border-l-primary"
             ]}
@@ -250,38 +263,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   end
 
   def handle_event("select", %{"place-id" => place_id, "display-text" => display_text}, socket) do
-    socket =
-      assign(socket,
-        selected: true,
-        selected_text: display_text,
-        selected_place_id: place_id,
-        suggestions: [],
-        show_suggestions: false,
-        suggestion_index: -1,
-        search_text: ""
-      )
-
-    socket =
-      if socket.assigns.fetch_coordinates do
-        session_token = socket.assigns.session_token
-
-        socket
-        |> assign(loading: true)
-        |> start_async(:place_details, fn ->
-          Huddlz.Places.place_details(place_id, session_token)
-        end)
-      else
-        notify_parent(socket, :selected, %{
-          place_id: place_id,
-          display_text: display_text,
-          latitude: nil,
-          longitude: nil
-        })
-
-        assign(socket, session_token: Ecto.UUID.generate())
-      end
-
-    {:noreply, socket}
+    {:noreply, select_suggestion(socket, place_id, display_text)}
   end
 
   def handle_event("edit", _params, socket) do
@@ -334,19 +316,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   end
 
   def handle_event("keydown", %{"key" => "Enter"}, socket) do
-    idx = socket.assigns.suggestion_index
-
-    if idx >= 0 and socket.assigns.show_suggestions do
-      suggestion = Enum.at(socket.assigns.suggestions, idx)
-
-      handle_event(
-        "select",
-        %{"place-id" => suggestion.place_id, "display-text" => suggestion.display_text},
-        socket
-      )
-    else
-      {:noreply, socket}
-    end
+    {:noreply, try_select_highlighted(socket)}
   end
 
   def handle_event("keydown", _params, socket) do
@@ -410,6 +380,49 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   end
 
   # -- Private helpers --
+
+  defp try_select_highlighted(socket) do
+    idx = socket.assigns.suggestion_index
+
+    if idx >= 0 and socket.assigns.show_suggestions do
+      suggestion = Enum.at(socket.assigns.suggestions, idx)
+      select_suggestion(socket, suggestion.place_id, suggestion.display_text)
+    else
+      socket
+    end
+  end
+
+  defp select_suggestion(socket, place_id, display_text) do
+    socket =
+      assign(socket,
+        selected: true,
+        selected_text: display_text,
+        selected_place_id: place_id,
+        suggestions: [],
+        show_suggestions: false,
+        suggestion_index: -1,
+        search_text: ""
+      )
+
+    if socket.assigns.fetch_coordinates do
+      session_token = socket.assigns.session_token
+
+      socket
+      |> assign(loading: true)
+      |> start_async(:place_details, fn ->
+        Huddlz.Places.place_details(place_id, session_token)
+      end)
+    else
+      notify_parent(socket, :selected, %{
+        place_id: place_id,
+        display_text: display_text,
+        latitude: nil,
+        longitude: nil
+      })
+
+      assign(socket, session_token: Ecto.UUID.generate())
+    end
+  end
 
   defp maybe_autocomplete(socket, text) when byte_size(text) < 2 do
     assign(socket,
