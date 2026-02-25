@@ -62,6 +62,35 @@ defmodule LocationAutocompleteSteps do
     Map.merge(context, %{session: session, conn: session})
   end
 
+  step "I press the down arrow to highlight a suggestion", context do
+    session = context[:session] || context[:conn]
+    view = session.view
+
+    component_id = find_component_id(view)
+
+    view
+    |> element("##{component_id}-input")
+    |> render_keydown(%{"key" => "ArrowDown"})
+
+    Map.merge(context, %{session: session, conn: session})
+  end
+
+  step "I press enter to select the highlighted suggestion", context do
+    setup_place_details_stub()
+    session = context[:session] || context[:conn]
+    view = session.view
+
+    component_id = find_component_id(view)
+
+    view
+    |> element("##{component_id}-input")
+    |> render_keydown(%{"key" => "Enter"})
+
+    render_async(view)
+
+    Map.merge(context, %{session: session, conn: session})
+  end
+
   step "the location filter should be active with {string}", %{args: [text]} = context do
     session = context[:session] || context[:conn]
     assert_has(session, "[data-testid='location-badge']", text: text)
