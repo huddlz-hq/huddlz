@@ -99,19 +99,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
     value = assigns[:value]
 
     if is_nil(value) && socket.assigns.selected do
-      assign(socket,
-        selected: false,
-        selected_text: nil,
-        selected_place_id: nil,
-        selected_lat: nil,
-        selected_lng: nil,
-        search_text: "",
-        suggestions: [],
-        show_suggestions: false,
-        suggestion_index: -1,
-        error: nil,
-        session_token: Ecto.UUID.generate()
-      )
+      reset_state(socket)
     else
       socket
     end
@@ -280,20 +268,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   def handle_event("clear", _params, socket) do
     notify_parent(socket, :cleared, nil)
 
-    {:noreply,
-     assign(socket,
-       selected: false,
-       selected_text: nil,
-       selected_place_id: nil,
-       selected_lat: nil,
-       selected_lng: nil,
-       search_text: "",
-       suggestions: [],
-       show_suggestions: false,
-       suggestion_index: -1,
-       error: nil,
-       session_token: Ecto.UUID.generate()
-     )}
+    {:noreply, reset_state(socket)}
   end
 
   def handle_event("dismiss", _params, socket) do
@@ -390,6 +365,22 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
     else
       socket
     end
+  end
+
+  defp reset_state(socket) do
+    assign(socket,
+      selected: false,
+      selected_text: nil,
+      selected_place_id: nil,
+      selected_lat: nil,
+      selected_lng: nil,
+      search_text: "",
+      suggestions: [],
+      show_suggestions: false,
+      suggestion_index: -1,
+      error: nil,
+      session_token: Ecto.UUID.generate()
+    )
   end
 
   defp select_suggestion(socket, place_id, display_text) do
