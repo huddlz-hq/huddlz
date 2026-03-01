@@ -52,12 +52,8 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
      )}
   end
 
-  def update(%{trigger_enter: true}, socket) do
-    {:ok, try_select_highlighted(socket)}
-  end
-
   def update(assigns, socket) do
-    socket = assign(socket, Map.drop(assigns, [:value, :latitude, :longitude, :trigger_enter]))
+    socket = assign(socket, Map.drop(assigns, [:value, :latitude, :longitude]))
 
     socket =
       if socket.assigns.initialized do
@@ -113,6 +109,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
       phx-click-away="dismiss"
       phx-target={@myself}
       phx-hook="LocationAutocomplete"
+      data-has-highlight={to_string(@suggestion_index >= 0)}
     >
       <label :if={@label} for={"#{@id}-input"} class={@label_class}>
         {@label}
@@ -205,9 +202,6 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
             type="button"
             id={"#{@id}-option-#{idx}"}
             role="option"
-            data-index={idx}
-            data-place-id={s.place_id}
-            data-display-text={s.display_text}
             phx-click="select"
             phx-value-place-id={s.place_id}
             phx-value-display-text={s.display_text}

@@ -28,12 +28,10 @@ const Hooks = {}
 
 Hooks.LocationAutocomplete = {
   mounted() {
-    this.highlightIndex = -1
     this.setupInput()
   },
 
   updated() {
-    this.syncHighlightFromDOM()
     if (!this._input || !this.el.contains(this._input)) {
       this.setupInput()
     }
@@ -60,71 +58,9 @@ Hooks.LocationAutocomplete = {
   handleKeydown(e) {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault()
-      e.stopPropagation()
-
-      const listbox = this.el.querySelector("[role='listbox']")
-      if (!listbox) return
-
-      const options = listbox.querySelectorAll("[role='option']")
-      if (options.length === 0) return
-
-      this.moveHighlight(e.key === "ArrowDown" ? 1 : -1, options)
-      this.pushEventTo(this.el, "keydown", {key: e.key})
-    } else if (e.key === "Enter") {
-      const listbox = this.el.querySelector("[role='listbox']")
-      if (listbox && this.highlightIndex >= 0) {
-        e.preventDefault()
-        e.stopPropagation()
-
-        const options = listbox.querySelectorAll("[role='option']")
-        const highlighted = options[this.highlightIndex]
-        if (highlighted) {
-          this.pushEventTo(this.el, "select", {
-            "place-id": highlighted.dataset.placeId,
-            "display-text": highlighted.dataset.displayText
-          })
-        }
-      }
-    } else if (e.key === "Escape") {
-      e.stopPropagation()
-      this.pushEventTo(this.el, "keydown", {key: "Escape"})
+    } else if (e.key === "Enter" && this.el.dataset.hasHighlight === "true") {
+      e.preventDefault()
     }
-  },
-
-  moveHighlight(direction, options) {
-    const maxIdx = options.length - 1
-    const newIdx = direction > 0
-      ? Math.min(this.highlightIndex + 1, maxIdx)
-      : Math.max(this.highlightIndex - 1, -1)
-
-    if (this.highlightIndex >= 0 && this.highlightIndex < options.length) {
-      options[this.highlightIndex].classList.remove("bg-primary/20", "border-l-primary")
-      options[this.highlightIndex].classList.add("border-l-transparent")
-    }
-
-    if (newIdx >= 0 && newIdx < options.length) {
-      options[newIdx].classList.add("bg-primary/20", "border-l-primary")
-      options[newIdx].classList.remove("border-l-transparent")
-    }
-
-    this.highlightIndex = newIdx
-  },
-
-  syncHighlightFromDOM() {
-    const listbox = this.el.querySelector("[role='listbox']")
-    if (!listbox) {
-      this.highlightIndex = -1
-      return
-    }
-
-    const options = listbox.querySelectorAll("[role='option']")
-    this.highlightIndex = -1
-    options.forEach((opt, idx) => {
-      if (opt.classList.contains("border-l-primary") &&
-          !opt.matches(":hover")) {
-        this.highlightIndex = idx
-      }
-    })
   }
 }
 
