@@ -46,12 +46,12 @@ Hooks.LocationAutocomplete = {
   },
 
   setupInput() {
-    this._input = this.el.querySelector("input[role='combobox']")
-    if (!this._input) return
-
-    if (this._handler) {
+    if (this._input && this._handler) {
       this._input.removeEventListener("keydown", this._handler)
     }
+
+    this._input = this.el.querySelector("input[role='combobox']")
+    if (!this._input) return
 
     this._handler = (e) => this.handleKeydown(e)
     this._input.addEventListener("keydown", this._handler)
