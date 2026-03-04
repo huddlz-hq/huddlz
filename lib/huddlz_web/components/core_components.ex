@@ -863,14 +863,14 @@ defmodule HuddlzWeb.CoreComponents do
         {@rest}
       >
         <option value="">Select duration...</option>
-        <option value="30" selected={@value == 30}>30 minutes</option>
-        <option value="60" selected={@value == 60}>1 hour</option>
-        <option value="90" selected={@value == 90}>1.5 hours</option>
-        <option value="120" selected={@value == 120}>2 hours</option>
-        <option value="150" selected={@value == 150}>2.5 hours</option>
-        <option value="180" selected={@value == 180}>3 hours</option>
-        <option value="240" selected={@value == 240}>4 hours</option>
-        <option value="360" selected={@value == 360}>6 hours</option>
+        <option value="30" selected={to_string(@value) == "30"}>30 minutes</option>
+        <option value="60" selected={to_string(@value) == "60"}>1 hour</option>
+        <option value="90" selected={to_string(@value) == "90"}>1.5 hours</option>
+        <option value="120" selected={to_string(@value) == "120"}>2 hours</option>
+        <option value="150" selected={to_string(@value) == "150"}>2.5 hours</option>
+        <option value="180" selected={to_string(@value) == "180"}>3 hours</option>
+        <option value="240" selected={to_string(@value) == "240"}>4 hours</option>
+        <option value="360" selected={to_string(@value) == "360"}>6 hours</option>
       </select>
       <.error :for={msg <- @errors}>{msg}</.error>
     </fieldset>
