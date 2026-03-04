@@ -4,6 +4,8 @@ defmodule HuddlzWeb.GroupLive.Edit do
   """
   use HuddlzWeb, :live_view
 
+  import HuddlzWeb.Live.Helpers.UploadHelpers
+
   alias Huddlz.Communities
   alias Huddlz.Communities.GroupImage
   alias Huddlz.Storage.GroupImages
@@ -115,7 +117,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
         |> assign(:image_error, nil)
 
       [{:error, reason}] ->
-        assign(socket, :image_error, format_error(reason))
+        assign(socket, :image_error, format_upload_error(reason))
 
       [] ->
         socket
@@ -137,10 +139,6 @@ defmodule HuddlzWeb.GroupLive.Edit do
         assign(socket, pending_image_id: nil, pending_preview_url: nil)
     end
   end
-
-  defp format_error(:invalid_extension), do: "Invalid file type. Please use JPG, PNG, or WebP"
-  defp format_error(msg) when is_binary(msg), do: msg
-  defp format_error(_), do: "Upload failed"
 
   @impl true
   def render(assigns) do
@@ -463,12 +461,4 @@ defmodule HuddlzWeb.GroupLive.Edit do
       {:error, _} -> {:error, :not_found}
     end
   end
-
-  defp upload_error_to_string(:too_large), do: "File is too large (max 5MB)"
-
-  defp upload_error_to_string(:not_accepted),
-    do: "Invalid file type. Please use JPG, PNG, or WebP"
-
-  defp upload_error_to_string(:too_many_files), do: "Only one file can be uploaded at a time"
-  defp upload_error_to_string(err), do: "Upload error: #{inspect(err)}"
 end

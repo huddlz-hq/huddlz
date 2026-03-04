@@ -6,6 +6,7 @@ defmodule HuddlzWeb.HuddlLive.New do
 
   import HuddlzWeb.HuddlLive.FormHelpers
   import HuddlzWeb.HuddlLive.FormComponent
+  import HuddlzWeb.Live.Helpers.UploadHelpers
 
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
@@ -158,20 +159,6 @@ defmodule HuddlzWeb.HuddlLive.New do
         assign(socket, pending_image_id: nil, pending_preview_url: nil)
     end
   end
-
-  defp format_upload_error(:invalid_extension),
-    do: "Invalid file type. Please use JPG, PNG, or WebP"
-
-  defp format_upload_error(msg) when is_binary(msg), do: msg
-  defp format_upload_error(_), do: "Upload failed"
-
-  defp upload_error_to_string(:too_large), do: "File is too large (max 5MB)"
-
-  defp upload_error_to_string(:not_accepted),
-    do: "Invalid file type. Please use JPG, PNG, or WebP"
-
-  defp upload_error_to_string(:too_many_files), do: "Only one file can be uploaded at a time"
-  defp upload_error_to_string(err), do: "Upload error: #{inspect(err)}"
 
   @impl true
   def render(assigns) do
