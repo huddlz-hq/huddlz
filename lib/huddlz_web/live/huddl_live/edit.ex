@@ -487,17 +487,11 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
   @impl true
   def handle_info({:location_selected, "address-autocomplete", %{display_text: text}}, socket) do
-    current_params = socket.assigns.form.source.params || %{}
-    updated_params = Map.put(current_params, "physical_location", text)
-    form = AshPhoenix.Form.validate(socket.assigns.form, updated_params)
-    {:noreply, assign(socket, :form, to_form(form))}
+    {:noreply, apply_location_to_form(socket, text)}
   end
 
   def handle_info({:location_cleared, "address-autocomplete"}, socket) do
-    current_params = socket.assigns.form.source.params || %{}
-    updated_params = Map.put(current_params, "physical_location", "")
-    form = AshPhoenix.Form.validate(socket.assigns.form, updated_params)
-    {:noreply, assign(socket, :form, to_form(form))}
+    {:noreply, apply_location_to_form(socket, "")}
   end
 
   defp assign_pending_image_to_huddl(socket, huddl) do
