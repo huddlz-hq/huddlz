@@ -34,15 +34,6 @@ defmodule HuddlzWeb.ProfileLive do
       )
       |> to_form()
 
-    location_form =
-      user
-      |> AshPhoenix.Form.for_update(:update_home_location,
-        domain: Huddlz.Accounts,
-        forms: [auto?: true],
-        actor: user
-      )
-      |> to_form()
-
     # Load user with profile picture calculation
     {:ok, user_with_avatar} =
       Ash.load(
@@ -56,11 +47,9 @@ defmodule HuddlzWeb.ProfileLive do
      |> assign(:page_title, "Profile")
      |> assign(:form, form)
      |> assign(:password_form, password_form)
-     |> assign(:location_form, location_form)
      |> assign(:current_user, user_with_avatar)
      |> assign(:avatar_error, nil)
      |> assign(:location_error, nil)
-     |> assign(:selected_place_coords, nil)
      |> allow_upload(:avatar,
        accept: ~w(.jpg .jpeg .png .webp),
        max_entries: 1,
@@ -371,21 +360,10 @@ defmodule HuddlzWeb.ProfileLive do
         {:ok, updated_user} =
           Ash.load(updated_user, [:home_location, :home_latitude, :home_longitude], actor: user)
 
-        location_form =
-          updated_user
-          |> AshPhoenix.Form.for_update(:update_home_location,
-            domain: Huddlz.Accounts,
-            forms: [auto?: true],
-            actor: updated_user
-          )
-          |> to_form()
-
         {:noreply,
          socket
          |> put_flash(:info, "Home location updated")
          |> assign(:current_user, updated_user)
-         |> assign(:location_form, location_form)
-         |> assign(:selected_place_coords, nil)
          |> assign(:location_error, nil)}
 
       {:error, _} ->
@@ -400,21 +378,10 @@ defmodule HuddlzWeb.ProfileLive do
 
     case Huddlz.Accounts.update_home_location(user, nil, nil, nil, actor: user) do
       {:ok, updated_user} ->
-        location_form =
-          updated_user
-          |> AshPhoenix.Form.for_update(:update_home_location,
-            domain: Huddlz.Accounts,
-            forms: [auto?: true],
-            actor: updated_user
-          )
-          |> to_form()
-
         {:noreply,
          socket
          |> put_flash(:info, "Home location cleared")
-         |> assign(:current_user, updated_user)
-         |> assign(:location_form, location_form)
-         |> assign(:selected_place_coords, nil)}
+         |> assign(:current_user, updated_user)}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to clear location")}
