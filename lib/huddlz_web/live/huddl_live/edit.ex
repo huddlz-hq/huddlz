@@ -147,6 +147,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
   defp create_pending_image_record(entry, metadata, user, group_id) do
     Communities.create_pending_huddl_image(
+      group_id,
       %{
         filename: entry.client_name,
         content_type: entry.client_type,
@@ -154,7 +155,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         storage_path: metadata.storage_path,
         thumbnail_path: metadata.thumbnail_path
       },
-      group_id,
       actor: user
     )
   end
