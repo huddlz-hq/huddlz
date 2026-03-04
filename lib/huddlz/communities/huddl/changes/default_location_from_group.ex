@@ -21,16 +21,31 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup do
   end
 
   defp inherit_group_location(changeset) do
-    group_id = Ash.Changeset.get_attribute(changeset, :group_id)
+    group = get_group(changeset)
 
-    case Ash.get(Group, group_id, authorize?: false) do
-      {:ok, group} when not is_nil(group.latitude) and not is_nil(group.longitude) ->
+    case group do
+      %{latitude: lat, longitude: lng} when not is_nil(lat) and not is_nil(lng) ->
         changeset
-        |> Ash.Changeset.force_change_attribute(:latitude, group.latitude)
-        |> Ash.Changeset.force_change_attribute(:longitude, group.longitude)
+        |> Ash.Changeset.force_change_attribute(:latitude, lat)
+        |> Ash.Changeset.force_change_attribute(:longitude, lng)
 
       _ ->
         changeset
+    end
+  end
+
+  defp get_group(changeset) do
+    case changeset.context do
+      %{group: group} when not is_nil(group) ->
+        group
+
+      _ ->
+        group_id = Ash.Changeset.get_attribute(changeset, :group_id)
+
+        case Ash.get(Group, group_id, authorize?: false) do
+          {:ok, group} -> group
+          _ -> nil
+        end
     end
   end
 end
