@@ -10,7 +10,7 @@ if File.exists?(env_file) do
 end
 
 # Server mode (only parse if set, nil would raise)
-if _phx_server = optional("PHX_SERVER") do
+if optional("PHX_SERVER") do
   config :huddlz, HuddlzWeb.Endpoint, server: true
 end
 
