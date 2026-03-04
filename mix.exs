@@ -53,7 +53,7 @@ defmodule Huddlz.MixProject do
       {:ash_json_api, "~> 1.0"},
       {:oban, "~> 2.0"},
       {:ash_oban, "~> 0.6"},
-      {:usage_rules, "~> 0.1", only: [:dev]},
+      {:usage_rules, "~> 1.0", only: [:dev]},
       {:bcrypt_elixir, "~> 3.0"},
       {:ash_ops, "~> 0.2.4"},
       {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false},
