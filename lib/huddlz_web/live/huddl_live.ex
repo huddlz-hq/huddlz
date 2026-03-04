@@ -46,37 +46,11 @@ defmodule HuddlzWeb.HuddlLive do
 
   @impl true
   def handle_event("filter_change", params, socket) do
-    query = if params["query"] != "", do: params["query"], else: nil
-    event_type = if params["event_type"] != "", do: params["event_type"], else: nil
-    date_filter = params["date_filter"] || "upcoming"
-    distance_miles = parse_distance(params["distance_miles"])
-
-    socket =
-      socket
-      |> assign(search_query: query)
-      |> assign(event_type_filter: event_type)
-      |> assign(date_filter: date_filter)
-      |> assign(distance_miles: distance_miles)
-      |> perform_search()
-
-    {:noreply, socket}
+    {:noreply, apply_search_params(params, socket)}
   end
 
   def handle_event("search", params, socket) do
-    query = if params["query"] != "", do: params["query"], else: nil
-    event_type = if params["event_type"] != "", do: params["event_type"], else: nil
-    date_filter = params["date_filter"] || "upcoming"
-    distance_miles = parse_distance(params["distance_miles"])
-
-    socket =
-      socket
-      |> assign(search_query: query)
-      |> assign(event_type_filter: event_type)
-      |> assign(date_filter: date_filter)
-      |> assign(distance_miles: distance_miles)
-      |> perform_search()
-
-    {:noreply, socket}
+    {:noreply, apply_search_params(params, socket)}
   end
 
   def handle_event("clear_filters", _params, socket) do
@@ -108,6 +82,20 @@ defmodule HuddlzWeb.HuddlLive do
     page_num = String.to_integer(page_str)
     socket = perform_search(socket, offset: (page_num - 1) * 20)
     {:noreply, socket}
+  end
+
+  defp apply_search_params(params, socket) do
+    query = if params["query"] != "", do: params["query"], else: nil
+    event_type = if params["event_type"] != "", do: params["event_type"], else: nil
+    date_filter = params["date_filter"] || "upcoming"
+    distance_miles = parse_distance(params["distance_miles"])
+
+    socket
+    |> assign(search_query: query)
+    |> assign(event_type_filter: event_type)
+    |> assign(date_filter: date_filter)
+    |> assign(distance_miles: distance_miles)
+    |> perform_search()
   end
 
   defp perform_search(socket, opts \\ []) do

@@ -45,6 +45,13 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
     end
   end
 
+  def apply_location_to_form(socket, location_text) do
+    current_params = socket.assigns.form.source.params || %{}
+    updated_params = Map.put(current_params, "physical_location", location_text)
+    form = AshPhoenix.Form.validate(socket.assigns.form, updated_params)
+    assign(socket, :form, Phoenix.Component.to_form(form))
+  end
+
   def parse_time(time_str) do
     case String.split(time_str, ":") do
       [hour_str, minute_str] ->
