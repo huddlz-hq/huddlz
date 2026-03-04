@@ -64,30 +64,6 @@ defmodule HuddlzWeb.Live.ErrorHelpers do
   end
 
   @doc """
-  Wraps a result tuple to convert various error formats to standard atoms.
-
-  Useful for normalizing Ash query results to standard error atoms.
-
-  ## Examples
-
-      case Huddlz.Communities.get_by_slug(slug, actor: user) do
-        {:ok, nil} -> {:error, :not_found}
-        {:ok, resource} -> {:ok, resource}
-        {:error, %Ash.Error.Query.NotFound{}} -> {:error, :not_found}
-        {:error, %Ash.Error.Forbidden{}} -> {:error, :not_authorized}
-        {:error, _} -> {:error, :not_found}
-      end
-
-      # Can be simplified to:
-      normalize_result(Huddlz.Communities.get_by_slug(slug, actor: user))
-  """
-  def normalize_result({:ok, nil}), do: {:error, :not_found}
-  def normalize_result({:ok, resource}), do: {:ok, resource}
-  def normalize_result({:error, %Ash.Error.Query.NotFound{}}), do: {:error, :not_found}
-  def normalize_result({:error, %Ash.Error.Forbidden{}}), do: {:error, :not_authorized}
-  def normalize_result({:error, _}), do: {:error, :not_found}
-
-  @doc """
   Checks authorization using Ash.can? and returns a standard result tuple.
 
   ## Examples

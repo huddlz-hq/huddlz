@@ -435,11 +435,6 @@ defmodule Huddlz.Communities.Huddl do
                   )
     end
 
-    calculate :actor_is_member, :boolean do
-      description "Whether the current actor is a member of the huddl's group"
-      calculation expr(exists(group.members, user_id == ^actor(:id)))
-    end
-
     calculate :is_publicly_visible, :boolean do
       description "Whether the huddl is visible to everyone (public huddl in public group)"
       calculation expr(is_private == false and group.is_public == true)
