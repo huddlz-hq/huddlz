@@ -36,7 +36,7 @@ defmodule HuddlzWeb.HuddlLive do
         location_lng: location_lng,
         location_active: location_active,
         distance_miles: 25,
-        groups: list_public_groups()
+        groups: []
       )
 
     socket = perform_search(socket)
@@ -137,6 +137,7 @@ defmodule HuddlzWeb.HuddlLive do
     socket
     |> assign(huddls: Enum.zip(huddls, distances))
     |> assign(page_info: page_info)
+    |> maybe_load_groups(huddls)
   end
 
   @impl true
@@ -170,6 +171,18 @@ defmodule HuddlzWeb.HuddlLive do
       |> perform_search()
 
     {:noreply, socket}
+  end
+
+  defp maybe_load_groups(socket, [_ | _]), do: assign(socket, :groups, [])
+
+  defp maybe_load_groups(socket, []) do
+    has_filters =
+      socket.assigns.search_query != nil or
+        socket.assigns.event_type_filter != nil or
+        socket.assigns.date_filter != "upcoming" or
+        socket.assigns.location_active
+
+    if has_filters, do: socket, else: assign(socket, :groups, list_public_groups())
   end
 
   defp load_results_with_distances({:ok, %{results: results}}, socket) do
