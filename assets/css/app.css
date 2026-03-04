@@ -108,35 +108,3 @@ html {
   text-transform: uppercase;
 }
 
-/* Scanline overlay */
-@utility scanlines {
-  position: relative;
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: repeating-linear-gradient(
-      0deg,
-      oklch(0% 0 0 / 0.03) 0px,
-      oklch(0% 0 0 / 0.03) 1px,
-      transparent 1px,
-      transparent 3px
-    );
-  }
-}
-
-/* Subtle glitch on hover */
-@keyframes cb-glitch {
-  0%, 100% { transform: translate(0); }
-  20% { transform: translate(-1px, 1px); }
-  40% { transform: translate(1px, -1px); }
-  60% { transform: translate(-1px, 0); }
-  80% { transform: translate(1px, 0); }
-}
-
-@utility glitch-hover {
-  &:hover {
-    animation: cb-glitch 0.3s ease-in-out;
-  }
-}
