@@ -98,7 +98,7 @@ defmodule HuddlzWeb.Layouts do
             <%!-- Mobile menu button --%>
             <button
               class="md:hidden p-1.5 hover:bg-base-300 transition-colors"
-              onclick="document.getElementById('mobile-menu').classList.toggle('hidden')"
+              phx-click={JS.toggle(to: "#mobile-menu")}
             >
               <.icon name="hero-bars-3" class="w-5 h-5" />
             </button>
