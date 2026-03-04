@@ -69,13 +69,12 @@ defmodule HuddlzWeb.GroupLive.Index do
   end
 
   defp list_groups do
-    # For now, show all public groups
-    # Later we can add filtering based on user's memberships
-    Group
-    |> Ash.Query.filter(is_public: true)
-    |> Ash.Query.load(:current_image_url)
-    |> Ash.read!()
-  rescue
-    _ -> []
+    case Group
+         |> Ash.Query.filter(is_public: true)
+         |> Ash.Query.load(:current_image_url)
+         |> Ash.read() do
+      {:ok, groups} -> groups
+      {:error, _} -> []
+    end
   end
 end
