@@ -102,6 +102,34 @@ defmodule Huddlz.Communities.GroupMembershipPermissionsTest do
                |> Ash.create()
     end
 
+    test "group organizer can add member to group", %{verified: owner, public_group: group} do
+      organizer = generate(user())
+
+      # Owner adds organizer
+      generate(
+        group_member(
+          group_id: group.id,
+          user_id: organizer.id,
+          role: :organizer,
+          actor: owner
+        )
+      )
+
+      # Organizer adds a new member
+      new_user = generate(user())
+
+      assert {:ok, membership} =
+               GroupMember
+               |> Ash.Changeset.for_create(
+                 :add_member,
+                 %{group_id: group.id, user_id: new_user.id, role: :member},
+                 actor: organizer
+               )
+               |> Ash.create()
+
+      assert membership.role == :member
+    end
+
     test "group owner can add organizer to group", %{verified: owner, public_group: group} do
       new_verified = generate(user())
 
