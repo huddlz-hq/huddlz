@@ -11,8 +11,6 @@ defmodule HuddlzWeb.GroupLive.Edit do
   alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
 
-  require Ash.Query
-
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
 
   @impl true
@@ -54,6 +52,10 @@ defmodule HuddlzWeb.GroupLive.Edit do
     |> assign(:image_error, nil)
     |> assign(:pending_image_id, nil)
     |> assign(:pending_preview_url, nil)
+    |> assign(:selected_location_data, build_initial_location_data(group))
+    |> assign(:modal_location_address, nil)
+    |> assign(:modal_location_lat, nil)
+    |> assign(:modal_location_lng, nil)
     |> assign(:upload_processing, false)
     |> allow_upload(:group_image,
       accept: ~w(.jpg .jpeg .png .webp),
@@ -62,6 +64,23 @@ defmodule HuddlzWeb.GroupLive.Edit do
       auto_upload: true,
       progress: &handle_upload_progress/3
     )
+  end
+
+  @impl true
+  def handle_params(_params, _uri, socket) do
+    socket =
+      case socket.assigns.live_action do
+        :new_location ->
+          socket
+          |> assign(:modal_location_address, nil)
+          |> assign(:modal_location_lat, nil)
+          |> assign(:modal_location_lng, nil)
+
+        _ ->
+          socket
+      end
+
+    {:noreply, socket}
   end
 
   defp handle_upload_progress(:group_image, entry, socket) do
@@ -206,7 +225,48 @@ defmodule HuddlzWeb.GroupLive.Edit do
         </div>
 
         <.input field={@form[:description]} type="textarea" label="Description" rows="4" />
-        <.input field={@form[:location]} type="text" label="Location" />
+
+        <div>
+          <label class="mono-label text-primary/70 mb-1.5 block">Location</label>
+          <%= if @selected_location_data do %>
+            <div class="flex items-center h-10 pl-6 border-0 border-b border-primary/50 bg-transparent group relative">
+              <.icon
+                name="hero-map-pin"
+                class="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-primary"
+              />
+              <.link
+                patch={~p"/groups/#{@original_slug}/edit/locations/new"}
+                class="flex items-center flex-1 min-w-0 cursor-pointer"
+              >
+                <span class="text-sm text-base-content truncate flex-1">
+                  {@selected_location_data.display_text}
+                </span>
+                <.icon
+                  name="hero-pencil"
+                  class="w-3.5 h-3.5 ml-2 text-transparent group-hover:text-primary/50 transition-colors"
+                />
+              </.link>
+              <button
+                type="button"
+                phx-click="clear_location"
+                class="ml-2 text-base-content/40 hover:text-error transition-colors"
+              >
+                <.icon name="hero-x-mark" class="w-4 h-4" />
+              </button>
+            </div>
+          <% else %>
+            <.link
+              patch={~p"/groups/#{@original_slug}/edit/locations/new"}
+              class="flex items-center h-10 pl-6 border-0 border-b border-base-300 bg-transparent hover:border-primary/50 transition-colors relative"
+            >
+              <.icon
+                name="hero-map-pin"
+                class="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40"
+              />
+              <span class="text-sm text-base-content/50">Search for a city or region...</span>
+            </.link>
+          <% end %>
+        </div>
 
         <div>
           <label class="mono-label text-primary/70 mb-2 block">
@@ -340,6 +400,39 @@ defmodule HuddlzWeb.GroupLive.Edit do
           </.link>
         </div>
       </form>
+
+      <.modal
+        :if={@live_action == :new_location}
+        id="new-location-modal"
+        show
+        on_cancel={JS.patch(~p"/groups/#{@original_slug}/edit")}
+      >
+        <h2 class="font-display text-xl tracking-tight text-glow mb-6">Set Location</h2>
+
+        <form phx-submit="select_modal_location">
+          <.live_component
+            module={HuddlzWeb.Live.LocationAutocomplete}
+            id="modal-location-autocomplete"
+            label="Search for a city or region"
+            placeholder="Search for a city or region..."
+            types={["locality", "sublocality", "administrative_area_level_2"]}
+            fetch_coordinates={true}
+            show_clear={true}
+          />
+
+          <div class="mt-6 flex gap-4">
+            <.button type="submit" disabled={is_nil(@modal_location_address)}>
+              Use This Location
+            </.button>
+            <.link
+              patch={~p"/groups/#{@original_slug}/edit"}
+              class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
+            >
+              Cancel
+            </.link>
+          </div>
+        </form>
+      </.modal>
     </Layouts.app>
     """
   end
@@ -394,10 +487,38 @@ defmodule HuddlzWeb.GroupLive.Edit do
     end
   end
 
+  @impl true
+  def handle_event("clear_location", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:selected_location_data, nil)
+     |> apply_location_to_form("")}
+  end
+
+  @impl true
+  def handle_event("select_modal_location", _params, socket) do
+    location_data = %{
+      display_text: socket.assigns.modal_location_address,
+      latitude: socket.assigns.modal_location_lat,
+      longitude: socket.assigns.modal_location_lng
+    }
+
+    {:noreply,
+     socket
+     |> assign(:selected_location_data, location_data)
+     |> apply_location_to_form(location_data.display_text)
+     |> push_patch(to: ~p"/groups/#{socket.assigns.original_slug}/edit")}
+  end
+
+  @impl true
   def handle_event("update_group", %{"form" => params}, socket) do
-    case socket.assigns.group
-         |> Ash.Changeset.for_update(:update_details, params, actor: socket.assigns.current_user)
-         |> Ash.update() do
+    params = inject_location_param(params, socket.assigns.selected_location_data)
+
+    case AshPhoenix.Form.submit(socket.assigns.form.source,
+           params: params,
+           actor: socket.assigns.current_user,
+           before_submit: prepare_source_with_coordinates(socket.assigns.selected_location_data)
+         ) do
       {:ok, updated_group} ->
         # Assign pending image to the group if one was uploaded
         assign_pending_image_to_group(socket, updated_group)
@@ -407,17 +528,38 @@ defmodule HuddlzWeb.GroupLive.Edit do
          |> put_flash(:info, "Group updated successfully")
          |> redirect(to: ~p"/groups/#{updated_group.slug}")}
 
-      {:error, changeset} ->
-        form =
-          AshPhoenix.Form.for_update(socket.assigns.group, :update_details,
-            errors: changeset.errors,
-            actor: socket.assigns.current_user,
-            forms: [auto?: true]
-          )
-          |> to_form()
-
-        {:noreply, assign(socket, :form, form)}
+      {:error, form} ->
+        {:noreply, assign(socket, :form, to_form(form))}
     end
+  end
+
+  @impl true
+  def handle_info(
+        {:location_selected, "modal-location-autocomplete",
+         %{display_text: text, latitude: lat, longitude: lng}},
+        socket
+      ) do
+    {:noreply,
+     assign(socket,
+       modal_location_address: text,
+       modal_location_lat: lat,
+       modal_location_lng: lng
+     )}
+  end
+
+  def handle_info({:location_cleared, "modal-location-autocomplete"}, socket) do
+    {:noreply,
+     assign(socket,
+       modal_location_address: nil,
+       modal_location_lat: nil,
+       modal_location_lng: nil
+     )}
+  end
+
+  defp inject_location_param(params, nil), do: params
+
+  defp inject_location_param(params, %{display_text: text}) do
+    Map.put(params, "location", text)
   end
 
   defp assign_pending_image_to_group(socket, group) do
@@ -449,6 +591,38 @@ defmodule HuddlzWeb.GroupLive.Edit do
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  defp build_initial_location_data(group) do
+    if group.location && group.latitude && group.longitude do
+      %{
+        display_text: to_string(group.location),
+        latitude: group.latitude,
+        longitude: group.longitude
+      }
+    else
+      nil
+    end
+  end
+
+  defp prepare_source_with_coordinates(nil), do: & &1
+
+  defp prepare_source_with_coordinates(%{latitude: lat, longitude: lng})
+       when is_number(lat) and is_number(lng) do
+    fn changeset ->
+      changeset
+      |> Ash.Changeset.force_change_attribute(:latitude, lat)
+      |> Ash.Changeset.force_change_attribute(:longitude, lng)
+    end
+  end
+
+  defp prepare_source_with_coordinates(_), do: & &1
+
+  defp apply_location_to_form(socket, text) do
+    current_params = socket.assigns.form.source.params || %{}
+    updated_params = Map.put(current_params, "location", text)
+    form = AshPhoenix.Form.validate(socket.assigns.form.source, updated_params)
+    assign(socket, :form, to_form(form))
   end
 
   defp get_group_by_slug(slug, actor) do
