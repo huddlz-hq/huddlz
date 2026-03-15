@@ -196,8 +196,8 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       conn
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}/huddlz/new")
-      # Default should be in_person
-      |> assert_has("input[name='form[physical_location]']")
+      # Default should be in_person — SavedLocationPicker is shown
+      |> assert_has("#saved-location-picker")
       |> refute_has("input[name='form[virtual_link]']")
     end
 
@@ -207,7 +207,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       |> visit(~p"/groups/#{group.slug}/huddlz/new")
       # Change to virtual
       |> select("Event Type", option: "Virtual", exact: false)
-      |> refute_has("input[name='form[physical_location]']")
+      |> refute_has("#saved-location-picker")
       |> assert_has("input[name='form[virtual_link]']")
     end
 
@@ -217,7 +217,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       |> visit(~p"/groups/#{group.slug}/huddlz/new")
       # Change to hybrid
       |> select("Event Type", option: "Hybrid (Both In-Person and Virtual)", exact: false)
-      |> assert_has("input[name='form[physical_location]']")
+      |> assert_has("#saved-location-picker")
       |> assert_has("input[name='form[virtual_link]']")
     end
   end
@@ -319,22 +319,22 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       assert_has(session, "input.border-error")
     end
 
-    test "selecting a location suggestion preserves other form fields", %{
+    test "selecting a saved location preserves other form fields", %{
       conn: conn,
       owner: owner,
       group: group
     } do
-      stub(Huddlz.MockPlaces, :autocomplete, fn "austin coffee", _token, _opts ->
-        {:ok,
-         [
-           %{
-             place_id: "p1",
-             display_text: "Austin Coffee, Austin, TX, USA",
-             main_text: "Austin Coffee",
-             secondary_text: "Austin, TX, USA"
-           }
-         ]}
-      end)
+      location =
+        generate(
+          group_location(
+            group_id: group.id,
+            name: "Austin Coffee",
+            address: "Austin Coffee, Austin, TX, USA",
+            latitude: 30.27,
+            longitude: -97.74,
+            actor: owner
+          )
+        )
 
       tomorrow = Date.utc_today() |> Date.add(1) |> Date.to_iso8601()
 
@@ -349,20 +349,14 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
 
       view = session.view
 
-      view
-      |> element("#address-autocomplete-input")
-      |> render_change(%{"address-autocomplete_search" => "austin coffee"})
-
-      render_async(view)
-
-      view |> element("[role='option']", "Austin Coffee") |> render_click()
+      # Simulate selecting a saved location
+      send(view.pid, {:saved_location_selected, "saved-location-picker", location})
       render(view)
 
       # Location should be in selected state
       assert has_element?(
                view,
-               "[data-testid='location-display']",
-               "Austin Coffee, Austin, TX, USA"
+               "[data-testid='saved-location-selected']"
              )
 
       # Other form fields must be preserved
@@ -587,29 +581,17 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
     end
   end
 
-  # Helper to select a physical location through the autocomplete component
+  # Helper to simulate selecting a physical location via SavedLocationPicker
   defp select_physical_location(view, text) do
-    stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
-      {:ok,
-       [
-         %{
-           place_id: "test-place",
-           display_text: text,
-           main_text: text,
-           secondary_text: ""
-         }
-       ]}
-    end)
+    location = %Huddlz.Communities.GroupLocation{
+      id: Ash.UUID.generate(),
+      name: text,
+      address: text,
+      latitude: 30.27,
+      longitude: -97.74
+    }
 
-    search = String.slice(text, 0, 3)
-
-    view
-    |> element("#address-autocomplete-input")
-    |> render_change(%{"address-autocomplete_search" => search})
-
-    render_async(view)
-
-    view |> element("[role='option']", text) |> render_click()
+    send(view.pid, {:saved_location_selected, "saved-location-picker", location})
     render(view)
   end
 end

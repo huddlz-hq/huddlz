@@ -3,14 +3,11 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
 
   import Huddlz.Generator
   import Huddlz.Test.Helpers.Authentication, only: [login: 2]
-  import Mox
   import Phoenix.LiveViewTest
 
   alias Huddlz.Communities.Huddl
 
   require Ash.Query
-
-  setup :verify_on_exit!
 
   describe "mount and authorization" do
     setup do
@@ -297,7 +294,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
     end
   end
 
-  describe "address autocomplete" do
+  describe "saved location picker" do
     setup do
       owner = generate(user(role: :user))
       group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
@@ -316,7 +313,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       %{owner: owner, group: group, huddl: huddl}
     end
 
-    test "shows address autocomplete for physical location", %{
+    test "shows saved location picker for physical location", %{
       conn: conn,
       owner: owner,
       group: group,
@@ -327,144 +324,47 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
         |> login(owner)
         |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
 
-      assert_has(session, "#address-autocomplete")
-      assert_has(session, "input[name='form[physical_location]']")
+      assert_has(session, "#saved-location-picker")
     end
 
-    test "shows suggestions when typing in physical location", %{
+    test "selecting a saved location preserves other form fields", %{
       conn: conn,
       owner: owner,
       group: group,
       huddl: huddl
     } do
-      stub(Huddlz.MockPlaces, :autocomplete, fn
-        "austin coffee", _token, _opts ->
-          {:ok,
-           [
-             %{
-               place_id: "p1",
-               display_text: "Austin Coffee, Austin, TX, USA",
-               main_text: "Austin Coffee",
-               secondary_text: "Austin, TX, USA"
-             }
-           ]}
-
-        _, _token, _opts ->
-          {:ok, []}
-      end)
-
-      session =
-        conn
-        |> login(owner)
-        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
-
-      view = session.view
-
-      view
-      |> element("#address-autocomplete-input")
-      |> render_change(%{"address-autocomplete_search" => "austin coffee"})
-
-      render_async(view)
-
-      assert has_element?(view, "[role='option']", "Austin Coffee")
-    end
-
-    test "selecting a suggestion preserves other form fields", %{
-      conn: conn,
-      owner: owner,
-      group: group,
-      huddl: huddl
-    } do
-      stub(Huddlz.MockPlaces, :autocomplete, fn
-        "austin coffee", _token, _opts ->
-          {:ok,
-           [
-             %{
-               place_id: "p1",
-               display_text: "Austin Coffee, Austin, TX, USA",
-               main_text: "Austin Coffee",
-               secondary_text: "Austin, TX, USA"
-             }
-           ]}
-
-        _, _token, _opts ->
-          {:ok, []}
-      end)
+      location =
+        generate(
+          group_location(
+            group_id: group.id,
+            name: "Austin Coffee",
+            address: "Austin Coffee, Austin, TX, USA",
+            latitude: 30.27,
+            longitude: -97.74,
+            actor: owner
+          )
+        )
 
       expected_date = DateTime.to_date(huddl.starts_at) |> Date.to_iso8601()
 
-      session =
+      {:ok, view, _html} =
         conn
         |> login(owner)
-        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
-        |> fill_in("Title", with: "My Updated Title")
-
-      view = session.view
+        |> live(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
 
       view
-      |> element("#address-autocomplete-input")
-      |> render_change(%{"address-autocomplete_search" => "austin coffee"})
+      |> form("#huddl-form", %{"form" => %{"title" => "My Updated Title"}})
+      |> render_change()
 
-      render_async(view)
-
-      view |> element("[role='option']", "Austin Coffee") |> render_click()
+      send(view.pid, {:saved_location_selected, "saved-location-picker", location})
       render(view)
 
-      # Location should be in selected state with display text
-      assert has_element?(
-               view,
-               "[data-testid='location-display']",
-               "Austin Coffee, Austin, TX, USA"
-             )
+      # Location should be in selected state
+      assert has_element?(view, "[data-testid='saved-location-selected']")
 
       # Other form fields must be preserved
       assert has_element?(view, "input[name='form[title]'][value='My Updated Title']")
       assert has_element?(view, "input[name='form[date]'][value='#{expected_date}']")
-    end
-
-    test "selecting a suggestion populates the field", %{
-      conn: conn,
-      owner: owner,
-      group: group,
-      huddl: huddl
-    } do
-      stub(Huddlz.MockPlaces, :autocomplete, fn
-        "austin coffee", _token, _opts ->
-          {:ok,
-           [
-             %{
-               place_id: "p1",
-               display_text: "Austin Coffee, Austin, TX, USA",
-               main_text: "Austin Coffee",
-               secondary_text: "Austin, TX, USA"
-             }
-           ]}
-
-        _, _token, _opts ->
-          {:ok, []}
-      end)
-
-      session =
-        conn
-        |> login(owner)
-        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
-
-      view = session.view
-
-      view
-      |> element("#address-autocomplete-input")
-      |> render_change(%{"address-autocomplete_search" => "austin coffee"})
-
-      render_async(view)
-
-      view |> element("[role='option']", "Austin Coffee") |> render_click()
-      render(view)
-
-      # Component is in selected state - hidden input carries the value
-      assert has_element?(
-               view,
-               "input[name='form[physical_location]'][value='Austin Coffee, Austin, TX, USA']"
-             )
     end
   end
 end

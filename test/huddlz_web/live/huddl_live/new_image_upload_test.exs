@@ -5,15 +5,12 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
   use HuddlzWeb.ConnCase, async: true
 
   import Huddlz.Generator
-  import Mox
   import Phoenix.LiveViewTest
 
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.HuddlImage
 
   require Ash.Query
-
-  setup :verify_on_exit!
 
   @test_image_path "test/fixtures/test_image.jpg"
 
@@ -188,29 +185,17 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
     end
   end
 
-  # Helper to select a physical location through the autocomplete component
+  # Helper to simulate selecting a physical location via SavedLocationPicker
   defp select_physical_location(view, text) do
-    stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
-      {:ok,
-       [
-         %{
-           place_id: "test-place",
-           display_text: text,
-           main_text: text,
-           secondary_text: ""
-         }
-       ]}
-    end)
+    location = %Huddlz.Communities.GroupLocation{
+      id: Ash.UUID.generate(),
+      name: text,
+      address: text,
+      latitude: 30.27,
+      longitude: -97.74
+    }
 
-    search = String.slice(text, 0, 3)
-
-    view
-    |> element("#address-autocomplete-input")
-    |> render_change(%{"address-autocomplete_search" => search})
-
-    render_async(view)
-
-    view |> element("[role='option']", text) |> render_click()
+    send(view.pid, {:saved_location_selected, "saved-location-picker", location})
     render(view)
   end
 end

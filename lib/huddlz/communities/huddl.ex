@@ -89,10 +89,14 @@ defmodule Huddlz.Communities.Huddl do
       argument :repeat_until, :date, allow_nil?: true
       argument :frequency, :string, allow_nil?: true
 
+      argument :provided_latitude, :float, allow_nil?: true
+      argument :provided_longitude, :float, allow_nil?: true
+
       validate Huddlz.Communities.Huddl.Validations.FutureDateValidation
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.AddHuddlTemplate
+      change Huddlz.Communities.Huddl.Changes.ApplyProvidedCoordinates
       change Huddlz.Communities.Huddl.Changes.GeocodeLocation
       change Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup
     end
@@ -130,10 +134,14 @@ defmodule Huddlz.Communities.Huddl do
         default "instance"
       end
 
+      argument :provided_latitude, :float, allow_nil?: true
+      argument :provided_longitude, :float, allow_nil?: true
+
       require_atomic? false
 
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz
+      change Huddlz.Communities.Huddl.Changes.ApplyProvidedCoordinates
       change Huddlz.Communities.Huddl.Changes.GeocodeLocation
       change Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup
     end

@@ -11,8 +11,10 @@ defmodule HuddlzWeb.HuddlLive.FormComponent do
   attr :show_physical_location, :boolean, default: true
   attr :show_virtual_link, :boolean, default: false
   attr :calculated_end_time, :string, default: nil
-  attr :physical_location_value, :string, default: ""
   attr :is_public, :boolean, required: true
+  attr :group_locations, :list, default: []
+  attr :selected_location, :any, default: nil
+  attr :new_location_path, :string, default: nil
   slot :image_section, required: true
   slot :recurring_section, required: true
   slot :actions, required: true
@@ -53,15 +55,11 @@ defmodule HuddlzWeb.HuddlLive.FormComponent do
 
     <%= if @show_physical_location do %>
       <.live_component
-        module={HuddlzWeb.Live.LocationAutocomplete}
-        id="address-autocomplete"
-        field_name="form[physical_location]"
-        value={@physical_location_value}
-        label="Physical Location"
-        placeholder="Search for an address or venue..."
-        types={[]}
-        fetch_coordinates={false}
-        show_clear={false}
+        module={HuddlzWeb.Live.SavedLocationPicker}
+        id="saved-location-picker"
+        group_locations={@group_locations}
+        selected_location={@selected_location}
+        new_location_path={@new_location_path}
       />
     <% end %>
 

@@ -114,6 +114,40 @@ defmodule Huddlz.Generator do
   end
 
   @doc """
+  Create a group location with given attributes.
+  """
+  def group_location(opts \\ []) do
+    actor =
+      opts[:actor] ||
+        once(:default_actor, fn ->
+          generate(user(role: :user))
+        end)
+
+    group_id =
+      opts[:group_id] ||
+        once(:default_group_id, fn ->
+          generate(group(actor: actor)).id
+        end)
+
+    changeset_generator(
+      Huddlz.Communities.GroupLocation,
+      :create,
+      defaults: [
+        name: StreamData.repeatedly(fn -> Faker.Company.name() end),
+        address:
+          StreamData.repeatedly(fn ->
+            Faker.Address.street_address() <> ", " <> Faker.Address.city() <> ", TX"
+          end),
+        latitude: 30.27,
+        longitude: -97.74,
+        group_id: group_id
+      ],
+      overrides: opts,
+      actor: actor
+    )
+  end
+
+  @doc """
   Create a past huddl using seed_generator (bypasses validations).
   Use this for creating test data with past dates.
   """

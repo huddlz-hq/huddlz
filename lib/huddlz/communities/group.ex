@@ -185,6 +185,10 @@ defmodule Huddlz.Communities.Group do
     has_many :group_images, Huddlz.Communities.GroupImage do
       destination_attribute :group_id
     end
+
+    has_many :group_locations, Huddlz.Communities.GroupLocation do
+      destination_attribute :group_id
+    end
   end
 
   calculations do

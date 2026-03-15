@@ -24,9 +24,17 @@ defmodule HuddlzWeb.HuddlLive.New do
 
     with {:ok, group} <- get_group_by_slug(group_slug, user),
          :ok <- authorize({Huddl, :create, %{group_id: group.id}}, user) do
+      group_locations = load_group_locations(group.id, user)
+
       socket =
         socket
         |> assign_create_form(group, user)
+        |> assign(:group_locations, group_locations)
+        |> assign(:selected_location, nil)
+        |> assign(:modal_location_name, "")
+        |> assign(:modal_location_address, nil)
+        |> assign(:modal_location_lat, nil)
+        |> assign(:modal_location_lng, nil)
         |> assign(:image_error, nil)
         |> assign(:pending_image_id, nil)
         |> assign(:pending_preview_url, nil)
@@ -78,6 +86,24 @@ defmodule HuddlzWeb.HuddlLive.New do
     |> assign(:show_virtual_link, false)
     |> assign(:show_physical_location, true)
     |> assign(:calculated_end_time, calculate_end_time(tomorrow, default_time, 60))
+  end
+
+  @impl true
+  def handle_params(_params, _uri, socket) do
+    socket =
+      case socket.assigns.live_action do
+        :new_location ->
+          socket
+          |> assign(:modal_location_name, "")
+          |> assign(:modal_location_address, nil)
+          |> assign(:modal_location_lat, nil)
+          |> assign(:modal_location_lng, nil)
+
+        _ ->
+          socket
+      end
+
+    {:noreply, socket}
   end
 
   defp handle_upload_progress(:huddl_image, entry, socket) do
@@ -184,8 +210,10 @@ defmodule HuddlzWeb.HuddlLive.New do
           show_physical_location={@show_physical_location}
           show_virtual_link={@show_virtual_link}
           calculated_end_time={@calculated_end_time}
-          physical_location_value={AshPhoenix.Form.value(@form.source, :physical_location) || ""}
           is_public={@group.is_public}
+          group_locations={@group_locations}
+          selected_location={@selected_location}
+          new_location_path={~p"/groups/#{@group.slug}/huddlz/new/locations/new"}
         >
           <:image_section>
             <div>
@@ -310,6 +338,54 @@ defmodule HuddlzWeb.HuddlLive.New do
           </:actions>
         </.huddl_form_fields>
       </.form>
+
+      <.modal
+        :if={@live_action == :new_location}
+        id="new-location-modal"
+        show
+        on_cancel={JS.patch(~p"/groups/#{@group.slug}/huddlz/new")}
+      >
+        <h2 class="font-display text-xl tracking-tight text-glow mb-6">Add New Address</h2>
+
+        <form phx-submit="save_location" phx-change="modal_form_changed">
+          <.live_component
+            module={HuddlzWeb.Live.LocationAutocomplete}
+            id="modal-address-autocomplete"
+            label="Search for an address"
+            placeholder="Search for an address or venue..."
+            types={[]}
+            fetch_coordinates={true}
+            show_clear={true}
+          />
+
+          <div class="mt-4">
+            <label class="mono-label text-primary/70 mb-1.5 block" for="location-name-input">
+              Location Name (optional)
+            </label>
+            <input
+              type="text"
+              id="location-name-input"
+              name="location_name"
+              value={@modal_location_name}
+              phx-debounce="100"
+              placeholder="e.g., Community Center"
+              class="w-full h-10 border-0 border-b border-base-300 bg-transparent focus:border-primary focus:ring-0 focus:outline-none text-base-content text-sm"
+            />
+          </div>
+
+          <div class="mt-6 flex gap-4">
+            <.button type="submit" disabled={is_nil(@modal_location_address)}>
+              Save Address
+            </.button>
+            <.link
+              patch={~p"/groups/#{@group.slug}/huddlz/new"}
+              class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
+            >
+              Cancel
+            </.link>
+          </div>
+        </form>
+      </.modal>
     </Layouts.app>
     """
   end
@@ -326,6 +402,8 @@ defmodule HuddlzWeb.HuddlLive.New do
 
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
+    params = inject_saved_location_params(params, socket.assigns[:selected_location])
+
     socket =
       socket
       |> update_event_type_visibility(params)
@@ -347,6 +425,7 @@ defmodule HuddlzWeb.HuddlLive.New do
       params
       |> Map.put("group_id", socket.assigns.group.id)
       |> Map.put("creator_id", socket.assigns.current_user.id)
+      |> inject_saved_location_params(socket.assigns[:selected_location])
 
     case AshPhoenix.Form.submit(socket.assigns.form,
            params: params,
@@ -365,13 +444,73 @@ defmodule HuddlzWeb.HuddlLive.New do
     end
   end
 
-  @impl true
-  def handle_info({:location_selected, "address-autocomplete", %{display_text: text}}, socket) do
-    {:noreply, apply_location_to_form(socket, text)}
+  def handle_event("save_location", _params, socket) do
+    user = socket.assigns.current_user
+    address = socket.assigns.modal_location_address
+    name = socket.assigns.modal_location_name
+    name = if name == "", do: nil, else: name
+
+    case Communities.create_group_location(
+           name,
+           address,
+           socket.assigns.modal_location_lat,
+           socket.assigns.modal_location_lng,
+           socket.assigns.group.id,
+           actor: user
+         ) do
+      {:ok, location} ->
+        group_locations = load_group_locations(socket.assigns.group.id, user)
+
+        {:noreply,
+         socket
+         |> assign(:group_locations, group_locations)
+         |> apply_saved_location_to_form(location)
+         |> push_patch(to: ~p"/groups/#{socket.assigns.group.slug}/huddlz/new")}
+
+      {:error, _error} ->
+        {:noreply, put_flash(socket, :error, "Failed to save location")}
+    end
   end
 
-  def handle_info({:location_cleared, "address-autocomplete"}, socket) do
-    {:noreply, apply_location_to_form(socket, "")}
+  def handle_event("modal_form_changed", %{"location_name" => name}, socket) do
+    {:noreply, assign(socket, :modal_location_name, name)}
+  end
+
+  def handle_event("modal_form_changed", _params, socket) do
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:saved_location_selected, "saved-location-picker", location}, socket) do
+    {:noreply, apply_saved_location_to_form(socket, location)}
+  end
+
+  def handle_info({:saved_location_cleared, "saved-location-picker"}, socket) do
+    {:noreply, clear_saved_location(socket)}
+  end
+
+  def handle_info(
+        {:location_selected, "modal-address-autocomplete",
+         %{display_text: text, main_text: main_text, latitude: lat, longitude: lng}},
+        socket
+      ) do
+    {:noreply,
+     assign(socket,
+       modal_location_address: text,
+       modal_location_lat: lat,
+       modal_location_lng: lng,
+       modal_location_name: main_text || ""
+     )}
+  end
+
+  def handle_info({:location_cleared, "modal-address-autocomplete"}, socket) do
+    {:noreply,
+     assign(socket,
+       modal_location_address: nil,
+       modal_location_lat: nil,
+       modal_location_lng: nil,
+       modal_location_name: ""
+     )}
   end
 
   defp assign_pending_image_to_huddl(socket, huddl) do
@@ -393,6 +532,13 @@ defmodule HuddlzWeb.HuddlLive.New do
       {:ok, nil} -> {:error, :not_found}
       {:ok, group} -> {:ok, group}
       {:error, _} -> {:error, :not_found}
+    end
+  end
+
+  defp load_group_locations(group_id, user) do
+    case Communities.list_group_locations(group_id, actor: user) do
+      {:ok, locations} -> locations
+      _ -> []
     end
   end
 end
