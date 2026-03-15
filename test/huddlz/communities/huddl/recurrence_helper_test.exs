@@ -101,6 +101,27 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
     end
   end
 
+  describe "generate_huddlz_from_template/3 max instances" do
+    test "caps generation at max_instances even when repeat_until is far in the future", ctx do
+      # 5 years of weekly = ~260 instances, but should cap at 104
+      repeat_until = Date.add(Date.utc_today(), 365 * 5)
+
+      template =
+        HuddlTemplate
+        |> Ash.Changeset.for_create(:create, %{frequency: :weekly, repeat_until: repeat_until})
+        |> Ash.create!(authorize?: false)
+
+      RecurrenceHelper.generate_huddlz_from_template(template, ctx.huddl)
+
+      generated =
+        Huddl
+        |> Ash.Query.filter(huddl_template_id == ^template.id)
+        |> Ash.read!(authorize?: false)
+
+      assert length(generated) == 104
+    end
+  end
+
   describe "generate_huddlz_from_template/2 copies huddl properties" do
     test "new huddlz inherit title, description, and other fields from source", ctx do
       repeat_until = Date.add(Date.utc_today(), 10)
