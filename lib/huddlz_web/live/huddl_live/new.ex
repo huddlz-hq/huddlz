@@ -429,7 +429,8 @@ defmodule HuddlzWeb.HuddlLive.New do
 
     case AshPhoenix.Form.submit(socket.assigns.form,
            params: params,
-           actor: socket.assigns.current_user
+           actor: socket.assigns.current_user,
+           before_submit: prepare_source_with_coordinates(socket.assigns[:selected_location])
          ) do
       {:ok, huddl} ->
         assign_pending_image_to_huddl(socket, huddl)

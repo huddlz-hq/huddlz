@@ -89,8 +89,8 @@ defmodule Huddlz.Communities.Huddl do
       argument :repeat_until, :date, allow_nil?: true
       argument :frequency, :string, allow_nil?: true
 
-      argument :provided_latitude, :float, allow_nil?: true
-      argument :provided_longitude, :float, allow_nil?: true
+      argument :provided_latitude, :float, allow_nil?: true, public?: false
+      argument :provided_longitude, :float, allow_nil?: true, public?: false
 
       validate Huddlz.Communities.Huddl.Validations.FutureDateValidation
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
@@ -134,8 +134,8 @@ defmodule Huddlz.Communities.Huddl do
         default "instance"
       end
 
-      argument :provided_latitude, :float, allow_nil?: true
-      argument :provided_longitude, :float, allow_nil?: true
+      argument :provided_latitude, :float, allow_nil?: true, public?: false
+      argument :provided_longitude, :float, allow_nil?: true, public?: false
 
       require_atomic? false
 

@@ -67,10 +67,21 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
   def inject_saved_location_params(params, nil), do: params
 
   def inject_saved_location_params(params, location) do
-    params
-    |> Map.put("physical_location", location.address)
-    |> Map.put("provided_latitude", location.latitude)
-    |> Map.put("provided_longitude", location.longitude)
+    Map.put(params, "physical_location", location.address)
+  end
+
+  @doc """
+  Returns a `prepare_source` function that sets the private provided_latitude/longitude
+  arguments on the changeset when a saved location is selected.
+  """
+  def prepare_source_with_coordinates(nil), do: & &1
+
+  def prepare_source_with_coordinates(location) do
+    fn changeset ->
+      changeset
+      |> Ash.Changeset.force_set_argument(:provided_latitude, location.latitude)
+      |> Ash.Changeset.force_set_argument(:provided_longitude, location.longitude)
+    end
   end
 
   def parse_time(time_str) do
