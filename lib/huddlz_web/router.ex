@@ -69,9 +69,11 @@ defmodule HuddlzWeb.Router do
 
       # Group routes
       live "/groups", GroupLive.Index, :index
+      live "/groups/new/locations/new", GroupLive.New, :new_location
       live "/groups/new", GroupLive.New, :new
-      live "/groups/:slug", GroupLive.Show, :show
+      live "/groups/:slug/edit/locations/new", GroupLive.Edit, :new_location
       live "/groups/:slug/edit", GroupLive.Edit, :edit
+      live "/groups/:slug", GroupLive.Show, :show
 
       # Group location management
       live "/groups/:slug/locations", GroupLive.Locations, :index

@@ -32,6 +32,10 @@ defmodule HuddlzWeb.GroupLive.New do
        |> assign(:image_error, nil)
        |> assign(:pending_image_id, nil)
        |> assign(:pending_preview_url, nil)
+       |> assign(:selected_location_data, nil)
+       |> assign(:modal_location_address, nil)
+       |> assign(:modal_location_lat, nil)
+       |> assign(:modal_location_lng, nil)
        |> assign(:upload_processing, false)
        |> allow_upload(:group_image,
          accept: ~w(.jpg .jpeg .png .webp),
@@ -46,6 +50,23 @@ defmodule HuddlzWeb.GroupLive.New do
        |> put_flash(:error, "You need to be logged in to create groups")
        |> redirect(to: ~p"/groups")}
     end
+  end
+
+  @impl true
+  def handle_params(_params, _uri, socket) do
+    socket =
+      case socket.assigns.live_action do
+        :new_location ->
+          socket
+          |> assign(:modal_location_address, nil)
+          |> assign(:modal_location_lat, nil)
+          |> assign(:modal_location_lng, nil)
+
+        _ ->
+          socket
+      end
+
+    {:noreply, socket}
   end
 
   defp handle_upload_progress(:group_image, entry, socket) do
@@ -147,16 +168,46 @@ defmodule HuddlzWeb.GroupLive.New do
   end
 
   @impl true
+  def handle_event("clear_location", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:selected_location_data, nil)
+     |> apply_location_to_form("")}
+  end
+
+  @impl true
+  def handle_event("select_modal_location", _params, socket) do
+    location_data = %{
+      display_text: socket.assigns.modal_location_address,
+      latitude: socket.assigns.modal_location_lat,
+      longitude: socket.assigns.modal_location_lng
+    }
+
+    {:noreply,
+     socket
+     |> assign(:selected_location_data, location_data)
+     |> apply_location_to_form(location_data.display_text)
+     |> push_patch(to: ~p"/groups/new")}
+  end
+
+  @impl true
   def handle_event("save", params, socket) do
     # Extract form params, handling both wrapped and unwrapped formats
     form_params = Map.get(params, "form", params)
 
-    # Add the current user as the owner
-    params_with_owner = Map.put(form_params, "owner_id", socket.assigns.current_user.id)
+    # Add the current user as the owner and inject location from modal selection
+    params_with_owner =
+      form_params
+      |> Map.put("owner_id", socket.assigns.current_user.id)
+      |> inject_location_param(socket.assigns.selected_location_data)
 
     case socket.assigns.form.source
          |> AshPhoenix.Form.validate(params_with_owner)
-         |> AshPhoenix.Form.submit(params: params_with_owner, actor: socket.assigns.current_user) do
+         |> AshPhoenix.Form.submit(
+           params: params_with_owner,
+           actor: socket.assigns.current_user,
+           before_submit: prepare_source_with_coordinates(socket.assigns.selected_location_data)
+         ) do
       {:ok, group} ->
         # Assign pending image to the new group if one was uploaded
         assign_pending_image_to_group(socket, group)
@@ -171,6 +222,29 @@ defmodule HuddlzWeb.GroupLive.New do
     end
   end
 
+  @impl true
+  def handle_info(
+        {:location_selected, "modal-location-autocomplete",
+         %{display_text: text, latitude: lat, longitude: lng}},
+        socket
+      ) do
+    {:noreply,
+     assign(socket,
+       modal_location_address: text,
+       modal_location_lat: lat,
+       modal_location_lng: lng
+     )}
+  end
+
+  def handle_info({:location_cleared, "modal-location-autocomplete"}, socket) do
+    {:noreply,
+     assign(socket,
+       modal_location_address: nil,
+       modal_location_lat: nil,
+       modal_location_lng: nil
+     )}
+  end
+
   defp assign_pending_image_to_group(socket, group) do
     case socket.assigns[:pending_image_id] do
       nil ->
@@ -183,6 +257,32 @@ defmodule HuddlzWeb.GroupLive.New do
           )
         end
     end
+  end
+
+  defp inject_location_param(params, nil), do: params
+
+  defp inject_location_param(params, %{display_text: text}) do
+    Map.put(params, "location", text)
+  end
+
+  defp prepare_source_with_coordinates(nil), do: & &1
+
+  defp prepare_source_with_coordinates(%{latitude: lat, longitude: lng})
+       when is_number(lat) and is_number(lng) do
+    fn changeset ->
+      changeset
+      |> Ash.Changeset.force_change_attribute(:latitude, lat)
+      |> Ash.Changeset.force_change_attribute(:longitude, lng)
+    end
+  end
+
+  defp prepare_source_with_coordinates(_), do: & &1
+
+  defp apply_location_to_form(socket, text) do
+    current_params = socket.assigns.form.source.params || %{}
+    updated_params = Map.put(current_params, "location", text)
+    form = AshPhoenix.Form.validate(socket.assigns.form.source, updated_params)
+    assign(socket, :form, to_form(form))
   end
 
   @impl true
@@ -207,7 +307,48 @@ defmodule HuddlzWeb.GroupLive.New do
         </div>
 
         <.input field={@form[:description]} type="textarea" label="Description" />
-        <.input field={@form[:location]} type="text" label="Location" />
+
+        <div>
+          <label class="mono-label text-primary/70 mb-1.5 block">Location</label>
+          <%= if @selected_location_data do %>
+            <div class="flex items-center h-10 pl-6 border-0 border-b border-primary/50 bg-transparent group relative">
+              <.icon
+                name="hero-map-pin"
+                class="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-primary"
+              />
+              <.link
+                patch={~p"/groups/new/locations/new"}
+                class="flex items-center flex-1 min-w-0 cursor-pointer"
+              >
+                <span class="text-sm text-base-content truncate flex-1">
+                  {@selected_location_data.display_text}
+                </span>
+                <.icon
+                  name="hero-pencil"
+                  class="w-3.5 h-3.5 ml-2 text-transparent group-hover:text-primary/50 transition-colors"
+                />
+              </.link>
+              <button
+                type="button"
+                phx-click="clear_location"
+                class="ml-2 text-base-content/40 hover:text-error transition-colors"
+              >
+                <.icon name="hero-x-mark" class="w-4 h-4" />
+              </button>
+            </div>
+          <% else %>
+            <.link
+              patch={~p"/groups/new/locations/new"}
+              class="flex items-center h-10 pl-6 border-0 border-b border-base-300 bg-transparent hover:border-primary/50 transition-colors relative"
+            >
+              <.icon
+                name="hero-map-pin"
+                class="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40"
+              />
+              <span class="text-sm text-base-content/50">Search for a city or region...</span>
+            </.link>
+          <% end %>
+        </div>
 
         <div>
           <label class="mono-label text-primary/70 mb-2 block">
@@ -312,6 +453,39 @@ defmodule HuddlzWeb.GroupLive.New do
           </.link>
         </div>
       </form>
+
+      <.modal
+        :if={@live_action == :new_location}
+        id="new-location-modal"
+        show
+        on_cancel={JS.patch(~p"/groups/new")}
+      >
+        <h2 class="font-display text-xl tracking-tight text-glow mb-6">Set Location</h2>
+
+        <form phx-submit="select_modal_location">
+          <.live_component
+            module={HuddlzWeb.Live.LocationAutocomplete}
+            id="modal-location-autocomplete"
+            label="Search for a city or region"
+            placeholder="Search for a city or region..."
+            types={["locality", "sublocality", "administrative_area_level_2"]}
+            fetch_coordinates={true}
+            show_clear={true}
+          />
+
+          <div class="mt-6 flex gap-4">
+            <.button type="submit" disabled={is_nil(@modal_location_address)}>
+              Use This Location
+            </.button>
+            <.link
+              patch={~p"/groups/new"}
+              class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
+            >
+              Cancel
+            </.link>
+          </div>
+        </form>
+      </.modal>
     </Layouts.app>
     """
   end

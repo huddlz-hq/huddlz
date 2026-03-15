@@ -1,6 +1,7 @@
 defmodule GroupManagementSteps do
   use Cucumber.StepDefinition
   import PhoenixTest
+  import Phoenix.LiveViewTest, only: [render: 1]
 
   import Huddlz.Generator
 
@@ -60,19 +61,42 @@ defmodule GroupManagementSteps do
     # Fill in each field using PhoenixTest
     session = context[:session] || context[:conn]
 
+    editing_group = context[:editing_group] || detect_editing_group(session, context)
+
     session =
       raw_table
       |> Enum.reduce(session, fn [field, value], session ->
-        # Convert field names to labels
-        label =
-          case field do
-            "Group Name" -> "Group Name"
-            "Description" -> "Description"
-            "Location" -> "Location"
-            _ -> field
-          end
+        case field do
+          "Location" ->
+            view = session.view
 
-        fill_in(session, label, with: value)
+            modal_path =
+              if editing_group,
+                do: "/groups/#{editing_group.slug}/edit/locations/new",
+                else: "/groups/new/locations/new"
+
+            Phoenix.LiveViewTest.render_patch(view, modal_path)
+
+            send(
+              view.pid,
+              {:location_selected, "modal-location-autocomplete",
+               %{
+                 place_id: "test_place_id",
+                 display_text: value,
+                 main_text: value,
+                 latitude: 37.77,
+                 longitude: -122.42
+               }}
+            )
+
+            render(view)
+            Phoenix.LiveViewTest.render_submit(view, "select_modal_location", %{})
+
+            session
+
+          _ ->
+            fill_in(session, field, with: value)
+        end
       end)
 
     Map.merge(context, %{session: session, conn: session})
@@ -98,6 +122,16 @@ defmodule GroupManagementSteps do
     Map.merge(context, %{session: session, conn: session})
   end
 
+  step "I visit the edit page for {string}",
+       %{args: [group_name]} = context do
+    groups = Map.get(context, :groups, [])
+    group = Enum.find(groups, fn g -> g.name |> to_string() == group_name end)
+
+    session = context[:session] || context[:conn]
+    session = session |> visit("/groups/#{group.slug}/edit")
+    Map.merge(context, %{session: session, conn: session, editing_group: group})
+  end
+
   # Assertions specific to groups
   step "I should be redirected to {string}", %{args: [_path]} = context do
     # PhoenixTest handles redirects automatically, so we just check we're on the expected page
@@ -110,5 +144,15 @@ defmodule GroupManagementSteps do
     session = context[:session] || context[:conn]
     assert_has(session, "*", text: "is required")
     context
+  end
+
+  # Detect if we're on a group edit page by checking the rendered HTML for the edit form
+  defp detect_editing_group(session, context) do
+    html = render(session.view)
+
+    if html =~ "edit-group-form" do
+      groups = Map.get(context, :groups, [])
+      List.first(groups)
+    end
   end
 end

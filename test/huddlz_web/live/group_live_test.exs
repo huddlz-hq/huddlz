@@ -98,9 +98,30 @@ defmodule HuddlzWeb.GroupLiveTest do
         |> visit(~p"/groups/new")
         |> fill_in("Group Name", with: "Test Group")
         |> fill_in("Description", with: "A test group")
-        |> fill_in("Location", with: "Test City")
         |> check("Public group (visible to everyone)")
-        |> click_button("Create Group")
+
+      # Simulate location selection via modal
+      view = session.view
+
+      Phoenix.LiveViewTest.render_patch(view, ~p"/groups/new/locations/new")
+
+      send(
+        view.pid,
+        {:location_selected, "modal-location-autocomplete",
+         %{
+           place_id: "test_place_id",
+           display_text: "Test City, TX, USA",
+           main_text: "Test City",
+           latitude: 30.27,
+           longitude: -97.74
+         }}
+      )
+
+      Phoenix.LiveViewTest.render(view)
+      Phoenix.LiveViewTest.render_submit(view, "select_modal_location", %{})
+
+      session
+      |> click_button("Create Group")
 
       # Verify group was created
       group =
@@ -108,7 +129,9 @@ defmodule HuddlzWeb.GroupLiveTest do
         |> Ash.Query.filter(name: "Test Group")
         |> Ash.read_one!()
 
-      assert_path(session, ~p"/groups/#{group.slug}")
+      assert group.location == "Test City, TX, USA"
+      assert group.latitude == 30.27
+      assert group.longitude == -97.74
     end
 
     test "shows errors with invalid data", %{conn: conn, verified: verified} do

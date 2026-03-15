@@ -77,6 +77,26 @@ Feature: Group Management
     Then I should be redirected to "/groups"
     And I should see "Group not found"
 
+  Scenario: Owner can edit group details
+    Given a public group "Book Club" exists with owner "verified@example.com"
+    And I am signed in as "verified@example.com"
+    When I visit the group page for "Book Club"
+    And I click "Edit Group"
+    Then I should see "Edit Group"
+    When I fill in the following:
+      | Group Name  | Updated Book Club       |
+      | Description | Updated description     |
+      | Location    | Austin, TX              |
+    And I click "Save Changes"
+    Then I should see "Group updated successfully"
+    And I should see "Updated Book Club"
+
+  Scenario: Non-owner cannot edit group
+    Given a public group "Book Club" exists with owner "verified@example.com"
+    And I am signed in as "regular@example.com"
+    When I visit the edit page for "Book Club"
+    Then I should see "You don't have permission to edit this group"
+
   Scenario: Group name is required
     Given I am signed in as "verified@example.com"
     When I visit the groups page
