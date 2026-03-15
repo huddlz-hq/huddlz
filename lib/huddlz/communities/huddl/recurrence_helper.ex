@@ -5,12 +5,22 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
 
   alias Huddlz.Communities.Huddl
 
+  @max_instances 104
+
   @doc """
   Recursively generates future huddlz based on the template's frequency
   and repeat_until date. Each new huddl copies the source huddl's properties
   and advances the start/end times by the appropriate interval.
+
+  Stops after `@max_instances` (#{@max_instances}) to prevent unbounded generation.
   """
-  def generate_huddlz_from_template(huddl_template, huddl) do
+  def generate_huddlz_from_template(huddl_template, huddl, count \\ 0)
+
+  def generate_huddlz_from_template(_huddl_template, _huddl, count)
+      when count >= @max_instances,
+      do: :ok
+
+  def generate_huddlz_from_template(huddl_template, huddl, count) do
     interval_days = frequency_days(huddl_template.frequency)
     starts_at = DateTime.add(huddl.starts_at, interval_days, :day)
     ends_at = DateTime.add(huddl.ends_at, interval_days, :day)
@@ -33,7 +43,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
         })
         |> Ash.create!(authorize?: false)
 
-      generate_huddlz_from_template(huddl_template, new_huddl)
+      generate_huddlz_from_template(huddl_template, new_huddl, count + 1)
     end
   end
 
