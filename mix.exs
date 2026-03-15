@@ -15,7 +15,8 @@ defmodule Huddlz.MixProject do
       test_ignore_filters: [
         ~r/features\/step_definitions/,
         ~r/features\/support/
-      ]
+      ],
+      usage_rules: usage_rules()
     ]
   end
 
@@ -42,6 +43,28 @@ defmodule Huddlz.MixProject do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
+  defp usage_rules do
+    [
+      file: "CLAUDE.md",
+      usage_rules: [:usage_rules],
+      skills: [
+        build: [
+          "ash-framework": [
+            description:
+              "Use when working with Ash Framework or any extension (AshPostgres, AshPhoenix, AshGraphql, AshJsonApi, AshOban, AshAuthentication).",
+            usage_rules: [:ash, ~r/^ash_/]
+          ],
+          "phoenix-framework": [
+            description:
+              "Use when working with Phoenix, LiveView, templates, routing, Ecto integration, and HTML helpers.",
+            usage_rules: [:phoenix]
+          ]
+        ],
+        deps: [:igniter]
+      ]
+    ]
+  end
+
   # Specifies your project dependencies.
   #
   # Type `mix help deps` for examples and options.
@@ -66,13 +89,13 @@ defmodule Huddlz.MixProject do
       {:tidewave, "~> 0.1", only: [:dev]},
       {:igniter, "~> 0.5", only: [:dev, :test]},
       {:faker, "~> 0.18", only: [:dev, :test]},
-      {:phoenix, "~> 1.8.0-rc.2", override: true},
+      {:phoenix, "~> 1.8"},
       {:phoenix_ecto, "~> 4.5"},
       {:ecto_sql, "~> 3.10"},
       {:postgrex, ">= 0.0.0"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 1.1.17"},
+      {:phoenix_live_view, "~> 1.1"},
       {:floki, "~> 0.38", only: :test},
       {:phoenix_live_dashboard, "~> 0.8.3"},
       {:esbuild, "~> 0.9", runtime: Mix.env() == :dev},
@@ -97,7 +120,7 @@ defmodule Huddlz.MixProject do
       {:cucumber, "~> 0.9.0", only: [:dev, :test]},
       {:mox, "~> 1.0", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:phoenix_test, "~> 0.9.0", only: :test},
+      {:phoenix_test, "~> 0.10.0", only: :test},
       {:slugify, "~> 1.3"},
       {:remote_ip, "~> 1.1"},
       {:envious, "~> 1.0"}

@@ -1,3 +1,7 @@
 [tools]
 elixir = "1.19.5-otp-28"
 erlang = "28.4"
+
+[tasks.sync-rules]
+description = "Sync usage_rules skills to .claude/skills/"
+run = "mix usage_rules.sync --yes"
