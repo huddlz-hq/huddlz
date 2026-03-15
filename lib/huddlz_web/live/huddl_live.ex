@@ -8,6 +8,7 @@ defmodule HuddlzWeb.HuddlLive do
   alias Huddlz.Communities.Group
   alias HuddlzWeb.Layouts
   require Ash.Query
+  require Logger
 
   # Authentication is optional - show cards to all but require auth for joining
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
@@ -195,6 +196,11 @@ defmodule HuddlzWeb.HuddlLive do
 
     dists = compute_distances(loaded, socket)
     {loaded, dists}
+  end
+
+  defp load_results_with_distances({:error, reason}, _socket) do
+    Logger.warning("Huddl search failed: #{inspect(reason)}")
+    {[], []}
   end
 
   defp load_results_with_distances(_, _socket), do: {[], []}
