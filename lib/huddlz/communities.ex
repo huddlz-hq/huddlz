@@ -78,5 +78,15 @@ defmodule Huddlz.Communities do
     end
 
     resource Huddlz.Communities.HuddlTemplate
+
+    resource Huddlz.Communities.GroupLocation do
+      define :create_group_location,
+        action: :create,
+        args: [:name, :address, :latitude, :longitude, :group_id]
+
+      define :list_group_locations, action: :by_group, args: [:group_id]
+      define :update_group_location, action: :update
+      define :delete_group_location, action: :destroy
+    end
   end
 end

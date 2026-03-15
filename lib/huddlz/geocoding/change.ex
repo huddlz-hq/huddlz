@@ -7,13 +7,23 @@ defmodule Huddlz.Geocoding.Change do
   require Logger
 
   def geocode_if_changed(changeset, location_attribute) do
-    if Ash.Changeset.changing_attribute?(changeset, location_attribute) do
+    if coordinates_already_provided?(changeset) do
       changeset
-      |> Ash.Changeset.get_attribute(location_attribute)
-      |> geocode_and_apply(changeset)
     else
-      changeset
+      if Ash.Changeset.changing_attribute?(changeset, location_attribute) do
+        changeset
+        |> Ash.Changeset.get_attribute(location_attribute)
+        |> geocode_and_apply(changeset)
+      else
+        changeset
+      end
     end
+  end
+
+  defp coordinates_already_provided?(changeset) do
+    changes = changeset.attributes
+
+    is_number(Map.get(changes, :latitude)) and is_number(Map.get(changes, :longitude))
   end
 
   defp geocode_and_apply(nil, changeset), do: set_coordinates(changeset, nil, nil)

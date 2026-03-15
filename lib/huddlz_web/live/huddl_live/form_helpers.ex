@@ -52,6 +52,27 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
     assign(socket, :form, Phoenix.Component.to_form(form))
   end
 
+  def apply_saved_location_to_form(socket, location) do
+    socket
+    |> assign(:selected_location, location)
+    |> apply_location_to_form(location.address)
+  end
+
+  def clear_saved_location(socket) do
+    socket
+    |> assign(:selected_location, nil)
+    |> apply_location_to_form("")
+  end
+
+  def inject_saved_location_params(params, nil), do: params
+
+  def inject_saved_location_params(params, location) do
+    params
+    |> Map.put("physical_location", location.address)
+    |> Map.put("provided_latitude", location.latitude)
+    |> Map.put("provided_longitude", location.longitude)
+  end
+
   def parse_time(time_str) do
     case String.split(time_str, ":") do
       [hour_str, minute_str] ->

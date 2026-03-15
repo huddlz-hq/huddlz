@@ -7,7 +7,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   - **Selected**: Static display of selected location with edit/clear buttons
 
   Manages all autocomplete state internally and notifies the parent via messages:
-  - `{:location_selected, id, %{place_id, display_text, latitude, longitude}}`
+  - `{:location_selected, id, %{place_id, display_text, main_text, latitude, longitude}}`
   - `{:location_cleared, id}`
   """
   use HuddlzWeb, :live_component
@@ -48,6 +48,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
        selected_place_id: nil,
        selected_lat: nil,
        selected_lng: nil,
+       selected_main_text: nil,
        initialized: false
      )}
   end
@@ -205,6 +206,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
             phx-click="select"
             phx-value-place-id={s.place_id}
             phx-value-display-text={s.display_text}
+            phx-value-main-text={s.main_text}
             phx-target={@myself}
             class={[
               "w-full text-left px-4 py-3 border-b border-base-300 last:border-b-0 cursor-pointer",
@@ -244,8 +246,12 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
     {:noreply, socket}
   end
 
-  def handle_event("select", %{"place-id" => place_id, "display-text" => display_text}, socket) do
-    {:noreply, select_suggestion(socket, place_id, display_text)}
+  def handle_event(
+        "select",
+        %{"place-id" => place_id, "display-text" => display_text, "main-text" => main_text},
+        socket
+      ) do
+    {:noreply, select_suggestion(socket, place_id, display_text, main_text)}
   end
 
   def handle_event("edit", _params, socket) do
@@ -323,6 +329,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
     notify_parent(socket, :selected, %{
       place_id: socket.assigns.selected_place_id,
       display_text: socket.assigns.selected_text,
+      main_text: socket.assigns.selected_main_text,
       latitude: lat,
       longitude: lng
     })
@@ -355,7 +362,13 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
 
     if idx >= 0 and socket.assigns.show_suggestions do
       suggestion = Enum.at(socket.assigns.suggestions, idx)
-      select_suggestion(socket, suggestion.place_id, suggestion.display_text)
+
+      select_suggestion(
+        socket,
+        suggestion.place_id,
+        suggestion.display_text,
+        suggestion.main_text
+      )
     else
       socket
     end
@@ -368,6 +381,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
       selected_place_id: nil,
       selected_lat: nil,
       selected_lng: nil,
+      selected_main_text: nil,
       search_text: "",
       suggestions: [],
       show_suggestions: false,
@@ -377,12 +391,13 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
     )
   end
 
-  defp select_suggestion(socket, place_id, display_text) do
+  defp select_suggestion(socket, place_id, display_text, main_text) do
     socket =
       assign(socket,
         selected: true,
         selected_text: display_text,
         selected_place_id: place_id,
+        selected_main_text: main_text,
         suggestions: [],
         show_suggestions: false,
         suggestion_index: -1,
@@ -401,6 +416,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
       notify_parent(socket, :selected, %{
         place_id: place_id,
         display_text: display_text,
+        main_text: main_text,
         latitude: nil,
         longitude: nil
       })

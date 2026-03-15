@@ -73,8 +73,14 @@ defmodule HuddlzWeb.Router do
       live "/groups/:slug", GroupLive.Show, :show
       live "/groups/:slug/edit", GroupLive.Edit, :edit
 
+      # Group location management
+      live "/groups/:slug/locations", GroupLive.Locations, :index
+      live "/groups/:slug/locations/new", GroupLive.Locations, :new_location
+
       # Huddl routes
+      live "/groups/:group_slug/huddlz/new/locations/new", HuddlLive.New, :new_location
       live "/groups/:group_slug/huddlz/new", HuddlLive.New, :new
+      live "/groups/:group_slug/huddlz/:id/edit/locations/new", HuddlLive.Edit, :new_location
       live "/groups/:group_slug/huddlz/:id/edit", HuddlLive.Edit, :edit
       live "/groups/:group_slug/huddlz/:id", HuddlLive.Show, :show
     end

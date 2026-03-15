@@ -4,7 +4,6 @@ defmodule CreateHuddlSteps do
   import PhoenixTest
   import Phoenix.LiveViewTest
   import ExUnit.Assertions
-  import Mox
   alias Huddlz.Communities.Huddl
   require Ash.Query
 
@@ -285,31 +284,25 @@ defmodule CreateHuddlSteps do
             fill_in(session, "Description", with: value, exact: false)
 
           "physical_location" ->
-            # Physical Location is a LiveComponent autocomplete.
-            # Simulate the selection flow by triggering the component directly.
-            stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
-              {:ok,
-               [
-                 %{
-                   place_id: "test-place",
-                   display_text: value,
-                   main_text: value,
-                   secondary_text: ""
-                 }
-               ]}
-            end)
+            # Physical Location now uses the SavedLocationPicker.
+            # Create a saved location and simulate its selection via handle_info.
+            group = context[:current_group]
+            current_user = context[:current_user]
 
+            {:ok, location} =
+              Huddlz.Communities.GroupLocation
+              |> Ash.Changeset.for_create(:create, %{
+                name: value,
+                address: value,
+                latitude: 30.27,
+                longitude: -97.74,
+                group_id: group.id
+              })
+              |> Ash.create(actor: current_user)
+
+            # Simulate the SavedLocationPicker selecting this location
             view = session.view
-            search_text = String.slice(value, 0, 3)
-
-            view
-            |> element("#address-autocomplete-input")
-            |> render_change(%{"address-autocomplete_search" => search_text})
-
-            render_async(view)
-
-            view |> element("[role='option']", value) |> render_click()
-            # Process the handle_info from the component
+            send(view.pid, {:saved_location_selected, "saved-location-picker", location})
             render(view)
             session
 

@@ -79,6 +79,12 @@ defmodule HuddlzWeb.GroupLive.Show do
 
             <%= if @is_owner || @is_organizer do %>
               <.link
+                navigate={~p"/groups/#{@group.slug}/locations"}
+                class="inline-flex items-center gap-1.5 text-sm font-medium text-base-content/50 hover:text-base-content transition-colors"
+              >
+                <.icon name="hero-map-pin" class="h-4 w-4" /> Locations
+              </.link>
+              <.link
                 navigate={~p"/groups/#{@group.slug}/huddlz/new"}
                 class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-content text-sm font-medium btn-neon"
               >
