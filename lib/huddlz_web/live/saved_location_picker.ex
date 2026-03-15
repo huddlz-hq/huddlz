@@ -22,6 +22,7 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
        show_dropdown: false,
        group_locations: [],
        selected_location: nil,
+       previous_location: nil,
        initialized: false
      )}
   end
@@ -68,7 +69,7 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
               class="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-primary"
             />
             <div
-              phx-click="clear"
+              phx-click="edit"
               phx-target={@myself}
               class="flex items-center flex-1 min-w-0 cursor-pointer"
               role="button"
@@ -125,6 +126,16 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
               @group_locations == [] && "opacity-50 cursor-not-allowed"
             ]}
           />
+          <button
+            :if={@previous_location}
+            type="button"
+            phx-click="cancel_edit"
+            phx-target={@myself}
+            class="absolute right-0 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content transition-colors"
+            aria-label="Cancel"
+          >
+            <.icon name="hero-x-mark" class="w-4 h-4" />
+          </button>
 
           <div
             :if={@show_dropdown && @filtered_locations != []}
@@ -158,6 +169,7 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
       <% end %>
 
       <.link
+        :if={!@selected_location}
         patch={@new_location_path}
         class="mt-2 inline-flex items-center gap-1.5 text-sm text-primary/70 hover:text-primary transition-colors"
       >
@@ -193,6 +205,7 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
       {:noreply,
        assign(socket,
          selected_location: location,
+         previous_location: nil,
          show_dropdown: false,
          search_text: ""
        )}
@@ -201,19 +214,63 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
     end
   end
 
+  def handle_event("edit", _params, socket) do
+    {:noreply,
+     assign(socket,
+       previous_location: socket.assigns.selected_location,
+       selected_location: nil,
+       search_text: "",
+       filtered_locations: socket.assigns.group_locations,
+       show_dropdown: true
+     )}
+  end
+
   def handle_event("clear", _params, socket) do
     send(self(), {:saved_location_cleared, socket.assigns.id})
 
     {:noreply,
      assign(socket,
        selected_location: nil,
+       previous_location: nil,
        search_text: "",
        show_dropdown: false
      )}
   end
 
+  def handle_event("cancel_edit", _params, socket) do
+    location = socket.assigns.previous_location
+
+    if location do
+      send(self(), {:saved_location_selected, socket.assigns.id, location})
+
+      {:noreply,
+       assign(socket,
+         selected_location: location,
+         previous_location: nil,
+         show_dropdown: false,
+         search_text: ""
+       )}
+    else
+      {:noreply, socket}
+    end
+  end
+
   def handle_event("dismiss", _params, socket) do
-    {:noreply, assign(socket, show_dropdown: false)}
+    if socket.assigns.previous_location do
+      # Clicking away restores the previous selection
+      location = socket.assigns.previous_location
+      send(self(), {:saved_location_selected, socket.assigns.id, location})
+
+      {:noreply,
+       assign(socket,
+         selected_location: location,
+         previous_location: nil,
+         show_dropdown: false,
+         search_text: ""
+       )}
+    else
+      {:noreply, assign(socket, show_dropdown: false)}
+    end
   end
 
   defp filter_locations(locations, ""), do: locations
