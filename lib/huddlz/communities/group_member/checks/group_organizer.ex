@@ -13,8 +13,8 @@ defmodule Huddlz.Communities.GroupMember.Checks.GroupOrganizer do
   def describe(_opts), do: "actor is an organizer of the group"
 
   @impl true
-  def match?(actor, %{group_id: group_id}, _opts)
-      when not is_nil(actor) and not is_nil(group_id) do
+  def match?(actor, %{subject: %{arguments: %{group_id: group_id}}}, _opts)
+      when is_map(actor) and is_binary(group_id) do
     GroupMember
     |> Ash.Query.filter(group_id: group_id, user_id: actor.id, role: :organizer)
     |> Ash.exists?(authorize?: false)
