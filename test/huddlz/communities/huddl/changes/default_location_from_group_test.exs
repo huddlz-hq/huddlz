@@ -128,6 +128,7 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroupTest do
       # Geocoding failed for "Unknown Place", so lat/lng should be nil
       # (not inherited from group because event_type is :hybrid)
       assert is_nil(hybrid_huddl.latitude)
+
       assert is_nil(hybrid_huddl.longitude)
     end
   end

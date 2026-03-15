@@ -26,6 +26,9 @@ defmodule Huddlz.Communities.Huddl.Changes.ApplyProvidedCoordinatesTest do
 
       assert {:ok, huddl} =
                Huddl
+               |> Ash.Changeset.new()
+               |> Ash.Changeset.set_argument(:provided_latitude, 30.27)
+               |> Ash.Changeset.set_argument(:provided_longitude, -97.74)
                |> Ash.Changeset.for_create(:create, %{
                  title: "Test Huddl",
                  description: "Test",
@@ -35,9 +38,7 @@ defmodule Huddlz.Communities.Huddl.Changes.ApplyProvidedCoordinatesTest do
                  event_type: :in_person,
                  physical_location: "100 Main St, Austin, TX",
                  group_id: group.id,
-                 creator_id: owner.id,
-                 provided_latitude: 30.27,
-                 provided_longitude: -97.74
+                 creator_id: owner.id
                })
                |> Ash.create(actor: owner)
 
@@ -78,6 +79,8 @@ defmodule Huddlz.Communities.Huddl.Changes.ApplyProvidedCoordinatesTest do
 
       assert {:ok, huddl} =
                Huddl
+               |> Ash.Changeset.new()
+               |> Ash.Changeset.set_argument(:provided_latitude, 30.27)
                |> Ash.Changeset.for_create(:create, %{
                  title: "Partial Coords",
                  description: "Test",
@@ -87,8 +90,7 @@ defmodule Huddlz.Communities.Huddl.Changes.ApplyProvidedCoordinatesTest do
                  event_type: :in_person,
                  physical_location: "789 Elm St, Houston, TX",
                  group_id: group.id,
-                 creator_id: owner.id,
-                 provided_latitude: 30.27
+                 creator_id: owner.id
                })
                |> Ash.create(actor: owner)
 
