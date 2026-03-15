@@ -311,6 +311,38 @@ defmodule Huddlz.Communities.GroupTest do
     end
   end
 
+  describe "attribute constraints" do
+    test "rejects description over 5000 characters" do
+      owner = generate(user())
+      long_desc = String.duplicate("a", 5001)
+
+      assert {:error, _} =
+               Group
+               |> Ash.Changeset.for_create(:create_group, %{
+                 name: "Test Group",
+                 description: long_desc,
+                 is_public: true,
+                 owner_id: owner.id
+               })
+               |> Ash.create(actor: owner)
+    end
+
+    test "rejects location over 500 characters" do
+      owner = generate(user())
+      long_loc = String.duplicate("a", 501)
+
+      assert {:error, _} =
+               Group
+               |> Ash.Changeset.for_create(:create_group, %{
+                 name: "Test Group",
+                 location: long_loc,
+                 is_public: true,
+                 owner_id: owner.id
+               })
+               |> Ash.create(actor: owner)
+    end
+  end
+
   describe "group management" do
     setup do
       owner = generate(user(role: :user))
