@@ -334,6 +334,7 @@ defmodule Huddlz.Communities.Huddl do
 
     attribute :description, :string do
       allow_nil? true
+      constraints max_length: 5000
     end
 
     attribute :starts_at, :utc_datetime do
@@ -352,11 +353,13 @@ defmodule Huddlz.Communities.Huddl do
 
     attribute :physical_location, :string do
       allow_nil? true
+      constraints max_length: 500
     end
 
     attribute :virtual_link, :string do
       allow_nil? true
       sensitive? true
+      constraints max_length: 2048
     end
 
     attribute :is_private, :boolean do

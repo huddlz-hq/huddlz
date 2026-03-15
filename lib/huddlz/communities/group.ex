@@ -127,10 +127,12 @@ defmodule Huddlz.Communities.Group do
 
     attribute :description, :ci_string do
       allow_nil? true
+      constraints max_length: 5000
     end
 
     attribute :location, :string do
       allow_nil? true
+      constraints max_length: 500
     end
 
     attribute :is_public, :boolean do
