@@ -4,6 +4,8 @@ defmodule HuddlzWeb.GroupLive.Locations do
   """
   use HuddlzWeb, :live_view
 
+  import HuddlzWeb.HuddlLive.FormHelpers, only: [load_group_locations: 2]
+
   alias Huddlz.Communities
   alias HuddlzWeb.Layouts
 
@@ -18,6 +20,14 @@ defmodule HuddlzWeb.GroupLive.Locations do
 
   @impl true
   def handle_params(%{"slug" => slug}, _, socket) do
+    if socket.assigns[:group] && socket.assigns.group.slug == slug do
+      {:noreply, reset_modal_state(socket)}
+    else
+      load_locations_page(socket, slug)
+    end
+  end
+
+  defp load_locations_page(socket, slug) do
     user = socket.assigns.current_user
 
     case get_group_by_slug(slug, user) do
@@ -30,10 +40,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
             |> assign(:page_title, "#{group.name} — Locations")
             |> assign(:group, group)
             |> assign(:locations, locations)
-            |> assign(:modal_location_name, "")
-            |> assign(:modal_location_address, nil)
-            |> assign(:modal_location_lat, nil)
-            |> assign(:modal_location_lng, nil)
+            |> reset_modal_state()
             |> assign(:editing_location_id, nil)
             |> assign(:editing_name, "")
 
@@ -50,6 +57,14 @@ defmodule HuddlzWeb.GroupLive.Locations do
         {:noreply,
          handle_error(socket, :not_found, resource_name: "Group", fallback_path: ~p"/groups")}
     end
+  end
+
+  defp reset_modal_state(socket) do
+    socket
+    |> assign(:modal_location_name, "")
+    |> assign(:modal_location_address, nil)
+    |> assign(:modal_location_lat, nil)
+    |> assign(:modal_location_lng, nil)
   end
 
   @impl true
@@ -230,14 +245,17 @@ defmodule HuddlzWeb.GroupLive.Locations do
     end
   end
 
+  @impl true
   def handle_event("modal_form_changed", %{"location_name" => name}, socket) do
     {:noreply, assign(socket, :modal_location_name, name)}
   end
 
+  @impl true
   def handle_event("modal_form_changed", _params, socket) do
     {:noreply, socket}
   end
 
+  @impl true
   def handle_event("start_rename", %{"id" => id}, socket) do
     loc = Enum.find(socket.assigns.locations, &(&1.id == id))
 
@@ -248,14 +266,17 @@ defmodule HuddlzWeb.GroupLive.Locations do
      )}
   end
 
+  @impl true
   def handle_event("cancel_rename", _params, socket) do
     {:noreply, assign(socket, editing_location_id: nil, editing_name: "")}
   end
 
+  @impl true
   def handle_event("update_editing_name", %{"name" => name}, socket) do
     {:noreply, assign(socket, :editing_name, name)}
   end
 
+  @impl true
   def handle_event("save_rename", %{"location_id" => id, "name" => name}, socket) do
     loc = Enum.find(socket.assigns.locations, &(&1.id == id))
     name = if name == "", do: nil, else: name
@@ -275,6 +296,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
     end
   end
 
+  @impl true
   def handle_event("delete_location", %{"id" => id}, socket) do
     loc = Enum.find(socket.assigns.locations, &(&1.id == id))
 
@@ -307,6 +329,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
      )}
   end
 
+  @impl true
   def handle_info({:location_cleared, "modal-address-autocomplete"}, socket) do
     {:noreply,
      assign(socket,
@@ -322,13 +345,6 @@ defmodule HuddlzWeb.GroupLive.Locations do
       {:ok, nil} -> {:error, :not_found}
       {:ok, group} -> {:ok, group}
       {:error, _} -> {:error, :not_found}
-    end
-  end
-
-  defp load_group_locations(group_id, user) do
-    case Communities.list_group_locations(group_id, actor: user) do
-      {:ok, locations} -> locations
-      _ -> []
     end
   end
 

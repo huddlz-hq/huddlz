@@ -236,6 +236,7 @@ defmodule HuddlzWeb.GroupLive.New do
      )}
   end
 
+  @impl true
   def handle_info({:location_cleared, "modal-location-autocomplete"}, socket) do
     {:noreply,
      assign(socket,

@@ -33,7 +33,7 @@ defmodule Huddlz.Communities.Group do
 
       change Huddlz.Communities.Group.Changes.AddOwnerAsMember
       change Huddlz.Communities.Group.Changes.GenerateSlug
-      change Huddlz.Communities.Group.Changes.ApplyProvidedCoordinates
+      change Huddlz.Geocoding.ApplyProvidedCoordinates
       change Huddlz.Communities.Group.Changes.GeocodeLocation
     end
 
@@ -89,7 +89,7 @@ defmodule Huddlz.Communities.Group do
       argument :provided_latitude, :float, allow_nil?: true, public?: false
       argument :provided_longitude, :float, allow_nil?: true, public?: false
 
-      change Huddlz.Communities.Group.Changes.ApplyProvidedCoordinates
+      change Huddlz.Geocoding.ApplyProvidedCoordinates
       change Huddlz.Communities.Group.Changes.GeocodeLocation
     end
   end

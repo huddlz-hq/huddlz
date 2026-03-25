@@ -1,6 +1,6 @@
-defmodule Huddlz.Communities.Huddl.Changes.ApplyProvidedCoordinates do
+defmodule Huddlz.Geocoding.ApplyProvidedCoordinates do
   @moduledoc """
-  Applies pre-existing coordinates from a saved group location.
+  Applies pre-existing coordinates from the provided_latitude/provided_longitude arguments.
   Runs before GeocodeLocation so that geocoding is skipped when coordinates are already set.
   """
   use Ash.Resource.Change
@@ -9,7 +9,7 @@ defmodule Huddlz.Communities.Huddl.Changes.ApplyProvidedCoordinates do
     lat = Ash.Changeset.get_argument(changeset, :provided_latitude)
     lng = Ash.Changeset.get_argument(changeset, :provided_longitude)
 
-    if lat && lng do
+    if is_number(lat) and is_number(lng) do
       changeset
       |> Ash.Changeset.force_change_attribute(:latitude, lat)
       |> Ash.Changeset.force_change_attribute(:longitude, lng)

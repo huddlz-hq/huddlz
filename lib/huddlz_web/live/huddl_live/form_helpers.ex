@@ -84,6 +84,13 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
     end
   end
 
+  def load_group_locations(group_id, user) do
+    case Huddlz.Communities.list_group_locations(group_id, actor: user) do
+      {:ok, locations} -> locations
+      _ -> []
+    end
+  end
+
   def parse_time(time_str) do
     case String.split(time_str, ":") do
       [hour_str, minute_str] ->
