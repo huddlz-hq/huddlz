@@ -413,6 +413,7 @@ defmodule HuddlzWeb.HuddlLive.New do
     {:noreply, assign(socket, :form, to_form(form))}
   end
 
+  @impl true
   def handle_event("save", %{"form" => params}, socket) do
     params =
       if socket.assigns.group.is_public do
@@ -445,6 +446,7 @@ defmodule HuddlzWeb.HuddlLive.New do
     end
   end
 
+  @impl true
   def handle_event("save_location", _params, socket) do
     user = socket.assigns.current_user
     address = socket.assigns.modal_location_address
@@ -473,10 +475,12 @@ defmodule HuddlzWeb.HuddlLive.New do
     end
   end
 
+  @impl true
   def handle_event("modal_form_changed", %{"location_name" => name}, socket) do
     {:noreply, assign(socket, :modal_location_name, name)}
   end
 
+  @impl true
   def handle_event("modal_form_changed", _params, socket) do
     {:noreply, socket}
   end
@@ -486,10 +490,12 @@ defmodule HuddlzWeb.HuddlLive.New do
     {:noreply, apply_saved_location_to_form(socket, location)}
   end
 
+  @impl true
   def handle_info({:saved_location_cleared, "saved-location-picker"}, socket) do
     {:noreply, clear_saved_location(socket)}
   end
 
+  @impl true
   def handle_info(
         {:location_selected, "modal-address-autocomplete",
          %{display_text: text, main_text: main_text, latitude: lat, longitude: lng}},
@@ -504,6 +510,7 @@ defmodule HuddlzWeb.HuddlLive.New do
      )}
   end
 
+  @impl true
   def handle_info({:location_cleared, "modal-address-autocomplete"}, socket) do
     {:noreply,
      assign(socket,
@@ -533,13 +540,6 @@ defmodule HuddlzWeb.HuddlLive.New do
       {:ok, nil} -> {:error, :not_found}
       {:ok, group} -> {:ok, group}
       {:error, _} -> {:error, :not_found}
-    end
-  end
-
-  defp load_group_locations(group_id, user) do
-    case Communities.list_group_locations(group_id, actor: user) do
-      {:ok, locations} -> locations
-      _ -> []
     end
   end
 end
