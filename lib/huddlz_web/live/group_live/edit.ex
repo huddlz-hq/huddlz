@@ -6,6 +6,13 @@ defmodule HuddlzWeb.GroupLive.Edit do
 
   import HuddlzWeb.Live.Helpers.UploadHelpers
 
+  import HuddlzWeb.HuddlLive.FormHelpers,
+    only: [
+      inject_group_location_param: 2,
+      prepare_source_with_coordinates: 1,
+      apply_group_location_to_form: 2
+    ]
+
   alias Huddlz.Communities
   alias Huddlz.Communities.GroupImage
   alias Huddlz.Storage.GroupImages
@@ -492,7 +499,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
     {:noreply,
      socket
      |> assign(:selected_location_data, nil)
-     |> apply_location_to_form("")}
+     |> apply_group_location_to_form("")}
   end
 
   @impl true
@@ -506,13 +513,13 @@ defmodule HuddlzWeb.GroupLive.Edit do
     {:noreply,
      socket
      |> assign(:selected_location_data, location_data)
-     |> apply_location_to_form(location_data.display_text)
+     |> apply_group_location_to_form(location_data.display_text)
      |> push_patch(to: ~p"/groups/#{socket.assigns.original_slug}/edit")}
   end
 
   @impl true
   def handle_event("update_group", %{"form" => params}, socket) do
-    params = inject_location_param(params, socket.assigns.selected_location_data)
+    params = inject_group_location_param(params, socket.assigns.selected_location_data)
 
     case AshPhoenix.Form.submit(socket.assigns.form.source,
            params: params,
@@ -557,12 +564,6 @@ defmodule HuddlzWeb.GroupLive.Edit do
      )}
   end
 
-  defp inject_location_param(params, nil), do: params
-
-  defp inject_location_param(params, %{display_text: text}) do
-    Map.put(params, "location", text)
-  end
-
   defp assign_pending_image_to_group(socket, group) do
     case socket.assigns[:pending_image_id] do
       nil ->
@@ -604,26 +605,6 @@ defmodule HuddlzWeb.GroupLive.Edit do
     else
       nil
     end
-  end
-
-  defp prepare_source_with_coordinates(nil), do: & &1
-
-  defp prepare_source_with_coordinates(%{latitude: lat, longitude: lng})
-       when is_number(lat) and is_number(lng) do
-    fn changeset ->
-      changeset
-      |> Ash.Changeset.force_change_attribute(:latitude, lat)
-      |> Ash.Changeset.force_change_attribute(:longitude, lng)
-    end
-  end
-
-  defp prepare_source_with_coordinates(_), do: & &1
-
-  defp apply_location_to_form(socket, text) do
-    current_params = socket.assigns.form.source.params || %{}
-    updated_params = Map.put(current_params, "location", text)
-    form = AshPhoenix.Form.validate(socket.assigns.form.source, updated_params)
-    assign(socket, :form, to_form(form))
   end
 
   defp get_group_by_slug(slug, actor) do
