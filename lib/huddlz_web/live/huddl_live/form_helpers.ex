@@ -1,7 +1,7 @@
 defmodule HuddlzWeb.HuddlLive.FormHelpers do
   @moduledoc """
-  Shared helpers for huddl create/edit forms.
-  Provides date/time calculation and event type visibility logic.
+  Shared helpers for huddl and group create/edit forms.
+  Provides date/time calculation, event type visibility, and location helpers.
   """
   import Phoenix.Component, only: [assign: 3]
 
@@ -71,17 +71,39 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
   end
 
   @doc """
-  Returns a `prepare_source` function that sets the private provided_latitude/longitude
-  arguments on the changeset when a saved location is selected.
+  Returns a `before_submit` function that applies pre-existing coordinates
+  directly to the changeset. Used with `AshPhoenix.Form.submit/2`'s
+  `:before_submit` option, which runs after `for_create`/`for_update`
+  (i.e., after Ash resource changes have already executed).
   """
   def prepare_source_with_coordinates(nil), do: & &1
 
-  def prepare_source_with_coordinates(location) do
+  def prepare_source_with_coordinates(location) when is_map(location) do
     fn changeset ->
       changeset
-      |> Ash.Changeset.force_set_argument(:provided_latitude, location.latitude)
-      |> Ash.Changeset.force_set_argument(:provided_longitude, location.longitude)
+      |> Ash.Changeset.force_change_attribute(:latitude, location.latitude)
+      |> Ash.Changeset.force_change_attribute(:longitude, location.longitude)
     end
+  end
+
+  @doc """
+  Injects the location text into form params for group forms.
+  Accepts a map with `:display_text` (from the autocomplete component).
+  """
+  def inject_group_location_param(params, nil), do: params
+
+  def inject_group_location_param(params, %{display_text: text}) do
+    Map.put(params, "location", text)
+  end
+
+  @doc """
+  Updates the group form's location field with the given text.
+  """
+  def apply_group_location_to_form(socket, text) do
+    current_params = socket.assigns.form.source.params || %{}
+    updated_params = Map.put(current_params, "location", text)
+    form = AshPhoenix.Form.validate(socket.assigns.form.source, updated_params)
+    assign(socket, :form, Phoenix.Component.to_form(form))
   end
 
   def load_group_locations(group_id, user) do
