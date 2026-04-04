@@ -47,12 +47,14 @@ mix usage_rules.search_docs "search term" -p ash -p ash_authentication_phoenix -
 - `mix ash.gen.custom_expression` - Generates a custom expression module.
 - `mix ash.gen.domain` - Generates an Ash.Domain
 - `mix ash.gen.enum` - Generates an Ash.Type.Enum
+- `mix ash.gen.gettext` - Copies Ash's .pot file for error message translation
 - `mix ash.gen.preparation` - Generates a custom preparation module.
 - `mix ash.gen.resource` - Generate and configure an Ash.Resource.
 - `mix ash.gen.validation` - Generates a custom validation module.
 - `mix ash.generate_livebook` - Generates a Livebook for each Ash domain
 - `mix ash.generate_policy_charts` - Generates a Mermaid Flow Chart for a given resource's policies.
 - `mix ash.generate_resource_diagrams` - Generates Mermaid Resource Diagrams for each Ash domain
+- `mix ash.gettext.extract` - Extracts Ash error messages into a .pot file
 - `mix ash.install` - Installs Ash into a project. Should be called with `mix igniter.install ash`
 - `mix ash.migrate` - Runs all migration tasks for any extension on any resource/domain in your application.
 - `mix ash.patch.extend` - Adds an extension or extensions to the given domain/resource
