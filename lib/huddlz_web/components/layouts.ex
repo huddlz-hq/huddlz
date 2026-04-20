@@ -72,12 +72,13 @@ defmodule HuddlzWeb.Layouts do
                     </li>
                   <% end %>
                   <li class="border-t border-base-300 mt-1 pt-1">
-                    <a
+                    <.link
                       href="/sign-out"
+                      method="delete"
                       class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-base-300 text-error transition-colors"
                     >
                       <.icon name="hero-arrow-right-on-rectangle" class="w-4 h-4" /> Sign Out
-                    </a>
+                    </.link>
                   </li>
                 </ul>
               </div>
