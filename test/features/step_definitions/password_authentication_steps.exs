@@ -217,9 +217,6 @@ defmodule PasswordAuthenticationSteps do
   end
 
   step "I should receive a password reset email for {string}", %{args: [email]} = context do
-    # Wait a moment for email to be sent
-    Process.sleep(200)
-
     # Debug - let's see what emails were sent
     # First try to assert any email was sent at all
     try do
@@ -258,9 +255,6 @@ defmodule PasswordAuthenticationSteps do
   step "I click the password reset link in the email", context do
     session = context[:session] || context[:conn]
     reset_link = context[:reset_link] || raise "No reset link found in context"
-
-    # Add a small delay to ensure token is fully processed
-    Process.sleep(100)
 
     session = visit(session, reset_link)
     {:ok, Map.merge(context, %{session: session, conn: session})}

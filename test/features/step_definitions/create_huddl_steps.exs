@@ -379,9 +379,6 @@ defmodule CreateHuddlSteps do
   end
 
   step "the huddl {string} should be created {int} times", %{args: [text, count]} = context do
-    # Wait a moment for any async operations to complete
-    Process.sleep(100)
-
     huddlz =
       Huddl
       |> Ash.Query.filter(title == ^text)
@@ -393,9 +390,6 @@ defmodule CreateHuddlSteps do
   end
 
   step "the huddl should be created as private", context do
-    # Wait a moment for any async operations to complete
-    Process.sleep(100)
-
     # Find the most recently created huddl using the correct actor
     huddl =
       Huddl
