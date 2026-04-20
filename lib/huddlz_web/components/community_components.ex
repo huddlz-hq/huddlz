@@ -5,7 +5,7 @@ defmodule HuddlzWeb.CommunityComponents do
   use Phoenix.Component
   use HuddlzWeb, :verified_routes
 
-  import HuddlzWeb.CoreComponents, only: [avatar: 1, icon: 1]
+  import HuddlzWeb.CoreComponents, only: [avatar: 1, humanize: 1, icon: 1]
 
   alias Huddlz.Storage.GroupImages
   alias Huddlz.Storage.HuddlImages
@@ -169,7 +169,7 @@ defmodule HuddlzWeb.CommunityComponents do
         <div class="flex flex-wrap gap-x-3 gap-y-1 mt-3 text-xs text-base-content/50">
           <span class="flex items-center gap-1">
             <.icon name={type_icon(@huddl.event_type)} class="h-3.5 w-3.5" />
-            {@huddl.event_type |> to_string() |> String.replace("_", " ") |> String.capitalize()}
+            {humanize(@huddl.event_type)}
           </span>
           <span class="flex items-center gap-1">
             <.icon name="hero-calendar" class="h-3.5 w-3.5" />
@@ -212,7 +212,7 @@ defmodule HuddlzWeb.CommunityComponents do
       status_badge_class(@status),
       @class
     ]}>
-      {@status |> to_string() |> String.replace("_", " ") |> String.capitalize()}
+      {humanize(@status)}
     </span>
     """
   end
@@ -231,7 +231,7 @@ defmodule HuddlzWeb.CommunityComponents do
       @class
     ]}>
       <.icon name={type_icon(@type)} class="h-3 w-3" />
-      {@type |> to_string() |> String.replace("_", " ") |> String.capitalize()}
+      {humanize(@type)}
     </span>
     """
   end

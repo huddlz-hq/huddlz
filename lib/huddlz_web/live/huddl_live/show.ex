@@ -125,7 +125,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
             <dt class="w-32 shrink-0 font-medium text-base-content/50">Status</dt>
             <dd class={["flex items-center gap-2", status_text_class(@huddl.status)]}>
               <.icon name={status_icon(@huddl.status)} class="h-4 w-4" />
-              {@huddl.status |> to_string() |> String.replace("_", " ") |> String.capitalize()}
+              {humanize(@huddl.status)}
             </dd>
           </div>
 
@@ -133,7 +133,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
             <dt class="w-32 shrink-0 font-medium text-base-content/50">Type</dt>
             <dd class="flex items-center gap-2">
               <.icon name={type_detail_icon(@huddl.event_type)} class="h-4 w-4" />
-              {@huddl.event_type |> to_string() |> String.replace("_", " ") |> String.capitalize()}
+              {humanize(@huddl.event_type)}
             </dd>
           </div>
 

@@ -676,6 +676,19 @@ defmodule HuddlzWeb.CoreComponents do
   end
 
   @doc """
+  Renders an atom or string as a human-readable label.
+
+  Underscores become spaces and the first letter is capitalized.
+  Use for enum values like `:in_person` → `"In person"`.
+  """
+  def humanize(value) do
+    value
+    |> to_string()
+    |> String.replace("_", " ")
+    |> String.capitalize()
+  end
+
+  @doc """
   Translates an error message using gettext.
   """
   def translate_error({msg, opts}) do
