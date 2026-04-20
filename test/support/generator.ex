@@ -83,6 +83,62 @@ defmodule Huddlz.Generator do
   end
 
   @doc """
+  Create a group and add the given members in one call.
+
+  Collapses the common "owner → group → add each member" setup into a single
+  helper. Returns `{group, group_members}` so callers can pattern-match or
+  discard the membership records.
+
+  Options:
+
+    * `:owner` — the `%User{}` that owns the group (acts as actor for group
+      creation and membership additions). Defaults to a freshly generated
+      `:user`-role user.
+    * `:group` — keyword list merged into the underlying `group/1` call
+      (`is_public`, `name`, `description`, etc.). `:owner_id` and `:actor`
+      are derived from `:owner` automatically.
+    * `:members` — list of `%{user: %User{}, role: :member | :organizer | :owner}`
+      maps describing memberships to create. Defaults to `[]`.
+
+  ## Examples
+
+      {public_group, _members} =
+        generate_group_with_members(
+          owner: owner,
+          group: [is_public: true, name: "Public Group"],
+          members: [
+            %{user: organizer, role: :organizer},
+            %{user: regular_member, role: :member}
+          ]
+        )
+  """
+  def generate_group_with_members(opts \\ []) do
+    owner = opts[:owner] || generate(user(role: :user))
+
+    group_opts =
+      (opts[:group] || [])
+      |> Keyword.put_new(:is_public, true)
+      |> Keyword.put(:owner_id, owner.id)
+      |> Keyword.put(:actor, owner)
+
+    group_record = generate(group(group_opts))
+
+    members =
+      for %{user: member_user, role: role} <- opts[:members] || [] do
+        generate(
+          group_member(
+            group_id: group_record.id,
+            user_id: member_user.id,
+            role: role,
+            actor: owner
+          )
+        )
+      end
+
+    {group_record, members}
+  end
+
+  @doc """
   Create a group with given attributes.
   """
   def group(opts \\ []) do

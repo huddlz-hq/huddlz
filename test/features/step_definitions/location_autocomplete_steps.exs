@@ -1,6 +1,6 @@
 defmodule LocationAutocompleteSteps do
   use Cucumber.StepDefinition
-  import Mox
+  import Huddlz.Test.MoxHelpers
   import PhoenixTest
   import Phoenix.LiveViewTest
 
@@ -111,43 +111,15 @@ defmodule LocationAutocompleteSteps do
   end
 
   defp setup_autocomplete_stub(text) do
-    case text do
-      "aus" ->
-        stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
-          {:ok,
-           [
-             %{
-               place_id: "p1",
-               display_text: "Austin, TX, USA",
-               main_text: "Austin",
-               secondary_text: "TX, USA"
-             }
-           ]}
-        end)
+    results =
+      case text do
+        "aus" -> [:austin]
+        "saint" -> [:saint_augustine]
+        _ -> []
+      end
 
-      "saint" ->
-        stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
-          {:ok,
-           [
-             %{
-               place_id: "p2",
-               display_text: "Saint Augustine, FL, USA",
-               main_text: "Saint Augustine",
-               secondary_text: "FL, USA"
-             }
-           ]}
-        end)
-
-      _ ->
-        stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts -> {:ok, []} end)
-    end
+    stub_places_autocomplete(%{text => results})
   end
 
-  defp setup_place_details_stub do
-    stub(Huddlz.MockPlaces, :place_details, fn
-      "p1", _token -> {:ok, %{latitude: 30.27, longitude: -97.74}}
-      "p2", _token -> {:ok, %{latitude: 29.89, longitude: -81.31}}
-      _, _token -> {:error, :not_found}
-    end)
-  end
+  defp setup_place_details_stub, do: stub_place_details(:defaults)
 end

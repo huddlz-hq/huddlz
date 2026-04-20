@@ -21,14 +21,15 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       regular = generate(user(role: :user))
       non_member = generate(user(role: :user))
 
-      group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
-
-      # Add organizer and member to group
-      generate(
-        group_member(group_id: group.id, user_id: organizer.id, role: :organizer, actor: owner)
-      )
-
-      generate(group_member(group_id: group.id, user_id: member.id, role: :member, actor: owner))
+      {group, _} =
+        generate_group_with_members(
+          owner: owner,
+          group: [is_public: true],
+          members: [
+            %{user: organizer, role: :organizer},
+            %{user: member, role: :member}
+          ]
+        )
 
       %{
         owner: owner,
@@ -528,13 +529,16 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       owner = generate(user(role: :user))
       organizer = generate(user(role: :user))
       member = generate(user(role: :user))
-      group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
 
-      generate(
-        group_member(group_id: group.id, user_id: organizer.id, role: :organizer, actor: owner)
-      )
-
-      generate(group_member(group_id: group.id, user_id: member.id, role: :member, actor: owner))
+      {group, _} =
+        generate_group_with_members(
+          owner: owner,
+          group: [is_public: true],
+          members: [
+            %{user: organizer, role: :organizer},
+            %{user: member, role: :member}
+          ]
+        )
 
       %{
         owner: owner,

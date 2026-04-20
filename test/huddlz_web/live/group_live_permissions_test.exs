@@ -12,82 +12,25 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       verified_non_member = generate(user(role: :user))
       regular_non_member = generate(user(role: :user))
 
-      # Groups are automatically created with owner membership
-      public_group =
-        generate(
-          group(
-            is_public: true,
-            owner_id: owner.id,
-            name: "Public Group",
-            actor: owner
-          )
+      members = [
+        %{user: organizer, role: :organizer},
+        %{user: verified_member, role: :member},
+        %{user: regular_member, role: :member}
+      ]
+
+      {public_group, _} =
+        generate_group_with_members(
+          owner: owner,
+          group: [is_public: true, name: "Public Group"],
+          members: members
         )
 
-      private_group =
-        generate(
-          group(
-            is_public: false,
-            owner_id: owner.id,
-            name: "Private Group",
-            actor: owner
-          )
+      {private_group, _} =
+        generate_group_with_members(
+          owner: owner,
+          group: [is_public: false, name: "Private Group"],
+          members: members
         )
-
-      # Add organizer and members to public group
-      generate(
-        group_member(
-          group_id: public_group.id,
-          user_id: organizer.id,
-          role: :organizer,
-          actor: owner
-        )
-      )
-
-      generate(
-        group_member(
-          group_id: public_group.id,
-          user_id: verified_member.id,
-          role: :member,
-          actor: owner
-        )
-      )
-
-      generate(
-        group_member(
-          group_id: public_group.id,
-          user_id: regular_member.id,
-          role: :member,
-          actor: owner
-        )
-      )
-
-      # Add organizer and members to private group
-      generate(
-        group_member(
-          group_id: private_group.id,
-          user_id: organizer.id,
-          role: :organizer,
-          actor: owner
-        )
-      )
-
-      generate(
-        group_member(
-          group_id: private_group.id,
-          user_id: verified_member.id,
-          role: :member,
-          actor: owner
-        )
-      )
-
-      generate(
-        group_member(
-          group_id: private_group.id,
-          user_id: regular_member.id,
-          role: :member,
-          actor: owner
-        )
-      )
 
       %{
         owner: owner,

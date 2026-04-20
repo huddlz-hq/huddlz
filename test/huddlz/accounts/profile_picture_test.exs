@@ -75,9 +75,6 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
           actor: user
         )
 
-      # Small delay to ensure different timestamps
-      Process.sleep(10)
-
       # Create second profile picture (most recent)
       {:ok, pic2} =
         Accounts.create_profile_picture(

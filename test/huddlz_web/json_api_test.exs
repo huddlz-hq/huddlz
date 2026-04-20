@@ -7,9 +7,7 @@ defmodule HuddlzWeb.JsonApiTest do
 
   describe "JSON:API authentication" do
     setup do
-      stub(Huddlz.MockGeocoding, :geocode, fn _address ->
-        {:ok, %{latitude: 30.27, longitude: -97.74}}
-      end)
+      stub_geocode(%{latitude: 30.27, longitude: -97.74})
 
       owner = generate(user(role: :user))
       group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
