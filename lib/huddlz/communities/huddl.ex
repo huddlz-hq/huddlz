@@ -97,7 +97,7 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.AddHuddlTemplate
       change Huddlz.Geocoding.ApplyProvidedCoordinates
-      change Huddlz.Communities.Huddl.Changes.GeocodeLocation
+      change {Huddlz.Geocoding.GeocodeChange, field: :physical_location}
       change Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup
     end
 
@@ -142,7 +142,7 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz
       change Huddlz.Geocoding.ApplyProvidedCoordinates
-      change Huddlz.Communities.Huddl.Changes.GeocodeLocation
+      change {Huddlz.Geocoding.GeocodeChange, field: :physical_location}
       change Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup
     end
 

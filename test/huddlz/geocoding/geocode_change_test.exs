@@ -1,4 +1,4 @@
-defmodule Huddlz.Communities.Huddl.Changes.GeocodeLocationTest do
+defmodule Huddlz.Geocoding.GeocodeChangeTest do
   use Huddlz.DataCase, async: true
 
   import Mox
