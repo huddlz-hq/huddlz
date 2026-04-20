@@ -32,10 +32,10 @@ defmodule HuddlzWeb.GroupLive.Show do
          |> assign(:page_title, group.name)
          |> assign(:group, group)
          |> assign(:members, members)
-         |> assign(:member_count, get_member_count(group))
-         |> assign(:is_member, member?(group, socket.assigns.current_user))
+         |> assign(:member_count, member_count_unchecked(group))
+         |> assign(:is_member, member_unchecked?(group, socket.assigns.current_user))
          |> assign(:is_owner, owner?(group, socket.assigns.current_user))
-         |> assign(:is_organizer, organizer?(group, socket.assigns.current_user))
+         |> assign(:is_organizer, organizer_unchecked?(group, socket.assigns.current_user))
          |> assign(:active_tab, "upcoming")
          |> assign(:upcoming_huddlz, upcoming_huddlz)
          |> assign(:past_huddlz, [])
@@ -263,7 +263,7 @@ defmodule HuddlzWeb.GroupLive.Show do
          |> put_flash(:info, "Successfully joined the group!")
          |> assign(:is_member, true)
          |> assign(:members, members)
-         |> assign(:member_count, get_member_count(group))}
+         |> assign(:member_count, member_count_unchecked(group))}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to join group")}
@@ -281,7 +281,7 @@ defmodule HuddlzWeb.GroupLive.Show do
          |> put_flash(:info, "Successfully left the group")
          |> assign(:is_member, false)
          |> assign(:members, members)
-         |> assign(:member_count, get_member_count(group))}
+         |> assign(:member_count, member_count_unchecked(group))}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to leave group")}
@@ -300,9 +300,9 @@ defmodule HuddlzWeb.GroupLive.Show do
     end
   end
 
-  defp member?(_group, nil), do: false
+  defp member_unchecked?(_group, nil), do: false
 
-  defp member?(group, user) do
+  defp member_unchecked?(group, user) do
     Huddlz.Communities.GroupMember
     |> Ash.Query.filter(group_id == ^group.id and user_id == ^user.id)
     |> Ash.exists?(authorize?: false)
@@ -323,12 +323,8 @@ defmodule HuddlzWeb.GroupLive.Show do
   end
 
   defp can_see_members?(group, current_user) do
-    # Only members can see member lists
-    current_user != nil && member?(group, current_user)
+    current_user != nil && member_unchecked?(group, current_user)
   end
-
-  # Removed unused functions after simplifying role system
-  # Only members can see member lists
 
   defp load_members(group, current_user) do
     # Use get_by_group action which enforces authorization
@@ -339,15 +335,15 @@ defmodule HuddlzWeb.GroupLive.Show do
     |> Enum.map(& &1.user)
   end
 
-  defp get_member_count(group) do
+  defp member_count_unchecked(group) do
     GroupMember
     |> Ash.Query.filter(group_id == ^group.id)
     |> Ash.count!(authorize?: false)
   end
 
-  defp organizer?(_group, nil), do: false
+  defp organizer_unchecked?(_group, nil), do: false
 
-  defp organizer?(group, user) do
+  defp organizer_unchecked?(group, user) do
     GroupMember
     |> Ash.Query.filter(group_id == ^group.id and user_id == ^user.id and role == :organizer)
     |> Ash.exists?(authorize?: false)
