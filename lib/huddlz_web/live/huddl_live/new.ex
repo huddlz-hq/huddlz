@@ -8,13 +8,13 @@ defmodule HuddlzWeb.HuddlLive.New do
   import HuddlzWeb.HuddlLive.FormComponent
   import HuddlzWeb.Live.Helpers.UploadHelpers
 
-  alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
-
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.HuddlImage
   alias Huddlz.Storage.HuddlImages
   alias HuddlzWeb.Layouts
+  alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
+  alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
 
   require Ash.Query
 
@@ -109,36 +109,24 @@ defmodule HuddlzWeb.HuddlLive.New do
     end
   end
 
-  defp process_eager_upload(socket) do
-    socket = cleanup_pending_image(socket)
-    socket = assign(socket, :upload_processing, true)
+  defp process_eager_upload(socket),
+    do: ImageUploadPipeline.process_eager_upload(socket, upload_config())
 
-    result =
-      consume_uploaded_entries(socket, :huddl_image, fn %{path: path}, entry ->
-        store_and_create_pending_image(
-          path,
-          entry,
-          socket.assigns.current_user,
-          socket.assigns.group.id
-        )
-      end)
+  defp cleanup_pending_image(socket),
+    do: ImageUploadPipeline.cleanup_pending_image(socket, upload_config())
 
-    socket = assign(socket, :upload_processing, false)
-    apply_upload_result(socket, result)
+  defp upload_config do
+    %{
+      upload_name: :huddl_image,
+      storage: HuddlImages,
+      create_pending: &create_pending_huddl_image/3,
+      cleanup: &soft_delete_pending_huddl_image/2
+    }
   end
 
-  defp store_and_create_pending_image(path, entry, user, group_id) do
-    with {:ok, metadata} <- HuddlImages.store_pending(path, entry.client_name, entry.client_type),
-         {:ok, image} <- create_pending_image_record(entry, metadata, user, group_id) do
-      {:ok, {:success, image.id, metadata.thumbnail_path}}
-    else
-      {:error, reason} -> {:ok, {:error, reason}}
-    end
-  end
-
-  defp create_pending_image_record(entry, metadata, user, group_id) do
+  defp create_pending_huddl_image(socket, entry, metadata) do
     Communities.create_pending_huddl_image(
-      group_id,
+      socket.assigns.group.id,
       %{
         filename: entry.client_name,
         content_type: entry.client_type,
@@ -146,38 +134,14 @@ defmodule HuddlzWeb.HuddlLive.New do
         storage_path: metadata.storage_path,
         thumbnail_path: metadata.thumbnail_path
       },
-      actor: user
+      actor: socket.assigns.current_user
     )
   end
 
-  defp apply_upload_result(socket, result) do
-    case result do
-      [{:success, image_id, thumbnail_path}] ->
-        socket
-        |> assign(:pending_image_id, image_id)
-        |> assign(:pending_preview_url, HuddlImages.url(thumbnail_path))
-        |> assign(:image_error, nil)
-
-      [{:error, reason}] ->
-        assign(socket, :image_error, format_upload_error(reason))
-
-      [] ->
-        socket
-    end
-  end
-
-  defp cleanup_pending_image(socket) do
-    case socket.assigns[:pending_image_id] do
-      nil ->
-        socket
-
-      image_id ->
-        with {:ok, image} <- Ash.get(HuddlImage, image_id),
-             true <- is_nil(image.huddl_id) do
-          Communities.soft_delete_huddl_image(image, actor: socket.assigns.current_user)
-        end
-
-        assign(socket, pending_image_id: nil, pending_preview_url: nil)
+  defp soft_delete_pending_huddl_image(socket, image_id) do
+    with {:ok, image} <- Ash.get(HuddlImage, image_id),
+         true <- is_nil(image.huddl_id) do
+      Communities.soft_delete_huddl_image(image, actor: socket.assigns.current_user)
     end
   end
 
