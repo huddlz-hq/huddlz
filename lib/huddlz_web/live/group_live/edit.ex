@@ -17,6 +17,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
   alias Huddlz.Communities.GroupImage
   alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
+  alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
 
@@ -60,9 +61,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
     |> assign(:pending_image_id, nil)
     |> assign(:pending_preview_url, nil)
     |> assign(:selected_location_data, build_initial_location_data(group))
-    |> assign(:modal_location_address, nil)
-    |> assign(:modal_location_lat, nil)
-    |> assign(:modal_location_lng, nil)
+    |> ModalLocationHelpers.init()
     |> assign(:upload_processing, false)
     |> allow_upload(:group_image,
       accept: ~w(.jpg .jpeg .png .webp),
@@ -77,14 +76,8 @@ defmodule HuddlzWeb.GroupLive.Edit do
   def handle_params(_params, _uri, socket) do
     socket =
       case socket.assigns.live_action do
-        :new_location ->
-          socket
-          |> assign(:modal_location_address, nil)
-          |> assign(:modal_location_lat, nil)
-          |> assign(:modal_location_lng, nil)
-
-        _ ->
-          socket
+        :new_location -> ModalLocationHelpers.clear(socket)
+        _ -> socket
       end
 
     {:noreply, socket}
@@ -541,27 +534,13 @@ defmodule HuddlzWeb.GroupLive.Edit do
   end
 
   @impl true
-  def handle_info(
-        {:location_selected, "modal-location-autocomplete",
-         %{display_text: text, latitude: lat, longitude: lng}},
-        socket
-      ) do
-    {:noreply,
-     assign(socket,
-       modal_location_address: text,
-       modal_location_lat: lat,
-       modal_location_lng: lng
-     )}
+  def handle_info({:location_selected, "modal-location-autocomplete", payload}, socket) do
+    {:noreply, ModalLocationHelpers.apply_selected(socket, payload)}
   end
 
   @impl true
   def handle_info({:location_cleared, "modal-location-autocomplete"}, socket) do
-    {:noreply,
-     assign(socket,
-       modal_location_address: nil,
-       modal_location_lat: nil,
-       modal_location_lng: nil
-     )}
+    {:noreply, ModalLocationHelpers.clear(socket)}
   end
 
   defp assign_pending_image_to_group(socket, group) do

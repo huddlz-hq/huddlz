@@ -8,6 +8,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
 
   alias Huddlz.Communities
   alias HuddlzWeb.Layouts
+  alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
 
   require Ash.Query
 
@@ -21,7 +22,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
   @impl true
   def handle_params(%{"slug" => slug}, _, socket) do
     if socket.assigns[:group] && socket.assigns.group.slug == slug do
-      {:noreply, reset_modal_state(socket)}
+      {:noreply, ModalLocationHelpers.clear(socket)}
     else
       load_locations_page(socket, slug)
     end
@@ -40,7 +41,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
             |> assign(:page_title, "#{group.name} — Locations")
             |> assign(:group, group)
             |> assign(:locations, locations)
-            |> reset_modal_state()
+            |> ModalLocationHelpers.init()
             |> assign(:editing_location_id, nil)
             |> assign(:editing_name, "")
 
@@ -57,14 +58,6 @@ defmodule HuddlzWeb.GroupLive.Locations do
         {:noreply,
          handle_error(socket, :not_found, resource_name: "Group", fallback_path: ~p"/groups")}
     end
-  end
-
-  defp reset_modal_state(socket) do
-    socket
-    |> assign(:modal_location_name, "")
-    |> assign(:modal_location_address, nil)
-    |> assign(:modal_location_lat, nil)
-    |> assign(:modal_location_lng, nil)
   end
 
   @impl true
@@ -315,29 +308,13 @@ defmodule HuddlzWeb.GroupLive.Locations do
   end
 
   @impl true
-  def handle_info(
-        {:location_selected, "modal-address-autocomplete",
-         %{display_text: text, main_text: main_text, latitude: lat, longitude: lng}},
-        socket
-      ) do
-    {:noreply,
-     assign(socket,
-       modal_location_address: text,
-       modal_location_lat: lat,
-       modal_location_lng: lng,
-       modal_location_name: main_text || ""
-     )}
+  def handle_info({:location_selected, "modal-address-autocomplete", payload}, socket) do
+    {:noreply, ModalLocationHelpers.apply_selected(socket, payload)}
   end
 
   @impl true
   def handle_info({:location_cleared, "modal-address-autocomplete"}, socket) do
-    {:noreply,
-     assign(socket,
-       modal_location_address: nil,
-       modal_location_lat: nil,
-       modal_location_lng: nil,
-       modal_location_name: ""
-     )}
+    {:noreply, ModalLocationHelpers.clear(socket)}
   end
 
   defp get_group_by_slug(slug, actor) do

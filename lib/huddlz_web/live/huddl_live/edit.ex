@@ -14,6 +14,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   alias Huddlz.Storage.GroupImages
   alias Huddlz.Storage.HuddlImages
   alias HuddlzWeb.Layouts
+  alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
 
   require Ash.Query
 
@@ -45,10 +46,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         |> assign_edit_form(huddl, group_slug, user)
         |> assign(:group_locations, group_locations)
         |> assign(:selected_location, find_matching_location(huddl, group_locations))
-        |> assign(:modal_location_name, "")
-        |> assign(:modal_location_address, nil)
-        |> assign(:modal_location_lat, nil)
-        |> assign(:modal_location_lng, nil)
+        |> ModalLocationHelpers.init()
         |> assign(:image_error, nil)
         |> assign(:pending_image_id, nil)
         |> assign(:pending_preview_url, nil)
@@ -82,15 +80,8 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
   defp apply_modal_state(socket) do
     case socket.assigns.live_action do
-      :new_location ->
-        socket
-        |> assign(:modal_location_name, "")
-        |> assign(:modal_location_address, nil)
-        |> assign(:modal_location_lat, nil)
-        |> assign(:modal_location_lng, nil)
-
-      _ ->
-        socket
+      :new_location -> ModalLocationHelpers.clear(socket)
+      _ -> socket
     end
   end
 
@@ -623,29 +614,13 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   end
 
   @impl true
-  def handle_info(
-        {:location_selected, "modal-address-autocomplete",
-         %{display_text: text, main_text: main_text, latitude: lat, longitude: lng}},
-        socket
-      ) do
-    {:noreply,
-     assign(socket,
-       modal_location_address: text,
-       modal_location_lat: lat,
-       modal_location_lng: lng,
-       modal_location_name: main_text || ""
-     )}
+  def handle_info({:location_selected, "modal-address-autocomplete", payload}, socket) do
+    {:noreply, ModalLocationHelpers.apply_selected(socket, payload)}
   end
 
   @impl true
   def handle_info({:location_cleared, "modal-address-autocomplete"}, socket) do
-    {:noreply,
-     assign(socket,
-       modal_location_address: nil,
-       modal_location_lat: nil,
-       modal_location_lng: nil,
-       modal_location_name: ""
-     )}
+    {:noreply, ModalLocationHelpers.clear(socket)}
   end
 
   defp assign_pending_image_to_huddl(socket, huddl) do
