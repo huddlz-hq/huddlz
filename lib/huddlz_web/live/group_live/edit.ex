@@ -17,6 +17,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
   alias Huddlz.Communities.GroupImage
   alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
+  alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
   alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
@@ -91,30 +92,22 @@ defmodule HuddlzWeb.GroupLive.Edit do
     end
   end
 
-  defp process_eager_upload(socket) do
-    # Clean up previous pending image if user re-uploads
-    socket = cleanup_pending_image(socket)
-    socket = assign(socket, :upload_processing, true)
+  defp process_eager_upload(socket),
+    do: ImageUploadPipeline.process_eager_upload(socket, upload_config())
 
-    result =
-      consume_uploaded_entries(socket, :group_image, fn %{path: path}, entry ->
-        store_and_create_pending_image(path, entry, socket.assigns.current_user)
-      end)
+  defp cleanup_pending_image(socket),
+    do: ImageUploadPipeline.cleanup_pending_image(socket, upload_config())
 
-    socket = assign(socket, :upload_processing, false)
-    apply_upload_result(socket, result)
+  defp upload_config do
+    %{
+      upload_name: :group_image,
+      storage: GroupImages,
+      create_pending: &create_pending_group_image/3,
+      cleanup: &soft_delete_pending_group_image/2
+    }
   end
 
-  defp store_and_create_pending_image(path, entry, user) do
-    with {:ok, metadata} <- GroupImages.store_pending(path, entry.client_name, entry.client_type),
-         {:ok, image} <- create_pending_image_record(entry, metadata, user) do
-      {:ok, {:success, image.id, metadata.thumbnail_path}}
-    else
-      {:error, reason} -> {:ok, {:error, reason}}
-    end
-  end
-
-  defp create_pending_image_record(entry, metadata, user) do
+  defp create_pending_group_image(socket, entry, metadata) do
     Communities.create_pending_group_image(
       %{
         filename: entry.client_name,
@@ -123,39 +116,14 @@ defmodule HuddlzWeb.GroupLive.Edit do
         storage_path: metadata.storage_path,
         thumbnail_path: metadata.thumbnail_path
       },
-      actor: user
+      actor: socket.assigns.current_user
     )
   end
 
-  defp apply_upload_result(socket, result) do
-    case result do
-      [{:success, image_id, thumbnail_path}] ->
-        socket
-        |> assign(:pending_image_id, image_id)
-        |> assign(:pending_preview_url, GroupImages.url(thumbnail_path))
-        |> assign(:image_error, nil)
-
-      [{:error, reason}] ->
-        assign(socket, :image_error, format_upload_error(reason))
-
-      [] ->
-        socket
-    end
-  end
-
-  defp cleanup_pending_image(socket) do
-    case socket.assigns[:pending_image_id] do
-      nil ->
-        socket
-
-      image_id ->
-        # Soft-delete previous pending image (will be cleaned up by Oban job)
-        with {:ok, image} <- Ash.get(GroupImage, image_id),
-             true <- is_nil(image.group_id) do
-          Communities.soft_delete_group_image(image, actor: socket.assigns.current_user)
-        end
-
-        assign(socket, pending_image_id: nil, pending_preview_url: nil)
+  defp soft_delete_pending_group_image(socket, image_id) do
+    with {:ok, image} <- Ash.get(GroupImage, image_id),
+         true <- is_nil(image.group_id) do
+      Communities.soft_delete_group_image(image, actor: socket.assigns.current_user)
     end
   end
 
