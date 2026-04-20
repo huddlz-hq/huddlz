@@ -118,8 +118,6 @@ defmodule Huddlz.Communities.HuddlImageTest do
           actor: owner
         )
 
-      Process.sleep(10)
-
       # Create second image (most recent)
       {:ok, img2} =
         Communities.create_huddl_image(

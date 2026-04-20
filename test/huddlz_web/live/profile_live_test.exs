@@ -97,17 +97,10 @@ defmodule HuddlzWeb.ProfileLiveTest do
     end
 
     test "shows suggestions when typing", %{conn: conn, user: user} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn "saint", _token, _opts ->
-        {:ok,
-         [
-           %{
-             place_id: "p1",
-             display_text: "Saint Augustine, FL, USA",
-             main_text: "Saint Augustine",
-             secondary_text: "FL, USA"
-           }
-         ]}
-      end)
+      # Profile's autocomplete uses place_id "p1" for Saint Augustine
+      stub_places_autocomplete(%{
+        "saint" => [%{known_places().saint_augustine | place_id: "p1"}]
+      })
 
       session = conn |> login(user) |> visit("/profile")
       view = session.view
@@ -122,21 +115,11 @@ defmodule HuddlzWeb.ProfileLiveTest do
     end
 
     test "selecting a suggestion saves location", %{conn: conn, user: user} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn "saint", _token, _opts ->
-        {:ok,
-         [
-           %{
-             place_id: "p1",
-             display_text: "Saint Augustine, FL, USA",
-             main_text: "Saint Augustine",
-             secondary_text: "FL, USA"
-           }
-         ]}
-      end)
+      stub_places_autocomplete(%{
+        "saint" => [%{known_places().saint_augustine | place_id: "p1"}]
+      })
 
-      stub(Huddlz.MockPlaces, :place_details, fn "p1", _token ->
-        {:ok, %{latitude: 29.89, longitude: -81.31}}
-      end)
+      stub_place_details(%{"p1" => %{latitude: 29.89, longitude: -81.31}})
 
       session = conn |> login(user) |> visit("/profile")
       view = session.view
@@ -154,9 +137,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
     end
 
     test "handles autocomplete API errors", %{conn: conn, user: user} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
-        {:error, {:request_failed, :timeout}}
-      end)
+      stub_places_autocomplete_error({:request_failed, :timeout})
 
       session = conn |> login(user) |> visit("/profile")
       view = session.view
@@ -171,9 +152,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
     end
 
     test "clears error when user types in location field", %{conn: conn, user: user} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
-        {:error, {:request_failed, :timeout}}
-      end)
+      stub_places_autocomplete_error({:request_failed, :timeout})
 
       session = conn |> login(user) |> visit("/profile")
       view = session.view
@@ -187,7 +166,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
       assert has_element?(view, "p", "Location search is currently unavailable")
 
       # Stub returns ok now — typing clears the error
-      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts -> {:ok, []} end)
+      stub_places_autocomplete(%{})
 
       view
       |> element("#profile-location-input")

@@ -286,22 +286,8 @@ defmodule HuddlzWeb.HuddlLiveTest do
       host: host,
       public_group: public_group
     } do
-      stub(Huddlz.MockPlaces, :autocomplete, fn
-        _text, _token, _opts ->
-          {:ok,
-           [
-             %{
-               place_id: "p1",
-               display_text: "Austin, TX, USA",
-               main_text: "Austin",
-               secondary_text: "TX, USA"
-             }
-           ]}
-      end)
-
-      stub(Huddlz.MockPlaces, :place_details, fn "p1", _token ->
-        {:ok, %{latitude: 30.2672, longitude: -97.7431}}
-      end)
+      stub_places_autocomplete(%{"aus" => [:austin]})
+      stub_place_details(%{"p1" => %{latitude: 30.2672, longitude: -97.7431}})
 
       generate(
         huddl(

@@ -80,9 +80,6 @@ defmodule Huddlz.Communities.GroupImageTest do
           actor: owner
         )
 
-      # Small delay to ensure different timestamps
-      Process.sleep(10)
-
       # Create second image (most recent)
       {:ok, img2} =
         Communities.create_group_image(

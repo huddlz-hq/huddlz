@@ -267,17 +267,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
   describe "location autocomplete" do
     test "shows suggestions when typing a location", %{conn: conn} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token, _opts ->
-        {:ok,
-         [
-           %{
-             place_id: "p1",
-             display_text: "Austin, TX, USA",
-             main_text: "Austin",
-             secondary_text: "TX, USA"
-           }
-         ]}
-      end)
+      stub_places_autocomplete(%{"aus" => [:austin]})
 
       {:ok, view, _html} = live(conn, "/")
 
@@ -291,21 +281,8 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
 
     test "selecting a suggestion activates location filter", %{conn: conn} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token, _opts ->
-        {:ok,
-         [
-           %{
-             place_id: "p1",
-             display_text: "Austin, TX, USA",
-             main_text: "Austin",
-             secondary_text: "TX, USA"
-           }
-         ]}
-      end)
-
-      stub(Huddlz.MockPlaces, :place_details, fn "p1", _token ->
-        {:ok, %{latitude: 30.27, longitude: -97.74}}
-      end)
+      stub_places_autocomplete(%{"aus" => [:austin]})
+      stub_place_details(:defaults)
 
       {:ok, view, _html} = live(conn, "/")
 
@@ -333,9 +310,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
 
     test "shows no locations found for unmatched queries", %{conn: conn} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn "xyzabc", _token, _opts ->
-        {:ok, []}
-      end)
+      stub_places_autocomplete(%{})
 
       {:ok, view, _html} = live(conn, "/")
 
@@ -349,9 +324,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
 
     test "handles autocomplete API errors gracefully", %{conn: conn} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
-        {:error, {:request_failed, :timeout}}
-      end)
+      stub_places_autocomplete_error({:request_failed, :timeout})
 
       {:ok, view, _html} = live(conn, "/")
 
@@ -365,21 +338,8 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
 
     test "handles place details errors gracefully", %{conn: conn} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token, _opts ->
-        {:ok,
-         [
-           %{
-             place_id: "p1",
-             display_text: "Austin, TX, USA",
-             main_text: "Austin",
-             secondary_text: "TX, USA"
-           }
-         ]}
-      end)
-
-      stub(Huddlz.MockPlaces, :place_details, fn "p1", _token ->
-        {:error, {:request_failed, :timeout}}
-      end)
+      stub_places_autocomplete(%{"aus" => [:austin]})
+      stub_place_details_error({:request_failed, :timeout})
 
       {:ok, view, _html} = live(conn, "/")
 
@@ -396,21 +356,8 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
 
     test "clearing filters clears location", %{conn: conn} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token, _opts ->
-        {:ok,
-         [
-           %{
-             place_id: "p1",
-             display_text: "Austin, TX, USA",
-             main_text: "Austin",
-             secondary_text: "TX, USA"
-           }
-         ]}
-      end)
-
-      stub(Huddlz.MockPlaces, :place_details, fn "p1", _token ->
-        {:ok, %{latitude: 30.27, longitude: -97.74}}
-      end)
+      stub_places_autocomplete(%{"aus" => [:austin]})
+      stub_place_details(:defaults)
 
       {:ok, view, _html} = live(conn, "/")
 
@@ -433,9 +380,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
 
     test "still shows huddlz when autocomplete returns no results", %{conn: conn} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn _, _token, _opts ->
-        {:ok, []}
-      end)
+      stub_places_autocomplete(%{})
 
       {:ok, view, _html} = live(conn, "/")
 
@@ -451,21 +396,8 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
 
     test "clear location button removes location filter", %{conn: conn} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token, _opts ->
-        {:ok,
-         [
-           %{
-             place_id: "p1",
-             display_text: "Austin, TX, USA",
-             main_text: "Austin",
-             secondary_text: "TX, USA"
-           }
-         ]}
-      end)
-
-      stub(Huddlz.MockPlaces, :place_details, fn "p1", _token ->
-        {:ok, %{latitude: 30.27, longitude: -97.74}}
-      end)
+      stub_places_autocomplete(%{"aus" => [:austin]})
+      stub_place_details(:defaults)
 
       {:ok, view, _html} = live(conn, "/")
 
@@ -489,21 +421,8 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
 
     test "clear location button doesn't affect other filters", %{conn: conn} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token, _opts ->
-        {:ok,
-         [
-           %{
-             place_id: "p1",
-             display_text: "Austin, TX, USA",
-             main_text: "Austin",
-             secondary_text: "TX, USA"
-           }
-         ]}
-      end)
-
-      stub(Huddlz.MockPlaces, :place_details, fn "p1", _token ->
-        {:ok, %{latitude: 30.27, longitude: -97.74}}
-      end)
+      stub_places_autocomplete(%{"aus" => [:austin]})
+      stub_place_details(:defaults)
 
       {:ok, view, _html} = live(conn, "/")
 
@@ -535,23 +454,17 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
   describe "keyboard navigation" do
     setup %{conn: conn} do
-      stub(Huddlz.MockPlaces, :autocomplete, fn "aus", _token, _opts ->
-        {:ok,
-         [
-           %{
-             place_id: "p1",
-             display_text: "Austin, TX, USA",
-             main_text: "Austin",
-             secondary_text: "TX, USA"
-           },
-           %{
-             place_id: "p2",
-             display_text: "Austin, MN, USA",
-             main_text: "Austin",
-             secondary_text: "MN, USA"
-           }
-         ]}
-      end)
+      stub_places_autocomplete(%{
+        "aus" => [
+          :austin,
+          %{
+            place_id: "p2",
+            display_text: "Austin, MN, USA",
+            main_text: "Austin",
+            secondary_text: "MN, USA"
+          }
+        ]
+      })
 
       %{conn: conn}
     end
@@ -600,9 +513,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
 
     test "Enter with highlighted suggestion selects it", %{conn: conn} do
-      stub(Huddlz.MockPlaces, :place_details, fn "p1", _token ->
-        {:ok, %{latitude: 30.27, longitude: -97.74}}
-      end)
+      stub_place_details(:defaults)
 
       {:ok, view, _html} = live(conn, "/")
 
