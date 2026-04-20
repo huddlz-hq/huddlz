@@ -12,6 +12,10 @@ defmodule Huddlz.Communities.HuddlAttendee do
   postgres do
     table "huddl_attendees"
     repo Huddlz.Repo
+
+    custom_indexes do
+      index [:user_id]
+    end
   end
 
   actions do

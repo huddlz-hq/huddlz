@@ -17,6 +17,10 @@ defmodule Huddlz.Communities.GroupMember do
   postgres do
     table "group_members"
     repo Huddlz.Repo
+
+    custom_indexes do
+      index [:user_id]
+    end
   end
 
   actions do

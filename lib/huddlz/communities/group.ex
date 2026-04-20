@@ -14,6 +14,8 @@ defmodule Huddlz.Communities.Group do
     repo Huddlz.Repo
 
     custom_indexes do
+      index [:owner_id]
+
       index "ST_MakePoint(longitude, latitude)",
         name: "groups_location_gist_index",
         using: "GIST",
