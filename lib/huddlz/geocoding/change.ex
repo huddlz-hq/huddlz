@@ -7,16 +7,17 @@ defmodule Huddlz.Geocoding.Change do
   require Logger
 
   def geocode_if_changed(changeset, location_attribute) do
-    if provided_coordinates?(changeset) do
-      changeset
-    else
-      if Ash.Changeset.changing_attribute?(changeset, location_attribute) do
+    cond do
+      provided_coordinates?(changeset) ->
+        changeset
+
+      not Ash.Changeset.changing_attribute?(changeset, location_attribute) ->
+        changeset
+
+      true ->
         changeset
         |> Ash.Changeset.get_attribute(location_attribute)
         |> geocode_and_apply(changeset)
-      else
-        changeset
-      end
     end
   end
 
