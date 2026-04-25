@@ -26,6 +26,7 @@ defmodule Huddlz.Communities.Huddl do
       create :create_huddl, :create
       update :update_huddl, :update
       update :rsvp_to_huddl, :rsvp
+      update :cancel_rsvp_to_huddl, :cancel_rsvp
     end
   end
 
@@ -43,6 +44,7 @@ defmodule Huddlz.Communities.Huddl do
       post :create
       patch :update
       patch :rsvp, route: "/:id/rsvp"
+      patch :cancel_rsvp, route: "/:id/cancel_rsvp"
     end
   end
 
@@ -254,12 +256,8 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     update :cancel_rsvp do
-      description "Cancel RSVP to this huddl"
+      description "Cancel RSVP to this huddl as the current actor"
       require_atomic? false
-
-      argument :user_id, :uuid do
-        allow_nil? false
-      end
 
       change Huddlz.Communities.Huddl.Changes.CancelRsvp
     end
@@ -296,7 +294,6 @@ defmodule Huddlz.Communities.Huddl do
     # Cancel RSVP policies
     policy action(:cancel_rsvp) do
       description "Users can cancel their own RSVPs"
-      forbid_unless expr(^arg(:user_id) == ^actor(:id))
       authorize_if expr(is_private == false and group.is_public == true)
       authorize_if expr(exists(group.members, id == ^actor(:id)))
     end

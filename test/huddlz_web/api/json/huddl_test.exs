@@ -1,6 +1,27 @@
 defmodule HuddlzWeb.Api.Json.HuddlTest do
   use HuddlzWeb.ApiCase, async: true
 
+  describe "PATCH /api/json/huddlz/:id/cancel_rsvp" do
+    test "is idempotent when actor is not RSVPed", %{conn: conn} do
+      owner = generate(user())
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      member = generate(user())
+
+      h = generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
+
+      conn =
+        conn
+        |> authenticated_conn(member)
+        |> put_req_header("content-type", "application/vnd.api+json")
+        |> patch("/api/json/huddlz/#{h.id}/cancel_rsvp", %{
+          "data" => %{"type" => "huddl", "attributes" => %{}}
+        })
+
+      assert %{"data" => data} = json_response(conn, 200)
+      assert data["id"] == h.id
+    end
+  end
+
   describe "PATCH /api/json/huddlz/:id/rsvp" do
     test "RSVPs the actor to the huddl and bumps rsvp_count", %{conn: conn} do
       owner = generate(user())
