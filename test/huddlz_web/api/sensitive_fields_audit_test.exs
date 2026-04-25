@@ -11,7 +11,11 @@ defmodule HuddlzWeb.Api.SensitiveFieldsAuditTest do
   use HuddlzWeb.ApiCase, async: true
 
   @forbidden_huddl_fields ~w(virtualLink virtual_link)
-  @forbidden_user_fields ~w(email role hashedPassword hashed_password homeLatitude homeLongitude)
+  # `User` is reachable via `me` query only, where the actor sees their own
+  # record. `Author` / `UserPublicProfile` are cross-user shapes — they
+  # MUST NOT leak email / role / hashed_password.
+  @forbidden_self_fields ~w(role hashedPassword hashed_password)
+  @forbidden_others_fields ~w(email role hashedPassword hashed_password homeLatitude homeLongitude)
 
   describe "Huddl GraphQL type" do
     test "does not expose virtual_link directly", %{conn: conn} do
@@ -24,15 +28,25 @@ defmodule HuddlzWeb.Api.SensitiveFieldsAuditTest do
     end
   end
 
-  describe "User-shaped GraphQL types (Author / Owner / public_profile)" do
-    test "no User-typed object exposes email or role fields", %{conn: conn} do
+  describe "User GraphQL type (only reachable via `me` query)" do
+    test "does not expose role or hashed_password", %{conn: conn} do
+      fields = type_field_names(conn, "User")
+
+      for f <- @forbidden_self_fields do
+        refute f in fields, "User type unexpectedly exposes #{f}"
+      end
+    end
+  end
+
+  describe "Cross-user GraphQL types (Author / UserPublicProfile)" do
+    test "no User-relationship type exposes email or sensitive fields", %{conn: conn} do
       with_types =
-        ~w(User Author UserPublicProfile)
+        ~w(Author UserPublicProfile)
         |> Enum.map(&{&1, type_field_names(conn, &1)})
         |> Enum.reject(fn {_name, fields} -> fields == [] end)
 
       for {type_name, fields} <- with_types do
-        for f <- @forbidden_user_fields do
+        for f <- @forbidden_others_fields do
           refute f in fields,
                  "GraphQL type #{type_name} unexpectedly exposes #{f}"
         end
