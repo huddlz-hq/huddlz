@@ -36,7 +36,7 @@ defmodule Huddlz.Communities do
         args: [:name, :description, :location, :is_public, :owner_id]
 
       define :search_groups, action: :search, args: [:query]
-      define :get_by_owner, action: :get_by_owner, args: [:owner_id]
+      define :get_by_owner, action: :get_by_owner
       define :get_by_slug, action: :get_by_slug, args: [:slug]
 
       define :update_details,

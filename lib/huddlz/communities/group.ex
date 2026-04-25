@@ -17,6 +17,7 @@ defmodule Huddlz.Communities.Group do
       read_one :get_group, :get_by_slug
       list :list_groups, :read
       list :search_groups, :search
+      list :my_groups, :get_by_owner
     end
   end
 
@@ -29,6 +30,7 @@ defmodule Huddlz.Communities.Group do
       get :read
       index :read
       index :search, route: "/search"
+      index :get_by_owner, route: "/mine"
       get :get_by_slug, route: "/by_slug/:slug"
     end
   end
@@ -87,13 +89,8 @@ defmodule Huddlz.Communities.Group do
     end
 
     read :get_by_owner do
-      description "Get groups owned by a specific user"
-
-      argument :owner_id, :uuid do
-        allow_nil? false
-      end
-
-      filter expr(owner_id == ^arg(:owner_id))
+      description "Get groups owned by the current actor"
+      filter expr(owner_id == ^actor(:id))
     end
 
     read :get_by_slug do
