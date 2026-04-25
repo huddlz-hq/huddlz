@@ -7,7 +7,28 @@ defmodule Huddlz.Communities.HuddlAttendee do
     otp_app: :huddlz,
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshJsonApi.Resource, AshGraphql.Resource]
+
+  graphql do
+    type :huddl_attendee
+
+    queries do
+      list :huddl_attendees, :by_huddl
+      list :my_rsvps, :by_user
+    end
+  end
+
+  json_api do
+    type "huddl_attendee"
+
+    routes do
+      base "/huddl_attendees"
+
+      index :by_huddl, route: "/by_huddl"
+      index :by_user, route: "/mine"
+    end
+  end
 
   postgres do
     table "huddl_attendees"
@@ -52,27 +73,18 @@ defmodule Huddlz.Communities.HuddlAttendee do
     end
 
     read :by_user do
-      description "Get all huddlz a user has RSVPed to"
-
-      argument :user_id, :uuid do
-        allow_nil? false
-      end
-
-      filter expr(user_id == ^arg(:user_id))
+      description "Get all huddlz the current actor has RSVPed to"
+      filter expr(user_id == ^actor(:id))
     end
 
     read :check_rsvp do
-      description "Check if a user has RSVPed to a huddl"
+      description "Check if the current actor has RSVPed to a huddl"
 
       argument :huddl_id, :uuid do
         allow_nil? false
       end
 
-      argument :user_id, :uuid do
-        allow_nil? false
-      end
-
-      filter expr(huddl_id == ^arg(:huddl_id) and user_id == ^arg(:user_id))
+      filter expr(huddl_id == ^arg(:huddl_id) and user_id == ^actor(:id))
     end
   end
 
@@ -116,12 +128,12 @@ defmodule Huddlz.Communities.HuddlAttendee do
 
     # Users can see their own RSVPs
     policy action(:by_user) do
-      authorize_if expr(^arg(:user_id) == ^actor(:id))
+      authorize_if actor_present()
     end
 
     # Users can check their own RSVP status
     policy action(:check_rsvp) do
-      authorize_if expr(^arg(:user_id) == ^actor(:id))
+      authorize_if actor_present()
     end
   end
 

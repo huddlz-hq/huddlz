@@ -8,6 +8,12 @@ defmodule HuddlzWeb.Router do
   pipeline :graphql do
     plug :load_from_bearer
     plug :set_actor, :user
+
+    plug AshAuthentication.Strategy.ApiKey.Plug,
+      resource: Huddlz.Accounts.User,
+      required?: false,
+      on_error: &HuddlzWeb.ApiAuth.continue/2
+
     plug AshGraphql.Plug
   end
 
@@ -25,6 +31,11 @@ defmodule HuddlzWeb.Router do
     plug :accepts, ["json"]
     plug :load_from_bearer
     plug :set_actor, :user
+
+    plug AshAuthentication.Strategy.ApiKey.Plug,
+      resource: Huddlz.Accounts.User,
+      required?: false,
+      on_error: &HuddlzWeb.ApiAuth.continue/2
   end
 
   scope "/gql" do
@@ -46,6 +57,19 @@ defmodule HuddlzWeb.Router do
       default_model_expand_depth: 4
 
     forward "/", HuddlzWeb.AshJsonApiRouter
+  end
+
+  scope "/api/auth", HuddlzWeb.Api do
+    pipe_through [:api]
+
+    post "/register", AuthController, :register
+    post "/sign_in", AuthController, :sign_in
+    get "/me", AuthController, :me
+    delete "/sign_out", AuthController, :sign_out
+    post "/password_reset", AuthController, :password_reset
+    post "/api_keys", AuthController, :create_api_key
+    get "/api_keys", AuthController, :list_api_keys
+    delete "/api_keys/:id", AuthController, :delete_api_key
   end
 
   scope "/", HuddlzWeb do

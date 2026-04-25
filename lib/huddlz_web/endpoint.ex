@@ -50,6 +50,14 @@ defmodule HuddlzWeb.Endpoint do
   plug RemoteIp
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
+  plug Corsica,
+    origins: {HuddlzWeb.Cors, :allowed?, []},
+    allow_credentials: true,
+    allow_headers: ["content-type", "authorization"],
+    allow_methods: ~w(GET POST PUT PATCH DELETE OPTIONS HEAD),
+    expose_headers: ["x-request-id"],
+    max_age: 600
+
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json, AshJsonApi.Plug.Parser, Absinthe.Plug.Parser],
     pass: ["*/*"],

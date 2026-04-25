@@ -14,14 +14,23 @@ defmodule Huddlz.Communities.HuddlImage do
     domain: Huddlz.Communities,
     authorizers: [Ash.Policy.Authorizer],
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshOban]
+    extensions: [AshOban, AshJsonApi.Resource, AshGraphql.Resource]
 
-  postgres do
-    table "huddl_images"
-    repo Huddlz.Repo
+  graphql do
+    type :huddl_image
 
-    custom_indexes do
-      index [:huddl_id, :inserted_at]
+    mutations do
+      create :upload_huddl_image, :upload
+    end
+  end
+
+  json_api do
+    type "huddl_image"
+
+    routes do
+      base "/huddl_images"
+
+      post :upload, route: "/upload"
     end
   end
 
@@ -50,6 +59,15 @@ defmodule Huddlz.Communities.HuddlImage do
     end
   end
 
+  postgres do
+    table "huddl_images"
+    repo Huddlz.Repo
+
+    custom_indexes do
+      index [:huddl_id, :inserted_at]
+    end
+  end
+
   actions do
     defaults [:read, :destroy]
 
@@ -57,6 +75,18 @@ defmodule Huddlz.Communities.HuddlImage do
       description "Upload a new image for a huddl"
       primary? true
       accept [:filename, :content_type, :size_bytes, :storage_path, :thumbnail_path, :huddl_id]
+    end
+
+    create :upload do
+      description "Upload an image for a huddl from multipart bytes"
+      accept [:huddl_id]
+
+      argument :file, Ash.Type.File do
+        allow_nil? false
+      end
+
+      change {Huddlz.Storage.Changes.PersistUpload,
+              storage_module: HuddlImages, parent_arg: :huddl_id}
     end
 
     create :create_pending do
@@ -175,6 +205,11 @@ defmodule Huddlz.Communities.HuddlImage do
 
     # Group owners/organizers can upload images for huddlz in their groups
     policy action(:create) do
+      description "Only group owners/organizers can upload images for huddlz"
+      authorize_if Huddlz.Communities.HuddlImage.Checks.IsHuddlGroupOwnerOrOrganizer
+    end
+
+    policy action(:upload) do
       description "Only group owners/organizers can upload images for huddlz"
       authorize_if Huddlz.Communities.HuddlImage.Checks.IsHuddlGroupOwnerOrOrganizer
     end

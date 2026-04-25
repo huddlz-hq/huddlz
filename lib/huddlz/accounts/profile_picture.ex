@@ -49,6 +49,20 @@ defmodule Huddlz.Accounts.ProfilePicture do
       accept [:filename, :content_type, :size_bytes, :storage_path, :thumbnail_path, :user_id]
     end
 
+    create :upload do
+      description "Upload a profile picture for the current actor from multipart bytes"
+      accept []
+
+      argument :file, Ash.Type.File do
+        allow_nil? false
+      end
+
+      change relate_actor(:user)
+
+      change {Huddlz.Storage.Changes.PersistUpload,
+              storage_module: ProfilePictures, parent_arg: :user_id}
+    end
+
     read :get_current_for_user do
       description "Get the current (most recent) profile picture for a user"
       get? true
@@ -107,6 +121,12 @@ defmodule Huddlz.Accounts.ProfilePicture do
   policies do
     bypass actor_attribute_equals(:role, :admin) do
       authorize_if always()
+    end
+
+    # Users can upload pictures for themselves via the API
+    policy action(:upload) do
+      description "Authenticated actors can upload their own profile picture"
+      authorize_if actor_present()
     end
 
     # Users can upload pictures for themselves

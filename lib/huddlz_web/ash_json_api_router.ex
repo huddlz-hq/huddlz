@@ -1,7 +1,7 @@
 defmodule HuddlzWeb.AshJsonApiRouter do
   @moduledoc false
   use AshJsonApi.Router,
-    domains: [Huddlz.Communities],
+    domains: [Huddlz.Communities, Huddlz.Accounts],
     open_api: "/open_api",
     modify_open_api: {__MODULE__, :modify_open_api, []}
 

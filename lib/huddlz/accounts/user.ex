@@ -7,8 +7,22 @@ defmodule Huddlz.Accounts.User do
     otp_app: :huddlz,
     domain: Huddlz.Accounts,
     authorizers: [Ash.Policy.Authorizer],
-    extensions: [AshAuthentication],
+    extensions: [AshAuthentication, AshGraphql.Resource],
     data_layer: AshPostgres.DataLayer
+
+  graphql do
+    type :user
+
+    queries do
+      read_one :me, :me
+    end
+
+    mutations do
+      update :update_display_name, :update_display_name
+      update :update_home_location, :update_home_location
+      update :change_password, :change_password
+    end
+  end
 
   authentication do
     add_ons do
@@ -47,6 +61,11 @@ defmodule Huddlz.Accounts.User do
           request_password_reset_action_name :request_password_reset_token
         end
       end
+
+      api_key :api_key do
+        api_key_relationship :valid_api_keys
+        api_key_hash_attribute :api_key_hash
+      end
     end
   end
 
@@ -61,6 +80,18 @@ defmodule Huddlz.Accounts.User do
 
   actions do
     defaults [:read]
+
+    read :public_profile do
+      description "Slim, public-facing profile shape used on relationships exposed via the API."
+      prepare build(select: [:id, :display_name], load: [:current_profile_picture_url])
+    end
+
+    read :me do
+      description "Read the current actor's profile."
+      get? true
+      filter expr(id == ^actor(:id))
+      prepare build(load: [:current_profile_picture_url])
+    end
 
     create :create do
       # For testing/seeding only - use authentication actions in production
@@ -282,6 +313,11 @@ defmodule Huddlz.Accounts.User do
       # Generates an authentication token for the user
       change AshAuthentication.GenerateTokenChange
     end
+
+    read :sign_in_with_api_key do
+      argument :api_key, :string, allow_nil?: false
+      prepare AshAuthentication.Strategy.ApiKey.SignInPreparation
+    end
   end
 
   policies do
@@ -296,6 +332,16 @@ defmodule Huddlz.Accounts.User do
     # Basic read permissions - needed for auth
     policy action(:read) do
       authorize_if always()
+    end
+
+    policy action(:public_profile) do
+      description "Anyone can view the public profile of any user"
+      authorize_if always()
+    end
+
+    policy action(:me) do
+      description "Authenticated actors can read themselves"
+      authorize_if actor_present()
     end
 
     policy action(:get_by_subject) do
@@ -413,6 +459,10 @@ defmodule Huddlz.Accounts.User do
 
     has_many :profile_pictures, Huddlz.Accounts.ProfilePicture do
       destination_attribute :user_id
+    end
+
+    has_many :valid_api_keys, Huddlz.Accounts.ApiKey do
+      filter expr(valid)
     end
   end
 

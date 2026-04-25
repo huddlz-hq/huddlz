@@ -14,14 +14,23 @@ defmodule Huddlz.Communities.GroupImage do
     domain: Huddlz.Communities,
     authorizers: [Ash.Policy.Authorizer],
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshOban]
+    extensions: [AshOban, AshJsonApi.Resource, AshGraphql.Resource]
 
-  postgres do
-    table "group_images"
-    repo Huddlz.Repo
+  graphql do
+    type :group_image
 
-    custom_indexes do
-      index [:group_id, :inserted_at]
+    mutations do
+      create :upload_group_image, :upload
+    end
+  end
+
+  json_api do
+    type "group_image"
+
+    routes do
+      base "/group_images"
+
+      post :upload, route: "/upload"
     end
   end
 
@@ -50,6 +59,15 @@ defmodule Huddlz.Communities.GroupImage do
     end
   end
 
+  postgres do
+    table "group_images"
+    repo Huddlz.Repo
+
+    custom_indexes do
+      index [:group_id, :inserted_at]
+    end
+  end
+
   actions do
     defaults [:read, :destroy]
 
@@ -57,6 +75,18 @@ defmodule Huddlz.Communities.GroupImage do
       description "Upload a new image for a group"
       primary? true
       accept [:filename, :content_type, :size_bytes, :storage_path, :thumbnail_path, :group_id]
+    end
+
+    create :upload do
+      description "Upload an image for a group from multipart bytes"
+      accept [:group_id]
+
+      argument :file, Ash.Type.File do
+        allow_nil? false
+      end
+
+      change {Huddlz.Storage.Changes.PersistUpload,
+              storage_module: GroupImages, parent_arg: :group_id}
     end
 
     create :create_pending do
@@ -171,6 +201,11 @@ defmodule Huddlz.Communities.GroupImage do
     # Group owners can upload images for their groups
     # Note: create needs custom check since relationship isn't loaded yet
     policy action(:create) do
+      description "Only group owners can upload images for their groups"
+      authorize_if Huddlz.Communities.GroupImage.Checks.IsGroupOwner
+    end
+
+    policy action(:upload) do
       description "Only group owners can upload images for their groups"
       authorize_if Huddlz.Communities.GroupImage.Checks.IsGroupOwner
     end

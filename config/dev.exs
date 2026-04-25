@@ -46,3 +46,6 @@ config :huddlz, Huddlz.Repo,
 
 # Adapters (compile-time - modules must exist at compile)
 config :huddlz, :storage, adapter: Huddlz.Storage.Local
+
+# CORS — allow all origins in development
+config :huddlz, :cors_origins, :all

@@ -17,11 +17,17 @@ defmodule Huddlz.Communities.Huddl do
     queries do
       get :get_huddl, :read
       list :search_huddlz, :search
+      list :upcoming_huddlz, :upcoming
+      list :past_huddlz, :past
+      list :huddlz_in_group, :by_group
     end
 
     mutations do
       create :create_huddl, :create
       update :update_huddl, :update
+      update :rsvp_to_huddl, :rsvp
+      update :cancel_rsvp_to_huddl, :cancel_rsvp
+      destroy :delete_huddl, :destroy
     end
   end
 
@@ -33,8 +39,14 @@ defmodule Huddlz.Communities.Huddl do
 
       get :read
       index :search
+      index :upcoming, route: "/upcoming"
+      index :past, route: "/past"
+      index :by_group, route: "/by_group"
       post :create
       patch :update
+      patch :rsvp, route: "/:id/rsvp"
+      patch :cancel_rsvp, route: "/:id/cancel_rsvp"
+      delete :destroy
     end
   end
 
@@ -239,23 +251,15 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     update :rsvp do
-      description "RSVP to this huddl"
+      description "RSVP to this huddl as the current actor"
       require_atomic? false
-
-      argument :user_id, :uuid do
-        allow_nil? false
-      end
 
       change Huddlz.Communities.Huddl.Changes.Rsvp
     end
 
     update :cancel_rsvp do
-      description "Cancel RSVP to this huddl"
+      description "Cancel RSVP to this huddl as the current actor"
       require_atomic? false
-
-      argument :user_id, :uuid do
-        allow_nil? false
-      end
 
       change Huddlz.Communities.Huddl.Changes.CancelRsvp
     end
@@ -285,7 +289,6 @@ defmodule Huddlz.Communities.Huddl do
     # RSVP policies
     policy action(:rsvp) do
       description "Users can RSVP to huddlz they have access to"
-      forbid_unless expr(^arg(:user_id) == ^actor(:id))
       authorize_if expr(is_private == false and group.is_public == true)
       authorize_if expr(exists(group.members, id == ^actor(:id)))
     end
@@ -293,7 +296,6 @@ defmodule Huddlz.Communities.Huddl do
     # Cancel RSVP policies
     policy action(:cancel_rsvp) do
       description "Users can cancel their own RSVPs"
-      forbid_unless expr(^arg(:user_id) == ^actor(:id))
       authorize_if expr(is_private == false and group.is_public == true)
       authorize_if expr(exists(group.members, id == ^actor(:id)))
     end
@@ -337,30 +339,36 @@ defmodule Huddlz.Communities.Huddl do
 
     attribute :title, :string do
       allow_nil? false
+      public? true
       constraints min_length: 3, max_length: 200
     end
 
     attribute :description, :string do
       allow_nil? true
+      public? true
       constraints max_length: 5000
     end
 
     attribute :starts_at, :utc_datetime do
       allow_nil? false
+      public? true
     end
 
     attribute :ends_at, :utc_datetime do
       allow_nil? false
+      public? true
     end
 
     attribute :event_type, :atom do
       allow_nil? false
+      public? true
       constraints one_of: [:in_person, :virtual, :hybrid]
       default :in_person
     end
 
     attribute :physical_location, :string do
       allow_nil? true
+      public? true
       constraints max_length: 500
     end
 
@@ -372,11 +380,13 @@ defmodule Huddlz.Communities.Huddl do
 
     attribute :is_private, :boolean do
       allow_nil? false
+      public? true
       default false
     end
 
     attribute :thumbnail_url, :string do
       allow_nil? true
+      public? true
     end
 
     attribute :latitude, :float do

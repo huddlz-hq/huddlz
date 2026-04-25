@@ -7,7 +7,38 @@ defmodule Huddlz.Communities.GroupMember do
     otp_app: :huddlz,
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshJsonApi.Resource, AshGraphql.Resource]
+
+  graphql do
+    type :group_member
+
+    queries do
+      list :group_members, :get_by_group
+      list :my_memberships, :get_by_user
+    end
+
+    mutations do
+      create :join_group, :join_group
+      destroy :leave_group, :leave_group
+      create :add_member, :add_member
+      destroy :remove_member, :remove_member
+    end
+  end
+
+  json_api do
+    type "group_member"
+
+    routes do
+      base "/group_members"
+
+      index :get_by_group, route: "/by_group"
+      index :get_by_user, route: "/mine"
+      post :join_group, route: "/join"
+      delete :leave_group
+      post :add_member, route: "/add"
+    end
+  end
 
   alias Huddlz.Communities.GroupMember.Checks.GroupMember
   alias Huddlz.Communities.GroupMember.Checks.GroupOrganizer
@@ -63,18 +94,14 @@ defmodule Huddlz.Communities.GroupMember do
     end
 
     create :join_group do
-      description "Join a group as a regular member"
+      description "Join a group as a regular member as the current actor"
 
       argument :group_id, :uuid do
         allow_nil? false
       end
 
-      argument :user_id, :uuid do
-        allow_nil? false
-      end
-
       change manage_relationship(:group_id, :group, type: :append)
-      change manage_relationship(:user_id, :user, type: :append)
+      change relate_actor(:user)
       change set_attribute(:role, :member)
     end
 
@@ -93,13 +120,8 @@ defmodule Huddlz.Communities.GroupMember do
     end
 
     read :get_by_user do
-      description "Get all groups a user is a member of"
-
-      argument :user_id, :uuid do
-        allow_nil? false
-      end
-
-      filter expr(user_id == ^arg(:user_id))
+      description "Get all group memberships for the current actor"
+      filter expr(user_id == ^actor(:id))
     end
   end
 
@@ -124,9 +146,6 @@ defmodule Huddlz.Communities.GroupMember do
     # Users can join public groups
     policy action(:join_group) do
       description "Allow users to join public groups"
-      # Check if the user is trying to join as themselves
-      forbid_unless expr(^arg(:user_id) == ^actor(:id))
-      # And the group is public
       authorize_if PublicGroup
     end
 
@@ -145,6 +164,16 @@ defmodule Huddlz.Communities.GroupMember do
       # Explicitly forbid everyone else (non-members cannot see member lists)
       forbid_if always()
     end
+
+    policy action(:get_by_user) do
+      description "Users can read their own memberships"
+      authorize_if actor_present()
+    end
+
+    policy action(:read) do
+      description "Default read — only your own membership records"
+      authorize_if relates_to_actor_via(:user)
+    end
   end
 
   attributes do
@@ -152,6 +181,7 @@ defmodule Huddlz.Communities.GroupMember do
 
     attribute :role, :atom do
       allow_nil? false
+      public? true
       default :member
       constraints one_of: [:owner, :organizer, :member]
     end

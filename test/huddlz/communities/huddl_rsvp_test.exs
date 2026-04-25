@@ -22,8 +22,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Test Group",
             description: "A test group",
-            is_public: true,
-            owner_id: owner.id
+            is_public: true
           },
           actor: owner
         )
@@ -74,7 +73,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
     test "member can RSVP to a huddl", %{member: member, huddl: huddl} do
       # RSVP to the huddl
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       assert rsvp_count(huddl) == 1
@@ -92,7 +91,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
     test "non-member can RSVP to public huddl", %{non_member: non_member, huddl: huddl} do
       # RSVP to the huddl
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: non_member.id}, actor: non_member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: non_member)
       |> Ash.update!()
 
       assert rsvp_count(huddl) == 1
@@ -101,13 +100,13 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
     test "user cannot RSVP twice to the same huddl", %{member: member, huddl: huddl} do
       # First RSVP
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       # Second RSVP should not increase count
       huddl
       |> Ash.reload!()
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       assert rsvp_count(huddl) == 1
@@ -128,13 +127,13 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
     } do
       # Member RSVPs
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       # Owner RSVPs
       huddl
       |> Ash.reload!()
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: owner.id}, actor: owner)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: owner)
       |> Ash.update!()
 
       assert rsvp_count(huddl) == 2
@@ -150,11 +149,10 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
       assert Enum.any?(attendees, &(&1.user_id == owner.id))
     end
 
-    test "user cannot RSVP for someone else", %{member: member, owner: owner, huddl: huddl} do
-      # Try to RSVP for someone else
-      assert_raise Ash.Error.Forbidden, fn ->
+    test "user cannot RSVP without an actor", %{huddl: huddl} do
+      assert_raise Ash.Error.Invalid, fn ->
         huddl
-        |> Ash.Changeset.for_update(:rsvp, %{user_id: owner.id}, actor: member)
+        |> Ash.Changeset.for_update(:rsvp, %{}, actor: nil)
         |> Ash.update!()
       end
     end
@@ -171,7 +169,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
 
       # After RSVP, virtual link should be visible
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       huddl_after =
@@ -187,19 +185,19 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
       # Before RSVP
       result =
         HuddlAttendee
-        |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl.id, user_id: member.id})
+        |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl.id}, actor: member)
         |> Ash.read_one(actor: member)
 
       assert {:ok, nil} = result
 
       # After RSVP
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       result =
         HuddlAttendee
-        |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl.id, user_id: member.id})
+        |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl.id}, actor: member)
         |> Ash.read_one(actor: member)
 
       assert {:ok, %HuddlAttendee{}} = result
@@ -208,13 +206,13 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
     test "user can see their RSVPs", %{member: member, huddl: huddl} do
       # RSVP to the huddl
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       # Get user's RSVPs
       rsvps =
         HuddlAttendee
-        |> Ash.Query.for_read(:by_user, %{user_id: member.id})
+        |> Ash.Query.for_read(:by_user, %{}, actor: member)
         |> Ash.read!(actor: member)
 
       assert length(rsvps) == 1
@@ -233,8 +231,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Private Group",
             description: "A private group",
-            is_public: false,
-            owner_id: owner.id
+            is_public: false
           },
           actor: owner
         )
@@ -284,8 +281,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Test Group",
             description: "A test group",
-            is_public: true,
-            owner_id: owner.id
+            is_public: true
           },
           actor: owner
         )
@@ -336,7 +332,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
     test "user can cancel their own RSVP", %{member: member, huddl: huddl} do
       # First RSVP to the huddl
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       # Verify RSVP exists
@@ -345,7 +341,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
       # Cancel the RSVP
       huddl
       |> Ash.reload!()
-      |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: member)
       |> Ash.update!()
 
       assert rsvp_count(huddl) == 0
@@ -362,7 +358,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
     test "cancelling RSVP when not RSVPed returns unchanged", %{member: member, huddl: huddl} do
       # Try to cancel without having RSVPed
       huddl
-      |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: member)
       |> Ash.update!()
 
       assert rsvp_count(huddl) == 0
@@ -375,16 +371,23 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
     } do
       # Member RSVPs
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
-      # Other user tries to cancel member's RSVP
-      assert_raise Ash.Error.Forbidden, fn ->
-        huddl
-        |> Ash.reload!()
-        |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: member.id}, actor: other_user)
-        |> Ash.update!()
-      end
+      # Other user trying to cancel — with the actor-based reshape, calling
+      # cancel_rsvp without a matching attendee record is a no-op (idempotent),
+      # but other_user has no record so nothing changes.
+      huddl
+      |> Ash.reload!()
+      |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: other_user)
+      |> Ash.update!()
+
+      attendees =
+        Huddlz.Communities.HuddlAttendee
+        |> Ash.Query.for_read(:by_huddl, %{huddl_id: huddl.id})
+        |> Ash.read!(authorize?: false)
+
+      assert Enum.any?(attendees, &(&1.user_id == member.id))
     end
 
     test "multiple users can cancel their RSVPs independently", %{
@@ -394,12 +397,12 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
     } do
       # Both users RSVP
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       huddl
       |> Ash.reload!()
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: owner.id}, actor: owner)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: owner)
       |> Ash.update!()
 
       assert rsvp_count(huddl) == 2
@@ -407,7 +410,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
       # Member cancels their RSVP
       huddl
       |> Ash.reload!()
-      |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: member)
       |> Ash.update!()
 
       assert rsvp_count(huddl) == 1
@@ -415,7 +418,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
       # Owner cancels their RSVP
       huddl
       |> Ash.reload!()
-      |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: owner.id}, actor: owner)
+      |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: owner)
       |> Ash.update!()
 
       assert rsvp_count(huddl) == 0
@@ -424,19 +427,19 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
     test "user can RSVP again after cancelling", %{member: member, huddl: huddl} do
       # RSVP
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       # Cancel
       huddl
       |> Ash.reload!()
-      |> Ash.Changeset.for_update(:cancel_rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: member)
       |> Ash.update!()
 
       # RSVP again
       huddl
       |> Ash.reload!()
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       assert rsvp_count(huddl) == 1
@@ -468,8 +471,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Test Group",
             description: "A test group",
-            is_public: true,
-            owner_id: owner.id
+            is_public: true
           },
           actor: owner
         )
@@ -523,7 +525,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
 
       # Have attendee RSVP to the huddl
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: attendee.id}, actor: attendee)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
       |> Ash.update!()
 
       %{

@@ -28,5 +28,7 @@ defmodule Huddlz.Accounts do
       define :delete_profile_picture, action: :destroy
       define :soft_delete_profile_picture, action: :soft_delete
     end
+
+    resource Huddlz.Accounts.ApiKey
   end
 end

@@ -25,18 +25,18 @@ defmodule Huddlz.Communities do
 
       define :get_group_huddlz, action: :by_group, args: [:group_id]
       define :get_past_group_huddlz, action: :past_by_group, args: [:group_id]
-      define :rsvp_huddl, action: :rsvp, args: [:user_id]
-      define :cancel_rsvp_huddl, action: :cancel_rsvp, args: [:user_id]
+      define :rsvp_huddl, action: :rsvp
+      define :cancel_rsvp_huddl, action: :cancel_rsvp
       define :destroy_huddl, action: :destroy
     end
 
     resource Huddlz.Communities.Group do
       define :create_group,
         action: :create_group,
-        args: [:name, :description, :location, :is_public, :owner_id]
+        args: [:name, :description, :location, :is_public]
 
       define :search_groups, action: :search, args: [:query]
-      define :get_by_owner, action: :get_by_owner, args: [:owner_id]
+      define :get_by_owner, action: :get_by_owner
       define :get_by_slug, action: :get_by_slug, args: [:slug]
 
       define :update_details,
@@ -70,11 +70,11 @@ defmodule Huddlz.Communities do
       define :add_member, action: :add_member, args: [:group_id, :user_id, :role]
       define :remove_member, action: :remove_member, args: [:group_id, :user_id]
       define :get_by_group, action: :get_by_group, args: [:group_id]
-      define :get_by_user, action: :get_by_user, args: [:user_id]
+      define :get_by_user, action: :get_by_user
     end
 
     resource Huddlz.Communities.HuddlAttendee do
-      define :check_user_rsvp, action: :check_rsvp, args: [:huddl_id, :user_id]
+      define :check_user_rsvp, action: :check_rsvp, args: [:huddl_id]
     end
 
     resource Huddlz.Communities.HuddlTemplate

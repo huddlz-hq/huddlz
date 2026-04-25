@@ -39,14 +39,14 @@ defmodule Huddlz.Communities.GroupMemberTest do
           )
         )
 
-      # Create a group
+      # Create a group owned by `owner`
       group =
         generate(
           group(
             name: "Membership Test Group",
             description: "A group for testing membership functions",
             is_public: true,
-            owner_id: owner.id
+            actor: owner
           )
         )
 

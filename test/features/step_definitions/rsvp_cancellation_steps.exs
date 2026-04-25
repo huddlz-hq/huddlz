@@ -176,7 +176,7 @@ defmodule RsvpCancellationSteps do
       |> Ash.read_one!(actor: user)
 
     huddl
-    |> Ash.Changeset.for_update(:rsvp, %{user_id: user.id}, actor: user)
+    |> Ash.Changeset.for_update(:rsvp, %{}, actor: user)
     |> Ash.update!()
 
     context
@@ -194,7 +194,7 @@ defmodule RsvpCancellationSteps do
       |> Ash.read_one!(actor: user)
 
     huddl
-    |> Ash.Changeset.for_update(:rsvp, %{user_id: user.id}, actor: user)
+    |> Ash.Changeset.for_update(:rsvp, %{}, actor: user)
     |> Ash.update!()
 
     context

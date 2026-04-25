@@ -231,7 +231,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
     huddl = socket.assigns.huddl
     user = socket.assigns.current_user
 
-    case Communities.rsvp_huddl(huddl, user.id, actor: user) do
+    case Communities.rsvp_huddl(huddl, %{}, actor: user) do
       {:ok, _} ->
         {:ok, reloaded} = reload_huddl(huddl, user)
 
@@ -251,7 +251,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
     huddl = socket.assigns.huddl
     user = socket.assigns.current_user
 
-    case Communities.cancel_rsvp_huddl(huddl, user.id, actor: user) do
+    case Communities.cancel_rsvp_huddl(huddl, %{}, actor: user) do
       {:ok, _} ->
         {:ok, reloaded} = reload_huddl(huddl, user)
 
@@ -335,7 +335,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp check_rsvp(_huddl, nil), do: false
 
   defp check_rsvp(huddl, user) do
-    case Communities.check_user_rsvp(huddl.id, user.id, actor: user) do
+    case Communities.check_user_rsvp(huddl.id, actor: user) do
       {:ok, []} -> false
       {:ok, [_ | _]} -> true
       {:error, _} -> false

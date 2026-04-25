@@ -8,7 +8,35 @@ defmodule Huddlz.Communities.GroupLocation do
     otp_app: :huddlz,
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshJsonApi.Resource, AshGraphql.Resource]
+
+  graphql do
+    type :group_location
+
+    queries do
+      list :group_locations, :by_group
+    end
+
+    mutations do
+      create :create_group_location, :create
+      update :update_group_location, :update
+      destroy :delete_group_location, :destroy
+    end
+  end
+
+  json_api do
+    type "group_location"
+
+    routes do
+      base "/group_locations"
+
+      index :by_group, route: "/by_group"
+      post :create
+      patch :update
+      delete :destroy
+    end
+  end
 
   postgres do
     table "group_locations"
@@ -70,23 +98,27 @@ defmodule Huddlz.Communities.GroupLocation do
 
     attribute :name, :string do
       allow_nil? true
+      public? true
       description "Optional friendly name (e.g., 'Community Center')"
       constraints max_length: 200
     end
 
     attribute :address, :string do
       allow_nil? false
+      public? true
       description "Full address string from Google Places"
       constraints min_length: 1, max_length: 500
     end
 
     attribute :latitude, :float do
       allow_nil? false
+      public? true
       constraints min: -90, max: 90
     end
 
     attribute :longitude, :float do
       allow_nil? false
+      public? true
       constraints min: -180, max: 180
     end
 

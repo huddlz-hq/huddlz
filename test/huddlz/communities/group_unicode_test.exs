@@ -25,8 +25,7 @@ defmodule Huddlz.Communities.GroupUnicodeTest do
               name: name,
               description: "Test group with unicode name",
               location: "Test Location",
-              is_public: true,
-              owner_id: user.id
+              is_public: true
             },
             actor: user
           )
@@ -51,8 +50,7 @@ defmodule Huddlz.Communities.GroupUnicodeTest do
             slug: "beijing-users",
             description: "Beijing user group",
             location: "Beijing",
-            is_public: true,
-            owner_id: user.id
+            is_public: true
           },
           actor: user
         )
@@ -75,8 +73,7 @@ defmodule Huddlz.Communities.GroupUnicodeTest do
                    name: "🔥🔥🔥",
                    description: "Test group",
                    location: "Test",
-                   is_public: true,
-                   owner_id: user.id
+                   is_public: true
                  },
                  actor: user
                )

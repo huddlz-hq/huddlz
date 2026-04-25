@@ -7,13 +7,12 @@ defmodule Huddlz.Communities.Huddl.Changes.Rsvp do
 
   require Ash.Query
 
-  def change(changeset, _opts, _context) do
-    user_id = Ash.Changeset.get_argument(changeset, :user_id)
+  def change(changeset, _opts, %{actor: %{id: user_id}}) when not is_nil(user_id) do
     huddl_id = changeset.data.id
 
     existing =
       Huddlz.Communities.HuddlAttendee
-      |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl_id, user_id: user_id})
+      |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl_id}, actor: %{id: user_id})
       |> Ash.read_one(authorize?: false)
 
     case existing do
@@ -30,5 +29,9 @@ defmodule Huddlz.Communities.Huddl.Changes.Rsvp do
       {:error, error} ->
         Ash.Changeset.add_error(changeset, error)
     end
+  end
+
+  def change(changeset, _opts, _context) do
+    Ash.Changeset.add_error(changeset, "An actor is required to RSVP")
   end
 end
