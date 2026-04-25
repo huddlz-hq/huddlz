@@ -25,7 +25,7 @@ defmodule Huddlz.Communities do
 
       define :get_group_huddlz, action: :by_group, args: [:group_id]
       define :get_past_group_huddlz, action: :past_by_group, args: [:group_id]
-      define :rsvp_huddl, action: :rsvp, args: [:user_id]
+      define :rsvp_huddl, action: :rsvp
       define :cancel_rsvp_huddl, action: :cancel_rsvp, args: [:user_id]
       define :destroy_huddl, action: :destroy
     end

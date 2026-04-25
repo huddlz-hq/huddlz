@@ -124,7 +124,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       # First RSVP
       updated_huddl =
         huddl
-        |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+        |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
         |> Ash.update!()
 
       conn
@@ -145,7 +145,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
     } do
       # Owner RSVPs
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: owner.id}, actor: owner)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: owner)
       |> Ash.update!()
 
       conn
@@ -288,7 +288,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
     } do
       # First RSVP to the huddl
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       conn
@@ -325,7 +325,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       # RSVP to the past huddl (directly in database since it's past)
       past_huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       conn
@@ -346,7 +346,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
     } do
       # First RSVP to the huddl
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       conn
@@ -371,12 +371,12 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
     } do
       # Both users RSVP
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: owner.id}, actor: owner)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: owner)
       |> Ash.update!()
 
       huddl
       |> Ash.reload!()
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       conn
@@ -397,7 +397,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
     } do
       # RSVP
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       conn

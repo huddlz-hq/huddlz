@@ -72,12 +72,12 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
 
       # Both users RSVP
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: owner.id}, actor: owner)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: owner)
       |> Ash.update!()
 
       huddl
       |> Ash.reload!()
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       # Initial count should be 2
@@ -126,7 +126,7 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
 
       # RSVP
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       # Should still be able to cancel
@@ -172,7 +172,7 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
       # RSVP then cancel - count is always consistent
       huddl
       |> Ash.reload!()
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       assert rsvp_count(huddl) == 1
@@ -213,7 +213,7 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
 
       # Member RSVPs
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       # Admin views the huddl
