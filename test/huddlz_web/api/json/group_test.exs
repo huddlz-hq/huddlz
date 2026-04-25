@@ -14,6 +14,49 @@ defmodule HuddlzWeb.Api.Json.GroupTest do
     end
   end
 
+  describe "PATCH /api/json/groups/:id" do
+    test "owner can update group details", %{conn: conn} do
+      owner = generate(user())
+      g = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+
+      conn =
+        conn
+        |> authenticated_conn(owner)
+        |> put_req_header("content-type", "application/vnd.api+json")
+        |> patch("/api/json/groups/#{g.id}", %{
+          "data" => %{
+            "type" => "group",
+            "attributes" => %{"description" => "Updated description"}
+          }
+        })
+
+      assert %{"data" => data} = json_response(conn, 200)
+      assert data["id"] == g.id
+
+      reloaded = Ash.get!(Huddlz.Communities.Group, g.id, authorize?: false)
+      assert reloaded.description |> to_string() == "Updated description"
+    end
+
+    test "non-owner cannot update group details", %{conn: conn} do
+      owner = generate(user())
+      g = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      stranger = generate(user())
+
+      conn =
+        conn
+        |> authenticated_conn(stranger)
+        |> put_req_header("content-type", "application/vnd.api+json")
+        |> patch("/api/json/groups/#{g.id}", %{
+          "data" => %{
+            "type" => "group",
+            "attributes" => %{"description" => "I shouldn't be able to do this"}
+          }
+        })
+
+      assert conn.status in [403, 404]
+    end
+  end
+
   describe "POST /api/json/groups" do
     test "authenticated user can create a group", %{conn: conn} do
       me = generate(user())
