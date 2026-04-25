@@ -19,6 +19,10 @@ defmodule Huddlz.Communities.Group do
       list :search_groups, :search
       list :my_groups, :get_by_owner
     end
+
+    mutations do
+      create :create_group, :create_group
+    end
   end
 
   json_api do
@@ -32,6 +36,7 @@ defmodule Huddlz.Communities.Group do
       index :search, route: "/search"
       index :get_by_owner, route: "/mine"
       get :get_by_slug, route: "/by_slug/:slug"
+      post :create_group
     end
   end
 
