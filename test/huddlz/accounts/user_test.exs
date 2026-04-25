@@ -1,7 +1,51 @@
 defmodule Huddlz.Accounts.UserTest do
   use Huddlz.DataCase, async: true
+  require Ash.Query
   alias Huddlz.Accounts
   alias Huddlz.Accounts.User
+
+  describe ":public_profile read action" do
+    test "selects only id and display_name and loads current_profile_picture_url" do
+      target = generate(user(display_name: "Alice"))
+      _other = generate(user(display_name: "Bob"))
+
+      [profile] =
+        User
+        |> Ash.Query.for_read(:public_profile, %{}, actor: nil)
+        |> Ash.Query.filter(id == ^target.id)
+        |> Ash.read!()
+
+      assert profile.id == target.id
+      assert profile.display_name == "Alice"
+      assert Map.has_key?(profile, :current_profile_picture_url)
+      assert match?(%Ash.NotLoaded{}, profile.email)
+      assert match?(%Ash.NotLoaded{}, profile.home_location)
+      assert match?(%Ash.NotLoaded{}, profile.confirmed_at)
+    end
+
+    test "anonymous, regular, and admin actors all see the same slim shape" do
+      target = generate(user(display_name: "Alice"))
+      regular = generate(user(role: :user))
+      admin = generate(user(role: :admin))
+
+      slim = fn actor ->
+        [profile] =
+          User
+          |> Ash.Query.for_read(:public_profile, %{}, actor: actor)
+          |> Ash.Query.filter(id == ^target.id)
+          |> Ash.read!()
+
+        profile
+      end
+
+      for actor <- [nil, regular, admin] do
+        profile = slim.(actor)
+        assert profile.id == target.id
+        assert profile.display_name == "Alice"
+        assert match?(%Ash.NotLoaded{}, profile.email)
+      end
+    end
+  end
 
   describe "user policies" do
     test "admin users can search by email" do
