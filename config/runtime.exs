@@ -101,4 +101,13 @@ if config_env() == :prod do
   config :huddlz, :storage,
     bucket: required!("BUCKET_NAME"),
     endpoint: required!("AWS_ENDPOINT_URL_S3")
+
+  cors_origins =
+    "CORS_ORIGINS"
+    |> optional("")
+    |> String.split(",", trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+
+  config :huddlz, :cors_origins, cors_origins
 end
