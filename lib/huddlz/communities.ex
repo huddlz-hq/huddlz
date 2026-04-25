@@ -33,7 +33,7 @@ defmodule Huddlz.Communities do
     resource Huddlz.Communities.Group do
       define :create_group,
         action: :create_group,
-        args: [:name, :description, :location, :is_public, :owner_id]
+        args: [:name, :description, :location, :is_public]
 
       define :search_groups, action: :search, args: [:query]
       define :get_by_owner, action: :get_by_owner

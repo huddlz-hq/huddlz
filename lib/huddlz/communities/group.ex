@@ -62,12 +62,13 @@ defmodule Huddlz.Communities.Group do
     defaults [:create, :read, :update, :destroy]
 
     create :create_group do
-      description "Create a new group"
-      accept [:name, :description, :location, :is_public, :owner_id, :slug]
+      description "Create a new group; the owner is always the current actor."
+      accept [:name, :description, :location, :is_public, :slug]
 
       argument :provided_latitude, :float, allow_nil?: true, public?: false
       argument :provided_longitude, :float, allow_nil?: true, public?: false
 
+      change Huddlz.Communities.Group.Changes.SetOwnerToActor
       change Huddlz.Communities.Group.Changes.AddOwnerAsMember
       change Huddlz.Communities.Group.Changes.GenerateSlug
       change Huddlz.Geocoding.ApplyProvidedCoordinates

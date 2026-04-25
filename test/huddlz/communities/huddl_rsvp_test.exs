@@ -22,8 +22,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Test Group",
             description: "A test group",
-            is_public: true,
-            owner_id: owner.id
+            is_public: true
           },
           actor: owner
         )
@@ -232,8 +231,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Private Group",
             description: "A private group",
-            is_public: false,
-            owner_id: owner.id
+            is_public: false
           },
           actor: owner
         )
@@ -283,8 +281,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Test Group",
             description: "A test group",
-            is_public: true,
-            owner_id: owner.id
+            is_public: true
           },
           actor: owner
         )
@@ -474,8 +471,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Test Group",
             description: "A test group",
-            is_public: true,
-            owner_id: owner.id
+            is_public: true
           },
           actor: owner
         )

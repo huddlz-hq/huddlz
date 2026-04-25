@@ -19,8 +19,7 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
           %{
             name: "Test Group",
             description: "A test group",
-            is_public: true,
-            owner_id: owner.id
+            is_public: true
           },
           actor: owner
         )

@@ -23,8 +23,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
           %{
             name: "Test Group",
             description: "A test group for huddl show",
-            is_public: true,
-            owner_id: owner.id
+            is_public: true
           },
           actor: owner
         )
@@ -242,8 +241,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
           %{
             name: "Private Group",
             description: "Members only",
-            is_public: false,
-            owner_id: owner.id
+            is_public: false
           },
           actor: owner
         )

@@ -146,8 +146,7 @@ defmodule Huddlz.Communities.GroupMembershipTest do
           %{
             name: "Test Group",
             description: "Test",
-            is_public: true,
-            owner_id: admin.id
+            is_public: true
           },
           actor: admin
         )

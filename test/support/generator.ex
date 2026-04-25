@@ -142,17 +142,19 @@ defmodule Huddlz.Generator do
   Create a group with given attributes.
   """
   def group(opts \\ []) do
+    # The action infers owner from actor; if a test passes owner_id, treat it
+    # as a hint that the actor should match that user.
     actor =
       opts[:actor] ||
-        once(:default_actor, fn ->
-          generate(user(role: opts[:actor_role] || :user))
-        end)
+        case opts[:owner_id] do
+          nil ->
+            once(:default_actor, fn ->
+              generate(user(role: opts[:actor_role] || :user))
+            end)
 
-    owner_id =
-      opts[:owner_id] ||
-        once(:default_owner_id, fn ->
-          generate(user()).id
-        end)
+          owner_id ->
+            Ash.get!(Huddlz.Accounts.User, owner_id, authorize?: false)
+        end
 
     changeset_generator(
       Group,
@@ -161,10 +163,9 @@ defmodule Huddlz.Generator do
         name: StreamData.repeatedly(fn -> Faker.Company.name() end),
         description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
         location: "Test Location",
-        is_public: true,
-        owner_id: owner_id
+        is_public: true
       ],
-      overrides: opts,
+      overrides: Keyword.drop(opts, [:owner_id, :actor, :actor_role]),
       actor: actor
     )
   end
