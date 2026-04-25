@@ -1,6 +1,56 @@
 defmodule HuddlzWeb.Api.Json.GroupMemberTest do
   use HuddlzWeb.ApiCase, async: true
 
+  describe "POST /api/json/group_members/add" do
+    test "owner can add a member to their group", %{conn: conn} do
+      owner = generate(user())
+      g = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      target = generate(user())
+
+      conn =
+        conn
+        |> authenticated_conn(owner)
+        |> put_req_header("content-type", "application/vnd.api+json")
+        |> post("/api/json/group_members/add", %{
+          "data" => %{
+            "type" => "group_member",
+            "attributes" => %{
+              "group_id" => g.id,
+              "user_id" => target.id,
+              "role" => "member"
+            }
+          }
+        })
+
+      assert %{"data" => data} = json_response(conn, 201)
+      assert is_binary(data["id"])
+    end
+
+    test "non-owner cannot add a member", %{conn: conn} do
+      owner = generate(user())
+      g = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      stranger = generate(user())
+      target = generate(user())
+
+      conn =
+        conn
+        |> authenticated_conn(stranger)
+        |> put_req_header("content-type", "application/vnd.api+json")
+        |> post("/api/json/group_members/add", %{
+          "data" => %{
+            "type" => "group_member",
+            "attributes" => %{
+              "group_id" => g.id,
+              "user_id" => target.id,
+              "role" => "member"
+            }
+          }
+        })
+
+      assert conn.status in [403, 404]
+    end
+  end
+
   describe "DELETE /api/json/group_members/:id (leave_group)" do
     test "actor can leave a group they joined", %{conn: conn} do
       owner = generate(user())
