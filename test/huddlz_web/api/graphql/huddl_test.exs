@@ -15,6 +15,23 @@ defmodule HuddlzWeb.Api.Graphql.HuddlTest do
     end
   end
 
+  describe "huddlzInGroup query" do
+    test "returns future huddlz in the given group", %{conn: conn} do
+      owner = generate(user())
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      h = generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
+
+      conn =
+        gql_post(conn, ~s|{ huddlzInGroup(groupId: "#{group.id}") { results { id } } }|)
+
+      assert %{"data" => %{"huddlzInGroup" => %{"results" => results}}} =
+               json_response(conn, 200)
+
+      ids = Enum.map(results, & &1["id"])
+      assert h.id in ids
+    end
+  end
+
   describe "pastHuddlz query" do
     test "returns past huddlz", %{conn: conn} do
       owner = generate(user())
