@@ -1,5 +1,6 @@
 defmodule HuddlzWeb.Api.AuthControllerTest do
   use HuddlzWeb.ApiCase, async: true
+  import Swoosh.TestAssertions
 
   describe "POST /api/auth/register" do
     test "creates a user and returns a JWT that authenticates the user", %{conn: conn} do
@@ -159,6 +160,37 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
     test "returns 401 when no bearer is provided", %{conn: conn} do
       conn = delete(conn, "/api/auth/sign_out")
       assert json_response(conn, 401) == %{"error" => "Authentication required"}
+    end
+  end
+
+  describe "POST /api/auth/password_reset" do
+    test "returns 204 and emails a reset link for a known email", %{conn: conn} do
+      generate(user_with_password(email: "reset-known@example.com"))
+      # Clear the registration confirmation email
+      assert_email_sent()
+
+      conn = post(conn, "/api/auth/password_reset", %{"email" => "reset-known@example.com"})
+
+      assert conn.status == 204
+
+      assert_email_sent(fn email ->
+        email.to == [{"", "reset-known@example.com"}] and
+          email.subject == "Reset your password"
+      end)
+    end
+
+    test "returns 204 and sends no email for an unknown email", %{conn: conn} do
+      conn = post(conn, "/api/auth/password_reset", %{"email" => "nobody-reset@example.com"})
+
+      assert conn.status == 204
+      refute_email_sent()
+    end
+
+    test "returns 204 when email param is missing", %{conn: conn} do
+      conn = post(conn, "/api/auth/password_reset", %{})
+
+      assert conn.status == 204
+      refute_email_sent()
     end
   end
 end

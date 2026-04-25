@@ -55,6 +55,7 @@ defmodule HuddlzWeb.Router do
     post "/sign_in", AuthController, :sign_in
     get "/me", AuthController, :me
     delete "/sign_out", AuthController, :sign_out
+    post "/password_reset", AuthController, :password_reset
   end
 
   scope "/", HuddlzWeb do

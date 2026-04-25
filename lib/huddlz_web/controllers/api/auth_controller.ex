@@ -62,6 +62,20 @@ defmodule HuddlzWeb.Api.AuthController do
     end
   end
 
+  def password_reset(conn, params) do
+    case Map.get(params, "email") do
+      email when is_binary(email) and email != "" ->
+        User
+        |> Ash.ActionInput.for_action(:request_password_reset_token, %{email: email})
+        |> Ash.run_action()
+
+      _ ->
+        :ok
+    end
+
+    send_resp(conn, :no_content, "")
+  end
+
   defp serialize_self(user) do
     %{
       id: user.id,
