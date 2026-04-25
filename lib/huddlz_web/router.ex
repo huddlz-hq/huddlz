@@ -48,6 +48,12 @@ defmodule HuddlzWeb.Router do
     forward "/", HuddlzWeb.AshJsonApiRouter
   end
 
+  scope "/api/auth", HuddlzWeb.Api do
+    pipe_through [:api]
+
+    post "/register", AuthController, :register
+  end
+
   scope "/", HuddlzWeb do
     pipe_through :browser
 
