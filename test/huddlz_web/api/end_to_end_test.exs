@@ -48,7 +48,6 @@ defmodule HuddlzWeb.Api.EndToEndTest do
             "description" => "End-to-end test",
             "location" => "Tucson",
             "is_public" => true,
-            "owner_id" => user_id,
             "slug" => "happy-path-group"
           }
         }

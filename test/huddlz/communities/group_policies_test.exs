@@ -15,7 +15,6 @@ defmodule Huddlz.Communities.GroupPoliciesTest do
           description: "A test group",
           location: "Test Location",
           is_public: true,
-          owner_id: owner.id,
           actor: owner
         )
       )
@@ -96,8 +95,7 @@ defmodule Huddlz.Communities.GroupPoliciesTest do
                  name: "New Group",
                  description: "Test group",
                  location: "Test Location",
-                 is_public: true,
-                 owner_id: user.id
+                 is_public: true
                })
                |> Ash.create(actor: user)
 
@@ -114,8 +112,7 @@ defmodule Huddlz.Communities.GroupPoliciesTest do
                  name: "Admin Group",
                  description: "Test group",
                  location: "Test Location",
-                 is_public: true,
-                 owner_id: admin.id
+                 is_public: true
                })
                |> Ash.create(actor: admin)
 
@@ -129,8 +126,7 @@ defmodule Huddlz.Communities.GroupPoliciesTest do
                  name: "New Group",
                  description: "Test group",
                  location: "Test Location",
-                 is_public: true,
-                 owner_id: user.id
+                 is_public: true
                })
                |> Ash.create(actor: user)
 

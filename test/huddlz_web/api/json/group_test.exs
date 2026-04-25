@@ -104,7 +104,6 @@ defmodule HuddlzWeb.Api.Json.GroupTest do
               "description" => "Created via JSON:API",
               "location" => "Tucson",
               "is_public" => true,
-              "owner_id" => me.id,
               "slug" => "api-created-group"
             }
           }

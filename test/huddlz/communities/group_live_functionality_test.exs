@@ -15,7 +15,6 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
         generate(
           group(
             is_public: true,
-            owner_id: owner.id,
             name: "Public Group",
             actor: owner
           )
@@ -25,7 +24,6 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
         generate(
           group(
             is_public: false,
-            owner_id: owner.id,
             name: "Private Group",
             actor: owner
           )
@@ -78,8 +76,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
                Group
                |> Ash.Changeset.for_create(:create_group, %{
                  description: "Missing name",
-                 is_public: true,
-                 owner_id: actor.id
+                 is_public: true
                })
                |> Ash.create(actor: actor)
 
@@ -94,8 +91,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
                |> Ash.Changeset.for_create(:create_group, %{
                  # Too short
                  name: "AB",
-                 is_public: true,
-                 owner_id: actor.id
+                 is_public: true
                })
                |> Ash.create(actor: actor)
 
@@ -112,8 +108,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
                Group
                |> Ash.Changeset.for_create(:create_group, %{
                  name: long_name,
-                 is_public: true,
-                 owner_id: actor.id
+                 is_public: true
                })
                |> Ash.create(actor: actor)
 
@@ -129,8 +124,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
         Group
         |> Ash.Changeset.for_create(:create_group, %{
           name: "Unique Name Test",
-          is_public: true,
-          owner_id: actor.id
+          is_public: true
         })
         |> Ash.create(actor: actor)
 
@@ -139,8 +133,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
                Group
                |> Ash.Changeset.for_create(:create_group, %{
                  name: "Unique Name Test",
-                 is_public: true,
-                 owner_id: actor.id
+                 is_public: true
                })
                |> Ash.create(actor: actor)
     end
@@ -149,8 +142,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
       {:ok, group} =
         Group
         |> Ash.Changeset.for_create(:create_group, %{
-          name: "Default Public Test",
-          owner_id: actor.id
+          name: "Default Public Test"
         })
         |> Ash.create(actor: actor)
 
@@ -164,8 +156,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
           name: "Full Details Group",
           description: "A group with all details",
           location: "San Francisco, CA",
-          is_public: false,
-          owner_id: actor.id
+          is_public: false
         })
         |> Ash.create(actor: actor)
 
@@ -235,7 +226,6 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
           group(
             name: "Original Name",
             description: "Original description",
-            owner_id: owner.id,
             actor: owner
           )
         )
