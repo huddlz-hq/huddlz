@@ -1,6 +1,26 @@
 defmodule HuddlzWeb.Api.Json.GroupMemberTest do
   use HuddlzWeb.ApiCase, async: true
 
+  describe "removeMember GraphQL mutation" do
+    test "schema exposes the removeMember mutation", %{conn: conn} do
+      conn =
+        gql_post(conn, """
+        {
+          __schema {
+            mutationType {
+              fields { name }
+            }
+          }
+        }
+        """)
+
+      assert %{"data" => %{"__schema" => %{"mutationType" => %{"fields" => fields}}}} =
+               json_response(conn, 200)
+
+      assert Enum.any?(fields, &(&1["name"] == "removeMember"))
+    end
+  end
+
   describe "POST /api/json/group_members/add" do
     test "owner can add a member to their group", %{conn: conn} do
       owner = generate(user())

@@ -22,6 +22,7 @@ defmodule Huddlz.Communities.GroupMember do
       create :join_group, :join_group
       destroy :leave_group, :leave_group
       create :add_member, :add_member
+      destroy :remove_member, :remove_member
     end
   end
 
