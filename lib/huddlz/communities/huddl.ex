@@ -17,6 +17,7 @@ defmodule Huddlz.Communities.Huddl do
     queries do
       get :get_huddl, :read
       list :search_huddlz, :search
+      list :upcoming_huddlz, :upcoming
     end
 
     mutations do
@@ -33,6 +34,7 @@ defmodule Huddlz.Communities.Huddl do
 
       get :read
       index :search
+      index :upcoming, route: "/upcoming"
       post :create
       patch :update
     end
