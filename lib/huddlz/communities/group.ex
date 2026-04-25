@@ -16,6 +16,7 @@ defmodule Huddlz.Communities.Group do
     queries do
       read_one :get_group, :get_by_slug
       list :list_groups, :read
+      list :search_groups, :search
     end
   end
 
@@ -27,6 +28,7 @@ defmodule Huddlz.Communities.Group do
 
       get :read
       index :read
+      index :search, route: "/search"
       get :get_by_slug, route: "/by_slug/:slug"
     end
   end
