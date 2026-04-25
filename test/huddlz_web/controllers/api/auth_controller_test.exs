@@ -107,4 +107,34 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
       assert json_response(conn, 401) == %{"error" => "Invalid email or password"}
     end
   end
+
+  describe "GET /api/auth/me" do
+    test "returns the current user with a valid bearer", %{conn: conn} do
+      target = generate(user(email: "me@example.com", display_name: "Me"))
+
+      conn =
+        conn
+        |> authenticated_conn(target)
+        |> get("/api/auth/me")
+
+      assert %{"user" => user} = json_response(conn, 200)
+      assert user["id"] == target.id
+      assert user["email"] == "me@example.com"
+      assert user["display_name"] == "Me"
+    end
+
+    test "returns 401 when no bearer is provided", %{conn: conn} do
+      conn = get(conn, "/api/auth/me")
+      assert json_response(conn, 401) == %{"error" => "Authentication required"}
+    end
+
+    test "returns 401 when the bearer is malformed", %{conn: conn} do
+      conn =
+        conn
+        |> put_req_header("authorization", "Bearer not.a.real.jwt")
+        |> get("/api/auth/me")
+
+      assert json_response(conn, 401) == %{"error" => "Authentication required"}
+    end
+  end
 end
