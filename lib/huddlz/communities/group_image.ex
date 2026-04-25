@@ -59,6 +59,18 @@ defmodule Huddlz.Communities.GroupImage do
       accept [:filename, :content_type, :size_bytes, :storage_path, :thumbnail_path, :group_id]
     end
 
+    create :upload do
+      description "Upload an image for a group from multipart bytes"
+      accept [:group_id]
+
+      argument :file, Ash.Type.File do
+        allow_nil? false
+      end
+
+      change {Huddlz.Storage.Changes.PersistUpload,
+              storage_module: GroupImages, parent_arg: :group_id}
+    end
+
     create :create_pending do
       description "Create a pending image during eager upload (group_id = nil)"
       accept [:filename, :content_type, :size_bytes, :storage_path, :thumbnail_path]
@@ -171,6 +183,11 @@ defmodule Huddlz.Communities.GroupImage do
     # Group owners can upload images for their groups
     # Note: create needs custom check since relationship isn't loaded yet
     policy action(:create) do
+      description "Only group owners can upload images for their groups"
+      authorize_if Huddlz.Communities.GroupImage.Checks.IsGroupOwner
+    end
+
+    policy action(:upload) do
       description "Only group owners can upload images for their groups"
       authorize_if Huddlz.Communities.GroupImage.Checks.IsGroupOwner
     end
