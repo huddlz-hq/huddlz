@@ -27,14 +27,7 @@ defmodule Huddlz.Communities.GroupMembershipTest do
     test "user can join public group", %{verified_user: user, public_group: group} do
       assert {:ok, membership} =
                GroupMember
-               |> Ash.Changeset.for_create(
-                 :join_group,
-                 %{
-                   group_id: group.id,
-                   user_id: user.id
-                 },
-                 actor: user
-               )
+               |> Ash.Changeset.for_create(:join_group, %{group_id: group.id}, actor: user)
                |> Ash.create()
 
       assert membership.user_id == user.id
@@ -45,30 +38,21 @@ defmodule Huddlz.Communities.GroupMembershipTest do
     test "user cannot join private group", %{verified_user: user, private_group: group} do
       assert {:error, _} =
                GroupMember
-               |> Ash.Changeset.for_create(
-                 :join_group,
-                 %{
-                   group_id: group.id,
-                   user_id: user.id
-                 },
-                 actor: user
-               )
+               |> Ash.Changeset.for_create(:join_group, %{group_id: group.id}, actor: user)
                |> Ash.create()
     end
 
-    test "user cannot join for someone else", %{
+    test "join_group always relates to the actor — user_id input is rejected", %{
       verified_user: user,
       regular_user: other_user,
       public_group: group
     } do
+      # The action no longer accepts user_id; passing it is a NoSuchInput error.
       assert {:error, _} =
                GroupMember
                |> Ash.Changeset.for_create(
                  :join_group,
-                 %{
-                   group_id: group.id,
-                   user_id: other_user.id
-                 },
+                 %{group_id: group.id, user_id: other_user.id},
                  actor: user
                )
                |> Ash.create()
