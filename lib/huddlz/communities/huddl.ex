@@ -27,6 +27,7 @@ defmodule Huddlz.Communities.Huddl do
       update :update_huddl, :update
       update :rsvp_to_huddl, :rsvp
       update :cancel_rsvp_to_huddl, :cancel_rsvp
+      destroy :delete_huddl, :destroy
     end
   end
 
@@ -45,6 +46,7 @@ defmodule Huddlz.Communities.Huddl do
       patch :update
       patch :rsvp, route: "/:id/rsvp"
       patch :cancel_rsvp, route: "/:id/cancel_rsvp"
+      delete :destroy
     end
   end
 
