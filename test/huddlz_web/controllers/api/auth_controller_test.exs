@@ -267,6 +267,55 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
     end
   end
 
+  describe "DELETE /api/auth/api_keys/:id" do
+    test "revokes the actor's key and that key no longer authenticates", %{conn: conn} do
+      target = generate(user())
+
+      %{"id" => id, "key" => key} =
+        conn
+        |> authenticated_conn(target)
+        |> post("/api/auth/api_keys", %{})
+        |> json_response(201)
+
+      delete_response =
+        conn
+        |> authenticated_conn(target)
+        |> delete("/api/auth/api_keys/#{id}")
+
+      assert delete_response.status == 204
+
+      revoked_attempt =
+        build_conn()
+        |> put_req_header("authorization", "Bearer " <> key)
+        |> get("/api/auth/me")
+
+      assert json_response(revoked_attempt, 401) == %{"error" => "Authentication required"}
+    end
+
+    test "returns 404 when trying to delete another actor's key", %{conn: conn} do
+      me = generate(user())
+      other = generate(user())
+
+      %{"id" => other_id} =
+        conn
+        |> authenticated_conn(other)
+        |> post("/api/auth/api_keys", %{})
+        |> json_response(201)
+
+      delete_response =
+        conn
+        |> authenticated_conn(me)
+        |> delete("/api/auth/api_keys/#{other_id}")
+
+      assert json_response(delete_response, 404) == %{"error" => "Not found"}
+    end
+
+    test "returns 401 when no bearer is provided", %{conn: conn} do
+      conn = delete(conn, "/api/auth/api_keys/#{Ash.UUID.generate()}")
+      assert json_response(conn, 401) == %{"error" => "Authentication required"}
+    end
+  end
+
   describe "POST /api/auth/password_reset" do
     test "returns 204 and emails a reset link for a known email", %{conn: conn} do
       generate(user_with_password(email: "reset-known@example.com"))

@@ -138,6 +138,34 @@ defmodule HuddlzWeb.Api.AuthController do
     }
   end
 
+  def delete_api_key(conn, %{"id" => id}) do
+    case conn.assigns[:current_user] do
+      %User{} = user -> destroy_api_key(conn, user, id)
+      _ -> auth_required(conn)
+    end
+  end
+
+  defp destroy_api_key(conn, user, id) do
+    with {:ok, record} <- Ash.get(ApiKey, id, actor: user),
+         :ok <- Ash.destroy(record, actor: user) do
+      send_resp(conn, :no_content, "")
+    else
+      _ -> not_found(conn)
+    end
+  end
+
+  defp auth_required(conn) do
+    conn
+    |> put_status(:unauthorized)
+    |> json(%{error: "Authentication required"})
+  end
+
+  defp not_found(conn) do
+    conn
+    |> put_status(:not_found)
+    |> json(%{error: "Not found"})
+  end
+
   defp parse_expires_in_days(%{"expires_in_days" => value}) when is_integer(value), do: value
 
   defp parse_expires_in_days(%{"expires_in_days" => value}) when is_binary(value) do

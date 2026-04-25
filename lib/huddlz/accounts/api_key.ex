@@ -45,6 +45,11 @@ defmodule Huddlz.Accounts.ApiKey do
       description "Users can read their own API keys"
       authorize_if expr(user_id == ^actor(:id))
     end
+
+    policy action(:destroy) do
+      description "Users can revoke their own API keys"
+      authorize_if expr(user_id == ^actor(:id))
+    end
   end
 
   attributes do
