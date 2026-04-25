@@ -1,6 +1,27 @@
 defmodule HuddlzWeb.Api.Json.GroupMemberTest do
   use HuddlzWeb.ApiCase, async: true
 
+  describe "DELETE /api/json/group_members/:id (leave_group)" do
+    test "actor can leave a group they joined", %{conn: conn} do
+      owner = generate(user())
+      g = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      joiner = generate(user())
+
+      {:ok, membership} =
+        Huddlz.Communities.GroupMember
+        |> Ash.Changeset.for_create(:join_group, %{group_id: g.id}, actor: joiner)
+        |> Ash.create()
+
+      conn =
+        conn
+        |> authenticated_conn(joiner)
+        |> put_req_header("content-type", "application/vnd.api+json")
+        |> delete("/api/json/group_members/#{membership.id}")
+
+      assert conn.status in [200, 204]
+    end
+  end
+
   describe "POST /api/json/group_members/join" do
     test "user can join a public group", %{conn: conn} do
       owner = generate(user())

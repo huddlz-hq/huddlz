@@ -20,6 +20,7 @@ defmodule Huddlz.Communities.GroupMember do
 
     mutations do
       create :join_group, :join_group
+      destroy :leave_group, :leave_group
     end
   end
 
@@ -32,6 +33,7 @@ defmodule Huddlz.Communities.GroupMember do
       index :get_by_group, route: "/by_group"
       index :get_by_user, route: "/mine"
       post :join_group, route: "/join"
+      delete :leave_group
     end
   end
 
@@ -163,6 +165,11 @@ defmodule Huddlz.Communities.GroupMember do
     policy action(:get_by_user) do
       description "Users can read their own memberships"
       authorize_if actor_present()
+    end
+
+    policy action(:read) do
+      description "Default read — only your own membership records"
+      authorize_if relates_to_actor_via(:user)
     end
   end
 
