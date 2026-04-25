@@ -15,6 +15,7 @@ defmodule Huddlz.Communities.HuddlAttendee do
 
     queries do
       list :huddl_attendees, :by_huddl
+      list :my_rsvps, :by_user
     end
   end
 
@@ -25,6 +26,7 @@ defmodule Huddlz.Communities.HuddlAttendee do
       base "/huddl_attendees"
 
       index :by_huddl, route: "/by_huddl"
+      index :by_user, route: "/mine"
     end
   end
 
@@ -71,13 +73,8 @@ defmodule Huddlz.Communities.HuddlAttendee do
     end
 
     read :by_user do
-      description "Get all huddlz a user has RSVPed to"
-
-      argument :user_id, :uuid do
-        allow_nil? false
-      end
-
-      filter expr(user_id == ^arg(:user_id))
+      description "Get all huddlz the current actor has RSVPed to"
+      filter expr(user_id == ^actor(:id))
     end
 
     read :check_rsvp do
@@ -135,7 +132,7 @@ defmodule Huddlz.Communities.HuddlAttendee do
 
     # Users can see their own RSVPs
     policy action(:by_user) do
-      authorize_if expr(^arg(:user_id) == ^actor(:id))
+      authorize_if actor_present()
     end
 
     # Users can check their own RSVP status

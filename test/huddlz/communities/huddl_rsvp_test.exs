@@ -213,7 +213,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
       # Get user's RSVPs
       rsvps =
         HuddlAttendee
-        |> Ash.Query.for_read(:by_user, %{user_id: member.id})
+        |> Ash.Query.for_read(:by_user, %{}, actor: member)
         |> Ash.read!(actor: member)
 
       assert length(rsvps) == 1
