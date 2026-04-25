@@ -7,7 +7,29 @@ defmodule Huddlz.Communities.Group do
     otp_app: :huddlz,
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshJsonApi.Resource, AshGraphql.Resource]
+
+  graphql do
+    type :group
+
+    queries do
+      read_one :get_group, :get_by_slug
+      list :list_groups, :read
+    end
+  end
+
+  json_api do
+    type "group"
+
+    routes do
+      base "/groups"
+
+      get :read
+      index :read
+      get :get_by_slug, route: "/by_slug/:slug"
+    end
+  end
 
   postgres do
     table "groups"
