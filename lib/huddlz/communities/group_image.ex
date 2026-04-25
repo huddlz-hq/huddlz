@@ -14,14 +14,23 @@ defmodule Huddlz.Communities.GroupImage do
     domain: Huddlz.Communities,
     authorizers: [Ash.Policy.Authorizer],
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshOban]
+    extensions: [AshOban, AshJsonApi.Resource, AshGraphql.Resource]
 
-  postgres do
-    table "group_images"
-    repo Huddlz.Repo
+  graphql do
+    type :group_image
 
-    custom_indexes do
-      index [:group_id, :inserted_at]
+    mutations do
+      create :upload_group_image, :upload
+    end
+  end
+
+  json_api do
+    type "group_image"
+
+    routes do
+      base "/group_images"
+
+      post :upload, route: "/upload"
     end
   end
 
@@ -47,6 +56,15 @@ defmodule Huddlz.Communities.GroupImage do
         worker_module_name Huddlz.Workers.GroupImageOrphanedCleanup
         scheduler_module_name Huddlz.Workers.GroupImageOrphanedCleanupScheduler
       end
+    end
+  end
+
+  postgres do
+    table "group_images"
+    repo Huddlz.Repo
+
+    custom_indexes do
+      index [:group_id, :inserted_at]
     end
   end
 

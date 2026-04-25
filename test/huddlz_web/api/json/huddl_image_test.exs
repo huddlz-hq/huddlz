@@ -34,6 +34,26 @@ defmodule HuddlzWeb.Api.Json.HuddlImageTest do
       assert is_binary(image.thumbnail_path)
     end
 
+    test "POST /api/json/huddl_images/upload route is registered", %{conn: conn} do
+      owner = generate(user())
+
+      conn =
+        conn
+        |> authenticated_conn(owner)
+        |> put_req_header("content-type", "application/vnd.api+json")
+        |> post("/api/json/huddl_images/upload", %{
+          "data" => %{
+            "type" => "huddl_image",
+            "attributes" => %{"huddl_id" => Ash.UUID.generate()}
+          }
+        })
+
+      # Either 422 (no file), 400, 404 (huddl), or 403 (auth) — anything BUT
+      # 404 not_found_at_the_route_layer proves the route exists. 415 means
+      # the Plug parser is checking content-type, which is also fine.
+      refute conn.status == 404
+    end
+
     test "non-owner cannot upload" do
       owner = generate(user())
       group = generate(group(owner_id: owner.id, is_public: true, actor: owner))

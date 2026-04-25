@@ -14,14 +14,23 @@ defmodule Huddlz.Communities.HuddlImage do
     domain: Huddlz.Communities,
     authorizers: [Ash.Policy.Authorizer],
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshOban]
+    extensions: [AshOban, AshJsonApi.Resource, AshGraphql.Resource]
 
-  postgres do
-    table "huddl_images"
-    repo Huddlz.Repo
+  graphql do
+    type :huddl_image
 
-    custom_indexes do
-      index [:huddl_id, :inserted_at]
+    mutations do
+      create :upload_huddl_image, :upload
+    end
+  end
+
+  json_api do
+    type "huddl_image"
+
+    routes do
+      base "/huddl_images"
+
+      post :upload, route: "/upload"
     end
   end
 
@@ -47,6 +56,15 @@ defmodule Huddlz.Communities.HuddlImage do
         worker_module_name Huddlz.Workers.HuddlImageOrphanedCleanup
         scheduler_module_name Huddlz.Workers.HuddlImageOrphanedCleanupScheduler
       end
+    end
+  end
+
+  postgres do
+    table "huddl_images"
+    repo Huddlz.Repo
+
+    custom_indexes do
+      index [:huddl_id, :inserted_at]
     end
   end
 
