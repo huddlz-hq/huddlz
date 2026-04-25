@@ -95,16 +95,19 @@ defmodule HuddlzWeb.Api.Graphql.HuddlTest do
   end
 
   describe "upcomingHuddlz query" do
-    test "returns future huddlz", %{conn: conn} do
+    test "returns future huddlz with their attributes", %{conn: conn} do
       owner = generate(user())
       group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
       h = generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
 
-      conn = gql_post(conn, "{ upcomingHuddlz { id } }")
+      conn = gql_post(conn, "{ upcomingHuddlz { id title eventType startsAt } }")
 
       assert %{"data" => %{"upcomingHuddlz" => results}} = json_response(conn, 200)
-      ids = Enum.map(results, & &1["id"])
-      assert h.id in ids
+      record = Enum.find(results, &(&1["id"] == h.id))
+      assert record, "expected the new huddl in the upcoming list"
+      assert is_binary(record["title"])
+      assert record["eventType"] in ["in_person", "virtual", "hybrid"]
+      assert is_binary(record["startsAt"])
     end
   end
 

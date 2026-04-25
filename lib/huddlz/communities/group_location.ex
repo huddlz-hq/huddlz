@@ -98,23 +98,27 @@ defmodule Huddlz.Communities.GroupLocation do
 
     attribute :name, :string do
       allow_nil? true
+      public? true
       description "Optional friendly name (e.g., 'Community Center')"
       constraints max_length: 200
     end
 
     attribute :address, :string do
       allow_nil? false
+      public? true
       description "Full address string from Google Places"
       constraints min_length: 1, max_length: 500
     end
 
     attribute :latitude, :float do
       allow_nil? false
+      public? true
       constraints min: -90, max: 90
     end
 
     attribute :longitude, :float do
       allow_nil? false
+      public? true
       constraints min: -180, max: 180
     end
 
