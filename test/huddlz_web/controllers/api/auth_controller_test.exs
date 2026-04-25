@@ -214,6 +214,39 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
       conn = post(conn, "/api/auth/api_keys", %{})
       assert json_response(conn, 401) == %{"error" => "Authentication required"}
     end
+
+    test "rejects negative expires_in_days with 422", %{conn: conn} do
+      target = generate(user())
+
+      conn =
+        conn
+        |> authenticated_conn(target)
+        |> post("/api/auth/api_keys", %{"expires_in_days" => -1})
+
+      assert %{"errors" => [%{"field" => "expires_in_days"}]} = json_response(conn, 422)
+    end
+
+    test "rejects oversized expires_in_days with 422", %{conn: conn} do
+      target = generate(user())
+
+      conn =
+        conn
+        |> authenticated_conn(target)
+        |> post("/api/auth/api_keys", %{"expires_in_days" => 365_000})
+
+      assert %{"errors" => [%{"field" => "expires_in_days"}]} = json_response(conn, 422)
+    end
+
+    test "rejects malformed expires_in_days with 422", %{conn: conn} do
+      target = generate(user())
+
+      conn =
+        conn
+        |> authenticated_conn(target)
+        |> post("/api/auth/api_keys", %{"expires_in_days" => "banana"})
+
+      assert %{"errors" => [%{"field" => "expires_in_days"}]} = json_response(conn, 422)
+    end
   end
 
   describe "GET /api/auth/api_keys" do
