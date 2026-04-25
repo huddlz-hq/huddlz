@@ -1,7 +1,8 @@
 defmodule HuddlzWeb.Api.AuthController do
   use HuddlzWeb, :controller
 
-  alias Huddlz.Accounts.User
+  alias AshAuthentication.TokenResource
+  alias Huddlz.Accounts.{Token, User}
 
   def register(conn, params) do
     User
@@ -40,6 +41,20 @@ defmodule HuddlzWeb.Api.AuthController do
       %User{} = user ->
         json(conn, %{user: serialize_self(user)})
 
+      _ ->
+        conn
+        |> put_status(:unauthorized)
+        |> json(%{error: "Authentication required"})
+    end
+  end
+
+  def sign_out(conn, _params) do
+    with %User{} <- conn.assigns[:current_user],
+         [bearer] <- get_req_header(conn, "authorization"),
+         "Bearer " <> token <- bearer,
+         :ok <- TokenResource.Actions.revoke(Token, token) do
+      send_resp(conn, :no_content, "")
+    else
       _ ->
         conn
         |> put_status(:unauthorized)

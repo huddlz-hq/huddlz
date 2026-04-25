@@ -137,4 +137,28 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
       assert json_response(conn, 401) == %{"error" => "Authentication required"}
     end
   end
+
+  describe "DELETE /api/auth/sign_out" do
+    test "revokes the bearer JWT and returns 204", %{conn: conn} do
+      user = generate(user())
+      authed_conn = authenticated_conn(conn, user)
+      bearer = authed_conn |> get_req_header("authorization") |> List.first()
+
+      response = delete(authed_conn, "/api/auth/sign_out")
+      assert response.status == 204
+      assert response.resp_body == ""
+
+      follow_up =
+        build_conn()
+        |> put_req_header("authorization", bearer)
+        |> get("/api/auth/me")
+
+      assert json_response(follow_up, 401) == %{"error" => "Authentication required"}
+    end
+
+    test "returns 401 when no bearer is provided", %{conn: conn} do
+      conn = delete(conn, "/api/auth/sign_out")
+      assert json_response(conn, 401) == %{"error" => "Authentication required"}
+    end
+  end
 end
