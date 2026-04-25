@@ -181,6 +181,7 @@ defmodule Huddlz.Communities.GroupMember do
 
     attribute :role, :atom do
       allow_nil? false
+      public? true
       default :member
       constraints one_of: [:owner, :organizer, :member]
     end

@@ -339,30 +339,36 @@ defmodule Huddlz.Communities.Huddl do
 
     attribute :title, :string do
       allow_nil? false
+      public? true
       constraints min_length: 3, max_length: 200
     end
 
     attribute :description, :string do
       allow_nil? true
+      public? true
       constraints max_length: 5000
     end
 
     attribute :starts_at, :utc_datetime do
       allow_nil? false
+      public? true
     end
 
     attribute :ends_at, :utc_datetime do
       allow_nil? false
+      public? true
     end
 
     attribute :event_type, :atom do
       allow_nil? false
+      public? true
       constraints one_of: [:in_person, :virtual, :hybrid]
       default :in_person
     end
 
     attribute :physical_location, :string do
       allow_nil? true
+      public? true
       constraints max_length: 500
     end
 
@@ -374,11 +380,13 @@ defmodule Huddlz.Communities.Huddl do
 
     attribute :is_private, :boolean do
       allow_nil? false
+      public? true
       default false
     end
 
     attribute :thumbnail_url, :string do
       allow_nil? true
+      public? true
     end
 
     attribute :latitude, :float do

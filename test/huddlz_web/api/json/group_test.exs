@@ -2,15 +2,32 @@ defmodule HuddlzWeb.Api.Json.GroupTest do
   use HuddlzWeb.ApiCase, async: true
 
   describe "GET /api/json/groups" do
-    test "lists public groups", %{conn: conn} do
+    test "lists public groups with their attributes", %{conn: conn} do
       owner = generate(user())
-      g = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+
+      g =
+        generate(
+          group(
+            owner_id: owner.id,
+            is_public: true,
+            actor: owner,
+            name: "Surfaces Attributes",
+            description: "must round-trip",
+            location: "Tucson"
+          )
+        )
 
       conn = get(conn, "/api/json/groups")
 
       assert %{"data" => data} = json_response(conn, 200)
-      ids = Enum.map(data, & &1["id"])
-      assert g.id in ids
+      record = Enum.find(data, &(&1["id"] == g.id))
+      assert record, "expected the just-created group in the list"
+
+      attrs = record["attributes"] || %{}
+      assert attrs["name"] == "Surfaces Attributes"
+      assert attrs["description"] == "must round-trip"
+      assert attrs["location"] == "Tucson"
+      assert attrs["is_public"] == true
     end
   end
 
