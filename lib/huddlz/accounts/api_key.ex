@@ -22,7 +22,9 @@ defmodule Huddlz.Accounts.ApiKey do
 
     create :create do
       primary? true
-      accept [:user_id, :expires_at]
+      accept [:expires_at]
+
+      change relate_actor(:user)
 
       change {AshAuthentication.Strategy.ApiKey.GenerateApiKey,
               prefix: :huddlz, hash: :api_key_hash}
@@ -32,6 +34,11 @@ defmodule Huddlz.Accounts.ApiKey do
   policies do
     bypass AshAuthentication.Checks.AshAuthenticationInteraction do
       authorize_if always()
+    end
+
+    policy action(:create) do
+      description "Authenticated users can create API keys for themselves"
+      authorize_if actor_present()
     end
   end
 
