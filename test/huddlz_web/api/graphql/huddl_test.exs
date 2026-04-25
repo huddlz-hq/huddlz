@@ -1,6 +1,22 @@
 defmodule HuddlzWeb.Api.Graphql.HuddlTest do
   use HuddlzWeb.ApiCase, async: true
 
+  describe "me query" do
+    test "returns the current actor when authenticated", %{conn: conn} do
+      target = generate(user(display_name: "Me"))
+
+      conn =
+        conn
+        |> authenticated_conn(target)
+        |> gql_post("{ me { id displayName } }")
+
+      assert %{"data" => %{"me" => %{"id" => id, "displayName" => "Me"}}} =
+               json_response(conn, 200)
+
+      assert id == target.id
+    end
+  end
+
   describe "cancelRsvpToHuddl mutation" do
     test "is idempotent when actor is not RSVPed", %{conn: conn} do
       owner = generate(user())
