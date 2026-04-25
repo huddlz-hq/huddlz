@@ -218,9 +218,8 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
       assert hd(groups).id == alpha.id
     end
 
-    test "can get groups by owner", %{owner1: owner1} do
-      {:ok, groups} =
-        Huddlz.Communities.get_by_owner(owner1.id, actor: owner1)
+    test "can get groups owned by the current actor", %{owner1: owner1} do
+      {:ok, groups} = Huddlz.Communities.get_by_owner(actor: owner1)
 
       assert length(groups) == 2
       assert Enum.all?(groups, &(&1.owner_id == owner1.id))
