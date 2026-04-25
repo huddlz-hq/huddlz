@@ -62,6 +62,11 @@ defmodule Huddlz.Accounts.User do
   actions do
     defaults [:read]
 
+    read :public_profile do
+      description "Slim, public-facing profile shape used on relationships exposed via the API."
+      prepare build(select: [:id, :display_name], load: [:current_profile_picture_url])
+    end
+
     create :create do
       # For testing/seeding only - use authentication actions in production
       primary? true
@@ -295,6 +300,11 @@ defmodule Huddlz.Accounts.User do
 
     # Basic read permissions - needed for auth
     policy action(:read) do
+      authorize_if always()
+    end
+
+    policy action(:public_profile) do
+      description "Anyone can view the public profile of any user"
       authorize_if always()
     end
 
