@@ -7,7 +7,26 @@ defmodule Huddlz.Communities.HuddlAttendee do
     otp_app: :huddlz,
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshJsonApi.Resource, AshGraphql.Resource]
+
+  graphql do
+    type :huddl_attendee
+
+    queries do
+      list :huddl_attendees, :by_huddl
+    end
+  end
+
+  json_api do
+    type "huddl_attendee"
+
+    routes do
+      base "/huddl_attendees"
+
+      index :by_huddl, route: "/by_huddl"
+    end
+  end
 
   postgres do
     table "huddl_attendees"
