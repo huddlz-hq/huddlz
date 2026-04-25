@@ -20,6 +20,21 @@ defmodule HuddlzWeb.Api.AuthController do
     end
   end
 
+  def sign_in(conn, params) do
+    User
+    |> Ash.Query.for_read(:sign_in_with_password, params)
+    |> Ash.read_one()
+    |> case do
+      {:ok, %User{} = user} ->
+        json(conn, %{token: Ash.Resource.get_metadata(user, :token), user: serialize_self(user)})
+
+      _ ->
+        conn
+        |> put_status(:unauthorized)
+        |> json(%{error: "Invalid email or password"})
+    end
+  end
+
   defp serialize_self(user) do
     %{
       id: user.id,
