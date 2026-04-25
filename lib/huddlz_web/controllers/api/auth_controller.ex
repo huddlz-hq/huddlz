@@ -2,7 +2,7 @@ defmodule HuddlzWeb.Api.AuthController do
   use HuddlzWeb, :controller
 
   alias AshAuthentication.TokenResource
-  alias Huddlz.Accounts.{Token, User}
+  alias Huddlz.Accounts.{ApiKey, Token, User}
 
   def register(conn, params) do
     User
@@ -75,6 +75,53 @@ defmodule HuddlzWeb.Api.AuthController do
 
     send_resp(conn, :no_content, "")
   end
+
+  def create_api_key(conn, params) do
+    case conn.assigns[:current_user] do
+      %User{} = user ->
+        days = parse_expires_in_days(params)
+        expires_at = DateTime.utc_now() |> DateTime.add(days * 24 * 3600, :second)
+
+        ApiKey
+        |> Ash.Changeset.for_create(
+          :create,
+          %{expires_at: expires_at},
+          actor: user
+        )
+        |> Ash.create()
+        |> case do
+          {:ok, record} ->
+            conn
+            |> put_status(:created)
+            |> json(%{
+              id: record.id,
+              key: record.__metadata__.plaintext_api_key,
+              expires_at: record.expires_at
+            })
+
+          {:error, error} ->
+            conn
+            |> put_status(:unprocessable_entity)
+            |> json(%{errors: format_errors(error)})
+        end
+
+      _ ->
+        conn
+        |> put_status(:unauthorized)
+        |> json(%{error: "Authentication required"})
+    end
+  end
+
+  defp parse_expires_in_days(%{"expires_in_days" => value}) when is_integer(value), do: value
+
+  defp parse_expires_in_days(%{"expires_in_days" => value}) when is_binary(value) do
+    case Integer.parse(value) do
+      {n, ""} -> n
+      _ -> 30
+    end
+  end
+
+  defp parse_expires_in_days(_), do: 30
 
   defp serialize_self(user) do
     %{

@@ -175,6 +175,47 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
     end
   end
 
+  describe "POST /api/auth/api_keys" do
+    test "creates an API key for the actor and returns the plaintext once", %{conn: conn} do
+      target = generate(user())
+
+      conn =
+        conn
+        |> authenticated_conn(target)
+        |> post("/api/auth/api_keys", %{"expires_in_days" => 30})
+
+      assert %{"id" => id, "key" => key, "expires_at" => expires_at} = json_response(conn, 201)
+      assert is_binary(id)
+      assert is_binary(key)
+      assert String.starts_with?(key, "huddlz_")
+      assert is_binary(expires_at)
+    end
+
+    test "the returned key authenticates a follow-up request", %{conn: conn} do
+      target = generate(user())
+
+      create_conn =
+        conn
+        |> authenticated_conn(target)
+        |> post("/api/auth/api_keys", %{})
+
+      assert %{"key" => key} = json_response(create_conn, 201)
+
+      follow_up =
+        build_conn()
+        |> put_req_header("authorization", "Bearer " <> key)
+        |> get("/api/auth/me")
+
+      assert %{"user" => %{"id" => id}} = json_response(follow_up, 200)
+      assert id == target.id
+    end
+
+    test "returns 401 when no bearer is provided", %{conn: conn} do
+      conn = post(conn, "/api/auth/api_keys", %{})
+      assert json_response(conn, 401) == %{"error" => "Authentication required"}
+    end
+  end
+
   describe "POST /api/auth/password_reset" do
     test "returns 204 and emails a reset link for a known email", %{conn: conn} do
       generate(user_with_password(email: "reset-known@example.com"))

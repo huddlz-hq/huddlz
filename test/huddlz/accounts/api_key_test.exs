@@ -11,8 +11,8 @@ defmodule Huddlz.Accounts.ApiKeyTest do
         ApiKey
         |> Ash.Changeset.for_create(
           :create,
-          %{user_id: user.id, expires_at: in_days(7)},
-          authorize?: false
+          %{expires_at: in_days(7)},
+          actor: user
         )
         |> Ash.create()
 
@@ -76,8 +76,8 @@ defmodule Huddlz.Accounts.ApiKeyTest do
     ApiKey
     |> Ash.Changeset.for_create(
       :create,
-      %{user_id: user.id, expires_at: expires_at},
-      authorize?: false
+      %{expires_at: expires_at},
+      actor: user
     )
     |> Ash.create!()
   end

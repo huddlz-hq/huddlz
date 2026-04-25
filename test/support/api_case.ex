@@ -77,8 +77,8 @@ defmodule HuddlzWeb.ApiCase do
       Huddlz.Accounts.ApiKey
       |> Ash.Changeset.for_create(
         :create,
-        %{user_id: user.id, expires_at: expires_at},
-        authorize?: false
+        %{expires_at: expires_at},
+        actor: user
       )
       |> Ash.create!()
 
