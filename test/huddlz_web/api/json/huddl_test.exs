@@ -1,6 +1,37 @@
 defmodule HuddlzWeb.Api.Json.HuddlTest do
   use HuddlzWeb.ApiCase, async: true
 
+  describe "DELETE /api/json/huddlz/:id" do
+    test "owner can delete the huddl", %{conn: conn} do
+      owner = generate(user())
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      h = generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
+
+      conn =
+        conn
+        |> authenticated_conn(owner)
+        |> put_req_header("content-type", "application/vnd.api+json")
+        |> delete("/api/json/huddlz/#{h.id}")
+
+      assert conn.status in [200, 204]
+    end
+
+    test "regular user cannot delete the huddl", %{conn: conn} do
+      owner = generate(user())
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      h = generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
+      stranger = generate(user())
+
+      conn =
+        conn
+        |> authenticated_conn(stranger)
+        |> put_req_header("content-type", "application/vnd.api+json")
+        |> delete("/api/json/huddlz/#{h.id}")
+
+      assert conn.status in [403, 404]
+    end
+  end
+
   describe "PATCH /api/json/huddlz/:id/cancel_rsvp" do
     test "is idempotent when actor is not RSVPed", %{conn: conn} do
       owner = generate(user())
