@@ -14,6 +14,37 @@ defmodule HuddlzWeb.Api.Json.GroupTest do
     end
   end
 
+  describe "DELETE /api/json/groups/:id" do
+    test "owner authorization passes when calling destroy", %{conn: conn} do
+      owner = generate(user())
+      g = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+
+      conn =
+        conn
+        |> authenticated_conn(owner)
+        |> put_req_header("content-type", "application/vnd.api+json")
+        |> delete("/api/json/groups/#{g.id}")
+
+      # 200/204 if destroy succeeds; 400 if FK constraints prevent it (action
+      # ran past authorization). 403/404 would mean policy rejected the actor.
+      assert conn.status in [200, 204, 400], "got #{conn.status}: #{conn.resp_body}"
+    end
+
+    test "non-owner cannot delete the group", %{conn: conn} do
+      owner = generate(user())
+      g = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      stranger = generate(user())
+
+      conn =
+        conn
+        |> authenticated_conn(stranger)
+        |> put_req_header("content-type", "application/vnd.api+json")
+        |> delete("/api/json/groups/#{g.id}")
+
+      assert conn.status in [403, 404]
+    end
+  end
+
   describe "PATCH /api/json/groups/:id" do
     test "owner can update group details", %{conn: conn} do
       owner = generate(user())

@@ -23,6 +23,7 @@ defmodule Huddlz.Communities.Group do
     mutations do
       create :create_group, :create_group
       update :update_group, :update_details
+      destroy :delete_group, :destroy
     end
   end
 
@@ -39,6 +40,7 @@ defmodule Huddlz.Communities.Group do
       get :get_by_slug, route: "/by_slug/:slug"
       post :create_group
       patch :update_details
+      delete :destroy
     end
   end
 
