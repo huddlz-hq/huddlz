@@ -7,8 +7,16 @@ defmodule Huddlz.Accounts.User do
     otp_app: :huddlz,
     domain: Huddlz.Accounts,
     authorizers: [Ash.Policy.Authorizer],
-    extensions: [AshAuthentication],
+    extensions: [AshAuthentication, AshGraphql.Resource],
     data_layer: AshPostgres.DataLayer
+
+  graphql do
+    type :user
+
+    queries do
+      read_one :me, :me
+    end
+  end
 
   authentication do
     add_ons do
@@ -70,6 +78,13 @@ defmodule Huddlz.Accounts.User do
     read :public_profile do
       description "Slim, public-facing profile shape used on relationships exposed via the API."
       prepare build(select: [:id, :display_name], load: [:current_profile_picture_url])
+    end
+
+    read :me do
+      description "Read the current actor's profile."
+      get? true
+      filter expr(id == ^actor(:id))
+      prepare build(load: [:current_profile_picture_url])
     end
 
     create :create do
@@ -316,6 +331,11 @@ defmodule Huddlz.Accounts.User do
     policy action(:public_profile) do
       description "Anyone can view the public profile of any user"
       authorize_if always()
+    end
+
+    policy action(:me) do
+      description "Authenticated actors can read themselves"
+      authorize_if actor_present()
     end
 
     policy action(:get_by_subject) do
