@@ -53,6 +53,7 @@ defmodule HuddlzWeb.Router do
 
     post "/register", AuthController, :register
     post "/sign_in", AuthController, :sign_in
+    get "/me", AuthController, :me
   end
 
   scope "/", HuddlzWeb do

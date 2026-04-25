@@ -35,6 +35,18 @@ defmodule HuddlzWeb.Api.AuthController do
     end
   end
 
+  def me(conn, _params) do
+    case conn.assigns[:current_user] do
+      %User{} = user ->
+        json(conn, %{user: serialize_self(user)})
+
+      _ ->
+        conn
+        |> put_status(:unauthorized)
+        |> json(%{error: "Authentication required"})
+    end
+  end
+
   defp serialize_self(user) do
     %{
       id: user.id,
