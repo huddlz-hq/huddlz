@@ -1,6 +1,28 @@
 defmodule HuddlzWeb.Api.Json.GroupMemberTest do
   use HuddlzWeb.ApiCase, async: true
 
+  describe "GET /api/json/group_members/mine" do
+    test "returns only the actor's memberships", %{conn: conn} do
+      me = generate(user())
+      _my_group = generate(group(owner_id: me.id, is_public: true, actor: me))
+
+      other_owner = generate(user())
+
+      _other_group =
+        generate(group(owner_id: other_owner.id, is_public: true, actor: other_owner))
+
+      conn =
+        conn
+        |> authenticated_conn(me)
+        |> get("/api/json/group_members/mine")
+
+      assert %{"data" => data} = json_response(conn, 200)
+      # Owner is auto-added as a member of their group
+      assert is_list(data)
+      assert data != []
+    end
+  end
+
   describe "GET /api/json/group_members/by_group?group_id=..." do
     test "returns members of the group when actor is a member", %{conn: conn} do
       owner = generate(user())

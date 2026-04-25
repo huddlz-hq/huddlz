@@ -15,6 +15,7 @@ defmodule Huddlz.Communities.GroupMember do
 
     queries do
       list :group_members, :get_by_group
+      list :my_memberships, :get_by_user
     end
   end
 
@@ -25,6 +26,7 @@ defmodule Huddlz.Communities.GroupMember do
       base "/group_members"
 
       index :get_by_group, route: "/by_group"
+      index :get_by_user, route: "/mine"
     end
   end
 
@@ -112,13 +114,8 @@ defmodule Huddlz.Communities.GroupMember do
     end
 
     read :get_by_user do
-      description "Get all groups a user is a member of"
-
-      argument :user_id, :uuid do
-        allow_nil? false
-      end
-
-      filter expr(user_id == ^arg(:user_id))
+      description "Get all group memberships for the current actor"
+      filter expr(user_id == ^actor(:id))
     end
   end
 
@@ -163,6 +160,11 @@ defmodule Huddlz.Communities.GroupMember do
 
       # Explicitly forbid everyone else (non-members cannot see member lists)
       forbid_if always()
+    end
+
+    policy action(:get_by_user) do
+      description "Users can read their own memberships"
+      authorize_if actor_present()
     end
   end
 
