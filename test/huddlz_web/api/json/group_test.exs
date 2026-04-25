@@ -14,6 +14,33 @@ defmodule HuddlzWeb.Api.Json.GroupTest do
     end
   end
 
+  describe "POST /api/json/groups" do
+    test "authenticated user can create a group", %{conn: conn} do
+      me = generate(user())
+
+      conn =
+        conn
+        |> authenticated_conn(me)
+        |> put_req_header("content-type", "application/vnd.api+json")
+        |> post("/api/json/groups", %{
+          "data" => %{
+            "type" => "group",
+            "attributes" => %{
+              "name" => "API Created Group",
+              "description" => "Created via JSON:API",
+              "location" => "Tucson",
+              "is_public" => true,
+              "owner_id" => me.id,
+              "slug" => "api-created-group"
+            }
+          }
+        })
+
+      assert %{"data" => data} = json_response(conn, 201)
+      assert is_binary(data["id"])
+    end
+  end
+
   describe "GET /api/json/groups/mine" do
     test "returns only groups owned by the actor", %{conn: conn} do
       me = generate(user())
