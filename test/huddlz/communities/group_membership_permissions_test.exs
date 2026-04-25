@@ -36,9 +36,7 @@ defmodule Huddlz.Communities.GroupMembershipPermissionsTest do
     test "user cannot join private group", %{regular: user, private_group: group} do
       assert {:error, %Ash.Error.Forbidden{}} =
                GroupMember
-               |> Ash.Changeset.for_create(:join_group, %{group_id: group.id, user_id: user.id},
-                 actor: user
-               )
+               |> Ash.Changeset.for_create(:join_group, %{group_id: group.id}, actor: user)
                |> Ash.create()
     end
 
@@ -48,9 +46,7 @@ defmodule Huddlz.Communities.GroupMembershipPermissionsTest do
 
       assert {:ok, membership} =
                GroupMember
-               |> Ash.Changeset.for_create(
-                 :join_group,
-                 %{group_id: group.id, user_id: new_verified.id},
+               |> Ash.Changeset.for_create(:join_group, %{group_id: group.id},
                  actor: new_verified
                )
                |> Ash.create()

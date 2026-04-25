@@ -12,7 +12,7 @@ defmodule Huddlz.Communities.Huddl.Changes.CancelRsvp do
 
     existing =
       Huddlz.Communities.HuddlAttendee
-      |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl_id, user_id: user_id})
+      |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl_id}, actor: %{id: user_id})
       |> Ash.read_one(authorize?: false)
 
     case existing do

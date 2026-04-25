@@ -74,7 +74,7 @@ defmodule Huddlz.Communities do
     end
 
     resource Huddlz.Communities.HuddlAttendee do
-      define :check_user_rsvp, action: :check_rsvp, args: [:huddl_id, :user_id]
+      define :check_user_rsvp, action: :check_rsvp, args: [:huddl_id]
     end
 
     resource Huddlz.Communities.HuddlTemplate
