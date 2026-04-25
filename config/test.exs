@@ -31,3 +31,6 @@ config :huddlz, :geocoding, adapter: Huddlz.MockGeocoding
 config :huddlz, :places, adapter: Huddlz.MockPlaces
 config :huddlz, geocoding_req_plug: {Req.Test, Huddlz.Geocoding.Google}
 config :huddlz, Huddlz.Repo, pool: Ecto.Adapters.SQL.Sandbox
+
+# CORS — allow all origins so tests don't have to configure them
+config :huddlz, :cors_origins, :all
