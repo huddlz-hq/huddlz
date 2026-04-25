@@ -52,6 +52,7 @@ defmodule HuddlzWeb.Router do
     pipe_through [:api]
 
     post "/register", AuthController, :register
+    post "/sign_in", AuthController, :sign_in
   end
 
   scope "/", HuddlzWeb do

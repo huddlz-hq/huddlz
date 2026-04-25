@@ -62,4 +62,49 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
       assert is_list(errors) and errors != []
     end
   end
+
+  describe "POST /api/auth/sign_in" do
+    test "returns a JWT on correct credentials", %{conn: conn} do
+      generate(
+        user_with_password(
+          email: "signin@example.com",
+          password: "correct horse battery staple"
+        )
+      )
+
+      conn =
+        post(conn, "/api/auth/sign_in", %{
+          "email" => "signin@example.com",
+          "password" => "correct horse battery staple"
+        })
+
+      assert %{"token" => token, "user" => %{"email" => "signin@example.com"}} =
+               json_response(conn, 200)
+
+      assert is_binary(token)
+      assert {:ok, _claims, _user_resource} = AshAuthentication.Jwt.verify(token, :huddlz)
+    end
+
+    test "returns 401 on wrong password", %{conn: conn} do
+      generate(user_with_password(email: "wrong-pass@example.com", password: "Password123!"))
+
+      conn =
+        post(conn, "/api/auth/sign_in", %{
+          "email" => "wrong-pass@example.com",
+          "password" => "totally wrong"
+        })
+
+      assert json_response(conn, 401) == %{"error" => "Invalid email or password"}
+    end
+
+    test "returns the same 401 shape on unknown email", %{conn: conn} do
+      conn =
+        post(conn, "/api/auth/sign_in", %{
+          "email" => "nobody@example.com",
+          "password" => "anything goes here"
+        })
+
+      assert json_response(conn, 401) == %{"error" => "Invalid email or password"}
+    end
+  end
 end
