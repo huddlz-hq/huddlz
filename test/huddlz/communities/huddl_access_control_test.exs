@@ -347,7 +347,7 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
     } do
       # First, member needs to RSVP
       virtual_huddl
-      |> Ash.Changeset.for_update(:rsvp, %{user_id: member.id}, actor: member)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
       result =

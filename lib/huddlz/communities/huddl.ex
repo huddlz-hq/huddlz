@@ -25,6 +25,7 @@ defmodule Huddlz.Communities.Huddl do
     mutations do
       create :create_huddl, :create
       update :update_huddl, :update
+      update :rsvp_to_huddl, :rsvp
     end
   end
 
@@ -41,6 +42,7 @@ defmodule Huddlz.Communities.Huddl do
       index :by_group, route: "/by_group"
       post :create
       patch :update
+      patch :rsvp, route: "/:id/rsvp"
     end
   end
 
@@ -245,12 +247,8 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     update :rsvp do
-      description "RSVP to this huddl"
+      description "RSVP to this huddl as the current actor"
       require_atomic? false
-
-      argument :user_id, :uuid do
-        allow_nil? false
-      end
 
       change Huddlz.Communities.Huddl.Changes.Rsvp
     end
@@ -291,7 +289,6 @@ defmodule Huddlz.Communities.Huddl do
     # RSVP policies
     policy action(:rsvp) do
       description "Users can RSVP to huddlz they have access to"
-      forbid_unless expr(^arg(:user_id) == ^actor(:id))
       authorize_if expr(is_private == false and group.is_public == true)
       authorize_if expr(exists(group.members, id == ^actor(:id)))
     end

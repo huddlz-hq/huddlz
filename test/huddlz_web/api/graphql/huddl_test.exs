@@ -1,6 +1,30 @@
 defmodule HuddlzWeb.Api.Graphql.HuddlTest do
   use HuddlzWeb.ApiCase, async: true
 
+  describe "rsvpToHuddl mutation" do
+    test "RSVPs the actor to the huddl", %{conn: conn} do
+      owner = generate(user())
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      h = generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
+      member = generate(user())
+
+      query = """
+      mutation { rsvpToHuddl(id: "#{h.id}") { result { id } errors { message } } }
+      """
+
+      conn =
+        conn
+        |> authenticated_conn(member)
+        |> gql_post(query)
+
+      assert %{"data" => %{"rsvpToHuddl" => %{"result" => %{"id" => id}, "errors" => errors}}} =
+               json_response(conn, 200)
+
+      assert id == h.id
+      assert errors in [nil, []]
+    end
+  end
+
   describe "upcomingHuddlz query" do
     test "returns future huddlz", %{conn: conn} do
       owner = generate(user())
