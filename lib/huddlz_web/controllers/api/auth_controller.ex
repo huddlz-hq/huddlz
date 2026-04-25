@@ -76,39 +76,41 @@ defmodule HuddlzWeb.Api.AuthController do
     send_resp(conn, :no_content, "")
   end
 
+  @api_key_min_days 1
+  @api_key_max_days 365
+  @api_key_default_days 30
+
   def create_api_key(conn, params) do
-    case conn.assigns[:current_user] do
-      %User{} = user ->
-        days = parse_expires_in_days(params)
-        expires_at = DateTime.utc_now() |> DateTime.add(days * 24 * 3600, :second)
+    with %User{} = user <- conn.assigns[:current_user] || :unauthorized,
+         {:ok, days} <- parse_expires_in_days(params) do
+      expires_at = DateTime.utc_now() |> DateTime.add(days * 24 * 3600, :second)
 
-        ApiKey
-        |> Ash.Changeset.for_create(
-          :create,
-          %{expires_at: expires_at},
-          actor: user
-        )
-        |> Ash.create()
-        |> case do
-          {:ok, record} ->
-            conn
-            |> put_status(:created)
-            |> json(%{
-              id: record.id,
-              key: record.__metadata__.plaintext_api_key,
-              expires_at: record.expires_at
-            })
+      ApiKey
+      |> Ash.Changeset.for_create(:create, %{expires_at: expires_at}, actor: user)
+      |> Ash.create()
+      |> case do
+        {:ok, record} ->
+          conn
+          |> put_status(:created)
+          |> json(%{
+            id: record.id,
+            key: record.__metadata__.plaintext_api_key,
+            expires_at: record.expires_at
+          })
 
-          {:error, error} ->
-            conn
-            |> put_status(:unprocessable_entity)
-            |> json(%{errors: format_errors(error)})
-        end
+        {:error, error} ->
+          conn
+          |> put_status(:unprocessable_entity)
+          |> json(%{errors: format_errors(error)})
+      end
+    else
+      :unauthorized ->
+        auth_required(conn)
 
-      _ ->
+      {:error, message} ->
         conn
-        |> put_status(:unauthorized)
-        |> json(%{error: "Authentication required"})
+        |> put_status(:unprocessable_entity)
+        |> json(%{errors: [%{field: "expires_in_days", message: message}]})
     end
   end
 
@@ -166,16 +168,25 @@ defmodule HuddlzWeb.Api.AuthController do
     |> json(%{error: "Not found"})
   end
 
-  defp parse_expires_in_days(%{"expires_in_days" => value}) when is_integer(value), do: value
+  defp parse_expires_in_days(%{"expires_in_days" => value}) when is_integer(value),
+    do: validate_days(value)
 
   defp parse_expires_in_days(%{"expires_in_days" => value}) when is_binary(value) do
     case Integer.parse(value) do
-      {n, ""} -> n
-      _ -> 30
+      {n, ""} -> validate_days(n)
+      _ -> {:error, "must be an integer"}
     end
   end
 
-  defp parse_expires_in_days(_), do: 30
+  defp parse_expires_in_days(%{"expires_in_days" => _}),
+    do: {:error, "must be an integer"}
+
+  defp parse_expires_in_days(_), do: {:ok, @api_key_default_days}
+
+  defp validate_days(n) when n in @api_key_min_days..@api_key_max_days, do: {:ok, n}
+
+  defp validate_days(_),
+    do: {:error, "must be between #{@api_key_min_days} and #{@api_key_max_days} days"}
 
   defp serialize_self(user) do
     %{
