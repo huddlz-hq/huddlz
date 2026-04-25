@@ -25,6 +25,11 @@ defmodule HuddlzWeb.Router do
     plug :accepts, ["json"]
     plug :load_from_bearer
     plug :set_actor, :user
+
+    plug AshAuthentication.Strategy.ApiKey.Plug,
+      resource: Huddlz.Accounts.User,
+      required?: false,
+      on_error: &HuddlzWeb.ApiAuth.continue/2
   end
 
   scope "/gql" do
