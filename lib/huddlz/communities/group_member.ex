@@ -17,6 +17,10 @@ defmodule Huddlz.Communities.GroupMember do
       list :group_members, :get_by_group
       list :my_memberships, :get_by_user
     end
+
+    mutations do
+      create :join_group, :join_group
+    end
   end
 
   json_api do
@@ -27,6 +31,7 @@ defmodule Huddlz.Communities.GroupMember do
 
       index :get_by_group, route: "/by_group"
       index :get_by_user, route: "/mine"
+      post :join_group, route: "/join"
     end
   end
 
@@ -84,18 +89,14 @@ defmodule Huddlz.Communities.GroupMember do
     end
 
     create :join_group do
-      description "Join a group as a regular member"
+      description "Join a group as a regular member as the current actor"
 
       argument :group_id, :uuid do
         allow_nil? false
       end
 
-      argument :user_id, :uuid do
-        allow_nil? false
-      end
-
       change manage_relationship(:group_id, :group, type: :append)
-      change manage_relationship(:user_id, :user, type: :append)
+      change relate_actor(:user)
       change set_attribute(:role, :member)
     end
 
@@ -140,9 +141,6 @@ defmodule Huddlz.Communities.GroupMember do
     # Users can join public groups
     policy action(:join_group) do
       description "Allow users to join public groups"
-      # Check if the user is trying to join as themselves
-      forbid_unless expr(^arg(:user_id) == ^actor(:id))
-      # And the group is public
       authorize_if PublicGroup
     end
 

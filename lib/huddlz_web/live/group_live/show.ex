@@ -351,14 +351,7 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   defp join_group(group, user) do
     GroupMember
-    |> Ash.Changeset.for_create(
-      :join_group,
-      %{
-        group_id: group.id,
-        user_id: user.id
-      },
-      actor: user
-    )
+    |> Ash.Changeset.for_create(:join_group, %{group_id: group.id}, actor: user)
     |> Ash.create()
   end
 

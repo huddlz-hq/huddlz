@@ -1,6 +1,28 @@
 defmodule HuddlzWeb.Api.Json.GroupMemberTest do
   use HuddlzWeb.ApiCase, async: true
 
+  describe "POST /api/json/group_members/join" do
+    test "user can join a public group", %{conn: conn} do
+      owner = generate(user())
+      g = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      joiner = generate(user())
+
+      conn =
+        conn
+        |> authenticated_conn(joiner)
+        |> put_req_header("content-type", "application/vnd.api+json")
+        |> post("/api/json/group_members/join", %{
+          "data" => %{
+            "type" => "group_member",
+            "attributes" => %{"group_id" => g.id}
+          }
+        })
+
+      assert %{"data" => data} = json_response(conn, 201)
+      assert is_binary(data["id"])
+    end
+  end
+
   describe "GET /api/json/group_members/mine" do
     test "returns only the actor's memberships", %{conn: conn} do
       me = generate(user())
