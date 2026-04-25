@@ -40,6 +40,11 @@ defmodule Huddlz.Accounts.ApiKey do
       description "Authenticated users can create API keys for themselves"
       authorize_if actor_present()
     end
+
+    policy action(:read) do
+      description "Users can read their own API keys"
+      authorize_if expr(user_id == ^actor(:id))
+    end
   end
 
   attributes do

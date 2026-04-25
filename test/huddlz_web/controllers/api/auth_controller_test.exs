@@ -216,6 +216,57 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
     end
   end
 
+  describe "GET /api/auth/api_keys" do
+    test "returns only the actor's keys without the plaintext or hash", %{conn: conn} do
+      target = generate(user())
+
+      mint_keys =
+        for _ <- 1..2 do
+          conn
+          |> authenticated_conn(target)
+          |> post("/api/auth/api_keys", %{})
+          |> json_response(201)
+        end
+
+      ids = Enum.map(mint_keys, & &1["id"])
+
+      list_conn =
+        conn
+        |> authenticated_conn(target)
+        |> get("/api/auth/api_keys")
+
+      assert %{"api_keys" => api_keys} = json_response(list_conn, 200)
+      returned_ids = Enum.map(api_keys, & &1["id"])
+      assert Enum.sort(returned_ids) == Enum.sort(ids)
+
+      for record <- api_keys do
+        refute Map.has_key?(record, "key")
+        refute Map.has_key?(record, "api_key_hash")
+        assert Map.has_key?(record, "expires_at")
+        assert Map.has_key?(record, "valid")
+      end
+    end
+
+    test "does not return another actor's keys", %{conn: conn} do
+      me = generate(user())
+      other = generate(user())
+
+      conn |> authenticated_conn(other) |> post("/api/auth/api_keys", %{})
+
+      list_conn =
+        conn
+        |> authenticated_conn(me)
+        |> get("/api/auth/api_keys")
+
+      assert %{"api_keys" => []} = json_response(list_conn, 200)
+    end
+
+    test "returns 401 when no bearer is provided", %{conn: conn} do
+      conn = get(conn, "/api/auth/api_keys")
+      assert json_response(conn, 401) == %{"error" => "Authentication required"}
+    end
+  end
+
   describe "POST /api/auth/password_reset" do
     test "returns 204 and emails a reset link for a known email", %{conn: conn} do
       generate(user_with_password(email: "reset-known@example.com"))

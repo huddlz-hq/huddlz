@@ -112,6 +112,32 @@ defmodule HuddlzWeb.Api.AuthController do
     end
   end
 
+  def list_api_keys(conn, _params) do
+    case conn.assigns[:current_user] do
+      %User{} = user ->
+        keys =
+          ApiKey
+          |> Ash.Query.load([:valid])
+          |> Ash.read!(actor: user)
+          |> Enum.map(&serialize_api_key/1)
+
+        json(conn, %{api_keys: keys})
+
+      _ ->
+        conn
+        |> put_status(:unauthorized)
+        |> json(%{error: "Authentication required"})
+    end
+  end
+
+  defp serialize_api_key(record) do
+    %{
+      id: record.id,
+      expires_at: record.expires_at,
+      valid: record.valid
+    }
+  end
+
   defp parse_expires_in_days(%{"expires_in_days" => value}) when is_integer(value), do: value
 
   defp parse_expires_in_days(%{"expires_in_days" => value}) when is_binary(value) do
