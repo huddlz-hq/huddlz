@@ -47,6 +47,11 @@ defmodule Huddlz.Accounts.User do
           request_password_reset_action_name :request_password_reset_token
         end
       end
+
+      api_key :api_key do
+        api_key_relationship :valid_api_keys
+        api_key_hash_attribute :api_key_hash
+      end
     end
   end
 
@@ -287,6 +292,11 @@ defmodule Huddlz.Accounts.User do
       # Generates an authentication token for the user
       change AshAuthentication.GenerateTokenChange
     end
+
+    read :sign_in_with_api_key do
+      argument :api_key, :string, allow_nil?: false
+      prepare AshAuthentication.Strategy.ApiKey.SignInPreparation
+    end
   end
 
   policies do
@@ -423,6 +433,10 @@ defmodule Huddlz.Accounts.User do
 
     has_many :profile_pictures, Huddlz.Accounts.ProfilePicture do
       destination_attribute :user_id
+    end
+
+    has_many :valid_api_keys, Huddlz.Accounts.ApiKey do
+      filter expr(valid)
     end
   end
 

@@ -61,4 +61,31 @@ defmodule HuddlzWeb.ApiCase do
     |> Plug.Conn.put_req_header("content-type", "application/json")
     |> Phoenix.ConnTest.dispatch(HuddlzWeb.Endpoint, :post, "/gql", body)
   end
+
+  @doc """
+  Mints an API key for the user and adds it to the conn's `authorization`
+  header as `Bearer <plaintext_api_key>`.
+  """
+  @spec api_key_conn(Plug.Conn.t(), Huddlz.Accounts.User.t(), keyword()) :: Plug.Conn.t()
+  def api_key_conn(conn, user, opts \\ []) do
+    expires_at =
+      Keyword.get_lazy(opts, :expires_at, fn ->
+        DateTime.utc_now() |> DateTime.add(7 * 24 * 3600, :second)
+      end)
+
+    record =
+      Huddlz.Accounts.ApiKey
+      |> Ash.Changeset.for_create(
+        :create,
+        %{user_id: user.id, expires_at: expires_at},
+        authorize?: false
+      )
+      |> Ash.create!()
+
+    Plug.Conn.put_req_header(
+      conn,
+      "authorization",
+      "Bearer " <> record.__metadata__.plaintext_api_key
+    )
+  end
 end

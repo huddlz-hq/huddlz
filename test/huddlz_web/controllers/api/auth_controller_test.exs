@@ -137,6 +137,18 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
 
       assert json_response(conn, 401) == %{"error" => "Authentication required"}
     end
+
+    test "authenticates with an API key in the Authorization header", %{conn: conn} do
+      target = generate(user(email: "key-user@example.com"))
+
+      conn =
+        conn
+        |> api_key_conn(target)
+        |> get("/api/auth/me")
+
+      assert %{"user" => %{"id" => id}} = json_response(conn, 200)
+      assert id == target.id
+    end
   end
 
   describe "DELETE /api/auth/sign_out" do
