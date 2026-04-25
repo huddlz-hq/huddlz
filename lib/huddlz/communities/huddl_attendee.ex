@@ -78,17 +78,13 @@ defmodule Huddlz.Communities.HuddlAttendee do
     end
 
     read :check_rsvp do
-      description "Check if a user has RSVPed to a huddl"
+      description "Check if the current actor has RSVPed to a huddl"
 
       argument :huddl_id, :uuid do
         allow_nil? false
       end
 
-      argument :user_id, :uuid do
-        allow_nil? false
-      end
-
-      filter expr(huddl_id == ^arg(:huddl_id) and user_id == ^arg(:user_id))
+      filter expr(huddl_id == ^arg(:huddl_id) and user_id == ^actor(:id))
     end
   end
 
@@ -137,7 +133,7 @@ defmodule Huddlz.Communities.HuddlAttendee do
 
     # Users can check their own RSVP status
     policy action(:check_rsvp) do
-      authorize_if expr(^arg(:user_id) == ^actor(:id))
+      authorize_if actor_present()
     end
   end
 

@@ -186,7 +186,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
       # Before RSVP
       result =
         HuddlAttendee
-        |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl.id, user_id: member.id})
+        |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl.id}, actor: member)
         |> Ash.read_one(actor: member)
 
       assert {:ok, nil} = result
@@ -198,7 +198,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
 
       result =
         HuddlAttendee
-        |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl.id, user_id: member.id})
+        |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl.id}, actor: member)
         |> Ash.read_one(actor: member)
 
       assert {:ok, %HuddlAttendee{}} = result
