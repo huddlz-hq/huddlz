@@ -8,7 +8,26 @@ defmodule Huddlz.Communities.GroupLocation do
     otp_app: :huddlz,
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshJsonApi.Resource, AshGraphql.Resource]
+
+  graphql do
+    type :group_location
+
+    queries do
+      list :group_locations, :by_group
+    end
+  end
+
+  json_api do
+    type "group_location"
+
+    routes do
+      base "/group_locations"
+
+      index :by_group, route: "/by_group"
+    end
+  end
 
   postgres do
     table "group_locations"
