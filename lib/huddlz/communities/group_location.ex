@@ -17,6 +17,12 @@ defmodule Huddlz.Communities.GroupLocation do
     queries do
       list :group_locations, :by_group
     end
+
+    mutations do
+      create :create_group_location, :create
+      update :update_group_location, :update
+      destroy :delete_group_location, :destroy
+    end
   end
 
   json_api do
@@ -26,6 +32,9 @@ defmodule Huddlz.Communities.GroupLocation do
       base "/group_locations"
 
       index :by_group, route: "/by_group"
+      post :create
+      patch :update
+      delete :destroy
     end
   end
 
