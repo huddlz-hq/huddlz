@@ -16,6 +16,12 @@ defmodule Huddlz.Accounts.User do
     queries do
       read_one :me, :me
     end
+
+    mutations do
+      update :update_display_name, :update_display_name
+      update :update_home_location, :update_home_location
+      update :change_password, :change_password
+    end
   end
 
   authentication do

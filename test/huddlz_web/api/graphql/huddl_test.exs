@@ -17,6 +17,32 @@ defmodule HuddlzWeb.Api.Graphql.HuddlTest do
     end
   end
 
+  describe "updateDisplayName mutation" do
+    test "actor updates their own display name", %{conn: conn} do
+      target = generate(user(display_name: "Old"))
+
+      query = """
+      mutation {
+        updateDisplayName(id: "#{target.id}", input: {displayName: "New"}) {
+          result { displayName }
+          errors { message }
+        }
+      }
+      """
+
+      conn =
+        conn
+        |> authenticated_conn(target)
+        |> gql_post(query)
+
+      assert %{"data" => %{"updateDisplayName" => %{"result" => result, "errors" => errors}}} =
+               json_response(conn, 200)
+
+      assert errors in [nil, []]
+      assert result["displayName"] == "New"
+    end
+  end
+
   describe "cancelRsvpToHuddl mutation" do
     test "is idempotent when actor is not RSVPed", %{conn: conn} do
       owner = generate(user())
