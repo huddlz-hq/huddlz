@@ -15,6 +15,24 @@ defmodule HuddlzWeb.Api.Json.HuddlTest do
     end
   end
 
+  describe "GET /api/json/huddlz/by_group" do
+    test "returns future huddlz scoped to a group", %{conn: conn} do
+      owner = generate(user())
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      other_group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+
+      h = generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
+      _other = generate(huddl(group_id: other_group.id, creator_id: owner.id, actor: owner))
+
+      conn = get(conn, "/api/json/huddlz/by_group", %{"group_id" => group.id})
+
+      assert %{"data" => data} = json_response(conn, 200)
+      ids = Enum.map(data, & &1["id"])
+      assert h.id in ids
+      refute Enum.any?(ids, &(&1 != h.id and &1 in [_other.id]))
+    end
+  end
+
   describe "GET /api/json/huddlz/past" do
     test "returns past huddlz", %{conn: conn} do
       owner = generate(user())
