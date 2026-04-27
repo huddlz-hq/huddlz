@@ -104,7 +104,7 @@ if config_env() == :prod do
 
   cors_origins =
     "CORS_ORIGINS"
-    |> optional("")
+    |> optional("#{scheme}://#{host}")
     |> String.split(",", trim: true)
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == ""))
