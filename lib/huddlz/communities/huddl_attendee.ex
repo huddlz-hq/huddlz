@@ -34,6 +34,10 @@ defmodule Huddlz.Communities.HuddlAttendee do
     table "huddl_attendees"
     repo Huddlz.Repo
 
+    references do
+      reference :huddl, on_delete: :delete
+    end
+
     custom_indexes do
       index [:user_id]
     end

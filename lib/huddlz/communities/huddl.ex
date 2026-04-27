@@ -54,6 +54,10 @@ defmodule Huddlz.Communities.Huddl do
     table "huddlz"
     repo Huddlz.Repo
 
+    references do
+      reference :group, on_delete: :delete
+    end
+
     custom_indexes do
       index "ST_MakePoint(longitude, latitude)",
         name: "huddlz_location_gist_index",
