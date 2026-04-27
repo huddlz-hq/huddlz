@@ -14,7 +14,6 @@ defmodule HuddlzWeb.HuddlLivePermissionsTest do
         generate(
           group(
             is_public: true,
-            owner_id: owner.id,
             name: "RSVP Group",
             actor: owner
           )
