@@ -49,6 +49,10 @@ defmodule Huddlz.Communities.GroupMember do
     table "group_members"
     repo Huddlz.Repo
 
+    references do
+      reference :group, on_delete: :delete
+    end
+
     custom_indexes do
       index [:user_id]
     end

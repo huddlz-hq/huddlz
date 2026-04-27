@@ -63,6 +63,10 @@ defmodule Huddlz.Communities.GroupImage do
     table "group_images"
     repo Huddlz.Repo
 
+    references do
+      reference :group, on_delete: :delete
+    end
+
     custom_indexes do
       index [:group_id, :inserted_at]
     end

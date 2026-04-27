@@ -1,5 +1,6 @@
 defmodule HuddlzWeb.Api.Json.GroupTest do
   use HuddlzWeb.ApiCase, async: true
+  require Ash.Query
 
   describe "GET /api/json/groups" do
     test "lists public groups with their attributes", %{conn: conn} do
@@ -32,9 +33,16 @@ defmodule HuddlzWeb.Api.Json.GroupTest do
   end
 
   describe "DELETE /api/json/groups/:id" do
-    test "owner authorization passes when calling destroy", %{conn: conn} do
+    test "owner can destroy a non-empty group; dependents cascade", %{conn: conn} do
       owner = generate(user())
       g = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      h = generate(huddl(group_id: g.id, creator_id: owner.id, actor: owner))
+
+      member = generate(user())
+
+      h
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
+      |> Ash.update!()
 
       conn =
         conn
@@ -42,9 +50,21 @@ defmodule HuddlzWeb.Api.Json.GroupTest do
         |> put_req_header("content-type", "application/vnd.api+json")
         |> delete("/api/json/groups/#{g.id}")
 
-      # 200/204 if destroy succeeds; 400 if FK constraints prevent it (action
-      # ran past authorization). 403/404 would mean policy rejected the actor.
-      assert conn.status in [200, 204, 400], "got #{conn.status}: #{conn.resp_body}"
+      assert conn.status in [200, 204], "got #{conn.status}: #{conn.resp_body}"
+
+      # Group itself is gone
+      assert {:error, _} = Ash.get(Huddlz.Communities.Group, g.id, authorize?: false)
+
+      # The huddl that lived in the group is gone
+      assert {:error, _} = Ash.get(Huddlz.Communities.Huddl, h.id, authorize?: false)
+
+      # And so are the attendees of that huddl
+      attendees =
+        Huddlz.Communities.HuddlAttendee
+        |> Ash.Query.filter(huddl_id: h.id)
+        |> Ash.read!(authorize?: false)
+
+      assert attendees == []
     end
 
     test "non-owner cannot delete the group", %{conn: conn} do
