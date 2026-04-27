@@ -37,6 +37,7 @@ defmodule Huddlz.Communities.GroupMember do
       post :join_group, route: "/join"
       delete :leave_group
       post :add_member, route: "/add"
+      route :delete, "/remove", :remove_member_by_ids
     end
   end
 
@@ -97,6 +98,21 @@ defmodule Huddlz.Communities.GroupMember do
       filter expr(user_id == ^arg(:user_id))
     end
 
+    action :remove_member_by_ids, :struct do
+      description "JSON:API entry point that mirrors :remove_member; takes group_id + user_id, finds the membership, destroys it via :remove_member."
+      constraints instance_of: Huddlz.Communities.GroupMember
+
+      argument :group_id, :uuid do
+        allow_nil? false
+      end
+
+      argument :user_id, :uuid do
+        allow_nil? false
+      end
+
+      run Huddlz.Communities.GroupMember.Actions.RemoveMemberByIds
+    end
+
     create :join_group do
       description "Join a group as a regular member as the current actor"
 
@@ -145,6 +161,13 @@ defmodule Huddlz.Communities.GroupMember do
     # Group owners can remove members
     policy action(:remove_member) do
       authorize_if GroupOwner
+    end
+
+    # The remove-by-ids wrapper authorizes by delegating to :remove_member
+    # internally. Allow any authenticated actor through this gate; the inner
+    # destroy is the real check.
+    policy action(:remove_member_by_ids) do
+      authorize_if actor_present()
     end
 
     # Users can join public groups

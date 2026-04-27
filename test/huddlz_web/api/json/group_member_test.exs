@@ -1,5 +1,75 @@
 defmodule HuddlzWeb.Api.Json.GroupMemberTest do
   use HuddlzWeb.ApiCase, async: true
+  require Ash.Query
+
+  describe "DELETE /api/json/group_members/remove" do
+    test "owner can remove a member by group_id + user_id", %{conn: conn} do
+      owner = generate(user())
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      target = generate(user())
+
+      {:ok, _} =
+        Huddlz.Communities.GroupMember
+        |> Ash.Changeset.for_create(
+          :add_member,
+          %{group_id: group.id, user_id: target.id, role: "member"},
+          actor: owner
+        )
+        |> Ash.create()
+
+      conn =
+        conn
+        |> authenticated_conn(owner)
+        |> put_req_header("content-type", "application/vnd.api+json")
+        |> dispatch(
+          @endpoint,
+          :delete,
+          "/api/json/group_members/remove?group_id=#{group.id}&user_id=#{target.id}"
+        )
+
+      assert conn.status in [200, 204], "got #{conn.status}: #{conn.resp_body}"
+
+      # Membership is gone
+      assert {:ok, nil} ==
+               Huddlz.Communities.GroupMember
+               |> Ash.Query.filter(group_id == ^group.id and user_id == ^target.id)
+               |> Ash.read_one(authorize?: false)
+    end
+
+    test "non-owner cannot remove a member", %{conn: conn} do
+      owner = generate(user())
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      target = generate(user())
+      stranger = generate(user())
+
+      {:ok, _} =
+        Huddlz.Communities.GroupMember
+        |> Ash.Changeset.for_create(
+          :add_member,
+          %{group_id: group.id, user_id: target.id, role: "member"},
+          actor: owner
+        )
+        |> Ash.create()
+
+      conn =
+        conn
+        |> authenticated_conn(stranger)
+        |> put_req_header("content-type", "application/vnd.api+json")
+        |> dispatch(
+          @endpoint,
+          :delete,
+          "/api/json/group_members/remove?group_id=#{group.id}&user_id=#{target.id}"
+        )
+
+      assert conn.status in [403, 404]
+
+      # Membership still exists
+      assert {:ok, %Huddlz.Communities.GroupMember{}} =
+               Huddlz.Communities.GroupMember
+               |> Ash.Query.filter(group_id == ^group.id and user_id == ^target.id)
+               |> Ash.read_one(authorize?: false)
+    end
+  end
 
   describe "removeMember GraphQL mutation" do
     test "schema exposes the removeMember mutation", %{conn: conn} do
