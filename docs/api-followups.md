@@ -114,6 +114,60 @@ there's a second consumer is premature.
   permissive — the goal is to stop runaway scripts, not to throttle
   legitimate use.
 
+## RemoveMemberByIds membership-existence leak
+
+**Status:** known, acceptable for v1.
+**Why:** `Huddlz.Communities.GroupMember.Actions.RemoveMemberByIds`
+does `Ash.read_one(authorize?: false)` on `(group_id, user_id)` and
+then dispatches `:remove_member` with the actor. The destroy is the
+real auth gate, so unauthorized callers can't change state — but the
+response shape distinguishes "membership not found" (404) from
+"found but forbidden" (403), letting any authenticated actor probe
+membership pairs. Group membership in a public group isn't very
+secret; private groups would leak.
+**To do:**
+
+- Fold into the API-key scopes work above. Once a `groups:admin`
+  scope exists, the lookup can be filtered to "groups owned by the
+  actor" and the probe closes naturally.
+- Cheaper interim fix: collapse 404 and 403 to a single 404 response
+  shape so the failure modes are indistinguishable.
+
+## User-FK cascade asymmetry
+
+**Status:** deferred.
+**Why:** Migration `20260427030225_cascade_destroy_groups_and_huddls`
+cascades `groups → group_members / group_images / huddlz` and
+`huddlz → huddl_images / huddl_attendees`, but the three FKs back to
+`users` are **not** cascaded: `group_members.user_id`,
+`huddl_attendees.user_id`, `huddlz.creator_id`. There's no
+delete-account flow today, so this isn't blocking.
+**To do (when delete-account ships):**
+
+- Follow-up migration. `group_members` and `huddl_attendees` are
+  pure join rows — `on_delete: :delete_all` is fine.
+- `huddlz.creator_id` needs a product call **before** the FK
+  changes: either soft-delete and anonymize the creator, or
+  transfer ownership to the group owner. Don't `:delete_all` huddlz
+  when their creator deletes their account.
+
+## sign_out path doesn't apply to API-key auth
+
+**Status:** functional but UX-confusing.
+**Why:** `DELETE /api/auth/sign_out` only revokes JWT bearers
+(it calls `TokenResource.Actions.revoke/2`). An actor authenticated
+via an API key gets the same generic
+`{"error": "Authentication required"}` 401 as an unauthenticated
+caller, with no hint that the real revoke endpoint is
+`DELETE /api/auth/api_keys/:id`.
+**To do (when there's a real API-key consumer):**
+
+- Detect the auth method on the conn and either
+  (a) return a 400 with a pointer to `/api/auth/api_keys/:id`, or
+  (b) destroy the active API key when sign_out is called with one.
+  (a) is simpler and probably better — sign_out and key revocation
+  are conceptually different.
+
 ## Cucumber `.feature` for the happy path
 
 **Status:** end-to-end test ships as a single ExUnit case
