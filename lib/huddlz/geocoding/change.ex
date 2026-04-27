@@ -36,8 +36,16 @@ defmodule Huddlz.Geocoding.Change do
         set_coordinates(changeset, lat, lng)
 
       {:error, reason} ->
-        Logger.warning("Geocoding failed for #{inspect(location)}: #{inspect(reason)}")
+        log_geocoding_failure(location, reason)
         set_coordinates(changeset, nil, nil)
+    end
+  end
+
+  # The default test stub always returns {:error, :not_found}; warning on
+  # every test create would just be log spam.
+  defp log_geocoding_failure(location, reason) do
+    if Application.get_env(:huddlz, :env) != :test do
+      Logger.warning("Geocoding failed for #{inspect(location)}: #{inspect(reason)}")
     end
   end
 

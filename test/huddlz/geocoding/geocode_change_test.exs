@@ -34,7 +34,7 @@ defmodule Huddlz.Geocoding.GeocodeChangeTest do
       assert huddl.longitude == -97.7431
     end
 
-    test "geocoding failure sets lat/lng to nil" do
+    test "geocoding failure sets lat/lng to nil and stays quiet in test env" do
       stub(Huddlz.MockGeocoding, :geocode, fn _address ->
         {:error, :not_found}
       end)
@@ -42,19 +42,24 @@ defmodule Huddlz.Geocoding.GeocodeChangeTest do
       owner = generate(user(role: :user))
       group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
 
-      huddl =
-        generate(
-          huddl(
-            event_type: :in_person,
-            physical_location: "Nonexistent Place XYZ",
-            group_id: group.id,
-            creator_id: owner.id,
-            actor: owner
-          )
-        )
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          huddl =
+            generate(
+              huddl(
+                event_type: :in_person,
+                physical_location: "Nonexistent Place XYZ",
+                group_id: group.id,
+                creator_id: owner.id,
+                actor: owner
+              )
+            )
 
-      assert is_nil(huddl.latitude)
-      assert is_nil(huddl.longitude)
+          assert is_nil(huddl.latitude)
+          assert is_nil(huddl.longitude)
+        end)
+
+      refute log =~ "Geocoding failed for"
     end
 
     test "nil physical_location does not trigger geocoding" do
