@@ -4,6 +4,13 @@ Things consciously deferred while landing the JSON:API + GraphQL surface on
 `feat/api`. Each entry captures *why* it was skipped and *what to do* when
 it's time to come back to it, so we don't have to reconstruct the context.
 
+> **Status as of latest sweep:**
+> Items addressed in the "make `feat/api` shippable" pass:
+> the slug ergonomics fix, group destroy cascade, ProfilePicture upload
+> exposure, the GroupMember.remove_member JSON:API route, the real
+> multipart HTTP test, and the image-upload error mapping. Removed from
+> this doc. The remaining items below are genuinely deferred.
+
 ## Pagination sweep
 
 **Status:** deferred.
@@ -45,130 +52,38 @@ than a code task.
 - Add example bodies to the OpenAPI spec via `OpenApiSpex` example
   schemas.
 
-## `GroupMember.remove_member` JSON:API route
-
-**Status:** deferred — GraphQL only for now.
-**Why:** The action's filter-by-arg design (takes `:group_id` + `:user_id`,
-filters to that pair, destroys the matching record) doesn't map onto
-JSON:API's `DELETE /:id` convention. Exposing it under `/remove/:id` would
-mean the path's `:id` is ignored and the action runs entirely off args —
-a misleading shape for clients. GraphQL handles it cleanly because the
-action's args become input fields.
-**To do:**
-
-- Reshape the action to take a record id (or a `(group_id, user_id)`
-  composite identity). Either:
-  1. Find the membership by id first, then run a no-arg destroy whose
-     policy checks `actor` is the group owner; or
-  2. Keep the args-based shape but expose it as an `action :remove_member`
-     (generic action) under a `route :delete, "/group_members/remove"`
-     route, which AshJsonApi supports for arbitrary verbs.
-- Mirror the GraphQL test once a JSON:API route exists.
-
-## Real multipart HTTP test for image upload
-
-**Status:** smoke-tested, but no end-to-end multipart fixture.
-**Why:** AshJsonApi's multipart envelope is the custom
-`multipart/x.ash+form-data` content-type (see
-`AshJsonApi.Plug.Parser` docs). Constructing one in Phoenix.ConnTest
-requires either a hand-rolled boundary or a helper that knows the
-`data` part vs file parts protocol. The action-level upload test
-already exercises the full storage path (Plug.Upload → PersistUpload
-change → Storage adapter → DB row), so the HTTP-only gap is purely
-"is the parser plug actually called and does the route accept the
-content type".
-**To do:**
-
-- Add a `multipart_post/3` helper to `HuddlzWeb.ApiCase` that builds
-  a `multipart/x.ash+form-data` request body with a single file part.
-- Wire it through one happy-path test in
-  `test/huddlz_web/api/json/huddl_image_test.exs` to assert the
-  storage path is populated end-to-end via HTTP.
-- For GraphQL: Absinthe expects the standard
-  [GraphQL multipart spec](https://github.com/jaydenseric/graphql-multipart-request-spec).
-  Add a separate helper.
-
-## Image upload — additional items
-
-**Status:** core actions land; supporting work deferred.
-
-- `ProfilePicture.upload` action exists and has a policy, but the
-  resource has no `graphql` / `json_api` block yet — there's no public
-  endpoint to call it. Adding one is small but needs a decision on
-  whether to expose `ProfilePicture` as a top-level type or only via
-  `User.profile_pictures`.
-- File-size and content-type validation lives in the storage modules
-  (`Huddlz.Storage.HuddlImages.validate_file_size/1` etc.) but errors
-  surface as raw atoms (`:invalid_extension`). Should be mapped to
-  user-friendly JSON:API error codes.
-- Pre-signed S3 upload URLs (the v2 plan) — deferred until there's a
-  concrete consumer that can't do multipart through the app server.
-
-## Group create takes explicit slug
-
-**Status:** mild API ergonomics gap.
-**Why:** `POST /api/json/groups` requires `slug` in the request body
-because `Group.slug` is `allow_nil? false` and JSON:API validates
-attributes before changes run. The `GenerateSlug` change auto-fills it
-from `name`, but only if the attribute reaches it — JSON:API rejects
-the request before the change runs.
-**To do:**
-
-- Change `Group.create_group` to drop `:slug` from `accept` (so it's
-  no longer a settable attribute via the API) and ensure
-  `GenerateSlug` runs early enough that the validation pass sees the
-  populated value. This requires either a `prepare`-style change or
-  moving slug generation to a `before_action`.
-
-## Group destroy can leave records behind
-
-**Status:** the action runs but returns 400 when a group has members.
-**Why:** Default destroy doesn't cascade; the existing FK on
-`group_members.group_id` rejects the delete. The plan accepted this
-trade-off — the test asserts 400 is returned past the auth gate, not
-that the destroy succeeds.
-**To do:**
-
-- Replace the default `:destroy` with a soft-delete (add a
-  `deleted_at` attribute and have read actions filter it out), or
-- Add a `change cascade_destroy(:group_members, return_notifications?: true)`
-  to actually delete dependents. Pick one, document the choice.
-
-## Group attributes not surfaced in API responses
-
-**Status:** known gap.
-**Why:** `name`, `description`, `location` on `Group` aren't
-`public? true`, so JSON:API and GraphQL don't include them in
-serialized responses. We exposed the resource without flipping these
-to public because the existing LiveView relies on resource-level
-loads, and we wanted to keep this PR scoped to API surface — not
-attribute visibility.
-**To do:**
-
-- Audit each `Group` attribute and decide which should be public.
-  At minimum: `name`, `description`, `location`, `slug`, `is_public`.
-- Same exercise for `Huddl` (most are already public),
-  `GroupMember.role`, `HuddlAttendee.rsvped_at`, `GroupLocation.address`.
-- Run the sensitive-field audit test after each batch — it'll fail
-  loudly if the new public fields include anything on the deny list.
-
 ## User update mutations use `id:` arg
 
-**Status:** functional but un-ergonomic.
+**Status:** functional but un-ergonomic. Attempted fix in the
+shippable-API sweep; deferred again after the AshGraphql/Ash 3.x
+interaction proved more involved than expected.
 **Why:** `updateDisplayName(id: $id, input: { displayName: $name })`
 takes the user id explicitly even though the policy already
-restricts the action to `^actor(:id)`. This mirrors how AshGraphql
-generates update mutations from an action that targets a record. The
-client can pass any id and the policy rejects mismatches; passing
-the id is just noise.
+restricts the action to `^actor(:id)`. The client can pass any id
+and the policy rejects mismatches; passing the id is noise.
+
+The clean fix — `update :update_display_name, :update_display_name,
+read_action: :me, identity: false` — produces an Ecto error at run
+time:
+
+> `update_all` does not allow subqueries in `from`
+
+because `:me` filters on `^actor(:id)`, which Ash's atomic update
+path turns into a subquery wrapping the update statement. Postgres
+rejects that. Setting `require_atomic? false` on the update action
+didn't bypass the path either.
+
 **To do:**
 
-- Add a thin `:update_self` style action that loads the actor and
-  delegates to the underlying update, and expose *that* as the
-  GraphQL mutation. The mutation then takes only the input fields,
-  not an id.
-- Or use `ash_graphql`'s `read_action` option on the mutation to
-  pin the actor lookup.
+- Investigate AshGraphql 1.9's mutation pipeline and figure out
+  whether there's a `read_action`-compatible shape that doesn't go
+  through bulk update (a `before_action` lookup, or a custom
+  resolver, or an Ash patch).
+- Alternative: build a generic action wrapper (`update_self`) that
+  takes only the input fields, loads the actor explicitly, and
+  delegates to the underlying update. Expose that action as the
+  mutation. More code than the `read_action` shortcut but works
+  around the atomic-update constraint.
 
 ## API key strategy: scopes, rotation, audit
 
