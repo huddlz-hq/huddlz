@@ -1,6 +1,8 @@
 defmodule Huddlz.Accounts.ApiKeyTest do
   use Huddlz.DataCase, async: true
 
+  require Ash.Query
+
   alias Huddlz.Accounts.{ApiKey, User}
 
   describe "ApiKey :create action" do
@@ -22,6 +24,31 @@ defmodule Huddlz.Accounts.ApiKeyTest do
       assert String.starts_with?(plaintext, "huddlz_")
       assert is_binary(record.api_key_hash)
       assert record.user_id == user.id
+    end
+  end
+
+  describe "ownership invariants" do
+    test "fails to create without an actor" do
+      assert {:error, %Ash.Error.Invalid{errors: errors}} =
+               ApiKey
+               |> Ash.Changeset.for_create(:create, %{expires_at: in_days(7)})
+               |> Ash.create(authorize?: false)
+
+      assert Enum.any?(errors, fn err ->
+               match?(%Ash.Error.Changes.InvalidRelationship{relationship: :user}, err)
+             end)
+    end
+
+    test "deleting the owning user cascades to their api keys" do
+      user = generate(user())
+      key = build_key!(user, in_days(7))
+
+      Huddlz.Repo.query!("DELETE FROM users WHERE id = $1", [Ecto.UUID.dump!(user.id)])
+
+      assert {:ok, []} =
+               ApiKey
+               |> Ash.Query.filter(id == ^key.id)
+               |> Ash.read(authorize?: false)
     end
   end
 

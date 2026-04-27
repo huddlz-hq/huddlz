@@ -15,6 +15,14 @@ defmodule Huddlz.Accounts.ApiKey do
   postgres do
     table "api_keys"
     repo Huddlz.Repo
+
+    references do
+      reference :user, on_delete: :delete
+    end
+
+    custom_indexes do
+      index [:user_id]
+    end
   end
 
   actions do
@@ -66,7 +74,9 @@ defmodule Huddlz.Accounts.ApiKey do
   end
 
   relationships do
-    belongs_to :user, Huddlz.Accounts.User
+    belongs_to :user, Huddlz.Accounts.User do
+      allow_nil? false
+    end
   end
 
   calculations do
