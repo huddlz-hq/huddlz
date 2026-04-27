@@ -82,6 +82,39 @@ defmodule HuddlzWeb.Api.Json.HuddlImageTest do
       assert Huddlz.Storage.exists?(attrs["storage_path"])
     end
 
+    test "rejects an .exe upload with a friendly message" do
+      owner = generate(user())
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      huddl = generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
+
+      bad_file = Path.join(System.tmp_dir!(), "evil-#{:rand.uniform(99_999)}.exe")
+      File.write!(bad_file, "MZ\x90\x00")
+
+      try do
+        upload = %Plug.Upload{
+          path: bad_file,
+          filename: "evil.exe",
+          content_type: "application/octet-stream"
+        }
+
+        assert {:error, %Ash.Error.Invalid{errors: errors}} =
+                 HuddlImage
+                 |> Ash.Changeset.for_create(
+                   :upload,
+                   %{file: upload, huddl_id: huddl.id},
+                   actor: owner
+                 )
+                 |> Ash.create()
+
+        # The user-facing message must NOT be the raw atom inspect form.
+        messages = Enum.map(errors, &Exception.message/1)
+        assert Enum.any?(messages, &(&1 =~ "Invalid file type"))
+        refute Enum.any?(messages, &(&1 =~ ":invalid_extension"))
+      after
+        File.rm(bad_file)
+      end
+    end
+
     test "non-owner cannot upload" do
       owner = generate(user())
       group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
