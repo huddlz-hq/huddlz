@@ -164,7 +164,6 @@ defmodule HuddlzWeb.GroupLiveTest do
         generate(
           group(
             is_public: true,
-            owner_id: owner.id,
             name: "Public Test Group",
             description: "A public group for testing",
             location: "Test Location",
@@ -176,7 +175,6 @@ defmodule HuddlzWeb.GroupLiveTest do
         generate(
           group(
             is_public: false,
-            owner_id: owner.id,
             name: "Private Test Group",
             actor: owner
           )

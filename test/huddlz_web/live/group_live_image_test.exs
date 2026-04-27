@@ -255,7 +255,6 @@ defmodule HuddlzWeb.GroupLiveImageTest do
             name: "Edit Test Group",
             slug: "edit-test-group",
             is_public: true,
-            owner_id: owner.id,
             actor: owner
           )
         )
