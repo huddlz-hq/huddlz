@@ -14,14 +14,23 @@ defmodule Huddlz.Accounts.ProfilePicture do
     domain: Huddlz.Accounts,
     authorizers: [Ash.Policy.Authorizer],
     data_layer: AshPostgres.DataLayer,
-    extensions: [AshOban]
+    extensions: [AshOban, AshJsonApi.Resource, AshGraphql.Resource]
 
-  postgres do
-    table "profile_pictures"
-    repo Huddlz.Repo
+  graphql do
+    type :profile_picture
 
-    custom_indexes do
-      index [:user_id, :inserted_at]
+    mutations do
+      create :upload_profile_picture, :upload
+    end
+  end
+
+  json_api do
+    type "profile_picture"
+
+    routes do
+      base "/profile_pictures"
+
+      post :upload, route: "/upload"
     end
   end
 
@@ -37,6 +46,15 @@ defmodule Huddlz.Accounts.ProfilePicture do
         log_final_error? true
         worker_module_name Huddlz.Workers.ProfilePictureCleanup
       end
+    end
+  end
+
+  postgres do
+    table "profile_pictures"
+    repo Huddlz.Repo
+
+    custom_indexes do
+      index [:user_id, :inserted_at]
     end
   end
 

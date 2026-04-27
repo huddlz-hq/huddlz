@@ -4,7 +4,8 @@ defmodule Huddlz.Accounts do
   """
 
   use Ash.Domain,
-    otp_app: :huddlz
+    otp_app: :huddlz,
+    extensions: [AshJsonApi.Domain]
 
   resources do
     resource Huddlz.Accounts.Token
