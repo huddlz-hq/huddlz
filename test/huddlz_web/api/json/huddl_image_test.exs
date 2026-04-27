@@ -54,6 +54,34 @@ defmodule HuddlzWeb.Api.Json.HuddlImageTest do
       refute conn.status == 404
     end
 
+    test "owner can upload via multipart HTTP end-to-end", %{conn: conn} do
+      owner = generate(user())
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      huddl = generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
+
+      conn =
+        conn
+        |> authenticated_conn(owner)
+        |> multipart_post(
+          "/api/json/huddl_images/upload",
+          %{"huddl_id" => huddl.id, "file" => "the_file"},
+          type: "huddl_image",
+          file: %{
+            part_name: "the_file",
+            path: @fixture,
+            filename: "banner.jpg",
+            content_type: "image/jpeg"
+          }
+        )
+
+      assert %{"data" => data} = json_response(conn, 201)
+      attrs = data["attributes"] || %{}
+      assert is_binary(attrs["storage_path"])
+      assert is_binary(attrs["thumbnail_path"])
+      assert attrs["filename"] == "banner.jpg"
+      assert Huddlz.Storage.exists?(attrs["storage_path"])
+    end
+
     test "non-owner cannot upload" do
       owner = generate(user())
       group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
