@@ -65,5 +65,9 @@ defmodule Huddlz.Storage.Changes.PersistUpload do
   defp extract_upload(_), do: {:error, "expected a file upload"}
 
   defp format_error(reason) when is_binary(reason), do: reason
+  defp format_error(:invalid_extension), do: "Invalid file type. Allowed: JPG, PNG, WebP"
+  defp format_error(:enoent), do: "Uploaded file is missing or unreadable"
+  defp format_error({:image_processing_failed, _}), do: "Could not process image"
+  defp format_error({:request_failed, _}), do: "Upload failed; please try again"
   defp format_error(reason), do: inspect(reason)
 end
