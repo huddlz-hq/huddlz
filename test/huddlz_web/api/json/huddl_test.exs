@@ -57,19 +57,7 @@ defmodule HuddlzWeb.Api.Json.HuddlTest do
     test "RSVPs the actor to the huddl and bumps rsvp_count", %{conn: conn} do
       owner = generate(user())
       group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
-
-      {_group, [%{user: member}]} =
-        generate_group_with_members(
-          owner: owner,
-          group: [name: "RSVP API Group", is_public: true, owner_id: owner.id],
-          members: [%{user: generate(user()), role: :member}]
-        )
-        |> case do
-          {g, members} -> {g, members}
-        end
-
-      _ = group
-      member_user = member
+      member_user = generate(user())
 
       h = generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
 
