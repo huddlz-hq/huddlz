@@ -19,18 +19,50 @@ defmodule Huddlz.Storage.Changes.PersistUpload do
 
   use Ash.Resource.Change
 
+  alias Ash.Resource.Info
+
   @impl true
   def change(changeset, opts, _context) do
     storage_module = Keyword.fetch!(opts, :storage_module)
     parent_arg = Keyword.fetch!(opts, :parent_arg)
     file_arg = Keyword.get(opts, :file_arg, :file)
 
-    upload = Ash.Changeset.get_argument(changeset, file_arg)
+    Ash.Changeset.before_action(changeset, fn cs ->
+      upload = Ash.Changeset.get_argument(cs, file_arg)
+      parent_id = resolve_parent_id(cs, parent_arg)
 
-    parent_id =
-      Ash.Changeset.get_argument(changeset, parent_arg) ||
-        Ash.Changeset.get_attribute(changeset, parent_arg)
+      if is_nil(parent_id) do
+        Ash.Changeset.add_error(cs, message: "is required", field: parent_arg)
+      else
+        do_persist(cs, upload, parent_id, storage_module, file_arg)
+      end
+    end)
+  end
 
+  # The owner id can come from an action argument, an explicit attribute
+  # change, or — when `relate_actor`/`manage_relationship` is in play — a
+  # queued relationship whose source attribute matches `parent_arg`. The
+  # last one isn't reflected in `get_attribute` until the action commits,
+  # so we peek at the queued related record.
+  defp resolve_parent_id(changeset, parent_arg) do
+    Ash.Changeset.get_argument(changeset, parent_arg) ||
+      Ash.Changeset.get_attribute(changeset, parent_arg) ||
+      parent_id_from_relationship(changeset, parent_arg)
+  end
+
+  defp parent_id_from_relationship(changeset, parent_arg) do
+    with %{} = relationship <-
+           Info.relationships(changeset.resource)
+           |> Enum.find(&(&1.type == :belongs_to and &1.source_attribute == parent_arg)),
+         [{[record | _], _opts} | _] <-
+           Map.get(changeset.relationships || %{}, relationship.name) do
+      Map.get(record, relationship.destination_attribute)
+    else
+      _ -> nil
+    end
+  end
+
+  defp do_persist(changeset, upload, parent_id, storage_module, file_arg) do
     case extract_upload(upload) do
       {:ok, %{path: path, filename: filename, content_type: content_type}} ->
         case storage_module.store(path, filename, content_type, parent_id) do

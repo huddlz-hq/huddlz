@@ -115,6 +115,28 @@ defmodule HuddlzWeb.Api.Json.HuddlImageTest do
       end
     end
 
+    test "missing huddl_id is rejected with a friendly changeset error" do
+      owner = generate(user())
+
+      upload = %Plug.Upload{
+        path: @fixture,
+        filename: "banner.jpg",
+        content_type: "image/jpeg"
+      }
+
+      # Bypass policies so the failure is unambiguously the missing parent_id,
+      # not the huddl-ownership check that would otherwise deny first.
+      assert {:error, %Ash.Error.Invalid{errors: errors}} =
+               HuddlImage
+               |> Ash.Changeset.for_create(:upload, %{file: upload}, actor: owner)
+               |> Ash.create(authorize?: false)
+
+      assert Enum.any?(errors, fn err ->
+               match?(%Ash.Error.Changes.InvalidAttribute{field: :huddl_id}, err) and
+                 Exception.message(err) =~ "is required"
+             end)
+    end
+
     test "non-owner cannot upload" do
       owner = generate(user())
       group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
