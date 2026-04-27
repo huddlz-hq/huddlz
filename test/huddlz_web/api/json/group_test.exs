@@ -106,7 +106,7 @@ defmodule HuddlzWeb.Api.Json.GroupTest do
   end
 
   describe "POST /api/json/groups" do
-    test "authenticated user can create a group", %{conn: conn} do
+    test "creates a group and auto-generates slug from name when omitted", %{conn: conn} do
       me = generate(user())
 
       conn =
@@ -120,14 +120,38 @@ defmodule HuddlzWeb.Api.Json.GroupTest do
               "name" => "API Created Group",
               "description" => "Created via JSON:API",
               "location" => "Tucson",
-              "is_public" => true,
-              "slug" => "api-created-group"
+              "is_public" => true
             }
           }
         })
 
       assert %{"data" => data} = json_response(conn, 201)
       assert is_binary(data["id"])
+      assert data["attributes"]["slug"] == Slug.slugify("API Created Group")
+    end
+
+    test "honors a caller-supplied slug", %{conn: conn} do
+      me = generate(user())
+
+      conn =
+        conn
+        |> authenticated_conn(me)
+        |> put_req_header("content-type", "application/vnd.api+json")
+        |> post("/api/json/groups", %{
+          "data" => %{
+            "type" => "group",
+            "attributes" => %{
+              "name" => "Slug Customizer",
+              "description" => "uses a custom slug",
+              "location" => "Tucson",
+              "is_public" => true,
+              "slug" => "my-custom-slug"
+            }
+          }
+        })
+
+      assert %{"data" => data} = json_response(conn, 201)
+      assert data["attributes"]["slug"] == "my-custom-slug"
     end
   end
 

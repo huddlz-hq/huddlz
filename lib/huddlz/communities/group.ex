@@ -63,8 +63,9 @@ defmodule Huddlz.Communities.Group do
 
     create :create_group do
       description "Create a new group; the owner is always the current actor."
-      accept [:name, :description, :location, :is_public, :slug]
+      accept [:name, :description, :location, :is_public]
 
+      argument :slug, :string, allow_nil?: true
       argument :provided_latitude, :float, allow_nil?: true, public?: false
       argument :provided_longitude, :float, allow_nil?: true, public?: false
 

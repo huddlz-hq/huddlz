@@ -4,6 +4,55 @@ defmodule Huddlz.Communities.GroupTest do
   alias Huddlz.Communities
   alias Huddlz.Communities.Group
 
+  describe "group creation slug" do
+    test "auto-generates slug from name when slug arg is omitted" do
+      actor = generate(user())
+
+      {:ok, group} =
+        Group
+        |> Ash.Changeset.for_create(
+          :create_group,
+          %{name: "Slug From Name Test", description: "x", is_public: true}
+        )
+        |> Ash.create(actor: actor)
+
+      assert group.slug == Slug.slugify("Slug From Name Test")
+    end
+
+    test "preserves a caller-supplied slug" do
+      actor = generate(user())
+
+      {:ok, group} =
+        Group
+        |> Ash.Changeset.for_create(
+          :create_group,
+          %{
+            name: "Custom Slug Test",
+            description: "x",
+            is_public: true,
+            slug: "i-picked-this"
+          }
+        )
+        |> Ash.create(actor: actor)
+
+      assert group.slug == "i-picked-this"
+    end
+
+    test "blank slug arg falls through to name-derived" do
+      actor = generate(user())
+
+      {:ok, group} =
+        Group
+        |> Ash.Changeset.for_create(
+          :create_group,
+          %{name: "Blank Slug Test", description: "x", is_public: true, slug: ""}
+        )
+        |> Ash.create(actor: actor)
+
+      assert group.slug == Slug.slugify("Blank Slug Test")
+    end
+  end
+
   describe "group creation" do
     test "admin users can create groups" do
       admin_user = generate(user(role: :admin))
