@@ -183,6 +183,30 @@ swaps) is its own project.
   for `Given I am authenticated as ...` / `When I POST ... with body ...` /
   `Then the response is ...`.
 
+## Flaky `profile_picture.feature` member-avatar step
+
+**Status:** intermittent failure observed during the PR-113 review
+sweep.
+**Why:** The Cucumber scenario "Profile picture appears in group
+members section" (`test/features/profile_picture.feature:45`) fails
+the `Then I should see the member avatar with image` step under some
+seeds — the selector `main img[src*='_thumb.jpg']` finds nothing.
+Re-running the same file with `--seed 0` is green, so it's a timing
+or fixture-ordering flake rather than a bug in the assertion. Looks
+unrelated to feat/api code, but it surfaces while the suite is hot
+on the branch.
+**To do:**
+
+- Reproduce with a sticky seed: bisect via `--seed <n>` to find a
+  failing one, then capture the rendered HTML at the failing step.
+- Likely culprits: profile-picture upload running through a Mox
+  expectation that another async test consumed first, or
+  `current_profile_picture_url` aggregate not having loaded by the
+  time the Liveview renders. The `Mox.stub_with` setup in
+  `test/features/support/hooks.exs` is the place to verify.
+- Once root-caused, either pin the scenario's stubs explicitly or
+  await the avatar render in the step definition before asserting.
+
 ---
 
 When picking one of these up, tag the commit message with the section
