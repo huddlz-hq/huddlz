@@ -33,27 +33,20 @@ defmodule HuddlzWeb.CorsTest do
     end
   end
 
-  describe "HuddlzWeb.Cors.allowed?/2" do
+  describe "HuddlzWeb.Cors.matches?/2" do
     test "returns true when configured for :all" do
-      Application.put_env(:huddlz, :cors_origins, :all)
-      on_exit(fn -> Application.put_env(:huddlz, :cors_origins, :all) end)
-
-      assert HuddlzWeb.Cors.allowed?(%Plug.Conn{}, "http://anything.example")
+      assert HuddlzWeb.Cors.matches?("http://anything.example", :all)
     end
 
     test "returns true only for listed origins" do
-      Application.put_env(:huddlz, :cors_origins, ["https://app.huddlz.com"])
-      on_exit(fn -> Application.put_env(:huddlz, :cors_origins, :all) end)
+      origins = ["https://app.huddlz.com"]
 
-      assert HuddlzWeb.Cors.allowed?(%Plug.Conn{}, "https://app.huddlz.com")
-      refute HuddlzWeb.Cors.allowed?(%Plug.Conn{}, "https://evil.example")
+      assert HuddlzWeb.Cors.matches?("https://app.huddlz.com", origins)
+      refute HuddlzWeb.Cors.matches?("https://evil.example", origins)
     end
 
     test "returns false when no origins are configured" do
-      Application.put_env(:huddlz, :cors_origins, [])
-      on_exit(fn -> Application.put_env(:huddlz, :cors_origins, :all) end)
-
-      refute HuddlzWeb.Cors.allowed?(%Plug.Conn{}, "https://app.huddlz.com")
+      refute HuddlzWeb.Cors.matches?("https://app.huddlz.com", [])
     end
   end
 end
