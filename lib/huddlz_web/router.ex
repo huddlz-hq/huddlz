@@ -8,12 +8,7 @@ defmodule HuddlzWeb.Router do
   pipeline :graphql do
     plug :load_from_bearer
     plug :set_actor, :user
-
-    plug AshAuthentication.Strategy.ApiKey.Plug,
-      resource: Huddlz.Accounts.User,
-      required?: false,
-      on_error: &HuddlzWeb.ApiAuth.continue/2
-
+    plug HuddlzWeb.ApiAuth, resource: Huddlz.Accounts.User, required?: false
     plug AshGraphql.Plug
   end
 
@@ -31,11 +26,7 @@ defmodule HuddlzWeb.Router do
     plug :accepts, ["json"]
     plug :load_from_bearer
     plug :set_actor, :user
-
-    plug AshAuthentication.Strategy.ApiKey.Plug,
-      resource: Huddlz.Accounts.User,
-      required?: false,
-      on_error: &HuddlzWeb.ApiAuth.continue/2
+    plug HuddlzWeb.ApiAuth, resource: Huddlz.Accounts.User, required?: false
   end
 
   scope "/gql" do
