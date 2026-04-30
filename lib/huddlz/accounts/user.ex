@@ -500,7 +500,7 @@ defmodule Huddlz.Accounts.User do
       description "Per-trigger email opt-in/out. Missing keys fall back to the trigger's default."
       allow_nil? false
       default %{}
-      public? false
+      public? true
     end
   end
 
