@@ -32,11 +32,14 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
     user = socket.assigns.current_user
     preferences = normalize_form_params(prefs_params)
 
-    case Ash.Changeset.for_update(
-           user,
-           :update_notification_preferences,
-           %{preferences: preferences}, actor: user)
-         |> Ash.update() do
+    user
+    |> Ash.Changeset.for_update(
+      :update_notification_preferences,
+      %{preferences: preferences},
+      actor: user
+    )
+    |> Ash.update()
+    |> case do
       {:ok, updated_user} ->
         {:noreply,
          socket
@@ -62,21 +65,18 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
         <:subtitle>Choose which emails you want to receive from huddlz.</:subtitle>
       </.header>
 
-      <form phx-submit="save" class="mt-8 space-y-10">
-        <.category_section
-          title="Security"
-          description="These messages always send. We can't disable them, but you'll always know about account-critical events."
-          triggers={@triggers_by_category.transactional}
-          user={@current_user}
-          editable={false}
-        />
+      <.read_only_section
+        title="Security"
+        description="These messages always send. We can't disable them, but you'll always know about account-critical events."
+        triggers={@triggers_by_category.transactional}
+      />
 
+      <form phx-submit="save" class="mt-10 space-y-10">
         <.category_section
           title="Activity"
           description="Updates about huddlz, RSVPs, and groups you're part of."
           triggers={@triggers_by_category.activity}
           user={@current_user}
-          editable={true}
         />
 
         <.category_section
@@ -84,7 +84,6 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
           description="Optional summaries and re-engagement messages. Off by default."
           triggers={@triggers_by_category.digest}
           user={@current_user}
-          editable={true}
         />
 
         <div>
@@ -99,7 +98,6 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
   attr :description, :string, required: true
   attr :triggers, :list, required: true
   attr :user, :any, required: true
-  attr :editable, :boolean, default: true
 
   defp category_section(assigns) do
     ~H"""
@@ -107,23 +105,38 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
       <h2 class="font-display text-2xl tracking-tight text-glow">{@title}</h2>
       <p class="text-base-content/70 mt-1">{@description}</p>
 
-      <div class="mt-6 space-y-3">
-        <label
+      <div class="mt-6 space-y-1">
+        <.input
           :for={{trigger, entry} <- @triggers}
-          class="flex items-start gap-3 cursor-pointer"
-        >
-          <input :if={@editable} type="hidden" name={"prefs[#{trigger}]"} value="false" />
-          <input
-            type="checkbox"
-            name={if @editable, do: "prefs[#{trigger}]"}
-            value="true"
-            checked={resolved_value(@user, trigger, entry)}
-            disabled={not @editable}
-            class="mt-1"
-          />
-          <span class="text-base-content">{entry.label}</span>
-        </label>
+          type="checkbox"
+          name={"prefs[#{trigger}]"}
+          label={entry.label}
+          checked={resolved_value(@user, trigger, entry)}
+        />
       </div>
+    </section>
+    """
+  end
+
+  attr :title, :string, required: true
+  attr :description, :string, required: true
+  attr :triggers, :list, required: true
+
+  defp read_only_section(assigns) do
+    ~H"""
+    <section class="border border-base-300 p-6">
+      <h2 class="font-display text-2xl tracking-tight text-glow">{@title}</h2>
+      <p class="text-base-content/70 mt-1">{@description}</p>
+
+      <ul class="mt-6 space-y-2">
+        <li
+          :for={{_trigger, entry} <- @triggers}
+          class="flex items-center gap-2 text-base-content"
+        >
+          <span class="mono-label text-primary/70">On</span>
+          <span>{entry.label}</span>
+        </li>
+      </ul>
     </section>
     """
   end
@@ -151,10 +164,9 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
     end
   end
 
-  # Each editable trigger renders as a hidden "false" input plus a checkbox
-  # with value "true". When the checkbox is checked, both fields are
-  # submitted and Phoenix takes the last value ("true"). When unchecked,
-  # only the hidden field is submitted ("false"). Cast to a boolean here.
+  # `<.input type="checkbox">` submits "true" when checked and "false" via a
+  # paired hidden input when unchecked. Iterate every editable trigger so
+  # the saved map stays exhaustive even if Phoenix drops keys in transit.
   defp normalize_form_params(form_prefs) do
     all_editable_keys =
       Triggers.all()
