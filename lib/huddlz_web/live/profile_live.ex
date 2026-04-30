@@ -68,6 +68,15 @@ defmodule HuddlzWeb.ProfileLive do
         <:subtitle>Manage your profile information</:subtitle>
       </.header>
 
+      <nav class="mt-4">
+        <.link
+          navigate={~p"/profile/notifications"}
+          class="text-primary underline underline-offset-4 hover:text-secondary"
+        >
+          Notification preferences
+        </.link>
+      </nav>
+
       <div class="mt-8">
         <h2 class="font-display text-lg tracking-tight text-glow">Profile Picture</h2>
         <p class="text-base-content/50 mb-4">

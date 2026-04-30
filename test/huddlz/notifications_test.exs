@@ -1,8 +1,35 @@
 defmodule Huddlz.NotificationsTest do
   use Huddlz.DataCase, async: true
+  import Swoosh.TestAssertions
 
   alias Huddlz.Accounts.User
   alias Huddlz.Notifications
+
+  describe "deliver/3 with a real sender" do
+    test "sends for a transactional trigger with the live PasswordChanged sender" do
+      user = generate(user(confirmed_at: DateTime.utc_now()))
+      assert :sent == Notifications.deliver(user, :password_changed, %{})
+
+      assert_email_sent(fn email ->
+        email.subject == "Your huddlz password was changed" and
+          email.to == [{"", to_string(user.email)}]
+      end)
+    end
+
+    test "skips when the user has opted out of an activity trigger" do
+      user = generate_user_with_prefs(%{"rsvp_received" => false})
+      # The sender module for :rsvp_received does not exist yet — the
+      # orchestrator must short-circuit before invoking it.
+      assert :skipped == Notifications.deliver(user, :rsvp_received, %{})
+      refute_email_sent()
+    end
+
+    test "skips activity triggers for unconfirmed users" do
+      user = generate(user(confirmed_at: nil))
+      assert :skipped == Notifications.deliver(user, :rsvp_received, %{})
+      refute_email_sent()
+    end
+  end
 
   describe "should_deliver?/3" do
     test "transactional category always sends to a confirmed user" do

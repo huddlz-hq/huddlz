@@ -1,0 +1,168 @@
+defmodule HuddlzWeb.ProfileLive.Notifications do
+  @moduledoc """
+  Settings page for the user's email notification preferences.
+
+  Renders one checkbox per entry in `Huddlz.Notifications.Triggers`, grouped
+  by category. Transactional triggers are shown disabled-but-on for
+  transparency. Activity and digest triggers are editable. Submitting the
+  form merges the changes onto `User.notification_preferences` via the
+  `:update_notification_preferences` Ash action.
+  """
+
+  use HuddlzWeb, :live_view
+
+  alias Huddlz.Notifications.Triggers
+  alias HuddlzWeb.Layouts
+
+  on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
+
+  @impl true
+  def mount(_params, _session, socket) do
+    user = socket.assigns.current_user
+
+    {:ok,
+     socket
+     |> assign(:page_title, "Notification preferences")
+     |> assign(:triggers_by_category, group_triggers())
+     |> assign(:current_user, user)}
+  end
+
+  @impl true
+  def handle_event("save", %{"prefs" => prefs_params}, socket) do
+    user = socket.assigns.current_user
+    preferences = normalize_form_params(prefs_params)
+
+    case Ash.Changeset.for_update(
+           user,
+           :update_notification_preferences,
+           %{preferences: preferences}, actor: user)
+         |> Ash.update() do
+      {:ok, updated_user} ->
+        {:noreply,
+         socket
+         |> assign(:current_user, updated_user)
+         |> put_flash(:info, "Notification preferences saved")}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Could not save preferences")}
+    end
+  end
+
+  # Swoosh's test adapter forwards delivered emails as messages to every pid
+  # in the $callers chain. We don't act on them here.
+  @impl true
+  def handle_info({:email, _}, socket), do: {:noreply, socket}
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <Layouts.app flash={@flash} current_user={@current_user}>
+      <.header>
+        Notification preferences
+        <:subtitle>Choose which emails you want to receive from huddlz.</:subtitle>
+      </.header>
+
+      <form phx-submit="save" class="mt-8 space-y-10">
+        <.category_section
+          title="Security"
+          description="These messages always send. We can't disable them, but you'll always know about account-critical events."
+          triggers={@triggers_by_category.transactional}
+          user={@current_user}
+          editable={false}
+        />
+
+        <.category_section
+          title="Activity"
+          description="Updates about huddlz, RSVPs, and groups you're part of."
+          triggers={@triggers_by_category.activity}
+          user={@current_user}
+          editable={true}
+        />
+
+        <.category_section
+          title="Digests"
+          description="Optional summaries and re-engagement messages. Off by default."
+          triggers={@triggers_by_category.digest}
+          user={@current_user}
+          editable={true}
+        />
+
+        <div>
+          <.button type="submit">Save preferences</.button>
+        </div>
+      </form>
+    </Layouts.app>
+    """
+  end
+
+  attr :title, :string, required: true
+  attr :description, :string, required: true
+  attr :triggers, :list, required: true
+  attr :user, :any, required: true
+  attr :editable, :boolean, default: true
+
+  defp category_section(assigns) do
+    ~H"""
+    <section class="border border-base-300 p-6">
+      <h2 class="font-display text-2xl tracking-tight text-glow">{@title}</h2>
+      <p class="text-base-content/70 mt-1">{@description}</p>
+
+      <div class="mt-6 space-y-3">
+        <label
+          :for={{trigger, entry} <- @triggers}
+          class="flex items-start gap-3 cursor-pointer"
+        >
+          <input :if={@editable} type="hidden" name={"prefs[#{trigger}]"} value="false" />
+          <input
+            type="checkbox"
+            name={if @editable, do: "prefs[#{trigger}]"}
+            value="true"
+            checked={resolved_value(@user, trigger, entry)}
+            disabled={not @editable}
+            class="mt-1"
+          />
+          <span class="text-base-content">{entry.label}</span>
+        </label>
+      </div>
+    </section>
+    """
+  end
+
+  defp group_triggers do
+    %{
+      transactional: sort_entries(Triggers.by_category(:transactional)),
+      activity: sort_entries(Triggers.by_category(:activity)),
+      digest: sort_entries(Triggers.by_category(:digest))
+    }
+  end
+
+  defp sort_entries(entries) do
+    entries
+    |> Enum.sort_by(fn {_atom, entry} -> entry.label end)
+  end
+
+  defp resolved_value(user, trigger, entry) do
+    key = Triggers.preference_key(trigger)
+
+    case Map.get(user.notification_preferences || %{}, key) do
+      nil -> entry.default
+      value when is_boolean(value) -> value
+      _ -> entry.default
+    end
+  end
+
+  # Each editable trigger renders as a hidden "false" input plus a checkbox
+  # with value "true". When the checkbox is checked, both fields are
+  # submitted and Phoenix takes the last value ("true"). When unchecked,
+  # only the hidden field is submitted ("false"). Cast to a boolean here.
+  defp normalize_form_params(form_prefs) do
+    all_editable_keys =
+      Triggers.all()
+      |> Enum.reject(fn {_atom, entry} -> entry.category == :transactional end)
+      |> Enum.map(fn {atom, _entry} -> Triggers.preference_key(atom) end)
+
+    Enum.into(all_editable_keys, %{}, fn key ->
+      {key, Map.get(form_prefs, key) == "true"}
+    end)
+  end
+end
