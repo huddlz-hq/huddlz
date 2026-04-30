@@ -24,6 +24,7 @@ defmodule Huddlz.Notifications.Senders.GroupOwnershipTransferred do
   import Swoosh.Email
 
   alias Huddlz.Mailer
+  alias Huddlz.Notifications.Senders.HtmlEscape
 
   @impl true
   def build(user, payload) do
@@ -36,9 +37,9 @@ defmodule Huddlz.Notifications.Senders.GroupOwnershipTransferred do
   end
 
   defp build_previous_owner(user, payload) do
-    safe_name = escape(user.display_name)
-    safe_group = escape(group_name(payload))
-    safe_new_owner = escape(payload["new_owner_display_name"] || "another member")
+    safe_name = HtmlEscape.escape(user.display_name)
+    safe_group = HtmlEscape.escape(group_name(payload))
+    safe_new_owner = HtmlEscape.escape(payload["new_owner_display_name"] || "another member")
     group_url = group_url(payload)
 
     new()
@@ -65,9 +66,12 @@ defmodule Huddlz.Notifications.Senders.GroupOwnershipTransferred do
   end
 
   defp build_new_owner(user, payload) do
-    safe_name = escape(user.display_name)
-    safe_group = escape(group_name(payload))
-    safe_prev_owner = escape(payload["previous_owner_display_name"] || "the previous owner")
+    safe_name = HtmlEscape.escape(user.display_name)
+    safe_group = HtmlEscape.escape(group_name(payload))
+
+    safe_prev_owner =
+      HtmlEscape.escape(payload["previous_owner_display_name"] || "the previous owner")
+
     group_url = group_url(payload)
 
     new()
@@ -99,11 +103,4 @@ defmodule Huddlz.Notifications.Senders.GroupOwnershipTransferred do
 
   defp group_url(%{"group_slug" => slug}) when is_binary(slug), do: url(~p"/groups/#{slug}")
   defp group_url(_), do: url(~p"/groups")
-
-  defp escape(value) do
-    value
-    |> to_string()
-    |> Phoenix.HTML.html_escape()
-    |> Phoenix.HTML.safe_to_string()
-  end
 end

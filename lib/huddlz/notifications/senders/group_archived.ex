@@ -16,11 +16,12 @@ defmodule Huddlz.Notifications.Senders.GroupArchived do
   import Swoosh.Email
 
   alias Huddlz.Mailer
+  alias Huddlz.Notifications.Senders.HtmlEscape
 
   @impl true
   def build(user, payload) do
-    safe_name = escape(user.display_name)
-    safe_group = escape(group_name(payload))
+    safe_name = HtmlEscape.escape(user.display_name)
+    safe_group = HtmlEscape.escape(group_name(payload))
     groups_url = url(~p"/groups")
 
     new()
@@ -48,11 +49,4 @@ defmodule Huddlz.Notifications.Senders.GroupArchived do
 
   defp group_name(%{"group_name" => name}) when is_binary(name), do: name
   defp group_name(_), do: "a group"
-
-  defp escape(value) do
-    value
-    |> to_string()
-    |> Phoenix.HTML.html_escape()
-    |> Phoenix.HTML.safe_to_string()
-  end
 end
