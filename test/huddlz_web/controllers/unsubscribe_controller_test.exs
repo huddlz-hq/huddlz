@@ -40,6 +40,22 @@ defmodule HuddlzWeb.UnsubscribeControllerTest do
 
       assert reloaded_user(user).notification_preferences["rsvp_received"] == false
     end
+
+    test "is idempotent when the user is already opted out", %{conn: conn} do
+      user = generate(user())
+      token = Notifications.unsubscribe_token(user, :rsvp_received)
+
+      conn
+      |> visit("/unsubscribe/#{token}")
+      |> click_button("Unsubscribe")
+
+      conn
+      |> visit("/unsubscribe/#{token}")
+      |> click_button("Unsubscribe")
+      |> assert_has("*", text: "Unsubscribed from")
+
+      assert reloaded_user(user).notification_preferences["rsvp_received"] == false
+    end
   end
 
   defp reloaded_user(user) do
