@@ -217,6 +217,22 @@ defmodule Huddlz.Accounts.User do
 
       validate {AshAuthentication.Strategy.Password.PasswordValidation,
                 strategy_name: :password, password_argument: :current_password}
+
+      change fn changeset, _ctx ->
+        Ash.Changeset.put_context(changeset, :previous_email, changeset.data.email)
+      end
+
+      change after_action(fn changeset, user, _ctx ->
+               previous_email = changeset.context[:previous_email] |> to_string()
+               new_email = to_string(user.email)
+
+               if previous_email != "" and previous_email != new_email do
+                 enqueue_email_changed(user, previous_email, "old")
+                 enqueue_email_changed(user, previous_email, "new")
+               end
+
+               {:ok, user}
+             end)
     end
 
     update :change_password do
@@ -579,5 +595,19 @@ defmodule Huddlz.Accounts.User do
 
   identities do
     identity :unique_email, [:email]
+  end
+
+  defp enqueue_email_changed(user, previous_email, audience) do
+    payload = %{"audience" => audience, "old_email" => previous_email}
+
+    case Huddlz.Notifications.deliver_async(user, :email_changed, payload) do
+      {:ok, _job} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error(
+          "Failed to enqueue email-changed (#{audience}) notification: #{inspect(reason)}"
+        )
+    end
   end
 end
