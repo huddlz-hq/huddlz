@@ -27,8 +27,8 @@ defmodule Huddlz.Notifications.Senders.GroupRoleChanged do
   def build(user, payload) do
     safe_name = HtmlEscape.escape(user.display_name)
     safe_group = HtmlEscape.escape(group_name(payload))
-    safe_prev = HtmlEscape.escape(humanize_role(role_value(payload, "previous_role")))
-    safe_new = HtmlEscape.escape(humanize_role(role_value(payload, "new_role")))
+    safe_prev = HtmlEscape.escape(role_label(role_value(payload, "previous_role")))
+    safe_new = HtmlEscape.escape(role_label(role_value(payload, "new_role")))
     group_url = group_url(payload)
 
     {footer_html, footer_text} = Footer.build(user, :group_role_changed)
@@ -49,7 +49,7 @@ defmodule Huddlz.Notifications.Senders.GroupRoleChanged do
     |> text_body("""
     Hi #{user.display_name},
 
-    Your role in "#{group_name(payload)}" changed from #{humanize_role(role_value(payload, "previous_role"))} to #{humanize_role(role_value(payload, "new_role"))}.
+    Your role in "#{group_name(payload)}" changed from #{role_label(role_value(payload, "previous_role"))} to #{role_label(role_value(payload, "new_role"))}.
 
     Visit the group at #{group_url}.
     #{footer_text}
@@ -70,6 +70,6 @@ defmodule Huddlz.Notifications.Senders.GroupRoleChanged do
     end
   end
 
-  defp humanize_role(""), do: "member"
-  defp humanize_role(role), do: role
+  defp role_label(""), do: "member"
+  defp role_label(role), do: role
 end
