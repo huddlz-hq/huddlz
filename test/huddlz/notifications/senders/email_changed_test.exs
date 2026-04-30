@@ -24,14 +24,18 @@ defmodule Huddlz.Notifications.Senders.EmailChangedTest do
       assert email.html_body =~ "security notice"
     end
 
-    test "includes a password reset link" do
+    test "directs the user to support and does not link the /reset flow" do
+      # The reset email would go to the *new* (potentially attacker-controlled)
+      # address, so /reset is not a real recovery channel here.
       user = generate(user(email: "new@example.com"))
       payload = %{"audience" => "old", "old_email" => "old@example.com"}
 
       email = EmailChanged.build(user, payload)
 
-      assert email.html_body =~ "/reset"
-      assert email.text_body =~ "/reset"
+      assert email.html_body =~ "contact support"
+      assert email.text_body =~ "contact support"
+      refute email.html_body =~ "/reset"
+      refute email.text_body =~ "/reset"
     end
 
     test "uses the configured from-address" do

@@ -4,8 +4,10 @@ defmodule Huddlz.Notifications.Senders.EmailChanged do
 
   Two audiences, both transactional:
 
-    * `audience: "old"` — the previous address. Security notice with a
-      reset link in case the change was unauthorized.
+    * `audience: "old"` — the previous address. Security notice that
+      directs the user to contact support if the change was unauthorized.
+      No `/reset` link: by this point the recovery channel (the reset
+      email) goes to the *new* address, which a hijacker would control.
     * `audience: "new"` — the new address. Confirmation that this address
       is now associated with the account.
 
@@ -30,14 +32,13 @@ defmodule Huddlz.Notifications.Senders.EmailChanged do
     new_email = to_string(user.email)
     safe_name = HtmlEscape.escape(user.display_name)
     safe_new_email = HtmlEscape.escape(new_email)
-    reset_url = url(~p"/reset")
 
     new()
     |> from(Mailer.from())
     |> to(old_email)
     |> subject(@subject)
-    |> html_body(html_old(safe_name, safe_new_email, reset_url))
-    |> text_body(text_old(user.display_name, new_email, reset_url))
+    |> html_body(html_old(safe_name, safe_new_email))
+    |> text_body(text_old(user.display_name, new_email))
   end
 
   def build(user, %{"audience" => "new"} = payload) do
@@ -60,7 +61,7 @@ defmodule Huddlz.Notifications.Senders.EmailChanged do
             "Expected `audience: \"old\"` or `audience: \"new\"`."
   end
 
-  defp html_old(safe_name, safe_new_email, reset_url) do
+  defp html_old(safe_name, safe_new_email) do
     """
     <p>Hi #{safe_name},</p>
 
@@ -70,13 +71,13 @@ defmodule Huddlz.Notifications.Senders.EmailChanged do
     <p>If this was you, no action is needed. Future emails from huddlz will
     go to your new address.</p>
 
-    <p>If this <strong>wasn't</strong> you, secure your account immediately by
-    resetting your password at <a href="#{reset_url}">#{reset_url}</a>
-    and contact support so we can restore access.</p>
+    <p>If this <strong>wasn't</strong> you, contact support right away so we
+    can restore access. Resetting your password won't help here — the reset
+    email would go to the new address, not this one.</p>
     """
   end
 
-  defp text_old(name, new_email, reset_url) do
+  defp text_old(name, new_email) do
     """
     Hi #{name},
 
@@ -86,8 +87,9 @@ defmodule Huddlz.Notifications.Senders.EmailChanged do
     If this was you, no action is needed. Future emails from huddlz will go to
     your new address.
 
-    If this wasn't you, secure your account immediately by resetting your
-    password at #{reset_url} and contact support so we can restore access.
+    If this wasn't you, contact support right away so we can restore access.
+    Resetting your password won't help here — the reset email would go to the
+    new address, not this one.
     """
   end
 
