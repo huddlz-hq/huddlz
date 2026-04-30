@@ -37,6 +37,7 @@ defmodule Huddlz.Notifications do
     entry = Triggers.fetch!(trigger)
 
     if should_deliver?(user, trigger, entry) do
+      ensure_sender_implemented!(trigger, entry.sender)
       email = entry.sender.build(user, payload)
 
       case Mailer.deliver(email) do
@@ -45,6 +46,19 @@ defmodule Huddlz.Notifications do
       end
     else
       :skipped
+    end
+  end
+
+  # The registry references sender modules for triggers whose phases haven't
+  # shipped yet. Raise a clear error rather than the cryptic
+  # UndefinedFunctionError you'd get from a missing module/function.
+  defp ensure_sender_implemented!(trigger, sender) do
+    Code.ensure_loaded(sender)
+
+    unless function_exported?(sender, :build, 2) do
+      raise ArgumentError,
+            "Notification sender #{inspect(sender)} for trigger #{inspect(trigger)} " <>
+              "is not yet implemented. Implement Huddlz.Notifications.Sender.build/2 in that module."
     end
   end
 
