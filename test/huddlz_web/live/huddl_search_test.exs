@@ -119,6 +119,39 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> assert_has("div[style*='width: 0%']")
     end
 
+    test "renders capacity label for limited huddlz with at least one RSVP", %{
+      conn: conn,
+      user: user,
+      group: group
+    } do
+      capped =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: user.id,
+            title: "Mostly Empty Capped Huddl",
+            description: "Limited seats",
+            event_type: :virtual,
+            virtual_link: "https://zoom.us/j/cap2",
+            date: Date.add(Date.utc_today(), 4),
+            start_time: ~T[12:00:00],
+            duration_minutes: 60,
+            is_private: false,
+            max_attendees: 5,
+            actor: user
+          )
+        )
+
+      capped
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: user)
+      |> Ash.update!()
+
+      conn
+      |> visit("/")
+      |> assert_has("h3", text: "Mostly Empty Capped Huddl")
+      |> assert_has("span", text: "1/5 spots filled")
+    end
+
     test "searches by title", %{conn: conn} do
       conn
       |> visit("/")

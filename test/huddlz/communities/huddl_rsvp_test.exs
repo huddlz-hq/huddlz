@@ -277,6 +277,34 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
                    end
     end
 
+    test "organizer can clear max_attendees even with existing RSVPs", %{
+      member: member,
+      owner: owner,
+      non_member: non_member,
+      huddl: huddl
+    } do
+      capped =
+        huddl
+        |> Ash.Changeset.for_update(:update, %{max_attendees: 5}, actor: owner)
+        |> Ash.update!()
+
+      for actor <- [member, non_member] do
+        capped
+        |> Ash.reload!()
+        |> Ash.Changeset.for_update(:rsvp, %{}, actor: actor)
+        |> Ash.update!()
+      end
+
+      uncapped =
+        capped
+        |> Ash.reload!()
+        |> Ash.Changeset.for_update(:update, %{max_attendees: nil}, actor: owner)
+        |> Ash.update!()
+
+      assert uncapped.max_attendees == nil
+      assert rsvp_count(uncapped) == 2
+    end
+
     test "user cannot RSVP without an actor", %{huddl: huddl} do
       assert_raise Ash.Error.Invalid, fn ->
         huddl
