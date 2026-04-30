@@ -158,6 +158,8 @@ defmodule Huddlz.Accounts.User do
                  previous_role == user.role ->
                    :ok
 
+                 # Skip only on actor-self updates. A nil actor (system call with
+                 # `authorize?: false`) intentionally falls through and notifies.
                  actor && actor.id == user.id ->
                    :ok
 

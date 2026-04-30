@@ -35,6 +35,8 @@ defmodule Huddlz.Notifications.Senders.EmailChanged do
 
     new()
     |> from(Mailer.from())
+    # Recipient header injection is prevented by the `User.email` regex constraint
+    # rejecting whitespace (CR/LF). Swoosh does not sanitize recipient strings.
     |> to(old_email)
     |> subject(@subject)
     |> html_body(html_old(safe_name, safe_new_email))

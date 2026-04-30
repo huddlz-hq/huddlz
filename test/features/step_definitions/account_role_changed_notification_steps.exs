@@ -58,6 +58,8 @@ defmodule AccountRoleChangedNotificationSteps do
       {:email, _other} ->
         refute_role_change_email_received()
     after
+      # Queue is already drained; this only flushes any in-flight {:email, _}
+      # mailbox messages, so a short timeout is sufficient.
       50 -> :ok
     end
   end
