@@ -44,7 +44,7 @@ defmodule Huddlz.Accounts.User.ChangeEmailTest do
     end
 
     test "rejects malformed email addresses", %{user: user} do
-      assert {:error, _} =
+      assert {:error, %Ash.Error.Invalid{}} =
                user
                |> Ash.Changeset.for_update(
                  :change_email,
@@ -57,7 +57,7 @@ defmodule Huddlz.Accounts.User.ChangeEmailTest do
     test "rejects an email already in use by another user", %{user: user} do
       _other = generate(user(email: "taken@example.com"))
 
-      assert {:error, _} =
+      assert {:error, %Ash.Error.Invalid{}} =
                user
                |> Ash.Changeset.for_update(
                  :change_email,
