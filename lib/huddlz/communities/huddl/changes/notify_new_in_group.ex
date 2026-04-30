@@ -1,0 +1,59 @@
+defmodule Huddlz.Communities.Huddl.Changes.NotifyNewInGroup do
+  @moduledoc """
+  Enqueues C1 (huddl_new) notifications when a new huddl is created
+  in a group. Sent to every group member except the actor (the user
+  who created the huddl).
+
+  Recipient resolution happens in `after_action` once the huddl row
+  exists, so the new huddl's group is reachable.
+  """
+
+  use Ash.Resource.Change
+
+  require Ash.Query
+
+  alias Huddlz.Accounts.User
+  alias Huddlz.Communities.GroupMember
+  alias Huddlz.Notifications
+
+  @impl true
+  def change(changeset, _opts, _context) do
+    Ash.Changeset.after_action(changeset, &notify/2)
+  end
+
+  defp notify(cs, huddl) do
+    huddl = Ash.load!(huddl, [:group], authorize?: false)
+
+    actor_id =
+      case cs.context[:private][:actor] do
+        %{id: id} -> id
+        _ -> nil
+      end
+
+    user_ids =
+      GroupMember
+      |> Ash.Query.filter(group_id == ^huddl.group_id)
+      |> Ash.Query.select([:user_id])
+      |> Ash.read!(authorize?: false)
+      |> Enum.map(& &1.user_id)
+      |> Enum.uniq()
+      |> Enum.reject(&(&1 == actor_id))
+
+    payload = %{
+      "huddl_id" => huddl.id,
+      "huddl_title" => to_string(huddl.title),
+      "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at),
+      "group_name" => to_string(huddl.group.name),
+      "group_slug" => to_string(huddl.group.slug)
+    }
+
+    for user_id <- user_ids do
+      case Ash.get(User, user_id, authorize?: false) do
+        {:ok, user} -> Notifications.deliver_async(user, :huddl_new, payload)
+        _ -> :noop
+      end
+    end
+
+    {:ok, huddl}
+  end
+end
