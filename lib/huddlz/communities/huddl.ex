@@ -300,6 +300,7 @@ defmodule Huddlz.Communities.Huddl do
       require_atomic? false
 
       change Huddlz.Communities.Huddl.Changes.CancelRsvp
+      change Huddlz.Communities.Huddl.Changes.NotifyRsvpCancelled
     end
 
     read :due_for_24h_reminder do

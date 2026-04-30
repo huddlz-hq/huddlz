@@ -21,7 +21,7 @@ defmodule Huddlz.Communities.Huddl.Changes.CancelRsvp do
 
       {:ok, attendee} ->
         Ash.destroy!(attendee, authorize?: false)
-        changeset
+        Ash.Changeset.put_context(changeset, :rsvp_cancelled, true)
 
       {:error, error} ->
         Ash.Changeset.add_error(changeset, error)
