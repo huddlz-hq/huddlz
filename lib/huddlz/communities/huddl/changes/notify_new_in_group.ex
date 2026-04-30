@@ -4,6 +4,13 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyNewInGroup do
   in a group. Sent to every group member except the actor (the user
   who created the huddl).
 
+  Skipped when the create runs without an actor — that path is
+  reserved for system-driven creations (e.g. `RecurrenceHelper`
+  generating subsequent instances of a recurring series). Group
+  members shouldn't get a "new huddl" email for every weekly
+  occurrence of the same series; the first instance covers it, and
+  D1/D2 reminders cover each occurrence individually.
+
   Recipient resolution happens in `after_action` once the huddl row
   exists, so the new huddl's group is reachable.
   """
@@ -14,6 +21,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyNewInGroup do
 
   alias Huddlz.Accounts.User
   alias Huddlz.Communities.GroupMember
+  alias Huddlz.Communities.Huddl.Changes.RecipientHelpers
   alias Huddlz.Notifications
 
   @impl true
@@ -22,13 +30,14 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyNewInGroup do
   end
 
   defp notify(cs, huddl) do
-    huddl = Ash.load!(huddl, [:group], authorize?: false)
+    case RecipientHelpers.actor_id(cs) do
+      nil -> {:ok, huddl}
+      actor_id -> notify_with_actor(cs, huddl, actor_id)
+    end
+  end
 
-    actor_id =
-      case cs.context[:private][:actor] do
-        %{id: id} -> id
-        _ -> nil
-      end
+  defp notify_with_actor(_cs, huddl, actor_id) do
+    huddl = Ash.load!(huddl, [:group], authorize?: false)
 
     user_ids =
       GroupMember

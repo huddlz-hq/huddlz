@@ -198,6 +198,108 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
     end
   end
 
+  describe "C4: huddl_series_updated" do
+    test "edit_type=all sends huddl_series_updated to the next instance's RSVPs" do
+      owner = generate(user(role: :user))
+      attendee = generate(user(display_name: "Attendee"))
+
+      group =
+        generate(
+          group(
+            name: "Pickup Sports",
+            slug: "pickup-sports",
+            is_public: true,
+            owner_id: owner.id,
+            actor: owner
+          )
+        )
+
+      original =
+        generate(
+          huddl(
+            title: "Saturday Soccer",
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            is_recurring: true,
+            frequency: "weekly",
+            repeat_until: Date.add(Date.utc_today(), 60)
+          )
+        )
+
+      original
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
+      |> Ash.update!()
+
+      Oban.drain_queue(queue: :notifications)
+      flush_mailbox()
+
+      original
+      |> Ash.load!([:huddl_template], authorize?: false)
+      |> Ash.Changeset.for_update(
+        :update,
+        %{
+          title: "Saturday Soccer (renamed)",
+          edit_type: "all",
+          repeat_until: Date.add(Date.utc_today(), 60),
+          frequency: "weekly"
+        },
+        actor: owner
+      )
+      |> Ash.update!(load: [:huddl_template])
+
+      assert %{success: 1} = Oban.drain_queue(queue: :notifications)
+
+      assert_email_sent(fn email ->
+        email.subject =~ "Recurring series updated:" and
+          email.to == [{"", to_string(attendee.email)}] and
+          email.html_body =~ "next upcoming instance"
+      end)
+    end
+
+    test "edit_type=instance still sends C2 (huddl_updated), not C4" do
+      owner = generate(user(role: :user))
+      attendee = generate(user())
+
+      group =
+        generate(group(name: "Pickup Sports", is_public: true, owner_id: owner.id, actor: owner))
+
+      original =
+        generate(
+          huddl(
+            title: "Series Original",
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            is_recurring: true,
+            frequency: "weekly",
+            repeat_until: Date.add(Date.utc_today(), 60)
+          )
+        )
+
+      original
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
+      |> Ash.update!()
+
+      Oban.drain_queue(queue: :notifications)
+      flush_mailbox()
+
+      original
+      |> Ash.Changeset.for_update(
+        :update,
+        %{title: "Renamed Just This One", edit_type: "instance"},
+        actor: owner
+      )
+      |> Ash.update!()
+
+      assert %{success: 1} = Oban.drain_queue(queue: :notifications)
+
+      assert_email_sent(fn email ->
+        email.subject == "Updated: Renamed Just This One"
+      end)
+    end
+  end
+
   describe "C3: huddl_cancelled" do
     test "emails every non-actor RSVP when the huddl is destroyed" do
       owner = generate(user(role: :user, display_name: "Group Owner"))
