@@ -7,6 +7,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
+  alias HuddlzWeb.MetaHelpers
 
   require Ash.Query
 
@@ -304,35 +305,12 @@ defmodule HuddlzWeb.GroupLive.Show do
   defp group_meta(group) do
     %{
       title: "#{group.name} · huddlz",
-      description: meta_description(group),
+      description: MetaHelpers.description(group, "Find and join this group on huddlz."),
       type: "website",
       url: url(~p"/groups/#{group.slug}"),
-      image: meta_image_url(group.current_image_url)
+      image: MetaHelpers.image_url(group.current_image_url, GroupImages)
     }
   end
-
-  defp meta_description(%{description: nil}), do: "Find and join this group on huddlz."
-
-  defp meta_description(%{description: description}) do
-    description
-    |> to_string()
-    |> String.replace(~r/\s+/, " ")
-    |> String.trim()
-    |> String.slice(0, 200)
-  end
-
-  defp meta_description(_group), do: "Find and join this group on huddlz."
-
-  defp meta_image_url(nil), do: nil
-
-  defp meta_image_url(path) do
-    path
-    |> GroupImages.url()
-    |> absolute_url()
-  end
-
-  defp absolute_url("http" <> _ = url), do: url
-  defp absolute_url(path), do: HuddlzWeb.Endpoint.url() <> path
 
   defp member_unchecked?(_group, nil), do: false
 

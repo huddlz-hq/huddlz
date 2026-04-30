@@ -362,10 +362,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
           group(is_public: true, owner_id: host.id, actor: host, name: "Linked Group Test")
         )
 
-      html =
-        conn
-        |> get(~p"/")
-        |> html_response(200)
+      {:ok, _view, html} = live(conn, ~p"/")
 
       assert html
              |> Floki.parse_document!()

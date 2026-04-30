@@ -7,6 +7,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   alias Huddlz.Communities
   alias Huddlz.Storage.HuddlImages
   alias HuddlzWeb.Layouts
+  alias HuddlzWeb.MetaHelpers
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
 
@@ -330,35 +331,12 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp huddl_meta(huddl) do
     %{
       title: "#{huddl.title} · huddlz",
-      description: meta_description(huddl),
+      description: MetaHelpers.description(huddl, "Find and join this huddl on huddlz."),
       type: "event",
       url: url(~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"),
-      image: meta_image_url(huddl.display_image_url)
+      image: MetaHelpers.image_url(huddl.display_image_url, HuddlImages)
     }
   end
-
-  defp meta_description(%{description: nil}), do: "Find and join this huddl on huddlz."
-
-  defp meta_description(%{description: description}) do
-    description
-    |> to_string()
-    |> String.replace(~r/\s+/, " ")
-    |> String.trim()
-    |> String.slice(0, 200)
-  end
-
-  defp meta_description(_huddl), do: "Find and join this huddl on huddlz."
-
-  defp meta_image_url(nil), do: nil
-
-  defp meta_image_url(path) do
-    path
-    |> HuddlImages.url()
-    |> absolute_url()
-  end
-
-  defp absolute_url("http" <> _ = url), do: url
-  defp absolute_url(path), do: HuddlzWeb.Endpoint.url() <> path
 
   defp creator?(_huddl, nil), do: false
 

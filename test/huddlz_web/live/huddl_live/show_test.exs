@@ -8,6 +8,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Communities.Huddl
+  alias Huddlz.Communities.HuddlImage
 
   describe "Show huddl details" do
     setup do
@@ -95,6 +96,64 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       assert meta_content(html, ~s(meta[property="og:url"])) =~
                "/groups/#{group.slug}/huddlz/#{huddl.id}"
+    end
+
+    test "renders rich link preview image metadata", %{conn: conn, group: group, huddl: huddl} do
+      thumbnail_path = "/uploads/huddl_images/#{huddl.id}/preview_thumb.jpg"
+
+      HuddlImage
+      |> Ash.Changeset.for_create(:create, %{
+        filename: "preview.jpg",
+        content_type: "image/jpeg",
+        size_bytes: 123,
+        storage_path: "/uploads/huddl_images/#{huddl.id}/preview.jpg",
+        thumbnail_path: thumbnail_path,
+        huddl_id: huddl.id
+      })
+      |> Ash.create!(authorize?: false)
+
+      html =
+        conn
+        |> get(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+        |> html_response(200)
+
+      assert meta_content(html, ~s(meta[property="og:image"])) ==
+               HuddlzWeb.Endpoint.url() <> thumbnail_path
+
+      assert meta_content(html, ~s(meta[name="twitter:image"])) ==
+               HuddlzWeb.Endpoint.url() <> thumbnail_path
+
+      assert meta_content(html, ~s(meta[name="twitter:card"])) == "summary_large_image"
+    end
+
+    test "renders fallback description metadata", %{conn: conn, group: group, owner: owner} do
+      huddl =
+        Huddl
+        |> Ash.Changeset.for_create(
+          :create,
+          %{
+            title: "Description-free Huddl",
+            description: nil,
+            date: Date.add(Date.utc_today(), 2),
+            start_time: ~T[14:00:00],
+            duration_minutes: 120,
+            event_type: :in_person,
+            physical_location: "123 Main St",
+            is_private: false,
+            group_id: group.id,
+            creator_id: owner.id
+          },
+          actor: owner
+        )
+        |> Ash.create!()
+
+      html =
+        conn
+        |> get(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+        |> html_response(200)
+
+      assert meta_content(html, ~s(meta[name="description"])) ==
+               "Find and join this huddl on huddlz."
     end
 
     test "shows RSVP button for authenticated users", %{
@@ -459,13 +518,5 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       role: :user
     })
     |> Ash.create!(authorize?: false)
-  end
-
-  defp meta_content(html, selector) do
-    html
-    |> Floki.parse_document!()
-    |> Floki.find(selector)
-    |> Floki.attribute("content")
-    |> List.first()
   end
 end
