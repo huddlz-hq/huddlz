@@ -11,6 +11,7 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
 
   use HuddlzWeb, :live_view
 
+  alias Huddlz.Notifications
   alias Huddlz.Notifications.Triggers
   alias HuddlzWeb.Layouts
 
@@ -111,7 +112,7 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
           type="checkbox"
           name={"prefs[#{trigger}]"}
           label={entry.label}
-          checked={resolved_value(@user, trigger, entry)}
+          checked={Notifications.preference_for(@user, trigger)}
         />
       </div>
     </section>
@@ -154,19 +155,10 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
     |> Enum.sort_by(fn {_atom, entry} -> entry.label end)
   end
 
-  defp resolved_value(user, trigger, entry) do
-    key = Triggers.preference_key(trigger)
-
-    case Map.get(user.notification_preferences || %{}, key) do
-      nil -> entry.default
-      value when is_boolean(value) -> value
-      _ -> entry.default
-    end
-  end
-
-  # `<.input type="checkbox">` submits "true" when checked and "false" via a
-  # paired hidden input when unchecked. Iterate every editable trigger so
-  # the saved map stays exhaustive even if Phoenix drops keys in transit.
+  # `<.input type="checkbox">` submits "true" when checked and a paired hidden
+  # input ensures "false" is submitted when unchecked. We iterate every editable
+  # trigger here so the saved map stays exhaustive regardless of which keys the
+  # client sends.
   defp normalize_form_params(form_prefs) do
     all_editable_keys =
       Triggers.all()

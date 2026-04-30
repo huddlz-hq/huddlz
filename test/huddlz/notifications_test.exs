@@ -135,6 +135,27 @@ defmodule Huddlz.NotificationsTest do
     end
   end
 
+  describe "preference_for/2" do
+    test "returns the registry default when no explicit preference is set" do
+      user = generate(user())
+      # :rsvp_received is registered with default: true
+      assert Notifications.preference_for(user, :rsvp_received) == true
+      # :weekly_digest is registered with default: false
+      assert Notifications.preference_for(user, :weekly_digest) == false
+    end
+
+    test "returns the explicit preference when set" do
+      user = generate_user_with_prefs(%{"rsvp_received" => false, "weekly_digest" => true})
+      assert Notifications.preference_for(user, :rsvp_received) == false
+      assert Notifications.preference_for(user, :weekly_digest) == true
+    end
+
+    test "falls back to the default when the stored value is non-boolean" do
+      user = generate_user_with_prefs(%{"rsvp_received" => "yes"})
+      assert Notifications.preference_for(user, :rsvp_received) == true
+    end
+  end
+
   defp transactional, do: %{category: :transactional, default: true}
   defp activity(default: default), do: %{category: :activity, default: default}
   defp digest(default: default), do: %{category: :digest, default: default}

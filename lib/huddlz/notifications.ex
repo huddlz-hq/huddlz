@@ -83,14 +83,20 @@ defmodule Huddlz.Notifications do
   defp user_can_receive?(_, _), do: false
 
   defp preference_allows?(_user, _trigger, %{category: :transactional}), do: true
+  defp preference_allows?(user, trigger, _entry), do: preference_for(user, trigger)
 
-  defp preference_allows?(user, trigger, %{default: default}) do
+  @doc """
+  Resolved boolean preference for `user` + `trigger`. Falls back to the
+  registry default if no explicit preference is set.
+  """
+  @spec preference_for(User.t(), atom()) :: boolean()
+  def preference_for(user, trigger) do
+    entry = Triggers.fetch!(trigger)
     key = Triggers.preference_key(trigger)
 
     case Map.get(user.notification_preferences || %{}, key) do
-      nil -> default
       value when is_boolean(value) -> value
-      _ -> default
+      _ -> entry.default
     end
   end
 
