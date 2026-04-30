@@ -126,6 +126,33 @@ defmodule Huddlz.Communities.Group do
       change Huddlz.Geocoding.ApplyProvidedCoordinates
       change {Huddlz.Geocoding.GeocodeChange, field: :location}
     end
+
+    update :transfer_ownership do
+      description "Transfer the group ownership to another user; demotes the previous owner to organizer."
+      accept []
+      require_atomic? false
+
+      argument :new_owner_id, :uuid do
+        allow_nil? false
+      end
+
+      validate fn changeset, _ctx ->
+        new_owner_id = Ash.Changeset.get_argument(changeset, :new_owner_id)
+
+        cond do
+          is_nil(new_owner_id) ->
+            {:error, field: :new_owner_id, message: "is required"}
+
+          new_owner_id == changeset.data.owner_id ->
+            {:error, field: :new_owner_id, message: "is already the group owner"}
+
+          true ->
+            :ok
+        end
+      end
+
+      change Huddlz.Communities.Group.Changes.TransferOwnership
+    end
   end
 
   policies do
@@ -141,6 +168,11 @@ defmodule Huddlz.Communities.Group do
 
     # Only the owner can update group details
     policy action(:update_details) do
+      authorize_if expr(owner_id == ^actor(:id))
+    end
+
+    # Only the current owner can transfer ownership.
+    policy action(:transfer_ownership) do
       authorize_if expr(owner_id == ^actor(:id))
     end
 

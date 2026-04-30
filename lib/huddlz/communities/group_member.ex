@@ -125,6 +125,17 @@ defmodule Huddlz.Communities.GroupMember do
       end
     end
 
+    update :set_role do
+      description """
+      Internal helper used by Group.:transfer_ownership to swap roles
+      without the :change_role validation. Always forbidden by policy —
+      callers must pass `authorize?: false`.
+      """
+
+      accept [:role]
+      require_atomic? false
+    end
+
     create :join_group do
       description "Join a group as a regular member as the current actor"
 
@@ -179,6 +190,11 @@ defmodule Huddlz.Communities.GroupMember do
     policy action(:change_role) do
       forbid_if expr(user_id == ^actor(:id))
       authorize_if expr(group.owner_id == ^actor(:id))
+    end
+
+    # Internal-only — must be called with `authorize?: false`.
+    policy action(:set_role) do
+      forbid_if always()
     end
 
     # The remove-by-ids wrapper authorizes by delegating to :remove_member
