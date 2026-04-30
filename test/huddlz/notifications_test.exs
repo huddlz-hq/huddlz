@@ -42,8 +42,6 @@ defmodule Huddlz.NotificationsTest do
 
     test "skips when the user has opted out of an activity trigger" do
       user = generate_user_with_prefs(%{"rsvp_received" => false})
-      # The sender module for :rsvp_received does not exist yet — the
-      # orchestrator must short-circuit before invoking it.
       assert :skipped == Notifications.deliver(user, :rsvp_received, %{})
       refute_email_sent()
     end
@@ -55,13 +53,14 @@ defmodule Huddlz.NotificationsTest do
     end
 
     test "raises a clear error when the registered sender isn't implemented" do
-      # :rsvp_received is registered with a sender module that doesn't exist
-      # yet. With the trigger enabled and the user eligible, deliver/3 must
-      # surface this loudly rather than producing an UndefinedFunctionError.
-      user = generate_user_with_prefs(%{"rsvp_received" => true})
+      # :weekly_digest is registered with a sender module (Senders.WeeklyDigest)
+      # that doesn't exist yet — F-series digests are deferred to v2. With
+      # the trigger enabled and the user eligible, deliver/3 must surface
+      # this loudly rather than producing an UndefinedFunctionError.
+      user = generate_user_with_prefs(%{"weekly_digest" => true})
 
       assert_raise ArgumentError, ~r/not yet implemented/, fn ->
-        Notifications.deliver(user, :rsvp_received, %{})
+        Notifications.deliver(user, :weekly_digest, %{})
       end
 
       refute_email_sent()
