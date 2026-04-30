@@ -23,6 +23,7 @@ defmodule Huddlz.Accounts.User do
       update :update_display_name, :update_display_name
       update :update_home_location, :update_home_location
       update :change_password, :change_password
+      update :change_email, :change_email
       update :update_notification_preferences, :update_notification_preferences
     end
   end
@@ -204,6 +205,18 @@ defmodule Huddlz.Accounts.User do
           Map.merge(existing, incoming)
         )
       end
+    end
+
+    update :change_email do
+      description "Change the user's email address. Requires the current password and emails old + new addresses as a security notice."
+
+      require_atomic? false
+      accept [:email]
+
+      argument :current_password, :string, sensitive?: true, allow_nil?: false
+
+      validate {AshAuthentication.Strategy.Password.PasswordValidation,
+                strategy_name: :password, password_argument: :current_password}
     end
 
     update :change_password do
@@ -467,6 +480,11 @@ defmodule Huddlz.Accounts.User do
 
     policy action(:change_password) do
       description "Users can change their own password"
+      authorize_if expr(id == ^actor(:id))
+    end
+
+    policy action(:change_email) do
+      description "Users can change their own email"
       authorize_if expr(id == ^actor(:id))
     end
 
