@@ -188,6 +188,11 @@ defmodule Huddlz.Accounts.User do
                 strategy_name: :password, password_argument: :current_password}
 
       change {AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password}
+
+      change after_action(fn _changeset, user, _ctx ->
+               Huddlz.Notifications.deliver(user, :password_changed)
+               {:ok, user}
+             end)
     end
 
     update :set_password do

@@ -27,17 +27,14 @@ defmodule Huddlz.Notifications do
 
   Raises if `trigger` is not in the registry — callers should use known atoms.
   """
-  @spec deliver(User.t(), atom(), map()) :: deliver_result()
+  @spec deliver(User.t(), atom(), map()) :: :sent | :skipped
   def deliver(user, trigger, payload \\ %{}) do
     entry = Triggers.fetch!(trigger)
 
     if should_deliver?(user, trigger, entry) do
       email = entry.sender.build(user, payload)
-
-      case Mailer.deliver(email) do
-        {:ok, _} -> :ok
-        {:error, reason} -> {:error, reason}
-      end
+      Mailer.deliver(email)
+      :sent
     else
       :skipped
     end
@@ -51,12 +48,17 @@ defmodule Huddlz.Notifications do
   """
   @spec should_deliver?(User.t(), atom(), map()) :: boolean()
   def should_deliver?(user, trigger, entry) do
-    user_can_receive?(user) and preference_allows?(user, trigger, entry)
+    user_can_receive?(user, entry.category) and preference_allows?(user, trigger, entry)
   end
 
-  defp user_can_receive?(%User{confirmed_at: nil}), do: false
-  defp user_can_receive?(%User{}), do: true
-  defp user_can_receive?(_), do: false
+  # Transactional security emails (password changed, account removed, etc.)
+  # must go through even before email confirmation — otherwise an attacker
+  # could mutate accounts in the unconfirmed window with no notice. Activity
+  # and digest emails wait until the user has confirmed their address.
+  defp user_can_receive?(%User{}, :transactional), do: true
+  defp user_can_receive?(%User{confirmed_at: nil}, _category), do: false
+  defp user_can_receive?(%User{}, _category), do: true
+  defp user_can_receive?(_, _), do: false
 
   defp preference_allows?(_user, _trigger, %{category: :transactional}), do: true
 
