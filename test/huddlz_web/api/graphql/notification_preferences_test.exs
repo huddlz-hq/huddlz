@@ -3,6 +3,49 @@ defmodule HuddlzWeb.Api.Graphql.NotificationPreferencesTest do
 
   alias Huddlz.Accounts.User
 
+  describe "me query notificationPreferences field" do
+    test "returns the actor's saved preferences", %{conn: conn} do
+      target = generate(user())
+
+      target
+      |> Ash.Changeset.for_update(
+        :update_notification_preferences,
+        %{preferences: %{"rsvp_received" => false}},
+        actor: target
+      )
+      |> Ash.update!()
+
+      query = """
+      query Me {
+        me { id notificationPreferences }
+      }
+      """
+
+      conn =
+        conn
+        |> authenticated_conn(target)
+        |> gql_post(query, %{})
+
+      assert %{"data" => %{"me" => %{"id" => id, "notificationPreferences" => prefs_json}}} =
+               json_response(conn, 200)
+
+      assert id == target.id
+      assert Jason.decode!(prefs_json) == %{"rsvp_received" => false}
+    end
+
+    test "unauthenticated callers get nil", %{conn: conn} do
+      query = """
+      query Me {
+        me { id notificationPreferences }
+      }
+      """
+
+      conn = gql_post(conn, query, %{})
+
+      assert %{"data" => %{"me" => nil}} = json_response(conn, 200)
+    end
+  end
+
   describe "updateNotificationPreferences mutation" do
     test "actor flips their own preference to false", %{conn: conn} do
       target = generate(user())
