@@ -9,6 +9,9 @@ defmodule Huddlz.Notifications.Sender do
 
   See `Huddlz.Notifications` for the orchestrator and `Huddlz.Notifications.Triggers`
   for the registry that maps trigger atoms to their sender modules.
+
+  See `docs/notifications.md` § Sender conventions for the rules every sender
+  follows (HTML escaping, footer, recovery-advice, test floor).
   """
 
   alias Huddlz.Accounts.User
