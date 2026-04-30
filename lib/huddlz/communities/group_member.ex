@@ -127,6 +127,8 @@ defmodule Huddlz.Communities.GroupMember do
       validate attribute_in(:role, [:member, :organizer]) do
         message "must be :member or :organizer (use transfer_ownership to change the owner)"
       end
+
+      change Huddlz.Communities.GroupMember.Changes.NotifyRoleChanged
     end
 
     update :set_role do
