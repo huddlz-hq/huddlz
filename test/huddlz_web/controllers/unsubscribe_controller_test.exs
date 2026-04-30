@@ -18,6 +18,17 @@ defmodule HuddlzWeb.UnsubscribeControllerTest do
       refute reloaded_user(user).notification_preferences["rsvp_received"] == false
     end
 
+    test "renders inside the standard application layout", %{conn: conn} do
+      user = generate(user())
+      token = Notifications.unsubscribe_token(user, :rsvp_received)
+
+      session = visit(conn, "/unsubscribe/#{token}")
+
+      # Standard app layout shell — navbar brand and footer link
+      assert_has(session, "header a", text: "huddlz")
+      assert_has(session, "footer a", text: "Contribute on GitHub")
+    end
+
     test "rejects unknown triggers without changing preferences", %{conn: conn} do
       user = generate(user())
       token = sign_token(user, :not_a_real_trigger)
