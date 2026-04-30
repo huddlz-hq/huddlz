@@ -91,9 +91,15 @@ defmodule HuddlzWeb.HuddlLive.Show do
                 </button>
               </div>
             <% else %>
-              <.button phx-click="rsvp">
-                RSVP to this huddl
-              </.button>
+              <%= if event_full?(@huddl) do %>
+                <div class="text-error font-semibold">
+                  <.icon name="hero-x-circle" class="h-5 w-5 inline" /> Event Full
+                </div>
+              <% else %>
+                <.button phx-click="rsvp">
+                  RSVP to this huddl
+                </.button>
+              <% end %>
             <% end %>
           <% end %>
         </:actions>
@@ -121,6 +127,23 @@ defmodule HuddlzWeb.HuddlLive.Show do
         <p class="text-base-content/60">
           {@huddl.description || "No description provided."}
         </p>
+
+        <%= if @huddl.max_attendees do %>
+          <div class="mt-6 border border-base-300 p-4">
+            <div class="flex items-center justify-between gap-3 text-sm">
+              <span class="font-medium flex items-center gap-2">
+                <.icon name="hero-user-group" class="h-4 w-4" />
+                {capacity_label(@huddl)}
+              </span>
+              <span class={capacity_status_class(@huddl)}>
+                {capacity_status(@huddl)}
+              </span>
+            </div>
+            <div class="mt-3 h-2 bg-base-200 overflow-hidden">
+              <div class="h-full bg-primary" style={"width: #{capacity_percent(@huddl)}%"}></div>
+            </div>
+          </div>
+        <% end %>
 
         <dl class="mt-6">
           <div class="flex items-start gap-3 py-3">
@@ -351,6 +374,36 @@ defmodule HuddlzWeb.HuddlLive.Show do
       {:ok, []} -> false
       {:ok, [_ | _]} -> true
       {:error, _} -> false
+    end
+  end
+
+  defp event_full?(%{max_attendees: nil}), do: false
+  defp event_full?(huddl), do: huddl.rsvp_count >= huddl.max_attendees
+
+  defp capacity_label(huddl) do
+    "#{huddl.rsvp_count}/#{huddl.max_attendees} spots filled"
+  end
+
+  defp capacity_percent(%{max_attendees: nil}), do: 0
+
+  defp capacity_percent(huddl) do
+    min(round(huddl.rsvp_count / huddl.max_attendees * 100), 100)
+  end
+
+  defp capacity_status(huddl) do
+    cond do
+      event_full?(huddl) -> "Event Full"
+      capacity_percent(huddl) >= 80 -> "Almost full"
+      capacity_percent(huddl) >= 50 -> "Filling up"
+      true -> "Plenty of space"
+    end
+  end
+
+  defp capacity_status_class(huddl) do
+    cond do
+      event_full?(huddl) -> "font-semibold text-error"
+      capacity_percent(huddl) >= 80 -> "font-semibold text-warning"
+      true -> "font-semibold text-success"
     end
   end
 
