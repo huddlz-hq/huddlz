@@ -54,6 +54,12 @@ defmodule Huddlz.Notifications.Senders.EmailChanged do
     |> text_body(text_new(user.display_name, old_email))
   end
 
+  def build(_user, payload) do
+    raise ArgumentError,
+          "EmailChanged sender received an unknown audience in payload: #{inspect(payload)}. " <>
+            "Expected `audience: \"old\"` or `audience: \"new\"`."
+  end
+
   defp html_old(safe_name, safe_new_email, reset_url) do
     """
     <p>Hi #{safe_name},</p>
