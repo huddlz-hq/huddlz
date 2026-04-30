@@ -35,15 +35,14 @@ defmodule Huddlz.Communities.GroupMember.Changes.NotifyJoined do
 
       group_id
       |> recipient_user_ids(joiner_id)
-      |> Enum.each(fn user_id ->
-        case Ash.get(User, user_id, authorize?: false) do
-          {:ok, recipient} ->
-            Notifications.deliver_async(recipient, :group_member_joined, payload)
+      |> Enum.each(&deliver_to(&1, payload))
+    end
+  end
 
-          _ ->
-            :noop
-        end
-      end)
+  defp deliver_to(user_id, payload) do
+    case Ash.get(User, user_id, authorize?: false) do
+      {:ok, recipient} -> Notifications.deliver_async(recipient, :group_member_joined, payload)
+      _ -> :noop
     end
   end
 

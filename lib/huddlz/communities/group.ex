@@ -59,7 +59,13 @@ defmodule Huddlz.Communities.Group do
   end
 
   actions do
-    defaults [:create, :read, :update, :destroy]
+    defaults [:create, :read, :update]
+
+    destroy :destroy do
+      primary? true
+      require_atomic? false
+      change Huddlz.Communities.Group.Changes.NotifyArchived
+    end
 
     create :create_group do
       description "Create a new group; the owner is always the current actor."

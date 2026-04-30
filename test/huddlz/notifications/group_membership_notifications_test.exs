@@ -234,6 +234,62 @@ defmodule Huddlz.Notifications.GroupMembershipNotificationsTest do
     end
   end
 
+  describe "B6: group_archived" do
+    test "emails every non-actor member when the group is destroyed" do
+      owner = generate(user(role: :user))
+      member_a = generate(user(display_name: "Alice"))
+      member_b = generate(user(display_name: "Bob"))
+      group = generate(group(name: "Vanishing Group", owner_id: owner.id, actor: owner))
+
+      generate(
+        group_member(group_id: group.id, user_id: member_a.id, role: :member, actor: owner)
+      )
+
+      generate(
+        group_member(group_id: group.id, user_id: member_b.id, role: :member, actor: owner)
+      )
+
+      Oban.drain_queue(queue: :notifications)
+      flush_mailbox()
+
+      :ok =
+        group
+        |> Ash.Changeset.for_destroy(:destroy)
+        |> Ash.destroy!(actor: owner)
+
+      assert %{success: 2} = Oban.drain_queue(queue: :notifications)
+
+      for member <- [member_a, member_b] do
+        assert_email_sent(fn email ->
+          email.subject == "Vanishing Group has been deleted" and
+            email.to == [{"", to_string(member.email)}]
+        end)
+      end
+    end
+
+    test "does not email the actor (the owner deleting their own group)" do
+      owner = generate(user(role: :user))
+      member = generate(user())
+      group = generate(group(name: "Solo Vanish", owner_id: owner.id, actor: owner))
+
+      generate(group_member(group_id: group.id, user_id: member.id, role: :member, actor: owner))
+
+      Oban.drain_queue(queue: :notifications)
+      flush_mailbox()
+
+      :ok =
+        group
+        |> Ash.Changeset.for_destroy(:destroy)
+        |> Ash.destroy!(actor: owner)
+
+      assert %{success: 1} = Oban.drain_queue(queue: :notifications)
+
+      assert_email_sent(fn email ->
+        email.to == [{"", to_string(member.email)}]
+      end)
+    end
+  end
+
   describe "B7: group_ownership_transferred" do
     test "emails both the previous and new owner" do
       previous_owner = generate(user(role: :user, display_name: "Old Owner"))
