@@ -2,95 +2,63 @@ defmodule Huddlz.Communities.Huddl.Changes.Rsvp do
   @moduledoc """
   Handles RSVP logic: creates an attendee record if one doesn't already exist.
   The rsvp_count is computed as an aggregate, so no manual counter management is needed.
+
+  Concurrency: locks the huddl row inside the action's transaction so that
+  concurrent RSVPs serialize on capacity checks and cannot overbook.
   """
   use Ash.Resource.Change
 
-  alias Ecto.Adapters.SQL
-  alias Huddlz.Communities.HuddlAttendee
-  alias Huddlz.Repo
+  alias Huddlz.Communities.{Huddl, HuddlAttendee}
 
   require Ash.Query
 
   def change(changeset, _opts, %{actor: %{id: user_id}}) when not is_nil(user_id) do
-    huddl_id = changeset.data.id
-
-    case reserve_spot(huddl_id, user_id) do
-      :ok ->
-        changeset
-
-      {:error, error} ->
-        Ash.Changeset.add_error(changeset, error)
-    end
+    Ash.Changeset.before_action(changeset, &reserve_spot(&1, user_id))
   end
 
   def change(changeset, _opts, _context) do
     Ash.Changeset.add_error(changeset, "An actor is required to RSVP")
   end
 
-  defp reserve_spot(huddl_id, user_id) do
-    dumped_huddl_id = Ecto.UUID.dump!(huddl_id)
+  defp reserve_spot(cs, user_id) do
+    huddl_id = cs.data.id
+    huddl = lock_huddl!(huddl_id)
 
-    Repo.transaction(fn ->
-      lock_huddl!(dumped_huddl_id)
-
-      reserve_if_available!(dumped_huddl_id, huddl_id, user_id)
-    end)
-    |> case do
-      {:ok, :ok} -> :ok
-      {:error, error} -> {:error, error}
+    case fetch_existing_rsvp(huddl_id, user_id) do
+      {:ok, nil} -> claim_or_reject(cs, huddl, huddl_id, user_id)
+      {:ok, _attendee} -> cs
+      {:error, error} -> Ash.Changeset.add_error(cs, error)
     end
   end
 
-  defp reserve_if_available!(dumped_huddl_id, huddl_id, user_id) do
-    if existing_rsvp?(huddl_id, user_id) do
-      :ok
-    else
-      create_rsvp_if_capacity_available!(dumped_huddl_id, huddl_id, user_id)
-    end
-  end
-
-  defp create_rsvp_if_capacity_available!(dumped_huddl_id, huddl_id, user_id) do
-    max_attendees = max_attendees!(dumped_huddl_id)
-    rsvp_count = rsvp_count!(dumped_huddl_id)
-
-    if max_attendees && rsvp_count >= max_attendees do
-      Repo.rollback("This huddl is full")
+  defp claim_or_reject(cs, huddl, huddl_id, user_id) do
+    if at_capacity?(huddl, huddl_id) do
+      Ash.Changeset.add_error(cs, "This huddl is full")
     else
       create_rsvp!(huddl_id, user_id)
-      :ok
+      cs
     end
   end
 
   defp lock_huddl!(huddl_id) do
-    SQL.query!(
-      Repo,
-      "SELECT id FROM huddlz WHERE id = $1 FOR UPDATE",
-      [huddl_id]
-    )
+    Huddl
+    |> Ash.Query.filter(id == ^huddl_id)
+    |> Ash.Query.lock("FOR UPDATE")
+    |> Ash.read_one!(authorize?: false)
   end
 
-  defp existing_rsvp?(huddl_id, user_id) do
-    case HuddlAttendee
-         |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl_id}, actor: %{id: user_id})
-         |> Ash.read_one(authorize?: false) do
-      {:ok, nil} -> false
-      {:ok, _} -> true
-      {:error, error} -> Repo.rollback(error)
-    end
+  defp fetch_existing_rsvp(huddl_id, user_id) do
+    HuddlAttendee
+    |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl_id}, actor: %{id: user_id})
+    |> Ash.read_one(authorize?: false)
   end
 
-  defp max_attendees!(huddl_id) do
-    %{rows: [[max_attendees]]} =
-      SQL.query!(Repo, "SELECT max_attendees FROM huddlz WHERE id = $1", [huddl_id])
+  defp at_capacity?(%{max_attendees: nil}, _huddl_id), do: false
 
-    max_attendees
-  end
-
-  defp rsvp_count!(huddl_id) do
-    %{rows: [[count]]} =
-      SQL.query!(Repo, "SELECT count(*) FROM huddl_attendees WHERE huddl_id = $1", [huddl_id])
-
-    count
+  defp at_capacity?(%{max_attendees: max}, huddl_id) do
+    HuddlAttendee
+    |> Ash.Query.for_read(:by_huddl, %{huddl_id: huddl_id})
+    |> Ash.count!(authorize?: false) >= max
   end
 
   defp create_rsvp!(huddl_id, user_id) do
