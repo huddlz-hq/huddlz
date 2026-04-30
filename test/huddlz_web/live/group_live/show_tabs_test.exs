@@ -74,6 +74,22 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       refute has_element?(view, "h3", "Upcoming Event 12")
     end
 
+    test "renders rich link preview metadata", %{conn: conn, group: group} do
+      html =
+        conn
+        |> get(~p"/groups/#{group.slug}")
+        |> html_response(200)
+
+      assert meta_content(html, ~s(meta[property="og:type"])) == "website"
+      assert meta_content(html, ~s(meta[property="og:title"])) == "#{group.name} · huddlz"
+      assert meta_content(html, ~s(meta[name="description"])) == to_string(group.description)
+
+      assert meta_content(html, ~s(meta[property="og:description"])) ==
+               to_string(group.description)
+
+      assert meta_content(html, ~s(meta[property="og:url"])) =~ "/groups/#{group.slug}"
+    end
+
     test "switches to past events tab when clicked", %{conn: conn, group: group} do
       {:ok, view, _html} = live(conn, ~p"/groups/#{group.slug}")
 
@@ -220,5 +236,13 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       assert has_element?(view, "button", "Upcoming")
       assert has_element?(view, "button", "Past")
     end
+  end
+
+  defp meta_content(html, selector) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find(selector)
+    |> Floki.attribute("content")
+    |> List.first()
   end
 end

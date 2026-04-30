@@ -81,6 +81,22 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has("dd", text: "Be the first to RSVP!")
     end
 
+    test "renders rich link preview metadata", %{conn: conn, group: group, huddl: huddl} do
+      html =
+        conn
+        |> get(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+        |> html_response(200)
+
+      assert meta_content(html, ~s(meta[property="og:type"])) == "event"
+      assert meta_content(html, ~s(meta[property="og:title"])) == "#{huddl.title} · huddlz"
+      assert meta_content(html, ~s(meta[name="description"])) == huddl.description
+      assert meta_content(html, ~s(meta[property="og:description"])) == huddl.description
+      assert meta_content(html, ~s(meta[name="twitter:description"])) == huddl.description
+
+      assert meta_content(html, ~s(meta[property="og:url"])) =~
+               "/groups/#{group.slug}/huddlz/#{huddl.id}"
+    end
+
     test "shows RSVP button for authenticated users", %{
       conn: conn,
       member: member,
@@ -443,5 +459,13 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       role: :user
     })
     |> Ash.create!(authorize?: false)
+  end
+
+  defp meta_content(html, selector) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find(selector)
+    |> Floki.attribute("content")
+    |> List.first()
   end
 end
