@@ -349,22 +349,26 @@ defmodule HuddlzWeb.CommunityComponents do
     min(round(huddl.rsvp_count / huddl.max_attendees * 100), 100)
   end
 
-  def capacity_status(huddl) do
+  def capacity_status(huddl), do: capacity_status_for_tier(capacity_tier(huddl))
+  def capacity_status_class(huddl), do: capacity_status_class_for_tier(capacity_tier(huddl))
+
+  defp capacity_tier(huddl) do
     cond do
-      event_full?(huddl) -> "Event Full"
-      capacity_percent(huddl) >= 80 -> "Almost full"
-      capacity_percent(huddl) >= 50 -> "Filling up"
-      true -> "Plenty of space"
+      event_full?(huddl) -> :full
+      capacity_percent(huddl) >= 80 -> :almost_full
+      capacity_percent(huddl) >= 50 -> :filling_up
+      true -> :plenty
     end
   end
 
-  def capacity_status_class(huddl) do
-    cond do
-      event_full?(huddl) -> "font-semibold text-error"
-      capacity_percent(huddl) >= 80 -> "font-semibold text-warning"
-      true -> "font-semibold text-success"
-    end
-  end
+  defp capacity_status_for_tier(:full), do: "Event Full"
+  defp capacity_status_for_tier(:almost_full), do: "Almost full"
+  defp capacity_status_for_tier(:filling_up), do: "Filling up"
+  defp capacity_status_for_tier(:plenty), do: "Plenty of space"
+
+  defp capacity_status_class_for_tier(:full), do: "font-semibold text-error"
+  defp capacity_status_class_for_tier(:almost_full), do: "font-semibold text-warning"
+  defp capacity_status_class_for_tier(_), do: "font-semibold text-success"
 
   defp truncate(text, max_length) when is_binary(text) and byte_size(text) > max_length do
     String.slice(text, 0, max_length) <> "..."
