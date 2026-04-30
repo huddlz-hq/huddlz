@@ -85,10 +85,7 @@ defmodule Huddlz.Communities.Group.Changes.TransferOwnership do
         membership
         |> Ash.Changeset.for_update(:set_role, %{role: :organizer})
         |> Ash.update(authorize?: false)
-        |> case do
-          {:ok, _} -> :ok
-          {:error, reason} -> {:error, reason}
-        end
+        |> ok_or_error()
     end
   end
 
@@ -102,21 +99,18 @@ defmodule Huddlz.Communities.Group.Changes.TransferOwnership do
           role: "owner"
         })
         |> Ash.create(authorize?: false)
-        |> case do
-          {:ok, _} -> :ok
-          {:error, reason} -> {:error, reason}
-        end
+        |> ok_or_error()
 
       membership ->
         membership
         |> Ash.Changeset.for_update(:set_role, %{role: :owner})
         |> Ash.update(authorize?: false)
-        |> case do
-          {:ok, _} -> :ok
-          {:error, reason} -> {:error, reason}
-        end
+        |> ok_or_error()
     end
   end
+
+  defp ok_or_error({:ok, _}), do: :ok
+  defp ok_or_error({:error, reason}), do: {:error, reason}
 
   defp fetch_membership(group_id, user_id) do
     GroupMember
