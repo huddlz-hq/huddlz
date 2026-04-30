@@ -92,6 +92,76 @@ defmodule Huddlz.Notifications.GroupMembershipNotificationsTest do
     end
   end
 
+  describe "B2: group_member_added" do
+    test "emails the added user when added to a private group" do
+      owner = generate(user(role: :user))
+      added = generate(user(display_name: "Added Pat"))
+
+      group =
+        generate(
+          group(
+            name: "Inner Circle",
+            is_public: false,
+            owner_id: owner.id,
+            actor: owner
+          )
+        )
+
+      {:ok, _} =
+        GroupMember
+        |> Ash.Changeset.for_create(:add_member, %{
+          group_id: group.id,
+          user_id: added.id,
+          role: :member
+        })
+        |> Ash.create(actor: owner)
+
+      assert %{success: 1} = Oban.drain_queue(queue: :notifications)
+
+      assert_email_sent(fn email ->
+        email.subject == "You're now a member of Inner Circle" and
+          email.to == [{"", to_string(added.email)}] and
+          email.html_body =~ "/unsubscribe/"
+      end)
+    end
+
+    test "does not email when adding to a public group" do
+      owner = generate(user(role: :user))
+      added = generate(user())
+
+      group =
+        generate(
+          group(
+            name: "Open Public",
+            is_public: true,
+            owner_id: owner.id,
+            actor: owner
+          )
+        )
+
+      {:ok, _} =
+        GroupMember
+        |> Ash.Changeset.for_create(:add_member, %{
+          group_id: group.id,
+          user_id: added.id,
+          role: :member
+        })
+        |> Ash.create(actor: owner)
+
+      refute_enqueued(worker: DeliverWorker)
+    end
+
+    test "does not email the owner when the create_group flow self-adds them" do
+      # Group.:create_group fires AddOwnerAsMember internally, which calls
+      # :add_member with role: "owner". That add_member must not email the
+      # owner about being added to their own group.
+      owner = generate(user(role: :user))
+      _group = generate(group(is_public: false, owner_id: owner.id, actor: owner))
+
+      refute_enqueued(worker: DeliverWorker)
+    end
+  end
+
   describe "B3: group_member_removed" do
     test "emails the removed user when an owner removes them" do
       owner = generate(user(role: :user))
