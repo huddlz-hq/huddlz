@@ -108,6 +108,7 @@ defmodule Huddlz.MixProject do
        compile: false,
        depth: 1},
       {:swoosh, "~> 1.16"},
+      {:ical, "~> 2.0"},
       {:req, "~> 0.5"},
       {:req_s3, "~> 0.2"},
       {:image, "~> 0.62"},
