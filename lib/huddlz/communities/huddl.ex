@@ -162,6 +162,7 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Geocoding.ApplyProvidedCoordinates
       change {Huddlz.Geocoding.GeocodeChange, field: :physical_location}
       change Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup
+      change Huddlz.Communities.Huddl.Changes.EnforceCapacityFloor
     end
 
     read :by_status do
@@ -338,8 +339,6 @@ defmodule Huddlz.Communities.Huddl do
       where attribute_equals(:event_type, :hybrid)
       message "both physical location and virtual link are required for hybrid events"
     end
-
-    validate Huddlz.Communities.Huddl.Validations.CapacityNotBelowRsvps
   end
 
   attributes do
