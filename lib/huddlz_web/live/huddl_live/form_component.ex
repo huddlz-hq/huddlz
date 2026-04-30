@@ -33,6 +33,14 @@ defmodule HuddlzWeb.HuddlLive.FormComponent do
 
     <.duration_picker field={@form[:duration_minutes]} label="Duration" />
 
+    <.input
+      field={@form[:max_attendees]}
+      type="number"
+      label="Max Attendees"
+      min="1"
+      placeholder="Leave blank for unlimited"
+    />
+
     <%= if @calculated_end_time do %>
       <div class="border border-primary/20 p-3 bg-primary/5 flex items-center gap-2 text-sm">
         <.icon name="hero-clock" class="h-5 w-5" />

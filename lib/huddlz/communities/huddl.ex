@@ -87,6 +87,7 @@ defmodule Huddlz.Communities.Huddl do
         :virtual_link,
         :is_private,
         :thumbnail_url,
+        :max_attendees,
         :creator_id,
         :group_id,
         :huddl_template_id
@@ -130,6 +131,7 @@ defmodule Huddlz.Communities.Huddl do
         :virtual_link,
         :is_private,
         :thumbnail_url,
+        :max_attendees,
         :huddl_template_id
       ]
 
@@ -336,6 +338,8 @@ defmodule Huddlz.Communities.Huddl do
       where attribute_equals(:event_type, :hybrid)
       message "both physical location and virtual link are required for hybrid events"
     end
+
+    validate Huddlz.Communities.Huddl.Validations.CapacityNotBelowRsvps
   end
 
   attributes do
@@ -391,6 +395,12 @@ defmodule Huddlz.Communities.Huddl do
     attribute :thumbnail_url, :string do
       allow_nil? true
       public? true
+    end
+
+    attribute :max_attendees, :integer do
+      allow_nil? true
+      public? true
+      constraints min: 1
     end
 
     attribute :latitude, :float do

@@ -149,6 +149,78 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
       assert Enum.any?(attendees, &(&1.user_id == owner.id))
     end
 
+    test "limited huddl allows RSVPs until capacity is reached", %{
+      member: member,
+      owner: owner,
+      huddl: huddl
+    } do
+      limited_huddl =
+        huddl
+        |> Ash.Changeset.for_update(:update, %{max_attendees: 2}, actor: owner)
+        |> Ash.update!()
+
+      limited_huddl
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
+      |> Ash.update!()
+
+      limited_huddl
+      |> Ash.reload!()
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: owner)
+      |> Ash.update!()
+
+      assert rsvp_count(limited_huddl) == 2
+    end
+
+    test "full huddl rejects new RSVPs", %{
+      member: member,
+      owner: owner,
+      non_member: non_member,
+      huddl: huddl
+    } do
+      limited_huddl =
+        huddl
+        |> Ash.Changeset.for_update(:update, %{max_attendees: 1}, actor: owner)
+        |> Ash.update!()
+
+      limited_huddl
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
+      |> Ash.update!()
+
+      assert_raise Ash.Error.Invalid, ~r/This huddl is full/, fn ->
+        limited_huddl
+        |> Ash.reload!()
+        |> Ash.Changeset.for_update(:rsvp, %{}, actor: non_member)
+        |> Ash.update!()
+      end
+
+      assert rsvp_count(limited_huddl) == 1
+    end
+
+    test "organizer cannot reduce capacity below current RSVPs", %{
+      member: member,
+      owner: owner,
+      non_member: non_member,
+      huddl: huddl
+    } do
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
+      |> Ash.update!()
+
+      huddl
+      |> Ash.reload!()
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: non_member)
+      |> Ash.update!()
+
+      assert_raise Ash.Error.Invalid,
+                   ~r/cannot be less than the current RSVP count/,
+                   fn ->
+                     huddl
+                     |> Ash.reload!()
+                     |> Ash.Changeset.for_update(:update, %{max_attendees: 1}, actor: owner)
+                     |> Ash.update!()
+                   end
+    end
+
     test "user cannot RSVP without an actor", %{huddl: huddl} do
       assert_raise Ash.Error.Invalid, fn ->
         huddl

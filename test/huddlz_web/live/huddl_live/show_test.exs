@@ -156,6 +156,54 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has("dd", text: "2 people attending")
     end
 
+    test "shows capacity status for limited huddls", %{
+      conn: conn,
+      member: member,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      limited_huddl =
+        huddl
+        |> Ash.Changeset.for_update(:update, %{max_attendees: 2}, actor: owner)
+        |> Ash.update!()
+
+      limited_huddl
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: owner)
+      |> Ash.update!()
+
+      conn
+      |> login(member)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{limited_huddl.id}")
+      |> assert_has("span", text: "1/2 spots filled")
+      |> assert_has("span", text: "Filling up")
+      |> assert_has("button", text: "RSVP to this huddl")
+    end
+
+    test "shows event full instead of RSVP button when capacity is reached", %{
+      conn: conn,
+      member: member,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      full_huddl =
+        huddl
+        |> Ash.Changeset.for_update(:update, %{max_attendees: 1}, actor: owner)
+        |> Ash.update!()
+
+      full_huddl
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: owner)
+      |> Ash.update!()
+
+      conn
+      |> login(member)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{full_huddl.id}")
+      |> assert_has("div", text: "Event Full")
+      |> assert_has("span", text: "1/1 spots filled")
+      |> refute_has("button", text: "RSVP to this huddl")
+    end
+
     test "non-authenticated users see sign-in prompt for virtual link", %{
       conn: conn,
       group: group,

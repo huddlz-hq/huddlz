@@ -184,8 +184,19 @@ defmodule HuddlzWeb.CommunityComponents do
           <%= if @huddl.rsvp_count > 0 do %>
             <span class="flex items-center gap-1">
               <.icon name="hero-user-group" class="h-3.5 w-3.5" />
-              {@huddl.rsvp_count} attending
+              <%= if @huddl.max_attendees do %>
+                {capacity_label(@huddl)}
+              <% else %>
+                {@huddl.rsvp_count} attending
+              <% end %>
             </span>
+          <% else %>
+            <%= if @huddl.max_attendees do %>
+              <span class="flex items-center gap-1">
+                <.icon name="hero-user-group" class="h-3.5 w-3.5" />
+                {capacity_label(@huddl)}
+              </span>
+            <% end %>
           <% end %>
           <%= if @distance do %>
             <span class="flex items-center gap-1 text-primary/70">
@@ -194,6 +205,16 @@ defmodule HuddlzWeb.CommunityComponents do
             </span>
           <% end %>
         </div>
+        <%= if @huddl.max_attendees do %>
+          <div class="mt-3">
+            <div class="flex items-center justify-between text-xs">
+              <span class={capacity_status_class(@huddl)}>{capacity_status(@huddl)}</span>
+            </div>
+            <div class="mt-1.5 h-1.5 bg-base-200 overflow-hidden">
+              <div class="h-full bg-primary" style={"width: #{capacity_percent(@huddl)}%"}></div>
+            </div>
+          </div>
+        <% end %>
       </div>
     </.link>
     """
@@ -323,6 +344,34 @@ defmodule HuddlzWeb.CommunityComponents do
   defp type_icon(:virtual), do: "hero-video-camera"
   defp type_icon(:hybrid), do: "hero-globe-alt"
   defp type_icon(_), do: "hero-calendar"
+
+  defp event_full?(%{max_attendees: nil}), do: false
+  defp event_full?(huddl), do: huddl.rsvp_count >= huddl.max_attendees
+
+  defp capacity_label(huddl), do: "#{huddl.rsvp_count}/#{huddl.max_attendees} spots filled"
+
+  defp capacity_percent(%{max_attendees: nil}), do: 0
+
+  defp capacity_percent(huddl) do
+    min(round(huddl.rsvp_count / huddl.max_attendees * 100), 100)
+  end
+
+  defp capacity_status(huddl) do
+    cond do
+      event_full?(huddl) -> "Event Full"
+      capacity_percent(huddl) >= 80 -> "Almost full"
+      capacity_percent(huddl) >= 50 -> "Filling up"
+      true -> "Plenty of space"
+    end
+  end
+
+  defp capacity_status_class(huddl) do
+    cond do
+      event_full?(huddl) -> "font-semibold text-error"
+      capacity_percent(huddl) >= 80 -> "font-semibold text-warning"
+      true -> "font-semibold text-success"
+    end
+  end
 
   defp truncate(text, max_length) when is_binary(text) and byte_size(text) > max_length do
     String.slice(text, 0, max_length) <> "..."
