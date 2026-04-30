@@ -113,6 +113,81 @@ defmodule Huddlz.Communities.GroupMemberTest do
       refute Enum.any?(memberships, fn m -> m.user_id == member.id end)
     end
 
+    test "owner can change a member's role to organizer", %{
+      owner: owner,
+      member: member,
+      group: group
+    } do
+      {:ok, membership} =
+        GroupMember
+        |> Ash.Changeset.for_create(:add_member, %{
+          group_id: group.id,
+          user_id: member.id,
+          role: :member
+        })
+        |> Ash.create(actor: owner)
+
+      assert {:ok, updated} =
+               membership
+               |> Ash.Changeset.for_update(:change_role, %{role: :organizer})
+               |> Ash.update(actor: owner)
+
+      assert updated.role == :organizer
+    end
+
+    test "non-owner cannot change a member's role", %{
+      owner: owner,
+      member: member,
+      non_member: non_member,
+      group: group
+    } do
+      {:ok, membership} =
+        GroupMember
+        |> Ash.Changeset.for_create(:add_member, %{
+          group_id: group.id,
+          user_id: member.id,
+          role: :member
+        })
+        |> Ash.create(actor: owner)
+
+      assert {:error, %Ash.Error.Forbidden{}} =
+               membership
+               |> Ash.Changeset.for_update(:change_role, %{role: :organizer})
+               |> Ash.update(actor: non_member)
+    end
+
+    test "owner cannot change their own role", %{owner: owner, group: group} do
+      owner_membership =
+        GroupMember
+        |> Ash.Query.filter(group_id: group.id, user_id: owner.id)
+        |> Ash.read_one!(authorize?: false)
+
+      assert {:error, %Ash.Error.Forbidden{}} =
+               owner_membership
+               |> Ash.Changeset.for_update(:change_role, %{role: :organizer})
+               |> Ash.update(actor: owner)
+    end
+
+    test "change_role rejects :owner — must use transfer_ownership", %{
+      owner: owner,
+      member: member,
+      group: group
+    } do
+      {:ok, membership} =
+        GroupMember
+        |> Ash.Changeset.for_create(:add_member, %{
+          group_id: group.id,
+          user_id: member.id,
+          role: :member
+        })
+        |> Ash.create(actor: owner)
+
+      assert {:error, %Ash.Error.Invalid{}} =
+               membership
+               |> Ash.Changeset.for_update(:change_role, %{role: :owner})
+               |> Ash.update(actor: owner)
+    end
+
     test "users can leave groups", %{owner: owner, member: member, group: group} do
       # Add a member first
       {:ok, group_member} =

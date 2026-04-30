@@ -69,6 +69,7 @@ defmodule Huddlz.Communities do
     resource Huddlz.Communities.GroupMember do
       define :add_member, action: :add_member, args: [:group_id, :user_id, :role]
       define :remove_member, action: :remove_member, args: [:group_id, :user_id]
+      define :change_member_role, action: :change_role, args: [:role]
       define :get_by_group, action: :get_by_group, args: [:group_id]
       define :get_by_user, action: :get_by_user
     end

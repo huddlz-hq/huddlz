@@ -23,6 +23,7 @@ defmodule Huddlz.Communities.GroupMember do
       destroy :leave_group, :leave_group
       create :add_member, :add_member
       destroy :remove_member, :remove_member
+      update :change_member_role, :change_role
     end
   end
 
@@ -38,6 +39,7 @@ defmodule Huddlz.Communities.GroupMember do
       delete :leave_group
       post :add_member, route: "/add"
       route :delete, "/remove", :remove_member_by_ids
+      patch :change_role, route: "/role"
     end
   end
 
@@ -113,6 +115,16 @@ defmodule Huddlz.Communities.GroupMember do
       run Huddlz.Communities.GroupMember.Actions.RemoveMemberByIds
     end
 
+    update :change_role do
+      description "Change a member's role within a group (owner only). Cannot promote to :owner — use Group.:transfer_ownership."
+      accept [:role]
+      require_atomic? false
+
+      validate attribute_in(:role, [:member, :organizer]) do
+        message "must be :member or :organizer (use transfer_ownership to change the owner)"
+      end
+    end
+
     create :join_group do
       description "Join a group as a regular member as the current actor"
 
@@ -161,6 +173,12 @@ defmodule Huddlz.Communities.GroupMember do
     # Group owners can remove members
     policy action(:remove_member) do
       authorize_if GroupOwner
+    end
+
+    # Group owners can change a member's role, but never their own.
+    policy action(:change_role) do
+      forbid_if expr(user_id == ^actor(:id))
+      authorize_if expr(group.owner_id == ^actor(:id))
     end
 
     # The remove-by-ids wrapper authorizes by delegating to :remove_member
