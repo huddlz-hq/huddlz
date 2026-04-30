@@ -7,6 +7,8 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
 
   require Ash.Query
 
+  alias Huddlz.Accounts.User
+  alias Huddlz.Communities.GroupMember
   alias Huddlz.Communities.HuddlAttendee
 
   @doc """
@@ -29,6 +31,24 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
   end
 
   @doc """
+  Returns the user_ids of every owner and organizer of the given group,
+  deduplicated, optionally excluding the actor. Used by the E1/E2 RSVP
+  fanout notifiers.
+  """
+  @spec group_organizer_user_ids(Ecto.UUID.t(), keyword()) :: [Ecto.UUID.t()]
+  def group_organizer_user_ids(group_id, opts \\ []) do
+    actor_id = Keyword.get(opts, :exclude)
+
+    GroupMember
+    |> Ash.Query.filter(group_id == ^group_id and role in [:owner, :organizer])
+    |> Ash.Query.select([:user_id])
+    |> Ash.read!(authorize?: false)
+    |> Enum.map(& &1.user_id)
+    |> Enum.uniq()
+    |> Enum.reject(&(&1 == actor_id))
+  end
+
+  @doc """
   Pull the actor id out of an Ash.Changeset's private context. Returns
   `nil` when no actor is present (e.g. system-driven actions).
   """
@@ -37,6 +57,21 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
     case changeset.context[:private][:actor] do
       %{id: id} -> id
       _ -> nil
+    end
+  end
+
+  @doc """
+  Look up a user's `display_name` by id, falling back to the given
+  string if the user can't be loaded. Used to render the rsvper's name
+  in E1/E2 fanout payloads.
+  """
+  @spec user_display_name(Ecto.UUID.t() | nil, String.t()) :: String.t()
+  def user_display_name(nil, fallback), do: fallback
+
+  def user_display_name(user_id, fallback) do
+    case Ash.get(User, user_id, authorize?: false) do
+      {:ok, user} -> to_string(user.display_name)
+      _ -> fallback
     end
   end
 end
