@@ -12,6 +12,8 @@ defmodule Huddlz.Notifications do
   for the registry of trigger codes.
   """
 
+  require Logger
+
   alias Huddlz.Accounts.User
   alias Huddlz.Mailer
   alias Huddlz.Notifications.DeliverWorker
@@ -70,6 +72,17 @@ defmodule Huddlz.Notifications do
     %{user_id: user_id, trigger: Atom.to_string(trigger), payload: payload}
     |> DeliverWorker.new()
     |> Oban.insert()
+    |> case do
+      {:ok, job} ->
+        {:ok, job}
+
+      {:error, reason} = err ->
+        Logger.warning(
+          "Failed to enqueue #{inspect(trigger)} notification for user #{user_id}: #{inspect(reason)}"
+        )
+
+        err
+    end
   end
 
   # The registry references sender modules for triggers whose phases haven't
