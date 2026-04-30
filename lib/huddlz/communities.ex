@@ -42,6 +42,10 @@ defmodule Huddlz.Communities do
       define :update_details,
         action: :update_details,
         args: [:name, :description, :location, :is_public, :slug]
+
+      define :transfer_group_ownership,
+        action: :transfer_ownership,
+        args: [:new_owner_id]
     end
 
     resource Huddlz.Communities.GroupImage do
