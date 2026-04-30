@@ -373,6 +373,12 @@ defmodule HuddlzWeb.ProfileLive do
     end
   end
 
+  # Swoosh's test adapter forwards delivered emails as messages to every pid
+  # in the $callers chain of the sender. Notification senders run inside this
+  # LiveView's process during password change, so we explicitly ignore those
+  # messages instead of crashing on an unmatched handle_info.
+  def handle_info({:email, _}, socket), do: {:noreply, socket}
+
   def handle_info({:location_cleared, "profile-location"}, socket) do
     user = socket.assigns.current_user
 

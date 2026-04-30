@@ -53,10 +53,16 @@ defmodule Huddlz.NotificationsTest do
       assert Notifications.should_deliver?(user, :rsvp_received, entry)
     end
 
-    test "unconfirmed users never receive — even transactional" do
+    test "unconfirmed users still receive transactional security emails" do
       user = generate(user(confirmed_at: nil))
       entry = transactional()
-      refute Notifications.should_deliver?(user, :password_changed, entry)
+      assert Notifications.should_deliver?(user, :password_changed, entry)
+    end
+
+    test "unconfirmed users skip activity and digest categories" do
+      user = generate(user(confirmed_at: nil))
+      refute Notifications.should_deliver?(user, :rsvp_received, activity(default: true))
+      refute Notifications.should_deliver?(user, :weekly_digest, digest(default: false))
     end
 
     test "non-User input returns false" do
