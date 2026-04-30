@@ -149,6 +149,7 @@ defmodule Huddlz.Communities.GroupMember do
       change manage_relationship(:group_id, :group, type: :append)
       change relate_actor(:user)
       change set_attribute(:role, :member)
+      change Huddlz.Communities.GroupMember.Changes.NotifyJoined
     end
 
     destroy :leave_group do

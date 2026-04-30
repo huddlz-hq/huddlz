@@ -14,6 +14,84 @@ defmodule Huddlz.Notifications.GroupMembershipNotificationsTest do
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Notifications.DeliverWorker
 
+  describe "B1: group_member_joined" do
+    test "emails the owner and every organizer when a user joins a public group" do
+      owner = generate(user(role: :user, display_name: "Group Owner"))
+      organizer_a = generate(user(display_name: "Org A"))
+      organizer_b = generate(user(display_name: "Org B"))
+      joiner = generate(user(display_name: "New Joiner"))
+
+      group =
+        generate(
+          group(
+            name: "Public Joinable Group",
+            is_public: true,
+            owner_id: owner.id,
+            actor: owner
+          )
+        )
+
+      generate(
+        group_member(
+          group_id: group.id,
+          user_id: organizer_a.id,
+          role: :organizer,
+          actor: owner
+        )
+      )
+
+      generate(
+        group_member(
+          group_id: group.id,
+          user_id: organizer_b.id,
+          role: :organizer,
+          actor: owner
+        )
+      )
+
+      {:ok, _} =
+        GroupMember
+        |> Ash.Changeset.for_create(:join_group, %{group_id: group.id}, actor: joiner)
+        |> Ash.create(actor: joiner)
+
+      assert %{success: 3} = Oban.drain_queue(queue: :notifications)
+
+      for recipient_email <- [owner.email, organizer_a.email, organizer_b.email] do
+        assert_email_sent(fn email ->
+          email.subject == "New Joiner joined Public Joinable Group" and
+            email.to == [{"", to_string(recipient_email)}] and
+            email.html_body =~ "/unsubscribe/"
+        end)
+      end
+    end
+
+    test "skips the joiner themselves even if they are also an organizer of another role" do
+      # If the joiner already had a privileged role somehow (shouldn't happen
+      # via :join_group but worth guarding), they should never be a recipient.
+      owner = generate(user(role: :user))
+
+      group =
+        generate(
+          group(name: "Solo Owner Group", is_public: true, owner_id: owner.id, actor: owner)
+        )
+
+      joiner = generate(user())
+
+      {:ok, _} =
+        GroupMember
+        |> Ash.Changeset.for_create(:join_group, %{group_id: group.id}, actor: joiner)
+        |> Ash.create(actor: joiner)
+
+      # success == 1 already implies the joiner is not enqueued; drain
+      # plus the targeted assert below pins the recipient.
+      assert %{success: 1} = Oban.drain_queue(queue: :notifications)
+
+      assert_email_sent(fn email ->
+        email.to == [{"", to_string(owner.email)}]
+      end)
+    end
+  end
+
   describe "B3: group_member_removed" do
     test "emails the removed user when an owner removes them" do
       owner = generate(user(role: :user))
