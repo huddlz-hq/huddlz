@@ -14,10 +14,8 @@ defmodule Huddlz.Communities.Huddl.Changes.SendReminder do
 
   use Ash.Resource.Change
 
-  require Ash.Query
-
   alias Huddlz.Accounts.User
-  alias Huddlz.Communities.HuddlAttendee
+  alias Huddlz.Communities.Huddl.Changes.RecipientHelpers
   alias Huddlz.Notifications
 
   @impl true
@@ -32,13 +30,7 @@ defmodule Huddlz.Communities.Huddl.Changes.SendReminder do
   end
 
   defp fan_out(huddl, trigger) do
-    user_ids =
-      HuddlAttendee
-      |> Ash.Query.filter(huddl_id == ^huddl.id)
-      |> Ash.Query.select([:user_id])
-      |> Ash.read!(authorize?: false)
-      |> Enum.map(& &1.user_id)
-      |> Enum.uniq()
+    user_ids = RecipientHelpers.rsvp_user_ids(huddl.id)
 
     payload = %{"huddl_id" => huddl.id}
 

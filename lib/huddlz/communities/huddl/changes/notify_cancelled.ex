@@ -12,10 +12,8 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyCancelled do
 
   use Ash.Resource.Change
 
-  require Ash.Query
-
   alias Huddlz.Accounts.User
-  alias Huddlz.Communities.HuddlAttendee
+  alias Huddlz.Communities.Huddl.Changes.RecipientHelpers
   alias Huddlz.Notifications
 
   @impl true
@@ -26,24 +24,10 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyCancelled do
   end
 
   defp capture_recipients_and_payload(cs) do
-    huddl = cs.data
-    huddl = Ash.load!(huddl, [:group], authorize?: false)
+    huddl = Ash.load!(cs.data, [:group], authorize?: false)
 
-    user_ids =
-      HuddlAttendee
-      |> Ash.Query.filter(huddl_id == ^huddl.id)
-      |> Ash.Query.select([:user_id])
-      |> Ash.read!(authorize?: false)
-      |> Enum.map(& &1.user_id)
-      |> Enum.uniq()
-
-    actor_id =
-      case cs.context[:private][:actor] do
-        %{id: id} -> id
-        _ -> nil
-      end
-
-    recipients = Enum.reject(user_ids, &(&1 == actor_id))
+    recipients =
+      RecipientHelpers.rsvp_user_ids(huddl.id, exclude: RecipientHelpers.actor_id(cs))
 
     payload = %{
       "huddl_title" => to_string(huddl.title),

@@ -191,6 +191,7 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup
       change Huddlz.Communities.Huddl.Changes.EnforceCapacityFloor
       change Huddlz.Communities.Huddl.Changes.ResetReminderStamps
+      change Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate
     end
 
     read :by_status do
