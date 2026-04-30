@@ -34,5 +34,23 @@ defmodule Huddlz.Notifications.Senders.PasswordChangedTest do
       assert email.html_body =~ "wasn't"
       assert email.html_body =~ "/reset"
     end
+
+    test "includes a plain-text body alongside the html body" do
+      user = generate(user(display_name: "Pat"))
+      email = PasswordChanged.build(user, %{})
+
+      assert email.text_body =~ "Hi Pat"
+      assert email.text_body =~ "security notice"
+      assert email.text_body =~ "/reset"
+      refute email.text_body =~ "<"
+    end
+
+    test "html-escapes the display name to prevent injection" do
+      user = generate(user(display_name: "<script>alert(1)</script>"))
+      email = PasswordChanged.build(user, %{})
+
+      refute email.html_body =~ "<script>"
+      assert email.html_body =~ "&lt;script&gt;"
+    end
   end
 end
