@@ -33,23 +33,31 @@ defmodule Huddlz.Communities.Huddl.Changes.Rsvp do
     Repo.transaction(fn ->
       lock_huddl!(dumped_huddl_id)
 
-      if existing_rsvp?(huddl_id, user_id) do
-        :ok
-      else
-        max_attendees = max_attendees!(dumped_huddl_id)
-        rsvp_count = rsvp_count!(dumped_huddl_id)
-
-        if max_attendees && rsvp_count >= max_attendees do
-          Repo.rollback("This huddl is full")
-        else
-          create_rsvp!(huddl_id, user_id)
-          :ok
-        end
-      end
+      reserve_if_available!(dumped_huddl_id, huddl_id, user_id)
     end)
     |> case do
       {:ok, :ok} -> :ok
       {:error, error} -> {:error, error}
+    end
+  end
+
+  defp reserve_if_available!(dumped_huddl_id, huddl_id, user_id) do
+    if existing_rsvp?(huddl_id, user_id) do
+      :ok
+    else
+      create_rsvp_if_capacity_available!(dumped_huddl_id, huddl_id, user_id)
+    end
+  end
+
+  defp create_rsvp_if_capacity_available!(dumped_huddl_id, huddl_id, user_id) do
+    max_attendees = max_attendees!(dumped_huddl_id)
+    rsvp_count = rsvp_count!(dumped_huddl_id)
+
+    if max_attendees && rsvp_count >= max_attendees do
+      Repo.rollback("This huddl is full")
+    else
+      create_rsvp!(huddl_id, user_id)
+      :ok
     end
   end
 
