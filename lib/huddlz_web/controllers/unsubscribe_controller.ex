@@ -18,8 +18,8 @@ defmodule HuddlzWeb.UnsubscribeController do
   alias Huddlz.Notifications.Triggers
 
   def show(conn, %{"token" => token}) do
-    case unsubscribe_context(token) do
-      {:ok, %{entry: entry}} ->
+    case verify(token) do
+      {:ok, _user_id, _trigger, entry} ->
         render_confirmation(conn, token, entry)
 
       :error ->
@@ -28,7 +28,8 @@ defmodule HuddlzWeb.UnsubscribeController do
   end
 
   def update(conn, %{"token" => token}) do
-    with {:ok, %{user: user, trigger: trigger, entry: entry}} <- unsubscribe_context(token),
+    with {:ok, user_id, trigger, entry} <- verify(token),
+         {:ok, user} <- Ash.get(User, user_id, authorize?: false),
          {:ok, _updated} <- opt_out(user, trigger) do
       conn
       |> put_flash(
@@ -41,30 +42,28 @@ defmodule HuddlzWeb.UnsubscribeController do
     end
   end
 
-  defp unsubscribe_context(token) do
+  defp verify(token) do
     with {:ok, {user_id, trigger}} <- Notifications.verify_unsubscribe_token(token),
-         true <- known_trigger?(trigger),
-         {:ok, user} <- Ash.get(User, user_id, authorize?: false) do
-      {:ok, %{user: user, trigger: trigger, entry: Triggers.fetch!(trigger)}}
+         {:ok, entry} <- Triggers.fetch(trigger) do
+      {:ok, user_id, trigger, entry}
     else
       _ -> :error
     end
   end
 
-  defp known_trigger?(trigger) when is_atom(trigger) do
-    match?({:ok, _}, Triggers.fetch(trigger))
-  end
-
-  defp known_trigger?(_), do: false
-
   defp render_confirmation(conn, token, entry) do
     action = ~p"/unsubscribe/#{token}"
     csrf_token = Plug.CSRFProtection.get_csrf_token()
 
+    safe_label =
+      entry.label
+      |> Phoenix.HTML.html_escape()
+      |> Phoenix.HTML.safe_to_string()
+
     html(conn, """
     <main class="mx-auto max-w-xl p-8">
       <h1>Confirm unsubscribe</h1>
-      <p>Unsubscribe from "#{entry.label}"?</p>
+      <p>Unsubscribe from "#{safe_label}"?</p>
       <form id="unsubscribe-confirmation-form" action="#{action}" method="post">
         <input type="hidden" name="_csrf_token" value="#{csrf_token}" />
         <button type="submit">Unsubscribe</button>
@@ -82,12 +81,16 @@ defmodule HuddlzWeb.UnsubscribeController do
   defp opt_out(%User{} = user, trigger) do
     key = Triggers.preference_key(trigger)
 
-    user
-    |> Ash.Changeset.for_update(
-      :update_notification_preferences,
-      %{preferences: %{key => false}},
-      authorize?: false
-    )
-    |> Ash.update()
+    if Map.get(user.notification_preferences || %{}, key) == false do
+      {:ok, user}
+    else
+      user
+      |> Ash.Changeset.for_update(
+        :update_notification_preferences,
+        %{preferences: %{key => false}},
+        authorize?: false
+      )
+      |> Ash.update()
+    end
   end
 end
