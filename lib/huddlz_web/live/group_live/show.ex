@@ -7,6 +7,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
+  alias HuddlzWeb.MetaHelpers
 
   require Ash.Query
 
@@ -30,6 +31,7 @@ defmodule HuddlzWeb.GroupLive.Show do
         {:noreply,
          socket
          |> assign(:page_title, group.name)
+         |> assign(:meta, group_meta(group))
          |> assign(:group, group)
          |> assign(:members, members)
          |> assign(:member_count, member_count_unchecked(group))
@@ -298,6 +300,16 @@ defmodule HuddlzWeb.GroupLive.Show do
       {:error, %Ash.Error.Query.NotFound{}} -> {:error, :not_found}
       {:error, _} -> {:error, :not_found}
     end
+  end
+
+  defp group_meta(group) do
+    %{
+      title: "#{group.name} · huddlz",
+      description: MetaHelpers.description(group, "Find and join this group on huddlz."),
+      type: "website",
+      url: url(~p"/groups/#{group.slug}"),
+      image: MetaHelpers.image_url(group.current_image_url, GroupImages)
+    }
   end
 
   defp member_unchecked?(_group, nil), do: false

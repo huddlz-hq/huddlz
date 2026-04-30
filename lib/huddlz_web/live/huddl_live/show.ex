@@ -7,6 +7,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   alias Huddlz.Communities
   alias Huddlz.Storage.HuddlImages
   alias HuddlzWeb.Layouts
+  alias HuddlzWeb.MetaHelpers
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
 
@@ -24,6 +25,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
         {:noreply,
          socket
          |> assign(:page_title, huddl.title)
+         |> assign(:meta, huddl_meta(huddl))
          |> assign(:huddl, huddl)
          |> assign(:has_rsvped, has_rsvped)
          |> assign(:is_creator, creator?(huddl, socket.assigns.current_user))}
@@ -324,6 +326,16 @@ defmodule HuddlzWeb.HuddlLive.Show do
       ],
       actor: user
     )
+  end
+
+  defp huddl_meta(huddl) do
+    %{
+      title: "#{huddl.title} · huddlz",
+      description: MetaHelpers.description(huddl, "Find and join this huddl on huddlz."),
+      type: "event",
+      url: url(~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"),
+      image: MetaHelpers.image_url(huddl.display_image_url, HuddlImages)
+    }
   end
 
   defp creator?(_huddl, nil), do: false

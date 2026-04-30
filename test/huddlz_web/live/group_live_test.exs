@@ -33,6 +33,25 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> refute_has("a", text: "New Group")
     end
 
+    test "renders default rich link preview metadata", %{conn: conn} do
+      html =
+        conn
+        |> get(~p"/groups")
+        |> html_response(200)
+
+      assert meta_content(html, ~s(meta[name="description"])) ==
+               "Find and join local community gatherings on huddlz."
+
+      assert meta_content(html, ~s(meta[property="og:type"])) == "website"
+      assert meta_content(html, ~s(meta[property="og:title"])) == "Groups"
+
+      assert meta_content(html, ~s(meta[property="og:description"])) ==
+               "Find and join local community gatherings on huddlz."
+
+      assert meta_content(html, ~s(meta[name="twitter:card"])) == "summary"
+      assert meta_content(html, ~s(meta[property="og:image"])) == nil
+    end
+
     test "shows New Group button for users", %{conn: conn, verified: verified} do
       conn
       |> login(verified)

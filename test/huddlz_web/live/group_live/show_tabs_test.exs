@@ -2,6 +2,8 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
   use HuddlzWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
 
+  alias Huddlz.Communities.GroupImage
+
   describe "Group show page tabs" do
     setup do
       # Create a user who can create groups and huddls
@@ -72,6 +74,62 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       # Check that the 11th and 12th upcoming events are not displayed
       refute has_element?(view, "h3", "Upcoming Event 11")
       refute has_element?(view, "h3", "Upcoming Event 12")
+    end
+
+    test "renders rich link preview metadata", %{conn: conn, group: group} do
+      html =
+        conn
+        |> get(~p"/groups/#{group.slug}")
+        |> html_response(200)
+
+      assert meta_content(html, ~s(meta[property="og:type"])) == "website"
+      assert meta_content(html, ~s(meta[property="og:title"])) == "#{group.name} · huddlz"
+      assert meta_content(html, ~s(meta[name="description"])) == to_string(group.description)
+
+      assert meta_content(html, ~s(meta[property="og:description"])) ==
+               to_string(group.description)
+
+      assert meta_content(html, ~s(meta[property="og:url"])) =~ "/groups/#{group.slug}"
+    end
+
+    test "renders rich link preview image metadata", %{conn: conn, group: group} do
+      thumbnail_path = "/uploads/group_images/#{group.id}/preview_thumb.jpg"
+
+      GroupImage
+      |> Ash.Changeset.for_create(:create, %{
+        filename: "preview.jpg",
+        content_type: "image/jpeg",
+        size_bytes: 123,
+        storage_path: "/uploads/group_images/#{group.id}/preview.jpg",
+        thumbnail_path: thumbnail_path,
+        group_id: group.id
+      })
+      |> Ash.create!(authorize?: false)
+
+      html =
+        conn
+        |> get(~p"/groups/#{group.slug}")
+        |> html_response(200)
+
+      assert meta_content(html, ~s(meta[property="og:image"])) ==
+               HuddlzWeb.Endpoint.url() <> thumbnail_path
+
+      assert meta_content(html, ~s(meta[name="twitter:image"])) ==
+               HuddlzWeb.Endpoint.url() <> thumbnail_path
+
+      assert meta_content(html, ~s(meta[name="twitter:card"])) == "summary_large_image"
+    end
+
+    test "renders fallback description metadata", %{conn: conn, user: user} do
+      group = generate(group(owner_id: user.id, is_public: true, actor: user, description: nil))
+
+      html =
+        conn
+        |> get(~p"/groups/#{group.slug}")
+        |> html_response(200)
+
+      assert meta_content(html, ~s(meta[name="description"])) ==
+               "Find and join this group on huddlz."
     end
 
     test "switches to past events tab when clicked", %{conn: conn, group: group} do

@@ -43,4 +43,12 @@ defmodule HuddlzWeb.ConnCase do
 
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
+
+  def meta_content(html, selector) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find(selector)
+    |> Floki.attribute("content")
+    |> List.first()
+  end
 end

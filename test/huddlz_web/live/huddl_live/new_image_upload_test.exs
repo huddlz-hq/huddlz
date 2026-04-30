@@ -58,7 +58,7 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
       |> render_submit()
 
       # Should redirect to group page
-      assert_redirected(view, "/groups/#{group.slug}")
+      assert_redirected(view, ~p"/groups/#{group.slug}")
 
       # Verify huddl was created without image
       huddl =
@@ -146,7 +146,7 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
       |> render_submit()
 
       # Should redirect to group page
-      assert_redirected(view, "/groups/#{group.slug}")
+      assert_redirected(view, ~p"/groups/#{group.slug}")
 
       # Verify huddl has image
       huddl =
