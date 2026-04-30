@@ -294,6 +294,59 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
     end
   end
 
+  describe "capacity validation" do
+    setup do
+      owner = generate(user(role: :user))
+      member_a = generate(user(role: :user))
+      member_b = generate(user(role: :user))
+      group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+
+      huddl =
+        generate(
+          huddl(
+            title: "Capped",
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            physical_location: "123 Main St"
+          )
+        )
+
+      for actor <- [member_a, member_b] do
+        huddl
+        |> Ash.reload!()
+        |> Ash.Changeset.for_update(:rsvp, %{}, actor: actor)
+        |> Ash.update!()
+      end
+
+      %{owner: owner, group: group, huddl: huddl}
+    end
+
+    test "renders inline error when reducing capacity below current RSVPs", %{
+      conn: conn,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+        |> fill_in("Max Attendees", with: "1")
+        |> click_button("Save Huddl")
+
+      assert_path(session, ~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+      assert_has(session, "*", text: "cannot be less than the current RSVP count")
+
+      reloaded =
+        Huddl
+        |> Ash.Query.filter(id == ^huddl.id)
+        |> Ash.read_one!(actor: owner)
+
+      assert reloaded.max_attendees == nil
+    end
+  end
+
   describe "saved location picker" do
     setup do
       owner = generate(user(role: :user))

@@ -196,6 +196,62 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
       assert rsvp_count(limited_huddl) == 1
     end
 
+    test "unlimited huddl (max_attendees nil) accepts every RSVP", %{
+      member: member,
+      owner: owner,
+      non_member: non_member,
+      huddl: huddl
+    } do
+      for actor <- [member, owner, non_member] do
+        huddl
+        |> Ash.reload!()
+        |> Ash.Changeset.for_update(:rsvp, %{}, actor: actor)
+        |> Ash.update!()
+      end
+
+      assert rsvp_count(huddl) == 3
+    end
+
+    test "max_attendees can be set on :create and is enforced", %{
+      owner: owner,
+      member: member,
+      non_member: non_member,
+      group: group
+    } do
+      limited_huddl =
+        Huddl
+        |> Ash.Changeset.for_create(
+          :create,
+          %{
+            title: "Capped Huddl",
+            description: "Tiny",
+            starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
+            ends_at: DateTime.add(DateTime.utc_now(), 2, :day),
+            event_type: :virtual,
+            virtual_link: "https://zoom.us/j/999",
+            is_private: false,
+            group_id: group.id,
+            creator_id: owner.id,
+            max_attendees: 1
+          },
+          actor: owner
+        )
+        |> Ash.create!()
+
+      limited_huddl
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
+      |> Ash.update!()
+
+      assert_raise Ash.Error.Invalid, ~r/This huddl is full/, fn ->
+        limited_huddl
+        |> Ash.reload!()
+        |> Ash.Changeset.for_update(:rsvp, %{}, actor: non_member)
+        |> Ash.update!()
+      end
+
+      assert rsvp_count(limited_huddl) == 1
+    end
+
     test "organizer cannot reduce capacity below current RSVPs", %{
       member: member,
       owner: owner,
