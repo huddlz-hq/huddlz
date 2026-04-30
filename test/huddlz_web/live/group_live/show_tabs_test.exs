@@ -9,13 +9,16 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       # Create a user who can create groups and huddls
       user = generate(user(role: :user))
 
-      # Pin description so meta-tag assertions are deterministic — the default
-      # Faker paragraph occasionally exceeds MetaHelpers' 200-char truncation.
+      # Pin name and description so meta-tag assertions are deterministic.
+      # Faker.Company.name() can yield non-ASCII characters that slugify into
+      # CJK-only slugs (URL-encoded in og:url), and Faker.Lorem.paragraph
+      # occasionally exceeds MetaHelpers' 200-char truncation.
       group =
         generate(
           group(
             owner_id: user.id,
             is_public: true,
+            name: "Test Group",
             description: "A short, deterministic group description for tests.",
             actor: user
           )
