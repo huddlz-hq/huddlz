@@ -20,11 +20,12 @@ defmodule Huddlz.Notifications.Senders.GroupMemberAdded do
 
   alias Huddlz.Mailer
   alias Huddlz.Notifications.Footer
+  alias Huddlz.Notifications.Senders.HtmlEscape
 
   @impl true
   def build(user, payload) do
-    safe_name = escape(user.display_name)
-    safe_group = escape(group_name(payload))
+    safe_name = HtmlEscape.escape(user.display_name)
+    safe_group = HtmlEscape.escape(group_name(payload))
     group_url = group_url(payload)
 
     {footer_html, footer_text} = Footer.build(user, :group_member_added)
@@ -56,11 +57,4 @@ defmodule Huddlz.Notifications.Senders.GroupMemberAdded do
 
   defp group_url(%{"group_slug" => slug}) when is_binary(slug), do: url(~p"/groups/#{slug}")
   defp group_url(_), do: url(~p"/groups")
-
-  defp escape(value) do
-    value
-    |> to_string()
-    |> Phoenix.HTML.html_escape()
-    |> Phoenix.HTML.safe_to_string()
-  end
 end

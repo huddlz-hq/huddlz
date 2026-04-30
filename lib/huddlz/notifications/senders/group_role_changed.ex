@@ -21,13 +21,14 @@ defmodule Huddlz.Notifications.Senders.GroupRoleChanged do
 
   alias Huddlz.Mailer
   alias Huddlz.Notifications.Footer
+  alias Huddlz.Notifications.Senders.HtmlEscape
 
   @impl true
   def build(user, payload) do
-    safe_name = escape(user.display_name)
-    safe_group = escape(group_name(payload))
-    safe_prev = escape(humanize_role(role_value(payload, "previous_role")))
-    safe_new = escape(humanize_role(role_value(payload, "new_role")))
+    safe_name = HtmlEscape.escape(user.display_name)
+    safe_group = HtmlEscape.escape(group_name(payload))
+    safe_prev = HtmlEscape.escape(humanize_role(role_value(payload, "previous_role")))
+    safe_new = HtmlEscape.escape(humanize_role(role_value(payload, "new_role")))
     group_url = group_url(payload)
 
     {footer_html, footer_text} = Footer.build(user, :group_role_changed)
@@ -71,11 +72,4 @@ defmodule Huddlz.Notifications.Senders.GroupRoleChanged do
 
   defp humanize_role(""), do: "member"
   defp humanize_role(role), do: role
-
-  defp escape(value) do
-    value
-    |> to_string()
-    |> Phoenix.HTML.html_escape()
-    |> Phoenix.HTML.safe_to_string()
-  end
 end
