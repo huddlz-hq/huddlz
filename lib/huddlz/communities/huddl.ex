@@ -291,6 +291,7 @@ defmodule Huddlz.Communities.Huddl do
       require_atomic? false
 
       change Huddlz.Communities.Huddl.Changes.Rsvp
+      change Huddlz.Communities.Huddl.Changes.NotifyRsvpConfirmation
     end
 
     update :cancel_rsvp do

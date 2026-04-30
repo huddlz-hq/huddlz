@@ -35,7 +35,7 @@ defmodule Huddlz.Communities.Huddl.Changes.Rsvp do
       Ash.Changeset.add_error(cs, "This huddl is full")
     else
       create_rsvp!(huddl.id, user_id)
-      cs
+      Ash.Changeset.put_context(cs, :rsvp_created, true)
     end
   end
 
