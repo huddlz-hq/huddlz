@@ -67,7 +67,11 @@ defmodule Huddlz.Communities.Huddl do
   end
 
   actions do
-    defaults [:destroy]
+    destroy :destroy do
+      primary? true
+      require_atomic? false
+      change Huddlz.Communities.Huddl.Changes.NotifyCancelled
+    end
 
     read :read do
       primary? true
