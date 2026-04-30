@@ -15,8 +15,13 @@ defmodule Huddlz.Notifications do
   alias Huddlz.Accounts.User
   alias Huddlz.Mailer
   alias Huddlz.Notifications.Triggers
+  alias HuddlzWeb.Endpoint
 
-  @type deliver_result :: :ok | :skipped | {:error, term()}
+  @unsubscribe_salt "notifications:unsubscribe"
+  # 30 days — long enough for an email to sit in an inbox over a vacation.
+  @unsubscribe_max_age 60 * 60 * 24 * 30
+
+  @type deliver_result :: :sent | :skipped
 
   @doc """
   Build and deliver the email for `trigger` to `user`.
@@ -70,5 +75,25 @@ defmodule Huddlz.Notifications do
       value when is_boolean(value) -> value
       _ -> default
     end
+  end
+
+  @doc """
+  Build a signed token that, when GETted at `/unsubscribe/:token`, opts the
+  user out of `trigger`. Token is bound to the user id and trigger so it
+  cannot be reused for another user or another category.
+  """
+  @spec unsubscribe_token(User.t(), atom()) :: String.t()
+  def unsubscribe_token(%User{id: user_id}, trigger) when is_atom(trigger) do
+    Phoenix.Token.sign(Endpoint, @unsubscribe_salt, {user_id, trigger})
+  end
+
+  @doc """
+  Verify an unsubscribe token. Returns `{:ok, {user_id, trigger}}` if the
+  token is valid and not expired. Otherwise `{:error, reason}`.
+  """
+  @spec verify_unsubscribe_token(String.t()) ::
+          {:ok, {Ecto.UUID.t(), atom()}} | {:error, atom()}
+  def verify_unsubscribe_token(token) when is_binary(token) do
+    Phoenix.Token.verify(Endpoint, @unsubscribe_salt, token, max_age: @unsubscribe_max_age)
   end
 end
