@@ -8,7 +8,7 @@ defmodule Huddlz.Communities.Huddl do
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
-    extensions: [AshJsonApi.Resource, AshGraphql.Resource],
+    extensions: [AshOban, AshJsonApi.Resource, AshGraphql.Resource],
     primary_read_warning?: false
 
   graphql do
@@ -47,6 +47,28 @@ defmodule Huddlz.Communities.Huddl do
       patch :rsvp, route: "/:id/rsvp"
       patch :cancel_rsvp, route: "/:id/cancel_rsvp"
       delete :destroy
+    end
+  end
+
+  oban do
+    triggers do
+      trigger :send_24h_reminder do
+        action :send_24h_reminder
+        read_action :due_for_24h_reminder
+        scheduler_cron "*/2 * * * *"
+        queue :notifications
+        worker_module_name Huddlz.Notifications.Workers.HuddlReminder24h
+        scheduler_module_name Huddlz.Notifications.Workers.HuddlReminder24hScheduler
+      end
+
+      trigger :send_1h_reminder do
+        action :send_1h_reminder
+        read_action :due_for_1h_reminder
+        scheduler_cron "*/2 * * * *"
+        queue :notifications
+        worker_module_name Huddlz.Notifications.Workers.HuddlReminder1h
+        scheduler_module_name Huddlz.Notifications.Workers.HuddlReminder1hScheduler
+      end
     end
   end
 
@@ -167,6 +189,7 @@ defmodule Huddlz.Communities.Huddl do
       change {Huddlz.Geocoding.GeocodeChange, field: :physical_location}
       change Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup
       change Huddlz.Communities.Huddl.Changes.EnforceCapacityFloor
+      change Huddlz.Communities.Huddl.Changes.ResetReminderStamps
     end
 
     read :by_status do
@@ -274,6 +297,44 @@ defmodule Huddlz.Communities.Huddl do
 
       change Huddlz.Communities.Huddl.Changes.CancelRsvp
     end
+
+    read :due_for_24h_reminder do
+      description "Huddlz starting in the next 24 hours that have not yet had a 24h reminder sent."
+
+      pagination keyset?: true, required?: false, default_limit: 100
+
+      filter expr(
+               starts_at > now() and
+                 starts_at < from_now(24, :hour) and
+                 is_nil(reminder_24h_sent_at)
+             )
+    end
+
+    read :due_for_1h_reminder do
+      description "Huddlz starting in the next hour that have not yet had a 1h reminder sent."
+
+      pagination keyset?: true, required?: false, default_limit: 100
+
+      filter expr(
+               starts_at > now() and
+                 starts_at < from_now(1, :hour) and
+                 is_nil(reminder_1h_sent_at)
+             )
+    end
+
+    update :send_24h_reminder do
+      description "Mark and fan out the 24-hour reminder for this huddl. Invoked by the AshOban scheduler."
+      require_atomic? false
+
+      change {Huddlz.Communities.Huddl.Changes.SendReminder, kind: :h24}
+    end
+
+    update :send_1h_reminder do
+      description "Mark and fan out the 1-hour reminder for this huddl. Invoked by the AshOban scheduler."
+      require_atomic? false
+
+      change {Huddlz.Communities.Huddl.Changes.SendReminder, kind: :h1}
+    end
   end
 
   policies do
@@ -294,6 +355,12 @@ defmodule Huddlz.Communities.Huddl do
     # and rely on the preparation to restrict results.
     policy action_type(:read) do
       description "Users can read huddlz they have access to (filtered by preparation)"
+      authorize_if always()
+    end
+
+    # Reminder fan-out actions are invoked by the AshOban scheduler with no actor.
+    policy action([:send_24h_reminder, :send_1h_reminder]) do
+      description "Reminder dispatch runs from background scheduler"
       authorize_if always()
     end
 
@@ -416,6 +483,20 @@ defmodule Huddlz.Communities.Huddl do
       allow_nil? true
       description "Geocoded longitude of physical_location or inherited from group"
       constraints min: -180, max: 180
+    end
+
+    attribute :reminder_24h_sent_at, :utc_datetime_usec do
+      allow_nil? true
+      public? false
+
+      description "Stamped when the 24-hour reminder has been sent for this huddl. Reset to nil when starts_at changes."
+    end
+
+    attribute :reminder_1h_sent_at, :utc_datetime_usec do
+      allow_nil? true
+      public? false
+
+      description "Stamped when the 1-hour reminder has been sent for this huddl. Reset to nil when starts_at changes."
     end
 
     create_timestamp :inserted_at
