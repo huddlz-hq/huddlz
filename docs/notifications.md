@@ -155,6 +155,45 @@ Unsubscribe links in email footers deep-link to a confirmation page, then a POST
 - `config/config.exs:22-32` — add notification queue
 - `lib/huddlz_web/router.ex` — needs `/unsubscribe/:token`
 
+## Sender conventions
+
+Rules every `Huddlz.Notifications.Senders.*` module follows. New senders should be cargo-cultable from any existing one.
+
+### HTML escaping
+
+Every user-controlled string interpolated into `html_body` MUST go through `Huddlz.Notifications.Senders.HtmlEscape.escape/1`. This includes display names, email addresses, and any value that originated outside the sender module. Plain-text bodies use the raw value.
+
+### Footer
+
+- **Transactional** senders: no footer. There is no preference toggle, so an unsubscribe link would be misleading.
+- **Activity** senders: include `<hr/>` + a settings link + an unsubscribe link. Generate the unsubscribe token via `Huddlz.Notifications.unsubscribe_token(user, trigger)` so the route flips the right preference key.
+
+(When the second activity sender lands, lift the inline footer HTML into a shared helper — until then, inline keeps the diff small.)
+
+### Recovery advice in security notices
+
+Include a `/reset` link **only when the recipient's address is the current account email**, i.e. when the password-reset channel itself is unchanged.
+
+| Sender | Recipient | Recovery channel intact? | Link `/reset`? |
+|---|---|---|---|
+| `password_changed` | current email | yes | yes |
+| `email_changed` (audience: "old") | previous email | **no** — reset email goes to the new (possibly attacker-controlled) address | no — direct to support |
+| `email_changed` (audience: "new") | new email | n/a — confirmation only | no |
+
+When the channel has moved, lead with "contact support" and explicitly note that `/reset` won't help. Anything else gives the user a false sense of recovery.
+
+### Test floor
+
+Each sender test should at minimum assert:
+
+- greeting includes the user's display name
+- recipient is correct (`email.to`)
+- `email.from` matches the configured `Mailer.from()`
+- subject line
+- a body keyword that anchors the message
+- `<script>` payload in display name is HTML-escaped
+- `refute email.text_body =~ "<"` — no markup leaks into plain text
+
 ## Testing
 
 - One sender test per trigger in `test/huddlz/notifications/`, using `Swoosh.Adapters.Test`.
