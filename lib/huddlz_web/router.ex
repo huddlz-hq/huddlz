@@ -66,6 +66,8 @@ defmodule HuddlzWeb.Router do
   scope "/", HuddlzWeb do
     pipe_through :browser
 
+    get "/unsubscribe/:token", UnsubscribeController, :show
+
     ash_authentication_live_session :authenticated_routes,
       on_mount: {HuddlzWeb.LiveUserAuth, :load_user_details} do
       # in each liveview, add one of the following at the top of the module:
