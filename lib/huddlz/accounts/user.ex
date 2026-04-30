@@ -217,15 +217,11 @@ defmodule Huddlz.Accounts.User do
       validate {AshAuthentication.Strategy.Password.PasswordValidation,
                 strategy_name: :password, password_argument: :current_password}
 
-      change fn changeset, _ctx ->
-        Ash.Changeset.put_context(changeset, :previous_email, changeset.data.email)
-      end
-
       change after_action(fn changeset, user, _ctx ->
-               previous_email = changeset.context[:previous_email] |> to_string()
+               previous_email = to_string(changeset.data.email)
                new_email = to_string(user.email)
 
-               if previous_email != "" and previous_email != new_email do
+               if previous_email != new_email do
                  enqueue_email_changed(user, previous_email, "old")
                  enqueue_email_changed(user, previous_email, "new")
                end
