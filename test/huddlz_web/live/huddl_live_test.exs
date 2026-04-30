@@ -362,9 +362,18 @@ defmodule HuddlzWeb.HuddlLiveTest do
           group(is_public: true, owner_id: host.id, actor: host, name: "Linked Group Test")
         )
 
-      conn
-      |> visit("/")
-      |> assert_has("a[href='/groups/#{group.slug}']")
+      html =
+        conn
+        |> get(~p"/")
+        |> html_response(200)
+
+      assert html
+             |> Floki.parse_document!()
+             |> Floki.find("a")
+             |> Enum.any?(fn link ->
+               Floki.attribute(link, "href") == ["/groups/#{group.slug}"] &&
+                 link |> Floki.text() |> String.contains?("Linked Group Test")
+             end)
     end
   end
 end
