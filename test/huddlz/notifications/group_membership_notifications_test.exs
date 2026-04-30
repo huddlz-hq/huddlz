@@ -179,10 +179,9 @@ defmodule Huddlz.Notifications.GroupMembershipNotificationsTest do
         |> Ash.create(actor: owner)
 
       # Drain any prior add_member-triggered jobs (none for public groups,
-      # but keep the queue clean).
+      # but keep the queue clean) and flush any leftover test mailbox
+      # messages from prior drains.
       Oban.drain_queue(queue: :notifications)
-      Process.sleep(0)
-      # Flush any leftover test mailbox messages from prior drains.
       flush_mailbox()
 
       {:ok, _} =
@@ -223,14 +222,6 @@ defmodule Huddlz.Notifications.GroupMembershipNotificationsTest do
         |> Ash.update(actor: owner)
 
       refute_enqueued(worker: DeliverWorker)
-    end
-  end
-
-  defp flush_mailbox do
-    receive do
-      {:email, _} -> flush_mailbox()
-    after
-      0 -> :ok
     end
   end
 
@@ -380,6 +371,14 @@ defmodule Huddlz.Notifications.GroupMembershipNotificationsTest do
         |> Ash.destroy!(actor: member)
 
       refute_enqueued(worker: DeliverWorker)
+    end
+  end
+
+  defp flush_mailbox do
+    receive do
+      {:email, _} -> flush_mailbox()
+    after
+      0 -> :ok
     end
   end
 end
