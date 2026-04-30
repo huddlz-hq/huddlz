@@ -163,7 +163,13 @@ defmodule Huddlz.Generator do
         name: StreamData.repeatedly(fn -> Faker.Company.name() end),
         description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
         location: "Test Location",
-        is_public: true
+        is_public: true,
+        # Pin to nil so GenerateSlug derives the slug from the name. Otherwise
+        # the public `:slug` argument on :create_group falls into Ash's optional
+        # input bucket and StreamData randomly emits :utf8 strings (CJK,
+        # private-use), which become URL-encoded slugs and break meta/URL
+        # assertions.
+        slug: nil
       ],
       overrides: Keyword.drop(opts, [:owner_id, :actor, :actor_role]),
       actor: actor
