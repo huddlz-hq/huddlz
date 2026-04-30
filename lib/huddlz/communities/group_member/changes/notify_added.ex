@@ -27,6 +27,12 @@ defmodule Huddlz.Communities.GroupMember.Changes.NotifyAdded do
       member.user_id == actor_id ->
         :noop
 
+      member.role == :owner ->
+        # :owner additions are internal flows (Group.:create_group's
+        # self-add and Group.:transfer_ownership). Those have their own
+        # notifications (B7) — don't double up with a B2 "you were added".
+        :noop
+
       true ->
         with {:ok, group} <- Ash.get(Group, member.group_id, authorize?: false),
              true <- group.is_public == false,

@@ -6,6 +6,7 @@ defmodule Huddlz.Communities.Group.Changes.TransferOwnership do
     * Demotes the previous owner's GroupMember row to `:organizer`.
     * Promotes the new owner's GroupMember row to `:owner`, creating the
       membership if the new owner is not already in the group.
+    * Enqueues B7 notifications to both the previous and new owners.
 
   Runs as a single `after_action` hook so it lands inside the same Ash
   transaction as the owner_id update.
@@ -15,7 +16,9 @@ defmodule Huddlz.Communities.Group.Changes.TransferOwnership do
 
   require Ash.Query
 
+  alias Huddlz.Accounts.User
   alias Huddlz.Communities.GroupMember
+  alias Huddlz.Notifications
 
   @impl true
   def change(changeset, _opts, _context) do
@@ -27,9 +30,48 @@ defmodule Huddlz.Communities.Group.Changes.TransferOwnership do
     |> Ash.Changeset.after_action(fn _cs, group ->
       with :ok <- demote(group.id, previous_owner_id),
            :ok <- promote(group.id, new_owner_id) do
+        notify(group, previous_owner_id, new_owner_id)
         {:ok, group}
       end
     end)
+  end
+
+  defp notify(group, previous_owner_id, new_owner_id) do
+    previous_owner =
+      case Ash.get(User, previous_owner_id, authorize?: false) do
+        {:ok, %User{} = u} -> u
+        _ -> nil
+      end
+
+    new_owner =
+      case Ash.get(User, new_owner_id, authorize?: false) do
+        {:ok, %User{} = u} -> u
+        _ -> nil
+      end
+
+    base = %{
+      "group_id" => group.id,
+      "group_name" => to_string(group.name),
+      "group_slug" => group.slug,
+      "previous_owner_display_name" => previous_owner && previous_owner.display_name,
+      "new_owner_display_name" => new_owner && new_owner.display_name
+    }
+
+    if previous_owner do
+      Notifications.deliver_async(
+        previous_owner,
+        :group_ownership_transferred,
+        Map.put(base, "role", "previous_owner")
+      )
+    end
+
+    if new_owner do
+      Notifications.deliver_async(
+        new_owner,
+        :group_ownership_transferred,
+        Map.put(base, "role", "new_owner")
+      )
+    end
   end
 
   defp demote(_group_id, nil), do: :ok

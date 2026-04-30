@@ -11,6 +11,7 @@ defmodule Huddlz.Notifications.GroupMembershipNotificationsTest do
   import Swoosh.TestAssertions
   require Ash.Query
 
+  alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Notifications.DeliverWorker
 
@@ -230,6 +231,39 @@ defmodule Huddlz.Notifications.GroupMembershipNotificationsTest do
       {:email, _} -> flush_mailbox()
     after
       0 -> :ok
+    end
+  end
+
+  describe "B7: group_ownership_transferred" do
+    test "emails both the previous and new owner" do
+      previous_owner = generate(user(role: :user, display_name: "Old Owner"))
+      new_owner = generate(user(display_name: "New Owner"))
+      group = generate(group(name: "Council", owner_id: previous_owner.id, actor: previous_owner))
+
+      Oban.drain_queue(queue: :notifications)
+      flush_mailbox()
+
+      {:ok, _} =
+        group
+        |> Ash.Changeset.for_update(:transfer_ownership, %{new_owner_id: new_owner.id})
+        |> Ash.update(actor: previous_owner)
+
+      assert %{success: 2} = Oban.drain_queue(queue: :notifications)
+
+      assert_email_sent(fn email ->
+        email.subject == "You transferred Council to a new owner" and
+          email.to == [{"", to_string(previous_owner.email)}] and
+          email.html_body =~ "New Owner"
+      end)
+
+      assert_email_sent(fn email ->
+        email.subject == "You're the new owner of Council" and
+          email.to == [{"", to_string(new_owner.email)}] and
+          email.html_body =~ "Old Owner"
+      end)
+
+      reloaded = Ash.get!(Group, group.id, authorize?: false)
+      assert reloaded.owner_id == new_owner.id
     end
   end
 
