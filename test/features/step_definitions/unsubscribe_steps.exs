@@ -20,6 +20,13 @@ defmodule UnsubscribeSteps do
     {:ok, Map.merge(context, %{session: session, conn: session})}
   end
 
+  step "I confirm the unsubscribe", context do
+    session = context[:session] || context[:conn]
+    session = click_button(session, "Unsubscribe")
+
+    {:ok, Map.merge(context, %{session: session, conn: session})}
+  end
+
   step "the user {string} should have trigger {string} disabled",
        %{args: [email, trigger_str]} = context do
     [user] =
@@ -29,6 +36,20 @@ defmodule UnsubscribeSteps do
 
     assert user.notification_preferences[trigger_str] == false,
            "expected #{email} to have #{trigger_str} disabled, got: " <>
+             inspect(user.notification_preferences)
+
+    {:ok, context}
+  end
+
+  step "the user {string} should not have trigger {string} disabled",
+       %{args: [email, trigger_str]} = context do
+    [user] =
+      User
+      |> Ash.Query.filter(email == ^email)
+      |> Ash.read!(authorize?: false)
+
+    refute user.notification_preferences[trigger_str] == false,
+           "expected #{email} not to have #{trigger_str} disabled, got: " <>
              inspect(user.notification_preferences)
 
     {:ok, context}

@@ -67,6 +67,7 @@ defmodule HuddlzWeb.Router do
     pipe_through :browser
 
     get "/unsubscribe/:token", UnsubscribeController, :show
+    post "/unsubscribe/:token", UnsubscribeController, :update
 
     ash_authentication_live_session :authenticated_routes,
       on_mount: {HuddlzWeb.LiveUserAuth, :load_user_details} do

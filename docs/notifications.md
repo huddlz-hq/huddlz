@@ -128,7 +128,7 @@ Toggles (and the trigger they map to):
 - Group membership changes affecting me (B2, B3, B4, B6, B7)
 - Someone joined a group I organize (B1)
 
-Unsubscribe links in email footers deep-link here, or flip a single key directly via signed token then redirect.
+Unsubscribe links in email footers deep-link to a confirmation page, then a POST flips a single key via signed token and redirects.
 
 ## Implementation
 
@@ -136,7 +136,7 @@ Unsubscribe links in email footers deep-link here, or flip a single key directly
 - **Sender modules** — one per email under `lib/huddlz/notifications/senders/` (or colocated under `lib/huddlz/accounts/user/senders/` to match AshAuthentication). Each sender: build email, check preferences, deliver.
 - **Ash notifiers** — most action-driven emails (B1, B3, C1, C3, E1, E2, E3) attach as `Ash.Notifier` modules on the resource. Avoids scattering side-effects across LiveViews.
 - **Reminder scheduling (D1, D2)** — when a huddl is created, schedule two Oban jobs (`scheduled_at: starts_at - 24h` and `starts_at - 1h`). On huddl update, cancel + reschedule. On RSVP create/destroy, do *not* touch the huddl-level job — the job resolves recipients at run time.
-- **Unsubscribe** — `Phoenix.Token` signed payload `{user_id, category}`, route at `/unsubscribe/:token`. Flip the preference, redirect to the settings page.
+- **Unsubscribe** — `Phoenix.Token` signed payload `{user_id, category}`, route at `/unsubscribe/:token`. GET shows confirmation; POST flips the preference and redirects to the settings page.
 - **`.ics` generation** — one shared helper module, used by E3, D1, D2.
 
 ### Existing infrastructure to build on
