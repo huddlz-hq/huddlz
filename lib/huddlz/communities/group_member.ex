@@ -87,6 +87,7 @@ defmodule Huddlz.Communities.GroupMember do
 
     destroy :remove_member do
       description "Remove a user from a group"
+      require_atomic? false
 
       argument :group_id, :uuid do
         allow_nil? false
@@ -98,6 +99,8 @@ defmodule Huddlz.Communities.GroupMember do
 
       filter expr(group_id == ^arg(:group_id))
       filter expr(user_id == ^arg(:user_id))
+
+      change Huddlz.Communities.GroupMember.Changes.NotifyRemoved
     end
 
     action :remove_member_by_ids, :struct do
