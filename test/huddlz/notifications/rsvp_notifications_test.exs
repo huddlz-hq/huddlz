@@ -239,6 +239,125 @@ defmodule Huddlz.Notifications.RsvpNotificationsTest do
     end
   end
 
+  describe "E2: rsvp_cancelled" do
+    test "emails the group owner and every organizer (deduped, actor excluded)" do
+      owner = generate(user(role: :user, display_name: "Owner"))
+      organizer = generate(user(display_name: "Organizer"))
+      attendee = generate(user(display_name: "Attendee"))
+
+      group =
+        generate(
+          group(
+            name: "Pickup Sports",
+            slug: "pickup-sports",
+            is_public: true,
+            owner_id: owner.id,
+            actor: owner
+          )
+        )
+
+      generate(
+        group_member(group_id: group.id, user_id: organizer.id, role: :organizer, actor: owner)
+      )
+
+      huddl =
+        generate(
+          huddl(
+            title: "Saturday Soccer",
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner
+          )
+        )
+
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
+      |> Ash.update!()
+
+      Oban.drain_queue(queue: :notifications)
+      flush_mailbox()
+
+      huddl
+      |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: attendee)
+      |> Ash.update!()
+
+      # Owner + organizer get E2. There is no E4 confirmation to the
+      # actor (the spec explicitly skips it).
+      assert %{success: 2} = Oban.drain_queue(queue: :notifications)
+
+      for recipient <- [owner, organizer] do
+        assert_email_sent(fn email ->
+          email.subject == "Attendee cancelled their RSVP to Saturday Soccer" and
+            email.to == [{"", to_string(recipient.email)}] and
+            email.html_body =~ "/groups/pickup-sports/huddlz/#{huddl.id}"
+        end)
+      end
+    end
+
+    test "does not fire when cancelling a nonexistent RSVP" do
+      owner = generate(user(role: :user))
+      attendee = generate(user())
+
+      group =
+        generate(group(name: "Pickup Sports", is_public: true, owner_id: owner.id, actor: owner))
+
+      huddl =
+        generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
+
+      Oban.drain_queue(queue: :notifications)
+      flush_mailbox()
+
+      # Attendee never RSVPd. cancel_rsvp is a no-op but the action still
+      # succeeds; no email should fire.
+      huddl
+      |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: attendee)
+      |> Ash.update!()
+
+      refute_enqueued(worker: DeliverWorker)
+    end
+
+    test "actor who is also an organizer is excluded from E2" do
+      owner = generate(user(role: :user))
+      organizer = generate(user(display_name: "Self-cancelling Organizer"))
+
+      group =
+        generate(group(name: "Pickup Sports", is_public: true, owner_id: owner.id, actor: owner))
+
+      generate(
+        group_member(group_id: group.id, user_id: organizer.id, role: :organizer, actor: owner)
+      )
+
+      huddl =
+        generate(
+          huddl(
+            title: "Saturday Soccer",
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner
+          )
+        )
+
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: organizer)
+      |> Ash.update!()
+
+      Oban.drain_queue(queue: :notifications)
+      flush_mailbox()
+
+      huddl
+      |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: organizer)
+      |> Ash.update!()
+
+      # Only owner gets E2. Organizer is the actor — excluded.
+      assert %{success: 1} = Oban.drain_queue(queue: :notifications)
+
+      assert_email_sent(fn email ->
+        email.to == [{"", to_string(owner.email)}] and
+          email.subject == "Self-cancelling Organizer cancelled their RSVP to Saturday Soccer"
+      end)
+    end
+  end
+
   defp flush_mailbox do
     receive do
       {:email, _} -> flush_mailbox()
