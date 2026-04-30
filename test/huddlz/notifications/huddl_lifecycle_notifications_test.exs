@@ -89,6 +89,115 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
     end
   end
 
+  describe "C2: huddl_updated" do
+    test "emails every non-actor RSVP when a meaningful field changes" do
+      owner = generate(user(role: :user))
+      attendee = generate(user(display_name: "Attendee"))
+
+      group =
+        generate(
+          group(
+            name: "Pickup Sports",
+            slug: "pickup-sports",
+            is_public: true,
+            owner_id: owner.id,
+            actor: owner
+          )
+        )
+
+      huddl =
+        generate(
+          huddl(
+            title: "Saturday Soccer",
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner
+          )
+        )
+
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
+      |> Ash.update!()
+
+      Oban.drain_queue(queue: :notifications)
+      flush_mailbox()
+
+      new_date = Date.add(Date.utc_today(), 14)
+
+      huddl
+      |> Ash.Changeset.for_update(
+        :update,
+        %{date: new_date, start_time: ~T[15:00:00], duration_minutes: 60},
+        actor: owner
+      )
+      |> Ash.update!()
+
+      assert %{success: 1} = Oban.drain_queue(queue: :notifications)
+
+      assert_email_sent(fn email ->
+        email.subject == "Updated: Saturday Soccer" and
+          email.to == [{"", to_string(attendee.email)}] and
+          email.html_body =~ "the start time"
+      end)
+    end
+
+    test "skips notification when no meaningful field changes" do
+      owner = generate(user(role: :user))
+      attendee = generate(user())
+
+      group =
+        generate(group(name: "Pickup Sports", is_public: true, owner_id: owner.id, actor: owner))
+
+      huddl =
+        generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
+
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
+      |> Ash.update!()
+
+      Oban.drain_queue(queue: :notifications)
+      flush_mailbox()
+
+      # Changing the description (not a meaningful field) should not
+      # enqueue any huddl_updated notification.
+      huddl
+      |> Ash.Changeset.for_update(:update, %{description: "now with more detail"}, actor: owner)
+      |> Ash.update!()
+
+      refute_enqueued(worker: DeliverWorker)
+    end
+
+    test "skips the actor (the editor) even if they had RSVPd" do
+      owner = generate(user(role: :user))
+      attendee = generate(user())
+
+      group =
+        generate(group(name: "Pickup Sports", is_public: true, owner_id: owner.id, actor: owner))
+
+      huddl =
+        generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
+
+      for u <- [owner, attendee] do
+        huddl
+        |> Ash.Changeset.for_update(:rsvp, %{}, actor: u)
+        |> Ash.update!()
+      end
+
+      Oban.drain_queue(queue: :notifications)
+      flush_mailbox()
+
+      huddl
+      |> Ash.Changeset.for_update(:update, %{title: "Renamed"}, actor: owner)
+      |> Ash.update!()
+
+      assert %{success: 1} = Oban.drain_queue(queue: :notifications)
+
+      assert_email_sent(fn email ->
+        email.to == [{"", to_string(attendee.email)}]
+      end)
+    end
+  end
+
   describe "C3: huddl_cancelled" do
     test "emails every non-actor RSVP when the huddl is destroyed" do
       owner = generate(user(role: :user, display_name: "Group Owner"))
