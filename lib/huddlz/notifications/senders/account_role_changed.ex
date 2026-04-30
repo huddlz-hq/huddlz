@@ -13,6 +13,7 @@ defmodule Huddlz.Notifications.Senders.AccountRoleChanged do
 
   alias Huddlz.Mailer
   alias Huddlz.Notifications
+  alias Huddlz.Notifications.Senders.HtmlEscape
 
   @impl true
   def build(user, payload) do
@@ -38,7 +39,7 @@ defmodule Huddlz.Notifications.Senders.AccountRoleChanged do
 
   defp html_body(ctx) do
     """
-    <p>Hi #{safe(ctx.name)},</p>
+    <p>Hi #{HtmlEscape.escape(ctx.name)},</p>
 
     <p>An administrator just updated your huddlz account role #{html_change_phrase(ctx)}.</p>
 
@@ -69,18 +70,12 @@ defmodule Huddlz.Notifications.Senders.AccountRoleChanged do
   end
 
   defp html_change_phrase(%{previous_role: nil, new_role: new}),
-    do: "to <strong>#{safe(new)}</strong>"
+    do: "to <strong>#{HtmlEscape.escape(new)}</strong>"
 
   defp html_change_phrase(%{previous_role: prev, new_role: new}),
-    do: "from <strong>#{safe(prev)}</strong> to <strong>#{safe(new)}</strong>"
+    do:
+      "from <strong>#{HtmlEscape.escape(prev)}</strong> to <strong>#{HtmlEscape.escape(new)}</strong>"
 
   defp text_change_phrase(%{previous_role: nil, new_role: new}), do: "to #{new}"
   defp text_change_phrase(%{previous_role: prev, new_role: new}), do: "from #{prev} to #{new}"
-
-  defp safe(value) do
-    value
-    |> to_string()
-    |> Phoenix.HTML.html_escape()
-    |> Phoenix.HTML.safe_to_string()
-  end
 end

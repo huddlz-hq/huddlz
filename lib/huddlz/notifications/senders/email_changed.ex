@@ -20,6 +20,7 @@ defmodule Huddlz.Notifications.Senders.EmailChanged do
   import Swoosh.Email
 
   alias Huddlz.Mailer
+  alias Huddlz.Notifications.Senders.HtmlEscape
 
   @subject "Your huddlz email address was changed"
 
@@ -27,8 +28,8 @@ defmodule Huddlz.Notifications.Senders.EmailChanged do
   def build(user, %{"audience" => "old"} = payload) do
     old_email = payload["old_email"]
     new_email = to_string(user.email)
-    safe_name = safe(user.display_name)
-    safe_new_email = safe(new_email)
+    safe_name = HtmlEscape.escape(user.display_name)
+    safe_new_email = HtmlEscape.escape(new_email)
     reset_url = url(~p"/reset")
 
     new()
@@ -42,8 +43,8 @@ defmodule Huddlz.Notifications.Senders.EmailChanged do
   def build(user, %{"audience" => "new"} = payload) do
     old_email = payload["old_email"]
     new_email = to_string(user.email)
-    safe_name = safe(user.display_name)
-    safe_old_email = safe(old_email)
+    safe_name = HtmlEscape.escape(user.display_name)
+    safe_old_email = HtmlEscape.escape(old_email)
 
     new()
     |> from(Mailer.from())
@@ -106,12 +107,5 @@ defmodule Huddlz.Notifications.Senders.EmailChanged do
     If you didn't make this change, contact support right away — someone
     else may have access to your account.
     """
-  end
-
-  defp safe(value) do
-    value
-    |> to_string()
-    |> Phoenix.HTML.html_escape()
-    |> Phoenix.HTML.safe_to_string()
   end
 end
