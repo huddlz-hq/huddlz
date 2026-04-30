@@ -14,6 +14,7 @@ defmodule Huddlz.Notifications do
 
   alias Huddlz.Accounts.User
   alias Huddlz.Mailer
+  alias Huddlz.Notifications.DeliverWorker
   alias Huddlz.Notifications.Triggers
   alias HuddlzWeb.Endpoint
 
@@ -47,6 +48,28 @@ defmodule Huddlz.Notifications do
     else
       :skipped
     end
+  end
+
+  @doc """
+  Enqueue an Oban job that will deliver the email asynchronously.
+
+  Returns `{:ok, %Oban.Job{}}` when the job is inserted, `{:error, reason}`
+  if Oban refuses it. The trigger is validated up front so callers find out
+  about typos at enqueue time rather than after a job is already scheduled.
+
+  This is the preferred entry point from request-handling code paths
+  (Ash actions, controllers, LiveViews) — it avoids holding the request
+  open while SMTP completes and keeps Swoosh test-adapter messages out of
+  the LV's `$callers` chain.
+  """
+  @spec deliver_async(User.t(), atom(), map()) ::
+          {:ok, Oban.Job.t()} | {:error, term()}
+  def deliver_async(%User{id: user_id}, trigger, payload \\ %{}) when is_atom(trigger) do
+    _ = Triggers.fetch!(trigger)
+
+    %{user_id: user_id, trigger: Atom.to_string(trigger), payload: payload}
+    |> DeliverWorker.new()
+    |> Oban.insert()
   end
 
   # The registry references sender modules for triggers whose phases haven't

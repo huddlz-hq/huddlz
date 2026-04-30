@@ -24,6 +24,7 @@ config :huddlz, Oban,
   notifier: Oban.Notifiers.Postgres,
   queues: [
     default: 10,
+    notifications: 10,
     profile_picture_cleanup: 5,
     group_image_cleanup: 5,
     huddl_image_cleanup: 5
