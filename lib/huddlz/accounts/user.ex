@@ -151,9 +151,8 @@ defmodule Huddlz.Accounts.User do
       require_atomic? false
       accept [:role]
 
-      change after_action(fn changeset, user, _ctx ->
+      change after_action(fn changeset, user, %{actor: actor} ->
                previous_role = changeset.data.role
-               actor = changeset.context[:private][:actor]
 
                cond do
                  previous_role == user.role ->
