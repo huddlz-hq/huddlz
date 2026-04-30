@@ -271,6 +271,40 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       assert duration_minutes == 120
     end
 
+    test "creates huddl with a capacity limit", %{conn: conn, owner: owner, group: group} do
+      tomorrow = Date.utc_today() |> Date.add(1)
+      date = Date.to_iso8601(tomorrow)
+
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/new")
+        |> fill_in("Title", with: "Capped Huddl")
+        |> fill_in("Description", with: "Limited seats")
+        |> fill_in("Date", with: date)
+        |> fill_in("Start Time", with: "14:30")
+        |> select("Duration", option: "2 hours")
+        |> fill_in("Max Attendees", with: "5")
+
+      select_physical_location(session.view, "123 Main St")
+
+      session
+      |> click_button("Create Huddl")
+      |> assert_path(~p"/groups/#{group.slug}")
+
+      huddl =
+        Huddl
+        |> Ash.Query.filter(title == "Capped Huddl" and group_id == ^group.id)
+        |> Ash.read_one!(actor: owner)
+
+      assert huddl.max_attendees == 5
+
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+      |> assert_has("*", text: "0/5 spots filled")
+    end
+
     test "creates private huddl for private group", %{conn: conn, owner: owner} do
       private_group = generate(group(is_public: false, owner_id: owner.id, actor: owner))
 

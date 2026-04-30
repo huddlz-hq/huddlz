@@ -89,6 +89,36 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> refute_has("h3", text: "Past Event")
     end
 
+    test "renders capacity label and progress bar for limited huddlz with no RSVPs", %{
+      conn: conn,
+      user: user,
+      group: group
+    } do
+      generate(
+        huddl(
+          group_id: group.id,
+          creator_id: user.id,
+          title: "Capped Huddl",
+          description: "Limited seats",
+          event_type: :virtual,
+          virtual_link: "https://zoom.us/j/cap",
+          date: Date.add(Date.utc_today(), 3),
+          start_time: ~T[12:00:00],
+          duration_minutes: 60,
+          is_private: false,
+          max_attendees: 5,
+          actor: user
+        )
+      )
+
+      conn
+      |> visit("/")
+      |> assert_has("h3", text: "Capped Huddl")
+      |> assert_has("span", text: "0/5 spots filled")
+      |> assert_has("span", text: "Plenty of space")
+      |> assert_has("div[style*='width: 0%']")
+    end
+
     test "searches by title", %{conn: conn} do
       conn
       |> visit("/")
