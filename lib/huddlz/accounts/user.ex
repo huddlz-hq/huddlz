@@ -193,16 +193,13 @@ defmodule Huddlz.Accounts.User do
       change {AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password}
 
       change after_action(fn _changeset, user, _ctx ->
-               case Huddlz.Notifications.deliver(user, :password_changed) do
-                 :sent ->
-                   :ok
-
-                 :skipped ->
+               case Huddlz.Notifications.deliver_async(user, :password_changed) do
+                 {:ok, _job} ->
                    :ok
 
                  {:error, reason} ->
                    Logger.error(
-                     "Failed to deliver password-changed notification: #{inspect(reason)}"
+                     "Failed to enqueue password-changed notification: #{inspect(reason)}"
                    )
                end
 

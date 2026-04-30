@@ -4,6 +4,10 @@ defmodule PasswordChangeNotificationSteps do
 
   step "a password-changed notification should be sent to {string}",
        %{args: [email]} = context do
+    # Delivery is async via Oban — drain the :notifications queue so the
+    # worker runs and the test mailbox actually receives the email.
+    Oban.drain_queue(queue: :notifications)
+
     # The test process accumulates other emails (e.g. registration
     # confirmation) during the scenario. Walk the mailbox and pick out the
     # password-changed one rather than asserting the first message matches.

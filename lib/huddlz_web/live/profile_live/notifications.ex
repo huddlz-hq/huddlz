@@ -52,11 +52,6 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
     end
   end
 
-  # Swoosh's test adapter forwards delivered emails as messages to every pid
-  # in the $callers chain. We don't act on them here.
-  @impl true
-  def handle_info({:email, _}, socket), do: {:noreply, socket}
-
   @impl true
   def render(assigns) do
     ~H"""
