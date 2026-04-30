@@ -20,8 +20,8 @@ defmodule Huddlz.Notifications.ICS do
     event = %ICal.Event{
       uid: "huddl-#{huddl.id}@huddlz.com",
       dtstamp: DateTime.utc_now() |> DateTime.truncate(:second),
-      dtstart: to_utc_datetime(huddl.starts_at),
-      dtend: to_utc_datetime(huddl.ends_at),
+      dtstart: DateTime.truncate(huddl.starts_at, :second),
+      dtend: DateTime.truncate(huddl.ends_at, :second),
       summary: huddl.title,
       description: build_description(huddl),
       location: build_location(huddl),
@@ -34,14 +34,6 @@ defmodule Huddlz.Notifications.ICS do
 
     content = calendar |> ICal.to_ics() |> IO.iodata_to_binary()
     {"huddl.ics", content}
-  end
-
-  defp to_utc_datetime(%DateTime{} = dt), do: DateTime.truncate(dt, :second)
-
-  defp to_utc_datetime(%NaiveDateTime{} = ndt) do
-    ndt
-    |> DateTime.from_naive!("Etc/UTC")
-    |> DateTime.truncate(:second)
   end
 
   defp build_description(%Huddl{description: nil, virtual_link: nil}), do: ""
