@@ -345,18 +345,18 @@ defmodule HuddlzWeb.CommunityComponents do
   defp type_icon(:hybrid), do: "hero-globe-alt"
   defp type_icon(_), do: "hero-calendar"
 
-  defp event_full?(%{max_attendees: nil}), do: false
-  defp event_full?(huddl), do: huddl.rsvp_count >= huddl.max_attendees
+  def event_full?(%{max_attendees: nil}), do: false
+  def event_full?(huddl), do: huddl.rsvp_count >= huddl.max_attendees
 
-  defp capacity_label(huddl), do: "#{huddl.rsvp_count}/#{huddl.max_attendees} spots filled"
+  def capacity_label(huddl), do: "#{huddl.rsvp_count}/#{huddl.max_attendees} spots filled"
 
-  defp capacity_percent(%{max_attendees: nil}), do: 0
+  def capacity_percent(%{max_attendees: nil}), do: 0
 
-  defp capacity_percent(huddl) do
+  def capacity_percent(huddl) do
     min(round(huddl.rsvp_count / huddl.max_attendees * 100), 100)
   end
 
-  defp capacity_status(huddl) do
+  def capacity_status(huddl) do
     cond do
       event_full?(huddl) -> "Event Full"
       capacity_percent(huddl) >= 80 -> "Almost full"
@@ -365,7 +365,7 @@ defmodule HuddlzWeb.CommunityComponents do
     end
   end
 
-  defp capacity_status_class(huddl) do
+  def capacity_status_class(huddl) do
     cond do
       event_full?(huddl) -> "font-semibold text-error"
       capacity_percent(huddl) >= 80 -> "font-semibold text-warning"

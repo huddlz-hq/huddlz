@@ -377,36 +377,6 @@ defmodule HuddlzWeb.HuddlLive.Show do
     end
   end
 
-  defp event_full?(%{max_attendees: nil}), do: false
-  defp event_full?(huddl), do: huddl.rsvp_count >= huddl.max_attendees
-
-  defp capacity_label(huddl) do
-    "#{huddl.rsvp_count}/#{huddl.max_attendees} spots filled"
-  end
-
-  defp capacity_percent(%{max_attendees: nil}), do: 0
-
-  defp capacity_percent(huddl) do
-    min(round(huddl.rsvp_count / huddl.max_attendees * 100), 100)
-  end
-
-  defp capacity_status(huddl) do
-    cond do
-      event_full?(huddl) -> "Event Full"
-      capacity_percent(huddl) >= 80 -> "Almost full"
-      capacity_percent(huddl) >= 50 -> "Filling up"
-      true -> "Plenty of space"
-    end
-  end
-
-  defp capacity_status_class(huddl) do
-    cond do
-      event_full?(huddl) -> "font-semibold text-error"
-      capacity_percent(huddl) >= 80 -> "font-semibold text-warning"
-      true -> "font-semibold text-success"
-    end
-  end
-
   defp format_datetime(datetime) do
     Calendar.strftime(datetime, "%B %d, %Y at %I:%M %p")
   end
