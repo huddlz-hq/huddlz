@@ -11,16 +11,15 @@ defmodule Huddlz.Notifications.Senders.PasswordChanged do
   use HuddlzWeb, :verified_routes
   import Swoosh.Email
 
+  alias Huddlz.Mailer
+
   @impl true
   def build(user, _payload) do
-    config = Application.get_env(:huddlz, :email, [])
-    from_name = config[:from_name] || "huddlz support"
-    from_address = config[:from_address] || "support@huddlz.com"
     reset_url = url(~p"/reset")
     safe_name = Phoenix.HTML.html_escape(user.display_name) |> Phoenix.HTML.safe_to_string()
 
     new()
-    |> from({from_name, from_address})
+    |> from(Mailer.from())
     |> to(to_string(user.email))
     |> subject("Your huddlz password was changed")
     |> html_body("""
