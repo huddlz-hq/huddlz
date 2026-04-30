@@ -12,11 +12,12 @@ defmodule Huddlz.Notifications.Senders.PasswordChanged do
   import Swoosh.Email
 
   alias Huddlz.Mailer
+  alias Huddlz.Notifications.Senders.HtmlEscape
 
   @impl true
   def build(user, _payload) do
     reset_url = url(~p"/reset")
-    safe_name = Phoenix.HTML.html_escape(user.display_name) |> Phoenix.HTML.safe_to_string()
+    safe_name = HtmlEscape.escape(user.display_name)
 
     new()
     |> from(Mailer.from())
