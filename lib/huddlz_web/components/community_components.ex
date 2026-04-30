@@ -181,7 +181,7 @@ defmodule HuddlzWeb.CommunityComponents do
               {@huddl.physical_location}
             </span>
           <% end %>
-          <%= if @huddl.rsvp_count > 0 do %>
+          <%= if @huddl.max_attendees || @huddl.rsvp_count > 0 do %>
             <span class="flex items-center gap-1">
               <.icon name="hero-user-group" class="h-3.5 w-3.5" />
               <%= if @huddl.max_attendees do %>
@@ -190,13 +190,6 @@ defmodule HuddlzWeb.CommunityComponents do
                 {@huddl.rsvp_count} attending
               <% end %>
             </span>
-          <% else %>
-            <%= if @huddl.max_attendees do %>
-              <span class="flex items-center gap-1">
-                <.icon name="hero-user-group" class="h-3.5 w-3.5" />
-                {capacity_label(@huddl)}
-              </span>
-            <% end %>
           <% end %>
           <%= if @distance do %>
             <span class="flex items-center gap-1 text-primary/70">
