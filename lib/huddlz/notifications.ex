@@ -21,25 +21,28 @@ defmodule Huddlz.Notifications do
   # 30 days — long enough for an email to sit in an inbox over a vacation.
   @unsubscribe_max_age 60 * 60 * 24 * 30
 
-  @type deliver_result :: :sent | :skipped
+  @type deliver_result :: :sent | :skipped | {:error, term()}
 
   @doc """
   Build and deliver the email for `trigger` to `user`.
 
-  Returns `:ok` if the mailer accepted the email, `:skipped` if the user is
+  Returns `:sent` if the mailer accepted the email, `:skipped` if the user is
   not eligible (preferences off, unconfirmed, etc.), or `{:error, reason}` if
   the mailer rejected.
 
   Raises if `trigger` is not in the registry — callers should use known atoms.
   """
-  @spec deliver(User.t(), atom(), map()) :: :sent | :skipped
+  @spec deliver(User.t(), atom(), map()) :: deliver_result()
   def deliver(user, trigger, payload \\ %{}) do
     entry = Triggers.fetch!(trigger)
 
     if should_deliver?(user, trigger, entry) do
       email = entry.sender.build(user, payload)
-      Mailer.deliver(email)
-      :sent
+
+      case Mailer.deliver(email) do
+        {:ok, _result} -> :sent
+        {:error, reason} -> {:error, reason}
+      end
     else
       :skipped
     end
@@ -78,9 +81,9 @@ defmodule Huddlz.Notifications do
   end
 
   @doc """
-  Build a signed token that, when GETted at `/unsubscribe/:token`, opts the
-  user out of `trigger`. Token is bound to the user id and trigger so it
-  cannot be reused for another user or another category.
+  Build a signed token for the unsubscribe confirmation flow. Token is bound
+  to the user id and trigger so it cannot be reused for another user or
+  another category.
   """
   @spec unsubscribe_token(User.t(), atom()) :: String.t()
   def unsubscribe_token(%User{id: user_id}, trigger) when is_atom(trigger) do

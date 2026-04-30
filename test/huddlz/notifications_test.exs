@@ -1,9 +1,15 @@
 defmodule Huddlz.NotificationsTest do
-  use Huddlz.DataCase, async: true
+  use Huddlz.DataCase, async: false
   import Swoosh.TestAssertions
 
   alias Huddlz.Accounts.User
   alias Huddlz.Notifications
+
+  defmodule FailingMailerAdapter do
+    use Swoosh.Adapter
+
+    def deliver(_email, _config), do: {:error, :smtp_unavailable}
+  end
 
   describe "deliver/3 with a real sender" do
     test "sends for a transactional trigger with the live PasswordChanged sender" do
@@ -14,6 +20,24 @@ defmodule Huddlz.NotificationsTest do
         email.subject == "Your huddlz password was changed" and
           email.to == [{"", to_string(user.email)}]
       end)
+    end
+
+    test "returns the mailer error when delivery fails" do
+      original_config = Application.get_env(:huddlz, Huddlz.Mailer)
+
+      on_exit(fn ->
+        if original_config do
+          Application.put_env(:huddlz, Huddlz.Mailer, original_config)
+        else
+          Application.delete_env(:huddlz, Huddlz.Mailer)
+        end
+      end)
+
+      Application.put_env(:huddlz, Huddlz.Mailer, adapter: FailingMailerAdapter)
+
+      user = generate(user(confirmed_at: DateTime.utc_now()))
+      assert {:error, :smtp_unavailable} == Notifications.deliver(user, :password_changed, %{})
+      refute_email_sent()
     end
 
     test "skips when the user has opted out of an activity trigger" do

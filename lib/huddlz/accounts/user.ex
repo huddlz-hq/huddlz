@@ -3,6 +3,8 @@ defmodule Huddlz.Accounts.User do
   User resource with authentication capabilities and role-based permissions.
   """
 
+  require Logger
+
   use Ash.Resource,
     otp_app: :huddlz,
     domain: Huddlz.Accounts,
@@ -190,7 +192,19 @@ defmodule Huddlz.Accounts.User do
       change {AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password}
 
       change after_action(fn _changeset, user, _ctx ->
-               Huddlz.Notifications.deliver(user, :password_changed)
+               case Huddlz.Notifications.deliver(user, :password_changed) do
+                 :sent ->
+                   :ok
+
+                 :skipped ->
+                   :ok
+
+                 {:error, reason} ->
+                   Logger.error(
+                     "Failed to deliver password-changed notification: #{inspect(reason)}"
+                   )
+               end
+
                {:ok, user}
              end)
     end
