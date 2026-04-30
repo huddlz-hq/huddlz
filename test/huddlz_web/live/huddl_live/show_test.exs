@@ -255,6 +255,33 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has("button", text: "RSVP to this huddl")
     end
 
+    test "shows almost-full status when capacity is at the 80% threshold", %{
+      conn: conn,
+      member: member,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      capped =
+        huddl
+        |> Ash.Changeset.for_update(:update, %{max_attendees: 5}, actor: owner)
+        |> Ash.update!()
+
+      for actor <- [owner, create_verified_user(), create_verified_user(), create_verified_user()] do
+        capped
+        |> Ash.reload!()
+        |> Ash.Changeset.for_update(:rsvp, %{}, actor: actor)
+        |> Ash.update!()
+      end
+
+      conn
+      |> login(member)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{capped.id}")
+      |> assert_has("span", text: "4/5 spots filled")
+      |> assert_has("span", text: "Almost full")
+      |> assert_has("button", text: "RSVP to this huddl")
+    end
+
     test "shows event full instead of RSVP button when capacity is reached", %{
       conn: conn,
       member: member,
