@@ -9,8 +9,17 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       # Create a user who can create groups and huddls
       user = generate(user(role: :user))
 
-      # Create a public group
-      group = generate(group(owner_id: user.id, is_public: true, actor: user))
+      # Pin description so meta-tag assertions are deterministic — the default
+      # Faker paragraph occasionally exceeds MetaHelpers' 200-char truncation.
+      group =
+        generate(
+          group(
+            owner_id: user.id,
+            is_public: true,
+            description: "A short, deterministic group description for tests.",
+            actor: user
+          )
+        )
 
       # Create upcoming huddls (future events)
       upcoming_huddls =
