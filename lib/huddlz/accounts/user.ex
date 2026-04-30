@@ -147,6 +147,26 @@ defmodule Huddlz.Accounts.User do
       accept [:role]
     end
 
+    update :update_notification_preferences do
+      description "Merge a partial map of trigger overrides onto the user's notification_preferences."
+      require_atomic? false
+
+      argument :preferences, :map, allow_nil?: false
+
+      validate present(:preferences)
+
+      change fn changeset, _ctx ->
+        existing = changeset.data.notification_preferences || %{}
+        incoming = Ash.Changeset.get_argument(changeset, :preferences)
+
+        Ash.Changeset.change_attribute(
+          changeset,
+          :notification_preferences,
+          Map.merge(existing, incoming)
+        )
+      end
+    end
+
     update :change_password do
       # Use this action to allow users to change their password by providing
       # their current password and a new password.
@@ -401,6 +421,11 @@ defmodule Huddlz.Accounts.User do
       description "Users can set their own password"
       authorize_if expr(id == ^actor(:id))
     end
+
+    policy action(:update_notification_preferences) do
+      description "Users can update their own notification preferences"
+      authorize_if expr(id == ^actor(:id))
+    end
   end
 
   attributes do
@@ -449,6 +474,13 @@ defmodule Huddlz.Accounts.User do
     attribute :home_longitude, :float do
       allow_nil? true
       constraints min: -180, max: 180
+    end
+
+    attribute :notification_preferences, :map do
+      description "Per-trigger email opt-in/out. Missing keys fall back to the trigger's default."
+      allow_nil? false
+      default %{}
+      public? false
     end
   end
 
