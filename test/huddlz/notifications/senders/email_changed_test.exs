@@ -118,4 +118,24 @@ defmodule Huddlz.Notifications.Senders.EmailChangedTest do
       refute email.text_body =~ "<"
     end
   end
+
+  describe "build/2 - unknown audience" do
+    test "raises with a descriptive message naming the bad payload" do
+      user = generate(user())
+      payload = %{"audience" => "stranger", "old_email" => "old@example.com"}
+
+      assert_raise ArgumentError, ~r/unknown audience/, fn ->
+        EmailChanged.build(user, payload)
+      end
+    end
+
+    test "raises when audience is missing entirely" do
+      user = generate(user())
+      payload = %{"old_email" => "old@example.com"}
+
+      assert_raise ArgumentError, ~r/unknown audience/, fn ->
+        EmailChanged.build(user, payload)
+      end
+    end
+  end
 end
