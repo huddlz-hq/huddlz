@@ -142,6 +142,7 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Geocoding.ApplyProvidedCoordinates
       change {Huddlz.Geocoding.GeocodeChange, field: :physical_location}
       change Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup
+      change Huddlz.Communities.Huddl.Changes.NotifyNewInGroup
     end
 
     update :update do

@@ -15,6 +15,80 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
   alias Huddlz.Communities.Huddl
   alias Huddlz.Notifications.DeliverWorker
 
+  describe "C1: huddl_new" do
+    test "emails every non-actor group member when a huddl is created" do
+      owner = generate(user(role: :user, display_name: "Owner"))
+      member_a = generate(user(display_name: "Member A"))
+      member_b = generate(user(display_name: "Member B"))
+
+      group =
+        generate(
+          group(
+            name: "Pickup Sports",
+            slug: "pickup-sports",
+            is_public: true,
+            owner_id: owner.id,
+            actor: owner
+          )
+        )
+
+      for u <- [member_a, member_b] do
+        generate(group_member(group_id: group.id, user_id: u.id, actor: owner))
+      end
+
+      Oban.drain_queue(queue: :notifications)
+      flush_mailbox()
+
+      _huddl =
+        generate(
+          huddl(
+            title: "Saturday Soccer",
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner
+          )
+        )
+
+      # Owner is the actor (excluded), member_a and member_b each receive one.
+      assert %{success: 2} = Oban.drain_queue(queue: :notifications)
+
+      for recipient <- [member_a, member_b] do
+        assert_email_sent(fn email ->
+          email.subject == "New huddl in Pickup Sports: Saturday Soccer" and
+            email.to == [{"", to_string(recipient.email)}]
+        end)
+      end
+    end
+
+    test "skips the actor (creator) even when they are also a member" do
+      owner = generate(user(role: :user))
+      member = generate(user())
+
+      group =
+        generate(
+          group(
+            name: "Solo Group",
+            is_public: true,
+            owner_id: owner.id,
+            actor: owner
+          )
+        )
+
+      generate(group_member(group_id: group.id, user_id: member.id, actor: owner))
+
+      Oban.drain_queue(queue: :notifications)
+      flush_mailbox()
+
+      generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
+
+      assert %{success: 1} = Oban.drain_queue(queue: :notifications)
+
+      assert_email_sent(fn email ->
+        email.to == [{"", to_string(member.email)}]
+      end)
+    end
+  end
+
   describe "C3: huddl_cancelled" do
     test "emails every non-actor RSVP when the huddl is destroyed" do
       owner = generate(user(role: :user, display_name: "Group Owner"))
