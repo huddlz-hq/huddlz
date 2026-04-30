@@ -1,8 +1,7 @@
 defmodule EmailChangeNotificationSteps do
   use Cucumber.StepDefinition
   import ExUnit.Assertions
-
-  alias Huddlz.Accounts.User
+  import Huddlz.Test.Helpers.FeatureUsers, only: [find_user!: 2]
 
   step "the user {string} has password {string}",
        %{args: [email, password]} = context do
@@ -29,18 +28,17 @@ defmodule EmailChangeNotificationSteps do
        %{args: [old_email, new_email, password]} = context do
     user = find_user!(context.users, old_email)
 
-    case Ash.Changeset.for_update(
-           user,
-           :change_email,
-           %{email: new_email, current_password: password},
-           actor: user
-         )
-         |> Ash.update() do
-      {:ok, _} -> {:ok, context}
-      # The same-email case is rejected by the unique-email identity, but
-      # that doesn't matter for the "no email is sent" assertion below.
-      {:error, _} -> {:ok, context}
-    end
+    # Same-email scenarios fail at the unique-email identity; the "no email
+    # is sent" scenario then asserts the notification was correctly skipped.
+    user
+    |> Ash.Changeset.for_update(
+      :change_email,
+      %{email: new_email, current_password: password},
+      actor: user
+    )
+    |> Ash.update()
+
+    {:ok, context}
   end
 
   step "a security notice should be sent to {string} naming the new address {string}",
@@ -73,13 +71,6 @@ defmodule EmailChangeNotificationSteps do
     end)
 
     {:ok, context}
-  end
-
-  defp find_user!(users, email) do
-    case Enum.find(users, fn u -> to_string(u.email) == email end) do
-      nil -> flunk("No user with email #{email} in scenario context")
-      %User{} = user -> user
-    end
   end
 
   defp receive_email_matching(recipient, predicate) do

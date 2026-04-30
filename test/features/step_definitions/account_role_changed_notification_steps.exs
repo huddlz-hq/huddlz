@@ -1,6 +1,7 @@
 defmodule AccountRoleChangedNotificationSteps do
   use Cucumber.StepDefinition
   import ExUnit.Assertions
+  import Huddlz.Test.Helpers.FeatureUsers, only: [find_user!: 2]
 
   alias Huddlz.Accounts
 
@@ -26,13 +27,6 @@ defmodule AccountRoleChangedNotificationSteps do
     Oban.drain_queue(queue: :notifications)
     refute_role_change_email_received()
     {:ok, context}
-  end
-
-  defp find_user!(users, email) do
-    case Enum.find(users, fn u -> to_string(u.email) == email end) do
-      nil -> flunk("No user with email #{email} in scenario context")
-      user -> user
-    end
   end
 
   defp assert_role_change_email_received(email_addr, role) do
