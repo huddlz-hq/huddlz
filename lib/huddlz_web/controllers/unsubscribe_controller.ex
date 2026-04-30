@@ -20,7 +20,7 @@ defmodule HuddlzWeb.UnsubscribeController do
   def show(conn, %{"token" => token}) do
     case verify(token) do
       {:ok, _user_id, _trigger, entry} ->
-        render_confirmation(conn, token, entry)
+        render(conn, :confirmation, token: token, entry: entry)
 
       :error ->
         invalid_link(conn)
@@ -49,27 +49,6 @@ defmodule HuddlzWeb.UnsubscribeController do
     else
       _ -> :error
     end
-  end
-
-  defp render_confirmation(conn, token, entry) do
-    action = ~p"/unsubscribe/#{token}"
-    csrf_token = Plug.CSRFProtection.get_csrf_token()
-
-    safe_label =
-      entry.label
-      |> Phoenix.HTML.html_escape()
-      |> Phoenix.HTML.safe_to_string()
-
-    html(conn, """
-    <main class="mx-auto max-w-xl p-8">
-      <h1>Confirm unsubscribe</h1>
-      <p>Unsubscribe from "#{safe_label}"?</p>
-      <form id="unsubscribe-confirmation-form" action="#{action}" method="post">
-        <input type="hidden" name="_csrf_token" value="#{csrf_token}" />
-        <button type="submit">Unsubscribe</button>
-      </form>
-    </main>
-    """)
   end
 
   defp invalid_link(conn) do
