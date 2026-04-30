@@ -162,6 +162,77 @@ defmodule Huddlz.Notifications.GroupMembershipNotificationsTest do
     end
   end
 
+  describe "B4: group_role_changed" do
+    test "emails the member when an owner changes their role" do
+      owner = generate(user(role: :user))
+      member = generate(user(display_name: "Promoted Pat"))
+      group = generate(group(name: "Promo Group", owner_id: owner.id, actor: owner))
+
+      {:ok, membership} =
+        GroupMember
+        |> Ash.Changeset.for_create(:add_member, %{
+          group_id: group.id,
+          user_id: member.id,
+          role: :member
+        })
+        |> Ash.create(actor: owner)
+
+      # Drain any prior add_member-triggered jobs (none for public groups,
+      # but keep the queue clean).
+      Oban.drain_queue(queue: :notifications)
+      Process.sleep(0)
+      # Flush any leftover test mailbox messages from prior drains.
+      flush_mailbox()
+
+      {:ok, _} =
+        membership
+        |> Ash.Changeset.for_update(:change_role, %{role: :organizer})
+        |> Ash.update(actor: owner)
+
+      assert %{success: 1} = Oban.drain_queue(queue: :notifications)
+
+      assert_email_sent(fn email ->
+        email.subject == "Your role in Promo Group changed" and
+          email.to == [{"", to_string(member.email)}] and
+          email.html_body =~ "<strong>member</strong>" and
+          email.html_body =~ "<strong>organizer</strong>" and
+          email.html_body =~ "/unsubscribe/"
+      end)
+    end
+
+    test "does not email when the role change is a no-op" do
+      owner = generate(user(role: :user))
+      member = generate(user())
+      group = generate(group(owner_id: owner.id, actor: owner))
+
+      {:ok, membership} =
+        GroupMember
+        |> Ash.Changeset.for_create(:add_member, %{
+          group_id: group.id,
+          user_id: member.id,
+          role: :member
+        })
+        |> Ash.create(actor: owner)
+
+      Oban.drain_queue(queue: :notifications)
+
+      {:ok, _} =
+        membership
+        |> Ash.Changeset.for_update(:change_role, %{role: :member})
+        |> Ash.update(actor: owner)
+
+      refute_enqueued(worker: DeliverWorker)
+    end
+  end
+
+  defp flush_mailbox do
+    receive do
+      {:email, _} -> flush_mailbox()
+    after
+      0 -> :ok
+    end
+  end
+
   describe "B3: group_member_removed" do
     test "emails the removed user when an owner removes them" do
       owner = generate(user(role: :user))
