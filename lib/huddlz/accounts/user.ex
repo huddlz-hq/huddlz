@@ -147,7 +147,43 @@ defmodule Huddlz.Accounts.User do
 
     update :update_role do
       description "Update a user's role"
+      require_atomic? false
       accept [:role]
+
+      change after_action(fn changeset, user, _ctx ->
+               previous_role = changeset.data.role
+               actor = changeset.context[:private][:actor]
+
+               cond do
+                 previous_role == user.role ->
+                   :ok
+
+                 actor && actor.id == user.id ->
+                   :ok
+
+                 true ->
+                   payload = %{
+                     "new_role" => Atom.to_string(user.role),
+                     "previous_role" => Atom.to_string(previous_role)
+                   }
+
+                   case Huddlz.Notifications.deliver_async(
+                          user,
+                          :account_role_changed,
+                          payload
+                        ) do
+                     {:ok, _job} ->
+                       :ok
+
+                     {:error, reason} ->
+                       Logger.error(
+                         "Failed to enqueue account-role-changed notification: #{inspect(reason)}"
+                       )
+                   end
+               end
+
+               {:ok, user}
+             end)
     end
 
     update :update_notification_preferences do
