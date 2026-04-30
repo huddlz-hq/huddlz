@@ -1,9 +1,6 @@
 defmodule Huddlz.Accounts.User.ChangeEmailTest do
   use Huddlz.DataCase, async: true
 
-  alias Ash.Resource.Info, as: ResourceInfo
-  alias Huddlz.Accounts.User
-
   describe "change_email" do
     setup do
       user =
@@ -104,11 +101,5 @@ defmodule Huddlz.Accounts.User.ChangeEmailTest do
 
       assert updated.confirmed_at == user.confirmed_at
     end
-  end
-
-  # Sanity: confirm the action is registered (catches typos in the resource).
-  test "action is exposed in the resource" do
-    actions = ResourceInfo.actions(User) |> Enum.map(& &1.name)
-    assert :change_email in actions
   end
 end

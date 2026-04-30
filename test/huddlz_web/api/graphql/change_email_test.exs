@@ -44,7 +44,7 @@ defmodule HuddlzWeb.Api.Graphql.ChangeEmailTest do
                }
              } = json_response(conn, 200)
 
-      assert errors in [nil, []]
+      assert errors == []
       assert id == user.id
 
       reloaded = Ash.get!(User, user.id, authorize?: false)
