@@ -23,6 +23,7 @@ defmodule Huddlz.Accounts.User do
       update :update_display_name, :update_display_name
       update :update_home_location, :update_home_location
       update :change_password, :change_password
+      update :update_notification_preferences, :update_notification_preferences
     end
   end
 
