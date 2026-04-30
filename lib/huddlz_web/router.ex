@@ -81,6 +81,7 @@ defmodule HuddlzWeb.Router do
       live "/", HuddlLive, :index
       live "/admin", AdminLive, :index
       live "/profile", ProfileLive, :index
+      live "/profile/notifications", ProfileLive.Notifications, :index
 
       # Group routes
       live "/groups", GroupLive.Index, :index
