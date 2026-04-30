@@ -53,6 +53,19 @@ defmodule Huddlz.NotificationsTest do
       assert :skipped == Notifications.deliver(user, :rsvp_received, %{})
       refute_email_sent()
     end
+
+    test "raises a clear error when the registered sender isn't implemented" do
+      # :rsvp_received is registered with a sender module that doesn't exist
+      # yet. With the trigger enabled and the user eligible, deliver/3 must
+      # surface this loudly rather than producing an UndefinedFunctionError.
+      user = generate_user_with_prefs(%{"rsvp_received" => true})
+
+      assert_raise ArgumentError, ~r/not yet implemented/, fn ->
+        Notifications.deliver(user, :rsvp_received, %{})
+      end
+
+      refute_email_sent()
+    end
   end
 
   describe "should_deliver?/3" do
