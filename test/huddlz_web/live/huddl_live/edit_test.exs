@@ -308,7 +308,10 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
             group_id: group.id,
             creator_id: owner.id,
             actor: owner,
-            physical_location: "123 Main St"
+            physical_location: "123 Main St",
+            # Start unlimited; the generator otherwise randomly fills this with
+            # a large integer half the time, breaking the post-validation assert.
+            max_attendees: nil
           )
         )
 
