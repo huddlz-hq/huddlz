@@ -21,6 +21,8 @@ defmodule Huddlz.Communities.Huddl.Changes.CancelRsvp do
 
       {:ok, attendee} ->
         Ash.destroy!(attendee, authorize?: false)
+        # Load-bearing: NotifyRsvpCancelled skips when this flag is absent
+        # so missing-attendee cancellations do not enqueue spurious emails.
         Ash.Changeset.put_context(changeset, :rsvp_cancelled, true)
 
       {:error, error} ->
