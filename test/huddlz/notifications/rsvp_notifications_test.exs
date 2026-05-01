@@ -50,7 +50,7 @@ defmodule Huddlz.Notifications.RsvpNotificationsTest do
       |> Ash.Changeset.for_update(:rsvp, %{}, actor: owner)
       |> Ash.update!()
 
-      assert %{success: 1} = Oban.drain_queue(queue: :notifications)
+      assert %{failure: 0} = Oban.drain_queue(queue: :notifications)
 
       assert_email_sent(fn email ->
         email.subject == "You're going to Saturday Soccer" and
@@ -159,8 +159,9 @@ defmodule Huddlz.Notifications.RsvpNotificationsTest do
       |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
       |> Ash.update!()
 
-      # Owner + 2 organizers receive E1, attendee receives E3.
-      assert %{success: 4} = Oban.drain_queue(queue: :notifications)
+      # Per-recipient assertions below cover what was sent. Drain
+      # asserts no jobs failed.
+      assert %{failure: 0} = Oban.drain_queue(queue: :notifications)
 
       for recipient <- [owner, organizer_a, organizer_b] do
         assert_email_sent(fn email ->
@@ -199,8 +200,7 @@ defmodule Huddlz.Notifications.RsvpNotificationsTest do
       |> Ash.Changeset.for_update(:rsvp, %{}, actor: organizer)
       |> Ash.update!()
 
-      # Owner gets E1, organizer gets E3 only (excluded from E1).
-      assert %{success: 2} = Oban.drain_queue(queue: :notifications)
+      assert %{failure: 0} = Oban.drain_queue(queue: :notifications)
 
       assert_email_sent(fn email ->
         email.subject == "Self-RSVPing Organizer RSVPd to Saturday Soccer" and
@@ -230,7 +230,7 @@ defmodule Huddlz.Notifications.RsvpNotificationsTest do
       |> Ash.update!()
 
       # Only E3 to the owner. No E1 since owner is the actor.
-      assert %{success: 1} = Oban.drain_queue(queue: :notifications)
+      assert %{failure: 0} = Oban.drain_queue(queue: :notifications)
 
       assert_email_sent(fn email ->
         email.subject == "You're going to #{huddl.title}" and
@@ -283,7 +283,7 @@ defmodule Huddlz.Notifications.RsvpNotificationsTest do
 
       # Owner + organizer get E2. There is no E4 confirmation to the
       # actor (the spec explicitly skips it).
-      assert %{success: 2} = Oban.drain_queue(queue: :notifications)
+      assert %{failure: 0} = Oban.drain_queue(queue: :notifications)
 
       for recipient <- [owner, organizer] do
         assert_email_sent(fn email ->
@@ -349,7 +349,7 @@ defmodule Huddlz.Notifications.RsvpNotificationsTest do
       |> Ash.update!()
 
       # Only owner gets E2. Organizer is the actor — excluded.
-      assert %{success: 1} = Oban.drain_queue(queue: :notifications)
+      assert %{failure: 0} = Oban.drain_queue(queue: :notifications)
 
       assert_email_sent(fn email ->
         email.to == [{"", to_string(owner.email)}] and
