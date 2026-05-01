@@ -2,16 +2,20 @@
 
 name: Fly Deploy
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["Elixir CI"]
+    branches: [main]
+    types: [completed]
 jobs:
   deploy:
     name: Deploy app
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
     runs-on: ubuntu-latest
     concurrency: deploy-group    # optional: ensure only one action runs at a time
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - run: flyctl deploy --remote-only
         env:
