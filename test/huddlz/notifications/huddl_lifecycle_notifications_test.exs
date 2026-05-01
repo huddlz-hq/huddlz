@@ -51,12 +51,13 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
 
       # Owner is the actor (excluded), member_a and member_b each receive one.
       assert %{success: 2} = Oban.drain_queue(queue: :notifications)
+      emails = drain_mailbox()
 
       for recipient <- [member_a, member_b] do
-        assert_email_sent(fn email ->
-          email.subject == "New huddl in Pickup Sports: Saturday Soccer" and
-            email.to == [{"", to_string(recipient.email)}]
-        end)
+        assert Enum.any?(emails, fn email ->
+                 email.subject == "New huddl in Pickup Sports: Saturday Soccer" and
+                   email.to == [{"", to_string(recipient.email)}]
+               end)
       end
     end
 
@@ -343,14 +344,15 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
       |> Ash.destroy!()
 
       assert %{success: 2} = Oban.drain_queue(queue: :notifications)
+      emails = drain_mailbox()
 
       for recipient <- [attendee_a, attendee_b] do
-        assert_email_sent(fn email ->
-          email.subject == "Cancelled: Saturday Soccer" and
-            email.to == [{"", to_string(recipient.email)}] and
-            email.html_body =~ "Pickup Sports" and
-            email.html_body =~ "/groups/pickup-sports"
-        end)
+        assert Enum.any?(emails, fn email ->
+                 email.subject == "Cancelled: Saturday Soccer" and
+                   email.to == [{"", to_string(recipient.email)}] and
+                   email.html_body =~ "Pickup Sports" and
+                   email.html_body =~ "/groups/pickup-sports"
+               end)
       end
     end
 
@@ -602,10 +604,15 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
   end
 
   defp flush_mailbox do
+    drain_mailbox()
+    :ok
+  end
+
+  defp drain_mailbox(acc \\ []) do
     receive do
-      {:email, _} -> flush_mailbox()
+      {:email, email} -> drain_mailbox([email | acc])
     after
-      0 -> :ok
+      0 -> Enum.reverse(acc)
     end
   end
 end

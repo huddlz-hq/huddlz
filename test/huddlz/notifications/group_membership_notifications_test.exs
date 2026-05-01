@@ -56,13 +56,14 @@ defmodule Huddlz.Notifications.GroupMembershipNotificationsTest do
         |> Ash.create(actor: joiner)
 
       assert %{success: 3} = Oban.drain_queue(queue: :notifications)
+      emails = drain_mailbox()
 
       for recipient_email <- [owner.email, organizer_a.email, organizer_b.email] do
-        assert_email_sent(fn email ->
-          email.subject == "New Joiner joined Public Joinable Group" and
-            email.to == [{"", to_string(recipient_email)}] and
-            email.html_body =~ "/unsubscribe/"
-        end)
+        assert Enum.any?(emails, fn email ->
+                 email.subject == "New Joiner joined Public Joinable Group" and
+                   email.to == [{"", to_string(recipient_email)}] and
+                   email.html_body =~ "/unsubscribe/"
+               end)
       end
     end
 
@@ -249,12 +250,13 @@ defmodule Huddlz.Notifications.GroupMembershipNotificationsTest do
         |> Ash.destroy!(actor: owner)
 
       assert %{success: 2} = Oban.drain_queue(queue: :notifications)
+      emails = drain_mailbox()
 
       for member <- [member_a, member_b] do
-        assert_email_sent(fn email ->
-          email.subject == "Vanishing Group has been deleted" and
-            email.to == [{"", to_string(member.email)}]
-        end)
+        assert Enum.any?(emails, fn email ->
+                 email.subject == "Vanishing Group has been deleted" and
+                   email.to == [{"", to_string(member.email)}]
+               end)
       end
     end
 
@@ -375,10 +377,15 @@ defmodule Huddlz.Notifications.GroupMembershipNotificationsTest do
   end
 
   defp flush_mailbox do
+    drain_mailbox()
+    :ok
+  end
+
+  defp drain_mailbox(acc \\ []) do
     receive do
-      {:email, _} -> flush_mailbox()
+      {:email, email} -> drain_mailbox([email | acc])
     after
-      0 -> :ok
+      0 -> Enum.reverse(acc)
     end
   end
 end
