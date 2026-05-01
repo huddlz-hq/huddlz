@@ -20,7 +20,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyRsvpCancelled do
 
   defp notify(cs, huddl) do
     with true <- cs.context[:rsvp_cancelled] == true,
-         %{id: _} = actor <- cs.context[:private][:actor] do
+         %{id: _} = actor <- RecipientHelpers.actor(cs) do
       deliver(huddl, actor)
       {:ok, huddl}
     else

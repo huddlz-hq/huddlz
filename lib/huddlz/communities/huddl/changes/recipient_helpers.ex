@@ -55,10 +55,19 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
   """
   @spec actor_id(Ash.Changeset.t()) :: Ecto.UUID.t() | nil
   def actor_id(changeset) do
-    case changeset.context[:private][:actor] do
+    case actor(changeset) do
       %{id: id} -> id
       _ -> nil
     end
+  end
+
+  @doc """
+  Pull the actor out of an Ash.Changeset's private context. Returns
+  `nil` when no actor is present (e.g. system-driven actions).
+  """
+  @spec actor(Ash.Changeset.t()) :: struct() | nil
+  def actor(changeset) do
+    changeset.context[:private][:actor]
   end
 
   @doc """
