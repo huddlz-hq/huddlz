@@ -74,6 +74,10 @@ defmodule Huddlz.Notifications.Senders.RsvpConfirmation do
     Ash.get!(Huddl, id, authorize?: false, load: [:group])
   end
 
+  defp fetch_huddl!(_) do
+    raise ArgumentError, "RsvpConfirmation requires payload key \"huddl_id\" with a binary UUID"
+  end
+
   defp format_starts_at(%DateTime{} = dt) do
     Calendar.strftime(dt, "%a %b %-d, %Y at %-I:%M %p UTC")
   end

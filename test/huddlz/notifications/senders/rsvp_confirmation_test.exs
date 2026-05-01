@@ -120,5 +120,21 @@ defmodule Huddlz.Notifications.Senders.RsvpConfirmationTest do
       assert email.text_body =~ "Sat & Sun"
       refute email.text_body =~ "<"
     end
+
+    test "raises a clear error when huddl_id is missing" do
+      user = generate(user())
+
+      assert_raise ArgumentError, ~r/requires payload key "huddl_id"/, fn ->
+        RsvpConfirmation.build(user, %{})
+      end
+    end
+
+    test "raises a clear error when huddl_id is not binary" do
+      user = generate(user())
+
+      assert_raise ArgumentError, ~r/requires payload key "huddl_id"/, fn ->
+        RsvpConfirmation.build(user, %{"huddl_id" => 123})
+      end
+    end
   end
 end
