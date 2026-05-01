@@ -11,9 +11,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyRsvpReceived do
 
   use Ash.Resource.Change
 
-  alias Huddlz.Accounts.User
   alias Huddlz.Communities.Huddl.Changes.RecipientHelpers
-  alias Huddlz.Notifications
 
   @impl true
   def change(changeset, _opts, _context) do
@@ -21,40 +19,28 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyRsvpReceived do
   end
 
   defp notify(cs, huddl) do
-    cond do
-      cs.context[:rsvp_created] != true ->
-        {:ok, huddl}
-
-      is_nil(RecipientHelpers.actor_id(cs)) ->
-        {:ok, huddl}
-
-      true ->
-        deliver(huddl, RecipientHelpers.actor_id(cs))
-        {:ok, huddl}
+    with true <- cs.context[:rsvp_created] == true,
+         %{id: _} = actor <- cs.context[:private][:actor] do
+      deliver(huddl, actor)
+      {:ok, huddl}
+    else
+      _ -> {:ok, huddl}
     end
   end
 
-  defp deliver(huddl, actor_id) do
+  defp deliver(huddl, actor) do
     huddl = Ash.load!(huddl, [:group], authorize?: false)
 
     payload = %{
       "huddl_id" => huddl.id,
       "huddl_title" => to_string(huddl.title),
-      "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at),
       "group_name" => to_string(huddl.group.name),
       "group_slug" => to_string(huddl.group.slug),
-      "rsvper_display_name" => RecipientHelpers.user_display_name(actor_id, "Someone")
+      "rsvper_display_name" => to_string(actor.display_name)
     }
 
     huddl.group_id
-    |> RecipientHelpers.group_organizer_user_ids(exclude: actor_id)
-    |> Enum.each(&deliver_to(&1, payload))
-  end
-
-  defp deliver_to(user_id, payload) do
-    case Ash.get(User, user_id, authorize?: false) do
-      {:ok, recipient} -> Notifications.deliver_async(recipient, :rsvp_received, payload)
-      _ -> :noop
-    end
+    |> RecipientHelpers.group_organizer_user_ids(exclude: actor.id)
+    |> RecipientHelpers.deliver_each(:rsvp_received, payload)
   end
 end

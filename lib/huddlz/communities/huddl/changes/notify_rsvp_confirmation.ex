@@ -11,8 +11,6 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyRsvpConfirmation do
 
   use Ash.Resource.Change
 
-  alias Huddlz.Accounts.User
-  alias Huddlz.Communities.Huddl.Changes.RecipientHelpers
   alias Huddlz.Notifications
 
   @impl true
@@ -21,26 +19,12 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyRsvpConfirmation do
   end
 
   defp notify(cs, huddl) do
-    cond do
-      cs.context[:rsvp_created] != true ->
-        {:ok, huddl}
-
-      is_nil(RecipientHelpers.actor_id(cs)) ->
-        {:ok, huddl}
-
-      true ->
-        deliver(huddl, RecipientHelpers.actor_id(cs))
-        {:ok, huddl}
-    end
-  end
-
-  defp deliver(huddl, actor_id) do
-    case Ash.get(User, actor_id, authorize?: false) do
-      {:ok, user} ->
-        Notifications.deliver_async(user, :rsvp_confirmation, %{"huddl_id" => huddl.id})
-
-      _ ->
-        :noop
+    with true <- cs.context[:rsvp_created] == true,
+         %{id: _} = actor <- cs.context[:private][:actor] do
+      Notifications.deliver_async(actor, :rsvp_confirmation, %{"huddl_id" => huddl.id})
+      {:ok, huddl}
+    else
+      _ -> {:ok, huddl}
     end
   end
 end
