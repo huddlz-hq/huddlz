@@ -23,10 +23,8 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate do
 
   require Ash.Query
 
-  alias Huddlz.Accounts.User
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.Huddl.Changes.RecipientHelpers
-  alias Huddlz.Notifications
 
   @meaningful_attrs [:title, :starts_at, :ends_at, :physical_location, :virtual_link]
 
@@ -60,7 +58,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate do
 
     payload = base_payload(huddl, changed_fields)
 
-    deliver_each(recipients, :huddl_updated, payload)
+    RecipientHelpers.deliver_each(recipients, :huddl_updated, payload)
 
     {:ok, huddl}
   end
@@ -79,7 +77,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate do
 
         payload = base_payload(next, changed_fields)
 
-        deliver_each(recipients, :huddl_series_updated, payload)
+        RecipientHelpers.deliver_each(recipients, :huddl_series_updated, payload)
 
         {:ok, huddl}
     end
@@ -104,14 +102,5 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate do
       "group_slug" => to_string(huddl.group.slug),
       "changed_fields" => Enum.map(changed_fields, &Atom.to_string/1)
     }
-  end
-
-  defp deliver_each(user_ids, trigger, payload) do
-    for user_id <- user_ids do
-      case Ash.get(User, user_id, authorize?: false) do
-        {:ok, user} -> Notifications.deliver_async(user, trigger, payload)
-        _ -> :noop
-      end
-    end
   end
 end

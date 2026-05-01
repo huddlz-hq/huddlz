@@ -10,6 +10,7 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
   alias Huddlz.Accounts.User
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Communities.HuddlAttendee
+  alias Huddlz.Notifications
 
   @doc """
   Returns the user_ids of every RSVP on the given huddl, optionally
@@ -61,17 +62,19 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
   end
 
   @doc """
-  Look up a user's `display_name` by id, falling back to the given
-  string if the user can't be loaded. Used to render the rsvper's name
-  in E1/E2 fanout payloads.
+  Fan a notification trigger out to a list of user_ids, fetching each
+  user with `authorize?: false` and skipping any that no longer exist
+  (e.g. raced deletion). Used by the C/E-series fanout notifiers.
   """
-  @spec user_display_name(Ecto.UUID.t() | nil, String.t()) :: String.t()
-  def user_display_name(nil, fallback), do: fallback
-
-  def user_display_name(user_id, fallback) do
-    case Ash.get(User, user_id, authorize?: false) do
-      {:ok, user} -> to_string(user.display_name)
-      _ -> fallback
+  @spec deliver_each([Ecto.UUID.t()], atom(), map()) :: :ok
+  def deliver_each(user_ids, trigger, payload) do
+    for user_id <- user_ids do
+      case Ash.get(User, user_id, authorize?: false) do
+        {:ok, user} -> Notifications.deliver_async(user, trigger, payload)
+        _ -> :noop
+      end
     end
+
+    :ok
   end
 end
