@@ -20,6 +20,7 @@ defmodule Huddlz.Notifications.Senders.HuddlUpdated do
   import Swoosh.Email
 
   alias Huddlz.Mailer
+  alias Huddlz.Notifications.DateTimeFormatter
   alias Huddlz.Notifications.Footer
   alias Huddlz.Notifications.Senders.HeaderSafe
   alias Huddlz.Notifications.Senders.HtmlEscape
@@ -29,7 +30,14 @@ defmodule Huddlz.Notifications.Senders.HuddlUpdated do
     safe_name = HtmlEscape.escape(user.display_name)
     safe_title = HtmlEscape.escape(huddl_title(payload))
     safe_group = HtmlEscape.escape(group_name(payload))
-    when_text = format_starts_at(payload)
+
+    when_text =
+      DateTimeFormatter.format_starts_at_iso(
+        payload["starts_at_iso"],
+        DateTimeFormatter.time_zone_from_payload(payload),
+        payload["starts_at_iso"] || "the scheduled time"
+      )
+
     safe_when = HtmlEscape.escape(when_text)
     safe_changed = HtmlEscape.escape(changed_summary(payload))
     huddl_url = huddl_url(payload)
@@ -78,15 +86,6 @@ defmodule Huddlz.Notifications.Senders.HuddlUpdated do
 
   defp huddl_url(%{"group_slug" => slug}) when is_binary(slug), do: url(~p"/groups/#{slug}")
   defp huddl_url(_), do: url(~p"/")
-
-  defp format_starts_at(%{"starts_at_iso" => iso}) when is_binary(iso) do
-    case DateTime.from_iso8601(iso) do
-      {:ok, dt, _offset} -> Calendar.strftime(dt, "%a %b %-d, %Y at %-I:%M %p UTC")
-      _ -> iso
-    end
-  end
-
-  defp format_starts_at(_), do: "the scheduled time"
 
   defp changed_summary(%{"changed_fields" => fields}) when is_list(fields) and fields != [] do
     Enum.map_join(fields, ", ", &humanize_field/1)

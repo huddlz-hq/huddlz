@@ -67,6 +67,21 @@ defmodule Huddlz.Notifications.Senders.HuddlNewTest do
       assert email.html_body =~ "May 4, 2030"
     end
 
+    test "formats the start time in the payload time zone" do
+      user = generate(user())
+
+      email =
+        HuddlNew.build(
+          user,
+          default_payload(%{
+            "starts_at_iso" => "2030-05-04T17:00:00Z",
+            "time_zone" => "America/Los_Angeles"
+          })
+        )
+
+      assert email.html_body =~ "May 4, 2030 at 10:00 AM PDT"
+    end
+
     test "includes the unsubscribe footer (activity)" do
       user = generate(user())
       email = HuddlNew.build(user, default_payload())

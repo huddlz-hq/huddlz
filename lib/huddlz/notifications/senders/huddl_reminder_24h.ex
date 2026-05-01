@@ -23,6 +23,7 @@ defmodule Huddlz.Notifications.Senders.HuddlReminder24h do
 
   alias Huddlz.Communities.Huddl
   alias Huddlz.Mailer
+  alias Huddlz.Notifications.DateTimeFormatter
   alias Huddlz.Notifications.Footer
   alias Huddlz.Notifications.ICS
   alias Huddlz.Notifications.Senders.HeaderSafe
@@ -35,7 +36,13 @@ defmodule Huddlz.Notifications.Senders.HuddlReminder24h do
     safe_name = HtmlEscape.escape(user.display_name)
     safe_title = HtmlEscape.escape(huddl.title)
     safe_group = HtmlEscape.escape(huddl.group.name)
-    when_text = format_starts_at(huddl.starts_at)
+
+    when_text =
+      DateTimeFormatter.format_starts_at(
+        huddl.starts_at,
+        DateTimeFormatter.time_zone_from_payload(payload)
+      )
+
     safe_when = HtmlEscape.escape(when_text)
     huddl_url = url(~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}")
 
@@ -76,9 +83,5 @@ defmodule Huddlz.Notifications.Senders.HuddlReminder24h do
 
   defp fetch_huddl!(%{"huddl_id" => id}) when is_binary(id) do
     Ash.get!(Huddl, id, authorize?: false, load: [:group])
-  end
-
-  defp format_starts_at(%DateTime{} = dt) do
-    Calendar.strftime(dt, "%a %b %-d, %Y at %-I:%M %p UTC")
   end
 end
