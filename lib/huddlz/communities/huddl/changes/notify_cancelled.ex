@@ -12,9 +12,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyCancelled do
 
   use Ash.Resource.Change
 
-  alias Huddlz.Accounts.User
   alias Huddlz.Communities.Huddl.Changes.RecipientHelpers
-  alias Huddlz.Notifications
 
   @impl true
   def change(changeset, _opts, _context) do
@@ -45,12 +43,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyCancelled do
     recipients = cs.context[:huddl_cancelled_recipients] || []
     payload = cs.context[:huddl_cancelled_payload] || %{}
 
-    for user_id <- recipients do
-      case Ash.get(User, user_id, authorize?: false) do
-        {:ok, user} -> Notifications.deliver_async(user, :huddl_cancelled, payload)
-        _ -> :noop
-      end
-    end
+    RecipientHelpers.deliver_each(recipients, :huddl_cancelled, payload)
 
     {:ok, huddl}
   end

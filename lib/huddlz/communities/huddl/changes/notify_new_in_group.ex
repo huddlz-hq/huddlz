@@ -19,10 +19,8 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyNewInGroup do
 
   require Ash.Query
 
-  alias Huddlz.Accounts.User
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Communities.Huddl.Changes.RecipientHelpers
-  alias Huddlz.Notifications
 
   @impl true
   def change(changeset, _opts, _context) do
@@ -56,12 +54,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyNewInGroup do
       "group_slug" => to_string(huddl.group.slug)
     }
 
-    for user_id <- user_ids do
-      case Ash.get(User, user_id, authorize?: false) do
-        {:ok, user} -> Notifications.deliver_async(user, :huddl_new, payload)
-        _ -> :noop
-      end
-    end
+    RecipientHelpers.deliver_each(user_ids, :huddl_new, payload)
 
     {:ok, huddl}
   end
