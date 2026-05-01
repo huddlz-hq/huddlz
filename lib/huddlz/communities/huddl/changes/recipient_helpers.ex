@@ -62,18 +62,18 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
   end
 
   @doc """
-  Fan a notification trigger out to a list of user_ids, fetching each
-  user with `authorize?: false` and skipping any that no longer exist
+  Fan a notification trigger out to a list of user_ids, fetching users
+  with `authorize?: false` and skipping any that no longer exist
   (e.g. raced deletion). Used by the C/E-series fanout notifiers.
   """
   @spec deliver_each([Ecto.UUID.t()], atom(), map()) :: :ok
+  def deliver_each([], _trigger, _payload), do: :ok
+
   def deliver_each(user_ids, trigger, payload) do
-    for user_id <- user_ids do
-      case Ash.get(User, user_id, authorize?: false) do
-        {:ok, user} -> Notifications.deliver_async(user, trigger, payload)
-        _ -> :noop
-      end
-    end
+    User
+    |> Ash.Query.filter(id in ^user_ids)
+    |> Ash.read!(authorize?: false)
+    |> Enum.each(&Notifications.deliver_async(&1, trigger, payload))
 
     :ok
   end
