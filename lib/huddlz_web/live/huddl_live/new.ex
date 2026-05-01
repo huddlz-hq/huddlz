@@ -232,9 +232,9 @@ defmodule HuddlzWeb.HuddlLive.New do
                     <.live_img_preview entry={entry} class="w-32 aspect-video object-cover" />
                     <div class="flex-1 min-w-0">
                       <p class="text-sm font-medium truncate">{entry.client_name}</p>
-                      <div class="w-full bg-base-300 rounded-full h-1.5 mt-1">
+                      <div class="w-full bg-base-300 h-1.5 mt-1">
                         <div
-                          class="bg-primary h-1.5 rounded-full transition-all"
+                          class="bg-primary h-1.5 transition-all"
                           style={"width: #{entry.progress}%"}
                         >
                         </div>
