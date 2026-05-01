@@ -23,6 +23,7 @@ defmodule Huddlz.Notifications.Senders.RsvpConfirmation do
   alias Huddlz.Mailer
   alias Huddlz.Notifications.Footer
   alias Huddlz.Notifications.ICS
+  alias Huddlz.Notifications.Senders.HeaderSafe
   alias Huddlz.Notifications.Senders.HtmlEscape
 
   @impl true
@@ -42,7 +43,7 @@ defmodule Huddlz.Notifications.Senders.RsvpConfirmation do
     new()
     |> from(Mailer.from())
     |> to(to_string(user.email))
-    |> subject("You're going to #{huddl.title}")
+    |> subject(HeaderSafe.safe("You're going to #{huddl.title}"))
     |> html_body("""
     <p>Hi #{safe_name},</p>
 

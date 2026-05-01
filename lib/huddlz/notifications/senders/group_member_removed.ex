@@ -16,6 +16,7 @@ defmodule Huddlz.Notifications.Senders.GroupMemberRemoved do
   import Swoosh.Email
 
   alias Huddlz.Mailer
+  alias Huddlz.Notifications.Senders.HeaderSafe
   alias Huddlz.Notifications.Senders.HtmlEscape
 
   @impl true
@@ -27,7 +28,7 @@ defmodule Huddlz.Notifications.Senders.GroupMemberRemoved do
     new()
     |> from(Mailer.from())
     |> to(to_string(user.email))
-    |> subject("You were removed from #{group_name(payload)}")
+    |> subject(HeaderSafe.safe("You were removed from #{group_name(payload)}"))
     |> html_body("""
     <p>Hi #{safe_name},</p>
 

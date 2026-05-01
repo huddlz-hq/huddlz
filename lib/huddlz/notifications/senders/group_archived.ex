@@ -16,6 +16,7 @@ defmodule Huddlz.Notifications.Senders.GroupArchived do
   import Swoosh.Email
 
   alias Huddlz.Mailer
+  alias Huddlz.Notifications.Senders.HeaderSafe
   alias Huddlz.Notifications.Senders.HtmlEscape
 
   @impl true
@@ -27,7 +28,7 @@ defmodule Huddlz.Notifications.Senders.GroupArchived do
     new()
     |> from(Mailer.from())
     |> to(to_string(user.email))
-    |> subject("#{group_name(payload)} has been deleted")
+    |> subject(HeaderSafe.safe("#{group_name(payload)} has been deleted"))
     |> html_body("""
     <p>Hi #{safe_name},</p>
 

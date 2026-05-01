@@ -20,6 +20,7 @@ defmodule Huddlz.Notifications.Senders.GroupMemberAdded do
 
   alias Huddlz.Mailer
   alias Huddlz.Notifications.Footer
+  alias Huddlz.Notifications.Senders.HeaderSafe
   alias Huddlz.Notifications.Senders.HtmlEscape
 
   @impl true
@@ -33,7 +34,7 @@ defmodule Huddlz.Notifications.Senders.GroupMemberAdded do
     new()
     |> from(Mailer.from())
     |> to(to_string(user.email))
-    |> subject("You're now a member of #{group_name(payload)}")
+    |> subject(HeaderSafe.safe("You're now a member of #{group_name(payload)}"))
     |> html_body("""
     <p>Hi #{safe_name},</p>
 

@@ -21,6 +21,7 @@ defmodule Huddlz.Notifications.Senders.HuddlCancelled do
   import Swoosh.Email
 
   alias Huddlz.Mailer
+  alias Huddlz.Notifications.Senders.HeaderSafe
   alias Huddlz.Notifications.Senders.HtmlEscape
 
   @impl true
@@ -35,7 +36,7 @@ defmodule Huddlz.Notifications.Senders.HuddlCancelled do
     new()
     |> from(Mailer.from())
     |> to(to_string(user.email))
-    |> subject("Cancelled: #{huddl_title(payload)}")
+    |> subject(HeaderSafe.safe("Cancelled: #{huddl_title(payload)}"))
     |> html_body("""
     <p>Hi #{safe_name},</p>
 
