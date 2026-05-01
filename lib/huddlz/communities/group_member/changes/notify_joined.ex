@@ -8,12 +8,10 @@ defmodule Huddlz.Communities.GroupMember.Changes.NotifyJoined do
 
   use Ash.Resource.Change
 
-  require Ash.Query
-
   alias Huddlz.Accounts.User
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupMember
-  alias Huddlz.Notifications
+  alias Huddlz.Communities.Huddl.Changes.RecipientHelpers
 
   @impl true
   def change(changeset, _opts, _context) do
@@ -34,25 +32,8 @@ defmodule Huddlz.Communities.GroupMember.Changes.NotifyJoined do
       }
 
       group_id
-      |> recipient_user_ids(joiner_id)
-      |> Enum.each(&deliver_to(&1, payload))
+      |> RecipientHelpers.group_organizer_user_ids(exclude: joiner_id)
+      |> RecipientHelpers.deliver_each(:group_member_joined, payload)
     end
-  end
-
-  defp deliver_to(user_id, payload) do
-    case Ash.get(User, user_id, authorize?: false) do
-      {:ok, recipient} -> Notifications.deliver_async(recipient, :group_member_joined, payload)
-      _ -> :noop
-    end
-  end
-
-  defp recipient_user_ids(group_id, joiner_id) do
-    GroupMember
-    |> Ash.Query.filter(group_id == ^group_id and role in [:owner, :organizer])
-    |> Ash.Query.select([:user_id])
-    |> Ash.read!(authorize?: false)
-    |> Enum.map(& &1.user_id)
-    |> Enum.uniq()
-    |> Enum.reject(&(&1 == joiner_id))
   end
 end

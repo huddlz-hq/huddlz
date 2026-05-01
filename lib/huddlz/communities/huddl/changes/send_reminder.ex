@@ -14,9 +14,7 @@ defmodule Huddlz.Communities.Huddl.Changes.SendReminder do
 
   use Ash.Resource.Change
 
-  alias Huddlz.Accounts.User
   alias Huddlz.Communities.Huddl.Changes.RecipientHelpers
-  alias Huddlz.Notifications
 
   @impl true
   def change(changeset, opts, _context) do
@@ -34,12 +32,7 @@ defmodule Huddlz.Communities.Huddl.Changes.SendReminder do
 
     payload = %{"huddl_id" => huddl.id}
 
-    for user_id <- user_ids do
-      case Ash.get(User, user_id, authorize?: false) do
-        {:ok, user} -> Notifications.deliver_async(user, trigger, payload)
-        _ -> :noop
-      end
-    end
+    RecipientHelpers.deliver_each(user_ids, trigger, payload)
 
     {:ok, huddl}
   end
