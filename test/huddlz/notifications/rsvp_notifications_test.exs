@@ -160,13 +160,14 @@ defmodule Huddlz.Notifications.RsvpNotificationsTest do
       |> Ash.update!()
 
       assert %{failure: 0} = Oban.drain_queue(queue: :notifications)
+      emails = drain_mailbox()
 
       for recipient <- [owner, organizer_a, organizer_b] do
-        assert_email_sent(fn email ->
-          email.subject == "Attendee RSVPd to Saturday Soccer" and
-            email.to == [{"", to_string(recipient.email)}] and
-            email.html_body =~ "/groups/pickup-sports/huddlz/#{huddl.id}"
-        end)
+        assert Enum.any?(emails, fn email ->
+                 email.subject == "Attendee RSVPd to Saturday Soccer" and
+                   email.to == [{"", to_string(recipient.email)}] and
+                   email.html_body =~ "/groups/pickup-sports/huddlz/#{huddl.id}"
+               end)
       end
     end
 
@@ -282,13 +283,14 @@ defmodule Huddlz.Notifications.RsvpNotificationsTest do
       # Owner + organizer get E2. There is no E4 confirmation to the
       # actor (the spec explicitly skips it).
       assert %{failure: 0} = Oban.drain_queue(queue: :notifications)
+      emails = drain_mailbox()
 
       for recipient <- [owner, organizer] do
-        assert_email_sent(fn email ->
-          email.subject == "Attendee cancelled their RSVP to Saturday Soccer" and
-            email.to == [{"", to_string(recipient.email)}] and
-            email.html_body =~ "/groups/pickup-sports/huddlz/#{huddl.id}"
-        end)
+        assert Enum.any?(emails, fn email ->
+                 email.subject == "Attendee cancelled their RSVP to Saturday Soccer" and
+                   email.to == [{"", to_string(recipient.email)}] and
+                   email.html_body =~ "/groups/pickup-sports/huddlz/#{huddl.id}"
+               end)
       end
     end
 
@@ -357,10 +359,15 @@ defmodule Huddlz.Notifications.RsvpNotificationsTest do
   end
 
   defp flush_mailbox do
+    drain_mailbox()
+    :ok
+  end
+
+  defp drain_mailbox(acc \\ []) do
     receive do
-      {:email, _} -> flush_mailbox()
+      {:email, email} -> drain_mailbox([email | acc])
     after
-      0 -> :ok
+      0 -> Enum.reverse(acc)
     end
   end
 end
