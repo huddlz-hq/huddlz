@@ -224,7 +224,7 @@ defmodule HuddlzWeb.GroupLive.New do
       </.header>
 
       <form id="group-form" phx-change="validate" phx-submit="save" class="space-y-6">
-        <.input field={@form[:name]} type="text" label="Group Name" required />
+        <.input field={@form[:name]} type="text" label="Group Name" autocomplete="off" required />
 
         <div class="border border-base-300 p-4 bg-base-200/50">
           <p class="text-sm text-base-content/60">

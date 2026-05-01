@@ -149,7 +149,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
         phx-change="validate"
         class="space-y-6 mt-6"
       >
-        <.input field={@form[:name]} type="text" label="Group Name" required />
+        <.input field={@form[:name]} type="text" label="Group Name" autocomplete="off" required />
 
         <div>
           <.input
