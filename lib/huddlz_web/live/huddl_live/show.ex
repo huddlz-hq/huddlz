@@ -68,13 +68,13 @@ defmodule HuddlzWeb.HuddlLive.Show do
             >
               <.icon name="hero-pencil" class="h-4 w-4" /> Edit Huddl
             </.link>
-            <button
+            <.button
               phx-click="delete_huddl"
               data-confirm="Are you sure you want to delete this huddl?"
-              class="px-4 py-2 text-sm font-medium bg-error text-error-content btn-neon transition-all inline-flex items-center gap-1.5"
+              variant="danger"
             >
               <.icon name="hero-trash" class="h-4 w-4" /> Delete Huddl
-            </button>
+            </.button>
           <% end %>
           <%= if @current_user && @huddl.status == :upcoming do %>
             <%= if @has_rsvped do %>
