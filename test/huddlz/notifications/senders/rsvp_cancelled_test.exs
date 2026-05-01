@@ -1,22 +1,10 @@
 defmodule Huddlz.Notifications.Senders.RsvpCancelledTest do
   use Huddlz.DataCase, async: true
 
+  import Huddlz.Test.Helpers.RsvpFanoutPayload, only: [payload: 0, payload: 1]
+
   alias Huddlz.Mailer
   alias Huddlz.Notifications.Senders.RsvpCancelled
-
-  defp payload(overrides \\ %{}) do
-    Map.merge(
-      %{
-        "huddl_id" => "00000000-0000-0000-0000-000000000001",
-        "huddl_title" => "Saturday Soccer",
-        "starts_at_iso" => "2026-05-10T15:00:00Z",
-        "group_name" => "Pickup Sports",
-        "group_slug" => "pickup-sports",
-        "rsvper_display_name" => "Trinity"
-      },
-      overrides
-    )
-  end
 
   describe "build/2" do
     test "addresses the recipient with their display name" do
