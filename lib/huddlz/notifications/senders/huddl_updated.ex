@@ -21,6 +21,7 @@ defmodule Huddlz.Notifications.Senders.HuddlUpdated do
 
   alias Huddlz.Mailer
   alias Huddlz.Notifications.Footer
+  alias Huddlz.Notifications.Senders.HeaderSafe
   alias Huddlz.Notifications.Senders.HtmlEscape
 
   @impl true
@@ -38,7 +39,7 @@ defmodule Huddlz.Notifications.Senders.HuddlUpdated do
     new()
     |> from(Mailer.from())
     |> to(to_string(user.email))
-    |> subject("Updated: #{huddl_title(payload)}")
+    |> subject(HeaderSafe.safe("Updated: #{huddl_title(payload)}"))
     |> html_body("""
     <p>Hi #{safe_name},</p>
 

@@ -22,6 +22,7 @@ defmodule Huddlz.Notifications.Senders.RsvpReceived do
 
   alias Huddlz.Mailer
   alias Huddlz.Notifications.Footer
+  alias Huddlz.Notifications.Senders.HeaderSafe
   alias Huddlz.Notifications.Senders.HtmlEscape
 
   @impl true
@@ -37,7 +38,9 @@ defmodule Huddlz.Notifications.Senders.RsvpReceived do
     new()
     |> from(Mailer.from())
     |> to(to_string(user.email))
-    |> subject("#{rsvper_display_name(payload)} RSVPd to #{huddl_title(payload)}")
+    |> subject(
+      HeaderSafe.safe("#{rsvper_display_name(payload)} RSVPd to #{huddl_title(payload)}")
+    )
     |> html_body("""
     <p>Hi #{safe_name},</p>
 

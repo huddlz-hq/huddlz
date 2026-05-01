@@ -21,6 +21,7 @@ defmodule Huddlz.Notifications.Senders.GroupMemberJoined do
 
   alias Huddlz.Mailer
   alias Huddlz.Notifications.Footer
+  alias Huddlz.Notifications.Senders.HeaderSafe
   alias Huddlz.Notifications.Senders.HtmlEscape
 
   @impl true
@@ -35,7 +36,7 @@ defmodule Huddlz.Notifications.Senders.GroupMemberJoined do
     new()
     |> from(Mailer.from())
     |> to(to_string(user.email))
-    |> subject("#{joiner_display_name(payload)} joined #{group_name(payload)}")
+    |> subject(HeaderSafe.safe("#{joiner_display_name(payload)} joined #{group_name(payload)}"))
     |> html_body("""
     <p>Hi #{safe_name},</p>
 

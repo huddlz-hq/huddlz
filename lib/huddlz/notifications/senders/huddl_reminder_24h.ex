@@ -25,6 +25,7 @@ defmodule Huddlz.Notifications.Senders.HuddlReminder24h do
   alias Huddlz.Mailer
   alias Huddlz.Notifications.Footer
   alias Huddlz.Notifications.ICS
+  alias Huddlz.Notifications.Senders.HeaderSafe
   alias Huddlz.Notifications.Senders.HtmlEscape
 
   @impl true
@@ -44,7 +45,7 @@ defmodule Huddlz.Notifications.Senders.HuddlReminder24h do
     new()
     |> from(Mailer.from())
     |> to(to_string(user.email))
-    |> subject("Tomorrow: #{huddl.title}")
+    |> subject(HeaderSafe.safe("Tomorrow: #{huddl.title}"))
     |> html_body("""
     <p>Hi #{safe_name},</p>
 

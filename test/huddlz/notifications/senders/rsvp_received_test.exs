@@ -107,5 +107,19 @@ defmodule Huddlz.Notifications.Senders.RsvpReceivedTest do
 
       assert email.subject == "Someone RSVPd to your huddl"
     end
+
+    test "strips control characters from the subject (header injection guard)" do
+      user = generate(user())
+
+      email =
+        RsvpReceived.build(
+          user,
+          payload(%{"rsvper_display_name" => "Eve\r\nBcc: x@evil.com"})
+        )
+
+      refute email.subject =~ "\r"
+      refute email.subject =~ "\n"
+      assert email.subject =~ "Eve Bcc: x@evil.com"
+    end
   end
 end

@@ -23,6 +23,7 @@ defmodule Huddlz.Notifications.Senders.HuddlNew do
 
   alias Huddlz.Mailer
   alias Huddlz.Notifications.Footer
+  alias Huddlz.Notifications.Senders.HeaderSafe
   alias Huddlz.Notifications.Senders.HtmlEscape
 
   @impl true
@@ -39,7 +40,7 @@ defmodule Huddlz.Notifications.Senders.HuddlNew do
     new()
     |> from(Mailer.from())
     |> to(to_string(user.email))
-    |> subject("New huddl in #{group_name(payload)}: #{huddl_title(payload)}")
+    |> subject(HeaderSafe.safe("New huddl in #{group_name(payload)}: #{huddl_title(payload)}"))
     |> html_body("""
     <p>Hi #{safe_name},</p>
 
