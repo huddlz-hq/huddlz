@@ -159,8 +159,6 @@ defmodule Huddlz.Notifications.RsvpNotificationsTest do
       |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
       |> Ash.update!()
 
-      # Per-recipient assertions below cover what was sent. Drain
-      # asserts no jobs failed.
       assert %{failure: 0} = Oban.drain_queue(queue: :notifications)
 
       for recipient <- [owner, organizer_a, organizer_b] do
