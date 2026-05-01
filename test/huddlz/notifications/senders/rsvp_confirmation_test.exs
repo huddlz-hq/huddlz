@@ -18,15 +18,29 @@ defmodule Huddlz.Notifications.Senders.RsvpConfirmationTest do
         )
       )
 
-    generate(
-      huddl(
+    huddl_attrs =
+      [
         title: attrs[:title] || "Saturday Soccer",
         group_id: group.id,
         creator_id: owner.id,
         actor: owner
-      )
+      ]
+      |> put_datetime_attrs(attrs)
+
+    generate(huddl(huddl_attrs))
+  end
+
+  defp put_datetime_attrs(huddl_attrs, %{starts_at: starts_at} = attrs) do
+    ends_at = attrs[:ends_at] || DateTime.add(starts_at, 2, :hour)
+
+    Keyword.merge(huddl_attrs,
+      date: DateTime.to_date(starts_at),
+      start_time: starts_at |> DateTime.to_time() |> Time.truncate(:second),
+      duration_minutes: DateTime.diff(ends_at, starts_at, :minute)
     )
   end
+
+  defp put_datetime_attrs(huddl_attrs, _attrs), do: huddl_attrs
 
   describe "build/2" do
     test "addresses the user with their display name" do
@@ -86,6 +100,22 @@ defmodule Huddlz.Notifications.Senders.RsvpConfirmationTest do
       assert attachment.filename == "huddl.ics"
       assert attachment.content_type == "text/calendar"
       assert attachment.data =~ "BEGIN:VCALENDAR"
+    end
+
+    test "formats the start time in the payload time zone" do
+      user = generate(user())
+
+      starts_at = ~U[2030-05-04 17:00:00Z]
+      huddl = setup_huddl(%{starts_at: starts_at, ends_at: DateTime.add(starts_at, 2, :hour)})
+
+      email =
+        RsvpConfirmation.build(user, %{
+          "huddl_id" => huddl.id,
+          "time_zone" => "America/New_York"
+        })
+
+      assert email.html_body =~ "May 4, 2030 at 1:00 PM EDT"
+      assert email.text_body =~ "May 4, 2030 at 1:00 PM EDT"
     end
 
     test "includes the unsubscribe footer (activity)" do
