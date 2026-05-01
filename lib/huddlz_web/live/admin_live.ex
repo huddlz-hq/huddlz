@@ -94,19 +94,12 @@ defmodule HuddlzWeb.AdminLive do
                   placeholder="Search users by email..."
                   class="flex-1 border border-base-300 px-4 py-2.5 bg-base-100 text-sm focus:border-primary focus:ring-1 focus:ring-primary/30 transition-colors"
                 />
-                <button
-                  type="submit"
-                  class="px-5 py-2.5 bg-primary text-primary-content text-sm font-medium btn-neon"
-                >
+                <.button type="submit" variant="primary">
                   Search
-                </button>
-                <button
-                  type="button"
-                  phx-click="clear_search"
-                  class="px-5 py-2.5 border border-base-300 text-sm font-medium hover:border-primary/30 transition-colors"
-                >
+                </.button>
+                <.button type="button" phx-click="clear_search">
                   Clear
-                </button>
+                </.button>
               </div>
             </form>
 
@@ -150,12 +143,9 @@ defmodule HuddlzWeb.AdminLive do
                                 <option value="user" selected={user.role == :user}>User</option>
                                 <option value="admin" selected={user.role == :admin}>Admin</option>
                               </select>
-                              <button
-                                type="submit"
-                                class="px-3 py-1 bg-primary text-primary-content text-xs font-medium btn-neon transition-all"
-                              >
+                              <.button type="submit" variant="primary" size="sm">
                                 Update
-                              </button>
+                              </.button>
                             </form>
                           </td>
                         </tr>

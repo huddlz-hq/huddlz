@@ -73,13 +73,15 @@ defmodule HuddlzWeb.AuthLive.Register do
                 placeholder="First and Last Name"
                 autocomplete="name"
               />
-              <button
+              <.button
                 type="button"
                 phx-click="generate_display_name"
-                class="text-xs text-primary hover:underline font-medium inline-flex items-center gap-1 mt-1"
+                variant="ghost"
+                size="sm"
+                class="mt-1"
               >
                 <.icon name="hero-arrow-path" class="h-4 w-4" /> Generate Random Name
-              </button>
+              </.button>
             </div>
 
             <div>

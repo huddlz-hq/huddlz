@@ -277,12 +277,9 @@ defmodule HuddlzWeb.HuddlLive do
                   This Month
                 </option>
               </select>
-              <button
-                type="submit"
-                class="h-12 px-6 bg-primary text-primary-content font-medium btn-neon active:scale-[0.98] transition-all"
-              >
+              <.button type="submit" variant="primary" class="h-12 px-6">
                 Search
-              </button>
+              </.button>
             </div>
             <div class="flex flex-wrap items-end gap-2 mt-2">
               <div class="flex-grow min-w-[200px]">
@@ -343,12 +340,9 @@ defmodule HuddlzWeb.HuddlLive do
                   {@location_text} · {@distance_miles} mi
                 </span>
               <% end %>
-              <button
-                phx-click="clear_filters"
-                class="text-xs text-primary hover:underline font-medium"
-              >
+              <.button phx-click="clear_filters" variant="ghost" size="sm">
                 Clear all
-              </button>
+              </.button>
             </div>
           <% end %>
         </div>
