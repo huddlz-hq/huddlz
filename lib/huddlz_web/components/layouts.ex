@@ -34,15 +34,26 @@ defmodule HuddlzWeb.Layouts do
           <%!-- Right side --%>
           <div class="flex items-center gap-3">
             <%= if @current_user do %>
-              <div class="dropdown dropdown-end">
-                <label tabindex="0" class="cursor-pointer">
+              <div class="relative">
+                <button
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-controls="user-menu"
+                  phx-click={JS.toggle(to: "#user-menu")}
+                  class="cursor-pointer"
+                >
                   <div class="ring-1 ring-base-300 hover:ring-primary transition-colors">
                     <.avatar user={@current_user} size={:sm} />
                   </div>
-                </label>
+                </button>
                 <ul
-                  tabindex="0"
-                  class="dropdown-content mt-3 z-[1] p-1 border border-primary/20 bg-base-200 w-56 shadow-xl shadow-primary/5"
+                  id="user-menu"
+                  role="menu"
+                  hidden
+                  phx-click-away={JS.hide(to: "#user-menu")}
+                  phx-window-keydown={JS.hide(to: "#user-menu")}
+                  phx-key="escape"
+                  class="absolute right-0 mt-3 z-50 p-1 border border-primary/20 bg-base-200 w-56 shadow-xl shadow-primary/5"
                 >
                   <li class="px-3 py-2.5 border-b border-base-300">
                     <span class="mono-label text-primary/60">

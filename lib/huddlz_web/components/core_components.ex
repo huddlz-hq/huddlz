@@ -243,7 +243,7 @@ defmodule HuddlzWeb.CoreComponents do
           name={@name}
           value="true"
           checked={@checked}
-          class={@class || "checkbox checkbox-sm checkbox-primary"}
+          class={@class || "checkbox-cyber"}
           {@rest}
         />
         <span class="text-sm font-medium">{@label}</span>
