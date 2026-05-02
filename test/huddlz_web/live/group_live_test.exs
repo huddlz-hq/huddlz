@@ -197,17 +197,42 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> assert_has("h2", text: to_string(joined.name))
     end
 
-    test "View all link appears when section count exceeds limit", %{conn: conn} do
+    test "View all link points to scoped path and preserves search", %{conn: conn} do
       heavy_owner = generate(user(role: :user))
 
       for i <- 1..7 do
         generate(group(name: "Heavy Group #{i}", actor: heavy_owner, is_public: true))
       end
 
+      # No search active — link should point at the scope only
       conn
       |> login(heavy_owner)
       |> visit(~p"/groups")
-      |> assert_has("a", text: "View all →")
+      |> assert_has(~s|a[href="/groups?yours=hosting"]|, text: "View all →")
+
+      # Search active — link should preserve the query
+      conn
+      |> login(heavy_owner)
+      |> visit(~p"/groups?q=heavy")
+      |> assert_has(~s|a[href="/groups?yours=hosting&q=heavy"]|, text: "View all →")
+    end
+
+    test "search with no matches collapses both personal sections", %{
+      conn: conn,
+      owner: owner
+    } do
+      # Owner has hosting; also make them a member of an unrelated group so we
+      # can prove BOTH sections collapse when the search matches nothing.
+      stranger = generate(user(role: :user))
+      other_group = generate(group(name: "Knitting Circle", actor: stranger, is_public: true))
+      generate(group_member(group_id: other_group.id, user_id: owner.id, actor: stranger))
+
+      conn
+      |> login(owner)
+      |> visit(~p"/groups?q=zzzznosuchgroupzzzz")
+      |> refute_has("span", text: "// Hosting")
+      |> refute_has("span", text: "// Joined")
+      |> assert_has("p", text: "No groups match your search.")
     end
   end
 
