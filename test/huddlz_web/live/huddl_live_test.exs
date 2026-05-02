@@ -373,4 +373,166 @@ defmodule HuddlzWeb.HuddlLiveTest do
              end)
     end
   end
+
+  describe "Personal sections" do
+    setup do
+      host = generate(user(role: :user))
+      attendee = generate(user(role: :user))
+      stranger = generate(user(role: :user))
+
+      host_group = generate(group(is_public: true, owner_id: host.id, actor: host))
+      stranger_group = generate(group(is_public: true, owner_id: stranger.id, actor: stranger))
+
+      hosted =
+        generate(
+          huddl(
+            group_id: host_group.id,
+            creator_id: host.id,
+            is_private: false,
+            title: "Hosted by host",
+            actor: host
+          )
+        )
+
+      foreign =
+        generate(
+          huddl(
+            group_id: stranger_group.id,
+            creator_id: stranger.id,
+            is_private: false,
+            title: "Hosted by stranger",
+            actor: stranger
+          )
+        )
+
+      foreign
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
+      |> Ash.update!()
+
+      %{
+        host: host,
+        attendee: attendee,
+        stranger: stranger,
+        host_group: host_group,
+        stranger_group: stranger_group,
+        hosted: hosted,
+        foreign: foreign
+      }
+    end
+
+    test "anonymous users see no personal sections", %{conn: conn} do
+      conn
+      |> visit("/")
+      |> refute_has("span", text: "// Hosting")
+      |> refute_has("span", text: "// Attending")
+    end
+
+    test "host sees Hosting section", %{conn: conn, host: host, hosted: hosted} do
+      conn
+      |> login(host)
+      |> visit("/")
+      |> assert_has("span", text: "// Hosting")
+      |> assert_has("h3", text: hosted.title)
+    end
+
+    test "RSVPed attendee sees Attending section, not Hosting", %{
+      conn: conn,
+      attendee: attendee,
+      foreign: foreign
+    } do
+      conn
+      |> login(attendee)
+      |> visit("/")
+      |> assert_has("span", text: "// Attending")
+      |> refute_has("span", text: "// Hosting")
+      |> assert_has("h3", text: foreign.title)
+    end
+
+    test "host who also RSVPed to their own huddl is not double-counted", %{
+      conn: conn,
+      host: host,
+      hosted: hosted
+    } do
+      hosted
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: host)
+      |> Ash.update!()
+
+      conn
+      |> login(host)
+      |> visit("/")
+      |> assert_has("span", text: "// Hosting")
+      |> refute_has("span", text: "// Attending")
+    end
+
+    test "?yours=hosting scope shows only hosted, hides sections", %{
+      conn: conn,
+      host: host,
+      hosted: hosted
+    } do
+      conn
+      |> login(host)
+      |> visit("/?yours=hosting")
+      |> assert_has("h1", text: "Huddlz You're Hosting")
+      |> assert_has("h3", text: hosted.title)
+      |> refute_has("span", text: "// Hosting")
+      |> assert_has("a", text: "All huddlz")
+    end
+
+    test "?yours=attending scope shows only attending", %{
+      conn: conn,
+      attendee: attendee,
+      foreign: foreign
+    } do
+      conn
+      |> login(attendee)
+      |> visit("/?yours=attending")
+      |> assert_has("h1", text: "Huddlz You're Attending")
+      |> assert_has("h3", text: foreign.title)
+    end
+
+    test "anonymous users redirected from ?yours= scopes to sign-in", %{conn: conn} do
+      session = conn |> visit("/?yours=hosting")
+      assert_path(session, ~p"/sign-in")
+
+      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~
+               "Sign in to view huddlz you're hosting"
+
+      session = conn |> visit("/?yours=attending")
+      assert_path(session, ~p"/sign-in")
+    end
+
+    test "View all link appears when hosting count exceeds limit", %{
+      conn: conn,
+      host: host
+    } do
+      group2 = generate(group(is_public: true, owner_id: host.id, actor: host))
+
+      for i <- 1..7 do
+        generate(
+          huddl(
+            group_id: group2.id,
+            creator_id: host.id,
+            is_private: false,
+            title: "Heavy Hosting #{i}",
+            actor: host
+          )
+        )
+      end
+
+      conn
+      |> login(host)
+      |> visit("/")
+      |> assert_has(~s|a[href="/?yours=hosting"]|, text: "View all →")
+    end
+
+    test "scoped view with non-matching search shows search-aware empty copy", %{
+      conn: conn,
+      host: host
+    } do
+      conn
+      |> login(host)
+      |> visit("/?yours=hosting&q=zzznomatch")
+      |> assert_has("p", text: "You aren't hosting any huddlz that match.")
+    end
+  end
 end
