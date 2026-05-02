@@ -6,11 +6,11 @@ defmodule Huddlz.Notifications.DeliverWorkerTest do
   alias Huddlz.Notifications
   alias Huddlz.Notifications.DeliverWorker
 
-  describe "deliver_async/3" do
+  describe "deliver/3" do
     test "enqueues a job in the :notifications queue with string-keyed args" do
       user = generate(user(confirmed_at: DateTime.utc_now()))
 
-      assert {:ok, _job} = Notifications.deliver_async(user, :password_changed)
+      assert {:ok, _job} = Notifications.deliver(user, :password_changed)
 
       assert_enqueued(
         worker: DeliverWorker,
@@ -27,7 +27,7 @@ defmodule Huddlz.Notifications.DeliverWorkerTest do
       user = generate(user())
 
       assert_raise KeyError, fn ->
-        Notifications.deliver_async(user, :totally_made_up)
+        Notifications.deliver(user, :totally_made_up)
       end
 
       refute_enqueued(worker: DeliverWorker)

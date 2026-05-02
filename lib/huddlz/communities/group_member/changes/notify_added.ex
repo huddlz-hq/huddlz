@@ -37,7 +37,7 @@ defmodule Huddlz.Communities.GroupMember.Changes.NotifyAdded do
         with {:ok, group} <- Ash.get(Group, member.group_id, authorize?: false),
              true <- group.is_public == false,
              {:ok, recipient} <- Ash.get(User, member.user_id, authorize?: false) do
-          Notifications.deliver_async(recipient, :group_member_added, %{
+          Notifications.deliver(recipient, :group_member_added, %{
             "group_id" => group.id,
             "group_name" => to_string(group.name),
             "group_slug" => group.slug

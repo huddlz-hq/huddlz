@@ -27,7 +27,7 @@ defmodule Huddlz.Communities.GroupMember.Changes.NotifyRoleChanged do
   defp deliver(member, previous_role) do
     with {:ok, user} <- Ash.get(User, member.user_id, authorize?: false),
          {:ok, group} <- Ash.get(Group, member.group_id, authorize?: false) do
-      Notifications.deliver_async(user, :group_role_changed, %{
+      Notifications.deliver(user, :group_role_changed, %{
         "group_id" => group.id,
         "group_name" => to_string(group.name),
         "group_slug" => group.slug,
