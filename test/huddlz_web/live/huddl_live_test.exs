@@ -491,7 +491,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
       conn
       |> login(host)
       |> visit("/?yours=hosting")
-      |> assert_has("h1", text: "Huddlz You're Hosting")
+      |> assert_has("h1", text: "huddlz you're hosting")
       |> assert_has("h3", text: hosted.title)
       |> refute_has("span", text: "// Hosting")
       |> assert_has("a", text: "All huddlz")
@@ -505,7 +505,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
       conn
       |> login(attendee)
       |> visit("/?yours=attending")
-      |> assert_has("h1", text: "Huddlz You're Attending")
+      |> assert_has("h1", text: "huddlz you're attending")
       |> assert_has("h3", text: foreign.title)
     end
 
