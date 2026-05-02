@@ -320,6 +320,25 @@ defmodule HuddlzWeb.HuddlLiveTest do
       session |> click_button("Search")
       refute has_element?(view, "[role='option']")
     end
+
+    test "typing in search after picking a location preserves lat/lng in URL", %{
+      conn: conn
+    } do
+      conn
+      |> visit("/?location=Austin%2C+TX&lat=30.2672&lng=-97.7431&distance=25")
+      |> assert_has("span", text: "Austin, TX · 25 mi")
+      |> fill_in("Search huddlz", with: "elixir")
+      |> assert_path(~p"/",
+        query_params: %{
+          "q" => "elixir",
+          "location" => "Austin, TX",
+          "lat" => "30.2672",
+          "lng" => "-97.7431",
+          "distance" => "25"
+        }
+      )
+      |> assert_has("span", text: "Austin, TX · 25 mi")
+    end
   end
 
   describe "Groups fallback" do
