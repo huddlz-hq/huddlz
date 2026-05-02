@@ -699,7 +699,10 @@ defmodule HuddlzWeb.HuddlLive do
         </div>
 
         <div :if={@scope != :all} class="mt-6">
-          <.link navigate={~p"/"} class="text-sm text-primary hover:underline font-medium">
+          <.link
+            navigate={view_all_path(:all, assigns)}
+            class="text-sm text-primary hover:underline font-medium"
+          >
             ← All huddlz
           </.link>
         </div>
