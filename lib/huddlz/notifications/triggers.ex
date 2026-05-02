@@ -136,6 +136,12 @@ defmodule Huddlz.Notifications.Triggers do
       default: true,
       label: "Confirmation when I RSVP to a huddl"
     },
+    waitlist_promoted: %{
+      category: :transactional,
+      sender: Senders.WaitlistPromoted,
+      default: true,
+      label: "I was promoted from a huddl waitlist to attending"
+    },
 
     # F — Digests (deferred, default OFF)
     weekly_digest: %{

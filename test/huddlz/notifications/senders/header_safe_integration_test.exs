@@ -52,7 +52,12 @@ defmodule Huddlz.Notifications.Senders.HeaderSafeIntegrationTest do
   end
 
   defp payload_variants(trigger, huddl)
-       when trigger in [:huddl_reminder_24h, :huddl_reminder_1h, :rsvp_confirmation] do
+       when trigger in [
+              :huddl_reminder_24h,
+              :huddl_reminder_1h,
+              :rsvp_confirmation,
+              :waitlist_promoted
+            ] do
     [{"default", %{"huddl_id" => huddl.id}}]
   end
 
