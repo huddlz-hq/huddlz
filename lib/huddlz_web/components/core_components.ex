@@ -111,8 +111,7 @@ defmodule HuddlzWeb.CoreComponents do
     variants = %{
       "primary" => "bg-primary text-primary-content border border-primary btn-neon",
       "danger" => "bg-error text-error-content border border-error btn-neon",
-      "ghost" =>
-        "bg-transparent text-primary border-0 hover:underline normal-case tracking-normal font-body",
+      "ghost" => "bg-transparent text-primary border-0 hover:underline font-body",
       nil => "bg-transparent text-primary border border-primary/40 btn-neon hover:bg-primary/10"
     }
 
@@ -132,13 +131,21 @@ defmodule HuddlzWeb.CoreComponents do
     assigns =
       assigns
       |> assign(:variant_class, Map.fetch!(variants, assigns[:variant]))
+      |> assign(
+        :text_style_class,
+        if(assigns[:variant] == "ghost",
+          do: "tracking-normal normal-case",
+          else: "tracking-wide uppercase font-display"
+        )
+      )
       |> assign(:size_class, size_class)
 
     if rest[:href] || rest[:navigate] || rest[:patch] do
       ~H"""
       <.link
         class={[
-          "inline-flex items-center justify-center gap-2 font-medium tracking-wide uppercase font-display",
+          "inline-flex items-center justify-center gap-2 font-medium",
+          @text_style_class,
           @size_class,
           @variant_class,
           @class
@@ -152,7 +159,8 @@ defmodule HuddlzWeb.CoreComponents do
       ~H"""
       <button
         class={[
-          "inline-flex items-center justify-center gap-2 font-medium tracking-wide uppercase font-display",
+          "inline-flex items-center justify-center gap-2 font-medium",
+          @text_style_class,
           @size_class,
           @variant_class,
           @class
