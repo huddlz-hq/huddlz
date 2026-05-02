@@ -34,15 +34,25 @@ defmodule HuddlzWeb.GroupLive.Index do
     scope = parse_scope(params["yours"])
     query = params["q"] |> normalize_query()
 
-    socket =
-      socket
-      |> assign(:page_title, page_title(scope))
-      |> assign(:scope, scope)
-      |> assign(:query, query)
-      |> load_groups()
+    if scope != :all and is_nil(socket.assigns.current_user) do
+      {:noreply,
+       socket
+       |> put_flash(:error, "Sign in to view #{sign_in_prompt(scope)}.")
+       |> push_navigate(to: ~p"/sign-in")}
+    else
+      socket =
+        socket
+        |> assign(:page_title, page_title(scope))
+        |> assign(:scope, scope)
+        |> assign(:query, query)
+        |> load_groups()
 
-    {:noreply, socket}
+      {:noreply, socket}
+    end
   end
+
+  defp sign_in_prompt(:hosting), do: "groups you host"
+  defp sign_in_prompt(:joined), do: "groups you've joined"
 
   @impl true
   def handle_event("filter_change", %{"query" => query}, socket) do
