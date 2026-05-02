@@ -12,6 +12,7 @@ defmodule HuddlzWeb.HuddlLive do
   require Logger
 
   @section_limit 6
+  @huddl_card_loads [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group]
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
 
@@ -364,14 +365,50 @@ defmodule HuddlzWeb.HuddlLive do
   defp maybe_load_personal_sections(socket, base_args) do
     user = socket.assigns.current_user
 
-    {hosting, hosting_total} = load_section(base_args, user, :hosting)
-    {attending, attending_total} = load_section(base_args, user, :attending)
+    %{
+      hosting: {hosting, hosting_total},
+      attending: {attending, attending_total}
+    } = load_personal_sections(base_args, user)
 
     socket
     |> assign(:hosting, hosting)
     |> assign(:hosting_total, hosting_total)
     |> assign(:attending, attending)
     |> assign(:attending_total, attending_total)
+  end
+
+  defp load_personal_sections(base_args, user) do
+    relationships = [:hosting, :attending]
+
+    if async_personal_sections?() do
+      relationships
+      |> Task.async_stream(
+        fn relationship -> {relationship, load_section(base_args, user, relationship)} end,
+        max_concurrency: length(relationships),
+        timeout: 15_000,
+        on_timeout: :kill_task
+      )
+      |> Enum.reduce(default_sections(), fn
+        {:ok, {relationship, section}}, sections ->
+          Map.put(sections, relationship, section)
+
+        {:exit, reason}, sections ->
+          Logger.warning("Huddl personal section search failed: #{inspect(reason)}")
+          sections
+      end)
+    else
+      Enum.reduce(relationships, default_sections(), fn relationship, sections ->
+        Map.put(sections, relationship, load_section(base_args, user, relationship))
+      end)
+    end
+  end
+
+  defp default_sections, do: %{hosting: {[], 0}, attending: {[], 0}}
+
+  defp async_personal_sections? do
+    Application.get_env(:huddlz, Huddlz.Repo, [])
+    |> Keyword.get(:pool)
+    |> Kernel.!=(Ecto.Adapters.SQL.Sandbox)
   end
 
   defp load_section(base_args, user, relationship) do
@@ -383,12 +420,7 @@ defmodule HuddlzWeb.HuddlLive do
 
     case page do
       {:ok, %{results: results, count: count}} ->
-        loaded =
-          Ash.load!(
-            results,
-            [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group],
-            actor: user
-          )
+        loaded = load_huddl_cards(results, user)
 
         {loaded, count || length(loaded)}
 
@@ -414,12 +446,7 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   defp load_results_with_distances({:ok, %{results: results}}, socket) do
-    loaded =
-      Ash.load!(
-        results,
-        [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group],
-        actor: socket.assigns[:current_user]
-      )
+    loaded = load_huddl_cards(results, socket.assigns[:current_user])
 
     dists = compute_distances(loaded, socket)
     {loaded, dists}
@@ -431,6 +458,10 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   defp load_results_with_distances(_, _socket), do: {[], []}
+
+  defp load_huddl_cards(results, actor) do
+    Ash.load!(results, @huddl_card_loads, actor: actor)
+  end
 
   defp compute_distances(huddls, %{assigns: %{location_active: false}}) do
     List.duplicate(nil, length(huddls))
