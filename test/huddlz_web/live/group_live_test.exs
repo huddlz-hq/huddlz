@@ -197,6 +197,20 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> assert_has("h2", text: to_string(joined.name))
     end
 
+    test "anonymous user is redirected to sign-in from ?yours= scopes", %{conn: conn} do
+      session = conn |> visit(~p"/groups?yours=hosting")
+      assert_path(session, ~p"/sign-in")
+
+      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~
+               "Sign in to view groups you host"
+
+      session = conn |> visit(~p"/groups?yours=joined")
+      assert_path(session, ~p"/sign-in")
+
+      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~
+               "Sign in to view groups you've joined"
+    end
+
     test "scoped view with non-matching search shows search-aware empty copy", %{
       conn: conn,
       owner: owner
