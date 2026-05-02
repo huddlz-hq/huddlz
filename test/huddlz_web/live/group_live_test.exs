@@ -2,6 +2,7 @@ defmodule HuddlzWeb.GroupLiveTest do
   use HuddlzWeb.ConnCase, async: true
 
   import Huddlz.Generator
+  import Phoenix.LiveViewTest
 
   alias Huddlz.Communities.Group
 
@@ -260,6 +261,94 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> refute_has("span", text: "// Hosting")
       |> refute_has("span", text: "// Joined")
       |> assert_has("p", text: "No groups match your search.")
+    end
+  end
+
+  describe "Index pagination" do
+    setup do
+      owner = generate(user(role: :user))
+
+      # 22 public groups → 2 pages at 20/page
+      for i <- 1..22 do
+        generate(group(is_public: true, owner_id: owner.id, actor: owner, name: "Group #{i}"))
+      end
+
+      %{owner: owner}
+    end
+
+    test "shows pagination when more than 20 groups", %{conn: conn} do
+      conn
+      |> visit(~p"/groups")
+      |> assert_has("button[phx-click=change_page]")
+      |> assert_has("button.w-8", text: "2")
+    end
+
+    test "direct visit to ?page=2 renders page 2", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/groups?page=2")
+      # Page 2 has only 2 of the 22 groups; page 1 has 20.
+      group_card_count =
+        html
+        |> Floki.parse_document!()
+        |> Floki.find(".grid > a")
+        |> length()
+
+      assert group_card_count == 2
+    end
+
+    test "clicking page 2 button updates the URL via push_patch", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/groups")
+
+      view
+      |> element("button.w-8[phx-value-page='2']")
+      |> render_click()
+
+      assert_patch(view, "/groups?page=2")
+    end
+
+    test "page=1 is omitted from the URL", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/groups?page=2")
+
+      view
+      |> element("button.w-8[phx-value-page='1']")
+      |> render_click()
+
+      assert_patch(view, "/groups")
+    end
+
+    test "filter change drops ?page from the URL", %{conn: conn} do
+      conn
+      |> visit(~p"/groups?page=2")
+      |> fill_in("Search groups", with: "Group 1")
+      |> assert_path(~p"/groups", query_params: %{"q" => "Group 1"})
+    end
+
+    test "out-of-range ?page= clamps to the last valid page", %{conn: conn} do
+      conn
+      |> visit(~p"/groups?page=999")
+      |> assert_path(~p"/groups", query_params: %{"page" => "2"})
+    end
+
+    test "non-integer ?page= falls back to page 1", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/groups?page=abc")
+
+      group_card_count =
+        html
+        |> Floki.parse_document!()
+        |> Floki.find(".grid > a")
+        |> length()
+
+      # Page 1 has 20 of the 22 groups
+      assert group_card_count == 20
+    end
+
+    test "pagination preserves active query in the URL", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/groups?q=Group")
+
+      view
+      |> element("button.w-8[phx-value-page='2']")
+      |> render_click()
+
+      assert_patch(view, "/groups?q=Group&page=2")
     end
   end
 
