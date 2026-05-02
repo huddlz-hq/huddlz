@@ -203,13 +203,9 @@ defmodule HuddlzWeb.GroupLive.Index do
             />
           </div>
           <%= if @query do %>
-            <button
-              type="button"
-              phx-click="clear_search"
-              class="text-xs text-primary hover:underline font-medium"
-            >
+            <.button variant="ghost" size="sm" type="button" phx-click="clear_search">
               Clear
-            </button>
+            </.button>
           <% end %>
         </div>
       </form>
