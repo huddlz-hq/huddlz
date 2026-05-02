@@ -312,8 +312,8 @@ defmodule HuddlzWeb.GroupLive.Index do
 
   defp show_all_heading?(_), do: false
 
+  defp empty_message(_scope, query) when not is_nil(query), do: "No groups match your search."
   defp empty_message(:hosting, _), do: "You aren't hosting any groups yet."
   defp empty_message(:joined, _), do: "You haven't joined any groups yet."
-  defp empty_message(:all, nil), do: "No groups found."
-  defp empty_message(:all, _query), do: "No groups match your search."
+  defp empty_message(:all, _), do: "No groups found."
 end
