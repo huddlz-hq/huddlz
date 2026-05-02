@@ -6,9 +6,9 @@ defmodule Huddlz.Notifications.DeliverWorker do
 
       %{"user_id" => "...", "trigger" => "password_changed", "payload" => %{}}
 
-  Looks up the user, then calls `Huddlz.Notifications.deliver/3` — the same
-  synchronous code path that direct callers use. Eligibility, preferences,
-  and sender dispatch live there; the worker is just the async wrapper.
+  Looks up the user, then calls `Huddlz.Notifications.deliver_now/3` —
+  the synchronous internal code path. Eligibility, preferences, and
+  sender dispatch live there; the worker is the only legitimate caller.
 
   Delivery failures retry with the worker's default exponential backoff.
   Skipped or unknown-user jobs return `{:cancel, reason}` so they don't
@@ -27,7 +27,7 @@ defmodule Huddlz.Notifications.DeliverWorker do
          {:ok, user} <- fetch_user(user_id) do
       payload = Map.get(args, "payload", %{})
 
-      case Notifications.deliver(user, trigger, payload) do
+      case Notifications.deliver_now(user, trigger, payload) do
         :sent -> :ok
         :skipped -> :ok
         {:error, reason} -> {:error, reason}

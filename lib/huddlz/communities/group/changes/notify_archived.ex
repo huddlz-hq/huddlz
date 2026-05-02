@@ -53,7 +53,7 @@ defmodule Huddlz.Communities.Group.Changes.NotifyArchived do
 
     for user_id <- recipients do
       case Ash.get(User, user_id, authorize?: false) do
-        {:ok, user} -> Notifications.deliver_async(user, :group_archived, payload)
+        {:ok, user} -> Notifications.deliver(user, :group_archived, payload)
         _ -> :noop
       end
     end

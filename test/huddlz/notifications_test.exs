@@ -11,10 +11,10 @@ defmodule Huddlz.NotificationsTest do
     def deliver(_email, _config), do: {:error, :smtp_unavailable}
   end
 
-  describe "deliver/3 with a real sender" do
+  describe "deliver_now/3 with a real sender" do
     test "sends for a transactional trigger with the live PasswordChanged sender" do
       user = generate(user(confirmed_at: DateTime.utc_now()))
-      assert :sent == Notifications.deliver(user, :password_changed, %{})
+      assert :sent == Notifications.deliver_now(user, :password_changed, %{})
 
       assert_email_sent(fn email ->
         email.subject == "Your huddlz password was changed" and
@@ -36,31 +36,34 @@ defmodule Huddlz.NotificationsTest do
       Application.put_env(:huddlz, Huddlz.Mailer, adapter: FailingMailerAdapter)
 
       user = generate(user(confirmed_at: DateTime.utc_now()))
-      assert {:error, :smtp_unavailable} == Notifications.deliver(user, :password_changed, %{})
+
+      assert {:error, :smtp_unavailable} ==
+               Notifications.deliver_now(user, :password_changed, %{})
+
       refute_email_sent()
     end
 
     test "skips when the user has opted out of an activity trigger" do
       user = generate_user_with_prefs(%{"rsvp_received" => false})
-      assert :skipped == Notifications.deliver(user, :rsvp_received, %{})
+      assert :skipped == Notifications.deliver_now(user, :rsvp_received, %{})
       refute_email_sent()
     end
 
     test "skips activity triggers for unconfirmed users" do
       user = generate(user(confirmed_at: nil))
-      assert :skipped == Notifications.deliver(user, :rsvp_received, %{})
+      assert :skipped == Notifications.deliver_now(user, :rsvp_received, %{})
       refute_email_sent()
     end
 
     test "raises a clear error when the registered sender isn't implemented" do
       # :weekly_digest is registered with a sender module (Senders.WeeklyDigest)
       # that doesn't exist yet — F-series digests are deferred to v2. With
-      # the trigger enabled and the user eligible, deliver/3 must surface
+      # the trigger enabled and the user eligible, deliver_now/3 must surface
       # this loudly rather than producing an UndefinedFunctionError.
       user = generate_user_with_prefs(%{"weekly_digest" => true})
 
       assert_raise ArgumentError, ~r/not yet implemented/, fn ->
-        Notifications.deliver(user, :weekly_digest, %{})
+        Notifications.deliver_now(user, :weekly_digest, %{})
       end
 
       refute_email_sent()

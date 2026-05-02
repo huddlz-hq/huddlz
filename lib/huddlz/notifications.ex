@@ -2,11 +2,13 @@ defmodule Huddlz.Notifications do
   @moduledoc """
   Email notifications orchestrator.
 
-  Single entry point for sending a notification email. Resolves the user's
-  preferences, decides whether to send, and dispatches to the right sender
-  module.
+  Public entry point for sending a notification email. `deliver/3`
+  enqueues an Oban job; the `Huddlz.Notifications.DeliverWorker` then
+  resolves the user's preferences, decides whether to send, and
+  dispatches to the right sender module.
 
       Huddlz.Notifications.deliver(user, :password_changed, %{...})
+      #=> {:ok, %Oban.Job{}}
 
   See `docs/notifications.md` for the system spec and `Huddlz.Notifications.Triggers`
   for the registry of trigger codes.
@@ -27,46 +29,19 @@ defmodule Huddlz.Notifications do
   @type deliver_result :: :sent | :skipped | {:error, term()}
 
   @doc """
-  Build and deliver the email for `trigger` to `user`.
-
-  Returns `:sent` if the mailer accepted the email, `:skipped` if the user is
-  not eligible (preferences off, unconfirmed, etc.), or `{:error, reason}` if
-  the mailer rejected.
-
-  Raises if `trigger` is not in the registry — callers should use known atoms.
-  """
-  @spec deliver(User.t(), atom(), map()) :: deliver_result()
-  def deliver(user, trigger, payload \\ %{}) do
-    entry = Triggers.fetch!(trigger)
-
-    if should_deliver?(user, trigger, entry) do
-      ensure_sender_implemented!(trigger, entry.sender)
-      email = entry.sender.build(user, payload)
-
-      case Mailer.deliver(email) do
-        {:ok, _result} -> :sent
-        {:error, reason} -> {:error, reason}
-      end
-    else
-      :skipped
-    end
-  end
-
-  @doc """
   Enqueue an Oban job that will deliver the email asynchronously.
 
   Returns `{:ok, %Oban.Job{}}` when the job is inserted, `{:error, reason}`
   if Oban refuses it. The trigger is validated up front so callers find out
   about typos at enqueue time rather than after a job is already scheduled.
 
-  This is the preferred entry point from request-handling code paths
-  (Ash actions, controllers, LiveViews) — it avoids holding the request
-  open while SMTP completes and keeps Swoosh test-adapter messages out of
-  the LV's `$callers` chain.
+  This is the only entry point app code should use. It avoids holding
+  request handlers open while SMTP completes and lets failed deliveries
+  retry on the worker's backoff schedule.
   """
-  @spec deliver_async(User.t(), atom(), map()) ::
+  @spec deliver(User.t(), atom(), map()) ::
           {:ok, Oban.Job.t()} | {:error, term()}
-  def deliver_async(%User{id: user_id}, trigger, payload \\ %{}) when is_atom(trigger) do
+  def deliver(%User{id: user_id}, trigger, payload \\ %{}) when is_atom(trigger) do
     _ = Triggers.fetch!(trigger)
 
     %{user_id: user_id, trigger: Atom.to_string(trigger), payload: payload}
@@ -82,6 +57,27 @@ defmodule Huddlz.Notifications do
         )
 
         err
+    end
+  end
+
+  @doc false
+  # Synchronous delivery. Internal to the notifications pipeline — only
+  # `Huddlz.Notifications.DeliverWorker` should call this. App code uses
+  # `deliver/3` so that delivery happens off the request path with retry.
+  @spec deliver_now(User.t(), atom(), map()) :: deliver_result()
+  def deliver_now(user, trigger, payload \\ %{}) do
+    entry = Triggers.fetch!(trigger)
+
+    if should_deliver?(user, trigger, entry) do
+      ensure_sender_implemented!(trigger, entry.sender)
+      email = entry.sender.build(user, payload)
+
+      case Mailer.deliver(email) do
+        {:ok, _result} -> :sent
+        {:error, reason} -> {:error, reason}
+      end
+    else
+      :skipped
     end
   end
 
@@ -101,7 +97,7 @@ defmodule Huddlz.Notifications do
   @doc """
   Pure decision function: should this email be sent?
 
-  Used by `deliver/3` and useful directly in tests for asserting the
+  Used by `deliver_now/3` and useful directly in tests for asserting the
   preference matrix without going through the mailer.
   """
   @spec should_deliver?(User.t(), atom(), map()) :: boolean()

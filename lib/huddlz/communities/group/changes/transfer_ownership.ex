@@ -58,7 +58,7 @@ defmodule Huddlz.Communities.Group.Changes.TransferOwnership do
     }
 
     if previous_owner do
-      Notifications.deliver_async(
+      Notifications.deliver(
         previous_owner,
         :group_ownership_transferred,
         Map.put(base, "role", "previous_owner")
@@ -66,7 +66,7 @@ defmodule Huddlz.Communities.Group.Changes.TransferOwnership do
     end
 
     if new_owner do
-      Notifications.deliver_async(
+      Notifications.deliver(
         new_owner,
         :group_ownership_transferred,
         Map.put(base, "role", "new_owner")
