@@ -197,6 +197,19 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> assert_has("h2", text: to_string(joined.name))
     end
 
+    test "scoped view with non-matching search shows search-aware empty copy", %{
+      conn: conn,
+      owner: owner
+    } do
+      # Owner DOES host groups, but the search matches none of them. The empty
+      # state must reflect the search, not falsely claim they host nothing.
+      conn
+      |> login(owner)
+      |> visit(~p"/groups?yours=hosting&q=zzznomatch")
+      |> assert_has("p", text: "No groups match your search.")
+      |> refute_has("p", text: "You aren't hosting any groups yet.")
+    end
+
     test "View all link points to scoped path and preserves search", %{conn: conn} do
       heavy_owner = generate(user(role: :user))
 
