@@ -79,6 +79,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
           30.2672,
           -97.7431,
           50,
+          nil,
           actor: owner,
           page: [limit: 20, offset: 0, count: true]
         )
@@ -100,6 +101,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
           30.2672,
           -97.7431,
           10,
+          nil,
           actor: owner,
           page: [limit: 20, offset: 0, count: true]
         )
@@ -120,6 +122,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
           30.2672,
           -97.7431,
           100,
+          nil,
           actor: owner,
           page: [limit: 20, offset: 0, count: true]
         )
@@ -139,6 +142,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
         Huddlz.Communities.search_huddlz(
           nil,
           :upcoming,
+          nil,
           nil,
           nil,
           nil,
@@ -163,6 +167,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
           30.2672,
           -97.7431,
           10,
+          nil,
           actor: owner,
           page: [limit: 20, offset: 0, count: true]
         )
@@ -175,6 +180,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
           30.2672,
           -97.7431,
           100,
+          nil,
           actor: owner,
           page: [limit: 20, offset: 0, count: true]
         )

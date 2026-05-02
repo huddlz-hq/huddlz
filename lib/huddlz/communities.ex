@@ -19,7 +19,8 @@ defmodule Huddlz.Communities do
           {:optional, :event_type},
           {:optional, :search_latitude},
           {:optional, :search_longitude},
-          {:optional, :distance_miles}
+          {:optional, :distance_miles},
+          {:optional, :relationship}
         ],
         get?: false
 
