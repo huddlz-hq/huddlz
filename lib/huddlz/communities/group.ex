@@ -18,6 +18,7 @@ defmodule Huddlz.Communities.Group do
       list :list_groups, :read
       list :search_groups, :search
       list :my_groups, :get_by_owner
+      list :joined_groups, :get_joined
     end
 
     mutations do
@@ -37,6 +38,7 @@ defmodule Huddlz.Communities.Group do
       index :read
       index :search, route: "/search"
       index :get_by_owner, route: "/mine"
+      index :get_joined, route: "/joined"
       get :get_by_slug, route: "/by_slug/:slug"
       post :create_group
       patch :update_details
@@ -108,6 +110,15 @@ defmodule Huddlz.Communities.Group do
     read :get_by_owner do
       description "Get groups owned by the current actor"
       filter expr(owner_id == ^actor(:id))
+    end
+
+    read :get_joined do
+      description "Get groups the current actor has joined but does not own"
+
+      filter expr(
+               exists(group_members, user_id == ^actor(:id)) and
+                 owner_id != ^actor(:id)
+             )
     end
 
     read :get_by_slug do
