@@ -11,6 +11,7 @@ defmodule HuddlzWeb.GroupLive.Index do
   require Logger
 
   @section_limit 6
+  @page_size 20
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
 
@@ -26,7 +27,8 @@ defmodule HuddlzWeb.GroupLive.Index do
      |> assign(:joined, [])
      |> assign(:hosting_total, 0)
      |> assign(:joined_total, 0)
-     |> assign(:groups, [])}
+     |> assign(:groups, [])
+     |> assign(:page_info, %{total_pages: 1, current_page: 1, total_count: 0})}
   end
 
   @impl true
@@ -40,14 +42,24 @@ defmodule HuddlzWeb.GroupLive.Index do
        |> put_flash(:error, "Sign in to view #{sign_in_prompt(scope)}.")
        |> push_navigate(to: ~p"/sign-in")}
     else
+      page = parse_page(params["page"])
+
       socket =
         socket
         |> assign(:page_title, page_title(scope))
         |> assign(:scope, scope)
         |> assign(:query, query)
-        |> load_groups()
+        |> load_groups(page)
 
-      {:noreply, socket}
+      total_pages = socket.assigns.page_info.total_pages
+
+      if page > total_pages do
+        # Out-of-range page: clamp by patching to the last valid page so the URL
+        # reflects what the user actually sees.
+        {:noreply, push_patch(socket, to: scoped_path(scope, query, page: total_pages))}
+      else
+        {:noreply, socket}
+      end
     end
   end
 
@@ -67,6 +79,14 @@ defmodule HuddlzWeb.GroupLive.Index do
     {:noreply, push_patch(socket, to: scoped_path(socket.assigns.scope, nil))}
   end
 
+  def handle_event("change_page", %{"page" => page_str}, socket) do
+    page = parse_page(page_str)
+
+    path = scoped_path(socket.assigns.scope, socket.assigns.query, page: page)
+
+    {:noreply, push_patch(socket, to: path)}
+  end
+
   defp parse_scope("hosting"), do: :hosting
   defp parse_scope("joined"), do: :joined
   defp parse_scope(_), do: :all
@@ -78,13 +98,28 @@ defmodule HuddlzWeb.GroupLive.Index do
   defp nilify_blank(""), do: nil
   defp nilify_blank(q), do: q
 
+  defp parse_page(nil), do: 1
+  defp parse_page(""), do: 1
+
+  defp parse_page(val) when is_binary(val) do
+    case Integer.parse(val) do
+      {n, _} when n >= 1 -> n
+      _ -> 1
+    end
+  end
+
+  defp parse_page(val) when is_integer(val) and val >= 1, do: val
+  defp parse_page(_), do: 1
+
   defp page_title(:hosting), do: "Groups You Host"
   defp page_title(:joined), do: "Groups You've Joined"
   defp page_title(:all), do: "Groups"
 
-  defp scoped_path(scope, query) do
+  defp scoped_path(scope, query, opts \\ []) do
+    page = Keyword.get(opts, :page, 1)
+
     params =
-      [yours: scope_param(scope), q: query]
+      [yours: scope_param(scope), q: query, page: page_param(page)]
       |> Enum.reject(fn {_, v} -> is_nil(v) end)
 
     case params do
@@ -93,35 +128,50 @@ defmodule HuddlzWeb.GroupLive.Index do
     end
   end
 
+  defp page_param(page) when is_integer(page) and page > 1, do: Integer.to_string(page)
+  defp page_param(_), do: nil
+
   defp scope_param(:hosting), do: "hosting"
   defp scope_param(:joined), do: "joined"
   defp scope_param(:all), do: nil
 
-  defp load_groups(socket) do
+  defp load_groups(socket, page) do
     user = socket.assigns.current_user
     query = socket.assigns.query
 
     case socket.assigns.scope do
       :hosting ->
-        assign(socket, :groups, list_hosting(user, query))
+        {groups, total} = list_hosting(user, query, page)
+
+        socket
+        |> assign(:groups, groups)
+        |> assign(:page_info, page_info(total, page))
 
       :joined ->
-        assign(socket, :groups, list_joined(user, query))
+        {groups, total} = list_joined(user, query, page)
+
+        socket
+        |> assign(:groups, groups)
+        |> assign(:page_info, page_info(total, page))
 
       :all ->
-        hosting = if user, do: list_hosting(user, query), else: []
-        joined = if user, do: list_joined(user, query), else: []
+        hosting = if user, do: list_hosting_section(user, query), else: []
+        joined = if user, do: list_joined_section(user, query), else: []
+        {groups, total} = list_all(query, page)
 
         socket
         |> assign(:hosting, Enum.take(hosting, @section_limit))
         |> assign(:hosting_total, length(hosting))
         |> assign(:joined, Enum.take(joined, @section_limit))
         |> assign(:joined_total, length(joined))
-        |> assign(:groups, list_all(query))
+        |> assign(:groups, groups)
+        |> assign(:page_info, page_info(total, page))
     end
   end
 
-  defp list_hosting(user, query) do
+  # Personal sections aren't paginated — they show up to @section_limit and
+  # link out to the scoped (paginated) view via "View all".
+  defp list_hosting_section(user, query) do
     Group
     |> Ash.Query.for_read(:get_by_owner, %{}, actor: user)
     |> apply_search(query)
@@ -129,7 +179,7 @@ defmodule HuddlzWeb.GroupLive.Index do
     |> read_groups(actor: user)
   end
 
-  defp list_joined(user, query) do
+  defp list_joined_section(user, query) do
     Group
     |> Ash.Query.for_read(:get_joined, %{}, actor: user)
     |> apply_search(query)
@@ -137,16 +187,58 @@ defmodule HuddlzWeb.GroupLive.Index do
     |> read_groups(actor: user)
   end
 
+  defp list_hosting(user, query, page) do
+    Group
+    |> Ash.Query.for_read(:get_by_owner, %{}, actor: user)
+    |> apply_search(query)
+    |> paginate_with_count(page, actor: user)
+  end
+
+  defp list_joined(user, query, page) do
+    Group
+    |> Ash.Query.for_read(:get_joined, %{}, actor: user)
+    |> apply_search(query)
+    |> paginate_with_count(page, actor: user)
+  end
+
   # The main directory stays public-only on purpose: a user's private groups
   # already surface in the // JOINED section above, so re-listing them here
   # would just duplicate. Anonymous users can only ever see public groups.
-  defp list_all(query) do
+  defp list_all(query, page) do
     Group
     |> Ash.Query.for_read(:read, %{}, actor: nil)
     |> Ash.Query.filter(is_public == true)
     |> apply_search(query)
-    |> Ash.Query.load(:current_image_url)
-    |> read_groups(actor: nil)
+    |> paginate_with_count(page, actor: nil)
+  end
+
+  defp paginate_with_count(ash_query, page, opts) do
+    total =
+      case Ash.count(ash_query, opts) do
+        {:ok, n} ->
+          n
+
+        {:error, reason} ->
+          Logger.warning("GroupLive.Index group count failed: #{inspect(reason)}")
+          0
+      end
+
+    paginated =
+      ash_query
+      |> Ash.Query.load(:current_image_url)
+      |> Ash.Query.limit(@page_size)
+      |> Ash.Query.offset((page - 1) * @page_size)
+      |> read_groups(opts)
+
+    {paginated, total}
+  end
+
+  defp page_info(0, _page),
+    do: %{total_pages: 1, current_page: 1, total_count: 0}
+
+  defp page_info(total, page) when total > 0 do
+    total_pages = ceil(total / @page_size)
+    %{total_pages: total_pages, current_page: page, total_count: total}
   end
 
   defp apply_search(ash_query, nil) do
@@ -238,7 +330,7 @@ defmodule HuddlzWeb.GroupLive.Index do
         >
           <span class="mono-label text-primary/70">// {scope_heading(@scope)}</span>
           <span class="text-sm font-body font-normal text-base-content/40">
-            ({length(@groups)})
+            ({@page_info.total_count})
           </span>
         </h2>
 
@@ -262,6 +354,14 @@ defmodule HuddlzWeb.GroupLive.Index do
               <.group_card group={group} />
             <% end %>
           </div>
+
+          <%= if @page_info.total_pages > 1 do %>
+            <.pagination
+              current_page={@page_info.current_page}
+              total_pages={@page_info.total_pages}
+              event_name="change_page"
+            />
+          <% end %>
         <% end %>
 
         <div :if={@scope != :all} class="mt-6">
