@@ -61,14 +61,32 @@ defmodule HuddlzWeb.HuddlLive do
        |> put_flash(:error, "Sign in to view #{sign_in_prompt(scope)}.")
        |> push_navigate(to: ~p"/sign-in")}
     else
+      page = parse_page(params["page"])
+
       socket =
         socket
         |> assign(:scope, scope)
         |> assign(:page_title, page_title(scope))
         |> assign_filters_from_params(params)
-        |> perform_search()
+        |> perform_search(offset: (page - 1) * 20)
 
-      {:noreply, socket}
+      total_pages = socket.assigns.page_info.total_pages
+
+      if page > total_pages do
+        # Out-of-range page: clamp by patching to the last valid page so the URL
+        # reflects what the user actually sees.
+        cleared? = location_explicitly_cleared?(socket.assigns)
+
+        path =
+          scoped_path(scope, form_params_from_assigns(socket),
+            override_location_with_cleared: cleared?,
+            page: total_pages
+          )
+
+        {:noreply, push_patch(socket, to: path)}
+      else
+        {:noreply, socket}
+      end
     end
   end
 
@@ -144,6 +162,19 @@ defmodule HuddlzWeb.HuddlLive do
   defp parse_distance(val) when is_integer(val) and val in 5..100, do: val
   defp parse_distance(_), do: 25
 
+  defp parse_page(nil), do: 1
+  defp parse_page(""), do: 1
+
+  defp parse_page(val) when is_binary(val) do
+    case Integer.parse(val) do
+      {n, _} when n >= 1 -> n
+      _ -> 1
+    end
+  end
+
+  defp parse_page(val) when is_integer(val) and val >= 1, do: val
+  defp parse_page(_), do: 1
+
   defp page_title(:hosting), do: "huddlz you're hosting"
   defp page_title(:attending), do: "huddlz you're attending"
   defp page_title(:all), do: "huddlz"
@@ -175,9 +206,16 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   def handle_event("change_page", %{"page" => page_str}, socket) do
-    page_num = String.to_integer(page_str)
-    socket = perform_search(socket, offset: (page_num - 1) * 20)
-    {:noreply, socket}
+    page = parse_page(page_str)
+    cleared? = location_explicitly_cleared?(socket.assigns)
+
+    path =
+      scoped_path(socket.assigns.scope, form_params_from_assigns(socket),
+        override_location_with_cleared: cleared?,
+        page: page
+      )
+
+    {:noreply, push_patch(socket, to: path)}
   end
 
   @impl true
@@ -238,8 +276,9 @@ defmodule HuddlzWeb.HuddlLive do
 
   defp scoped_path(scope, form_params, opts \\ []) do
     cleared? = Keyword.get(opts, :override_location_with_cleared, false)
+    page = Keyword.get(opts, :page, 1)
 
-    base = current_filter_params(form_params, cleared?)
+    base = current_filter_params(form_params, cleared?) ++ page_params(page)
     params = put_scope(scope, base)
 
     case params do
@@ -247,6 +286,11 @@ defmodule HuddlzWeb.HuddlLive do
       params -> ~p"/?#{params}"
     end
   end
+
+  defp page_params(page) when is_integer(page) and page > 1,
+    do: [{"page", Integer.to_string(page)}]
+
+  defp page_params(_), do: []
 
   defp current_filter_params(form_params, cleared?) do
     non_location_params(form_params)
@@ -285,7 +329,7 @@ defmodule HuddlzWeb.HuddlLive do
   defp put_scope(:all, params), do: params
   defp put_scope(scope, params), do: [{"yours", Atom.to_string(scope)} | params]
 
-  defp perform_search(socket, opts \\ []) do
+  defp perform_search(socket, opts) do
     offset = Keyword.get(opts, :offset, 0)
 
     base_args = build_search_args(socket)

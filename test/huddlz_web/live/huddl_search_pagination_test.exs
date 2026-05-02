@@ -1,6 +1,8 @@
 defmodule HuddlzWeb.HuddlSearchPaginationTest do
   use HuddlzWeb.ConnCase, async: true
 
+  import Phoenix.LiveViewTest
+
   setup do
     user = generate(user(role: :user))
     group = generate(group(owner_id: user.id, is_public: true, actor: user))
@@ -232,6 +234,78 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
       # No pagination should be shown for exactly 20 results
       |> refute_has("button", text: "2")
       |> refute_has("button[phx-click=change_page]")
+    end
+  end
+
+  describe "URL-driven pagination" do
+    test "direct visit to ?page=2 renders page 2", %{conn: conn} do
+      conn
+      |> visit("/?page=2")
+      |> assert_has("h3", text: "Test Huddl 21")
+      |> assert_has("h3", text: "Test Huddl 22")
+      |> refute_has("h3", text: "Test Huddl 1")
+      |> refute_has("h3", text: "Test Huddl 20")
+    end
+
+    test "clicking a page button updates the URL via push_patch", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/")
+
+      view
+      |> element("button.w-8[phx-value-page='2']")
+      |> render_click()
+
+      assert_patch(view, "/?page=2")
+    end
+
+    test "page=1 is omitted from the URL", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/?page=2")
+
+      view
+      |> element("button.w-8[phx-value-page='1']")
+      |> render_click()
+
+      assert_patch(view, "/")
+    end
+
+    test "changing a filter while on page 2 drops ?page from the URL", %{conn: conn} do
+      conn
+      |> visit("/?page=2")
+      |> fill_in("Search huddlz", with: "Test")
+      |> assert_path(~p"/", query_params: %{"q" => "Test"})
+      |> assert_has("h3", text: "Test Huddl 1")
+    end
+
+    test "out-of-range ?page= clamps to the last valid page", %{conn: conn} do
+      conn
+      |> visit("/?page=999")
+      |> assert_path(~p"/", query_params: %{"page" => "2"})
+      |> assert_has("h3", text: "Test Huddl 21")
+    end
+
+    test "?page=0 is treated as page 1 and dropped from URL", %{conn: conn} do
+      conn
+      |> visit("/?page=0")
+      |> assert_has("h3", text: "Test Huddl 1")
+      |> assert_has("h3", text: "Test Huddl 20")
+    end
+
+    test "non-integer ?page= falls back to page 1", %{conn: conn} do
+      conn
+      |> visit("/?page=abc")
+      |> assert_has("h3", text: "Test Huddl 1")
+      |> assert_has("h3", text: "Test Huddl 20")
+      |> refute_has("h3", text: "Test Huddl 21")
+    end
+
+    test "pagination preserves active filters in the URL", %{conn: conn} do
+      # Use a term that matches all 22 huddlz to keep multiple pages
+      {:ok, view, _html} = live(conn, "/?q=Test")
+
+      view
+      |> element("button.w-8[phx-value-page='2']")
+      |> render_click()
+
+      assert_patch(view, "/?q=Test&page=2")
     end
   end
 end
