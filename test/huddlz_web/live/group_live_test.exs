@@ -82,6 +82,135 @@ defmodule HuddlzWeb.GroupLiveTest do
     end
   end
 
+  describe "Index personal sections" do
+    setup do
+      owner = generate(user(role: :user))
+      member = generate(user(role: :user))
+      stranger = generate(user(role: :user))
+
+      hosted = generate(group(name: "Cyberpunk Builders", actor: owner, is_public: true))
+
+      joined =
+        generate(group(name: "Phoenix Devs", actor: stranger, is_public: true))
+
+      generate(group_member(group_id: joined.id, user_id: member.id, actor: stranger))
+
+      %{owner: owner, member: member, stranger: stranger, hosted: hosted, joined: joined}
+    end
+
+    test "anonymous users see no personal sections", %{conn: conn} do
+      conn
+      |> visit(~p"/groups")
+      |> refute_has("span", text: "// Hosting")
+      |> refute_has("span", text: "// Joined")
+    end
+
+    test "logged-in user with no relationships sees no personal sections", %{conn: conn} do
+      disconnected = generate(user(role: :user))
+
+      conn
+      |> login(disconnected)
+      |> visit(~p"/groups")
+      |> refute_has("span", text: "// Hosting")
+      |> refute_has("span", text: "// Joined")
+    end
+
+    test "owner sees Hosting section with their group", %{
+      conn: conn,
+      owner: owner,
+      hosted: hosted
+    } do
+      conn
+      |> login(owner)
+      |> visit(~p"/groups")
+      |> assert_has("span", text: "// Hosting")
+      |> assert_has("h2", text: to_string(hosted.name))
+    end
+
+    test "member sees Joined section with the joined group, not Hosting", %{
+      conn: conn,
+      member: member,
+      joined: joined
+    } do
+      conn
+      |> login(member)
+      |> visit(~p"/groups")
+      |> assert_has("span", text: "// Joined")
+      |> refute_has("span", text: "// Hosting")
+      |> assert_has("h2", text: to_string(joined.name))
+    end
+
+    test "owner is not double-counted in Joined section", %{conn: conn, owner: owner} do
+      # Owner is auto-added as member of their own group. The Joined section
+      # filter must exclude groups they own so they only appear under Hosting.
+      conn
+      |> login(owner)
+      |> visit(~p"/groups")
+      |> assert_has("span", text: "// Hosting")
+      |> refute_has("span", text: "// Joined")
+    end
+
+    test "search filters sections and main grid together", %{
+      conn: conn,
+      owner: owner,
+      hosted: hosted
+    } do
+      _other =
+        generate(
+          group(name: "Knitting Circle", actor: generate(user(role: :user)), is_public: true)
+        )
+
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups?q=cyberpunk")
+
+      session
+      |> assert_has("h2", text: to_string(hosted.name))
+      |> refute_has("h2", text: "Knitting Circle")
+    end
+
+    test "?yours=hosting scope shows only hosted, hides sections", %{
+      conn: conn,
+      owner: owner,
+      hosted: hosted
+    } do
+      conn
+      |> login(owner)
+      |> visit(~p"/groups?yours=hosting")
+      |> assert_has("h1", text: "Groups You Host")
+      |> assert_has("h2", text: to_string(hosted.name))
+      |> refute_has("span", text: "// Hosting")
+      |> refute_has("span", text: "// Joined")
+      |> assert_has("a", text: "All groups")
+    end
+
+    test "?yours=joined scope shows only joined", %{
+      conn: conn,
+      member: member,
+      joined: joined
+    } do
+      conn
+      |> login(member)
+      |> visit(~p"/groups?yours=joined")
+      |> assert_has("h1", text: "Groups You've Joined")
+      |> assert_has("h2", text: to_string(joined.name))
+    end
+
+    test "View all link appears when section count exceeds limit", %{conn: conn} do
+      heavy_owner = generate(user(role: :user))
+
+      for i <- 1..7 do
+        generate(group(name: "Heavy Group #{i}", actor: heavy_owner, is_public: true))
+      end
+
+      conn
+      |> login(heavy_owner)
+      |> visit(~p"/groups")
+      |> assert_has("a", text: "View all →")
+    end
+  end
+
   describe "New" do
     setup do
       admin = generate(user(role: :admin))
