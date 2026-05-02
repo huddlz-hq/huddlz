@@ -241,6 +241,12 @@ defmodule Huddlz.Communities.Huddl do
         constraints min: 5, max: 100
       end
 
+      argument :relationship, :atom do
+        description "Restrict results to huddlz the actor hosts (creator) or is attending (RSVPed)."
+        allow_nil? true
+        constraints one_of: [:hosting, :attending]
+      end
+
       pagination keyset?: true,
                  offset?: true,
                  countable: true,
