@@ -182,4 +182,118 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
       assert length(far_results) >= length(near_results)
     end
   end
+
+  describe "relationship filter" do
+    setup %{group: host_group, owner: owner} do
+      attendee = generate(user(role: :user))
+      stranger = generate(user(role: :user))
+      stranger_group = generate(group(owner_id: stranger.id, is_public: true, actor: stranger))
+
+      hosted_by_owner =
+        generate(
+          huddl_at_location(
+            title: "Owner hosts",
+            latitude: nil,
+            longitude: nil,
+            group_id: host_group.id,
+            creator_id: owner.id
+          )
+        )
+
+      hosted_by_stranger =
+        generate(
+          huddl_at_location(
+            title: "Stranger hosts",
+            latitude: nil,
+            longitude: nil,
+            group_id: stranger_group.id,
+            creator_id: stranger.id
+          )
+        )
+
+      hosted_by_stranger
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
+      |> Ash.update!()
+
+      %{
+        attendee: attendee,
+        stranger: stranger,
+        hosted_by_owner: hosted_by_owner,
+        hosted_by_stranger: hosted_by_stranger
+      }
+    end
+
+    test ":hosting returns only huddlz the actor created", %{
+      owner: owner,
+      hosted_by_owner: hosted
+    } do
+      {:ok, %{results: results}} =
+        Huddlz.Communities.Huddl
+        |> Ash.Query.for_read(:search, %{relationship: :hosting, date_filter: :all}, actor: owner)
+        |> Ash.read(actor: owner, page: [limit: 50, count: true])
+
+      ids = Enum.map(results, & &1.id)
+      assert hosted.id in ids
+      assert Enum.all?(results, &(&1.creator_id == owner.id))
+    end
+
+    test ":attending returns huddlz the actor RSVPed but did not create", %{
+      attendee: attendee,
+      hosted_by_stranger: hosted
+    } do
+      {:ok, %{results: results}} =
+        Huddlz.Communities.Huddl
+        |> Ash.Query.for_read(:search, %{relationship: :attending, date_filter: :all},
+          actor: attendee
+        )
+        |> Ash.read(actor: attendee, page: [limit: 50, count: true])
+
+      ids = Enum.map(results, & &1.id)
+      assert hosted.id in ids
+    end
+
+    test ":attending excludes huddlz the actor created (even if they RSVPed)", %{
+      owner: owner,
+      hosted_by_owner: hosted
+    } do
+      hosted
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: owner)
+      |> Ash.update!()
+
+      {:ok, %{results: results}} =
+        Huddlz.Communities.Huddl
+        |> Ash.Query.for_read(:search, %{relationship: :attending, date_filter: :all},
+          actor: owner
+        )
+        |> Ash.read(actor: owner, page: [limit: 50, count: true])
+
+      refute hosted.id in Enum.map(results, & &1.id)
+    end
+
+    test "anonymous actor with relationship filter returns []", %{} do
+      require Ash.Query
+
+      {:ok, %{results: results}} =
+        Huddlz.Communities.Huddl
+        |> Ash.Query.for_read(:search, %{relationship: :hosting, date_filter: :all}, actor: nil)
+        |> Ash.read(actor: nil, page: [limit: 50, count: true])
+
+      assert results == []
+    end
+
+    test "no relationship filter returns the broader public set", %{
+      hosted_by_owner: a,
+      hosted_by_stranger: b,
+      attendee: attendee
+    } do
+      {:ok, %{results: results}} =
+        Huddlz.Communities.Huddl
+        |> Ash.Query.for_read(:search, %{date_filter: :all}, actor: attendee)
+        |> Ash.read(actor: attendee, page: [limit: 50, count: true])
+
+      ids = Enum.map(results, & &1.id)
+      assert a.id in ids
+      assert b.id in ids
+    end
+  end
 end

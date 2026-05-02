@@ -7,12 +7,13 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
 
   @meters_per_mile 1609.344
 
-  def prepare(query, _opts, _context) do
+  def prepare(query, _opts, context) do
     query
     |> apply_text_filter()
     |> apply_date_filter()
     |> apply_event_type_filter()
     |> apply_location_filter()
+    |> apply_relationship_filter(context)
   end
 
   defp apply_text_filter(query) do
@@ -87,6 +88,35 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
       )
     else
       query
+    end
+  end
+
+  defp apply_relationship_filter(query, %{actor: nil}) do
+    # An anonymous actor cannot host or attend anything; force an empty result
+    # rather than ignoring the relationship filter (which would silently broaden
+    # the query and leak unrelated huddlz to API consumers).
+    case Ash.Query.get_argument(query, :relationship) do
+      relationship when relationship in [:hosting, :attending] ->
+        Ash.Query.filter(query, false)
+
+      _ ->
+        query
+    end
+  end
+
+  defp apply_relationship_filter(query, %{actor: actor}) do
+    case Ash.Query.get_argument(query, :relationship) do
+      :hosting ->
+        Ash.Query.filter(query, creator_id == ^actor.id)
+
+      :attending ->
+        Ash.Query.filter(
+          query,
+          exists(attendees, user_id == ^actor.id) and creator_id != ^actor.id
+        )
+
+      _ ->
+        query
     end
   end
 end
