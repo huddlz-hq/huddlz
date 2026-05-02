@@ -153,4 +153,79 @@ defmodule HuddlzWeb.Api.Graphql.HuddlTest do
       assert h.id in ids
     end
   end
+
+  describe "searchHuddlz query — relationship arg" do
+    setup do
+      host = generate(user())
+      attendee = generate(user())
+      stranger = generate(user())
+
+      host_group = generate(group(owner_id: host.id, is_public: true, actor: host))
+      stranger_group = generate(group(owner_id: stranger.id, is_public: true, actor: stranger))
+
+      hosted =
+        generate(huddl(group_id: host_group.id, creator_id: host.id, actor: host))
+
+      foreign =
+        generate(huddl(group_id: stranger_group.id, creator_id: stranger.id, actor: stranger))
+
+      foreign
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
+      |> Ash.update!()
+
+      %{host: host, attendee: attendee, hosted: hosted, foreign: foreign}
+    end
+
+    test "relationship hosting returns only huddlz the actor created", %{
+      conn: conn,
+      host: host,
+      hosted: hosted,
+      foreign: foreign
+    } do
+      conn =
+        conn
+        |> authenticated_conn(host)
+        |> gql_post(~s|{ searchHuddlz(query: null, relationship: "hosting") { results { id } } }|)
+
+      assert %{"data" => %{"searchHuddlz" => %{"results" => results}}} =
+               json_response(conn, 200)
+
+      ids = Enum.map(results, & &1["id"])
+
+      assert hosted.id in ids
+      refute foreign.id in ids
+    end
+
+    test "relationship attending returns RSVPed huddlz the actor did not create", %{
+      conn: conn,
+      attendee: attendee,
+      foreign: foreign,
+      hosted: hosted
+    } do
+      conn =
+        conn
+        |> authenticated_conn(attendee)
+        |> gql_post(
+          ~s|{ searchHuddlz(query: null, relationship: "attending") { results { id } } }|
+        )
+
+      assert %{"data" => %{"searchHuddlz" => %{"results" => results}}} =
+               json_response(conn, 200)
+
+      ids = Enum.map(results, & &1["id"])
+
+      assert foreign.id in ids
+      refute hosted.id in ids
+    end
+
+    test "anonymous actor with relationship filter returns []", %{conn: conn} do
+      conn =
+        gql_post(
+          conn,
+          ~s|{ searchHuddlz(query: null, relationship: "hosting") { results { id } } }|
+        )
+
+      assert %{"data" => %{"searchHuddlz" => %{"results" => []}}} = json_response(conn, 200)
+    end
+  end
 end
