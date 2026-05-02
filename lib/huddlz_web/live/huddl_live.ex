@@ -8,6 +8,7 @@ defmodule HuddlzWeb.HuddlLive do
   alias Huddlz.Communities
   alias Huddlz.Communities.Group
   alias HuddlzWeb.Layouts
+  alias Phoenix.LiveView.AsyncResult
   require Ash.Query
   require Logger
 
@@ -42,10 +43,8 @@ defmodule HuddlzWeb.HuddlLive do
         not is_nil(socket.assigns.default_location_lat) and
           not is_nil(socket.assigns.default_location_lng),
       scope: :all,
-      hosting: [],
-      attending: [],
-      hosting_total: 0,
-      attending_total: 0,
+      hosting: AsyncResult.ok({[], 0}),
+      attending: AsyncResult.ok({[], 0}),
       huddls: [],
       groups: [],
       page_info: %{total_pages: 1, current_page: 1, total_count: 0}
@@ -353,62 +352,46 @@ defmodule HuddlzWeb.HuddlLive do
 
   defp maybe_load_personal_sections(socket, _base_args)
        when is_nil(socket.assigns.current_user) do
-    assign(socket, hosting: [], attending: [], hosting_total: 0, attending_total: 0)
+    assign(socket, hosting: AsyncResult.ok({[], 0}), attending: AsyncResult.ok({[], 0}))
   end
 
   defp maybe_load_personal_sections(socket, _base_args)
        when socket.assigns.scope != :all do
     # On a scoped view, we only render the main grid — sections are hidden.
-    assign(socket, hosting: [], attending: [], hosting_total: 0, attending_total: 0)
+    assign(socket, hosting: AsyncResult.ok({[], 0}), attending: AsyncResult.ok({[], 0}))
   end
 
   defp maybe_load_personal_sections(socket, base_args) do
     user = socket.assigns.current_user
-
-    %{
-      hosting: {hosting, hosting_total},
-      attending: {attending, attending_total}
-    } = load_personal_sections(base_args, user)
+    parent = self()
 
     socket
-    |> assign(:hosting, hosting)
-    |> assign(:hosting_total, hosting_total)
-    |> assign(:attending, attending)
-    |> assign(:attending_total, attending_total)
+    |> assign_async(
+      :hosting,
+      fn ->
+        allow_sandbox(parent)
+        {:ok, %{hosting: load_section(base_args, user, :hosting)}}
+      end,
+      reset: true
+    )
+    |> assign_async(
+      :attending,
+      fn ->
+        allow_sandbox(parent)
+        {:ok, %{attending: load_section(base_args, user, :attending)}}
+      end,
+      reset: true
+    )
   end
 
-  defp load_personal_sections(base_args, user) do
-    relationships = [:hosting, :attending]
-
-    if async_personal_sections?() do
-      relationships
-      |> Task.async_stream(
-        fn relationship -> {relationship, load_section(base_args, user, relationship)} end,
-        max_concurrency: length(relationships),
-        timeout: 15_000,
-        on_timeout: :kill_task
-      )
-      |> Enum.reduce(default_sections(), fn
-        {:ok, {relationship, section}}, sections ->
-          Map.put(sections, relationship, section)
-
-        {:exit, reason}, sections ->
-          Logger.warning("Huddl personal section search failed: #{inspect(reason)}")
-          sections
-      end)
-    else
-      Enum.reduce(relationships, default_sections(), fn relationship, sections ->
-        Map.put(sections, relationship, load_section(base_args, user, relationship))
-      end)
-    end
-  end
-
-  defp default_sections, do: %{hosting: {[], 0}, attending: {[], 0}}
-
-  defp async_personal_sections? do
-    Application.get_env(:huddlz, Huddlz.Repo, [])
-    |> Keyword.get(:pool)
-    |> Kernel.!=(Ecto.Adapters.SQL.Sandbox)
+  # In `async: true` test mode, the SQL sandbox connection is owned by the test
+  # process. `assign_async` spawns a task that has no access by default — grant
+  # it via the LiveView's own sandbox allowance. No-op outside the sandbox.
+  if Application.compile_env(:huddlz, :sql_sandbox?, false) do
+    alias Ecto.Adapters.SQL.Sandbox
+    defp allow_sandbox(parent), do: Sandbox.allow(Huddlz.Repo, parent, self())
+  else
+    defp allow_sandbox(_parent), do: :ok
   end
 
   defp load_section(base_args, user, relationship) do
@@ -645,22 +628,30 @@ defmodule HuddlzWeb.HuddlLive do
         </div>
 
         <%= if @scope == :all and @current_user do %>
-          <.personal_section
-            :if={@hosting_total > 0}
-            title="Hosting"
-            count={@hosting_total}
-            huddls={@hosting}
-            limit={@section_limit}
-            view_all_path={view_all_path(:hosting, assigns)}
-          />
-          <.personal_section
-            :if={@attending_total > 0}
-            title="Attending"
-            count={@attending_total}
-            huddls={@attending}
-            limit={@section_limit}
-            view_all_path={view_all_path(:attending, assigns)}
-          />
+          <.async_result :let={{huddls, count}} assign={@hosting}>
+            <:loading></:loading>
+            <:failed :let={_}></:failed>
+            <.personal_section
+              :if={count > 0}
+              title="Hosting"
+              count={count}
+              huddls={huddls}
+              limit={@section_limit}
+              view_all_path={view_all_path(:hosting, assigns)}
+            />
+          </.async_result>
+          <.async_result :let={{huddls, count}} assign={@attending}>
+            <:loading></:loading>
+            <:failed :let={_}></:failed>
+            <.personal_section
+              :if={count > 0}
+              title="Attending"
+              count={count}
+              huddls={huddls}
+              limit={@section_limit}
+              view_all_path={view_all_path(:attending, assigns)}
+            />
+          </.async_result>
         <% end %>
 
         <div class="w-full">
@@ -818,15 +809,20 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   defp show_main_heading?(%{
-         scope: scope,
+         scope: :all,
          current_user: user,
-         hosting_total: h,
-         attending_total: a
+         hosting: hosting,
+         attending: attending
        })
-       when scope == :all and not is_nil(user) and (h > 0 or a > 0),
-       do: true
+       when not is_nil(user),
+       do: section_count(hosting) > 0 or section_count(attending) > 0
 
   defp show_main_heading?(_), do: false
+
+  defp section_count(%AsyncResult{ok?: true, result: {_, count}}) when is_integer(count),
+    do: count
+
+  defp section_count(_), do: 0
 
   defp main_heading(:hosting), do: "Hosting"
   defp main_heading(:attending), do: "Attending"

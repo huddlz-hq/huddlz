@@ -450,7 +450,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
       conn
       |> login(host)
       |> visit("/")
-      |> assert_has("span", text: "// Hosting")
+      |> assert_has("span", text: "// Hosting", timeout: 500)
       |> assert_has("h3", text: hosted.title)
     end
 
@@ -462,8 +462,8 @@ defmodule HuddlzWeb.HuddlLiveTest do
       conn
       |> login(attendee)
       |> visit("/")
-      |> assert_has("span", text: "// Attending")
-      |> refute_has("span", text: "// Hosting")
+      |> assert_has("span", text: "// Attending", timeout: 500)
+      |> refute_has("span", text: "// Hosting", timeout: 500)
       |> assert_has("h3", text: foreign.title)
     end
 
@@ -479,8 +479,8 @@ defmodule HuddlzWeb.HuddlLiveTest do
       conn
       |> login(host)
       |> visit("/")
-      |> assert_has("span", text: "// Hosting")
-      |> refute_has("span", text: "// Attending")
+      |> assert_has("span", text: "// Hosting", timeout: 500)
+      |> refute_has("span", text: "// Attending", timeout: 500)
     end
 
     test "?yours=hosting scope shows only hosted, hides sections", %{
@@ -548,7 +548,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
       conn
       |> login(host)
       |> visit("/")
-      |> assert_has(~s|a[href="/?yours=hosting"]|, text: "View all →")
+      |> assert_has(~s|a[href="/?yours=hosting"]|, text: "View all →", timeout: 500)
     end
 
     test "scoped view with non-matching search shows search-aware empty copy", %{
@@ -593,7 +593,10 @@ defmodule HuddlzWeb.HuddlLiveTest do
         |> login(user)
         |> visit("/?cleared=1")
 
-      assert_has(session, ~s|a[href="/?yours=hosting&cleared=1"]|, text: "View all →")
+      assert_has(session, ~s|a[href="/?yours=hosting&cleared=1"]|,
+        text: "View all →",
+        timeout: 500
+      )
     end
 
     test "anonymous visit to / does not produce ?cleared=1 in resulting URL", %{conn: conn} do
