@@ -535,4 +535,67 @@ defmodule HuddlzWeb.HuddlLiveTest do
       |> assert_has("p", text: "You aren't hosting any huddlz that match.")
     end
   end
+
+  describe "Cleared location pre-fill" do
+    test "View all link preserves cleared=1 when home_location was cleared", %{conn: conn} do
+      user = generate(user(role: :user))
+
+      user
+      |> Ash.Changeset.for_update(
+        :update_home_location,
+        %{home_location: "Austin, TX", home_latitude: 30.2672, home_longitude: -97.7431},
+        actor: user
+      )
+      |> Ash.update!()
+
+      group = generate(group(is_public: true, owner_id: user.id, actor: user))
+
+      for i <- 1..7 do
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: user.id,
+            is_private: false,
+            title: "Hosted #{i}",
+            actor: user
+          )
+        )
+      end
+
+      session =
+        conn
+        |> login(user)
+        |> visit("/?cleared=1")
+
+      assert_has(session, ~s|a[href="/?yours=hosting&cleared=1"]|, text: "View all →")
+    end
+
+    test "anonymous visit to / does not produce ?cleared=1 in resulting URL", %{conn: conn} do
+      session = conn |> visit("/")
+      assert_path(session, ~p"/")
+    end
+
+    test "clearing location while pre-fill is active drops distance and lat/lng from URL", %{
+      conn: conn
+    } do
+      user = generate(user(role: :user))
+
+      user
+      |> Ash.Changeset.for_update(
+        :update_home_location,
+        %{home_location: "Austin, TX", home_latitude: 30.2672, home_longitude: -97.7431},
+        actor: user
+      )
+      |> Ash.update!()
+
+      conn = login(conn, user)
+      {:ok, view, _html} = Phoenix.LiveViewTest.live(conn, "/")
+
+      view
+      |> element(~s|button[aria-label="Clear location"]|)
+      |> render_click()
+
+      assert_patch(view, "/?cleared=1")
+    end
+  end
 end
