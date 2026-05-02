@@ -509,6 +509,13 @@ defmodule HuddlzWeb.HuddlLiveTest do
       |> assert_has("h3", text: foreign.title)
     end
 
+    test "← All huddlz back link preserves active filters", %{conn: conn, host: host} do
+      conn
+      |> login(host)
+      |> visit("/?yours=hosting&q=elixir&date_filter=this_week")
+      |> assert_has(~s|a[href="/?q=elixir&date_filter=this_week"]|, text: "All huddlz")
+    end
+
     test "anonymous users redirected from ?yours= scopes to sign-in", %{conn: conn} do
       session = conn |> visit("/?yours=hosting")
       assert_path(session, ~p"/sign-in")
