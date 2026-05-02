@@ -109,11 +109,14 @@ defmodule HuddlzWeb.CoreComponents do
 
   def button(%{rest: rest} = assigns) do
     variants = %{
-      "primary" => "bg-primary text-primary-content border border-primary btn-neon",
-      "danger" => "bg-error text-error-content border border-error btn-neon",
+      "primary" =>
+        "font-display tracking-wide uppercase bg-primary text-primary-content border border-primary btn-neon",
+      "danger" =>
+        "font-display tracking-wide uppercase bg-error text-error-content border border-error btn-neon",
       "ghost" =>
-        "bg-transparent text-primary border-0 hover:underline normal-case tracking-normal font-body",
-      nil => "bg-transparent text-primary border border-primary/40 btn-neon hover:bg-primary/10"
+        "font-body tracking-normal normal-case bg-transparent text-primary border-0 hover:underline",
+      nil =>
+        "font-display tracking-wide uppercase bg-transparent text-primary border border-primary/40 btn-neon hover:bg-primary/10"
     }
 
     sizes = %{
@@ -138,7 +141,7 @@ defmodule HuddlzWeb.CoreComponents do
       ~H"""
       <.link
         class={[
-          "inline-flex items-center justify-center gap-2 font-medium tracking-wide uppercase font-display",
+          "inline-flex items-center justify-center gap-2 font-medium",
           @size_class,
           @variant_class,
           @class
@@ -152,7 +155,7 @@ defmodule HuddlzWeb.CoreComponents do
       ~H"""
       <button
         class={[
-          "inline-flex items-center justify-center gap-2 font-medium tracking-wide uppercase font-display",
+          "inline-flex items-center justify-center gap-2 font-medium",
           @size_class,
           @variant_class,
           @class
