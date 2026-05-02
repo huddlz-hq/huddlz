@@ -5,6 +5,7 @@ defmodule HuddlzWeb.HuddlLive do
   """
   use HuddlzWeb, :live_view
 
+  alias Huddlz.Communities
   alias Huddlz.Communities.Group
   alias HuddlzWeb.Layouts
   require Ash.Query
@@ -337,14 +338,17 @@ defmodule HuddlzWeb.HuddlLive do
   defp scope_to_relationship(:all), do: nil
 
   defp run_search(args, actor, opts) do
-    relationship = Keyword.get(opts, :relationship)
-    page_opts = Keyword.get(opts, :page, [])
-
-    args_with_relationship = Map.put(args, :relationship, relationship)
-
-    Huddlz.Communities.Huddl
-    |> Ash.Query.for_read(:search, args_with_relationship, actor: actor)
-    |> Ash.read(actor: actor, page: page_opts)
+    Communities.search_huddlz(
+      args.query,
+      args.date_filter,
+      args.event_type,
+      args.search_latitude,
+      args.search_longitude,
+      args.distance_miles,
+      Keyword.get(opts, :relationship),
+      actor: actor,
+      page: Keyword.get(opts, :page, [])
+    )
   end
 
   defp maybe_load_personal_sections(socket, _base_args)
