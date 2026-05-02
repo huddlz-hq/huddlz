@@ -207,9 +207,8 @@ defmodule HuddlzWeb.HuddlLive do
          to: scoped_path(socket.assigns.scope, merged, override_location_with_cleared: true)
        )}
     else
-      # Component fires :location_cleared on its own initial mount when its
-      # value is nil. Ignoring that no-op so the URL doesn't pick up `cleared=1`
-      # spuriously.
+      # No-op when there was nothing to clear, so the URL doesn't pick up
+      # `cleared=1` spuriously.
       {:noreply, socket}
     end
   end
