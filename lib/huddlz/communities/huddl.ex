@@ -192,6 +192,7 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Communities.Huddl.Changes.EnforceCapacityFloor
       change Huddlz.Communities.Huddl.Changes.ResetReminderStamps
       change Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate
+      change Huddlz.Communities.Huddl.Changes.PromoteOnCapacityIncrease
     end
 
     read :by_status do
@@ -302,11 +303,20 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     update :cancel_rsvp do
-      description "Cancel RSVP to this huddl as the current actor"
+      description "Cancel RSVP or leave waitlist for this huddl as the current actor"
       require_atomic? false
 
       change Huddlz.Communities.Huddl.Changes.CancelRsvp
+      change Huddlz.Communities.Huddl.Changes.PromoteFromWaitlist
       change Huddlz.Communities.Huddl.Changes.NotifyRsvpCancelled
+      change Huddlz.Communities.Huddl.Changes.NotifyWaitlistPromoted
+    end
+
+    update :join_waitlist do
+      description "Join the waitlist for this huddl as the current actor when full"
+      require_atomic? false
+
+      change Huddlz.Communities.Huddl.Changes.JoinWaitlist
     end
 
     read :due_for_24h_reminder do
@@ -382,9 +392,16 @@ defmodule Huddlz.Communities.Huddl do
       authorize_if expr(exists(group.members, id == ^actor(:id)))
     end
 
-    # Cancel RSVP policies
+    # Cancel RSVP policies (also covers leaving the waitlist)
     policy action(:cancel_rsvp) do
-      description "Users can cancel their own RSVPs"
+      description "Users can cancel their own RSVPs or leave the waitlist"
+      authorize_if expr(is_private == false and group.is_public == true)
+      authorize_if expr(exists(group.members, id == ^actor(:id)))
+    end
+
+    # Waitlist join policy mirrors RSVP visibility
+    policy action(:join_waitlist) do
+      description "Users can join the waitlist for huddlz they have access to"
       authorize_if expr(is_private == false and group.is_public == true)
       authorize_if expr(exists(group.members, id == ^actor(:id)))
     end
@@ -577,7 +594,13 @@ defmodule Huddlz.Communities.Huddl do
   end
 
   aggregates do
-    count :rsvp_count, :attendees
+    count :rsvp_count, :attendees do
+      filter expr(is_nil(waitlisted_at))
+    end
+
+    count :waitlist_count, :attendees do
+      filter expr(not is_nil(waitlisted_at))
+    end
 
     first :current_image_url, :huddl_images, :thumbnail_path do
       description "Returns the thumbnail path of the huddl's current image"

@@ -1,7 +1,14 @@
 defmodule Huddlz.Communities.Huddl.Changes.CancelRsvp do
   @moduledoc """
-  Handles RSVP cancellation: destroys the attendee record if one exists.
-  The rsvp_count is computed as an aggregate, so no manual counter management is needed.
+  Handles RSVP cancellation and waitlist withdrawal: destroys the
+  attendee record if one exists, regardless of whether it represents an
+  active RSVP or a waitlist entry.
+
+  Sets `:rsvp_cancelled` context only when an active attendee row was
+  destroyed (a real freed seat) so that downstream changes
+  (`PromoteFromWaitlist`, `NotifyRsvpCancelled`) can no-op for waitlist
+  withdrawals. Sets `:waitlist_left` when a waitlist row was destroyed
+  so the LiveView flash message can distinguish the two cases.
   """
   use Ash.Resource.Change
 
@@ -19,11 +26,16 @@ defmodule Huddlz.Communities.Huddl.Changes.CancelRsvp do
       {:ok, nil} ->
         changeset
 
-      {:ok, attendee} ->
+      {:ok, %{waitlisted_at: nil} = attendee} ->
         Ash.destroy!(attendee, authorize?: false)
-        # Load-bearing: NotifyRsvpCancelled skips when this flag is absent
-        # so missing-attendee cancellations do not enqueue spurious emails.
+        # Load-bearing: NotifyRsvpCancelled and PromoteFromWaitlist skip
+        # when this flag is absent — pure waitlist withdrawals don't
+        # free a seat or warrant an organizer email.
         Ash.Changeset.put_context(changeset, :rsvp_cancelled, true)
+
+      {:ok, %{waitlisted_at: %DateTime{}} = attendee} ->
+        Ash.destroy!(attendee, authorize?: false)
+        Ash.Changeset.put_context(changeset, :waitlist_left, true)
 
       {:error, error} ->
         Ash.Changeset.add_error(changeset, error)

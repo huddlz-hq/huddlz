@@ -62,8 +62,30 @@ defmodule Huddlz.Communities.HuddlAttendee do
       change manage_relationship(:user_id, :user, type: :append)
     end
 
+    create :join_waitlist do
+      description "Join the waitlist for a full huddl"
+
+      argument :huddl_id, :uuid do
+        allow_nil? false
+      end
+
+      argument :user_id, :uuid do
+        allow_nil? false
+      end
+
+      change manage_relationship(:huddl_id, :huddl, type: :append)
+      change manage_relationship(:user_id, :user, type: :append)
+      change set_attribute(:waitlisted_at, &DateTime.utc_now/0)
+    end
+
+    update :promote_from_waitlist do
+      description "Clear waitlisted_at, moving the entry from waitlist to attending"
+
+      change set_attribute(:waitlisted_at, nil)
+    end
+
     destroy :cancel_rsvp do
-      description "Cancel RSVP to a huddl"
+      description "Cancel RSVP or leave waitlist for a huddl"
     end
 
     read :by_huddl do
@@ -73,7 +95,18 @@ defmodule Huddlz.Communities.HuddlAttendee do
         allow_nil? false
       end
 
-      filter expr(huddl_id == ^arg(:huddl_id))
+      filter expr(huddl_id == ^arg(:huddl_id) and is_nil(waitlisted_at))
+    end
+
+    read :waitlist_for_huddl do
+      description "Get all waitlist entries for a huddl, oldest first"
+
+      argument :huddl_id, :uuid do
+        allow_nil? false
+      end
+
+      filter expr(huddl_id == ^arg(:huddl_id) and not is_nil(waitlisted_at))
+      prepare build(sort: [waitlisted_at: :asc])
     end
 
     read :by_user do
@@ -82,7 +115,7 @@ defmodule Huddlz.Communities.HuddlAttendee do
     end
 
     read :check_rsvp do
-      description "Check if the current actor has RSVPed to a huddl"
+      description "Check if the current actor has a row (RSVP or waitlist) for a huddl"
 
       argument :huddl_id, :uuid do
         allow_nil? false
@@ -105,6 +138,19 @@ defmodule Huddlz.Communities.HuddlAttendee do
       forbid_unless expr(^arg(:user_id) == ^actor(:id))
       # And they must have access to view the huddl
       # The huddl access check will be done in the LiveView
+      authorize_if always()
+    end
+
+    # Users can join a waitlist for huddlz they have access to
+    policy action(:join_waitlist) do
+      description "Allow users to join a waitlist for accessible huddlz"
+      forbid_unless expr(^arg(:user_id) == ^actor(:id))
+      authorize_if always()
+    end
+
+    # Promote action runs system-driven (cancellations, capacity bumps).
+    policy action(:promote_from_waitlist) do
+      description "Promotion is invoked by other actions, not user-facing"
       authorize_if always()
     end
 
@@ -145,6 +191,12 @@ defmodule Huddlz.Communities.HuddlAttendee do
     uuid_primary_key :id
 
     create_timestamp :rsvped_at
+
+    attribute :waitlisted_at, :utc_datetime_usec do
+      allow_nil? true
+      public? true
+      description "When set, this row is a waitlist entry; when nil, an active RSVP."
+    end
   end
 
   relationships do
