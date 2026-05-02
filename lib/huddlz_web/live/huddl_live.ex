@@ -144,9 +144,9 @@ defmodule HuddlzWeb.HuddlLive do
   defp parse_distance(val) when is_integer(val) and val in 5..100, do: val
   defp parse_distance(_), do: 25
 
-  defp page_title(:hosting), do: "Huddlz You're Hosting"
-  defp page_title(:attending), do: "Huddlz You're Attending"
-  defp page_title(:all), do: "Huddlz"
+  defp page_title(:hosting), do: "huddlz you're hosting"
+  defp page_title(:attending), do: "huddlz you're attending"
+  defp page_title(:all), do: "huddlz"
 
   defp sign_in_prompt(:hosting), do: "huddlz you're hosting"
   defp sign_in_prompt(:attending), do: "huddlz you're attending"
