@@ -230,36 +230,38 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   defp current_filter_params(form_params, cleared?) do
-    location =
-      cond do
-        cleared? ->
-          [{"cleared", "1"}]
+    non_location_params(form_params)
+    |> Kernel.++(location_params(form_params, cleared?))
+    |> Enum.reject(&drop_param?/1)
+  end
 
-        form_params["lat"] && form_params["lng"] ->
-          [
-            {"location", form_params["location"] || ""},
-            {"lat", form_params["lat"]},
-            {"lng", form_params["lng"]}
-          ]
-
-        true ->
-          []
-      end
-
+  defp non_location_params(form_params) do
     [
       {"q", form_params["query"]},
       {"event_type", form_params["event_type"]},
-      {"date_filter", form_params["date_filter"] || "upcoming"},
-      {"distance", form_params["distance_miles"]}
+      {"date_filter", form_params["date_filter"] || "upcoming"}
     ]
-    |> Enum.reject(fn
-      {_, ""} -> true
-      {_, nil} -> true
-      {"date_filter", "upcoming"} -> true
-      _ -> false
-    end)
-    |> Kernel.++(location)
   end
+
+  defp location_params(_form_params, true), do: [{"cleared", "1"}]
+
+  defp location_params(form_params, false) do
+    if form_params["lat"] && form_params["lng"] do
+      [
+        {"location", form_params["location"] || ""},
+        {"lat", form_params["lat"]},
+        {"lng", form_params["lng"]},
+        {"distance", form_params["distance_miles"]}
+      ]
+    else
+      []
+    end
+  end
+
+  defp drop_param?({_, ""}), do: true
+  defp drop_param?({_, nil}), do: true
+  defp drop_param?({"date_filter", "upcoming"}), do: true
+  defp drop_param?(_), do: false
 
   defp put_scope(:all, params), do: params
   defp put_scope(scope, params), do: [{"yours", Atom.to_string(scope)} | params]
@@ -722,13 +724,20 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   defp view_all_path(scope, assigns) do
-    params = current_filter_params(form_params_from_assigns(assigns), false)
+    cleared? = location_explicitly_cleared?(assigns)
+    params = current_filter_params(form_params_from_assigns(assigns), cleared?)
     params = put_scope(scope, params)
 
     case params do
       [] -> ~p"/"
       params -> ~p"/?#{params}"
     end
+  end
+
+  defp location_explicitly_cleared?(assigns) do
+    not assigns.location_active and
+      not is_nil(assigns.default_location_lat) and
+      not is_nil(assigns.default_location_lng)
   end
 
   defp form_params_from_assigns(%Phoenix.LiveView.Socket{assigns: assigns}),
