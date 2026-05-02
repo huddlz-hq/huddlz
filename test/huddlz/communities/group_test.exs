@@ -574,4 +574,54 @@ defmodule Huddlz.Communities.GroupTest do
       assert MapSet.member?(group_ids, group3.id)
     end
   end
+
+  describe ":get_joined action" do
+    setup do
+      member = generate(user(role: :user))
+      stranger = generate(user(role: :user))
+
+      owned = generate(group(name: "Owned by member", actor: member, is_public: true))
+
+      joined =
+        generate(group(name: "Joined by member", actor: stranger, is_public: true))
+
+      generate(group_member(group_id: joined.id, user_id: member.id, actor: stranger))
+
+      _untouched =
+        generate(group(name: "Unrelated", actor: stranger, is_public: true))
+
+      %{member: member, stranger: stranger, owned: owned, joined: joined}
+    end
+
+    test "returns groups the actor has joined", %{member: member, joined: joined} do
+      result = Communities.get_joined_groups!(actor: member)
+
+      assert Enum.map(result, & &1.id) == [joined.id]
+    end
+
+    test "excludes groups the actor owns", %{member: member, owned: owned} do
+      result = Communities.get_joined_groups!(actor: member)
+
+      refute Enum.any?(result, &(&1.id == owned.id))
+    end
+
+    test "excludes groups the actor has no relationship to", %{
+      member: member,
+      stranger: stranger
+    } do
+      # The "Unrelated" group is owned by stranger and member is not a member.
+      member_results = Communities.get_joined_groups!(actor: member)
+      stranger_results = Communities.get_joined_groups!(actor: stranger)
+
+      refute Enum.any?(member_results, &(&1.name |> to_string() == "Unrelated"))
+      # Stranger owns Unrelated, so it's also excluded from THEIR joined list
+      refute Enum.any?(stranger_results, &(&1.name |> to_string() == "Unrelated"))
+    end
+
+    test "returns nothing for an actor with no memberships" do
+      lonely = generate(user(role: :user))
+
+      assert Communities.get_joined_groups!(actor: lonely) == []
+    end
+  end
 end
