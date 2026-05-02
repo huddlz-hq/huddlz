@@ -20,14 +20,16 @@ defmodule HuddlzWeb.HuddlLive.Show do
   def handle_params(%{"group_slug" => group_slug, "id" => id}, _, socket) do
     case get_huddl(id, group_slug, socket.assigns.current_user) do
       {:ok, huddl} ->
-        has_rsvped = check_rsvp(huddl, socket.assigns.current_user)
+        attendance = check_attendance(huddl, socket.assigns.current_user)
 
         {:noreply,
          socket
          |> assign(:page_title, huddl.title)
          |> assign(:meta, huddl_meta(huddl))
          |> assign(:huddl, huddl)
-         |> assign(:has_rsvped, has_rsvped)
+         |> assign(:attendance, attendance)
+         |> assign(:has_rsvped, attendance == :attending)
+         |> assign(:waitlist_position, waitlist_position(huddl, socket.assigns.current_user))
          |> assign(:is_creator, creator?(huddl, socket.assigns.current_user))}
 
       {:error, :not_found} ->
@@ -77,29 +79,44 @@ defmodule HuddlzWeb.HuddlLive.Show do
             </.button>
           <% end %>
           <%= if @current_user && @huddl.status == :upcoming do %>
-            <%= if @has_rsvped do %>
-              <div class="flex items-center gap-4">
-                <div class="text-success font-semibold">
-                  <.icon name="hero-check-circle" class="h-5 w-5 inline" /> You're attending!
+            <%= case @attendance do %>
+              <% :attending -> %>
+                <div class="flex items-center gap-4">
+                  <div class="text-success font-semibold">
+                    <.icon name="hero-check-circle" class="h-5 w-5 inline" /> You're attending!
+                  </div>
+                  <button
+                    phx-click="cancel_rsvp"
+                    phx-disable-with="Cancelling..."
+                    class="px-3 py-1.5 text-xs font-medium bg-error/10 text-error hover:bg-error/20 transition-colors"
+                  >
+                    Cancel RSVP
+                  </button>
                 </div>
-                <button
-                  phx-click="cancel_rsvp"
-                  phx-disable-with="Cancelling..."
-                  class="px-3 py-1.5 text-xs font-medium bg-error/10 text-error hover:bg-error/20 transition-colors"
-                >
-                  Cancel RSVP
-                </button>
-              </div>
-            <% else %>
-              <%= if event_full?(@huddl) do %>
-                <div class="text-error font-semibold">
-                  <.icon name="hero-x-circle" class="h-5 w-5 inline" /> Event Full
+              <% :waitlisted -> %>
+                <div class="flex items-center gap-4">
+                  <div class="text-warning font-semibold">
+                    <.icon name="hero-clock" class="h-5 w-5 inline" />
+                    On waitlist ({@waitlist_position} of {@huddl.waitlist_count})
+                  </div>
+                  <button
+                    phx-click="leave_waitlist"
+                    phx-disable-with="Leaving..."
+                    class="px-3 py-1.5 text-xs font-medium bg-error/10 text-error hover:bg-error/20 transition-colors"
+                  >
+                    Leave Waitlist
+                  </button>
                 </div>
-              <% else %>
-                <.button phx-click="rsvp">
-                  RSVP to this huddl
-                </.button>
-              <% end %>
+              <% :none -> %>
+                <%= if event_full?(@huddl) do %>
+                  <.button phx-click="join_waitlist">
+                    Event Full — Join Waitlist
+                  </.button>
+                <% else %>
+                  <.button phx-click="rsvp">
+                    RSVP to this huddl
+                  </.button>
+                <% end %>
             <% end %>
           <% end %>
         </:actions>
@@ -258,13 +275,10 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
     case Communities.rsvp_huddl(huddl, %{}, actor: user) do
       {:ok, _} ->
-        {:ok, reloaded} = reload_huddl(huddl, user)
-
         {:noreply,
          socket
          |> put_flash(:info, "Successfully RSVPed to this huddl!")
-         |> assign(:huddl, reloaded)
-         |> assign(:has_rsvped, true)}
+         |> refresh_attendance(huddl, user)}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to RSVP. Please try again.")}
@@ -272,19 +286,37 @@ defmodule HuddlzWeb.HuddlLive.Show do
   end
 
   @impl true
-  def handle_event("cancel_rsvp", _, socket) do
+  def handle_event("join_waitlist", _, socket) do
     huddl = socket.assigns.huddl
     user = socket.assigns.current_user
 
+    case Communities.join_waitlist_huddl(huddl, %{}, actor: user) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Added to the waitlist. We'll email you if a spot opens up.")
+         |> refresh_attendance(huddl, user)}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Couldn't join the waitlist. Please try again.")}
+    end
+  end
+
+  @impl true
+  def handle_event(action, _, socket) when action in ["cancel_rsvp", "leave_waitlist"] do
+    huddl = socket.assigns.huddl
+    user = socket.assigns.current_user
+    waitlist? = socket.assigns.attendance == :waitlisted
+
     case Communities.cancel_rsvp_huddl(huddl, %{}, actor: user) do
       {:ok, _} ->
-        {:ok, reloaded} = reload_huddl(huddl, user)
+        flash_msg =
+          if waitlist?, do: "Removed from the waitlist.", else: "RSVP cancelled successfully"
 
         {:noreply,
          socket
-         |> put_flash(:info, "RSVP cancelled successfully")
-         |> assign(:huddl, reloaded)
-         |> assign(:has_rsvped, false)}
+         |> put_flash(:info, flash_msg)
+         |> refresh_attendance(huddl, user)}
 
       {:error, %Ash.Error.Forbidden{}} ->
         {:noreply, put_flash(socket, :error, "You can only cancel your own RSVP.")}
@@ -315,6 +347,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
            load: [
              :status,
              :rsvp_count,
+             :waitlist_count,
              :visible_virtual_link,
              :display_image_url,
              :group,
@@ -342,6 +375,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
       load: [
         :status,
         :rsvp_count,
+        :waitlist_count,
         :visible_virtual_link,
         :display_image_url,
         :group,
@@ -349,6 +383,17 @@ defmodule HuddlzWeb.HuddlLive.Show do
       ],
       actor: user
     )
+  end
+
+  defp refresh_attendance(socket, huddl, user) do
+    {:ok, reloaded} = reload_huddl(huddl, user)
+    attendance = check_attendance(reloaded, user)
+
+    socket
+    |> assign(:huddl, reloaded)
+    |> assign(:attendance, attendance)
+    |> assign(:has_rsvped, attendance == :attending)
+    |> assign(:waitlist_position, waitlist_position(reloaded, user))
   end
 
   defp huddl_meta(huddl) do
@@ -367,13 +412,32 @@ defmodule HuddlzWeb.HuddlLive.Show do
     huddl.creator_id == user.id
   end
 
-  defp check_rsvp(_huddl, nil), do: false
+  defp check_attendance(_huddl, nil), do: :none
 
-  defp check_rsvp(huddl, user) do
+  defp check_attendance(huddl, user) do
     case Communities.check_user_rsvp(huddl.id, actor: user) do
-      {:ok, []} -> false
-      {:ok, [_ | _]} -> true
-      {:error, _} -> false
+      {:ok, []} -> :none
+      {:ok, [%{waitlisted_at: nil} | _]} -> :attending
+      {:ok, [%{waitlisted_at: _} | _]} -> :waitlisted
+      {:error, _} -> :none
+    end
+  end
+
+  defp waitlist_position(_huddl, nil), do: nil
+
+  defp waitlist_position(huddl, user) do
+    require Ash.Query
+
+    case Communities.check_user_rsvp(huddl.id, actor: user) do
+      {:ok, [%{waitlisted_at: %DateTime{} = my_at} | _]} ->
+        Huddlz.Communities.HuddlAttendee
+        |> Ash.Query.filter(
+          huddl_id == ^huddl.id and not is_nil(waitlisted_at) and waitlisted_at <= ^my_at
+        )
+        |> Ash.count!(authorize?: false)
+
+      _ ->
+        nil
     end
   end
 
