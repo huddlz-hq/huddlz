@@ -8,6 +8,7 @@ defmodule HuddlzWeb.GroupLive.Index do
   alias Huddlz.Communities.Group
   alias HuddlzWeb.Layouts
   require Ash.Query
+  require Logger
 
   @section_limit 6
 
@@ -62,7 +63,7 @@ defmodule HuddlzWeb.GroupLive.Index do
 
   defp normalize_query(nil), do: nil
   defp normalize_query(""), do: nil
-  defp normalize_query(q) when is_binary(q), do: String.trim(q) |> nilify_blank()
+  defp normalize_query(q) when is_binary(q), do: q |> String.trim() |> nilify_blank()
 
   defp nilify_blank(""), do: nil
   defp nilify_blank(q), do: q
@@ -73,9 +74,8 @@ defmodule HuddlzWeb.GroupLive.Index do
 
   defp scoped_path(scope, query) do
     params =
-      []
-      |> maybe_put(:yours, scope_param(scope))
-      |> maybe_put(:q, query)
+      [yours: scope_param(scope), q: query]
+      |> Enum.reject(fn {_, v} -> is_nil(v) end)
 
     case params do
       [] -> ~p"/groups"
@@ -86,9 +86,6 @@ defmodule HuddlzWeb.GroupLive.Index do
   defp scope_param(:hosting), do: "hosting"
   defp scope_param(:joined), do: "joined"
   defp scope_param(:all), do: nil
-
-  defp maybe_put(list, _key, nil), do: list
-  defp maybe_put(list, key, value), do: [{key, value} | list]
 
   defp load_groups(socket) do
     user = socket.assigns.current_user
@@ -130,6 +127,9 @@ defmodule HuddlzWeb.GroupLive.Index do
     |> read_groups(actor: user)
   end
 
+  # The main directory stays public-only on purpose: a user's private groups
+  # already surface in the // JOINED section above, so re-listing them here
+  # would just duplicate. Anonymous users can only ever see public groups.
   defp list_all(query) do
     Group
     |> Ash.Query.for_read(:read, %{}, actor: nil)
@@ -139,12 +139,12 @@ defmodule HuddlzWeb.GroupLive.Index do
     |> read_groups(actor: nil)
   end
 
-  defp apply_search(query, nil) do
-    Ash.Query.sort(query, name: :asc)
+  defp apply_search(ash_query, nil) do
+    Ash.Query.sort(ash_query, name: :asc)
   end
 
-  defp apply_search(query, search_text) do
-    query
+  defp apply_search(ash_query, search_text) do
+    ash_query
     |> Ash.Query.filter(
       trigram_similarity(name, ^search_text) > 0.1 or
         trigram_similarity(description, ^search_text) > 0.1
@@ -156,10 +156,14 @@ defmodule HuddlzWeb.GroupLive.Index do
     )
   end
 
-  defp read_groups(query, opts) do
-    case Ash.read(query, opts) do
-      {:ok, groups} -> groups
-      {:error, _} -> []
+  defp read_groups(ash_query, opts) do
+    case Ash.read(ash_query, opts) do
+      {:ok, groups} ->
+        groups
+
+      {:error, reason} ->
+        Logger.warning("GroupLive.Index group read failed: #{inspect(reason)}")
+        []
     end
   end
 
