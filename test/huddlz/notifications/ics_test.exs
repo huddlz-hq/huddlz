@@ -40,12 +40,16 @@ defmodule Huddlz.Notifications.ICSTest do
     end
 
     test "ics carries the huddl identity and timing", ctx do
+      date = Date.add(Date.utc_today(), 30)
+      start_time = ~T[14:00:00]
+      ymd = Calendar.strftime(date, "%Y%m%d")
+
       huddl =
         build_huddl(ctx,
           title: "Coffee meetup",
           description: "Casual chat",
-          date: ~D[2026-05-01],
-          start_time: ~T[14:00:00],
+          date: date,
+          start_time: start_time,
           duration_minutes: 90
         )
 
@@ -53,8 +57,8 @@ defmodule Huddlz.Notifications.ICSTest do
 
       assert ics =~ "UID:huddl-#{huddl.id}@huddlz.com"
       assert ics =~ "SUMMARY:Coffee meetup"
-      assert ics =~ "DTSTART:20260501T140000Z"
-      assert ics =~ "DTEND:20260501T153000Z"
+      assert ics =~ "DTSTART:#{ymd}T140000Z"
+      assert ics =~ "DTEND:#{ymd}T153000Z"
       assert ics =~ "Casual chat"
     end
 
@@ -83,7 +87,7 @@ defmodule Huddlz.Notifications.ICSTest do
       huddl =
         build_huddl(ctx,
           title: "Roundtrip Test",
-          date: ~D[2026-06-15],
+          date: Date.add(Date.utc_today(), 45),
           start_time: ~T[09:00:00],
           duration_minutes: 60
         )
