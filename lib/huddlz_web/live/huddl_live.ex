@@ -214,7 +214,26 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   defp build_path(socket, params) do
-    scoped_path(socket.assigns.scope, params)
+    scoped_path(socket.assigns.scope, merge_active_location(socket, params))
+  end
+
+  # The autocomplete component only emits a hidden `location` text input on the
+  # form; lat/lng live in component state and reach the parent via :location_selected.
+  # Plain form events (typing search, changing date, etc.) therefore don't carry
+  # lat/lng — merge them in from socket assigns so the URL doesn't silently drop
+  # an active location filter.
+  defp merge_active_location(%{assigns: %{location_active: false}}, params), do: params
+
+  defp merge_active_location(%{assigns: assigns}, params) do
+    if params["lat"] && params["lng"] do
+      params
+    else
+      Map.merge(params, %{
+        "location" => params["location"] || assigns.location_text,
+        "lat" => Float.to_string(assigns.location_lat),
+        "lng" => Float.to_string(assigns.location_lng)
+      })
+    end
   end
 
   defp scoped_path(scope, form_params, opts \\ []) do
