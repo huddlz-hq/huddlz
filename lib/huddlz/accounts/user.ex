@@ -169,7 +169,7 @@ defmodule Huddlz.Accounts.User do
                      "previous_role" => Atom.to_string(previous_role)
                    }
 
-                   case Huddlz.Notifications.deliver_async(
+                   case Huddlz.Notifications.deliver(
                           user,
                           :account_role_changed,
                           payload
@@ -255,7 +255,7 @@ defmodule Huddlz.Accounts.User do
       change {AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password}
 
       change after_action(fn _changeset, user, _ctx ->
-               case Huddlz.Notifications.deliver_async(user, :password_changed) do
+               case Huddlz.Notifications.deliver(user, :password_changed) do
                  {:ok, _job} ->
                    :ok
 
@@ -597,7 +597,7 @@ defmodule Huddlz.Accounts.User do
   defp enqueue_email_changed(user, previous_email, audience) do
     payload = %{"audience" => audience, "old_email" => previous_email}
 
-    case Huddlz.Notifications.deliver_async(user, :email_changed, payload) do
+    case Huddlz.Notifications.deliver(user, :email_changed, payload) do
       {:ok, _job} ->
         :ok
 

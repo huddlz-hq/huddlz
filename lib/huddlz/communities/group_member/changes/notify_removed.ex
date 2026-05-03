@@ -30,7 +30,7 @@ defmodule Huddlz.Communities.GroupMember.Changes.NotifyRemoved do
   defp deliver(member) do
     with {:ok, user} <- Ash.get(Huddlz.Accounts.User, member.user_id, authorize?: false),
          {:ok, group} <- Ash.get(Group, member.group_id, authorize?: false) do
-      Notifications.deliver_async(user, :group_member_removed, %{
+      Notifications.deliver(user, :group_member_removed, %{
         "group_id" => group.id,
         "group_name" => to_string(group.name)
       })

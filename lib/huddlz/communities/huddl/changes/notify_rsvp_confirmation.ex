@@ -21,7 +21,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyRsvpConfirmation do
   defp notify(cs, huddl) do
     with true <- cs.context[:rsvp_created] == true,
          %{id: _} = actor <- cs.context[:private][:actor] do
-      Notifications.deliver_async(actor, :rsvp_confirmation, %{"huddl_id" => huddl.id})
+      Notifications.deliver(actor, :rsvp_confirmation, %{"huddl_id" => huddl.id})
       {:ok, huddl}
     else
       _ -> {:ok, huddl}

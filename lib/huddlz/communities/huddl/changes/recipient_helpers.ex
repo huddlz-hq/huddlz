@@ -82,7 +82,7 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
     User
     |> Ash.Query.filter(id in ^user_ids)
     |> Ash.read!(authorize?: false)
-    |> Enum.each(&Notifications.deliver_async(&1, trigger, payload))
+    |> Enum.each(&Notifications.deliver(&1, trigger, payload))
 
     :ok
   end
