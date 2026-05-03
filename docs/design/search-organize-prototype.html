@@ -1,0 +1,3440 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Huddlz Search Prototype</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #020404;
+      --panel: #050808;
+      --panel-2: #081011;
+      --line: #142022;
+      --line-strong: #243639;
+      --text: #f4fbfb;
+      --soft: #b7c1c3;
+      --muted: #7d888b;
+      --cyan: #18cbd4;
+      --cyan-soft: rgba(24, 203, 212, 0.14);
+      --danger: #ff896f;
+      --shadow: 0 28px 80px rgba(0, 0, 0, 0.56);
+      --radius: 7px;
+      --radius-sm: 5px;
+      --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .app {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 78% 8%, rgba(24, 203, 212, 0.10), transparent 360px),
+        linear-gradient(180deg, #020404 0%, #020404 62%, #030707 100%);
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      height: 82px;
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      padding: 0 48px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(2, 4, 4, 0.94);
+      backdrop-filter: blur(12px);
+    }
+
+    .logo {
+      flex: 0 0 auto;
+      color: #eaffff;
+      font-family: var(--mono);
+      font-size: 25px;
+      letter-spacing: 0;
+      text-decoration: none;
+      text-shadow: 0 0 12px rgba(24, 203, 212, 0.32);
+    }
+
+    .nav {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      margin-left: auto;
+    }
+
+    .nav a {
+      color: var(--soft);
+      font-size: 14px;
+      font-weight: 760;
+      text-decoration: none;
+    }
+
+    .search-wrap {
+      position: relative;
+      flex: 1 1 520px;
+      max-width: 620px;
+    }
+
+    .search-form {
+      height: 48px;
+      display: flex;
+      align-items: stretch;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: rgba(5, 9, 9, 0.96);
+      overflow: hidden;
+    }
+
+    .search-form:focus-within {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px var(--cyan-soft);
+    }
+
+    .search-icon {
+      width: 48px;
+      display: grid;
+      place-items: center;
+      color: var(--cyan);
+      font-size: 18px;
+    }
+
+    .search-input {
+      flex: 1 1 auto;
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 690;
+    }
+
+    .search-input::placeholder {
+      color: #667174;
+      font-weight: 620;
+    }
+
+    .search-button {
+      border: 0;
+      background: var(--cyan);
+      color: #001011;
+      padding: 0 22px;
+      font-size: 13px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .suggestions {
+      position: absolute;
+      top: 58px;
+      left: 0;
+      right: 0;
+      z-index: 30;
+      display: none;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: #050909;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .app.is-searching .suggestions {
+      display: block;
+    }
+
+    .suggestion {
+      width: 100%;
+      min-height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 0 16px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+    }
+
+    .suggestion:last-child {
+      border-bottom: 0;
+    }
+
+    .suggestion:hover,
+    .suggestion:focus-visible {
+      outline: 0;
+      background: var(--cyan-soft);
+    }
+
+    .suggestion strong {
+      font-size: 14px;
+      font-weight: 840;
+    }
+
+    .suggestion span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .auth {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex: 0 0 auto;
+    }
+
+    .avatar-btn {
+      min-width: 46px;
+      height: 46px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-sm);
+      background: #050909;
+      color: var(--text);
+      padding: 0 8px 0 6px;
+      font-weight: 850;
+    }
+
+    .avatar-mark {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--cyan);
+      color: #001011;
+      font-size: 13px;
+      font-weight: 950;
+    }
+
+    .avatar-name {
+      max-width: 96px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .app.signed-in .auth > .btn {
+      display: none;
+    }
+
+    .app.signed-in .avatar-btn {
+      display: inline-flex;
+    }
+
+    .btn {
+      height: 46px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text);
+      padding: 0 20px;
+      font-size: 14px;
+      font-weight: 850;
+    }
+
+    .btn.primary {
+      border-color: var(--cyan);
+      background: var(--cyan);
+      color: #001011;
+    }
+
+    .icon-btn {
+      width: 46px;
+      height: 46px;
+      border: 0;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text);
+      font-size: 18px;
+      display: none;
+      place-items: center;
+    }
+
+    .hamburger-lines {
+      width: 20px;
+      height: 14px;
+      display: grid;
+      align-content: space-between;
+    }
+
+    .hamburger-lines span {
+      display: block;
+      width: 20px;
+      height: 2px;
+      border-radius: 999px;
+      background: currentColor;
+    }
+
+    .account-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 48px;
+      z-index: 35;
+      display: none;
+      width: 220px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: #050909;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .app.signed-in .account-menu {
+      width: 260px;
+    }
+
+    .app.menu-open .account-menu {
+      display: block;
+    }
+
+    .menu-note {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 780;
+    }
+
+    .menu-note strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .signed-in-menu {
+      display: none;
+    }
+
+    .app.signed-in .signed-out-menu {
+      display: none;
+    }
+
+    .app.signed-in .signed-in-menu {
+      display: block;
+    }
+
+    .menu-item {
+      width: 100%;
+      min-height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      color: var(--text);
+      padding: 0 16px;
+      text-align: left;
+      font-size: 14px;
+      font-weight: 850;
+      text-decoration: none;
+    }
+
+    .menu-item:last-child {
+      border-bottom: 0;
+    }
+
+    .menu-item.primary {
+      color: #001011;
+      background: var(--cyan);
+    }
+
+    .page {
+      padding: 0 48px 56px;
+    }
+
+    .hero {
+      min-height: 540px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 480px;
+      gap: 54px;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .eyebrow {
+      margin-bottom: 16px;
+      color: var(--cyan);
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 680px;
+      font-size: clamp(42px, 5vw, 72px);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 630px;
+      margin: 22px 0 32px;
+      color: var(--soft);
+      font-size: 20px;
+      line-height: 1.45;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .cta {
+      height: 54px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: #050909;
+      color: var(--text);
+      padding: 0 24px;
+      font-weight: 900;
+    }
+
+    .cta.primary {
+      border-color: var(--cyan);
+      background: var(--cyan);
+      color: #001011;
+    }
+
+    .event-feature {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      overflow: hidden;
+    }
+
+    .image-frame {
+      aspect-ratio: 16 / 9;
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius) var(--radius) 0 0;
+      background:
+        linear-gradient(135deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.62)),
+        linear-gradient(145deg, #9f6844 0%, #c89b62 32%, #2f6268 68%, #11191b 100%);
+    }
+
+    .image-frame img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+
+    .image-frame.has-img::before,
+    .image-frame.has-img::after {
+      display: none;
+    }
+
+    .image-frame::before {
+      content: "";
+      position: absolute;
+      inset: 12% 12% 0;
+      border: 2px solid rgba(0, 0, 0, 0.32);
+      border-bottom: 0;
+      transform: skewX(-12deg);
+    }
+
+    .image-frame::after {
+      content: attr(data-title);
+      position: absolute;
+      left: 7%;
+      right: 7%;
+      bottom: 10%;
+      color: #fff7e8;
+      font-family: Georgia, serif;
+      font-size: clamp(23px, 3vw, 40px);
+      font-weight: 900;
+      line-height: 0.96;
+      text-transform: uppercase;
+    }
+
+    .image-frame.group {
+      background:
+        linear-gradient(135deg, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0.58)),
+        linear-gradient(145deg, #15484d 0%, #18cbd4 36%, #263334 68%, #071011 100%);
+    }
+
+    .feature-body,
+    .card-body {
+      padding: 20px;
+    }
+
+    .feature-body h2 {
+      margin: 0 0 10px;
+      font-size: 27px;
+      letter-spacing: 0;
+    }
+
+    .meta,
+    .card-meta {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .notes {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      padding: 30px 0 0;
+    }
+
+    .note {
+      border-top: 1px solid var(--line);
+      padding-top: 18px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.42;
+    }
+
+    .note strong {
+      display: block;
+      color: var(--text);
+      margin-bottom: 7px;
+      font-size: 15px;
+    }
+
+    .landing-section {
+      padding: 58px 0 0;
+    }
+
+    .landing-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 22px;
+    }
+
+    .landing-head h2 {
+      margin: 0;
+      font-size: clamp(28px, 3vw, 42px);
+      letter-spacing: 0;
+    }
+
+    .landing-head p {
+      max-width: 460px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .landing-cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 20px;
+    }
+
+    .organize-band {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+      gap: 34px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(90deg, rgba(24, 203, 212, 0.08), rgba(24, 203, 212, 0)),
+        #050909;
+      padding: 34px;
+    }
+
+    .organize-band h2 {
+      margin: 0 0 14px;
+      font-size: clamp(28px, 3vw, 44px);
+      letter-spacing: 0;
+    }
+
+    .organize-band p {
+      max-width: 640px;
+      margin: 0 0 24px;
+      color: var(--soft);
+      font-size: 17px;
+      line-height: 1.45;
+    }
+
+    .organize-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .organize-item {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: rgba(2, 4, 4, 0.52);
+      padding: 14px;
+    }
+
+    .organize-item strong {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .organize-item span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .auth-view {
+      display: none;
+      padding: 58px 0 0;
+    }
+
+    .app.auth-page .hero,
+    .app.auth-page .notes,
+    .app.auth-page .landing-section,
+    .app.auth-page .results-view {
+      display: none;
+    }
+
+    .app.auth-page .auth-view {
+      display: block;
+    }
+
+    .auth-shell {
+      display: grid;
+      grid-template-columns: minmax(360px, 0.78fr) minmax(420px, 1fr);
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .auth-card,
+    .auth-aside {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #050909;
+    }
+
+    .auth-card {
+      padding: 34px;
+    }
+
+    .auth-kicker {
+      margin-bottom: 16px;
+      color: var(--cyan);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .auth-card h1 {
+      margin: 0 0 10px;
+      font-size: clamp(36px, 4vw, 58px);
+      line-height: 0.95;
+      letter-spacing: 0;
+    }
+
+    .auth-card p {
+      margin: 0 0 28px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.45;
+    }
+
+    .auth-form {
+      display: grid;
+      gap: 14px;
+    }
+
+    .auth-field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .auth-field label {
+      color: var(--soft);
+      font-size: 12px;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .auth-field input {
+      width: 100%;
+      min-height: 56px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-sm);
+      background: #020404;
+      color: var(--text);
+      font: inherit;
+      font-size: 16px;
+      font-weight: 750;
+      padding: 0 16px;
+      outline: 0;
+    }
+
+    .auth-field input:focus {
+      border-color: rgba(34, 199, 211, 0.86);
+      box-shadow: 0 0 0 3px rgba(34, 199, 211, 0.14);
+    }
+
+    .auth-submit {
+      margin-top: 8px;
+      min-height: 58px;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .auth-meta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin: 4px 0 6px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 720;
+    }
+
+    .auth-check {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .auth-check span {
+      width: 18px;
+      height: 18px;
+      border: 1px solid var(--line-strong);
+      border-radius: 4px;
+      background: rgba(34, 199, 211, 0.12);
+    }
+
+    .auth-link {
+      border: 0;
+      background: transparent;
+      color: var(--cyan);
+      font: inherit;
+      font-weight: 850;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .auth-switch {
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 720;
+    }
+
+    .auth-aside {
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 0;
+      min-height: 520px;
+    }
+
+    .auth-aside .image-frame {
+      height: 100%;
+      min-height: 0;
+      aspect-ratio: 16 / 9;
+      border-radius: 0;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .auth-aside-content {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 22px;
+      padding: 32px;
+    }
+
+    .auth-aside-content h2 {
+      margin: 0 0 12px;
+      font-size: clamp(26px, 3vw, 42px);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .auth-aside-content p {
+      margin: 0;
+      color: var(--soft);
+      font-size: 16px;
+      line-height: 1.45;
+    }
+
+    .auth-benefits {
+      display: grid;
+      gap: 12px;
+    }
+
+    .auth-benefit {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      background: rgba(2, 4, 4, 0.58);
+    }
+
+    .auth-benefit strong {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .auth-benefit span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .organize-view {
+      display: none;
+      padding-top: 28px;
+    }
+
+    .member-view {
+      display: none;
+      padding-top: 34px;
+    }
+
+    .app.organize-page .hero,
+    .app.organize-page .notes,
+    .app.organize-page .landing-section,
+    .app.organize-page .results-view,
+    .app.organize-page .auth-view,
+    .app.organize-page .member-view,
+    .app.organize-page .site-footer {
+      display: none;
+    }
+
+    .app.organize-page .organize-view {
+      display: block;
+    }
+
+    .app.member-page .hero,
+    .app.member-page .notes,
+    .app.member-page .landing-section,
+    .app.member-page .results-view,
+    .app.member-page .auth-view,
+    .app.member-page .organize-view {
+      display: none;
+    }
+
+    .app.member-page .member-view {
+      display: block;
+    }
+
+    .member-top {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 22px;
+    }
+
+    .member-top h1 {
+      font-size: clamp(38px, 5vw, 64px);
+      line-height: 0.98;
+    }
+
+    .member-top p {
+      max-width: 640px;
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.45;
+    }
+
+    .member-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+
+    .member-tab {
+      min-height: 42px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-sm);
+      background: #050909;
+      color: var(--text);
+      padding: 0 14px;
+      font-size: 14px;
+      font-weight: 840;
+    }
+
+    .member-tab.active {
+      border-color: var(--cyan);
+      background: var(--cyan);
+      color: #001011;
+    }
+
+    .member-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .member-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .member-card {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #050909;
+      overflow: hidden;
+    }
+
+    .member-card .image-frame {
+      width: 220px;
+      height: 124px;
+      border: 0;
+      border-right: 1px solid var(--line);
+      border-radius: 0;
+    }
+
+    .member-card-body {
+      min-width: 0;
+      padding: 16px 0;
+    }
+
+    .member-card-body h2 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      letter-spacing: 0;
+    }
+
+    .member-card-body p {
+      margin: 0 0 10px;
+      color: var(--soft);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .member-card-meta {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+      font-weight: 720;
+    }
+
+    .member-card-actions {
+      display: grid;
+      gap: 8px;
+      padding-right: 16px;
+      min-width: 132px;
+    }
+
+    .member-side {
+      display: grid;
+      gap: 16px;
+    }
+
+    .member-panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #050909;
+      padding: 18px;
+    }
+
+    .member-panel h2 {
+      margin: 0 0 12px;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .member-panel p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .organize-shell {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      min-height: calc(100vh - 138px);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #030606;
+    }
+
+    .organize-sidebar {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--line);
+      background: #050909;
+    }
+
+    .organize-sidebar-head {
+      padding: 24px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .organize-sidebar-head strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--text);
+      font-size: 18px;
+      line-height: 1.1;
+    }
+
+    .organize-sidebar-head span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .organize-nav {
+      display: grid;
+      gap: 6px;
+      padding: 14px;
+    }
+
+    .organize-tab {
+      min-height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--soft);
+      padding: 0 12px;
+      text-align: left;
+      font-size: 14px;
+      font-weight: 840;
+    }
+
+    .organize-tab span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .organize-tab.active {
+      border-color: var(--cyan);
+      background: var(--cyan);
+      color: #001011;
+    }
+
+    .organize-tab.active span {
+      color: rgba(0, 16, 17, 0.72);
+    }
+
+    .organize-sidebar-foot {
+      margin-top: auto;
+      padding: 18px 24px 24px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .organize-main {
+      min-width: 0;
+      padding: 30px;
+    }
+
+    .organize-main.creating .dashboard-content {
+      display: none;
+    }
+
+    .create-huddl-form {
+      display: none;
+    }
+
+    .organize-main.creating .create-huddl-form {
+      display: grid;
+      gap: 18px;
+    }
+
+    .organize-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .organize-top h1 {
+      font-size: clamp(34px, 4vw, 56px);
+      line-height: 0.98;
+    }
+
+    .organize-top p {
+      max-width: 680px;
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.45;
+    }
+
+    .organize-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: #050909;
+      padding: 16px;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 8px;
+      color: var(--text);
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .organize-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+      gap: 18px;
+    }
+
+    .form-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .form-panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #050909;
+      padding: 22px;
+    }
+
+    .form-panel h2 {
+      margin: 0 0 16px;
+      font-size: 20px;
+      letter-spacing: 0;
+    }
+
+    .form-section {
+      display: grid;
+      gap: 14px;
+      padding: 20px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .form-section:first-child {
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    .form-section h3 {
+      margin: 0;
+      color: var(--soft);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .textarea-field {
+      min-height: 112px;
+      resize: vertical;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-sm);
+      background: #020404;
+      color: var(--text);
+      font: inherit;
+      font-size: 15px;
+      font-weight: 650;
+      padding: 14px 16px;
+      outline: 0;
+    }
+
+    .upload-box {
+      display: grid;
+      grid-template-columns: minmax(240px, 0.8fr) minmax(0, 1fr);
+      gap: 16px;
+      align-items: center;
+      border: 1px dashed var(--line-strong);
+      border-radius: var(--radius);
+      background: #020404;
+      padding: 14px;
+    }
+
+    .upload-preview {
+      aspect-ratio: 16 / 9;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: #061112;
+    }
+
+    .upload-preview img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+
+    .upload-copy strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text);
+      font-size: 16px;
+    }
+
+    .upload-copy p {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .geo-card {
+      display: grid;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--panel-2);
+      padding: 14px;
+    }
+
+    .geo-map {
+      min-height: 150px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background:
+        linear-gradient(135deg, rgba(24, 203, 212, 0.16), transparent 38%),
+        linear-gradient(90deg, transparent 0 48%, rgba(24, 203, 212, 0.32) 48% 50%, transparent 50%),
+        linear-gradient(0deg, transparent 0 48%, rgba(24, 203, 212, 0.24) 48% 50%, transparent 50%),
+        #071112;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .geo-pin {
+      position: absolute;
+      left: 54%;
+      top: 45%;
+      width: 18px;
+      height: 18px;
+      border-radius: 50% 50% 50% 0;
+      background: var(--cyan);
+      transform: rotate(-45deg);
+      box-shadow: 0 0 0 6px var(--cyan-soft);
+    }
+
+    .geo-result {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      color: var(--soft);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .publish-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .publish-item {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      background: rgba(2, 4, 4, 0.58);
+    }
+
+    .publish-item strong {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .publish-item span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .switch {
+      width: 42px;
+      height: 24px;
+      flex: 0 0 auto;
+      border: 1px solid var(--line-strong);
+      border-radius: 999px;
+      background: var(--cyan-soft);
+      position: relative;
+    }
+
+    .switch::after {
+      content: "";
+      position: absolute;
+      right: 3px;
+      top: 3px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--cyan);
+    }
+
+    .sticky-actions {
+      position: sticky;
+      bottom: 18px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(3, 6, 6, 0.92);
+      backdrop-filter: blur(12px);
+    }
+
+    .work-panel {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #050909;
+      overflow: hidden;
+    }
+
+    .work-panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .work-panel-head h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .work-panel-head span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 760;
+    }
+
+    .work-list {
+      display: grid;
+    }
+
+    .work-row {
+      display: grid;
+      grid-template-columns: 64px minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .work-row:last-child {
+      border-bottom: 0;
+    }
+
+    .work-thumb {
+      width: 64px;
+      aspect-ratio: 16 / 9;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: #061112;
+    }
+
+    .work-thumb img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+
+    .work-row strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text);
+      font-size: 15px;
+    }
+
+    .work-row span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .status-pill {
+      min-width: 82px;
+      min-height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-sm);
+      color: var(--soft);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .status-pill.live {
+      border-color: var(--cyan);
+      color: var(--cyan);
+      background: var(--cyan-soft);
+    }
+
+    .detail-stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .detail-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #050909;
+      padding: 18px;
+    }
+
+    .detail-card h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .detail-card p {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .preference-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .preference-item {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: rgba(2, 4, 4, 0.58);
+      padding: 14px;
+    }
+
+    .preference-item strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .preference-item span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .task-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .task-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      color: var(--soft);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .task-dot {
+      width: 10px;
+      height: 10px;
+      flex: 0 0 auto;
+      margin-top: 4px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 0 4px var(--cyan-soft);
+    }
+
+    .results-view {
+      display: none;
+      padding-top: 34px;
+    }
+
+    .app.results .hero,
+    .app.results .notes,
+    .app.results .landing-section,
+    .app.results .auth-view {
+      display: none;
+    }
+
+    .app.results .results-view {
+      display: block;
+    }
+
+    .results-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 18px;
+    }
+
+    .results-head h1 {
+      font-size: clamp(34px, 4vw, 52px);
+      line-height: 1.04;
+    }
+
+    .results-count {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .filters-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 22px 0 26px;
+    }
+
+    .chip,
+    .filter-trigger {
+      min-height: 40px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-sm);
+      background: #050909;
+      color: var(--text);
+      padding: 0 14px;
+      font-size: 14px;
+      font-weight: 840;
+    }
+
+    .chip.active {
+      border-color: var(--cyan);
+      background: var(--cyan);
+      color: #001011;
+    }
+
+    .filter-trigger {
+      margin-left: auto;
+    }
+
+
+    .section-label {
+      margin: 28px 0 14px;
+      color: var(--soft);
+      font-size: 14px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #020505;
+      overflow: hidden;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 25px;
+      margin-bottom: 12px;
+      padding: 0 9px;
+      border: 1px solid var(--line-strong);
+      color: var(--soft);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .badge.group {
+      border-color: rgba(24, 203, 212, 0.7);
+      color: var(--cyan);
+    }
+
+    .card h2 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .card p {
+      min-height: 42px;
+      margin: 0 0 16px;
+      color: var(--soft);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .empty {
+      display: none;
+      border: 1px solid var(--line);
+      padding: 36px;
+      color: var(--muted);
+      background: #050909;
+    }
+
+    .site-footer {
+      margin-top: 76px;
+      border-top: 1px solid var(--line);
+      background: #030606;
+    }
+
+    .footer-panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #050909;
+    }
+
+    .footer-art {
+      position: relative;
+      height: 220px;
+      overflow: hidden;
+      border-bottom: 1px solid var(--line);
+      background: #082434;
+    }
+
+    .footer-art img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+
+    .footer-art::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(2, 4, 4, 0.16), rgba(2, 4, 4, 0.04) 42%, rgba(2, 4, 4, 0.2)),
+        linear-gradient(180deg, rgba(2, 4, 4, 0.02), rgba(2, 4, 4, 0.3));
+    }
+
+    .footer-content {
+      display: grid;
+      grid-template-columns: minmax(260px, 1.5fr) repeat(4, minmax(140px, 1fr));
+      gap: 28px;
+      padding: 34px 32px 28px;
+      background: #030606;
+    }
+
+    .footer-brand {
+      color: #eaffff;
+      font-family: var(--mono);
+      font-size: 27px;
+      letter-spacing: 0;
+      text-shadow: 0 0 12px rgba(24, 203, 212, 0.32);
+    }
+
+    .footer-copy {
+      max-width: 320px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .footer-group h2 {
+      margin: 0 0 13px;
+      color: var(--soft);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .footer-group a {
+      display: block;
+      margin: 10px 0;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 730;
+      text-decoration: none;
+    }
+
+    .footer-group a:hover,
+    .footer-group a:focus-visible {
+      color: var(--cyan);
+      outline: 0;
+    }
+
+    .footer-bottom {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      margin: 0 32px;
+      padding: 22px 0 30px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 720;
+    }
+
+    .filter-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      width: min(430px, 100vw);
+      height: 100vh;
+      border-left: 1px solid var(--line-strong);
+      border-radius: var(--radius) 0 0 var(--radius);
+      background: #050909;
+      box-shadow: var(--shadow);
+      transform: translateX(100%);
+      transition: transform 180ms ease;
+    }
+
+    .app.filters-open .filter-panel {
+      transform: translateX(0);
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 45;
+      display: none;
+      background: rgba(0, 0, 0, 0.62);
+    }
+
+    .app.filters-open .overlay {
+      display: block;
+    }
+
+    .panel-head,
+    .panel-actions {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-actions {
+      border-top: 1px solid var(--line);
+      border-bottom: 0;
+      justify-content: flex-end;
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: 0;
+    }
+
+    .panel-body {
+      flex: 1 1 auto;
+      overflow: auto;
+      padding: 18px 20px 24px;
+    }
+
+    .field-group {
+      padding: 18px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .field-group:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .field-group h3 {
+      margin: 0 0 12px;
+      color: var(--soft);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    .segment {
+      min-height: 42px;
+      border: 0;
+      border-right: 1px solid var(--line-strong);
+      background: #050909;
+      color: var(--soft);
+      font-size: 13px;
+      font-weight: 880;
+    }
+
+    .segment:last-child {
+      border-right: 0;
+    }
+
+    .segment.active {
+      background: var(--cyan);
+      color: #001011;
+    }
+
+    .helper {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .fake-input {
+      min-height: 58px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--panel-2);
+      padding: 10px 12px;
+    }
+
+    .fake-input label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .fake-input div {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 780;
+    }
+
+    .option-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+    }
+
+    .toggle {
+      min-height: 36px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-sm);
+      background: #050909;
+      color: var(--soft);
+      padding: 0 12px;
+      font-size: 13px;
+      font-weight: 830;
+    }
+
+    .toggle.active {
+      border-color: var(--cyan);
+      background: var(--cyan-soft);
+      color: var(--text);
+    }
+
+    @media (max-width: 1020px) {
+      .topbar {
+        height: auto;
+        min-height: 72px;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 14px 22px;
+      }
+
+      .nav,
+      .auth .btn {
+        display: none;
+      }
+
+      .auth {
+        margin-left: auto;
+      }
+
+      .icon-btn {
+        display: inline-grid;
+      }
+
+      .logo {
+        font-size: 22px;
+      }
+
+      .search-wrap {
+        order: 3;
+        flex-basis: 100%;
+        max-width: none;
+        margin-left: 0;
+      }
+
+      .icon-btn {
+        margin-left: 0;
+      }
+
+      .account-menu {
+        right: 22px;
+      }
+
+      .page {
+        padding: 0 22px 34px;
+      }
+
+      .hero {
+        min-height: auto;
+        display: block;
+        padding: 48px 0 28px;
+      }
+
+      .lead {
+        font-size: 17px;
+      }
+
+      .event-feature {
+        margin-top: 34px;
+      }
+
+      .notes {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding-top: 24px;
+      }
+
+      .landing-head {
+        display: block;
+      }
+
+      .landing-head p {
+        margin-top: 10px;
+      }
+
+      .landing-cards,
+      .organize-band,
+      .auth-shell,
+      .auth-aside {
+        grid-template-columns: 1fr;
+      }
+
+      .organize-band,
+      .auth-card,
+      .auth-aside-content {
+        padding: 22px;
+      }
+
+      .auth-aside .image-frame {
+        height: auto;
+      }
+
+      .auth-meta-row {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .organize-shell,
+      .organize-grid,
+      .form-shell,
+      .member-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .organize-shell {
+        min-height: 0;
+      }
+
+      .organize-sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .organize-nav {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .organize-main {
+        padding: 22px;
+      }
+
+      .organize-top {
+        display: block;
+      }
+
+      .organize-actions {
+        justify-content: flex-start;
+        margin-top: 18px;
+      }
+
+      .metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .member-top {
+        display: block;
+      }
+
+      .member-card {
+        grid-template-columns: 180px minmax(0, 1fr);
+      }
+
+      .member-card .image-frame {
+        width: 180px;
+        height: 102px;
+      }
+
+      .member-card-actions {
+        grid-column: 2;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: 0 16px 16px 0;
+      }
+
+      .footer-content {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .footer-brand-block {
+        grid-column: 1 / -1;
+      }
+
+      .results-head {
+        display: block;
+      }
+
+      .filter-trigger {
+        margin-left: 0;
+      }
+
+      .filters-row {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        overflow: visible;
+      }
+
+      .filters-row .chip {
+        min-width: 0;
+        justify-content: center;
+        padding: 0 10px;
+      }
+
+      .filters-row .chip[data-action="filters"] {
+        justify-content: flex-start;
+      }
+
+      .filter-trigger {
+        grid-column: 1 / -1;
+        justify-content: center;
+        min-height: 46px;
+      }
+
+      .cards {
+        grid-template-columns: 1fr;
+      }
+
+      .card {
+        display: block;
+        min-height: 0;
+      }
+
+      .card .image-frame {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+      }
+
+      .card .image-frame::after {
+        left: 7%;
+        right: 7%;
+        bottom: 10%;
+        font-size: clamp(24px, 8vw, 34px);
+      }
+
+      .card .image-frame::before {
+        inset: 12% 12% 0;
+      }
+
+      .card-body {
+        padding: 16px;
+      }
+
+      .card p {
+        min-height: 0;
+        margin-bottom: 10px;
+      }
+
+      .filter-panel {
+        top: auto;
+        bottom: 0;
+        width: 100vw;
+        height: min(76vh, 720px);
+        border-top: 1px solid var(--line-strong);
+        border-left: 0;
+        transform: translateY(100%);
+      }
+
+      .app.filters-open .filter-panel {
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 520px) {
+      .search-button {
+        display: none;
+      }
+
+      .search-icon {
+        width: 42px;
+      }
+
+      .results-view {
+        padding-top: 24px;
+      }
+
+      .filters-row {
+        padding-bottom: 6px;
+      }
+
+      .chip,
+      .filter-trigger {
+        flex: initial;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .organize-nav,
+      .metric-grid,
+      .preference-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .work-row {
+        grid-template-columns: 54px minmax(0, 1fr);
+      }
+
+      .status-pill {
+        grid-column: 2;
+        justify-self: start;
+      }
+
+      .member-card {
+        display: block;
+      }
+
+      .member-card .image-frame {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 16 / 9;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .member-card-body,
+      .member-card-actions {
+        padding: 16px;
+      }
+
+      .member-card-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .field-row,
+      .upload-box {
+        grid-template-columns: 1fr;
+      }
+
+      .footer-art {
+        height: 150px;
+      }
+
+      .footer-content {
+        grid-template-columns: 1fr;
+        padding: 28px 24px 24px;
+      }
+
+      .footer-bottom {
+        display: block;
+        margin: 0 24px;
+      }
+
+      .footer-bottom span {
+        display: block;
+        margin-top: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="topbar">
+      <a class="logo" href="#" data-action="home">huddlz</a>
+
+      <div class="search-wrap">
+        <form class="search-form" id="searchForm">
+          <div class="search-icon" aria-hidden="true">/</div>
+          <input class="search-input" id="searchInput" placeholder="Search huddlz" autocomplete="off" />
+          <button class="search-button" type="submit">Search</button>
+        </form>
+        <div class="suggestions" id="suggestions">
+          <button class="suggestion" type="button" data-suggest="all">
+            <strong>Search all for <span data-query-label>founder coffee</span></strong>
+            <span>Enter</span>
+          </button>
+          <button class="suggestion" type="button" data-suggest="huddlz">
+            <strong>Search huddlz for <span data-query-label>founder coffee</span></strong>
+            <span>Events</span>
+          </button>
+          <button class="suggestion" type="button" data-suggest="groups">
+            <strong>Search groups for <span data-query-label>founder coffee</span></strong>
+            <span>Communities</span>
+          </button>
+          <button class="suggestion" type="button" data-action="filters">
+            <strong>More filters</strong>
+            <span>Optional</span>
+          </button>
+        </div>
+      </div>
+
+      <nav class="nav" aria-label="Primary">
+        <a href="#" data-action="organize">Organize</a>
+      </nav>
+
+      <div class="auth">
+        <button class="btn" type="button" data-action="sign-up">Sign Up</button>
+        <button class="btn primary" type="button" data-action="sign-in">Sign In</button>
+        <button class="avatar-btn" type="button" aria-label="Open account menu" data-action="menu">
+          <span class="avatar-mark">MH</span>
+          <span class="avatar-name">Micah</span>
+        </button>
+        <button class="icon-btn" type="button" aria-label="Open menu" data-action="menu">
+          <span class="hamburger-lines" aria-hidden="true"><span></span><span></span><span></span></span>
+        </button>
+      </div>
+
+      <div class="account-menu" aria-label="Account menu">
+        <div class="signed-out-menu">
+          <div class="menu-note">You are browsing signed out.</div>
+          <button class="menu-item primary" type="button" data-action="sign-in">Sign In <span>→</span></button>
+          <button class="menu-item" type="button" data-action="sign-up">Sign Up</button>
+          <button class="menu-item" type="button" data-action="organize">Organize</button>
+        </div>
+        <div class="signed-in-menu">
+          <div class="menu-note"><strong>Micah Huddlz</strong>micah@example.com</div>
+          <button class="menu-item" type="button" data-member-tab="huddlz">My huddlz</button>
+          <button class="menu-item" type="button" data-member-tab="groups">My groups</button>
+          <button class="menu-item primary" type="button" data-action="organize">Organizer workspace <span>→</span></button>
+          <button class="menu-item" type="button" data-organize-tab="preferences">Profile & preferences</button>
+          <button class="menu-item" type="button" data-organize-tab="settings">Workspace settings</button>
+          <button class="menu-item" type="button" data-action="home">Public home</button>
+          <button class="menu-item" type="button" data-action="sign-out">Sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="hero">
+        <div>
+          <div class="eyebrow">Find your people, fast</div>
+          <h1>Find your next real-life gathering.</h1>
+          <p class="lead">Huddlz helps people discover local events and groups without turning the first step into paperwork. Search for what you want, pick a huddl, and show up.</p>
+          <div class="hero-actions">
+            <button class="cta primary" type="button" data-action="focus-search">Search huddlz</button>
+            <button class="cta" type="button" data-action="organize">Organize</button>
+          </div>
+        </div>
+        <aside class="event-feature">
+          <div class="image-frame has-img">
+            <img src="images/boat-drinks.svg" alt="Boat Drinks event cover" />
+          </div>
+          <div class="feature-body">
+            <h2>I'm on a boat (drink)!</h2>
+            <div class="meta">Huddl · May 09, 2026 · St. Augustine, FL</div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="notes">
+        <div class="note"><strong>Discover quickly</strong>Search huddlz and groups from the header. Type a topic, city, or community and press Enter.</div>
+        <div class="note"><strong>Meet in real life</strong>Huddlz puts the focus on gatherings, RSVPs, location, and the small details that help people show up.</div>
+        <div class="note"><strong>Organize without clutter</strong>Organizers get a dedicated workspace for groups, huddlz, attendees, members, messages, and settings.</div>
+      </section>
+
+      <section class="landing-section">
+        <div class="landing-head">
+          <h2>Upcoming huddlz</h2>
+          <p>A first page should give people something concrete to inspect while keeping the global search as the main action.</p>
+        </div>
+        <div class="landing-cards">
+          <article class="card">
+            <div class="image-frame has-img">
+              <img src="images/boat-drinks.svg" alt="Boat Drinks event cover" />
+            </div>
+            <div class="card-body">
+              <span class="badge">Huddl</span>
+              <h2>I'm on a boat (drink)!</h2>
+              <p>Come hang out and get a drink with your favorite tech people.</p>
+              <div class="card-meta">Boat Drinks<br>In person · May 09, 2026 · St. Augustine, FL</div>
+            </div>
+          </article>
+          <article class="card">
+            <div class="image-frame has-img">
+              <img src="images/product-night.svg" alt="Product Builders Night cover" />
+            </div>
+            <div class="card-body">
+              <span class="badge">Huddl</span>
+              <h2>Product Builders Night</h2>
+              <p>Demos, feedback, and casual conversations for product-minded makers.</p>
+              <div class="card-meta">North Florida Tech<br>Hybrid · May 16, 2026 · Jacksonville, FL</div>
+            </div>
+          </article>
+          <article class="card">
+            <div class="image-frame has-img">
+              <img src="images/founder-coffee.svg" alt="Founder Coffee group cover" />
+            </div>
+            <div class="card-body">
+              <span class="badge group">Group</span>
+              <h2>Founder Coffee</h2>
+              <p>A practical morning group for people building products and teams.</p>
+              <div class="card-meta">Group · 182 members<br>Weekly · St. Augustine, FL</div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="landing-section">
+        <div class="organize-band">
+          <div>
+            <div class="eyebrow">For organizers</div>
+            <h2>Run the community, not the tooling.</h2>
+            <p>Organize should lead to a signed-in workspace for creating groups and huddlz, managing RSVPs, checking attendees in, messaging people, and keeping settings sane.</p>
+            <button class="cta primary" type="button" data-action="organize">Open organize</button>
+          </div>
+          <div class="organize-list">
+            <div class="organize-item"><strong>Create groups and huddlz</strong><span>Draft, publish, duplicate, and manage the core gathering details.</span></div>
+            <div class="organize-item"><strong>Track attendees and members</strong><span>Separate event RSVPs from group relationships so each job has a clear home.</span></div>
+            <div class="organize-item"><strong>Communicate clearly</strong><span>Send announcements, reminders, and direct follow-ups from one operations surface.</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="results-view" aria-live="polite">
+        <div class="results-head">
+          <div>
+            <h1 id="resultsTitle">Results for founder coffee</h1>
+            <div class="results-count" id="resultsCount">Grouped results from huddlz and groups near St. Augustine.</div>
+          </div>
+        </div>
+
+        <div class="filters-row">
+          <button class="chip active" type="button" data-scope="all">All</button>
+          <button class="chip" type="button" data-scope="huddlz">Huddlz</button>
+          <button class="chip" type="button" data-scope="groups">Groups</button>
+          <button class="chip" type="button" data-action="filters">St. Augustine</button>
+          <button class="chip" type="button" data-action="filters">25 mi</button>
+          <button class="filter-trigger" type="button" data-action="filters">Filters</button>
+        </div>
+
+        <div id="huddlSection">
+          <div class="section-label">Huddlz</div>
+          <div class="cards" id="huddlCards"></div>
+        </div>
+
+        <div id="groupSection">
+          <div class="section-label">Groups</div>
+          <div class="cards" id="groupCards"></div>
+        </div>
+
+        <div class="empty" id="emptyState">No results for this scope. Try All or change your filters.</div>
+      </section>
+
+      <section class="auth-view" id="authView" aria-live="polite">
+        <div class="auth-shell">
+          <div class="auth-card">
+            <div class="auth-kicker" id="authKicker">Welcome back</div>
+            <h1 id="authTitle">Sign in to huddlz.</h1>
+            <p id="authIntro">Keep your RSVPs, groups, organizer tools, and saved activity in one place.</p>
+
+            <form class="auth-form">
+              <div class="auth-field" id="nameField">
+                <label for="authName">Name</label>
+                <input id="authName" type="text" autocomplete="name" placeholder="Your name" />
+              </div>
+              <div class="auth-field">
+                <label for="authEmail">Email</label>
+                <input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com" />
+              </div>
+              <div class="auth-field">
+                <label for="authPassword">Password</label>
+                <input id="authPassword" type="password" autocomplete="current-password" placeholder="••••••••" />
+              </div>
+              <div class="auth-meta-row" id="authMetaRow">
+                <label class="auth-check"><span aria-hidden="true"></span> Keep me signed in</label>
+                <button class="auth-link" type="button">Forgot password?</button>
+              </div>
+              <button class="cta primary auth-submit" type="button" id="authSubmit">Sign In</button>
+            </form>
+
+            <div class="auth-switch">
+              <span id="authSwitchCopy">New to Huddlz?</span>
+              <button class="auth-link" type="button" id="authSwitch" data-action="sign-up">Create an account</button>
+            </div>
+          </div>
+
+          <aside class="auth-aside">
+            <div class="image-frame has-img">
+              <img src="images/founder-coffee.svg" alt="Founder Coffee group cover" />
+            </div>
+            <div class="auth-aside-content">
+              <div>
+                <div class="eyebrow">Why sign in?</div>
+                <h2 id="authAsideTitle">Pick up where you left off.</h2>
+                <p id="authAsideCopy">A signed-in account should make the discovery path lighter, not heavier.</p>
+              </div>
+              <div class="auth-benefits">
+                <div class="auth-benefit"><strong>RSVP faster</strong><span>Use your profile details instead of re-entering the basics every time.</span></div>
+                <div class="auth-benefit"><strong>Follow groups</strong><span>Keep track of communities you care about and see what they publish next.</span></div>
+                <div class="auth-benefit"><strong>Organize when ready</strong><span>Unlock the workspace for groups, huddlz, attendees, members, and messages.</span></div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="organize-view" id="organizeView" aria-live="polite">
+        <div class="organize-shell">
+          <aside class="organize-sidebar">
+            <div class="organize-sidebar-head">
+              <strong>Organizer workspace</strong>
+              <span>Everything needed to run groups and huddlz after sign-in.</span>
+            </div>
+            <nav class="organize-nav" aria-label="Organizer tools">
+              <button class="organize-tab active" type="button" data-organize-tab="overview">Overview <span>Today</span></button>
+              <button class="organize-tab" type="button" data-organize-tab="groups">Groups <span>3</span></button>
+              <button class="organize-tab" type="button" data-organize-tab="huddlz">Huddlz <span>8</span></button>
+              <button class="organize-tab" type="button" data-organize-tab="attendees">Attendees <span>216</span></button>
+              <button class="organize-tab" type="button" data-organize-tab="members">Members <span>352</span></button>
+              <button class="organize-tab" type="button" data-organize-tab="messages">Messages <span>4</span></button>
+              <button class="organize-tab" type="button" data-organize-tab="preferences">Preferences <span></span></button>
+              <button class="organize-tab" type="button" data-organize-tab="settings">Settings <span></span></button>
+            </nav>
+            <div class="organize-sidebar-foot">
+              Signed in as Micah. Role-based permissions could show only groups and huddlz this user can organize.
+            </div>
+          </aside>
+
+          <div class="organize-main" id="organizeMain">
+            <div class="organize-top">
+              <div>
+                <div class="eyebrow">Organize</div>
+                <h1 id="organizeTitle">Run your huddlz.</h1>
+                <p id="organizeIntro">A master-detail workspace for creating groups, publishing huddlz, tracking RSVPs, managing members, and sending updates without leaving the organizer context.</p>
+              </div>
+              <div class="organize-actions">
+                <button class="btn" type="button">Create group</button>
+                <button class="btn primary" type="button" data-action="create-huddl">Create huddl</button>
+              </div>
+            </div>
+
+            <div class="dashboard-content" id="organizeDashboard">
+              <div class="metric-grid">
+                <div class="metric"><span id="metricOneLabel">Upcoming huddlz</span><strong id="metricOne">8</strong></div>
+                <div class="metric"><span id="metricTwoLabel">Open RSVPs</span><strong id="metricTwo">216</strong></div>
+                <div class="metric"><span id="metricThreeLabel">Groups managed</span><strong id="metricThree">3</strong></div>
+                <div class="metric"><span id="metricFourLabel">Needs review</span><strong id="metricFour">4</strong></div>
+              </div>
+
+              <div class="organize-grid">
+                <section class="work-panel">
+                  <div class="work-panel-head">
+                    <div>
+                      <h2 id="workPanelTitle">Active work</h2>
+                      <span id="workPanelMeta">Recently updated groups and huddlz</span>
+                    </div>
+                    <button class="btn" type="button">View all</button>
+                  </div>
+                  <div class="work-list" id="workList"></div>
+                </section>
+
+                <aside class="detail-stack">
+                  <div class="detail-card">
+                    <h2 id="detailTitle">What this page needs</h2>
+                    <p id="detailCopy">The workspace should make the next organizer action obvious, while keeping navigation stable for heavier admin tasks.</p>
+                    <div class="task-list" id="taskList"></div>
+                    <div class="preference-grid" id="preferenceGrid"></div>
+                  </div>
+                  <div class="detail-card">
+                    <h2>Selected group</h2>
+                    <p>Founder Coffee</p>
+                    <div class="task-list">
+                      <div class="task-item"><span class="task-dot"></span><span>182 members, 42 active in the last 30 days.</span></div>
+                      <div class="task-item"><span class="task-dot"></span><span>Next huddl: Friday Morning Coffee, May 10.</span></div>
+                      <div class="task-item"><span class="task-dot"></span><span>Draft announcement waiting for review.</span></div>
+                    </div>
+                  </div>
+                </aside>
+              </div>
+            </div>
+
+            <div class="create-huddl-form" id="createHuddlForm">
+              <div class="form-shell">
+                <section class="form-panel">
+                  <div class="form-section">
+                    <h2>Create huddl</h2>
+                    <h3>Cover image</h3>
+                    <div class="upload-box">
+                      <div class="upload-preview">
+                        <img src="images/boat-drinks.svg" alt="Cover image preview" />
+                      </div>
+                      <div class="upload-copy">
+                        <strong>Upload a 16:9 cover</strong>
+                        <p>Drag an image here or choose a file. The crop preview stays 16:9 so organizers see the same framing used in search cards.</p>
+                        <button class="btn primary" type="button">Choose image</button>
+                        <button class="btn" type="button">Open crop tool</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="form-section">
+                    <h3>Basics</h3>
+                    <div class="auth-field">
+                      <label for="huddlTitle">Title</label>
+                      <input id="huddlTitle" type="text" value="Friday Morning Coffee" />
+                    </div>
+                    <div class="auth-field">
+                      <label for="huddlGroup">Group</label>
+                      <input id="huddlGroup" type="text" value="Founder Coffee" />
+                    </div>
+                    <textarea class="textarea-field">A practical morning meetup for founders, builders, and product people. Coffee first, pitches never.</textarea>
+                  </div>
+
+                  <div class="form-section">
+                    <h3>Date and format</h3>
+                    <div class="field-row">
+                      <div class="auth-field">
+                        <label for="huddlDate">Date</label>
+                        <input id="huddlDate" type="text" value="May 10, 2026" />
+                      </div>
+                      <div class="auth-field">
+                        <label for="huddlTime">Time</label>
+                        <input id="huddlTime" type="text" value="8:30 AM - 10:00 AM" />
+                      </div>
+                    </div>
+                    <div class="option-grid">
+                      <button class="toggle active" type="button">In person</button>
+                      <button class="toggle" type="button">Virtual</button>
+                      <button class="toggle" type="button">Hybrid</button>
+                    </div>
+                  </div>
+
+                  <div class="form-section">
+                    <h3>Address and geolocation</h3>
+                    <div class="auth-field">
+                      <label for="huddlAddress">Search address or place</label>
+                      <input id="huddlAddress" type="text" value="The Kookaburra, 24 Cathedral Pl, St. Augustine, FL" />
+                    </div>
+                    <div class="geo-card">
+                      <div class="geo-map"><span class="geo-pin"></span></div>
+                      <div class="geo-result">
+                        <div><strong>Matched place</strong><br>The Kookaburra, 24 Cathedral Pl, St. Augustine, FL 32084</div>
+                        <button class="btn" type="button">Adjust pin</button>
+                      </div>
+                      <div class="field-row">
+                        <div class="fake-input"><label>Latitude</label><div>29.8936 <span>locked</span></div></div>
+                        <div class="fake-input"><label>Longitude</label><div>-81.3124 <span>locked</span></div></div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <aside class="detail-stack">
+                  <div class="detail-card">
+                    <h2>Publish settings</h2>
+                    <div class="publish-list">
+                      <div class="publish-item"><div><strong>Visible in search</strong><span>Show this huddl on public discovery after publishing.</span></div><span class="switch"></span></div>
+                      <div class="publish-item"><div><strong>Require RSVP</strong><span>People must RSVP before seeing full attendee details.</span></div><span class="switch"></span></div>
+                      <div class="publish-item"><div><strong>Capacity</strong><span>Limit to 30 attendees, then open waitlist.</span></div><span class="switch"></span></div>
+                      <div class="publish-item"><div><strong>Reminder email</strong><span>Send 24 hours before the huddl starts.</span></div><span class="switch"></span></div>
+                    </div>
+                  </div>
+                  <div class="detail-card">
+                    <h2>Preview checklist</h2>
+                    <div class="task-list">
+                      <div class="task-item"><span class="task-dot"></span><span>Cover image uses the same 16:9 crop as search cards.</span></div>
+                      <div class="task-item"><span class="task-dot"></span><span>Address geocoded and pin confirmed.</span></div>
+                      <div class="task-item"><span class="task-dot"></span><span>Date, time, capacity, RSVP policy, and reminders are set.</span></div>
+                    </div>
+                  </div>
+                </aside>
+              </div>
+              <div class="sticky-actions">
+                <button class="btn" type="button" data-organize-tab="huddlz">Cancel</button>
+                <button class="btn" type="button">Save draft</button>
+                <button class="btn primary" type="button">Publish huddl</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="member-view" id="memberView" aria-live="polite">
+        <div class="member-top">
+          <div>
+            <div class="eyebrow">Signed in</div>
+            <h1 id="memberTitle">My huddlz.</h1>
+            <p id="memberIntro">A personal dashboard for the huddlz you joined, the groups you follow, invitations waiting on you, and updates that matter.</p>
+          </div>
+          <button class="btn primary" type="button" data-action="focus-search">Find another huddl</button>
+        </div>
+
+        <div class="member-tabs">
+          <button class="member-tab active" type="button" data-member-tab="huddlz">My Huddlz</button>
+          <button class="member-tab" type="button" data-member-tab="groups">My Groups</button>
+          <button class="member-tab" type="button" data-member-tab="invites">Invites</button>
+          <button class="member-tab" type="button" data-member-tab="updates">Updates</button>
+        </div>
+
+        <div class="member-layout">
+          <div class="member-list" id="memberList"></div>
+          <aside class="member-side">
+            <div class="member-panel">
+              <h2 id="memberSideTitle">Coming up</h2>
+              <p id="memberSideCopy">Your next RSVP is Boat Drinks on May 09. Event details and reminders live here so the user can get back to the gathering quickly.</p>
+            </div>
+            <div class="member-panel">
+              <h2>Useful next actions</h2>
+              <div class="task-list" id="memberTasks"></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <footer class="site-footer">
+        <div class="footer-panel">
+          <div class="footer-art">
+            <img src="images/footer-community.svg" alt="Stylized Huddlz community gathering" />
+          </div>
+          <div class="footer-content">
+            <div class="footer-brand-block">
+              <div class="footer-brand">huddlz</div>
+              <div class="footer-copy">Real-life communities, easier to discover and organize.</div>
+            </div>
+            <nav class="footer-group" aria-label="Product">
+              <h2>Product</h2>
+              <a href="#">Discover huddlz</a>
+              <a href="#">Groups</a>
+              <a href="#">Organize</a>
+            </nav>
+            <nav class="footer-group" aria-label="Help">
+              <h2>Help</h2>
+              <a href="#">Support</a>
+              <a href="#">Contact</a>
+              <a href="#">Status</a>
+            </nav>
+            <nav class="footer-group" aria-label="Legal">
+              <h2>Legal</h2>
+              <a href="#">Terms</a>
+              <a href="#">Privacy</a>
+              <a href="#">Community Guidelines</a>
+              <a href="#">Code of Conduct</a>
+            </nav>
+            <nav class="footer-group" aria-label="Open">
+              <h2>Open</h2>
+              <a href="#">GitHub</a>
+              <a href="#">API docs</a>
+            </nav>
+          </div>
+          <div class="footer-bottom">
+            <div>© 2026 Huddlz</div>
+            <span>Built for real-life gatherings</span>
+          </div>
+        </div>
+      </footer>
+    </main>
+
+    <div class="overlay" data-action="close-filters"></div>
+    <aside class="filter-panel" aria-label="Search filters">
+      <div class="panel-head">
+        <h2>Filters</h2>
+        <button class="icon-btn" type="button" data-action="close-filters" aria-label="Close filters">x</button>
+      </div>
+      <div class="panel-body">
+        <section class="field-group">
+          <h3>Search scope</h3>
+          <div class="segmented">
+            <button class="segment active" type="button" data-panel-scope="all">All</button>
+            <button class="segment" type="button" data-panel-scope="huddlz">Huddlz</button>
+            <button class="segment" type="button" data-panel-scope="groups">Groups</button>
+          </div>
+          <div class="helper">All keeps results grouped by type, which makes pagination simpler and more predictable.</div>
+        </section>
+
+        <section class="field-group">
+          <h3>Location</h3>
+          <div class="form-grid">
+            <div class="fake-input"><label>City</label><div>St. Augustine, FL <span>v</span></div></div>
+            <div class="fake-input"><label>Distance</label><div>25 miles <span>v</span></div></div>
+          </div>
+        </section>
+
+        <section class="field-group">
+          <h3>Date</h3>
+          <div class="option-grid">
+            <button class="toggle active" type="button">Upcoming</button>
+            <button class="toggle" type="button">This week</button>
+            <button class="toggle" type="button">This month</button>
+            <button class="toggle" type="button">Custom</button>
+          </div>
+        </section>
+
+        <section class="field-group">
+          <h3>Format</h3>
+          <div class="option-grid">
+            <button class="toggle active" type="button">In person</button>
+            <button class="toggle" type="button">Virtual</button>
+            <button class="toggle active" type="button">Hybrid</button>
+          </div>
+        </section>
+
+        <section class="field-group">
+          <h3>Group topics</h3>
+          <div class="option-grid">
+            <button class="toggle active" type="button">Tech</button>
+            <button class="toggle" type="button">Startups</button>
+            <button class="toggle" type="button">Design</button>
+            <button class="toggle" type="button">Social</button>
+            <button class="toggle" type="button">Groups I follow</button>
+          </div>
+        </section>
+
+        <section class="field-group">
+          <h3>Huddl options</h3>
+          <div class="option-grid">
+            <button class="toggle" type="button">Has open spots</button>
+            <button class="toggle" type="button">Free only</button>
+            <button class="toggle active" type="button">Include online</button>
+          </div>
+        </section>
+
+        <section class="field-group">
+          <h3>Sort</h3>
+          <div class="option-grid">
+            <button class="toggle active" type="button">Relevance</button>
+            <button class="toggle" type="button">Soonest</button>
+            <button class="toggle" type="button">Nearest</button>
+            <button class="toggle" type="button">Newest</button>
+          </div>
+        </section>
+      </div>
+      <div class="panel-actions">
+        <button class="btn" type="button" data-action="reset-filters">Reset</button>
+        <button class="btn primary" type="button" data-action="apply-filters">Apply filters</button>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const app = document.getElementById("app");
+    const input = document.getElementById("searchInput");
+    const form = document.getElementById("searchForm");
+    const resultsTitle = document.getElementById("resultsTitle");
+    const resultsCount = document.getElementById("resultsCount");
+    const huddlCards = document.getElementById("huddlCards");
+    const groupCards = document.getElementById("groupCards");
+    const huddlSection = document.getElementById("huddlSection");
+    const groupSection = document.getElementById("groupSection");
+    const emptyState = document.getElementById("emptyState");
+    const authKicker = document.getElementById("authKicker");
+    const authTitle = document.getElementById("authTitle");
+    const authIntro = document.getElementById("authIntro");
+    const nameField = document.getElementById("nameField");
+    const authPassword = document.getElementById("authPassword");
+    const authMetaRow = document.getElementById("authMetaRow");
+    const authSubmit = document.getElementById("authSubmit");
+    const authSwitchCopy = document.getElementById("authSwitchCopy");
+    const authSwitch = document.getElementById("authSwitch");
+    const authAsideTitle = document.getElementById("authAsideTitle");
+    const authAsideCopy = document.getElementById("authAsideCopy");
+    const organizeTitle = document.getElementById("organizeTitle");
+    const organizeIntro = document.getElementById("organizeIntro");
+    const workPanelTitle = document.getElementById("workPanelTitle");
+    const workPanelMeta = document.getElementById("workPanelMeta");
+    const workList = document.getElementById("workList");
+    const taskList = document.getElementById("taskList");
+    const preferenceGrid = document.getElementById("preferenceGrid");
+    const detailTitle = document.getElementById("detailTitle");
+    const detailCopy = document.getElementById("detailCopy");
+    const organizeMain = document.getElementById("organizeMain");
+    const metricOne = document.getElementById("metricOne");
+    const metricTwo = document.getElementById("metricTwo");
+    const metricThree = document.getElementById("metricThree");
+    const metricFour = document.getElementById("metricFour");
+    const metricOneLabel = document.getElementById("metricOneLabel");
+    const metricTwoLabel = document.getElementById("metricTwoLabel");
+    const metricThreeLabel = document.getElementById("metricThreeLabel");
+    const metricFourLabel = document.getElementById("metricFourLabel");
+    const memberTitle = document.getElementById("memberTitle");
+    const memberIntro = document.getElementById("memberIntro");
+    const memberList = document.getElementById("memberList");
+    const memberSideTitle = document.getElementById("memberSideTitle");
+    const memberSideCopy = document.getElementById("memberSideCopy");
+    const memberTasks = document.getElementById("memberTasks");
+
+    const huddlz = [
+      ["boat-drinks.svg", "I'm on a boat (drink)!", "Boat Drinks", "In person · May 09, 2026 · St. Augustine, FL", "Come hang out and get a drink with your favorite tech people."],
+      ["product-night.svg", "Product Builders Night", "North Florida Tech", "Hybrid · May 16, 2026 · Jacksonville, FL", "Demos, feedback, and casual conversations for product-minded makers."],
+      ["ai-meetup.svg", "AI Builders Meetup", "Huddlz Builders", "Virtual · May 21, 2026 · Online", "A working session for builders experimenting with AI product ideas."]
+    ];
+
+    const groups = [
+      ["founder-coffee.svg", "Founder Coffee", "Group · 182 members", "Weekly · 4.2 miles away · St. Augustine, FL", "A practical morning group for people building products and teams."],
+      ["product-night.svg", "Design Systems Circle", "Group · 96 members", "Monthly · 18 miles away · St. Augustine, FL", "Designers and engineers making reusable product UI together."],
+      ["boat-drinks.svg", "Casual Code & Coffee", "Group · 74 members", "Biweekly · St. Augustine, FL", "Bring a laptop, ask questions, and meet people shipping local projects."]
+    ];
+
+    const organizeViews = {
+      overview: {
+        title: "Run your huddlz.",
+        intro: "A master-detail workspace for creating groups, publishing huddlz, tracking RSVPs, managing members, and sending updates without leaving the organizer context.",
+        panel: "Active work",
+        meta: "Recently updated groups and huddlz",
+        metricLabels: ["Upcoming huddlz", "Open RSVPs", "Groups managed", "Needs review"],
+        metrics: ["8", "216", "3", "4"],
+        rows: [
+          ["boat-drinks.svg", "I'm on a boat (drink)!", "Published · 44 RSVPs · May 09", "Live"],
+          ["founder-coffee.svg", "Friday Morning Coffee", "Draft · Founder Coffee · Needs venue", "Draft"],
+          ["product-night.svg", "Product Builders Night", "Published · 71 RSVPs · May 16", "Live"]
+        ],
+        detailTitle: "What this page needs",
+        detailCopy: "The workspace should make the next organizer action obvious, while keeping navigation stable for heavier admin tasks.",
+        tasks: ["Review drafts that block publishing.", "Check RSVP counts and attendee messages.", "Jump into group, huddl, attendee, or message tools without losing context."]
+      },
+      groups: {
+        title: "Manage your groups.",
+        intro: "Groups are the long-lived communities. This view should show ownership, member health, default settings, and the next huddl attached to each group.",
+        panel: "Groups you organize",
+        meta: "Communities where you have organizer permissions",
+        metricLabels: ["Groups", "Members", "Active members", "Join requests"],
+        metrics: ["3", "352", "42", "1"],
+        rows: [
+          ["founder-coffee.svg", "Founder Coffee", "182 members · Weekly · St. Augustine", "Active"],
+          ["product-night.svg", "North Florida Tech", "96 members · Monthly · Jacksonville", "Active"],
+          ["boat-drinks.svg", "Boat Drinks", "74 members · Casual social group", "Active"]
+        ],
+        detailTitle: "Group tools",
+        detailCopy: "A group detail should answer who belongs here, what is scheduled next, and which settings apply to new huddlz.",
+        tasks: ["Create a group and invite co-organizers.", "Edit group profile, image, description, and visibility.", "Review members, roles, join requests, and upcoming huddlz."]
+      },
+      huddlz: {
+        title: "Create and publish huddlz.",
+        intro: "Huddlz are date-bound gatherings. This view should separate drafts, published events, past events, and repeatable templates.",
+        panel: "Huddlz",
+        meta: "Drafts, scheduled events, and recent gatherings",
+        metricLabels: ["Upcoming", "Drafts", "Open RSVPs", "Past huddlz"],
+        metrics: ["8", "2", "216", "18"],
+        rows: [
+          ["boat-drinks.svg", "I'm on a boat (drink)!", "Published · May 09 · St. Augustine", "Live"],
+          ["founder-coffee.svg", "Friday Morning Coffee", "Draft · Missing venue details", "Draft"],
+          ["ai-meetup.svg", "AI Builders Meetup", "Published · May 21 · Online", "Live"]
+        ],
+        detailTitle: "Huddl tools",
+        detailCopy: "Publishing should make event details, capacity, visibility, reminders, and RSVPs easy to review before going live.",
+        tasks: ["Create, duplicate, draft, publish, cancel, or archive huddlz.", "Set date, location, format, capacity, and host details.", "Preview the public card and detail page before publishing."]
+      },
+      attendees: {
+        title: "Track attendees.",
+        intro: "Attendees are event-specific people: RSVPs, check-ins, waitlists, cancellations, guests, and no-shows for individual huddlz.",
+        panel: "Upcoming attendee lists",
+        meta: "RSVPs grouped by huddl",
+        metricLabels: ["Open RSVPs", "Waitlisted", "Needs reply", "Capacity alerts"],
+        metrics: ["216", "19", "11", "6"],
+        rows: [
+          ["boat-drinks.svg", "I'm on a boat (drink)!", "44 yes · 6 waitlist · 3 maybe", "Ready"],
+          ["product-night.svg", "Product Builders Night", "71 yes · 4 waitlist · 12 invited", "Open"],
+          ["ai-meetup.svg", "AI Builders Meetup", "38 yes · virtual details sent", "Open"]
+        ],
+        detailTitle: "Attendee tools",
+        detailCopy: "This should be operational: who is coming, who needs a reminder, who checked in, and whether capacity is becoming a problem.",
+        tasks: ["Open a huddl-specific RSVP list.", "Check attendees in at the event.", "Manage waitlist movement, guests, cancellations, and exports."]
+      },
+      members: {
+        title: "Understand members.",
+        intro: "Members belong to groups over time. This view should show roles, join status, participation, and relationship history across huddlz.",
+        panel: "Group members",
+        meta: "People connected to your communities",
+        metricLabels: ["Members", "New this month", "Join requests", "Active members"],
+        metrics: ["352", "18", "7", "42"],
+        rows: [
+          ["founder-coffee.svg", "Founder Coffee members", "182 total · 42 active this month", "Healthy"],
+          ["product-night.svg", "North Florida Tech members", "96 total · 18 new this month", "Growing"],
+          ["boat-drinks.svg", "Boat Drinks members", "74 total · 9 first-time attendees", "Active"]
+        ],
+        detailTitle: "Member tools",
+        detailCopy: "Members are not the same as attendees. This area should support community relationship management, not event check-in.",
+        tasks: ["Approve or remove members and assign organizer roles.", "See member participation across multiple huddlz.", "Message subsets like new members, inactive members, or co-organizers."]
+      },
+      messages: {
+        title: "Send the right update.",
+        intro: "Messaging should support announcements, reminders, attendee follow-ups, and group-level communication without turning into a full inbox.",
+        panel: "Message queue",
+        meta: "Drafts, scheduled sends, and recent updates",
+        metricLabels: ["Drafts", "Scheduled", "Recipients", "Open rate"],
+        metrics: ["4", "2", "138", "96%"],
+        rows: [
+          ["founder-coffee.svg", "Venue reminder", "Draft · Friday Morning Coffee attendees", "Draft"],
+          ["boat-drinks.svg", "Boat Drinks final details", "Scheduled · Sends tomorrow at 9 AM", "Ready"],
+          ["product-night.svg", "Product Night follow-up", "Sent · 62 opened · 11 replies", "Sent"]
+        ],
+        detailTitle: "Message tools",
+        detailCopy: "The key is choosing the audience correctly: one huddl, one group, attendees, members, waitlist, or no-shows.",
+        tasks: ["Write and preview announcements or reminders.", "Select recipients from attendee and member segments.", "Track sent, scheduled, draft, and failed messages."]
+      },
+      preferences: {
+        title: "Tune your account.",
+        intro: "User preferences are personal and should follow the signed-in person across public discovery and organizer tools.",
+        panel: "Preference areas",
+        meta: "Personal account settings, not group defaults",
+        metricLabels: ["Profile fields", "Notification channels", "Saved places", "Privacy choices"],
+        metrics: ["5", "3", "2", "4"],
+        rows: [
+          ["founder-coffee.svg", "Public profile", "Name, avatar, bio, social links", "Personal"],
+          ["boat-drinks.svg", "Notifications", "Email, reminders, organizer alerts", "Personal"],
+          ["product-night.svg", "Discovery defaults", "Home city, radius, followed topics", "Personal"]
+        ],
+        detailTitle: "Profile & preferences",
+        detailCopy: "These settings should answer how Huddlz behaves for this person, regardless of which groups they organize.",
+        tasks: [],
+        preferences: [
+          ["Profile", "Name, avatar, bio, social links, and public profile visibility."],
+          ["Notifications", "Huddl reminders, RSVP updates, organizer alerts, email digest, and quiet hours."],
+          ["Discovery", "Default city, distance, topics, followed groups, and saved searches if we add them later."],
+          ["Privacy", "Profile visibility, RSVP visibility, blocked users, and data export/delete entry points."],
+          ["Security", "Password, passkeys, connected accounts, active sessions, and two-factor authentication."],
+          ["Accessibility", "Reduced motion, density, timezone display, and preferred date/time formatting."]
+        ]
+      },
+      settings: {
+        title: "Control workspace settings.",
+        intro: "Settings should cover defaults and permissions that affect organizing, without burying the day-to-day tools.",
+        panel: "Settings areas",
+        meta: "Workspace defaults and permissions",
+        metricLabels: ["Groups", "Co-organizers", "Defaults", "Alerts"],
+        metrics: ["3", "2", "1", "0"],
+        rows: [
+          ["founder-coffee.svg", "Organizer roles", "Micah owner · 2 co-organizers", "Set"],
+          ["product-night.svg", "Default huddl settings", "Visibility, RSVP windows, reminders", "Set"],
+          ["boat-drinks.svg", "Brand and links", "Images, GitHub, support, footer links", "Review"]
+        ],
+        detailTitle: "Settings tools",
+        detailCopy: "This should stay boring and predictable: permissions, defaults, notification preferences, integrations, and account safety.",
+        tasks: ["Manage organizer permissions and group ownership.", "Set default RSVP, reminder, and visibility behavior.", "Connect support links, legal links, and API/GitHub details."]
+      }
+    };
+
+    const memberViews = {
+      huddlz: {
+        title: "My huddlz.",
+        intro: "The signed-in user's upcoming, waitlisted, and past gatherings. This is participant-centered, not organizer-centered.",
+        sideTitle: "Coming up",
+        sideCopy: "Your next RSVP is Boat Drinks on May 09. Event details and reminders live here so the user can get back to the gathering quickly.",
+        tasks: ["View event details and location.", "Change RSVP or add a guest.", "Message the organizer if something changes."],
+        items: [
+          ["boat-drinks.svg", "I'm on a boat (drink)!", "RSVP confirmed", "May 09 · St. Augustine, FL · Boat Drinks", "View details", "Change RSVP"],
+          ["product-night.svg", "Product Builders Night", "Going", "May 16 · Jacksonville, FL · North Florida Tech", "View details", "Add to calendar"],
+          ["ai-meetup.svg", "AI Builders Meetup", "Interested", "May 21 · Online · Huddlz Builders", "View details", "RSVP"]
+        ]
+      },
+      groups: {
+        title: "My groups.",
+        intro: "Groups are the communities this user follows, belongs to, or helps organize over time.",
+        sideTitle: "Group activity",
+        sideCopy: "Founder Coffee has a new huddl draft and Boat Drinks posted a reminder. This area should make group-level activity easy to scan.",
+        tasks: ["Open a group home.", "See upcoming huddlz for followed groups.", "Manage notification level per group."],
+        items: [
+          ["founder-coffee.svg", "Founder Coffee", "Member", "182 members · Weekly · St. Augustine", "Open group", "Notifications"],
+          ["product-night.svg", "North Florida Tech", "Following", "96 members · Monthly · Jacksonville", "Open group", "Unfollow"],
+          ["boat-drinks.svg", "Boat Drinks", "Organizer", "74 members · Casual social group", "Open group", "Organize"]
+        ]
+      },
+      invites: {
+        title: "Invites.",
+        intro: "Invitations and join requests need their own small queue so users do not miss something that expects a response.",
+        sideTitle: "Needs response",
+        sideCopy: "Invites should be lightweight: accept, decline, maybe, or ask a question.",
+        tasks: ["Accept or decline a huddl invite.", "Respond to group join approvals.", "Review waitlist movement."],
+        items: [
+          ["founder-coffee.svg", "Friday Morning Coffee", "Invited", "May 10 · 8:30 AM · Founder Coffee", "Accept", "Decline"],
+          ["ai-meetup.svg", "AI Builders Meetup", "Waitlist opened", "A spot became available for May 21", "Claim spot", "Pass"],
+          ["product-night.svg", "Design Systems Circle", "Join approved", "You can now see member-only huddlz", "Open group", "Mute"]
+        ]
+      },
+      updates: {
+        title: "Updates.",
+        intro: "A focused notification feed for RSVP changes, reminders, group announcements, and organizer messages.",
+        sideTitle: "Notification controls",
+        sideCopy: "This should connect back to preferences: email, reminders, digest frequency, quiet hours, and group-level muting.",
+        tasks: ["Mark updates as read.", "Jump to the related huddl or group.", "Tune notification preferences."],
+        items: [
+          ["boat-drinks.svg", "Boat Drinks reminder", "Organizer update", "Final location details were posted.", "Read", "Mute"],
+          ["founder-coffee.svg", "Founder Coffee", "New huddl", "Friday Morning Coffee was published.", "View", "RSVP"],
+          ["product-night.svg", "Product Builders Night", "Calendar reminder", "Starts in 5 days.", "View", "Dismiss"]
+        ]
+      }
+    };
+
+    const state = {
+      query: new URLSearchParams(location.search).get("q") || "",
+      scope: new URLSearchParams(location.search).get("scope") || "all",
+      view: new URLSearchParams(location.search).get("view") || "landing",
+      mode: new URLSearchParams(location.search).get("mode") || ""
+    };
+
+    function renderCards(target, items, type) {
+      target.innerHTML = items.map((item) => {
+        const [imageFile, title, group, meta, desc] = item;
+        const imageClass = type === "group" ? "image-frame group" : "image-frame";
+        const badgeClass = type === "group" ? "badge group" : "badge";
+        const label = type === "group" ? "Group" : "Huddl";
+        return `
+          <article class="card">
+            <div class="${imageClass} has-img">
+              <img src="images/${imageFile}" alt="${title} cover image" />
+            </div>
+            <div class="card-body">
+              <span class="${badgeClass}">${label}</span>
+              <h2>${title}</h2>
+              <p>${desc}</p>
+              <div class="card-meta">${group}<br>${meta}</div>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function syncUrl() {
+      const params = new URLSearchParams();
+      if (state.view === "results") params.set("view", "results");
+      if (state.view === "sign-in" || state.view === "sign-up") params.set("view", state.view);
+      if (state.view === "organize") params.set("view", "organize");
+      if (state.view === "me") params.set("view", "me");
+      if (state.mode) params.set("mode", state.mode);
+      if (state.query) params.set("q", state.query);
+      if (state.scope !== "all") params.set("scope", state.scope);
+      const queryString = params.toString();
+      history.replaceState(null, "", queryString ? `${location.pathname}?${queryString}` : location.pathname);
+    }
+
+    function setScope(scope) {
+      state.scope = scope;
+      document.querySelectorAll("[data-scope], [data-panel-scope]").forEach((button) => {
+        const value = button.dataset.scope || button.dataset.panelScope;
+        button.classList.toggle("active", value === scope);
+      });
+      huddlSection.style.display = scope === "groups" ? "none" : "block";
+      groupSection.style.display = scope === "huddlz" ? "none" : "block";
+      emptyState.style.display = "none";
+      if (scope === "all") {
+        resultsCount.textContent = "Grouped results from huddlz and groups near St. Augustine.";
+      } else if (scope === "huddlz") {
+        resultsCount.textContent = "Huddlz matching your search near St. Augustine.";
+      } else {
+        resultsCount.textContent = "Groups matching your search near St. Augustine.";
+      }
+      syncUrl();
+    }
+
+    function showResults(query = input.value.trim() || "founder coffee", scope = state.scope) {
+      state.view = "results";
+      state.mode = "";
+      state.query = query;
+      input.value = query;
+      app.classList.remove("is-searching");
+      app.classList.remove("auth-page", "organize-page", "member-page");
+      app.classList.add("results");
+      resultsTitle.textContent = `Results for ${query}`;
+      document.querySelectorAll("[data-query-label]").forEach((label) => { label.textContent = query; });
+      setScope(scope);
+      syncUrl();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function showAuth(mode = "sign-in") {
+      const isSignUp = mode === "sign-up";
+      state.view = mode;
+      state.mode = "";
+      app.classList.remove("results", "organize-page", "member-page", "is-searching", "menu-open", "filters-open");
+      app.classList.add("auth-page");
+      authKicker.textContent = isSignUp ? "Join huddlz" : "Welcome back";
+      authTitle.textContent = isSignUp ? "Create your account." : "Sign in to huddlz.";
+      authIntro.textContent = isSignUp
+        ? "Start with a lightweight account for RSVPs, followed groups, and organizer tools when you need them."
+        : "Keep your RSVPs, groups, organizer tools, and saved activity in one place.";
+      nameField.style.display = isSignUp ? "grid" : "none";
+      authPassword.autocomplete = isSignUp ? "new-password" : "current-password";
+      authMetaRow.innerHTML = isSignUp
+        ? '<label class="auth-check"><span aria-hidden="true"></span> Email me helpful huddl reminders</label>'
+        : '<label class="auth-check"><span aria-hidden="true"></span> Keep me signed in</label><button class="auth-link" type="button">Forgot password?</button>';
+      authSubmit.textContent = isSignUp ? "Create Account" : "Sign In";
+      authSwitchCopy.textContent = isSignUp ? "Already have an account?" : "New to Huddlz?";
+      authSwitch.textContent = isSignUp ? "Sign in" : "Create an account";
+      authSwitch.dataset.action = isSignUp ? "sign-in" : "sign-up";
+      authAsideTitle.textContent = isSignUp ? "Start as a person, grow into an organizer." : "Pick up where you left off.";
+      authAsideCopy.textContent = isSignUp
+        ? "Sign-up should feel like a small commitment: enough to RSVP and follow groups, with organizing available after sign-in."
+        : "A signed-in account should make the discovery path lighter, not heavier.";
+      syncUrl();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function renderMember(tab = "huddlz") {
+      const view = memberViews[tab] || memberViews.huddlz;
+      state.view = "me";
+      state.mode = "";
+      app.classList.remove("results", "auth-page", "organize-page", "is-searching", "menu-open", "filters-open");
+      app.classList.add("member-page", "signed-in");
+      document.querySelectorAll("[data-member-tab]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.memberTab === tab);
+      });
+      memberTitle.textContent = view.title;
+      memberIntro.textContent = view.intro;
+      memberSideTitle.textContent = view.sideTitle;
+      memberSideCopy.textContent = view.sideCopy;
+      memberList.innerHTML = view.items.map(([imageFile, title, badge, meta, primary, secondary]) => `
+        <article class="member-card">
+          <div class="image-frame has-img"><img src="images/${imageFile}" alt="${title} cover image" /></div>
+          <div class="member-card-body">
+            <span class="badge">${badge}</span>
+            <h2>${title}</h2>
+            <p>${meta}</p>
+            <div class="member-card-meta">Personal saved state for Micah</div>
+          </div>
+          <div class="member-card-actions">
+            <button class="btn primary" type="button">${primary}</button>
+            <button class="btn" type="button">${secondary}</button>
+          </div>
+        </article>
+      `).join("");
+      memberTasks.innerHTML = view.tasks.map((task) => `
+        <div class="task-item"><span class="task-dot"></span><span>${task}</span></div>
+      `).join("");
+      syncUrl();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function renderOrganize(tab = "overview") {
+      const view = organizeViews[tab] || organizeViews.overview;
+      state.view = "organize";
+      state.mode = "";
+      app.classList.remove("results", "auth-page", "member-page", "is-searching", "menu-open", "filters-open");
+      app.classList.add("organize-page", "signed-in");
+      organizeMain.classList.remove("creating");
+      document.querySelectorAll("[data-organize-tab]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.organizeTab === tab);
+      });
+      organizeTitle.textContent = view.title;
+      organizeIntro.textContent = view.intro;
+      workPanelTitle.textContent = view.panel;
+      workPanelMeta.textContent = view.meta;
+      [metricOneLabel.textContent, metricTwoLabel.textContent, metricThreeLabel.textContent, metricFourLabel.textContent] = view.metricLabels;
+      [metricOne.textContent, metricTwo.textContent, metricThree.textContent, metricFour.textContent] = view.metrics;
+      workList.innerHTML = view.rows.map(([imageFile, title, meta, status]) => `
+        <div class="work-row">
+          <div class="work-thumb"><img src="images/${imageFile}" alt="${title} thumbnail" /></div>
+          <div><strong>${title}</strong><span>${meta}</span></div>
+          <div class="status-pill ${["Live", "Ready"].includes(status) ? "live" : ""}">${status}</div>
+        </div>
+      `).join("");
+      detailTitle.textContent = view.detailTitle;
+      detailCopy.textContent = view.detailCopy;
+      taskList.innerHTML = view.tasks.map((task) => `
+        <div class="task-item"><span class="task-dot"></span><span>${task}</span></div>
+      `).join("");
+      preferenceGrid.innerHTML = (view.preferences || []).map(([title, copy]) => `
+        <div class="preference-item"><strong>${title}</strong><span>${copy}</span></div>
+      `).join("");
+      preferenceGrid.style.display = view.preferences ? "grid" : "none";
+      taskList.style.display = view.tasks.length ? "grid" : "none";
+      syncUrl();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function renderCreateHuddl() {
+      state.view = "organize";
+      state.mode = "create-huddl";
+      app.classList.remove("results", "auth-page", "member-page", "is-searching", "menu-open", "filters-open");
+      app.classList.add("organize-page", "signed-in");
+      organizeMain.classList.add("creating");
+      document.querySelectorAll("[data-organize-tab]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.organizeTab === "huddlz");
+      });
+      organizeTitle.textContent = "Create a huddl.";
+      organizeIntro.textContent = "Start with the essentials: cover image, group, date, format, address, geocoded location, RSVP rules, and publish settings.";
+      syncUrl();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function openFilters() {
+      app.classList.remove("is-searching", "menu-open");
+      app.classList.add("filters-open");
+    }
+
+    function closeFilters() {
+      app.classList.remove("filters-open");
+    }
+
+    function toggleMenu() {
+      app.classList.remove("is-searching", "filters-open");
+      app.classList.toggle("menu-open");
+    }
+
+    function goHome() {
+      state.view = "landing";
+      state.mode = "";
+      state.scope = "all";
+      state.query = "";
+      input.value = "";
+      app.classList.remove("results", "auth-page", "organize-page", "member-page", "filters-open", "is-searching", "signed-in");
+      setScope("all");
+      history.replaceState(null, "", location.pathname);
+    }
+
+    renderCards(huddlCards, huddlz, "huddl");
+    renderCards(groupCards, groups, "group");
+    input.value = state.query;
+
+    if (state.view === "organize") {
+      if (state.mode === "create-huddl") {
+        renderCreateHuddl();
+      } else {
+        renderOrganize("overview");
+      }
+    } else if (state.view === "me") {
+      renderMember("huddlz");
+    } else if (state.view === "sign-in" || state.view === "sign-up") {
+      showAuth(state.view);
+    } else if (state.view === "results" || state.query) {
+      showResults(state.query || "founder coffee", state.scope);
+    } else {
+      setScope("all");
+    }
+
+    input.addEventListener("focus", () => {
+      if (!app.classList.contains("filters-open")) {
+        app.classList.add("is-searching");
+      }
+    });
+
+    input.addEventListener("input", () => {
+      const query = input.value.trim() || "your search";
+      document.querySelectorAll("[data-query-label]").forEach((label) => { label.textContent = query; });
+    });
+
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        showResults();
+      }
+    });
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      showResults();
+    });
+
+    document.addEventListener("click", (event) => {
+      const target = event.target.closest("button, a");
+      if (!target) {
+        if (!event.target.closest(".search-wrap")) app.classList.remove("is-searching");
+        if (!event.target.closest(".account-menu")) app.classList.remove("menu-open");
+        return;
+      }
+
+      if (target.dataset.action === "home") {
+        event.preventDefault();
+        goHome();
+      }
+
+      if (target.dataset.action === "focus-search") {
+        app.classList.remove("menu-open");
+        input.focus();
+      }
+
+      if (target.dataset.action === "organize") {
+        event.preventDefault();
+        app.classList.remove("menu-open", "is-searching");
+        if (app.classList.contains("auth-page") || app.classList.contains("signed-in")) {
+          renderOrganize("overview");
+        } else {
+          showAuth("sign-in");
+        }
+      }
+
+      if (target.dataset.action === "sign-in" || target.dataset.action === "sign-up") {
+        event.preventDefault();
+        showAuth(target.dataset.action);
+      }
+
+      if (target.dataset.action === "sign-out") {
+        event.preventDefault();
+        app.classList.remove("signed-in", "menu-open");
+        goHome();
+      }
+
+      if (target.id === "authSubmit") {
+        event.preventDefault();
+        renderMember("huddlz");
+      }
+
+      if (target.dataset.action === "create-huddl") {
+        event.preventDefault();
+        renderCreateHuddl();
+      }
+
+      if (target.dataset.memberTab) {
+        renderMember(target.dataset.memberTab);
+      }
+
+      if (target.dataset.organizeTab) {
+        renderOrganize(target.dataset.organizeTab);
+      }
+
+      if (target.dataset.searchGroups !== undefined) {
+        showResults("groups", "groups");
+      }
+
+      if (target.dataset.suggest) {
+        showResults(input.value.trim() || "founder coffee", target.dataset.suggest);
+      }
+
+      if (target.dataset.scope) {
+        setScope(target.dataset.scope);
+      }
+
+      if (target.dataset.panelScope) {
+        setScope(target.dataset.panelScope);
+      }
+
+      if (target.dataset.action === "filters") {
+        openFilters();
+      }
+
+      if (target.dataset.action === "menu") {
+        toggleMenu();
+      }
+
+      if (target.dataset.action === "close-filters") {
+        closeFilters();
+      }
+
+      if (target.dataset.action === "apply-filters") {
+        closeFilters();
+        if (!app.classList.contains("results")) showResults();
+      }
+
+      if (target.dataset.action === "reset-filters") {
+        setScope("all");
+        document.querySelectorAll(".toggle").forEach((button) => button.classList.remove("active"));
+        document.querySelectorAll(".toggle").forEach((button) => {
+          if (["Upcoming", "In person", "Hybrid", "Include online", "Relevance"].includes(button.textContent.trim())) {
+            button.classList.add("active");
+          }
+        });
+      }
+
+      if (target.classList.contains("toggle")) {
+        target.classList.toggle("active");
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeFilters();
+        app.classList.remove("is-searching", "menu-open");
+      }
+    });
+  </script>
+</body>
+</html>

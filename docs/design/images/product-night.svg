@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Product Builders Night cover</title>
+  <desc id="desc">Stylized workshop room with screens, notes, and cyan light.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#97633f"/>
+      <stop offset="0.48" stop-color="#323d3c"/>
+      <stop offset="1" stop-color="#061a1c"/>
+    </linearGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#020404" stop-opacity="0.02"/>
+      <stop offset="1" stop-color="#020404" stop-opacity="0.76"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect x="170" y="130" width="1260" height="580" rx="34" fill="#071113" opacity="0.42"/>
+  <rect x="250" y="210" width="500" height="310" rx="18" fill="#18cbd4" opacity="0.18"/>
+  <rect x="825" y="210" width="460" height="310" rx="18" fill="#10191a" stroke="#1a3438" stroke-width="8"/>
+  <path d="M310 595 H930" stroke="#d3a36c" stroke-width="18" opacity="0.75"/>
+  <path d="M320 650 H1160" stroke="#18cbd4" stroke-width="10" opacity="0.45"/>
+  <circle cx="360" cy="370" r="72" fill="#141d1e"/>
+  <circle cx="520" cy="350" r="64" fill="#1b2324"/>
+  <circle cx="1040" cy="360" r="70" fill="#202829"/>
+  <rect width="1600" height="900" fill="url(#shade)"/>
+  <text x="120" y="665" fill="#fff7e8" font-family="Georgia, serif" font-size="112" font-weight="900">PRODUCT</text>
+  <text x="120" y="780" fill="#fff7e8" font-family="Georgia, serif" font-size="112" font-weight="900">NIGHT</text>
+</svg>
