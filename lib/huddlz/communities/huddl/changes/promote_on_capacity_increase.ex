@@ -44,8 +44,9 @@ defmodule Huddlz.Communities.Huddl.Changes.PromoteOnCapacityIncrease do
         "group_slug" => to_string(huddl.group.slug)
       }
 
-      with {:ok, user} <- Ash.get(Huddlz.Accounts.User, user_id, authorize?: false) do
-        Notifications.deliver_async(user, :waitlist_promoted, payload)
+      case Ash.get(Huddlz.Accounts.User, user_id, authorize?: false) do
+        {:ok, user} -> Notifications.deliver_async(user, :waitlist_promoted, payload)
+        _ -> :noop
       end
     end)
 
