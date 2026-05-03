@@ -1,0 +1,1316 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Huddlz Search Prototype</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #020404;
+      --panel: #050808;
+      --panel-2: #081011;
+      --line: #142022;
+      --line-strong: #243639;
+      --text: #f4fbfb;
+      --soft: #b7c1c3;
+      --muted: #7d888b;
+      --cyan: #18cbd4;
+      --cyan-soft: rgba(24, 203, 212, 0.14);
+      --danger: #ff896f;
+      --shadow: 0 28px 80px rgba(0, 0, 0, 0.56);
+      --radius: 7px;
+      --radius-sm: 5px;
+      --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .app {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 78% 8%, rgba(24, 203, 212, 0.10), transparent 360px),
+        linear-gradient(180deg, #020404 0%, #020404 62%, #030707 100%);
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      height: 82px;
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      padding: 0 48px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(2, 4, 4, 0.94);
+      backdrop-filter: blur(12px);
+    }
+
+    .logo {
+      flex: 0 0 auto;
+      color: #eaffff;
+      font-family: var(--mono);
+      font-size: 25px;
+      letter-spacing: 0;
+      text-decoration: none;
+      text-shadow: 0 0 12px rgba(24, 203, 212, 0.32);
+    }
+
+    .nav {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+    }
+
+    .nav a {
+      color: var(--soft);
+      font-size: 14px;
+      font-weight: 760;
+      text-decoration: none;
+    }
+
+    .search-wrap {
+      position: relative;
+      flex: 1 1 520px;
+      max-width: 620px;
+      margin-left: auto;
+    }
+
+    .search-form {
+      height: 48px;
+      display: flex;
+      align-items: stretch;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: rgba(5, 9, 9, 0.96);
+      overflow: hidden;
+    }
+
+    .search-form:focus-within {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px var(--cyan-soft);
+    }
+
+    .search-icon {
+      width: 48px;
+      display: grid;
+      place-items: center;
+      color: var(--cyan);
+      font-size: 18px;
+    }
+
+    .search-input {
+      flex: 1 1 auto;
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 690;
+    }
+
+    .search-input::placeholder {
+      color: #667174;
+      font-weight: 620;
+    }
+
+    .search-button {
+      border: 0;
+      background: var(--cyan);
+      color: #001011;
+      padding: 0 22px;
+      font-size: 13px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .suggestions {
+      position: absolute;
+      top: 58px;
+      left: 0;
+      right: 0;
+      z-index: 30;
+      display: none;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: #050909;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .app.is-searching .suggestions {
+      display: block;
+    }
+
+    .suggestion {
+      width: 100%;
+      min-height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 0 16px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+    }
+
+    .suggestion:last-child {
+      border-bottom: 0;
+    }
+
+    .suggestion:hover,
+    .suggestion:focus-visible {
+      outline: 0;
+      background: var(--cyan-soft);
+    }
+
+    .suggestion strong {
+      font-size: 14px;
+      font-weight: 840;
+    }
+
+    .suggestion span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .auth {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex: 0 0 auto;
+    }
+
+    .btn {
+      height: 46px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text);
+      padding: 0 20px;
+      font-size: 14px;
+      font-weight: 850;
+    }
+
+    .btn.primary {
+      border-color: var(--cyan);
+      background: var(--cyan);
+      color: #001011;
+    }
+
+    .icon-btn {
+      width: 46px;
+      height: 46px;
+      border: 0;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text);
+      font-size: 18px;
+      display: none;
+      place-items: center;
+    }
+
+    .hamburger-lines {
+      width: 20px;
+      height: 14px;
+      display: grid;
+      align-content: space-between;
+    }
+
+    .hamburger-lines span {
+      display: block;
+      width: 20px;
+      height: 2px;
+      border-radius: 999px;
+      background: currentColor;
+    }
+
+    .account-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 48px;
+      z-index: 35;
+      display: none;
+      width: 220px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: #050909;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .app.menu-open .account-menu {
+      display: block;
+    }
+
+    .menu-note {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 780;
+    }
+
+    .menu-item {
+      width: 100%;
+      min-height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      color: var(--text);
+      padding: 0 16px;
+      text-align: left;
+      font-size: 14px;
+      font-weight: 850;
+      text-decoration: none;
+    }
+
+    .menu-item:last-child {
+      border-bottom: 0;
+    }
+
+    .menu-item.primary {
+      color: #001011;
+      background: var(--cyan);
+    }
+
+    .page {
+      padding: 0 48px 56px;
+    }
+
+    .hero {
+      min-height: 540px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 480px;
+      gap: 54px;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .eyebrow {
+      margin-bottom: 16px;
+      color: var(--cyan);
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 680px;
+      font-size: clamp(42px, 5vw, 72px);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 630px;
+      margin: 22px 0 32px;
+      color: var(--soft);
+      font-size: 20px;
+      line-height: 1.45;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .cta {
+      height: 54px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: #050909;
+      color: var(--text);
+      padding: 0 24px;
+      font-weight: 900;
+    }
+
+    .cta.primary {
+      border-color: var(--cyan);
+      background: var(--cyan);
+      color: #001011;
+    }
+
+    .event-feature {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      overflow: hidden;
+    }
+
+    .image-frame {
+      aspect-ratio: 16 / 9;
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius) var(--radius) 0 0;
+      background:
+        linear-gradient(135deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.62)),
+        linear-gradient(145deg, #9f6844 0%, #c89b62 32%, #2f6268 68%, #11191b 100%);
+    }
+
+    .image-frame::before {
+      content: "";
+      position: absolute;
+      inset: 12% 12% 0;
+      border: 2px solid rgba(0, 0, 0, 0.32);
+      border-bottom: 0;
+      transform: skewX(-12deg);
+    }
+
+    .image-frame::after {
+      content: attr(data-title);
+      position: absolute;
+      left: 7%;
+      right: 7%;
+      bottom: 10%;
+      color: #fff7e8;
+      font-family: Georgia, serif;
+      font-size: clamp(23px, 3vw, 40px);
+      font-weight: 900;
+      line-height: 0.96;
+      text-transform: uppercase;
+    }
+
+    .image-frame.group {
+      background:
+        linear-gradient(135deg, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0.58)),
+        linear-gradient(145deg, #15484d 0%, #18cbd4 36%, #263334 68%, #071011 100%);
+    }
+
+    .feature-body,
+    .card-body {
+      padding: 20px;
+    }
+
+    .feature-body h2 {
+      margin: 0 0 10px;
+      font-size: 27px;
+      letter-spacing: 0;
+    }
+
+    .meta,
+    .card-meta {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .notes {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      padding: 30px 0 0;
+    }
+
+    .note {
+      border-top: 1px solid var(--line);
+      padding-top: 18px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.42;
+    }
+
+    .note strong {
+      display: block;
+      color: var(--text);
+      margin-bottom: 7px;
+      font-size: 15px;
+    }
+
+    .results-view {
+      display: none;
+      padding-top: 34px;
+    }
+
+    .app.results .hero,
+    .app.results .notes {
+      display: none;
+    }
+
+    .app.results .results-view {
+      display: block;
+    }
+
+    .results-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 18px;
+    }
+
+    .results-head h1 {
+      font-size: clamp(34px, 4vw, 52px);
+      line-height: 1.04;
+    }
+
+    .results-count {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .filters-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 22px 0 26px;
+    }
+
+    .chip,
+    .filter-trigger {
+      min-height: 40px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-sm);
+      background: #050909;
+      color: var(--text);
+      padding: 0 14px;
+      font-size: 14px;
+      font-weight: 840;
+    }
+
+    .chip.active {
+      border-color: var(--cyan);
+      background: var(--cyan);
+      color: #001011;
+    }
+
+    .filter-trigger {
+      margin-left: auto;
+    }
+
+    .section-label {
+      margin: 28px 0 14px;
+      color: var(--soft);
+      font-size: 14px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #020505;
+      overflow: hidden;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 25px;
+      margin-bottom: 12px;
+      padding: 0 9px;
+      border: 1px solid var(--line-strong);
+      color: var(--soft);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .badge.group {
+      border-color: rgba(24, 203, 212, 0.7);
+      color: var(--cyan);
+    }
+
+    .card h2 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .card p {
+      min-height: 42px;
+      margin: 0 0 16px;
+      color: var(--soft);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .empty {
+      display: none;
+      border: 1px solid var(--line);
+      padding: 36px;
+      color: var(--muted);
+      background: #050909;
+    }
+
+    .filter-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      width: min(430px, 100vw);
+      height: 100vh;
+      border-left: 1px solid var(--line-strong);
+      border-radius: var(--radius) 0 0 var(--radius);
+      background: #050909;
+      box-shadow: var(--shadow);
+      transform: translateX(100%);
+      transition: transform 180ms ease;
+    }
+
+    .app.filters-open .filter-panel {
+      transform: translateX(0);
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 45;
+      display: none;
+      background: rgba(0, 0, 0, 0.62);
+    }
+
+    .app.filters-open .overlay {
+      display: block;
+    }
+
+    .panel-head,
+    .panel-actions {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-actions {
+      border-top: 1px solid var(--line);
+      border-bottom: 0;
+      justify-content: flex-end;
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: 0;
+    }
+
+    .panel-body {
+      flex: 1 1 auto;
+      overflow: auto;
+      padding: 18px 20px 24px;
+    }
+
+    .field-group {
+      padding: 18px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .field-group:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .field-group h3 {
+      margin: 0 0 12px;
+      color: var(--soft);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    .segment {
+      min-height: 42px;
+      border: 0;
+      border-right: 1px solid var(--line-strong);
+      background: #050909;
+      color: var(--soft);
+      font-size: 13px;
+      font-weight: 880;
+    }
+
+    .segment:last-child {
+      border-right: 0;
+    }
+
+    .segment.active {
+      background: var(--cyan);
+      color: #001011;
+    }
+
+    .helper {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .fake-input {
+      min-height: 58px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--panel-2);
+      padding: 10px 12px;
+    }
+
+    .fake-input label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .fake-input div {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 780;
+    }
+
+    .option-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+    }
+
+    .toggle {
+      min-height: 36px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-sm);
+      background: #050909;
+      color: var(--soft);
+      padding: 0 12px;
+      font-size: 13px;
+      font-weight: 830;
+    }
+
+    .toggle.active {
+      border-color: var(--cyan);
+      background: var(--cyan-soft);
+      color: var(--text);
+    }
+
+    @media (max-width: 1020px) {
+      .topbar {
+        height: auto;
+        min-height: 72px;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 14px 22px;
+      }
+
+      .nav,
+      .auth .btn {
+        display: none;
+      }
+
+      .auth {
+        margin-left: auto;
+      }
+
+      .icon-btn {
+        display: inline-grid;
+      }
+
+      .logo {
+        font-size: 22px;
+      }
+
+      .search-wrap {
+        order: 3;
+        flex-basis: 100%;
+        max-width: none;
+        margin-left: 0;
+      }
+
+      .icon-btn {
+        margin-left: 0;
+      }
+
+      .account-menu {
+        right: 22px;
+      }
+
+      .page {
+        padding: 0 22px 34px;
+      }
+
+      .hero {
+        min-height: auto;
+        display: block;
+        padding: 48px 0 28px;
+      }
+
+      .lead {
+        font-size: 17px;
+      }
+
+      .event-feature {
+        margin-top: 34px;
+      }
+
+      .notes {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding-top: 24px;
+      }
+
+      .results-head {
+        display: block;
+      }
+
+      .filter-trigger {
+        margin-left: 0;
+      }
+
+      .cards {
+        grid-template-columns: 1fr;
+      }
+
+      .card {
+        display: block;
+        min-height: 0;
+      }
+
+      .card .image-frame {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+      }
+
+      .card .image-frame::after {
+        left: 7%;
+        right: 7%;
+        bottom: 10%;
+        font-size: clamp(24px, 8vw, 34px);
+      }
+
+      .card .image-frame::before {
+        inset: 12% 12% 0;
+      }
+
+      .card-body {
+        padding: 16px;
+      }
+
+      .card p {
+        min-height: 0;
+        margin-bottom: 10px;
+      }
+
+      .filter-panel {
+        top: auto;
+        bottom: 0;
+        width: 100vw;
+        height: min(76vh, 720px);
+        border-top: 1px solid var(--line-strong);
+        border-left: 0;
+        transform: translateY(100%);
+      }
+
+      .app.filters-open .filter-panel {
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 520px) {
+      .search-button {
+        display: none;
+      }
+
+      .search-icon {
+        width: 42px;
+      }
+
+      .results-view {
+        padding-top: 24px;
+      }
+
+      .filters-row {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 6px;
+      }
+
+      .chip,
+      .filter-trigger {
+        flex: 0 0 auto;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="topbar">
+      <a class="logo" href="#" data-action="home">huddlz</a>
+      <nav class="nav" aria-label="Primary">
+        <a href="#" data-action="organize">Organize</a>
+      </nav>
+
+      <div class="search-wrap">
+        <form class="search-form" id="searchForm">
+          <div class="search-icon" aria-hidden="true">/</div>
+          <input class="search-input" id="searchInput" placeholder="Search huddlz" autocomplete="off" />
+          <button class="search-button" type="submit">Search</button>
+        </form>
+        <div class="suggestions" id="suggestions">
+          <button class="suggestion" type="button" data-suggest="all">
+            <strong>Search all for <span data-query-label>founder coffee</span></strong>
+            <span>Enter</span>
+          </button>
+          <button class="suggestion" type="button" data-suggest="huddlz">
+            <strong>Search huddlz for <span data-query-label>founder coffee</span></strong>
+            <span>Events</span>
+          </button>
+          <button class="suggestion" type="button" data-suggest="groups">
+            <strong>Search groups for <span data-query-label>founder coffee</span></strong>
+            <span>Communities</span>
+          </button>
+          <button class="suggestion" type="button" data-action="filters">
+            <strong>More filters</strong>
+            <span>Optional</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="auth">
+        <button class="btn" type="button">Sign Up</button>
+        <button class="btn primary" type="button">Sign In</button>
+        <button class="icon-btn" type="button" aria-label="Open menu" data-action="menu">
+          <span class="hamburger-lines" aria-hidden="true"><span></span><span></span><span></span></span>
+        </button>
+      </div>
+
+      <div class="account-menu" aria-label="Account menu">
+        <div class="menu-note">You are browsing signed out.</div>
+        <button class="menu-item primary" type="button">Sign In <span>→</span></button>
+        <button class="menu-item" type="button">Sign Up</button>
+        <button class="menu-item" type="button" data-action="organize">Organize</button>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="hero">
+        <div>
+          <div class="eyebrow">Find your people, fast</div>
+          <h1>Find your next huddl.</h1>
+          <p class="lead">Search once from anywhere, then refine only when you need to. Events and groups stay discoverable without making the first step feel like setup.</p>
+          <div class="hero-actions">
+            <button class="cta primary" type="button" data-action="focus-search">Start searching</button>
+            <button class="cta" type="button" data-search-groups>Browse groups</button>
+          </div>
+        </div>
+        <aside class="event-feature">
+          <div class="image-frame" data-title="Boat drinks"></div>
+          <div class="feature-body">
+            <h2>I'm on a boat (drink)!</h2>
+            <div class="meta">Huddl · May 09, 2026 · St. Augustine, FL</div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="notes">
+        <div class="note"><strong>Golden path</strong>Tap search, type a query, hit Enter. No city, date, or distance setup is required first.</div>
+        <div class="note"><strong>Consistent images</strong>Huddl and group cover art uses a 16:9 frame everywhere, including compact mobile results.</div>
+        <div class="note"><strong>Combined search</strong>All results can be grouped by type first, which avoids the messiest mixed pagination behavior.</div>
+      </section>
+
+      <section class="results-view" aria-live="polite">
+        <div class="results-head">
+          <div>
+            <h1 id="resultsTitle">Results for founder coffee</h1>
+            <div class="results-count" id="resultsCount">Grouped results from huddlz and groups near St. Augustine.</div>
+          </div>
+        </div>
+
+        <div class="filters-row">
+          <button class="chip active" type="button" data-scope="all">All</button>
+          <button class="chip" type="button" data-scope="huddlz">Huddlz</button>
+          <button class="chip" type="button" data-scope="groups">Groups</button>
+          <button class="chip" type="button" data-action="filters">St. Augustine</button>
+          <button class="chip" type="button" data-action="filters">25 mi</button>
+          <button class="filter-trigger" type="button" data-action="filters">Filters</button>
+        </div>
+
+        <div id="huddlSection">
+          <div class="section-label">Huddlz</div>
+          <div class="cards" id="huddlCards"></div>
+        </div>
+
+        <div id="groupSection">
+          <div class="section-label">Groups</div>
+          <div class="cards" id="groupCards"></div>
+        </div>
+
+        <div class="empty" id="emptyState">No results for this scope. Try All or change your filters.</div>
+      </section>
+    </main>
+
+    <div class="overlay" data-action="close-filters"></div>
+    <aside class="filter-panel" aria-label="Search filters">
+      <div class="panel-head">
+        <h2>Filters</h2>
+        <button class="icon-btn" type="button" data-action="close-filters" aria-label="Close filters">x</button>
+      </div>
+      <div class="panel-body">
+        <section class="field-group">
+          <h3>Search scope</h3>
+          <div class="segmented">
+            <button class="segment active" type="button" data-panel-scope="all">All</button>
+            <button class="segment" type="button" data-panel-scope="huddlz">Huddlz</button>
+            <button class="segment" type="button" data-panel-scope="groups">Groups</button>
+          </div>
+          <div class="helper">All keeps results grouped by type, which makes pagination simpler and more predictable.</div>
+        </section>
+
+        <section class="field-group">
+          <h3>Location</h3>
+          <div class="form-grid">
+            <div class="fake-input"><label>City</label><div>St. Augustine, FL <span>v</span></div></div>
+            <div class="fake-input"><label>Distance</label><div>25 miles <span>v</span></div></div>
+          </div>
+        </section>
+
+        <section class="field-group">
+          <h3>Date</h3>
+          <div class="option-grid">
+            <button class="toggle active" type="button">Upcoming</button>
+            <button class="toggle" type="button">This week</button>
+            <button class="toggle" type="button">This month</button>
+            <button class="toggle" type="button">Custom</button>
+          </div>
+        </section>
+
+        <section class="field-group">
+          <h3>Format</h3>
+          <div class="option-grid">
+            <button class="toggle active" type="button">In person</button>
+            <button class="toggle" type="button">Virtual</button>
+            <button class="toggle active" type="button">Hybrid</button>
+          </div>
+        </section>
+
+        <section class="field-group">
+          <h3>Group topics</h3>
+          <div class="option-grid">
+            <button class="toggle active" type="button">Tech</button>
+            <button class="toggle" type="button">Startups</button>
+            <button class="toggle" type="button">Design</button>
+            <button class="toggle" type="button">Social</button>
+            <button class="toggle" type="button">Groups I follow</button>
+          </div>
+        </section>
+
+        <section class="field-group">
+          <h3>Huddl options</h3>
+          <div class="option-grid">
+            <button class="toggle" type="button">Has open spots</button>
+            <button class="toggle" type="button">Free only</button>
+            <button class="toggle active" type="button">Include online</button>
+          </div>
+        </section>
+
+        <section class="field-group">
+          <h3>Sort</h3>
+          <div class="option-grid">
+            <button class="toggle active" type="button">Relevance</button>
+            <button class="toggle" type="button">Soonest</button>
+            <button class="toggle" type="button">Nearest</button>
+            <button class="toggle" type="button">Newest</button>
+          </div>
+        </section>
+      </div>
+      <div class="panel-actions">
+        <button class="btn" type="button" data-action="reset-filters">Reset</button>
+        <button class="btn primary" type="button" data-action="apply-filters">Apply filters</button>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const app = document.getElementById("app");
+    const input = document.getElementById("searchInput");
+    const form = document.getElementById("searchForm");
+    const resultsTitle = document.getElementById("resultsTitle");
+    const resultsCount = document.getElementById("resultsCount");
+    const huddlCards = document.getElementById("huddlCards");
+    const groupCards = document.getElementById("groupCards");
+    const huddlSection = document.getElementById("huddlSection");
+    const groupSection = document.getElementById("groupSection");
+    const emptyState = document.getElementById("emptyState");
+
+    const huddlz = [
+      ["Boat drinks", "I'm on a boat (drink)!", "Boat Drinks", "In person · May 09, 2026 · St. Augustine, FL", "Come hang out and get a drink with your favorite tech people."],
+      ["Product night", "Product Builders Night", "North Florida Tech", "Hybrid · May 16, 2026 · Jacksonville, FL", "Demos, feedback, and casual conversations for product-minded makers."],
+      ["AI meetup", "AI Builders Meetup", "Huddlz Builders", "Virtual · May 21, 2026 · Online", "A working session for builders experimenting with AI product ideas."]
+    ];
+
+    const groups = [
+      ["Founder coffee", "Founder Coffee", "Group · 182 members", "Weekly · 4.2 miles away · St. Augustine, FL", "A practical morning group for people building products and teams."],
+      ["Design systems", "Design Systems Circle", "Group · 96 members", "Monthly · 18 miles away · St. Augustine, FL", "Designers and engineers making reusable product UI together."],
+      ["Code coffee", "Casual Code & Coffee", "Group · 74 members", "Biweekly · St. Augustine, FL", "Bring a laptop, ask questions, and meet people shipping local projects."]
+    ];
+
+    const state = {
+      query: new URLSearchParams(location.search).get("q") || "",
+      scope: new URLSearchParams(location.search).get("scope") || "all",
+      view: new URLSearchParams(location.search).get("view") || "landing"
+    };
+
+    function renderCards(target, items, type) {
+      target.innerHTML = items.map((item) => {
+        const [imageTitle, title, group, meta, desc] = item;
+        const imageClass = type === "group" ? "image-frame group" : "image-frame";
+        const badgeClass = type === "group" ? "badge group" : "badge";
+        const label = type === "group" ? "Group" : "Huddl";
+        return `
+          <article class="card">
+            <div class="${imageClass}" data-title="${imageTitle}"></div>
+            <div class="card-body">
+              <span class="${badgeClass}">${label}</span>
+              <h2>${title}</h2>
+              <p>${desc}</p>
+              <div class="card-meta">${group}<br>${meta}</div>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function syncUrl() {
+      const params = new URLSearchParams();
+      if (state.view === "results") params.set("view", "results");
+      if (state.query) params.set("q", state.query);
+      if (state.scope !== "all") params.set("scope", state.scope);
+      const queryString = params.toString();
+      history.replaceState(null, "", queryString ? `${location.pathname}?${queryString}` : location.pathname);
+    }
+
+    function setScope(scope) {
+      state.scope = scope;
+      document.querySelectorAll("[data-scope], [data-panel-scope]").forEach((button) => {
+        const value = button.dataset.scope || button.dataset.panelScope;
+        button.classList.toggle("active", value === scope);
+      });
+      huddlSection.style.display = scope === "groups" ? "none" : "block";
+      groupSection.style.display = scope === "huddlz" ? "none" : "block";
+      emptyState.style.display = "none";
+      if (scope === "all") {
+        resultsCount.textContent = "Grouped results from huddlz and groups near St. Augustine.";
+      } else if (scope === "huddlz") {
+        resultsCount.textContent = "Huddlz matching your search near St. Augustine.";
+      } else {
+        resultsCount.textContent = "Groups matching your search near St. Augustine.";
+      }
+      syncUrl();
+    }
+
+    function showResults(query = input.value.trim() || "founder coffee", scope = state.scope) {
+      state.view = "results";
+      state.query = query;
+      input.value = query;
+      app.classList.remove("is-searching");
+      app.classList.add("results");
+      resultsTitle.textContent = `Results for ${query}`;
+      document.querySelectorAll("[data-query-label]").forEach((label) => { label.textContent = query; });
+      setScope(scope);
+      syncUrl();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function openFilters() {
+      app.classList.remove("is-searching", "menu-open");
+      app.classList.add("filters-open");
+    }
+
+    function closeFilters() {
+      app.classList.remove("filters-open");
+    }
+
+    function toggleMenu() {
+      app.classList.remove("is-searching", "filters-open");
+      app.classList.toggle("menu-open");
+    }
+
+    function goHome() {
+      state.view = "landing";
+      state.scope = "all";
+      state.query = "";
+      input.value = "";
+      app.classList.remove("results", "filters-open", "is-searching");
+      setScope("all");
+      history.replaceState(null, "", location.pathname);
+    }
+
+    renderCards(huddlCards, huddlz, "huddl");
+    renderCards(groupCards, groups, "group");
+    input.value = state.query;
+
+    if (state.view === "results" || state.query) {
+      showResults(state.query || "founder coffee", state.scope);
+    } else {
+      setScope("all");
+    }
+
+    input.addEventListener("focus", () => {
+      if (!app.classList.contains("filters-open")) {
+        app.classList.add("is-searching");
+      }
+    });
+
+    input.addEventListener("input", () => {
+      const query = input.value.trim() || "your search";
+      document.querySelectorAll("[data-query-label]").forEach((label) => { label.textContent = query; });
+    });
+
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        showResults();
+      }
+    });
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      showResults();
+    });
+
+    document.addEventListener("click", (event) => {
+      const target = event.target.closest("button, a");
+      if (!target) {
+        if (!event.target.closest(".search-wrap")) app.classList.remove("is-searching");
+        if (!event.target.closest(".account-menu")) app.classList.remove("menu-open");
+        return;
+      }
+
+      if (target.dataset.action === "home") {
+        event.preventDefault();
+        goHome();
+      }
+
+      if (target.dataset.action === "focus-search") {
+        app.classList.remove("menu-open");
+        input.focus();
+      }
+
+      if (target.dataset.action === "organize") {
+        event.preventDefault();
+        app.classList.remove("menu-open", "is-searching");
+        window.alert("Organize requires sign in, then opens the organizer workspace for groups, huddlz, attendees, members, messages, and settings.");
+      }
+
+      if (target.dataset.searchGroups !== undefined) {
+        showResults("groups", "groups");
+      }
+
+      if (target.dataset.suggest) {
+        showResults(input.value.trim() || "founder coffee", target.dataset.suggest);
+      }
+
+      if (target.dataset.scope) {
+        setScope(target.dataset.scope);
+      }
+
+      if (target.dataset.panelScope) {
+        setScope(target.dataset.panelScope);
+      }
+
+      if (target.dataset.action === "filters") {
+        openFilters();
+      }
+
+      if (target.dataset.action === "menu") {
+        toggleMenu();
+      }
+
+      if (target.dataset.action === "close-filters") {
+        closeFilters();
+      }
+
+      if (target.dataset.action === "apply-filters") {
+        closeFilters();
+        if (!app.classList.contains("results")) showResults();
+      }
+
+      if (target.dataset.action === "reset-filters") {
+        setScope("all");
+        document.querySelectorAll(".toggle").forEach((button) => button.classList.remove("active"));
+        document.querySelectorAll(".toggle").forEach((button) => {
+          if (["Upcoming", "In person", "Hybrid", "Include online", "Relevance"].includes(button.textContent.trim())) {
+            button.classList.add("active");
+          }
+        });
+      }
+
+      if (target.classList.contains("toggle")) {
+        target.classList.toggle("active");
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeFilters();
+        app.classList.remove("is-searching", "menu-open");
+      }
+    });
+  </script>
+</body>
+</html>
