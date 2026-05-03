@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Boat Drinks event cover</title>
+  <desc id="desc">Stylized evening meetup cover image with people, drinks, and a harbor glow.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b07247"/>
+      <stop offset="0.42" stop-color="#5b5848"/>
+      <stop offset="1" stop-color="#092528"/>
+    </linearGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#020404" stop-opacity="0"/>
+      <stop offset="1" stop-color="#020404" stop-opacity="0.72"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#sky)"/>
+  <circle cx="1220" cy="180" r="150" fill="#18cbd4" opacity="0.16"/>
+  <path d="M0 610 C220 540 420 560 650 610 C920 670 1130 610 1600 540 L1600 900 L0 900 Z" fill="#051314" opacity="0.8"/>
+  <path d="M450 180 L900 790" stroke="#102d31" stroke-width="18" opacity="0.75"/>
+  <path d="M470 180 H1230 L1040 790 H280 Z" fill="none" stroke="#102d31" stroke-width="9" opacity="0.82"/>
+  <g transform="translate(255 360)">
+    <circle cx="100" cy="85" r="68" fill="#2e1915"/>
+    <circle cx="285" cy="65" r="58" fill="#3b1e18"/>
+    <circle cx="480" cy="90" r="70" fill="#211615"/>
+    <path d="M26 390 C70 205 145 155 246 250 C300 170 400 165 460 252 C525 180 655 215 695 390 Z" fill="#192b2c"/>
+    <rect x="142" y="230" width="52" height="132" rx="14" fill="#6ed8df" opacity="0.9"/>
+    <rect x="365" y="225" width="56" height="136" rx="14" fill="#c58e5a" opacity="0.9"/>
+    <rect x="555" y="232" width="54" height="128" rx="14" fill="#6ed8df" opacity="0.86"/>
+  </g>
+  <rect width="1600" height="900" fill="url(#shade)"/>
+  <text x="120" y="710" fill="#fff7e8" font-family="Georgia, serif" font-size="118" font-weight="900">BOAT DRINKS</text>
+</svg>
