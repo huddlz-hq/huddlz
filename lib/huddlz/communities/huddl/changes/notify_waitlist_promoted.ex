@@ -22,8 +22,12 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyWaitlistPromoted do
         {:ok, huddl}
 
       user_id ->
-        with {:ok, user} <- Ash.get(User, user_id, authorize?: false) do
-          Notifications.deliver_async(user, :waitlist_promoted, %{"huddl_id" => huddl.id})
+        case Ash.get(User, user_id, authorize?: false) do
+          {:ok, user} ->
+            Notifications.deliver_async(user, :waitlist_promoted, %{"huddl_id" => huddl.id})
+
+          _ ->
+            :noop
         end
 
         {:ok, huddl}
