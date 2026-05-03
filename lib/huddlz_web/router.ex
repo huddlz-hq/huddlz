@@ -155,5 +155,12 @@ defmodule HuddlzWeb.Router do
       live_dashboard "/dashboard", metrics: HuddlzWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
+
+    scope "/dev", HuddlzWeb do
+      pipe_through :browser
+
+      get "/design", DevDesignController, :index
+      get "/design/search-organize", DevDesignController, :search_organize
+    end
   end
 end
