@@ -469,9 +469,8 @@ defmodule HuddlzWeb.HuddlLive do
   defp list_groups(query, page, actor) do
     ash_query =
       Group
-      |> Ash.Query.for_read(:read, %{}, actor: actor)
+      |> Ash.Query.for_read(:search, %{query: query}, actor: actor)
       |> Ash.Query.filter(is_public == true)
-      |> apply_group_search(query)
 
     total =
       case Ash.count(ash_query, actor: actor) do
@@ -500,23 +499,6 @@ defmodule HuddlzWeb.HuddlLive do
       end
 
     {groups, total}
-  end
-
-  defp apply_group_search(ash_query, nil) do
-    Ash.Query.sort(ash_query, name: :asc)
-  end
-
-  defp apply_group_search(ash_query, search_text) do
-    ash_query
-    |> Ash.Query.filter(
-      trigram_similarity(name, ^search_text) > 0.1 or
-        trigram_similarity(description, ^search_text) > 0.1
-    )
-    |> Ash.Query.load(search_relevance: [query: search_text])
-    |> Ash.Query.sort(
-      search_relevance: {%{query: search_text}, :desc},
-      name: :asc
-    )
   end
 
   defp load_results_with_distances({:ok, %{results: results}}, socket) do
