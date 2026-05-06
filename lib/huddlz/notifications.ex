@@ -22,6 +22,7 @@ defmodule Huddlz.Notifications do
     resource Huddlz.Notifications.Notification do
       define :create_notification, action: :create
       define :list_for_user, action: :for_user
+      define :list_invites_for_user, action: :invites_for_user
       define :mark_read, action: :mark_read
       define :mark_unread, action: :mark_unread
     end
