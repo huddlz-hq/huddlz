@@ -269,7 +269,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> refute_has("span", text: "Search:")
       |> assert_has("span", text: "Type: Virtual")
       |> refute_has("span", text: "Date:")
-      # Clear Event Type
+      # Clear Event Type (clicking the active toggle deselects it)
       |> click_link("#filter-panel a", "Virtual")
       |> refute_has("span", text: "Search:")
       |> refute_has("span", text: "Type:")
