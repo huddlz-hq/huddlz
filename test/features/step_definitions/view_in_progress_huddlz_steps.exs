@@ -4,7 +4,7 @@ defmodule ViewInProgressHuddlzSteps do
   import Huddlz.Generator
 
   step "I visit the home page", %{conn: conn} do
-    conn = conn |> visit("/")
+    conn = conn |> visit("/discover")
     {:ok, %{conn: conn}}
   end
 

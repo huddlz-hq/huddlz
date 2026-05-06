@@ -69,7 +69,7 @@ defmodule HuddlzWeb.MeLive do
           title="Hosting"
           section={@hosting}
           limit={@section_limit}
-          view_all_path={~p"/?yours=hosting"}
+          view_all_path={~p"/discover?yours=hosting"}
           empty_message="You aren't hosting any upcoming huddlz."
         />
 
@@ -77,7 +77,7 @@ defmodule HuddlzWeb.MeLive do
           title="Attending"
           section={@attending}
           limit={@section_limit}
-          view_all_path={~p"/?yours=attending"}
+          view_all_path={~p"/discover?yours=attending"}
           empty_message="You haven't RSVP'd to any upcoming huddlz."
         />
       </div>

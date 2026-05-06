@@ -29,7 +29,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
         )
 
       conn
-      |> visit("/")
+      |> visit("/discover")
       |> assert_has("input[placeholder='Find your huddl']")
       |> assert_has("button", text: "Search")
       |> assert_has("h3", text: public_huddl.title)
@@ -61,7 +61,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
         )
 
       conn
-      |> visit("/")
+      |> visit("/discover")
       |> fill_in("Search huddlz", with: "Elixir")
       # Should find the Elixir huddl
       |> assert_has("h3", text: "Elixir Programming Workshop")
@@ -95,7 +95,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
         )
 
       conn
-      |> visit("/")
+      |> visit("/discover")
       |> fill_in("Search huddlz", with: "Elixir patterns")
       # Should find the huddl with matching description
       |> assert_has("h3", text: "Tech Talk")
@@ -133,7 +133,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
 
       session =
         conn
-        |> visit("/")
+        |> visit("/discover")
 
       # Initially should see both huddlz
       session
@@ -173,7 +173,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
       )
 
       conn
-      |> visit("/")
+      |> visit("/discover")
       |> fill_in("Search huddlz", with: "nonexistent12345")
       # Should show no results message
       |> assert_has("p", text: "No huddlz found")
@@ -207,7 +207,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
         )
 
       conn
-      |> visit("/")
+      |> visit("/discover")
       |> fill_in("Search huddlz", with: "Elixir")
       |> within("#huddl-search-form", &click_button(&1, "Search"))
       # Should find the Elixir huddl
@@ -231,7 +231,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
           )
         )
 
-      session = conn |> visit("/")
+      session = conn |> visit("/discover")
 
       # Test each case variation
       session
@@ -263,7 +263,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
           )
         )
 
-      session = conn |> visit("/")
+      session = conn |> visit("/discover")
 
       # Test partial matches
       for query <- ["Eli", "Programming", "Work", "gram"] do
@@ -301,7 +301,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
       )
 
       # Select a location via the component
-      session = conn |> visit("/")
+      session = conn |> visit("/discover")
       view = session.view
 
       view
@@ -325,10 +325,10 @@ defmodule HuddlzWeb.HuddlLiveTest do
       conn: conn
     } do
       conn
-      |> visit("/?location=Austin%2C+TX&lat=30.2672&lng=-97.7431&distance=25")
+      |> visit("/discover?location=Austin%2C+TX&lat=30.2672&lng=-97.7431&distance=25")
       |> assert_has("span", text: "Austin, TX · 25 mi")
       |> fill_in("Search huddlz", with: "elixir")
-      |> assert_path(~p"/",
+      |> assert_path(~p"/discover",
         query_params: %{
           "q" => "elixir",
           "location" => "Austin, TX",
@@ -351,7 +351,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
       generate(group(is_public: true, owner_id: host.id, actor: host, name: "Elixir Club"))
 
       conn
-      |> visit("/")
+      |> visit("/discover")
       |> assert_has("h2", text: "Groups you can explore")
       |> assert_has("h2", text: "Elixir Club")
     end
@@ -370,7 +370,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
       )
 
       conn
-      |> visit("/")
+      |> visit("/discover")
       |> assert_has("h3", text: "Active Huddl")
       |> refute_has("h2", text: "Groups you can explore")
     end
@@ -381,7 +381,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
           group(is_public: true, owner_id: host.id, actor: host, name: "Linked Group Test")
         )
 
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, _view, html} = live(conn, ~p"/discover")
 
       assert html
              |> Floki.parse_document!()
@@ -393,7 +393,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
     end
   end
 
-  describe "Personal sections" do
+  describe "Scoped views (?yours=...)" do
     setup do
       host = generate(user(role: :user))
       attendee = generate(user(role: :user))
@@ -428,83 +428,26 @@ defmodule HuddlzWeb.HuddlLiveTest do
       |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
       |> Ash.update!()
 
-      %{
-        host: host,
-        attendee: attendee,
-        stranger: stranger,
-        host_group: host_group,
-        stranger_group: stranger_group,
-        hosted: hosted,
-        foreign: foreign
-      }
+      %{host: host, attendee: attendee, hosted: hosted, foreign: foreign}
     end
 
-    test "anonymous users see no personal sections", %{conn: conn} do
-      conn
-      |> visit("/")
-      |> refute_has("span", text: "// Hosting")
-      |> refute_has("span", text: "// Attending")
-    end
-
-    test "host sees Hosting section", %{conn: conn, host: host, hosted: hosted} do
+    test "?yours=hosting shows only hosted huddlz", %{conn: conn, host: host, hosted: hosted} do
       conn
       |> login(host)
-      |> visit("/")
-      |> assert_has("span", text: "// Hosting", timeout: 500)
-      |> assert_has("h3", text: hosted.title)
-    end
-
-    test "RSVPed attendee sees Attending section, not Hosting", %{
-      conn: conn,
-      attendee: attendee,
-      foreign: foreign
-    } do
-      conn
-      |> login(attendee)
-      |> visit("/")
-      |> assert_has("span", text: "// Attending", timeout: 500)
-      |> refute_has("span", text: "// Hosting", timeout: 500)
-      |> assert_has("h3", text: foreign.title)
-    end
-
-    test "host who also RSVPed to their own huddl is not double-counted", %{
-      conn: conn,
-      host: host,
-      hosted: hosted
-    } do
-      hosted
-      |> Ash.Changeset.for_update(:rsvp, %{}, actor: host)
-      |> Ash.update!()
-
-      conn
-      |> login(host)
-      |> visit("/")
-      |> assert_has("span", text: "// Hosting", timeout: 500)
-      |> refute_has("span", text: "// Attending", timeout: 500)
-    end
-
-    test "?yours=hosting scope shows only hosted, hides sections", %{
-      conn: conn,
-      host: host,
-      hosted: hosted
-    } do
-      conn
-      |> login(host)
-      |> visit("/?yours=hosting")
+      |> visit("/discover?yours=hosting")
       |> assert_has("h1", text: "huddlz you're hosting")
       |> assert_has("h3", text: hosted.title)
-      |> refute_has("span", text: "// Hosting")
       |> assert_has("a", text: "All huddlz")
     end
 
-    test "?yours=attending scope shows only attending", %{
+    test "?yours=attending shows only attending", %{
       conn: conn,
       attendee: attendee,
       foreign: foreign
     } do
       conn
       |> login(attendee)
-      |> visit("/?yours=attending")
+      |> visit("/discover?yours=attending")
       |> assert_has("h1", text: "huddlz you're attending")
       |> assert_has("h3", text: foreign.title)
     end
@@ -512,43 +455,19 @@ defmodule HuddlzWeb.HuddlLiveTest do
     test "← All huddlz back link preserves active filters", %{conn: conn, host: host} do
       conn
       |> login(host)
-      |> visit("/?yours=hosting&q=elixir&date_filter=this_week")
-      |> assert_has(~s|a[href="/?q=elixir&date_filter=this_week"]|, text: "All huddlz")
+      |> visit("/discover?yours=hosting&q=elixir&date_filter=this_week")
+      |> assert_has(~s|a[href="/discover?q=elixir&date_filter=this_week"]|, text: "All huddlz")
     end
 
     test "anonymous users redirected from ?yours= scopes to sign-in", %{conn: conn} do
-      session = conn |> visit("/?yours=hosting")
+      session = conn |> visit("/discover?yours=hosting")
       assert_path(session, ~p"/sign-in")
 
       assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~
                "Sign in to view huddlz you're hosting"
 
-      session = conn |> visit("/?yours=attending")
+      session = conn |> visit("/discover?yours=attending")
       assert_path(session, ~p"/sign-in")
-    end
-
-    test "View all link appears when hosting count exceeds limit", %{
-      conn: conn,
-      host: host
-    } do
-      group2 = generate(group(is_public: true, owner_id: host.id, actor: host))
-
-      for i <- 1..7 do
-        generate(
-          huddl(
-            group_id: group2.id,
-            creator_id: host.id,
-            is_private: false,
-            title: "Heavy Hosting #{i}",
-            actor: host
-          )
-        )
-      end
-
-      conn
-      |> login(host)
-      |> visit("/")
-      |> assert_has(~s|a[href="/?yours=hosting"]|, text: "View all →", timeout: 500)
     end
 
     test "scoped view with non-matching search shows search-aware empty copy", %{
@@ -557,51 +476,17 @@ defmodule HuddlzWeb.HuddlLiveTest do
     } do
       conn
       |> login(host)
-      |> visit("/?yours=hosting&q=zzznomatch")
+      |> visit("/discover?yours=hosting&q=zzznomatch")
       |> assert_has("p", text: "You aren't hosting any huddlz that match.")
     end
   end
 
   describe "Cleared location pre-fill" do
-    test "View all link preserves cleared=1 when home_location was cleared", %{conn: conn} do
-      user = generate(user(role: :user))
-
-      user
-      |> Ash.Changeset.for_update(
-        :update_home_location,
-        %{home_location: "Austin, TX", home_latitude: 30.2672, home_longitude: -97.7431},
-        actor: user
-      )
-      |> Ash.update!()
-
-      group = generate(group(is_public: true, owner_id: user.id, actor: user))
-
-      for i <- 1..7 do
-        generate(
-          huddl(
-            group_id: group.id,
-            creator_id: user.id,
-            is_private: false,
-            title: "Hosted #{i}",
-            actor: user
-          )
-        )
-      end
-
-      session =
-        conn
-        |> login(user)
-        |> visit("/?cleared=1")
-
-      assert_has(session, ~s|a[href="/?yours=hosting&cleared=1"]|,
-        text: "View all →",
-        timeout: 500
-      )
-    end
-
-    test "anonymous visit to / does not produce ?cleared=1 in resulting URL", %{conn: conn} do
-      session = conn |> visit("/")
-      assert_path(session, ~p"/")
+    test "anonymous visit to /discover does not produce ?cleared=1 in resulting URL", %{
+      conn: conn
+    } do
+      session = conn |> visit("/discover")
+      assert_path(session, ~p"/discover")
     end
 
     test "clearing location while pre-fill is active drops distance and lat/lng from URL", %{
@@ -618,13 +503,13 @@ defmodule HuddlzWeb.HuddlLiveTest do
       |> Ash.update!()
 
       conn = login(conn, user)
-      {:ok, view, _html} = Phoenix.LiveViewTest.live(conn, "/")
+      {:ok, view, _html} = Phoenix.LiveViewTest.live(conn, "/discover")
 
       view
       |> element(~s|button[aria-label="Clear location"]|)
       |> render_click()
 
-      assert_patch(view, "/?cleared=1")
+      assert_patch(view, "/discover?cleared=1")
     end
   end
 end

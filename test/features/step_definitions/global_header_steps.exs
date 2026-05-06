@@ -8,11 +8,11 @@ defmodule GlobalHeaderSteps do
     context
   end
 
-  step "the header should expose a global search form posting q to the home page", context do
+  step "the header should expose a global search form posting q to /discover", context do
     session = context[:session] || context[:conn]
 
     session
-    |> assert_has("header form[role='search'][method='get'][action='/']")
+    |> assert_has("header form[role='search'][method='get'][action='/discover']")
     |> assert_has("header input[type='search'][name='q'][placeholder='Search huddlz']")
 
     context
@@ -38,7 +38,7 @@ defmodule GlobalHeaderSteps do
     |> assert_has("#user-menu a[href='/me?tab=groups']", text: "My groups")
     |> assert_has("#user-menu a[href='/organize']", text: "Organizer workspace")
     |> assert_has("#user-menu a[href='/profile']", text: "Profile & preferences")
-    |> assert_has("#user-menu a[href='/']", text: "Public home")
+    |> assert_has("#user-menu a[href='/discover']", text: "Discover huddlz")
     |> assert_has("#user-menu a[href='/sign-out']", text: "Sign out")
 
     context

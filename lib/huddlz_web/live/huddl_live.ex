@@ -1,18 +1,17 @@
 defmodule HuddlzWeb.HuddlLive do
   @moduledoc """
-  LiveView for searching and filtering huddlz across all groups, with personal
-  sections (Hosting, Attending) for authenticated users.
+  LiveView for searching and filtering huddlz across all groups, mounted at
+  `/discover`. Personal sections (Hosting, Attending) live on `MeLive` at
+  `/me`; this view is shared by anonymous and signed-in users.
   """
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities
   alias Huddlz.Communities.Group
   alias HuddlzWeb.Layouts
-  alias Phoenix.LiveView.AsyncResult
   require Ash.Query
   require Logger
 
-  @section_limit 6
   @huddl_card_loads [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group]
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
@@ -26,7 +25,6 @@ defmodule HuddlzWeb.HuddlLive do
      |> assign(:default_location_text, user && user.home_location)
      |> assign(:default_location_lat, user && user.home_latitude)
      |> assign(:default_location_lng, user && user.home_longitude)
-     |> assign(:section_limit, @section_limit)
      |> assign_search_defaults()}
   end
 
@@ -43,8 +41,6 @@ defmodule HuddlzWeb.HuddlLive do
         not is_nil(socket.assigns.default_location_lat) and
           not is_nil(socket.assigns.default_location_lng),
       scope: :all,
-      hosting: AsyncResult.ok({[], 0}),
-      attending: AsyncResult.ok({[], 0}),
       huddls: [],
       groups: [],
       page_info: %{total_pages: 1, current_page: 1, total_count: 0}
@@ -282,8 +278,8 @@ defmodule HuddlzWeb.HuddlLive do
     params = put_scope(scope, base)
 
     case params do
-      [] -> ~p"/"
-      params -> ~p"/?#{params}"
+      [] -> ~p"/discover"
+      params -> ~p"/discover?#{params}"
     end
   end
 
@@ -349,7 +345,6 @@ defmodule HuddlzWeb.HuddlLive do
     socket
     |> assign(huddls: Enum.zip(huddls, distances))
     |> assign(page_info: page_info)
-    |> maybe_load_personal_sections(base_args)
     |> maybe_load_groups(huddls)
   end
 
@@ -392,68 +387,6 @@ defmodule HuddlzWeb.HuddlLive do
       actor: actor,
       page: Keyword.get(opts, :page, [])
     )
-  end
-
-  defp maybe_load_personal_sections(socket, _base_args)
-       when is_nil(socket.assigns.current_user) do
-    assign(socket, hosting: AsyncResult.ok({[], 0}), attending: AsyncResult.ok({[], 0}))
-  end
-
-  defp maybe_load_personal_sections(socket, _base_args)
-       when socket.assigns.scope != :all do
-    # On a scoped view, we only render the main grid — sections are hidden.
-    assign(socket, hosting: AsyncResult.ok({[], 0}), attending: AsyncResult.ok({[], 0}))
-  end
-
-  defp maybe_load_personal_sections(socket, base_args) do
-    user = socket.assigns.current_user
-    parent = self()
-
-    socket
-    |> assign_async(
-      :hosting,
-      fn ->
-        allow_sandbox(parent)
-        {:ok, %{hosting: load_section(base_args, user, :hosting)}}
-      end,
-      reset: true
-    )
-    |> assign_async(
-      :attending,
-      fn ->
-        allow_sandbox(parent)
-        {:ok, %{attending: load_section(base_args, user, :attending)}}
-      end,
-      reset: true
-    )
-  end
-
-  # In `async: true` test mode, the SQL sandbox connection is owned by the test
-  # process. `assign_async` spawns a task that has no access by default — grant
-  # it via the LiveView's own sandbox allowance. No-op outside the sandbox.
-  if Application.compile_env(:huddlz, :sql_sandbox?, false) do
-    alias Ecto.Adapters.SQL.Sandbox
-    defp allow_sandbox(parent), do: Sandbox.allow(Huddlz.Repo, parent, self())
-  else
-    defp allow_sandbox(_parent), do: :ok
-  end
-
-  defp load_section(base_args, user, relationship) do
-    page =
-      run_search(base_args, user,
-        relationship: relationship,
-        page: [limit: @section_limit, offset: 0, count: true]
-      )
-
-    case page do
-      {:ok, %{results: results, count: count}} ->
-        loaded = load_huddl_cards(results, user)
-
-        {loaded, count || length(loaded)}
-
-      _ ->
-        {[], 0}
-    end
   end
 
   defp maybe_load_groups(socket, [_ | _]), do: assign(socket, :groups, [])
@@ -671,33 +604,6 @@ defmodule HuddlzWeb.HuddlLive do
           <% end %>
         </div>
 
-        <%= if @scope == :all and @current_user do %>
-          <.async_result :let={{huddls, count}} assign={@hosting}>
-            <:loading></:loading>
-            <:failed :let={_}></:failed>
-            <.personal_section
-              :if={count > 0}
-              title="Hosting"
-              count={count}
-              huddls={huddls}
-              limit={@section_limit}
-              view_all_path={view_all_path(:hosting, assigns)}
-            />
-          </.async_result>
-          <.async_result :let={{huddls, count}} assign={@attending}>
-            <:loading></:loading>
-            <:failed :let={_}></:failed>
-            <.personal_section
-              :if={count > 0}
-              title="Attending"
-              count={count}
-              huddls={huddls}
-              limit={@section_limit}
-              view_all_path={view_all_path(:attending, assigns)}
-            />
-          </.async_result>
-        <% end %>
-
         <div class="w-full">
           <%= if Enum.empty?(@huddls) do %>
             <%= if any_filter_active?(assigns) or @scope != :all do %>
@@ -731,16 +637,7 @@ defmodule HuddlzWeb.HuddlLive do
               <% end %>
             <% end %>
           <% else %>
-            <h2
-              :if={show_main_heading?(assigns)}
-              class="font-display text-lg tracking-tight text-glow flex items-baseline gap-3 mb-4"
-            >
-              <span class="mono-label text-primary/70">// {main_heading(@scope)}</span>
-              <span class="text-sm font-body font-normal text-base-content/40">
-                ({@page_info.total_count})
-              </span>
-            </h2>
-            <div :if={!show_main_heading?(assigns)} class="mb-4 text-sm text-base-content/40">
+            <div class="mb-4 text-sm text-base-content/40">
               Found {@page_info.total_count} {if @page_info.total_count == 1,
                 do: "huddl",
                 else: "huddlz"}
@@ -774,48 +671,14 @@ defmodule HuddlzWeb.HuddlLive do
     """
   end
 
-  attr :title, :string, required: true
-  attr :count, :integer, required: true
-  attr :huddls, :list, required: true
-  attr :limit, :integer, required: true
-  attr :view_all_path, :string, required: true
-
-  defp personal_section(assigns) do
-    ~H"""
-    <div class="mt-10">
-      <div class="flex items-baseline justify-between gap-2">
-        <h2 class="font-display text-lg tracking-tight text-glow flex items-baseline gap-3">
-          <span class="mono-label text-primary/70">// {@title}</span>
-          <span class="text-sm font-body font-normal text-base-content/40">
-            ({@count})
-          </span>
-        </h2>
-        <.link
-          :if={@count > @limit}
-          navigate={@view_all_path}
-          class="text-xs text-primary hover:underline font-medium tracking-wide uppercase"
-        >
-          View all →
-        </.link>
-      </div>
-
-      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 mt-4">
-        <%= for huddl <- @huddls do %>
-          <.huddl_card huddl={huddl} show_group={true} />
-        <% end %>
-      </div>
-    </div>
-    """
-  end
-
   defp view_all_path(scope, assigns) do
     cleared? = location_explicitly_cleared?(assigns)
     params = current_filter_params(form_params_from_assigns(assigns), cleared?)
     params = put_scope(scope, params)
 
     case params do
-      [] -> ~p"/"
-      params -> ~p"/?#{params}"
+      [] -> ~p"/discover"
+      params -> ~p"/discover?#{params}"
     end
   end
 
@@ -851,26 +714,6 @@ defmodule HuddlzWeb.HuddlLive do
     not is_nil(assigns.search_query) or not is_nil(assigns.event_type_filter) or
       assigns.date_filter != "upcoming" or assigns.location_active
   end
-
-  defp show_main_heading?(%{
-         scope: :all,
-         current_user: user,
-         hosting: hosting,
-         attending: attending
-       })
-       when not is_nil(user),
-       do: section_count(hosting) > 0 or section_count(attending) > 0
-
-  defp show_main_heading?(_), do: false
-
-  defp section_count(%AsyncResult{ok?: true, result: {_, count}}) when is_integer(count),
-    do: count
-
-  defp section_count(_), do: 0
-
-  defp main_heading(:hosting), do: "Hosting"
-  defp main_heading(:attending), do: "Attending"
-  defp main_heading(:all), do: "All Huddlz"
 
   defp empty_message(%{scope: :hosting}), do: "You aren't hosting any huddlz that match."
   defp empty_message(%{scope: :attending}), do: "You aren't attending any huddlz that match."
