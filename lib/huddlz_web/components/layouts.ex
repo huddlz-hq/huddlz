@@ -13,12 +13,12 @@ defmodule HuddlzWeb.Layouts do
 
   def app(assigns) do
     ~H"""
-    <header class="bg-base-100/95 backdrop-blur-sm border-b border-base-300 sticky top-0 z-50 px-4 sm:px-6 lg:px-8">
-      <nav class="mx-auto max-w-6xl">
-        <div class="flex h-14 items-center gap-4">
+    <header class="bg-base-100/95 backdrop-blur-sm border-b border-base-300 sticky top-0 z-50 px-6 sm:px-8 lg:px-12">
+      <nav class="mx-auto max-w-7xl">
+        <div class="flex h-20 items-center gap-5">
           <%!-- Brand --%>
-          <a href="/" class="flex items-center group flex-shrink-0">
-            <span class="font-display text-lg tracking-tighter text-glow">huddlz</span>
+          <a href="/" class="flex items-center flex-shrink-0">
+            <span class="font-display text-2xl tracking-tighter text-glow">huddlz</span>
           </a>
 
           <%!-- Search (desktop) --%>
@@ -27,30 +27,32 @@ defmodule HuddlzWeb.Layouts do
             action="/"
             role="search"
             aria-label="Search huddlz"
-            class="hidden md:flex flex-1 max-w-xl items-center gap-2"
+            class="hidden md:flex flex-1 max-w-2xl items-stretch h-12 border border-base-300 rounded-md overflow-hidden bg-base-200/40 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15 transition-colors"
           >
+            <span class="grid place-items-center w-12 text-primary flex-shrink-0">
+              <.icon name="hero-magnifying-glass" class="w-5 h-5" />
+            </span>
             <input
               type="search"
               name="q"
               value={assigns[:search_query] || ""}
               placeholder="Search huddlz"
               aria-label="Search huddlz"
-              class="flex-1 border-0 border-b border-base-300 bg-transparent focus:border-primary focus:ring-0 px-2 py-1.5 text-sm placeholder:text-base-content/40"
+              class="flex-1 min-w-0 border-0 bg-transparent text-base-content text-[15px] focus:outline-none focus:ring-0 placeholder:text-base-content/40"
             />
             <button
               type="submit"
-              aria-label="Search"
-              class="p-1.5 text-primary hover:bg-primary/10 transition-colors"
+              class="flex-shrink-0 px-6 bg-primary text-primary-content font-display uppercase text-xs font-black tracking-wider hover:bg-primary/90 transition-colors"
             >
-              <.icon name="hero-magnifying-glass" class="w-5 h-5" />
+              Search
             </button>
           </form>
 
           <%!-- Right side --%>
-          <div class="ml-auto flex items-center gap-3">
+          <div class="ml-auto flex items-center gap-3 flex-shrink-0">
             <a
               href="/groups/new"
-              class="hidden md:inline-flex px-3 py-1.5 text-sm font-medium text-base-content/70 hover:text-primary transition-colors"
+              class="hidden md:inline-flex items-center h-12 px-4 text-sm font-bold text-base-content/80 hover:text-primary transition-colors"
             >
               Organize
             </a>
@@ -61,11 +63,9 @@ defmodule HuddlzWeb.Layouts do
                   aria-haspopup="menu"
                   aria-controls="user-menu"
                   phx-click={JS.toggle(to: "#user-menu")}
-                  class="cursor-pointer"
+                  class="cursor-pointer flex items-center justify-center w-12 h-12 border border-base-300 rounded-md hover:border-primary transition-colors"
                 >
-                  <div class="ring-1 ring-base-300 hover:ring-primary transition-colors">
-                    <.avatar user={@current_user} size={:sm} />
-                  </div>
+                  <.avatar user={@current_user} size={:sm} />
                 </button>
                 <ul
                   id="user-menu"
@@ -74,7 +74,7 @@ defmodule HuddlzWeb.Layouts do
                   phx-click-away={JS.hide(to: "#user-menu")}
                   phx-window-keydown={JS.hide(to: "#user-menu")}
                   phx-key="escape"
-                  class="absolute right-0 mt-3 z-50 p-1 border border-primary/20 bg-base-200 w-56 shadow-xl shadow-primary/5"
+                  class="absolute right-0 mt-3 z-50 p-1 border border-primary/20 bg-base-200 w-56 shadow-xl shadow-primary/5 rounded-md"
                 >
                   <li class="px-3 py-2.5 border-b border-base-300">
                     <span class="mono-label text-primary/60">
@@ -117,13 +117,13 @@ defmodule HuddlzWeb.Layouts do
             <% else %>
               <a
                 href="/register"
-                class="px-4 py-1.5 text-sm font-medium border border-base-300 hover:border-primary hover:text-primary btn-neon transition-colors"
+                class="inline-flex items-center h-12 px-5 text-sm font-bold border border-base-300 rounded-md text-base-content hover:border-primary hover:text-primary transition-colors"
               >
                 Sign Up
               </a>
               <a
                 href="/sign-in"
-                class="px-4 py-1.5 text-sm font-medium bg-primary text-primary-content btn-neon"
+                class="inline-flex items-center h-12 px-5 text-sm font-bold bg-primary text-primary-content rounded-md hover:bg-primary/90 transition-colors"
               >
                 Sign In
               </a>
@@ -131,8 +131,9 @@ defmodule HuddlzWeb.Layouts do
             <%!-- Mobile menu button --%>
             <button
               type="button"
-              class="md:hidden p-1.5 hover:bg-base-300 transition-colors"
+              class="md:hidden grid place-items-center w-12 h-12 border border-base-300 rounded-md hover:border-primary transition-colors"
               phx-click={JS.toggle(to: "#mobile-menu")}
+              aria-label="Open menu"
             >
               <.icon name="hero-bars-3" class="w-5 h-5" />
             </button>
@@ -145,22 +146,24 @@ defmodule HuddlzWeb.Layouts do
           action="/"
           role="search"
           aria-label="Search huddlz"
-          class="md:hidden pb-3 flex items-center gap-2"
+          class="md:hidden pb-4 flex items-stretch h-12 border border-base-300 rounded-md overflow-hidden bg-base-200/40 focus-within:border-primary"
         >
+          <span class="grid place-items-center w-12 text-primary flex-shrink-0">
+            <.icon name="hero-magnifying-glass" class="w-5 h-5" />
+          </span>
           <input
             type="search"
             name="q"
             value={assigns[:search_query] || ""}
             placeholder="Search huddlz"
             aria-label="Search huddlz"
-            class="flex-1 border-0 border-b border-base-300 bg-transparent focus:border-primary focus:ring-0 px-2 py-1.5 text-sm placeholder:text-base-content/40"
+            class="flex-1 min-w-0 border-0 bg-transparent text-base-content text-[15px] focus:outline-none focus:ring-0 placeholder:text-base-content/40"
           />
           <button
             type="submit"
-            aria-label="Search"
-            class="p-1.5 text-primary hover:bg-primary/10 transition-colors"
+            class="flex-shrink-0 px-5 bg-primary text-primary-content font-display uppercase text-xs font-black tracking-wider"
           >
-            <.icon name="hero-magnifying-glass" class="w-5 h-5" />
+            Search
           </button>
         </form>
 
@@ -168,7 +171,7 @@ defmodule HuddlzWeb.Layouts do
         <div id="mobile-menu" class="hidden md:hidden border-t border-base-300 py-2 pb-3">
           <a
             href="/groups/new"
-            class="block px-3 py-2 text-sm hover:bg-base-300 hover:text-primary"
+            class="block px-3 py-2 text-sm font-bold hover:bg-base-300 hover:text-primary transition-colors"
           >
             Organize
           </a>
