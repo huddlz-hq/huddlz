@@ -9,7 +9,10 @@ defmodule HuddlzWeb.MeLive do
   """
   use HuddlzWeb, :live_view
 
+  require Ash.Query
+
   alias Huddlz.Communities
+  alias Huddlz.Communities.Group
   alias HuddlzWeb.Layouts
 
   @section_limit 6
@@ -26,7 +29,9 @@ defmodule HuddlzWeb.MeLive do
      |> assign(:page_title, "My huddlz")
      |> assign(:upcoming, empty_section())
      |> assign(:waitlisted, empty_section())
-     |> assign(:past, empty_section())}
+     |> assign(:past, empty_section())
+     |> assign(:hosting_groups, empty_section())
+     |> assign(:joined_groups, empty_section())}
   end
 
   @impl true
@@ -47,6 +52,12 @@ defmodule HuddlzWeb.MeLive do
     |> assign(:upcoming, load_section(user, :attending, :upcoming, :soonest))
     |> assign(:waitlisted, load_section(user, :waitlisted, :upcoming, :soonest))
     |> assign(:past, load_section(user, :attending, :past, :newest))
+  end
+
+  defp load_tab(socket, :groups, user) do
+    socket
+    |> assign(:hosting_groups, load_groups_section(user, :get_by_owner))
+    |> assign(:joined_groups, load_groups_section(user, :get_joined))
   end
 
   defp load_tab(socket, _tab, _user), do: socket
@@ -76,6 +87,17 @@ defmodule HuddlzWeb.MeLive do
     end
   end
 
+  defp load_groups_section(user, action) do
+    case Group
+         |> Ash.Query.for_read(action, %{}, actor: user)
+         |> Ash.Query.load(:current_image_url)
+         |> Ash.Query.sort(name: :asc)
+         |> Ash.read(actor: user) do
+      {:ok, groups} -> {groups, length(groups)}
+      _ -> empty_section()
+    end
+  end
+
   defp empty_section, do: {[], 0}
 
   @impl true
@@ -89,8 +111,8 @@ defmodule HuddlzWeb.MeLive do
             <h1 class="font-display text-3xl tracking-tight text-glow mt-2">
               My huddlz.
             </h1>
-            <p class="mt-2 text-base-content/60 max-w-2xl">
-              Your upcoming RSVPs, waitlisted spots, and past gatherings — all in one place.
+            <p :if={tab_intro(@tab)} class="mt-2 text-base-content/60 max-w-2xl">
+              {tab_intro(@tab)}
             </p>
           </div>
           <.link
@@ -117,7 +139,11 @@ defmodule HuddlzWeb.MeLive do
               limit={@section_limit}
             />
           <% :groups -> %>
-            <.placeholder_tab message="Coming soon — joined and organized groups will live here." />
+            <.groups_tab
+              hosting={@hosting_groups}
+              joined={@joined_groups}
+              limit={@section_limit}
+            />
           <% :invites -> %>
             <.placeholder_tab message="Coming soon — huddl invitations and join requests." />
           <% :updates -> %>
@@ -165,6 +191,39 @@ defmodule HuddlzWeb.MeLive do
       <aside class="space-y-6">
         <.coming_up_panel section={@upcoming} />
         <.next_actions_panel />
+      </aside>
+    </div>
+    """
+  end
+
+  attr :hosting, :any, required: true
+  attr :joined, :any, required: true
+  attr :limit, :integer, required: true
+
+  defp groups_tab(assigns) do
+    ~H"""
+    <div class="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-10">
+      <div class="space-y-12 lg:col-span-2">
+        <.groups_section
+          title="Hosting"
+          section={@hosting}
+          limit={@limit}
+          view_all_path={~p"/groups?yours=hosting"}
+          empty_message="You haven't created a group yet."
+        />
+
+        <.groups_section
+          title="Joined"
+          section={@joined}
+          limit={@limit}
+          view_all_path={~p"/groups?yours=joined"}
+          empty_message="You haven't joined any groups yet."
+        />
+      </div>
+
+      <aside class="space-y-6">
+        <.find_more_groups_panel />
+        <.groups_next_actions_panel />
       </aside>
     </div>
     """
@@ -268,6 +327,84 @@ defmodule HuddlzWeb.MeLive do
     """
   end
 
+  attr :title, :string, required: true
+  attr :section, :any, required: true
+  attr :limit, :integer, required: true
+  attr :view_all_path, :any, default: nil
+  attr :empty_message, :string, required: true
+
+  defp groups_section(assigns) do
+    {groups, count} = assigns.section
+    assigns = assign(assigns, groups: groups, count: count)
+
+    ~H"""
+    <section>
+      <div class="flex items-baseline justify-between gap-2">
+        <h2 class="font-display text-lg tracking-tight text-glow flex items-baseline gap-3">
+          <span class="mono-label text-primary/70">// {@title}</span>
+          <span class="text-sm font-body font-normal text-base-content/40">
+            ({@count})
+          </span>
+        </h2>
+        <.link
+          :if={@view_all_path && @count > @limit}
+          navigate={@view_all_path}
+          class="text-xs text-primary hover:underline font-medium tracking-wide uppercase"
+        >
+          View all →
+        </.link>
+      </div>
+
+      <%= if @count == 0 do %>
+        <div class="border border-dashed border-base-300 p-8 mt-4 text-center text-base-content/50">
+          {@empty_message}
+        </div>
+      <% else %>
+        <div class="grid gap-6 sm:grid-cols-2 mt-4">
+          <%= for group <- Enum.take(@groups, @limit) do %>
+            <.group_card group={group} />
+          <% end %>
+        </div>
+      <% end %>
+    </section>
+    """
+  end
+
+  defp find_more_groups_panel(assigns) do
+    ~H"""
+    <div class="border border-base-300 p-6">
+      <span class="mono-label text-primary/70">// Find more groups</span>
+      <p class="text-sm text-base-content/60 mt-3">
+        Browse groups near you, by topic, or by name.
+      </p>
+      <.link
+        navigate={~p"/discover?scope=groups"}
+        class="mt-4 inline-flex text-xs text-primary hover:underline font-medium tracking-wide uppercase"
+      >
+        Discover groups →
+      </.link>
+    </div>
+    """
+  end
+
+  defp groups_next_actions_panel(assigns) do
+    ~H"""
+    <div class="border border-base-300 p-6">
+      <span class="mono-label text-primary/70">// Useful next actions</span>
+      <ul class="mt-3 space-y-2 text-sm text-base-content/70">
+        <li>Open a group's home page to see its upcoming huddlz.</li>
+        <li>
+          <.link navigate={~p"/profile/notifications"} class="text-primary hover:underline">
+            Manage notifications
+          </.link>
+          per group from your profile.
+        </li>
+        <li>Browse more groups on Discover.</li>
+      </ul>
+    </div>
+    """
+  end
+
   attr :message, :string, required: true
 
   defp placeholder_tab(assigns) do
@@ -279,6 +416,12 @@ defmodule HuddlzWeb.MeLive do
   end
 
   defp tab_path(tab), do: ~p"/me?#{[tab: tab]}"
+
+  defp tab_intro(:huddlz),
+    do: "Your upcoming RSVPs, waitlisted spots, and past gatherings — all in one place."
+
+  defp tab_intro(:groups), do: "Groups you organize and groups you've joined."
+  defp tab_intro(_), do: nil
 
   defp format_starts_at(datetime) do
     Calendar.strftime(datetime, "%b %d, %Y · %I:%M %p")
