@@ -29,4 +29,18 @@ defmodule GlobalHeaderSteps do
     refute_has(session, "header a[href='/groups']", text: "Groups")
     context
   end
+
+  step "the account menu should expose the member, organizer, and account links", context do
+    session = context[:session] || context[:conn]
+
+    session
+    |> assert_has("#user-menu a[href='/me?tab=huddlz']", text: "My huddlz")
+    |> assert_has("#user-menu a[href='/me?tab=groups']", text: "My groups")
+    |> assert_has("#user-menu a[href='/organize']", text: "Organizer workspace")
+    |> assert_has("#user-menu a[href='/profile']", text: "Profile & preferences")
+    |> assert_has("#user-menu a[href='/']", text: "Public home")
+    |> assert_has("#user-menu a[href='/sign-out']", text: "Sign out")
+
+    context
+  end
 end
