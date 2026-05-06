@@ -1,24 +1,39 @@
 defmodule Huddlz.Notifications do
   @moduledoc """
-  Email notifications orchestrator.
+  Notifications domain — email orchestrator and in-app feed.
 
-  Public entry point for sending a notification email. `deliver/3`
-  enqueues an Oban job; the `Huddlz.Notifications.DeliverWorker` then
-  resolves the user's preferences, decides whether to send, and
-  dispatches to the right sender module.
+  Public entry point for raising a notification. `deliver/3` persists an
+  in-app `Notification` row (synchronous) and enqueues an Oban job that
+  resolves the user's email preferences and dispatches to the right sender.
 
       Huddlz.Notifications.deliver(user, :password_changed, %{...})
       #=> {:ok, %Oban.Job{}}
 
+  Email preferences gate email delivery only — every triggered notification
+  is recorded in the in-app feed regardless of pref state.
+
   See `docs/notifications.md` for the system spec and `Huddlz.Notifications.Triggers`
   for the registry of trigger codes.
   """
+
+  use Ash.Domain, otp_app: :huddlz
+
+  resources do
+    resource Huddlz.Notifications.Notification do
+      define :create_notification, action: :create
+      define :list_for_user, action: :for_user
+      define :mark_read, action: :mark_read
+      define :mark_unread, action: :mark_unread
+    end
+  end
 
   require Logger
 
   alias Huddlz.Accounts.User
   alias Huddlz.Mailer
   alias Huddlz.Notifications.DeliverWorker
+  alias Huddlz.Notifications.Notification
+  alias Huddlz.Notifications.Summary
   alias Huddlz.Notifications.Triggers
   alias HuddlzWeb.Endpoint
 
@@ -44,6 +59,8 @@ defmodule Huddlz.Notifications do
   def deliver(%User{id: user_id}, trigger, payload \\ %{}) when is_atom(trigger) do
     _ = Triggers.fetch!(trigger)
 
+    persist_in_app_notification(user_id, trigger, payload)
+
     %{user_id: user_id, trigger: Atom.to_string(trigger), payload: payload}
     |> DeliverWorker.new()
     |> Oban.insert()
@@ -57,6 +74,38 @@ defmodule Huddlz.Notifications do
         )
 
         err
+    end
+  end
+
+  # In-app feed persistence runs alongside the email enqueue. A failure here
+  # logs but does not block the email path — the two channels are decoupled.
+  defp persist_in_app_notification(user_id, trigger, payload) do
+    summary = Summary.summarize(trigger, payload)
+
+    Notification
+    |> Ash.Changeset.for_create(
+      :create,
+      %{
+        user_id: user_id,
+        trigger: Atom.to_string(trigger),
+        payload: payload,
+        title: summary.title,
+        description: summary.description,
+        source_url: summary.source_url
+      },
+      authorize?: false
+    )
+    |> Ash.create()
+    |> case do
+      {:ok, _notification} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning(
+          "Failed to persist #{inspect(trigger)} notification for user #{user_id}: #{inspect(reason)}"
+        )
+
+        :error
     end
   end
 

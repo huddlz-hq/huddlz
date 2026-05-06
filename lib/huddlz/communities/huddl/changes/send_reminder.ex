@@ -28,9 +28,16 @@ defmodule Huddlz.Communities.Huddl.Changes.SendReminder do
   end
 
   defp fan_out(huddl, trigger) do
+    huddl = Ash.load!(huddl, [:group], authorize?: false)
     user_ids = RecipientHelpers.rsvp_user_ids(huddl.id)
 
-    payload = %{"huddl_id" => huddl.id}
+    payload = %{
+      "huddl_id" => huddl.id,
+      "huddl_title" => to_string(huddl.title),
+      "group_name" => to_string(huddl.group.name),
+      "group_slug" => to_string(huddl.group.slug),
+      "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at)
+    }
 
     RecipientHelpers.deliver_each(user_ids, trigger, payload)
 

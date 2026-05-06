@@ -13,9 +13,11 @@ defmodule HuddlzWeb.MeLive do
 
   alias Huddlz.Communities
   alias Huddlz.Communities.Group
+  alias Huddlz.Notifications
   alias HuddlzWeb.Layouts
 
   @section_limit 6
+  @updates_limit 20
   @huddl_card_loads [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group]
   @valid_tabs ~w(huddlz groups invites updates)
 
@@ -31,7 +33,9 @@ defmodule HuddlzWeb.MeLive do
      |> assign(:waitlisted, empty_section())
      |> assign(:past, empty_section())
      |> assign(:hosting_groups, empty_section())
-     |> assign(:joined_groups, empty_section())}
+     |> assign(:joined_groups, empty_section())
+     |> assign(:updates, [])
+     |> assign(:unread_updates, 0)}
   end
 
   @impl true
@@ -60,7 +64,50 @@ defmodule HuddlzWeb.MeLive do
     |> assign(:joined_groups, load_groups_section(user, :get_joined))
   end
 
+  defp load_tab(socket, :updates, user) do
+    {updates, unread} = load_updates(user)
+
+    socket
+    |> assign(:updates, updates)
+    |> assign(:unread_updates, unread)
+  end
+
   defp load_tab(socket, _tab, _user), do: socket
+
+  defp load_updates(user) do
+    case Notifications.list_for_user(actor: user, page: [limit: @updates_limit, count: true]) do
+      {:ok, %{results: results}} ->
+        unread = Enum.count(results, &is_nil(&1.read_at))
+        {results, unread}
+
+      _ ->
+        {[], 0}
+    end
+  end
+
+  @impl true
+  def handle_event("mark_read", %{"id" => id}, socket) do
+    user = socket.assigns.current_user
+
+    with {:ok, notification} <- Ash.get(Notifications.Notification, id, actor: user),
+         {:ok, _updated} <- Notifications.mark_read(notification, actor: user) do
+      {:noreply, load_tab(socket, :updates, user)}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("mark_all_read", _params, socket) do
+    user = socket.assigns.current_user
+
+    socket.assigns.updates
+    |> Enum.filter(&is_nil(&1.read_at))
+    |> Enum.each(fn notification ->
+      Notifications.mark_read(notification, actor: user)
+    end)
+
+    {:noreply, load_tab(socket, :updates, user)}
+  end
 
   defp load_section(user, relationship, date_filter, sort) do
     page =
@@ -147,7 +194,7 @@ defmodule HuddlzWeb.MeLive do
           <% :invites -> %>
             <.placeholder_tab message="Coming soon — huddl invitations and join requests." />
           <% :updates -> %>
-            <.placeholder_tab message="Coming soon — reminders and announcements." />
+            <.updates_tab updates={@updates} unread={@unread_updates} />
         <% end %>
       </div>
     </Layouts.app>
@@ -405,6 +452,159 @@ defmodule HuddlzWeb.MeLive do
     """
   end
 
+  attr :updates, :list, required: true
+  attr :unread, :integer, required: true
+
+  defp updates_tab(assigns) do
+    ~H"""
+    <div class="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-10">
+      <div class="lg:col-span-2 space-y-6">
+        <div class="flex items-baseline justify-between gap-2">
+          <h2 class="font-display text-lg tracking-tight text-glow flex items-baseline gap-3">
+            <span class="mono-label text-primary/70">// Updates</span>
+            <span :if={@unread > 0} class="text-sm font-body font-normal text-primary">
+              ({@unread} unread)
+            </span>
+          </h2>
+          <button
+            :if={@unread > 0}
+            type="button"
+            phx-click="mark_all_read"
+            class="text-xs text-primary hover:underline font-medium tracking-wide uppercase"
+          >
+            Mark all as read
+          </button>
+        </div>
+
+        <%= if @updates == [] do %>
+          <div class="border border-dashed border-base-300 p-8 text-center text-base-content/50">
+            No updates yet. Reminders and group activity will appear here as they happen.
+          </div>
+        <% else %>
+          <ul class="space-y-3" id="updates-list">
+            <%= for notification <- @updates do %>
+              <.notification_card notification={notification} />
+            <% end %>
+          </ul>
+        <% end %>
+      </div>
+
+      <aside class="space-y-6">
+        <.notification_controls_panel />
+        <.updates_next_actions_panel />
+      </aside>
+    </div>
+    """
+  end
+
+  attr :notification, :map, required: true
+
+  defp notification_card(assigns) do
+    read? = !is_nil(assigns.notification.read_at)
+    assigns = assign(assigns, :read?, read?)
+
+    ~H"""
+    <li
+      id={"notification-#{@notification.id}"}
+      class={[
+        "border border-base-300 p-5",
+        @read? && "opacity-60"
+      ]}
+    >
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-baseline gap-2 flex-wrap">
+            <span class="text-xs px-2 py-0.5 font-medium border border-current/20 text-primary/80">
+              {category_label(@notification.trigger)}
+            </span>
+            <span class="text-xs text-base-content/50">
+              {format_time_ago(@notification.inserted_at)}
+            </span>
+          </div>
+          <h3 class="font-display text-base tracking-tight mt-2">
+            {@notification.title}
+          </h3>
+          <p :if={@notification.description} class="text-sm text-base-content/60 mt-1">
+            {@notification.description}
+          </p>
+        </div>
+
+        <div class="flex items-center gap-3 flex-shrink-0">
+          <.link
+            :if={@notification.source_url}
+            navigate={@notification.source_url}
+            class="text-xs text-primary hover:underline font-medium tracking-wide uppercase"
+          >
+            View →
+          </.link>
+          <button
+            :if={!@read?}
+            type="button"
+            phx-click="mark_read"
+            phx-value-id={@notification.id}
+            class="text-xs text-base-content/50 hover:text-primary font-medium tracking-wide uppercase"
+          >
+            Mark read
+          </button>
+        </div>
+      </div>
+    </li>
+    """
+  end
+
+  defp notification_controls_panel(assigns) do
+    ~H"""
+    <div class="border border-base-300 p-6">
+      <span class="mono-label text-primary/70">// Notification controls</span>
+      <p class="text-sm text-base-content/60 mt-3">
+        Tune which events email you and which stay in-app only.
+      </p>
+      <.link
+        navigate={~p"/profile/notifications"}
+        class="mt-4 inline-flex text-xs text-primary hover:underline font-medium tracking-wide uppercase"
+      >
+        Open preferences →
+      </.link>
+    </div>
+    """
+  end
+
+  defp updates_next_actions_panel(assigns) do
+    ~H"""
+    <div class="border border-base-300 p-6">
+      <span class="mono-label text-primary/70">// Useful next actions</span>
+      <ul class="mt-3 space-y-2 text-sm text-base-content/70">
+        <li>Jump to the related huddl or group with View.</li>
+        <li>Mark items as read once you've handled them.</li>
+        <li>Tune notification preferences in your profile.</li>
+      </ul>
+    </div>
+    """
+  end
+
+  defp category_label(trigger) when is_binary(trigger) do
+    case Notifications.Triggers.fetch(String.to_existing_atom(trigger)) do
+      {:ok, %{category: :transactional}} -> "Transactional"
+      {:ok, %{category: :activity}} -> "Activity"
+      {:ok, %{category: :digest}} -> "Digest"
+      _ -> "Update"
+    end
+  rescue
+    ArgumentError -> "Update"
+  end
+
+  defp format_time_ago(%DateTime{} = dt) do
+    diff_seconds = DateTime.diff(DateTime.utc_now(), dt, :second)
+
+    cond do
+      diff_seconds < 60 -> "just now"
+      diff_seconds < 3600 -> "#{div(diff_seconds, 60)}m ago"
+      diff_seconds < 86_400 -> "#{div(diff_seconds, 3600)}h ago"
+      diff_seconds < 7 * 86_400 -> "#{div(diff_seconds, 86_400)}d ago"
+      true -> Calendar.strftime(dt, "%b %d, %Y")
+    end
+  end
+
   attr :message, :string, required: true
 
   defp placeholder_tab(assigns) do
@@ -421,6 +621,10 @@ defmodule HuddlzWeb.MeLive do
     do: "Your upcoming RSVPs, waitlisted spots, and past gatherings — all in one place."
 
   defp tab_intro(:groups), do: "Groups you organize and groups you've joined."
+
+  defp tab_intro(:updates),
+    do: "Reminders, RSVPs, and group activity from across huddlz."
+
   defp tab_intro(_), do: nil
 
   defp format_starts_at(datetime) do

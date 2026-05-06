@@ -21,7 +21,16 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyRsvpConfirmation do
   defp notify(cs, huddl) do
     with true <- cs.context[:rsvp_created] == true,
          %{id: _} = actor <- cs.context[:private][:actor] do
-      Notifications.deliver(actor, :rsvp_confirmation, %{"huddl_id" => huddl.id})
+      huddl = Ash.load!(huddl, [:group], authorize?: false)
+
+      Notifications.deliver(actor, :rsvp_confirmation, %{
+        "huddl_id" => huddl.id,
+        "huddl_title" => to_string(huddl.title),
+        "group_name" => to_string(huddl.group.name),
+        "group_slug" => to_string(huddl.group.slug),
+        "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at)
+      })
+
       {:ok, huddl}
     else
       _ -> {:ok, huddl}
