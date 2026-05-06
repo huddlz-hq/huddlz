@@ -15,3 +15,7 @@ Feature: Global Header
     Given there are upcoming huddlz in the system
     When I visit "/?q=Elixir"
     Then I should see huddlz matching "Elixir"
+
+  Scenario: Signed-in user sees the redesigned account menu
+    Given I am signed in as "menu.user@example.com" with password "Password123!"
+    Then the account menu should expose the member, organizer, and account links

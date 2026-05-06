@@ -186,17 +186,17 @@ defmodule PasswordAuthenticationSteps do
   step "I should be signed in", context do
     session = context[:session] || context[:conn]
 
-    # The old test just checked for "Sign Out" link
+    # The old test just checked for "Sign out" link
     # Our custom navigation has it in a dropdown menu
-    assert_has(session, "a", text: "Sign Out")
+    assert_has(session, "a", text: "Sign out")
 
     {:ok, Map.merge(context, %{session: session, conn: session})}
   end
 
   step "I should not be signed in", context do
     session = context[:session] || context[:conn]
-    # Check that Sign Out link is NOT present
-    refute_has(session, "a", text: "Sign Out")
+    # Check that Sign out link is NOT present
+    refute_has(session, "a", text: "Sign out")
     {:ok, context}
   end
 

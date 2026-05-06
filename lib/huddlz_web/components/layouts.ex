@@ -70,46 +70,76 @@ defmodule HuddlzWeb.Layouts do
                 <ul
                   id="user-menu"
                   role="menu"
-                  hidden
                   phx-click-away={JS.hide(to: "#user-menu")}
                   phx-window-keydown={JS.hide(to: "#user-menu")}
                   phx-key="escape"
-                  class="absolute right-0 mt-3 z-50 p-1 border border-primary/20 bg-base-200 w-56 shadow-xl shadow-primary/5 rounded-md"
+                  class="hidden absolute right-0 mt-3 z-50 border border-base-300 bg-base-200 w-64 shadow-xl shadow-primary/5 rounded-md overflow-hidden"
                 >
-                  <li class="px-3 py-2.5 border-b border-base-300">
-                    <span class="mono-label text-primary/60">
-                      Signed in as
-                    </span>
-                    <p class="text-sm font-medium truncate mt-0.5">
-                      {@current_user.display_name || @current_user.email}
+                  <li class="px-4 py-3 border-b border-base-300">
+                    <p class="text-sm font-bold truncate">
+                      {@current_user.display_name || "Account"}
+                    </p>
+                    <p class="mono-label text-base-content/40 mt-0.5 truncate normal-case">
+                      {@current_user.email}
                     </p>
                   </li>
                   <li>
                     <a
-                      href="/profile"
-                      class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-base-300 hover:text-primary transition-colors"
+                      href="/me?tab=huddlz"
+                      class="block px-4 py-2.5 text-sm hover:bg-base-300 hover:text-primary transition-colors"
                     >
-                      <.icon name="hero-user" class="w-4 h-4 text-base-content/40" /> Profile
+                      My huddlz
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="/me?tab=groups"
+                      class="block px-4 py-2.5 text-sm hover:bg-base-300 hover:text-primary transition-colors"
+                    >
+                      My groups
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="/organize"
+                      class="flex items-center justify-between px-4 py-2.5 text-sm font-bold text-primary hover:bg-base-300 transition-colors"
+                    >
+                      Organizer workspace <span aria-hidden="true">→</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="/profile"
+                      class="block px-4 py-2.5 text-sm hover:bg-base-300 hover:text-primary transition-colors"
+                    >
+                      Profile &amp; preferences
                     </a>
                   </li>
                   <%= if @current_user.role == :admin do %>
                     <li>
                       <a
                         href="/admin"
-                        class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-base-300 hover:text-primary transition-colors"
+                        class="block px-4 py-2.5 text-sm hover:bg-base-300 hover:text-primary transition-colors"
                       >
-                        <.icon name="hero-shield-check" class="w-4 h-4 text-base-content/40" />
-                        Admin Panel
+                        Admin panel
                       </a>
                     </li>
                   <% end %>
-                  <li class="border-t border-base-300 mt-1 pt-1">
+                  <li>
+                    <a
+                      href="/"
+                      class="block px-4 py-2.5 text-sm hover:bg-base-300 hover:text-primary transition-colors"
+                    >
+                      Public home
+                    </a>
+                  </li>
+                  <li class="border-t border-base-300">
                     <.link
                       href="/sign-out"
                       method="delete"
-                      class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-base-300 text-error transition-colors"
+                      class="block px-4 py-2.5 text-sm text-error hover:bg-base-300 transition-colors"
                     >
-                      <.icon name="hero-arrow-right-on-rectangle" class="w-4 h-4" /> Sign Out
+                      Sign out
                     </.link>
                   </li>
                 </ul>

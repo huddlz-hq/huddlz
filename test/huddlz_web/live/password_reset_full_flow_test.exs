@@ -197,7 +197,7 @@ defmodule HuddlzWeb.PasswordResetFullFlowTest do
         end)
 
       # Should be signed in with the new password
-      assert_has(session, "a", text: "Sign Out")
+      assert_has(session, "a", text: "Sign out")
     end
 
     test "invalid reset link shows error immediately", %{conn: conn} do
