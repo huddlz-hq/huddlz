@@ -10,6 +10,8 @@ defmodule Huddlz.Communities.Group do
     authorizers: [Ash.Policy.Authorizer],
     extensions: [AshJsonApi.Resource, AshGraphql.Resource]
 
+  require Ash.Query
+
   graphql do
     type :group
 
@@ -92,8 +94,6 @@ defmodule Huddlz.Communities.Group do
       end
 
       prepare fn query, _ ->
-        require Ash.Query
-
         case query.arguments.query do
           nil ->
             Ash.Query.sort(query, name: :asc)
