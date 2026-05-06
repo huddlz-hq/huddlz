@@ -56,9 +56,12 @@ Group results reuse `Communities.search_groups` plus an inline offset-pagination
 - Group distance/location filtering: tracked alongside 1.3.
 - **Cut line:** filter panel polish (1.3).
 
-### 1.3 Filter panel slide-in
-Date / format / topics / huddl options / sort. Wire to existing Ash filter args; add what's missing (topics, sort options) as small follow-ups inside this ticket.
-- **Cut line:** saved searches.
+### 1.3 Filter panel slide-in — ✅ shipped
+**Decision:** Lifted the right-side drawer markup from the prototype (bottom sheet on mobile via Tailwind responsive classes). Built inline in `HuddlLive`, not extracted to a shared `<.drawer>`. Sections shipped: Date, Format, Location, Sort. Each toggle is a `<.link patch>` that computes a new URL via `form_params_from_assigns` + override merge — clicking an active toggle deselects (URL drops the param). A new `:sort` argument was added to the `Huddl :search` action with `:soonest` (default) and `:newest`. Active-filter chips below the chrome row now include a Sort chip when `?sort=newest`. Reset button reuses the existing `clear_filters` event.
+- **Topics dropped:** No data model exists for topics on Group/Huddl, and "Groups I follow" needs a follow association we don't have. Deferred to a separate ticket.
+- **"Huddl options" dropped** (Has open spots / Free only / Include online): no underlying data; defer alongside topics.
+- **Apply button dropped:** uses live URL patches instead, matching today's filter behavior.
+- **Cut lines that held:** saved searches; relevance/nearest sort; format multi-select.
 
 ### 1.4 16:9 imagery audit — ✅ shipped
 **Decision:** Audit found `aspect-video object-cover` already applied to every cover surface (cards in `community_components.ex`, detail heroes in `huddl_live/show.ex` and `group_live/show.ex`, all four upload-form previews) and `Huddlz.ImageProcessing.create_banner_thumbnail/3` already coerces uploads to a 1280×720 JPEG via `Image.thumbnail(..., crop: :center)`. Both layers were already in place. Shipped a small PR to (a) align helper-text on `huddl new`/`huddl edit` forms with the canonical "(16:9 ratio recommended)" wording the group forms use, and (b) add DOM regression assertions (`[class*='aspect-video']`) on huddl + group card grids and detail heroes so future refactors can't quietly drop the ratio. Profile avatar deliberately left square. No client-side cropper added; server-side center-crop is the single source of truth.
