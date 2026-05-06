@@ -197,7 +197,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
       conn
       |> visit("/discover")
       |> fill_in("Search huddlz", with: "nonexistent")
-      |> assert_has("p", text: "No huddlz found matching your filters")
+      |> assert_has("p", text: "No huddlz match this search")
       # No pagination should be shown
       |> refute_has("button", text: "1")
       |> refute_has("button[phx-click=change_page]")
