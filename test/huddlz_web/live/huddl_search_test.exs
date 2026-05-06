@@ -82,7 +82,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
   describe "search functionality" do
     test "displays all upcoming huddlz by default", %{conn: conn} do
       conn
-      |> visit("/")
+      |> visit("/discover")
       |> assert_has("h3", text: "Morning Yoga Session")
       |> assert_has("h3", text: "Virtual Book Club")
       |> assert_has("h3", text: "Hybrid Workshop")
@@ -112,7 +112,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       )
 
       conn
-      |> visit("/")
+      |> visit("/discover")
       |> assert_has("h3", text: "Capped Huddl")
       |> assert_has("span", text: "0/5 spots filled")
       |> assert_has("span", text: "Plenty of space")
@@ -147,14 +147,14 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> Ash.update!()
 
       conn
-      |> visit("/")
+      |> visit("/discover")
       |> assert_has("h3", text: "Mostly Empty Capped Huddl")
       |> assert_has("span", text: "1/5 spots filled")
     end
 
     test "searches by title", %{conn: conn} do
       conn
-      |> visit("/")
+      |> visit("/discover")
       |> fill_in("Search huddlz", with: "Yoga")
       |> assert_has("h3", text: "Morning Yoga Session")
       |> refute_has("h3", text: "Virtual Book Club")
@@ -163,7 +163,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
     test "searches by description", %{conn: conn} do
       conn
-      |> visit("/")
+      |> visit("/discover")
       |> fill_in("Search huddlz", with: "programming")
       |> assert_has("h3", text: "Hybrid Workshop")
       |> refute_has("h3", text: "Morning Yoga Session")
@@ -172,7 +172,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
     test "filters by event type", %{conn: conn} do
       conn
-      |> visit("/")
+      |> visit("/discover")
       |> select("Event Type", option: "Virtual")
       |> assert_has("h3", text: "Virtual Book Club")
       |> refute_has("h3", text: "Morning Yoga Session")
@@ -181,7 +181,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
     test "filters by date range - this week", %{conn: conn} do
       conn
-      |> visit("/")
+      |> visit("/discover")
       |> select("Date Range", option: "This Week")
       # Only events within 7 days should show
       |> assert_has("h3", text: "Morning Yoga Session")
@@ -193,7 +193,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
     test "filters by date range - this month", %{conn: conn} do
       conn
-      |> visit("/")
+      |> visit("/discover")
       |> select("Date Range", option: "This Month")
       # All future events within 30 days should show
       |> assert_has("h3", text: "Morning Yoga Session")
@@ -205,7 +205,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
     test "combines multiple filters", %{conn: conn} do
       conn
-      |> visit("/")
+      |> visit("/discover")
       |> fill_in("Search huddlz", with: "book")
       |> select("Event Type", option: "Virtual")
       |> select("Date Range", option: "This Week")
@@ -216,7 +216,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
     test "displays active filters", %{conn: conn} do
       conn
-      |> visit("/")
+      |> visit("/discover")
       |> fill_in("Search huddlz", with: "book")
       |> select("Event Type", option: "Virtual")
       |> assert_has("span", text: "Search: book")
@@ -225,7 +225,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
     test "clears all filters", %{conn: conn} do
       conn
-      |> visit("/")
+      |> visit("/discover")
       # Apply filters
       |> fill_in("Search huddlz", with: "book")
       |> select("Event Type", option: "Virtual")
@@ -239,7 +239,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
     test "only showing applied filters as active", %{conn: conn} do
       conn
-      |> visit("/")
+      |> visit("/discover")
       # No filters applied initially
       |> refute_has("span", text: "Search:")
       |> refute_has("span", text: "Type:")
@@ -278,7 +278,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
     test "shows result count", %{conn: conn} do
       conn
-      |> visit("/")
+      |> visit("/discover")
       |> assert_has("div", text: "Found 3 huddlz")
       |> select("Event Type", option: "Virtual")
       |> assert_has("div", text: "Found 1 huddl")
@@ -287,7 +287,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     test "displays huddlz in chronological order", %{conn: conn} do
       # Verify all huddlz are displayed in date order (earliest first)
       conn
-      |> visit("/")
+      |> visit("/discover")
       |> assert_has("h3", text: "Morning Yoga Session")
       |> assert_has("h3", text: "Virtual Book Club")
       |> assert_has("h3", text: "Hybrid Workshop")
@@ -295,7 +295,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
     test "shows no results message with active filters", %{conn: conn} do
       conn
-      |> visit("/")
+      |> visit("/discover")
       |> fill_in("Search huddlz", with: "nonexistent")
       |> assert_has(
         "p",
@@ -323,7 +323,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
       conn
       |> login(other_user)
-      |> visit("/")
+      |> visit("/discover")
       |> refute_has("h3", text: "Private Event")
     end
   end
@@ -332,7 +332,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     test "shows suggestions when typing a location", %{conn: conn} do
       stub_places_autocomplete(%{"aus" => [:austin]})
 
-      {:ok, view, _html} = live(conn, "/")
+      {:ok, view, _html} = live(conn, "/discover")
 
       view
       |> element("#location-autocomplete-input")
@@ -347,7 +347,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       stub_places_autocomplete(%{"aus" => [:austin]})
       stub_place_details(:defaults)
 
-      {:ok, view, _html} = live(conn, "/")
+      {:ok, view, _html} = live(conn, "/discover")
 
       view
       |> element("#location-autocomplete-input")
@@ -363,7 +363,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
 
     test "no suggestions for short queries", %{conn: conn} do
-      {:ok, view, _html} = live(conn, "/")
+      {:ok, view, _html} = live(conn, "/discover")
 
       view
       |> element("#location-autocomplete-input")
@@ -375,7 +375,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     test "shows no locations found for unmatched queries", %{conn: conn} do
       stub_places_autocomplete(%{})
 
-      {:ok, view, _html} = live(conn, "/")
+      {:ok, view, _html} = live(conn, "/discover")
 
       view
       |> element("#location-autocomplete-input")
@@ -389,7 +389,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     test "handles autocomplete API errors gracefully", %{conn: conn} do
       stub_places_autocomplete_error({:request_failed, :timeout})
 
-      {:ok, view, _html} = live(conn, "/")
+      {:ok, view, _html} = live(conn, "/discover")
 
       view
       |> element("#location-autocomplete-input")
@@ -404,7 +404,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       stub_places_autocomplete(%{"aus" => [:austin]})
       stub_place_details_error({:request_failed, :timeout})
 
-      {:ok, view, _html} = live(conn, "/")
+      {:ok, view, _html} = live(conn, "/discover")
 
       view
       |> element("#location-autocomplete-input")
@@ -422,7 +422,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       stub_places_autocomplete(%{"aus" => [:austin]})
       stub_place_details(:defaults)
 
-      {:ok, view, _html} = live(conn, "/")
+      {:ok, view, _html} = live(conn, "/discover")
 
       view
       |> element("#location-autocomplete-input")
@@ -445,7 +445,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     test "still shows huddlz when autocomplete returns no results", %{conn: conn} do
       stub_places_autocomplete(%{})
 
-      {:ok, view, _html} = live(conn, "/")
+      {:ok, view, _html} = live(conn, "/discover")
 
       view
       |> element("#location-autocomplete-input")
@@ -462,7 +462,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       stub_places_autocomplete(%{"aus" => [:austin]})
       stub_place_details(:defaults)
 
-      {:ok, view, _html} = live(conn, "/")
+      {:ok, view, _html} = live(conn, "/discover")
 
       view
       |> element("#location-autocomplete-input")
@@ -487,7 +487,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       stub_places_autocomplete(%{"aus" => [:austin]})
       stub_place_details(:defaults)
 
-      {:ok, view, _html} = live(conn, "/")
+      {:ok, view, _html} = live(conn, "/discover")
 
       # Apply text search filter
       view |> form("#huddl-search-form", %{"query" => "Yoga"}) |> render_change()
@@ -533,7 +533,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
 
     test "ArrowDown highlights suggestions sequentially", %{conn: conn} do
-      {:ok, view, _html} = live(conn, "/")
+      {:ok, view, _html} = live(conn, "/discover")
 
       view
       |> element("#location-autocomplete-input")
@@ -558,7 +558,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
 
     test "Escape closes suggestions", %{conn: conn} do
-      {:ok, view, _html} = live(conn, "/")
+      {:ok, view, _html} = live(conn, "/discover")
 
       view
       |> element("#location-autocomplete-input")
@@ -578,7 +578,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     test "Enter with highlighted suggestion selects it", %{conn: conn} do
       stub_place_details(:defaults)
 
-      {:ok, view, _html} = live(conn, "/")
+      {:ok, view, _html} = live(conn, "/discover")
 
       view
       |> element("#location-autocomplete-input")

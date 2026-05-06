@@ -85,7 +85,7 @@ defmodule Huddlz.Notifications.Senders.HuddlUpdated do
   end
 
   defp huddl_url(%{"group_slug" => slug}) when is_binary(slug), do: url(~p"/groups/#{slug}")
-  defp huddl_url(_), do: url(~p"/")
+  defp huddl_url(_), do: url(~p"/discover")
 
   defp changed_summary(%{"changed_fields" => fields}) when is_list(fields) and fields != [] do
     Enum.map_join(fields, ", ", &humanize_field/1)

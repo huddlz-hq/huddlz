@@ -71,5 +71,5 @@ defmodule Huddlz.Notifications.Senders.RsvpReceived do
        when is_binary(slug) and is_binary(id),
        do: url(~p"/groups/#{slug}/huddlz/#{id}")
 
-  defp huddl_url(_), do: url(~p"/")
+  defp huddl_url(_), do: url(~p"/discover")
 end

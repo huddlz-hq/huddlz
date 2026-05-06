@@ -42,8 +42,9 @@ Replace single-line footer with Product / Help / Legal / Open columns. Static li
 
 Highest visible UX shift; pulls the brand together around search.
 
-### 1.1 Landing page
-Decide and implement: does `/` become a marketing/landing surface (hero + featured huddl + upcoming cards) with discovery moving to `/huddlz`, or does `/` keep doing double duty? Spike first if this isn't obvious.
+### 1.1 Landing page — ✅ shipped
+**Decision:** `/` is `LandingLive` for anonymous visitors (hero + value tiles + upcoming preview + organizer band). Authenticated users are redirected from `/` to `/me` via the `:redirect_to_me_if_authenticated` LiveUserAuth hook. Discovery (search, filters, all-upcoming, scoped views) moved to `/discover` and is shared by anonymous and signed-in users. Personal sections (Hosting / Attending) live on `/me` (a thin shell — Phase 2.1 will fill in tabs).
+- Featured-huddl curation card is **deferred**: needs a `Huddl.is_featured` attribute + admin selection UI; revisit alongside Phase 3.x organizer workspace.
 - **Cut line:** new search results route (1.2).
 
 ### 1.2 Combined search results route

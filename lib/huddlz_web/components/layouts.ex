@@ -24,7 +24,7 @@ defmodule HuddlzWeb.Layouts do
           <%!-- Search (desktop) --%>
           <form
             method="get"
-            action="/"
+            action="/discover"
             role="search"
             aria-label="Search huddlz"
             class="hidden md:flex flex-1 max-w-2xl items-stretch h-12 border border-base-300 rounded-md overflow-hidden bg-base-200/40 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15 transition-colors"
@@ -130,10 +130,10 @@ defmodule HuddlzWeb.Layouts do
                   <% end %>
                   <li>
                     <a
-                      href="/"
+                      href="/discover"
                       class="block px-4 py-2.5 text-sm hover:bg-base-300 hover:text-primary transition-colors"
                     >
-                      Public home
+                      Discover huddlz
                     </a>
                   </li>
                   <li class="border-t border-base-300">
@@ -176,7 +176,7 @@ defmodule HuddlzWeb.Layouts do
         <%!-- Search (mobile) --%>
         <form
           method="get"
-          action="/"
+          action="/discover"
           role="search"
           aria-label="Search huddlz"
           class="md:hidden pb-4 flex items-stretch h-12 border border-base-300 rounded-md overflow-hidden bg-base-200/40 focus-within:border-primary"
@@ -229,7 +229,7 @@ defmodule HuddlzWeb.Layouts do
           <h2 class="mono-label text-base-content/40">Product</h2>
           <ul class="mt-3 space-y-2 text-sm font-bold">
             <li>
-              <a href="/" class="hover:text-primary transition-colors">Discover huddlz</a>
+              <a href="/discover" class="hover:text-primary transition-colors">Discover huddlz</a>
             </li>
             <li>
               <a href="/groups" class="hover:text-primary transition-colors">Groups</a>

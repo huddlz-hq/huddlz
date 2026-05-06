@@ -7,13 +7,13 @@ Feature: Global Header
   Scenario: Header chrome is visible on the home page
     Given the user is on the home page
     Then the header should show the huddlz brand
-    And the header should expose a global search form posting q to the home page
+    And the header should expose a global search form posting q to /discover
     And the header should expose an Organize link to /groups/new
     And the header should not expose a Groups link
 
-  Scenario: Header search posts the query to the home page
+  Scenario: Header search posts the query to /discover
     Given there are upcoming huddlz in the system
-    When I visit "/?q=Elixir"
+    When I visit "/discover?q=Elixir"
     Then I should see huddlz matching "Elixir"
 
   Scenario: Signed-in user sees the redesigned account menu

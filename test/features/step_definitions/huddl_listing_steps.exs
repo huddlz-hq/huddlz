@@ -56,9 +56,10 @@ defmodule HuddlListingSteps do
     Map.merge(context, %{huddlz: huddlz, huddlz_count: length(huddlz)})
   end
 
-  # Visit landing page
+  # Visit the discovery page (named "landing page" in legacy step text;
+  # the actual discovery surface lives at /discover after Phase 1.1).
   step "I visit the landing page", context do
-    conn = context.conn |> visit("/")
+    conn = context.conn |> visit("/discover")
     Map.put(context, :conn, conn)
   end
 
