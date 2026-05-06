@@ -14,7 +14,7 @@ defmodule HuddlzWeb.Layouts do
   def app(assigns) do
     ~H"""
     <header class="bg-base-100/95 backdrop-blur-sm border-b border-base-300 sticky top-0 z-50 px-6 sm:px-8 lg:px-12">
-      <nav class="mx-auto max-w-7xl">
+      <nav>
         <div class="flex h-20 items-center gap-5">
           <%!-- Brand --%>
           <a href="/" class="flex items-center flex-shrink-0">
@@ -179,15 +179,13 @@ defmodule HuddlzWeb.Layouts do
       </nav>
     </header>
 
-    <main class="px-4 py-8 sm:px-6 lg:px-8">
-      <div class="mx-auto max-w-6xl">
-        <.flash_group flash={@flash} />
-        {render_slot(@inner_block)}
-      </div>
+    <main class="px-6 py-8 sm:px-8 lg:px-12">
+      <.flash_group flash={@flash} />
+      {render_slot(@inner_block)}
     </main>
 
-    <footer class="border-t border-base-300 px-4 sm:px-6 lg:px-8">
-      <div class="mx-auto max-w-6xl py-6 flex items-center justify-between">
+    <footer class="border-t border-base-300 px-6 sm:px-8 lg:px-12">
+      <div class="py-6 flex items-center justify-between">
         <span class="text-xs text-base-content/30">huddlz</span>
         <a
           href="https://github.com/huddlz-hq/huddlz"
