@@ -209,7 +209,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
       conn
       |> visit("/")
       |> fill_in("Search huddlz", with: "Elixir")
-      |> click_button("Search")
+      |> within("#huddl-search-form", &click_button(&1, "Search"))
       # Should find the Elixir huddl
       |> assert_has("h3", text: "Elixir Programming Workshop")
       # Should not find the Python huddl
@@ -317,7 +317,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
       assert has_element?(view, "[data-testid='location-display']", "Austin, TX, USA")
 
       # Click Search button - should NOT reopen suggestions
-      session |> click_button("Search")
+      session |> within("#huddl-search-form", &click_button(&1, "Search"))
       refute has_element?(view, "[role='option']")
     end
 
