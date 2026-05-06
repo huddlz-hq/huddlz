@@ -352,6 +352,21 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> refute_has("span", text: "Date: This Week")
       |> refute_has("span", text: "Sort: Newest")
     end
+
+    test "Reset leaves the filter panel open", %{conn: conn} do
+      # The panel is URL-driven, not client-state-driven; Reset patches the
+      # URL but should not also trigger a hide-transition (the two raced and
+      # caused a flicker). After clicking Reset, the panel should still be
+      # mounted with all four sections visible so the user sees the toggles
+      # flip back to defaults.
+      conn
+      |> visit("/discover?date_filter=this_week")
+      |> click_button("Reset")
+      |> assert_has("#filter-panel h3", text: "Date")
+      |> assert_has("#filter-panel h3", text: "Format")
+      |> assert_has("#filter-panel h3", text: "Location")
+      |> assert_has("#filter-panel h3", text: "Sort")
+    end
   end
 
   describe "access control" do
