@@ -243,9 +243,14 @@ defmodule Huddlz.Communities.Huddl do
       end
 
       argument :relationship, :atom do
-        description "Restrict results to huddlz the actor hosts (creator) or is attending (RSVPed)."
+        description """
+        Restrict results to huddlz the actor hosts (creator), is attending
+        (confirmed RSVP), or is on the waitlist for. :attending excludes
+        waitlisted rows; use :waitlisted to find those instead.
+        """
+
         allow_nil? true
-        constraints one_of: [:hosting, :attending]
+        constraints one_of: [:hosting, :attending, :waitlisted]
       end
 
       argument :sort, :atom do
