@@ -60,8 +60,8 @@ Group results reuse `Communities.search_groups` plus an inline offset-pagination
 Date / format / topics / huddl options / sort. Wire to existing Ash filter args; add what's missing (topics, sort options) as small follow-ups inside this ticket.
 - **Cut line:** saved searches.
 
-### 1.4 16:9 imagery audit
-Enforce one cover ratio across discovery cards, results cards, detail pages, and organizer rows. Add cropping guidance if any sites still allow free-ratio uploads.
+### 1.4 16:9 imagery audit — ✅ shipped
+**Decision:** Audit found `aspect-video object-cover` already applied to every cover surface (cards in `community_components.ex`, detail heroes in `huddl_live/show.ex` and `group_live/show.ex`, all four upload-form previews) and `Huddlz.ImageProcessing.create_banner_thumbnail/3` already coerces uploads to a 1280×720 JPEG via `Image.thumbnail(..., crop: :center)`. Both layers were already in place. Shipped a small PR to (a) align helper-text on `huddl new`/`huddl edit` forms with the canonical "(16:9 ratio recommended)" wording the group forms use, and (b) add DOM regression assertions (`[class*='aspect-video']`) on huddl + group card grids and detail heroes so future refactors can't quietly drop the ratio. Profile avatar deliberately left square. No client-side cropper added; server-side center-crop is the single source of truth.
 
 ---
 

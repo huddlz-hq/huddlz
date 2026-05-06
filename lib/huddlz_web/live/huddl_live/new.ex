@@ -180,7 +180,7 @@ defmodule HuddlzWeb.HuddlLive.New do
                 Huddl Image
               </label>
               <p class="text-base-content/50 text-sm mb-3">
-                Upload a banner image for this huddl. If none is provided, the group image will be used.
+                Upload a banner image for this huddl (16:9 ratio recommended). If none is provided, the group image will be used.
               </p>
 
               <div

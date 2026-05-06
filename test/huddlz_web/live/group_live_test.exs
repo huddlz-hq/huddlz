@@ -34,6 +34,12 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> refute_has("a", text: "New Group")
     end
 
+    test "renders group cards in 16:9 aspect ratio", %{conn: conn} do
+      conn
+      |> visit(~p"/groups")
+      |> assert_has("[class*='aspect-video']")
+    end
+
     test "renders default rich link preview metadata", %{conn: conn} do
       html =
         conn
@@ -489,6 +495,12 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> assert_has("p", text: group.location)
       # No edit button for anonymous
       |> refute_has("a", text: "Edit Group")
+    end
+
+    test "renders detail hero in 16:9 aspect ratio", %{conn: conn, public_group: group} do
+      conn
+      |> visit(~p"/groups/#{group.slug}")
+      |> assert_has("[class*='aspect-video']")
     end
 
     test "displays owner badge for group owner", %{
