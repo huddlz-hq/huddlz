@@ -83,8 +83,16 @@ Joined / followed / organized splits. Reuses `Group.get_joined` and `Group.get_b
 Notifications feed from the existing `Notifications` domain. Read/unread + jump-to-source actions.
 - **Cut line:** notification preferences live at `/profile/notifications` already; only show controls inline if cheap.
 
-### 2.4 Invites — spike
-Decide whether to model `HuddlInvite` as a new resource (organizer-issued invitations with a state machine) or scope the tab to existing waitlist openings + group join approvals only. Spike produces a design note; the implementation is a follow-up ticket.
+### 2.4 Invites — spike — ✅ shipped
+**Decision:** Defer a new `HuddlInvite` resource. Ship the Invites tab as a tighter-filtered view of the `Notification` resource shipped in 2.3. See [phase-2-4-invites-spike.md](phase-2-4-invites-spike.md) for the full design note.
+
+Two product gaps captured for follow-up tickets (no new model in the MVP tab):
+- Private groups have no invitation mechanism (only path in is `:add_member` by an existing organizer who already knows the user).
+- Direct huddl invitations ("invite Sarah specifically") have no model — natural fit for the AI-native direction.
+
+### 2.4.1 Invites tab — implementation
+Wire `/me?tab=invites` as a filtered view of `Notification`. "Needs response" filter starts at `[:waitlist_promoted, :group_member_added]`. Reuses the notification card from the Updates tab (or shares via a tiny extracted component). Empty state copy and tab intro per the spike note.
+- **Cut line:** no new resources, no schema changes, no state machines. Direct invitations + group invitations are separate future tickets per the spike's documented gaps.
 
 ---
 
