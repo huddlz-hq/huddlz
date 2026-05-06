@@ -85,10 +85,24 @@ Feature: Me dashboard
     When I visit "/me?tab=invites"
     Then I should see "Coming soon — huddl invitations and join requests."
 
-  Scenario: Updates tab renders a coming-soon placeholder
+  Scenario: Updates tab shows an empty feed with notification controls panel
     Given I am signed in as "host@example.com"
     When I visit "/me?tab=updates"
-    Then I should see "Coming soon — reminders and announcements."
+    Then I should see "Reminders, RSVPs, and group activity from across huddlz."
+    And I should see "// Updates"
+    And I should see "No updates yet. Reminders and group activity will appear here as they happen."
+    And I should see "// Notification controls"
+    And I should see "Open preferences"
+
+  Scenario: RSVP confirmation appears as a notification on the Updates tab
+    Given a public group "Phoenix Devs" exists with owner "stranger@example.com"
+    And the huddl "Elixir Workshop" exists in group "Phoenix Devs" hosted by "stranger@example.com"
+    And "attendee@example.com" has RSVPed to "Elixir Workshop"
+    And I am signed in as "attendee@example.com"
+    When I visit "/me?tab=updates"
+    Then I should see "RSVP confirmed: Elixir Workshop"
+    And I should see "Activity"
+    And I should see "Mark all as read"
 
   Scenario: RSVPed user sees the huddl in the Upcoming section and the Coming up panel
     Given a public group "Phoenix Devs" exists with owner "stranger@example.com"
