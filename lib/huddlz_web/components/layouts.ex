@@ -15,24 +15,45 @@ defmodule HuddlzWeb.Layouts do
     ~H"""
     <header class="bg-base-100/95 backdrop-blur-sm border-b border-base-300 sticky top-0 z-50 px-4 sm:px-6 lg:px-8">
       <nav class="mx-auto max-w-6xl">
-        <div class="flex h-14 items-center justify-between">
-          <%!-- Logo + nav links --%>
-          <div class="flex items-center gap-8">
-            <a href="/" class="flex items-center group">
-              <span class="font-display text-lg tracking-tighter text-glow">huddlz</span>
-            </a>
-            <div class="hidden md:flex items-center gap-1">
-              <a
-                href="/groups"
-                class="px-3 py-1.5 text-sm font-medium text-base-content/50 hover:text-primary transition-colors"
-              >
-                Groups
-              </a>
-            </div>
-          </div>
+        <div class="flex h-14 items-center gap-4">
+          <%!-- Brand --%>
+          <a href="/" class="flex items-center group flex-shrink-0">
+            <span class="font-display text-lg tracking-tighter text-glow">huddlz</span>
+          </a>
+
+          <%!-- Search (desktop) --%>
+          <form
+            method="get"
+            action="/"
+            role="search"
+            aria-label="Search huddlz"
+            class="hidden md:flex flex-1 max-w-xl items-center gap-2"
+          >
+            <input
+              type="search"
+              name="q"
+              value={assigns[:search_query] || ""}
+              placeholder="Search huddlz"
+              aria-label="Search huddlz"
+              class="flex-1 border-0 border-b border-base-300 bg-transparent focus:border-primary focus:ring-0 px-2 py-1.5 text-sm placeholder:text-base-content/40"
+            />
+            <button
+              type="submit"
+              aria-label="Search"
+              class="p-1.5 text-primary hover:bg-primary/10 transition-colors"
+            >
+              <.icon name="hero-magnifying-glass" class="w-5 h-5" />
+            </button>
+          </form>
 
           <%!-- Right side --%>
-          <div class="flex items-center gap-3">
+          <div class="ml-auto flex items-center gap-3">
+            <a
+              href="/groups/new"
+              class="hidden md:inline-flex px-3 py-1.5 text-sm font-medium text-base-content/70 hover:text-primary transition-colors"
+            >
+              Organize
+            </a>
             <%= if @current_user do %>
               <div class="relative">
                 <button
@@ -109,6 +130,7 @@ defmodule HuddlzWeb.Layouts do
             <% end %>
             <%!-- Mobile menu button --%>
             <button
+              type="button"
               class="md:hidden p-1.5 hover:bg-base-300 transition-colors"
               phx-click={JS.toggle(to: "#mobile-menu")}
             >
@@ -116,10 +138,39 @@ defmodule HuddlzWeb.Layouts do
             </button>
           </div>
         </div>
+
+        <%!-- Search (mobile) --%>
+        <form
+          method="get"
+          action="/"
+          role="search"
+          aria-label="Search huddlz"
+          class="md:hidden pb-3 flex items-center gap-2"
+        >
+          <input
+            type="search"
+            name="q"
+            value={assigns[:search_query] || ""}
+            placeholder="Search huddlz"
+            aria-label="Search huddlz"
+            class="flex-1 border-0 border-b border-base-300 bg-transparent focus:border-primary focus:ring-0 px-2 py-1.5 text-sm placeholder:text-base-content/40"
+          />
+          <button
+            type="submit"
+            aria-label="Search"
+            class="p-1.5 text-primary hover:bg-primary/10 transition-colors"
+          >
+            <.icon name="hero-magnifying-glass" class="w-5 h-5" />
+          </button>
+        </form>
+
         <%!-- Mobile menu --%>
         <div id="mobile-menu" class="hidden md:hidden border-t border-base-300 py-2 pb-3">
-          <a href="/groups" class="block px-3 py-2 text-sm hover:bg-base-300 hover:text-primary">
-            Groups
+          <a
+            href="/groups/new"
+            class="block px-3 py-2 text-sm hover:bg-base-300 hover:text-primary"
+          >
+            Organize
           </a>
         </div>
       </nav>
