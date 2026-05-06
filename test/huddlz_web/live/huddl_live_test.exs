@@ -291,6 +291,15 @@ defmodule HuddlzWeb.HuddlLiveTest do
         |> assert_has("h3", text: "Elixir Programming Workshop")
       end
     end
+
+    test "empty discover with no filters shows the soft 'no upcoming' copy", %{conn: conn} do
+      # No huddlz created in this test — the page should not nudge users
+      # toward Groups when there are simply no upcoming huddlz to show.
+      conn
+      |> visit("/discover")
+      |> assert_has("p", text: "No upcoming huddlz right now.")
+      |> refute_has("p", text: "Try Groups")
+    end
   end
 
   describe "location search" do

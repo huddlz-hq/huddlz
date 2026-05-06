@@ -1062,8 +1062,13 @@ defmodule HuddlzWeb.HuddlLive do
   defp empty_message(%{yours: :hosting}), do: "You aren't hosting any huddlz that match."
   defp empty_message(%{yours: :attending}), do: "You aren't attending any huddlz that match."
 
-  defp empty_message(%{scope: :huddlz}),
-    do: "No huddlz match this search. Try Groups or change your filters."
+  defp empty_message(%{scope: :huddlz} = assigns) do
+    if any_filter_active?(assigns) do
+      "No huddlz match this search. Try Groups or change your filters."
+    else
+      "No upcoming huddlz right now."
+    end
+  end
 
   defp humanize_filter(filter) do
     filter
