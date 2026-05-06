@@ -248,6 +248,13 @@ defmodule Huddlz.Communities.Huddl do
         constraints one_of: [:hosting, :attending]
       end
 
+      argument :sort, :atom do
+        description "Result ordering. :soonest sorts upcoming huddlz first; :newest sorts by recently created."
+        allow_nil? true
+        default :soonest
+        constraints one_of: [:soonest, :newest]
+      end
+
       pagination keyset?: true,
                  offset?: true,
                  countable: true,
@@ -256,7 +263,6 @@ defmodule Huddlz.Communities.Huddl do
 
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
       prepare Huddlz.Communities.Huddl.Preparations.ApplySearchFilters
-      prepare build(sort: [starts_at: :asc])
     end
 
     read :by_group do

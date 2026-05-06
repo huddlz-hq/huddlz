@@ -36,6 +36,7 @@ defmodule HuddlzWeb.MeLive do
         nil,
         nil,
         relationship,
+        :soonest,
         actor: user,
         page: [limit: @section_limit, offset: 0, count: true]
       )
