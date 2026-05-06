@@ -103,11 +103,16 @@ defmodule HuddlzWeb.HuddlLive do
     |> assign(:event_type_filter, normalize_event_type(params["event_type"]))
     |> assign(:date_filter, normalize_date_filter(params["date_filter"]))
     |> assign(:distance_miles, parse_distance(params["distance"] || params["distance_miles"]))
+    |> assign(:sort, parse_sort(params["sort"]))
     |> assign(:location_text, location_text)
     |> assign(:location_lat, location_lat)
     |> assign(:location_lng, location_lng)
     |> assign(:location_active, location_active)
   end
+
+  defp parse_sort("newest"), do: :newest
+  defp parse_sort(:newest), do: :newest
+  defp parse_sort(_), do: :soonest
 
   defp parse_location_params(params, socket) do
     case {params["lat"], params["lng"]} do
@@ -269,10 +274,17 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   defp build_path(socket, params) do
+    # Form events (phx-change/phx-submit) only carry the inputs that exist on
+    # that form. Filters now live on a separate panel from the search input,
+    # so any submission would otherwise clobber filters not present in the
+    # event params. Merge form_params over the current assigns-derived state
+    # so missing keys preserve their current value.
+    merged = Map.merge(form_params_from_assigns(socket), params)
+
     scoped_path(
       socket.assigns.scope,
       socket.assigns.yours,
-      merge_active_location(socket, params)
+      merge_active_location(socket, merged)
     )
   end
 
@@ -327,7 +339,8 @@ defmodule HuddlzWeb.HuddlLive do
     [
       {"q", form_params["query"]},
       {"event_type", form_params["event_type"]},
-      {"date_filter", form_params["date_filter"] || "upcoming"}
+      {"date_filter", form_params["date_filter"] || "upcoming"},
+      {"sort", form_params["sort"] || "soonest"}
     ]
   end
 
@@ -349,6 +362,7 @@ defmodule HuddlzWeb.HuddlLive do
   defp drop_param?({_, ""}), do: true
   defp drop_param?({_, nil}), do: true
   defp drop_param?({"date_filter", "upcoming"}), do: true
+  defp drop_param?({"sort", "soonest"}), do: true
   defp drop_param?(_), do: false
 
   defp put_yours(params, :all), do: params
@@ -566,6 +580,79 @@ defmodule HuddlzWeb.HuddlLive do
     }
   end
 
+  defp show_filter_panel(js \\ %JS{}) do
+    js
+    |> JS.show(to: "#filter-panel")
+    |> JS.show(
+      to: "#filter-panel-bg",
+      time: 200,
+      transition: {"transition-opacity ease-out duration-200", "opacity-0", "opacity-100"}
+    )
+    |> JS.show(
+      to: "#filter-panel-container",
+      time: 200,
+      transition:
+        {"transition-transform ease-out duration-200",
+         "translate-y-full lg:translate-y-0 lg:translate-x-full",
+         "translate-y-0 lg:translate-x-0"}
+    )
+    |> JS.add_class("overflow-hidden", to: "body")
+    |> JS.focus_first(to: "#filter-panel-container")
+  end
+
+  defp hide_filter_panel(js \\ %JS{}) do
+    js
+    |> JS.hide(
+      to: "#filter-panel-bg",
+      time: 200,
+      transition: {"transition-opacity ease-in duration-200", "opacity-100", "opacity-0"}
+    )
+    |> JS.hide(
+      to: "#filter-panel-container",
+      time: 200,
+      transition:
+        {"transition-transform ease-in duration-200", "translate-y-0 lg:translate-x-0",
+         "translate-y-full lg:translate-y-0 lg:translate-x-full"}
+    )
+    |> JS.hide(to: "#filter-panel", transition: {"block", "block", "hidden"})
+    |> JS.remove_class("overflow-hidden", to: "body")
+  end
+
+  defp filter_url(overrides, assigns) do
+    params = Map.merge(form_params_from_assigns(assigns), overrides)
+    scoped_path(assigns.scope, assigns.yours, params)
+  end
+
+  defp date_toggle_url(target, assigns) do
+    new_value = if assigns.date_filter == target, do: "upcoming", else: target
+    filter_url(%{"date_filter" => new_value}, assigns)
+  end
+
+  defp format_toggle_url(target, assigns) do
+    new_value = if assigns.event_type_filter == target, do: nil, else: target
+    filter_url(%{"event_type" => new_value}, assigns)
+  end
+
+  defp sort_toggle_url(target, assigns) do
+    new_value = if Atom.to_string(assigns.sort) == target, do: "soonest", else: target
+    filter_url(%{"sort" => new_value}, assigns)
+  end
+
+  defp distance_change_url(target, assigns) do
+    filter_url(%{"distance_miles" => target}, assigns)
+  end
+
+  defp toggle_class(active?) do
+    base =
+      "inline-flex items-center justify-center min-h-9 px-3 text-sm font-medium border transition-colors"
+
+    if active? do
+      base <> " border-primary bg-primary/15 text-primary"
+    else
+      base <> " border-base-300 hover:border-primary/50 text-base-content"
+    end
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -594,7 +681,7 @@ defmodule HuddlzWeb.HuddlLive do
 
         <div class="mb-8">
           <form id="huddl-search-form" phx-change="filter_change" phx-submit="search">
-            <div class="flex flex-wrap items-end gap-2">
+            <div class="flex flex-wrap items-stretch gap-2">
               <div class="flex-grow min-w-[200px]">
                 <label for="search-query" class="sr-only">{search_label(@scope)}</label>
                 <input
@@ -607,77 +694,20 @@ defmodule HuddlzWeb.HuddlLive do
                   class="w-full h-12 pl-0 pr-4 border-0 border-b border-base-300 bg-transparent text-base focus:outline-none focus:ring-0 focus:border-primary transition-colors placeholder:text-base-content/30"
                 />
               </div>
-              <%= if @scope == :huddlz do %>
-                <label for="event-type" class="sr-only">Event Type</label>
-                <select
-                  id="event-type"
-                  name="event_type"
-                  class="h-12 px-3 border border-base-300 bg-base-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
-                >
-                  <option value="">All Types</option>
-                  <option value="in_person" selected={@event_type_filter == "in_person"}>
-                    In Person
-                  </option>
-                  <option value="virtual" selected={@event_type_filter == "virtual"}>
-                    Virtual
-                  </option>
-                  <option value="hybrid" selected={@event_type_filter == "hybrid"}>
-                    Hybrid
-                  </option>
-                </select>
-                <label for="date-range" class="sr-only">Date Range</label>
-                <select
-                  id="date-range"
-                  name="date_filter"
-                  class="h-12 px-3 border border-base-300 bg-base-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
-                >
-                  <option value="upcoming" selected={@date_filter == "upcoming"}>
-                    All Upcoming
-                  </option>
-                  <option value="this_week" selected={@date_filter == "this_week"}>
-                    This Week
-                  </option>
-                  <option value="this_month" selected={@date_filter == "this_month"}>
-                    This Month
-                  </option>
-                </select>
-              <% end %>
               <.button variant="primary" type="submit" class="h-12 active:scale-[0.98]">
                 Search
               </.button>
-            </div>
-            <%= if @scope == :huddlz do %>
-              <div class="flex flex-wrap items-end gap-2 mt-2">
-                <div class="flex-grow min-w-[200px]">
-                  <.live_component
-                    module={HuddlzWeb.Live.LocationAutocomplete}
-                    id="location-autocomplete"
-                    field_name="location"
-                    value={@location_text}
-                    latitude={@location_lat}
-                    longitude={@location_lng}
-                    label="Location"
-                    label_class="sr-only"
-                    placeholder="City, State"
-                  />
-                </div>
-                <label for="distance-radius" class="sr-only">Distance</label>
-                <select
-                  id="distance-radius"
-                  name="distance_miles"
-                  disabled={!@location_active}
-                  class={[
-                    "h-12 px-3 border border-base-300 bg-base-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors",
-                    !@location_active && "opacity-50"
-                  ]}
+              <%= if @scope == :huddlz do %>
+                <button
+                  type="button"
+                  phx-click={show_filter_panel()}
+                  aria-controls="filter-panel"
+                  class="h-12 px-4 inline-flex items-center gap-2 border border-base-300 hover:border-primary/50 text-base-content text-sm font-medium transition-colors active:scale-[0.98]"
                 >
-                  <option value="10" selected={@distance_miles == 10}>10 miles</option>
-                  <option value="25" selected={@distance_miles == 25}>25 miles</option>
-                  <option value="50" selected={@distance_miles == 50}>50 miles</option>
-                  <option value="100" selected={@distance_miles == 100}>100 miles</option>
-                </select>
-              </div>
-            <% end %>
+                  <.icon name="hero-adjustments-horizontal" class="w-4 h-4" /> Filters
+                </button>
+              <% end %>
+            </div>
           </form>
 
           <%= if @scope == :huddlz and any_filter_active?(assigns) do %>
@@ -696,6 +726,11 @@ defmodule HuddlzWeb.HuddlLive do
               <%= if @date_filter != "upcoming" do %>
                 <span class="text-xs px-2.5 py-1 bg-secondary/10 text-secondary font-medium inline-flex items-center">
                   Date: {humanize_filter(@date_filter)}
+                </span>
+              <% end %>
+              <%= if @sort != :soonest do %>
+                <span class="text-xs px-2.5 py-1 bg-secondary/10 text-secondary font-medium inline-flex items-center">
+                  Sort: {humanize_filter(@sort)}
                 </span>
               <% end %>
               <%= if @location_active do %>
@@ -777,6 +812,159 @@ defmodule HuddlzWeb.HuddlLive do
           >
             ← All huddlz
           </.link>
+        </div>
+
+        <div
+          :if={@scope == :huddlz}
+          id="filter-panel"
+          class="hidden fixed inset-0 z-50"
+          phx-remove={hide_filter_panel()}
+          data-cancel={JS.exec("phx-remove", to: "#filter-panel")}
+        >
+          <div
+            id="filter-panel-bg"
+            class="fixed inset-0 bg-black/60"
+            phx-click={JS.exec("data-cancel", to: "#filter-panel")}
+            aria-hidden="true"
+          />
+          <.focus_wrap
+            id="filter-panel-container"
+            phx-window-keydown={JS.exec("data-cancel", to: "#filter-panel")}
+            phx-key="escape"
+            class="fixed bottom-0 inset-x-0 lg:bottom-auto lg:top-0 lg:right-0 lg:left-auto w-full lg:w-[430px] max-h-[76vh] lg:max-h-none lg:h-screen border-t lg:border-t-0 lg:border-l border-base-300 bg-base-100 flex flex-col"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="filter-panel-title"
+          >
+            <header class="flex items-center justify-between px-5 py-4 border-b border-base-300 flex-shrink-0">
+              <h2 id="filter-panel-title" class="font-display text-2xl tracking-tight text-glow">
+                Filters
+              </h2>
+              <button
+                type="button"
+                phx-click={JS.exec("data-cancel", to: "#filter-panel")}
+                aria-label="Close filters"
+                class="text-base-content/40 hover:text-base-content transition-colors p-1"
+              >
+                <.icon name="hero-x-mark" class="w-5 h-5" />
+              </button>
+            </header>
+
+            <div class="flex-1 overflow-y-auto px-5 py-4 space-y-6">
+              <section>
+                <h3 class="mono-label text-base-content/60 mb-3">Date</h3>
+                <div class="flex flex-wrap gap-2">
+                  <.link
+                    patch={date_toggle_url("upcoming", assigns)}
+                    class={toggle_class(@date_filter == "upcoming")}
+                  >
+                    Upcoming
+                  </.link>
+                  <.link
+                    patch={date_toggle_url("this_week", assigns)}
+                    class={toggle_class(@date_filter == "this_week")}
+                  >
+                    This week
+                  </.link>
+                  <.link
+                    patch={date_toggle_url("this_month", assigns)}
+                    class={toggle_class(@date_filter == "this_month")}
+                  >
+                    This month
+                  </.link>
+                  <.link
+                    patch={date_toggle_url("all", assigns)}
+                    class={toggle_class(@date_filter == "all")}
+                  >
+                    All
+                  </.link>
+                </div>
+              </section>
+
+              <section>
+                <h3 class="mono-label text-base-content/60 mb-3">Format</h3>
+                <div class="flex flex-wrap gap-2">
+                  <.link
+                    patch={format_toggle_url("in_person", assigns)}
+                    class={toggle_class(@event_type_filter == "in_person")}
+                  >
+                    In person
+                  </.link>
+                  <.link
+                    patch={format_toggle_url("virtual", assigns)}
+                    class={toggle_class(@event_type_filter == "virtual")}
+                  >
+                    Virtual
+                  </.link>
+                  <.link
+                    patch={format_toggle_url("hybrid", assigns)}
+                    class={toggle_class(@event_type_filter == "hybrid")}
+                  >
+                    Hybrid
+                  </.link>
+                </div>
+              </section>
+
+              <section>
+                <h3 class="mono-label text-base-content/60 mb-3">Location</h3>
+                <div class="space-y-3">
+                  <.live_component
+                    module={HuddlzWeb.Live.LocationAutocomplete}
+                    id="location-autocomplete"
+                    field_name="location"
+                    value={@location_text}
+                    latitude={@location_lat}
+                    longitude={@location_lng}
+                    label="City"
+                    label_class="mono-label text-base-content/60 mb-2 block"
+                    placeholder="City, State"
+                  />
+                  <div :if={@location_active}>
+                    <span class="mono-label text-base-content/60 mb-2 block">Distance</span>
+                    <div class="flex flex-wrap gap-2">
+                      <%= for miles <- [10, 25, 50, 100] do %>
+                        <.link
+                          patch={distance_change_url(Integer.to_string(miles), assigns)}
+                          class={toggle_class(@distance_miles == miles)}
+                        >
+                          {miles} mi
+                        </.link>
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section>
+                <h3 class="mono-label text-base-content/60 mb-3">Sort</h3>
+                <div class="flex flex-wrap gap-2">
+                  <.link
+                    patch={sort_toggle_url("soonest", assigns)}
+                    class={toggle_class(@sort == :soonest)}
+                  >
+                    Soonest
+                  </.link>
+                  <.link
+                    patch={sort_toggle_url("newest", assigns)}
+                    class={toggle_class(@sort == :newest)}
+                  >
+                    Newest
+                  </.link>
+                </div>
+              </section>
+            </div>
+
+            <footer class="flex items-center justify-end px-5 py-4 border-t border-base-300 flex-shrink-0">
+              <.button
+                variant="ghost"
+                size="sm"
+                type="button"
+                phx-click={JS.exec("data-cancel", to: "#filter-panel") |> JS.push("clear_filters")}
+              >
+                Reset
+              </.button>
+            </footer>
+          </.focus_wrap>
         </div>
       </div>
     </Layouts.app>
@@ -870,7 +1058,8 @@ defmodule HuddlzWeb.HuddlLive do
     base = %{
       "query" => assigns.search_query,
       "event_type" => assigns.event_type_filter,
-      "date_filter" => assigns.date_filter
+      "date_filter" => assigns.date_filter,
+      "sort" => Atom.to_string(assigns.sort)
     }
 
     if assigns.location_active do
@@ -887,7 +1076,7 @@ defmodule HuddlzWeb.HuddlLive do
 
   defp any_filter_active?(assigns) do
     not is_nil(assigns.search_query) or not is_nil(assigns.event_type_filter) or
-      assigns.date_filter != "upcoming" or assigns.location_active
+      assigns.date_filter != "upcoming" or assigns.location_active or assigns.sort != :soonest
   end
 
   defp empty_message(%{scope: :groups}),

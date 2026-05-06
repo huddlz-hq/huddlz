@@ -173,7 +173,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     test "filters by event type", %{conn: conn} do
       conn
       |> visit("/discover")
-      |> select("Event Type", option: "Virtual")
+      |> click_link("#filter-panel a", "Virtual")
       |> assert_has("h3", text: "Virtual Book Club")
       |> refute_has("h3", text: "Morning Yoga Session")
       |> refute_has("h3", text: "Hybrid Workshop")
@@ -182,7 +182,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     test "filters by date range - this week", %{conn: conn} do
       conn
       |> visit("/discover")
-      |> select("Date Range", option: "This Week")
+      |> click_link("#filter-panel a", "This week")
       # Only events within 7 days should show
       |> assert_has("h3", text: "Morning Yoga Session")
       |> assert_has("h3", text: "Virtual Book Club")
@@ -194,7 +194,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     test "filters by date range - this month", %{conn: conn} do
       conn
       |> visit("/discover")
-      |> select("Date Range", option: "This Month")
+      |> click_link("#filter-panel a", "This month")
       # All future events within 30 days should show
       |> assert_has("h3", text: "Morning Yoga Session")
       |> assert_has("h3", text: "Virtual Book Club")
@@ -207,8 +207,8 @@ defmodule HuddlzWeb.HuddlSearchTest do
       conn
       |> visit("/discover")
       |> fill_in("Search huddlz", with: "book")
-      |> select("Event Type", option: "Virtual")
-      |> select("Date Range", option: "This Week")
+      |> click_link("#filter-panel a", "Virtual")
+      |> click_link("#filter-panel a", "This week")
       |> assert_has("h3", text: "Virtual Book Club")
       |> refute_has("h3", text: "Morning Yoga Session")
       |> refute_has("h3", text: "Hybrid Workshop")
@@ -218,7 +218,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       conn
       |> visit("/discover")
       |> fill_in("Search huddlz", with: "book")
-      |> select("Event Type", option: "Virtual")
+      |> click_link("#filter-panel a", "Virtual")
       |> assert_has("span", text: "Search: book")
       |> assert_has("span", text: "Type: Virtual")
     end
@@ -228,7 +228,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> visit("/discover")
       # Apply filters
       |> fill_in("Search huddlz", with: "book")
-      |> select("Event Type", option: "Virtual")
+      |> click_link("#filter-panel a", "Virtual")
       # Clear filters
       |> click_button("Clear all")
       # All huddlz should be visible again
@@ -245,7 +245,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> refute_has("span", text: "Type:")
       |> refute_has("span", text: "Date:")
       # Select Event Type
-      |> select("Event Type", option: "Virtual")
+      |> click_link("#filter-panel a", "Virtual")
       |> refute_has("span", text: "Search:")
       |> assert_has("span", text: "Type: Virtual")
       |> refute_has("span", text: "Date:")
@@ -255,12 +255,12 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> assert_has("span", text: "Type: Virtual")
       |> refute_has("span", text: "Date:")
       # Select Date Range
-      |> select("Date Range", option: "This Week")
+      |> click_link("#filter-panel a", "This week")
       |> assert_has("span", text: "Search: book")
       |> assert_has("span", text: "Type: Virtual")
       |> assert_has("span", text: "Date: This Week")
       # Clear Date Range
-      |> select("Date Range", option: "All Upcoming")
+      |> click_link("#filter-panel a", "Upcoming")
       |> assert_has("span", text: "Search: book")
       |> assert_has("span", text: "Type: Virtual")
       |> refute_has("span", text: "Date:")
@@ -270,7 +270,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> assert_has("span", text: "Type: Virtual")
       |> refute_has("span", text: "Date:")
       # Clear Event Type
-      |> select("Event Type", option: "All Types")
+      |> click_link("#filter-panel a", "Virtual")
       |> refute_has("span", text: "Search:")
       |> refute_has("span", text: "Type:")
       |> refute_has("span", text: "Date:")
@@ -280,7 +280,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       conn
       |> visit("/discover")
       |> assert_has("div", text: "Found 3 huddlz")
-      |> select("Event Type", option: "Virtual")
+      |> click_link("#filter-panel a", "Virtual")
       |> assert_has("div", text: "Found 1 huddl")
     end
 
@@ -301,6 +301,56 @@ defmodule HuddlzWeb.HuddlSearchTest do
         "p",
         text: "No huddlz match this search. Try Groups or change your filters."
       )
+    end
+  end
+
+  describe "filter panel" do
+    test "Filters trigger button is rendered for huddlz scope", %{conn: conn} do
+      conn
+      |> visit("/discover")
+      |> assert_has("button", text: "Filters")
+    end
+
+    test "Filters trigger is hidden under scope=groups", %{conn: conn} do
+      conn
+      |> visit("/discover?scope=groups")
+      |> refute_has("button", text: "Filters")
+    end
+
+    test "panel renders all four sections", %{conn: conn} do
+      conn
+      |> visit("/discover")
+      |> assert_has("#filter-panel h3", text: "Date")
+      |> assert_has("#filter-panel h3", text: "Format")
+      |> assert_has("#filter-panel h3", text: "Location")
+      |> assert_has("#filter-panel h3", text: "Sort")
+    end
+
+    test "Sort: Newest patches URL and re-renders chip", %{conn: conn} do
+      conn
+      |> visit("/discover")
+      |> click_link("#filter-panel a", "Newest")
+      |> assert_path(~p"/discover", query_params: %{"sort" => "newest"})
+      |> assert_has("span", text: "Sort: Newest")
+    end
+
+    test "Sort: clicking Soonest while sort=newest drops sort from URL", %{conn: conn} do
+      conn
+      |> visit("/discover?sort=newest")
+      |> assert_has("span", text: "Sort: Newest")
+      |> click_link("#filter-panel a", "Soonest")
+      |> assert_path(~p"/discover")
+      |> refute_has("span", text: "Sort: Newest")
+    end
+
+    test "Reset button clears all filter params", %{conn: conn} do
+      conn
+      |> visit("/discover?date_filter=this_week&sort=newest")
+      |> assert_has("span", text: "Date: This Week")
+      |> assert_has("span", text: "Sort: Newest")
+      |> click_button("Reset")
+      |> refute_has("span", text: "Date: This Week")
+      |> refute_has("span", text: "Sort: Newest")
     end
   end
 
