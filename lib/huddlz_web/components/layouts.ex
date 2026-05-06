@@ -217,28 +217,73 @@ defmodule HuddlzWeb.Layouts do
       {render_slot(@inner_block)}
     </main>
 
-    <footer class="border-t border-base-300 px-6 sm:px-8 lg:px-12">
-      <div class="py-6 flex items-center justify-between">
-        <span class="text-xs text-base-content/30">huddlz</span>
-        <a
-          href="https://github.com/huddlz-hq/huddlz"
-          class="flex items-center gap-1.5 text-xs text-base-content/30 hover:text-primary transition-colors"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="14"
-            viewBox="0 0 16 16"
-            width="14"
-            aria-hidden="true"
-          >
-            <path
-              fill="currentColor"
-              d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
-            >
-            </path>
-          </svg>
-          Contribute on GitHub
-        </a>
+    <footer class="border-t border-base-300 px-6 sm:px-8 lg:px-12 mt-12 sm:mt-16 lg:mt-20">
+      <div class="py-12 grid grid-cols-2 lg:grid-cols-5 gap-8">
+        <div class="col-span-2 lg:col-span-1">
+          <p class="font-display text-2xl tracking-tighter text-glow">huddlz</p>
+          <p class="mt-3 text-sm text-base-content/60 max-w-xs">
+            Real-life communities, easier to discover and organize.
+          </p>
+        </div>
+        <nav aria-label="Product">
+          <h2 class="mono-label text-base-content/40">Product</h2>
+          <ul class="mt-3 space-y-2 text-sm font-bold">
+            <li>
+              <a href="/" class="hover:text-primary transition-colors">Discover huddlz</a>
+            </li>
+            <li>
+              <a href="/groups" class="hover:text-primary transition-colors">Groups</a>
+            </li>
+            <li>
+              <a href="/groups/new" class="hover:text-primary transition-colors">Organize</a>
+            </li>
+          </ul>
+        </nav>
+        <nav aria-label="Help">
+          <h2 class="mono-label text-base-content/40">Help</h2>
+          <ul class="mt-3 space-y-2 text-sm font-bold">
+            <li><a href="#" class="hover:text-primary transition-colors">Support</a></li>
+            <li><a href="#" class="hover:text-primary transition-colors">Contact</a></li>
+            <li><a href="#" class="hover:text-primary transition-colors">Status</a></li>
+          </ul>
+        </nav>
+        <nav aria-label="Legal">
+          <h2 class="mono-label text-base-content/40">Legal</h2>
+          <ul class="mt-3 space-y-2 text-sm font-bold">
+            <li><a href="#" class="hover:text-primary transition-colors">Terms</a></li>
+            <li><a href="#" class="hover:text-primary transition-colors">Privacy</a></li>
+            <li>
+              <a href="#" class="hover:text-primary transition-colors">
+                Community Guidelines
+              </a>
+            </li>
+            <li>
+              <a href="#" class="hover:text-primary transition-colors">Code of Conduct</a>
+            </li>
+          </ul>
+        </nav>
+        <nav aria-label="Open">
+          <h2 class="mono-label text-base-content/40">Open</h2>
+          <ul class="mt-3 space-y-2 text-sm font-bold">
+            <li>
+              <a
+                href="https://github.com/huddlz-hq/huddlz"
+                class="hover:text-primary transition-colors"
+              >
+                GitHub
+              </a>
+            </li>
+            <li>
+              <a href="/api/json/swaggerui" class="hover:text-primary transition-colors">
+                API docs
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+      <div class="border-t border-base-300 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-base-content/40">
+        <p>© 2026 huddlz</p>
+        <p>Built for real-life gatherings</p>
       </div>
     </footer>
     """

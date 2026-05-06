@@ -26,7 +26,7 @@ defmodule HuddlzWeb.UnsubscribeControllerTest do
 
       # Standard app layout shell — navbar brand and footer link
       assert_has(session, "header a", text: "huddlz")
-      assert_has(session, "footer a", text: "Contribute on GitHub")
+      assert_has(session, "footer a", text: "GitHub")
     end
 
     test "rejects unknown triggers without changing preferences", %{conn: conn} do
