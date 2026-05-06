@@ -18,6 +18,23 @@ defmodule GroupsPersonalSectionsSteps do
     context
   end
 
+  step "{string} was added to the group {string}",
+       %{args: [email, name]} = context do
+    user = lookup_user(email)
+    group = lookup_group(name)
+    owner = lookup_user_by_id(group.owner_id)
+
+    Huddlz.Communities.GroupMember
+    |> Ash.Changeset.for_create(
+      :add_member,
+      %{group_id: group.id, user_id: user.id, role: "member"},
+      actor: owner
+    )
+    |> Ash.create!()
+
+    context
+  end
+
   step "{string} hosts {int} public groups named {string}",
        %{args: [email, count, prefix]} = context do
     owner = lookup_user(email)

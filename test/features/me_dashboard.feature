@@ -80,10 +80,20 @@ Feature: Me dashboard
     And I should see "// Joined"
     And I should see "Phoenix Devs"
 
-  Scenario: Invites tab renders a coming-soon placeholder
+  Scenario: Invites tab shows an empty feed with needs-response side panel
     Given I am signed in as "host@example.com"
     When I visit "/me?tab=invites"
-    Then I should see "Coming soon — huddl invitations and join requests."
+    Then I should see "Things that need a response from you."
+    And I should see "// Invites"
+    And I should see "No invites right now. When organizers invite you to a huddl or group, they'll show up here."
+    And I should see "// Needs response"
+
+  Scenario: Being added to a private group surfaces as an Invite
+    Given a private group "Phoenix Devs" exists with owner "stranger@example.com"
+    And "attendee@example.com" was added to the group "Phoenix Devs"
+    And I am signed in as "attendee@example.com"
+    When I visit "/me?tab=invites"
+    Then I should see "Added to Phoenix Devs"
 
   Scenario: Updates tab shows an empty feed with notification controls panel
     Given I am signed in as "host@example.com"

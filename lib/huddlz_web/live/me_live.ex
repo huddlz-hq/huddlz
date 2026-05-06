@@ -35,7 +35,8 @@ defmodule HuddlzWeb.MeLive do
      |> assign(:hosting_groups, empty_section())
      |> assign(:joined_groups, empty_section())
      |> assign(:updates, [])
-     |> assign(:unread_updates, 0)}
+     |> assign(:unread_updates, 0)
+     |> assign(:invites, [])}
   end
 
   @impl true
@@ -72,6 +73,10 @@ defmodule HuddlzWeb.MeLive do
     |> assign(:unread_updates, unread)
   end
 
+  defp load_tab(socket, :invites, user) do
+    assign(socket, :invites, load_invites(user))
+  end
+
   defp load_tab(socket, _tab, _user), do: socket
 
   defp load_updates(user) do
@@ -85,13 +90,20 @@ defmodule HuddlzWeb.MeLive do
     end
   end
 
+  defp load_invites(user) do
+    case Notifications.list_invites_for_user(actor: user, page: [limit: @updates_limit]) do
+      {:ok, %{results: results}} -> results
+      _ -> []
+    end
+  end
+
   @impl true
   def handle_event("mark_read", %{"id" => id}, socket) do
     user = socket.assigns.current_user
 
     with {:ok, notification} <- Ash.get(Notifications.Notification, id, actor: user),
          {:ok, _updated} <- Notifications.mark_read(notification, actor: user) do
-      {:noreply, load_tab(socket, :updates, user)}
+      {:noreply, load_tab(socket, socket.assigns.tab, user)}
     else
       _ -> {:noreply, socket}
     end
@@ -106,7 +118,7 @@ defmodule HuddlzWeb.MeLive do
       Notifications.mark_read(notification, actor: user)
     end)
 
-    {:noreply, load_tab(socket, :updates, user)}
+    {:noreply, load_tab(socket, socket.assigns.tab, user)}
   end
 
   defp load_section(user, relationship, date_filter, sort) do
@@ -192,7 +204,7 @@ defmodule HuddlzWeb.MeLive do
               limit={@section_limit}
             />
           <% :invites -> %>
-            <.placeholder_tab message="Coming soon — huddl invitations and join requests." />
+            <.invites_tab invites={@invites} />
           <% :updates -> %>
             <.updates_tab updates={@updates} unread={@unread_updates} />
         <% end %>
@@ -582,6 +594,66 @@ defmodule HuddlzWeb.MeLive do
     """
   end
 
+  attr :invites, :list, required: true
+
+  defp invites_tab(assigns) do
+    ~H"""
+    <div class="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-10">
+      <div class="lg:col-span-2 space-y-6">
+        <div class="flex items-baseline justify-between gap-2">
+          <h2 class="font-display text-lg tracking-tight text-glow flex items-baseline gap-3">
+            <span class="mono-label text-primary/70">// Invites</span>
+            <span :if={@invites != []} class="text-sm font-body font-normal text-base-content/40">
+              ({length(@invites)})
+            </span>
+          </h2>
+        </div>
+
+        <%= if @invites == [] do %>
+          <div class="border border-dashed border-base-300 p-8 text-center text-base-content/50">
+            No invites right now. When organizers invite you to a huddl or group, they'll show up here.
+          </div>
+        <% else %>
+          <ul class="space-y-3" id="invites-list">
+            <%= for notification <- @invites do %>
+              <.notification_card notification={notification} />
+            <% end %>
+          </ul>
+        <% end %>
+      </div>
+
+      <aside class="space-y-6">
+        <.needs_response_panel />
+        <.invites_next_actions_panel />
+      </aside>
+    </div>
+    """
+  end
+
+  defp needs_response_panel(assigns) do
+    ~H"""
+    <div class="border border-base-300 p-6">
+      <span class="mono-label text-primary/70">// Needs response</span>
+      <p class="text-sm text-base-content/60 mt-3">
+        Invites are lightweight. Open the related huddl or group to take action, then mark the invite read.
+      </p>
+    </div>
+    """
+  end
+
+  defp invites_next_actions_panel(assigns) do
+    ~H"""
+    <div class="border border-base-300 p-6">
+      <span class="mono-label text-primary/70">// Useful next actions</span>
+      <ul class="mt-3 space-y-2 text-sm text-base-content/70">
+        <li>Open a waitlist promotion to confirm or cancel.</li>
+        <li>Visit a group you've been added to.</li>
+        <li>Mark each invite read once you've handled it.</li>
+      </ul>
+    </div>
+    """
+  end
+
   defp category_label(trigger) when is_binary(trigger) do
     case Notifications.Triggers.fetch(String.to_existing_atom(trigger)) do
       {:ok, %{category: :transactional}} -> "Transactional"
@@ -605,22 +677,15 @@ defmodule HuddlzWeb.MeLive do
     end
   end
 
-  attr :message, :string, required: true
-
-  defp placeholder_tab(assigns) do
-    ~H"""
-    <div class="border border-dashed border-base-300 p-12 text-center text-base-content/50">
-      {@message}
-    </div>
-    """
-  end
-
   defp tab_path(tab), do: ~p"/me?#{[tab: tab]}"
 
   defp tab_intro(:huddlz),
     do: "Your upcoming RSVPs, waitlisted spots, and past gatherings — all in one place."
 
   defp tab_intro(:groups), do: "Groups you organize and groups you've joined."
+
+  defp tab_intro(:invites),
+    do: "Things that need a response from you."
 
   defp tab_intro(:updates),
     do: "Reminders, RSVPs, and group activity from across huddlz."
