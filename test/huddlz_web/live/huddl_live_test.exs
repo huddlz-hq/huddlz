@@ -176,7 +176,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
       |> visit("/discover")
       |> fill_in("Search huddlz", with: "nonexistent12345")
       # Should show no results message
-      |> assert_has("p", text: "No huddlz found")
+      |> assert_has("p", text: "No huddlz match this search")
     end
 
     test "search button triggers search via form submit", %{
@@ -341,22 +341,22 @@ defmodule HuddlzWeb.HuddlLiveTest do
     end
   end
 
-  describe "Groups fallback" do
+  describe "Groups scope (?scope=groups)" do
     setup do
       host = generate(user(role: :user))
       %{host: host}
     end
 
-    test "shows groups when no huddlz exist", %{conn: conn, host: host} do
+    test "lists public groups", %{conn: conn, host: host} do
       generate(group(is_public: true, owner_id: host.id, actor: host, name: "Elixir Club"))
 
       conn
-      |> visit("/discover")
-      |> assert_has("h2", text: "Groups you can explore")
+      |> visit("/discover?scope=groups")
+      |> assert_has("h1", text: "Discover groups")
       |> assert_has("h2", text: "Elixir Club")
     end
 
-    test "hides groups section when huddlz exist", %{conn: conn, host: host} do
+    test "hides huddlz when scope=groups", %{conn: conn, host: host} do
       public_group = generate(group(is_public: true, owner_id: host.id, actor: host))
 
       generate(
@@ -370,9 +370,8 @@ defmodule HuddlzWeb.HuddlLiveTest do
       )
 
       conn
-      |> visit("/discover")
-      |> assert_has("h3", text: "Active Huddl")
-      |> refute_has("h2", text: "Groups you can explore")
+      |> visit("/discover?scope=groups")
+      |> refute_has("h3", text: "Active Huddl")
     end
 
     test "group cards link to group detail page", %{conn: conn, host: host} do
@@ -381,7 +380,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
           group(is_public: true, owner_id: host.id, actor: host, name: "Linked Group Test")
         )
 
-      {:ok, _view, html} = live(conn, ~p"/discover")
+      {:ok, _view, html} = live(conn, ~p"/discover?scope=groups")
 
       assert html
              |> Floki.parse_document!()
@@ -390,6 +389,27 @@ defmodule HuddlzWeb.HuddlLiveTest do
                Floki.attribute(link, "href") == ["/groups/#{group.slug}"] &&
                  link |> Floki.text() |> String.contains?("Linked Group Test")
              end)
+    end
+
+    test "default scope=huddlz does not show groups", %{conn: conn, host: host} do
+      generate(group(is_public: true, owner_id: host.id, actor: host, name: "Hidden Club"))
+
+      conn
+      |> visit("/discover")
+      |> refute_has("h2", text: "Hidden Club")
+    end
+
+    test "scope chips render with Huddlz active by default", %{conn: conn} do
+      conn
+      |> visit("/discover")
+      |> assert_has("a", text: "Huddlz")
+      |> assert_has("a", text: "Groups")
+    end
+
+    test "scope=groups empty state when no public groups", %{conn: conn} do
+      conn
+      |> visit("/discover?scope=groups&q=zzznomatch")
+      |> assert_has("p", text: "No groups match this search")
     end
   end
 

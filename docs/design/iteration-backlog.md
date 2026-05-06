@@ -47,8 +47,13 @@ Highest visible UX shift; pulls the brand together around search.
 - Featured-huddl curation card is **deferred**: needs a `Huddl.is_featured` attribute + admin selection UI; revisit alongside Phase 3.x organizer workspace.
 - **Cut line:** new search results route (1.2).
 
-### 1.2 Combined search results route
-New `SearchLive` (route TBD: `/search` or `/`) that queries `Huddl.search` and `Group.search` with the same actor and renders grouped sections. `All / Huddlz / Groups` scope segments swap visibility. Pagination per section.
+### 1.2 Combined search results route — ✅ shipped
+**Decision:** No new `/search` route. Folded combined results into the existing `/discover` (`HuddlzWeb.HuddlLive`). The page is filter-driven via two URL params:
+- `?scope=huddlz|groups` (default `huddlz`) — selects which resource type renders. Two scope chips ("Huddlz" / "Groups") sit above the search form; the `All` scope from the prototype was dropped because blending huddlz + groups in one feed had no shared relevance ranking and produced padded layout. Huddlz are the primary entity; groups are reachable via the chip.
+- `?yours=hosting|attending` (existing) — huddlz-only, ignored under `scope=groups`.
+Group results reuse `Communities.search_groups` plus an inline offset-pagination helper modeled on `GroupLive.Index.paginate_with_count`. Results-head copy, scope chips, mono section labels, and per-scope empty states transcribed from the search-organize prototype. Type badges deferred (each scope is homogeneous so the section label is sufficient).
+- Filter panel slide-in (Phase 1.3): location/date/format/topics/huddl-options/sort.
+- Group distance/location filtering: tracked alongside 1.3.
 - **Cut line:** filter panel polish (1.3).
 
 ### 1.3 Filter panel slide-in
