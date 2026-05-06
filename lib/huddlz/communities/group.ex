@@ -85,25 +85,30 @@ defmodule Huddlz.Communities.Group do
     end
 
     read :search do
-      description "Search for groups by name or description"
+      description "Search for groups by name or description. With nil query, returns all groups sorted by name."
 
       argument :query, :string do
-        allow_nil? false
+        allow_nil? true
       end
 
-      # Use trigram similarity for better search matching
-      filter expr(
-               trigram_similarity(name, ^arg(:query)) > 0.1 or
-                 trigram_similarity(description, ^arg(:query)) > 0.1
-             )
-
-      # Load and sort by relevance
       prepare fn query, _ ->
-        query_arg = query.arguments.query
+        require Ash.Query
 
-        query
-        |> Ash.Query.load(search_relevance: [query: query_arg])
-        |> Ash.Query.sort(search_relevance: {%{query: query_arg}, :desc}, name: :asc)
+        case query.arguments.query do
+          nil ->
+            Ash.Query.sort(query, name: :asc)
+
+          q ->
+            query
+            |> Ash.Query.filter(
+              expr(
+                trigram_similarity(name, ^q) > 0.1 or
+                  trigram_similarity(description, ^q) > 0.1
+              )
+            )
+            |> Ash.Query.load(search_relevance: [query: q])
+            |> Ash.Query.sort(search_relevance: {%{query: q}, :desc}, name: :asc)
+        end
       end
     end
 

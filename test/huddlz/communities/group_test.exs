@@ -573,6 +573,23 @@ defmodule Huddlz.Communities.GroupTest do
       # alpha in description
       assert MapSet.member?(group_ids, group3.id)
     end
+
+    test "search with nil query returns all groups sorted by name", %{
+      owner: owner,
+      group1: group1,
+      group2: group2,
+      group3: group3
+    } do
+      result = Communities.search_groups!(nil, actor: owner)
+
+      ids = Enum.map(result, & &1.id)
+      assert group1.id in ids
+      assert group2.id in ids
+      assert group3.id in ids
+
+      names = Enum.map(result, &to_string(&1.name))
+      assert names == Enum.sort(names)
+    end
   end
 
   describe ":get_joined action" do
