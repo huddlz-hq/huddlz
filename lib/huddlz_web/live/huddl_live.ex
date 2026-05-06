@@ -46,6 +46,7 @@ defmodule HuddlzWeb.HuddlLive do
           not is_nil(socket.assigns.default_location_lng),
       scope: :huddlz,
       yours: :all,
+      sort: :soonest,
       huddls: [],
       groups: [],
       page_info: %{total_pages: 1, current_page: 1, total_count: 0}
@@ -424,7 +425,8 @@ defmodule HuddlzWeb.HuddlLive do
       event_type: event_type_atom,
       search_latitude: search_lat,
       search_longitude: search_lng,
-      distance_miles: distance
+      distance_miles: distance,
+      sort: socket.assigns.sort
     }
   end
 
@@ -441,6 +443,7 @@ defmodule HuddlzWeb.HuddlLive do
       args.search_longitude,
       args.distance_miles,
       Keyword.get(opts, :relationship),
+      args.sort,
       actor: actor,
       page: Keyword.get(opts, :page, [])
     )

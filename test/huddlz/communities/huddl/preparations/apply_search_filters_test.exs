@@ -80,6 +80,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
           -97.7431,
           50,
           nil,
+          :soonest,
           actor: owner,
           page: [limit: 20, offset: 0, count: true]
         )
@@ -102,6 +103,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
           -97.7431,
           10,
           nil,
+          :soonest,
           actor: owner,
           page: [limit: 20, offset: 0, count: true]
         )
@@ -123,6 +125,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
           -97.7431,
           100,
           nil,
+          :soonest,
           actor: owner,
           page: [limit: 20, offset: 0, count: true]
         )
@@ -147,6 +150,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
           nil,
           nil,
           nil,
+          :soonest,
           actor: owner,
           page: [limit: 20, offset: 0, count: true]
         )
@@ -168,6 +172,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
           -97.7431,
           10,
           nil,
+          :soonest,
           actor: owner,
           page: [limit: 20, offset: 0, count: true]
         )
@@ -181,6 +186,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
           -97.7431,
           100,
           nil,
+          :soonest,
           actor: owner,
           page: [limit: 20, offset: 0, count: true]
         )
@@ -300,6 +306,136 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
       ids = Enum.map(results, & &1.id)
       assert a.id in ids
       assert b.id in ids
+    end
+  end
+
+  describe "sort argument" do
+    setup %{owner: owner, group: group} do
+      # Three huddlz with distinct (starts_at, inserted_at) orderings so
+      # :soonest and :newest must produce different sequences.
+      now = DateTime.utc_now()
+
+      first_inserted =
+        generate(
+          huddl_at_location(
+            title: "First inserted, latest start",
+            starts_at: DateTime.add(now, 30 * 24 * 60 * 60, :second),
+            ends_at: DateTime.add(now, 30 * 24 * 60 * 60 + 3600, :second),
+            latitude: nil,
+            longitude: nil,
+            group_id: group.id,
+            creator_id: owner.id
+          )
+        )
+
+      middle_inserted =
+        generate(
+          huddl_at_location(
+            title: "Middle inserted, earliest start",
+            starts_at: DateTime.add(now, 1 * 24 * 60 * 60, :second),
+            ends_at: DateTime.add(now, 1 * 24 * 60 * 60 + 3600, :second),
+            latitude: nil,
+            longitude: nil,
+            group_id: group.id,
+            creator_id: owner.id
+          )
+        )
+
+      last_inserted =
+        generate(
+          huddl_at_location(
+            title: "Last inserted, middle start",
+            starts_at: DateTime.add(now, 14 * 24 * 60 * 60, :second),
+            ends_at: DateTime.add(now, 14 * 24 * 60 * 60 + 3600, :second),
+            latitude: nil,
+            longitude: nil,
+            group_id: group.id,
+            creator_id: owner.id
+          )
+        )
+
+      %{
+        first_inserted: first_inserted,
+        middle_inserted: middle_inserted,
+        last_inserted: last_inserted
+      }
+    end
+
+    test "defaults to :soonest (starts_at ascending)", %{
+      owner: owner,
+      first_inserted: latest_start,
+      middle_inserted: earliest_start
+    } do
+      {:ok, %{results: results}} =
+        Huddlz.Communities.search_huddlz(
+          nil,
+          :all,
+          nil,
+          nil,
+          nil,
+          nil,
+          nil,
+          nil,
+          actor: owner,
+          page: [limit: 50, count: true]
+        )
+
+      ids = Enum.map(results, & &1.id)
+
+      assert Enum.find_index(ids, &(&1 == earliest_start.id)) <
+               Enum.find_index(ids, &(&1 == latest_start.id))
+    end
+
+    test ":newest sorts by inserted_at descending", %{
+      owner: owner,
+      first_inserted: oldest_insert,
+      last_inserted: newest_insert
+    } do
+      {:ok, %{results: results}} =
+        Huddlz.Communities.search_huddlz(
+          nil,
+          :all,
+          nil,
+          nil,
+          nil,
+          nil,
+          nil,
+          :newest,
+          actor: owner,
+          page: [limit: 50, count: true]
+        )
+
+      ids = Enum.map(results, & &1.id)
+
+      assert Enum.find_index(ids, &(&1 == newest_insert.id)) <
+               Enum.find_index(ids, &(&1 == oldest_insert.id))
+    end
+
+    test ":soonest sorts by starts_at ascending", %{
+      owner: owner,
+      first_inserted: latest_start,
+      middle_inserted: earliest_start,
+      last_inserted: middle_start
+    } do
+      {:ok, %{results: results}} =
+        Huddlz.Communities.search_huddlz(
+          nil,
+          :all,
+          nil,
+          nil,
+          nil,
+          nil,
+          nil,
+          :soonest,
+          actor: owner,
+          page: [limit: 50, count: true]
+        )
+
+      ids = Enum.map(results, & &1.id)
+      ordered_ids = [earliest_start.id, middle_start.id, latest_start.id]
+
+      ordered_indexes = Enum.map(ordered_ids, fn id -> Enum.find_index(ids, &(&1 == id)) end)
+      assert ordered_indexes == Enum.sort(ordered_indexes)
     end
   end
 end

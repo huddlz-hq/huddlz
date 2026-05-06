@@ -20,7 +20,8 @@ defmodule Huddlz.Communities do
           {:optional, :search_latitude},
           {:optional, :search_longitude},
           {:optional, :distance_miles},
-          {:optional, :relationship}
+          {:optional, :relationship},
+          {:optional, :sort}
         ],
         get?: false
 
