@@ -135,7 +135,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
       conn
       |> visit("/discover")
       # Filter to reduce results
-      |> select("Event Type", option: "Virtual")
+      |> click_link("#filter-panel a", "Virtual")
       # Should have fewer than 20 results
       |> refute_has("button[phx-click=change_page]")
     end
@@ -164,7 +164,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
 
       conn
       |> visit("/discover")
-      |> select("Event Type", option: "Virtual")
+      |> click_link("#filter-panel a", "Virtual")
       # Should still have pagination
       |> assert_has("button", text: "2")
       |> click_button("2")
