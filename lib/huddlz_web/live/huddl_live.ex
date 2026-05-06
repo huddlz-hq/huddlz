@@ -937,12 +937,7 @@ defmodule HuddlzWeb.HuddlLive do
             </div>
 
             <footer class="flex items-center justify-end px-5 py-4 border-t border-base-300 flex-shrink-0">
-              <.button
-                variant="ghost"
-                size="sm"
-                type="button"
-                phx-click={JS.exec("data-cancel", to: "#filter-panel") |> JS.push("clear_filters")}
-              >
+              <.button variant="ghost" size="sm" type="button" phx-click="clear_filters">
                 Reset
               </.button>
             </footer>
