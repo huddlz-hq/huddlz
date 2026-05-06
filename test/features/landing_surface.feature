@@ -26,5 +26,5 @@ Feature: Landing surface
   Scenario: Authenticated user is redirected from / to /me
     Given I am signed in as "regular@example.com"
     When I visit "/"
-    Then I should see "Welcome back, Regular."
-    And I should see "// Your dashboard"
+    Then I should see "My huddlz."
+    And I should see "// Signed in"
