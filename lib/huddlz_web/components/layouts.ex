@@ -63,9 +63,12 @@ defmodule HuddlzWeb.Layouts do
                   aria-haspopup="menu"
                   aria-controls="user-menu"
                   phx-click={JS.toggle(to: "#user-menu")}
-                  class="cursor-pointer flex items-center justify-center w-12 h-12 border border-base-300 rounded-md hover:border-primary transition-colors"
+                  class="cursor-pointer flex items-center gap-2 h-12 pl-1.5 pr-4 border border-base-300 rounded-full hover:border-primary transition-colors"
                 >
-                  <.avatar user={@current_user} size={:sm} />
+                  <.avatar user={@current_user} size={:sm} class="rounded-full" />
+                  <span class="hidden sm:inline font-bold text-sm text-base-content">
+                    {first_name(@current_user)}
+                  </span>
                 </button>
                 <ul
                   id="user-menu"
@@ -283,4 +286,13 @@ defmodule HuddlzWeb.Layouts do
     </div>
     """
   end
+
+  defp first_name(%{display_name: name}) when is_binary(name) do
+    case name |> String.trim() |> String.split(~r/\s+/, parts: 2) do
+      [first | _] when first != "" -> first
+      _ -> "Account"
+    end
+  end
+
+  defp first_name(_), do: "Account"
 end
