@@ -82,6 +82,12 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has("dd", text: "Be the first to RSVP!")
     end
 
+    test "renders detail hero in 16:9 aspect ratio", %{conn: conn, group: group, huddl: huddl} do
+      conn
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+      |> assert_has("[class*='aspect-video']")
+    end
+
     test "renders rich link preview metadata", %{conn: conn, group: group, huddl: huddl} do
       html =
         conn

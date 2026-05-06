@@ -156,6 +156,19 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       assert_has(session, "select[name='form[event_type]']")
     end
 
+    test "shows 16:9 ratio guidance for cover image", %{
+      conn: conn,
+      owner: owner,
+      public_group: group
+    } do
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/new")
+
+      assert_has(session, "p", text: "16:9 ratio recommended")
+    end
+
     test "shows is_private checkbox for public groups", %{
       conn: conn,
       owner: owner,

@@ -35,6 +35,25 @@ defmodule HuddlzWeb.HuddlLiveTest do
       |> assert_has("h3", text: public_huddl.title)
     end
 
+    test "renders huddl cards in 16:9 aspect ratio", %{
+      conn: conn,
+      host: host,
+      public_group: public_group
+    } do
+      generate(
+        huddl(
+          group_id: public_group.id,
+          creator_id: host.id,
+          is_private: false,
+          actor: host
+        )
+      )
+
+      conn
+      |> visit("/discover")
+      |> assert_has("[class*='aspect-video']")
+    end
+
     test "searches huddlz by title", %{conn: conn, host: host, public_group: public_group} do
       _elixir_huddl =
         generate(

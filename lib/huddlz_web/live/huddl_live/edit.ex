@@ -208,6 +208,9 @@ defmodule HuddlzWeb.HuddlLive.Edit do
               <label class="mono-label text-primary/70 mb-2 block">
                 Huddl Image
               </label>
+              <p class="text-base-content/50 text-sm mb-3">
+                Upload a new banner image (16:9 ratio recommended).
+              </p>
 
               <%= cond do %>
                 <% @pending_preview_url -> %>
