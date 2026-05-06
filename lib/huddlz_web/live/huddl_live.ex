@@ -547,14 +547,14 @@ defmodule HuddlzWeb.HuddlLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_user={@current_user}>
+    <Layouts.app flash={@flash} current_user={@current_user} search_query={@search_query}>
       <div>
         <h1 :if={@scope != :all} class="font-display text-2xl tracking-tight text-glow mb-4">
           {page_title(@scope)}
         </h1>
 
         <div class="mb-8">
-          <form phx-change="filter_change" phx-submit="search">
+          <form id="huddl-search-form" phx-change="filter_change" phx-submit="search">
             <div class="flex flex-wrap items-end gap-2">
               <div class="flex-grow min-w-[200px]">
                 <label for="search-query" class="sr-only">Search huddlz</label>

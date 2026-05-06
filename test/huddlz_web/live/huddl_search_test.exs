@@ -490,7 +490,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       {:ok, view, _html} = live(conn, "/")
 
       # Apply text search filter
-      view |> form("form", %{"query" => "Yoga"}) |> render_change()
+      view |> form("#huddl-search-form", %{"query" => "Yoga"}) |> render_change()
 
       # Select location via component
       view
