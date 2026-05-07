@@ -625,9 +625,9 @@ defmodule HuddlzWeb.HuddlLive.New do
     end
   end
 
-  defp success_redirect_path(socket, _huddl) do
+  defp success_redirect_path(socket, huddl) do
     if socket.assigns[:workspace_mode?] do
-      ~p"/organize/huddlz"
+      ~p"/groups/#{socket.assigns.group.slug}/huddlz/#{huddl.id}"
     else
       ~p"/groups/#{socket.assigns.group.slug}"
     end

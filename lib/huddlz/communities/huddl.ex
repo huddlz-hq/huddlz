@@ -305,7 +305,14 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     read :huddlz_for_organizer do
-      description "Huddlz across all groups the actor owns or organizes"
+      description """
+      Huddlz across every group the actor owns or co-organizes.
+
+      Note: this is intentionally broader than `Group.get_by_owner` (owner-only).
+      The Workspace Groups + Members tabs still scope to owned groups; if those
+      surfaces should ever match this action's reach, parallel them with a new
+      `groups_for_organizer` action rather than widening `get_by_owner`.
+      """
 
       argument :state, :atom do
         allow_nil? false
