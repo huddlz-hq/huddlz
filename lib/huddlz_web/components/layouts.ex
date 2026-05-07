@@ -2,10 +2,9 @@ defmodule HuddlzWeb.Layouts do
   @moduledoc """
   This module holds different layouts used by your application.
 
-  See the `layouts` directory for all templates available.
-  The "root" layout is a skeleton rendered as part of the
-  application router. The "app" layout is rendered as component
-  in regular views and live views.
+  Reconciled with the search-organize prototype: header search button uses
+  Inter heavy weight at sentence case (no Space Mono uppercase); user
+  dropdown and mobile menu use rounded-sm corners matching the new theme.
   """
   use HuddlzWeb, :html
 
@@ -18,7 +17,7 @@ defmodule HuddlzWeb.Layouts do
         <div class="flex h-20 items-center gap-5">
           <%!-- Brand --%>
           <a href="/" class="flex items-center flex-shrink-0">
-            <span class="font-display text-2xl tracking-tighter text-glow">huddlz</span>
+            <span class="text-2xl font-extrabold tracking-tight">huddlz</span>
           </a>
 
           <%!-- Search (desktop) --%>
@@ -27,7 +26,7 @@ defmodule HuddlzWeb.Layouts do
             action="/discover"
             role="search"
             aria-label="Search huddlz"
-            class="hidden md:flex flex-1 max-w-2xl items-stretch h-12 border border-base-300 rounded-md overflow-hidden bg-base-200/40 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15 transition-colors"
+            class="hidden md:flex flex-1 max-w-2xl items-stretch h-12 border border-base-300 rounded-sm overflow-hidden bg-base-200/40 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15 transition-colors"
           >
             <span class="grid place-items-center w-12 text-primary flex-shrink-0">
               <.icon name="hero-magnifying-glass" class="w-5 h-5" />
@@ -42,7 +41,7 @@ defmodule HuddlzWeb.Layouts do
             />
             <button
               type="submit"
-              class="flex-shrink-0 px-6 bg-primary text-primary-content font-display uppercase text-xs font-black tracking-wider hover:bg-primary/90 transition-colors"
+              class="flex-shrink-0 px-6 bg-primary text-primary-content text-sm font-extrabold hover:brightness-110 transition-colors"
             >
               Search
             </button>
@@ -76,7 +75,7 @@ defmodule HuddlzWeb.Layouts do
                   phx-click-away={JS.hide(to: "#user-menu")}
                   phx-window-keydown={JS.hide(to: "#user-menu")}
                   phx-key="escape"
-                  class="hidden absolute right-0 mt-3 z-50 border border-base-300 bg-base-200 w-64 shadow-xl shadow-primary/5 rounded-md overflow-hidden"
+                  class="hidden absolute right-0 mt-3 z-50 border border-base-300 bg-base-200 w-64 shadow-pop rounded overflow-hidden"
                 >
                   <li class="px-4 py-3 border-b border-base-300">
                     <p class="text-sm font-bold truncate">
@@ -150,13 +149,13 @@ defmodule HuddlzWeb.Layouts do
             <% else %>
               <a
                 href="/register"
-                class="inline-flex items-center h-12 px-5 text-sm font-bold border border-base-300 rounded-md text-base-content hover:border-primary hover:text-primary transition-colors"
+                class="inline-flex items-center h-12 px-5 text-sm font-bold border border-base-300 rounded-sm text-base-content hover:border-primary hover:text-primary transition-colors"
               >
                 Sign Up
               </a>
               <a
                 href="/sign-in"
-                class="inline-flex items-center h-12 px-5 text-sm font-bold bg-primary text-primary-content rounded-md hover:bg-primary/90 transition-colors"
+                class="inline-flex items-center h-12 px-5 text-sm font-extrabold bg-primary text-primary-content rounded-sm hover:brightness-110 transition-colors"
               >
                 Sign In
               </a>
@@ -164,7 +163,7 @@ defmodule HuddlzWeb.Layouts do
             <%!-- Mobile menu button --%>
             <button
               type="button"
-              class="md:hidden grid place-items-center w-12 h-12 border border-base-300 rounded-md hover:border-primary transition-colors"
+              class="md:hidden grid place-items-center w-12 h-12 border border-base-300 rounded-sm hover:border-primary transition-colors"
               phx-click={JS.toggle(to: "#mobile-menu")}
               aria-label="Open menu"
             >
@@ -179,7 +178,7 @@ defmodule HuddlzWeb.Layouts do
           action="/discover"
           role="search"
           aria-label="Search huddlz"
-          class="md:hidden pb-4 flex items-stretch h-12 border border-base-300 rounded-md overflow-hidden bg-base-200/40 focus-within:border-primary"
+          class="md:hidden pb-4 flex items-stretch h-12 border border-base-300 rounded-sm overflow-hidden bg-base-200/40 focus-within:border-primary"
         >
           <span class="grid place-items-center w-12 text-primary flex-shrink-0">
             <.icon name="hero-magnifying-glass" class="w-5 h-5" />
@@ -194,7 +193,7 @@ defmodule HuddlzWeb.Layouts do
           />
           <button
             type="submit"
-            class="flex-shrink-0 px-5 bg-primary text-primary-content font-display uppercase text-xs font-black tracking-wider"
+            class="flex-shrink-0 px-5 bg-primary text-primary-content text-sm font-extrabold"
           >
             Search
           </button>
@@ -220,7 +219,7 @@ defmodule HuddlzWeb.Layouts do
     <footer class="border-t border-base-300 px-6 sm:px-8 lg:px-12 mt-12 sm:mt-16 lg:mt-20">
       <div class="py-12 grid grid-cols-2 lg:grid-cols-5 gap-8">
         <div class="col-span-2 lg:col-span-1">
-          <p class="font-display text-2xl tracking-tighter text-glow">huddlz</p>
+          <p class="text-2xl font-extrabold tracking-tight">huddlz</p>
           <p class="mt-3 text-sm text-base-content/60 max-w-xs">
             Real-life communities, easier to discover and organize.
           </p>
@@ -291,10 +290,6 @@ defmodule HuddlzWeb.Layouts do
 
   @doc """
   Shows the flash group with standard titles and content.
-
-  ## Examples
-
-      <.flash_group flash={@flash} />
   """
   attr :flash, :map, required: true, doc: "the map of flash messages"
   attr :id, :string, default: "flash-group", doc: "the optional id of flash container"
