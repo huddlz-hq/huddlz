@@ -1,6 +1,10 @@
 defmodule HuddlzWeb.CommunityComponents do
   @moduledoc """
   Reusable UI components for communities domain (groups and huddlz).
+
+  Reconciled with the search-organize prototype: rounded corners use the
+  theme `--radius-box` (7px), titles use Inter heavy weights instead of
+  Space Mono, status pills use the prototype's uppercase-mono badge.
   """
   use Phoenix.Component
   use HuddlzWeb, :verified_routes
@@ -12,11 +16,6 @@ defmodule HuddlzWeb.CommunityComponents do
 
   @doc """
   Renders a list of huddlz with empty state handling.
-
-  ## Examples
-
-      <.huddl_list huddlz={@upcoming_huddlz} empty_message="No upcoming huddlz scheduled." />
-      <.huddl_list huddlz={@huddlz} show_group={true} empty_message="No huddlz found." />
   """
   attr :huddlz, :list, required: true
   attr :empty_message, :string, default: "No huddlz found."
@@ -38,10 +37,6 @@ defmodule HuddlzWeb.CommunityComponents do
 
   @doc """
   Renders a group card with 16:9 banner image and content below.
-
-  ## Examples
-
-      <.group_card group={group} />
   """
   attr :group, :map, required: true
   attr :class, :string, default: nil
@@ -52,12 +47,12 @@ defmodule HuddlzWeb.CommunityComponents do
     <.link
       navigate={~p"/groups/#{@group.slug}"}
       class={[
-        "border border-base-300 overflow-hidden hover:border-primary/30 transition-colors group flex flex-col",
+        "border border-base-300 rounded overflow-hidden bg-base-200 hover:border-primary/50 transition-colors group flex flex-col",
         @class
       ]}
       {@rest}
     >
-      <div class="aspect-video overflow-hidden relative bg-base-200 flex-shrink-0">
+      <div class="aspect-video overflow-hidden relative bg-base-300 flex-shrink-0">
         <%= if @group.current_image_url do %>
           <img
             src={GroupImages.url(@group.current_image_url)}
@@ -66,18 +61,18 @@ defmodule HuddlzWeb.CommunityComponents do
           />
         <% else %>
           <div class="w-full h-full bg-base-100 flex items-center justify-center">
-            <span class="text-2xl font-bold text-base-content/30 text-center px-4 line-clamp-2">
+            <span class="text-2xl font-extrabold text-base-content/30 text-center px-4 line-clamp-2">
               {@group.name}
             </span>
           </div>
         <% end %>
       </div>
       <div class="p-4 flex-1">
-        <h2 class="font-display tracking-tight">{@group.name}</h2>
-        <p class="text-sm text-base-content/40 line-clamp-2 mt-1">
+        <h2 class="text-base font-extrabold leading-snug text-base-content">{@group.name}</h2>
+        <p class="text-sm text-base-content/50 line-clamp-2 mt-1.5 leading-relaxed">
           {@group.description || "No description provided."}
         </p>
-        <p :if={@group.location} class="text-xs text-base-content/50 mt-2 flex items-center gap-1">
+        <p :if={@group.location} class="text-xs text-base-content/50 mt-3 flex items-center gap-1">
           <.icon name="hero-map-pin" class="h-3 w-3" /> {@group.location}
         </p>
       </div>
@@ -87,10 +82,6 @@ defmodule HuddlzWeb.CommunityComponents do
 
   @doc """
   Renders a grid of group cards with empty state handling.
-
-  ## Examples
-
-      <.group_list groups={@groups} empty_message="No groups found." />
   """
   attr :groups, :list, required: true
   attr :empty_message, :string, default: "No groups found."
@@ -111,10 +102,6 @@ defmodule HuddlzWeb.CommunityComponents do
 
   @doc """
   Renders a huddl card with 16:9 banner image and content below.
-
-  ## Examples
-
-      <.huddl_card huddl={@huddl} />
   """
   attr :huddl, :map, required: true
   attr :show_group, :boolean, default: false
@@ -127,12 +114,12 @@ defmodule HuddlzWeb.CommunityComponents do
     <.link
       navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}"}
       class={[
-        "border border-base-300 overflow-hidden hover:border-primary/30 transition-colors group flex flex-col",
+        "border border-base-300 rounded overflow-hidden bg-base-200 hover:border-primary/50 transition-colors group flex flex-col",
         @class
       ]}
       {@rest}
     >
-      <div class="aspect-video overflow-hidden relative bg-base-200 flex-shrink-0">
+      <div class="aspect-video overflow-hidden relative bg-base-300 flex-shrink-0">
         <%= if @huddl.display_image_url do %>
           <img
             src={HuddlImages.url(@huddl.display_image_url)}
@@ -141,7 +128,7 @@ defmodule HuddlzWeb.CommunityComponents do
           />
         <% else %>
           <div class="w-full h-full flex items-center justify-center bg-base-100">
-            <span class="text-base-content/30 font-display text-lg text-center px-3 line-clamp-2">
+            <span class="text-base-content/30 text-lg font-extrabold text-center px-3 line-clamp-2">
               {@huddl.title}
             </span>
           </div>
@@ -150,20 +137,18 @@ defmodule HuddlzWeb.CommunityComponents do
           <.huddl_status_badge status={@huddl.status} />
         </div>
         <div :if={@huddl.is_private} class="absolute top-2 left-2">
-          <span class="text-xs px-2 py-0.5 bg-base-300/80 text-base-content/50">
-            Private
-          </span>
+          <.huddl_badge>Private</.huddl_badge>
         </div>
       </div>
       <div class="p-4 flex-1 flex flex-col">
-        <h3 class="font-display tracking-tight">{@huddl.title}</h3>
+        <h3 class="text-base font-extrabold leading-snug text-base-content">{@huddl.title}</h3>
         <%= if @show_group && Map.has_key?(@huddl, :group) do %>
-          <p class="text-xs text-base-content/50 mt-0.5 flex items-center gap-1">
+          <p class="text-xs text-base-content/50 mt-1 flex items-center gap-1">
             <.icon name="hero-user-group" class="h-3 w-3" />
             {@huddl.group.name}
           </p>
         <% end %>
-        <p class="text-sm text-base-content/40 mt-1 line-clamp-2">
+        <p class="text-sm text-base-content/50 mt-1.5 line-clamp-2 leading-relaxed">
           {truncate(@huddl.description || "No description provided", 150)}
         </p>
         <div class="flex flex-wrap gap-x-3 gap-y-1 mt-3 text-xs text-base-content/50">
@@ -192,7 +177,7 @@ defmodule HuddlzWeb.CommunityComponents do
             </span>
           <% end %>
           <%= if @distance do %>
-            <span class="flex items-center gap-1 text-primary/70">
+            <span class="flex items-center gap-1 text-primary/80">
               <.icon name="hero-map-pin" class="h-3.5 w-3.5" />
               {format_distance(@distance)}
             </span>
@@ -203,7 +188,7 @@ defmodule HuddlzWeb.CommunityComponents do
             <div class="flex items-center justify-between text-xs">
               <span class={capacity_status_class(@huddl)}>{capacity_status(@huddl)}</span>
             </div>
-            <div class="mt-1.5 h-1.5 bg-base-200 overflow-hidden">
+            <div class="mt-1.5 h-1.5 bg-base-300 rounded-sm overflow-hidden">
               <div class="h-full bg-primary" style={"width: #{capacity_percent(@huddl)}%"}></div>
             </div>
           </div>
@@ -214,6 +199,33 @@ defmodule HuddlzWeb.CommunityComponents do
   end
 
   @doc """
+  Renders a small uppercase-mono pill — the prototype's badge vocabulary.
+  Use directly, or via `huddl_status_badge` / `huddl_type_badge`.
+  """
+  attr :variant, :string, default: "default", values: ~w(default cyan outline danger)
+  attr :class, :string, default: nil
+  slot :inner_block, required: true
+
+  def huddl_badge(assigns) do
+    ~H"""
+    <span class={[
+      "inline-flex items-center min-h-[22px] px-2 rounded-sm text-[10px] font-extrabold uppercase tracking-wider leading-none",
+      huddl_badge_classes(@variant),
+      @class
+    ]}>
+      {render_slot(@inner_block)}
+    </span>
+    """
+  end
+
+  defp huddl_badge_classes("default"),
+    do: "border border-base-300 text-base-content/70 bg-base-200"
+
+  defp huddl_badge_classes("cyan"), do: "border border-primary text-primary bg-primary/10"
+  defp huddl_badge_classes("outline"), do: "border border-base-300 text-base-content/60"
+  defp huddl_badge_classes("danger"), do: "border border-error text-error"
+
+  @doc """
   Renders a huddl status badge.
   """
   attr :status, :atom, required: true
@@ -221,13 +233,9 @@ defmodule HuddlzWeb.CommunityComponents do
 
   def huddl_status_badge(assigns) do
     ~H"""
-    <span class={[
-      "text-xs px-2 py-0.5 font-medium border border-current/20",
-      status_badge_class(@status),
-      @class
-    ]}>
+    <.huddl_badge variant={status_badge_variant(@status)} class={@class}>
       {humanize(@status)}
-    </span>
+    </.huddl_badge>
     """
   end
 
@@ -239,23 +247,15 @@ defmodule HuddlzWeb.CommunityComponents do
 
   def huddl_type_badge(assigns) do
     ~H"""
-    <span class={[
-      "text-xs px-2 py-0.5 font-medium inline-flex items-center gap-1 border border-current/20",
-      type_badge_class(@type),
-      @class
-    ]}>
-      <.icon name={type_icon(@type)} class="h-3 w-3" />
+    <.huddl_badge variant="outline" class={@class}>
+      <.icon name={type_icon(@type)} class="h-3 w-3 mr-1" />
       {humanize(@type)}
-    </span>
+    </.huddl_badge>
     """
   end
 
   @doc """
   Renders a member card showing user display name and optional owner badge.
-
-  ## Examples
-
-      <.member_card member={member} is_owner={member.id == @group.owner_id} />
   """
   attr :member, :map, required: true
   attr :is_owner, :boolean, default: false
@@ -265,7 +265,7 @@ defmodule HuddlzWeb.CommunityComponents do
     <div class="flex items-center gap-3 py-2">
       <.avatar user={@member} size={:sm} />
       <div class="flex-1 min-w-0">
-        <p class="font-medium text-sm truncate">
+        <p class="font-bold text-sm truncate">
           {@member.display_name || "User"}
         </p>
       </div>
@@ -280,15 +280,6 @@ defmodule HuddlzWeb.CommunityComponents do
 
   @doc """
   Renders a grid of group members with permission-based visibility.
-
-  ## Examples
-
-      <.member_list
-        members={@members}
-        member_count={@member_count}
-        owner_id={@group.owner_id}
-        current_user={@current_user}
-      />
   """
   attr :members, :list, default: nil
   attr :member_count, :integer, required: true
@@ -298,9 +289,9 @@ defmodule HuddlzWeb.CommunityComponents do
   def member_list(assigns) do
     ~H"""
     <div class="mt-10">
-      <h3 class="font-display text-lg tracking-tight text-glow flex items-center gap-2">
+      <h3 class="text-lg font-extrabold tracking-tight text-base-content flex items-center gap-2">
         <.icon name="hero-users" class="w-5 h-5 text-base-content/40" /> Members
-        <span class="text-sm font-body font-normal text-base-content/50">({@member_count})</span>
+        <span class="text-sm font-normal text-base-content/50">({@member_count})</span>
       </h3>
       <%= if @members do %>
         <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -321,17 +312,12 @@ defmodule HuddlzWeb.CommunityComponents do
     """
   end
 
-  # Huddl helper functions
+  # Helper functions
 
-  defp status_badge_class(:upcoming), do: "bg-primary/10 text-primary"
-  defp status_badge_class(:in_progress), do: "bg-success/10 text-success"
-  defp status_badge_class(:completed), do: "bg-base-200 text-base-content/50"
-  defp status_badge_class(_), do: "bg-base-200 text-base-content/50"
-
-  defp type_badge_class(:in_person), do: "bg-info/10 text-info"
-  defp type_badge_class(:virtual), do: "bg-warning/10 text-warning"
-  defp type_badge_class(:hybrid), do: "bg-secondary/10 text-secondary"
-  defp type_badge_class(_), do: "bg-base-200 text-base-content/50"
+  defp status_badge_variant(:upcoming), do: "cyan"
+  defp status_badge_variant(:in_progress), do: "cyan"
+  defp status_badge_variant(:completed), do: "default"
+  defp status_badge_variant(_), do: "default"
 
   defp type_icon(:in_person), do: "hero-map-pin"
   defp type_icon(:virtual), do: "hero-video-camera"
@@ -366,9 +352,9 @@ defmodule HuddlzWeb.CommunityComponents do
   defp capacity_status_for_tier(:filling_up), do: "Filling up"
   defp capacity_status_for_tier(:plenty), do: "Plenty of space"
 
-  defp capacity_status_class_for_tier(:full), do: "font-semibold text-error"
-  defp capacity_status_class_for_tier(:almost_full), do: "font-semibold text-warning"
-  defp capacity_status_class_for_tier(_), do: "font-semibold text-success"
+  defp capacity_status_class_for_tier(:full), do: "font-bold text-error"
+  defp capacity_status_class_for_tier(:almost_full), do: "font-bold text-warning"
+  defp capacity_status_class_for_tier(_), do: "font-bold text-success"
 
   defp truncate(text, max_length) when is_binary(text) and byte_size(text) > max_length do
     String.slice(text, 0, max_length) <> "..."

@@ -2,29 +2,15 @@ defmodule HuddlzWeb.CoreComponents do
   @moduledoc """
   Provides core UI components.
 
-  At first glance, this module may seem daunting, but its goal is to provide
-  core building blocks for your application, such as tables, forms, and
-  inputs. The components consist mostly of markup and are well-documented
-  with doc strings and declarative assigns. You may customize and style
-  them in any way you want, based on your application growth and needs.
+  Reconciled with the huddlz search-organize prototype:
+  buttons use Inter heavy weights instead of uppercase Space Mono;
+  inputs are bordered fields on a panel surface; modal uses a soft
+  shadow-pop instead of the cyan-glow halo.
 
-  The foundation for styling is Tailwind CSS, a utility-first CSS framework,
-  augmented with daisyUI, a Tailwind CSS plugin that provides UI components
-  and themes. Here are useful references:
-
-    * [daisyUI](https://daisyui.com/docs/intro/) - a good place to get
-      started and see the available components.
-
-    * [Tailwind CSS](https://tailwindcss.com) - the foundational framework
-      we build on. You will use it for layout, sizing, flexbox, grid, and
-      spacing.
-
-    * [Heroicons](https://heroicons.com) - see `icon/1` for usage.
-
-    * [Phoenix.Component](https://hexdocs.pm/phoenix_live_view/Phoenix.Component.html) -
-      the component system used by Phoenix. Some components, such as `<.link>`
-      and `<.form>`, are defined there.
-
+    * [daisyUI](https://daisyui.com/docs/intro/)
+    * [Tailwind CSS](https://tailwindcss.com)
+    * [Heroicons](https://heroicons.com) — see `icon/1`
+    * [Phoenix.Component](https://hexdocs.pm/phoenix_live_view/Phoenix.Component.html)
   """
   use Phoenix.Component
   use Gettext, backend: HuddlzWeb.Gettext
@@ -34,16 +20,10 @@ defmodule HuddlzWeb.CoreComponents do
   alias Phoenix.HTML.Form
   alias Phoenix.LiveView.JS
 
-  # Import verified routes for ~p sigil
   use HuddlzWeb, :verified_routes
 
   @doc """
   Renders flash notices.
-
-  ## Examples
-
-      <.flash kind={:info} flash={@flash} />
-      <.flash kind={:info} phx-mounted={show("#flash")}>Welcome Back!</.flash>
   """
   attr :id, :string, doc: "the optional id of flash container"
   attr :flash, :map, default: %{}, doc: "the map of flash messages to display"
@@ -66,7 +46,7 @@ defmodule HuddlzWeb.CoreComponents do
       {@rest}
     >
       <div class={[
-        "flex items-center gap-3 border px-4 py-3 text-sm",
+        "flex items-center gap-3 border rounded px-4 py-3 text-sm",
         @kind == :info && "border-primary/30 bg-primary/5 text-primary",
         @kind == :error && "border-error/30 bg-error/5 text-error"
       ]}>
@@ -95,11 +75,12 @@ defmodule HuddlzWeb.CoreComponents do
   @doc """
   Renders a button with navigation support.
 
-  ## Examples
+  Variants follow the prototype:
 
-      <.button>Send!</.button>
-      <.button phx-click="go" variant="primary">Send!</.button>
-      <.button navigate={~p"/"}>Home</.button>
+    * `nil` (default) — outline: panel surface, line-strong border
+    * `"primary"` — cyan fill (one per surface; the headline action)
+    * `"danger"` — destructive outline (or fill with `solid` size combo)
+    * `"ghost"` — transparent, used in dense headers/menus
   """
   attr :rest, :global, include: ~w(href navigate patch method disabled)
   attr :variant, :string, values: ~w(primary danger ghost)
@@ -109,15 +90,18 @@ defmodule HuddlzWeb.CoreComponents do
 
   def button(%{rest: rest} = assigns) do
     variants = %{
-      "primary" => "bg-primary text-primary-content border border-primary btn-neon",
-      "danger" => "bg-error text-error-content border border-error btn-neon",
-      "ghost" => "bg-transparent text-primary border-0 hover:underline font-body",
-      nil => "bg-transparent text-primary border border-primary/40 btn-neon hover:bg-primary/10"
+      "primary" =>
+        "bg-primary text-primary-content border border-primary font-extrabold hover:brightness-110",
+      "danger" =>
+        "bg-transparent text-error border border-error font-extrabold hover:bg-error/10",
+      "ghost" =>
+        "bg-transparent text-base-content/70 border border-transparent hover:bg-base-200 hover:text-base-content",
+      nil => "bg-base-200 text-base-content border border-base-300 hover:bg-base-300 font-bold"
     }
 
     sizes = %{
       "sm" => "px-3 py-1 text-xs",
-      "md" => "px-5 py-2 text-sm"
+      "md" => "px-4 h-[42px] text-sm"
     }
 
     ghost_sizes = %{"sm" => "text-xs", "md" => "text-sm"}
@@ -131,21 +115,13 @@ defmodule HuddlzWeb.CoreComponents do
     assigns =
       assigns
       |> assign(:variant_class, Map.fetch!(variants, assigns[:variant]))
-      |> assign(
-        :text_style_class,
-        if(assigns[:variant] == "ghost",
-          do: "tracking-normal normal-case",
-          else: "tracking-wide uppercase font-display"
-        )
-      )
       |> assign(:size_class, size_class)
 
     if rest[:href] || rest[:navigate] || rest[:patch] do
       ~H"""
       <.link
         class={[
-          "inline-flex items-center justify-center gap-2 font-medium",
-          @text_style_class,
+          "inline-flex items-center justify-center gap-2 rounded-sm transition",
           @size_class,
           @variant_class,
           @class
@@ -159,8 +135,7 @@ defmodule HuddlzWeb.CoreComponents do
       ~H"""
       <button
         class={[
-          "inline-flex items-center justify-center gap-2 font-medium",
-          @text_style_class,
+          "inline-flex items-center justify-center gap-2 rounded-sm transition",
           @size_class,
           @variant_class,
           @class
@@ -176,28 +151,8 @@ defmodule HuddlzWeb.CoreComponents do
   @doc """
   Renders an input with label and error messages.
 
-  A `Phoenix.HTML.FormField` may be passed as argument,
-  which is used to retrieve the input name, id, and values.
-  Otherwise all attributes may be passed explicitly.
-
-  ## Types
-
-  This function accepts all HTML input types, considering that:
-
-    * You may also set `type="select"` to render a `<select>` tag
-
-    * `type="checkbox"` is used exclusively to render boolean values
-
-    * For live file uploads, see `Phoenix.Component.live_file_input/1`
-
-  See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input
-  for more information. Unsupported types, such as hidden and radio,
-  are best written directly in your templates.
-
-  ## Examples
-
-      <.input field={@form[:email]} type="email" />
-      <.input name="my-input" errors={["oh no!"]} />
+  Bordered fields on a panel surface (matches the prototype). Pass either
+  a `Phoenix.HTML.FormField` via `:field` or raw `:name`/`:value`.
   """
   attr :id, :any, default: nil
   attr :name, :any
@@ -267,7 +222,7 @@ defmodule HuddlzWeb.CoreComponents do
       <label
         :if={@label}
         for={@id}
-        class="mono-label text-primary/70 mb-1.5 block"
+        class="mono-label text-base-content/60 mb-2 block"
       >
         {@label}
       </label>
@@ -276,7 +231,7 @@ defmodule HuddlzWeb.CoreComponents do
         name={@name}
         class={[
           @class ||
-            "w-full h-10 border-0 border-b border-base-300 bg-transparent focus:border-primary focus:ring-0 focus:outline-none text-base-content text-sm",
+            "w-full h-11 px-3 rounded-sm bg-base-200 text-base-content text-sm border border-base-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition",
           @errors != [] && (@error_class || "border-error")
         ]}
         multiple={@multiple}
@@ -296,7 +251,7 @@ defmodule HuddlzWeb.CoreComponents do
       <label
         :if={@label}
         for={@id}
-        class="mono-label text-primary/70 mb-1.5 block"
+        class="mono-label text-base-content/60 mb-2 block"
       >
         {@label}
       </label>
@@ -305,7 +260,7 @@ defmodule HuddlzWeb.CoreComponents do
         name={@name}
         class={[
           @class ||
-            "w-full py-2 border-0 border-b border-base-300 bg-transparent focus:border-primary focus:ring-0 focus:outline-none text-base-content text-sm",
+            "w-full px-3 py-2.5 rounded-sm bg-base-200 text-base-content text-sm leading-relaxed border border-base-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition resize-y",
           @errors != [] && (@error_class || "border-error")
         ]}
         {@rest}
@@ -322,7 +277,7 @@ defmodule HuddlzWeb.CoreComponents do
       <label
         :if={@label}
         for={@id}
-        class="mono-label text-primary/70 mb-1.5 block"
+        class="mono-label text-base-content/60 mb-2 block"
       >
         {@label}
       </label>
@@ -333,7 +288,7 @@ defmodule HuddlzWeb.CoreComponents do
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
           @class ||
-            "w-full h-10 border-0 border-b border-base-300 bg-transparent focus:border-primary focus:ring-0 focus:outline-none text-base-content text-sm",
+            "w-full h-11 px-3 rounded-sm bg-base-200 text-base-content text-sm border border-base-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition placeholder:text-base-content/40",
           @errors != [] && (@error_class || "border-error")
         ]}
         {@rest}
@@ -343,7 +298,6 @@ defmodule HuddlzWeb.CoreComponents do
     """
   end
 
-  # Helper used by inputs to generate form errors
   defp error(assigns) do
     ~H"""
     <p class="mt-1.5 flex gap-2 items-center text-sm text-error">
@@ -366,10 +320,10 @@ defmodule HuddlzWeb.CoreComponents do
     ~H"""
     <header class={[@actions != [] && "flex items-center justify-between gap-6", "pb-6", @class]}>
       <div>
-        <h1 class="font-display text-2xl md:text-3xl tracking-tight text-base-content text-glow">
+        <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-base-content">
           {render_slot(@inner_block)}
         </h1>
-        <p :if={@subtitle != []} class="mt-1 text-sm text-base-content/40">
+        <p :if={@subtitle != []} class="mt-1 text-sm text-base-content/50">
           {render_slot(@subtitle)}
         </p>
       </div>
@@ -380,13 +334,6 @@ defmodule HuddlzWeb.CoreComponents do
 
   @doc ~S"""
   Renders a table with generic styling.
-
-  ## Examples
-
-      <.table id="users" rows={@users}>
-        <:col :let={user} label="id">{user.id}</:col>
-        <:col :let={user} label="username">{user.username}</:col>
-      </.table>
   """
   attr :id, :string, required: true
   attr :rows, :list, required: true
@@ -410,13 +357,13 @@ defmodule HuddlzWeb.CoreComponents do
       end
 
     ~H"""
-    <div class="overflow-x-auto border border-base-300">
+    <div class="overflow-x-auto border border-base-300 rounded">
       <table class="table">
         <thead>
           <tr class="border-b border-base-300">
             <th
               :for={col <- @col}
-              class="mono-label text-primary/60 bg-base-200/30"
+              class="mono-label text-base-content/50 bg-base-200/30"
             >
               {col[:label]}
             </th>
@@ -454,13 +401,6 @@ defmodule HuddlzWeb.CoreComponents do
 
   @doc """
   Renders a data list.
-
-  ## Examples
-
-      <.list>
-        <:item title="Title">{@post.title}</:item>
-        <:item title="Views">{@post.views}</:item>
-      </.list>
   """
   slot :item, required: true do
     attr :title, :string, required: true
@@ -481,21 +421,6 @@ defmodule HuddlzWeb.CoreComponents do
 
   @doc """
   Renders a [Heroicon](https://heroicons.com).
-
-  Heroicons come in three styles – outline, solid, and mini.
-  By default, the outline style is used, but solid and mini may
-  be applied by using the `-solid` and `-mini` suffix.
-
-  You can customize the size and colors of the icons by setting
-  width, height, and background color classes.
-
-  Icons are extracted from the `deps/heroicons` directory and bundled within
-  your compiled app.css by the plugin in `assets/vendor/heroicons.js`.
-
-  ## Examples
-
-      <.icon name="hero-x-mark-solid" />
-      <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
   """
   attr :name, :string, required: true
   attr :class, :string, default: "size-4"
@@ -508,12 +433,6 @@ defmodule HuddlzWeb.CoreComponents do
 
   @doc """
   Renders a user avatar with fallback to initials or icon.
-
-  ## Examples
-
-      <.avatar user={@current_user} />
-      <.avatar user={@member} size={:sm} />
-      <.avatar user={nil} size={:lg} />
   """
   attr :user, :map,
     default: nil,
@@ -548,7 +467,7 @@ defmodule HuddlzWeb.CoreComponents do
 
     ~H"""
     <div class={[
-      "flex items-center justify-center flex-shrink-0 overflow-hidden",
+      "flex items-center justify-center flex-shrink-0 overflow-hidden rounded-full",
       @size_class,
       @class
     ]}>
@@ -622,13 +541,6 @@ defmodule HuddlzWeb.CoreComponents do
 
   @doc """
   Renders a modal dialog as an overlay.
-
-  ## Examples
-
-      <.modal id="add-location" show on_cancel={JS.navigate(~p"/back")}>
-        <h2>Add Location</h2>
-        ...
-      </.modal>
   """
   attr :id, :string, required: true
   attr :show, :boolean, default: false
@@ -663,7 +575,7 @@ defmodule HuddlzWeb.CoreComponents do
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="relative border border-base-300 bg-base-200 shadow-[0_0_30px_oklch(75%_0.18_195/0.15)] p-6"
+              class="relative border border-base-300 bg-base-200 rounded shadow-pop p-6"
             >
               <button
                 phx-click={JS.exec("data-cancel", to: "##{@id}")}
@@ -710,9 +622,6 @@ defmodule HuddlzWeb.CoreComponents do
 
   @doc """
   Renders an atom or string as a human-readable label.
-
-  Underscores become spaces and the first letter is capitalized.
-  Use for enum values like `:in_person` → `"In person"`.
   """
   def humanize(value) do
     value
@@ -741,10 +650,6 @@ defmodule HuddlzWeb.CoreComponents do
 
   @doc """
   Renders pagination controls.
-
-  ## Examples
-
-      <.pagination current_page={@page} total_pages={@total_pages} event_name="change_page" />
   """
   attr :current_page, :integer, required: true
   attr :total_pages, :integer, required: true
@@ -757,7 +662,7 @@ defmodule HuddlzWeb.CoreComponents do
       <div class="flex items-center gap-1">
         <button
           :if={@current_page > 1}
-          class="px-3 py-1.5 text-sm font-medium border border-base-300 btn-neon transition-colors"
+          class="px-3 py-1.5 text-sm font-bold border border-base-300 rounded-sm hover:border-primary transition-colors"
           phx-click={@event_name}
           phx-value-page={@current_page - 1}
         >
@@ -770,9 +675,9 @@ defmodule HuddlzWeb.CoreComponents do
           <% else %>
             <button
               class={[
-                "w-8 h-8 text-sm font-medium font-display transition-colors",
+                "w-8 h-8 text-sm font-bold rounded-sm transition-colors",
                 if(page == @current_page,
-                  do: "bg-primary text-primary-content neon-glow",
+                  do: "bg-primary text-primary-content",
                   else: "hover:bg-base-300"
                 )
               ]}
@@ -786,7 +691,7 @@ defmodule HuddlzWeb.CoreComponents do
 
         <button
           :if={@current_page < @total_pages}
-          class="px-3 py-1.5 text-sm font-medium border border-base-300 btn-neon transition-colors"
+          class="px-3 py-1.5 text-sm font-bold border border-base-300 rounded-sm hover:border-primary transition-colors"
           phx-click={@event_name}
           phx-value-page={@current_page + 1}
         >
@@ -797,7 +702,6 @@ defmodule HuddlzWeb.CoreComponents do
     """
   end
 
-  # Helper function to generate pagination range
   defp pagination_range(_current_page, total_pages) when total_pages <= 7 do
     1..total_pages |> Enum.to_list()
   end
@@ -825,11 +729,6 @@ defmodule HuddlzWeb.CoreComponents do
 
   @doc """
   Renders a date picker input.
-
-  ## Examples
-
-      <.date_picker field={@form[:date]} />
-      <.date_picker name="event_date" value={@date} />
   """
   attr :id, :any, default: nil
   attr :name, :any
@@ -859,7 +758,7 @@ defmodule HuddlzWeb.CoreComponents do
     <fieldset class="fieldset mb-4">
       <label
         for={@id}
-        class="mono-label text-primary/70 mb-1.5 block"
+        class="mono-label text-base-content/60 mb-2 block"
       >
         {@label}
       </label>
@@ -871,7 +770,7 @@ defmodule HuddlzWeb.CoreComponents do
           value={@value}
           min={@min}
           class={[
-            "input border border-base-300 bg-base-100/5 w-full pr-10 focus:border-primary focus:ring-0 text-base-content",
+            "w-full h-11 px-3 pr-10 rounded-sm bg-base-200 border border-base-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none text-base-content text-sm transition",
             @errors != [] && "border-error"
           ]}
           {@rest}
@@ -888,11 +787,6 @@ defmodule HuddlzWeb.CoreComponents do
 
   @doc """
   Renders a time picker with 15-minute increments and manual entry.
-
-  ## Examples
-
-      <.time_picker field={@form[:start_time]} />
-      <.time_picker name="start_time" value={@time} />
   """
   attr :id, :any, default: nil
   attr :name, :any
@@ -919,7 +813,7 @@ defmodule HuddlzWeb.CoreComponents do
     <fieldset class="fieldset mb-4">
       <label
         for={@id}
-        class="mono-label text-primary/70 mb-1.5 block"
+        class="mono-label text-base-content/60 mb-2 block"
       >
         {@label}
       </label>
@@ -931,7 +825,7 @@ defmodule HuddlzWeb.CoreComponents do
         list={"time-options-#{@id}"}
         class={[
           @class ||
-            "input border border-base-300 bg-base-100/5 w-full focus:border-primary focus:ring-0 text-base-content",
+            "w-full h-11 px-3 rounded-sm bg-base-200 border border-base-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none text-base-content text-sm transition",
           @errors != [] && "border-error"
         ]}
         {@rest}
@@ -951,11 +845,6 @@ defmodule HuddlzWeb.CoreComponents do
 
   @doc """
   Renders a duration picker with preset options.
-
-  ## Examples
-
-      <.duration_picker field={@form[:duration_minutes]} />
-      <.duration_picker name="duration" value={60} />
   """
   attr :id, :any, default: nil
   attr :name, :any
@@ -982,7 +871,7 @@ defmodule HuddlzWeb.CoreComponents do
     <fieldset class="fieldset mb-4">
       <label
         for={@id}
-        class="mono-label text-primary/70 mb-1.5 block"
+        class="mono-label text-base-content/60 mb-2 block"
       >
         {@label}
       </label>
@@ -991,7 +880,7 @@ defmodule HuddlzWeb.CoreComponents do
         name={@name}
         class={[
           @class ||
-            "select border border-base-300 bg-base-100/5 w-full focus:border-primary focus:ring-0 text-base-content",
+            "w-full h-11 px-3 rounded-sm bg-base-200 border border-base-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none text-base-content text-sm transition",
           @errors != [] && "border-error"
         ]}
         {@rest}
@@ -1011,7 +900,6 @@ defmodule HuddlzWeb.CoreComponents do
     """
   end
 
-  # Helper function for time picker options
   defp time_option_value(hour, minute) do
     hour_str = hour |> Integer.to_string() |> String.pad_leading(2, "0")
     minute_str = minute |> Integer.to_string() |> String.pad_leading(2, "0")
