@@ -101,7 +101,6 @@ defmodule HuddlzWeb.Router do
       live "/organize/calendar", OrganizeLive, :calendar
       live "/organize/attendees", OrganizeLive, :attendees
       live "/organize/members", OrganizeLive, :members
-      live "/organize/settings", OrganizeLive, :settings
 
       # Group routes
       live "/groups", GroupLive.Index, :index
