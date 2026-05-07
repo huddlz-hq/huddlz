@@ -200,11 +200,44 @@ Feature: Organizer workspace
     And I should see "Nobody is on the waitlist."
     And I should see "All upcoming"
 
-  Scenario: Members tab renders the placeholder card with a link to /me
+  Scenario: Members tab shows the empty state when the actor owns no groups
     Given I am signed in as "host@example.com"
     When I visit "/organize/members"
-    Then I should see "Members."
-    And I should see "// Coming in Phase 3.6"
+    Then I should see "Understand members."
+    And I should see "// No groups yet"
+    And I should see "You don't own any groups yet."
+
+  Scenario: Members tab lists groups the actor owns with member counts
+    Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
+    And a private group "Inner Circle" exists with owner "host@example.com"
+    And I am signed in as "host@example.com"
+    When I visit "/organize/members"
+    Then I should see "// Your groups"
+    And I should see "Cyberpunk Builders"
+    And I should see "Inner Circle"
+    And I should see "Public"
+    And I should see "Private"
+
+  Scenario: Members tab does not list groups the actor does not own
+    Given a public group "Phoenix Devs" exists with owner "stranger@example.com"
+    And I am signed in as "host@example.com"
+    When I visit "/organize/members"
+    Then I should see "// No groups yet"
+    And I should not see "Phoenix Devs"
+
+  Scenario: Selecting a group shows its roster grouped by role
+    Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
+    And "attendee@example.com" is a member of "Cyberpunk Builders"
+    And I am signed in as "host@example.com"
+    When I visit "/organize/members"
+    And I click "Cyberpunk Builders"
+    Then I should see "// Owner"
+    And I should see "// Members"
+    And I should see "// Organizers"
+    And I should see "Host User"
+    And I should see "Attendee"
+    And I should see "All groups"
+    And I should see "No co-organizers yet."
 
   Scenario: Settings tab renders the placeholder card with no replacement surface
     Given I am signed in as "host@example.com"
