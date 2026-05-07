@@ -143,12 +143,29 @@ Adding drafts is a feature, not a tab — it touches at minimum:
 - 3.7-C: implement Group draft state
 - 3.7-D: re-introduce the Drafts tab once 3.7-B and 3.7-C land
 
-### 3.8 Calendar tab
-Month / week / agenda view across organized groups. Largest unknown; spike before committing.
-- **Cut line:** calendar sync / iCal export.
+### 3.8 Calendar tab — ✅ shipped
+**Decision:** Shipped two views inside the workspace shell, switched by `?view=agenda|month`. Agenda (default) reuses `huddlz_for_organizer` with `:live`, grouped by date; each day section gets a `// Today / // Tomorrow / // <Sun-Sat> / // <Mon DD>` eyebrow plus the long-form date label. Month view uses a 6×7 Sunday-start grid bounded by `?ym=YYYY-MM` (defaults to the current month, UTC). Today is highlighted with a cyan-bordered day number; out-of-month cells dim. Each cell renders up to 2 huddl pills (time · title) with a `+N more` overflow line; pills link to the huddl edit page. The month query pulls `:live` and `:past` via `huddlz_for_organizer`, both date-bounded to the visible 42-day window so the action stays scalable. Prev / Today / Next nav links sit beside the month heading. View toggle uses the existing `filter_chip` pattern.
+- **Cut lines that held:** week view; calendar sync / iCal export; drag-to-reschedule; create-from-cell affordance; per-group filtering; click-day-to-filter-agenda.
+- **Known limitation:** UTC-bucketed dates — a 11pm Eastern huddl shows on the next UTC day. Tracked alongside the broader timezone story; the rest of the app already uses UTC for `format_starts_at`.
 
-### 3.9 Settings tab
-Organizer defaults — visibility, RSVP windows, reminder schedule, default capacity, attendee questions. Form-heavy; some fields likely don't exist yet (small spike to enumerate).
+### 3.9 Settings tab — ⏸ deferred (model gap)
+**Decision:** Removed the Settings sidebar tab and `/organize/settings` route entirely until a defaults model lands. See [phase-3-9-settings-spike.md](phase-3-9-settings-spike.md) for the full audit.
+
+Field audit, in short:
+- **Default visibility** — only per-group `Group.is_public` and per-huddl `Huddl.is_private` exist. No org-wide default home.
+- **RSVP windows** — no schema. `Huddl` has start/end and `max_attendees` but no open/close cutoff.
+- **Reminder schedule** — hardcoded 24h+1h via `Huddl.reminder_24h_sent_at` / `reminder_1h_sent_at`. User-level email opt-in/out exists at `/profile/notifications`; the schedule itself is not configurable.
+- **Default capacity** — `Huddl.max_attendees` per huddl, no default.
+- **Attendee questions** — no resource.
+
+The only existing organizer-relevant setting (`User.notification_preferences`) already has a dedicated page reachable from the avatar dropdown. A stub Settings tab would duplicate it and add nothing else.
+
+**Follow-up tickets to file:**
+- 3.9-A: defaults-model spike — `OrganizerSettings` (user-keyed) vs. per-`Group` extension. Output: `phase-3-9-defaults-spike.md`.
+- 3.9-B: RSVP windows on `Huddl` + enforcement in `:rsvp` / `:join_waitlist` + form wiring.
+- 3.9-C: configurable reminder schedule + worker rewrite + backfill.
+- 3.9-D: attendee questions resource + RSVP-time capture + Attendees-detail surfacing.
+- 3.9-E: re-introduce the Settings tab once enough of B–D have landed to populate a useful form.
 
 ---
 

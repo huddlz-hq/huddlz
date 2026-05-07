@@ -48,6 +48,14 @@ defmodule OrganizeWorkspaceSteps do
     context
   end
 
+  step "the page should not link to {string}",
+       %{args: [path]} = context do
+    session = context[:session] || context[:conn]
+    refute_has(session, "a[href='#{path}']")
+
+    context
+  end
+
   defp lookup_group(name) do
     Huddlz.Communities.Group
     |> Ash.Query.filter(name: name)

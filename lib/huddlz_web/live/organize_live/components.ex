@@ -69,12 +69,6 @@ defmodule HuddlzWeb.OrganizeLive.Components do
           label="Members"
           path={~p"/organize/members"}
         />
-        <.sidebar_link
-          active={@active}
-          action={:settings}
-          label="Settings"
-          path={~p"/organize/settings"}
-        />
       </nav>
 
       <div class="border-t border-base-300 px-5 py-3 text-xs text-base-content/50">
