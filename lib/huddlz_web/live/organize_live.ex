@@ -319,9 +319,9 @@ defmodule HuddlzWeb.OrganizeLive do
                     <span>{huddl.group.name}</span>
                   </p>
                 </div>
-                <span class="text-xs font-bold text-primary flex-shrink-0">
+                <.huddl_badge variant="cyan" class="flex-shrink-0">
                   {rsvp_label(huddl.rsvp_count)}
-                </span>
+                </.huddl_badge>
               </li>
             <% end %>
           </ul>
