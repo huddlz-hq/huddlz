@@ -27,6 +27,12 @@ defmodule Huddlz.Communities do
 
       define :get_group_huddlz, action: :by_group, args: [:group_id]
       define :get_past_group_huddlz, action: :past_by_group, args: [:group_id]
+
+      define :huddlz_for_organizer,
+        action: :huddlz_for_organizer,
+        args: [{:optional, :state}],
+        get?: false
+
       define :rsvp_huddl, action: :rsvp
       define :cancel_rsvp_huddl, action: :cancel_rsvp
       define :join_waitlist_huddl, action: :join_waitlist

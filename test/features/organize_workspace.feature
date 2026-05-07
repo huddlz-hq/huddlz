@@ -100,12 +100,52 @@ Feature: Organizer workspace
     Then I should see "Cyberpunk Builders"
     And the page should link "Cyberpunk Builders" to its edit screen
 
-  Scenario: Huddlz tab renders the placeholder card with a link to groups
-    Given I am signed in as "host@example.com"
+  Scenario: Huddlz tab shows the empty state when the actor has no live huddlz
+    Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
+    And I am signed in as "host@example.com"
     When I visit "/organize/huddlz"
-    Then I should see "Huddlz."
-    And I should see "// Coming in Phase 3.3"
-    And I should see "Browse groups"
+    Then I should see "Manage your huddlz."
+    And I should see "// No live huddlz"
+    And I should see "Nothing on the calendar."
+    And I should see "Create your first huddl"
+
+  Scenario: Huddlz tab lists live huddlz across every group the actor organizes
+    Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
+    And a public group "Synth Society" exists with owner "host@example.com"
+    And the huddl "Synthwave Night" exists in group "Cyberpunk Builders" hosted by "host@example.com"
+    And the huddl "Modular Jam" exists in group "Synth Society" hosted by "host@example.com"
+    And I am signed in as "host@example.com"
+    When I visit "/organize/huddlz"
+    Then I should see "// Live huddlz"
+    And I should see "Synthwave Night"
+    And I should see "Modular Jam"
+    And I should see "Cyberpunk Builders"
+    And I should see "Synth Society"
+
+  Scenario: Huddlz tab Past filter lists wrapped huddlz
+    Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
+    And the past huddl "Last Year's Demoday" exists in group "Cyberpunk Builders" hosted by "host@example.com"
+    And I am signed in as "host@example.com"
+    When I visit "/organize/huddlz"
+    And I click "Past"
+    Then I should see "// Past huddlz"
+    And I should see "Last Year's Demoday"
+    And I should not see "Create your first huddl"
+
+  Scenario: Huddlz tab does not list huddlz from groups the actor does not organize
+    Given a public group "Phoenix Devs" exists with owner "stranger@example.com"
+    And the huddl "External Meetup" exists in group "Phoenix Devs" hosted by "stranger@example.com"
+    And I am signed in as "host@example.com"
+    When I visit "/organize/huddlz"
+    Then I should see "// No live huddlz"
+    And I should not see "External Meetup"
+
+  Scenario: Huddlz tab rows link to the huddl edit page
+    Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
+    And the huddl "Synthwave Night" exists in group "Cyberpunk Builders" hosted by "host@example.com"
+    And I am signed in as "host@example.com"
+    When I visit "/organize/huddlz"
+    Then the page should link "Synthwave Night" to its huddl edit screen
 
   Scenario: Calendar tab renders the placeholder card with no replacement surface
     Given I am signed in as "host@example.com"
