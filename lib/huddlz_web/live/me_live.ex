@@ -167,19 +167,16 @@ defmodule HuddlzWeb.MeLive do
         <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <span class="mono-label text-primary/70">// Signed in</span>
-            <h1 class="font-display text-3xl tracking-tight text-glow mt-2">
+            <h1 class="text-3xl font-extrabold tracking-tight text-base-content mt-2">
               My huddlz.
             </h1>
             <p :if={tab_intro(@tab)} class="mt-2 text-base-content/60 max-w-2xl">
               {tab_intro(@tab)}
             </p>
           </div>
-          <.link
-            navigate={~p"/discover"}
-            class="self-start lg:self-end inline-flex items-center px-5 py-2 text-sm font-medium bg-primary text-primary-content border border-primary btn-neon"
-          >
+          <.button variant="primary" navigate={~p"/discover"} class="self-start lg:self-end">
             Find another huddl
-          </.link>
+          </.button>
         </header>
 
         <nav class="flex flex-wrap items-center gap-2" aria-label="Member dashboard tabs">
@@ -301,7 +298,7 @@ defmodule HuddlzWeb.MeLive do
     ~H"""
     <section>
       <div class="flex items-baseline justify-between gap-2">
-        <h2 class="font-display text-lg tracking-tight text-glow flex items-baseline gap-3">
+        <h2 class="text-lg font-extrabold tracking-tight text-base-content flex items-baseline gap-3">
           <span class="mono-label text-primary/70">// {@title}</span>
           <span class="text-sm font-body font-normal text-base-content/40">
             ({@count})
@@ -310,7 +307,7 @@ defmodule HuddlzWeb.MeLive do
         <.link
           :if={@view_all_path && @count > @limit}
           navigate={@view_all_path}
-          class="text-xs text-primary hover:underline font-medium tracking-wide uppercase"
+          class="text-xs font-bold text-primary hover:underline"
         >
           View all →
         </.link>
@@ -342,7 +339,7 @@ defmodule HuddlzWeb.MeLive do
     <div class="border border-base-300 p-6">
       <span class="mono-label text-primary/70">// Coming up</span>
       <%= if @next do %>
-        <h3 class="font-display text-lg tracking-tight text-glow mt-3">
+        <h3 class="text-lg font-extrabold tracking-tight text-base-content mt-3">
           {@next.title}
         </h3>
         <p class="text-sm text-base-content/60 mt-1">
@@ -354,7 +351,7 @@ defmodule HuddlzWeb.MeLive do
         </p>
         <.link
           navigate={~p"/groups/#{@next.group.slug}/huddlz/#{@next.id}"}
-          class="mt-4 inline-flex text-xs text-primary hover:underline font-medium tracking-wide uppercase"
+          class="mt-4 inline-flex text-xs font-bold text-primary hover:underline"
         >
           View details →
         </.link>
@@ -399,7 +396,7 @@ defmodule HuddlzWeb.MeLive do
     ~H"""
     <section>
       <div class="flex items-baseline justify-between gap-2">
-        <h2 class="font-display text-lg tracking-tight text-glow flex items-baseline gap-3">
+        <h2 class="text-lg font-extrabold tracking-tight text-base-content flex items-baseline gap-3">
           <span class="mono-label text-primary/70">// {@title}</span>
           <span class="text-sm font-body font-normal text-base-content/40">
             ({@count})
@@ -408,7 +405,7 @@ defmodule HuddlzWeb.MeLive do
         <.link
           :if={@view_all_path && @count > @limit}
           navigate={@view_all_path}
-          class="text-xs text-primary hover:underline font-medium tracking-wide uppercase"
+          class="text-xs font-bold text-primary hover:underline"
         >
           View all →
         </.link>
@@ -438,7 +435,7 @@ defmodule HuddlzWeb.MeLive do
       </p>
       <.link
         navigate={~p"/discover?scope=groups"}
-        class="mt-4 inline-flex text-xs text-primary hover:underline font-medium tracking-wide uppercase"
+        class="mt-4 inline-flex text-xs font-bold text-primary hover:underline"
       >
         Discover groups →
       </.link>
@@ -472,7 +469,7 @@ defmodule HuddlzWeb.MeLive do
     <div class="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-10">
       <div class="lg:col-span-2 space-y-6">
         <div class="flex items-baseline justify-between gap-2">
-          <h2 class="font-display text-lg tracking-tight text-glow flex items-baseline gap-3">
+          <h2 class="text-lg font-extrabold tracking-tight text-base-content flex items-baseline gap-3">
             <span class="mono-label text-primary/70">// Updates</span>
             <span :if={@unread > 0} class="text-sm font-body font-normal text-primary">
               ({@unread} unread)
@@ -482,7 +479,7 @@ defmodule HuddlzWeb.MeLive do
             :if={@unread > 0}
             type="button"
             phx-click="mark_all_read"
-            class="text-xs text-primary hover:underline font-medium tracking-wide uppercase"
+            class="text-xs font-bold text-primary hover:underline"
           >
             Mark all as read
           </button>
@@ -526,14 +523,12 @@ defmodule HuddlzWeb.MeLive do
       <div class="flex items-start justify-between gap-4">
         <div class="flex-1 min-w-0">
           <div class="flex items-baseline gap-2 flex-wrap">
-            <span class="text-xs px-2 py-0.5 font-medium border border-current/20 text-primary/80">
-              {category_label(@notification.trigger)}
-            </span>
+            <.huddl_badge variant="cyan">{category_label(@notification.trigger)}</.huddl_badge>
             <span class="text-xs text-base-content/50">
               {format_time_ago(@notification.inserted_at)}
             </span>
           </div>
-          <h3 class="font-display text-base tracking-tight mt-2">
+          <h3 class="text-base font-extrabold tracking-tight text-base-content mt-2">
             {@notification.title}
           </h3>
           <p :if={@notification.description} class="text-sm text-base-content/60 mt-1">
@@ -545,7 +540,7 @@ defmodule HuddlzWeb.MeLive do
           <.link
             :if={@notification.source_url}
             navigate={@notification.source_url}
-            class="text-xs text-primary hover:underline font-medium tracking-wide uppercase"
+            class="text-xs font-bold text-primary hover:underline"
           >
             View →
           </.link>
@@ -554,7 +549,7 @@ defmodule HuddlzWeb.MeLive do
             type="button"
             phx-click="mark_read"
             phx-value-id={@notification.id}
-            class="text-xs text-base-content/50 hover:text-primary font-medium tracking-wide uppercase"
+            class="text-xs font-bold text-base-content/50 hover:text-primary"
           >
             Mark read
           </button>
@@ -573,7 +568,7 @@ defmodule HuddlzWeb.MeLive do
       </p>
       <.link
         navigate={~p"/profile/notifications"}
-        class="mt-4 inline-flex text-xs text-primary hover:underline font-medium tracking-wide uppercase"
+        class="mt-4 inline-flex text-xs font-bold text-primary hover:underline"
       >
         Open preferences →
       </.link>
@@ -601,7 +596,7 @@ defmodule HuddlzWeb.MeLive do
     <div class="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-10">
       <div class="lg:col-span-2 space-y-6">
         <div class="flex items-baseline justify-between gap-2">
-          <h2 class="font-display text-lg tracking-tight text-glow flex items-baseline gap-3">
+          <h2 class="text-lg font-extrabold tracking-tight text-base-content flex items-baseline gap-3">
             <span class="mono-label text-primary/70">// Invites</span>
             <span :if={@invites != []} class="text-sm font-body font-normal text-base-content/40">
               ({length(@invites)})
