@@ -98,7 +98,7 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
   defp category_section(assigns) do
     ~H"""
     <section class="border border-base-300 p-6">
-      <h2 class="font-display text-2xl tracking-tight text-glow">{@title}</h2>
+      <h2 class="text-2xl font-extrabold tracking-tight text-base-content">{@title}</h2>
       <p class="text-base-content/70 mt-1">{@description}</p>
 
       <div class="mt-6 space-y-1">
@@ -121,7 +121,7 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
   defp read_only_section(assigns) do
     ~H"""
     <section class="border border-base-300 p-6">
-      <h2 class="font-display text-2xl tracking-tight text-glow">{@title}</h2>
+      <h2 class="text-2xl font-extrabold tracking-tight text-base-content">{@title}</h2>
       <p class="text-base-content/70 mt-1">{@description}</p>
 
       <ul class="mt-6 space-y-2">
