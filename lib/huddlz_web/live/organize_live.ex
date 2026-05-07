@@ -20,7 +20,6 @@ defmodule HuddlzWeb.OrganizeLive do
   alias HuddlzWeb.Layouts
 
   @huddl_loads [:rsvp_count, :group]
-  @overview_huddl_limit 100
   @attendees_huddl_loads [:rsvp_count, :waitlist_count, :group]
   @group_loads [:current_image_url, :member_count]
   @member_role_order [:owner, :organizer, :member]
@@ -193,7 +192,7 @@ defmodule HuddlzWeb.OrganizeLive do
     GroupMember
     |> Ash.Query.for_read(:get_by_group, %{group_id: group.id}, actor: user)
     |> Ash.Query.load(:user)
-    |> Ash.Query.sort(role: :asc, created_at: :asc)
+    |> Ash.Query.sort(created_at: :asc)
     |> Ash.read!(actor: user)
   end
 
@@ -288,7 +287,6 @@ defmodule HuddlzWeb.OrganizeLive do
     Huddl
     |> Ash.Query.for_read(:upcoming, %{}, actor: user)
     |> Ash.Query.filter(group_id in ^group_ids)
-    |> Ash.Query.limit(@overview_huddl_limit)
     |> Ash.Query.load(@huddl_loads)
     |> Ash.read!(actor: user)
   end
@@ -1373,11 +1371,8 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp member_name(entry), do: attendee_name(entry)
 
-  defp format_member_meta(%{created_at: %DateTime{} = at}), do: "Joined " <> format_relative(at)
-
-  defp format_member_meta(%{created_at: %NaiveDateTime{} = at}) do
-    "Joined " <> Calendar.strftime(at, "%b %d, %Y")
-  end
+  defp format_member_meta(%{created_at: at}) when not is_nil(at),
+    do: "Joined " <> format_date_short(at)
 
   defp format_member_meta(_), do: ""
 
@@ -1397,24 +1392,24 @@ defmodule HuddlzWeb.OrganizeLive do
   defp role_badge_variant(:organizer), do: "outline"
   defp role_badge_variant(:member), do: "default"
 
-  defp role_empty_copy(:owner), do: "No owner on file."
-
+  # No :owner clause — every group is created with its owner as a :owner GroupMember
+  # row (Group.Changes.AddOwnerAsMember), so the owner panel always has at least
+  # one row. If that invariant breaks, FunctionClauseError surfaces it.
   defp role_empty_copy(:organizer),
     do: "No co-organizers yet. Promote a member to organizer to share the load."
 
   defp role_empty_copy(:member), do: "Nobody has joined yet."
 
   defp format_attendee_meta(%{waitlisted_at: %DateTime{} = at}),
-    do: "Joined waitlist " <> format_relative(at)
+    do: "Joined waitlist " <> format_date_short(at)
 
   defp format_attendee_meta(%{rsvped_at: %DateTime{} = at}),
-    do: "RSVPed " <> format_relative(at)
+    do: "RSVPed " <> format_date_short(at)
 
   defp format_attendee_meta(_), do: ""
 
-  defp format_relative(%DateTime{} = at) do
-    Calendar.strftime(at, "%b %d, %Y")
-  end
+  defp format_date_short(%DateTime{} = at), do: Calendar.strftime(at, "%b %d, %Y")
+  defp format_date_short(%NaiveDateTime{} = at), do: Calendar.strftime(at, "%b %d, %Y")
 
   defp member_label(0), do: "No members yet"
   defp member_label(1), do: "1 member"
