@@ -119,8 +119,11 @@ Port `HuddlLive.New` form into the workspace shell: cover upload, basics, date/f
 - **Cut lines that held:** message attendees (Phase 4.x); mark-checked-in (needs new field); move to waitlist (no UX yet); past huddlz filter (this surface is operational, "what's coming up next").
 - **Cut line:** check-in workflow if it requires new fields.
 
-### 3.6 Members tab
-Group membership ops cross-group. Reuses `GroupMember` actions for role changes / approvals / removals.
+### 3.6 Members tab — ✅ shipped
+**Decision:** Shipped a read-only master-detail view mirroring 3.5. The index lists groups the actor owns (sorted by name, reusing `Group.get_by_owner`) with member counts and visibility badges; clicking a row patches `?group=<slug>` and renders the roster in three role-grouped panels — Owner / Organizers / Members — each ordered by created_at. Each row shows display name (falling back to email), join date, and a role badge. The detail view ends with a small italic note that role changes / removals haven't been wired into the workspace yet.
+- Scoped to **owned** groups only, matching 3.2's behavior. Organizers-but-not-owners don't see groups they only co-organize. If we want that, the right fix is a `groups_for_organizer` action paralleling `huddlz_for_organizer`; it stayed out of scope for this slice.
+- **3.6.1 follow-up — member ops:** role change (member ↔ organizer), remove member, add-by-search. The actions exist on `GroupMember` (`:change_role`, `:remove_member`, `:add_member`); only the UI is missing. Owner-only by current policy.
+- **Cut lines that held:** approvals (no model — flagged in 2.4 spike), invitations to private groups (no model), bulk operations, search/filter within a group's roster.
 
 ### 3.7 Drafts tab
 Lists huddl + group drafts with a completion checklist. Needs `:draft` state reads on both resources (verify they exist; add if not).

@@ -14,6 +14,7 @@ defmodule HuddlzWeb.OrganizeLive do
   require Ash.Query
 
   alias Huddlz.Communities.Group
+  alias Huddlz.Communities.GroupMember
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.HuddlAttendee
   alias Huddlz.Storage.GroupImages
@@ -23,6 +24,7 @@ defmodule HuddlzWeb.OrganizeLive do
   @overview_huddl_limit 100
   @attendees_huddl_loads [:rsvp_count, :waitlist_count, :group]
   @group_loads [:current_image_url, :member_count]
+  @member_role_order [:owner, :organizer, :member]
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
 
@@ -41,7 +43,10 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:attendees_huddlz, [])
      |> assign(:selected_huddl, nil)
      |> assign(:selected_attendees, [])
-     |> assign(:selected_waitlist, [])}
+     |> assign(:selected_waitlist, [])
+     |> assign(:members_groups, [])
+     |> assign(:selected_group, nil)
+     |> assign(:selected_members, [])}
   end
 
   @impl true
@@ -103,6 +108,16 @@ defmodule HuddlzWeb.OrganizeLive do
     |> assign(:selected_waitlist, load_waitlist(selected, user))
   end
 
+  defp load_action(socket, :members, params, user) do
+    groups = load_owned_groups(user)
+    selected = find_selected_group(groups, params["group"])
+
+    socket
+    |> assign(:members_groups, groups)
+    |> assign(:selected_group, selected)
+    |> assign(:selected_members, load_group_members(selected, user))
+  end
+
   defp load_action(socket, _, _params, _user), do: socket
 
   defp find_selected_huddl(_huddlz, nil), do: nil
@@ -127,6 +142,22 @@ defmodule HuddlzWeb.OrganizeLive do
     HuddlAttendee
     |> Ash.Query.for_read(:waitlist_for_huddl, %{huddl_id: huddl.id}, actor: user)
     |> Ash.Query.load(:user)
+    |> Ash.read!(actor: user)
+  end
+
+  defp find_selected_group(_groups, nil), do: nil
+
+  defp find_selected_group(groups, slug) do
+    Enum.find(groups, &(&1.slug == slug))
+  end
+
+  defp load_group_members(nil, _user), do: []
+
+  defp load_group_members(group, user) do
+    GroupMember
+    |> Ash.Query.for_read(:get_by_group, %{group_id: group.id}, actor: user)
+    |> Ash.Query.load(:user)
+    |> Ash.Query.sort(role: :asc, created_at: :asc)
     |> Ash.read!(actor: user)
   end
 
@@ -202,12 +233,10 @@ defmodule HuddlzWeb.OrganizeLive do
               waitlist={@selected_waitlist}
             />
           <% :members -> %>
-            <.placeholder_tab
-              title="Members"
-              description="Group membership operations across every group you organize."
-              phase="3.6"
-              cta_label="Open hosting groups on /me"
-              cta_path={~p"/me?#{[tab: :groups]}"}
+            <.members_tab
+              groups={@members_groups}
+              selected={@selected_group}
+              members={@selected_members}
             />
           <% :settings -> %>
             <.placeholder_tab
@@ -769,6 +798,197 @@ defmodule HuddlzWeb.OrganizeLive do
     """
   end
 
+  attr :groups, :list, required: true
+  attr :selected, :any, required: true
+  attr :members, :list, required: true
+
+  defp members_tab(assigns) do
+    ~H"""
+    <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <span class="mono-label text-primary/70">// Members</span>
+        <h1 class="text-3xl font-extrabold tracking-tight text-base-content mt-2">
+          Understand members.
+        </h1>
+        <p class="mt-2 text-base-content/60 max-w-2xl">
+          The people connected to the groups you own. Click a group to see its roster
+          by role.
+        </p>
+      </div>
+    </header>
+
+    <%= if @selected do %>
+      <.members_detail group={@selected} members={@members} />
+    <% else %>
+      <.members_index groups={@groups} />
+    <% end %>
+    """
+  end
+
+  attr :groups, :list, required: true
+
+  defp members_index(assigns) do
+    ~H"""
+    <%= if @groups == [] do %>
+      <div class="border border-base-300 p-8">
+        <span class="mono-label text-primary/70">// No groups yet</span>
+        <h2 class="text-xl font-extrabold tracking-tight text-base-content mt-2">
+          You don't own any groups yet.
+        </h2>
+        <p class="mt-2 text-sm text-base-content/60 max-w-xl">
+          Create a group to start building a community. Once you have one, this tab
+          shows the people who joined it.
+        </p>
+        <.button variant="primary" navigate={~p"/groups/new"} class="mt-4">
+          Create your first group
+        </.button>
+      </div>
+    <% else %>
+      <section>
+        <div class="flex items-baseline justify-between gap-2">
+          <h2 class="text-lg font-extrabold tracking-tight text-base-content flex items-baseline gap-3">
+            <span class="mono-label text-primary/70">// Your groups</span>
+            <span class="text-sm font-body font-normal text-base-content/40">
+              ({length(@groups)})
+            </span>
+          </h2>
+        </div>
+
+        <ul class="mt-4 divide-y divide-base-300 border border-base-300">
+          <%= for group <- @groups do %>
+            <.members_index_row group={group} />
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+    """
+  end
+
+  attr :group, :map, required: true
+
+  defp members_index_row(assigns) do
+    ~H"""
+    <li>
+      <.link
+        patch={~p"/organize/members?#{[group: @group.slug]}"}
+        class="flex items-center gap-4 px-5 py-4 hover:bg-base-200/40 transition-colors group"
+      >
+        <div class="flex-1 min-w-0">
+          <h3 class="text-base font-extrabold tracking-tight text-base-content group-hover:text-primary transition-colors truncate">
+            {@group.name}
+          </h3>
+          <p class="text-xs text-base-content/60 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>{member_label(@group.member_count)}</span>
+            <span :if={@group.location} class="text-base-content/30">·</span>
+            <span :if={@group.location}>{@group.location}</span>
+          </p>
+        </div>
+
+        <.huddl_badge variant={visibility_variant(@group.is_public)} class="flex-shrink-0">
+          {visibility_label(@group.is_public)}
+        </.huddl_badge>
+
+        <.icon
+          name="hero-chevron-right"
+          class="w-4 h-4 text-base-content/40 group-hover:text-primary transition-colors flex-shrink-0"
+        />
+      </.link>
+    </li>
+    """
+  end
+
+  attr :group, :map, required: true
+  attr :members, :list, required: true
+
+  defp members_detail(assigns) do
+    grouped =
+      @member_role_order
+      |> Enum.map(fn role -> {role, Enum.filter(assigns.members, &(&1.role == role))} end)
+
+    assigns = assign(assigns, :grouped, grouped)
+
+    ~H"""
+    <section class="space-y-6">
+      <div class="flex flex-wrap items-baseline justify-between gap-3">
+        <div class="min-w-0">
+          <.link
+            patch={~p"/organize/members"}
+            class="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+          >
+            <.icon name="hero-chevron-left" class="w-3 h-3" /> All groups
+          </.link>
+          <h2 class="mt-2 text-2xl font-extrabold tracking-tight text-base-content truncate">
+            {@group.name}
+          </h2>
+          <p class="mt-1 text-xs text-base-content/60 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>{member_label(@group.member_count)}</span>
+            <span :if={@group.location} class="text-base-content/30">·</span>
+            <span :if={@group.location}>{@group.location}</span>
+          </p>
+        </div>
+        <.link
+          navigate={~p"/groups/#{@group.slug}/edit"}
+          class="text-xs font-bold text-primary hover:underline"
+        >
+          Edit group →
+        </.link>
+      </div>
+
+      <div class="space-y-6">
+        <%= for {role, rows} <- @grouped do %>
+          <.member_panel role={role} rows={rows} />
+        <% end %>
+      </div>
+
+      <p class="text-xs text-base-content/40 max-w-xl">
+        Role changes and removals are not yet wired into the workspace. Use the existing
+        group tools when those operations land in a follow-up.
+      </p>
+    </section>
+    """
+  end
+
+  attr :role, :atom, required: true
+  attr :rows, :list, required: true
+
+  defp member_panel(assigns) do
+    ~H"""
+    <div class="border border-base-300">
+      <div class="border-b border-base-300 px-5 py-4 flex items-baseline gap-3">
+        <span class="mono-label text-primary/70">// {role_eyebrow(@role)}</span>
+        <p class="text-base font-extrabold tracking-tight text-base-content">
+          {role_heading(@role)}
+        </p>
+        <span class="text-sm font-body font-normal text-base-content/40">
+          ({length(@rows)})
+        </span>
+      </div>
+
+      <%= if @rows == [] do %>
+        <p class="px-5 py-6 text-sm text-base-content/50">{role_empty_copy(@role)}</p>
+      <% else %>
+        <ul class="divide-y divide-base-300">
+          <%= for entry <- @rows do %>
+            <li class="flex items-center gap-3 px-5 py-3">
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-bold text-base-content truncate">
+                  {member_name(entry)}
+                </p>
+                <p class="text-xs text-base-content/50 mt-0.5">
+                  {format_member_meta(entry)}
+                </p>
+              </div>
+              <.huddl_badge variant={role_badge_variant(@role)} class="flex-shrink-0">
+                {role_label(@role)}
+              </.huddl_badge>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
+    </div>
+    """
+  end
+
   attr :title, :string, required: true
   attr :description, :string, required: true
   attr :phase, :string, required: true
@@ -817,6 +1037,39 @@ defmodule HuddlzWeb.OrganizeLive do
     do: to_string(email)
 
   defp attendee_name(_), do: "Unknown member"
+
+  defp member_name(entry), do: attendee_name(entry)
+
+  defp format_member_meta(%{created_at: %DateTime{} = at}), do: "Joined " <> format_relative(at)
+
+  defp format_member_meta(%{created_at: %NaiveDateTime{} = at}) do
+    "Joined " <> Calendar.strftime(at, "%b %d, %Y")
+  end
+
+  defp format_member_meta(_), do: ""
+
+  defp role_eyebrow(:owner), do: "Owner"
+  defp role_eyebrow(:organizer), do: "Organizers"
+  defp role_eyebrow(:member), do: "Members"
+
+  defp role_heading(:owner), do: "Group owner"
+  defp role_heading(:organizer), do: "Organizers"
+  defp role_heading(:member), do: "Members"
+
+  defp role_label(:owner), do: "Owner"
+  defp role_label(:organizer), do: "Organizer"
+  defp role_label(:member), do: "Member"
+
+  defp role_badge_variant(:owner), do: "cyan"
+  defp role_badge_variant(:organizer), do: "outline"
+  defp role_badge_variant(:member), do: "default"
+
+  defp role_empty_copy(:owner), do: "No owner on file."
+
+  defp role_empty_copy(:organizer),
+    do: "No co-organizers yet. Promote a member to organizer to share the load."
+
+  defp role_empty_copy(:member), do: "Nobody has joined yet."
 
   defp format_attendee_meta(%{waitlisted_at: %DateTime{} = at}),
     do: "Joined waitlist " <> format_relative(at)
