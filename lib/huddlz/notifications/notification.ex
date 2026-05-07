@@ -101,9 +101,10 @@ defmodule Huddlz.Notifications.Notification do
     end
 
     # System-driven create from Huddlz.Notifications.deliver/3 runs with
-    # authorize?: false. No user-facing path creates notifications.
+    # authorize?: false. No actor-driven path creates notifications, so
+    # forbid the action whenever an actor is in play.
     policy action(:create) do
-      authorize_if always()
+      forbid_if always()
     end
 
     policy action(:for_user) do
@@ -119,8 +120,8 @@ defmodule Huddlz.Notifications.Notification do
     end
 
     policy action(:read) do
-      description "Default read used internally; user-facing reads use :for_user"
-      authorize_if always()
+      description "Default read; restricted to the row's owner. User-facing reads use :for_user."
+      authorize_if relates_to_actor_via(:user)
     end
   end
 
