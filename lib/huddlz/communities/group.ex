@@ -309,6 +309,10 @@ defmodule Huddlz.Communities.Group do
       sort inserted_at: :desc
       filter expr(is_nil(deleted_at))
     end
+
+    count :member_count, :group_members do
+      description "Total members in the group, including owner and organizers"
+    end
   end
 
   identities do

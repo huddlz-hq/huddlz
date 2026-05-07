@@ -66,12 +66,39 @@ Feature: Organizer workspace
     Then I should see "// Open RSVPs"
     And I should see "1 RSVP"
 
-  Scenario: Groups tab renders the placeholder card with a link to /me
+  Scenario: Groups tab shows the empty state when the actor owns no groups
     Given I am signed in as "host@example.com"
     When I visit "/organize/groups"
-    Then I should see "Groups."
-    And I should see "// Coming in Phase 3.2"
-    And I should see "Open hosting groups on /me"
+    Then I should see "Manage your groups."
+    And I should see "// No groups yet"
+    And I should see "You don't organize any groups yet."
+    And I should see "Create your first group"
+
+  Scenario: Groups tab lists owned groups with their member count and visibility
+    Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
+    And a private group "Inner Circle" exists with owner "host@example.com"
+    And I am signed in as "host@example.com"
+    When I visit "/organize/groups"
+    Then I should see "// Groups you organize"
+    And I should see "Cyberpunk Builders"
+    And I should see "Inner Circle"
+    And I should see "Public"
+    And I should see "Private"
+    And I should see "1 member"
+
+  Scenario: Groups tab does not list groups the actor does not own
+    Given a public group "Phoenix Devs" exists with owner "stranger@example.com"
+    And I am signed in as "host@example.com"
+    When I visit "/organize/groups"
+    Then I should see "// No groups yet"
+    And I should not see "Phoenix Devs"
+
+  Scenario: Group rows link to the group edit page
+    Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
+    And I am signed in as "host@example.com"
+    When I visit "/organize/groups"
+    Then I should see "Cyberpunk Builders"
+    And the page should link "Cyberpunk Builders" to its edit screen
 
   Scenario: Huddlz tab renders the placeholder card with a link to groups
     Given I am signed in as "host@example.com"

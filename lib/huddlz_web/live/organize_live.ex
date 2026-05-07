@@ -11,12 +11,14 @@ defmodule HuddlzWeb.OrganizeLive do
 
   require Ash.Query
 
-  alias Huddlz.Communities
+  alias Huddlz.Communities.Group
   alias Huddlz.Communities.Huddl
+  alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
 
   @huddl_loads [:rsvp_count, :group]
   @overview_huddl_limit 100
+  @group_loads [:current_image_url, :member_count]
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
 
@@ -26,6 +28,7 @@ defmodule HuddlzWeb.OrganizeLive do
      socket
      |> assign(:page_title, "Organizer workspace")
      |> assign(:owned_groups, [])
+     |> assign(:groups_list, [])
      |> assign(:upcoming_huddlz, [])
      |> assign(:upcoming_count, 0)
      |> assign(:open_rsvps, 0)}
@@ -42,12 +45,7 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   defp load_action(socket, :overview, user) do
-    owned_groups =
-      case Communities.get_by_owner(actor: user) do
-        {:ok, groups} -> groups
-        _ -> []
-      end
-
+    owned_groups = load_owned_groups(user)
     upcoming_huddlz = load_upcoming_huddlz(owned_groups, user)
     open_rsvps = Enum.reduce(upcoming_huddlz, 0, &(&1.rsvp_count + &2))
 
@@ -58,7 +56,19 @@ defmodule HuddlzWeb.OrganizeLive do
     |> assign(:open_rsvps, open_rsvps)
   end
 
+  defp load_action(socket, :groups, user) do
+    assign(socket, :groups_list, load_owned_groups(user))
+  end
+
   defp load_action(socket, _, _user), do: socket
+
+  defp load_owned_groups(user) do
+    Group
+    |> Ash.Query.for_read(:get_by_owner, %{}, actor: user)
+    |> Ash.Query.load(@group_loads)
+    |> Ash.Query.sort(name: :asc)
+    |> Ash.read!(actor: user)
+  end
 
   defp load_upcoming_huddlz([], _user), do: []
 
@@ -90,13 +100,7 @@ defmodule HuddlzWeb.OrganizeLive do
                 open_rsvps={@open_rsvps}
               />
             <% :groups -> %>
-              <.placeholder_tab
-                title="Groups"
-                description="Manage every group you organize from one cross-group list."
-                phase="3.2"
-                cta_label="Open hosting groups on /me"
-                cta_path={~p"/me?#{[tab: :groups]}"}
-              />
+              <.groups_tab groups={@groups_list} />
             <% :huddlz -> %>
               <.placeholder_tab
                 title="Huddlz"
@@ -360,6 +364,106 @@ defmodule HuddlzWeb.OrganizeLive do
     """
   end
 
+  attr :groups, :list, required: true
+
+  defp groups_tab(assigns) do
+    ~H"""
+    <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <span class="mono-label text-primary/70">// Groups</span>
+        <h1 class="text-3xl font-extrabold tracking-tight text-base-content mt-2">
+          Manage your groups.
+        </h1>
+        <p class="mt-2 text-base-content/60 max-w-2xl">
+          Communities where you have organizer permissions. Click a row to edit its profile, image, and visibility.
+        </p>
+      </div>
+      <.button variant="primary" navigate={~p"/groups/new"}>Create group</.button>
+    </header>
+
+    <%= if @groups == [] do %>
+      <div class="border border-base-300 p-8">
+        <span class="mono-label text-primary/70">// No groups yet</span>
+        <h2 class="text-xl font-extrabold tracking-tight text-base-content mt-2">
+          You don't organize any groups yet.
+        </h2>
+        <p class="mt-2 text-sm text-base-content/60 max-w-xl">
+          Create a group to start hosting huddlz. Each group can have its own members, organizers, and recurring or one-off huddlz.
+        </p>
+        <.button variant="primary" navigate={~p"/groups/new"} class="mt-4">
+          Create your first group
+        </.button>
+      </div>
+    <% else %>
+      <section>
+        <div class="flex items-baseline justify-between gap-2">
+          <h2 class="text-lg font-extrabold tracking-tight text-base-content flex items-baseline gap-3">
+            <span class="mono-label text-primary/70">// Groups you organize</span>
+            <span class="text-sm font-body font-normal text-base-content/40">
+              ({length(@groups)})
+            </span>
+          </h2>
+        </div>
+
+        <ul class="mt-4 divide-y divide-base-300 border border-base-300">
+          <%= for group <- @groups do %>
+            <.group_row group={group} />
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+    """
+  end
+
+  attr :group, :map, required: true
+
+  defp group_row(assigns) do
+    ~H"""
+    <li>
+      <.link
+        navigate={~p"/groups/#{@group.slug}/edit"}
+        class="flex items-center gap-4 px-5 py-4 hover:bg-base-200/40 transition-colors group"
+      >
+        <div class="w-20 aspect-video flex-shrink-0 overflow-hidden border border-base-300 bg-base-300">
+          <%= if @group.current_image_url do %>
+            <img
+              src={GroupImages.url(@group.current_image_url)}
+              alt={@group.name}
+              class="w-full h-full object-cover"
+            />
+          <% else %>
+            <div class="w-full h-full bg-base-100 flex items-center justify-center">
+              <span class="text-[10px] font-extrabold text-base-content/30 text-center px-1 line-clamp-2">
+                {@group.name}
+              </span>
+            </div>
+          <% end %>
+        </div>
+
+        <div class="flex-1 min-w-0">
+          <h3 class="text-base font-extrabold tracking-tight text-base-content group-hover:text-primary transition-colors truncate">
+            {@group.name}
+          </h3>
+          <p class="text-xs text-base-content/60 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>{member_label(@group.member_count)}</span>
+            <span :if={@group.location} class="text-base-content/30">·</span>
+            <span :if={@group.location}>{@group.location}</span>
+          </p>
+        </div>
+
+        <.huddl_badge variant={visibility_variant(@group.is_public)} class="flex-shrink-0">
+          {visibility_label(@group.is_public)}
+        </.huddl_badge>
+
+        <.icon
+          name="hero-chevron-right"
+          class="w-4 h-4 text-base-content/40 group-hover:text-primary transition-colors flex-shrink-0"
+        />
+      </.link>
+    </li>
+    """
+  end
+
   attr :title, :string, required: true
   attr :description, :string, required: true
   attr :phase, :string, required: true
@@ -399,6 +503,16 @@ defmodule HuddlzWeb.OrganizeLive do
   defp rsvp_label(0), do: "0 RSVPs"
   defp rsvp_label(1), do: "1 RSVP"
   defp rsvp_label(n), do: "#{n} RSVPs"
+
+  defp member_label(0), do: "No members yet"
+  defp member_label(1), do: "1 member"
+  defp member_label(n), do: "#{n} members"
+
+  defp visibility_label(true), do: "Public"
+  defp visibility_label(false), do: "Private"
+
+  defp visibility_variant(true), do: "cyan"
+  defp visibility_variant(false), do: "outline"
 
   defp format_starts_at(%DateTime{} = dt) do
     Calendar.strftime(dt, "%b %d, %Y · %I:%M %p")
