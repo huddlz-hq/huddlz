@@ -460,13 +460,14 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
       assert %DateTime{} = stamped_huddl.reminder_24h_sent_at
 
       assert %{success: 2} = Oban.drain_queue(queue: :notifications)
+      emails = drain_mailbox()
 
       for recipient <- [attendee_a, attendee_b] do
-        assert_email_sent(fn email ->
-          email.subject == "Tomorrow: Saturday Soccer" and
-            email.to == [{"", to_string(recipient.email)}] and
-            Enum.any?(email.attachments, &(&1.content_type == "text/calendar"))
-        end)
+        assert Enum.any?(emails, fn email ->
+                 email.subject == "Tomorrow: Saturday Soccer" and
+                   email.to == [{"", to_string(recipient.email)}] and
+                   Enum.any?(email.attachments, &(&1.content_type == "text/calendar"))
+               end)
       end
     end
 
