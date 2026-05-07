@@ -203,22 +203,31 @@ defmodule HuddlzWeb.HuddlLive.New do
 
           <div class="border border-base-300 p-5">
             <span class="mono-label text-primary/70">// Group</span>
-            <h2 class="text-lg font-extrabold tracking-tight text-base-content mt-2">
+            <label
+              for="workspace-group-select"
+              class="block text-lg font-extrabold tracking-tight text-base-content mt-2"
+            >
               Which group is this huddl for?
-            </h2>
+            </label>
             <p class="text-xs text-base-content/60 mt-1">
               Switching groups resets the form to that group's defaults.
             </p>
 
-            <select
-              name="group_id"
-              phx-change="select_group"
-              class="mt-3 w-full bg-base-200 border border-base-300 px-3 py-2 text-sm font-bold focus:border-primary focus:outline-none"
-            >
-              <option :for={group <- @owned_groups} value={group.id} selected={group.id == @group.id}>
-                {group.name}
-              </option>
-            </select>
+            <form phx-change="select_group">
+              <select
+                id="workspace-group-select"
+                name="group_id"
+                class="mt-3 w-full bg-base-200 border border-base-300 px-3 py-2 text-sm font-bold focus:border-primary focus:outline-none"
+              >
+                <option
+                  :for={group <- @owned_groups}
+                  value={group.id}
+                  selected={group.id == @group.id}
+                >
+                  {group.name}
+                </option>
+              </select>
+            </form>
           </div>
 
           <.create_huddl_form_body
