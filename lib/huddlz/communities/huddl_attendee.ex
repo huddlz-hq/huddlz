@@ -176,6 +176,14 @@ defmodule Huddlz.Communities.HuddlAttendee do
       forbid_if always()
     end
 
+    # Group owners and organizers can see the waitlist for huddlz they organize.
+    # The waitlist is an operational view (managing capacity), so we restrict to
+    # organizers rather than allowing fellow attendees as :by_huddl does.
+    policy action(:waitlist_for_huddl) do
+      authorize_if Huddlz.Communities.HuddlAttendee.Checks.IsGroupOwnerOrOrganizer
+      forbid_if always()
+    end
+
     # Users can see their own RSVPs
     policy action(:by_user) do
       authorize_if actor_present()

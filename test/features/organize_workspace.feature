@@ -160,11 +160,45 @@ Feature: Organizer workspace
     Then I should see "Drafts."
     And I should see "// Coming in Phase 3.7"
 
-  Scenario: Attendees tab renders the placeholder card with a link to /me
-    Given I am signed in as "host@example.com"
+  Scenario: Attendees tab shows the empty state when the actor has no upcoming huddlz
+    Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
+    And I am signed in as "host@example.com"
     When I visit "/organize/attendees"
-    Then I should see "Attendees."
-    And I should see "// Coming in Phase 3.5"
+    Then I should see "Track attendees."
+    And I should see "// No upcoming huddlz"
+    And I should see "Nothing on the calendar."
+
+  Scenario: Attendees tab lists upcoming huddlz with RSVP and waitlist counts
+    Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
+    And the huddl "Synthwave Night" exists in group "Cyberpunk Builders" hosted by "host@example.com"
+    And "attendee@example.com" has RSVPed to "Synthwave Night"
+    And I am signed in as "host@example.com"
+    When I visit "/organize/attendees"
+    Then I should see "// Upcoming huddlz"
+    And I should see "Synthwave Night"
+    And I should see "1 RSVP"
+    And I should see "0 waitlist"
+
+  Scenario: Attendees tab does not list huddlz from groups the actor does not organize
+    Given a public group "Phoenix Devs" exists with owner "stranger@example.com"
+    And the huddl "External Meetup" exists in group "Phoenix Devs" hosted by "stranger@example.com"
+    And I am signed in as "host@example.com"
+    When I visit "/organize/attendees"
+    Then I should see "// No upcoming huddlz"
+    And I should not see "External Meetup"
+
+  Scenario: Selecting a huddl shows its attendees in the detail view
+    Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
+    And the huddl "Synthwave Night" exists in group "Cyberpunk Builders" hosted by "host@example.com"
+    And "attendee@example.com" has RSVPed to "Synthwave Night"
+    And I am signed in as "host@example.com"
+    When I visit "/organize/attendees"
+    And I click "Synthwave Night"
+    Then I should see "// Attending"
+    And I should see "// Waitlist"
+    And I should see "Attendee"
+    And I should see "Nobody is on the waitlist."
+    And I should see "All upcoming"
 
   Scenario: Members tab renders the placeholder card with a link to /me
     Given I am signed in as "host@example.com"

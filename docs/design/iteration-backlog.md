@@ -114,8 +114,9 @@ Cross-group huddl list with Live / Draft / Past filters. Needs a new `huddlz_for
 Port `HuddlLive.New` form into the workspace shell: cover upload, basics, date/format, address + geocode (already supported), publish settings.
 - **Cut line:** new model fields beyond what `Huddl` already has.
 
-### 3.5 Attendees tab
-Cross-huddl RSVP ops with a detail panel. Reuses `HuddlAttendee.by_huddl` / `waitlist_for_huddl`. Actions: message, mark checked-in, move to waitlist (some may pull in 4.x).
+### 3.5 Attendees tab — ✅ shipped
+**Decision:** Shipped a master-detail view inside the workspace shell. The index lists upcoming organized huddlz (sorted by start time, ascending) with cyan RSVP and outline waitlist count badges; clicking a row patches `?huddl=<id>` and renders a detail view with two columns — Attending and Waitlist — populated by `HuddlAttendee.by_huddl` / `waitlist_for_huddl` actions. A new policy was added to `:waitlist_for_huddl` (`IsGroupOwnerOrOrganizer`) since the waitlist is an operational view; `:by_huddl` already had the right policy. Detail rows show display name (falling back to email) and a relative timestamp; waitlist rows are numbered to surface position. The `Edit huddl →` link drops into the existing edit page rather than building duplicate edit affordances.
+- **Cut lines that held:** message attendees (Phase 4.x); mark-checked-in (needs new field); move to waitlist (no UX yet); past huddlz filter (this surface is operational, "what's coming up next").
 - **Cut line:** check-in workflow if it requires new fields.
 
 ### 3.6 Members tab
