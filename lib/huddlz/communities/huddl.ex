@@ -304,6 +304,28 @@ defmodule Huddlz.Communities.Huddl do
       prepare build(sort: [starts_at: :desc])
     end
 
+    read :huddlz_for_organizer do
+      description "Huddlz across all groups the actor owns or organizes"
+
+      argument :state, :atom do
+        allow_nil? false
+        default :live
+        constraints one_of: [:live, :past]
+      end
+
+      prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
+
+      filter expr(
+               group.owner_id == ^actor(:id) or
+                 exists(group.group_members, user_id == ^actor(:id) and role == :organizer)
+             )
+
+      filter expr(
+               (^arg(:state) == :live and ends_at > now()) or
+                 (^arg(:state) == :past and ends_at < now())
+             )
+    end
+
     update :rsvp do
       description "RSVP to this huddl as the current actor"
       require_atomic? false

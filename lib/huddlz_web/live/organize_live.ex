@@ -29,18 +29,21 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:page_title, "Organizer workspace")
      |> assign(:owned_groups, [])
      |> assign(:groups_list, [])
+     |> assign(:huddlz_list, [])
+     |> assign(:huddlz_filter, :live)
      |> assign(:upcoming_huddlz, [])
      |> assign(:upcoming_count, 0)
      |> assign(:open_rsvps, 0)}
   end
 
   @impl true
-  def handle_params(_params, _uri, socket) do
+  def handle_params(params, _uri, socket) do
     action = socket.assigns.live_action
 
     {:noreply,
      socket
      |> assign(:active, action)
+     |> assign(:huddlz_filter, parse_huddlz_filter(params["filter"]))
      |> load_action(action, socket.assigns.current_user)}
   end
 
@@ -60,7 +63,28 @@ defmodule HuddlzWeb.OrganizeLive do
     assign(socket, :groups_list, load_owned_groups(user))
   end
 
+  defp load_action(socket, :huddlz, user) do
+    state = socket.assigns.huddlz_filter
+
+    huddlz =
+      Huddl
+      |> Ash.Query.for_read(:huddlz_for_organizer, %{state: state}, actor: user)
+      |> Ash.Query.load([:rsvp_count, :status, :group])
+      |> Ash.Query.sort(starts_at: state_sort_dir(state))
+      |> Ash.read!(actor: user)
+
+    socket
+    |> assign(:owned_groups, load_owned_groups(user))
+    |> assign(:huddlz_list, huddlz)
+  end
+
   defp load_action(socket, _, _user), do: socket
+
+  defp parse_huddlz_filter("past"), do: :past
+  defp parse_huddlz_filter(_), do: :live
+
+  defp state_sort_dir(:past), do: :desc
+  defp state_sort_dir(_), do: :asc
 
   defp load_owned_groups(user) do
     Group
@@ -102,12 +126,10 @@ defmodule HuddlzWeb.OrganizeLive do
             <% :groups -> %>
               <.groups_tab groups={@groups_list} />
             <% :huddlz -> %>
-              <.placeholder_tab
-                title="Huddlz"
-                description="Cross-group huddl list with Live, Draft, and Past filters."
-                phase="3.3"
-                cta_label="Browse groups"
-                cta_path={~p"/groups"}
+              <.huddlz_tab
+                huddlz={@huddlz_list}
+                filter={@huddlz_filter}
+                owned_groups={@owned_groups}
               />
             <% :calendar -> %>
               <.placeholder_tab
@@ -464,6 +486,133 @@ defmodule HuddlzWeb.OrganizeLive do
     """
   end
 
+  attr :huddlz, :list, required: true
+  attr :filter, :atom, required: true
+  attr :owned_groups, :list, required: true
+
+  defp huddlz_tab(assigns) do
+    ~H"""
+    <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <span class="mono-label text-primary/70">// Huddlz</span>
+        <h1 class="text-3xl font-extrabold tracking-tight text-base-content mt-2">
+          Manage your huddlz.
+        </h1>
+        <p class="mt-2 text-base-content/60 max-w-2xl">
+          Every huddl across the groups you organize. Click a row to edit details, location, and capacity.
+        </p>
+      </div>
+      <.button variant="primary" navigate={create_huddl_path(@owned_groups)}>Create huddl</.button>
+    </header>
+
+    <nav class="flex gap-2" aria-label="Huddlz filter">
+      <.filter_chip label="Live" active={@filter == :live} path={~p"/organize/huddlz"} />
+      <.filter_chip label="Past" active={@filter == :past} path={~p"/organize/huddlz?filter=past"} />
+    </nav>
+
+    <%= if @huddlz == [] do %>
+      <.huddlz_empty filter={@filter} owned_groups={@owned_groups} />
+    <% else %>
+      <section>
+        <div class="flex items-baseline justify-between gap-2">
+          <h2 class="text-lg font-extrabold tracking-tight text-base-content flex items-baseline gap-3">
+            <span class="mono-label text-primary/70">// {filter_eyebrow(@filter)}</span>
+            <span class="text-sm font-body font-normal text-base-content/40">
+              ({length(@huddlz)})
+            </span>
+          </h2>
+        </div>
+
+        <ul class="mt-4 divide-y divide-base-300 border border-base-300">
+          <%= for huddl <- @huddlz do %>
+            <.huddl_row huddl={huddl} />
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+    """
+  end
+
+  attr :huddl, :map, required: true
+
+  defp huddl_row(assigns) do
+    ~H"""
+    <li>
+      <.link
+        navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}/edit"}
+        class="flex items-center gap-4 px-5 py-4 hover:bg-base-200/40 transition-colors group"
+      >
+        <div class="flex-1 min-w-0">
+          <h3 class="text-base font-extrabold tracking-tight text-base-content group-hover:text-primary transition-colors truncate">
+            {@huddl.title}
+          </h3>
+          <p class="text-xs text-base-content/60 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>{format_starts_at(@huddl.starts_at)}</span>
+            <span class="text-base-content/30">·</span>
+            <span class="truncate">{@huddl.group.name}</span>
+          </p>
+        </div>
+
+        <.huddl_badge variant="cyan" class="flex-shrink-0">
+          {rsvp_label(@huddl.rsvp_count)}
+        </.huddl_badge>
+
+        <.huddl_status_badge status={@huddl.status} class="flex-shrink-0" />
+
+        <.icon
+          name="hero-chevron-right"
+          class="w-4 h-4 text-base-content/40 group-hover:text-primary transition-colors flex-shrink-0"
+        />
+      </.link>
+    </li>
+    """
+  end
+
+  attr :label, :string, required: true
+  attr :active, :boolean, required: true
+  attr :path, :string, required: true
+
+  defp filter_chip(assigns) do
+    ~H"""
+    <.link
+      patch={@path}
+      class={[
+        "inline-flex items-center gap-2 px-3 py-1.5 text-xs font-extrabold uppercase tracking-wider border transition-colors",
+        @active && "border-primary text-primary bg-primary/10",
+        !@active &&
+          "border-base-300 text-base-content/60 hover:text-base-content hover:border-base-content/40"
+      ]}
+    >
+      {@label}
+    </.link>
+    """
+  end
+
+  attr :filter, :atom, required: true
+  attr :owned_groups, :list, required: true
+
+  defp huddlz_empty(assigns) do
+    ~H"""
+    <div class="border border-base-300 p-8">
+      <span class="mono-label text-primary/70">// {empty_eyebrow(@filter)}</span>
+      <h2 class="text-xl font-extrabold tracking-tight text-base-content mt-2">
+        {empty_heading(@filter)}
+      </h2>
+      <p class="mt-2 text-sm text-base-content/60 max-w-xl">
+        {empty_body(@filter)}
+      </p>
+      <.button
+        :if={@filter == :live}
+        variant="primary"
+        navigate={create_huddl_path(@owned_groups)}
+        class="mt-4"
+      >
+        Create your first huddl
+      </.button>
+    </div>
+    """
+  end
+
   attr :title, :string, required: true
   attr :description, :string, required: true
   attr :phase, :string, required: true
@@ -513,6 +662,22 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp visibility_variant(true), do: "cyan"
   defp visibility_variant(false), do: "outline"
+
+  defp filter_eyebrow(:past), do: "Past huddlz"
+  defp filter_eyebrow(_), do: "Live huddlz"
+
+  defp empty_eyebrow(:past), do: "No past huddlz"
+  defp empty_eyebrow(_), do: "No live huddlz"
+
+  defp empty_heading(:past), do: "No past huddlz yet."
+  defp empty_heading(_), do: "Nothing on the calendar."
+
+  defp empty_body(:past),
+    do: "Once a huddl wraps up, it'll show up here so you can revisit attendance and notes."
+
+  defp empty_body(_),
+    do:
+      "Schedule a huddl to start hosting. You'll see every active huddl across your groups in this list."
 
   defp format_starts_at(%DateTime{} = dt) do
     Calendar.strftime(dt, "%b %d, %Y · %I:%M %p")
