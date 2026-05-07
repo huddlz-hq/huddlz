@@ -18,9 +18,9 @@ defmodule GlobalHeaderSteps do
     context
   end
 
-  step "the header should expose an Organize link to /groups/new", context do
+  step "the header should expose an Organize link to /organize", context do
     session = context[:session] || context[:conn]
-    assert_has(session, "header a[href='/groups/new']", text: "Organize")
+    assert_has(session, "header a[href='/organize']", text: "Organize")
     context
   end
 

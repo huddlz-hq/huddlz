@@ -88,6 +88,16 @@ defmodule HuddlzWeb.Router do
       live "/profile", ProfileLive, :index
       live "/profile/notifications", ProfileLive.Notifications, :index
 
+      # Organizer workspace
+      live "/organize", OrganizeLive, :overview
+      live "/organize/groups", OrganizeLive, :groups
+      live "/organize/huddlz", OrganizeLive, :huddlz
+      live "/organize/calendar", OrganizeLive, :calendar
+      live "/organize/drafts", OrganizeLive, :drafts
+      live "/organize/attendees", OrganizeLive, :attendees
+      live "/organize/members", OrganizeLive, :members
+      live "/organize/settings", OrganizeLive, :settings
+
       # Group routes
       live "/groups", GroupLive.Index, :index
       live "/groups/new/locations/new", GroupLive.New, :new_location

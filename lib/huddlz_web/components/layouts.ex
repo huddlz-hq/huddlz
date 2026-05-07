@@ -50,7 +50,7 @@ defmodule HuddlzWeb.Layouts do
           <%!-- Right side --%>
           <div class="ml-auto flex items-center gap-3 flex-shrink-0">
             <a
-              href="/groups/new"
+              href="/organize"
               class="hidden md:inline-flex items-center h-12 px-4 text-sm font-bold text-base-content/80 hover:text-primary transition-colors"
             >
               Organize
@@ -202,7 +202,7 @@ defmodule HuddlzWeb.Layouts do
         <%!-- Mobile menu --%>
         <div id="mobile-menu" class="hidden md:hidden border-t border-base-300 py-2 pb-3">
           <a
-            href="/groups/new"
+            href="/organize"
             class="block px-3 py-2 text-sm font-bold hover:bg-base-300 hover:text-primary transition-colors"
           >
             Organize
