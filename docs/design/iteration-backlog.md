@@ -125,8 +125,23 @@ Port `HuddlLive.New` form into the workspace shell: cover upload, basics, date/f
 - **3.6.1 follow-up — member ops:** role change (member ↔ organizer), remove member, add-by-search. The actions exist on `GroupMember` (`:change_role`, `:remove_member`, `:add_member`); only the UI is missing. Owner-only by current policy.
 - **Cut lines that held:** approvals (no model — flagged in 2.4 spike), invitations to private groups (no model), bulk operations, search/filter within a group's roster.
 
-### 3.7 Drafts tab
-Lists huddl + group drafts with a completion checklist. Needs `:draft` state reads on both resources (verify they exist; add if not).
+### 3.7 Drafts tab — ⏸ deferred (model gap)
+**Decision:** Removed the Drafts sidebar tab and `/organize/drafts` route entirely until a real draft state lands on both `Huddl` and `Group`. Verification turned up no draft model: `Huddl.:status` is a calculation that resolves only to `:upcoming | :in_progress | :completed`; the `:draft` and `:cancelled` values in the `:by_status` enum constraint are vestigial — the calculation can never return them, and there are zero callers of `:by_status` in the web layer or tests. `Group` has nothing draft-related at all.
+
+Adding drafts is a feature, not a tab — it touches at minimum:
+- `Huddl` + `Group` schema (e.g., a `published_at :utc_datetime_usec`, nullable; or `:is_draft` boolean)
+- `Huddl.:status` calculation (`is_nil(published_at) -> :draft` branch)
+- Visibility filter (`Huddlz.Communities.Huddl.Preparations.FilterByVisibility`) — drafts must not appear in discovery
+- Notifications — reminders + RSVP confirmations must not fire for drafts
+- Edit/create flows in both `HuddlLive.New` / `HuddlLive.Edit` and `GroupLive.New` / `GroupLive.Edit` — a "Save draft" vs "Publish" affordance
+- A backfill migration treating existing rows as published
+- Removing the now-truly-vestigial `:draft` / `:cancelled` enum values from `:by_status`, or reusing them once the calc supports them
+
+**Follow-up tickets to file:**
+- 3.7-A: design note + spike for the draft state machine across both resources (output: `phase-3-7-drafts-spike.md`)
+- 3.7-B: implement Huddl draft state (schema + status + visibility + edit-flow)
+- 3.7-C: implement Group draft state
+- 3.7-D: re-introduce the Drafts tab once 3.7-B and 3.7-C land
 
 ### 3.8 Calendar tab
 Month / week / agenda view across organized groups. Largest unknown; spike before committing.
