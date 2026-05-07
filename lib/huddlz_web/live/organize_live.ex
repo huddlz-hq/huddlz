@@ -1,11 +1,12 @@
 defmodule HuddlzWeb.OrganizeLive do
   @moduledoc """
-  Organizer workspace shell. Eight sidebar tabs (Overview, Groups, Huddlz,
-  Calendar, Drafts, Attendees, Members, Settings) live at /organize and
+  Organizer workspace shell. Sidebar tabs (Overview, Groups, Huddlz,
+  Calendar, Attendees, Members, Settings) live at /organize and
   /organize/<tab>. Phase 3.1 ships the Overview tab with three metric tiles
   (Upcoming huddlz, Open RSVPs, Groups managed) plus quick actions; the
   rest are placeholder cards that link to the closest existing surface
-  until later phases polish them.
+  until later phases polish them. Drafts is deferred until both Huddl and
+  Group gain a real draft state — see iteration-backlog.md §3.7.
   """
   use HuddlzWeb, :live_view
 
@@ -214,14 +215,6 @@ defmodule HuddlzWeb.OrganizeLive do
               title="Calendar"
               description="Month, week, and agenda views across the groups you organize."
               phase="3.8"
-              cta_label={nil}
-              cta_path={nil}
-            />
-          <% :drafts -> %>
-            <.placeholder_tab
-              title="Drafts"
-              description="Unfinished groups and huddlz with completion checklists."
-              phase="3.7"
               cta_label={nil}
               cta_path={nil}
             />

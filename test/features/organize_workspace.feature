@@ -34,7 +34,6 @@ Feature: Organizer workspace
     And I should see "Groups"
     And I should see "Huddlz"
     And I should see "Calendar"
-    And I should see "Drafts"
     And I should see "Attendees"
     And I should see "Members"
     And I should see "Settings"
@@ -153,12 +152,6 @@ Feature: Organizer workspace
     Then I should see "Calendar."
     And I should see "// Coming in Phase 3.8"
     And I should see "No replacement surface available yet."
-
-  Scenario: Drafts tab renders the placeholder card with no replacement surface
-    Given I am signed in as "host@example.com"
-    When I visit "/organize/drafts"
-    Then I should see "Drafts."
-    And I should see "// Coming in Phase 3.7"
 
   Scenario: Attendees tab shows the empty state when the actor has no upcoming huddlz
     Given a public group "Cyberpunk Builders" exists with owner "host@example.com"

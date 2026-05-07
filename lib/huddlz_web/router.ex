@@ -99,7 +99,6 @@ defmodule HuddlzWeb.Router do
            :workspace_new_location
 
       live "/organize/calendar", OrganizeLive, :calendar
-      live "/organize/drafts", OrganizeLive, :drafts
       live "/organize/attendees", OrganizeLive, :attendees
       live "/organize/members", OrganizeLive, :members
       live "/organize/settings", OrganizeLive, :settings
