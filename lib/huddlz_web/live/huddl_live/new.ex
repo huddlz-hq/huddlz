@@ -7,8 +7,10 @@ defmodule HuddlzWeb.HuddlLive.New do
   import HuddlzWeb.HuddlLive.FormHelpers
   import HuddlzWeb.HuddlLive.FormComponent
   import HuddlzWeb.Live.Helpers.UploadHelpers
+  import HuddlzWeb.OrganizeLive.Components
 
   alias Huddlz.Communities
+  alias Huddlz.Communities.Group
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.HuddlImage
   alias Huddlz.Storage.HuddlImages
@@ -26,25 +28,10 @@ defmodule HuddlzWeb.HuddlLive.New do
 
     with {:ok, group} <- get_group_by_slug(group_slug, user),
          :ok <- authorize({Huddl, :create, %{group_id: group.id}}, user) do
-      group_locations = load_group_locations(group.id, user)
-
       socket =
         socket
-        |> assign_create_form(group, user)
-        |> assign(:group_locations, group_locations)
-        |> assign(:selected_location, nil)
-        |> ModalLocationHelpers.init()
-        |> assign(:image_error, nil)
-        |> assign(:pending_image_id, nil)
-        |> assign(:pending_preview_url, nil)
-        |> assign(:upload_processing, false)
-        |> allow_upload(:huddl_image,
-          accept: ~w(.jpg .jpeg .png .webp),
-          max_entries: 1,
-          max_file_size: 5_000_000,
-          auto_upload: true,
-          progress: &handle_upload_progress/3
-        )
+        |> assign(:workspace_mode?, false)
+        |> init_create_form_socket(group, user)
 
       {:ok, socket}
     else
@@ -59,6 +46,59 @@ defmodule HuddlzWeb.HuddlLive.New do
            resource_path: ~p"/groups/#{group_slug}"
          )}
     end
+  end
+
+  def mount(_params, _session, socket) do
+    user = socket.assigns.current_user
+
+    case load_owned_groups(user) do
+      [] ->
+        {:ok,
+         socket
+         |> put_flash(:error, "Create a group before scheduling a huddl.")
+         |> push_navigate(to: ~p"/organize/groups")}
+
+      [first | _] = groups ->
+        socket =
+          socket
+          |> assign(:workspace_mode?, true)
+          |> assign(:owned_groups, groups)
+          |> init_create_form_socket(first, user)
+
+        {:ok, socket}
+    end
+  end
+
+  defp init_create_form_socket(socket, group, user) do
+    socket
+    |> assign_create_form(group, user)
+    |> assign(:group_locations, load_group_locations(group.id, user))
+    |> assign(:selected_location, nil)
+    |> ModalLocationHelpers.init()
+    |> assign(:image_error, nil)
+    |> assign(:pending_image_id, nil)
+    |> assign(:pending_preview_url, nil)
+    |> assign(:upload_processing, false)
+    |> maybe_allow_image_upload()
+  end
+
+  defp maybe_allow_image_upload(%{assigns: %{uploads: %{huddl_image: _}}} = socket), do: socket
+
+  defp maybe_allow_image_upload(socket) do
+    allow_upload(socket, :huddl_image,
+      accept: ~w(.jpg .jpeg .png .webp),
+      max_entries: 1,
+      max_file_size: 5_000_000,
+      auto_upload: true,
+      progress: &handle_upload_progress/3
+    )
+  end
+
+  defp load_owned_groups(user) do
+    Group
+    |> Ash.Query.for_read(:get_by_owner, %{}, actor: user)
+    |> Ash.Query.sort(name: :asc)
+    |> Ash.read!(actor: user)
   end
 
   defp assign_create_form(socket, group, user) do
@@ -91,7 +131,7 @@ defmodule HuddlzWeb.HuddlLive.New do
   def handle_params(_params, _uri, socket) do
     socket =
       case socket.assigns.live_action do
-        :new_location ->
+        action when action in [:new_location, :workspace_new_location] ->
           ModalLocationHelpers.clear(socket)
 
         _ ->
@@ -149,160 +189,89 @@ defmodule HuddlzWeb.HuddlLive.New do
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} current_user={@current_user}>
-      <.link
-        navigate={~p"/groups/#{@group.slug}"}
-        class="text-sm font-semibold leading-6 hover:underline"
-      >
-        <.icon name="hero-arrow-left" class="h-3 w-3" /> Back to {@group.name}
-      </.link>
+      <%= if @workspace_mode? do %>
+        <.workspace_chrome active={:huddlz} current_user={@current_user}>
+          <header>
+            <span class="mono-label text-primary/70">// Create huddl</span>
+            <h1 class="text-3xl font-extrabold tracking-tight text-base-content mt-2">
+              Schedule a new huddl.
+            </h1>
+            <p class="mt-2 text-base-content/60 max-w-2xl">
+              Cover image, basics, when and how, address. Defaults to the first group you organize.
+            </p>
+          </header>
 
-      <.header>
-        Create New Huddl
-        <:subtitle>
-          Creating an event for <span class="font-semibold">{@group.name}</span>
-        </:subtitle>
-      </.header>
+          <div class="border border-base-300 p-5">
+            <span class="mono-label text-primary/70">// Group</span>
+            <h2 class="text-lg font-extrabold tracking-tight text-base-content mt-2">
+              Which group is this huddl for?
+            </h2>
+            <p class="text-xs text-base-content/60 mt-1">
+              Switching groups resets the form to that group's defaults.
+            </p>
 
-      <.form for={@form} id="huddl-form" phx-change="validate" phx-submit="save" class="space-y-6">
-        <.huddl_form_fields
+            <select
+              name="group_id"
+              phx-change="select_group"
+              class="mt-3 w-full bg-base-200 border border-base-300 px-3 py-2 text-sm font-bold focus:border-primary focus:outline-none"
+            >
+              <option :for={group <- @owned_groups} value={group.id} selected={group.id == @group.id}>
+                {group.name}
+              </option>
+            </select>
+          </div>
+
+          <.create_huddl_form_body
+            form={@form}
+            group={@group}
+            group_locations={@group_locations}
+            selected_location={@selected_location}
+            show_physical_location={@show_physical_location}
+            show_virtual_link={@show_virtual_link}
+            calculated_end_time={@calculated_end_time}
+            uploads={@uploads}
+            image_error={@image_error}
+            pending_preview_url={@pending_preview_url}
+            new_location_path={~p"/organize/huddlz/new/locations/new"}
+            cancel_path={~p"/organize/huddlz"}
+          />
+        </.workspace_chrome>
+      <% else %>
+        <.link
+          navigate={~p"/groups/#{@group.slug}"}
+          class="text-sm font-semibold leading-6 hover:underline"
+        >
+          <.icon name="hero-arrow-left" class="h-3 w-3" /> Back to {@group.name}
+        </.link>
+
+        <.header>
+          Create New Huddl
+          <:subtitle>
+            Creating an event for <span class="font-semibold">{@group.name}</span>
+          </:subtitle>
+        </.header>
+
+        <.create_huddl_form_body
           form={@form}
+          group={@group}
+          group_locations={@group_locations}
+          selected_location={@selected_location}
           show_physical_location={@show_physical_location}
           show_virtual_link={@show_virtual_link}
           calculated_end_time={@calculated_end_time}
-          is_public={@group.is_public}
-          group_locations={@group_locations}
-          selected_location={@selected_location}
+          uploads={@uploads}
+          image_error={@image_error}
+          pending_preview_url={@pending_preview_url}
           new_location_path={~p"/groups/#{@group.slug}/huddlz/new/locations/new"}
-        >
-          <:image_section>
-            <div>
-              <label class="mono-label text-primary/70 mb-2 block">
-                Huddl Image
-              </label>
-              <p class="text-base-content/50 text-sm mb-3">
-                Upload a banner image for this huddl (16:9 ratio recommended). If none is provided, the group image will be used.
-              </p>
-
-              <div
-                class="border border-dashed border-base-300 p-4 text-center hover:border-primary transition-colors"
-                phx-drop-target={@uploads.huddl_image.ref}
-              >
-                <.live_file_input upload={@uploads.huddl_image} class="hidden" />
-                <label
-                  for={@uploads.huddl_image.ref}
-                  class="cursor-pointer flex flex-col items-center"
-                >
-                  <.icon name="hero-photo" class="w-8 h-8 text-base-content/50 mb-2" />
-                  <span class="text-sm text-base-content/50">
-                    Click to upload or drag and drop
-                  </span>
-                  <span class="text-xs text-base-content/50 mt-1">
-                    JPG, PNG, or WebP (max 5MB)
-                  </span>
-                </label>
-              </div>
-
-              <%= if @image_error do %>
-                <p class="text-error text-sm mt-2">{@image_error}</p>
-              <% end %>
-
-              <%= if @pending_preview_url do %>
-                <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
-                  <img
-                    src={@pending_preview_url}
-                    class="w-32 aspect-video object-cover"
-                    alt="Preview"
-                  />
-                  <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-success flex items-center gap-1">
-                      <.icon name="hero-check-circle" class="w-4 h-4" /> Image uploaded
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    phx-click="cancel_pending_image"
-                    class="p-1 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
-                  >
-                    <.icon name="hero-x-mark" class="w-4 h-4" />
-                  </button>
-                </div>
-              <% else %>
-                <%= for entry <- @uploads.huddl_image.entries do %>
-                  <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
-                    <.live_img_preview entry={entry} class="w-32 aspect-video object-cover" />
-                    <div class="flex-1 min-w-0">
-                      <p class="text-sm font-medium truncate">{entry.client_name}</p>
-                      <div class="w-full bg-base-300 h-1.5 mt-1">
-                        <div
-                          class="bg-primary h-1.5 transition-all"
-                          style={"width: #{entry.progress}%"}
-                        >
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      phx-click="cancel_image_upload"
-                      phx-value-ref={entry.ref}
-                      class="p-1 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
-                    >
-                      <.icon name="hero-x-mark" class="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <%= for err <- upload_errors(@uploads.huddl_image, entry) do %>
-                    <p class="text-error text-sm mt-1">{upload_error_to_string(err)}</p>
-                  <% end %>
-                <% end %>
-              <% end %>
-
-              <%= for err <- upload_errors(@uploads.huddl_image) do %>
-                <p class="text-error text-sm mt-2">{upload_error_to_string(err)}</p>
-              <% end %>
-            </div>
-          </:image_section>
-
-          <:recurring_section>
-            <.input field={@form[:is_recurring]} type="checkbox" label="Make this a recurring event" />
-
-            <%= if @form[:is_recurring].value do %>
-              <div class="grid gap-4 sm:grid-cols-2">
-                <.input
-                  field={@form[:frequency]}
-                  type="select"
-                  label="Frequency"
-                  options={[
-                    {"Weekly", "weekly"},
-                    {"Monthly", "monthly"}
-                  ]}
-                  required
-                />
-                <.input field={@form[:repeat_until]} type="date" label="Repeat Until" required />
-              </div>
-            <% end %>
-          </:recurring_section>
-
-          <:actions>
-            <div class="flex gap-4">
-              <.button type="submit" phx-disable-with="Creating...">
-                Create Huddl
-              </.button>
-              <.link
-                navigate={~p"/groups/#{@group.slug}"}
-                class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
-              >
-                Cancel
-              </.link>
-            </div>
-          </:actions>
-        </.huddl_form_fields>
-      </.form>
+          cancel_path={~p"/groups/#{@group.slug}"}
+        />
+      <% end %>
 
       <.modal
-        :if={@live_action == :new_location}
+        :if={@live_action in [:new_location, :workspace_new_location]}
         id="new-location-modal"
         show
-        on_cancel={JS.patch(~p"/groups/#{@group.slug}/huddlz/new")}
+        on_cancel={JS.patch(new_huddl_path_for_assigns(assigns))}
       >
         <h2 class="font-display text-xl tracking-tight text-glow mb-6">Add New Address</h2>
 
@@ -337,7 +306,7 @@ defmodule HuddlzWeb.HuddlLive.New do
               Save Address
             </.button>
             <.link
-              patch={~p"/groups/#{@group.slug}/huddlz/new"}
+              patch={new_huddl_path_for_assigns(assigns)}
               class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
             >
               Cancel
@@ -347,6 +316,176 @@ defmodule HuddlzWeb.HuddlLive.New do
       </.modal>
     </Layouts.app>
     """
+  end
+
+  attr :form, :any, required: true
+  attr :group, :map, required: true
+  attr :group_locations, :list, required: true
+  attr :selected_location, :any, required: true
+  attr :show_physical_location, :boolean, required: true
+  attr :show_virtual_link, :boolean, required: true
+  attr :calculated_end_time, :string, default: nil
+  attr :uploads, :map, required: true
+  attr :image_error, :any, default: nil
+  attr :pending_preview_url, :any, default: nil
+  attr :new_location_path, :string, required: true
+  attr :cancel_path, :string, required: true
+
+  defp create_huddl_form_body(assigns) do
+    ~H"""
+    <.form for={@form} id="huddl-form" phx-change="validate" phx-submit="save" class="space-y-6">
+      <.huddl_form_fields
+        form={@form}
+        show_physical_location={@show_physical_location}
+        show_virtual_link={@show_virtual_link}
+        calculated_end_time={@calculated_end_time}
+        is_public={@group.is_public}
+        group_locations={@group_locations}
+        selected_location={@selected_location}
+        new_location_path={@new_location_path}
+      >
+        <:image_section>
+          <div>
+            <label class="mono-label text-primary/70 mb-2 block">
+              Huddl Image
+            </label>
+            <p class="text-base-content/50 text-sm mb-3">
+              Upload a banner image for this huddl (16:9 ratio recommended). If none is provided, the group image will be used.
+            </p>
+
+            <div
+              class="border border-dashed border-base-300 p-4 text-center hover:border-primary transition-colors"
+              phx-drop-target={@uploads.huddl_image.ref}
+            >
+              <.live_file_input upload={@uploads.huddl_image} class="hidden" />
+              <label
+                for={@uploads.huddl_image.ref}
+                class="cursor-pointer flex flex-col items-center"
+              >
+                <.icon name="hero-photo" class="w-8 h-8 text-base-content/50 mb-2" />
+                <span class="text-sm text-base-content/50">
+                  Click to upload or drag and drop
+                </span>
+                <span class="text-xs text-base-content/50 mt-1">
+                  JPG, PNG, or WebP (max 5MB)
+                </span>
+              </label>
+            </div>
+
+            <%= if @image_error do %>
+              <p class="text-error text-sm mt-2">{@image_error}</p>
+            <% end %>
+
+            <%= if @pending_preview_url do %>
+              <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
+                <img
+                  src={@pending_preview_url}
+                  class="w-32 aspect-video object-cover"
+                  alt="Preview"
+                />
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-success flex items-center gap-1">
+                    <.icon name="hero-check-circle" class="w-4 h-4" /> Image uploaded
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  phx-click="cancel_pending_image"
+                  class="p-1 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
+                >
+                  <.icon name="hero-x-mark" class="w-4 h-4" />
+                </button>
+              </div>
+            <% else %>
+              <%= for entry <- @uploads.huddl_image.entries do %>
+                <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
+                  <.live_img_preview entry={entry} class="w-32 aspect-video object-cover" />
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium truncate">{entry.client_name}</p>
+                    <div class="w-full bg-base-300 h-1.5 mt-1">
+                      <div
+                        class="bg-primary h-1.5 transition-all"
+                        style={"width: #{entry.progress}%"}
+                      >
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    phx-click="cancel_image_upload"
+                    phx-value-ref={entry.ref}
+                    class="p-1 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
+                  >
+                    <.icon name="hero-x-mark" class="w-4 h-4" />
+                  </button>
+                </div>
+
+                <%= for err <- upload_errors(@uploads.huddl_image, entry) do %>
+                  <p class="text-error text-sm mt-1">{upload_error_to_string(err)}</p>
+                <% end %>
+              <% end %>
+            <% end %>
+
+            <%= for err <- upload_errors(@uploads.huddl_image) do %>
+              <p class="text-error text-sm mt-2">{upload_error_to_string(err)}</p>
+            <% end %>
+          </div>
+        </:image_section>
+
+        <:recurring_section>
+          <.input field={@form[:is_recurring]} type="checkbox" label="Make this a recurring event" />
+
+          <%= if @form[:is_recurring].value do %>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <.input
+                field={@form[:frequency]}
+                type="select"
+                label="Frequency"
+                options={[
+                  {"Weekly", "weekly"},
+                  {"Monthly", "monthly"}
+                ]}
+                required
+              />
+              <.input field={@form[:repeat_until]} type="date" label="Repeat Until" required />
+            </div>
+          <% end %>
+        </:recurring_section>
+
+        <:actions>
+          <div class="flex gap-4">
+            <.button type="submit" phx-disable-with="Creating...">
+              Create Huddl
+            </.button>
+            <.link
+              navigate={@cancel_path}
+              class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
+            >
+              Cancel
+            </.link>
+          </div>
+        </:actions>
+      </.huddl_form_fields>
+    </.form>
+    """
+  end
+
+  defp new_huddl_path_for_assigns(%{workspace_mode?: true}), do: ~p"/organize/huddlz/new"
+
+  defp new_huddl_path_for_assigns(%{group: group}),
+    do: ~p"/groups/#{group.slug}/huddlz/new"
+
+  @impl true
+  def handle_event("select_group", %{"group_id" => group_id}, socket) do
+    user = socket.assigns.current_user
+
+    case Enum.find(socket.assigns.owned_groups, &(&1.id == group_id)) do
+      nil ->
+        {:noreply, socket}
+
+      group ->
+        {:noreply, init_create_form_socket(socket, group, user)}
+    end
   end
 
   @impl true
@@ -398,7 +537,7 @@ defmodule HuddlzWeb.HuddlLive.New do
         {:noreply,
          socket
          |> put_flash(:info, "Huddl created successfully!")
-         |> redirect(to: ~p"/groups/#{socket.assigns.group.slug}")}
+         |> redirect(to: success_redirect_path(socket, huddl))}
 
       {:error, form} ->
         {:noreply, assign(socket, :form, to_form(form))}
@@ -427,7 +566,7 @@ defmodule HuddlzWeb.HuddlLive.New do
          socket
          |> assign(:group_locations, group_locations)
          |> apply_saved_location_to_form(location)
-         |> push_patch(to: ~p"/groups/#{socket.assigns.group.slug}/huddlz/new")}
+         |> push_patch(to: new_huddl_path(socket))}
 
       {:error, _error} ->
         {:noreply, put_flash(socket, :error, "Failed to save location")}
@@ -483,6 +622,22 @@ defmodule HuddlzWeb.HuddlLive.New do
       {:ok, nil} -> {:error, :not_found}
       {:ok, group} -> {:ok, group}
       {:error, _} -> {:error, :not_found}
+    end
+  end
+
+  defp success_redirect_path(socket, _huddl) do
+    if socket.assigns[:workspace_mode?] do
+      ~p"/organize/huddlz"
+    else
+      ~p"/groups/#{socket.assigns.group.slug}"
+    end
+  end
+
+  defp new_huddl_path(socket) do
+    if socket.assigns[:workspace_mode?] do
+      ~p"/organize/huddlz/new"
+    else
+      ~p"/groups/#{socket.assigns.group.slug}/huddlz/new"
     end
   end
 end

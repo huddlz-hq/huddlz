@@ -92,6 +92,12 @@ defmodule HuddlzWeb.Router do
       live "/organize", OrganizeLive, :overview
       live "/organize/groups", OrganizeLive, :groups
       live "/organize/huddlz", OrganizeLive, :huddlz
+      live "/organize/huddlz/new", HuddlLive.New, :workspace_new
+
+      live "/organize/huddlz/new/locations/new",
+           HuddlLive.New,
+           :workspace_new_location
+
       live "/organize/calendar", OrganizeLive, :calendar
       live "/organize/drafts", OrganizeLive, :drafts
       live "/organize/attendees", OrganizeLive, :attendees
