@@ -160,7 +160,7 @@ defmodule HuddlzWeb.OrganizeLive do
     <aside class="border border-base-300 self-start lg:sticky lg:top-28">
       <div class="border-b border-base-300 px-5 py-4">
         <span class="mono-label text-primary/70">// Workspace</span>
-        <p class="font-display text-base tracking-tight text-glow mt-1">Organizer</p>
+        <p class="text-base font-extrabold tracking-tight text-base-content mt-1">Organizer</p>
         <p class="text-xs text-base-content/50 mt-1">
           Operations across your groups and huddlz.
         </p>
@@ -257,7 +257,7 @@ defmodule HuddlzWeb.OrganizeLive do
     <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div>
         <span class="mono-label text-primary/70">// Overview</span>
-        <h1 class="font-display text-3xl tracking-tight text-glow mt-2">
+        <h1 class="text-3xl font-extrabold tracking-tight text-base-content mt-2">
           Organizer workspace.
         </h1>
         <p class="mt-2 text-base-content/60 max-w-2xl">
@@ -265,18 +265,10 @@ defmodule HuddlzWeb.OrganizeLive do
         </p>
       </div>
       <div class="flex flex-wrap gap-2">
-        <.link
-          navigate={~p"/groups/new"}
-          class="inline-flex items-center min-h-10 px-4 text-sm font-bold border border-base-300 hover:border-primary hover:text-primary transition-colors"
-        >
-          Create group
-        </.link>
-        <.link
-          navigate={create_huddl_path(@owned_groups)}
-          class="inline-flex items-center min-h-10 px-4 text-sm font-bold bg-primary text-primary-content border border-primary btn-neon"
-        >
+        <.button navigate={~p"/groups/new"}>Create group</.button>
+        <.button variant="primary" navigate={create_huddl_path(@owned_groups)}>
           Create huddl
-        </.link>
+        </.button>
       </div>
     </header>
 
@@ -291,7 +283,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
       <section>
         <div class="flex items-baseline justify-between gap-2">
-          <h2 class="font-display text-lg tracking-tight text-glow flex items-baseline gap-3">
+          <h2 class="text-lg font-extrabold tracking-tight text-base-content flex items-baseline gap-3">
             <span class="mono-label text-primary/70">// Upcoming huddlz</span>
             <span class="text-sm font-body font-normal text-base-content/40">
               ({@upcoming_count})
@@ -300,7 +292,7 @@ defmodule HuddlzWeb.OrganizeLive do
           <.link
             :if={@upcoming_count > @preview_limit}
             navigate={~p"/organize/huddlz"}
-            class="text-xs text-primary hover:underline font-medium tracking-wide uppercase"
+            class="text-xs font-bold text-primary hover:underline"
           >
             View all →
           </.link>
@@ -317,7 +309,7 @@ defmodule HuddlzWeb.OrganizeLive do
                 <div class="min-w-0">
                   <.link
                     navigate={~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"}
-                    class="font-display text-base tracking-tight hover:text-primary transition-colors block truncate"
+                    class="text-base font-extrabold tracking-tight text-base-content hover:text-primary transition-colors block truncate"
                   >
                     {huddl.title}
                   </.link>
@@ -327,7 +319,7 @@ defmodule HuddlzWeb.OrganizeLive do
                     <span>{huddl.group.name}</span>
                   </p>
                 </div>
-                <span class="text-xs text-primary/80 font-bold tracking-wide flex-shrink-0">
+                <span class="text-xs font-bold text-primary flex-shrink-0">
                   {rsvp_label(huddl.rsvp_count)}
                 </span>
               </li>
@@ -346,7 +338,7 @@ defmodule HuddlzWeb.OrganizeLive do
     ~H"""
     <div class="border border-base-300 p-6">
       <span class="mono-label text-primary/70">// {@label}</span>
-      <p class="font-display text-3xl tracking-tight text-glow mt-2">{@value}</p>
+      <p class="text-3xl font-extrabold tracking-tight text-base-content mt-2">{@value}</p>
     </div>
     """
   end
@@ -355,18 +347,15 @@ defmodule HuddlzWeb.OrganizeLive do
     ~H"""
     <div class="border border-base-300 p-8">
       <span class="mono-label text-primary/70">// Get started</span>
-      <h2 class="font-display text-xl tracking-tight text-glow mt-2">
+      <h2 class="text-xl font-extrabold tracking-tight text-base-content mt-2">
         You don't organize any groups yet.
       </h2>
       <p class="mt-2 text-sm text-base-content/60 max-w-xl">
         Create a group to start hosting huddlz. Once you have a group, this overview will fill in with upcoming huddlz, RSVP totals, and quick actions.
       </p>
-      <.link
-        navigate={~p"/groups/new"}
-        class="mt-4 inline-flex items-center min-h-10 px-5 text-sm font-bold bg-primary text-primary-content border border-primary btn-neon"
-      >
+      <.button variant="primary" navigate={~p"/groups/new"} class="mt-4">
         Create your first group
-      </.link>
+      </.button>
     </div>
     """
   end
@@ -381,7 +370,7 @@ defmodule HuddlzWeb.OrganizeLive do
     ~H"""
     <header>
       <span class="mono-label text-primary/70">// {@title}</span>
-      <h1 class="font-display text-3xl tracking-tight text-glow mt-2">{@title}.</h1>
+      <h1 class="text-3xl font-extrabold tracking-tight text-base-content mt-2">{@title}.</h1>
       <p class="mt-2 text-base-content/60 max-w-2xl">{@description}</p>
     </header>
 
@@ -393,11 +382,11 @@ defmodule HuddlzWeb.OrganizeLive do
       <.link
         :if={@cta_path}
         navigate={@cta_path}
-        class="mt-4 inline-flex text-xs text-primary hover:underline font-medium tracking-wide uppercase"
+        class="mt-4 inline-flex text-xs font-bold text-primary hover:underline"
       >
         {@cta_label} →
       </.link>
-      <p :if={!@cta_path} class="mt-4 text-xs text-base-content/40 tracking-wide uppercase">
+      <p :if={!@cta_path} class="mt-4 text-xs font-bold text-base-content/40">
         No replacement surface available yet.
       </p>
     </div>
