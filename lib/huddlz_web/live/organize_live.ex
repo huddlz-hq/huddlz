@@ -15,11 +15,13 @@ defmodule HuddlzWeb.OrganizeLive do
 
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.Huddl
+  alias Huddlz.Communities.HuddlAttendee
   alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
 
   @huddl_loads [:rsvp_count, :group]
   @overview_huddl_limit 100
+  @attendees_huddl_loads [:rsvp_count, :waitlist_count, :group]
   @group_loads [:current_image_url, :member_count]
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
@@ -35,7 +37,11 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:huddlz_filter, :live)
      |> assign(:upcoming_huddlz, [])
      |> assign(:upcoming_count, 0)
-     |> assign(:open_rsvps, 0)}
+     |> assign(:open_rsvps, 0)
+     |> assign(:attendees_huddlz, [])
+     |> assign(:selected_huddl, nil)
+     |> assign(:selected_attendees, [])
+     |> assign(:selected_waitlist, [])}
   end
 
   @impl true
@@ -46,10 +52,10 @@ defmodule HuddlzWeb.OrganizeLive do
      socket
      |> assign(:active, action)
      |> assign(:huddlz_filter, parse_huddlz_filter(params["filter"]))
-     |> load_action(action, socket.assigns.current_user)}
+     |> load_action(action, params, socket.assigns.current_user)}
   end
 
-  defp load_action(socket, :overview, user) do
+  defp load_action(socket, :overview, _params, user) do
     owned_groups = load_owned_groups(user)
     upcoming_huddlz = load_upcoming_huddlz(owned_groups, user)
     open_rsvps = Enum.reduce(upcoming_huddlz, 0, &(&1.rsvp_count + &2))
@@ -61,11 +67,11 @@ defmodule HuddlzWeb.OrganizeLive do
     |> assign(:open_rsvps, open_rsvps)
   end
 
-  defp load_action(socket, :groups, user) do
+  defp load_action(socket, :groups, _params, user) do
     assign(socket, :groups_list, load_owned_groups(user))
   end
 
-  defp load_action(socket, :huddlz, user) do
+  defp load_action(socket, :huddlz, _params, user) do
     state = socket.assigns.huddlz_filter
 
     huddlz =
@@ -80,7 +86,49 @@ defmodule HuddlzWeb.OrganizeLive do
     |> assign(:huddlz_list, huddlz)
   end
 
-  defp load_action(socket, _, _user), do: socket
+  defp load_action(socket, :attendees, params, user) do
+    huddlz =
+      Huddl
+      |> Ash.Query.for_read(:huddlz_for_organizer, %{state: :live}, actor: user)
+      |> Ash.Query.load(@attendees_huddl_loads)
+      |> Ash.Query.sort(starts_at: :asc)
+      |> Ash.read!(actor: user)
+
+    selected = find_selected_huddl(huddlz, params["huddl"])
+
+    socket
+    |> assign(:attendees_huddlz, huddlz)
+    |> assign(:selected_huddl, selected)
+    |> assign(:selected_attendees, load_attendees(selected, user))
+    |> assign(:selected_waitlist, load_waitlist(selected, user))
+  end
+
+  defp load_action(socket, _, _params, _user), do: socket
+
+  defp find_selected_huddl(_huddlz, nil), do: nil
+
+  defp find_selected_huddl(huddlz, id) do
+    Enum.find(huddlz, &(&1.id == id))
+  end
+
+  defp load_attendees(nil, _user), do: []
+
+  defp load_attendees(huddl, user) do
+    HuddlAttendee
+    |> Ash.Query.for_read(:by_huddl, %{huddl_id: huddl.id}, actor: user)
+    |> Ash.Query.load(:user)
+    |> Ash.Query.sort(rsvped_at: :asc)
+    |> Ash.read!(actor: user)
+  end
+
+  defp load_waitlist(nil, _user), do: []
+
+  defp load_waitlist(huddl, user) do
+    HuddlAttendee
+    |> Ash.Query.for_read(:waitlist_for_huddl, %{huddl_id: huddl.id}, actor: user)
+    |> Ash.Query.load(:user)
+    |> Ash.read!(actor: user)
+  end
 
   defp parse_huddlz_filter("past"), do: :past
   defp parse_huddlz_filter(_), do: :live
@@ -147,12 +195,11 @@ defmodule HuddlzWeb.OrganizeLive do
               cta_path={nil}
             />
           <% :attendees -> %>
-            <.placeholder_tab
-              title="Attendees"
-              description="Cross-huddl RSVP operations with a detail panel."
-              phase="3.5"
-              cta_label="Open hosting groups on /me"
-              cta_path={~p"/me?#{[tab: :groups]}"}
+            <.attendees_tab
+              huddlz={@attendees_huddlz}
+              selected={@selected_huddl}
+              attendees={@selected_attendees}
+              waitlist={@selected_waitlist}
             />
           <% :members -> %>
             <.placeholder_tab
@@ -520,6 +567,208 @@ defmodule HuddlzWeb.OrganizeLive do
     """
   end
 
+  attr :huddlz, :list, required: true
+  attr :selected, :any, required: true
+  attr :attendees, :list, required: true
+  attr :waitlist, :list, required: true
+
+  defp attendees_tab(assigns) do
+    ~H"""
+    <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <span class="mono-label text-primary/70">// Attendees</span>
+        <h1 class="text-3xl font-extrabold tracking-tight text-base-content mt-2">
+          Track attendees.
+        </h1>
+        <p class="mt-2 text-base-content/60 max-w-2xl">
+          RSVPs and waitlist for every upcoming huddl across the groups you organize.
+          Click a huddl to see who is coming.
+        </p>
+      </div>
+    </header>
+
+    <%= if @selected do %>
+      <.attendees_detail
+        huddl={@selected}
+        attendees={@attendees}
+        waitlist={@waitlist}
+      />
+    <% else %>
+      <.attendees_index huddlz={@huddlz} />
+    <% end %>
+    """
+  end
+
+  attr :huddlz, :list, required: true
+
+  defp attendees_index(assigns) do
+    ~H"""
+    <%= if @huddlz == [] do %>
+      <div class="border border-base-300 p-8">
+        <span class="mono-label text-primary/70">// No upcoming huddlz</span>
+        <h2 class="text-xl font-extrabold tracking-tight text-base-content mt-2">
+          Nothing on the calendar.
+        </h2>
+        <p class="mt-2 text-sm text-base-content/60 max-w-xl">
+          When you publish a huddl, it'll appear here so you can review RSVPs and waitlist
+          activity at a glance.
+        </p>
+      </div>
+    <% else %>
+      <section>
+        <div class="flex items-baseline justify-between gap-2">
+          <h2 class="text-lg font-extrabold tracking-tight text-base-content flex items-baseline gap-3">
+            <span class="mono-label text-primary/70">// Upcoming huddlz</span>
+            <span class="text-sm font-body font-normal text-base-content/40">
+              ({length(@huddlz)})
+            </span>
+          </h2>
+        </div>
+
+        <ul class="mt-4 divide-y divide-base-300 border border-base-300">
+          <%= for huddl <- @huddlz do %>
+            <.attendees_index_row huddl={huddl} />
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+    """
+  end
+
+  attr :huddl, :map, required: true
+
+  defp attendees_index_row(assigns) do
+    ~H"""
+    <li>
+      <.link
+        patch={~p"/organize/attendees?#{[huddl: @huddl.id]}"}
+        class="flex items-center gap-4 px-5 py-4 hover:bg-base-200/40 transition-colors group"
+      >
+        <div class="flex-1 min-w-0">
+          <h3 class="text-base font-extrabold tracking-tight text-base-content group-hover:text-primary transition-colors truncate">
+            {@huddl.title}
+          </h3>
+          <p class="text-xs text-base-content/60 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>{format_starts_at(@huddl.starts_at)}</span>
+            <span class="text-base-content/30">·</span>
+            <span class="truncate">{@huddl.group.name}</span>
+          </p>
+        </div>
+
+        <.huddl_badge variant="cyan" class="flex-shrink-0">
+          {rsvp_label(@huddl.rsvp_count)}
+        </.huddl_badge>
+
+        <.huddl_badge variant="outline" class="flex-shrink-0">
+          {waitlist_label(@huddl.waitlist_count)}
+        </.huddl_badge>
+
+        <.icon
+          name="hero-chevron-right"
+          class="w-4 h-4 text-base-content/40 group-hover:text-primary transition-colors flex-shrink-0"
+        />
+      </.link>
+    </li>
+    """
+  end
+
+  attr :huddl, :map, required: true
+  attr :attendees, :list, required: true
+  attr :waitlist, :list, required: true
+
+  defp attendees_detail(assigns) do
+    ~H"""
+    <section class="space-y-6">
+      <div class="flex flex-wrap items-baseline justify-between gap-3">
+        <div class="min-w-0">
+          <.link
+            patch={~p"/organize/attendees"}
+            class="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+          >
+            <.icon name="hero-chevron-left" class="w-3 h-3" /> All upcoming
+          </.link>
+          <h2 class="mt-2 text-2xl font-extrabold tracking-tight text-base-content truncate">
+            {@huddl.title}
+          </h2>
+          <p class="mt-1 text-xs text-base-content/60 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>{format_starts_at(@huddl.starts_at)}</span>
+            <span class="text-base-content/30">·</span>
+            <span class="truncate">{@huddl.group.name}</span>
+          </p>
+        </div>
+        <.link
+          navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}/edit"}
+          class="text-xs font-bold text-primary hover:underline"
+        >
+          Edit huddl →
+        </.link>
+      </div>
+
+      <div class="grid gap-6 lg:grid-cols-2">
+        <.attendee_panel
+          eyebrow="// Attending"
+          heading="RSVPed"
+          empty_copy="Nobody has RSVPed yet."
+          rows={@attendees}
+          show_position={false}
+        />
+        <.attendee_panel
+          eyebrow="// Waitlist"
+          heading="Waitlist"
+          empty_copy="Nobody is on the waitlist."
+          rows={@waitlist}
+          show_position={true}
+        />
+      </div>
+    </section>
+    """
+  end
+
+  attr :eyebrow, :string, required: true
+  attr :heading, :string, required: true
+  attr :empty_copy, :string, required: true
+  attr :rows, :list, required: true
+  attr :show_position, :boolean, required: true
+
+  defp attendee_panel(assigns) do
+    ~H"""
+    <div class="border border-base-300">
+      <div class="border-b border-base-300 px-5 py-4 flex items-baseline gap-3">
+        <span class="mono-label text-primary/70">{@eyebrow}</span>
+        <p class="text-base font-extrabold tracking-tight text-base-content">{@heading}</p>
+        <span class="text-sm font-body font-normal text-base-content/40">
+          ({length(@rows)})
+        </span>
+      </div>
+
+      <%= if @rows == [] do %>
+        <p class="px-5 py-6 text-sm text-base-content/50">{@empty_copy}</p>
+      <% else %>
+        <ul class="divide-y divide-base-300">
+          <%= for {entry, index} <- Enum.with_index(@rows, 1) do %>
+            <li class="flex items-center gap-3 px-5 py-3">
+              <span
+                :if={@show_position}
+                class="mono-label text-base-content/40 w-6 flex-shrink-0"
+              >
+                {index}
+              </span>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-bold text-base-content truncate">
+                  {attendee_name(entry)}
+                </p>
+                <p class="text-xs text-base-content/50 mt-0.5">
+                  {format_attendee_meta(entry)}
+                </p>
+              </div>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
+    </div>
+    """
+  end
+
   attr :title, :string, required: true
   attr :description, :string, required: true
   attr :phase, :string, required: true
@@ -558,6 +807,28 @@ defmodule HuddlzWeb.OrganizeLive do
   defp rsvp_label(0), do: "0 RSVPs"
   defp rsvp_label(1), do: "1 RSVP"
   defp rsvp_label(n), do: "#{n} RSVPs"
+
+  defp waitlist_label(0), do: "0 waitlist"
+  defp waitlist_label(n), do: "#{n} waitlist"
+
+  defp attendee_name(%{user: %{display_name: name}}) when is_binary(name) and name != "", do: name
+
+  defp attendee_name(%{user: %{email: email}}) when not is_nil(email),
+    do: to_string(email)
+
+  defp attendee_name(_), do: "Unknown member"
+
+  defp format_attendee_meta(%{waitlisted_at: %DateTime{} = at}),
+    do: "Joined waitlist " <> format_relative(at)
+
+  defp format_attendee_meta(%{rsvped_at: %DateTime{} = at}),
+    do: "RSVPed " <> format_relative(at)
+
+  defp format_attendee_meta(_), do: ""
+
+  defp format_relative(%DateTime{} = at) do
+    Calendar.strftime(at, "%b %d, %Y")
+  end
 
   defp member_label(0), do: "No members yet"
   defp member_label(1), do: "1 member"
