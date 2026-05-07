@@ -8,7 +8,7 @@ Feature: Global Header
     Given the user is on the home page
     Then the header should show the huddlz brand
     And the header should expose a global search form posting q to /discover
-    And the header should expose an Organize link to /groups/new
+    And the header should expose an Organize link to /organize
     And the header should not expose a Groups link
 
   Scenario: Header search posts the query to /discover
