@@ -39,3 +39,18 @@ Feature: Create huddl from organizer workspace
     And I click "Create your first huddl"
     Then I should see "Schedule a new huddl."
     And I should see "// Create huddl"
+
+  Scenario: Selecting a different group repopulates the form context
+    Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
+    And a public group "Synth Society" exists with owner "host@example.com"
+    And I am signed in as "host@example.com"
+    When I visit "/organize/huddlz/new"
+    And I select "Synth Society" from "Which group is this huddl for?"
+    Then "Synth Society" should be the selected group
+
+  Scenario: Cancelling the workspace create form returns to the Huddlz tab
+    Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
+    And I am signed in as "host@example.com"
+    When I visit "/organize/huddlz/new"
+    And I click "Cancel"
+    Then I should see "Manage your huddlz."
