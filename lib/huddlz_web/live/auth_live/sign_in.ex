@@ -17,7 +17,7 @@ defmodule HuddlzWeb.AuthLive.SignIn do
         <p class="text-center text-base-content/40 mt-2">Welcome back!</p>
 
         <%!-- Password Sign In Form --%>
-        <div class="border border-base-300 rounded p-6 mt-8">
+        <.surface_panel class="p-6 mt-8">
           <h2 class="font-display text-xl mb-4">Sign in with password</h2>
 
           <.form
@@ -50,7 +50,7 @@ defmodule HuddlzWeb.AuthLive.SignIn do
               Forgot your password?
             </a>
           </div>
-        </div>
+        </.surface_panel>
 
         <div class="text-center mt-8">
           <span class="text-sm text-base-content/50">

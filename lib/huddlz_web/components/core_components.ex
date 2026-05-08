@@ -160,7 +160,7 @@ defmodule HuddlzWeb.CoreComponents do
     ~H"""
     <.link
       class={[
-        "inline-flex items-center min-h-10 px-3.5 rounded-sm text-sm font-extrabold gap-2 border transition-colors",
+        "inline-flex items-center min-h-10 px-3.5 rounded text-sm font-extrabold gap-2 border transition-colors",
         @active && "border-primary bg-primary text-primary-content",
         !@active &&
           "border-base-300 bg-base-100 text-base-content hover:border-primary",
@@ -176,6 +176,7 @@ defmodule HuddlzWeb.CoreComponents do
   @doc """
   Renders a rounded bordered panel shell.
   """
+  attr :tag, :string, default: "div", doc: "HTML tag to render as the panel shell"
   attr :variant, :string, values: ~w(solid dashed), default: "solid"
   attr :class, :any, default: nil
   attr :rest, :global
@@ -183,7 +184,8 @@ defmodule HuddlzWeb.CoreComponents do
 
   def surface_panel(assigns) do
     ~H"""
-    <div
+    <.dynamic_tag
+      tag_name={@tag}
       class={[
         "rounded border border-base-300",
         @variant == "dashed" && "border-dashed",
@@ -192,7 +194,7 @@ defmodule HuddlzWeb.CoreComponents do
       {@rest}
     >
       {render_slot(@inner_block)}
-    </div>
+    </.dynamic_tag>
     """
   end
 
