@@ -53,7 +53,7 @@ defmodule HuddlzWeb.AuthLive.Register do
         </p>
 
         <%!-- Password Registration Form --%>
-        <div class="border border-base-300 p-6 mt-8">
+        <div class="border border-base-300 rounded p-6 mt-8">
           <h2 class="font-display text-xl mb-4">Sign up with password</h2>
 
           <.form for={@form} id="registration-form" phx-change="validate" phx-submit="register">
