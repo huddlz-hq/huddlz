@@ -397,11 +397,11 @@ defmodule HuddlzWeb.OrganizeLive do
         </div>
 
         <%= if @upcoming_huddlz == [] do %>
-          <div class="border border-dashed border-base-300 p-8 mt-4 text-center text-base-content/50">
+          <.surface_panel variant="dashed" class="p-8 mt-4 text-center text-base-content/50">
             No upcoming huddlz right now. Create one to get started.
-          </div>
+          </.surface_panel>
         <% else %>
-          <ul class="mt-4 divide-y divide-base-300 border border-base-300">
+          <.surface_panel tag="ul" class="mt-4 divide-y divide-base-300">
             <%= for huddl <- Enum.take(@upcoming_huddlz, @preview_limit) do %>
               <li class="flex items-center justify-between gap-4 px-5 py-4">
                 <div class="min-w-0">
@@ -422,7 +422,7 @@ defmodule HuddlzWeb.OrganizeLive do
                 </.huddl_badge>
               </li>
             <% end %>
-          </ul>
+          </.surface_panel>
         <% end %>
       </section>
     <% end %>
@@ -434,16 +434,16 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp metric_tile(assigns) do
     ~H"""
-    <div class="border border-base-300 p-6">
+    <.surface_panel class="p-6">
       <span class="mono-label text-primary/70">// {@label}</span>
       <p class="text-3xl font-extrabold tracking-tight text-base-content mt-2">{@value}</p>
-    </div>
+    </.surface_panel>
     """
   end
 
   defp empty_state(assigns) do
     ~H"""
-    <div class="border border-base-300 p-8">
+    <.surface_panel class="p-8">
       <span class="mono-label text-primary/70">// Get started</span>
       <h2 class="text-xl font-extrabold tracking-tight text-base-content mt-2">
         You don't organize any groups yet.
@@ -454,7 +454,7 @@ defmodule HuddlzWeb.OrganizeLive do
       <.button variant="primary" navigate={~p"/groups/new"} class="mt-4">
         Create your first group
       </.button>
-    </div>
+    </.surface_panel>
     """
   end
 
@@ -476,7 +476,7 @@ defmodule HuddlzWeb.OrganizeLive do
     </header>
 
     <%= if @groups == [] do %>
-      <div class="border border-base-300 p-8">
+      <.surface_panel class="p-8">
         <span class="mono-label text-primary/70">// No groups yet</span>
         <h2 class="text-xl font-extrabold tracking-tight text-base-content mt-2">
           You don't organize any groups yet.
@@ -487,7 +487,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <.button variant="primary" navigate={~p"/groups/new"} class="mt-4">
           Create your first group
         </.button>
-      </div>
+      </.surface_panel>
     <% else %>
       <section>
         <div class="flex items-baseline justify-between gap-2">
@@ -499,11 +499,11 @@ defmodule HuddlzWeb.OrganizeLive do
           </h2>
         </div>
 
-        <ul class="mt-4 divide-y divide-base-300 border border-base-300">
+        <.surface_panel tag="ul" class="mt-4 divide-y divide-base-300">
           <%= for group <- @groups do %>
             <.group_row group={group} />
           <% end %>
-        </ul>
+        </.surface_panel>
       </section>
     <% end %>
     """
@@ -578,8 +578,8 @@ defmodule HuddlzWeb.OrganizeLive do
     </header>
 
     <nav class="flex gap-2" aria-label="Huddlz filter">
-      <.filter_chip label="Live" active={@filter == :live} path={~p"/organize/huddlz"} />
-      <.filter_chip label="Past" active={@filter == :past} path={~p"/organize/huddlz?filter=past"} />
+      <.page_tab patch={~p"/organize/huddlz"} active={@filter == :live}>Live</.page_tab>
+      <.page_tab patch={~p"/organize/huddlz?filter=past"} active={@filter == :past}>Past</.page_tab>
     </nav>
 
     <%= if @huddlz == [] do %>
@@ -595,11 +595,11 @@ defmodule HuddlzWeb.OrganizeLive do
           </h2>
         </div>
 
-        <ul class="mt-4 divide-y divide-base-300 border border-base-300">
+        <.surface_panel tag="ul" class="mt-4 divide-y divide-base-300">
           <%= for huddl <- @huddlz do %>
             <.huddl_row huddl={huddl} />
           <% end %>
-        </ul>
+        </.surface_panel>
       </section>
     <% end %>
     """
@@ -640,32 +640,12 @@ defmodule HuddlzWeb.OrganizeLive do
     """
   end
 
-  attr :label, :string, required: true
-  attr :active, :boolean, required: true
-  attr :path, :string, required: true
-
-  defp filter_chip(assigns) do
-    ~H"""
-    <.link
-      patch={@path}
-      class={[
-        "inline-flex items-center gap-2 px-3 py-1.5 text-xs font-extrabold uppercase tracking-wider border transition-colors",
-        @active && "border-primary text-primary bg-primary/10",
-        !@active &&
-          "border-base-300 text-base-content/60 hover:text-base-content hover:border-base-content/40"
-      ]}
-    >
-      {@label}
-    </.link>
-    """
-  end
-
   attr :filter, :atom, required: true
   attr :owned_groups, :list, required: true
 
   defp huddlz_empty(assigns) do
     ~H"""
-    <div class="border border-base-300 p-8">
+    <.surface_panel class="p-8">
       <span class="mono-label text-primary/70">// {empty_eyebrow(@filter)}</span>
       <h2 class="text-xl font-extrabold tracking-tight text-base-content mt-2">
         {empty_heading(@filter)}
@@ -681,7 +661,7 @@ defmodule HuddlzWeb.OrganizeLive do
       >
         Create your first huddl
       </.button>
-    </div>
+    </.surface_panel>
     """
   end
 
@@ -722,7 +702,7 @@ defmodule HuddlzWeb.OrganizeLive do
   defp attendees_index(assigns) do
     ~H"""
     <%= if @huddlz == [] do %>
-      <div class="border border-base-300 p-8">
+      <.surface_panel class="p-8">
         <span class="mono-label text-primary/70">// No upcoming huddlz</span>
         <h2 class="text-xl font-extrabold tracking-tight text-base-content mt-2">
           Nothing on the calendar.
@@ -731,7 +711,7 @@ defmodule HuddlzWeb.OrganizeLive do
           When you publish a huddl, it'll appear here so you can review RSVPs and waitlist
           activity at a glance.
         </p>
-      </div>
+      </.surface_panel>
     <% else %>
       <section>
         <div class="flex items-baseline justify-between gap-2">
@@ -743,11 +723,11 @@ defmodule HuddlzWeb.OrganizeLive do
           </h2>
         </div>
 
-        <ul class="mt-4 divide-y divide-base-300 border border-base-300">
+        <.surface_panel tag="ul" class="mt-4 divide-y divide-base-300">
           <%= for huddl <- @huddlz do %>
             <.attendees_index_row huddl={huddl} />
           <% end %>
-        </ul>
+        </.surface_panel>
       </section>
     <% end %>
     """
@@ -850,7 +830,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp attendee_panel(assigns) do
     ~H"""
-    <div class="border border-base-300">
+    <.surface_panel>
       <div class="border-b border-base-300 px-5 py-4 flex items-baseline gap-3">
         <span class="mono-label text-primary/70">{@eyebrow}</span>
         <p class="text-base font-extrabold tracking-tight text-base-content">{@heading}</p>
@@ -883,7 +863,7 @@ defmodule HuddlzWeb.OrganizeLive do
           <% end %>
         </ul>
       <% end %>
-    </div>
+    </.surface_panel>
     """
   end
 
@@ -919,7 +899,7 @@ defmodule HuddlzWeb.OrganizeLive do
   defp members_index(assigns) do
     ~H"""
     <%= if @groups == [] do %>
-      <div class="border border-base-300 p-8">
+      <.surface_panel class="p-8">
         <span class="mono-label text-primary/70">// No groups yet</span>
         <h2 class="text-xl font-extrabold tracking-tight text-base-content mt-2">
           You don't own any groups yet.
@@ -931,7 +911,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <.button variant="primary" navigate={~p"/groups/new"} class="mt-4">
           Create your first group
         </.button>
-      </div>
+      </.surface_panel>
     <% else %>
       <section>
         <div class="flex items-baseline justify-between gap-2">
@@ -943,11 +923,11 @@ defmodule HuddlzWeb.OrganizeLive do
           </h2>
         </div>
 
-        <ul class="mt-4 divide-y divide-base-300 border border-base-300">
+        <.surface_panel tag="ul" class="mt-4 divide-y divide-base-300">
           <%= for group <- @groups do %>
             <.members_index_row group={group} />
           <% end %>
-        </ul>
+        </.surface_panel>
       </section>
     <% end %>
     """
@@ -1042,7 +1022,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp member_panel(assigns) do
     ~H"""
-    <div class="border border-base-300">
+    <.surface_panel>
       <div class="border-b border-base-300 px-5 py-4 flex items-baseline gap-3">
         <span class="mono-label text-primary/70">// {role_eyebrow(@role)}</span>
         <p class="text-base font-extrabold tracking-tight text-base-content">
@@ -1074,7 +1054,7 @@ defmodule HuddlzWeb.OrganizeLive do
           <% end %>
         </ul>
       <% end %>
-    </div>
+    </.surface_panel>
     """
   end
 
@@ -1103,16 +1083,10 @@ defmodule HuddlzWeb.OrganizeLive do
     </header>
 
     <nav class="flex flex-wrap items-center gap-2" aria-label="Calendar view">
-      <.filter_chip
-        label="Agenda"
-        active={@view == :agenda}
-        path={~p"/organize/calendar"}
-      />
-      <.filter_chip
-        label="Month"
-        active={@view == :month}
-        path={~p"/organize/calendar?view=month"}
-      />
+      <.page_tab patch={~p"/organize/calendar"} active={@view == :agenda}>Agenda</.page_tab>
+      <.page_tab patch={~p"/organize/calendar?view=month"} active={@view == :month}>
+        Month
+      </.page_tab>
     </nav>
 
     <%= case @view do %>
@@ -1144,7 +1118,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
     ~H"""
     <%= if @huddlz == [] do %>
-      <div class="border border-base-300 p-8">
+      <.surface_panel class="p-8">
         <span class="mono-label text-primary/70">// Agenda</span>
         <h2 class="text-xl font-extrabold tracking-tight text-base-content mt-2">
           Nothing on the calendar.
@@ -1153,7 +1127,7 @@ defmodule HuddlzWeb.OrganizeLive do
           When you publish a huddl, it'll appear here grouped by day so you can see
           what's coming up across every group you organize.
         </p>
-      </div>
+      </.surface_panel>
     <% else %>
       <section>
         <div class="flex items-baseline justify-between gap-2">
@@ -1167,7 +1141,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
         <div class="mt-4 space-y-6">
           <%= for date <- @sorted_dates do %>
-            <div class="border border-base-300">
+            <.surface_panel>
               <div class="border-b border-base-300 px-5 py-3 flex items-baseline gap-3">
                 <span class="mono-label text-primary/70">
                   // {agenda_date_eyebrow(date, @today)}
@@ -1184,7 +1158,7 @@ defmodule HuddlzWeb.OrganizeLive do
                   <.calendar_agenda_row huddl={huddl} />
                 <% end %>
               </ul>
-            </div>
+            </.surface_panel>
           <% end %>
         </div>
       </section>
@@ -1273,7 +1247,7 @@ defmodule HuddlzWeb.OrganizeLive do
         </div>
       </div>
 
-      <div class="border border-base-300">
+      <.surface_panel>
         <div class="grid grid-cols-7 border-b border-base-300">
           <%= for day_name <- ~w(Sun Mon Tue Wed Thu Fri Sat) do %>
             <div class="px-2 py-2 text-center mono-label text-primary/70">
@@ -1313,7 +1287,7 @@ defmodule HuddlzWeb.OrganizeLive do
             <% end %>
           </div>
         <% end %>
-      </div>
+      </.surface_panel>
 
       <p class="text-xs text-base-content/40 max-w-xl">
         Past months show huddlz that took place. Week view, drag-to-reschedule, and
