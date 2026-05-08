@@ -180,10 +180,10 @@ defmodule HuddlzWeb.MeLive do
         </header>
 
         <nav class="flex flex-wrap items-center gap-2" aria-label="Member dashboard tabs">
-          <.link patch={tab_path(:huddlz)} class={chip_class(@tab == :huddlz)}>My Huddlz</.link>
-          <.link patch={tab_path(:groups)} class={chip_class(@tab == :groups)}>My Groups</.link>
-          <.link patch={tab_path(:invites)} class={chip_class(@tab == :invites)}>Invites</.link>
-          <.link patch={tab_path(:updates)} class={chip_class(@tab == :updates)}>Updates</.link>
+          <.page_tab patch={tab_path(:huddlz)} active={@tab == :huddlz}>My Huddlz</.page_tab>
+          <.page_tab patch={tab_path(:groups)} active={@tab == :groups}>My Groups</.page_tab>
+          <.page_tab patch={tab_path(:invites)} active={@tab == :invites}>Invites</.page_tab>
+          <.page_tab patch={tab_path(:updates)} active={@tab == :updates}>Updates</.page_tab>
         </nav>
 
         <%= case @tab do %>
@@ -314,9 +314,9 @@ defmodule HuddlzWeb.MeLive do
       </div>
 
       <%= if @count == 0 do %>
-        <div class="border border-dashed border-base-300 p-8 mt-4 text-center text-base-content/50">
+        <.surface_panel variant="dashed" class="p-8 mt-4 text-center text-base-content/50">
           {@empty_message}
-        </div>
+        </.surface_panel>
       <% else %>
         <div class="grid gap-6 sm:grid-cols-2 mt-4">
           <%= for huddl <- @huddls do %>
@@ -336,7 +336,7 @@ defmodule HuddlzWeb.MeLive do
     assigns = assign(assigns, next: next)
 
     ~H"""
-    <div class="border border-base-300 p-6">
+    <.surface_panel class="p-6">
       <span class="mono-label text-primary/70">// Coming up</span>
       <%= if @next do %>
         <h3 class="text-lg font-extrabold tracking-tight text-base-content mt-3">
@@ -366,20 +366,20 @@ defmodule HuddlzWeb.MeLive do
           </.link>
         </p>
       <% end %>
-    </div>
+    </.surface_panel>
     """
   end
 
   defp next_actions_panel(assigns) do
     ~H"""
-    <div class="border border-base-300 p-6">
+    <.surface_panel class="p-6">
       <span class="mono-label text-primary/70">// Useful next actions</span>
       <ul class="mt-3 space-y-2 text-sm text-base-content/70">
         <li>View event details and location.</li>
         <li>Change RSVP or add a guest.</li>
         <li>Message the organizer if something changes.</li>
       </ul>
-    </div>
+    </.surface_panel>
     """
   end
 
@@ -412,9 +412,9 @@ defmodule HuddlzWeb.MeLive do
       </div>
 
       <%= if @count == 0 do %>
-        <div class="border border-dashed border-base-300 p-8 mt-4 text-center text-base-content/50">
+        <.surface_panel variant="dashed" class="p-8 mt-4 text-center text-base-content/50">
           {@empty_message}
-        </div>
+        </.surface_panel>
       <% else %>
         <div class="grid gap-6 sm:grid-cols-2 mt-4">
           <%= for group <- Enum.take(@groups, @limit) do %>
@@ -428,7 +428,7 @@ defmodule HuddlzWeb.MeLive do
 
   defp find_more_groups_panel(assigns) do
     ~H"""
-    <div class="border border-base-300 p-6">
+    <.surface_panel class="p-6">
       <span class="mono-label text-primary/70">// Find more groups</span>
       <p class="text-sm text-base-content/60 mt-3">
         Browse groups near you, by topic, or by name.
@@ -439,13 +439,13 @@ defmodule HuddlzWeb.MeLive do
       >
         Discover groups →
       </.link>
-    </div>
+    </.surface_panel>
     """
   end
 
   defp groups_next_actions_panel(assigns) do
     ~H"""
-    <div class="border border-base-300 p-6">
+    <.surface_panel class="p-6">
       <span class="mono-label text-primary/70">// Useful next actions</span>
       <ul class="mt-3 space-y-2 text-sm text-base-content/70">
         <li>Open a group's home page to see its upcoming huddlz.</li>
@@ -457,7 +457,7 @@ defmodule HuddlzWeb.MeLive do
         </li>
         <li>Browse more groups on Discover.</li>
       </ul>
-    </div>
+    </.surface_panel>
     """
   end
 
@@ -486,9 +486,9 @@ defmodule HuddlzWeb.MeLive do
         </div>
 
         <%= if @updates == [] do %>
-          <div class="border border-dashed border-base-300 p-8 text-center text-base-content/50">
+          <.surface_panel variant="dashed" class="p-8 text-center text-base-content/50">
             No updates yet. Reminders and group activity will appear here as they happen.
-          </div>
+          </.surface_panel>
         <% else %>
           <ul class="space-y-3" id="updates-list">
             <%= for notification <- @updates do %>
@@ -516,7 +516,7 @@ defmodule HuddlzWeb.MeLive do
     <li
       id={"notification-#{@notification.id}"}
       class={[
-        "border border-base-300 p-5",
+        "rounded border border-base-300 p-5",
         @read? && "opacity-60"
       ]}
     >
@@ -561,7 +561,7 @@ defmodule HuddlzWeb.MeLive do
 
   defp notification_controls_panel(assigns) do
     ~H"""
-    <div class="border border-base-300 p-6">
+    <.surface_panel class="p-6">
       <span class="mono-label text-primary/70">// Notification controls</span>
       <p class="text-sm text-base-content/60 mt-3">
         Tune which events email you and which stay in-app only.
@@ -572,20 +572,20 @@ defmodule HuddlzWeb.MeLive do
       >
         Open preferences →
       </.link>
-    </div>
+    </.surface_panel>
     """
   end
 
   defp updates_next_actions_panel(assigns) do
     ~H"""
-    <div class="border border-base-300 p-6">
+    <.surface_panel class="p-6">
       <span class="mono-label text-primary/70">// Useful next actions</span>
       <ul class="mt-3 space-y-2 text-sm text-base-content/70">
         <li>Jump to the related huddl or group with View.</li>
         <li>Mark items as read once you've handled them.</li>
         <li>Tune notification preferences in your profile.</li>
       </ul>
-    </div>
+    </.surface_panel>
     """
   end
 
@@ -605,9 +605,9 @@ defmodule HuddlzWeb.MeLive do
         </div>
 
         <%= if @invites == [] do %>
-          <div class="border border-dashed border-base-300 p-8 text-center text-base-content/50">
+          <.surface_panel variant="dashed" class="p-8 text-center text-base-content/50">
             No invites right now. When organizers invite you to a huddl or group, they'll show up here.
-          </div>
+          </.surface_panel>
         <% else %>
           <ul class="space-y-3" id="invites-list">
             <%= for notification <- @invites do %>
@@ -627,25 +627,25 @@ defmodule HuddlzWeb.MeLive do
 
   defp needs_response_panel(assigns) do
     ~H"""
-    <div class="border border-base-300 p-6">
+    <.surface_panel class="p-6">
       <span class="mono-label text-primary/70">// Needs response</span>
       <p class="text-sm text-base-content/60 mt-3">
         Invites are lightweight. Open the related huddl or group to take action, then mark the invite read.
       </p>
-    </div>
+    </.surface_panel>
     """
   end
 
   defp invites_next_actions_panel(assigns) do
     ~H"""
-    <div class="border border-base-300 p-6">
+    <.surface_panel class="p-6">
       <span class="mono-label text-primary/70">// Useful next actions</span>
       <ul class="mt-3 space-y-2 text-sm text-base-content/70">
         <li>Open a waitlist promotion to confirm or cancel.</li>
         <li>Visit a group you've been added to.</li>
         <li>Mark each invite read once you've handled it.</li>
       </ul>
-    </div>
+    </.surface_panel>
     """
   end
 
@@ -689,13 +689,5 @@ defmodule HuddlzWeb.MeLive do
 
   defp format_starts_at(datetime) do
     Calendar.strftime(datetime, "%b %d, %Y · %I:%M %p")
-  end
-
-  defp chip_class(true) do
-    "inline-flex items-center min-h-10 px-3.5 text-sm font-extrabold gap-2 border border-primary bg-primary text-primary-content"
-  end
-
-  defp chip_class(false) do
-    "inline-flex items-center min-h-10 px-3.5 text-sm font-extrabold gap-2 border border-base-300 bg-base-100 text-base-content hover:border-primary transition-colors"
   end
 end

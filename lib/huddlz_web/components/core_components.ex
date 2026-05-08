@@ -149,6 +149,54 @@ defmodule HuddlzWeb.CoreComponents do
   end
 
   @doc """
+  Renders a rounded tab chip for page-level segmented navigation.
+  """
+  attr :active, :boolean, default: false
+  attr :class, :any, default: nil
+  attr :rest, :global, include: ~w(href navigate patch method)
+  slot :inner_block, required: true
+
+  def page_tab(assigns) do
+    ~H"""
+    <.link
+      class={[
+        "inline-flex items-center min-h-10 px-3.5 rounded-sm text-sm font-extrabold gap-2 border transition-colors",
+        @active && "border-primary bg-primary text-primary-content",
+        !@active &&
+          "border-base-300 bg-base-100 text-base-content hover:border-primary",
+        @class
+      ]}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </.link>
+    """
+  end
+
+  @doc """
+  Renders a rounded bordered panel shell.
+  """
+  attr :variant, :string, values: ~w(solid dashed), default: "solid"
+  attr :class, :any, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def surface_panel(assigns) do
+    ~H"""
+    <div
+      class={[
+        "rounded border border-base-300",
+        @variant == "dashed" && "border-dashed",
+        @class
+      ]}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
+  @doc """
   Renders an input with label and error messages.
 
   Bordered fields on a panel surface (matches the prototype). Pass either

@@ -178,7 +178,7 @@ defmodule HuddlzWeb.Layouts do
           action="/discover"
           role="search"
           aria-label="Search huddlz"
-          class="md:hidden pb-4 flex items-stretch h-12 border border-base-300 rounded-sm overflow-hidden bg-base-200/40 focus-within:border-primary"
+          class="md:hidden mb-4 flex items-stretch h-12 border border-base-300 rounded-sm overflow-hidden bg-base-200/40 focus-within:border-primary"
         >
           <span class="grid place-items-center w-12 text-primary flex-shrink-0">
             <.icon name="hero-magnifying-glass" class="w-5 h-5" />
@@ -193,7 +193,7 @@ defmodule HuddlzWeb.Layouts do
           />
           <button
             type="submit"
-            class="flex-shrink-0 px-5 bg-primary text-primary-content text-sm font-extrabold"
+            class="flex-shrink-0 px-4 sm:px-5 bg-primary text-primary-content text-sm font-extrabold"
           >
             Search
           </button>
