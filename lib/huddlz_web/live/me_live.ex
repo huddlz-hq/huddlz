@@ -513,10 +513,11 @@ defmodule HuddlzWeb.MeLive do
     assigns = assign(assigns, :read?, read?)
 
     ~H"""
-    <li
+    <.surface_panel
+      tag="li"
       id={"notification-#{@notification.id}"}
       class={[
-        "rounded border border-base-300 p-5",
+        "p-5",
         @read? && "opacity-60"
       ]}
     >
@@ -555,7 +556,7 @@ defmodule HuddlzWeb.MeLive do
           </button>
         </div>
       </div>
-    </li>
+    </.surface_panel>
     """
   end
 
