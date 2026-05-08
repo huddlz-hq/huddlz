@@ -2,9 +2,10 @@ defmodule HuddlzWeb.CommunityComponents do
   @moduledoc """
   Reusable UI components for communities domain (groups and huddlz).
 
-  Reconciled with the search-organize prototype: rounded corners use the
-  theme `--radius-box` (7px), titles use Inter heavy weights instead of
-  Space Mono, status pills use the prototype's uppercase-mono badge.
+  Reconciled with the search-organize prototype: cards use
+  `rounded-hz-surface`, badges use `rounded-hz-control`, titles use Inter
+  heavy weights instead of Space Mono, and status pills use the prototype's
+  uppercase-mono badge.
   """
   use Phoenix.Component
   use HuddlzWeb, :verified_routes
@@ -47,7 +48,7 @@ defmodule HuddlzWeb.CommunityComponents do
     <.link
       navigate={~p"/groups/#{@group.slug}"}
       class={[
-        "border border-base-300 rounded overflow-hidden bg-base-200 hover:border-primary/50 transition-colors group flex flex-col",
+        "border border-base-300 rounded-hz-surface overflow-hidden bg-base-200 hover:border-primary/50 transition-colors group flex flex-col",
         @class
       ]}
       {@rest}
@@ -114,7 +115,7 @@ defmodule HuddlzWeb.CommunityComponents do
     <.link
       navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}"}
       class={[
-        "border border-base-300 rounded overflow-hidden bg-base-200 hover:border-primary/50 transition-colors group flex flex-col",
+        "border border-base-300 rounded-hz-surface overflow-hidden bg-base-200 hover:border-primary/50 transition-colors group flex flex-col",
         @class
       ]}
       {@rest}
@@ -188,7 +189,7 @@ defmodule HuddlzWeb.CommunityComponents do
             <div class="flex items-center justify-between text-xs">
               <span class={capacity_status_class(@huddl)}>{capacity_status(@huddl)}</span>
             </div>
-            <div class="mt-1.5 h-1.5 bg-base-300 rounded-sm overflow-hidden">
+            <div class="mt-1.5 h-1.5 bg-base-300 rounded-hz-control overflow-hidden">
               <div class="h-full bg-primary" style={"width: #{capacity_percent(@huddl)}%"}></div>
             </div>
           </div>
@@ -209,7 +210,7 @@ defmodule HuddlzWeb.CommunityComponents do
   def huddl_badge(assigns) do
     ~H"""
     <span class={[
-      "inline-flex items-center min-h-[22px] px-2 rounded-sm text-[10px] font-extrabold uppercase tracking-wider leading-none",
+      "inline-flex items-center min-h-[22px] px-2 rounded-hz-control text-[10px] font-extrabold uppercase tracking-wider leading-none",
       huddl_badge_classes(@variant),
       @class
     ]}>

@@ -19,7 +19,7 @@ defmodule HuddlzWeb.CoreComponentsTest do
         <.page_tab href="/me">Inactive</.page_tab>
         """)
 
-      assert active_html =~ "rounded"
+      assert active_html =~ "rounded-hz-control"
       assert active_html =~ "border-primary"
       assert active_html =~ "bg-primary"
       assert active_html =~ "Active"
@@ -40,7 +40,7 @@ defmodule HuddlzWeb.CoreComponentsTest do
         """)
 
       assert html =~ ~s(<div)
-      assert html =~ "rounded"
+      assert html =~ "rounded-hz-surface"
       assert html =~ "border-base-300"
       refute html =~ "border-dashed"
       assert html =~ "Panel"
@@ -55,7 +55,7 @@ defmodule HuddlzWeb.CoreComponentsTest do
         """)
 
       assert html =~ ~s(<li)
-      assert html =~ "rounded"
+      assert html =~ "rounded-hz-surface"
       assert html =~ "border-dashed"
       assert html =~ "p-5"
       assert html =~ "Row"

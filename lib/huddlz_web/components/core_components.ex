@@ -46,7 +46,7 @@ defmodule HuddlzWeb.CoreComponents do
       {@rest}
     >
       <div class={[
-        "flex items-center gap-3 border rounded px-4 py-3 text-sm",
+        "flex items-center gap-3 border rounded-hz-surface px-4 py-3 text-sm",
         @kind == :info && "border-primary/30 bg-primary/5 text-primary",
         @kind == :error && "border-error/30 bg-error/5 text-error"
       ]}>
@@ -121,7 +121,7 @@ defmodule HuddlzWeb.CoreComponents do
       ~H"""
       <.link
         class={[
-          "inline-flex items-center justify-center gap-2 rounded-sm transition",
+          "inline-flex items-center justify-center gap-2 rounded-hz-control transition",
           @size_class,
           @variant_class,
           @class
@@ -135,7 +135,7 @@ defmodule HuddlzWeb.CoreComponents do
       ~H"""
       <button
         class={[
-          "inline-flex items-center justify-center gap-2 rounded-sm transition",
+          "inline-flex items-center justify-center gap-2 rounded-hz-control transition",
           @size_class,
           @variant_class,
           @class
@@ -160,7 +160,7 @@ defmodule HuddlzWeb.CoreComponents do
     ~H"""
     <.link
       class={[
-        "inline-flex items-center min-h-10 px-3.5 rounded text-sm font-extrabold gap-2 border transition-colors",
+        "inline-flex items-center min-h-10 px-3.5 rounded-hz-control text-sm font-extrabold gap-2 border transition-colors",
         @active && "border-primary bg-primary text-primary-content",
         !@active &&
           "border-base-300 bg-base-100 text-base-content hover:border-primary",
@@ -187,7 +187,7 @@ defmodule HuddlzWeb.CoreComponents do
     <.dynamic_tag
       tag_name={@tag}
       class={[
-        "rounded border border-base-300",
+        "rounded-hz-surface border border-base-300",
         @variant == "dashed" && "border-dashed",
         @class
       ]}
@@ -281,7 +281,7 @@ defmodule HuddlzWeb.CoreComponents do
         name={@name}
         class={[
           @class ||
-            "w-full h-11 px-3 rounded-sm bg-base-200 text-base-content text-sm border border-base-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition",
+            "w-full h-11 px-3 rounded-hz-control bg-base-200 text-base-content text-sm border border-base-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition",
           @errors != [] && (@error_class || "border-error")
         ]}
         multiple={@multiple}
@@ -310,7 +310,7 @@ defmodule HuddlzWeb.CoreComponents do
         name={@name}
         class={[
           @class ||
-            "w-full px-3 py-2.5 rounded-sm bg-base-200 text-base-content text-sm leading-relaxed border border-base-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition resize-y",
+            "w-full px-3 py-2.5 rounded-hz-control bg-base-200 text-base-content text-sm leading-relaxed border border-base-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition resize-y",
           @errors != [] && (@error_class || "border-error")
         ]}
         {@rest}
@@ -338,7 +338,7 @@ defmodule HuddlzWeb.CoreComponents do
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
           @class ||
-            "w-full h-11 px-3 rounded-sm bg-base-200 text-base-content text-sm border border-base-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition placeholder:text-base-content/40",
+            "w-full h-11 px-3 rounded-hz-control bg-base-200 text-base-content text-sm border border-base-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition placeholder:text-base-content/40",
           @errors != [] && (@error_class || "border-error")
         ]}
         {@rest}
@@ -407,7 +407,7 @@ defmodule HuddlzWeb.CoreComponents do
       end
 
     ~H"""
-    <div class="overflow-x-auto border border-base-300 rounded">
+    <div class="overflow-x-auto border border-base-300 rounded-hz-surface">
       <table class="table">
         <thead>
           <tr class="border-b border-base-300">
@@ -625,7 +625,7 @@ defmodule HuddlzWeb.CoreComponents do
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="relative border border-base-300 bg-base-200 rounded shadow-pop p-6"
+              class="relative border border-base-300 bg-base-200 rounded-hz-modal shadow-pop p-6"
             >
               <button
                 phx-click={JS.exec("data-cancel", to: "##{@id}")}
@@ -712,7 +712,7 @@ defmodule HuddlzWeb.CoreComponents do
       <div class="flex items-center gap-1">
         <button
           :if={@current_page > 1}
-          class="px-3 py-1.5 text-sm font-bold border border-base-300 rounded-sm hover:border-primary transition-colors"
+          class="px-3 py-1.5 text-sm font-bold border border-base-300 rounded-hz-control hover:border-primary transition-colors"
           phx-click={@event_name}
           phx-value-page={@current_page - 1}
         >
@@ -725,7 +725,7 @@ defmodule HuddlzWeb.CoreComponents do
           <% else %>
             <button
               class={[
-                "w-8 h-8 text-sm font-bold rounded-sm transition-colors",
+                "w-8 h-8 text-sm font-bold rounded-hz-control transition-colors",
                 if(page == @current_page,
                   do: "bg-primary text-primary-content",
                   else: "hover:bg-base-300"
@@ -741,7 +741,7 @@ defmodule HuddlzWeb.CoreComponents do
 
         <button
           :if={@current_page < @total_pages}
-          class="px-3 py-1.5 text-sm font-bold border border-base-300 rounded-sm hover:border-primary transition-colors"
+          class="px-3 py-1.5 text-sm font-bold border border-base-300 rounded-hz-control hover:border-primary transition-colors"
           phx-click={@event_name}
           phx-value-page={@current_page + 1}
         >
@@ -820,7 +820,7 @@ defmodule HuddlzWeb.CoreComponents do
           value={@value}
           min={@min}
           class={[
-            "w-full h-11 px-3 pr-10 rounded-sm bg-base-200 border border-base-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none text-base-content text-sm transition",
+            "w-full h-11 px-3 pr-10 rounded-hz-control bg-base-200 border border-base-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none text-base-content text-sm transition",
             @errors != [] && "border-error"
           ]}
           {@rest}
@@ -875,7 +875,7 @@ defmodule HuddlzWeb.CoreComponents do
         list={"time-options-#{@id}"}
         class={[
           @class ||
-            "w-full h-11 px-3 rounded-sm bg-base-200 border border-base-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none text-base-content text-sm transition",
+            "w-full h-11 px-3 rounded-hz-control bg-base-200 border border-base-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none text-base-content text-sm transition",
           @errors != [] && "border-error"
         ]}
         {@rest}
@@ -930,7 +930,7 @@ defmodule HuddlzWeb.CoreComponents do
         name={@name}
         class={[
           @class ||
-            "w-full h-11 px-3 rounded-sm bg-base-200 border border-base-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none text-base-content text-sm transition",
+            "w-full h-11 px-3 rounded-hz-control bg-base-200 border border-base-300 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none text-base-content text-sm transition",
           @errors != [] && "border-error"
         ]}
         {@rest}
