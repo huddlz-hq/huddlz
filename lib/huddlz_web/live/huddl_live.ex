@@ -653,12 +653,12 @@ defmodule HuddlzWeb.HuddlLive do
         </div>
 
         <div class="flex flex-wrap items-center gap-2 mb-6">
-          <.link patch={chip_path(:huddlz, assigns)} class={chip_class(@scope == :huddlz)}>
+          <.page_tab patch={chip_path(:huddlz, assigns)} active={@scope == :huddlz}>
             Huddlz
-          </.link>
-          <.link patch={chip_path(:groups, assigns)} class={chip_class(@scope == :groups)}>
+          </.page_tab>
+          <.page_tab patch={chip_path(:groups, assigns)} active={@scope == :groups}>
             Groups
-          </.link>
+          </.page_tab>
         </div>
 
         <div class="mb-8">
@@ -734,9 +734,9 @@ defmodule HuddlzWeb.HuddlLive do
         <div :if={@scope == :huddlz} class="w-full">
           <div class="mono-label text-primary/70 mb-3">Huddlz</div>
           <%= if Enum.empty?(@huddls) do %>
-            <div class="border border-dashed border-base-300 p-12 text-center">
+            <.surface_panel variant="dashed" class="p-12 text-center">
               <p class="text-lg text-base-content/50">{empty_message(assigns)}</p>
-            </div>
+            </.surface_panel>
           <% else %>
             <div class="mb-4 text-sm text-base-content/40">
               Found {@page_info.total_count} {if @page_info.total_count == 1,
@@ -762,9 +762,9 @@ defmodule HuddlzWeb.HuddlLive do
         <div :if={@scope == :groups} class="w-full">
           <div class="mono-label text-primary/70 mb-3">Groups</div>
           <%= if @groups == [] do %>
-            <div class="border border-dashed border-base-300 p-12 text-center">
+            <.surface_panel variant="dashed" class="p-12 text-center">
               <p class="text-lg text-base-content/50">{empty_message(assigns)}</p>
-            </div>
+            </.surface_panel>
           <% else %>
             <div class="mb-4 text-sm text-base-content/40">
               Found {@page_info.total_count} {if @page_info.total_count == 1,
@@ -979,14 +979,6 @@ defmodule HuddlzWeb.HuddlLive do
 
   defp search_label(:groups), do: "Search groups"
   defp search_label(_), do: "Search huddlz"
-
-  defp chip_class(true) do
-    "inline-flex items-center min-h-10 px-3.5 text-sm font-extrabold gap-2 border border-primary bg-primary text-primary-content"
-  end
-
-  defp chip_class(false) do
-    "inline-flex items-center min-h-10 px-3.5 text-sm font-extrabold gap-2 border border-base-300 bg-base-100 text-base-content hover:border-primary transition-colors"
-  end
 
   defp chip_path(target_scope, assigns) do
     cleared? = location_explicitly_cleared?(assigns)

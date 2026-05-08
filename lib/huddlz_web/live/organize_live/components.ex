@@ -6,6 +6,7 @@ defmodule HuddlzWeb.OrganizeLive.Components do
   form on `/organize/huddlz/new`).
   """
   use Phoenix.Component
+  import HuddlzWeb.CoreComponents, only: [surface_panel: 1]
   use HuddlzWeb, :verified_routes
 
   attr :active, :atom, required: true
@@ -28,7 +29,7 @@ defmodule HuddlzWeb.OrganizeLive.Components do
 
   defp workspace_sidebar(assigns) do
     ~H"""
-    <aside class="border border-base-300 self-start lg:sticky lg:top-28">
+    <.surface_panel tag="aside" class="self-start lg:sticky lg:top-28">
       <div class="border-b border-base-300 px-5 py-4">
         <span class="mono-label text-primary/70">// Workspace</span>
         <p class="text-base font-extrabold tracking-tight text-base-content mt-1">Organizer</p>
@@ -77,7 +78,7 @@ defmodule HuddlzWeb.OrganizeLive.Components do
           {@current_user.display_name || @current_user.email}
         </span>
       </div>
-    </aside>
+    </.surface_panel>
     """
   end
 
