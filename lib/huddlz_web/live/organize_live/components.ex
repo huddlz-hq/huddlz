@@ -96,10 +96,10 @@ defmodule HuddlzWeb.OrganizeLive.Components do
   end
 
   defp sidebar_link_class(true) do
-    "block px-3 py-2 text-sm font-bold border border-primary bg-primary/10 text-primary"
+    "block px-3 py-2 text-sm font-bold border border-primary rounded-hz-control bg-primary/10 text-primary"
   end
 
   defp sidebar_link_class(false) do
-    "block px-3 py-2 text-sm font-bold border border-transparent text-base-content/80 hover:border-base-300 hover:text-primary transition-colors"
+    "block px-3 py-2 text-sm font-bold border border-transparent rounded-hz-control text-base-content/80 hover:border-base-300 hover:text-primary transition-colors"
   end
 end

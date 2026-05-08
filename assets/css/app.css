@@ -70,6 +70,13 @@
   --noise: 0;
 }
 
+@theme {
+  --radius-hz-tight: 0.1875rem;    /* 3px — tiny indicators and checkboxes */
+  --radius-hz-control: 0.3125rem;  /* 5px — buttons, fields, tabs, badges */
+  --radius-hz-surface: 0.4375rem;  /* 7px — panels, cards, dropdowns */
+  --radius-hz-modal: 0.4375rem;    /* 7px — dialogs and overlays */
+}
+
 /* Add variants based on LiveView classes */
 @custom-variant phx-click-loading (.phx-click-loading&, .phx-click-loading &);
 @custom-variant phx-submit-loading (.phx-submit-loading&, .phx-submit-loading &);
@@ -154,7 +161,7 @@ html {
   background-color: transparent;
   cursor: pointer;
   position: relative;
-  border-radius: 0.1875rem;
+  border-radius: var(--radius-hz-tight);
   transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 
   &:hover {

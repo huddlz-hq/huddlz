@@ -518,7 +518,7 @@ defmodule HuddlzWeb.OrganizeLive do
         navigate={~p"/groups/#{@group.slug}/edit"}
         class="flex items-center gap-4 px-5 py-4 hover:bg-base-200/40 transition-colors group"
       >
-        <div class="w-20 aspect-video flex-shrink-0 overflow-hidden border border-base-300 bg-base-300">
+        <div class="w-20 aspect-video flex-shrink-0 overflow-hidden border border-base-300 bg-base-300 rounded-hz-control">
           <%= if @group.current_image_url do %>
             <img
               src={GroupImages.url(@group.current_image_url)}
@@ -1226,20 +1226,20 @@ defmodule HuddlzWeb.OrganizeLive do
         <div class="flex items-center gap-1">
           <.link
             patch={@prev_path}
-            class="inline-flex items-center justify-center w-8 h-8 border border-base-300 hover:border-primary/60 hover:text-primary transition-colors text-base-content/70"
+            class="inline-flex items-center justify-center w-8 h-8 border border-base-300 rounded-hz-control hover:border-primary/60 hover:text-primary transition-colors text-base-content/70"
             aria-label="Previous month"
           >
             <.icon name="hero-chevron-left" class="w-4 h-4" />
           </.link>
           <.link
             patch={~p"/organize/calendar?view=month"}
-            class="inline-flex items-center px-3 h-8 text-xs font-extrabold uppercase tracking-wider border border-base-300 hover:border-primary/60 hover:text-primary text-base-content/70 transition-colors"
+            class="inline-flex items-center px-3 h-8 text-xs font-extrabold uppercase tracking-wider border border-base-300 rounded-hz-control hover:border-primary/60 hover:text-primary text-base-content/70 transition-colors"
           >
             Today
           </.link>
           <.link
             patch={@next_path}
-            class="inline-flex items-center justify-center w-8 h-8 border border-base-300 hover:border-primary/60 hover:text-primary transition-colors text-base-content/70"
+            class="inline-flex items-center justify-center w-8 h-8 border border-base-300 rounded-hz-control hover:border-primary/60 hover:text-primary transition-colors text-base-content/70"
             aria-label="Next month"
           >
             <.icon name="hero-chevron-right" class="w-4 h-4" />

@@ -4,7 +4,8 @@ defmodule HuddlzWeb.Layouts do
 
   Reconciled with the search-organize prototype: header search button uses
   Inter heavy weight at sentence case (no Space Mono uppercase); user
-  dropdown and mobile menu use rounded-sm corners matching the new theme.
+  compact controls use `rounded-hz-control`; dropdown surfaces use
+  `rounded-hz-surface`.
   """
   use HuddlzWeb, :html
 
@@ -26,7 +27,7 @@ defmodule HuddlzWeb.Layouts do
             action="/discover"
             role="search"
             aria-label="Search huddlz"
-            class="hidden md:flex flex-1 max-w-2xl items-stretch h-12 border border-base-300 rounded-sm overflow-hidden bg-base-200/40 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15 transition-colors"
+            class="hidden md:flex flex-1 max-w-2xl items-stretch h-12 border border-base-300 rounded-hz-control overflow-hidden bg-base-200/40 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15 transition-colors"
           >
             <span class="grid place-items-center w-12 text-primary flex-shrink-0">
               <.icon name="hero-magnifying-glass" class="w-5 h-5" />
@@ -75,7 +76,7 @@ defmodule HuddlzWeb.Layouts do
                   phx-click-away={JS.hide(to: "#user-menu")}
                   phx-window-keydown={JS.hide(to: "#user-menu")}
                   phx-key="escape"
-                  class="hidden absolute right-0 mt-3 z-50 border border-base-300 bg-base-200 w-64 shadow-pop rounded overflow-hidden"
+                  class="hidden absolute right-0 mt-3 z-50 border border-base-300 bg-base-200 w-64 shadow-pop rounded-hz-surface overflow-hidden"
                 >
                   <li class="px-4 py-3 border-b border-base-300">
                     <p class="text-sm font-bold truncate">
@@ -149,13 +150,13 @@ defmodule HuddlzWeb.Layouts do
             <% else %>
               <a
                 href="/register"
-                class="inline-flex items-center h-12 px-5 text-sm font-bold border border-base-300 rounded-sm text-base-content hover:border-primary hover:text-primary transition-colors"
+                class="inline-flex items-center h-12 px-5 text-sm font-bold border border-base-300 rounded-hz-control text-base-content hover:border-primary hover:text-primary transition-colors"
               >
                 Sign Up
               </a>
               <a
                 href="/sign-in"
-                class="inline-flex items-center h-12 px-5 text-sm font-extrabold bg-primary text-primary-content rounded-sm hover:brightness-110 transition-colors"
+                class="inline-flex items-center h-12 px-5 text-sm font-extrabold bg-primary text-primary-content rounded-hz-control hover:brightness-110 transition-colors"
               >
                 Sign In
               </a>
@@ -163,7 +164,7 @@ defmodule HuddlzWeb.Layouts do
             <%!-- Mobile menu button --%>
             <button
               type="button"
-              class="md:hidden grid place-items-center w-12 h-12 border border-base-300 rounded-sm hover:border-primary transition-colors"
+              class="md:hidden grid place-items-center w-12 h-12 border border-base-300 rounded-hz-control hover:border-primary transition-colors"
               phx-click={JS.toggle(to: "#mobile-menu")}
               aria-label="Open menu"
             >
@@ -178,7 +179,7 @@ defmodule HuddlzWeb.Layouts do
           action="/discover"
           role="search"
           aria-label="Search huddlz"
-          class="md:hidden mb-4 flex items-stretch h-12 border border-base-300 rounded-sm overflow-hidden bg-base-200/40 focus-within:border-primary"
+          class="md:hidden mb-4 flex items-stretch h-12 border border-base-300 rounded-hz-control overflow-hidden bg-base-200/40 focus-within:border-primary"
         >
           <span class="grid place-items-center w-12 text-primary flex-shrink-0">
             <.icon name="hero-magnifying-glass" class="w-5 h-5" />
