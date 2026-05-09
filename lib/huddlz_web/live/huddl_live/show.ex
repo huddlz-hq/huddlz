@@ -20,7 +20,8 @@ defmodule HuddlzWeb.HuddlLive.Show do
   def handle_params(%{"group_slug" => group_slug, "id" => id}, _, socket) do
     case get_huddl(id, group_slug, socket.assigns.current_user) do
       {:ok, huddl} ->
-        attendance = check_attendance(huddl, socket.assigns.current_user)
+        user = socket.assigns.current_user
+        attendance = check_attendance(huddl, user)
 
         {:noreply,
          socket
@@ -29,8 +30,9 @@ defmodule HuddlzWeb.HuddlLive.Show do
          |> assign(:huddl, huddl)
          |> assign(:attendance, attendance)
          |> assign(:has_rsvped, attendance == :attending)
-         |> assign(:waitlist_position, waitlist_position(huddl, socket.assigns.current_user))
-         |> assign(:is_creator, creator?(huddl, socket.assigns.current_user))}
+         |> assign(:waitlist_position, waitlist_position(huddl, user))
+         |> assign(:can_edit_huddl, Ash.can?({huddl, :update}, user))
+         |> assign(:can_delete_huddl, Ash.can?({huddl, :destroy}, user))}
 
       {:error, :not_found} ->
         {:noreply,
@@ -63,13 +65,15 @@ defmodule HuddlzWeb.HuddlLive.Show do
           <% end %>
         </:subtitle>
         <:actions>
-          <%= if @is_creator do %>
+          <%= if @can_edit_huddl do %>
             <.link
               navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}/edit"}
               class="inline-flex items-center gap-1.5 text-sm font-medium text-base-content/50 hover:text-base-content transition-colors"
             >
               <.icon name="hero-pencil" class="h-4 w-4" /> Edit Huddl
             </.link>
+          <% end %>
+          <%= if @can_delete_huddl do %>
             <.button
               phx-click="delete_huddl"
               data-confirm="Are you sure you want to delete this huddl?"
@@ -404,12 +408,6 @@ defmodule HuddlzWeb.HuddlLive.Show do
       url: url(~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"),
       image: MetaHelpers.image_url(huddl.display_image_url, HuddlImages)
     }
-  end
-
-  defp creator?(_huddl, nil), do: false
-
-  defp creator?(huddl, user) do
-    huddl.creator_id == user.id
   end
 
   defp check_attendance(_huddl, nil), do: :none
