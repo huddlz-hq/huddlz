@@ -91,7 +91,6 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
               phx-target={@myself}
               data-testid="saved-location-change"
               aria-label="Change location"
-              role="button"
               class="inline-flex items-center gap-1.5 text-primary/70 hover:text-primary transition-colors"
             >
               <.icon name="hero-pencil" class="h-3.5 w-3.5" /> Change address

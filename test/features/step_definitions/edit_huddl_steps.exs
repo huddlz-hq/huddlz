@@ -7,11 +7,16 @@ defmodule EditHuddlSteps do
 
   import Huddlz.Generator
   import PhoenixTest
-  import Phoenix.LiveViewTest
 
   alias Huddlz.Communities.Group
 
   require Ash.Query
+
+  # The "switch saved" and "modal save" steps drive the parent LV via send/0
+  # rather than clicking through the picker dropdown / autocomplete suggestions.
+  # That keeps the scenarios fast and avoids reproducing debounce + render
+  # cadence; the picker's `select` handler and the autocomplete's emit contract
+  # are covered by their own dedicated tests.
 
   step "the group {string} has a saved location {string} at {string} with coordinates {float}, {float}",
        %{args: [group_name, name, address, lat, lng]} = context do
@@ -64,19 +69,7 @@ defmodule EditHuddlSteps do
     location = lookup_saved_location(context, name)
 
     send(session.view.pid, {:saved_location_selected, "saved-location-picker", location})
-    render(session.view)
-
-    Map.merge(context, %{session: session, conn: session})
-  end
-
-  step "I edit the saved location selection", context do
-    session = context[:session] || context[:conn]
-
-    # Mirror clicking the (hover-revealed) edit pencil on the selected-location
-    # card. This puts the picker into search mode so "Add new address" appears.
-    session.view
-    |> element("[data-testid='saved-location-selected'] [role='button']")
-    |> render_click()
+    Phoenix.LiveViewTest.render(session.view)
 
     Map.merge(context, %{session: session, conn: session})
   end
@@ -102,7 +95,7 @@ defmodule EditHuddlSteps do
        }}
     )
 
-    render(session.view)
+    Phoenix.LiveViewTest.render(session.view)
 
     session = click_button(session, "Save Address")
 
