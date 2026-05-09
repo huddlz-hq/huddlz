@@ -10,9 +10,7 @@ defmodule HuddlzWeb.HuddlLive do
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities
-  alias Huddlz.Communities.Group
   alias HuddlzWeb.Layouts
-  require Ash.Query
   require Logger
 
   @huddl_card_loads [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group]
@@ -417,7 +415,8 @@ defmodule HuddlzWeb.HuddlLive do
       Keyword.get(opts, :relationship),
       args.sort,
       actor: actor,
-      page: Keyword.get(opts, :page, [])
+      page: Keyword.get(opts, :page, []),
+      load: @huddl_card_loads
     )
   end
 
@@ -425,45 +424,28 @@ defmodule HuddlzWeb.HuddlLive do
   # member's private groups already surface in /groups under their personal
   # sections, so re-listing them here would just duplicate.
   defp list_groups(query, page, actor) do
-    ash_query =
-      Group
-      |> Ash.Query.for_read(:search, %{query: query}, actor: actor)
-      |> Ash.Query.filter(is_public == true)
+    case Communities.search_groups(query,
+           actor: actor,
+           query: [filter: [is_public: true]],
+           load: [:current_image_url],
+           page: [
+             limit: @page_size,
+             offset: (page - 1) * @page_size,
+             count: true
+           ]
+         ) do
+      {:ok, %{results: results, count: count}} ->
+        {results, count || 0}
 
-    total =
-      case Ash.count(ash_query, actor: actor) do
-        {:ok, n} ->
-          n
-
-        {:error, reason} ->
-          Logger.warning("HuddlLive group count failed: #{inspect(reason)}")
-          0
-      end
-
-    paginated =
-      ash_query
-      |> Ash.Query.load(:current_image_url)
-      |> Ash.Query.limit(@page_size)
-      |> Ash.Query.offset((page - 1) * @page_size)
-
-    groups =
-      case Ash.read(paginated, actor: actor) do
-        {:ok, gs} ->
-          gs
-
-        {:error, reason} ->
-          Logger.warning("HuddlLive group read failed: #{inspect(reason)}")
-          []
-      end
-
-    {groups, total}
+      {:error, reason} ->
+        Logger.warning("HuddlLive group search failed: #{inspect(reason)}")
+        {[], 0}
+    end
   end
 
   defp load_results_with_distances({:ok, %{results: results}}, socket) do
-    loaded = load_huddl_cards(results, socket.assigns[:current_user])
-
-    dists = compute_distances(loaded, socket)
-    {loaded, dists}
+    dists = compute_distances(results, socket)
+    {results, dists}
   end
 
   defp load_results_with_distances({:error, reason}, _socket) do
@@ -472,10 +454,6 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   defp load_results_with_distances(_, _socket), do: {[], []}
-
-  defp load_huddl_cards(results, actor) do
-    Ash.load!(results, @huddl_card_loads, actor: actor)
-  end
 
   defp compute_distances(huddls, %{assigns: %{location_active: false}}) do
     List.duplicate(nil, length(huddls))

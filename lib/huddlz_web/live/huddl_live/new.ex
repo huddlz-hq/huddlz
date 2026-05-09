@@ -10,15 +10,12 @@ defmodule HuddlzWeb.HuddlLive.New do
   import HuddlzWeb.OrganizeLive.Components
 
   alias Huddlz.Communities
-  alias Huddlz.Communities.Group
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.HuddlImage
   alias Huddlz.Storage.HuddlImages
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
   alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
-
-  require Ash.Query
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
 
@@ -95,10 +92,7 @@ defmodule HuddlzWeb.HuddlLive.New do
   end
 
   defp load_owned_groups(user) do
-    Group
-    |> Ash.Query.for_read(:get_by_owner, %{}, actor: user)
-    |> Ash.Query.sort(name: :asc)
-    |> Ash.read!(actor: user)
+    Communities.get_by_owner!(actor: user, query: [sort: [name: :asc]])
   end
 
   defp assign_create_form(socket, group, user) do
