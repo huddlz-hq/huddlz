@@ -79,6 +79,27 @@ window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 // connect if there are any LiveViews on the page
 liveSocket.connect()
 
+// "/" focuses the chrome search box, GitHub-style. Skipped while the user
+// is already typing in an editable field, or when modifier keys are held.
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return
+
+  const target = event.target
+  if (target && target.matches && target.matches('input, textarea, select, [contenteditable="true"], [contenteditable=""]')) return
+
+  const inputs = document.querySelectorAll('input[type="search"][name="q"]')
+  for (const input of inputs) {
+    // offsetParent is null for inputs hidden via display: none — pick the
+    // visible one (desktop chrome on >= md, mobile chrome below).
+    if (input.offsetParent !== null) {
+      event.preventDefault()
+      input.focus()
+      input.select()
+      return
+    }
+  }
+})
+
 // expose liveSocket on window for web console debug logs and latency simulation:
 // >> liveSocket.enableDebug()
 // >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
