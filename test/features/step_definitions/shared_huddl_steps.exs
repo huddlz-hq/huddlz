@@ -1,6 +1,25 @@
 defmodule SharedHuddlSteps do
   use Cucumber.StepDefinition
   import Huddlz.Generator
+  import ExUnit.Assertions
+
+  alias Huddlz.Communities.Huddl
+
+  require Ash.Query
+
+  step "the huddl {string} should have coordinates {float}, {float}",
+       %{args: [title, lat, lng]} = context do
+    huddl =
+      Huddl
+      |> Ash.Query.filter(title == ^title)
+      |> Ash.read_one!(authorize?: false)
+
+    assert huddl, "Expected a huddl titled #{inspect(title)} to exist"
+    assert huddl.latitude == lat, "expected latitude #{lat}, got #{inspect(huddl.latitude)}"
+    assert huddl.longitude == lng, "expected longitude #{lng}, got #{inspect(huddl.longitude)}"
+
+    context
+  end
 
   step "the following huddlz exist:", context do
     huddlz =

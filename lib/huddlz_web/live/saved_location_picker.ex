@@ -50,7 +50,13 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
     new_selection = assigns[:selected_location]
 
     if new_selection != socket.assigns.selected_location do
-      assign(socket, :selected_location, new_selection)
+      # Parent assigns are canonical. If the parent swaps to a fresh selection
+      # (e.g., after the "Add new address" modal saves), drop any stashed
+      # `previous_location` so the dismiss handler can't quietly restore the
+      # pre-edit pick on the next click-away.
+      socket
+      |> assign(:selected_location, new_selection)
+      |> assign(:previous_location, nil)
     else
       socket
     end
@@ -62,36 +68,40 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
       <label class="mono-label text-primary/70 mb-1.5 block">Physical Location</label>
 
       <%= if @selected_location do %>
-        <div class="relative" data-testid="saved-location-selected">
-          <div class="flex items-center h-10 pl-6 pr-6 border-0 border-b border-primary/50 bg-transparent group">
-            <.icon
-              name="hero-map-pin"
-              class="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-primary"
-            />
-            <div
+        <div data-testid="saved-location-selected">
+          <div class="flex items-center gap-2 h-10 pr-6 border-0 border-b border-primary/50 bg-transparent">
+            <.icon name="hero-map-pin" class="w-4 h-4 text-primary flex-shrink-0" />
+            <span
+              class="text-sm text-base-content truncate flex-1"
+              data-testid="saved-location-display"
+            >
+              {@selected_location.name || @selected_location.address}
+            </span>
+            <span
+              :if={@selected_location.name}
+              class="text-xs text-base-content/40 ml-2 truncate hidden sm:inline"
+            >
+              {@selected_location.address}
+            </span>
+          </div>
+          <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
+            <button
+              type="button"
               phx-click="edit"
               phx-target={@myself}
-              class="flex items-center flex-1 min-w-0 cursor-pointer"
-              role="button"
+              data-testid="saved-location-change"
               aria-label="Change location"
+              role="button"
+              class="inline-flex items-center gap-1.5 text-primary/70 hover:text-primary transition-colors"
             >
-              <span
-                class="text-sm text-base-content truncate flex-1"
-                data-testid="saved-location-display"
-              >
-                {@selected_location.name || @selected_location.address}
-              </span>
-              <span
-                :if={@selected_location.name}
-                class="text-xs text-base-content/40 ml-2 truncate hidden sm:inline"
-              >
-                {@selected_location.address}
-              </span>
-              <.icon
-                name="hero-pencil"
-                class="w-3.5 h-3.5 ml-2 text-transparent group-hover:text-primary/50 transition-colors"
-              />
-            </div>
+              <.icon name="hero-pencil" class="h-3.5 w-3.5" /> Change address
+            </button>
+            <.link
+              patch={@new_location_path}
+              class="inline-flex items-center gap-1.5 text-primary/70 hover:text-primary transition-colors"
+            >
+              <.icon name="hero-plus" class="h-3.5 w-3.5" /> Add new address
+            </.link>
           </div>
         </div>
       <% else %>
