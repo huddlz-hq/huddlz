@@ -9,10 +9,7 @@ defmodule HuddlzWeb.MeLive do
   """
   use HuddlzWeb, :live_view
 
-  require Ash.Query
-
   alias Huddlz.Communities
-  alias Huddlz.Communities.Group
   alias Huddlz.Notifications
   alias HuddlzWeb.Layouts
 
@@ -133,25 +130,29 @@ defmodule HuddlzWeb.MeLive do
         relationship,
         sort,
         actor: user,
-        page: [limit: @section_limit, offset: 0, count: true]
+        page: [limit: @section_limit, offset: 0, count: true],
+        load: @huddl_card_loads
       )
 
     case page do
       {:ok, %{results: results, count: count}} ->
-        loaded = Ash.load!(results, @huddl_card_loads, actor: user)
-        {loaded, count || length(loaded)}
+        {results, count || length(results)}
 
       _ ->
         empty_section()
     end
   end
 
-  defp load_groups_section(user, action) do
-    case Group
-         |> Ash.Query.for_read(action, %{}, actor: user)
-         |> Ash.Query.load(:current_image_url)
-         |> Ash.Query.sort(name: :asc)
-         |> Ash.read(actor: user) do
+  defp load_groups_section(user, :get_by_owner) do
+    fetch_groups(&Communities.get_by_owner/1, user)
+  end
+
+  defp load_groups_section(user, :get_joined) do
+    fetch_groups(&Communities.get_joined_groups/1, user)
+  end
+
+  defp fetch_groups(fun, user) do
+    case fun.(actor: user, query: [sort: [name: :asc]], load: [:current_image_url]) do
       {:ok, groups} -> {groups, length(groups)}
       _ -> empty_section()
     end

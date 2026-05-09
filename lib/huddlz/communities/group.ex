@@ -93,6 +93,8 @@ defmodule Huddlz.Communities.Group do
         allow_nil? true
       end
 
+      pagination offset?: true, countable: true, required?: false, default_limit: 20
+
       prepare fn query, _ ->
         case query.arguments.query do
           nil ->

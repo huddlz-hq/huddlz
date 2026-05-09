@@ -24,9 +24,11 @@ defmodule HuddlzWeb.LandingLive do
 
   defp load_preview do
     case Communities.search_huddlz(nil, :upcoming, nil, nil, nil, nil, nil, :soonest,
-           page: [limit: @preview_limit, count: false]
+           page: [limit: @preview_limit, count: false],
+           load: @huddl_card_loads,
+           authorize?: false
          ) do
-      {:ok, %{results: results}} -> Ash.load!(results, @huddl_card_loads, authorize?: false)
+      {:ok, %{results: results}} -> results
       _ -> []
     end
   end

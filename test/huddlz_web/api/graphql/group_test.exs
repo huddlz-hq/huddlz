@@ -30,9 +30,11 @@ defmodule HuddlzWeb.Api.Graphql.GroupTest do
           )
         )
 
-      conn = gql_post(conn, ~s|{ searchGroups(query: "Elixir") { id } }|)
+      conn = gql_post(conn, ~s|{ searchGroups(query: "Elixir") { results { id } } }|)
 
-      assert %{"data" => %{"searchGroups" => results}} = json_response(conn, 200)
+      assert %{"data" => %{"searchGroups" => %{"results" => results}}} =
+               json_response(conn, 200)
+
       ids = Enum.map(results, & &1["id"])
       assert target.id in ids
     end
