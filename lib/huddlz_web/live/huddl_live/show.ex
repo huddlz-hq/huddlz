@@ -114,7 +114,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
               <% :none -> %>
                 <%= if event_full?(@huddl) do %>
                   <.button phx-click="join_waitlist">
-                    Event Full — Join Waitlist
+                    Huddl Full — Join Waitlist
                   </.button>
                 <% else %>
                   <.button phx-click="rsvp">

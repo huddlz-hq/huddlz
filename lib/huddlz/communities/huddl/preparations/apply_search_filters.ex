@@ -1,6 +1,6 @@
 defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
   @moduledoc """
-  Applies search filters to huddl queries including text search, date filtering, and event type filtering.
+  Applies search filters to huddl queries including text search, date filtering, and huddl-type filtering.
   """
   use Ash.Resource.Preparation
   require Ash.Query
@@ -39,7 +39,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
 
     case date_filter do
       :upcoming ->
-        # Include in-progress events
+        # Include in-progress huddlz
         Ash.Query.filter(query, ends_at > ^now)
 
       :this_week ->

@@ -12,7 +12,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.FilterByVisibility do
   require Ash.Query
 
   def prepare(query, _opts, %{actor: nil}) do
-    # Non-authenticated users can only see public events in public groups
+    # Non-authenticated users can only see public huddlz in public groups
     # Use the is_publicly_visible calculation
     query
     |> Ash.Query.load([:group, :is_publicly_visible])

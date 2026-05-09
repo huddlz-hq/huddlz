@@ -376,7 +376,7 @@ defmodule HuddlzWeb.MeLive do
     <.surface_panel class="p-6">
       <span class="mono-label text-primary/70">// Useful next actions</span>
       <ul class="mt-3 space-y-2 text-sm text-base-content/70">
-        <li>View event details and location.</li>
+        <li>View huddl details and location.</li>
         <li>Change RSVP or add a guest.</li>
         <li>Message the organizer if something changes.</li>
       </ul>
@@ -566,7 +566,7 @@ defmodule HuddlzWeb.MeLive do
     <.surface_panel class="p-6">
       <span class="mono-label text-primary/70">// Notification controls</span>
       <p class="text-sm text-base-content/60 mt-3">
-        Tune which events email you and which stay in-app only.
+        Tune which huddlz email you and which stay in-app only.
       </p>
       <.link
         navigate={~p"/profile/notifications"}

@@ -53,7 +53,7 @@ defmodule HuddlzWeb.HuddlLive.FormComponent do
     <.input
       field={@form[:event_type]}
       type="select"
-      label="Event Type"
+      label="Huddl Type"
       options={[
         {"In-Person", "in_person"},
         {"Virtual", "virtual"},
@@ -84,12 +84,12 @@ defmodule HuddlzWeb.HuddlLive.FormComponent do
       <.input
         field={@form[:is_private]}
         type="checkbox"
-        label="Make this a private event (only visible to group members)"
+        label="Make this a private huddl (only visible to group members)"
       />
     <% else %>
       <p class="text-sm text-base-content/60">
         <.icon name="hero-lock-closed" class="h-4 w-4 inline" />
-        This will be a private event (private groups can only create private events)
+        This will be a private huddl (private groups can only create private huddlz)
       </p>
     <% end %>
 

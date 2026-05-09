@@ -307,7 +307,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       conn
       |> login(member)
       |> visit(~p"/groups/#{group.slug}/huddlz/#{full_huddl.id}")
-      |> assert_has("div", text: "Event Full")
+      |> assert_has("div", text: "Huddl Full")
       |> assert_has("span", text: "1/1 spots filled")
       |> refute_has("button", text: "RSVP to this huddl")
     end

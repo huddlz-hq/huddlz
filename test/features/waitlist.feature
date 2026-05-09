@@ -23,10 +23,10 @@ Feature: Waitlist
   Scenario: User joins the waitlist when the huddl is full
     Given I am logged in as "hopeful@example.com"
     When I visit the "Capped Code Review" huddl page
-    Then I should see "Event Full"
+    Then I should see "Huddl Full"
     And I should see "Join Waitlist"
 
-    When I click "Event Full — Join Waitlist"
+    When I click "Huddl Full — Join Waitlist"
     Then I should see "Added to the waitlist"
     And I should see "On waitlist"
     And I should see "Leave Waitlist"

@@ -1,6 +1,6 @@
 defmodule Huddlz.Communities.Huddl do
   @moduledoc """
-  A huddl represents an event or gathering within the Huddlz platform.
+  A huddl is a gathering within the huddlz platform.
   """
 
   use Ash.Resource,
@@ -466,17 +466,17 @@ defmodule Huddlz.Communities.Huddl do
 
     validate present([:physical_location]) do
       where attribute_equals(:event_type, :in_person)
-      message "is required for in-person events"
+      message "is required for in-person huddlz"
     end
 
     validate present([:virtual_link]) do
       where attribute_equals(:event_type, :virtual)
-      message "is required for virtual events"
+      message "is required for virtual huddlz"
     end
 
     validate present([:physical_location, :virtual_link]) do
       where attribute_equals(:event_type, :hybrid)
-      message "both physical location and virtual link are required for hybrid events"
+      message "both physical location and virtual link are required for hybrid huddlz"
     end
   end
 
