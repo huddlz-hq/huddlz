@@ -102,23 +102,44 @@ defmodule Huddlz.Communities.GroupMembershipTest do
                |> Ash.read_one(authorize?: false)
     end
 
-    test "owner can leave their own group (transfer ownership is out of scope)", %{
-      admin: owner,
-      public_group: group
-    } do
+    test "owner cannot leave their own group" do
+      # Use a non-admin owner so the admin bypass policy does not mask the
+      # owner-role guard. Owners would otherwise destroy their owner-role
+      # membership row, leaving the group with a stale owner_id and locking
+      # themselves out of private groups (Group :read requires public OR a
+      # member relationship). To leave, an owner must transfer ownership
+      # first via Group.:transfer_ownership.
+      owner = generate(user(role: :user))
+      group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+
       owner_membership =
         GroupMember
         |> Ash.Query.filter(group_id == ^group.id and user_id == ^owner.id)
         |> Ash.read_one!(authorize?: false)
 
-      # Owners can leave - ownership transfer is a future feature
-      assert :ok = Ash.destroy(owner_membership, action: :leave_group, actor: owner)
+      assert owner_membership.role == :owner
 
-      # Verify owner was removed
-      assert {:ok, nil} ==
+      assert {:error, %Ash.Error.Forbidden{}} =
+               Ash.destroy(owner_membership, action: :leave_group, actor: owner)
+
+      # Membership row is still there
+      assert {:ok, %GroupMember{}} =
                GroupMember
                |> Ash.Query.filter(group_id == ^group.id and user_id == ^owner.id)
                |> Ash.read_one(authorize?: false)
+    end
+
+    test "admin owner can still leave via the admin bypass", %{admin: owner, public_group: group} do
+      # The admin bypass at the top of GroupMember.policies trumps the
+      # owner-role guard. Documented here to make the bypass interaction
+      # explicit and to prevent accidental tightening that would also lock
+      # admins out of recovery paths.
+      owner_membership =
+        GroupMember
+        |> Ash.Query.filter(group_id == ^group.id and user_id == ^owner.id)
+        |> Ash.read_one!(authorize?: false)
+
+      assert :ok = Ash.destroy(owner_membership, action: :leave_group, actor: owner)
     end
 
     test "user cannot remove someone else", %{

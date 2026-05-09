@@ -37,7 +37,7 @@ defmodule HuddlzWeb.GroupLive.Show do
          |> assign(:members, members)
          |> assign(:member_count, group.member_count)
          |> assign(:is_member, !is_nil(membership))
-         |> assign_action_permissions(group, user)
+         |> assign_action_permissions(group, user, membership)
          |> assign(:active_tab, "upcoming")
          |> assign(:upcoming_huddlz, upcoming_huddlz)
          |> assign(:past_huddlz, [])
@@ -52,7 +52,7 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   # Compute UI gates from the resource policies themselves so this view stays
   # in lockstep if those policies change.
-  defp assign_action_permissions(socket, group, user) do
+  defp assign_action_permissions(socket, group, user, membership) do
     socket
     |> assign(:can_edit_group, Ash.can?({group, :update_details}, user))
     |> assign(
@@ -64,7 +64,11 @@ defmodule HuddlzWeb.GroupLive.Show do
       :can_join_group,
       Ash.can?({GroupMember, :join_group, %{group_id: group.id}}, user)
     )
+    |> assign(:can_leave_group, can_leave?(membership, user))
   end
+
+  defp can_leave?(nil, _user), do: false
+  defp can_leave?(membership, user), do: Ash.can?({membership, :leave_group}, user)
 
   @impl true
   def render(assigns) do
@@ -113,7 +117,7 @@ defmodule HuddlzWeb.GroupLive.Show do
               </.link>
             <% end %>
 
-            <%= if @is_member do %>
+            <%= if @can_leave_group do %>
               <.button
                 phx-click="leave_group"
                 data-confirm="Are you sure you want to leave this group?"
@@ -277,6 +281,7 @@ defmodule HuddlzWeb.GroupLive.Show do
     case join_group(socket.assigns.group, user) do
       {:ok, _} ->
         group = reload_group(socket.assigns.group, user)
+        membership = current_user_membership(group, user)
         members = get_members(group, user, true)
 
         {:noreply,
@@ -286,7 +291,7 @@ defmodule HuddlzWeb.GroupLive.Show do
          |> assign(:is_member, true)
          |> assign(:members, members)
          |> assign(:member_count, group.member_count)
-         |> assign_action_permissions(group, user)}
+         |> assign_action_permissions(group, user, membership)}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to join group")}
@@ -307,7 +312,7 @@ defmodule HuddlzWeb.GroupLive.Show do
          |> assign(:is_member, false)
          |> assign(:members, nil)
          |> assign(:member_count, group.member_count)
-         |> assign_action_permissions(group, user)}
+         |> assign_action_permissions(group, user, nil)}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to leave group")}

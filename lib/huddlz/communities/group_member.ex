@@ -228,9 +228,15 @@ defmodule Huddlz.Communities.GroupMember do
       authorize_if PublicGroup
     end
 
-    # Users can leave groups
+    # Users can leave groups they belong to, except group owners — owners must
+    # transfer ownership (Group.:transfer_ownership) before they can leave.
+    # Without this guard, an owner deleting their :owner membership row leaves
+    # the group in an inconsistent state (owner_id still set, but owner is no
+    # longer a member) and locks the owner out of their own private group on
+    # subsequent reads (Group :read requires public OR member relationship).
     policy action(:leave_group) do
-      description "Allow users to leave groups they're members of"
+      description "Members can leave a group; owners must transfer ownership first"
+      forbid_if expr(role == :owner)
       # User must be the member being removed
       authorize_if relates_to_actor_via(:user)
     end
