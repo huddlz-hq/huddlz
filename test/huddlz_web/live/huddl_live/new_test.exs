@@ -180,10 +180,10 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> visit(~p"/groups/#{group.slug}/huddlz/new")
 
       assert_has(session, "input[name='form[is_private]'][type='checkbox']")
-      assert session.conn.resp_body =~ "Make this a private event"
+      assert session.conn.resp_body =~ "Make this a private huddl"
     end
 
-    test "shows private event notice for private groups", %{
+    test "shows private huddl notice for private groups", %{
       conn: conn,
       owner: owner,
       private_group: group
@@ -194,8 +194,8 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> visit(~p"/groups/#{group.slug}/huddlz/new")
 
       refute session.conn.resp_body =~ ~s(input[name='form[is_private]'][type='checkbox'])
-      assert session.conn.resp_body =~ "This will be a private event"
-      assert session.conn.resp_body =~ "private groups can only create private events"
+      assert session.conn.resp_body =~ "This will be a private huddl"
+      assert session.conn.resp_body =~ "private groups can only create private huddlz"
     end
   end
 
@@ -220,7 +220,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}/huddlz/new")
       # Change to virtual
-      |> select("Event Type", option: "Virtual", exact: false)
+      |> select("Huddl Type", option: "Virtual", exact: false)
       |> refute_has("#saved-location-picker")
       |> assert_has("input[name='form[virtual_link]']")
     end
@@ -230,7 +230,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}/huddlz/new")
       # Change to hybrid
-      |> select("Event Type", option: "Hybrid (Both In-Person and Virtual)", exact: false)
+      |> select("Huddl Type", option: "Hybrid (Both In-Person and Virtual)", exact: false)
       |> assert_has("#saved-location-picker")
       |> assert_has("input[name='form[virtual_link]']")
     end
@@ -330,7 +330,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> login(owner)
         |> visit(~p"/groups/#{private_group.slug}/huddlz/new")
         # First change to virtual to show the virtual_link field
-        |> select("Event Type", option: "Virtual", exact: false)
+        |> select("Huddl Type", option: "Virtual", exact: false)
         |> fill_in("Title", with: "Private Group Huddl")
         |> fill_in("Description", with: "A huddl in a private group")
         |> fill_in("Date", with: date)

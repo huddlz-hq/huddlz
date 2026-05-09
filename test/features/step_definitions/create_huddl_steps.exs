@@ -224,7 +224,7 @@ defmodule CreateHuddlSteps do
               acc
             end
 
-          "Event Type" ->
+          "Huddl Type" ->
             event_type =
               case value do
                 "In-Person" -> "in_person"
@@ -268,7 +268,7 @@ defmodule CreateHuddlSteps do
             _ -> "In-Person"
           end
 
-        select(session, "Event Type", option: event_type_label, exact: false)
+        select(session, "Huddl Type", option: event_type_label, exact: false)
       else
         session
       end

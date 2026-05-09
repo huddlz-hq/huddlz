@@ -45,7 +45,7 @@ defmodule HuddlzWeb.LandingLive do
               Find your next real-life gathering.
             </h1>
             <p class="mt-5 max-w-xl text-base-content/70 text-lg leading-relaxed">
-              Huddlz helps people discover local events and groups without turning the first step into paperwork. Search for what you want, pick a huddl, and show up.
+              Huddlz helps people discover local huddlz and groups without turning the first step into paperwork. Search for what you want, pick a huddl, and show up.
             </p>
             <div class="mt-8 flex flex-wrap gap-3">
               <.link
@@ -136,7 +136,7 @@ defmodule HuddlzWeb.LandingLive do
               <li>
                 <p class="font-bold text-sm text-base-content">Track attendees and members</p>
                 <p class="mt-1 text-sm text-base-content/60">
-                  Separate event RSVPs from group relationships so each job has a clear home.
+                  Separate huddl RSVPs from group relationships so each job has a clear home.
                 </p>
               </li>
               <li>

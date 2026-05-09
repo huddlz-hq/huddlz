@@ -32,7 +32,7 @@ Feature: Create Huddl
       | Description       | Discussion about new tech    |
       | Start Date & Time | tomorrow at 6:00 PM         |
       | End Date & Time   | tomorrow at 8:00 PM         |
-      | Event Type        | In-Person                   |
+      | Huddl Type        | In-Person                   |
       | Physical Location | 123 Main St, Tech City      |
     And I submit the form
     Then I should be redirected to the "Tech Meetup" group page
@@ -51,7 +51,7 @@ Feature: Create Huddl
       | Description       | Remote code review session   |
       | Start Date & Time | tomorrow at 3:00 PM         |
       | End Date & Time   | tomorrow at 4:00 PM         |
-      | Event Type        | Virtual                     |
+      | Huddl Type        | Virtual                     |
       | Virtual Link      | https://zoom.us/j/123456    |
     And I submit the form
     Then I should be redirected to the "Tech Meetup" group page
@@ -63,14 +63,14 @@ Feature: Create Huddl
     Then I should see a "Create Huddl" button
     When I click "Create Huddl"
     Then I should be on the new huddl page for "Tech Meetup"
-    When I check "Make this a recurring event"
+    When I check "Make this a recurring huddl"
     When I fill in the huddl form with:
       | Field             | Value                       |
       | Title             | Monthly Tech Talk           |
       | Description       | Discussion about new tech   |
       | Start Date & Time | tomorrow at 6:00 PM         |
       | End Date & Time   | tomorrow at 8:00 PM         |
-      | Event Type        | In-Person                   |
+      | Huddl Type        | In-Person                   |
       | Physical Location | 123 Main St, Tech City      |
       | Frequency         | Monthly                     |
       | Repeat Until      | two months                  |
@@ -83,14 +83,14 @@ Feature: Create Huddl
     Then I should see a "Create Huddl" button
     When I click "Create Huddl"
     Then I should be on the new huddl page for "Tech Meetup"
-    When I check "Make this a recurring event"
+    When I check "Make this a recurring huddl"
     When I fill in the huddl form with:
       | Field             | Value                       |
       | Title             | Weekly Tech Talk            |
       | Description       | Discussion about new tech   |
       | Start Date & Time | tomorrow at 6:00 PM         |
       | End Date & Time   | tomorrow at 8:00 PM         |
-      | Event Type        | In-Person                   |
+      | Huddl Type        | In-Person                   |
       | Physical Location | 123 Main St, Tech City      |
       | Frequency         | Weekly                      |
       | Repeat Until      | two months                  |
@@ -102,22 +102,22 @@ Feature: Create Huddl
     When I visit the new huddl page for "Tech Meetup"
     Then I should see "Physical Location" field
     And I should not see "Virtual Meeting Link" field
-    When I select "Hybrid (Both In-Person and Virtual)" from "Event Type"
+    When I select "Hybrid (Both In-Person and Virtual)" from "Huddl Type"
     Then I should see "Physical Location" field
     And I should see "Virtual Meeting Link" field
 
   Scenario: Private groups create private huddls only
     Given I am signed in as "owner@example.com"
     When I visit the new huddl page for "Private Group"
-    Then I should not see a checkbox for "Make this a private event"
-    And I should see "This will be a private event"
+    Then I should not see a checkbox for "Make this a private huddl"
+    And I should see "This will be a private huddl"
     When I fill in the huddl form with:
       | Field             | Value                        |
       | Title             | Private Meeting              |
       | Description       | Members only                 |
       | Start Date & Time | tomorrow at 2:00 PM         |
       | End Date & Time   | tomorrow at 3:00 PM         |
-      | Event Type        | In-Person                   |
+      | Huddl Type        | In-Person                   |
       | Physical Location | Secret Location              |
     And I submit the form
     Then the huddl should be created as private

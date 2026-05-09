@@ -348,7 +348,7 @@ defmodule HuddlzWeb.CommunityComponents do
     end
   end
 
-  defp capacity_status_for_tier(:full), do: "Event Full"
+  defp capacity_status_for_tier(:full), do: "Huddl Full"
   defp capacity_status_for_tier(:almost_full), do: "Almost full"
   defp capacity_status_for_tier(:filling_up), do: "Filling up"
   defp capacity_status_for_tier(:plenty), do: "Plenty of space"

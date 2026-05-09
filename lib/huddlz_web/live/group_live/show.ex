@@ -229,7 +229,7 @@ defmodule HuddlzWeb.GroupLive.Show do
           |> assign(:active_tab, "upcoming")
 
         "past" ->
-          # Load first page of past events when switching to past tab
+          # Load first page of past huddlz when switching to past tab
           {past_huddlz, total_pages} =
             get_past_group_huddlz_paginated(
               socket.assigns.group,

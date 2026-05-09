@@ -249,7 +249,7 @@ defmodule HuddlzWeb.HuddlLive.New do
         <.header>
           Create New Huddl
           <:subtitle>
-            Creating an event for <span class="font-semibold">{@group.name}</span>
+            Creating a huddl for <span class="font-semibold">{@group.name}</span>
           </:subtitle>
         </.header>
 
@@ -435,7 +435,7 @@ defmodule HuddlzWeb.HuddlLive.New do
         </:image_section>
 
         <:recurring_section>
-          <.input field={@form[:is_recurring]} type="checkbox" label="Make this a recurring event" />
+          <.input field={@form[:is_recurring]} type="checkbox" label="Make this a recurring huddl" />
 
           <%= if @form[:is_recurring].value do %>
             <div class="grid gap-4 sm:grid-cols-2">

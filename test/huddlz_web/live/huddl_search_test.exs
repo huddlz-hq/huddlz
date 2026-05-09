@@ -238,7 +238,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> refute_has("span", text: "Type:")
       |> refute_has("span", text: "Date:")
 
-      # Event Type only.
+      # Huddl Type only.
       conn
       |> visit("/discover")
       |> click_link("#filter-panel a", "Virtual")
@@ -246,14 +246,14 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> assert_has("span", text: "Type: Virtual")
       |> refute_has("span", text: "Date:")
 
-      # Search + Event Type.
+      # Search + Huddl Type.
       conn
       |> visit("/discover?q=book&event_type=virtual")
       |> assert_has("span", text: "Search: book")
       |> assert_has("span", text: "Type: Virtual")
       |> refute_has("span", text: "Date:")
 
-      # Search + Event Type + Date.
+      # Search + Huddl Type + Date.
       conn
       |> visit("/discover?q=book&event_type=virtual&date_filter=this_week")
       |> assert_has("span", text: "Search: book")

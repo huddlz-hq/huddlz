@@ -1,7 +1,7 @@
 defmodule HuddlzWeb.HuddlLive.FormHelpers do
   @moduledoc """
   Shared helpers for huddl and group create/edit forms.
-  Provides date/time calculation, event type visibility, and location helpers.
+  Provides date/time calculation, huddl-type visibility, and location helpers.
   """
   import Phoenix.Component, only: [assign: 3]
 
