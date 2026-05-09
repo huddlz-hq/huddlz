@@ -198,14 +198,6 @@ defmodule HuddlzWeb.HuddlLive do
   defp sign_in_prompt(:attending), do: "huddlz you're attending"
 
   @impl true
-  def handle_event("filter_change", params, socket) do
-    {:noreply, push_patch(socket, to: build_path(socket, params))}
-  end
-
-  def handle_event("search", params, socket) do
-    {:noreply, push_patch(socket, to: build_path(socket, params))}
-  end
-
   def handle_event("clear_filters", _params, socket) do
     send_update(HuddlzWeb.Live.LocationAutocomplete,
       id: "location-autocomplete",
@@ -270,40 +262,6 @@ defmodule HuddlzWeb.HuddlLive do
       # No-op when there was nothing to clear, so the URL doesn't pick up
       # `cleared=1` spuriously.
       {:noreply, socket}
-    end
-  end
-
-  defp build_path(socket, params) do
-    # Form events (phx-change/phx-submit) only carry the inputs that exist on
-    # that form. Filters now live on a separate panel from the search input,
-    # so any submission would otherwise clobber filters not present in the
-    # event params. Merge form_params over the current assigns-derived state
-    # so missing keys preserve their current value.
-    merged = Map.merge(form_params_from_assigns(socket), params)
-
-    scoped_path(
-      socket.assigns.scope,
-      socket.assigns.yours,
-      merge_active_location(socket, merged)
-    )
-  end
-
-  # The autocomplete component only emits a hidden `location` text input on the
-  # form; lat/lng live in component state and reach the parent via :location_selected.
-  # Plain form events (typing search, changing date, etc.) therefore don't carry
-  # lat/lng — merge them in from socket assigns so the URL doesn't silently drop
-  # an active location filter.
-  defp merge_active_location(%{assigns: %{location_active: false}}, params), do: params
-
-  defp merge_active_location(%{assigns: assigns}, params) do
-    if params["lat"] && params["lng"] do
-      params
-    else
-      Map.merge(params, %{
-        "location" => params["location"] || assigns.location_text,
-        "lat" => Float.to_string(assigns.location_lat),
-        "lng" => Float.to_string(assigns.location_lng)
-      })
     end
   end
 
@@ -652,82 +610,58 @@ defmodule HuddlzWeb.HuddlLive do
           </p>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2 mb-6">
+        <div class="flex flex-wrap items-center gap-2 mb-8">
           <.page_tab patch={chip_path(:huddlz, assigns)} active={@scope == :huddlz}>
             Huddlz
           </.page_tab>
           <.page_tab patch={chip_path(:groups, assigns)} active={@scope == :groups}>
             Groups
           </.page_tab>
-        </div>
-
-        <div class="mb-8">
-          <form id="huddl-search-form" phx-change="filter_change" phx-submit="search">
-            <div class="flex flex-wrap items-stretch gap-2">
-              <div class="flex-grow min-w-[200px]">
-                <label for="search-query" class="sr-only">{search_label(@scope)}</label>
-                <input
-                  id="search-query"
-                  type="text"
-                  name="query"
-                  value={@search_query}
-                  placeholder={search_placeholder(@scope)}
-                  phx-debounce="300"
-                  class="w-full h-12 pl-0 pr-4 border-0 border-b border-base-300 bg-transparent text-base focus:outline-none focus:ring-0 focus:border-primary transition-colors placeholder:text-base-content/30"
-                />
-              </div>
-              <.button variant="primary" type="submit" class="h-12 active:scale-[0.98]">
-                Search
-              </.button>
-              <%= if @scope == :huddlz do %>
-                <button
-                  type="button"
-                  phx-click={show_filter_panel()}
-                  aria-controls="filter-panel"
-                  class="h-12 px-4 inline-flex items-center gap-2 border border-base-300 hover:border-primary/50 text-base-content text-sm font-medium transition-colors active:scale-[0.98]"
-                >
-                  <.icon name="hero-adjustments-horizontal" class="w-4 h-4" /> Filters
-                </button>
-              <% end %>
-            </div>
-          </form>
 
           <%= if @scope == :huddlz and any_filter_active?(assigns) do %>
-            <div class="mt-3 flex flex-wrap items-center gap-2">
-              <span class="text-sm text-base-content/40">Filters:</span>
-              <%= if @search_query do %>
-                <span class="text-xs px-2.5 py-1 bg-secondary/10 text-secondary font-medium inline-flex items-center">
-                  Search: {@search_query}
-                </span>
-              <% end %>
-              <%= if @event_type_filter do %>
-                <span class="text-xs px-2.5 py-1 bg-secondary/10 text-secondary font-medium inline-flex items-center">
-                  Type: {humanize_filter(@event_type_filter)}
-                </span>
-              <% end %>
-              <%= if @date_filter != "upcoming" do %>
-                <span class="text-xs px-2.5 py-1 bg-secondary/10 text-secondary font-medium inline-flex items-center">
-                  Date: {humanize_filter(@date_filter)}
-                </span>
-              <% end %>
-              <%= if @sort != :soonest do %>
-                <span class="text-xs px-2.5 py-1 bg-secondary/10 text-secondary font-medium inline-flex items-center">
-                  Sort: {humanize_filter(@sort)}
-                </span>
-              <% end %>
-              <%= if @location_active do %>
-                <span
-                  data-testid="location-badge"
-                  class="text-xs px-2.5 py-1 bg-primary/10 text-primary font-medium inline-flex items-center gap-1"
-                >
-                  <.icon name="hero-map-pin" class="h-3 w-3" />
-                  {@location_text} · {@distance_miles} mi
-                </span>
-              <% end %>
-              <.button variant="ghost" size="sm" type="button" phx-click="clear_filters">
-                Clear all
-              </.button>
-            </div>
+            <%= if @search_query do %>
+              <span class="text-xs px-2.5 py-1 bg-secondary/10 text-secondary font-medium inline-flex items-center">
+                Search: {@search_query}
+              </span>
+            <% end %>
+            <%= if @event_type_filter do %>
+              <span class="text-xs px-2.5 py-1 bg-secondary/10 text-secondary font-medium inline-flex items-center">
+                Type: {humanize_filter(@event_type_filter)}
+              </span>
+            <% end %>
+            <%= if @date_filter != "upcoming" do %>
+              <span class="text-xs px-2.5 py-1 bg-secondary/10 text-secondary font-medium inline-flex items-center">
+                Date: {humanize_filter(@date_filter)}
+              </span>
+            <% end %>
+            <%= if @sort != :soonest do %>
+              <span class="text-xs px-2.5 py-1 bg-secondary/10 text-secondary font-medium inline-flex items-center">
+                Sort: {humanize_filter(@sort)}
+              </span>
+            <% end %>
+            <%= if @location_active do %>
+              <span
+                data-testid="location-badge"
+                class="text-xs px-2.5 py-1 bg-primary/10 text-primary font-medium inline-flex items-center gap-1"
+              >
+                <.icon name="hero-map-pin" class="h-3 w-3" />
+                {@location_text} · {@distance_miles} mi
+              </span>
+            <% end %>
+            <.button variant="ghost" size="sm" type="button" phx-click="clear_filters">
+              Clear all
+            </.button>
+          <% end %>
+
+          <%= if @scope == :huddlz do %>
+            <button
+              type="button"
+              phx-click={show_filter_panel()}
+              aria-controls="filter-panel"
+              class="ml-auto h-10 px-4 inline-flex items-center gap-2 border border-base-300 hover:border-primary/50 text-base-content text-sm font-extrabold transition-colors active:scale-[0.98]"
+            >
+              <.icon name="hero-adjustments-horizontal" class="w-4 h-4" /> Filters
+            </button>
           <% end %>
         </div>
 
@@ -973,12 +907,6 @@ defmodule HuddlzWeb.HuddlLive do
       "Communities organizing huddlz."
     end
   end
-
-  defp search_placeholder(:groups), do: "Search groups"
-  defp search_placeholder(_), do: "Find your huddl"
-
-  defp search_label(:groups), do: "Search groups"
-  defp search_label(_), do: "Search huddlz"
 
   defp chip_path(target_scope, assigns) do
     cleared? = location_explicitly_cleared?(assigns)

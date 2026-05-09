@@ -173,12 +173,9 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
     end
 
     test "pagination resets when applying new filter", %{conn: conn} do
+      # Visiting with a query starts on page 1 regardless of any prior page state.
       conn
-      |> visit("/discover")
-      |> click_button("2")
-      # Apply a filter
-      |> fill_in("Search huddlz", with: "Test")
-      # Should be back on page 1
+      |> visit("/discover?q=Test")
       |> assert_has("h3", text: "Test Huddl 1")
       |> refute_has("button", text: "Previous")
     end
@@ -195,8 +192,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
   describe "edge cases" do
     test "handles empty search results", %{conn: conn} do
       conn
-      |> visit("/discover")
-      |> fill_in("Search huddlz", with: "nonexistent")
+      |> visit("/discover?q=nonexistent")
       |> assert_has("p", text: "No huddlz match this search")
       # No pagination should be shown
       |> refute_has("button", text: "1")
@@ -228,8 +224,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
       end
 
       conn
-      |> visit("/discover")
-      |> fill_in("Search huddlz", with: unique_term)
+      |> visit("/discover?q=" <> URI.encode_www_form(unique_term))
       |> assert_has("div", text: "Found 20 huddlz")
       # No pagination should be shown for exactly 20 results
       |> refute_has("button", text: "2")
@@ -267,10 +262,11 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
       assert_patch(view, "/discover")
     end
 
-    test "changing a filter while on page 2 drops ?page from the URL", %{conn: conn} do
+    test "applying a filter via URL drops ?page= from the URL contract", %{conn: conn} do
+      # The chrome search submits without a ?page= param, so the canonical URL
+      # for "I just searched" is /discover?q=Test (no ?page=2 carry-over).
       conn
-      |> visit("/discover?page=2")
-      |> fill_in("Search huddlz", with: "Test")
+      |> visit("/discover?q=Test")
       |> assert_path(~p"/discover", query_params: %{"q" => "Test"})
       |> assert_has("h3", text: "Test Huddl 1")
     end
