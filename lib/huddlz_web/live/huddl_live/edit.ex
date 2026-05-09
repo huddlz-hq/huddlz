@@ -9,15 +9,11 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   import HuddlzWeb.Live.Helpers.UploadHelpers
 
   alias Huddlz.Communities
-  alias Huddlz.Communities.Huddl
-  alias Huddlz.Communities.HuddlImage
   alias Huddlz.Storage.GroupImages
   alias Huddlz.Storage.HuddlImages
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
   alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
-
-  require Ash.Query
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
 
@@ -172,7 +168,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   end
 
   defp soft_delete_pending_huddl_image(socket, image_id) do
-    with {:ok, image} <- Ash.get(HuddlImage, image_id),
+    with {:ok, image} <- Communities.get_huddl_image_by_id(image_id),
          true <- is_nil(image.huddl_id) do
       Communities.soft_delete_huddl_image(image, actor: socket.assigns.current_user)
     end
@@ -606,7 +602,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
             :ok
         end
 
-        with {:ok, image} <- Ash.get(HuddlImage, image_id) do
+        with {:ok, image} <- Communities.get_huddl_image_by_id(image_id) do
           Communities.assign_huddl_image_to_huddl(image, huddl.id,
             actor: socket.assigns.current_user
           )
@@ -615,17 +611,17 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   end
 
   defp get_huddl(id, group_slug, user) do
-    case Huddl
-         |> Ash.Query.filter(id == ^id)
-         |> Ash.Query.load([
-           :creator,
-           :huddl_template,
-           :status,
-           :visible_virtual_link,
-           :current_image_url,
-           group: [:current_image_url]
-         ])
-         |> Ash.read_one(actor: user) do
+    case Communities.get_huddl(id,
+           actor: user,
+           load: [
+             :creator,
+             :huddl_template,
+             :status,
+             :visible_virtual_link,
+             :current_image_url,
+             group: [:current_image_url]
+           ]
+         ) do
       {:ok, nil} ->
         {:error, :not_found}
 

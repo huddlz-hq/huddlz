@@ -173,6 +173,17 @@ defmodule Huddlz.Communities.GroupMember do
       description "Get all group memberships for the current actor"
       filter expr(user_id == ^actor(:id))
     end
+
+    read :get_in_group do
+      description "Get the current actor's membership row in a specific group, or nil. Used by UIs to render member/organizer state."
+      get? true
+
+      argument :group_id, :uuid do
+        allow_nil? false
+      end
+
+      filter expr(group_id == ^arg(:group_id) and user_id == ^actor(:id))
+    end
   end
 
   policies do
@@ -235,6 +246,11 @@ defmodule Huddlz.Communities.GroupMember do
 
     policy action(:get_by_user) do
       description "Users can read their own memberships"
+      authorize_if actor_present()
+    end
+
+    policy action(:get_in_group) do
+      description "Users can look up their own membership in any group"
       authorize_if actor_present()
     end
 

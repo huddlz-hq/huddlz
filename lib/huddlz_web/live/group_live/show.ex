@@ -4,12 +4,10 @@ defmodule HuddlzWeb.GroupLive.Show do
   """
   use HuddlzWeb, :live_view
 
-  alias Huddlz.Communities.GroupMember
+  alias Huddlz.Communities
   alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
-
-  require Ash.Query
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
 
@@ -20,13 +18,15 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   @impl true
   def handle_params(%{"slug" => slug}, _, socket) do
+    user = socket.assigns.current_user
     # Ash policies handle read authorization - not_found covers both missing and unauthorized
-    case get_group_by_slug(slug, socket.assigns.current_user) do
+    case get_group_by_slug(slug, user) do
       {:ok, group} ->
-        members = get_members(group, socket.assigns.current_user)
+        membership = current_user_membership(group, user)
+        members = get_members(group, user, !is_nil(membership))
 
-        # Load upcoming events (limited to 10)
-        upcoming_huddlz = get_upcoming_group_huddlz(group, socket.assigns.current_user, limit: 10)
+        # Load upcoming huddlz (limited to 10)
+        upcoming_huddlz = get_upcoming_group_huddlz(group, user, limit: 10)
 
         {:noreply,
          socket
@@ -34,10 +34,10 @@ defmodule HuddlzWeb.GroupLive.Show do
          |> assign(:meta, group_meta(group))
          |> assign(:group, group)
          |> assign(:members, members)
-         |> assign(:member_count, member_count_unchecked(group))
-         |> assign(:is_member, member_unchecked?(group, socket.assigns.current_user))
-         |> assign(:is_owner, owner?(group, socket.assigns.current_user))
-         |> assign(:is_organizer, organizer_unchecked?(group, socket.assigns.current_user))
+         |> assign(:member_count, group.member_count)
+         |> assign(:is_member, !is_nil(membership))
+         |> assign(:is_owner, owner?(group, user))
+         |> assign(:is_organizer, membership && membership.role == :organizer)
          |> assign(:active_tab, "upcoming")
          |> assign(:upcoming_huddlz, upcoming_huddlz)
          |> assign(:past_huddlz, [])
@@ -255,17 +255,20 @@ defmodule HuddlzWeb.GroupLive.Show do
   end
 
   def handle_event("join_group", _, socket) do
-    case join_group(socket.assigns.group, socket.assigns.current_user) do
+    user = socket.assigns.current_user
+
+    case join_group(socket.assigns.group, user) do
       {:ok, _} ->
-        group = Ash.reload!(socket.assigns.group)
-        members = get_members(group, socket.assigns.current_user)
+        group = reload_group(socket.assigns.group, user)
+        members = get_members(group, user, true)
 
         {:noreply,
          socket
          |> put_flash(:info, "Successfully joined the group!")
+         |> assign(:group, group)
          |> assign(:is_member, true)
          |> assign(:members, members)
-         |> assign(:member_count, member_count_unchecked(group))}
+         |> assign(:member_count, group.member_count)}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to join group")}
@@ -273,33 +276,38 @@ defmodule HuddlzWeb.GroupLive.Show do
   end
 
   def handle_event("leave_group", _, socket) do
-    case leave_group(socket.assigns.group, socket.assigns.current_user) do
+    user = socket.assigns.current_user
+
+    case leave_group(socket.assigns.group, user) do
       {:ok, _} ->
-        group = Ash.reload!(socket.assigns.group)
-        members = get_members(group, socket.assigns.current_user)
+        group = reload_group(socket.assigns.group, user)
 
         {:noreply,
          socket
          |> put_flash(:info, "Successfully left the group")
+         |> assign(:group, group)
          |> assign(:is_member, false)
-         |> assign(:members, members)
-         |> assign(:member_count, member_count_unchecked(group))}
+         |> assign(:members, nil)
+         |> assign(:member_count, group.member_count)}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to leave group")}
     end
   end
 
+  @group_loads [:current_image_url, :member_count, owner: [:current_profile_picture_url]]
+
   defp get_group_by_slug(slug, actor) do
-    case Huddlz.Communities.get_by_slug(slug,
-           actor: actor,
-           load: [:current_image_url, owner: [:current_profile_picture_url]]
-         ) do
+    case Communities.get_by_slug(slug, actor: actor, load: @group_loads) do
       {:ok, nil} -> {:error, :not_found}
       {:ok, group} -> {:ok, group}
       {:error, %Ash.Error.Query.NotFound{}} -> {:error, :not_found}
       {:error, _} -> {:error, :not_found}
     end
+  end
+
+  defp reload_group(%{slug: slug}, actor) do
+    Communities.get_by_slug!(slug, actor: actor, load: @group_loads)
   end
 
   defp group_meta(group) do
@@ -312,81 +320,54 @@ defmodule HuddlzWeb.GroupLive.Show do
     }
   end
 
-  defp member_unchecked?(_group, nil), do: false
+  defp current_user_membership(_group, nil), do: nil
 
-  defp member_unchecked?(group, user) do
-    Huddlz.Communities.GroupMember
-    |> Ash.Query.filter(group_id == ^group.id and user_id == ^user.id)
-    |> Ash.exists?(authorize?: false)
-  end
-
-  defp owner?(_group, nil), do: false
-
-  defp owner?(group, user) do
-    group.owner_id == user.id
-  end
-
-  defp get_members(group, current_user) do
-    if can_see_members?(group, current_user) do
-      load_members(group, current_user)
-    else
-      nil
+  defp current_user_membership(group, user) do
+    case Communities.get_membership_in_group(group.id, actor: user) do
+      {:ok, membership} -> membership
+      _ -> nil
     end
   end
 
-  defp can_see_members?(group, current_user) do
-    current_user != nil && member_unchecked?(group, current_user)
-  end
+  defp owner?(_group, nil), do: false
+  defp owner?(group, user), do: group.owner_id == user.id
 
-  defp load_members(group, current_user) do
-    # Use get_by_group action which enforces authorization
-    GroupMember
-    |> Ash.Query.for_read(:get_by_group, %{group_id: group.id})
-    |> Ash.Query.load(user: [:current_profile_picture_url])
-    |> Ash.read!(actor: current_user)
+  defp get_members(_group, _user, false), do: nil
+  defp get_members(_group, nil, _), do: nil
+
+  defp get_members(group, user, true) do
+    group.id
+    |> Communities.get_by_group!(actor: user, load: [user: [:current_profile_picture_url]])
     |> Enum.map(& &1.user)
   end
 
-  defp member_count_unchecked(group) do
-    GroupMember
-    |> Ash.Query.filter(group_id == ^group.id)
-    |> Ash.count!(authorize?: false)
-  end
-
-  defp organizer_unchecked?(_group, nil), do: false
-
-  defp organizer_unchecked?(group, user) do
-    GroupMember
-    |> Ash.Query.filter(group_id == ^group.id and user_id == ^user.id and role == :organizer)
-    |> Ash.exists?(authorize?: false)
-  end
-
   defp join_group(group, user) do
-    GroupMember
+    Huddlz.Communities.GroupMember
     |> Ash.Changeset.for_create(:join_group, %{group_id: group.id}, actor: user)
     |> Ash.create()
   end
 
   defp leave_group(group, user) do
-    GroupMember
-    |> Ash.Query.filter(group_id == ^group.id and user_id == ^user.id)
-    |> Ash.read_one!(authorize?: false)
-    |> Ash.destroy(action: :leave_group, actor: user)
+    case Communities.get_membership_in_group(group.id, actor: user) do
+      {:ok, %{} = membership} ->
+        Ash.destroy(membership, action: :leave_group, actor: user)
+
+      _ ->
+        {:error, :not_a_member}
+    end
   end
 
   defp get_upcoming_group_huddlz(group, user, opts) do
     limit = Keyword.get(opts, :limit, 10)
 
     page =
-      Huddlz.Communities.Huddl
-      |> Ash.Query.for_read(:by_group, %{group_id: group.id}, actor: user)
-      |> Ash.Query.page(limit: limit)
-      |> Ash.read!(actor: user)
+      Communities.get_group_huddlz!(group.id,
+        actor: user,
+        page: [limit: limit],
+        load: [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group]
+      )
 
     page.results
-    |> Ash.load!([:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group],
-      actor: user
-    )
   end
 
   defp get_past_group_huddlz_paginated(group, user, opts) do
@@ -394,18 +375,11 @@ defmodule HuddlzWeb.GroupLive.Show do
     per_page = Keyword.get(opts, :per_page, 10)
     offset = (page - 1) * per_page
 
-    # Use Ash pagination with offset
     page_result =
-      Huddlz.Communities.Huddl
-      |> Ash.Query.for_read(:past_by_group, %{group_id: group.id}, actor: user)
-      |> Ash.Query.page(limit: per_page, offset: offset, count: true)
-      |> Ash.read!(actor: user)
-
-    # Load additional fields on the results
-    loaded_results =
-      page_result.results
-      |> Ash.load!([:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group],
-        actor: user
+      Communities.get_past_group_huddlz!(group.id,
+        actor: user,
+        page: [limit: per_page, offset: offset, count: true],
+        load: [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group]
       )
 
     total_pages =
@@ -415,6 +389,6 @@ defmodule HuddlzWeb.GroupLive.Show do
         1
       end
 
-    {loaded_results, total_pages}
+    {page_result.results, total_pages}
   end
 end

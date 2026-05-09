@@ -558,11 +558,7 @@ defmodule Huddlz.Communities.GroupTest do
     end
 
     test "search finds groups by description", %{owner: owner, group1: group1, group3: group3} do
-      # Direct test on resource
-      result =
-        Huddlz.Communities.Group
-        |> Ash.Query.for_read(:search, %{query: "alpha"})
-        |> Ash.read!(actor: owner)
+      result = Communities.search_groups!("alpha", actor: owner)
 
       assert length(result) == 2
       group_ids = Enum.map(result, & &1.id) |> MapSet.new()

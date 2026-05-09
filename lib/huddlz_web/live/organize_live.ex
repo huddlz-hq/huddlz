@@ -10,12 +10,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
   import HuddlzWeb.OrganizeLive.Components
 
-  require Ash.Query
-
-  alias Huddlz.Communities.Group
-  alias Huddlz.Communities.GroupMember
-  alias Huddlz.Communities.Huddl
-  alias Huddlz.Communities.HuddlAttendee
+  alias Huddlz.Communities
   alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
 
@@ -86,11 +81,11 @@ defmodule HuddlzWeb.OrganizeLive do
     state = socket.assigns.huddlz_filter
 
     huddlz =
-      Huddl
-      |> Ash.Query.for_read(:huddlz_for_organizer, %{state: state}, actor: user)
-      |> Ash.Query.load([:rsvp_count, :status, :group])
-      |> Ash.Query.sort(starts_at: state_sort_dir(state))
-      |> Ash.read!(actor: user)
+      Communities.huddlz_for_organizer!(state,
+        actor: user,
+        load: [:rsvp_count, :status, :group],
+        query: [sort: [starts_at: state_sort_dir(state)]]
+      )
 
     socket
     |> assign(:owned_groups, load_owned_groups(user))
@@ -99,11 +94,11 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp load_action(socket, :attendees, params, user) do
     huddlz =
-      Huddl
-      |> Ash.Query.for_read(:huddlz_for_organizer, %{state: :live}, actor: user)
-      |> Ash.Query.load(@attendees_huddl_loads)
-      |> Ash.Query.sort(starts_at: :asc)
-      |> Ash.read!(actor: user)
+      Communities.huddlz_for_organizer!(:live,
+        actor: user,
+        load: @attendees_huddl_loads,
+        query: [sort: [starts_at: :asc]]
+      )
 
     selected = find_selected_huddl(huddlz, params["huddl"])
 
@@ -164,20 +159,17 @@ defmodule HuddlzWeb.OrganizeLive do
   defp load_attendees(nil, _user), do: []
 
   defp load_attendees(huddl, user) do
-    HuddlAttendee
-    |> Ash.Query.for_read(:by_huddl, %{huddl_id: huddl.id}, actor: user)
-    |> Ash.Query.load(:user)
-    |> Ash.Query.sort(rsvped_at: :asc)
-    |> Ash.read!(actor: user)
+    Communities.list_huddl_attendees!(huddl.id,
+      actor: user,
+      load: :user,
+      query: [sort: [rsvped_at: :asc]]
+    )
   end
 
   defp load_waitlist(nil, _user), do: []
 
   defp load_waitlist(huddl, user) do
-    HuddlAttendee
-    |> Ash.Query.for_read(:waitlist_for_huddl, %{huddl_id: huddl.id}, actor: user)
-    |> Ash.Query.load(:user)
-    |> Ash.read!(actor: user)
+    Communities.list_huddl_waitlist!(huddl.id, actor: user, load: :user)
   end
 
   defp find_selected_group(_groups, nil), do: nil
@@ -189,11 +181,11 @@ defmodule HuddlzWeb.OrganizeLive do
   defp load_group_members(nil, _user), do: []
 
   defp load_group_members(group, user) do
-    GroupMember
-    |> Ash.Query.for_read(:get_by_group, %{group_id: group.id}, actor: user)
-    |> Ash.Query.load(:user)
-    |> Ash.Query.sort(created_at: :asc)
-    |> Ash.read!(actor: user)
+    Communities.get_by_group!(group.id,
+      actor: user,
+      load: :user,
+      query: [sort: [created_at: :asc]]
+    )
   end
 
   defp parse_huddlz_filter("past"), do: :past
@@ -248,19 +240,15 @@ defmodule HuddlzWeb.OrganizeLive do
   defp state_sort_dir(_), do: :asc
 
   defp load_owned_groups(user) do
-    Group
-    |> Ash.Query.for_read(:get_by_owner, %{}, actor: user)
-    |> Ash.Query.load(@group_loads)
-    |> Ash.Query.sort(name: :asc)
-    |> Ash.read!(actor: user)
+    Communities.get_by_owner!(actor: user, load: @group_loads, query: [sort: [name: :asc]])
   end
 
   defp load_calendar_agenda_huddlz(user) do
-    Huddl
-    |> Ash.Query.for_read(:huddlz_for_organizer, %{state: :live}, actor: user)
-    |> Ash.Query.load(@calendar_huddl_loads)
-    |> Ash.Query.sort(starts_at: :asc)
-    |> Ash.read!(actor: user)
+    Communities.huddlz_for_organizer!(:live,
+      actor: user,
+      load: @calendar_huddl_loads,
+      query: [sort: [starts_at: :asc]]
+    )
   end
 
   defp load_calendar_month_huddlz(user, %Date{} = grid_start, %Date{} = grid_end_exclusive) do
@@ -269,12 +257,16 @@ defmodule HuddlzWeb.OrganizeLive do
 
     [:live, :past]
     |> Enum.flat_map(fn state ->
-      Huddl
-      |> Ash.Query.for_read(:huddlz_for_organizer, %{state: state}, actor: user)
-      |> Ash.Query.filter(starts_at >= ^visible_from and starts_at < ^visible_to)
-      |> Ash.Query.load(@calendar_huddl_loads)
-      |> Ash.Query.sort(starts_at: :asc)
-      |> Ash.read!(actor: user)
+      Communities.huddlz_for_organizer!(state,
+        actor: user,
+        load: @calendar_huddl_loads,
+        query: [
+          filter: [
+            starts_at: [greater_than_or_equal: visible_from, less_than: visible_to]
+          ],
+          sort: [starts_at: :asc]
+        ]
+      )
     end)
     |> Enum.sort_by(& &1.starts_at, DateTime)
   end
@@ -284,11 +276,11 @@ defmodule HuddlzWeb.OrganizeLive do
   defp load_upcoming_huddlz(owned_groups, user) do
     group_ids = Enum.map(owned_groups, & &1.id)
 
-    Huddl
-    |> Ash.Query.for_read(:upcoming, %{}, actor: user)
-    |> Ash.Query.filter(group_id in ^group_ids)
-    |> Ash.Query.load(@huddl_loads)
-    |> Ash.read!(actor: user)
+    Communities.list_upcoming_huddlz!(
+      actor: user,
+      load: @huddl_loads,
+      query: [filter: [group_id: [in: group_ids]]]
+    )
   end
 
   @impl true
