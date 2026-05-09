@@ -103,12 +103,9 @@ defmodule Huddlz.Communities.GroupMembershipTest do
     end
 
     test "owner cannot leave their own group" do
-      # Use a non-admin owner so the admin bypass policy does not mask the
-      # owner-role guard. Owners would otherwise destroy their owner-role
-      # membership row, leaving the group with a stale owner_id and locking
-      # themselves out of private groups (Group :read requires public OR a
-      # member relationship). To leave, an owner must transfer ownership
-      # first via Group.:transfer_ownership.
+      # The action-level validation runs before policy authorization, so this
+      # is rejected as Ash.Error.Invalid for any owner — whether or not they
+      # would have passed the policy's `forbid_if role == :owner` check.
       owner = generate(user(role: :user))
       group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
 
@@ -119,27 +116,50 @@ defmodule Huddlz.Communities.GroupMembershipTest do
 
       assert owner_membership.role == :owner
 
-      assert {:error, %Ash.Error.Forbidden{}} =
+      assert {:error, %Ash.Error.Invalid{}} =
                Ash.destroy(owner_membership, action: :leave_group, actor: owner)
 
-      # Membership row is still there
       assert {:ok, %GroupMember{}} =
                GroupMember
                |> Ash.Query.filter(group_id == ^group.id and user_id == ^owner.id)
                |> Ash.read_one(authorize?: false)
     end
 
-    test "admin owner can still leave via the admin bypass", %{admin: owner, public_group: group} do
-      # The admin bypass at the top of GroupMember.policies trumps the
-      # owner-role guard. Documented here to make the bypass interaction
-      # explicit and to prevent accidental tightening that would also lock
-      # admins out of recovery paths.
+    test "admin owner is also blocked despite the admin policy bypass",
+         %{admin: owner, public_group: group} do
+      # Admins bypass the policy via actor_attribute_equals(:role, :admin).
+      # Without an action-level validation, an admin-owned group could be
+      # corrupted: owner_id stays, owner row disappears, admin locked out of
+      # private group reads. Validations are unbypassable.
       owner_membership =
         GroupMember
         |> Ash.Query.filter(group_id == ^group.id and user_id == ^owner.id)
         |> Ash.read_one!(authorize?: false)
 
-      assert :ok = Ash.destroy(owner_membership, action: :leave_group, actor: owner)
+      assert {:error, %Ash.Error.Invalid{}} =
+               Ash.destroy(owner_membership, action: :leave_group, actor: owner)
+
+      assert {:ok, %GroupMember{}} =
+               GroupMember
+               |> Ash.Query.filter(group_id == ^group.id and user_id == ^owner.id)
+               |> Ash.read_one(authorize?: false)
+    end
+
+    test "Ash.can? reflects the policy guard for non-admin owners" do
+      # The policy keeps `forbid_if role == :owner` so that UI gates built on
+      # Ash.can?({membership, :leave_group}, user) hide the Leave button for
+      # owners without needing to special-case the role at every call site.
+      # (Admin owners are special-cased in the LiveView because the bypass
+      # makes Ash.can? return true regardless.)
+      owner = generate(user(role: :user))
+      group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+
+      owner_membership =
+        GroupMember
+        |> Ash.Query.filter(group_id == ^group.id and user_id == ^owner.id)
+        |> Ash.read_one!(authorize?: false)
+
+      refute Ash.can?({owner_membership, :leave_group}, owner)
     end
 
     test "user cannot remove someone else", %{

@@ -68,6 +68,10 @@ defmodule HuddlzWeb.GroupLive.Show do
   end
 
   defp can_leave?(nil, _user), do: false
+  # Owners cannot leave their own group — the action validation enforces this even
+  # for admins (whose policy bypass otherwise tells Ash.can? "yes"). Short-circuit
+  # so the button never renders for an owner row.
+  defp can_leave?(%{role: :owner}, _user), do: false
   defp can_leave?(membership, user), do: Ash.can?({membership, :leave_group}, user)
 
   @impl true

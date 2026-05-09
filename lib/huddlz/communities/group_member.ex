@@ -156,7 +156,13 @@ defmodule Huddlz.Communities.GroupMember do
     end
 
     destroy :leave_group do
-      description "Leave a group (member removes themselves)"
+      description "Leave a group (member removes themselves; owners must transfer ownership first)"
+
+      # Encoded as a validation, not just a policy guard, so the admin bypass
+      # cannot delete an owner's membership row and corrupt group state.
+      validate attribute_does_not_equal(:role, :owner) do
+        message "owners cannot leave their own group; transfer ownership first"
+      end
     end
 
     read :get_by_group do
