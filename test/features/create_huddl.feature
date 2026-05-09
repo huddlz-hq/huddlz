@@ -37,6 +37,7 @@ Feature: Create Huddl
     And I submit the form
     Then I should be redirected to the "Tech Meetup" group page
     And I should see "Huddl created successfully!"
+    And the huddl "Monthly Tech Talk" should have coordinates 30.27, -97.74
 
   Scenario: Organizer creates a virtual huddl
     Given I am signed in as "organizer@example.com"
