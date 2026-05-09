@@ -29,8 +29,12 @@ defmodule HuddlzWeb.Layouts do
             aria-label="Search huddlz"
             class="hidden md:flex flex-1 max-w-2xl items-stretch h-12 border border-base-300 rounded-hz-control overflow-hidden bg-base-200/40 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15 transition-colors"
           >
-            <span class="grid place-items-center w-12 text-primary flex-shrink-0">
-              <.icon name="hero-magnifying-glass" class="w-5 h-5" />
+            <%!-- Doubles as the "/" keyboard-shortcut hint; focus handler in app.js. --%>
+            <span
+              class="grid place-items-center w-12 text-primary flex-shrink-0 text-lg font-bold select-none"
+              aria-hidden="true"
+            >
+              /
             </span>
             <input
               type="search"
@@ -181,8 +185,11 @@ defmodule HuddlzWeb.Layouts do
           aria-label="Search huddlz"
           class="md:hidden mb-4 flex items-stretch h-12 border border-base-300 rounded-hz-control overflow-hidden bg-base-200/40 focus-within:border-primary"
         >
-          <span class="grid place-items-center w-12 text-primary flex-shrink-0">
-            <.icon name="hero-magnifying-glass" class="w-5 h-5" />
+          <span
+            class="grid place-items-center w-12 text-primary flex-shrink-0 text-lg font-bold select-none"
+            aria-hidden="true"
+          >
+            /
           </span>
           <input
             type="search"
