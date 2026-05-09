@@ -1,5 +1,7 @@
 # Code Interfaces
 
+Domains and Resources can define code interfaces. Prefer writing code interfaces instead of regular elixir functions.
+
 Use code interfaces on domains to define the contract for calling into Ash resources. See the [Code interface guide for more](https://hexdocs.pm/ash/code-interfaces.html).
 
 Define code interfaces on the domain, like this:

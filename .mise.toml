@@ -3,5 +3,5 @@ elixir = "1.19.5-otp-28"
 erlang = "28.4"
 
 [tasks.sync-rules]
-description = "Sync usage_rules skills to .claude/skills/"
+description = "Sync CLAUDE.md and .claude/skills/ from mix.exs usage_rules config (AGENTS.md and .codex/skills are symlinks)"
 run = "mix usage_rules.sync --yes"
