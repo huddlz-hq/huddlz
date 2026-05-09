@@ -85,6 +85,14 @@
 /* Make LiveView wrapper divs transparent for layout */
 [data-phx-session] { display: contents }
 
+/* Hide the native search-clear "X" — WebKit renders a small grey lozenge
+   that clashes with the dark chrome. The form has its own affordances. */
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 /* ===== HUDDLZ GLOBAL STYLES ===== */
 
 html {
