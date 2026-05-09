@@ -599,7 +599,7 @@ defmodule HuddlzWeb.HuddlLive do
     <Layouts.app flash={@flash} current_user={@current_user} search_query={@search_query}>
       <div>
         <div class="mb-6">
-          <h1 class="font-display text-3xl md:text-4xl tracking-tight text-glow">
+          <h1 class="font-display text-3xl md:text-4xl tracking-tight">
             {results_heading(@scope, @yours, @search_query)}
           </h1>
           <p
