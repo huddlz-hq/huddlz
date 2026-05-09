@@ -223,7 +223,6 @@ defmodule Huddlz.Accounts.ProfilePicture do
     belongs_to :user, Huddlz.Accounts.User do
       attribute_type :uuid
       allow_nil? false
-      public? true
     end
   end
 
