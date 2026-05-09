@@ -10,8 +10,6 @@ defmodule HuddlzWeb.GroupLive.Locations do
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
 
-  require Ash.Query
-
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
 
   @impl true
@@ -326,9 +324,13 @@ defmodule HuddlzWeb.GroupLive.Locations do
   end
 
   defp authorized_to_manage?(group, user) do
-    group.owner_id == user.id ||
-      Huddlz.Communities.GroupMember
-      |> Ash.Query.filter(group_id == ^group.id and user_id == ^user.id and role == :organizer)
-      |> Ash.exists?(authorize?: false)
+    if group.owner_id == user.id do
+      true
+    else
+      case Huddlz.Communities.get_membership_in_group(group.id, actor: user) do
+        {:ok, %{role: :organizer}} -> true
+        _ -> false
+      end
+    end
   end
 end

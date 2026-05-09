@@ -11,7 +11,6 @@ defmodule HuddlzWeb.HuddlLive.New do
 
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
-  alias Huddlz.Communities.HuddlImage
   alias Huddlz.Storage.HuddlImages
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
@@ -173,7 +172,7 @@ defmodule HuddlzWeb.HuddlLive.New do
   end
 
   defp soft_delete_pending_huddl_image(socket, image_id) do
-    with {:ok, image} <- Ash.get(HuddlImage, image_id),
+    with {:ok, image} <- Communities.get_huddl_image_by_id(image_id),
          true <- is_nil(image.huddl_id) do
       Communities.soft_delete_huddl_image(image, actor: socket.assigns.current_user)
     end
@@ -612,7 +611,7 @@ defmodule HuddlzWeb.HuddlLive.New do
         :ok
 
       image_id ->
-        with {:ok, image} <- Ash.get(HuddlImage, image_id) do
+        with {:ok, image} <- Communities.get_huddl_image_by_id(image_id) do
           Communities.assign_huddl_image_to_huddl(image, huddl.id,
             actor: socket.assigns.current_user
           )

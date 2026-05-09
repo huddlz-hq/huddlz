@@ -5,9 +5,9 @@ defmodule HuddlzWeb.GroupLive.Index do
   """
   use HuddlzWeb, :live_view
 
+  alias Huddlz.Communities
   alias Huddlz.Communities.Group
   alias HuddlzWeb.Layouts
-  require Ash.Query
   require Logger
 
   @section_limit 6
@@ -172,65 +172,65 @@ defmodule HuddlzWeb.GroupLive.Index do
   # Personal sections aren't paginated — they show up to @section_limit and
   # link out to the scoped (paginated) view via "View all".
   defp list_hosting_section(user, query) do
-    Group
-    |> Ash.Query.for_read(:get_by_owner, %{}, actor: user)
-    |> apply_search(query)
-    |> Ash.Query.load(:current_image_url)
-    |> read_groups(actor: user)
+    Communities.get_by_owner(search_input(query), actor: user, load: [:current_image_url])
+    |> unwrap_section()
   end
 
   defp list_joined_section(user, query) do
-    Group
-    |> Ash.Query.for_read(:get_joined, %{}, actor: user)
-    |> apply_search(query)
-    |> Ash.Query.load(:current_image_url)
-    |> read_groups(actor: user)
+    Communities.get_joined_groups(search_input(query), actor: user, load: [:current_image_url])
+    |> unwrap_section()
   end
 
   defp list_hosting(user, query, page) do
-    Group
-    |> Ash.Query.for_read(:get_by_owner, %{}, actor: user)
-    |> apply_search(query)
-    |> paginate_with_count(page, actor: user)
+    Communities.get_by_owner(search_input(query),
+      actor: user,
+      load: [:current_image_url],
+      page: page_opts(page)
+    )
+    |> unwrap_page(page)
   end
 
   defp list_joined(user, query, page) do
-    Group
-    |> Ash.Query.for_read(:get_joined, %{}, actor: user)
-    |> apply_search(query)
-    |> paginate_with_count(page, actor: user)
+    Communities.get_joined_groups(search_input(query),
+      actor: user,
+      load: [:current_image_url],
+      page: page_opts(page)
+    )
+    |> unwrap_page(page)
   end
+
+  defp search_input(nil), do: %{}
+  defp search_input(query) when is_binary(query), do: %{search: query}
 
   # The main directory stays public-only on purpose: a user's private groups
   # already surface in the // JOINED section above, so re-listing them here
   # would just duplicate. Anonymous users can only ever see public groups.
   defp list_all(query, page) do
-    Group
-    |> Ash.Query.for_read(:read, %{}, actor: nil)
-    |> Ash.Query.filter(is_public == true)
-    |> apply_search(query)
-    |> paginate_with_count(page, actor: nil)
+    Communities.search_groups(query,
+      actor: nil,
+      query: [filter: [is_public: true]],
+      load: [:current_image_url],
+      page: page_opts(page)
+    )
+    |> unwrap_page(page)
   end
 
-  defp paginate_with_count(ash_query, page, opts) do
-    total =
-      case Ash.count(ash_query, opts) do
-        {:ok, n} ->
-          n
+  defp page_opts(page) do
+    [limit: @page_size, offset: (page - 1) * @page_size, count: true]
+  end
 
-        {:error, reason} ->
-          Logger.warning("GroupLive.Index group count failed: #{inspect(reason)}")
-          0
-      end
+  defp unwrap_section({:ok, groups}), do: groups
 
-    paginated =
-      ash_query
-      |> Ash.Query.load(:current_image_url)
-      |> Ash.Query.limit(@page_size)
-      |> Ash.Query.offset((page - 1) * @page_size)
-      |> read_groups(opts)
+  defp unwrap_section({:error, reason}) do
+    Logger.warning("GroupLive.Index group section read failed: #{inspect(reason)}")
+    []
+  end
 
-    {paginated, total}
+  defp unwrap_page({:ok, %{results: results, count: count}}, _page), do: {results, count || 0}
+
+  defp unwrap_page({:error, reason}, _page) do
+    Logger.warning("GroupLive.Index group page read failed: #{inspect(reason)}")
+    {[], 0}
   end
 
   defp page_info(0, _page),
@@ -239,34 +239,6 @@ defmodule HuddlzWeb.GroupLive.Index do
   defp page_info(total, page) when total > 0 do
     total_pages = ceil(total / @page_size)
     %{total_pages: total_pages, current_page: page, total_count: total}
-  end
-
-  defp apply_search(ash_query, nil) do
-    Ash.Query.sort(ash_query, name: :asc)
-  end
-
-  defp apply_search(ash_query, search_text) do
-    ash_query
-    |> Ash.Query.filter(
-      trigram_similarity(name, ^search_text) > 0.1 or
-        trigram_similarity(description, ^search_text) > 0.1
-    )
-    |> Ash.Query.load(search_relevance: [query: search_text])
-    |> Ash.Query.sort(
-      search_relevance: {%{query: search_text}, :desc},
-      name: :asc
-    )
-  end
-
-  defp read_groups(ash_query, opts) do
-    case Ash.read(ash_query, opts) do
-      {:ok, groups} ->
-        groups
-
-      {:error, reason} ->
-        Logger.warning("GroupLive.Index group read failed: #{inspect(reason)}")
-        []
-    end
   end
 
   @impl true

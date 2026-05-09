@@ -87,45 +87,45 @@ defmodule Huddlz.Communities.Group do
     end
 
     read :search do
-      description "Search for groups by name or description. With nil query, returns all groups sorted by name."
+      description "Search for groups by name or description. With nil :search arg, returns all groups sorted by name."
 
-      argument :query, :string do
+      argument :search, :string do
         allow_nil? true
       end
 
       pagination offset?: true, countable: true, required?: false, default_limit: 20
 
-      prepare fn query, _ ->
-        case query.arguments.query do
-          nil ->
-            Ash.Query.sort(query, name: :asc)
-
-          q ->
-            query
-            |> Ash.Query.filter(
-              expr(
-                trigram_similarity(name, ^q) > 0.1 or
-                  trigram_similarity(description, ^q) > 0.1
-              )
-            )
-            |> Ash.Query.load(search_relevance: [query: q])
-            |> Ash.Query.sort(search_relevance: {%{query: q}, :desc}, name: :asc)
-        end
-      end
+      prepare Huddlz.Communities.Group.Preparations.ApplyTrigramSearch
     end
 
     read :get_by_owner do
-      description "Get groups owned by the current actor"
+      description "Get groups owned by the current actor. Optional `:search` arg applies trigram search."
+
+      argument :search, :string do
+        allow_nil? true
+      end
+
+      pagination offset?: true, countable: true, required?: false, default_limit: 20
+
       filter expr(owner_id == ^actor(:id))
+      prepare Huddlz.Communities.Group.Preparations.ApplyTrigramSearch
     end
 
     read :get_joined do
-      description "Get groups the current actor has joined but does not own"
+      description "Get groups the current actor has joined but does not own. Optional `:search` arg applies trigram search."
+
+      argument :search, :string do
+        allow_nil? true
+      end
+
+      pagination offset?: true, countable: true, required?: false, default_limit: 20
 
       filter expr(
                exists(group_members, user_id == ^actor(:id)) and
                  owner_id != ^actor(:id)
              )
+
+      prepare Huddlz.Communities.Group.Preparations.ApplyTrigramSearch
     end
 
     read :get_by_slug do

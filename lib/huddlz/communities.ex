@@ -27,6 +27,7 @@ defmodule Huddlz.Communities do
 
       define :get_group_huddlz, action: :by_group, args: [:group_id]
       define :get_past_group_huddlz, action: :past_by_group, args: [:group_id]
+      define :list_upcoming_huddlz, action: :upcoming, get?: false
 
       define :huddlz_for_organizer,
         action: :huddlz_for_organizer,
@@ -44,7 +45,7 @@ defmodule Huddlz.Communities do
         action: :create_group,
         args: [:name, :description, :location, :is_public]
 
-      define :search_groups, action: :search, args: [{:optional, :query}]
+      define :search_groups, action: :search, args: [{:optional, :search}]
       define :get_by_owner, action: :get_by_owner
       define :get_joined_groups, action: :get_joined
       define :get_by_slug, action: :get_by_slug, args: [:slug]
@@ -73,6 +74,7 @@ defmodule Huddlz.Communities do
       define :create_huddl_image, action: :create
       define :create_pending_huddl_image, action: :create_pending, args: [:group_id]
       define :assign_huddl_image_to_huddl, action: :assign_to_huddl, args: [:huddl_id]
+      define :get_huddl_image_by_id, action: :read, get_by: [:id]
       define :get_current_huddl_image, action: :get_current_for_huddl, args: [:huddl_id]
       define :list_huddl_images, action: :list_for_huddl, args: [:huddl_id]
       define :get_orphaned_pending_huddl_images, action: :orphaned_pending
@@ -86,10 +88,13 @@ defmodule Huddlz.Communities do
       define :change_member_role, action: :change_role, args: [:role]
       define :get_by_group, action: :get_by_group, args: [:group_id]
       define :get_by_user, action: :get_by_user
+      define :get_membership_in_group, action: :get_in_group, args: [:group_id], get?: true
     end
 
     resource Huddlz.Communities.HuddlAttendee do
       define :check_user_rsvp, action: :check_rsvp, args: [:huddl_id]
+      define :list_huddl_attendees, action: :by_huddl, args: [:huddl_id], get?: false
+      define :list_huddl_waitlist, action: :waitlist_for_huddl, args: [:huddl_id], get?: false
     end
 
     resource Huddlz.Communities.HuddlTemplate

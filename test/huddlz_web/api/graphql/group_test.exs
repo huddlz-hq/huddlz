@@ -30,7 +30,7 @@ defmodule HuddlzWeb.Api.Graphql.GroupTest do
           )
         )
 
-      conn = gql_post(conn, ~s|{ searchGroups(query: "Elixir") { results { id } } }|)
+      conn = gql_post(conn, ~s|{ searchGroups(search: "Elixir") { results { id } } }|)
 
       assert %{"data" => %{"searchGroups" => %{"results" => results}}} =
                json_response(conn, 200)
@@ -67,9 +67,10 @@ defmodule HuddlzWeb.Api.Graphql.GroupTest do
       conn =
         conn
         |> authenticated_conn(member)
-        |> gql_post("{ joinedGroups { id name } }")
+        |> gql_post("{ joinedGroups { results { id name } } }")
 
-      assert %{"data" => %{"joinedGroups" => results}} = json_response(conn, 200)
+      assert %{"data" => %{"joinedGroups" => %{"results" => results}}} =
+               json_response(conn, 200)
 
       ids = Enum.map(results, & &1["id"])
       assert joined.id in ids
@@ -83,9 +84,9 @@ defmodule HuddlzWeb.Api.Graphql.GroupTest do
       conn =
         conn
         |> authenticated_conn(lonely)
-        |> gql_post("{ joinedGroups { id } }")
+        |> gql_post("{ joinedGroups { results { id } } }")
 
-      assert %{"data" => %{"joinedGroups" => []}} = json_response(conn, 200)
+      assert %{"data" => %{"joinedGroups" => %{"results" => []}}} = json_response(conn, 200)
     end
   end
 end
