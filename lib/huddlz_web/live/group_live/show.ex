@@ -5,6 +5,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities
+  alias Huddlz.Communities.{GroupLocation, GroupMember, Huddl}
   alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
@@ -36,8 +37,7 @@ defmodule HuddlzWeb.GroupLive.Show do
          |> assign(:members, members)
          |> assign(:member_count, group.member_count)
          |> assign(:is_member, !is_nil(membership))
-         |> assign(:is_owner, owner?(group, user))
-         |> assign(:is_organizer, membership && membership.role == :organizer)
+         |> assign_action_permissions(group, user)
          |> assign(:active_tab, "upcoming")
          |> assign(:upcoming_huddlz, upcoming_huddlz)
          |> assign(:past_huddlz, [])
@@ -48,6 +48,22 @@ defmodule HuddlzWeb.GroupLive.Show do
         {:noreply,
          handle_error(socket, :not_found, resource_name: "Group", fallback_path: ~p"/groups")}
     end
+  end
+
+  # Compute UI gates from the resource policies themselves so this view stays
+  # in lockstep if those policies change.
+  defp assign_action_permissions(socket, group, user) do
+    socket
+    |> assign(:can_edit_group, Ash.can?({group, :update_details}, user))
+    |> assign(
+      :can_manage_locations,
+      Ash.can?({GroupLocation, :create, %{group_id: group.id}}, user)
+    )
+    |> assign(:can_create_huddl, Ash.can?({Huddl, :create, %{group_id: group.id}}, user))
+    |> assign(
+      :can_join_group,
+      Ash.can?({GroupMember, :join_group, %{group_id: group.id}}, user)
+    )
   end
 
   @impl true
@@ -62,7 +78,7 @@ defmodule HuddlzWeb.GroupLive.Show do
               Private
             </span>
           <% end %>
-          <%= if @is_owner do %>
+          <%= if @can_edit_group do %>
             <span class="text-xs px-2.5 py-1 bg-primary/10 text-primary font-medium">
               Owner
             </span>
@@ -70,7 +86,7 @@ defmodule HuddlzWeb.GroupLive.Show do
         </:subtitle>
         <:actions>
           <%= if @current_user do %>
-            <%= if @is_owner do %>
+            <%= if @can_edit_group do %>
               <.link
                 navigate={~p"/groups/#{@group.slug}/edit"}
                 class="inline-flex items-center gap-1.5 text-sm font-medium text-base-content/50 hover:text-base-content transition-colors"
@@ -79,13 +95,16 @@ defmodule HuddlzWeb.GroupLive.Show do
               </.link>
             <% end %>
 
-            <%= if @is_owner || @is_organizer do %>
+            <%= if @can_manage_locations do %>
               <.link
                 navigate={~p"/groups/#{@group.slug}/locations"}
                 class="inline-flex items-center gap-1.5 text-sm font-medium text-base-content/50 hover:text-base-content transition-colors"
               >
                 <.icon name="hero-map-pin" class="h-4 w-4" /> Locations
               </.link>
+            <% end %>
+
+            <%= if @can_create_huddl do %>
               <.link
                 navigate={~p"/groups/#{@group.slug}/huddlz/new"}
                 class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-content text-sm font-medium btn-neon"
@@ -94,21 +113,19 @@ defmodule HuddlzWeb.GroupLive.Show do
               </.link>
             <% end %>
 
-            <%= if !@is_owner do %>
-              <%= if @is_member do %>
-                <.button
-                  phx-click="leave_group"
-                  data-confirm="Are you sure you want to leave this group?"
-                >
-                  Leave Group
-                </.button>
-              <% else %>
-                <%= if @group.is_public do %>
-                  <.button phx-click="join_group">
-                    Join Group
-                  </.button>
-                <% end %>
-              <% end %>
+            <%= if @is_member do %>
+              <.button
+                phx-click="leave_group"
+                data-confirm="Are you sure you want to leave this group?"
+              >
+                Leave Group
+              </.button>
+            <% end %>
+
+            <%= if !@is_member and @can_join_group do %>
+              <.button phx-click="join_group">
+                Join Group
+              </.button>
             <% end %>
           <% end %>
         </:actions>
@@ -268,7 +285,8 @@ defmodule HuddlzWeb.GroupLive.Show do
          |> assign(:group, group)
          |> assign(:is_member, true)
          |> assign(:members, members)
-         |> assign(:member_count, group.member_count)}
+         |> assign(:member_count, group.member_count)
+         |> assign_action_permissions(group, user)}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to join group")}
@@ -288,7 +306,8 @@ defmodule HuddlzWeb.GroupLive.Show do
          |> assign(:group, group)
          |> assign(:is_member, false)
          |> assign(:members, nil)
-         |> assign(:member_count, group.member_count)}
+         |> assign(:member_count, group.member_count)
+         |> assign_action_permissions(group, user)}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to leave group")}
@@ -329,9 +348,6 @@ defmodule HuddlzWeb.GroupLive.Show do
     end
   end
 
-  defp owner?(_group, nil), do: false
-  defp owner?(group, user), do: group.owner_id == user.id
-
   defp get_members(_group, _user, false), do: nil
   defp get_members(_group, nil, _), do: nil
 
@@ -342,7 +358,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   end
 
   defp join_group(group, user) do
-    Huddlz.Communities.GroupMember
+    GroupMember
     |> Ash.Changeset.for_create(:join_group, %{group_id: group.id}, actor: user)
     |> Ash.create()
   end

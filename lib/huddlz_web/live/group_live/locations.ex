@@ -323,14 +323,12 @@ defmodule HuddlzWeb.GroupLive.Locations do
     end
   end
 
+  # Delegate to the GroupLocation.:create policy so this UI gate stays in
+  # lockstep with the action's actual authorization rules.
   defp authorized_to_manage?(group, user) do
-    if group.owner_id == user.id do
-      true
-    else
-      case Huddlz.Communities.get_membership_in_group(group.id, actor: user) do
-        {:ok, %{role: :organizer}} -> true
-        _ -> false
-      end
-    end
+    Ash.can?(
+      {Huddlz.Communities.GroupLocation, :create, %{group_id: group.id}},
+      user
+    )
   end
 end
