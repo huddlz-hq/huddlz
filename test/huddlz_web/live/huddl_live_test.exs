@@ -30,7 +30,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
 
       conn
       |> visit("/discover")
-      |> assert_has("input[placeholder='Find your huddl']")
+      |> assert_has("input[placeholder='Search huddlz']")
       |> assert_has("button", text: "Search")
       |> assert_has("h3", text: public_huddl.title)
     end
@@ -80,8 +80,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
         )
 
       conn
-      |> visit("/discover")
-      |> fill_in("Search huddlz", with: "Elixir")
+      |> visit("/discover?q=Elixir")
       # Should find the Elixir huddl
       |> assert_has("h3", text: "Elixir Programming Workshop")
       # Should not find the Python huddl
@@ -114,8 +113,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
         )
 
       conn
-      |> visit("/discover")
-      |> fill_in("Search huddlz", with: "Elixir patterns")
+      |> visit("/discover?q=Elixir+patterns")
       # Should find the huddl with matching description
       |> assert_has("h3", text: "Tech Talk")
       # Should not find the other huddl
@@ -150,28 +148,21 @@ defmodule HuddlzWeb.HuddlLiveTest do
           )
         )
 
-      session =
-        conn
-        |> visit("/discover")
-
-      # Initially should see both huddlz
-      session
+      # Initially both huddlz are visible.
+      conn
+      |> visit("/discover")
       |> assert_has("h3", text: huddl1.title)
       |> assert_has("h3", text: huddl2.title)
 
-      # Search for "Elixir"
-      session2 =
-        session
-        |> fill_in("Search huddlz", with: "Elixir")
-
-      session2
+      # Searching for "Elixir" narrows to only the matching huddl.
+      conn
+      |> visit("/discover?q=Elixir")
       |> assert_has("h3", text: huddl1.title)
       |> refute_has("h3", text: huddl2.title)
 
-      # Clear search
-      session2
-      |> fill_in("Search huddlz", with: "")
-      # Should see both huddlz again
+      # Clearing the query brings everything back.
+      conn
+      |> visit("/discover")
       |> assert_has("h3", text: huddl1.title)
       |> assert_has("h3", text: huddl2.title)
     end
@@ -192,47 +183,9 @@ defmodule HuddlzWeb.HuddlLiveTest do
       )
 
       conn
-      |> visit("/discover")
-      |> fill_in("Search huddlz", with: "nonexistent12345")
+      |> visit("/discover?q=nonexistent12345")
       # Should show no results message
       |> assert_has("p", text: "No huddlz match this search")
-    end
-
-    test "search button triggers search via form submit", %{
-      conn: conn,
-      host: host,
-      public_group: public_group
-    } do
-      _elixir_huddl =
-        generate(
-          huddl(
-            group_id: public_group.id,
-            creator_id: host.id,
-            is_private: false,
-            title: "Elixir Programming Workshop",
-            actor: host
-          )
-        )
-
-      _python_huddl =
-        generate(
-          huddl(
-            group_id: public_group.id,
-            creator_id: host.id,
-            is_private: false,
-            title: "Python Data Science",
-            actor: host
-          )
-        )
-
-      conn
-      |> visit("/discover")
-      |> fill_in("Search huddlz", with: "Elixir")
-      |> within("#huddl-search-form", &click_button(&1, "Search"))
-      # Should find the Elixir huddl
-      |> assert_has("h3", text: "Elixir Programming Workshop")
-      # Should not find the Python huddl
-      |> refute_has("h3", text: "Python Data Science")
     end
 
     test "search is case-insensitive", %{conn: conn, host: host, public_group: public_group} do
@@ -250,24 +203,11 @@ defmodule HuddlzWeb.HuddlLiveTest do
           )
         )
 
-      session = conn |> visit("/discover")
-
-      # Test each case variation
-      session
-      |> fill_in("Search huddlz", with: "elixir")
-      |> assert_has("h3", text: "Elixir Programming Workshop")
-
-      session
-      |> fill_in("Search huddlz", with: "ELIXIR")
-      |> assert_has("h3", text: "Elixir Programming Workshop")
-
-      session
-      |> fill_in("Search huddlz", with: "Elixir")
-      |> assert_has("h3", text: "Elixir Programming Workshop")
-
-      session
-      |> fill_in("Search huddlz", with: "eLiXiR")
-      |> assert_has("h3", text: "Elixir Programming Workshop")
+      for query <- ["elixir", "ELIXIR", "Elixir", "eLiXiR"] do
+        conn
+        |> visit("/discover?q=" <> URI.encode_www_form(query))
+        |> assert_has("h3", text: "Elixir Programming Workshop")
+      end
     end
 
     test "partial search matches work", %{conn: conn, host: host, public_group: public_group} do
@@ -282,12 +222,9 @@ defmodule HuddlzWeb.HuddlLiveTest do
           )
         )
 
-      session = conn |> visit("/discover")
-
-      # Test partial matches
       for query <- ["Eli", "Programming", "Work", "gram"] do
-        session
-        |> fill_in("Search huddlz", with: query)
+        conn
+        |> visit("/discover?q=" <> URI.encode_www_form(query))
         |> assert_has("h3", text: "Elixir Programming Workshop")
       end
     end
@@ -309,7 +246,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
       %{host: host, public_group: public_group}
     end
 
-    test "clicking Search does not open location suggestions", %{
+    test "selecting a location closes the autocomplete dropdown", %{
       conn: conn,
       host: host,
       public_group: public_group
@@ -328,7 +265,6 @@ defmodule HuddlzWeb.HuddlLiveTest do
         )
       )
 
-      # Select a location via the component
       session = conn |> visit("/discover")
       view = session.view
 
@@ -341,30 +277,17 @@ defmodule HuddlzWeb.HuddlLiveTest do
       view |> element("[role='option']", "Austin") |> render_click()
       render_async(view)
 
-      # The location should be active (in selected state)
+      # Location is active and the suggestions dropdown is closed.
       assert has_element?(view, "[data-testid='location-display']", "Austin, TX, USA")
-
-      # Click Search button - should NOT reopen suggestions
-      session |> within("#huddl-search-form", &click_button(&1, "Search"))
       refute has_element?(view, "[role='option']")
     end
 
-    test "typing in search after picking a location preserves lat/lng in URL", %{
+    test "discover URL with q + lat/lng renders both filters as active", %{
       conn: conn
     } do
       conn
-      |> visit("/discover?location=Austin%2C+TX&lat=30.2672&lng=-97.7431&distance=25")
-      |> assert_has("span", text: "Austin, TX · 25 mi")
-      |> fill_in("Search huddlz", with: "elixir")
-      |> assert_path(~p"/discover",
-        query_params: %{
-          "q" => "elixir",
-          "location" => "Austin, TX",
-          "lat" => "30.2672",
-          "lng" => "-97.7431",
-          "distance" => "25"
-        }
-      )
+      |> visit("/discover?q=elixir&location=Austin%2C+TX&lat=30.2672&lng=-97.7431&distance=25")
+      |> assert_has("span", text: "Search: elixir")
       |> assert_has("span", text: "Austin, TX · 25 mi")
     end
   end

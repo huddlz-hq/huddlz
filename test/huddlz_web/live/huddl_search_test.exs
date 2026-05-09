@@ -154,8 +154,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
     test "searches by title", %{conn: conn} do
       conn
-      |> visit("/discover")
-      |> fill_in("Search huddlz", with: "Yoga")
+      |> visit("/discover?q=Yoga")
       |> assert_has("h3", text: "Morning Yoga Session")
       |> refute_has("h3", text: "Virtual Book Club")
       |> refute_has("h3", text: "Hybrid Workshop")
@@ -163,8 +162,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
     test "searches by description", %{conn: conn} do
       conn
-      |> visit("/discover")
-      |> fill_in("Search huddlz", with: "programming")
+      |> visit("/discover?q=programming")
       |> assert_has("h3", text: "Hybrid Workshop")
       |> refute_has("h3", text: "Morning Yoga Session")
       |> refute_has("h3", text: "Virtual Book Club")
@@ -205,8 +203,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
     test "combines multiple filters", %{conn: conn} do
       conn
-      |> visit("/discover")
-      |> fill_in("Search huddlz", with: "book")
+      |> visit("/discover?q=book")
       |> click_link("#filter-panel a", "Virtual")
       |> click_link("#filter-panel a", "This week")
       |> assert_has("h3", text: "Virtual Book Club")
@@ -216,8 +213,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
     test "displays active filters", %{conn: conn} do
       conn
-      |> visit("/discover")
-      |> fill_in("Search huddlz", with: "book")
+      |> visit("/discover?q=book")
       |> click_link("#filter-panel a", "Virtual")
       |> assert_has("span", text: "Search: book")
       |> assert_has("span", text: "Type: Virtual")
@@ -225,11 +221,8 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
     test "clears all filters", %{conn: conn} do
       conn
-      |> visit("/discover")
-      # Apply filters
-      |> fill_in("Search huddlz", with: "book")
+      |> visit("/discover?q=book")
       |> click_link("#filter-panel a", "Virtual")
-      # Clear filters
       |> click_button("Clear all")
       # All huddlz should be visible again
       |> assert_has("h3", text: "Morning Yoga Session")
@@ -238,39 +231,52 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
 
     test "only showing applied filters as active", %{conn: conn} do
+      # No filters applied initially.
       conn
       |> visit("/discover")
-      # No filters applied initially
       |> refute_has("span", text: "Search:")
       |> refute_has("span", text: "Type:")
       |> refute_has("span", text: "Date:")
-      # Select Event Type
+
+      # Event Type only.
+      conn
+      |> visit("/discover")
       |> click_link("#filter-panel a", "Virtual")
       |> refute_has("span", text: "Search:")
       |> assert_has("span", text: "Type: Virtual")
       |> refute_has("span", text: "Date:")
-      # Apply Search
-      |> fill_in("Search huddlz", with: "book")
+
+      # Search + Event Type.
+      conn
+      |> visit("/discover?q=book&event_type=virtual")
       |> assert_has("span", text: "Search: book")
       |> assert_has("span", text: "Type: Virtual")
       |> refute_has("span", text: "Date:")
-      # Select Date Range
-      |> click_link("#filter-panel a", "This week")
+
+      # Search + Event Type + Date.
+      conn
+      |> visit("/discover?q=book&event_type=virtual&date_filter=this_week")
       |> assert_has("span", text: "Search: book")
       |> assert_has("span", text: "Type: Virtual")
       |> assert_has("span", text: "Date: This Week")
-      # Clear Date Range
-      |> click_link("#filter-panel a", "Upcoming")
+
+      # Clearing the date filter back to upcoming drops the Date pill.
+      conn
+      |> visit("/discover?q=book&event_type=virtual")
       |> assert_has("span", text: "Search: book")
       |> assert_has("span", text: "Type: Virtual")
       |> refute_has("span", text: "Date:")
-      # Clear Search
-      |> fill_in("Search huddlz", with: "")
+
+      # Clearing the search drops the Search pill.
+      conn
+      |> visit("/discover?event_type=virtual")
       |> refute_has("span", text: "Search:")
       |> assert_has("span", text: "Type: Virtual")
       |> refute_has("span", text: "Date:")
-      # Clear Event Type (clicking the active toggle deselects it)
-      |> click_link("#filter-panel a", "Virtual")
+
+      # Clearing event_type drops the Type pill.
+      conn
+      |> visit("/discover")
       |> refute_has("span", text: "Search:")
       |> refute_has("span", text: "Type:")
       |> refute_has("span", text: "Date:")
@@ -295,8 +301,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
     test "shows no results message with active filters", %{conn: conn} do
       conn
-      |> visit("/discover")
-      |> fill_in("Search huddlz", with: "nonexistent")
+      |> visit("/discover?q=nonexistent")
       |> assert_has(
         "p",
         text: "No huddlz match this search. Try Groups or change your filters."
@@ -552,12 +557,11 @@ defmodule HuddlzWeb.HuddlSearchTest do
       stub_places_autocomplete(%{"aus" => [:austin]})
       stub_place_details(:defaults)
 
-      {:ok, view, _html} = live(conn, "/discover")
+      # Start with q already in the URL — search lives in the chrome now,
+      # which submits via GET. The in-page contract is that picking a location
+      # preserves q, and clearing the location preserves q too.
+      {:ok, view, _html} = live(conn, "/discover?q=Yoga")
 
-      # Apply text search filter
-      view |> form("#huddl-search-form", %{"query" => "Yoga"}) |> render_change()
-
-      # Select location via component
       view
       |> element("#location-autocomplete-input")
       |> render_change(%{"location-autocomplete_search" => "aus"})
@@ -571,7 +575,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       assert html =~ "Austin, TX, USA"
       assert html =~ "Search: Yoga"
 
-      # Clear just the location
+      # Clear just the location.
       view |> element("[aria-label='Clear location']") |> render_click()
 
       html = render(view)
