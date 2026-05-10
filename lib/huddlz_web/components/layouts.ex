@@ -369,7 +369,7 @@ defmodule HuddlzWeb.Layouts do
         </div>
 
         <a class="sb-user" href="/profile" aria-label="View profile">
-          <span class="avatar" aria-hidden="true"></span>
+          <.sb_user_avatar user={@current_user} />
           <div class="who">
             <div class="name">{display_name(@current_user)}</div>
             <div class="role">{@current_user.email}</div>
@@ -648,6 +648,35 @@ defmodule HuddlzWeb.Layouts do
   defp display_name(%{display_name: name}) when is_binary(name) and name != "", do: name
   defp display_name(%{email: email}) when is_binary(email), do: email
   defp display_name(_), do: "Account"
+
+  attr :user, :map, required: true
+
+  defp sb_user_avatar(assigns) do
+    ~H"""
+    <%= cond do %>
+      <% url = avatar_url(@user) -> %>
+        <img class="avatar" src={url} alt="" aria-hidden="true" />
+      <% initials = avatar_initials(@user) -> %>
+        <span class="avatar" aria-hidden="true">{initials}</span>
+      <% true -> %>
+        <span class="avatar" aria-hidden="true"></span>
+    <% end %>
+    """
+  end
+
+  defp avatar_url(%{current_profile_picture_url: url}) when is_binary(url) and url != "", do: url
+  defp avatar_url(_), do: nil
+
+  defp avatar_initials(%{display_name: name}) when is_binary(name) and name != "" do
+    name
+    |> String.trim()
+    |> String.split(~r/\s+/)
+    |> Enum.take(2)
+    |> Enum.map_join(&String.first/1)
+    |> String.upcase()
+  end
+
+  defp avatar_initials(_), do: nil
 
   @doc """
   Shows the flash group with standard titles and content.
