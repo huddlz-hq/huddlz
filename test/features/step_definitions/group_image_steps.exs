@@ -149,8 +149,9 @@ defmodule GroupImageSteps do
        %{args: [group_name]} = context do
     session = context[:session] || context[:conn]
 
-    # The placeholder div should contain the group name
-    assert_has(session, "div.aspect-video span", text: group_name)
+    # With no cover image, the hero renders the group name as its title.
+    assert_has(session, ".hero .hero-content h1", text: group_name)
+    refute_has(session, ".hero img.hero-img")
     context
   end
 

@@ -136,17 +136,25 @@ defmodule HuddlzWeb.GroupLiveTest do
     } do
       conn
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("h1", text: to_string(group.name))
-      |> assert_has("p", text: to_string(group.description))
-      |> assert_has("p", text: group.location)
-      # No edit button for anonymous
+      |> assert_has(".hero h1", text: to_string(group.name))
+      |> assert_has(".huddl-intro p", text: to_string(group.description))
+      |> assert_has(".hero .meta span", text: group.location)
+      |> assert_has(".facts .value", text: group.location)
       |> refute_has("a", text: "Edit Group")
     end
 
-    test "renders detail hero in 16:9 aspect ratio", %{conn: conn, public_group: group} do
+    test "renders v3 hero and side panel for signed-in members", %{
+      conn: conn,
+      owner: owner,
+      public_group: group
+    } do
       conn
+      |> login(owner)
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("[class*='aspect-video']")
+      |> assert_has("aside.sidebar")
+      |> assert_has("div.hero .hero-content h1", text: to_string(group.name))
+      |> assert_has(".huddl-side h3", text: "This group")
+      |> assert_has(".facts .label", text: "Members")
     end
 
     test "displays owner badge for group owner", %{
@@ -157,7 +165,7 @@ defmodule HuddlzWeb.GroupLiveTest do
       conn
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("span", text: "Owner")
+      |> assert_has(".role-pill .pill", text: "Owner")
     end
 
     test "redirects non-members from private groups", %{
@@ -184,9 +192,9 @@ defmodule HuddlzWeb.GroupLiveTest do
       conn
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("h1", text: to_string(group.name))
-      |> assert_has("span", text: "Private")
-      |> assert_has("span", text: "Owner")
+      |> assert_has(".hero h1", text: to_string(group.name))
+      |> assert_has(".eyebrow", text: "Private")
+      |> assert_has(".role-pill .pill", text: "Owner")
     end
 
     test "handles non-existent group", %{conn: conn} do

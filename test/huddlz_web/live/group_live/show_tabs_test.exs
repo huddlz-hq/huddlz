@@ -74,7 +74,7 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       {:ok, view, _html} = live(conn, ~p"/groups/#{group.slug}")
 
       # Check that upcoming tab is active by default
-      assert has_element?(view, "button.text-primary", "Upcoming")
+      assert has_element?(view, "button.chip.is-active", "Upcoming")
 
       # Check that upcoming events are displayed (limited to 10)
       upcoming_titles = upcoming_huddls |> Enum.take(10) |> Enum.map(& &1.title)
@@ -151,7 +151,7 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       view |> element("button", "Past") |> render_click()
 
       # Check that past tab is now active
-      assert has_element?(view, "button.text-primary", "Past")
+      assert has_element?(view, "button.chip.is-active", "Past")
 
       # Check that past events are displayed
       assert has_element?(view, "h3", "Past Event 1")
@@ -183,7 +183,7 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       view |> element("button", "2") |> render_click()
 
       # Check that we're on page 2
-      assert has_element?(view, "button.bg-primary", "2")
+      assert has_element?(view, "button.page-num.is-active", "2")
 
       # Check that events 11-20 are displayed
       assert has_element?(view, "h3", "Past Event 11")
@@ -202,7 +202,7 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       view |> element("button", "3") |> render_click()
 
       # Check that we're on page 3
-      assert has_element?(view, "button.bg-primary", "3")
+      assert has_element?(view, "button.page-num.is-active", "3")
 
       # Check that events 21-25 are displayed (last page)
       assert has_element?(view, "h3", "Past Event 21")
@@ -240,15 +240,15 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       {:ok, view, _html} = live(conn, ~p"/groups/#{group.slug}")
 
       # Start on upcoming tab
-      assert has_element?(view, "button.text-primary", "Upcoming")
+      assert has_element?(view, "button.chip.is-active", "Upcoming")
 
       # Switch to past events tab
       view |> element("button", "Past") |> render_click()
-      assert has_element?(view, "button.text-primary", "Past")
+      assert has_element?(view, "button.chip.is-active", "Past")
 
       # Switch back to upcoming events tab
       view |> element("button", "Upcoming") |> render_click()
-      assert has_element?(view, "button.text-primary", "Upcoming")
+      assert has_element?(view, "button.chip.is-active", "Upcoming")
     end
   end
 

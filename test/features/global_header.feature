@@ -10,7 +10,7 @@ Feature: Global Header
       | header.user@example.com     | user |
     And a public group "Header Group" exists with owner "header.user@example.com"
     And I am signed in as "header.user@example.com"
-    When I visit the group page for "Header Group"
+    When I visit the edit page for "Header Group"
     Then the header should show the huddlz brand
     And the header should expose a global search form posting q to /discover
     And the header should expose an Organize link to /organize
@@ -31,5 +31,5 @@ Feature: Global Header
       | menu.user@example.com     | user |
     And a public group "Menu Group" exists with owner "menu.user@example.com"
     And I am signed in as "menu.user@example.com"
-    When I visit the group page for "Menu Group"
+    When I visit the edit page for "Menu Group"
     Then the account menu should expose the member, organizer, and account links
