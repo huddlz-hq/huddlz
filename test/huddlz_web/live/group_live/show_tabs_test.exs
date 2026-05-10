@@ -274,7 +274,8 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
     } do
       conn = login(conn, non_member)
 
-      {:error, {:redirect, %{to: "/groups"}}} = live(conn, ~p"/groups/#{private_group.slug}")
+      {:error, {:redirect, %{to: "/discover?scope=groups"}}} =
+        live(conn, ~p"/groups/#{private_group.slug}")
     end
 
     test "group members can access private group tabs", %{

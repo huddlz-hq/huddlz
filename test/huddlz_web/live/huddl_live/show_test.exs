@@ -430,8 +430,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
         |> login(non_member)
         |> visit(~p"/groups/#{private_group.slug}/huddlz/#{private_huddl.id}")
 
-      # Should redirect to the groups list when huddl is not found (due to authorization)
-      assert_path(session, ~p"/groups")
+      # Should redirect to the groups scope of /discover when huddl is not found (due to authorization)
+      assert_path(session, ~p"/discover", query_params: %{"scope" => "groups"})
     end
 
     test "shows Cancel RSVP button when user has RSVPed", %{

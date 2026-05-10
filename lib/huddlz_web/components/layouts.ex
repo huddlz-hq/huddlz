@@ -236,7 +236,7 @@ defmodule HuddlzWeb.Layouts do
               <a href="/discover" class="hover:text-primary transition-colors">Discover huddlz</a>
             </li>
             <li>
-              <a href="/groups" class="hover:text-primary transition-colors">Groups</a>
+              <a href="/discover?scope=groups" class="hover:text-primary transition-colors">Groups</a>
             </li>
             <li>
               <a href="/groups/new" class="hover:text-primary transition-colors">Organize</a>

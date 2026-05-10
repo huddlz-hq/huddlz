@@ -61,5 +61,5 @@ defmodule Huddlz.Notifications.Senders.GroupMemberJoined do
   defp joiner_display_name(_), do: "Someone"
 
   defp group_url(%{"group_slug" => slug}) when is_binary(slug), do: url(~p"/groups/#{slug}")
-  defp group_url(_), do: url(~p"/groups")
+  defp group_url(_), do: url(~p"/discover?#{[scope: "groups"]}")
 end

@@ -115,8 +115,8 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> login(owner)
         |> visit(~p"/groups/#{Ash.UUID.generate()}/huddlz/new")
 
-      # Should redirect to groups index
-      assert_path(session, ~p"/groups")
+      # Should redirect to the groups scope of /discover
+      assert_path(session, ~p"/discover", query_params: %{"scope" => "groups"})
 
       # Check flash message
       assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~ "Group not found"

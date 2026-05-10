@@ -23,7 +23,7 @@ defmodule Huddlz.Notifications.Senders.GroupArchived do
   def build(user, payload) do
     safe_name = HtmlEscape.escape(user.display_name)
     safe_group = HtmlEscape.escape(group_name(payload))
-    groups_url = url(~p"/groups")
+    groups_url = url(~p"/discover?#{[scope: "groups"]}")
 
     new()
     |> from(Mailer.from())

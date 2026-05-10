@@ -173,7 +173,7 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       conn
       |> login(user)
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("h1", text: "Groups")
+      |> assert_has("h1", text: "Browse groups")
     end
 
     test "regular non-member cannot access private group", %{
@@ -185,7 +185,7 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       conn
       |> login(user)
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("h1", text: "Groups")
+      |> assert_has("h1", text: "Browse groups")
     end
 
     test "anonymous user cannot see member list in public group", %{
@@ -202,7 +202,7 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       # Anonymous users should see not found for private groups
       conn
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("h1", text: "Groups")
+      |> assert_has("h1", text: "Browse groups")
     end
   end
 end

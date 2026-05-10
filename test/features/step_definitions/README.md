@@ -53,7 +53,7 @@ Handles navigation, clicking, form interactions, and content assertions.
 **Navigation:**
 ```gherkin
 Given the user is on the home page
-When I visit "/groups"
+When I visit "/discover"
 When the user clicks the "Groups" link in the navbar
 ```
 

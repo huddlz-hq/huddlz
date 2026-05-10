@@ -61,7 +61,7 @@ defmodule Huddlz.Notifications.Senders.GroupRoleChanged do
   defp group_name(_), do: "the group"
 
   defp group_url(%{"group_slug" => slug}) when is_binary(slug), do: url(~p"/groups/#{slug}")
-  defp group_url(_), do: url(~p"/groups")
+  defp group_url(_), do: url(~p"/discover?#{[scope: "groups"]}")
 
   defp role_value(payload, key) do
     case Map.get(payload, key) do

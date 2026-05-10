@@ -54,7 +54,10 @@ defmodule HuddlzWeb.GroupLive.Locations do
 
       {:error, _} ->
         {:noreply,
-         handle_error(socket, :not_found, resource_name: "Group", fallback_path: ~p"/groups")}
+         handle_error(socket, :not_found,
+           resource_name: "Group",
+           fallback_path: ~p"/discover?#{[scope: "groups"]}"
+         )}
     end
   end
 

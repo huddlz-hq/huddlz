@@ -225,8 +225,9 @@ defmodule ViewPastHuddlzSteps do
   end
 
   step "I should be redirected to the groups index", %{conn: conn} do
-    # Check that we're on the groups index page
-    assert_has(conn, "h1", text: "Groups")
+    # /groups directory was retired during the v3 migration — the groups
+    # browse surface now lives at /discover?scope=groups.
+    assert_has(conn, "h1", text: "Browse groups")
     :ok
   end
 

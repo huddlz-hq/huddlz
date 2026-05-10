@@ -32,7 +32,10 @@ defmodule HuddlzWeb.GroupLive.Edit do
     else
       {:error, :not_found} ->
         {:ok,
-         handle_error(socket, :not_found, resource_name: "Group", fallback_path: ~p"/groups")}
+         handle_error(socket, :not_found,
+           resource_name: "Group",
+           fallback_path: ~p"/discover?#{[scope: "groups"]}"
+         )}
 
       {:error, :not_authorized} ->
         {:ok,
