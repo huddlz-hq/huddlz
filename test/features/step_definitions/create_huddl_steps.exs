@@ -165,6 +165,7 @@ defmodule CreateHuddlSteps do
   step "I should not see a {string} button", %{args: [button_text]} = context do
     session = context[:session] || context[:conn]
     refute_has(session, "button", text: button_text)
+    refute_has(session, "a", text: button_text)
     context
   end
 

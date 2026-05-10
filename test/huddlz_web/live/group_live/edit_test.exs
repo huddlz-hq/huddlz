@@ -72,7 +72,7 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       |> assert_has("div[role='alert']", text: "Group updated successfully")
       |> assert_has("h1", text: "Updated Group Name")
       |> assert_has("p", text: "Updated description")
-      |> assert_has("p", text: "Updated location")
+      |> assert_has(".hero .meta span", text: "Updated location")
     end
 
     test "slug change shows warning", %{conn: conn, owner: owner, group: group} do
@@ -183,7 +183,7 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       session
       |> click_button("Save Changes")
       |> assert_has("div[role='alert']", text: "Group updated successfully")
-      |> assert_has("p", text: "Austin, TX, USA")
+      |> assert_has(".hero .meta span", text: "Austin, TX, USA")
     end
   end
 end

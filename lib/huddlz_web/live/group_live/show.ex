@@ -7,10 +7,15 @@ defmodule HuddlzWeb.GroupLive.Show do
   alias Huddlz.Communities
   alias Huddlz.Communities.{GroupLocation, GroupMember, Huddl}
   alias Huddlz.Storage.GroupImages
+  alias Huddlz.Storage.HuddlImages
+  alias HuddlzWeb.Avatar
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
+  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
+
+  @member_grid_visible 7
 
   @impl true
   def mount(_params, _session, socket) do
@@ -20,13 +25,11 @@ defmodule HuddlzWeb.GroupLive.Show do
   @impl true
   def handle_params(%{"slug" => slug}, _, socket) do
     user = socket.assigns.current_user
-    # Ash policies handle read authorization - not_found covers both missing and unauthorized
+
     case get_group_by_slug(slug, user) do
       {:ok, group} ->
         membership = current_user_membership(group, user)
         members = get_members(group, user, !is_nil(membership))
-
-        # Load upcoming huddlz (limited to 10)
         upcoming_huddlz = get_upcoming_group_huddlz(group, user, limit: 10)
 
         {:noreply,
@@ -53,8 +56,6 @@ defmodule HuddlzWeb.GroupLive.Show do
     end
   end
 
-  # Compute UI gates from the resource policies themselves so this view stays
-  # in lockstep if those policies change.
   defp assign_action_permissions(socket, group, user, membership) do
     socket
     |> assign(:can_edit_group, Ash.can?({group, :update_details}, user))
@@ -80,154 +81,273 @@ defmodule HuddlzWeb.GroupLive.Show do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_user={@current_user}>
-      <.header>
-        {@group.name}
-        <:subtitle>
-          <%= if !@group.is_public do %>
-            <span class="text-xs px-2.5 py-1 bg-base-300 text-base-content/50 font-medium">
-              Private
+    <Layouts.v3_app flash={@flash} current_user={@current_user} active="discover">
+      <div class="hero">
+        <img
+          :if={@group.current_image_url}
+          class="hero-img"
+          src={GroupImages.url(@group.current_image_url)}
+          alt={@group.name}
+        />
+        <div class="hero-content">
+          <span class="eyebrow">
+            Group ·
+            <%= if @group.is_public do %>
+              Public
+            <% else %>
+              <span style="color:var(--warn)">Private</span>
+            <% end %>
+          </span>
+          <h1>{@group.name}</h1>
+          <div class="meta">
+            <span :if={@group.location}>📍 {@group.location}</span>
+            <span :if={@group.location && @member_count && @member_count > 0}>·</span>
+            <span :if={@member_count && @member_count > 0}>
+              {member_count_label(@member_count)}
             </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="huddl-frame">
+        <div class="huddl-intro prose">
+          <%= if @group.description do %>
+            <p :for={paragraph <- description_paragraphs(@group.description)}>{paragraph}</p>
+          <% else %>
+            <p>No description provided.</p>
           <% end %>
-          <%= if @can_edit_group do %>
-            <span class="text-xs px-2.5 py-1 bg-primary/10 text-primary font-medium">
-              Owner
-            </span>
-          <% end %>
-        </:subtitle>
-        <:actions>
+        </div>
+
+        <aside class="huddl-side">
+          <h3>This group</h3>
+          <ul class="facts">
+            <li>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9.5" cy="7" r="4" />
+              </svg>
+              <div>
+                <div class="label">Members</div>
+                <div class="value">{@member_count}</div>
+              </div>
+            </li>
+            <li :if={@group.location}>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              <div>
+                <div class="label">Where</div>
+                <div class="value">{@group.location}</div>
+              </div>
+            </li>
+            <li>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <%= if @group.is_public do %>
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20" />
+                <% else %>
+                  <rect x="5" y="11" width="14" height="10" rx="2" />
+                  <path d="M8 11V7a4 4 0 1 1 8 0v4" />
+                <% end %>
+              </svg>
+              <div>
+                <div class="label">Visibility</div>
+                <div class="value">
+                  <%= if @group.is_public do %>
+                    Public
+                  <% else %>
+                    Private
+                  <% end %>
+                </div>
+              </div>
+            </li>
+          </ul>
+
           <%= if @current_user do %>
-            <%= if @can_edit_group do %>
-              <.link
-                navigate={~p"/groups/#{@group.slug}/edit"}
-                class="inline-flex items-center gap-1.5 text-sm font-medium text-base-content/50 hover:text-base-content transition-colors"
-              >
-                <.icon name="hero-pencil" class="h-4 w-4" /> Edit Group
-              </.link>
-            <% end %>
-
-            <%= if @can_manage_locations do %>
-              <.link
-                navigate={~p"/groups/#{@group.slug}/locations"}
-                class="inline-flex items-center gap-1.5 text-sm font-medium text-base-content/50 hover:text-base-content transition-colors"
-              >
-                <.icon name="hero-map-pin" class="h-4 w-4" /> Locations
-              </.link>
-            <% end %>
-
-            <%= if @can_create_huddl do %>
-              <.link
+            <div :if={role_pill(assigns)} class="role-pill">
+              <.v3_pill variant={:cyan}>{role_pill(assigns)}</.v3_pill>
+            </div>
+            <div class="side-actions">
+              <.v3_button
+                :if={@can_create_huddl}
+                variant={:primary}
                 navigate={~p"/groups/#{@group.slug}/huddlz/new"}
-                class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-content text-sm font-medium btn-neon"
               >
-                <.icon name="hero-plus" class="h-4 w-4" /> Create Huddl
-              </.link>
-            <% end %>
-
-            <%= if @can_leave_group do %>
-              <.button
+                + Create Huddl
+              </.v3_button>
+              <.v3_button
+                :if={@can_edit_group}
+                variant={:secondary}
+                navigate={~p"/groups/#{@group.slug}/edit"}
+              >
+                Edit Group
+              </.v3_button>
+              <.v3_button
+                :if={@can_manage_locations}
+                variant={:secondary}
+                navigate={~p"/groups/#{@group.slug}/locations"}
+              >
+                Locations
+              </.v3_button>
+              <.v3_button
+                :if={!@is_member and @can_join_group}
+                variant={:primary}
+                phx-click="join_group"
+              >
+                Join Group
+              </.v3_button>
+              <.v3_button
+                :if={@can_leave_group}
+                variant={:muted}
                 phx-click="leave_group"
                 data-confirm="Are you sure you want to leave this group?"
               >
                 Leave Group
-              </.button>
-            <% end %>
-
-            <%= if !@is_member and @can_join_group do %>
-              <.button phx-click="join_group">
-                Join Group
-              </.button>
-            <% end %>
-          <% end %>
-        </:actions>
-      </.header>
-
-      <div class="mt-8">
-        <div class="mb-6">
-          <%= if @group.current_image_url do %>
-            <img
-              src={GroupImages.url(@group.current_image_url)}
-              alt={@group.name}
-              class="w-full aspect-video object-cover overflow-hidden"
-            />
-          <% else %>
-            <div class="w-full aspect-video bg-base-100 overflow-hidden flex items-center justify-center">
-              <span class="text-4xl font-bold text-base-content/40 text-center px-8 line-clamp-2">
-                {@group.name}
-              </span>
+              </.v3_button>
             </div>
           <% end %>
-        </div>
 
-        <div>
-          <p class="text-base-content/60">
-            {@group.description || "No description provided."}
-          </p>
-
-          <%= if @group.location do %>
-            <p class="flex items-center gap-2 text-base-content/50 mt-2">
-              <.icon name="hero-map-pin" class="h-4 w-4" />
-              {@group.location}
-            </p>
-          <% end %>
-
-          <div class="mt-8">
-            <h3 class="font-display text-lg tracking-tight text-glow">Huddlz</h3>
-
-            <div class="flex gap-4 mt-4">
-              <button
-                class={[
-                  "text-sm font-medium transition-colors pb-1",
-                  if(@active_tab == "upcoming",
-                    do: "text-primary border-b border-primary",
-                    else: "text-base-content/40 hover:text-base-content"
-                  )
-                ]}
-                phx-click="switch_tab"
-                phx-value-tab="upcoming"
-              >
-                Upcoming
-              </button>
-              <button
-                class={[
-                  "text-sm font-medium transition-colors pb-1",
-                  if(@active_tab == "past",
-                    do: "text-primary border-b border-primary",
-                    else: "text-base-content/40 hover:text-base-content"
-                  )
-                ]}
-                phx-click="switch_tab"
-                phx-value-tab="past"
-              >
-                Past
-              </button>
-            </div>
-
-            <div class="mt-6">
-              <%= if @active_tab == "upcoming" do %>
-                <.huddl_list huddlz={@upcoming_huddlz} empty_message="No upcoming huddlz scheduled." />
-              <% else %>
-                <.huddl_list huddlz={@past_huddlz} empty_message="No past huddlz found." />
-                <%= if @past_total_pages > 1 do %>
-                  <.pagination
-                    current_page={@past_page}
-                    total_pages={@past_total_pages}
-                    event_name="change_past_page"
-                  />
+          <div class="huddl-side-section">
+            <h3>Members</h3>
+            <%= if @members do %>
+              <% {visible, extras} = split_members(@members) %>
+              <div class="member-grid compact">
+                <div :for={{member, idx} <- Enum.with_index(visible)} class="member-mini">
+                  <div
+                    class={["member-mark", member_mark_variant(idx)]}
+                    title={member.display_name || "Member"}
+                  >
+                    {member_initials(member)}
+                  </div>
+                </div>
+                <div :if={extras > 0} class="member-mini">
+                  <div class="member-mark m4">+{extras}</div>
+                </div>
+              </div>
+            <% else %>
+              <div class="muted" style="font-size:13px">
+                <%= if @current_user do %>
+                  Only members can see who's in this group.
+                <% else %>
+                  Sign in to see who's in this group.
                 <% end %>
-              <% end %>
-            </div>
+              </div>
+            <% end %>
+          </div>
+        </aside>
+
+        <div class="huddl-rest">
+          <div class="prose">
+            <h2>Huddlz</h2>
           </div>
 
-          <.member_list
-            members={@members}
-            member_count={@member_count}
-            owner_id={@group.owner_id}
-            current_user={@current_user}
-          />
+          <div class="filters" role="tablist" aria-label="Huddl timeframe">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={@active_tab == "upcoming"}
+              class={["chip", @active_tab == "upcoming" && "is-active"]}
+              phx-click="switch_tab"
+              phx-value-tab="upcoming"
+            >
+              Upcoming
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={@active_tab == "past"}
+              class={["chip", @active_tab == "past" && "is-active"]}
+              phx-click="switch_tab"
+              phx-value-tab="past"
+            >
+              Past
+            </button>
+          </div>
+
+          <%= if @active_tab == "upcoming" do %>
+            <.huddl_grid huddlz={@upcoming_huddlz} empty_message="No upcoming huddlz scheduled." />
+          <% else %>
+            <.huddl_grid huddlz={@past_huddlz} empty_message="No past huddlz found." />
+            <.v3_pagination
+              :if={@past_total_pages > 1}
+              current_page={@past_page}
+              total_pages={@past_total_pages}
+              event_name="change_past_page"
+            />
+          <% end %>
         </div>
       </div>
-    </Layouts.app>
+    </Layouts.v3_app>
+    """
+  end
+
+  attr :huddlz, :list, required: true
+  attr :empty_message, :string, required: true
+
+  defp huddl_grid(assigns) do
+    ~H"""
+    <%= if @huddlz == [] do %>
+      <p class="empty-state muted" style="padding:24px 0; font-size:14px">
+        {@empty_message}
+      </p>
+    <% else %>
+      <div class="grid two">
+        <.v3_card
+          :for={{huddl, idx} <- Enum.with_index(@huddlz)}
+          navigate={~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"}
+          gradient={Integer.mod(idx, 6) + 1}
+        >
+          <:cover>
+            <img
+              :if={huddl.display_image_url}
+              class="card-cover-img"
+              src={HuddlImages.url(huddl.display_image_url)}
+              alt={huddl.title}
+            />
+            <.v3_date_stamp month={huddl_month(huddl)} day={huddl_day(huddl)} />
+            <.v3_card_tag variant={tag_variant(huddl.event_type)}>
+              {tag_label(huddl.event_type)}
+            </.v3_card_tag>
+          </:cover>
+          <:body>
+            <span class="card-group">{huddl_kind_label(huddl)}</span>
+            <h3 class="card-title">{huddl.title}</h3>
+            <div class="card-meta">
+              <span>{format_meta_when(huddl.starts_at)}</span>
+              <%= if huddl.rsvp_count > 0 || huddl.max_attendees do %>
+                <span class="dot"></span>
+                <span>{rsvp_label(huddl)}</span>
+              <% end %>
+            </div>
+          </:body>
+        </.v3_card>
+      </div>
+    <% end %>
     """
   end
 
@@ -240,7 +360,6 @@ defmodule HuddlzWeb.GroupLive.Show do
           |> assign(:active_tab, "upcoming")
 
         "past" ->
-          # Load first page of past huddlz when switching to past tab
           {past_huddlz, total_pages} =
             get_past_group_huddlz_paginated(
               socket.assigns.group,
@@ -419,4 +538,63 @@ defmodule HuddlzWeb.GroupLive.Show do
 
     {page_result.results, total_pages}
   end
+
+  defp role_pill(%{can_edit_group: true}), do: "Owner"
+  defp role_pill(%{is_member: true}), do: "Joined"
+  defp role_pill(_assigns), do: nil
+
+  defp split_members(members) do
+    visible = Enum.take(members, @member_grid_visible)
+    extras = max(length(members) - @member_grid_visible, 0)
+    {visible, extras}
+  end
+
+  defp member_mark_variant(idx), do: "m#{Integer.mod(idx, 5) + 1}"
+
+  defp member_initials(member) do
+    case Avatar.initials(member) do
+      nil -> "?"
+      initials -> initials
+    end
+  end
+
+  defp member_count_label(1), do: "1 member"
+  defp member_count_label(n) when is_integer(n), do: "#{n} members"
+  defp member_count_label(_), do: nil
+
+  defp description_paragraphs(description) do
+    description
+    |> to_string()
+    |> String.split(~r/\R{2,}/, trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  defp tag_variant(:in_person), do: :in_person
+  defp tag_variant(:virtual), do: :online
+  defp tag_variant(:hybrid), do: :hybrid
+
+  defp tag_label(:in_person), do: "In person"
+  defp tag_label(:virtual), do: "Online"
+  defp tag_label(:hybrid), do: "Hybrid"
+
+  defp huddl_kind_label(%{event_type: :in_person}), do: "In person"
+  defp huddl_kind_label(%{event_type: :virtual}), do: "Online"
+  defp huddl_kind_label(%{event_type: :hybrid}), do: "Hybrid"
+  defp huddl_kind_label(_), do: "Huddl"
+
+  defp huddl_month(%{starts_at: %DateTime{} = dt}),
+    do: Calendar.strftime(dt, "%b") |> String.upcase()
+
+  defp huddl_day(%{starts_at: %DateTime{} = dt}), do: Calendar.strftime(dt, "%-d")
+
+  defp format_meta_when(%DateTime{} = dt) do
+    "#{Calendar.strftime(dt, "%a")} · #{Calendar.strftime(dt, "%-I:%M %p")}"
+  end
+
+  defp rsvp_label(%{rsvp_count: count, max_attendees: max}) when is_integer(max) and max > 0,
+    do: "#{count} / #{max} RSVPs"
+
+  defp rsvp_label(%{rsvp_count: 1}), do: "1 RSVP"
+  defp rsvp_label(%{rsvp_count: count}), do: "#{count} RSVPs"
 end

@@ -1623,6 +1623,19 @@ body.v3 .role-pill {
   margin-bottom: 12px;
 }
 
+/* Stacked button stack inside huddl-side (join / leave / manage / create) */
+body.v3 .side-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+body.v3 .side-actions > .btn-primary,
+body.v3 .side-actions > .btn-secondary {
+  width: 100%;
+  justify-content: center;
+}
+
 /* Sub-section inside huddl-side */
 body.v3 .huddl-side-section {
   margin-top: 20px;

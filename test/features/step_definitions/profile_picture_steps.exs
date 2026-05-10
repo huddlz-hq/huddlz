@@ -67,6 +67,12 @@ defmodule ProfilePictureSteps do
     context
   end
 
+  step "I should see the member tile with initials {string}", %{args: [initials]} = context do
+    session = context[:session] || context[:conn]
+    assert_has(session, ".member-grid .member-mark", text: initials)
+    context
+  end
+
   step "I should see the owner avatar with image", context do
     # The owner in Group Details section should show profile picture image
     # The owner section is in a definition list (dl) with "Owner" label

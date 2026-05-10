@@ -52,8 +52,8 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       conn
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: owner.display_name)
+      |> assert_has(".huddl-side-section h3", text: "Members")
+      |> assert_has(".member-grid .member-mark", text: member_initials(owner))
     end
 
     test "organizer can see full member list in public group", %{
@@ -64,8 +64,8 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       conn
       |> login(organizer)
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: organizer.display_name)
+      |> assert_has(".huddl-side-section h3", text: "Members")
+      |> assert_has(".member-grid .member-mark", text: member_initials(organizer))
     end
 
     test "verified member can see full member list in public group", %{
@@ -76,8 +76,8 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       conn
       |> login(member)
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: member.display_name)
+      |> assert_has(".huddl-side-section h3", text: "Members")
+      |> assert_has(".member-grid .member-mark", text: member_initials(member))
     end
 
     test "regular member can see member list in public group", %{
@@ -88,8 +88,8 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       conn
       |> login(member)
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: member.display_name)
+      |> assert_has(".huddl-side-section h3", text: "Members")
+      |> assert_has(".member-grid .member-mark", text: member_initials(member))
     end
 
     test "verified non-member cannot see member list in public group", %{
@@ -100,8 +100,10 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       conn
       |> login(user)
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: "Only members can see the member list.")
+      |> assert_has(".huddl-side-section h3", text: "Members")
+      |> assert_has(".huddl-side-section .muted",
+        text: "Only members can see who's in this group."
+      )
     end
 
     test "regular non-member cannot see member list in public group", %{
@@ -112,8 +114,10 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       conn
       |> login(user)
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: "Only members can see the member list.")
+      |> assert_has(".huddl-side-section h3", text: "Members")
+      |> assert_has(".huddl-side-section .muted",
+        text: "Only members can see who's in this group."
+      )
     end
 
     test "owner can see full member list in private group", %{
@@ -124,8 +128,8 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       conn
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: owner.display_name)
+      |> assert_has(".huddl-side-section h3", text: "Members")
+      |> assert_has(".member-grid .member-mark", text: member_initials(owner))
     end
 
     test "organizer can see full member list in private group", %{
@@ -136,8 +140,8 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       conn
       |> login(organizer)
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: organizer.display_name)
+      |> assert_has(".huddl-side-section h3", text: "Members")
+      |> assert_has(".member-grid .member-mark", text: member_initials(organizer))
     end
 
     test "verified member can see full member list in private group", %{
@@ -148,8 +152,8 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       conn
       |> login(member)
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: member.display_name)
+      |> assert_has(".huddl-side-section h3", text: "Members")
+      |> assert_has(".member-grid .member-mark", text: member_initials(member))
     end
 
     test "regular member can see member list in private group", %{
@@ -160,8 +164,8 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       conn
       |> login(member)
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: member.display_name)
+      |> assert_has(".huddl-side-section h3", text: "Members")
+      |> assert_has(".member-grid .member-mark", text: member_initials(member))
     end
 
     test "verified non-member cannot access private group", %{
@@ -194,8 +198,8 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
     } do
       conn
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("h3", text: "Members")
-      |> assert_has("p", text: "Please sign in to see the member list.")
+      |> assert_has(".huddl-side-section h3", text: "Members")
+      |> assert_has(".huddl-side-section .muted", text: "Sign in to see who's in this group.")
     end
 
     test "anonymous user cannot access private group", %{conn: conn, private_group: group} do
@@ -204,5 +208,14 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h1", text: "Browse groups")
     end
+  end
+
+  defp member_initials(%{display_name: name}) when is_binary(name) and name != "" do
+    name
+    |> String.trim()
+    |> String.split(~r/\s+/)
+    |> Enum.take(2)
+    |> Enum.map_join(&String.first/1)
+    |> String.upcase()
   end
 end
