@@ -2346,12 +2346,27 @@ body.v3 .edit-scope-row { padding: 0; }
 body.v3 .edit-scope-row p { margin: 6px 0 12px; color: var(--soft); font-size: 13.5px; }
 body.v3 .edit-scope-row strong { color: var(--text); }
 
-/* Toggle pill (notification prefs etc.) */
+/* Toggle pill (notification prefs etc.).
+   Resets here undo daisyUI's `.toggle` component CSS: daisy clamps `.toggle`
+   to ~40px wide, paints a border + inset shadow, and animates
+   `grid-template-columns` on `:checked` state — the latter still affects
+   child rendering even after we swap `display` to inline-flex, growing the
+   `.track` rect by ~4px on unchecked rows. Drop the whole daisy footprint
+   until the migration retires daisy entirely. */
 body.v3 .toggle {
   display: inline-flex;
   align-items: center;
   gap: 10px;
   cursor: pointer;
+  width: auto;
+  height: auto;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  appearance: auto;
+  grid-template-columns: none;
+  transition: none;
+  place-content: normal;
 }
 
 body.v3 .toggle input { display: none; }
