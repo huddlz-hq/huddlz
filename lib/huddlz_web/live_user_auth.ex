@@ -62,6 +62,12 @@ defmodule HuddlzWeb.LiveUserAuth do
     {:cont, maybe_load_user_details(socket)}
   end
 
+  # Flips the body class to `"v3"` so v3-scoped styles in app.css take effect.
+  # Pair with `<Layouts.v3_app>` in the LiveView template.
+  def on_mount(:v3_app, _params, _session, socket) do
+    {:cont, assign(socket, :body_class, "v3")}
+  end
+
   defp maybe_load_user_details(%{assigns: %{current_user: user}} = socket)
        when not is_nil(user) do
     case Ash.load(

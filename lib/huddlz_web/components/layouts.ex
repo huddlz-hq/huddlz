@@ -292,6 +292,294 @@ defmodule HuddlzWeb.Layouts do
   end
 
   @doc """
+  V3 app layout — sidebar + topbar shell wrapping the inner content.
+
+  Mirrors the clickthrough mockup at `/dev/design/clickthrough/explore` (and
+  the `clickthrough_shell` function component in `HuddlzWeb.DevDesignHTML`),
+  but reads the real `current_user` and renders an admin link when the user
+  is an admin.
+
+  Pair with `on_mount {HuddlzWeb.LiveUserAuth, :v3_app}` to flip the body
+  class to `"v3"` so the v3 styles in `app.css` take effect.
+  """
+  attr :flash, :map, required: true
+  attr :current_user, :map, default: nil
+
+  attr :active, :string,
+    default: nil,
+    doc: "active surface key for nav highlighting (e.g. \"discover\", \"my-huddlz\")"
+
+  attr :query, :string, default: "", doc: "current search query — prefilled in topbar input"
+  slot :inner_block, required: true
+
+  def v3_app(assigns) do
+    assigns = assign_new(assigns, :signed_in, fn -> assigns.current_user != nil end)
+
+    ~H"""
+    <%= if @signed_in do %>
+      <input type="checkbox" id="nav-toggle" class="nav-toggle" />
+      <label for="nav-toggle" class="nav-scrim" aria-hidden="true"></label>
+      <aside class="sidebar">
+        <a class="sidebar-brand" href="/">
+          <div class="brand-glyph">h</div>
+          <div class="brand-text">huddlz</div>
+        </a>
+
+        <nav class="sb-nav">
+          <a class={["sb-item", @active == "discover" && "active"]} href="/discover">
+            <.v3_nav_icon name="search" />
+            <span class="label">Explore</span>
+          </a>
+          <a class={["sb-item", @active == "my-huddlz" && "active"]} href="/my-huddlz">
+            <.v3_nav_icon name="ticket" />
+            <span class="label">My huddlz</span>
+          </a>
+          <a class={["sb-item", @active == "my-groups" && "active"]} href="/my-groups">
+            <.v3_nav_icon name="users" />
+            <span class="label">My groups</span>
+          </a>
+          <a class={["sb-item", @active == "calendar" && "active"]} href="/calendar">
+            <.v3_nav_icon name="calendar" />
+            <span class="label">My calendar</span>
+          </a>
+        </nav>
+
+        <div class="sb-account">
+          <a class={["sb-item", @active == "profile" && "active"]} href="/profile">
+            <.v3_nav_icon name="user" />
+            <span class="label">Profile</span>
+          </a>
+          <a
+            class={["sb-item", @active == "settings" && "active"]}
+            href="/profile/notifications"
+          >
+            <.v3_nav_icon name="cog" />
+            <span class="label">Settings</span>
+          </a>
+          <a class={["sb-item", @active == "help" && "active"]} href="/help">
+            <.v3_nav_icon name="help" />
+            <span class="label">Help</span>
+          </a>
+          <%= if @current_user && @current_user.role == :admin do %>
+            <a class={["sb-item", @active == "admin" && "active"]} href="/admin">
+              <.v3_nav_icon name="shield" />
+              <span class="label">Admin</span>
+            </a>
+          <% end %>
+        </div>
+
+        <a class="sb-user" href="/profile" aria-label="View profile">
+          <span class="avatar" aria-hidden="true"></span>
+          <div class="who">
+            <div class="name">{display_name(@current_user)}</div>
+            <div class="role">{@current_user.email}</div>
+          </div>
+        </a>
+      </aside>
+    <% end %>
+
+    <main class="main">
+      <header class="content-topbar">
+        <%= if @signed_in do %>
+          <label for="nav-toggle" class="nav-trigger" aria-label="Open navigation">
+            <.v3_nav_icon name="bars" />
+          </label>
+        <% else %>
+          <a class="topbar-brand" href="/" aria-label="huddlz home">
+            <div class="brand-glyph">h</div>
+            <div class="brand-text">huddlz</div>
+          </a>
+        <% end %>
+        <form class="topbar-search" action="/discover" method="get" role="search">
+          <span class="lead-key" aria-hidden="true">/</span>
+          <input type="search" name="q" placeholder="Search huddlz" value={@query} />
+        </form>
+        <div class="content-actions">
+          <%= if @signed_in do %>
+            <a
+              class={["icon-pill", @active == "notifications" && "active"]}
+              href="/notifications"
+              aria-label="Notifications"
+            >
+              <.v3_nav_icon name="bell" />
+            </a>
+          <% else %>
+            <a class="btn-secondary" href="/sign-in">Sign in</a>
+            <a class="btn-primary" href="/register">Sign up</a>
+          <% end %>
+        </div>
+      </header>
+
+      <div class="content-body">
+        <.flash_group flash={@flash} />
+        {render_slot(@inner_block)}
+      </div>
+    </main>
+    """
+  end
+
+  attr :name, :string, required: true
+
+  defp v3_nav_icon(%{name: "search"} = assigns) do
+    ~H"""
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+    </svg>
+    """
+  end
+
+  defp v3_nav_icon(%{name: "ticket"} = assigns) do
+    ~H"""
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z" /><path
+        d="M14 7v10"
+        stroke-dasharray="2 2"
+      />
+    </svg>
+    """
+  end
+
+  defp v3_nav_icon(%{name: "users"} = assigns) do
+    ~H"""
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <circle cx="9" cy="9" r="3" /><circle cx="17" cy="9" r="2.5" /><path d="M3 19a6 6 0 0 1 12 0" /><path d="M14 17a5 5 0 0 1 7 2" />
+    </svg>
+    """
+  end
+
+  defp v3_nav_icon(%{name: "calendar"} = assigns) do
+    ~H"""
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 11h18" />
+    </svg>
+    """
+  end
+
+  defp v3_nav_icon(%{name: "user"} = assigns) do
+    ~H"""
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" />
+    </svg>
+    """
+  end
+
+  defp v3_nav_icon(%{name: "cog"} = assigns) do
+    ~H"""
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" />
+    </svg>
+    """
+  end
+
+  defp v3_nav_icon(%{name: "help"} = assigns) do
+    ~H"""
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2-2.5 3.5" /><path d="M12 17h.01" />
+    </svg>
+    """
+  end
+
+  defp v3_nav_icon(%{name: "shield"} = assigns) do
+    ~H"""
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M12 3 4 6v6c0 5 3.5 8.5 8 9 4.5-.5 8-4 8-9V6l-8-3z" />
+    </svg>
+    """
+  end
+
+  defp v3_nav_icon(%{name: "bars"} = assigns) do
+    ~H"""
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
+    """
+  end
+
+  defp v3_nav_icon(%{name: "bell"} = assigns) do
+    ~H"""
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" />
+    </svg>
+    """
+  end
+
+  defp display_name(%{display_name: name}) when is_binary(name) and name != "", do: name
+  defp display_name(%{email: email}) when is_binary(email), do: email
+  defp display_name(_), do: "Account"
+
+  @doc """
   Shows the flash group with standard titles and content.
   """
   attr :flash, :map, required: true, doc: "the map of flash messages"

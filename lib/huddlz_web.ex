@@ -90,6 +90,8 @@ defmodule HuddlzWeb do
       # Core UI components
       import HuddlzWeb.CoreComponents
       import HuddlzWeb.CommunityComponents
+      # V3 design components — see HuddlzWeb.V3 for the migration context.
+      use HuddlzWeb.V3
 
       # Common modules used in templates
       alias HuddlzWeb.Layouts

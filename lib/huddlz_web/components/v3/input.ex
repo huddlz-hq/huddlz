@@ -1,0 +1,140 @@
+defmodule HuddlzWeb.V3.Input do
+  @moduledoc """
+  V3 form primitives — `v3_input/1`, `v3_textarea/1`, `v3_select/1`.
+
+  Each renders a `form-row` containing a `form-label`, the field control, and
+  optional `form-help` / `form-error` text. They accept either a
+  `Phoenix.HTML.FormField` via the `field` attr, or a manual `name`/`value`/
+  `errors` triple.
+  """
+  use Phoenix.Component
+
+  alias Phoenix.HTML.Form
+  alias Phoenix.HTML.FormField
+
+  attr :id, :any, default: nil
+  attr :name, :any
+  attr :label, :string, default: nil
+  attr :value, :any
+  attr :type, :string, default: "text"
+  attr :help, :string, default: nil
+  attr :errors, :list, default: []
+  attr :field, FormField, doc: "a Phoenix.HTML.FormField struct"
+  attr :class, :any, default: nil
+
+  attr :rest, :global, include: ~w(autocomplete disabled form list max maxlength min minlength
+                pattern placeholder readonly required step inputmode)
+
+  def v3_input(%{field: %FormField{} = field} = assigns) do
+    errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
+
+    assigns
+    |> assign(field: nil, id: assigns.id || field.id)
+    |> assign(:errors, Enum.map(errors, &translate_error/1))
+    |> assign_new(:name, fn -> field.name end)
+    |> assign_new(:value, fn -> field.value end)
+    |> v3_input()
+  end
+
+  def v3_input(assigns) do
+    assigns = assign_new(assigns, :id, fn -> assigns[:name] end)
+
+    ~H"""
+    <div class="form-row">
+      <label :if={@label} for={@id} class="form-label">{@label}</label>
+      <input
+        type={@type}
+        id={@id}
+        name={@name}
+        value={Form.normalize_value(@type, @value)}
+        class={["form-input", @class]}
+        {@rest}
+      />
+      <p :if={@help && @errors == []} class="form-help">{@help}</p>
+      <p :for={msg <- @errors} class="form-error">{msg}</p>
+    </div>
+    """
+  end
+
+  attr :id, :any, default: nil
+  attr :name, :any
+  attr :label, :string, default: nil
+  attr :value, :any
+  attr :help, :string, default: nil
+  attr :errors, :list, default: []
+  attr :field, FormField, doc: "a Phoenix.HTML.FormField struct"
+  attr :class, :any, default: nil
+
+  attr :rest, :global, include: ~w(autocomplete disabled form maxlength minlength
+                placeholder readonly required rows cols)
+
+  def v3_textarea(%{field: %FormField{} = field} = assigns) do
+    errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
+
+    assigns
+    |> assign(field: nil, id: assigns.id || field.id)
+    |> assign(:errors, Enum.map(errors, &translate_error/1))
+    |> assign_new(:name, fn -> field.name end)
+    |> assign_new(:value, fn -> field.value end)
+    |> v3_textarea()
+  end
+
+  def v3_textarea(assigns) do
+    assigns = assign_new(assigns, :id, fn -> assigns[:name] end)
+
+    ~H"""
+    <div class="form-row">
+      <label :if={@label} for={@id} class="form-label">{@label}</label>
+      <textarea id={@id} name={@name} class={["form-textarea", @class]} {@rest}>{Form.normalize_value("textarea", @value)}</textarea>
+      <p :if={@help && @errors == []} class="form-help">{@help}</p>
+      <p :for={msg <- @errors} class="form-error">{msg}</p>
+    </div>
+    """
+  end
+
+  attr :id, :any, default: nil
+  attr :name, :any
+  attr :label, :string, default: nil
+  attr :value, :any
+  attr :help, :string, default: nil
+  attr :errors, :list, default: []
+  attr :field, FormField, doc: "a Phoenix.HTML.FormField struct"
+  attr :class, :any, default: nil
+  attr :options, :list, required: true, doc: "list of {label, value} tuples or values"
+  attr :prompt, :string, default: nil
+
+  attr :rest, :global, include: ~w(autocomplete disabled form multiple required size)
+
+  def v3_select(%{field: %FormField{} = field} = assigns) do
+    errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
+
+    assigns
+    |> assign(field: nil, id: assigns.id || field.id)
+    |> assign(:errors, Enum.map(errors, &translate_error/1))
+    |> assign_new(:name, fn -> field.name end)
+    |> assign_new(:value, fn -> field.value end)
+    |> v3_select()
+  end
+
+  def v3_select(assigns) do
+    assigns = assign_new(assigns, :id, fn -> assigns[:name] end)
+
+    ~H"""
+    <div class="form-row">
+      <label :if={@label} for={@id} class="form-label">{@label}</label>
+      <select id={@id} name={@name} class={["form-select", @class]} {@rest}>
+        <option :if={@prompt} value="">{@prompt}</option>
+        {Phoenix.HTML.Form.options_for_select(@options, @value)}
+      </select>
+      <p :if={@help && @errors == []} class="form-help">{@help}</p>
+      <p :for={msg <- @errors} class="form-error">{msg}</p>
+    </div>
+    """
+  end
+
+  defp translate_error({msg, opts}) do
+    Enum.reduce(opts, msg, fn {key, value}, acc ->
+      String.replace(acc, "%{#{key}}", fn _ -> to_string(value) end)
+    end)
+  end
+end
