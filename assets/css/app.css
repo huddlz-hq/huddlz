@@ -858,6 +858,75 @@ body.v3 .filter-location-clear {
 
 body.v3 .filter-location-clear:hover { color: var(--text); }
 
+body.v3 .filter-location-wrap {
+  position: relative;
+}
+
+body.v3 .filter-location-wrap .filter-location-input {
+  width: 100%;
+  cursor: text;
+}
+
+body.v3 .filter-location-wrap .filter-location-input[readonly] {
+  cursor: pointer;
+}
+
+body.v3 .filter-location-listbox {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  min-width: 220px;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  padding: 4px;
+}
+
+body.v3 .filter-location-listbox.empty {
+  padding: 12px 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+body.v3 .filter-location-option {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+body.v3 .filter-location-option:hover,
+body.v3 .filter-location-option.is-active {
+  background: var(--cyan-soft);
+}
+
+body.v3 .filter-location-option .opt-main {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+body.v3 .filter-location-option .opt-secondary {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+body.v3 .filter-location-error {
+  margin: 6px 0 0;
+  color: var(--warn);
+  font-size: 12px;
+}
+
 body.v3 .filter-distance {
   display: flex;
   align-items: center;
@@ -1050,7 +1119,7 @@ body.v3 .card-group {
   text-transform: uppercase;
 }
 
-body.v3 .card-title { font-size: 16px; font-weight: 700; line-height: 1.25; color: var(--text); }
+body.v3 .card-title { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.25; color: var(--text); }
 
 body.v3 .card-meta {
   display: flex;

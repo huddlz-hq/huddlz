@@ -10,6 +10,8 @@ defmodule HuddlzWeb.HuddlLive do
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities
+  alias Huddlz.Storage.GroupImages
+  alias Huddlz.Storage.HuddlImages
   alias HuddlzWeb.Layouts
   require Logger
 
@@ -17,6 +19,7 @@ defmodule HuddlzWeb.HuddlLive do
   @page_size 20
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
+  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -75,8 +78,6 @@ defmodule HuddlzWeb.HuddlLive do
       total_pages = socket.assigns.page_info.total_pages
 
       if page > total_pages do
-        # Out-of-range page: clamp by patching to the last valid page so the URL
-        # reflects what the user actually sees.
         cleared? = location_explicitly_cleared?(socket.assigns)
 
         path =
@@ -226,6 +227,24 @@ defmodule HuddlzWeb.HuddlLive do
     {:noreply, push_patch(socket, to: path)}
   end
 
+  def handle_event("distance_change", %{"distance_miles" => raw}, socket) do
+    new_distance = parse_distance(raw)
+
+    if new_distance == socket.assigns.distance_miles do
+      {:noreply, socket}
+    else
+      params =
+        socket
+        |> form_params_from_assigns()
+        |> Map.put("distance_miles", Integer.to_string(new_distance))
+
+      {:noreply,
+       push_patch(socket,
+         to: scoped_path(socket.assigns.scope, socket.assigns.yours, params)
+       )}
+    end
+  end
+
   @impl true
   def handle_info(
         {:location_selected, "location-autocomplete",
@@ -257,8 +276,6 @@ defmodule HuddlzWeb.HuddlLive do
            )
        )}
     else
-      # No-op when there was nothing to clear, so the URL doesn't pick up
-      # `cleared=1` spuriously.
       {:noreply, socket}
     end
   end
@@ -420,14 +437,11 @@ defmodule HuddlzWeb.HuddlLive do
     )
   end
 
-  # Public-only directory: anonymous users can only see public groups, and a
-  # member's private groups already surface in /groups under their personal
-  # sections, so re-listing them here would just duplicate.
   defp list_groups(query, page, actor) do
     case Communities.search_groups(query,
            actor: actor,
            query: [filter: [is_public: true]],
-           load: [:current_image_url],
+           load: [:current_image_url, :member_count],
            page: [
              limit: @page_size,
              offset: (page - 1) * @page_size,
@@ -498,44 +512,6 @@ defmodule HuddlzWeb.HuddlLive do
     }
   end
 
-  defp show_filter_panel(js \\ %JS{}) do
-    js
-    |> JS.show(to: "#filter-panel")
-    |> JS.show(
-      to: "#filter-panel-bg",
-      time: 200,
-      transition: {"transition-opacity ease-out duration-200", "opacity-0", "opacity-100"}
-    )
-    |> JS.show(
-      to: "#filter-panel-container",
-      time: 200,
-      transition:
-        {"transition-transform ease-out duration-200",
-         "translate-y-full lg:translate-y-0 lg:translate-x-full",
-         "translate-y-0 lg:translate-x-0"}
-    )
-    |> JS.add_class("overflow-hidden", to: "body")
-    |> JS.focus_first(to: "#filter-panel-container")
-  end
-
-  defp hide_filter_panel(js \\ %JS{}) do
-    js
-    |> JS.hide(
-      to: "#filter-panel-bg",
-      time: 200,
-      transition: {"transition-opacity ease-in duration-200", "opacity-100", "opacity-0"}
-    )
-    |> JS.hide(
-      to: "#filter-panel-container",
-      time: 200,
-      transition:
-        {"transition-transform ease-in duration-200", "translate-y-0 lg:translate-x-0",
-         "translate-y-full lg:translate-y-0 lg:translate-x-full"}
-    )
-    |> JS.hide(to: "#filter-panel", transition: {"block", "block", "hidden"})
-    |> JS.remove_class("overflow-hidden", to: "body")
-  end
-
   defp filter_url(overrides, assigns) do
     params = Map.merge(form_params_from_assigns(assigns), overrides)
     scoped_path(assigns.scope, assigns.yours, params)
@@ -556,333 +532,331 @@ defmodule HuddlzWeb.HuddlLive do
     filter_url(%{"sort" => new_value}, assigns)
   end
 
-  defp distance_change_url(target, assigns) do
-    filter_url(%{"distance_miles" => target}, assigns)
-  end
-
-  defp toggle_class(active?) do
-    base =
-      "inline-flex items-center justify-center min-h-9 px-3 text-sm font-medium border transition-colors"
-
-    if active? do
-      base <> " border-primary bg-primary/15 text-primary"
-    else
-      base <> " border-base-300 hover:border-primary/50 text-base-content"
-    end
-  end
-
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_user={@current_user} search_query={@search_query}>
-      <div>
-        <div class="mb-6">
-          <h1 class="font-display text-3xl md:text-4xl tracking-tight">
-            {results_heading(@scope, @yours, @search_query)}
-          </h1>
-          <p
-            :if={results_subtitle(@scope, @yours, @search_query, @location_text)}
-            class="mt-2 text-base-content/60"
-          >
-            {results_subtitle(@scope, @yours, @search_query, @location_text)}
+    <Layouts.v3_app
+      flash={@flash}
+      current_user={@current_user}
+      active="discover"
+      query={@search_query || ""}
+    >
+      <div class="page-head">
+        <div>
+          <h1>{discover_h1(@scope, @yours, @search_query)}</h1>
+          <p :if={discover_subtitle(@scope, @yours, @search_query, @location_text)}>
+            {discover_subtitle(@scope, @yours, @search_query, @location_text)}
           </p>
         </div>
+      </div>
 
-        <div class="flex flex-wrap items-center gap-2 mb-8">
-          <.page_tab patch={chip_path(:huddlz, assigns)} active={@scope == :huddlz}>
-            Huddlz
-          </.page_tab>
-          <.page_tab patch={chip_path(:groups, assigns)} active={@scope == :groups}>
-            Groups
-          </.page_tab>
+      <div :if={@yours != :all} style="margin-bottom:16px">
+        <.link patch={view_all_path(:all, assigns)} class="muted" style="font-size:13px">
+          ← All huddlz
+        </.link>
+      </div>
 
-          <%= if @scope == :huddlz and any_filter_active?(assigns) do %>
-            <%= if @search_query do %>
-              <span class="text-xs px-2.5 py-1 bg-secondary/10 text-secondary font-medium inline-flex items-center">
-                Search: {@search_query}
-              </span>
-            <% end %>
-            <%= if @event_type_filter do %>
-              <span class="text-xs px-2.5 py-1 bg-secondary/10 text-secondary font-medium inline-flex items-center">
-                Type: {humanize_filter(@event_type_filter)}
-              </span>
-            <% end %>
-            <%= if @date_filter != "upcoming" do %>
-              <span class="text-xs px-2.5 py-1 bg-secondary/10 text-secondary font-medium inline-flex items-center">
-                Date: {humanize_filter(@date_filter)}
-              </span>
-            <% end %>
-            <%= if @sort != :soonest do %>
-              <span class="text-xs px-2.5 py-1 bg-secondary/10 text-secondary font-medium inline-flex items-center">
-                Sort: {humanize_filter(@sort)}
-              </span>
-            <% end %>
-            <%= if @location_active do %>
-              <span
-                data-testid="location-badge"
-                class="text-xs px-2.5 py-1 bg-primary/10 text-primary font-medium inline-flex items-center gap-1"
-              >
-                <.icon name="hero-map-pin" class="h-3 w-3" />
-                {@location_text} · {@distance_miles} mi
-              </span>
-            <% end %>
-            <.button variant="ghost" size="sm" type="button" phx-click="clear_filters">
-              Clear all
-            </.button>
-          <% end %>
-
-          <%= if @scope == :huddlz do %>
-            <button
-              type="button"
-              phx-click={show_filter_panel()}
-              aria-controls="filter-panel"
-              class="ml-auto h-10 px-4 inline-flex items-center gap-2 border border-base-300 hover:border-primary/50 text-base-content text-sm font-extrabold transition-colors active:scale-[0.98]"
-            >
-              <.icon name="hero-adjustments-horizontal" class="w-4 h-4" /> Filters
-            </button>
-          <% end %>
-        </div>
-
-        <div :if={@scope == :huddlz} class="w-full">
-          <div class="mono-label text-primary/70 mb-3">Huddlz</div>
-          <%= if Enum.empty?(@huddls) do %>
-            <.surface_panel variant="dashed" class="p-12 text-center">
-              <p class="text-lg text-base-content/50">{empty_message(assigns)}</p>
-            </.surface_panel>
-          <% else %>
-            <div class="mb-4 text-sm text-base-content/40">
-              Found {@page_info.total_count} {if @page_info.total_count == 1,
-                do: "huddl",
-                else: "huddlz"}
-            </div>
-            <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              <%= for {huddl, distance} <- @huddls do %>
-                <.huddl_card huddl={huddl} show_group={true} distance={distance} />
-              <% end %>
-            </div>
-
-            <%= if @page_info.total_pages > 1 do %>
-              <.pagination
-                current_page={@page_info.current_page}
-                total_pages={@page_info.total_pages}
-                event_name="change_page"
-              />
-            <% end %>
-          <% end %>
-        </div>
-
-        <div :if={@scope == :groups} class="w-full">
-          <div class="mono-label text-primary/70 mb-3">Groups</div>
-          <%= if @groups == [] do %>
-            <.surface_panel variant="dashed" class="p-12 text-center">
-              <p class="text-lg text-base-content/50">{empty_message(assigns)}</p>
-            </.surface_panel>
-          <% else %>
-            <div class="mb-4 text-sm text-base-content/40">
-              Found {@page_info.total_count} {if @page_info.total_count == 1,
-                do: "group",
-                else: "groups"}
-            </div>
-            <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              <%= for group <- @groups do %>
-                <.group_card group={group} />
-              <% end %>
-            </div>
-
-            <%= if @page_info.total_pages > 1 do %>
-              <.pagination
-                current_page={@page_info.current_page}
-                total_pages={@page_info.total_pages}
-                event_name="change_page"
-              />
-            <% end %>
-          <% end %>
-        </div>
-
-        <div :if={@yours != :all} class="mt-6">
-          <.link
-            patch={view_all_path(:all, assigns)}
-            class="text-sm text-primary hover:underline font-medium"
-          >
-            ← All huddlz
-          </.link>
-        </div>
-
-        <div
-          :if={@scope == :huddlz}
-          id="filter-panel"
-          class="hidden fixed inset-0 z-50"
-          phx-remove={hide_filter_panel()}
-          data-cancel={JS.exec("phx-remove", to: "#filter-panel")}
+      <div class="scope-tabs">
+        <.link
+          patch={chip_path(:huddlz, assigns)}
+          class={["scope-tab", @scope == :huddlz && "is-active"]}
         >
-          <div
-            id="filter-panel-bg"
-            class="fixed inset-0 bg-black/60"
-            phx-click={JS.exec("data-cancel", to: "#filter-panel")}
-            aria-hidden="true"
+          Huddlz
+        </.link>
+        <.link
+          patch={chip_path(:groups, assigns)}
+          class={["scope-tab", @scope == :groups && "is-active"]}
+        >
+          Groups
+        </.link>
+      </div>
+
+      <div :if={@scope == :huddlz} class="filter-bar">
+        <div class="filter-group">
+          <span class="filter-label">Within</span>
+          <.live_component
+            module={HuddlzWeb.Live.LocationAutocomplete}
+            id="location-autocomplete"
+            variant={:filter_pill}
+            value={@location_text}
+            latitude={@location_lat}
+            longitude={@location_lng}
+            placeholder="Anywhere"
           />
-          <.focus_wrap
-            id="filter-panel-container"
-            phx-window-keydown={JS.exec("data-cancel", to: "#filter-panel")}
-            phx-key="escape"
-            class="fixed bottom-0 inset-x-0 lg:bottom-auto lg:top-0 lg:right-0 lg:left-auto w-full lg:w-[430px] max-h-[76vh] lg:max-h-none lg:h-screen border-t lg:border-t-0 lg:border-l border-base-300 bg-base-100 flex flex-col"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="filter-panel-title"
+          <form
+            :if={@location_active}
+            class="filter-distance"
+            phx-change="distance_change"
+            style="display:contents"
           >
-            <header class="flex items-center justify-between px-5 py-4 border-b border-base-300 flex-shrink-0">
-              <h2 id="filter-panel-title" class="font-display text-2xl tracking-tight text-glow">
-                Filters
-              </h2>
-              <button
-                type="button"
-                phx-click={JS.exec("data-cancel", to: "#filter-panel")}
-                aria-label="Close filters"
-                class="text-base-content/40 hover:text-base-content transition-colors p-1"
-              >
-                <.icon name="hero-x-mark" class="w-5 h-5" />
-              </button>
-            </header>
+            <input
+              id="distance"
+              type="range"
+              name="distance_miles"
+              min="5"
+              max="100"
+              step="5"
+              value={@distance_miles}
+              phx-debounce="200"
+            />
+            <output for="distance" class="filter-distance-value">{@distance_miles} mi</output>
+          </form>
+        </div>
 
-            <div class="flex-1 overflow-y-auto px-5 py-4 space-y-6">
-              <section>
-                <h3 class="mono-label text-base-content/60 mb-3">Date</h3>
-                <div class="flex flex-wrap gap-2">
-                  <.link
-                    patch={date_toggle_url("upcoming", assigns)}
-                    class={toggle_class(@date_filter == "upcoming")}
-                  >
-                    Upcoming
-                  </.link>
-                  <.link
-                    patch={date_toggle_url("this_week", assigns)}
-                    class={toggle_class(@date_filter == "this_week")}
-                  >
-                    This week
-                  </.link>
-                  <.link
-                    patch={date_toggle_url("this_month", assigns)}
-                    class={toggle_class(@date_filter == "this_month")}
-                  >
-                    This month
-                  </.link>
-                  <.link
-                    patch={date_toggle_url("all", assigns)}
-                    class={toggle_class(@date_filter == "all")}
-                  >
-                    All
-                  </.link>
-                </div>
-              </section>
+        <div class="filter-group">
+          <span class="filter-label">Type</span>
+          <div class="chip-group">
+            <.v3_chip
+              patch={format_toggle_url("in_person", assigns)}
+              active={@event_type_filter == "in_person"}
+            >
+              In person
+            </.v3_chip>
+            <.v3_chip
+              patch={format_toggle_url("virtual", assigns)}
+              active={@event_type_filter == "virtual"}
+            >
+              Virtual
+            </.v3_chip>
+            <.v3_chip
+              patch={format_toggle_url("hybrid", assigns)}
+              active={@event_type_filter == "hybrid"}
+            >
+              Hybrid
+            </.v3_chip>
+          </div>
+        </div>
 
-              <section>
-                <h3 class="mono-label text-base-content/60 mb-3">Format</h3>
-                <div class="flex flex-wrap gap-2">
-                  <.link
-                    patch={format_toggle_url("in_person", assigns)}
-                    class={toggle_class(@event_type_filter == "in_person")}
-                  >
-                    In person
-                  </.link>
-                  <.link
-                    patch={format_toggle_url("virtual", assigns)}
-                    class={toggle_class(@event_type_filter == "virtual")}
-                  >
-                    Virtual
-                  </.link>
-                  <.link
-                    patch={format_toggle_url("hybrid", assigns)}
-                    class={toggle_class(@event_type_filter == "hybrid")}
-                  >
-                    Hybrid
-                  </.link>
-                </div>
-              </section>
+        <div class="filter-group">
+          <span class="filter-label">When</span>
+          <div class="chip-group">
+            <.v3_chip
+              patch={date_toggle_url("upcoming", assigns)}
+              active={@date_filter == "upcoming"}
+            >
+              All upcoming
+            </.v3_chip>
+            <.v3_chip
+              patch={date_toggle_url("this_week", assigns)}
+              active={@date_filter == "this_week"}
+            >
+              This week
+            </.v3_chip>
+            <.v3_chip
+              patch={date_toggle_url("this_month", assigns)}
+              active={@date_filter == "this_month"}
+            >
+              This month
+            </.v3_chip>
+          </div>
+        </div>
 
-              <section>
-                <h3 class="mono-label text-base-content/60 mb-3">Location</h3>
-                <div class="space-y-3">
-                  <.live_component
-                    module={HuddlzWeb.Live.LocationAutocomplete}
-                    id="location-autocomplete"
-                    field_name="location"
-                    value={@location_text}
-                    latitude={@location_lat}
-                    longitude={@location_lng}
-                    label="City"
-                    label_class="mono-label text-base-content/60 mb-2 block"
-                    placeholder="City, State"
-                  />
-                  <div :if={@location_active}>
-                    <span class="mono-label text-base-content/60 mb-2 block">Distance</span>
-                    <div class="flex flex-wrap gap-2">
-                      <%= for miles <- [10, 25, 50, 100] do %>
-                        <.link
-                          patch={distance_change_url(Integer.to_string(miles), assigns)}
-                          class={toggle_class(@distance_miles == miles)}
-                        >
-                          {miles} mi
-                        </.link>
-                      <% end %>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section>
-                <h3 class="mono-label text-base-content/60 mb-3">Sort</h3>
-                <div class="flex flex-wrap gap-2">
-                  <.link
-                    patch={sort_toggle_url("soonest", assigns)}
-                    class={toggle_class(@sort == :soonest)}
-                  >
-                    Soonest
-                  </.link>
-                  <.link
-                    patch={sort_toggle_url("newest", assigns)}
-                    class={toggle_class(@sort == :newest)}
-                  >
-                    Newest
-                  </.link>
-                </div>
-              </section>
-            </div>
-
-            <footer class="flex items-center justify-end px-5 py-4 border-t border-base-300 flex-shrink-0">
-              <.button variant="ghost" size="sm" type="button" phx-click="clear_filters">
-                Reset
-              </.button>
-            </footer>
-          </.focus_wrap>
+        <div class="filter-group">
+          <span class="filter-label">Sort</span>
+          <div class="chip-group">
+            <.v3_chip patch={sort_toggle_url("soonest", assigns)} active={@sort == :soonest}>
+              Soonest
+            </.v3_chip>
+            <.v3_chip patch={sort_toggle_url("newest", assigns)} active={@sort == :newest}>
+              Newest
+            </.v3_chip>
+          </div>
         </div>
       </div>
-    </Layouts.app>
+
+      <div class="muted" style="margin-bottom:14px;font-size:12px">
+        {result_count_label(@page_info.total_count, @scope)}
+        <span :if={any_filter_active?(assigns)}>
+          ·
+          <button
+            type="button"
+            phx-click="clear_filters"
+            class="cyan"
+            style="background:transparent;border:0;font:inherit;cursor:pointer;padding:0"
+          >
+            Clear filters
+          </button>
+        </span>
+      </div>
+
+      <%= if @scope == :huddlz do %>
+        <%= if Enum.empty?(@huddls) do %>
+          <p class="muted">{empty_message(assigns)}</p>
+        <% else %>
+          <div class="grid">
+            <%= for {{huddl, distance}, idx} <- Enum.with_index(@huddls) do %>
+              <.v3_huddl_card huddl={huddl} distance={distance} gradient={Integer.mod(idx, 6) + 1} />
+            <% end %>
+          </div>
+          <.v3_pagination
+            :if={@page_info.total_pages > 1}
+            current_page={@page_info.current_page}
+            total_pages={@page_info.total_pages}
+            event_name="change_page"
+          />
+        <% end %>
+      <% else %>
+        <%= if @groups == [] do %>
+          <p class="muted">{empty_message(assigns)}</p>
+        <% else %>
+          <div class="grid">
+            <%= for {group, idx} <- Enum.with_index(@groups) do %>
+              <.v3_group_card group={group} gradient={Integer.mod(idx, 6) + 1} />
+            <% end %>
+          </div>
+          <.v3_pagination
+            :if={@page_info.total_pages > 1}
+            current_page={@page_info.current_page}
+            total_pages={@page_info.total_pages}
+            event_name="change_page"
+          />
+        <% end %>
+      <% end %>
+    </Layouts.v3_app>
     """
   end
 
-  defp results_heading(_, :hosting, _), do: "huddlz you're hosting"
-  defp results_heading(_, :attending, _), do: "huddlz you're attending"
-  defp results_heading(_, _, q) when is_binary(q) and q != "", do: "Results for #{q}"
-  defp results_heading(:groups, _, _), do: "Discover groups"
-  defp results_heading(:huddlz, _, _), do: "Discover huddlz"
+  attr :huddl, :map, required: true
+  attr :distance, :float, default: nil
+  attr :gradient, :integer, default: 1
 
-  defp results_subtitle(_, yours, _, _) when yours in [:hosting, :attending], do: nil
+  defp v3_huddl_card(assigns) do
+    ~H"""
+    <.v3_card
+      navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}"}
+      gradient={@gradient}
+    >
+      <:cover>
+        <img
+          :if={@huddl.display_image_url}
+          class="card-cover-img"
+          src={HuddlImages.url(@huddl.display_image_url)}
+          alt={@huddl.title}
+        />
+        <.v3_date_stamp month={huddl_month(@huddl)} day={huddl_day(@huddl)} />
+        <.v3_card_tag variant={tag_variant(@huddl.event_type)}>
+          {tag_label(@huddl.event_type)}
+        </.v3_card_tag>
+      </:cover>
+      <:body>
+        <span :if={Map.has_key?(@huddl, :group) && @huddl.group} class="card-group">
+          {@huddl.group.name}
+        </span>
+        <h3 class="card-title">{@huddl.title}</h3>
+        <div class="card-meta">
+          <span>{format_meta_when(@huddl.starts_at)}</span>
+          <%= if @distance do %>
+            <span class="dot"></span>
+            <span>{format_distance(@distance)}</span>
+          <% end %>
+          <%= if @huddl.rsvp_count > 0 || @huddl.max_attendees do %>
+            <span class="dot"></span>
+            <span>{rsvp_label(@huddl)}</span>
+          <% end %>
+        </div>
+      </:body>
+    </.v3_card>
+    """
+  end
 
-  defp results_subtitle(:huddlz, _, q, location) do
+  attr :group, :map, required: true
+  attr :gradient, :integer, default: 1
+
+  defp v3_group_card(assigns) do
+    ~H"""
+    <.v3_card navigate={~p"/groups/#{@group.slug}"} gradient={@gradient}>
+      <:cover>
+        <img
+          :if={@group.current_image_url}
+          class="card-cover-img"
+          src={GroupImages.url(@group.current_image_url)}
+          alt={@group.name}
+        />
+      </:cover>
+      <:body>
+        <span :if={@group.location} class="card-group">{@group.location}</span>
+        <h2 class="card-title">{@group.name}</h2>
+        <div :if={member_count(@group)} class="card-meta">
+          <span>{member_count_label(@group)}</span>
+        </div>
+      </:body>
+    </.v3_card>
+    """
+  end
+
+  defp discover_h1(_, :hosting, _), do: "huddlz you're hosting"
+  defp discover_h1(_, :attending, _), do: "huddlz you're attending"
+
+  defp discover_h1(_, _, q) when is_binary(q) and q != "",
+    do: "Results for “#{q}”"
+
+  defp discover_h1(:groups, _, _), do: "Browse groups"
+  defp discover_h1(:huddlz, _, _), do: "Browse huddlz"
+
+  defp discover_subtitle(_, yours, _, _) when yours in [:hosting, :attending], do: nil
+
+  defp discover_subtitle(:huddlz, _, q, location) do
     base =
       if is_binary(q) and q != "",
-        do: "Huddlz matching your search",
-        else: "Real-life gatherings"
+        do: "Showing huddlz that match your search",
+        else: "Find a huddl worth showing up to. Tweak the filters to match what you're after"
 
     location_suffix = if location, do: " near #{location}", else: ""
     base <> location_suffix <> "."
   end
 
-  defp results_subtitle(:groups, _, q, _location) do
+  defp discover_subtitle(:groups, _, q, _location) do
     if is_binary(q) and q != "" do
       "Groups matching your search."
     else
       "Communities organizing huddlz."
+    end
+  end
+
+  defp result_count_label(count, :huddlz),
+    do: "#{count} #{if count == 1, do: "huddl", else: "huddlz"}"
+
+  defp result_count_label(count, :groups),
+    do: "#{count} #{if count == 1, do: "group", else: "groups"}"
+
+  defp tag_variant(:in_person), do: :in_person
+  defp tag_variant(:virtual), do: :online
+  defp tag_variant(:hybrid), do: :hybrid
+
+  defp tag_label(:in_person), do: "In person"
+  defp tag_label(:virtual), do: "Online"
+  defp tag_label(:hybrid), do: "Hybrid"
+
+  defp huddl_month(%{starts_at: %DateTime{} = dt}),
+    do: Calendar.strftime(dt, "%b") |> String.upcase()
+
+  defp huddl_day(%{starts_at: %DateTime{} = dt}), do: Calendar.strftime(dt, "%-d")
+
+  defp format_meta_when(%DateTime{} = dt) do
+    "#{Calendar.strftime(dt, "%a")} · #{Calendar.strftime(dt, "%-I:%M %p")}"
+  end
+
+  defp format_distance(miles) when is_number(miles) and miles < 1, do: "< 1 mi"
+  defp format_distance(miles) when is_number(miles), do: "#{Float.round(miles * 1.0, 1)} mi"
+
+  defp rsvp_label(%{rsvp_count: count, max_attendees: max}) when is_integer(max) and max > 0,
+    do: "#{count} / #{max} RSVPs"
+
+  defp rsvp_label(%{rsvp_count: 1}), do: "1 RSVP"
+  defp rsvp_label(%{rsvp_count: count}), do: "#{count} RSVPs"
+
+  defp member_count(group) do
+    case Map.get(group, :member_count) do
+      n when is_integer(n) and n > 0 -> n
+      _ -> nil
+    end
+  end
+
+  defp member_count_label(group) do
+    case member_count(group) do
+      nil -> ""
+      1 -> "1 member"
+      n -> "#{n} members"
     end
   end
 
@@ -966,13 +940,5 @@ defmodule HuddlzWeb.HuddlLive do
     else
       "No upcoming huddlz right now."
     end
-  end
-
-  defp humanize_filter(filter) do
-    filter
-    |> to_string()
-    |> String.replace("_", " ")
-    |> String.split(" ")
-    |> Enum.map_join(" ", &String.capitalize/1)
   end
 end

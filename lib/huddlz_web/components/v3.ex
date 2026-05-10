@@ -27,6 +27,7 @@ defmodule HuddlzWeb.V3 do
       import HuddlzWeb.V3.Chip
       import HuddlzWeb.V3.Input
       import HuddlzWeb.V3.ListRow
+      import HuddlzWeb.V3.Pagination
       import HuddlzWeb.V3.Panel
       import HuddlzWeb.V3.Pill
     end

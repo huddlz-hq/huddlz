@@ -17,7 +17,7 @@ Feature: Combined search on /discover
   Scenario: scope=groups shows the groups section
     Given a group named "Tampa Tech Talks" is owned by "host@example.com"
     When I visit "/discover?scope=groups"
-    Then I should see "Discover groups"
+    Then I should see "Browse groups"
     And I should see "Tampa Tech Talks"
 
   Scenario: scope=groups hides huddlz

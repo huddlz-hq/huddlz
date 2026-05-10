@@ -18,6 +18,16 @@ defmodule GlobalHeaderSteps do
     context
   end
 
+  step "the v3 topbar should expose a search form posting q to /discover", context do
+    session = context[:session] || context[:conn]
+
+    session
+    |> assert_has(".content-topbar form[action='/discover'][method='get']")
+    |> assert_has(".content-topbar input[type='search'][name='q'][placeholder='Search huddlz']")
+
+    context
+  end
+
   step "the header should expose an Organize link to /organize", context do
     session = context[:session] || context[:conn]
     assert_has(session, "header a[href='/organize']", text: "Organize")

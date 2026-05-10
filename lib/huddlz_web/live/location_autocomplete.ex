@@ -24,6 +24,11 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   attr :show_clear, :boolean, default: true
   attr :fetch_coordinates, :boolean, default: true
 
+  attr :variant, :atom,
+    values: [:default, :filter_pill],
+    default: :default,
+    doc: "render style — `:filter_pill` mounts inside the v3 `.filter-location` chrome"
+
   def mount(socket) do
     {:ok,
      assign(socket,
@@ -35,6 +40,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
        types: ["locality"],
        show_clear: true,
        fetch_coordinates: true,
+       variant: :default,
        # Internal state
        search_text: "",
        suggestions: [],
@@ -102,7 +108,10 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
     end
   end
 
-  def render(assigns) do
+  def render(%{variant: :filter_pill} = assigns), do: render_filter_pill(assigns)
+  def render(assigns), do: render_default(assigns)
+
+  defp render_default(assigns) do
     ~H"""
     <div
       id={@id}
@@ -228,6 +237,125 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
       </div>
 
       <p :if={@error} class="mt-1 text-sm text-error">{@error}</p>
+    </div>
+    """
+  end
+
+  # V3 filter-pill variant — renders inside the `.filter-location` pill chrome
+  # used by `/discover`. Same events and parent notifications as the default.
+  defp render_filter_pill(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      class="filter-location-wrap"
+      phx-click-away="dismiss"
+      phx-target={@myself}
+      phx-hook="LocationAutocomplete"
+      data-has-highlight={to_string(@suggestion_index >= 0)}
+    >
+      <div class="filter-location">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 22s7-7.6 7-13a7 7 0 0 0-14 0c0 5.4 7 13 7 13z" />
+          <circle cx="12" cy="9" r="2.5" />
+        </svg>
+
+        <%= if @selected do %>
+          <input :if={@field_name} type="hidden" name={@field_name} value={@selected_text} />
+          <input
+            type="text"
+            class="filter-location-input"
+            value={@selected_text}
+            phx-click="edit"
+            phx-target={@myself}
+            readonly
+            data-testid="location-display"
+            aria-label="Edit location"
+          />
+          <button
+            :if={@show_clear}
+            type="button"
+            class="filter-location-clear"
+            phx-click="clear"
+            phx-target={@myself}
+            aria-label="Clear location"
+          >
+            ×
+          </button>
+        <% else %>
+          <input :if={@field_name} type="hidden" name={@field_name} value={@search_text} />
+          <input
+            type="text"
+            id={"#{@id}-input"}
+            class="filter-location-input"
+            value={@search_text}
+            placeholder={@placeholder}
+            phx-change="search_input"
+            phx-target={@myself}
+            phx-debounce="300"
+            phx-keydown="keydown"
+            name={"#{@id}_search"}
+            autocomplete="off"
+            data-testid="location-input"
+            role="combobox"
+            aria-expanded={to_string(@show_suggestions && @suggestions != [])}
+            aria-autocomplete="list"
+            aria-controls={"#{@id}-listbox"}
+          />
+          <button
+            :if={@show_clear && @search_text != ""}
+            type="button"
+            class="filter-location-clear"
+            phx-click="clear"
+            phx-target={@myself}
+            aria-label="Clear location"
+          >
+            ×
+          </button>
+        <% end %>
+      </div>
+
+      <%!-- Suggestion dropdown --%>
+      <div
+        :if={!@selected && @show_suggestions && @suggestions != []}
+        id={"#{@id}-listbox"}
+        role="listbox"
+        class="filter-location-listbox"
+      >
+        <button
+          :for={{s, idx} <- Enum.with_index(@suggestions)}
+          type="button"
+          id={"#{@id}-option-#{idx}"}
+          role="option"
+          phx-click="select"
+          phx-value-place-id={s.place_id}
+          phx-value-display-text={s.display_text}
+          phx-value-main-text={s.main_text}
+          phx-target={@myself}
+          class={["filter-location-option", idx == @suggestion_index && "is-active"]}
+        >
+          <span class="opt-main">{s.main_text}</span>
+          <span class="opt-secondary">{s.secondary_text}</span>
+        </button>
+      </div>
+
+      <p
+        :if={!@selected && @show_suggestions && @suggestions == [] && !@loading}
+        class="filter-location-listbox empty"
+      >
+        No locations found
+      </p>
+
+      <p :if={@error} class="filter-location-error">{@error}</p>
     </div>
     """
   end

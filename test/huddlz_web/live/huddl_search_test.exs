@@ -10,7 +10,6 @@ defmodule HuddlzWeb.HuddlSearchTest do
     user = generate(user(role: :user))
     group = generate(group(owner_id: user.id, is_public: true, actor: user))
 
-    # Create various huddlz for testing
     huddl1 =
       generate(
         huddl(
@@ -62,7 +61,6 @@ defmodule HuddlzWeb.HuddlSearchTest do
         )
       )
 
-    # Create a past huddl that shouldn't appear
     _past_huddl =
       generate(
         past_huddl(
@@ -89,7 +87,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> refute_has("h3", text: "Past Event")
     end
 
-    test "renders capacity label and progress bar for limited huddlz with no RSVPs", %{
+    test "renders RSVP-out-of-capacity meta for limited huddlz with no RSVPs", %{
       conn: conn,
       user: user,
       group: group
@@ -114,12 +112,10 @@ defmodule HuddlzWeb.HuddlSearchTest do
       conn
       |> visit("/discover")
       |> assert_has("h3", text: "Capped Huddl")
-      |> assert_has("span", text: "0/5 spots filled")
-      |> assert_has("span", text: "Plenty of space")
-      |> assert_has("div[style*='width: 0%']")
+      |> assert_has(".card-meta span", text: "0 / 5 RSVPs")
     end
 
-    test "renders capacity label for limited huddlz with at least one RSVP", %{
+    test "renders RSVP-out-of-capacity meta for limited huddlz with at least one RSVP", %{
       conn: conn,
       user: user,
       group: group
@@ -149,7 +145,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       conn
       |> visit("/discover")
       |> assert_has("h3", text: "Mostly Empty Capped Huddl")
-      |> assert_has("span", text: "1/5 spots filled")
+      |> assert_has(".card-meta span", text: "1 / 5 RSVPs")
     end
 
     test "searches by title", %{conn: conn} do
@@ -171,7 +167,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
     test "filters by event type", %{conn: conn} do
       conn
       |> visit("/discover")
-      |> click_link("#filter-panel a", "Virtual")
+      |> click_link(".chip-group a.chip", "Virtual")
       |> assert_has("h3", text: "Virtual Book Club")
       |> refute_has("h3", text: "Morning Yoga Session")
       |> refute_has("h3", text: "Hybrid Workshop")
@@ -180,118 +176,59 @@ defmodule HuddlzWeb.HuddlSearchTest do
     test "filters by date range - this week", %{conn: conn} do
       conn
       |> visit("/discover")
-      |> click_link("#filter-panel a", "This week")
+      |> click_link(".chip-group a.chip", "This week")
       # Only events within 7 days should show
       |> assert_has("h3", text: "Morning Yoga Session")
       |> assert_has("h3", text: "Virtual Book Club")
       |> refute_has("h3", text: "Hybrid Workshop")
-      # Past events should never show
       |> refute_has("h3", text: "Past Event")
     end
 
     test "filters by date range - this month", %{conn: conn} do
       conn
       |> visit("/discover")
-      |> click_link("#filter-panel a", "This month")
+      |> click_link(".chip-group a.chip", "This month")
       # All future events within 30 days should show
       |> assert_has("h3", text: "Morning Yoga Session")
       |> assert_has("h3", text: "Virtual Book Club")
       |> assert_has("h3", text: "Hybrid Workshop")
-      # Past events should never show
       |> refute_has("h3", text: "Past Event")
     end
 
     test "combines multiple filters", %{conn: conn} do
       conn
       |> visit("/discover?q=book")
-      |> click_link("#filter-panel a", "Virtual")
-      |> click_link("#filter-panel a", "This week")
+      |> click_link(".chip-group a.chip", "Virtual")
+      |> click_link(".chip-group a.chip", "This week")
       |> assert_has("h3", text: "Virtual Book Club")
       |> refute_has("h3", text: "Morning Yoga Session")
       |> refute_has("h3", text: "Hybrid Workshop")
     end
 
-    test "displays active filters", %{conn: conn} do
+    test "active chips reflect URL state", %{conn: conn} do
       conn
-      |> visit("/discover?q=book")
-      |> click_link("#filter-panel a", "Virtual")
-      |> assert_has("span", text: "Search: book")
-      |> assert_has("span", text: "Type: Virtual")
+      |> visit("/discover?event_type=virtual&date_filter=this_week&sort=newest")
+      |> assert_has(".chip-group a.chip.is-active", text: "Virtual")
+      |> assert_has(".chip-group a.chip.is-active", text: "This week")
+      |> assert_has(".chip-group a.chip.is-active", text: "Newest")
     end
 
-    test "clears all filters", %{conn: conn} do
+    test "Clear filters button drops all filter params", %{conn: conn} do
       conn
-      |> visit("/discover?q=book")
-      |> click_link("#filter-panel a", "Virtual")
-      |> click_button("Clear all")
-      # All huddlz should be visible again
-      |> assert_has("h3", text: "Morning Yoga Session")
-      |> assert_has("h3", text: "Virtual Book Club")
-      |> assert_has("h3", text: "Hybrid Workshop")
-    end
-
-    test "only showing applied filters as active", %{conn: conn} do
-      # No filters applied initially.
-      conn
-      |> visit("/discover")
-      |> refute_has("span", text: "Search:")
-      |> refute_has("span", text: "Type:")
-      |> refute_has("span", text: "Date:")
-
-      # Huddl Type only.
-      conn
-      |> visit("/discover")
-      |> click_link("#filter-panel a", "Virtual")
-      |> refute_has("span", text: "Search:")
-      |> assert_has("span", text: "Type: Virtual")
-      |> refute_has("span", text: "Date:")
-
-      # Search + Huddl Type.
-      conn
-      |> visit("/discover?q=book&event_type=virtual")
-      |> assert_has("span", text: "Search: book")
-      |> assert_has("span", text: "Type: Virtual")
-      |> refute_has("span", text: "Date:")
-
-      # Search + Huddl Type + Date.
-      conn
-      |> visit("/discover?q=book&event_type=virtual&date_filter=this_week")
-      |> assert_has("span", text: "Search: book")
-      |> assert_has("span", text: "Type: Virtual")
-      |> assert_has("span", text: "Date: This Week")
-
-      # Clearing the date filter back to upcoming drops the Date pill.
-      conn
-      |> visit("/discover?q=book&event_type=virtual")
-      |> assert_has("span", text: "Search: book")
-      |> assert_has("span", text: "Type: Virtual")
-      |> refute_has("span", text: "Date:")
-
-      # Clearing the search drops the Search pill.
-      conn
-      |> visit("/discover?event_type=virtual")
-      |> refute_has("span", text: "Search:")
-      |> assert_has("span", text: "Type: Virtual")
-      |> refute_has("span", text: "Date:")
-
-      # Clearing event_type drops the Type pill.
-      conn
-      |> visit("/discover")
-      |> refute_has("span", text: "Search:")
-      |> refute_has("span", text: "Type:")
-      |> refute_has("span", text: "Date:")
+      |> visit("/discover?q=book&event_type=virtual&date_filter=this_week&sort=newest")
+      |> click_button("Clear filters")
+      |> assert_path(~p"/discover", query_params: %{"cleared" => "1"})
     end
 
     test "shows result count", %{conn: conn} do
       conn
       |> visit("/discover")
-      |> assert_has("div", text: "Found 3 huddlz")
-      |> click_link("#filter-panel a", "Virtual")
-      |> assert_has("div", text: "Found 1 huddl")
+      |> assert_has(".muted", text: "3 huddlz")
+      |> click_link(".chip-group a.chip", "Virtual")
+      |> assert_has(".muted", text: "1 huddl")
     end
 
     test "displays huddlz in chronological order", %{conn: conn} do
-      # Verify all huddlz are displayed in date order (earliest first)
       conn
       |> visit("/discover")
       |> assert_has("h3", text: "Morning Yoga Session")
@@ -309,68 +246,52 @@ defmodule HuddlzWeb.HuddlSearchTest do
     end
   end
 
-  describe "filter panel" do
-    test "Filters trigger button is rendered for huddlz scope", %{conn: conn} do
+  describe "filter bar" do
+    test "filter bar is rendered for huddlz scope", %{conn: conn} do
       conn
       |> visit("/discover")
-      |> assert_has("button", text: "Filters")
+      |> assert_has(".filter-bar")
+      |> assert_has(".filter-label", text: "Within")
+      |> assert_has(".filter-label", text: "Type")
+      |> assert_has(".filter-label", text: "When")
+      |> assert_has(".filter-label", text: "Sort")
     end
 
-    test "Filters trigger is hidden under scope=groups", %{conn: conn} do
+    test "filter bar is hidden under scope=groups", %{conn: conn} do
       conn
       |> visit("/discover?scope=groups")
-      |> refute_has("button", text: "Filters")
+      |> refute_has(".filter-bar")
     end
 
-    test "panel renders all four sections", %{conn: conn} do
+    test "Sort: Newest patches URL and marks chip active", %{conn: conn} do
       conn
       |> visit("/discover")
-      |> assert_has("#filter-panel h3", text: "Date")
-      |> assert_has("#filter-panel h3", text: "Format")
-      |> assert_has("#filter-panel h3", text: "Location")
-      |> assert_has("#filter-panel h3", text: "Sort")
-    end
-
-    test "Sort: Newest patches URL and re-renders chip", %{conn: conn} do
-      conn
-      |> visit("/discover")
-      |> click_link("#filter-panel a", "Newest")
+      |> click_link(".chip-group a.chip", "Newest")
       |> assert_path(~p"/discover", query_params: %{"sort" => "newest"})
-      |> assert_has("span", text: "Sort: Newest")
+      |> assert_has(".chip-group a.chip.is-active", text: "Newest")
     end
 
     test "Sort: clicking Soonest while sort=newest drops sort from URL", %{conn: conn} do
       conn
       |> visit("/discover?sort=newest")
-      |> assert_has("span", text: "Sort: Newest")
-      |> click_link("#filter-panel a", "Soonest")
+      |> assert_has(".chip-group a.chip.is-active", text: "Newest")
+      |> click_link(".chip-group a.chip", "Soonest")
       |> assert_path(~p"/discover")
-      |> refute_has("span", text: "Sort: Newest")
+      |> refute_has(".chip-group a.chip.is-active", text: "Newest")
     end
 
-    test "Reset button clears all filter params", %{conn: conn} do
-      conn
-      |> visit("/discover?date_filter=this_week&sort=newest")
-      |> assert_has("span", text: "Date: This Week")
-      |> assert_has("span", text: "Sort: Newest")
-      |> click_button("Reset")
-      |> refute_has("span", text: "Date: This Week")
-      |> refute_has("span", text: "Sort: Newest")
-    end
+    test "distance slider patches URL with new distance", %{conn: conn} do
+      {:ok, view, _html} =
+        live(conn, "/discover?location=Austin%2C+TX&lat=30.2672&lng=-97.7431&distance=25")
 
-    test "Reset leaves the filter panel open", %{conn: conn} do
-      # The panel is URL-driven, not client-state-driven; Reset patches the
-      # URL but should not also trigger a hide-transition (the two raced and
-      # caused a flicker). After clicking Reset, the panel should still be
-      # mounted with all four sections visible so the user sees the toggles
-      # flip back to defaults.
-      conn
-      |> visit("/discover?date_filter=this_week")
-      |> click_button("Reset")
-      |> assert_has("#filter-panel h3", text: "Date")
-      |> assert_has("#filter-panel h3", text: "Format")
-      |> assert_has("#filter-panel h3", text: "Location")
-      |> assert_has("#filter-panel h3", text: "Sort")
+      view
+      |> form("form[phx-change='distance_change']", %{"distance_miles" => "50"})
+      |> render_change()
+
+      assert_patched(
+        view,
+        "/discover?location=Austin%2C+TX&lat=30.2672&lng=-97.7431&distance=50"
+      )
     end
   end
 
@@ -488,7 +409,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       assert has_element?(view, "p", "Location search is currently unavailable")
     end
 
-    test "clearing filters clears location", %{conn: conn} do
+    test "Clear filters drops the active location", %{conn: conn} do
       stub_places_autocomplete(%{"aus" => [:austin]})
       stub_place_details(:defaults)
 
@@ -506,7 +427,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       html = render(view)
       assert html =~ "Austin, TX, USA"
 
-      view |> element("button", "Clear all") |> render_click()
+      view |> element("button", "Clear filters") |> render_click()
 
       html = render(view)
       refute html =~ "Austin, TX, USA"
@@ -528,7 +449,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       assert html =~ "Virtual Book Club"
     end
 
-    test "clear location button removes location filter", %{conn: conn} do
+    test "clear-location button removes location filter", %{conn: conn} do
       stub_places_autocomplete(%{"aus" => [:austin]})
       stub_place_details(:defaults)
 
@@ -553,13 +474,13 @@ defmodule HuddlzWeb.HuddlSearchTest do
       assert html =~ "Morning Yoga Session"
     end
 
-    test "clear location button doesn't affect other filters", %{conn: conn} do
+    test "clear-location button preserves the search query", %{conn: conn} do
       stub_places_autocomplete(%{"aus" => [:austin]})
       stub_place_details(:defaults)
 
-      # Start with q already in the URL — search lives in the chrome now,
-      # which submits via GET. The in-page contract is that picking a location
-      # preserves q, and clearing the location preserves q too.
+      # Start with q already in the URL — search lives in the chrome and submits
+      # via GET. Picking a location preserves q, and clearing the location
+      # preserves q too.
       {:ok, view, _html} = live(conn, "/discover?q=Yoga")
 
       view
@@ -573,14 +494,13 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
       html = render(view)
       assert html =~ "Austin, TX, USA"
-      assert html =~ "Search: Yoga"
+      assert html =~ "Results for"
 
-      # Clear just the location.
       view |> element("[aria-label='Clear location']") |> render_click()
 
       html = render(view)
       refute html =~ "Austin, TX, USA"
-      assert html =~ "Search: Yoga"
+      assert html =~ "Results for"
     end
   end
 
@@ -616,7 +536,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
       html = render(view)
       assert html =~ ~s(id="location-autocomplete-option-0")
-      assert html =~ "bg-primary/20 border-l-primary"
+      assert html =~ "filter-location-option is-active"
 
       view
       |> element("#location-autocomplete-input")

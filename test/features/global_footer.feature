@@ -5,7 +5,7 @@ Feature: Global Footer
   So that I can find supporting pages without hunting for them
 
   Scenario: Footer surfaces grouped columns and the tagline
-    When I visit "/discover"
+    When I visit "/groups"
     Then the footer should show the huddlz brand block
     And the footer should expose the Product, Help, Legal, and Open columns
     And the footer should link to GitHub and the API docs
