@@ -391,7 +391,7 @@ defmodule HuddlzWeb.CalendarLive do
             :for={entry <- @sorted}
             navigate={huddl_path(entry)}
             class="row"
-            style="grid-template-columns: 200px 1fr auto; text-decoration: none; padding: 14px 0"
+            style="grid-template-columns: 200px 1fr auto; text-decoration: none"
           >
             <span class="meta">{format_agenda_when(entry.huddl.starts_at)}</span>
             <span class="row-title">{entry.huddl.title}</span>

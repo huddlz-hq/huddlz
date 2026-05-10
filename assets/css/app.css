@@ -1266,12 +1266,18 @@ body.v3 .row {
   display: grid;
   align-items: center;
   gap: 16px;
-  padding: 14px 0;
+  /* padding-top is 1px short of padding-bottom to compensate for the 1px
+     border-top eating into the box (box-sizing: border-box) — without this
+     the grid track lands 1px below the row's geometric center. */
+  padding: 13px 0 14px;
   border-top: 1px solid var(--line);
   font-size: 13.5px;
 }
 
-body.v3 .row:first-child { border-top: 0; }
+body.v3 .row:first-child {
+  padding-top: 14px;
+  border-top: 0;
+}
 
 body.v3 .row .meta { color: var(--muted); font-size: 12px; }
 body.v3 .row .row-title .title-tag {
