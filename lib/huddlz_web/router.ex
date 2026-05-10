@@ -83,6 +83,7 @@ defmodule HuddlzWeb.Router do
       # on_mount {HuddlzWeb.LiveUserAuth, :live_no_user}
       live "/", LandingLive, :index
       live "/discover", HuddlLive, :index
+      live "/help", HelpLive, :index
       live "/me", MeLive, :index
       live "/admin", AdminLive, :index
       live "/profile", ProfileLive, :index
