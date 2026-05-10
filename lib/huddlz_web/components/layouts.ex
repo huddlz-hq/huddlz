@@ -330,7 +330,7 @@ defmodule HuddlzWeb.Layouts do
         <nav class="sb-nav">
           <a class={["sb-item", @active == "discover" && "active"]} href="/discover">
             <.v3_nav_icon name="search" />
-            <span class="label">Explore</span>
+            <span class="label">Discover</span>
           </a>
           <a class={["sb-item", @active == "my-huddlz" && "active"]} href="/my-huddlz">
             <.v3_nav_icon name="ticket" />
