@@ -5,8 +5,12 @@ Feature: Global Header
   So that I can find huddlz from anywhere and start organizing without hunting through menus
 
   Scenario: Header chrome is visible on legacy pages
-    Given I am signed in as "header.user@example.com" with password "Password123!"
-    When I visit "/groups/new"
+    Given the following users exist:
+      | email                       | role |
+      | header.user@example.com     | user |
+    And a public group "Header Group" exists with owner "header.user@example.com"
+    And I am signed in as "header.user@example.com"
+    When I visit the group page for "Header Group"
     Then the header should show the huddlz brand
     And the header should expose a global search form posting q to /discover
     And the header should expose an Organize link to /organize
@@ -22,6 +26,10 @@ Feature: Global Header
     Then I should see huddlz matching "Elixir"
 
   Scenario: Signed-in user sees the redesigned account menu on legacy pages
-    Given I am signed in as "menu.user@example.com" with password "Password123!"
-    When I visit "/groups/new"
+    Given the following users exist:
+      | email                     | role |
+      | menu.user@example.com     | user |
+    And a public group "Menu Group" exists with owner "menu.user@example.com"
+    And I am signed in as "menu.user@example.com"
+    When I visit the group page for "Menu Group"
     Then the account menu should expose the member, organizer, and account links

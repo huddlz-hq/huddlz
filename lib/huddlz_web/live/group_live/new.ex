@@ -210,8 +210,13 @@ defmodule HuddlzWeb.GroupLive.New do
               label="Group name"
               placeholder="e.g. Phoenix Elixir Meetup"
               autocomplete="off"
-              help={"3–100 characters. Your group lives at #{url(~p"/groups/#{@form[:slug].value || "your-group"}")}"}
+              help="3–100 characters."
             />
+            <div class="form-row">
+              <div class="form-help">
+                URL: {url(~p"/groups/#{@form[:slug].value || "..."}")}
+              </div>
+            </div>
             <.v3_textarea
               field={@form[:description]}
               label="Description"
@@ -245,8 +250,10 @@ defmodule HuddlzWeb.GroupLive.New do
             <h2>Cover image</h2>
           </div>
 
+          <.live_file_input upload={@uploads.group_image} class="hidden" />
+
           <%= if @pending_preview_url do %>
-            <div class="image-preview">
+            <div class="image-preview" phx-drop-target={@uploads.group_image.ref}>
               <div
                 class="card-cover"
                 style={"height:140px; background-image: url('#{@pending_preview_url}')"}
@@ -257,9 +264,14 @@ defmodule HuddlzWeb.GroupLive.New do
                 style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-top:10px"
               >
                 <span>Image uploaded · ready to publish.</span>
-                <.v3_button variant={:muted} type="button" phx-click="cancel_pending_image">
-                  Remove
-                </.v3_button>
+                <div style="display:flex; gap:8px">
+                  <label for={@uploads.group_image.ref} class="btn-secondary" style="cursor:pointer">
+                    Replace
+                  </label>
+                  <.v3_button variant={:muted} type="button" phx-click="cancel_pending_image">
+                    Remove
+                  </.v3_button>
+                </div>
               </div>
             </div>
           <% else %>
@@ -281,7 +293,6 @@ defmodule HuddlzWeb.GroupLive.New do
                   <path d="m21 15-5-5L5 21" />
                 </svg>
               </div>
-              <.live_file_input upload={@uploads.group_image} class="hidden" />
               <label for={@uploads.group_image.ref} class="upload-prompt">
                 Drop a 16:9 image, or <span class="upload-link">browse</span>
               </label>

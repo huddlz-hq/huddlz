@@ -27,10 +27,10 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         |> login(owner)
         |> live(~p"/groups/new")
 
-      assert has_element?(view, "label", "Group Image")
-      assert has_element?(view, "*", "Upload a banner image")
-      assert has_element?(view, "*", "Click to upload or drag and drop")
-      assert has_element?(view, "*", "JPG, PNG, or WebP (max 5MB)")
+      assert has_element?(view, ".panel-head h2", "Cover image")
+      assert has_element?(view, ".upload-zone")
+      assert has_element?(view, "*", "Drop a 16:9 image")
+      assert has_element?(view, "*", "JPG, PNG, WebP · 5 MB max")
     end
 
     test "creates group without image", %{conn: conn, owner: owner} do

@@ -32,14 +32,16 @@ Feature: Profile Picture Management
     And I should see "Display name"
 
   Scenario: Profile picture appears in navbar when user has one
-    Given the following profile pictures exist:
+    Given a public group "Avatar Group" exists with owner "alice@example.com"
+    And the following profile pictures exist:
       | user_email          | storage_path                                      |
       | alice@example.com   | /uploads/profile_pictures/alice/avatar.jpg        |
-    When I visit "/groups/new"
+    When I visit the group page for "Avatar Group"
     Then I should see the navbar avatar with image
 
   Scenario: Navbar shows initials when user has no profile picture
-    When I visit "/groups/new"
+    Given a public group "Initials Group" exists with owner "alice@example.com"
+    When I visit the group page for "Initials Group"
     Then I should see the navbar avatar with initials "AU"
 
   Scenario: Profile picture appears in group members section
