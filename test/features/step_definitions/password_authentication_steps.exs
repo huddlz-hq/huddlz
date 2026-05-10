@@ -203,7 +203,7 @@ defmodule PasswordAuthenticationSteps do
   step "I should see the password sign-in form", context do
     session = context[:session] || context[:conn]
     assert_has(session, "form#password-sign-in-form")
-    assert_has(session, "h2", text: "Sign in with password")
+    assert_has(session, "h1", text: "Sign in")
     {:ok, context}
   end
 

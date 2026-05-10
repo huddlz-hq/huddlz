@@ -14,7 +14,7 @@ Feature: Organizer workspace
 
   Scenario: Anonymous visitor is redirected from /organize to sign-in
     When I visit "/organize"
-    Then I should see "Sign In"
+    Then I should see "Sign in"
 
   Scenario: Signed-in user with no groups sees the empty-state CTA
     Given I am signed in as "host@example.com"

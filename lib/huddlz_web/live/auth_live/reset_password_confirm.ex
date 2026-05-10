@@ -1,17 +1,22 @@
 defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
   @moduledoc """
-  LiveView for setting a new password using a reset token.
+  Reset-confirm page at `/reset/:token`. Renders either the new-password form
+  (when the token is valid) or an expired-link state (when it isn't).
   """
   use HuddlzWeb, :live_view
+
   alias AshPhoenix.Form
   alias Huddlz.Accounts.User
-
-  import HuddlzWeb.Layouts
 
   @impl true
   def mount(%{"token" => token}, _session, socket) do
     strategy = AshAuthentication.Info.strategy!(User, :password)
     domain = AshAuthentication.Info.authentication_domain!(User)
+
+    socket =
+      socket
+      |> assign(:page_title, "Set new password")
+      |> assign(:body_class, "v3 is-auth")
 
     with {:ok, %{"sub" => subject}, _resource} <- AshAuthentication.Jwt.verify(token, User),
          {:ok, user} <- AshAuthentication.subject_to_user(subject, User) do
@@ -39,6 +44,8 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
   def mount(_params, _session, socket) do
     {:ok,
      socket
+     |> assign(:page_title, "Set new password")
+     |> assign(:body_class, "v3 is-auth")
      |> assign(:token_valid, false)
      |> assign(:trigger_action, false)}
   end
@@ -46,85 +53,104 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
   @impl true
   def render(assigns) do
     ~H"""
-    <.app flash={@flash} current_user={assigns[:current_user]}>
-      <div class="max-w-md mx-auto">
-        <div class="border border-base-300 p-6">
-          <%= if @token_valid do %>
-            <h2 class="font-display text-2xl tracking-tight mb-4">Set new password</h2>
+    <Layouts.flash_group flash={@flash} />
 
-            <.form
-              :let={f}
-              for={@form}
-              phx-change="validate"
-              phx-submit="reset_password"
-              phx-trigger-action={@trigger_action}
-              action="/auth/user/password/reset"
-              method="POST"
-              id="reset-password-confirm-form"
-            >
-              <input
-                type="hidden"
-                name={Phoenix.HTML.Form.input_name(f, :reset_token)}
-                value={@token}
-              />
+    <div class="auth-shell">
+      <header class="auth-topbar">
+        <a href={~p"/"} style="display:flex;align-items:center;gap:10px">
+          <div class="brand-glyph">h</div>
+          <div class="brand-text">huddlz</div>
+        </a>
+      </header>
 
-              <%= if f[:reset_token].errors != [] do %>
-                <div class="border border-error/30 p-4 bg-error/5 flex items-start gap-3 mb-4">
-                  <.icon name="hero-x-circle" class="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
-                  <span class="text-sm">This password reset link is invalid or has expired.</span>
-                </div>
-                <div class="mt-4">
-                  <.link
-                    navigate="/reset"
-                    class="block text-center text-primary hover:underline font-medium"
+      <div class="auth-frame">
+        <%= if @token_valid do %>
+          <h1>Set a new password</h1>
+          <p class="lede">Almost there. Pick a new password and you'll be signed in.</p>
+
+          <.form
+            :let={f}
+            for={@form}
+            phx-change="validate"
+            phx-submit="reset_password"
+            phx-trigger-action={@trigger_action}
+            action="/auth/user/password/reset"
+            method="POST"
+            id="reset-password-confirm-form"
+            class="auth-card"
+          >
+            <input
+              type="hidden"
+              name={Phoenix.HTML.Form.input_name(f, :reset_token)}
+              value={@token}
+            />
+
+            <%= if f[:reset_token].errors != [] do %>
+              <div class="auth-state warn">
+                <div class="icon-mark">
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
                   >
-                    Request new reset link
-                  </.link>
+                    <circle cx="12" cy="12" r="9" /><path d="M12 7v6" /><path d="M12 17h.01" />
+                  </svg>
                 </div>
-              <% else %>
-                <.input
+                <h2>This password reset link is invalid or has expired</h2>
+                <p>Reset links expire after a short window for security. Request a new one.</p>
+                <.link navigate={~p"/reset"} class="btn-primary">Request new reset link</.link>
+              </div>
+            <% else %>
+              <div class="form-grid">
+                <.v3_input
                   field={f[:password]}
                   type="password"
                   label="New password"
                   autocomplete="new-password"
+                  help="At least 8 characters."
                 />
-
-                <.input
+                <.v3_input
                   field={f[:password_confirmation]}
                   type="password"
                   label="Confirm new password"
                   autocomplete="new-password"
                 />
-
-                <div class="text-xs text-base-content/60 mt-1 mb-4">
-                  Password must be at least 8 characters long
-                </div>
-
-                <div class="mt-6">
-                  <.button phx-disable-with="Resetting..." class="w-full">
-                    Reset password
-                  </.button>
-                </div>
-              <% end %>
-            </.form>
-          <% else %>
-            <h2 class="font-display text-2xl tracking-tight mb-4">Invalid reset link</h2>
-
-            <div class="border border-error/30 p-4 bg-error/5 flex items-start gap-3">
-              <.icon name="hero-x-circle" class="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
-              <span class="text-sm">This password reset link is invalid or has expired.</span>
+              </div>
+              <div class="form-foot">
+                <button type="submit" class="btn-primary" phx-disable-with="Resetting...">
+                  Reset password
+                </button>
+              </div>
+            <% end %>
+          </.form>
+        <% else %>
+          <div class="auth-state warn">
+            <div class="icon-mark">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="9" /><path d="M12 7v6" /><path d="M12 17h.01" />
+              </svg>
             </div>
-
-            <.link
-              navigate="/reset"
-              class="block text-center text-primary hover:underline font-medium mt-6"
-            >
-              Request new reset link
-            </.link>
-          <% end %>
-        </div>
+            <h2>This password reset link is invalid or has expired</h2>
+            <p>The link may have expired or already been used. Request a fresh one.</p>
+            <.link navigate={~p"/reset"} class="btn-primary">Request new reset link</.link>
+          </div>
+        <% end %>
       </div>
-    </.app>
+    </div>
     """
   end
 

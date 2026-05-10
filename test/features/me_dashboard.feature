@@ -14,7 +14,7 @@ Feature: Me dashboard
 
   Scenario: Anonymous visitor is redirected from /me to sign-in
     When I visit "/me"
-    Then I should see "Sign In"
+    Then I should see "Sign in"
 
   Scenario: Signed-in user with no activity sees the My Huddlz tab by default with empty sections
     Given I am signed in as "host@example.com"
