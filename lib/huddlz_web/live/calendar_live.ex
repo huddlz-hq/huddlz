@@ -385,8 +385,8 @@ defmodule HuddlzWeb.CalendarLive do
     <%= if @sorted == [] do %>
       <p class="muted">Nothing on the calendar this month.</p>
     <% else %>
-      <div class="panel">
-        <div class="row-list">
+      <div class="panel" style="padding:0">
+        <div class="row-list" style="padding:6px 20px">
           <.link
             :for={entry <- @sorted}
             navigate={huddl_path(entry)}
