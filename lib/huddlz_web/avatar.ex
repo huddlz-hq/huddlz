@@ -8,9 +8,11 @@ defmodule HuddlzWeb.Avatar do
   Shared by the v3 sidebar (`.sb-user`) and the `/profile` `.big-avatar`.
   """
 
+  alias Huddlz.Storage.ProfilePictures
+
   @doc "Returns the user's current profile picture URL, or nil."
-  def picture_url(%{current_profile_picture_url: url}) when is_binary(url) and url != "",
-    do: url
+  def picture_url(%{current_profile_picture_url: path}) when is_binary(path) and path != "",
+    do: ProfilePictures.url(path)
 
   def picture_url(_), do: nil
 
