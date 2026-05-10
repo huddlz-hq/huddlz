@@ -93,13 +93,18 @@ defmodule LocationAutocompleteSteps do
 
   step "the location filter should be active with {string}", %{args: [text]} = context do
     session = context[:session] || context[:conn]
-    assert_has(session, "[data-testid='location-badge']", text: text)
+    # On /discover the active location is shown inside an `<input>` pill (its
+    # value attribute, not text content); legacy autocomplete renders the same
+    # text inside a `<span>`. Both carry `data-testid='location-display'`.
+    assert_has(session, "[data-testid='location-display'][value='#{text}']") ||
+      assert_has(session, "[data-testid='location-display']", text: text)
+
     context
   end
 
   step "the location filter should not be active", context do
     session = context[:session] || context[:conn]
-    refute_has(session, "[data-testid='location-badge']")
+    refute_has(session, "[data-testid='location-display']")
     context
   end
 

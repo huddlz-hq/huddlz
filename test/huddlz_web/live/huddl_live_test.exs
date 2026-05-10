@@ -31,11 +31,10 @@ defmodule HuddlzWeb.HuddlLiveTest do
       conn
       |> visit("/discover")
       |> assert_has("input[placeholder='Search huddlz']")
-      |> assert_has("button", text: "Search")
       |> assert_has("h3", text: public_huddl.title)
     end
 
-    test "renders huddl cards in 16:9 aspect ratio", %{
+    test "renders huddl cards with v3 cover", %{
       conn: conn,
       host: host,
       public_group: public_group
@@ -51,7 +50,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
 
       conn
       |> visit("/discover")
-      |> assert_has("[class*='aspect-video']")
+      |> assert_has(".grid .card .card-cover")
     end
 
     test "searches huddlz by title", %{conn: conn, host: host, public_group: public_group} do
@@ -278,17 +277,20 @@ defmodule HuddlzWeb.HuddlLiveTest do
       render_async(view)
 
       # Location is active and the suggestions dropdown is closed.
-      assert has_element?(view, "[data-testid='location-display']", "Austin, TX, USA")
+      assert view |> element("[data-testid='location-display']") |> render() =~ "Austin, TX, USA"
       refute has_element?(view, "[role='option']")
     end
 
-    test "discover URL with q + lat/lng renders both filters as active", %{
-      conn: conn
-    } do
-      conn
-      |> visit("/discover?q=elixir&location=Austin%2C+TX&lat=30.2672&lng=-97.7431&distance=25")
-      |> assert_has("span", text: "Search: elixir")
-      |> assert_has("span", text: "Austin, TX · 25 mi")
+    test "discover URL with q + lat/lng renders search and location as active", %{conn: conn} do
+      session =
+        conn
+        |> visit("/discover?q=elixir&location=Austin%2C+TX&lat=30.2672&lng=-97.7431&distance=25")
+
+      session
+      |> assert_has("h1", text: "Results for")
+      |> assert_has("input[name='q'][value='elixir']")
+      |> assert_has(".filter-distance input[type='range'][value='25']")
+      |> assert_has(".filter-distance-value", text: "25 mi")
     end
   end
 
@@ -303,7 +305,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
 
       conn
       |> visit("/discover?scope=groups")
-      |> assert_has("h1", text: "Discover groups")
+      |> assert_has("h1", text: "Browse groups")
       |> assert_has("h2", text: "Elixir Club")
     end
 
@@ -353,8 +355,8 @@ defmodule HuddlzWeb.HuddlLiveTest do
     test "scope chips render with Huddlz active by default", %{conn: conn} do
       conn
       |> visit("/discover")
-      |> assert_has("a", text: "Huddlz")
-      |> assert_has("a", text: "Groups")
+      |> assert_has(".scope-tab.is-active", text: "Huddlz")
+      |> assert_has(".scope-tab", text: "Groups")
     end
 
     test "scope=groups empty state when no public groups", %{conn: conn} do
@@ -427,7 +429,9 @@ defmodule HuddlzWeb.HuddlLiveTest do
       conn
       |> login(host)
       |> visit("/discover?yours=hosting&q=elixir&date_filter=this_week")
-      |> assert_has(~s|a[href="/discover?q=elixir&date_filter=this_week"]|, text: "All huddlz")
+      |> assert_has(~s|a[href="/discover?q=elixir&date_filter=this_week"]|,
+        text: "All huddlz"
+      )
     end
 
     test "anonymous users redirected from ?yours= scopes to sign-in", %{conn: conn} do

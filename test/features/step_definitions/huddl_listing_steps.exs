@@ -113,9 +113,7 @@ defmodule HuddlListingSteps do
   step "I should see a search form", context do
     session = context[:session] || context[:conn]
 
-    session
-    |> assert_has("input[placeholder='Search huddlz']")
-    |> assert_has("button", text: "Search")
+    assert_has(session, "input[placeholder='Search huddlz']")
 
     context
   end
