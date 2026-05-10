@@ -40,7 +40,7 @@
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
     </script>
   </head>
-  <body>
+  <body class={Map.get(assigns, :body_class, "")}>
     {@inner_content}
   </body>
 </html>
