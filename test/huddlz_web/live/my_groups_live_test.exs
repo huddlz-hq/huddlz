@@ -140,15 +140,6 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
     end
   end
 
-  describe "redirect from /me?tab=groups" do
-    test "/me?tab=groups redirects to /my-groups", %{conn: conn, member: member} do
-      conn
-      |> login(member)
-      |> visit("/me?tab=groups")
-      |> assert_path("/my-groups")
-    end
-  end
-
   describe "URL filtering" do
     test "unknown filter falls back to All", %{conn: conn, member: member} do
       conn

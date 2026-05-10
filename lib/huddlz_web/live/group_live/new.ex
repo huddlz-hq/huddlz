@@ -55,7 +55,7 @@ defmodule HuddlzWeb.GroupLive.New do
       {:ok,
        socket
        |> put_flash(:error, "You need to be logged in to create groups")
-       |> redirect(to: ~p"/groups")}
+       |> redirect(to: ~p"/discover?#{[scope: "groups"]}")}
     end
   end
 
@@ -375,7 +375,7 @@ defmodule HuddlzWeb.GroupLive.New do
         <div class="flex gap-4">
           <.button type="submit" phx-disable-with="Creating...">Create Group</.button>
           <.link
-            navigate={~p"/groups"}
+            navigate={~p"/discover?#{[scope: "groups"]}"}
             class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
           >
             Cancel

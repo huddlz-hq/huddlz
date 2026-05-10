@@ -25,7 +25,9 @@ defmodule HuddlzWeb.Live.ErrorHelpers do
 
       # In a with else clause:
       {:error, :not_found} ->
-        {:noreply, handle_error(socket, :not_found, resource_name: "Group", fallback_path: ~p"/groups")}
+        {:noreply, handle_error(socket, :not_found,
+          resource_name: "Group",
+          fallback_path: ~p"/discover?\#{[scope: "groups"]}")}
 
       {:error, :not_authorized} ->
         {:noreply, handle_error(socket, :not_authorized,

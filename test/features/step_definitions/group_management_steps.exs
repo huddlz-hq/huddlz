@@ -35,13 +35,6 @@ defmodule GroupManagementSteps do
     Map.put(context, :groups, [group | groups])
   end
 
-  # Navigation steps specific to groups
-  step "I visit the groups page", context do
-    session = context[:session] || context[:conn]
-    session = session |> visit("/groups")
-    Map.merge(context, %{session: session, conn: session})
-  end
-
   step "I visit the group page for {string}",
        %{args: [group_name]} = context do
     groups = Map.get(context, :groups, [])
@@ -111,14 +104,6 @@ defmodule GroupManagementSteps do
   step "I uncheck {string}", %{args: [label]} = context do
     session = context[:session] || context[:conn]
     session = uncheck(session, label)
-    Map.merge(context, %{session: session, conn: session})
-  end
-
-  # Click actions specific to groups
-  step "I click on the group {string}", %{args: [group_name]} = context do
-    # The entire group card is a clickable link
-    session = context[:session] || context[:conn]
-    session = click_link(session, group_name)
     Map.merge(context, %{session: session, conn: session})
   end
 

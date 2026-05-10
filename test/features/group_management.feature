@@ -11,28 +11,9 @@ Feature: Group Management
       | verified@example.com     | verified | Verified User|
       | regular@example.com      | regular  | Regular User |
 
-  Scenario: Viewing groups page as a visitor
-    When I visit the groups page
-    Then I should see "Groups"
-    And I should see "No groups found"
-    And I should not see "New Group"
-
-  Scenario: Viewing groups page as a regular user
-    Given I am signed in as "regular@example.com"
-    When I visit the groups page
-    Then I should see "Groups"
-    And I should see "New Group"
-
-  Scenario: Viewing groups page as a verified user
-    Given I am signed in as "verified@example.com"
-    When I visit the groups page
-    Then I should see "Groups"
-    And I should see "New Group"
-
   Scenario: Creating a public group as a verified user
     Given I am signed in as "verified@example.com"
-    When I visit the groups page
-    And I click "New Group"
+    When I visit "/groups/new"
     Then I should see "Create a New Group"
     When I fill in the following:
       | Group Name  | Tech Enthusiasts           |
@@ -46,8 +27,7 @@ Feature: Group Management
 
   Scenario: Creating a private group as an admin
     Given I am signed in as "admin@example.com"
-    When I visit the groups page
-    And I click "New Group"
+    When I visit "/groups/new"
     When I fill in the following:
       | Group Name  | Secret Society |
       | Description | Private group  |
@@ -65,16 +45,14 @@ Feature: Group Management
 
   Scenario: Viewing a public group as a visitor
     Given a public group "Book Club" exists with owner "verified@example.com"
-    When I visit the groups page
-    Then I should see "Book Club"
-    When I click on the group "Book Club"
+    When I visit the group page for "Book Club"
     Then I should see "Book Club"
 
   Scenario: Cannot view private group as non-member
     Given a private group "VIP Club" exists with owner "admin@example.com"
     And I am signed in as "regular@example.com"
     When I visit the group page for "VIP Club"
-    Then I should be redirected to "/groups"
+    Then I should be redirected to "/discover?scope=groups"
     And I should see "Group not found"
 
   Scenario: Owner can edit group details
@@ -99,7 +77,6 @@ Feature: Group Management
 
   Scenario: Group name is required
     Given I am signed in as "verified@example.com"
-    When I visit the groups page
-    And I click "New Group"
+    When I visit "/groups/new"
     And I click "Create Group"
     Then I should see an error on the "Group Name" field

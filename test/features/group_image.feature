@@ -162,5 +162,5 @@ Feature: Group Image Management
     When I visit "/groups/new"
     And I upload "test/fixtures/test_image.jpg" to "Group Image"
     Then I should see "Image uploaded"
-    When I visit "/groups"
+    When I visit "/my-groups"
     Then there should be an orphaned pending image

@@ -46,7 +46,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
          handle_error(socket, :not_authorized,
            resource_name: "huddl",
            action: "access",
-           fallback_path: ~p"/groups"
+           fallback_path: ~p"/discover?#{[scope: "groups"]}"
          )}
     end
   end

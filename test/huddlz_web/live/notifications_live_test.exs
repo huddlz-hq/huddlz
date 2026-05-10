@@ -160,22 +160,6 @@ defmodule HuddlzWeb.NotificationsLiveTest do
     end
   end
 
-  describe "redirects from /me" do
-    test "/me?tab=updates redirects to /notifications", %{conn: conn, user: user} do
-      conn
-      |> login(user)
-      |> visit("/me?tab=updates")
-      |> assert_path("/notifications")
-    end
-
-    test "/me?tab=invites redirects to /notifications?filter=invites", %{conn: conn, user: user} do
-      conn
-      |> login(user)
-      |> visit("/me?tab=invites")
-      |> assert_path("/notifications", query_params: %{"filter" => "invites"})
-    end
-  end
-
   describe "URL filtering" do
     test "unknown filter falls back to Inbox", %{conn: conn, user: user} do
       conn
