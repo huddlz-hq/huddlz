@@ -61,8 +61,9 @@ defmodule SignInAndSignOutSteps do
   step "the user should be signed in", context do
     session = context[:session] || context[:conn]
 
-    # A signed-in session has a "Sign out" link reachable from the chrome.
-    assert_has(session, "a", text: "Sign out")
+    # Chrome-agnostic post-sign-in check. The v3 topbar shows Sign in / Sign up
+    # for anonymous users only; once signed in those buttons are gone.
+    refute_has(session, "a", text: "Sign in")
 
     {:ok, context}
   end
@@ -71,7 +72,7 @@ defmodule SignInAndSignOutSteps do
   step "the user should not be signed in", context do
     session = context[:session] || context[:conn]
 
-    # No "Sign out" link means we're not signed in.
+    # No "Sign out" link in any chrome (legacy or v3) means we're not signed in.
     refute_has(session, "a", text: "Sign out")
 
     {:ok, context}

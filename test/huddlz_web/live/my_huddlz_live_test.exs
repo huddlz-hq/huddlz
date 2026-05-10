@@ -192,12 +192,32 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
     end
   end
 
-  describe "redirect from /me?tab=huddlz" do
+  describe "legacy /me redirects" do
+    test "bare /me redirects to /my-huddlz", %{conn: conn, attendee: attendee} do
+      conn
+      |> login(attendee)
+      |> visit("/me")
+      |> assert_path("/my-huddlz")
+    end
+
     test "/me?tab=huddlz redirects to /my-huddlz", %{conn: conn, attendee: attendee} do
       conn
       |> login(attendee)
       |> visit("/me?tab=huddlz")
       |> assert_path("/my-huddlz")
+    end
+
+    test "/me?tab=garbage falls back to /my-huddlz", %{conn: conn, attendee: attendee} do
+      conn
+      |> login(attendee)
+      |> visit("/me?tab=garbage")
+      |> assert_path("/my-huddlz")
+    end
+
+    test "anonymous visit to /me lands at /sign-in", %{conn: conn} do
+      conn
+      |> visit("/me")
+      |> assert_path("/sign-in")
     end
   end
 

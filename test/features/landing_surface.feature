@@ -28,8 +28,8 @@ Feature: Landing surface
     Then I should see "Sign in"
     And I should see "Sign up"
 
-  Scenario: Authenticated user is redirected from / to /me
+  Scenario: Authenticated user is redirected from / to /my-huddlz
     Given I am signed in as "regular@example.com"
     When I visit "/"
-    Then I should see "My huddlz."
-    And I should see "// Signed in"
+    Then I should see "My huddlz"
+    And I should see "Upcoming"

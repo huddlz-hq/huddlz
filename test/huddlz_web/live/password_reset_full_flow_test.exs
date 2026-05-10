@@ -196,8 +196,8 @@ defmodule HuddlzWeb.PasswordResetFullFlowTest do
           |> click_button("Sign in")
         end)
 
-      # Should be signed in with the new password
-      assert_has(session, "a", text: "Sign out")
+      # Should be signed in with the new password — anonymous Sign in link is gone.
+      refute_has(session, "a", text: "Sign in")
     end
 
     test "invalid reset link shows error immediately", %{conn: conn} do
