@@ -29,6 +29,38 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> assert_has(".sb-item.active", text: "Profile")
     end
 
+    test "sidebar shows initials when the user has no profile picture", %{
+      conn: conn,
+      user: user
+    } do
+      # Test User → "TU"
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> assert_has("aside.sidebar .sb-user .avatar", text: "TU")
+      |> refute_has("aside.sidebar .sb-user img.avatar")
+    end
+
+    test "sidebar shows the uploaded image when the user has a profile picture",
+         %{conn: conn, user: user} do
+      Huddlz.Accounts.create_profile_picture!(
+        %{
+          filename: "avatar.jpg",
+          content_type: "image/jpeg",
+          size_bytes: 1000,
+          storage_path: "/uploads/profile_pictures/#{user.id}/avatar.jpg",
+          thumbnail_path: "/uploads/profile_pictures/#{user.id}/avatar_thumb.jpg",
+          user_id: user.id
+        },
+        actor: user
+      )
+
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> assert_has("aside.sidebar .sb-user img.avatar[src*='_thumb.jpg']")
+    end
+
     test "displays user profile when authenticated", %{conn: conn, user: user} do
       conn
       |> login(user)
