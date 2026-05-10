@@ -1,0 +1,178 @@
+<.clickthrough_shell active={@active} query={@query} signed_in={@signed_in}>
+  <div class="page-head">
+    <div>
+      <h1>My calendar</h1>
+      <p>
+        Huddlz you're hosting, attending, or watching from the waitlist — laid out across the month.
+      </p>
+    </div>
+    <div class="actions">
+      <button class="btn-secondary">Subscribe</button>
+    </div>
+  </div>
+
+  <div class="cal-toolbar">
+    <div class="cal-nav">
+      <button class="cal-nav-btn" aria-label="Previous month">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="m15 18-6-6 6-6" />
+        </svg>
+      </button>
+      <button class="cal-nav-today">Today</button>
+      <button class="cal-nav-btn" aria-label="Next month">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="m9 6 6 6-6 6" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="cal-month-title">
+      <span class="cal-month-name">May 2026</span>
+      <span class="cal-month-count">(8 huddlz)</span>
+    </div>
+
+    <div class="cal-view-tabs">
+      <button class="scope-tab is-active">Month</button>
+      <button class="scope-tab">Agenda</button>
+    </div>
+  </div>
+
+  <div class="panel" style="padding:0">
+    <div class="cal-grid">
+      <div class="cal-day-name">Sun</div>
+      <div class="cal-day-name">Mon</div>
+      <div class="cal-day-name">Tue</div>
+      <div class="cal-day-name">Wed</div>
+      <div class="cal-day-name">Thu</div>
+      <div class="cal-day-name">Fri</div>
+      <div class="cal-day-name">Sat</div>
+    </div>
+
+    <div class="cal-grid">
+      <%!-- Week 1: Apr 26 – May 2 --%>
+      <div class="cal-cell out-of-month"><span class="cal-day-num">26</span></div>
+      <div class="cal-cell out-of-month"><span class="cal-day-num">27</span></div>
+      <div class="cal-cell out-of-month"><span class="cal-day-num">28</span></div>
+      <div class="cal-cell out-of-month"><span class="cal-day-num">29</span></div>
+      <div class="cal-cell out-of-month"><span class="cal-day-num">30</span></div>
+      <div class="cal-cell"><span class="cal-day-num">1</span></div>
+      <div class="cal-cell"><span class="cal-day-num">2</span></div>
+
+      <%!-- Week 2: May 3 – May 9 --%>
+      <div class="cal-cell"><span class="cal-day-num">3</span></div>
+      <div class="cal-cell"><span class="cal-day-num">4</span></div>
+      <div class="cal-cell"><span class="cal-day-num">5</span></div>
+      <div class="cal-cell"><span class="cal-day-num">6</span></div>
+      <div class="cal-cell"><span class="cal-day-num">7</span></div>
+      <div class="cal-cell">
+        <span class="cal-day-num">8</span>
+        <a class="cal-pill past" href="/dev/design/clickthrough/huddl">
+          6:30 PM · Phoenix 1.8 walkthrough
+        </a>
+      </div>
+      <div class="cal-cell"><span class="cal-day-num">9</span></div>
+
+      <%!-- Week 3: May 10 – May 16 (today is May 9 — show May 12 as today for variety) --%>
+      <div class="cal-cell"><span class="cal-day-num">10</span></div>
+      <div class="cal-cell"><span class="cal-day-num">11</span></div>
+      <div class="cal-cell">
+        <span class="cal-day-num is-today">12</span>
+      </div>
+      <div class="cal-cell"><span class="cal-day-num">13</span></div>
+      <div class="cal-cell"><span class="cal-day-num">14</span></div>
+      <div class="cal-cell"><span class="cal-day-num">15</span></div>
+      <div class="cal-cell"><span class="cal-day-num">16</span></div>
+
+      <%!-- Week 4: May 17 – May 23 --%>
+      <div class="cal-cell"><span class="cal-day-num">17</span></div>
+      <div class="cal-cell"><span class="cal-day-num">18</span></div>
+      <div class="cal-cell">
+        <span class="cal-day-num">19</span>
+      </div>
+      <div class="cal-cell"><span class="cal-day-num">20</span></div>
+      <div class="cal-cell">
+        <span class="cal-day-num">21</span>
+      </div>
+      <div class="cal-cell">
+        <span class="cal-day-num">22</span>
+        <a class="cal-pill" href="/dev/design/clickthrough/huddl">
+          6:00 PM · Ash Framework workshop
+        </a>
+      </div>
+      <div class="cal-cell">
+        <span class="cal-day-num">23</span>
+      </div>
+
+      <%!-- Week 5: May 24 – May 30 --%>
+      <div class="cal-cell"><span class="cal-day-num">24</span></div>
+      <div class="cal-cell"><span class="cal-day-num">25</span></div>
+      <div class="cal-cell"><span class="cal-day-num">26</span></div>
+      <div class="cal-cell">
+        <span class="cal-day-num">27</span>
+      </div>
+      <div class="cal-cell">
+        <span class="cal-day-num">28</span>
+        <a class="cal-pill" href="/dev/design/clickthrough/huddl">6:30 PM · LiveView deep dive</a>
+      </div>
+      <div class="cal-cell"><span class="cal-day-num">29</span></div>
+      <div class="cal-cell"><span class="cal-day-num">30</span></div>
+
+      <%!-- Week 6: May 31 – Jun 6 --%>
+      <div class="cal-cell">
+        <span class="cal-day-num">31</span>
+        <a class="cal-pill tentative" href="/dev/design/clickthrough/huddl">
+          7:30 AM · Saturday 5K + coffee
+        </a>
+      </div>
+      <div class="cal-cell out-of-month">
+        <span class="cal-day-num">1</span>
+      </div>
+      <div class="cal-cell out-of-month">
+        <span class="cal-day-num">2</span>
+      </div>
+      <div class="cal-cell out-of-month">
+        <span class="cal-day-num">3</span>
+      </div>
+      <div class="cal-cell out-of-month">
+        <span class="cal-day-num">4</span>
+        <a class="cal-pill out-of-month-pill" href="/dev/design/clickthrough/huddl">
+          7:00 PM · Phoenix Elixir social
+        </a>
+      </div>
+      <div class="cal-cell out-of-month"><span class="cal-day-num">5</span></div>
+      <div class="cal-cell out-of-month">
+        <span class="cal-day-num">6</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cal-legend">
+    <span class="cal-legend-item">
+      <span class="cal-legend-swatch" style="background:var(--cyan)"></span> Going
+    </span>
+    <span class="cal-legend-item">
+      <span class="cal-legend-swatch" style="background:var(--warn)"></span> Tentative / waitlist
+    </span>
+    <span class="cal-legend-item">
+      <span class="cal-legend-swatch" style="background:var(--muted)"></span> Past
+    </span>
+  </div>
+</.clickthrough_shell>

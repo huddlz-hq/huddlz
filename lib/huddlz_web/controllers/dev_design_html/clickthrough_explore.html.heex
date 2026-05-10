@@ -1,0 +1,218 @@
+<.clickthrough_shell active={@active} query={@query} signed_in={@signed_in}>
+  <div class="page-head">
+    <div>
+      <h1>
+        <%= if @query == "" do %>
+          Browse huddlz
+        <% else %>
+          Results for &ldquo;{@query}&rdquo;
+        <% end %>
+      </h1>
+      <p>
+        <%= if @query == "" do %>
+          Find a huddl worth showing up to. Tweak the filters to match what you're after.
+        <% else %>
+          Showing huddlz that match your search. Refine with the filters below.
+        <% end %>
+      </p>
+    </div>
+  </div>
+
+  <div class="scope-tabs">
+    <button class="scope-tab is-active">Huddlz</button>
+    <button class="scope-tab">Groups</button>
+  </div>
+
+  <form class="filter-bar">
+    <div class="filter-group">
+      <label class="filter-label">Within</label>
+      <div class="filter-location">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M12 22s7-7.6 7-13a7 7 0 0 0-14 0c0 5.4 7 13 7 13z" /><circle
+            cx="12"
+            cy="9"
+            r="2.5"
+          />
+        </svg>
+        <input
+          class="filter-location-input"
+          type="text"
+          value="Phoenix, AZ"
+          placeholder="Anywhere"
+        />
+        <button type="button" class="filter-location-clear" aria-label="Clear location">×</button>
+      </div>
+      <div class="filter-distance">
+        <input id="distance" type="range" min="5" max="100" step="5" value="25" />
+        <output for="distance" class="filter-distance-value">25 mi</output>
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <span class="filter-label">Type</span>
+      <div class="chip-group">
+        <button type="button" class="chip is-active">In person</button>
+        <button type="button" class="chip">Virtual</button>
+        <button type="button" class="chip">Hybrid</button>
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <span class="filter-label">When</span>
+      <div class="chip-group">
+        <button type="button" class="chip is-active">All upcoming</button>
+        <button type="button" class="chip">This week</button>
+        <button type="button" class="chip">This month</button>
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <span class="filter-label">Sort</span>
+      <div class="chip-group">
+        <button type="button" class="chip is-active">Soonest</button>
+        <button type="button" class="chip">Newest</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="muted" style="margin-bottom:14px; font-size:12px">
+    124 huddlz · within 25 mi of Phoenix, AZ
+  </div>
+
+  <div class="grid">
+    <a class="card" href="/dev/design/clickthrough/huddl">
+      <div class="card-cover gradient-1">
+        <img class="card-cover-img" src="/dev/design/images/product-night.svg" alt="" />
+        <div class="date-stamp"><span class="m">MAY</span><span class="d">22</span></div>
+        <span class="card-tag hybrid">Hybrid</span>
+      </div>
+      <div class="card-body">
+        <span class="card-group">Phoenix Elixir · Workshop</span>
+        <div class="card-title">Ash Framework workshop</div>
+        <div class="card-meta">
+          <span>Thu · 6:00 PM</span><span class="dot"></span><span>2.4 mi</span><span class="dot"></span><span>28 / 40 RSVPs</span>
+        </div>
+      </div>
+    </a>
+    <a class="card" href="/dev/design/clickthrough/huddl">
+      <div class="card-cover gradient-4">
+        <img class="card-cover-img" src="/dev/design/images/ai-meetup.svg" alt="" />
+        <div class="date-stamp"><span class="m">MAY</span><span class="d">28</span></div>
+        <span class="card-tag hybrid">Hybrid</span>
+      </div>
+      <div class="card-body">
+        <span class="card-group">Phoenix Elixir · Talk</span>
+        <div class="card-title">LiveView deep dive · streams &amp; async</div>
+        <div class="card-meta">
+          <span>Wed · 6:30 PM</span><span class="dot"></span><span>2.4 mi</span><span class="dot"></span><span>34 / 60 RSVPs</span>
+        </div>
+      </div>
+    </a>
+    <a class="card" href="/dev/design/clickthrough/huddl">
+      <div class="card-cover gradient-2">
+        <img class="card-cover-img" src="/dev/design/images/boat-drinks.svg" alt="" />
+        <div class="date-stamp"><span class="m">JUN</span><span class="d">04</span></div>
+        <span class="card-tag in-person">In person</span>
+      </div>
+      <div class="card-body">
+        <span class="card-group">Sonoran AI Collective · Social</span>
+        <div class="card-title">AI builders happy hour</div>
+        <div class="card-meta">
+          <span>Tue · 7:00 PM</span><span class="dot"></span><span>5.1 mi</span><span class="dot"></span><span>52 RSVPs</span>
+        </div>
+      </div>
+    </a>
+    <a class="card" href="/dev/design/clickthrough/huddl">
+      <div class="card-cover gradient-5">
+        <img class="card-cover-img" src="/dev/design/images/founder-coffee.svg" alt="" />
+        <div class="date-stamp"><span class="m">JUN</span><span class="d">07</span></div>
+        <span class="card-tag online">Online</span>
+      </div>
+      <div class="card-body">
+        <span class="card-group">Trail Coffee Crew · Run</span>
+        <div class="card-title">Saturday 5K + coffee</div>
+        <div class="card-meta">
+          <span>Sat · 7:30 AM</span><span class="dot"></span><span>0.8 mi</span><span class="dot"></span><span>16 RSVPs</span>
+        </div>
+      </div>
+    </a>
+    <a class="card" href="/dev/design/clickthrough/huddl">
+      <div class="card-cover gradient-3">
+        <img class="card-cover-img" src="/dev/design/images/founder-coffee.svg" alt="" />
+        <div class="date-stamp"><span class="m">JUN</span><span class="d">11</span></div>
+        <span class="card-tag hybrid">Hybrid</span>
+      </div>
+      <div class="card-body">
+        <span class="card-group">Phoenix Elixir · Workshop</span>
+        <div class="card-title">Property-based testing intro</div>
+        <div class="card-meta">
+          <span>Wed · 6:30 PM</span><span class="dot"></span><span>2.4 mi</span><span class="dot"></span><span>12 RSVPs</span>
+        </div>
+      </div>
+    </a>
+    <a class="card" href="/dev/design/clickthrough/huddl">
+      <div class="card-cover gradient-6">
+        <img class="card-cover-img" src="/dev/design/images/ai-meetup.svg" alt="" />
+        <div class="date-stamp"><span class="m">JUN</span><span class="d">18</span></div>
+        <span class="card-tag in-person">In person</span>
+      </div>
+      <div class="card-body">
+        <span class="card-group">Sonoran AI Collective · Talk</span>
+        <div class="card-title">Agents in production: lessons learned</div>
+        <div class="card-meta">
+          <span>Tue · 6:00 PM</span><span class="dot"></span><span>5.1 mi</span><span class="dot"></span><span>78 RSVPs</span>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <nav class="pagination" aria-label="Pagination">
+    <button class="page-nav" disabled aria-label="Previous page">
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="m15 18-6-6 6-6" />
+      </svg>
+      <span>Prev</span>
+    </button>
+    <ol class="page-numbers">
+      <li><button class="page-num is-active" aria-current="page">1</button></li>
+      <li><button class="page-num">2</button></li>
+      <li><button class="page-num">3</button></li>
+      <li><button class="page-num">4</button></li>
+      <li class="page-ellipsis" aria-hidden="true">…</li>
+      <li><button class="page-num">21</button></li>
+    </ol>
+    <button class="page-nav" aria-label="Next page">
+      <span>Next</span>
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="m9 6 6 6-6 6" />
+      </svg>
+    </button>
+  </nav>
+</.clickthrough_shell>

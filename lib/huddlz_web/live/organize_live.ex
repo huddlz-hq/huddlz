@@ -2,9 +2,6 @@ defmodule HuddlzWeb.OrganizeLive do
   @moduledoc """
   Organizer workspace shell. Sidebar tabs (Overview, Groups, Huddlz,
   Calendar, Attendees, Members) live at /organize and /organize/<tab>.
-  Drafts is deferred until both Huddl and Group gain a real draft state
-  (see iteration-backlog.md §3.7); Settings is deferred until the
-  defaults-model spike lands (see iteration-backlog.md §3.9).
   """
   use HuddlzWeb, :live_view
 

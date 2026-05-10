@@ -1,0 +1,111 @@
+<.clickthrough_shell active={@active} query={@query} signed_in={@signed_in}>
+  <div class="page-head">
+    <div>
+      <h1>Profile</h1>
+      <p>How you show up in huddlz — your name, photo, and how to reach you.</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Profile picture</h2>
+    </div>
+    <div class="profile-photo-row">
+      <img class="big-avatar" src="/dev/design/images/avatar-mw.svg" alt="Micah Woods" />
+      <div class="profile-photo-actions">
+        <button class="btn-secondary">Upload a photo…</button>
+        <button class="btn-secondary muted-btn">Remove</button>
+        <div class="muted" style="font-size:12px; margin-top:6px">
+          JPG, PNG, or WebP · 5 MB max
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Account information</h2>
+    </div>
+    <div class="form-grid">
+      <div class="form-row">
+        <label class="form-label">Email</label>
+        <div class="form-control read-only">
+          <span>micah@example.com</span>
+          <span class="pill cyan">Verified</span>
+        </div>
+        <div class="form-help">Your email can't be changed from this page.</div>
+      </div>
+      <div class="form-row">
+        <label class="form-label" for="display-name">Display name</label>
+        <input id="display-name" class="form-input" type="text" value="Micah Woods" />
+        <div class="form-help">Names aren't unique on huddlz — pick anything you like.</div>
+      </div>
+    </div>
+    <div class="form-foot">
+      <button class="btn-primary">Save changes</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Home location</h2>
+        <div class="panel-sub">
+          Used to pre-fill the distance filter when you search huddlz nearby.
+        </div>
+      </div>
+    </div>
+    <div class="location-display">
+      <div class="location-current">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M12 22s7-7.6 7-13a7 7 0 0 0-14 0c0 5.4 7 13 7 13z" /><circle
+            cx="12"
+            cy="9"
+            r="2.5"
+          />
+        </svg>
+        <span>Phoenix, AZ, USA</span>
+      </div>
+      <div class="location-actions">
+        <button class="btn-secondary">Change location…</button>
+        <button class="btn-secondary muted-btn">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Password</h2>
+        <div class="panel-sub">Last changed 4 months ago.</div>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-row">
+        <label class="form-label" for="current-password">Current password</label>
+        <input id="current-password" class="form-input" type="password" value="" />
+      </div>
+      <div class="form-row">
+        <label class="form-label" for="new-password">New password</label>
+        <input id="new-password" class="form-input" type="password" value="" />
+        <div class="form-help">At least 8 characters.</div>
+      </div>
+      <div class="form-row">
+        <label class="form-label" for="confirm-password">Confirm new password</label>
+        <input id="confirm-password" class="form-input" type="password" value="" />
+      </div>
+    </div>
+    <div class="form-foot">
+      <button class="btn-primary">Update password</button>
+    </div>
+  </div>
+</.clickthrough_shell>

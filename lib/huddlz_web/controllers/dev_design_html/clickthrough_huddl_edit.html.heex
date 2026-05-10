@@ -1,0 +1,217 @@
+<.clickthrough_shell active={@active} query={@query} signed_in={@signed_in}>
+  <div class="page-head">
+    <div>
+      <h1>Edit huddl</h1>
+      <p>
+        Updating an RSVP'd huddl notifies attendees if you change the time, location, capacity, or privacy.
+      </p>
+    </div>
+  </div>
+
+  <form>
+    <div data-tw-container="Edit scope" class="panel">
+      <div data-tw-variant="Single instance" class="edit-scope-row">
+        <span class="eyebrow" style="color:var(--cyan)">Editing one date</span>
+        <p>
+          This huddl is part of a recurring series. Your changes will only affect <strong>Thu, May 22</strong>.
+        </p>
+        <div class="chip-group">
+          <button type="button" class="chip is-active">Just this huddl</button>
+          <button type="button" class="chip">Whole series</button>
+        </div>
+      </div>
+      <div data-tw-variant="Whole series" class="edit-scope-row" hidden>
+        <span class="eyebrow" style="color:var(--warn)">Editing every date</span>
+        <p>
+          Your changes will apply to all <strong>upcoming</strong>
+          dates in this series. Past instances are unchanged.
+        </p>
+        <div class="chip-group">
+          <button type="button" class="chip">Just this huddl</button>
+          <button type="button" class="chip is-active">Whole series</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>The basics</h2>
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label class="form-label" for="he-title">Title</label>
+          <input id="he-title" class="form-input" type="text" value="Ash Framework workshop" />
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="he-description">Description</label>
+          <textarea id="he-description" class="form-textarea">Hands-on workshop building real features with Ash Framework. You'll model resources, write actions, and ship a working LiveView CRUD in 90 minutes.</textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Format</h2>
+      </div>
+      <div class="event-type-grid">
+        <label class="event-type-option">
+          <input type="radio" name="event_type" value="in_person" />
+          <div class="event-type-icon">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" /><circle
+                cx="12"
+                cy="10"
+                r="3"
+              />
+            </svg>
+          </div>
+          <div>
+            <div class="event-type-title">In person</div>
+            <div class="event-type-desc">Single physical location.</div>
+          </div>
+        </label>
+        <label class="event-type-option">
+          <input type="radio" name="event_type" value="virtual" />
+          <div class="event-type-icon">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3" y="6" width="13" height="12" rx="2" /><path d="m16 10 5-3v10l-5-3" />
+            </svg>
+          </div>
+          <div>
+            <div class="event-type-title">Virtual</div>
+            <div class="event-type-desc">Online only — no physical address.</div>
+          </div>
+        </label>
+        <label class="event-type-option is-active">
+          <input type="radio" name="event_type" value="hybrid" checked />
+          <div class="event-type-icon">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" /><circle
+                cx="12"
+                cy="10"
+                r="3"
+              /><path d="m22 22-2-2" />
+            </svg>
+          </div>
+          <div>
+            <div class="event-type-title">Hybrid</div>
+            <div class="event-type-desc">In-person plus an online stream.</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>When</h2>
+      </div>
+      <div class="form-grid">
+        <div class="form-row form-row-inline">
+          <div style="flex:1 1 200px">
+            <label class="form-label" for="he-date">Date</label>
+            <input id="he-date" class="form-input" type="date" value="2026-05-22" />
+          </div>
+          <div style="flex:1 1 140px">
+            <label class="form-label" for="he-time">Start time</label>
+            <input id="he-time" class="form-input" type="time" value="18:00" />
+          </div>
+          <div style="flex:1 1 140px">
+            <label class="form-label" for="he-duration">Duration (min)</label>
+            <input
+              id="he-duration"
+              class="form-input"
+              type="number"
+              min="15"
+              max="1440"
+              step="15"
+              value="90"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Where</h2>
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label class="form-label" for="he-location">Physical location</label>
+          <select id="he-location" class="form-select">
+            <option selected>Heatsync Labs · 108 W Main St, Mesa</option>
+            <option>Galvanize Phoenix · 515 E Grant St</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="he-virtual">Online link</label>
+          <input
+            id="he-virtual"
+            class="form-input"
+            type="url"
+            value="https://meet.huddlz.app/ash-may22"
+          />
+          <div class="form-help">Only RSVP'd attendees see this link.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Capacity &amp; visibility</h2>
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label class="form-label" for="he-cap">Max attendees</label>
+          <input id="he-cap" class="form-input" type="number" min="1" value="40" />
+        </div>
+        <div class="form-row">
+          <label class="toggle">
+            <input type="checkbox" id="he-private" />
+            <span class="track"></span>
+            <span
+              class="toggle-text"
+              style="font-weight:700; text-transform:none; letter-spacing:0.02em; font-family:var(--font); font-size:13px; color:var(--soft)"
+            >
+              Members only
+            </span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-foot" style="border:0; margin:0; flex-wrap:wrap; gap:10px">
+      <button type="submit" class="btn-primary">Save changes</button>
+      <a class="btn-secondary" href="/dev/design/clickthrough/huddl">Cancel</a>
+      <span style="flex:1 1 auto"></span>
+      <button type="button" class="btn-secondary muted-btn">Cancel huddl</button>
+    </div>
+  </form>
+</.clickthrough_shell>

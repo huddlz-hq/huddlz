@@ -1,0 +1,37 @@
+<.clickthrough_shell active={@active} query={@query} signed_in={@signed_in}>
+  <div class="auth-shell">
+    <header class="auth-topbar">
+      <a href="/dev/design/clickthrough/landing">
+        <div class="brand-glyph">h</div>
+        <div class="brand-text">huddlz</div>
+      </a>
+    </header>
+
+    <div class="auth-frame">
+      <h1>Reset your password</h1>
+      <p class="lede">Enter your email and we'll send a link to set a new password.</p>
+
+      <form class="auth-card">
+        <div class="form-grid">
+          <div class="form-row">
+            <label class="form-label" for="reset-email">Email</label>
+            <input
+              id="reset-email"
+              class="form-input"
+              type="email"
+              name="email"
+              autocomplete="email"
+            />
+          </div>
+        </div>
+        <div class="form-foot">
+          <button type="submit" class="btn-primary">Send reset instructions</button>
+        </div>
+      </form>
+
+      <div class="auth-aside">
+        <a href="/dev/design/clickthrough/sign-in">Back to sign in</a>
+      </div>
+    </div>
+  </div>
+</.clickthrough_shell>

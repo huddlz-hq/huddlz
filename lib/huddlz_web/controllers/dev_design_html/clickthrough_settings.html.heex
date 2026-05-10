@@ -1,0 +1,280 @@
+<.clickthrough_shell active={@active} query={@query} signed_in={@signed_in}>
+  <div class="page-head">
+    <div>
+      <h1>Settings</h1>
+      <p>Notification preferences and other knobs. We'll add more here as huddlz grows.</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Transactional</h2>
+        <div class="panel-sub">
+          Critical account and event updates. Always on — these can't be disabled.
+        </div>
+      </div>
+    </div>
+    <div class="settings-list row-list pref-list">
+      <div class="row">
+        <div>
+          <div class="row-title">Password changed</div>
+          <div class="row-desc">Confirmation when your password is updated.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked disabled />
+          <span class="track"></span>
+          <span class="toggle-text">On</span>
+        </label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-title">Email address changed</div>
+          <div class="row-desc">Confirmation when your email is updated.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked disabled />
+          <span class="track"></span>
+          <span class="toggle-text">On</span>
+        </label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-title">Removed from a group</div>
+          <div class="row-desc">When a group organizer removes you.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked disabled />
+          <span class="track"></span>
+          <span class="toggle-text">On</span>
+        </label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-title">Group archived</div>
+          <div class="row-desc">When a group you belong to is archived.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked disabled />
+          <span class="track"></span>
+          <span class="toggle-text">On</span>
+        </label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-title">Group ownership transferred</div>
+          <div class="row-desc">When a group you organize changes hands.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked disabled />
+          <span class="track"></span>
+          <span class="toggle-text">On</span>
+        </label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-title">Huddl cancelled</div>
+          <div class="row-desc">When a huddl you've RSVP'd to is cancelled.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked disabled />
+          <span class="track"></span>
+          <span class="toggle-text">On</span>
+        </label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-title">Promoted from waitlist</div>
+          <div class="row-desc">
+            When a spot opens up and you move from waitlist to attending.
+          </div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked disabled />
+          <span class="track"></span>
+          <span class="toggle-text">On</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Activity</h2>
+        <div class="panel-sub">Things that happen in groups and huddlz you're part of.</div>
+      </div>
+    </div>
+    <div class="settings-list row-list pref-list">
+      <div class="row">
+        <div>
+          <div class="row-title">Account role changed</div>
+          <div class="row-desc">When your account role is updated by an admin.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked />
+          <span class="track"></span>
+          <span class="toggle-text">On</span>
+        </label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-title">Member joined a group I organize</div>
+          <div class="row-desc">A heads-up when someone new joins.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked />
+          <span class="track"></span>
+          <span class="toggle-text">On</span>
+        </label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-title">I was added to a group</div>
+          <div class="row-desc">When an organizer adds you directly.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked />
+          <span class="track"></span>
+          <span class="toggle-text">On</span>
+        </label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-title">My role in a group changed</div>
+          <div class="row-desc">When you're promoted to organizer or moved back to member.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked />
+          <span class="track"></span>
+          <span class="toggle-text">On</span>
+        </label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-title">New huddl in a group I'm in</div>
+          <div class="row-desc">Whenever an organizer schedules something new.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked />
+          <span class="track"></span>
+          <span class="toggle-text">On</span>
+        </label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-title">Huddl I'm RSVP'd to was updated</div>
+          <div class="row-desc">Time, location, or capacity changes.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked />
+          <span class="track"></span>
+          <span class="toggle-text">On</span>
+        </label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-title">Recurring huddl series I'm in was updated</div>
+          <div class="row-desc">When the entire series — not just one date — changes.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked />
+          <span class="track"></span>
+          <span class="toggle-text">On</span>
+        </label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-title">24-hour reminder</div>
+          <div class="row-desc">Day-before nudge for huddlz you've RSVP'd to.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked />
+          <span class="track"></span>
+          <span class="toggle-text">On</span>
+        </label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-title">1-hour reminder</div>
+          <div class="row-desc">Final ping right before a huddl starts.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked />
+          <span class="track"></span>
+          <span class="toggle-text">On</span>
+        </label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-title">RSVPs to huddlz I organize</div>
+          <div class="row-desc">When someone says they're coming.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked />
+          <span class="track"></span>
+          <span class="toggle-text">On</span>
+        </label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-title">RSVP cancellations</div>
+          <div class="row-desc">When someone cancels their RSVP to a huddl you organize.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked />
+          <span class="track"></span>
+          <span class="toggle-text">On</span>
+        </label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-title">RSVP confirmation</div>
+          <div class="row-desc">A receipt every time you RSVP to a huddl.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" checked />
+          <span class="track"></span>
+          <span class="toggle-text">On</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Digest</h2>
+        <div class="panel-sub">Optional summaries. Off by default.</div>
+      </div>
+    </div>
+    <div class="settings-list row-list pref-list">
+      <div class="row">
+        <div>
+          <div class="row-title">Weekly digest</div>
+          <div class="row-desc">Sunday recap of huddlz worth showing up to.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" />
+          <span class="track"></span>
+          <span class="toggle-text">Off</span>
+        </label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-title">Re-engagement nudge</div>
+          <div class="row-desc">An occasional ping when you've been quiet for a while.</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" />
+          <span class="track"></span>
+          <span class="toggle-text">Off</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-foot" style="border:0; margin:0 0 32px">
+    <button class="btn-primary">Save preferences</button>
+  </div>
+</.clickthrough_shell>

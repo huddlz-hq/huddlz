@@ -1,0 +1,263 @@
+<.clickthrough_shell active={@active} query={@query} signed_in={@signed_in}>
+  <div class="page-head">
+    <div>
+      <h1>Schedule a huddl</h1>
+      <p>Set the time, place, and capacity. Members get an email when you publish.</p>
+    </div>
+  </div>
+
+  <form>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>The basics</h2>
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label class="form-label" for="h-title">Title</label>
+          <input
+            id="h-title"
+            class="form-input"
+            type="text"
+            placeholder="e.g. Ash Framework workshop"
+          />
+          <div class="form-help">3–200 characters.</div>
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="h-description">Description</label>
+          <textarea
+            id="h-description"
+            class="form-textarea"
+            placeholder="What you'll do, what to bring, who it's for."
+          ></textarea>
+          <div class="form-help">Up to 5,000 characters. Markdown supported.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Format</h2>
+      </div>
+      <div class="event-type-grid">
+        <label class="event-type-option is-active">
+          <input type="radio" name="event_type" value="in_person" checked />
+          <div class="event-type-icon">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" /><circle
+                cx="12"
+                cy="10"
+                r="3"
+              />
+            </svg>
+          </div>
+          <div>
+            <div class="event-type-title">In person</div>
+            <div class="event-type-desc">Single physical location.</div>
+          </div>
+        </label>
+        <label class="event-type-option">
+          <input type="radio" name="event_type" value="virtual" />
+          <div class="event-type-icon">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3" y="6" width="13" height="12" rx="2" /><path d="m16 10 5-3v10l-5-3" />
+            </svg>
+          </div>
+          <div>
+            <div class="event-type-title">Virtual</div>
+            <div class="event-type-desc">Online only — no physical address.</div>
+          </div>
+        </label>
+        <label class="event-type-option">
+          <input type="radio" name="event_type" value="hybrid" />
+          <div class="event-type-icon">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" /><circle
+                cx="12"
+                cy="10"
+                r="3"
+              /><path d="m22 22-2-2" />
+            </svg>
+          </div>
+          <div>
+            <div class="event-type-title">Hybrid</div>
+            <div class="event-type-desc">In-person plus an online stream.</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>When</h2>
+      </div>
+      <div class="form-grid">
+        <div class="form-row form-row-inline">
+          <div style="flex:1 1 200px">
+            <label class="form-label" for="h-date">Date</label>
+            <input id="h-date" class="form-input" type="date" value="2026-05-22" />
+          </div>
+          <div style="flex:1 1 140px">
+            <label class="form-label" for="h-time">Start time</label>
+            <input id="h-time" class="form-input" type="time" value="18:00" />
+          </div>
+          <div style="flex:1 1 140px">
+            <label class="form-label" for="h-duration">Duration (min)</label>
+            <input
+              id="h-duration"
+              class="form-input"
+              type="number"
+              min="15"
+              max="1440"
+              step="15"
+              value="90"
+            />
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="toggle">
+            <input type="checkbox" id="h-recurring" />
+            <span class="track"></span>
+            <span
+              class="toggle-text"
+              style="font-weight:700; text-transform:none; letter-spacing:0.02em; font-family:var(--font); font-size:13px; color:var(--soft)"
+            >
+              Recurring huddl
+            </span>
+          </label>
+          <div class="form-help">Repeats on a schedule until you stop it.</div>
+        </div>
+        <div class="form-row form-row-inline" id="h-recurring-fields">
+          <div style="flex:1 1 200px">
+            <label class="form-label" for="h-frequency">Frequency</label>
+            <select id="h-frequency" class="form-select">
+              <option>Weekly</option>
+              <option>Every 2 weeks</option>
+              <option>Monthly</option>
+            </select>
+          </div>
+          <div style="flex:1 1 200px">
+            <label class="form-label" for="h-repeat-until">Repeat until</label>
+            <input id="h-repeat-until" class="form-input" type="date" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Where</h2>
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label class="form-label" for="h-location">Physical location</label>
+          <select id="h-location" class="form-select">
+            <option>Heatsync Labs · 108 W Main St, Mesa</option>
+            <option>Galvanize Phoenix · 515 E Grant St</option>
+            <option>+ Add a new location…</option>
+          </select>
+          <div class="form-help">Pick from saved locations or add a new one.</div>
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="h-virtual">Online link</label>
+          <input
+            id="h-virtual"
+            class="form-input"
+            type="url"
+            placeholder="https://meet.example.com/..."
+          />
+          <div class="form-help">
+            Required for virtual or hybrid huddlz. Only attendees see this link.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Capacity &amp; visibility</h2>
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label class="form-label" for="h-cap">Max attendees</label>
+          <input id="h-cap" class="form-input" type="number" min="1" placeholder="No limit" />
+          <div class="form-help">
+            Leave blank for unlimited. When full, new RSVPs go to a waitlist.
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="toggle">
+            <input type="checkbox" id="h-private" />
+            <span class="track"></span>
+            <span
+              class="toggle-text"
+              style="font-weight:700; text-transform:none; letter-spacing:0.02em; font-family:var(--font); font-size:13px; color:var(--soft)"
+            >
+              Members only
+            </span>
+          </label>
+          <div class="form-help">
+            Only group members can RSVP. Useful for private workshops or socials.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Cover image</h2>
+      </div>
+      <div class="upload-zone">
+        <div class="upload-icon">
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-5-5L5 21" />
+          </svg>
+        </div>
+        <div class="upload-prompt">
+          Drop a 16:9 image, or <span class="upload-link">browse</span>
+        </div>
+        <div class="upload-meta muted">JPG, PNG, WebP · 5 MB max · optional</div>
+      </div>
+    </div>
+
+    <div class="form-foot" style="border:0; margin:0">
+      <button type="submit" class="btn-primary">Schedule huddl</button>
+      <a class="btn-secondary" href="/dev/design/clickthrough/organize-huddlz">Cancel</a>
+    </div>
+  </form>
+</.clickthrough_shell>

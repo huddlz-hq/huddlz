@@ -176,7 +176,9 @@ defmodule HuddlzWeb.Router do
       pipe_through :browser
 
       get "/design", DevDesignController, :index
-      get "/design/search-organize", DevDesignController, :search_organize
+      get "/design/clickthrough/styles.css", DevDesignController, :clickthrough_styles
+      get "/design/clickthrough", DevDesignController, :clickthrough
+      get "/design/clickthrough/:surface", DevDesignController, :clickthrough
       get "/design/images/:filename", DevDesignController, :image
     end
   end

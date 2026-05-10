@@ -1,0 +1,112 @@
+<.clickthrough_shell active={@active} query={@query} signed_in={@signed_in}>
+  <div class="page-head">
+    <div>
+      <h1>Edit group</h1>
+      <p>Update group details, photo, and visibility. Changes save when you hit save.</p>
+    </div>
+  </div>
+
+  <form>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>The basics</h2>
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label class="form-label" for="ge-name">Group name</label>
+          <input id="ge-name" class="form-input" type="text" value="Phoenix Elixir Meetup" />
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="ge-slug">URL</label>
+          <div class="slug-control">
+            <span class="slug-prefix">huddlz.app/groups/</span>
+            <input id="ge-slug" class="form-input" type="text" value="phoenix-elixir-meetup" />
+          </div>
+          <div class="form-help warn-text">
+            Changing the URL will break existing links to this group. Old links won't redirect.
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="ge-description">Description</label>
+          <textarea id="ge-description" class="form-textarea">A friendly community for Phoenix developers using Elixir, Phoenix, and LiveView. We meet every two weeks for talks, workshops, and code-with-us sessions. Mostly hybrid — show up in person if you can, hop on Zoom if you can't.</textarea>
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="ge-location">Location</label>
+          <div class="location-control">
+            <input id="ge-location" class="form-input" type="text" value="Phoenix, AZ, USA" />
+            <button type="button" class="form-clear" aria-label="Clear location">×</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Cover image</h2>
+        <a class="pill" href="#">Replace</a>
+      </div>
+      <div class="image-preview">
+        <div class="card-cover gradient-1" style="height:140px">
+          <img class="card-cover-img" src="/dev/design/images/product-night.svg" alt="" />
+        </div>
+        <div class="muted" style="font-size:12px; margin-top:10px">
+          phoenix-elixir-cover.jpg · 1.2 MB · uploaded 4 months ago
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Saved locations</h2>
+          <div class="panel-sub">
+            Reusable venues for huddlz. Pick from this list when scheduling.
+          </div>
+        </div>
+        <button type="button" class="btn-secondary">+ Add location</button>
+      </div>
+      <div class="settings-list row-list">
+        <div class="row">
+          <div>
+            <div class="row-title">Heatsync Labs</div>
+            <div class="row-desc">108 W Main St, Mesa, AZ</div>
+          </div>
+          <a class="pill" href="#">Edit</a>
+        </div>
+        <div class="row">
+          <div>
+            <div class="row-title">Galvanize Phoenix</div>
+            <div class="row-desc">515 E Grant St, Phoenix, AZ</div>
+          </div>
+          <a class="pill" href="#">Edit</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Visibility</h2>
+      </div>
+      <div class="settings-list row-list pref-list">
+        <div class="row">
+          <div>
+            <div class="row-title">Public group</div>
+            <div class="row-desc">
+              Currently public — anyone can find and join, huddlz are visible without signing in.
+            </div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" checked />
+            <span class="track"></span>
+            <span class="toggle-text">On</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-foot" style="border:0; margin:0">
+      <button type="submit" class="btn-primary">Save changes</button>
+      <a class="btn-secondary" href="/dev/design/clickthrough/group">Cancel</a>
+    </div>
+  </form>
+</.clickthrough_shell>

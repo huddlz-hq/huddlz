@@ -1,11 +1,6 @@
 defmodule HuddlzWeb.CommunityComponents do
   @moduledoc """
   Reusable UI components for communities domain (groups and huddlz).
-
-  Reconciled with the search-organize prototype: cards use
-  `rounded-hz-surface`, badges use `rounded-hz-control`, titles use Inter
-  heavy weights instead of Space Mono, and status pills use the prototype's
-  uppercase-mono badge.
   """
   use Phoenix.Component
   use HuddlzWeb, :verified_routes

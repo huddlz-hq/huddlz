@@ -19,9 +19,7 @@
 }
 
 /* ===== HUDDLZ DARK THEME =====
-   Reconciled with docs/design/search-organize-prototype.html.
-   Calmer than the previous cyberpunk-brutalist theme: single cyan accent,
-   neutral panels, slightly larger radii, no neon glow by default.
+   Single cyan accent, neutral panels, no neon glow by default.
    Glow utilities are still defined below for opt-in use. */
 @plugin "../vendor/daisyui-theme" {
   name: "dark";
@@ -29,14 +27,12 @@
   prefersdark: true;
   color-scheme: "dark";
 
-  /* Surfaces — match prototype --bg / --panel / --panel-2.
-     Translated to OKLCH for daisyUI consistency. */
-  --color-base-100: oklch(13% 0.005 200);  /* canvas (#020404-ish) */
+  --color-base-100: oklch(13% 0.005 200);  /* canvas */
   --color-base-200: oklch(16% 0.008 200);  /* cards, dropdowns */
   --color-base-300: oklch(22% 0.012 200);  /* form fields, segmented borders */
   --color-base-content: oklch(97% 0.005 200);
 
-  /* Brand cyan — matches prototype --cyan (#18cbd4) */
+  /* Brand cyan (#18cbd4 in OKLCH) */
   --color-primary: oklch(78% 0.13 195);
   --color-primary-content: oklch(13% 0.01 200);
 
@@ -56,10 +52,10 @@
   --color-success-content: oklch(13% 0.01 200);
   --color-warning: oklch(78% 0.16 80);
   --color-warning-content: oklch(13% 0.01 200);
-  --color-error: oklch(72% 0.18 25);   /* prototype --danger #ff896f */
+  --color-error: oklch(72% 0.18 25);
   --color-error-content: oklch(13% 0.01 200);
 
-  /* Radii — prototype: --radius 7px (cards), --radius-sm 5px (fields/chips) */
+  /* Radii: 7px for cards/modals, 5px for fields/chips */
   --radius-selector: 0.3125rem;  /* 5px — chips, toggles */
   --radius-field:    0.3125rem;  /* 5px — inputs, buttons */
   --radius-box:      0.4375rem;  /* 7px — cards, modals */
@@ -97,7 +93,6 @@ input[type="search"]::-webkit-search-decoration {
 
 html {
   font-family: 'Inter', system-ui, sans-serif;
-  /* Inter heavy-weight stylistic sets used in the prototype */
   font-feature-settings: "ss01", "cv11";
 }
 
@@ -137,7 +132,6 @@ html {
 
 /* ===== Glow utilities — kept for opt-in use only =====
    Previously applied by default on every button via btn-neon.
-   The prototype doesn't use them, so the new core_components don't either.
    Leave them defined so existing screens that rely on them still render. */
 @utility neon-glow {
   box-shadow: 0 0 8px oklch(78% 0.13 195 / 0.3),
@@ -145,8 +139,6 @@ html {
 }
 
 @utility text-glow {
-  /* Down from a 10px halo to a subtle 4px lift — matches prototype's
-     restrained type treatment without breaking screens that reference it. */
   text-shadow: 0 0 4px oklch(78% 0.13 195 / 0.25);
 }
 
@@ -159,7 +151,7 @@ html {
   }
 }
 
-/* Sharp-edged checkbox in prototype style. */
+/* Sharp-edged checkbox. */
 @utility checkbox-cyber {
   appearance: none;
   width: 1rem;
