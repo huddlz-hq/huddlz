@@ -4,8 +4,8 @@ Feature: Global Header
   I want a global header that pairs the brand with search and an organize entry point
   So that I can find huddlz from anywhere and start organizing without hunting through menus
 
-  Scenario: Header chrome is visible on the home page
-    Given the user is on the home page
+  Scenario: Header chrome is visible on legacy pages
+    When I visit "/discover"
     Then the header should show the huddlz brand
     And the header should expose a global search form posting q to /discover
     And the header should expose an Organize link to /organize
