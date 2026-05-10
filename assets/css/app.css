@@ -1636,6 +1636,15 @@ body.v3 .side-actions > .btn-secondary {
   justify-content: center;
 }
 
+/* Warn-colored span inside an eyebrow (e.g. "Group · Private") */
+body.v3 .eyebrow .eyebrow-warn { color: var(--warn); }
+
+/* Empty-state placeholder inside .member-grid */
+body.v3 .member-grid-empty { font-size: 13px; }
+
+/* Empty-state placeholder for grid-driven lists (huddlz, etc) */
+body.v3 .empty-state { padding: 24px 0; font-size: 14px; }
+
 /* Sub-section inside huddl-side */
 body.v3 .huddl-side-section {
   margin-top: 20px;
