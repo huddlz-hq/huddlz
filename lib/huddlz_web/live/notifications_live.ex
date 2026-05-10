@@ -1,0 +1,308 @@
+defmodule HuddlzWeb.NotificationsLive do
+  @moduledoc """
+  LiveView at `/notifications`. Notification inbox for the signed-in user.
+  Two filter chips driven by `?filter=`: default `inbox` is no param;
+  `invites` narrows to notifications that need a response. `?page=N`
+  paginates the active filter.
+
+  Replaces the `/me?tab=updates` and `/me?tab=invites` tabs from the legacy
+  member dashboard. Redirects from those legacy paths land users on the
+  matching filter.
+  """
+  use HuddlzWeb, :live_view
+
+  alias Huddlz.Notifications
+  alias Huddlz.Notifications.Notification
+  alias HuddlzWeb.Layouts
+  require Ash.Query
+  require Logger
+
+  @page_size 20
+  @valid_filters ~w(inbox invites)
+
+  on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
+  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
+
+  @impl true
+  def mount(_params, _session, socket) do
+    {:ok,
+     socket
+     |> assign(:page_title, "Notifications")
+     |> assign(:notifications, [])
+     |> assign(:counts, %{inbox: 0, invites: 0})
+     |> assign(:page_info, %{total_pages: 1, current_page: 1, total_count: 0})}
+  end
+
+  @impl true
+  def handle_params(params, _uri, socket) do
+    filter = parse_filter(params["filter"])
+    page = parse_page(params["page"])
+    user = socket.assigns.current_user
+
+    socket =
+      socket
+      |> assign(:filter, filter)
+      |> assign(:counts, load_counts(user))
+      |> load_results(filter, page, user)
+
+    total_pages = socket.assigns.page_info.total_pages
+
+    if page > total_pages do
+      {:noreply, push_patch(socket, to: filter_path(filter, total_pages))}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("change_page", %{"page" => page_str}, socket) do
+    page = parse_page(page_str)
+    {:noreply, push_patch(socket, to: filter_path(socket.assigns.filter, page))}
+  end
+
+  def handle_event("mark_read", %{"id" => id}, socket) do
+    user = socket.assigns.current_user
+
+    with {:ok, notification} <- Ash.get(Notification, id, actor: user),
+         {:ok, _} <- Notifications.mark_read(notification, actor: user) do
+      {:noreply,
+       socket
+       |> assign(:counts, load_counts(user))
+       |> load_results(socket.assigns.filter, socket.assigns.page_info.current_page, user)}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("mark_all_read", _params, socket) do
+    user = socket.assigns.current_user
+
+    socket.assigns.notifications
+    |> Enum.filter(&is_nil(&1.read_at))
+    |> Enum.each(&Notifications.mark_read(&1, actor: user))
+
+    {:noreply,
+     socket
+     |> assign(:counts, load_counts(user))
+     |> load_results(socket.assigns.filter, socket.assigns.page_info.current_page, user)}
+  end
+
+  defp parse_filter(value) when value in @valid_filters, do: String.to_existing_atom(value)
+  defp parse_filter(_), do: :inbox
+
+  defp parse_page(nil), do: 1
+  defp parse_page(""), do: 1
+
+  defp parse_page(val) when is_binary(val) do
+    case Integer.parse(val) do
+      {n, _} when n >= 1 -> n
+      _ -> 1
+    end
+  end
+
+  defp parse_page(val) when is_integer(val) and val >= 1, do: val
+  defp parse_page(_), do: 1
+
+  defp load_counts(user) do
+    %{
+      inbox: count_unread_inbox(user),
+      invites: count_invites(user)
+    }
+  end
+
+  defp count_unread_inbox(user) do
+    Notification
+    |> Ash.Query.for_read(:for_user, %{}, actor: user)
+    |> Ash.Query.filter(is_nil(read_at))
+    |> Ash.count()
+    |> case do
+      {:ok, count} -> count
+      _ -> 0
+    end
+  end
+
+  defp count_invites(user) do
+    case Notifications.list_invites_for_user(
+           actor: user,
+           page: [limit: 1, offset: 0, count: true]
+         ) do
+      {:ok, %{count: count}} when is_integer(count) -> count
+      _ -> 0
+    end
+  end
+
+  defp load_results(socket, filter, page, user) do
+    offset = (page - 1) * @page_size
+
+    case fetch_page(filter, user, offset) do
+      {:ok, %Ash.Page.Offset{results: results, count: count}} ->
+        total_pages = if count && count > 0, do: ceil(count / @page_size), else: 1
+
+        socket
+        |> assign(:notifications, results)
+        |> assign(:page_info, %{
+          total_pages: total_pages,
+          current_page: page,
+          total_count: count || 0
+        })
+
+      {:error, reason} ->
+        Logger.warning("NotificationsLive load failed: #{inspect(reason)}")
+
+        socket
+        |> assign(:notifications, [])
+        |> assign(:page_info, %{total_pages: 1, current_page: 1, total_count: 0})
+    end
+  end
+
+  defp fetch_page(:inbox, user, offset) do
+    Notifications.list_for_user(
+      actor: user,
+      page: [limit: @page_size, offset: offset, count: true]
+    )
+  end
+
+  defp fetch_page(:invites, user, offset) do
+    Notifications.list_invites_for_user(
+      actor: user,
+      page: [limit: @page_size, offset: offset, count: true]
+    )
+  end
+
+  defp filter_path(:inbox, page) when page > 1, do: ~p"/notifications?#{[page: page]}"
+  defp filter_path(:inbox, _page), do: ~p"/notifications"
+
+  defp filter_path(filter, page) when page > 1,
+    do: ~p"/notifications?#{[filter: filter, page: page]}"
+
+  defp filter_path(filter, _page), do: ~p"/notifications?#{[filter: filter]}"
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <Layouts.v3_app flash={@flash} current_user={@current_user} active="notifications">
+      <div class="page-head">
+        <div>
+          <h1>Notifications</h1>
+          <p>{filter_blurb(@filter)}</p>
+        </div>
+        <div :if={@filter == :inbox and @counts.inbox > 0} class="actions">
+          <button type="button" class="btn-secondary" phx-click="mark_all_read">
+            Mark all as read
+          </button>
+        </div>
+      </div>
+
+      <div class="filters">
+        <.v3_chip patch={filter_path(:inbox, 1)} active={@filter == :inbox}>
+          Inbox · {@counts.inbox} unread
+        </.v3_chip>
+        <.v3_chip patch={filter_path(:invites, 1)} active={@filter == :invites}>
+          Invites · {@counts.invites}
+        </.v3_chip>
+      </div>
+
+      <%= if Enum.empty?(@notifications) do %>
+        <p class="muted">{empty_message(@filter)}</p>
+      <% else %>
+        <div class="panel" style="padding:0">
+          <div class="row-list" style="padding:0 20px">
+            <%= for notification <- @notifications do %>
+              <.notification_row notification={notification} />
+            <% end %>
+          </div>
+        </div>
+        <.v3_pagination
+          :if={@page_info.total_pages > 1}
+          current_page={@page_info.current_page}
+          total_pages={@page_info.total_pages}
+          event_name="change_page"
+        />
+      <% end %>
+    </Layouts.v3_app>
+    """
+  end
+
+  attr :notification, :map, required: true
+
+  defp notification_row(assigns) do
+    read? = !is_nil(assigns.notification.read_at)
+    assigns = assign(assigns, :unread, !read?)
+
+    ~H"""
+    <div
+      id={"notification-#{@notification.id}"}
+      class={["row", "notif-row", @unread && "unread"]}
+    >
+      <div class={["notif-mark", mark_color(@notification)]} aria-hidden="true"></div>
+      <div>
+        <div class="row-title">{@notification.title}</div>
+        <div :if={meta_line(@notification)} class="meta">{meta_line(@notification)}</div>
+      </div>
+      <%= if @notification.source_url do %>
+        <.link class="pill" navigate={@notification.source_url}>Open</.link>
+      <% else %>
+        <button
+          :if={@unread}
+          type="button"
+          class="pill"
+          phx-click="mark_read"
+          phx-value-id={@notification.id}
+        >
+          Mark read
+        </button>
+      <% end %>
+    </div>
+    """
+  end
+
+  defp filter_blurb(:inbox),
+    do: "RSVPs, group activity, and reminders from across huddlz."
+
+  defp filter_blurb(:invites),
+    do: "Things that need a response from you."
+
+  defp empty_message(:inbox),
+    do: "No notifications yet. Reminders and group activity will appear here as they happen."
+
+  defp empty_message(:invites),
+    do:
+      "No invites right now. When organizers invite you to a huddl or group, they'll show up here."
+
+  defp mark_color(%{read_at: %DateTime{}}), do: "muted"
+
+  defp mark_color(%{trigger: trigger}) when is_binary(trigger) do
+    case Notifications.Triggers.fetch(safe_atom(trigger)) do
+      {:ok, %{category: :transactional}} -> "warn"
+      _ -> "cyan"
+    end
+  rescue
+    ArgumentError -> "cyan"
+  end
+
+  defp mark_color(_), do: "cyan"
+
+  defp safe_atom(value) when is_binary(value) do
+    String.to_existing_atom(value)
+  end
+
+  defp meta_line(%{description: desc, inserted_at: %DateTime{} = at})
+       when is_binary(desc) and desc != "" do
+    "#{desc} · #{format_time_ago(at)}"
+  end
+
+  defp meta_line(%{inserted_at: %DateTime{} = at}), do: format_time_ago(at)
+  defp meta_line(_), do: nil
+
+  defp format_time_ago(%DateTime{} = dt) do
+    diff = DateTime.diff(DateTime.utc_now(), dt, :second)
+
+    cond do
+      diff < 60 -> "just now"
+      diff < 3600 -> "#{div(diff, 60)}m ago"
+      diff < 86_400 -> "#{div(diff, 3600)}h ago"
+      diff < 7 * 86_400 -> "#{div(diff, 86_400)}d ago"
+      true -> Calendar.strftime(dt, "%b %d, %Y")
+    end
+  end
+end

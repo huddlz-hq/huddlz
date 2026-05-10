@@ -70,39 +70,9 @@ Feature: Me dashboard
     Then I should see "Cyberpunk Builders"
     And I should see "Phoenix Devs"
 
-  Scenario: Invites tab shows an empty feed with needs-response side panel
-    Given I am signed in as "host@example.com"
-    When I visit "/me?tab=invites"
-    Then I should see "Things that need a response from you."
-    And I should see "// Invites"
-    And I should see "No invites right now. When organizers invite you to a huddl or group, they'll show up here."
-    And I should see "// Needs response"
-
-  Scenario: Being added to a private group surfaces as an Invite
-    Given a private group "Phoenix Devs" exists with owner "stranger@example.com"
-    And "attendee@example.com" was added to the group "Phoenix Devs"
-    And I am signed in as "attendee@example.com"
-    When I visit "/me?tab=invites"
-    Then I should see "Added to Phoenix Devs"
-
-  Scenario: Updates tab shows an empty feed with notification controls panel
-    Given I am signed in as "host@example.com"
-    When I visit "/me?tab=updates"
-    Then I should see "Reminders, RSVPs, and group activity from across huddlz."
-    And I should see "// Updates"
-    And I should see "No updates yet. Reminders and group activity will appear here as they happen."
-    And I should see "// Notification controls"
-    And I should see "Open preferences"
-
-  Scenario: RSVP confirmation appears as a notification on the Updates tab
-    Given a public group "Phoenix Devs" exists with owner "stranger@example.com"
-    And the huddl "Elixir Workshop" exists in group "Phoenix Devs" hosted by "stranger@example.com"
-    And "attendee@example.com" has RSVPed to "Elixir Workshop"
-    And I am signed in as "attendee@example.com"
-    When I visit "/me?tab=updates"
-    Then I should see "RSVP confirmed: Elixir Workshop"
-    And I should see "Activity"
-    And I should see "Mark all as read"
+  # Updates and Invites have moved to /notifications — see
+  # test/huddlz_web/live/notifications_live_test.exs. The legacy /me tabs
+  # now redirect there.
 
   Scenario: RSVPed user sees the huddl in the Upcoming section and the Coming up panel
     Given a public group "Phoenix Devs" exists with owner "stranger@example.com"

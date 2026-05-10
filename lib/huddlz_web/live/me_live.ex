@@ -45,6 +45,14 @@ defmodule HuddlzWeb.MeLive do
     {:noreply, push_navigate(socket, to: ~p"/my-groups")}
   end
 
+  def handle_params(%{"tab" => "updates"}, _uri, socket) do
+    {:noreply, push_navigate(socket, to: ~p"/notifications")}
+  end
+
+  def handle_params(%{"tab" => "invites"}, _uri, socket) do
+    {:noreply, push_navigate(socket, to: ~p"/notifications?#{[filter: :invites]}")}
+  end
+
   def handle_params(params, _uri, socket) do
     tab = parse_tab(params["tab"])
 
