@@ -1,0 +1,125 @@
+<.clickthrough_shell active={@active} query={@query} signed_in={@signed_in}>
+  <div class="page-head">
+    <div>
+      <h1>Create a group</h1>
+      <p>
+        Groups are where huddlz live. Set the name, decide who can see it, and you can invite members or schedule your first huddl in a minute.
+      </p>
+    </div>
+  </div>
+
+  <form>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>The basics</h2>
+      </div>
+      <div class="form-grid">
+        <div class="form-row">
+          <label class="form-label" for="g-name">Group name</label>
+          <input
+            id="g-name"
+            class="form-input"
+            type="text"
+            name="name"
+            placeholder="e.g. Phoenix Elixir Meetup"
+          />
+          <div class="form-help">3–100 characters.</div>
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="g-slug">URL</label>
+          <div class="slug-control">
+            <span class="slug-prefix">huddlz.app/groups/</span>
+            <input
+              id="g-slug"
+              class="form-input"
+              type="text"
+              name="slug"
+              placeholder="auto-generated from name"
+            />
+          </div>
+          <div class="form-help">
+            Letters, numbers, and dashes only. We'll fill this in for you.
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="g-description">Description</label>
+          <textarea
+            id="g-description"
+            class="form-textarea"
+            name="description"
+            placeholder="Tell people what your group is about, what huddlz to expect, and who should join."
+          ></textarea>
+          <div class="form-help">Up to 5,000 characters. Markdown is supported.</div>
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="g-location">Location</label>
+          <div class="location-control">
+            <input
+              id="g-location"
+              class="form-input"
+              type="text"
+              name="location"
+              placeholder="Search for a city"
+            />
+            <button type="button" class="form-clear" aria-label="Clear location">×</button>
+          </div>
+          <div class="form-help">
+            Optional. Helps people find your group when they search nearby.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Cover image</h2>
+      </div>
+      <div class="upload-zone">
+        <div class="upload-icon">
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-5-5L5 21" />
+          </svg>
+        </div>
+        <div class="upload-prompt">
+          Drop a 16:9 image, or <span class="upload-link">browse</span>
+        </div>
+        <div class="upload-meta muted">JPG, PNG, WebP · 5 MB max</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Visibility</h2>
+      </div>
+      <div class="settings-list row-list pref-list">
+        <div class="row">
+          <div>
+            <div class="row-title">Public group</div>
+            <div class="row-desc">
+              Anyone can find and join this group. Huddlz are visible without signing in.
+            </div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" checked />
+            <span class="track"></span>
+            <span class="toggle-text">On</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-foot" style="border:0; margin:0">
+      <button type="submit" class="btn-primary">Create group</button>
+      <a class="btn-secondary" href="/dev/design/clickthrough/my-groups">Cancel</a>
+    </div>
+  </form>
+</.clickthrough_shell>

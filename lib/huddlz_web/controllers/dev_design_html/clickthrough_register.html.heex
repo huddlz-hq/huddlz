@@ -1,0 +1,68 @@
+<.clickthrough_shell active={@active} query={@query} signed_in={@signed_in}>
+  <div class="auth-shell">
+    <header class="auth-topbar">
+      <a href="/dev/design/clickthrough/landing">
+        <div class="brand-glyph">h</div>
+        <div class="brand-text">huddlz</div>
+      </a>
+    </header>
+
+    <div class="auth-frame">
+      <h1>Create your account</h1>
+      <p class="lede">Names aren't unique on huddlz — pick anything you like.</p>
+
+      <form class="auth-card">
+        <div class="form-grid">
+          <div class="form-row">
+            <label class="form-label" for="reg-email">Email</label>
+            <input
+              id="reg-email"
+              class="form-input"
+              type="email"
+              name="email"
+              autocomplete="email"
+            />
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="reg-name">Display name</label>
+            <input
+              id="reg-name"
+              class="form-input"
+              type="text"
+              name="display_name"
+              autocomplete="nickname"
+            />
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="reg-password">Password</label>
+            <input
+              id="reg-password"
+              class="form-input"
+              type="password"
+              name="password"
+              autocomplete="new-password"
+            />
+            <div class="form-help">At least 8 characters.</div>
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="reg-confirm">Confirm password</label>
+            <input
+              id="reg-confirm"
+              class="form-input"
+              type="password"
+              name="password_confirmation"
+              autocomplete="new-password"
+            />
+          </div>
+        </div>
+        <div class="form-foot">
+          <button type="submit" class="btn-primary">Create account</button>
+        </div>
+      </form>
+
+      <div class="auth-aside">
+        Already have an account? <a href="/dev/design/clickthrough/sign-in">Sign in</a>
+      </div>
+    </div>
+  </div>
+</.clickthrough_shell>

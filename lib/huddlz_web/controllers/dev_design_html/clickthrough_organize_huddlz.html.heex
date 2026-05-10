@@ -1,0 +1,204 @@
+<.clickthrough_shell active={@active} query={@query} signed_in={@signed_in}>
+  <div class="page-head">
+    <div>
+      <h1>Huddlz</h1>
+      <p>Every huddl this group has scheduled or run. Click a huddl to manage it.</p>
+    </div>
+    <div class="actions">
+      <a class="btn-primary" href="/dev/design/clickthrough/huddl-new">+ Schedule huddl</a>
+    </div>
+  </div>
+
+  <div class="insight-strip">
+    <span class="insight-pill">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+      >
+        <path d="M3 17l6-6 4 4 8-8" />
+      </svg>
+      Avg RSVPs <strong>↑ 12%</strong>
+      last 90 days
+    </span>
+    <span class="insight-pill">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M5 13l4 4L19 7" />
+      </svg>
+      Show-up rate <strong>78%</strong>
+    </span>
+    <span class="insight-pill">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+      >
+        <circle cx="12" cy="12" r="9" /><path d="M12 8v5l3 2" />
+      </svg>
+      <strong>5</strong>
+      upcoming
+    </span>
+    <span class="insight-pill">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+      >
+        <path d="M19 21 12 16l-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z" />
+      </svg>
+      <strong>4</strong>
+      recurring series active
+    </span>
+  </div>
+
+  <div class="filters">
+    <button class="chip is-active">Upcoming · 5</button>
+    <button class="chip">Past</button>
+  </div>
+
+  <div class="grid">
+    <a class="card" href="/dev/design/clickthrough/huddl-edit">
+      <div class="card-cover gradient-1">
+        <img class="card-cover-img" src="/dev/design/images/product-night.svg" alt="" />
+        <div class="date-stamp"><span class="m">MAY</span><span class="d">22</span></div>
+        <span class="card-tag hybrid">Hybrid</span>
+      </div>
+      <div class="card-body">
+        <span class="card-group">Workshop · 90 min</span>
+        <div class="card-title">Ash Framework workshop</div>
+        <div class="card-meta">
+          <span>Thu · 6:00 PM</span><span class="dot"></span><span>28 / 40 RSVPs</span>
+        </div>
+      </div>
+      <div class="card-foot">
+        <div class="bar warn" style="flex:1"><span style="width:70%"></span></div>
+        <span class="muted" style="font-size:12px">3 waitlisted</span>
+      </div>
+    </a>
+
+    <a class="card" href="/dev/design/clickthrough/huddl-edit">
+      <div class="card-cover gradient-4">
+        <img class="card-cover-img" src="/dev/design/images/ai-meetup.svg" alt="" />
+        <div class="date-stamp"><span class="m">MAY</span><span class="d">28</span></div>
+        <span class="card-tag hybrid">Hybrid</span>
+      </div>
+      <div class="card-body">
+        <span class="card-group">Talk · 60 min</span>
+        <div class="card-title">LiveView deep dive · streams &amp; async</div>
+        <div class="card-meta">
+          <span>Wed · 6:30 PM</span><span class="dot"></span><span>34 / 60 RSVPs</span>
+        </div>
+      </div>
+      <div class="card-foot">
+        <div class="bar" style="flex:1"><span style="width:57%"></span></div>
+      </div>
+    </a>
+
+    <a class="card" href="/dev/design/clickthrough/huddl-edit">
+      <div class="card-cover gradient-2">
+        <img class="card-cover-img" src="/dev/design/images/boat-drinks.svg" alt="" />
+        <div class="date-stamp"><span class="m">JUN</span><span class="d">04</span></div>
+        <span class="card-tag in-person">In person</span>
+      </div>
+      <div class="card-body">
+        <span class="card-group">Social · 2 hr</span>
+        <div class="card-title">Phoenix Elixir social</div>
+        <div class="card-meta">
+          <span>Tue · 7:00 PM</span><span class="dot"></span><span>18 RSVPs · no cap</span>
+        </div>
+      </div>
+      <div class="card-foot">
+        <span class="pill warn">No venue</span>
+      </div>
+    </a>
+
+    <a class="card" href="/dev/design/clickthrough/huddl-edit">
+      <div class="card-cover gradient-3">
+        <img class="card-cover-img" src="/dev/design/images/founder-coffee.svg" alt="" />
+        <div class="date-stamp"><span class="m">JUN</span><span class="d">11</span></div>
+        <span class="card-tag hybrid">Hybrid</span>
+      </div>
+      <div class="card-body">
+        <span class="card-group">Workshop · 60 min</span>
+        <div class="card-title">Property-based testing intro</div>
+        <div class="card-meta">
+          <span>Wed · 6:30 PM</span><span class="dot"></span><span>12 RSVPs · no cap</span>
+        </div>
+      </div>
+      <div class="card-foot">
+        <div class="bar" style="flex:1"><span style="width:24%"></span></div>
+      </div>
+    </a>
+
+    <a class="card" href="/dev/design/clickthrough/huddl">
+      <div class="card-cover gradient-5">
+        <img class="card-cover-img" src="/dev/design/images/ai-meetup.svg" alt="" />
+        <div class="date-stamp"><span class="m">MAY</span><span class="d">08</span></div>
+        <span class="card-tag in-person">In person</span>
+      </div>
+      <div class="card-body">
+        <span class="card-group">Talk · past</span>
+        <div class="card-title">Phoenix 1.8 walkthrough</div>
+        <div class="card-meta">
+          <span>41 / 50 went</span><span class="dot"></span><span>84% show-up</span>
+        </div>
+      </div>
+      <div class="card-foot">
+        <span class="muted" style="font-size:12px">22 repeat attendees</span>
+      </div>
+    </a>
+  </div>
+
+  <nav class="pagination" aria-label="Pagination">
+    <button class="page-nav" disabled aria-label="Previous page">
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="m15 18-6-6 6-6" />
+      </svg>
+      <span>Prev</span>
+    </button>
+    <ol class="page-numbers">
+      <li><button class="page-num is-active" aria-current="page">1</button></li>
+      <li><button class="page-num">2</button></li>
+      <li><button class="page-num">3</button></li>
+      <li class="page-ellipsis" aria-hidden="true">…</li>
+      <li><button class="page-num">8</button></li>
+    </ol>
+    <button class="page-nav" aria-label="Next page">
+      <span>Next</span>
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="m9 6 6 6-6 6" />
+      </svg>
+    </button>
+  </nav>
+</.clickthrough_shell>

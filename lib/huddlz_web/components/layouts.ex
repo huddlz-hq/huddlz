@@ -1,11 +1,6 @@
 defmodule HuddlzWeb.Layouts do
   @moduledoc """
   This module holds different layouts used by your application.
-
-  Reconciled with the search-organize prototype: header search button uses
-  Inter heavy weight at sentence case (no Space Mono uppercase); user
-  compact controls use `rounded-hz-control`; dropdown surfaces use
-  `rounded-hz-surface`.
   """
   use HuddlzWeb, :html
 

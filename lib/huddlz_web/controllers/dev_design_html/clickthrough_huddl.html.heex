@@ -1,0 +1,271 @@
+<.clickthrough_shell active={@active} query={@query} signed_in={@signed_in}>
+  <div data-tw-container="Huddl status" class="hero">
+    <img class="hero-img" src="/dev/design/images/product-night.svg" alt="" />
+    <div data-tw-variant="Upcoming" class="hero-content">
+      <span class="eyebrow">Hybrid huddl · Upcoming</span>
+      <h1>Ash Framework workshop</h1>
+      <div class="meta">
+        <span>Phoenix Elixir Meetup</span>
+        <span>·</span>
+        <span>Thu, May 22 · 6:00 PM</span>
+        <span>·</span>
+        <span>Central Phoenix · &amp; online</span>
+      </div>
+    </div>
+    <div data-tw-variant="In progress" class="hero-content" hidden>
+      <span class="eyebrow" style="color:var(--warn)">Hybrid huddl · Happening now</span>
+      <h1>Ash Framework workshop</h1>
+      <div class="meta">
+        <span>Phoenix Elixir Meetup</span>
+        <span>·</span>
+        <span>Started 6:00 PM · ends 8:30 PM</span>
+      </div>
+    </div>
+    <div data-tw-variant="Completed" class="hero-content" hidden>
+      <span class="eyebrow" style="color:var(--muted)">Hybrid huddl · Completed</span>
+      <h1>Ash Framework workshop</h1>
+      <div class="meta">
+        <span>Phoenix Elixir Meetup</span>
+        <span>·</span>
+        <span>Thu, May 22 · 41 attended</span>
+      </div>
+    </div>
+    <div data-tw-variant="Cancelled" class="hero-content" hidden>
+      <span class="eyebrow" style="color:var(--magenta)">Hybrid huddl · Cancelled</span>
+      <h1 style="text-decoration:line-through; text-decoration-color:rgba(232,79,180,0.4)">
+        Ash Framework workshop
+      </h1>
+      <div class="meta">
+        <span>Phoenix Elixir Meetup</span>
+        <span>·</span>
+        <span>Was scheduled for Thu, May 22</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="huddl-frame">
+    <div class="prose">
+      <p>
+        Hands-on workshop building real features with Ash Framework. You'll model resources, write actions, and ship a working LiveView CRUD in 90 minutes — enough to leave with a project skeleton you can keep working on.
+      </p>
+
+      <h2>What you'll build</h2>
+      <p>
+        A small "events" app — resources, custom actions, validations, and a LiveView page that talks to it. We'll cover the parts that get you to "wait, that worked?" the fastest, and skip the parts that don't matter on day one.
+      </p>
+
+      <h2>What to bring</h2>
+      <p>
+        A laptop with Elixir 1.18+ installed, plus a coffee. We'll have the project skeleton ready to clone — show up at 5:50 to get the install going so 6:00 is code-time.
+      </p>
+
+      <h2>About the host</h2>
+      <p>
+        Hosted by Alice Johnson — Phoenix Elixir's lead organizer. Alice has been writing Elixir since 2017 and has run a dozen community workshops in the valley.
+      </p>
+    </div>
+
+    <aside class="huddl-side">
+      <h3>RSVP</h3>
+      <ul class="facts">
+        <li>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="9" /><path d="M12 6v6l4 2" />
+          </svg>
+          <div>
+            <div class="label">When</div>
+            <div class="value">Thu, May 22<br />6:00 – 8:30 PM MST</div>
+          </div>
+        </li>
+        <li>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" /><circle
+              cx="12"
+              cy="10"
+              r="3"
+            />
+          </svg>
+          <div>
+            <div class="label">Where</div>
+            <div class="value">Heatsync Labs<br />108 W Main St, Mesa</div>
+          </div>
+        </li>
+        <li>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9.5" cy="7" r="4" />
+          </svg>
+          <div>
+            <div class="label">Capacity</div>
+            <div class="value">28 / 40 RSVPs · 3 waitlisted</div>
+          </div>
+        </li>
+      </ul>
+
+      <div class="bar"><span style="width:70%"></span></div>
+
+      <div data-tw-container="RSVP state">
+        <div data-tw-variant="Not RSVP'd" style="margin-top:18px">
+          <button class="btn-primary" style="width:100%">RSVP — I'm in</button>
+          <div class="muted virtual-hint">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3" y="6" width="13" height="12" rx="2" /><path d="m16 10 5-3v10l-5-3" />
+            </svg>
+            <span>Online link visible after you RSVP.</span>
+          </div>
+        </div>
+
+        <div data-tw-variant="Going" hidden style="margin-top:18px">
+          <div class="rsvp-banner cyan">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M5 13l4 4L19 7" />
+            </svg>
+            <span>You're attending</span>
+          </div>
+          <a
+            class="btn-secondary virtual-link"
+            href="#"
+            style="width:100%; margin-top:10px; justify-content:center"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3" y="6" width="13" height="12" rx="2" /><path d="m16 10 5-3v10l-5-3" />
+            </svg>
+            Join the online room
+          </a>
+          <button class="btn-secondary muted-btn" style="width:100%; margin-top:8px">
+            Cancel RSVP
+          </button>
+        </div>
+
+        <div data-tw-variant="Capacity full · waitlist" hidden style="margin-top:18px">
+          <div class="rsvp-banner warn">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+            </svg>
+            <span>This huddl is full</span>
+          </div>
+          <button class="btn-primary" style="width:100%; margin-top:10px">Join waitlist</button>
+        </div>
+
+        <div data-tw-variant="On waitlist" hidden style="margin-top:18px">
+          <div class="rsvp-banner warn">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+            </svg>
+            <span>On waitlist · #3 of 3</span>
+          </div>
+          <button class="btn-secondary muted-btn" style="width:100%; margin-top:10px">
+            Leave waitlist
+          </button>
+        </div>
+
+        <div data-tw-variant="Anonymous · sign-in to RSVP" hidden style="margin-top:18px">
+          <a
+            class="btn-primary"
+            href="/dev/design/clickthrough/sign-in"
+            style="width:100%; justify-content:center"
+          >
+            Sign in to RSVP
+          </a>
+        </div>
+
+        <div data-tw-variant="Organizer view" hidden style="margin-top:18px">
+          <div class="rsvp-banner cyan">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M12 2 4 6v6c0 5 3.5 9.4 8 10 4.5-.6 8-5 8-10V6Z" />
+            </svg>
+            <span>You organize this huddl</span>
+          </div>
+          <a
+            class="btn-primary"
+            href="/dev/design/clickthrough/huddl-edit"
+            style="width:100%; margin-top:10px; justify-content:center"
+          >
+            Edit huddl
+          </a>
+          <a
+            class="btn-secondary"
+            href="/dev/design/clickthrough/organize-overview"
+            style="width:100%; margin-top:8px; justify-content:center"
+          >
+            View attendees
+          </a>
+        </div>
+      </div>
+    </aside>
+  </div>
+</.clickthrough_shell>

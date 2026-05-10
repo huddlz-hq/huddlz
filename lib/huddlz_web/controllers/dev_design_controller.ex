@@ -7,8 +7,34 @@ defmodule HuddlzWeb.DevDesignController do
 
   use HuddlzWeb, :controller
 
-  @prototype_path Path.expand("docs/design/search-organize-prototype.html", File.cwd!())
+  @clickthrough_styles_path Path.expand("docs/design/clickthrough/styles.css", File.cwd!())
   @image_dir Path.expand("docs/design/images", File.cwd!())
+
+  @surface_templates %{
+    "landing" => :clickthrough_landing,
+    "sign-in" => :clickthrough_sign_in,
+    "register" => :clickthrough_register,
+    "reset-request" => :clickthrough_reset_request,
+    "reset-confirm" => :clickthrough_reset_confirm,
+    "email-confirm" => :clickthrough_email_confirm,
+    "explore" => :clickthrough_explore,
+    "my-huddlz" => :clickthrough_my_huddlz,
+    "my-groups" => :clickthrough_my_groups,
+    "calendar" => :clickthrough_calendar,
+    "notifications" => :clickthrough_notifications,
+    "group" => :clickthrough_group,
+    "huddl" => :clickthrough_huddl,
+    "profile" => :clickthrough_profile,
+    "settings" => :clickthrough_settings,
+    "organize-overview" => :clickthrough_organize_overview,
+    "organize-huddlz" => :clickthrough_organize_huddlz,
+    "organize-members" => :clickthrough_organize_members,
+    "group-new" => :clickthrough_group_new,
+    "group-edit" => :clickthrough_group_edit,
+    "huddl-new" => :clickthrough_huddl_new,
+    "huddl-edit" => :clickthrough_huddl_edit,
+    "help" => :clickthrough_help
+  }
 
   def index(conn, _params) do
     html(conn, """
@@ -133,13 +159,13 @@ defmodule HuddlzWeb.DevDesignController do
           <p>Development-only prototypes for exploring Huddlz product flows in high-fidelity HTML and CSS before moving them into LiveView.</p>
 
           <section class="grid" aria-label="Design prototypes">
-            <a class="card" href="/dev/design/search-organize">
+            <a class="card" href="/dev/design/clickthrough">
               <div>
-                <div class="eyebrow">Prototype</div>
-                <h2>Search and organize</h2>
-                <p>Global search, grouped results, filters, 16:9 cover imagery, and the organize navigation direction.</p>
+                <div class="eyebrow">Clickthrough</div>
+                <h2>App walkthrough</h2>
+                <p>Click through every signed-in and signed-out surface — explore, my huddlz, my groups, calendar, organize, group/huddl detail, profile, settings, notifications, auth, and CRUD forms.</p>
               </div>
-              <div class="open">Open prototype</div>
+              <div class="open">Open clickthrough</div>
             </a>
           </section>
         </main>
@@ -148,10 +174,29 @@ defmodule HuddlzWeb.DevDesignController do
     """)
   end
 
-  def search_organize(conn, _params) do
+  def clickthrough(conn, params) do
+    surface = params["surface"] || "landing"
+
+    case Map.fetch(@surface_templates, surface) do
+      {:ok, template} ->
+        conn
+        |> put_view(HuddlzWeb.DevDesignHTML)
+        |> put_root_layout(false)
+        |> put_layout({HuddlzWeb.DevDesignHTML, :clickthrough_layout})
+        |> assign(:active, surface)
+        |> assign(:query, params["q"] || "")
+        |> assign(:signed_in, params["signed_in"] != "0")
+        |> render(template)
+
+      :error ->
+        send_resp(conn, 404, "Unknown surface")
+    end
+  end
+
+  def clickthrough_styles(conn, _params) do
     conn
-    |> put_resp_content_type("text/html")
-    |> send_file(200, @prototype_path)
+    |> put_resp_content_type("text/css")
+    |> send_file(200, @clickthrough_styles_path)
   end
 
   def image(conn, %{"filename" => filename}) do

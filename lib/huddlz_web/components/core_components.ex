@@ -2,11 +2,6 @@ defmodule HuddlzWeb.CoreComponents do
   @moduledoc """
   Provides core UI components.
 
-  Reconciled with the huddlz search-organize prototype:
-  buttons use Inter heavy weights instead of uppercase Space Mono;
-  inputs are bordered fields on a panel surface; modal uses a soft
-  shadow-pop instead of the cyan-glow halo.
-
     * [daisyUI](https://daisyui.com/docs/intro/)
     * [Tailwind CSS](https://tailwindcss.com)
     * [Heroicons](https://heroicons.com) — see `icon/1`

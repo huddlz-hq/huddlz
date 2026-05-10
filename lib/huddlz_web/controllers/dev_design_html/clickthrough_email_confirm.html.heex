@@ -1,0 +1,58 @@
+<.clickthrough_shell active={@active} query={@query} signed_in={@signed_in}>
+  <div class="auth-shell">
+    <header class="auth-topbar">
+      <a href="/dev/design/clickthrough/landing">
+        <div class="brand-glyph">h</div>
+        <div class="brand-text">huddlz</div>
+      </a>
+    </header>
+
+    <div data-tw-container="Email confirm — token state" class="auth-frame">
+      <div data-tw-variant="Confirmed">
+        <div class="auth-state">
+          <div class="icon-mark">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2>Email confirmed</h2>
+          <p>Your account is set. You can sign in now and start finding huddlz.</p>
+          <a class="btn-primary" href="/dev/design/clickthrough/sign-in">Sign in</a>
+        </div>
+      </div>
+
+      <div data-tw-variant="Expired" hidden>
+        <div class="auth-state warn">
+          <div class="icon-mark">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="9" /><path d="M12 7v6" /><path d="M12 17h.01" />
+            </svg>
+          </div>
+          <h2>This confirmation link is invalid</h2>
+          <p>
+            The link may have expired or already been used. Sign in and we'll send a fresh confirmation email.
+          </p>
+          <a class="btn-primary" href="/dev/design/clickthrough/sign-in">Sign in</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</.clickthrough_shell>

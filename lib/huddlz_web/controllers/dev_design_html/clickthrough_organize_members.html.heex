@@ -1,0 +1,134 @@
+<.clickthrough_shell active={@active} query={@query} signed_in={@signed_in}>
+  <div class="page-head">
+    <div>
+      <h1>Members</h1>
+      <p>
+        Who's part of your group, how active they are, and who's worth a personal welcome — or a nudge.
+      </p>
+    </div>
+  </div>
+
+  <div class="insight-strip">
+    <span class="insight-pill">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+      >
+        <path d="M3 17l6-6 4 4 8-8" />
+      </svg>
+      <strong>+18</strong>
+      new this month
+    </span>
+    <span class="insight-pill">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+      >
+        <circle cx="12" cy="12" r="9" /><path d="M12 8v5l3 2" />
+      </svg>
+      <strong>71%</strong>
+      attended a huddl in last 90 days
+    </span>
+    <span class="insight-pill">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+      >
+        <path d="M5 13l4 4L19 7" />
+      </svg>
+      <strong>12</strong>
+      top hosts (3+ huddlz attended)
+    </span>
+    <span class="insight-pill" style="border-color: rgba(246, 193, 119, 0.35)">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        style="color: var(--warn)"
+      >
+        <path d="M12 9v4M12 17h.01" /><circle cx="12" cy="12" r="9" />
+      </svg>
+      <strong>43</strong>
+      dormant · no activity 90+ days
+    </span>
+  </div>
+
+  <div class="filters">
+    <button class="chip is-active">All · 642</button>
+    <button class="chip">New this month · 18</button>
+    <button class="chip">Top hosts · 12</button>
+    <button class="chip">Dormant · 43</button>
+    <button class="chip">Organizers · 4</button>
+  </div>
+
+  <div class="panel" style="padding:0">
+    <div class="row-list" style="padding:0 20px">
+      <div class="row members-row">
+        <div class="member-mark m1">AJ</div>
+        <div>
+          <div class="row-title">Alice Johnson <span class="title-tag">Organizer</span></div>
+          <div class="meta">alice.j@example.com · joined Feb 2023</div>
+        </div>
+        <span class="muted" style="font-size:12px">Active today</span>
+        <span class="pill cyan">28 huddlz</span>
+      </div>
+      <div class="row members-row">
+        <div class="member-mark m2">RG</div>
+        <div>
+          <div class="row-title">Ravi Gupta</div>
+          <div class="meta">ravi@example.com · joined Mar 2024</div>
+        </div>
+        <span class="muted" style="font-size:12px">Active 2d ago</span>
+        <span class="pill cyan">Top host · 14</span>
+      </div>
+      <div class="row members-row">
+        <div class="member-mark m4">SK</div>
+        <div>
+          <div class="row-title">Sara Kim</div>
+          <div class="meta">sara.k@example.com · joined this week</div>
+        </div>
+        <span class="muted" style="font-size:12px">New</span>
+        <span class="pill">1 huddl</span>
+      </div>
+      <div class="row members-row">
+        <div class="member-mark m5">TN</div>
+        <div>
+          <div class="row-title">Tomás Núñez</div>
+          <div class="meta">tomas@example.com · joined Jun 2023</div>
+        </div>
+        <span class="muted" style="font-size:12px">Last seen 4 mo ago</span>
+        <span class="pill muted">Dormant</span>
+      </div>
+      <div class="row members-row">
+        <div class="member-mark m3">EP</div>
+        <div>
+          <div class="row-title">Emma Park</div>
+          <div class="meta">emma@example.com · joined Aug 2023</div>
+        </div>
+        <span class="muted" style="font-size:12px">Active 1w ago</span>
+        <span class="pill">9 huddlz</span>
+      </div>
+      <div class="row members-row">
+        <div class="member-mark m1">DL</div>
+        <div>
+          <div class="row-title">Diego Lopez</div>
+          <div class="meta">diego.l@example.com · joined this week</div>
+        </div>
+        <span class="muted" style="font-size:12px">New</span>
+        <span class="pill">0 huddlz</span>
+      </div>
+    </div>
+  </div>
+</.clickthrough_shell>

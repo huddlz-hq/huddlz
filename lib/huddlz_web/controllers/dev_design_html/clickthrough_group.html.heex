@@ -1,0 +1,258 @@
+<.clickthrough_shell active={@active} query={@query} signed_in={@signed_in}>
+  <div data-tw-container="Group visibility" class="hero">
+    <img class="hero-img" src="/dev/design/images/product-night.svg" alt="" />
+    <div data-tw-variant="Public" class="hero-content">
+      <span class="eyebrow">Group · Public</span>
+      <h1>Phoenix Elixir Meetup</h1>
+      <div class="meta">
+        <span>📍 Phoenix, AZ</span>
+        <span>·</span>
+        <span>642 members</span>
+        <span>·</span>
+        <span>Since Jan 2023</span>
+      </div>
+    </div>
+    <div data-tw-variant="Private" class="hero-content" hidden>
+      <span class="eyebrow">Group · <span style="color:var(--warn)">Private</span></span>
+      <h1>Phoenix Elixir Meetup</h1>
+      <div class="meta">
+        <span>📍 Phoenix, AZ</span>
+        <span>·</span>
+        <span>642 members</span>
+        <span>·</span>
+        <span>Members-only · invite required</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="huddl-frame">
+    <div class="huddl-intro prose">
+      <p>
+        A friendly community for Phoenix developers using Elixir, Phoenix, and LiveView. We meet every two weeks for talks, workshops, and code-with-us sessions. Mostly hybrid — show up in person if you can, hop on Zoom if you can't.
+      </p>
+      <p>
+        Talks are typically 30–45 minutes plus discussion; workshops run 90 minutes and you'll write code. Bring a laptop. Snacks provided.
+      </p>
+      <p>
+        If you'd like to give a talk or run a workshop, reach out via the group inbox — we always have room for first-time speakers.
+      </p>
+    </div>
+
+    <aside class="huddl-side">
+      <h3>This group</h3>
+      <ul class="facts">
+        <li>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9.5" cy="7" r="4" />
+          </svg>
+          <div>
+            <div class="label">Members</div>
+            <div class="value">642</div>
+          </div>
+        </li>
+        <li>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 11h18" />
+          </svg>
+          <div>
+            <div class="label">Schedule</div>
+            <div class="value">Bi-weekly · Thursdays</div>
+          </div>
+        </li>
+        <li>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" /><circle
+              cx="12"
+              cy="10"
+              r="3"
+            />
+          </svg>
+          <div>
+            <div class="label">Where</div>
+            <div class="value">Phoenix, AZ · usually Central</div>
+          </div>
+        </li>
+      </ul>
+
+      <div data-tw-container="Viewer role">
+        <div data-tw-variant="Non-member">
+          <button class="btn-primary" style="width:100%">Join group</button>
+          <button class="btn-secondary" style="width:100%; margin-top:8px">Share</button>
+        </div>
+        <div data-tw-variant="Member" hidden>
+          <div class="role-pill">
+            <span class="pill cyan">Joined</span>
+          </div>
+          <button class="btn-secondary" style="width:100%">Share</button>
+          <button class="btn-secondary muted-btn" style="width:100%; margin-top:8px">
+            Leave group
+          </button>
+        </div>
+        <div data-tw-variant="Organizer" hidden>
+          <div class="role-pill">
+            <span class="pill cyan">Organizer</span>
+          </div>
+          <a
+            class="btn-primary"
+            href="/dev/design/clickthrough/organize-overview"
+            style="width:100%; justify-content:center"
+          >
+            Manage group
+          </a>
+          <a
+            class="btn-secondary"
+            href="/dev/design/clickthrough/huddl-new"
+            style="width:100%; margin-top:8px; justify-content:center"
+          >
+            + Create huddl
+          </a>
+          <a
+            class="btn-secondary"
+            href="/dev/design/clickthrough/group-edit"
+            style="width:100%; margin-top:8px; justify-content:center"
+          >
+            Edit group
+          </a>
+        </div>
+      </div>
+
+      <div data-tw-container="Members panel — visibility" class="huddl-side-section">
+        <div data-tw-variant="Members visible">
+          <h3>Members</h3>
+          <div class="member-grid compact">
+            <div class="member-mini">
+              <div class="member-mark m1">AJ</div>
+            </div>
+            <div class="member-mini">
+              <div class="member-mark m2">RG</div>
+            </div>
+            <div class="member-mini">
+              <div class="member-mark m4">SK</div>
+            </div>
+            <div class="member-mini">
+              <div class="member-mark m5">TN</div>
+            </div>
+            <div class="member-mini">
+              <div class="member-mark m3">EP</div>
+            </div>
+            <div class="member-mini">
+              <div class="member-mark m1">DL</div>
+            </div>
+            <div class="member-mini">
+              <div class="member-mark m2">JT</div>
+            </div>
+            <div class="member-mini">
+              <div class="member-mark m4">+635</div>
+            </div>
+          </div>
+        </div>
+        <div data-tw-variant="Members hidden (non-member)" hidden>
+          <h3>Members</h3>
+          <div class="muted" style="font-size:13px">Join this group to see who's in it.</div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="huddl-rest">
+      <div class="prose">
+        <h2>Upcoming huddlz</h2>
+      </div>
+
+      <div class="grid two">
+        <a class="card" href="/dev/design/clickthrough/huddl">
+          <div class="card-cover gradient-1">
+            <img class="card-cover-img" src="/dev/design/images/product-night.svg" alt="" />
+            <div class="date-stamp"><span class="m">MAY</span><span class="d">22</span></div>
+            <span class="card-tag hybrid">Hybrid</span>
+          </div>
+          <div class="card-body">
+            <span class="card-group">Workshop · 90 min</span>
+            <div class="card-title">Ash Framework workshop</div>
+            <div class="card-meta">
+              <span>Thu · 6:00 PM</span><span class="dot"></span><span>Central Phoenix</span>
+            </div>
+          </div>
+          <div class="card-foot">
+            <div class="stack">
+              <div class="pip"></div>
+              <div class="pip"></div>
+              <div class="pip"></div>
+              <span class="stack-count">28 going</span>
+            </div>
+            <button class="save-btn">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M19 21 12 16l-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z" />
+              </svg>
+            </button>
+          </div>
+        </a>
+        <a class="card" href="/dev/design/clickthrough/huddl">
+          <div class="card-cover gradient-4">
+            <img class="card-cover-img" src="/dev/design/images/ai-meetup.svg" alt="" />
+            <div class="date-stamp"><span class="m">MAY</span><span class="d">28</span></div>
+            <span class="card-tag hybrid">Hybrid</span>
+          </div>
+          <div class="card-body">
+            <span class="card-group">Talk · 60 min</span>
+            <div class="card-title">LiveView deep dive · streams &amp; async</div>
+            <div class="card-meta">
+              <span>Wed · 6:30 PM</span><span class="dot"></span><span>Phoenix, AZ</span>
+            </div>
+          </div>
+          <div class="card-foot">
+            <div class="stack">
+              <div class="pip"></div>
+              <div class="pip"></div>
+              <div class="pip"></div>
+              <span class="stack-count">34 going</span>
+            </div>
+            <button class="save-btn">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M19 21 12 16l-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z" />
+              </svg>
+            </button>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+</.clickthrough_shell>
