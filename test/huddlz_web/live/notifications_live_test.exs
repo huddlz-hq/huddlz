@@ -100,6 +100,19 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       |> click_button("Mark all as read")
       |> assert_has(".filters .chip", text: "Inbox · 0 unread")
     end
+
+    test "Mark all as read clears unread beyond the visible page", %{conn: conn, user: user} do
+      # 25 unread > 20-per-page. Per-page iteration would leave 5 unread;
+      # bulk update clears all of them.
+      for _ <- 1..25, do: deliver!(user, :password_changed, %{})
+
+      conn
+      |> login(user)
+      |> visit("/notifications")
+      |> assert_has(".filters .chip", text: "Inbox · 25 unread")
+      |> click_button("Mark all as read")
+      |> assert_has(".filters .chip", text: "Inbox · 0 unread")
+    end
   end
 
   describe "Invites filter" do

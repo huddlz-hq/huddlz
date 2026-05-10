@@ -28,6 +28,7 @@ defmodule Huddlz.Notifications do
     end
   end
 
+  require Ash.Query
   require Logger
 
   alias Huddlz.Accounts.User
@@ -141,6 +142,32 @@ defmodule Huddlz.Notifications do
       raise ArgumentError,
             "Notification sender #{inspect(sender)} for trigger #{inspect(trigger)} " <>
               "is not yet implemented. Implement Huddlz.Notifications.Sender.build/2 in that module."
+    end
+  end
+
+  @doc """
+  Mark every unread notification owned by `user` as read in a single SQL
+  UPDATE.
+
+  Replaces N round-trips of `mark_read/1` for the case where the actor wants
+  to clear their inbox in one click. The update policy on `Notification`
+  scopes the bulk to the actor's own rows; the query filter narrows to
+  `is_nil(read_at)` so reads aren't re-stamped.
+
+  Returns `:ok` on success, `{:error, term()}` if Ash reports any failures.
+  """
+  @spec mark_all_read(User.t()) :: :ok | {:error, term()}
+  def mark_all_read(%User{} = user) do
+    Notification
+    |> Ash.Query.filter(is_nil(read_at))
+    |> Ash.bulk_update(:mark_all_read, %{},
+      actor: user,
+      return_records?: false,
+      return_errors?: true
+    )
+    |> case do
+      %Ash.BulkResult{status: :success} -> :ok
+      %Ash.BulkResult{errors: errors} -> {:error, errors}
     end
   end
 
