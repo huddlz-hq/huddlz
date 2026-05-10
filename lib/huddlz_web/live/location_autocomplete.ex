@@ -25,9 +25,11 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   attr :fetch_coordinates, :boolean, default: true
 
   attr :variant, :atom,
-    values: [:default, :filter_pill],
+    values: [:default, :filter_pill, :v3_form],
     default: :default,
-    doc: "render style — `:filter_pill` mounts inside the v3 `.filter-location` chrome"
+    doc:
+      "render style — `:filter_pill` mounts inside the v3 `.filter-location` chrome; " <>
+        "`:v3_form` renders the panel-style `.location-display` block used on `/profile`"
 
   def mount(socket) do
     {:ok,
@@ -109,6 +111,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   end
 
   def render(%{variant: :filter_pill} = assigns), do: render_filter_pill(assigns)
+  def render(%{variant: :v3_form} = assigns), do: render_v3_form(assigns)
   def render(assigns), do: render_default(assigns)
 
   defp render_default(assigns) do
@@ -356,6 +359,132 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
       </p>
 
       <p :if={@error} class="filter-location-error">{@error}</p>
+    </div>
+    """
+  end
+
+  # V3 panel-form variant — renders the `.location-display` block on `/profile`.
+  # When a location is selected, shows a static pill with explicit
+  # "Change location…" and "Clear" buttons (matching the clickthrough mockup);
+  # when searching, falls back to a `.form-input` + `.filter-location-listbox`
+  # dropdown so the suggestions reuse the v3 panel styling.
+  defp render_v3_form(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      class="filter-location-wrap"
+      phx-click-away="dismiss"
+      phx-target={@myself}
+      phx-hook="LocationAutocomplete"
+      data-has-highlight={to_string(@suggestion_index >= 0)}
+    >
+      <%= if @selected do %>
+        <input :if={@field_name} type="hidden" name={@field_name} value={@selected_text} />
+        <div class="location-display" data-testid="location-selected">
+          <div class="location-current">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 22s7-7.6 7-13a7 7 0 0 0-14 0c0 5.4 7 13 7 13z" />
+              <circle cx="12" cy="9" r="2.5" />
+            </svg>
+            <span data-testid="location-display">{@selected_text}</span>
+          </div>
+          <div class="location-actions">
+            <button
+              type="button"
+              class="btn-secondary"
+              phx-click="edit"
+              phx-target={@myself}
+            >
+              Change location…
+            </button>
+            <button
+              :if={@show_clear}
+              type="button"
+              class="btn-secondary muted-btn"
+              phx-click="clear"
+              phx-target={@myself}
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      <% else %>
+        <div class="location-control">
+          <input :if={@field_name} type="hidden" name={@field_name} value={@search_text} />
+          <input
+            type="text"
+            id={"#{@id}-input"}
+            class="form-input"
+            value={@search_text}
+            placeholder={@placeholder}
+            phx-change="search_input"
+            phx-target={@myself}
+            phx-debounce="300"
+            phx-keydown="keydown"
+            name={"#{@id}_search"}
+            autocomplete="off"
+            data-testid="location-input"
+            role="combobox"
+            aria-expanded={to_string(@show_suggestions && @suggestions != [])}
+            aria-autocomplete="list"
+            aria-controls={"#{@id}-listbox"}
+          />
+          <button
+            :if={@show_clear && @search_text != "" && !@loading}
+            type="button"
+            class="form-clear"
+            phx-click="clear"
+            phx-target={@myself}
+            aria-label="Clear location"
+          >
+            ×
+          </button>
+        </div>
+
+        <div
+          :if={@show_suggestions && @suggestions != []}
+          id={"#{@id}-listbox"}
+          role="listbox"
+          class="filter-location-listbox"
+          style="min-width: 100%"
+        >
+          <button
+            :for={{s, idx} <- Enum.with_index(@suggestions)}
+            type="button"
+            id={"#{@id}-option-#{idx}"}
+            role="option"
+            phx-click="select"
+            phx-value-place-id={s.place_id}
+            phx-value-display-text={s.display_text}
+            phx-value-main-text={s.main_text}
+            phx-target={@myself}
+            class={["filter-location-option", idx == @suggestion_index && "is-active"]}
+          >
+            <span class="opt-main">{s.main_text}</span>
+            <span class="opt-secondary">{s.secondary_text}</span>
+          </button>
+        </div>
+
+        <p
+          :if={@show_suggestions && @suggestions == [] && !@loading}
+          class="filter-location-listbox empty"
+          style="min-width: 100%"
+        >
+          No locations found
+        </p>
+      <% end %>
+
+      <p :if={@error} class="form-error">{@error}</p>
     </div>
     """
   end
