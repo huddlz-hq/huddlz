@@ -79,6 +79,21 @@ defmodule HuddlzWeb.V3Test do
       assert link =~ ~s(href="/discover")
       assert link =~ "btn-secondary"
     end
+
+    test "honors type=\"submit\" from the caller" do
+      # Regression: `type` used to be declared in the `:rest` global include,
+      # so an explicit `type="submit"` from the caller was silently overridden
+      # by the component's default `type="button"`. Profile forms looked
+      # rendered but didn't actually submit.
+      assigns = %{}
+
+      submit = rendered_to_string(~H|<.v3_button type="submit">Save</.v3_button>|)
+      default = rendered_to_string(~H"<.v3_button>Cancel</.v3_button>")
+
+      assert submit =~ ~s(type="submit")
+      refute submit =~ ~s(type="button")
+      assert default =~ ~s(type="button")
+    end
   end
 
   describe "v3_panel/1" do
