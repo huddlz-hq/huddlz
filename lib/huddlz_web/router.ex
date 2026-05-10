@@ -107,7 +107,6 @@ defmodule HuddlzWeb.Router do
       live "/organize/members", OrganizeLive, :members
 
       # Group routes
-      live "/groups/new/locations/new", GroupLive.New, :new_location
       live "/groups/new", GroupLive.New, :new
       live "/groups/:slug/edit/locations/new", GroupLive.Edit, :new_location
       live "/groups/:slug/edit", GroupLive.Edit, :edit

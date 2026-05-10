@@ -63,16 +63,21 @@ defmodule GroupManagementSteps do
           "Location" ->
             view = session.view
 
-            modal_path =
+            {component_id, needs_modal_submit?} =
               if editing_group,
-                do: "/groups/#{editing_group.slug}/edit/locations/new",
-                else: "/groups/new/locations/new"
+                do: {"modal-location-autocomplete", true},
+                else: {"group-location", false}
 
-            Phoenix.LiveViewTest.render_patch(view, modal_path)
+            if needs_modal_submit? do
+              Phoenix.LiveViewTest.render_patch(
+                view,
+                "/groups/#{editing_group.slug}/edit/locations/new"
+              )
+            end
 
             send(
               view.pid,
-              {:location_selected, "modal-location-autocomplete",
+              {:location_selected, component_id,
                %{
                  place_id: "test_place_id",
                  display_text: value,
@@ -83,7 +88,10 @@ defmodule GroupManagementSteps do
             )
 
             render(view)
-            Phoenix.LiveViewTest.render_submit(view, "select_modal_location", %{})
+
+            if needs_modal_submit? do
+              Phoenix.LiveViewTest.render_submit(view, "select_modal_location", %{})
+            end
 
             session
 

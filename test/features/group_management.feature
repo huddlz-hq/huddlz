@@ -14,13 +14,13 @@ Feature: Group Management
   Scenario: Creating a public group as a verified user
     Given I am signed in as "verified@example.com"
     When I visit "/groups/new"
-    Then I should see "Create a New Group"
+    Then I should see "Create a group"
     When I fill in the following:
-      | Group Name  | Tech Enthusiasts           |
+      | Group name  | Tech Enthusiasts           |
       | Description | A group for tech lovers    |
       | Location    | San Francisco, CA          |
-    And I check "Public group (visible to everyone)"
-    And I click "Create Group"
+    And I check "Public group"
+    And I click "Create group"
     Then I should see "Group created successfully"
     And I should see "Tech Enthusiasts"
     And I should see "A group for tech lovers"
@@ -29,10 +29,10 @@ Feature: Group Management
     Given I am signed in as "admin@example.com"
     When I visit "/groups/new"
     When I fill in the following:
-      | Group Name  | Secret Society |
+      | Group name  | Secret Society |
       | Description | Private group  |
-    And I uncheck "Public group (visible to everyone)"
-    And I click "Create Group"
+    And I uncheck "Public group"
+    And I click "Create group"
     Then I should see "Group created successfully"
     And I should see "Secret Society"
     And I should see "Private"
@@ -40,8 +40,7 @@ Feature: Group Management
   Scenario: Regular users can create groups
     Given I am signed in as "regular@example.com"
     When I visit "/groups/new"
-    Then I should see "New Group"
-    And I should see "Create a New Group"
+    Then I should see "Create a group"
 
   Scenario: Viewing a public group as a visitor
     Given a public group "Book Club" exists with owner "verified@example.com"
@@ -78,5 +77,5 @@ Feature: Group Management
   Scenario: Group name is required
     Given I am signed in as "verified@example.com"
     When I visit "/groups/new"
-    And I click "Create Group"
-    Then I should see an error on the "Group Name" field
+    And I click "Create group"
+    Then I should see an error on the "Group name" field
