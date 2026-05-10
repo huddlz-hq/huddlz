@@ -1893,6 +1893,14 @@ body.v3 .auth-card .form-grid { max-width: none; gap: 14px; }
 body.v3 .auth-card .form-foot { border: 0; padding: 0; margin-top: 18px; }
 body.v3 .auth-card .form-foot .btn-primary { flex: 1 1 auto; justify-content: center; height: 44px; font-size: 14px; }
 
+body.v3 .auth-card .auth-aux-btn {
+  align-self: flex-start;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+  margin-top: -10px;
+}
+
 body.v3 .auth-aside {
   text-align: center;
   color: var(--muted);

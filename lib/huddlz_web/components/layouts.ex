@@ -418,6 +418,76 @@ defmodule HuddlzWeb.Layouts do
     """
   end
 
+  @doc """
+  V3 auth shell — chromeless wrapper used by `/sign-in`, `/register`, `/reset`,
+  and `/reset/:token`. Renders the brand topbar, the flash group, and an
+  `auth-frame` container around the inner content.
+
+  Pair with `assign(socket, :body_class, "v3 is-auth")` in the LiveView's
+  `mount/3` so the v3 auth styles in `app.css` take effect.
+  """
+  attr :flash, :map, required: true
+  slot :inner_block, required: true
+
+  def auth_shell(assigns) do
+    ~H"""
+    <Layouts.flash_group flash={@flash} />
+
+    <div class="auth-shell">
+      <header class="auth-topbar">
+        <a href={~p"/"}>
+          <div class="brand-glyph">h</div>
+          <div class="brand-text">huddlz</div>
+        </a>
+      </header>
+
+      <div class="auth-frame">
+        {render_slot(@inner_block)}
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  Cyan check or warn circle inside `.icon-mark` — used by auth-state success
+  and expired/invalid blocks.
+  """
+  attr :name, :string, required: true, values: ~w(check warn)
+
+  def auth_state_icon(%{name: "check"} = assigns) do
+    ~H"""
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M5 13l4 4L19 7" />
+    </svg>
+    """
+  end
+
+  def auth_state_icon(%{name: "warn"} = assigns) do
+    ~H"""
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <circle cx="12" cy="12" r="9" /><path d="M12 7v6" /><path d="M12 17h.01" />
+    </svg>
+    """
+  end
+
   attr :name, :string, required: true
 
   defp v3_nav_icon(%{name: "search"} = assigns) do

@@ -44,89 +44,72 @@ defmodule HuddlzWeb.AuthLive.Register do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.flash_group flash={@flash} />
+    <Layouts.auth_shell flash={@flash}>
+      <h1>Create your account</h1>
+      <p class="lede">Names aren't unique on huddlz — pick anything you like.</p>
 
-    <div class="auth-shell">
-      <header class="auth-topbar">
-        <a href={~p"/"} style="display:flex;align-items:center;gap:10px">
-          <div class="brand-glyph">h</div>
-          <div class="brand-text">huddlz</div>
-        </a>
-      </header>
+      <.form
+        for={@form}
+        id="registration-form"
+        phx-change="validate"
+        phx-submit="register"
+        class="auth-card"
+      >
+        <div class="form-grid">
+          <.v3_input
+            field={@form[:email]}
+            type="email"
+            label="Email"
+            placeholder="you@example.com"
+            autocomplete="email"
+          />
 
-      <div class="auth-frame">
-        <h1>Create your account</h1>
-        <p class="lede">Names aren't unique on huddlz — pick anything you like.</p>
+          <.v3_input
+            field={@form[:display_name]}
+            type="text"
+            label="Display Name"
+            placeholder="First and Last Name"
+            autocomplete="name"
+          />
 
-        <.form
-          for={@form}
-          id="registration-form"
-          phx-change="validate"
-          phx-submit="register"
-          class="auth-card"
-        >
-          <div class="form-grid">
-            <.v3_input
-              field={@form[:email]}
-              type="email"
-              label="Email"
-              placeholder="you@example.com"
-              autocomplete="email"
-            />
+          <button
+            type="button"
+            phx-click="generate_display_name"
+            class="btn-secondary auth-aux-btn"
+          >
+            Generate random name
+          </button>
 
-            <div class="form-row">
-              <label for="user_display_name" class="form-label">Display Name</label>
-              <input
-                type="text"
-                id="user_display_name"
-                name="user[display_name]"
-                value={Phoenix.HTML.Form.normalize_value("text", @form[:display_name].value)}
-                class="form-input"
-                placeholder="First and Last Name"
-                autocomplete="name"
-              />
-              <button
-                type="button"
-                phx-click="generate_display_name"
-                class="btn-secondary"
-                style="margin-top:6px;align-self:flex-start;height:32px;padding:0 12px;font-size:12px"
-              >
-                Generate random name
-              </button>
-              <p :for={msg <- field_errors(@form[:display_name])} class="form-error">{msg}</p>
-            </div>
+          <.v3_input
+            field={@form[:password]}
+            type="password"
+            label="Password"
+            placeholder="At least 8 characters"
+            autocomplete="new-password"
+            help="At least 8 characters."
+            phx-debounce="blur"
+          />
 
-            <.v3_input
-              field={@form[:password]}
-              type="password"
-              label="Password"
-              placeholder="At least 8 characters"
-              autocomplete="new-password"
-              help="At least 8 characters."
-              phx-debounce="blur"
-            />
-
-            <.v3_input
-              field={@form[:password_confirmation]}
-              type="password"
-              label="Confirm Password"
-              placeholder="Type your password again"
-              autocomplete="new-password"
-              phx-debounce="blur"
-            />
-          </div>
-          <div class="form-foot">
-            <button type="submit" class="btn-primary" phx-disable-with="Creating account...">
-              Create account
-            </button>
-          </div>
-        </.form>
-
-        <div class="auth-aside">
-          Already have an account? <.link navigate={~p"/sign-in"}>Sign in</.link>
+          <.v3_input
+            field={@form[:password_confirmation]}
+            type="password"
+            label="Confirm Password"
+            placeholder="Type your password again"
+            autocomplete="new-password"
+            phx-debounce="blur"
+          />
         </div>
+        <div class="form-foot">
+          <button type="submit" class="btn-primary" phx-disable-with="Creating account...">
+            Create account
+          </button>
+        </div>
+      </.form>
+
+      <div class="auth-aside">
+        Already have an account? <.link navigate={~p"/sign-in"}>Sign in</.link>
       </div>
-    </div>
+    </Layouts.auth_shell>
     """
   end
 
@@ -203,20 +186,6 @@ defmodule HuddlzWeb.AuthLive.Register do
 
   defp assign_form(socket, form) do
     assign(socket, :form, to_form(form))
-  end
-
-  defp field_errors(field) do
-    if Phoenix.Component.used_input?(field) do
-      Enum.map(field.errors, &translate_field_error/1)
-    else
-      []
-    end
-  end
-
-  defp translate_field_error({msg, opts}) do
-    Enum.reduce(opts, msg, fn {key, value}, acc ->
-      String.replace(acc, "%{#{key}}", fn _ -> to_string(value) end)
-    end)
   end
 
   defp get_form_errors(form) do

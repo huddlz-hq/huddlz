@@ -11,60 +11,44 @@ defmodule HuddlzWeb.AuthLive.SignIn do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.flash_group flash={@flash} />
+    <Layouts.auth_shell flash={@flash}>
+      <h1>Sign in</h1>
+      <p class="lede">Welcome back. Sign in to RSVP, organize, and follow your groups.</p>
 
-    <div class="auth-shell">
-      <header class="auth-topbar">
-        <a href={~p"/"} style="display:flex;align-items:center;gap:10px">
-          <div class="brand-glyph">h</div>
-          <div class="brand-text">huddlz</div>
-        </a>
-      </header>
-
-      <div class="auth-frame">
-        <h1>Sign in</h1>
-        <p class="lede">Welcome back. Sign in to RSVP, organize, and follow your groups.</p>
-
-        <.form
-          :let={f}
-          for={@password_form}
-          id="password-sign-in-form"
-          phx-submit="sign_in_with_password"
-          phx-change="validate_password"
-          phx-trigger-action={@trigger_action}
-          action="/auth/user/password/sign_in"
-          method="post"
-          class="auth-card"
-        >
-          <div class="form-grid">
-            <.v3_input
-              field={f[:email]}
-              type="email"
-              label="Email"
-              autocomplete="email"
-            />
-            <.v3_input
-              field={f[:password]}
-              type="password"
-              label="Password"
-              autocomplete="current-password"
-            />
-          </div>
-          <div class="form-foot">
-            <button type="submit" class="btn-primary" phx-disable-with="Signing in...">
-              Sign in
-            </button>
-          </div>
-        </.form>
-
-        <div class="auth-aside">
-          <.link navigate={~p"/reset"}>Forgot your password?</.link>
+      <.form
+        :let={f}
+        for={@password_form}
+        id="password-sign-in-form"
+        phx-submit="sign_in_with_password"
+        phx-change="validate_password"
+        phx-trigger-action={@trigger_action}
+        action="/auth/user/password/sign_in"
+        method="post"
+        class="auth-card"
+      >
+        <div class="form-grid">
+          <.v3_input field={f[:email]} type="email" label="Email" autocomplete="email" />
+          <.v3_input
+            field={f[:password]}
+            type="password"
+            label="Password"
+            autocomplete="current-password"
+          />
         </div>
-        <div class="auth-aside">
-          Don't have an account? <.link navigate={~p"/register"}>Sign up</.link>
+        <div class="form-foot">
+          <button type="submit" class="btn-primary" phx-disable-with="Signing in...">
+            Sign in
+          </button>
         </div>
+      </.form>
+
+      <div class="auth-aside">
+        <.link navigate={~p"/reset"}>Forgot your password?</.link>
       </div>
-    </div>
+      <div class="auth-aside">
+        Don't have an account? <.link navigate={~p"/register"}>Sign up</.link>
+      </div>
+    </Layouts.auth_shell>
     """
   end
 
