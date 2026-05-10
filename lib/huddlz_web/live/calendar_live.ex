@@ -130,7 +130,7 @@ defmodule HuddlzWeb.CalendarLive do
 
   defp shift_month(date, delta) do
     total = date.year * 12 + (date.month - 1) + delta
-    Date.new!(div(total, 12), rem(total, 12) + 1, 1)
+    Date.new!(Integer.floor_div(total, 12), Integer.mod(total, 12) + 1, 1)
   end
 
   defp month_path(month, view) do
@@ -151,7 +151,7 @@ defmodule HuddlzWeb.CalendarLive do
   end
 
   defp format_month_param(%Date{year: y, month: m}) do
-    :io_lib.format("~4..0B-~2..0B", [y, m]) |> IO.iodata_to_binary()
+    "#{y}-#{String.pad_leading(to_string(m), 2, "0")}"
   end
 
   defp format_month(%Date{year: y, month: m}) do
@@ -194,8 +194,10 @@ defmodule HuddlzWeb.CalendarLive do
   defp huddl_path(%{huddl: %{id: id, group: %{slug: slug}}}),
     do: ~p"/groups/#{slug}/huddlz/#{id}"
 
-  defp agenda_entries(entries) do
-    Enum.sort_by(entries, fn %{huddl: %{starts_at: dt}} -> dt end, DateTime)
+  defp agenda_entries(entries, focus_month) do
+    entries
+    |> Enum.filter(fn %{huddl: h} -> in_focus_month?(h, focus_month) end)
+    |> Enum.sort_by(fn %{huddl: %{starts_at: dt}} -> dt end, DateTime)
   end
 
   defp agenda_pill_variant(%{role: role, huddl: %{starts_at: dt}}, %Date{} = today) do
@@ -308,7 +310,7 @@ defmodule HuddlzWeb.CalendarLive do
           today={@today}
         />
       <% else %>
-        <.agenda_view entries={@entries} today={@today} />
+        <.agenda_view entries={@entries} focus_month={@focus_month} today={@today} />
       <% end %>
 
       <div class="cal-legend">
@@ -372,10 +374,11 @@ defmodule HuddlzWeb.CalendarLive do
   end
 
   attr :entries, :list, required: true
+  attr :focus_month, Date, required: true
   attr :today, Date, required: true
 
   defp agenda_view(assigns) do
-    sorted = agenda_entries(assigns.entries)
+    sorted = agenda_entries(assigns.entries, assigns.focus_month)
     assigns = assign(assigns, :sorted, sorted)
 
     ~H"""
