@@ -17,9 +17,10 @@ defmodule HuddlzWeb.V3.Button do
     values: [:primary, :secondary, :muted, :destructive],
     default: :secondary
 
+  attr :type, :string, default: "button"
   attr :class, :any, default: nil
 
-  attr :rest, :global, include: ~w(href navigate patch type disabled name value form)
+  attr :rest, :global, include: ~w(href navigate patch disabled name value form)
 
   slot :inner_block, required: true
 
@@ -31,8 +32,6 @@ defmodule HuddlzWeb.V3.Button do
       </.link>
       """
     else
-      assigns = assign_new(assigns, :type, fn -> "button" end)
-
       ~H"""
       <button type={@type} class={[base_class(@variant), @class]} {@rest}>
         {render_slot(@inner_block)}

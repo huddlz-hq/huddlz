@@ -8,6 +8,7 @@ defmodule HuddlzWeb.ProfileLive do
   alias HuddlzWeb.Layouts
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
+  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -62,192 +63,189 @@ defmodule HuddlzWeb.ProfileLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_user={@current_user}>
-      <.header>
-        Profile Settings
-        <:subtitle>Manage your profile information</:subtitle>
-      </.header>
+    <Layouts.v3_app flash={@flash} current_user={@current_user} active="profile">
+      <div class="page-head">
+        <div>
+          <h1>Profile</h1>
+          <p>How you show up in huddlz — your name, photo, and how to reach you.</p>
+        </div>
+      </div>
 
-      <nav class="mt-4">
-        <.link
-          navigate={~p"/profile/notifications"}
-          class="text-primary underline underline-offset-4 hover:text-secondary"
-        >
-          Notification preferences
-        </.link>
-      </nav>
-
-      <div class="mt-8">
-        <h2 class="font-display text-lg tracking-tight text-glow">Profile Picture</h2>
-        <p class="text-base-content/50 mb-4">
-          Upload a profile picture to personalize your account.
-        </p>
-
-        <div class="relative inline-block">
-          <div class="relative">
-            <.avatar user={@current_user} size={:xl} />
-            <button
-              type="button"
-              phx-click={JS.toggle(to: "#avatar-menu")}
-              class="absolute bottom-0 right-0 w-6 h-6 flex items-center justify-center bg-base-200 border border-base-300 text-primary cursor-pointer"
-            >
-              <.icon name="hero-pencil" class="w-3 h-3" />
-            </button>
-          </div>
-
-          <div
-            id="avatar-menu"
-            class="hidden absolute left-0 mt-2 w-48 border border-base-300 bg-base-200 z-10"
-            phx-click-away={JS.hide(to: "#avatar-menu")}
-          >
-            <label
-              for={@uploads.avatar.ref}
-              class="block w-full text-left px-4 py-2 text-sm hover:text-primary cursor-pointer transition-colors"
-              phx-click={JS.hide(to: "#avatar-menu")}
-            >
-              Upload a photo...
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Profile picture</h2>
+        </div>
+        <div class="profile-photo-row">
+          <.big_avatar user={@current_user} />
+          <div class="profile-photo-actions">
+            <label for={@uploads.avatar.ref} class="btn-secondary" style="cursor:pointer">
+              Upload a photo…
             </label>
             <%= if @current_user.current_profile_picture_url do %>
               <button
                 type="button"
+                class="btn-secondary muted-btn"
                 phx-click="remove_avatar"
                 data-confirm="Are you sure you want to remove your profile picture?"
-                class="block w-full text-left px-4 py-2 text-sm text-error hover:text-error/70 transition-colors"
               >
-                <span>Remove</span>
+                Remove
               </button>
             <% end %>
-          </div>
-
-          <form id="avatar-form" phx-change="validate_avatar" class="hidden">
-            <.live_file_input upload={@uploads.avatar} />
-          </form>
-        </div>
-
-        <%= if @avatar_error do %>
-          <p class="text-error text-sm mt-2">{@avatar_error}</p>
-        <% end %>
-
-        <div class="mt-10">
-          <h2 class="font-display text-lg tracking-tight text-glow">Account Information</h2>
-          <div class="mt-4 space-y-3">
-            <div class="flex items-center gap-3">
-              <span class="w-16 mono-label text-primary/70">Email</span>
-              <span class="text-base-content/50">{@current_user.email}</span>
+            <div class="muted" style="font-size:12px; margin-top:6px">
+              JPG, PNG, or WebP · 5 MB max
             </div>
-            <div class="flex items-center gap-3">
-              <span class="w-16 mono-label text-primary/70">Role</span>
-              <span class={[
-                "text-xs px-2.5 py-1 font-medium",
-                @current_user.role == :admin && "bg-primary/10 text-primary",
-                @current_user.role == :user && "bg-base-300 text-base-content/50"
-              ]}>
-                {@current_user.role |> to_string() |> String.capitalize()}
-              </span>
-            </div>
+            <p :if={@avatar_error} class="form-error">{@avatar_error}</p>
           </div>
         </div>
+        <form id="avatar-form" phx-change="validate_avatar" class="hidden">
+          <.live_file_input upload={@uploads.avatar} />
+        </form>
+      </div>
 
-        <div class="mt-10">
-          <h2 class="font-display text-lg tracking-tight text-glow">Display Name</h2>
-          <p class="text-base-content/50 mb-4">
-            This is how other users will see you on the platform.
-          </p>
-
-          <form phx-submit="save" phx-change="validate">
-            <.input
+      <.form for={@form} phx-submit="save" phx-change="validate">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Account information</h2>
+          </div>
+          <div class="form-grid">
+            <div class="form-row">
+              <label class="form-label">Email</label>
+              <div class="form-control read-only">
+                <span>{@current_user.email}</span>
+                <span class={["pill", role_pill_color(@current_user.role)]}>
+                  {role_label(@current_user.role)}
+                </span>
+              </div>
+              <p class="form-help">Your email can't be changed from this page.</p>
+            </div>
+            <.v3_input
               field={@form[:display_name]}
-              type="text"
-              label="Display Name"
+              label="Display name"
               placeholder="Enter your display name"
+              help="Names aren't unique on huddlz — pick anything you like."
             />
-
-            <div class="mt-4">
-              <.button type="submit">
-                Save Changes
-              </.button>
-            </div>
-          </form>
+          </div>
+          <div class="form-foot">
+            <.v3_button variant={:primary} type="submit">Save changes</.v3_button>
+          </div>
         </div>
+      </.form>
 
-        <div class="mt-10">
-          <h2 class="font-display text-lg tracking-tight text-glow">Home Location</h2>
-          <p class="text-base-content/50 mb-4">
-            Set your home city to pre-fill location search when browsing huddlz.
-          </p>
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Home location</h2>
+            <div class="panel-sub">
+              Used to pre-fill the distance filter when you search huddlz nearby.
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <.live_component
+            module={HuddlzWeb.Live.LocationAutocomplete}
+            id="profile-location"
+            field_name="home_location"
+            value={@current_user.home_location}
+            latitude={@current_user.home_latitude}
+            longitude={@current_user.home_longitude}
+            placeholder="e.g. Austin, TX"
+          />
+          <p :if={@location_error} class="form-error">{@location_error}</p>
+        </div>
+      </div>
 
-          <form phx-change="noop" phx-submit="noop">
-            <div class="flex items-end gap-3">
-              <div class="flex-1">
-                <.live_component
-                  module={HuddlzWeb.Live.LocationAutocomplete}
-                  id="profile-location"
-                  field_name="home_location"
-                  value={@current_user.home_location}
-                  latitude={@current_user.home_latitude}
-                  longitude={@current_user.home_longitude}
-                  label="City / Region"
-                  placeholder="e.g. Austin, TX"
-                />
+      <.form
+        for={@password_form}
+        id="password-form"
+        phx-submit="update_password"
+        phx-change="validate_password"
+      >
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>{if @current_user.hashed_password, do: "Change", else: "Set"} password</h2>
+              <div class="panel-sub">
+                <%= if @current_user.hashed_password do %>
+                  Update your password to keep your account secure.
+                <% else %>
+                  Set a password to enable password-based sign in.
+                <% end %>
               </div>
             </div>
-          </form>
-
-          <%= if @location_error do %>
-            <p class="mt-1 text-sm text-error">{@location_error}</p>
-          <% end %>
-        </div>
-
-        <div class="mt-10">
-          <h2 class="font-display text-lg tracking-tight text-glow">
-            {if @current_user.hashed_password, do: "Change", else: "Set"} Password
-          </h2>
-          <p class="text-base-content/50 mb-4">
+          </div>
+          <div class="form-grid">
             <%= if @current_user.hashed_password do %>
-              Update your password to keep your account secure.
-            <% else %>
-              Set a password to enable password-based sign in.
-            <% end %>
-          </p>
-
-          <form id="password-form" phx-submit="update_password" phx-change="validate_password">
-            <%= if @current_user.hashed_password do %>
-              <.input
+              <.v3_input
                 field={@password_form[:current_password]}
                 type="password"
-                label="Current Password"
+                label="Current password"
                 placeholder="Enter your current password"
                 autocomplete="current-password"
               />
             <% end %>
-
-            <.input
+            <.v3_input
               field={@password_form[:password]}
               type="password"
-              label="New Password"
+              label="New password"
               placeholder="Enter your new password"
               autocomplete="new-password"
+              help="At least 8 characters."
             />
-
-            <.input
+            <.v3_input
               field={@password_form[:password_confirmation]}
               type="password"
-              label="Confirm New Password"
+              label="Confirm new password"
               placeholder="Confirm your new password"
               autocomplete="new-password"
             />
-
-            <div class="mt-4">
-              <.button type="submit">
-                {if @current_user.hashed_password, do: "Update", else: "Set"} Password
-              </.button>
-            </div>
-          </form>
+          </div>
+          <div class="form-foot">
+            <.v3_button variant={:primary} type="submit">
+              {if @current_user.hashed_password, do: "Update", else: "Set"} password
+            </.v3_button>
+          </div>
         </div>
-      </div>
-    </Layouts.app>
+      </.form>
+    </Layouts.v3_app>
     """
   end
+
+  attr :user, :map, required: true
+
+  defp big_avatar(assigns) do
+    ~H"""
+    <%= cond do %>
+      <% @user.current_profile_picture_url -> %>
+        <img
+          class="big-avatar"
+          src={@user.current_profile_picture_url}
+          alt={@user.display_name || @user.email}
+        />
+      <% initials = avatar_initials(@user) -> %>
+        <div class="big-avatar">{initials}</div>
+      <% true -> %>
+        <div class="big-avatar"></div>
+    <% end %>
+    """
+  end
+
+  defp avatar_initials(%{display_name: name}) when is_binary(name) and name != "" do
+    name
+    |> String.trim()
+    |> String.split(~r/\s+/)
+    |> Enum.take(2)
+    |> Enum.map_join(&String.first/1)
+    |> String.upcase()
+  end
+
+  defp avatar_initials(_), do: nil
+
+  defp role_label(:admin), do: "Admin"
+  defp role_label(role) when is_atom(role), do: role |> to_string() |> String.capitalize()
+  defp role_label(_), do: "Member"
+
+  defp role_pill_color(:admin), do: "magenta"
+  defp role_pill_color(_), do: "cyan"
 
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do

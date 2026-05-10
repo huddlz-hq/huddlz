@@ -36,12 +36,12 @@ defmodule ProfilePictureSteps do
 
   # Then steps
   step "I should see the avatar fallback showing initials", context do
-    # The avatar component shows initials when no profile picture is set
-    # Verify no thumbnail image is shown in the main content area
+    # The v3 .big-avatar shows initials when no profile picture is set.
+    # Verify no thumbnail image is shown in the main content area, then
+    # confirm the initials "AU" (Alice User) appear in the fallback avatar.
     session = context[:session] || context[:conn]
     refute_has(session, "main img[src*='_thumb.jpg']")
-    # Verify we see the initials "AU" (Alice User) in the avatar
-    assert_has(session, "[class*='overflow-hidden']", text: "AU")
+    assert_has(session, "main .big-avatar", text: "AU")
     context
   end
 
