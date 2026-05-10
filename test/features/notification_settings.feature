@@ -17,4 +17,4 @@ Feature: Notification preferences settings page
     Given I am signed in as "linknav@example.com" with password "Password123!"
     When I go to my profile page
     And I click "Settings"
-    Then I should see "Choose which emails you want to receive"
+    Then I should see "Notification preferences and other knobs"

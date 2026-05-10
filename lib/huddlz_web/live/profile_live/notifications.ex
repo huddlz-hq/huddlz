@@ -2,7 +2,7 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
   @moduledoc """
   Settings page for the user's email notification preferences.
 
-  Renders one checkbox per entry in `Huddlz.Notifications.Triggers`, grouped
+  Renders one toggle per entry in `Huddlz.Notifications.Triggers`, grouped
   by category. Transactional triggers are shown disabled-but-on for
   transparency. Activity and digest triggers are editable. Submitting the
   form merges the changes onto `User.notification_preferences` via the
@@ -16,6 +16,7 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
   alias HuddlzWeb.Layouts
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
+  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -23,7 +24,7 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
 
     {:ok,
      socket
-     |> assign(:page_title, "Notification preferences")
+     |> assign(:page_title, "Settings")
      |> assign(:triggers_by_category, group_triggers())
      |> assign(:current_user, user)}
   end
@@ -55,38 +56,40 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_user={@current_user}>
-      <.header>
-        Notification preferences
-        <:subtitle>Choose which emails you want to receive from huddlz.</:subtitle>
-      </.header>
+    <Layouts.v3_app flash={@flash} current_user={@current_user} active="settings">
+      <div class="page-head">
+        <div>
+          <h1>Settings</h1>
+          <p>Notification preferences and other knobs. We'll add more here as huddlz grows.</p>
+        </div>
+      </div>
 
-      <.read_only_section
-        title="Security"
-        description="These messages always send. We can't disable them, but you'll always know about account-critical events."
-        triggers={@triggers_by_category.transactional}
-      />
+      <form phx-submit="save">
+        <.read_only_panel
+          title="Transactional"
+          description="Critical account and event updates. Always on — these can't be disabled."
+          triggers={@triggers_by_category.transactional}
+        />
 
-      <form phx-submit="save" class="mt-10 space-y-10">
-        <.category_section
+        <.category_panel
           title="Activity"
-          description="Updates about huddlz, RSVPs, and groups you're part of."
+          description="Things that happen in groups and huddlz you're part of."
           triggers={@triggers_by_category.activity}
           user={@current_user}
         />
 
-        <.category_section
-          title="Digests"
-          description="Optional summaries and re-engagement messages. Off by default."
+        <.category_panel
+          title="Digest"
+          description="Optional summaries. Off by default."
           triggers={@triggers_by_category.digest}
           user={@current_user}
         />
 
-        <div>
-          <.button type="submit">Save preferences</.button>
+        <div class="form-foot" style="border:0; margin:0 0 32px">
+          <.v3_button variant={:primary} type="submit">Save preferences</.v3_button>
         </div>
       </form>
-    </Layouts.app>
+    </Layouts.v3_app>
     """
   end
 
@@ -95,22 +98,39 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
   attr :triggers, :list, required: true
   attr :user, :any, required: true
 
-  defp category_section(assigns) do
+  defp category_panel(assigns) do
     ~H"""
-    <section class="border border-base-300 p-6">
-      <h2 class="text-2xl font-extrabold tracking-tight text-base-content">{@title}</h2>
-      <p class="text-base-content/70 mt-1">{@description}</p>
-
-      <div class="mt-6 space-y-1">
-        <.input
-          :for={{trigger, entry} <- @triggers}
-          type="checkbox"
-          name={"prefs[#{trigger}]"}
-          label={entry.label}
-          checked={Notifications.preference_for(@user, trigger)}
-        />
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>{@title}</h2>
+          <div class="panel-sub">{@description}</div>
+        </div>
       </div>
-    </section>
+      <div class="settings-list row-list pref-list">
+        <div :for={{trigger, entry} <- @triggers} class="row">
+          <div>
+            <label class="row-title" for={"prefs-#{Triggers.preference_key(trigger)}"}>
+              {entry.label}
+            </label>
+          </div>
+          <label class="toggle">
+            <input type="hidden" name={"prefs[#{Triggers.preference_key(trigger)}]"} value="false" />
+            <input
+              id={"prefs-#{Triggers.preference_key(trigger)}"}
+              type="checkbox"
+              name={"prefs[#{Triggers.preference_key(trigger)}]"}
+              value="true"
+              checked={Notifications.preference_for(@user, trigger)}
+            />
+            <span class="track"></span>
+            <span class="toggle-text">
+              {if Notifications.preference_for(@user, trigger), do: "On", else: "Off"}
+            </span>
+          </label>
+        </div>
+      </div>
+    </div>
     """
   end
 
@@ -118,22 +138,28 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
   attr :description, :string, required: true
   attr :triggers, :list, required: true
 
-  defp read_only_section(assigns) do
+  defp read_only_panel(assigns) do
     ~H"""
-    <section class="border border-base-300 p-6">
-      <h2 class="text-2xl font-extrabold tracking-tight text-base-content">{@title}</h2>
-      <p class="text-base-content/70 mt-1">{@description}</p>
-
-      <ul class="mt-6 space-y-2">
-        <li
-          :for={{_trigger, entry} <- @triggers}
-          class="flex items-center gap-2 text-base-content"
-        >
-          <span class="mono-label text-primary/70">On</span>
-          <span>{entry.label}</span>
-        </li>
-      </ul>
-    </section>
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>{@title}</h2>
+          <div class="panel-sub">{@description}</div>
+        </div>
+      </div>
+      <div class="settings-list row-list pref-list">
+        <div :for={{_trigger, entry} <- @triggers} class="row">
+          <div>
+            <div class="row-title">{entry.label}</div>
+          </div>
+          <span class="toggle">
+            <input type="checkbox" checked disabled />
+            <span class="track"></span>
+            <span class="toggle-text">On</span>
+          </span>
+        </div>
+      </div>
+    </div>
     """
   end
 
@@ -150,10 +176,9 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
     |> Enum.sort_by(fn {_atom, entry} -> entry.label end)
   end
 
-  # `<.input type="checkbox">` submits "true" when checked and a paired hidden
-  # input ensures "false" is submitted when unchecked. We iterate every editable
-  # trigger here so the saved map stays exhaustive regardless of which keys the
-  # client sends.
+  # The form only sends keys for *checked* boxes (we don't render a hidden
+  # paired input). Iterate every editable trigger so the saved map stays
+  # exhaustive: missing keys become `false`.
   defp normalize_form_params(form_prefs) do
     all_editable_keys =
       Triggers.all()
