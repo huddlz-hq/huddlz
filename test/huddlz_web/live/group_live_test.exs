@@ -16,23 +16,26 @@ defmodule HuddlzWeb.GroupLiveTest do
       %{admin: admin, verified: verified, regular: regular}
     end
 
-    test "renders form for users", %{conn: conn, verified: verified} do
+    test "renders v3 shell with form panels", %{conn: conn, verified: verified} do
       conn
       |> login(verified)
       |> visit(~p"/groups/new")
-      |> assert_has("h1", text: "Create a New Group")
-      |> assert_has("label", text: "Group Name")
-      |> assert_has("label", text: "Description")
-      |> assert_has("label", text: "Location")
-      |> assert_has("label", text: "Group Image")
-      |> assert_has("label", text: "Privacy")
+      |> assert_has("aside.sidebar")
+      |> assert_has("h1", text: "Create a group")
+      |> assert_has(".panel .panel-head h2", text: "The basics")
+      |> assert_has(".panel .panel-head h2", text: "Cover image")
+      |> assert_has(".panel .panel-head h2", text: "Visibility")
+      |> assert_has("label.form-label", text: "Group name")
+      |> assert_has("label.form-label", text: "Description")
+      |> assert_has("label.form-label", text: "Location")
+      |> assert_has("label.row-title", text: "Public group")
     end
 
     test "allows all users to create groups", %{conn: conn, regular: regular} do
       conn
       |> login(regular)
       |> visit(~p"/groups/new")
-      |> assert_has("h1", text: "Create a New Group")
+      |> assert_has("h1", text: "Create a group")
     end
 
     test "creates group with valid data", %{conn: conn, verified: verified} do
@@ -40,18 +43,15 @@ defmodule HuddlzWeb.GroupLiveTest do
         conn
         |> login(verified)
         |> visit(~p"/groups/new")
-        |> fill_in("Group Name", with: "Test Group")
+        |> fill_in("Group name", with: "Test Group")
         |> fill_in("Description", with: "A test group")
-        |> check("Public group (visible to everyone)")
+        |> check("Public group")
 
-      # Simulate location selection via modal
       view = session.view
-
-      Phoenix.LiveViewTest.render_patch(view, ~p"/groups/new/locations/new")
 
       send(
         view.pid,
-        {:location_selected, "modal-location-autocomplete",
+        {:location_selected, "group-location",
          %{
            place_id: "test_place_id",
            display_text: "Test City, TX, USA",
@@ -62,12 +62,10 @@ defmodule HuddlzWeb.GroupLiveTest do
       )
 
       Phoenix.LiveViewTest.render(view)
-      Phoenix.LiveViewTest.render_submit(view, "select_modal_location", %{})
 
       session
-      |> click_button("Create Group")
+      |> click_button("Create group")
 
-      # Verify group was created
       group =
         Group
         |> Ash.Query.filter(name: "Test Group")
@@ -82,9 +80,9 @@ defmodule HuddlzWeb.GroupLiveTest do
       conn
       |> login(verified)
       |> visit(~p"/groups/new")
-      |> fill_in("Group Name", with: "")
+      |> fill_in("Group name", with: "")
       |> fill_in("Description", with: "Missing name")
-      |> click_button("Create Group")
+      |> click_button("Create group")
       |> assert_has("p", text: "is required")
     end
 
@@ -92,8 +90,7 @@ defmodule HuddlzWeb.GroupLiveTest do
       conn
       |> login(verified)
       |> visit(~p"/groups/new")
-      |> fill_in("Group Name", with: "ab")
-      # PhoenixTest triggers phx-change automatically when filling fields
+      |> fill_in("Group name", with: "ab")
       |> assert_has("p", text: "length must be greater than or equal to")
     end
   end

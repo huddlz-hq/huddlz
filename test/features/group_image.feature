@@ -16,29 +16,28 @@ Feature: Group Image Management
   Scenario: Owner can see image upload area when creating a group
     Given I am signed in as "owner@example.com"
     When I visit "/groups/new"
-    Then I should see "Group Image"
-    And I should see "Upload a banner image for your group"
-    And I should see "Click to upload or drag and drop"
-    And I should see "JPG, PNG, or WebP (max 5MB)"
+    Then I should see "Cover image"
+    And I should see "Drop a 16:9 image"
+    And I should see "JPG, PNG, WebP · 5 MB max"
 
   Scenario: Creating a group without an image
     Given I am signed in as "owner@example.com"
     When I visit "/groups/new"
-    And I fill in "Group Name" with "No Image Group"
+    And I fill in "Group name" with "No Image Group"
     And I fill in "Description" with "A group without an image"
-    And I check "Public group (visible to everyone)"
-    And I click "Create Group"
+    And I check "Public group"
+    And I click "Create group"
     Then I should see "Group created successfully"
     And I should see "No Image Group"
 
   Scenario: Creating a group with an image upload
     Given I am signed in as "owner@example.com"
     When I visit "/groups/new"
-    And I fill in "Group Name" with "Image Test Group"
+    And I fill in "Group name" with "Image Test Group"
     And I fill in "Description" with "A group with an image"
-    And I upload "test/fixtures/test_image.jpg" to "Group Image"
+    And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "Image uploaded"
-    When I click "Create Group"
+    When I click "Create group"
     Then I should see "Group created successfully"
     And I should see "Image Test Group"
     And the group "Image Test Group" should have an image
@@ -46,22 +45,22 @@ Feature: Group Image Management
   Scenario: Canceling a pending image before saving group
     Given I am signed in as "owner@example.com"
     When I visit "/groups/new"
-    And I fill in "Group Name" with "Cancel Image Group"
-    And I upload "test/fixtures/test_image.jpg" to "Group Image"
+    And I fill in "Group name" with "Cancel Image Group"
+    And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "Image uploaded"
     When I cancel the pending image
     Then I should not see "Image uploaded"
-    When I click "Create Group"
+    When I click "Create group"
     Then I should see "Group created successfully"
     And the group "Cancel Image Group" should not have an image
 
   Scenario: Re-uploading replaces the pending image
     Given I am signed in as "owner@example.com"
     When I visit "/groups/new"
-    And I fill in "Group Name" with "Replace Image Group"
-    And I upload "test/fixtures/test_image.jpg" to "Group Image"
+    And I fill in "Group name" with "Replace Image Group"
+    And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "Image uploaded"
-    When I upload "test/fixtures/test_image.jpg" to "Group Image"
+    When I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "Image uploaded"
     And there should be only one pending image for the current user
 
@@ -151,16 +150,16 @@ Feature: Group Image Management
   Scenario: Form validation errors preserve pending image
     Given I am signed in as "owner@example.com"
     When I visit "/groups/new"
-    And I upload "test/fixtures/test_image.jpg" to "Group Image"
+    And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "Image uploaded"
-    When I click "Create Group"
+    When I click "Create group"
     Then I should see "is required"
     And I should see "Image uploaded"
 
   Scenario: Navigating away leaves orphaned pending image for cleanup
     Given I am signed in as "owner@example.com"
     When I visit "/groups/new"
-    And I upload "test/fixtures/test_image.jpg" to "Group Image"
+    And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "Image uploaded"
     When I visit "/my-groups"
     Then there should be an orphaned pending image

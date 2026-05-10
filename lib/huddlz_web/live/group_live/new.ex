@@ -19,15 +19,13 @@ defmodule HuddlzWeb.GroupLive.New do
   alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
-  alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
+  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
 
   @impl true
   def mount(_params, _session, socket) do
-    # Check if user can create groups
     if Ash.can?({Group, :create_group}, socket.assigns.current_user) do
-      # Create a new changeset for the form
       form =
         AshPhoenix.Form.for_create(Group, :create_group,
           actor: socket.assigns.current_user,
@@ -42,7 +40,6 @@ defmodule HuddlzWeb.GroupLive.New do
        |> assign(:pending_image_id, nil)
        |> assign(:pending_preview_url, nil)
        |> assign(:selected_location_data, nil)
-       |> ModalLocationHelpers.init()
        |> assign(:upload_processing, false)
        |> allow_upload(:group_image,
          accept: ~w(.jpg .jpeg .png .webp),
@@ -57,17 +54,6 @@ defmodule HuddlzWeb.GroupLive.New do
        |> put_flash(:error, "You need to be logged in to create groups")
        |> redirect(to: ~p"/discover?#{[scope: "groups"]}")}
     end
-  end
-
-  @impl true
-  def handle_params(_params, _uri, socket) do
-    socket =
-      case socket.assigns.live_action do
-        :new_location -> ModalLocationHelpers.clear(socket)
-        _ -> socket
-      end
-
-    {:noreply, socket}
   end
 
   defp handle_upload_progress(:group_image, entry, socket) do
@@ -136,34 +122,9 @@ defmodule HuddlzWeb.GroupLive.New do
   end
 
   @impl true
-  def handle_event("clear_location", _params, socket) do
-    {:noreply,
-     socket
-     |> assign(:selected_location_data, nil)
-     |> apply_group_location_to_form("")}
-  end
-
-  @impl true
-  def handle_event("select_modal_location", _params, socket) do
-    location_data = %{
-      display_text: socket.assigns.modal_location_address,
-      latitude: socket.assigns.modal_location_lat,
-      longitude: socket.assigns.modal_location_lng
-    }
-
-    {:noreply,
-     socket
-     |> assign(:selected_location_data, location_data)
-     |> apply_group_location_to_form(location_data.display_text)
-     |> push_patch(to: ~p"/groups/new")}
-  end
-
-  @impl true
   def handle_event("save", params, socket) do
-    # Extract form params, handling both wrapped and unwrapped formats
     form_params = Map.get(params, "form", params)
 
-    # Add the current user as the owner and inject location from modal selection
     params_with_owner =
       form_params
       |> Map.put("owner_id", socket.assigns.current_user.id)
@@ -177,7 +138,6 @@ defmodule HuddlzWeb.GroupLive.New do
            before_submit: prepare_source_with_coordinates(socket.assigns.selected_location_data)
          ) do
       {:ok, group} ->
-        # Assign pending image to the new group if one was uploaded
         assign_pending_image_to_group(socket, group)
 
         {:noreply,
@@ -191,13 +151,25 @@ defmodule HuddlzWeb.GroupLive.New do
   end
 
   @impl true
-  def handle_info({:location_selected, "modal-location-autocomplete", payload}, socket) do
-    {:noreply, ModalLocationHelpers.apply_selected(socket, payload)}
+  def handle_info({:location_selected, "group-location", payload}, socket) do
+    location_data = %{
+      display_text: payload.display_text,
+      latitude: payload.latitude,
+      longitude: payload.longitude
+    }
+
+    {:noreply,
+     socket
+     |> assign(:selected_location_data, location_data)
+     |> apply_group_location_to_form(location_data.display_text)}
   end
 
   @impl true
-  def handle_info({:location_cleared, "modal-location-autocomplete"}, socket) do
-    {:noreply, ModalLocationHelpers.clear(socket)}
+  def handle_info({:location_cleared, "group-location"}, socket) do
+    {:noreply,
+     socket
+     |> assign(:selected_location_data, nil)
+     |> apply_group_location_to_form("")}
   end
 
   defp assign_pending_image_to_group(socket, group) do
@@ -217,205 +189,182 @@ defmodule HuddlzWeb.GroupLive.New do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_user={@current_user}>
-      <.header>
-        Create a New Group
-        <:subtitle>Create a group to organize huddlz and connect with others</:subtitle>
-      </.header>
-
-      <form id="group-form" phx-change="validate" phx-submit="save" class="space-y-6">
-        <.input field={@form[:name]} type="text" label="Group Name" autocomplete="off" required />
-
-        <div class="border border-base-300 p-4 bg-base-200/50">
-          <p class="text-sm text-base-content/60">
-            Your group will be available at:
-          </p>
-          <p class="font-mono text-sm mt-1 break-all">
-            {url(~p"/groups/#{@form[:slug].value || "..."}")}
+    <Layouts.v3_app flash={@flash} current_user={@current_user} active="my-groups">
+      <div class="page-head">
+        <div>
+          <h1>Create a group</h1>
+          <p>
+            Groups are where huddlz live. Set the name, decide who can see it, and you can invite members or schedule your first huddl in a minute.
           </p>
         </div>
+      </div>
 
-        <.input field={@form[:description]} type="textarea" label="Description" />
-
-        <div>
-          <label class="mono-label text-primary/70 mb-1.5 block">Location</label>
-          <%= if @selected_location_data do %>
-            <div class="flex items-center h-10 pl-6 border-0 border-b border-primary/50 bg-transparent group relative">
-              <.icon
-                name="hero-map-pin"
-                class="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-primary"
+      <.form for={@form} id="group-form" phx-change="validate" phx-submit="save">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>The basics</h2>
+          </div>
+          <div class="form-grid">
+            <.v3_input
+              field={@form[:name]}
+              label="Group name"
+              placeholder="e.g. Phoenix Elixir Meetup"
+              autocomplete="off"
+              help={"3–100 characters. Your group lives at #{url(~p"/groups/#{@form[:slug].value || "your-group"}")}"}
+            />
+            <.v3_textarea
+              field={@form[:description]}
+              label="Description"
+              placeholder="Tell people what your group is about, what huddlz to expect, and who should join."
+              help="Up to 5,000 characters."
+            />
+            <div class="form-row">
+              <label class="form-label" for="group-location-input">Location</label>
+              <.live_component
+                module={HuddlzWeb.Live.LocationAutocomplete}
+                id="group-location"
+                variant={:v3_form}
+                field_name="form[location]"
+                value={@form[:location].value}
+                latitude={@selected_location_data && @selected_location_data.latitude}
+                longitude={@selected_location_data && @selected_location_data.longitude}
+                placeholder="Search for a city"
+                types={["locality", "sublocality", "administrative_area_level_2"]}
+                fetch_coordinates={true}
+                show_clear={true}
               />
-              <.link
-                patch={~p"/groups/new/locations/new"}
-                class="flex items-center flex-1 min-w-0 cursor-pointer"
-              >
-                <span class="text-sm text-base-content truncate flex-1">
-                  {@selected_location_data.display_text}
-                </span>
-                <.icon
-                  name="hero-pencil"
-                  class="w-3.5 h-3.5 ml-2 text-transparent group-hover:text-primary/50 transition-colors"
-                />
-              </.link>
-              <button
-                type="button"
-                phx-click="clear_location"
-                class="ml-2 text-base-content/40 hover:text-error transition-colors"
-              >
-                <.icon name="hero-x-mark" class="w-4 h-4" />
-              </button>
+              <p class="form-help">
+                Optional. Helps people find your group when they search nearby.
+              </p>
             </div>
-          <% else %>
-            <.link
-              patch={~p"/groups/new/locations/new"}
-              class="flex items-center h-10 pl-6 border-0 border-b border-base-300 bg-transparent hover:border-primary/50 transition-colors relative"
-            >
-              <.icon
-                name="hero-map-pin"
-                class="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40"
-              />
-              <span class="text-sm text-base-content/50">Search for a city or region...</span>
-            </.link>
-          <% end %>
+          </div>
         </div>
 
-        <div>
-          <label class="mono-label text-primary/70 mb-2 block">
-            Group Image
-          </label>
-          <p class="text-base-content/50 text-sm mb-3">
-            Upload a banner image for your group (16:9 ratio recommended).
-          </p>
-
-          <div
-            class="border border-dashed border-base-300 p-4 text-center hover:border-primary transition-colors"
-            phx-drop-target={@uploads.group_image.ref}
-          >
-            <.live_file_input upload={@uploads.group_image} class="hidden" />
-            <label for={@uploads.group_image.ref} class="cursor-pointer flex flex-col items-center">
-              <.icon name="hero-photo" class="w-8 h-8 text-base-content/50 mb-2" />
-              <span class="text-sm text-base-content/50">
-                Click to upload or drag and drop
-              </span>
-              <span class="text-xs text-base-content/50 mt-1">
-                JPG, PNG, or WebP (max 5MB)
-              </span>
-            </label>
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Cover image</h2>
           </div>
 
-          <%= if @image_error do %>
-            <p class="text-error text-sm mt-2">{@image_error}</p>
-          <% end %>
-
           <%= if @pending_preview_url do %>
-            <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
-              <img src={@pending_preview_url} class="w-32 aspect-video object-cover" alt="Preview" />
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-success flex items-center gap-1">
-                  <.icon name="hero-check-circle" class="w-4 h-4" /> Image uploaded
-                </p>
-              </div>
-              <button
-                type="button"
-                phx-click="cancel_pending_image"
-                class="p-1 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
+            <div class="image-preview">
+              <div
+                class="card-cover"
+                style={"height:140px; background-image: url('#{@pending_preview_url}')"}
               >
-                <.icon name="hero-x-mark" class="w-4 h-4" />
-              </button>
+              </div>
+              <div
+                class="muted"
+                style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-top:10px"
+              >
+                <span>Image uploaded · ready to publish.</span>
+                <.v3_button variant={:muted} type="button" phx-click="cancel_pending_image">
+                  Remove
+                </.v3_button>
+              </div>
             </div>
           <% else %>
-            <%= for entry <- @uploads.group_image.entries do %>
-              <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
-                <.live_img_preview entry={entry} class="w-32 aspect-video object-cover" />
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium truncate">{entry.client_name}</p>
-                  <div class="w-full bg-base-300 h-1.5 mt-1">
-                    <div
-                      class="bg-primary h-1.5 transition-all"
-                      style={"width: #{entry.progress}%"}
-                    >
-                    </div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  phx-click="cancel_image_upload"
-                  phx-value-ref={entry.ref}
-                  class="p-1 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
+            <div class="upload-zone" phx-drop-target={@uploads.group_image.ref}>
+              <div class="upload-icon">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
                 >
-                  <.icon name="hero-x-mark" class="w-4 h-4" />
-                </button>
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <circle cx="9" cy="9" r="2" />
+                  <path d="m21 15-5-5L5 21" />
+                </svg>
+              </div>
+              <.live_file_input upload={@uploads.group_image} class="hidden" />
+              <label for={@uploads.group_image.ref} class="upload-prompt">
+                Drop a 16:9 image, or <span class="upload-link">browse</span>
+              </label>
+              <div class="upload-meta muted">JPG, PNG, WebP · 5 MB max</div>
+            </div>
+
+            <%= for entry <- @uploads.group_image.entries do %>
+              <div class="image-preview" style="margin-top:12px">
+                <.live_img_preview entry={entry} class="card-cover-img" />
+                <div
+                  class="muted"
+                  style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-top:10px"
+                >
+                  <span>{entry.client_name} · {entry.progress}%</span>
+                  <.v3_button
+                    variant={:muted}
+                    type="button"
+                    phx-click="cancel_image_upload"
+                    phx-value-ref={entry.ref}
+                  >
+                    Cancel
+                  </.v3_button>
+                </div>
               </div>
 
               <%= for err <- upload_errors(@uploads.group_image, entry) do %>
-                <p class="text-error text-sm mt-1">{upload_error_to_string(err)}</p>
+                <p class="form-error">{upload_error_to_string(err)}</p>
               <% end %>
             <% end %>
           <% end %>
 
+          <p :if={@image_error} class="form-error">{@image_error}</p>
+
           <%= for err <- upload_errors(@uploads.group_image) do %>
-            <p class="text-error text-sm mt-2">{upload_error_to_string(err)}</p>
+            <p class="form-error">{upload_error_to_string(err)}</p>
           <% end %>
         </div>
 
-        <div>
-          <label class="mono-label text-primary/70 mb-2 block">
-            Privacy
-          </label>
-          <.input
-            field={@form[:is_public]}
-            type="checkbox"
-            label="Public group (visible to everyone)"
-          />
-          <p class="text-sm text-base-content/50">
-            Public groups are visible to all users. Private groups are only visible to members.
-          </p>
-        </div>
-
-        <div class="flex gap-4">
-          <.button type="submit" phx-disable-with="Creating...">Create Group</.button>
-          <.link
-            navigate={~p"/discover?#{[scope: "groups"]}"}
-            class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
-          >
-            Cancel
-          </.link>
-        </div>
-      </form>
-
-      <.modal
-        :if={@live_action == :new_location}
-        id="new-location-modal"
-        show
-        on_cancel={JS.patch(~p"/groups/new")}
-      >
-        <h2 class="font-display text-xl tracking-tight text-glow mb-6">Set Location</h2>
-
-        <form phx-submit="select_modal_location">
-          <.live_component
-            module={HuddlzWeb.Live.LocationAutocomplete}
-            id="modal-location-autocomplete"
-            label="Search for a city or region"
-            placeholder="Search for a city or region..."
-            types={["locality", "sublocality", "administrative_area_level_2"]}
-            fetch_coordinates={true}
-            show_clear={true}
-          />
-
-          <div class="mt-6 flex gap-4">
-            <.button type="submit" disabled={is_nil(@modal_location_address)}>
-              Use This Location
-            </.button>
-            <.link
-              patch={~p"/groups/new"}
-              class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
-            >
-              Cancel
-            </.link>
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Visibility</h2>
+              <div class="panel-sub">
+                Public groups are findable in Discover. Private groups are only visible to members.
+              </div>
+            </div>
           </div>
-        </form>
-      </.modal>
-    </Layouts.app>
+          <div class="settings-list row-list pref-list">
+            <div class="row">
+              <div>
+                <label class="row-title" for="group-is-public">Public group</label>
+                <div class="row-desc">
+                  Anyone can find and join this group. Huddlz are visible without signing in.
+                </div>
+              </div>
+              <label class="toggle">
+                <input type="hidden" name={@form[:is_public].name} value="false" />
+                <input
+                  id="group-is-public"
+                  type="checkbox"
+                  name={@form[:is_public].name}
+                  value="true"
+                  checked={Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_public].value)}
+                />
+                <span class="track"></span>
+                <span class="toggle-text">
+                  {if Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_public].value),
+                    do: "On",
+                    else: "Off"}
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-foot" style="border:0; margin:0">
+          <.v3_button variant={:primary} type="submit" phx-disable-with="Creating…">
+            Create group
+          </.v3_button>
+          <.v3_button variant={:secondary} navigate={~p"/my-groups"}>Cancel</.v3_button>
+        </div>
+      </.form>
+    </Layouts.v3_app>
     """
   end
 end
