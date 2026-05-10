@@ -2411,6 +2411,34 @@ body.v3 .insight-pill svg { width: 13px; height: 13px; color: var(--cyan); }
 body.v3 .muted { color: var(--muted); }
 body.v3 .cyan { color: var(--cyan); }
 
+/* Inline button styled like a link — for "Clear filters" / similar resets that
+   sit alongside muted prose. Strips the default `<button>` chrome and adopts
+   the surrounding font. */
+body.v3 .button-link {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: var(--cyan);
+  cursor: pointer;
+}
+
+body.v3 .button-link:hover { text-decoration: underline; }
+
+/* Discover-page meta line (result count + inline reset link). */
+body.v3 .discover-meta {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+
+/* "All huddlz" backlink wrapper used when ?yours= is active. */
+body.v3 .discover-back {
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
 /* ───────────────────────────────────────  PAGINATION  ──────────── */
 body.v3 .pagination {
   display: flex;

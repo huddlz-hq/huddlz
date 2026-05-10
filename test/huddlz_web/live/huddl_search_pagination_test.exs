@@ -93,7 +93,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
     test "shows 20 results on first page", %{conn: conn} do
       conn
       |> visit("/discover")
-      |> assert_has(".muted", text: "22 huddlz")
+      |> assert_has(".discover-meta", text: "22 huddlz")
       # Should see huddl 1-20
       |> assert_has("h3", text: "Test Huddl 1")
       |> assert_has("h3", text: "Test Huddl 20")
@@ -106,7 +106,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
       conn
       |> visit("/discover")
       |> click_button(".page-num", "2")
-      |> assert_has(".muted", text: "22 huddlz")
+      |> assert_has(".discover-meta", text: "22 huddlz")
       # Should see huddl 21-22
       |> assert_has("h3", text: "Test Huddl 21")
       |> assert_has("h3", text: "Test Huddl 22")
@@ -127,7 +127,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
       |> visit("/discover")
       |> click_button(".page-num", "2")
       |> click_button(".page-num", "1")
-      |> assert_has(".muted", text: "22 huddlz")
+      |> assert_has(".discover-meta", text: "22 huddlz")
       |> assert_has("h3", text: "Test Huddl 1")
     end
 
@@ -184,9 +184,9 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
     test "shows total result count across pages", %{conn: conn} do
       conn
       |> visit("/discover")
-      |> assert_has(".muted", text: "22 huddlz")
+      |> assert_has(".discover-meta", text: "22 huddlz")
       |> click_button(".page-num", "2")
-      |> assert_has(".muted", text: "22 huddlz")
+      |> assert_has(".discover-meta", text: "22 huddlz")
     end
   end
 
@@ -226,7 +226,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
 
       conn
       |> visit("/discover?q=" <> URI.encode_www_form(unique_term))
-      |> assert_has(".muted", text: "20 huddlz")
+      |> assert_has(".discover-meta", text: "20 huddlz")
       # No pagination should be shown for exactly 20 results
       |> refute_has(".page-num", text: "2")
       |> refute_has("button[phx-click=change_page]")

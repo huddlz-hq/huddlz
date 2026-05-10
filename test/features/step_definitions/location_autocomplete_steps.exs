@@ -93,11 +93,16 @@ defmodule LocationAutocompleteSteps do
 
   step "the location filter should be active with {string}", %{args: [text]} = context do
     session = context[:session] || context[:conn]
-    # On /discover the active location is shown inside an `<input>` pill (its
-    # value attribute, not text content); legacy autocomplete renders the same
-    # text inside a `<span>`. Both carry `data-testid='location-display'`.
-    assert_has(session, "[data-testid='location-display'][value='#{text}']") ||
-      assert_has(session, "[data-testid='location-display']", text: text)
+    # The v3 filter pill renders the active location as the value of an
+    # `<input data-testid='location-display'>`; the legacy autocomplete (used
+    # by other LiveViews) renders the same text inside a `<span>`. Match
+    # whichever is on the page.
+    try do
+      assert_has(session, "[data-testid='location-display'][value='#{text}']")
+    rescue
+      ExUnit.AssertionError ->
+        assert_has(session, "[data-testid='location-display']", text: text)
+    end
 
     context
   end

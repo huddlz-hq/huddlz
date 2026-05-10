@@ -223,9 +223,9 @@ defmodule HuddlzWeb.HuddlSearchTest do
     test "shows result count", %{conn: conn} do
       conn
       |> visit("/discover")
-      |> assert_has(".muted", text: "3 huddlz")
+      |> assert_has(".discover-meta", text: "3 huddlz")
       |> click_link(".chip-group a.chip", "Virtual")
-      |> assert_has(".muted", text: "1 huddl")
+      |> assert_has(".discover-meta", text: "1 huddl")
     end
 
     test "displays huddlz in chronological order", %{conn: conn} do
