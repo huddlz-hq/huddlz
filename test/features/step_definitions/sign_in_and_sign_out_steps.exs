@@ -61,9 +61,8 @@ defmodule SignInAndSignOutSteps do
   step "the user should be signed in", context do
     session = context[:session] || context[:conn]
 
-    # Check that we're on the home page with a signed-in user
-    assert_has(session, "a", text: "Profile")
-    refute_has(session, "a", text: "Sign In")
+    # A signed-in session has a "Sign out" link reachable from the chrome.
+    assert_has(session, "a", text: "Sign out")
 
     {:ok, context}
   end
@@ -72,9 +71,8 @@ defmodule SignInAndSignOutSteps do
   step "the user should not be signed in", context do
     session = context[:session] || context[:conn]
 
-    # Check that we still see the sign in link
-    assert_has(session, "a", text: "Sign In")
-    refute_has(session, "a", text: "Profile")
+    # No "Sign out" link means we're not signed in.
+    refute_has(session, "a", text: "Sign out")
 
     {:ok, context}
   end

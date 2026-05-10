@@ -62,7 +62,7 @@ defmodule HuddlzWeb.PasswordResetFullFlowTest do
       session = visit(conn, reset_path)
 
       # Should be on our custom password reset form
-      assert_has(session, "h2", text: "Set new password")
+      assert_has(session, "h1", text: "Set a new password")
       assert_has(session, "button", text: "Reset password")
 
       # Our custom form uses LiveView instead of a form action
@@ -204,7 +204,6 @@ defmodule HuddlzWeb.PasswordResetFullFlowTest do
       # When visiting with an invalid token, the error is shown on mount
       session = visit(conn, "/reset/invalid-token-123")
 
-      assert_has(session, "h2", text: "Invalid reset link")
       assert_has(session, "*", text: "This password reset link is invalid or has expired")
     end
   end

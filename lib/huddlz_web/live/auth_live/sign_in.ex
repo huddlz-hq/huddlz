@@ -1,82 +1,82 @@
 defmodule HuddlzWeb.AuthLive.SignIn do
   @moduledoc """
-  LiveView for user sign-in with email and password authentication.
+  Sign-in page at `/sign-in`. Email + password only. Mounted under the v3
+  auth shell — chromeless, no sidebar, no global topbar.
   """
   use HuddlzWeb, :live_view
 
   alias AshPhoenix.Form
   alias Huddlz.Accounts.User
-  import HuddlzWeb.Layouts
 
   @impl true
   def render(assigns) do
     ~H"""
-    <.app flash={@flash} current_user={assigns[:current_user]}>
-      <div class="mx-auto max-w-md">
-        <h1 class="font-display text-2xl tracking-tight text-center">Sign in to your account</h1>
-        <p class="text-center text-base-content/40 mt-2">Welcome back!</p>
+    <Layouts.flash_group flash={@flash} />
 
-        <%!-- Password Sign In Form --%>
-        <.surface_panel class="p-6 mt-8">
-          <h2 class="font-display text-xl mb-4">Sign in with password</h2>
+    <div class="auth-shell">
+      <header class="auth-topbar">
+        <a href={~p"/"} style="display:flex;align-items:center;gap:10px">
+          <div class="brand-glyph">h</div>
+          <div class="brand-text">huddlz</div>
+        </a>
+      </header>
 
-          <.form
-            :let={f}
-            for={@password_form}
-            id="password-sign-in-form"
-            phx-submit="sign_in_with_password"
-            phx-change="validate_password"
-            phx-trigger-action={@trigger_action}
-            action="/auth/user/password/sign_in"
-            method="post"
-          >
-            <.input field={f[:email]} type="email" label="Email" autocomplete="email" />
-            <.input
+      <div class="auth-frame">
+        <h1>Sign in</h1>
+        <p class="lede">Welcome back. Sign in to RSVP, organize, and follow your groups.</p>
+
+        <.form
+          :let={f}
+          for={@password_form}
+          id="password-sign-in-form"
+          phx-submit="sign_in_with_password"
+          phx-change="validate_password"
+          phx-trigger-action={@trigger_action}
+          action="/auth/user/password/sign_in"
+          method="post"
+          class="auth-card"
+        >
+          <div class="form-grid">
+            <.v3_input
+              field={f[:email]}
+              type="email"
+              label="Email"
+              autocomplete="email"
+            />
+            <.v3_input
               field={f[:password]}
               type="password"
               label="Password"
               autocomplete="current-password"
             />
-
-            <div class="mt-6">
-              <.button phx-disable-with="Signing in..." class="w-full">
-                Sign in
-              </.button>
-            </div>
-          </.form>
-
-          <div class="text-sm mt-4">
-            <a href="/reset" class="text-primary hover:underline font-medium">
-              Forgot your password?
-            </a>
           </div>
-        </.surface_panel>
+          <div class="form-foot">
+            <button type="submit" class="btn-primary" phx-disable-with="Signing in...">
+              Sign in
+            </button>
+          </div>
+        </.form>
 
-        <div class="text-center mt-8">
-          <span class="text-sm text-base-content/50">
-            Don't have an account?
-          </span>
-          <a href="/register" class="text-primary hover:underline font-medium text-sm ml-1">
-            Sign up
-          </a>
+        <div class="auth-aside">
+          <.link navigate={~p"/reset"}>Forgot your password?</.link>
+        </div>
+        <div class="auth-aside">
+          Don't have an account? <.link navigate={~p"/register"}>Sign up</.link>
         </div>
       </div>
-    </.app>
+    </div>
     """
   end
 
   @impl true
   def mount(_params, _session, socket) do
-    # Get the password strategy to pass proper context
     strategy = AshAuthentication.Info.strategy!(User, :password)
 
-    # Build context like the default Ash auth does
     context = %{
       strategy: strategy,
       private: %{ash_authentication?: true}
     }
 
-    # Add token_type if sign_in_tokens are enabled
     context =
       if Map.get(strategy, :sign_in_tokens_enabled?) do
         Map.put(context, :token_type, :sign_in)
@@ -95,18 +95,17 @@ defmodule HuddlzWeb.AuthLive.SignIn do
 
     {:ok,
      socket
-     |> assign(:page_title, "Sign In")
+     |> assign(:page_title, "Sign in")
+     |> assign(:body_class, "v3 is-auth")
      |> assign(:password_form, password_form)
      |> assign(:trigger_action, false)}
   end
 
   @impl true
   def handle_event("sign_in_with_password", %{"user" => params}, socket) do
-    # Match Ash's sign-in form behavior exactly
     strategy = AshAuthentication.Info.strategy!(User, :password)
 
     if Map.get(strategy, :sign_in_tokens_enabled?) do
-      # Token-based sign in (Ash's default behavior)
       case Form.submit(socket.assigns.password_form.source, params: params, read_one?: true) do
         {:ok, user} ->
           token = user.__metadata__.token
@@ -126,7 +125,6 @@ defmodule HuddlzWeb.AuthLive.SignIn do
            )}
       end
     else
-      # Direct form submission with phx-trigger-action
       form =
         socket.assigns.password_form.source
         |> Form.validate(params)

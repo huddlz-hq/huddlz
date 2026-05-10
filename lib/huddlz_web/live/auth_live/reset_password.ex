@@ -1,12 +1,13 @@
 defmodule HuddlzWeb.AuthLive.ResetPassword do
   @moduledoc """
-  LiveView for requesting a password reset token via email.
+  Reset-request page at `/reset`. Asks the user for an email address; emits
+  the reset email if an account exists. Always shows the success state — we
+  don't reveal whether the address is registered.
   """
   use HuddlzWeb, :live_view
+
   alias AshPhoenix.Form
   alias Huddlz.Accounts.User
-
-  import HuddlzWeb.Layouts
 
   @impl true
   def mount(_params, _session, socket) do
@@ -14,6 +15,8 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
 
     {:ok,
      socket
+     |> assign(:page_title, "Reset password")
+     |> assign(:body_class, "v3 is-auth")
      |> assign(:form, to_form(form))
      |> assign(:submitted, false)}
   end
@@ -21,61 +24,72 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
   @impl true
   def render(assigns) do
     ~H"""
-    <.app flash={@flash} current_user={assigns[:current_user]}>
-      <div class="max-w-md mx-auto">
-        <div class="border border-base-300 p-6">
-          <h2 class="font-display text-2xl tracking-tight mb-4">Reset your password</h2>
+    <Layouts.flash_group flash={@flash} />
 
-          <%= if @submitted do %>
-            <div class="border border-success/30 p-4 bg-success/5 flex items-start gap-3">
-              <.icon name="hero-check-circle" class="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
-              <span class="text-sm">
-                If an account exists for that email, you will receive password reset instructions shortly.
-              </span>
+    <div class="auth-shell">
+      <header class="auth-topbar">
+        <a href={~p"/"} style="display:flex;align-items:center;gap:10px">
+          <div class="brand-glyph">h</div>
+          <div class="brand-text">huddlz</div>
+        </a>
+      </header>
+
+      <div class="auth-frame">
+        <%= if @submitted do %>
+          <div class="auth-state">
+            <div class="icon-mark">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M5 13l4 4L19 7" />
+              </svg>
             </div>
-
-            <.link
-              navigate="/sign-in"
-              class="block text-center text-primary hover:underline font-medium mt-6"
-            >
-              Back to sign in
-            </.link>
-          <% else %>
-            <p class="text-sm mb-6 text-base-content/50">
-              Enter your email address and we'll send you instructions to reset your password.
+            <h2>Check your email</h2>
+            <p>
+              If an account exists for that email, you will receive password reset instructions shortly.
             </p>
+            <.link navigate={~p"/sign-in"} class="btn-primary">Back to sign in</.link>
+          </div>
+        <% else %>
+          <h1>Reset your password</h1>
+          <p class="lede">Enter your email and we'll send a link to set a new password.</p>
 
-            <.form
-              for={@form}
-              phx-change="validate"
-              phx-submit="request_reset"
-              id="reset-password-form"
-            >
-              <.input
+          <.form
+            for={@form}
+            id="reset-password-form"
+            phx-change="validate"
+            phx-submit="request_reset"
+            class="auth-card"
+          >
+            <div class="form-grid">
+              <.v3_input
                 field={@form[:email]}
                 type="email"
                 label="Email"
                 placeholder="you@example.com"
                 autocomplete="email"
               />
-
-              <div class="mt-6">
-                <.button phx-disable-with="Sending..." class="w-full">
-                  Send reset instructions
-                </.button>
-              </div>
-            </.form>
-
-            <div class="text-center mt-6">
-              <span class="text-sm text-base-content/50">Remember your password? </span>
-              <.link navigate="/sign-in" class="text-primary hover:underline font-medium text-sm">
-                Sign in
-              </.link>
             </div>
-          <% end %>
-        </div>
+            <div class="form-foot">
+              <button type="submit" class="btn-primary" phx-disable-with="Sending...">
+                Send reset instructions
+              </button>
+            </div>
+          </.form>
+
+          <div class="auth-aside">
+            <.link navigate={~p"/sign-in"}>Back to sign in</.link>
+          </div>
+        <% end %>
       </div>
-    </.app>
+    </div>
     """
   end
 
@@ -88,16 +102,13 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
   def handle_event("request_reset", %{"form" => params}, socket) do
     _form = socket.assigns.form.source |> Form.validate(params)
 
-    # Use Ash.run_action for this action type
     input = Ash.ActionInput.for_action(User, :request_password_reset_token, params)
 
     case Ash.run_action(input) do
       :ok ->
-        # Always show success message for security (don't reveal if email exists)
         {:noreply, assign(socket, :submitted, true)}
 
       {:error, _} ->
-        # Also show success for security (don't reveal if email exists)
         {:noreply, assign(socket, :submitted, true)}
     end
   end
