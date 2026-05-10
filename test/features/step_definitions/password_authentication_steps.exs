@@ -186,16 +186,16 @@ defmodule PasswordAuthenticationSteps do
   step "I should be signed in", context do
     session = context[:session] || context[:conn]
 
-    # The old test just checked for "Sign out" link
-    # Our custom navigation has it in a dropdown menu
-    assert_has(session, "a", text: "Sign out")
+    # Chrome-agnostic post-sign-in check. The v3 topbar shows Sign in / Sign up
+    # for anonymous users only; once signed in, those buttons are gone.
+    refute_has(session, "a", text: "Sign in")
 
     {:ok, Map.merge(context, %{session: session, conn: session})}
   end
 
   step "I should not be signed in", context do
     session = context[:session] || context[:conn]
-    # Check that Sign out link is NOT present
+    # No "Sign out" link in any chrome (legacy or v3) means we're not signed in.
     refute_has(session, "a", text: "Sign out")
     {:ok, context}
   end

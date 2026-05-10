@@ -87,7 +87,7 @@ defmodule HuddlzWeb.Layouts do
                   </li>
                   <li>
                     <a
-                      href="/me?tab=huddlz"
+                      href="/my-huddlz"
                       class="block px-4 py-2.5 text-sm hover:bg-base-300 hover:text-primary transition-colors"
                     >
                       My huddlz
@@ -95,7 +95,7 @@ defmodule HuddlzWeb.Layouts do
                   </li>
                   <li>
                     <a
-                      href="/me?tab=groups"
+                      href="/my-groups"
                       class="block px-4 py-2.5 text-sm hover:bg-base-300 hover:text-primary transition-colors"
                     >
                       My groups

@@ -35,11 +35,11 @@ Feature: Profile Picture Management
     Given the following profile pictures exist:
       | user_email          | storage_path                                      |
       | alice@example.com   | /uploads/profile_pictures/alice/avatar.jpg        |
-    When I visit "/"
+    When I visit "/groups"
     Then I should see the navbar avatar with image
 
   Scenario: Navbar shows initials when user has no profile picture
-    When I visit "/"
+    When I visit "/groups"
     Then I should see the navbar avatar with initials "AU"
 
   Scenario: Profile picture appears in group members section

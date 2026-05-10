@@ -49,7 +49,7 @@ defmodule HuddlzWeb.AdminLiveTest do
       conn
       |> login(regular_user)
       |> visit(~p"/admin")
-      |> assert_path(~p"/me")
+      |> assert_path(~p"/my-huddlz")
     end
 
     test "redirects all non-admin users", %{conn: conn, verified_user: verified_user} do
@@ -57,7 +57,7 @@ defmodule HuddlzWeb.AdminLiveTest do
       conn
       |> login(verified_user)
       |> visit(~p"/admin")
-      |> assert_path(~p"/me")
+      |> assert_path(~p"/my-huddlz")
     end
 
     test "renders admin panel for admin users", %{conn: conn, admin_user: admin_user} do

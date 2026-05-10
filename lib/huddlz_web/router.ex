@@ -69,6 +69,10 @@ defmodule HuddlzWeb.Router do
     get "/unsubscribe/:token", UnsubscribeController, :show
     post "/unsubscribe/:token", UnsubscribeController, :update
 
+    # Legacy /me redirects — the old member dashboard split into /my-huddlz,
+    # /my-groups, and /notifications. Keep these for inbound emails/bookmarks.
+    get "/me", LegacyRedirectController, :me
+
     ash_authentication_live_session :authenticated_routes,
       on_mount: {HuddlzWeb.LiveUserAuth, :load_user_details} do
       # in each liveview, add one of the following at the top of the module:
@@ -84,7 +88,6 @@ defmodule HuddlzWeb.Router do
       live "/", LandingLive, :index
       live "/discover", HuddlLive, :index
       live "/help", HelpLive, :index
-      live "/me", MeLive, :index
       live "/my-huddlz", MyHuddlzLive, :index
       live "/my-groups", MyGroupsLive, :index
       live "/notifications", NotificationsLive, :index

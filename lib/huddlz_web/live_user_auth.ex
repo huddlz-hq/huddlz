@@ -42,7 +42,7 @@ defmodule HuddlzWeb.LiveUserAuth do
 
   def on_mount(:redirect_to_me_if_authenticated, _params, _session, socket) do
     if socket.assigns[:current_user] do
-      {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/me")}
+      {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/my-huddlz")}
     else
       {:cont, assign(socket, :current_user, nil)}
     end

@@ -44,8 +44,8 @@ defmodule GlobalHeaderSteps do
     session = context[:session] || context[:conn]
 
     session
-    |> assert_has("#user-menu a[href='/me?tab=huddlz']", text: "My huddlz")
-    |> assert_has("#user-menu a[href='/me?tab=groups']", text: "My groups")
+    |> assert_has("#user-menu a[href='/my-huddlz']", text: "My huddlz")
+    |> assert_has("#user-menu a[href='/my-groups']", text: "My groups")
     |> assert_has("#user-menu a[href='/organize']", text: "Organizer workspace")
     |> assert_has("#user-menu a[href='/profile']", text: "Profile & preferences")
     |> assert_has("#user-menu a[href='/discover']", text: "Discover huddlz")

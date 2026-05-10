@@ -20,6 +20,7 @@ Feature: Global Header
     When I visit "/discover?q=Elixir"
     Then I should see huddlz matching "Elixir"
 
-  Scenario: Signed-in user sees the redesigned account menu
+  Scenario: Signed-in user sees the redesigned account menu on legacy pages
     Given I am signed in as "menu.user@example.com" with password "Password123!"
+    When I visit "/groups"
     Then the account menu should expose the member, organizer, and account links
