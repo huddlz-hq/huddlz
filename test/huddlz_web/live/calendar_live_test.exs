@@ -102,12 +102,12 @@ defmodule HuddlzWeb.CalendarLiveTest do
       host: host,
       public_group: public_group
     } do
-      huddl = create_huddl(host, public_group, title: "Going Show")
+      huddl = create_huddl(host, public_group, title: "Going Show", date: tomorrow())
       rsvp!(huddl, attendee, :rsvp)
 
       conn
       |> login(attendee)
-      |> visit("/calendar")
+      |> visit(calendar_path_for(tomorrow()))
       |> assert_has(".cal-pill", text: "Going Show")
     end
 
@@ -117,7 +117,12 @@ defmodule HuddlzWeb.CalendarLiveTest do
       host: host,
       public_group: public_group
     } do
-      huddl = create_huddl(host, public_group, title: "Sold Out", max_attendees: 1)
+      huddl =
+        create_huddl(host, public_group,
+          title: "Sold Out",
+          max_attendees: 1,
+          date: tomorrow()
+        )
 
       filler = generate(user(role: :user))
       rsvp!(huddl, filler, :rsvp)
@@ -127,7 +132,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar")
+      |> visit(calendar_path_for(tomorrow()))
       |> assert_has(".cal-pill.tentative", text: "Sold Out")
     end
 
@@ -142,7 +147,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar")
+      |> visit(calendar_path_for(Date.add(Date.utc_today(), -2)))
       |> assert_has(".cal-pill.past", text: "Old Workshop")
     end
 
@@ -151,11 +156,11 @@ defmodule HuddlzWeb.CalendarLiveTest do
       host: host,
       public_group: public_group
     } do
-      _huddl = create_huddl(host, public_group, title: "I Am Hosting")
+      _huddl = create_huddl(host, public_group, title: "I Am Hosting", date: tomorrow())
 
       conn
       |> login(host)
-      |> visit("/calendar")
+      |> visit(calendar_path_for(tomorrow()))
       |> assert_has(".cal-pill", text: "I Am Hosting")
     end
 
@@ -165,15 +170,13 @@ defmodule HuddlzWeb.CalendarLiveTest do
       host: host,
       public_group: public_group
     } do
-      _theirs = create_huddl(host, public_group, title: "Stranger Show")
       stranger = generate(user(role: :user))
-
-      huddl = create_huddl(host, public_group, title: "Stranger Show")
+      huddl = create_huddl(host, public_group, title: "Stranger Show", date: tomorrow())
       rsvp!(huddl, stranger, :rsvp)
 
       conn
       |> login(attendee)
-      |> visit("/calendar")
+      |> visit(calendar_path_for(tomorrow()))
       |> refute_has(".cal-pill", text: "Stranger Show")
     end
 
@@ -200,12 +203,12 @@ defmodule HuddlzWeb.CalendarLiveTest do
       host: host,
       public_group: public_group
     } do
-      huddl = create_huddl(host, public_group, title: "Linked")
+      huddl = create_huddl(host, public_group, title: "Linked", date: tomorrow())
       rsvp!(huddl, attendee, :rsvp)
 
       conn
       |> login(attendee)
-      |> visit("/calendar")
+      |> visit(calendar_path_for(tomorrow()))
       |> assert_has(~s(.cal-pill[href="/groups/#{public_group.slug}/huddlz/#{huddl.id}"]))
     end
   end
@@ -258,12 +261,12 @@ defmodule HuddlzWeb.CalendarLiveTest do
       host: host,
       public_group: public_group
     } do
-      huddl = create_huddl(host, public_group, title: "Agenda Item")
+      huddl = create_huddl(host, public_group, title: "Agenda Item", date: tomorrow())
       rsvp!(huddl, attendee, :rsvp)
 
       conn
       |> login(attendee)
-      |> visit("/calendar?view=agenda")
+      |> visit(calendar_path_for(tomorrow(), view: "agenda"))
       |> assert_has(".row .row-title", text: "Agenda Item")
       |> assert_has(".pill", text: "Going")
     end
@@ -274,6 +277,21 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> visit("/calendar?view=agenda")
       |> assert_has("p", text: "Nothing on the calendar this month.")
     end
+  end
+
+  defp tomorrow, do: Date.add(Date.utc_today(), 1)
+
+  # Build a /calendar URL pinned to the month containing `date`, so the focus
+  # month always matches where the huddl actually lives (matters for agenda
+  # filtering and for past dates that may slip outside the default grid).
+  defp calendar_path_for(date, opts \\ []) do
+    month = "#{date.year}-#{String.pad_leading(to_string(date.month), 2, "0")}"
+    view = Keyword.get(opts, :view)
+
+    params =
+      if view, do: "?month=#{month}&view=#{view}", else: "?month=#{month}"
+
+    "/calendar" <> params
   end
 
   defp current_month_name do
