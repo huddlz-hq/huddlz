@@ -95,7 +95,7 @@ defmodule HuddlzWeb.GroupLive.Show do
             <%= if @group.is_public do %>
               Public
             <% else %>
-              <span style="color:var(--warn)">Private</span>
+              <span class="eyebrow-warn">Private</span>
             <% end %>
           </span>
           <h1>{@group.name}</h1>
@@ -250,7 +250,7 @@ defmodule HuddlzWeb.GroupLive.Show do
                 </div>
               </div>
             <% else %>
-              <div class="muted" style="font-size:13px">
+              <div class="member-grid-empty muted">
                 <%= if @current_user do %>
                   Only members can see who's in this group.
                 <% else %>
@@ -312,7 +312,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   defp huddl_grid(assigns) do
     ~H"""
     <%= if @huddlz == [] do %>
-      <p class="empty-state muted" style="padding:24px 0; font-size:14px">
+      <p class="empty-state muted">
         {@empty_message}
       </p>
     <% else %>
@@ -560,7 +560,6 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   defp member_count_label(1), do: "1 member"
   defp member_count_label(n) when is_integer(n), do: "#{n} members"
-  defp member_count_label(_), do: nil
 
   defp description_paragraphs(description) do
     description
