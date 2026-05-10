@@ -11,17 +11,22 @@ Feature: Landing surface
 
   Scenario: Anonymous visitor sees the landing hero and CTAs
     When I visit "/"
-    Then I should see "Find your next real-life gathering."
-    And I should see "Find your people, fast"
-    And I should see "Search huddlz"
-    And I should see "Run the community, not the tooling."
-    And I should see "Open organize"
+    Then I should see "Find your people."
+    And I should see "Run the meetup."
+    And I should see "In-person and online · everywhere"
+    And I should see "Browse huddlz"
+    And I should see "Start a group"
 
   Scenario: Anonymous visitor sees the three value tiles
     When I visit "/"
-    Then I should see "Discover quickly"
-    And I should see "Meet in real life"
-    And I should see "Organize without clutter"
+    Then I should see "Discovery that learns you"
+    And I should see "Organize without the spreadsheet"
+    And I should see "Bring your agent"
+
+  Scenario: Anonymous visitor sees sign-in and sign-up links in the topbar
+    When I visit "/"
+    Then I should see "Sign in"
+    And I should see "Sign up"
 
   Scenario: Authenticated user is redirected from / to /me
     Given I am signed in as "regular@example.com"
