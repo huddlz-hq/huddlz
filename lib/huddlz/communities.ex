@@ -48,6 +48,7 @@ defmodule Huddlz.Communities do
       define :search_groups, action: :search, args: [{:optional, :search}]
       define :get_by_owner, action: :get_by_owner
       define :get_joined_groups, action: :get_joined
+      define :my_groups, action: :my_groups, args: [{:optional, :relationship}]
       define :get_by_slug, action: :get_by_slug, args: [:slug]
 
       define :update_details,

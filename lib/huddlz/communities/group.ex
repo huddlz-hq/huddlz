@@ -128,6 +128,25 @@ defmodule Huddlz.Communities.Group do
       prepare Huddlz.Communities.Group.Preparations.ApplyTrigramSearch
     end
 
+    read :my_groups do
+      description """
+      Groups the actor either owns or has joined. The `:relationship` arg
+      scopes the result: `:hosting` (owned), `:joined` (member but not
+      owner), or `:all` (default — both). Sorted alphabetically by name.
+      """
+
+      argument :relationship, :atom do
+        allow_nil? true
+        default :all
+        constraints one_of: [:all, :hosting, :joined]
+      end
+
+      pagination offset?: true, countable: true, required?: false, default_limit: 20
+
+      prepare Huddlz.Communities.Group.Preparations.ApplyMyGroupsFilter
+      prepare Huddlz.Communities.Group.Preparations.ApplyTrigramSearch
+    end
+
     read :get_by_slug do
       description "Get a group by its slug"
 
