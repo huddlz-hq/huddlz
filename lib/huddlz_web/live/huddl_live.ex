@@ -550,8 +550,8 @@ defmodule HuddlzWeb.HuddlLive do
         </div>
       </div>
 
-      <div :if={@yours != :all} style="margin-bottom:16px">
-        <.link patch={view_all_path(:all, assigns)} class="muted" style="font-size:13px">
+      <div :if={@yours != :all} class="discover-back">
+        <.link patch={view_all_path(:all, assigns)} class="muted">
           ← All huddlz
         </.link>
       </div>
@@ -583,6 +583,9 @@ defmodule HuddlzWeb.HuddlLive do
             longitude={@location_lng}
             placeholder="Anywhere"
           />
+          <%!-- A `<form>` wraps the slider so phx-change emits a clean
+                `name=value` payload. `display: contents` flattens the form so
+                it doesn't perturb the .filter-distance flex layout. --%>
           <form
             :if={@location_active}
             class="filter-distance"
@@ -664,16 +667,11 @@ defmodule HuddlzWeb.HuddlLive do
         </div>
       </div>
 
-      <div class="muted" style="margin-bottom:14px;font-size:12px">
+      <div class="discover-meta">
         {result_count_label(@page_info.total_count, @scope)}
         <span :if={any_filter_active?(assigns)}>
           ·
-          <button
-            type="button"
-            phx-click="clear_filters"
-            class="cyan"
-            style="background:transparent;border:0;font:inherit;cursor:pointer;padding:0"
-          >
+          <button type="button" phx-click="clear_filters" class="button-link">
             Clear filters
           </button>
         </span>
@@ -776,7 +774,7 @@ defmodule HuddlzWeb.HuddlLive do
       <:body>
         <span :if={@group.location} class="card-group">{@group.location}</span>
         <h2 class="card-title">{@group.name}</h2>
-        <div :if={member_count(@group)} class="card-meta">
+        <div :if={member_count_label(@group)} class="card-meta">
           <span>{member_count_label(@group)}</span>
         </div>
       </:body>
@@ -837,7 +835,11 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   defp format_distance(miles) when is_number(miles) and miles < 1, do: "< 1 mi"
-  defp format_distance(miles) when is_number(miles), do: "#{Float.round(miles * 1.0, 1)} mi"
+
+  defp format_distance(miles) when is_number(miles) do
+    rounded = Float.round(miles * 1.0, 1)
+    if rounded == trunc(rounded), do: "#{trunc(rounded)} mi", else: "#{rounded} mi"
+  end
 
   defp rsvp_label(%{rsvp_count: count, max_attendees: max}) when is_integer(max) and max > 0,
     do: "#{count} / #{max} RSVPs"
@@ -845,18 +847,11 @@ defmodule HuddlzWeb.HuddlLive do
   defp rsvp_label(%{rsvp_count: 1}), do: "1 RSVP"
   defp rsvp_label(%{rsvp_count: count}), do: "#{count} RSVPs"
 
-  defp member_count(group) do
-    case Map.get(group, :member_count) do
-      n when is_integer(n) and n > 0 -> n
-      _ -> nil
-    end
-  end
-
   defp member_count_label(group) do
-    case member_count(group) do
-      nil -> ""
+    case Map.get(group, :member_count) do
       1 -> "1 member"
-      n -> "#{n} members"
+      n when is_integer(n) and n > 0 -> "#{n} members"
+      _ -> nil
     end
   end
 
