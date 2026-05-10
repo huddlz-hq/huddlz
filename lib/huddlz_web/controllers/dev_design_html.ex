@@ -59,7 +59,7 @@ defmodule HuddlzWeb.DevDesignHTML do
                 >
                   <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
                 </svg>
-                <span class="label">Explore</span>
+                <span class="label">Discover</span>
               </a>
               <a
                 class={["sb-item", @active == "my-huddlz" && "active"]}
