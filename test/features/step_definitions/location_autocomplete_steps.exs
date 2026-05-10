@@ -48,7 +48,16 @@ defmodule LocationAutocompleteSteps do
     session = context[:session] || context[:conn]
     view = session.view
 
-    view |> element("[data-testid='location-selected'] [role='button']") |> render_click()
+    # Legacy variant uses a pencil button (`role="button"`); the v3 form variant
+    # uses an explicit "Change location…" button. Either fires `phx-click="edit"`.
+    edit_selector =
+      if has_element?(view, "[data-testid='location-selected'] [role='button']") do
+        "[data-testid='location-selected'] [role='button']"
+      else
+        "[data-testid='location-selected'] [phx-click='edit']"
+      end
+
+    view |> element(edit_selector) |> render_click()
 
     Map.merge(context, %{session: session, conn: session})
   end
@@ -57,7 +66,16 @@ defmodule LocationAutocompleteSteps do
     session = context[:session] || context[:conn]
     view = session.view
 
-    view |> element("[aria-label='Clear location']") |> render_click()
+    # Legacy + filter-pill variants expose the clear button via aria-label;
+    # the v3 form variant uses an explicit "Clear" text button.
+    clear_selector =
+      if has_element?(view, "[aria-label='Clear location']") do
+        "[aria-label='Clear location']"
+      else
+        "[data-testid='location-selected'] [phx-click='clear']"
+      end
+
+    view |> element(clear_selector) |> render_click()
 
     Map.merge(context, %{session: session, conn: session})
   end

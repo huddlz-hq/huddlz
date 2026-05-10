@@ -140,10 +140,11 @@ defmodule HuddlzWeb.ProfileLive do
             </div>
           </div>
         </div>
-        <div class="form-row">
+        <form phx-change="noop" phx-submit="noop" class="form-row">
           <.live_component
             module={HuddlzWeb.Live.LocationAutocomplete}
             id="profile-location"
+            variant={:v3_form}
             field_name="home_location"
             value={@current_user.home_location}
             latitude={@current_user.home_latitude}
@@ -151,7 +152,7 @@ defmodule HuddlzWeb.ProfileLive do
             placeholder="e.g. Austin, TX"
           />
           <p :if={@location_error} class="form-error">{@location_error}</p>
-        </div>
+        </form>
       </div>
 
       <.form
