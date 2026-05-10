@@ -19,8 +19,10 @@ defmodule Huddlz.Communities.Group do
       read_one :get_group, :get_by_slug
       list :list_groups, :read
       list :search_groups, :search
-      list :my_groups, :get_by_owner
-      list :joined_groups, :get_joined
+      # `myGroups` mirrors the `Communities.my_groups/1` Elixir interface and
+      # the `/my-groups` LiveView: returns groups the actor owns or has joined.
+      # Pass `relationship: hosting | joined | all` to scope the result.
+      list :my_groups, :my_groups
     end
 
     mutations do
@@ -39,8 +41,7 @@ defmodule Huddlz.Communities.Group do
       get :read
       index :read
       index :search, route: "/search"
-      index :get_by_owner, route: "/mine"
-      index :get_joined, route: "/joined"
+      index :my_groups, route: "/my-groups"
       get :get_by_slug, route: "/by_slug/:slug"
       post :create_group
       patch :update_details

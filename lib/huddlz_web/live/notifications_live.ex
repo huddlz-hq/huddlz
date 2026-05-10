@@ -65,26 +65,31 @@ defmodule HuddlzWeb.NotificationsLive do
 
     with {:ok, notification} <- Ash.get(Notification, id, actor: user),
          {:ok, _} <- Notifications.mark_read(notification, actor: user) do
-      {:noreply,
-       socket
-       |> assign(:counts, load_counts(user))
-       |> load_results(socket.assigns.filter, socket.assigns.page_info.current_page, user)}
+      {:noreply, refresh(socket, user)}
     else
-      _ -> {:noreply, socket}
+      {:error, reason} ->
+        Logger.warning("NotificationsLive mark_read failed: #{inspect(reason)}")
+        {:noreply, socket}
     end
   end
 
   def handle_event("mark_all_read", _params, socket) do
     user = socket.assigns.current_user
 
-    socket.assigns.notifications
-    |> Enum.filter(&is_nil(&1.read_at))
-    |> Enum.each(&Notifications.mark_read(&1, actor: user))
+    case Notifications.mark_all_read(user) do
+      :ok ->
+        {:noreply, refresh(socket, user)}
 
-    {:noreply,
-     socket
-     |> assign(:counts, load_counts(user))
-     |> load_results(socket.assigns.filter, socket.assigns.page_info.current_page, user)}
+      {:error, reason} ->
+        Logger.warning("NotificationsLive mark_all_read failed: #{inspect(reason)}")
+        {:noreply, socket}
+    end
+  end
+
+  defp refresh(socket, user) do
+    socket
+    |> assign(:counts, load_counts(user))
+    |> load_results(socket.assigns.filter, socket.assigns.page_info.current_page, user)
   end
 
   defp parse_filter(value) when value in @valid_filters, do: String.to_existing_atom(value)
@@ -272,19 +277,20 @@ defmodule HuddlzWeb.NotificationsLive do
   defp mark_color(%{read_at: %DateTime{}}), do: "muted"
 
   defp mark_color(%{trigger: trigger}) when is_binary(trigger) do
-    case Notifications.Triggers.fetch(safe_atom(trigger)) do
-      {:ok, %{category: :transactional}} -> "warn"
-      _ -> "cyan"
-    end
-  rescue
-    ArgumentError -> "cyan"
+    if trigger in transactional_triggers(), do: "warn", else: "cyan"
   end
 
   defp mark_color(_), do: "cyan"
 
-  defp safe_atom(value) when is_binary(value) do
-    String.to_existing_atom(value)
-  end
+  # Memoized at module load — Triggers.all/0 is a compile-time map. Using a
+  # string set lets us match the DB-stored trigger string directly without
+  # converting to an atom (which would risk ArgumentError on stale rows).
+  @transactional_triggers Notifications.Triggers.all()
+                          |> Enum.filter(fn {_, e} -> e.category == :transactional end)
+                          |> Enum.map(fn {trigger, _} -> Atom.to_string(trigger) end)
+                          |> MapSet.new()
+
+  defp transactional_triggers, do: @transactional_triggers
 
   defp meta_line(%{description: desc, inserted_at: %DateTime{} = at})
        when is_binary(desc) and desc != "" do

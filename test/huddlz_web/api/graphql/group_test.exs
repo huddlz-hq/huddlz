@@ -52,8 +52,8 @@ defmodule HuddlzWeb.Api.Graphql.GroupTest do
     end
   end
 
-  describe "joinedGroups query" do
-    test "returns groups the actor has joined but does not own", %{conn: conn} do
+  describe "myGroups query" do
+    test "returns groups the actor owns or has joined (default :all)", %{conn: conn} do
       member = generate(user())
       stranger = generate(user())
 
@@ -67,26 +67,65 @@ defmodule HuddlzWeb.Api.Graphql.GroupTest do
       conn =
         conn
         |> authenticated_conn(member)
-        |> gql_post("{ joinedGroups { results { id name } } }")
+        |> gql_post("{ myGroups { results { id name } } }")
 
-      assert %{"data" => %{"joinedGroups" => %{"results" => results}}} =
+      assert %{"data" => %{"myGroups" => %{"results" => results}}} =
                json_response(conn, 200)
+
+      ids = Enum.map(results, & &1["id"])
+      assert owned.id in ids
+      assert joined.id in ids
+    end
+
+    test "relationship: \"hosting\" returns only owned groups", %{conn: conn} do
+      member = generate(user())
+      stranger = generate(user())
+
+      owned = generate(group(name: "Owned", actor: member, is_public: true))
+      joined = generate(group(name: "Joined", actor: stranger, is_public: true))
+      generate(group_member(group_id: joined.id, user_id: member.id, actor: stranger))
+
+      conn =
+        conn
+        |> authenticated_conn(member)
+        |> gql_post(~s|{ myGroups(relationship: "hosting") { results { id } } }|)
+
+      assert %{"data" => %{"myGroups" => %{"results" => results}}} = json_response(conn, 200)
+
+      ids = Enum.map(results, & &1["id"])
+      assert owned.id in ids
+      refute joined.id in ids
+    end
+
+    test "relationship: \"joined\" returns only joined-but-not-owned groups", %{conn: conn} do
+      member = generate(user())
+      stranger = generate(user())
+
+      owned = generate(group(name: "Owned", actor: member, is_public: true))
+      joined = generate(group(name: "Joined", actor: stranger, is_public: true))
+      generate(group_member(group_id: joined.id, user_id: member.id, actor: stranger))
+
+      conn =
+        conn
+        |> authenticated_conn(member)
+        |> gql_post(~s|{ myGroups(relationship: "joined") { results { id } } }|)
+
+      assert %{"data" => %{"myGroups" => %{"results" => results}}} = json_response(conn, 200)
 
       ids = Enum.map(results, & &1["id"])
       assert joined.id in ids
       refute owned.id in ids
     end
 
-    test "returns empty list for user with no memberships beyond ownership", %{conn: conn} do
+    test "returns empty list for an unrelated user", %{conn: conn} do
       lonely = generate(user())
-      _owned = generate(group(actor: lonely, is_public: true))
 
       conn =
         conn
         |> authenticated_conn(lonely)
-        |> gql_post("{ joinedGroups { results { id } } }")
+        |> gql_post("{ myGroups { results { id } } }")
 
-      assert %{"data" => %{"joinedGroups" => %{"results" => []}}} = json_response(conn, 200)
+      assert %{"data" => %{"myGroups" => %{"results" => []}}} = json_response(conn, 200)
     end
   end
 end

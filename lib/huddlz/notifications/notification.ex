@@ -93,6 +93,17 @@ defmodule Huddlz.Notifications.Notification do
       description "Clear the read marker on a notification."
       change set_attribute(:read_at, nil)
     end
+
+    update :mark_all_read do
+      description """
+      Bulk-mark notifications as read. Used via `Ash.bulk_update` against a
+      query scoped by the actor (`user_id == ^actor(:id) and is_nil(read_at)`)
+      so the entire inbox is cleared in a single SQL UPDATE rather than one
+      round-trip per row.
+      """
+
+      change set_attribute(:read_at, &DateTime.utc_now/0)
+    end
   end
 
   policies do
