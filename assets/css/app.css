@@ -2162,6 +2162,15 @@ body.v3 .location-current svg { color: var(--cyan); flex: 0 0 auto; }
 
 body.v3 .location-actions { display: inline-flex; gap: 8px; flex-wrap: wrap; }
 
+/* On narrow screens the pill + buttons stack; let each row span the full
+   width so the location pill doesn't sit as a tiny chip next to a wall of
+   whitespace, and so the Change/Clear buttons line up across the bottom. */
+@media (max-width: 760px) {
+  body.v3 .location-current { width: 100%; box-sizing: border-box; }
+  body.v3 .location-actions { width: 100%; }
+  body.v3 .location-actions > .btn-secondary { flex: 1 1 auto; justify-content: center; }
+}
+
 body.v3 .location-control .form-input { padding-right: 36px; }
 
 body.v3 .form-clear {
