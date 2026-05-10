@@ -12,28 +12,28 @@ Feature: User Profile Management
 
   Scenario: Viewing my profile
     When I visit "/profile"
-    Then I should see "Profile Settings"
+    Then I should see "Profile"
     And I should see my current display name
     And I should see "alice@example.com"
 
   Scenario: Updating my display name
     Given I am on my profile page
-    When I fill in "Display Name" with "Alice Cooper"
-    And I click the "Save Changes" button
+    When I fill in "Display name" with "Alice Cooper"
+    And I click the "Save changes" button
     Then I should see "Display name updated successfully"
     And the display name field should contain "Alice Cooper"
 
   Scenario: Display name validation - empty
     Given I am on my profile page
-    When I fill in "Display Name" with ""
-    And I click the "Save Changes" button
+    When I fill in "Display name" with ""
+    And I click the "Save changes" button
     Then I should see "Failed to update display name. Please check the errors below."
     And I should not see "Display name updated successfully"
 
   Scenario: Display name validation - too long
     Given I am on my profile page
-    When I fill in "Display Name" with "This is a very long display name that definitely exceeds the seventy character maximum length allowed"
-    And I click the "Save Changes" button
+    When I fill in "Display name" with "This is a very long display name that definitely exceeds the seventy character maximum length allowed"
+    And I click the "Save changes" button
     Then I should see "Failed to update display name. Please check the errors below."
     And I should not see "Display name updated successfully"
 
@@ -41,8 +41,8 @@ Feature: User Profile Management
     When I visit "/"
     Then I should see "huddlz"
     When I visit "/profile"
-    Then I should see "Profile Settings"
-    And I should see "Manage your profile information"
+    Then I should see "Profile"
+    And I should see "How you show up in huddlz"
 
   Scenario: Setting home location with autocomplete
     Given I am on my profile page

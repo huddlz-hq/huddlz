@@ -13,8 +13,8 @@ Feature: Notification preferences settings page
     And I click "Save preferences"
     Then I should see "Notification preferences saved"
 
-  Scenario: User can reach the notifications page from the profile page
+  Scenario: User can reach the notifications page from the profile sidebar
     Given I am signed in as "linknav@example.com" with password "Password123!"
     When I go to my profile page
-    And I click "Notification preferences"
+    And I click "Settings"
     Then I should see "Choose which emails you want to receive"

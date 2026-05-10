@@ -11,6 +11,6 @@ Feature: Password change notification email
       | current_password      | OldPassword123! |
       | password              | NewPassword456! |
       | password_confirmation | NewPassword456! |
-    And I click "Update Password"
+    And I click "Update password"
     Then I should see "Password updated successfully"
     And a password-changed notification should be sent to "secure@example.com"

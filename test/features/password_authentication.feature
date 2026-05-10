@@ -42,7 +42,7 @@ Feature: Password Authentication
       | current_password      | OldPassword123! |
       | password              | NewPassword123! |
       | password_confirmation | NewPassword123! |
-    And I click "Update Password"
+    And I click "Update password"
     Then I should see "Password updated successfully"
 
   Scenario: User requests password reset

@@ -20,13 +20,21 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> assert_path("/sign-in")
     end
 
+    test "renders v3 chrome with Profile sidebar item active", %{conn: conn, user: user} do
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> assert_has("h1", text: "Profile")
+      |> assert_has("aside.sidebar")
+      |> assert_has(".sb-item.active", text: "Profile")
+    end
+
     test "displays user profile when authenticated", %{conn: conn, user: user} do
       conn
       |> login(user)
       |> visit("/profile")
-      |> assert_has("h1", text: "Profile Settings")
-      |> assert_has("h2", text: "Display Name")
-      |> assert_has("*", text: user.display_name)
+      |> assert_has("h1", text: "Profile")
+      |> assert_has(".panel-head h2", text: "Account information")
       |> assert_has("*", text: to_string(user.email))
     end
 
@@ -36,7 +44,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> visit("/profile")
       |> assert_has("form")
       |> assert_has("input[name=\"form[display_name]\"]")
-      |> assert_has("button[type=\"submit\"]", text: "Save Changes")
+      |> assert_has("button[type=\"submit\"]", text: "Save changes")
     end
 
     test "updates display name successfully", %{conn: conn, user: user} do
@@ -45,8 +53,8 @@ defmodule HuddlzWeb.ProfileLiveTest do
       conn
       |> login(user)
       |> visit("/profile")
-      |> fill_in("Display Name", with: new_name)
-      |> click_button("Save Changes")
+      |> fill_in("Display name", with: new_name)
+      |> click_button("Save changes")
       |> assert_has("*", text: "Display name updated successfully")
       |> assert_has(~s|input[name="form[display_name]"][value="#{new_name}"]|)
     end
@@ -59,22 +67,22 @@ defmodule HuddlzWeb.ProfileLiveTest do
 
       # Test empty (not allowed)
       session
-      |> fill_in("Display Name", with: "")
-      |> click_button("Save Changes")
+      |> fill_in("Display name", with: "")
+      |> click_button("Save changes")
       |> assert_has("*", text: "Failed to update display name")
 
       # Test too long (> 30 chars)
       long_name = String.duplicate("a", 31)
 
       session
-      |> fill_in("Display Name", with: long_name)
-      |> click_button("Save Changes")
+      |> fill_in("Display name", with: long_name)
+      |> click_button("Save changes")
       |> assert_has("*", text: "Failed to update display name")
 
       # Test single character (should be allowed)
       session
-      |> fill_in("Display Name", with: "A")
-      |> click_button("Save Changes")
+      |> fill_in("Display name", with: "A")
+      |> click_button("Save changes")
       |> assert_has("*", text: "Display name updated successfully")
     end
 
@@ -82,7 +90,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
       conn
       |> login(user)
       |> visit("/profile")
-      |> fill_in("Display Name", with: "")
+      |> fill_in("Display name", with: "")
       |> assert_has("form")
     end
   end
@@ -92,7 +100,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
       conn
       |> login(user)
       |> visit("/profile")
-      |> assert_has("h2", text: "Home Location")
+      |> assert_has(".panel-head h2", text: "Home location")
       |> assert_has("#profile-location")
     end
 

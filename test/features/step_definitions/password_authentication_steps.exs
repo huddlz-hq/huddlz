@@ -135,13 +135,13 @@ defmodule PasswordAuthenticationSteps do
         Enum.reduce(table_rows, sess, fn [field, value], s ->
           case field do
             "current_password" ->
-              fill_in(s, "Current Password", with: value)
+              fill_in(s, "Current password", with: value)
 
             "password" ->
-              fill_in(s, "New Password", with: value)
+              fill_in(s, "New password", with: value)
 
             "password_confirmation" ->
-              fill_in(s, "Confirm New Password", with: value)
+              fill_in(s, "Confirm new password", with: value)
 
             _ ->
               s
@@ -161,9 +161,9 @@ defmodule PasswordAuthenticationSteps do
       within(session, "#password-form", fn s ->
         # Try both possible button texts
         try do
-          click_button(s, "Set Password")
+          click_button(s, "Set password")
         rescue
-          _ -> click_button(s, "Update Password")
+          _ -> click_button(s, "Update password")
         end
       end)
 

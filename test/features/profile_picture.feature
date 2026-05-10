@@ -12,9 +12,9 @@ Feature: Profile Picture Management
 
   Scenario: Viewing profile picture section
     When I visit "/profile"
-    Then I should see "Profile Picture"
-    And I should see "Upload a profile picture to personalize your account"
-    And I should see "Upload a photo..."
+    Then I should see "Profile picture"
+    And I should see "JPG, PNG, or WebP"
+    And I should see "Upload a photo"
 
   Scenario: Profile shows fallback avatar when no picture is uploaded
     When I visit "/profile"
@@ -26,10 +26,10 @@ Feature: Profile Picture Management
 
   Scenario: Viewing the profile picture card structure
     When I visit "/profile"
-    Then I should see "Profile Settings"
-    And I should see "Profile Picture"
-    And I should see "Account Information"
-    And I should see "Display Name"
+    Then I should see "Profile"
+    And I should see "Profile picture"
+    And I should see "Account information"
+    And I should see "Display name"
 
   Scenario: Profile picture appears in navbar when user has one
     Given the following profile pictures exist:
