@@ -211,7 +211,7 @@ defmodule HuddlzWeb.NotificationsLive do
         <p class="muted">{empty_message(@filter)}</p>
       <% else %>
         <div class="panel" style="padding:0">
-          <div class="row-list" style="padding:0 20px">
+          <div class="row-list" style="padding:6px 20px">
             <%= for notification <- @notifications do %>
               <.notification_row notification={notification} />
             <% end %>
