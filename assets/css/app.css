@@ -1436,6 +1436,8 @@ body.v3 .cal-nav-btn:hover { color: var(--cyan); border-color: var(--cyan); }
 
 body.v3 .cal-nav-today {
   height: 32px;
+  display: inline-flex;
+  align-items: center;
   padding: 0 14px;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
