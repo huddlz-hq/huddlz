@@ -37,6 +37,14 @@ defmodule HuddlzWeb.MeLive do
   end
 
   @impl true
+  def handle_params(%{"tab" => "huddlz"}, _uri, socket) do
+    {:noreply, push_navigate(socket, to: ~p"/my-huddlz")}
+  end
+
+  def handle_params(%{"tab" => "groups"}, _uri, socket) do
+    {:noreply, push_navigate(socket, to: ~p"/my-groups")}
+  end
+
   def handle_params(params, _uri, socket) do
     tab = parse_tab(params["tab"])
 

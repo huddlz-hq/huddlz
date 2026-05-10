@@ -85,6 +85,8 @@ defmodule HuddlzWeb.Router do
       live "/discover", HuddlLive, :index
       live "/help", HelpLive, :index
       live "/me", MeLive, :index
+      live "/my-huddlz", MyHuddlzLive, :index
+      live "/my-groups", MyGroupsLive, :index
       live "/admin", AdminLive, :index
       live "/profile", ProfileLive, :index
       live "/profile/notifications", ProfileLive.Notifications, :index

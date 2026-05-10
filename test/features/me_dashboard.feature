@@ -39,45 +39,35 @@ Feature: Me dashboard
     When I visit "/me?tab=garbage"
     Then I should see "// Upcoming"
 
-  Scenario: My Groups tab shows empty Hosting and Joined sections with side panels
+  Scenario: /me?tab=groups redirects to /my-groups
     Given I am signed in as "host@example.com"
     When I visit "/me?tab=groups"
-    Then I should see "Groups you organize and groups you've joined."
-    And I should see "// Hosting"
-    And I should see "You haven't created a group yet."
-    And I should see "// Joined"
-    And I should see "You haven't joined any groups yet."
-    And I should see "// Find more groups"
-    And I should see "Discover groups"
-    And I should see "// Useful next actions"
-    And I should not see "// Upcoming"
+    Then I should see "My groups"
+    And I should see "Groups you organize and groups you've joined."
+    And I should see "You haven't organized or joined any groups yet. Start one or browse Discover."
 
-  Scenario: Owner sees their group in the Hosting section under My Groups
+  Scenario: Owner sees their group on /my-groups
     Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
     And I am signed in as "host@example.com"
-    When I visit "/me?tab=groups"
-    Then I should see "// Hosting"
+    When I visit "/my-groups"
+    Then I should see "Hosting"
     And I should see "Cyberpunk Builders"
-    And I should see "You haven't joined any groups yet."
 
-  Scenario: Member sees groups they joined in the Joined section under My Groups
+  Scenario: Member sees groups they joined on /my-groups
     Given a public group "Phoenix Devs" exists with owner "stranger@example.com"
     And "attendee@example.com" has joined the group "Phoenix Devs"
     And I am signed in as "attendee@example.com"
-    When I visit "/me?tab=groups"
-    Then I should see "// Joined"
+    When I visit "/my-groups"
+    Then I should see "Joined"
     And I should see "Phoenix Devs"
-    And I should see "You haven't created a group yet."
 
-  Scenario: Hosting and Joined are split for the same user
+  Scenario: Hosting and Joined groups appear together on /my-groups
     Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
     And a public group "Phoenix Devs" exists with owner "stranger@example.com"
     And "host@example.com" has joined the group "Phoenix Devs"
     And I am signed in as "host@example.com"
-    When I visit "/me?tab=groups"
-    Then I should see "// Hosting"
-    And I should see "Cyberpunk Builders"
-    And I should see "// Joined"
+    When I visit "/my-groups"
+    Then I should see "Cyberpunk Builders"
     And I should see "Phoenix Devs"
 
   Scenario: Invites tab shows an empty feed with needs-response side panel
