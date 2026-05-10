@@ -5,6 +5,7 @@ defmodule HuddlzWeb.ProfileLive do
   use HuddlzWeb, :live_view
 
   alias Huddlz.Storage.ProfilePictures
+  alias HuddlzWeb.Avatar
   alias HuddlzWeb.Layouts
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
@@ -140,7 +141,7 @@ defmodule HuddlzWeb.ProfileLive do
             </div>
           </div>
         </div>
-        <form phx-change="noop" phx-submit="noop" class="form-row">
+        <form class="form-row">
           <.live_component
             module={HuddlzWeb.Live.LocationAutocomplete}
             id="profile-location"
@@ -216,30 +217,15 @@ defmodule HuddlzWeb.ProfileLive do
   defp big_avatar(assigns) do
     ~H"""
     <%= cond do %>
-      <% @user.current_profile_picture_url -> %>
-        <img
-          class="big-avatar"
-          src={@user.current_profile_picture_url}
-          alt={@user.display_name || @user.email}
-        />
-      <% initials = avatar_initials(@user) -> %>
+      <% url = Avatar.picture_url(@user) -> %>
+        <img class="big-avatar" src={url} alt="" aria-hidden="true" />
+      <% initials = Avatar.initials(@user) -> %>
         <div class="big-avatar">{initials}</div>
       <% true -> %>
         <div class="big-avatar"></div>
     <% end %>
     """
   end
-
-  defp avatar_initials(%{display_name: name}) when is_binary(name) and name != "" do
-    name
-    |> String.trim()
-    |> String.split(~r/\s+/)
-    |> Enum.take(2)
-    |> Enum.map_join(&String.first/1)
-    |> String.upcase()
-  end
-
-  defp avatar_initials(_), do: nil
 
   defp role_label(:admin), do: "Admin"
   defp role_label(role) when is_atom(role), do: role |> to_string() |> String.capitalize()
@@ -323,9 +309,6 @@ defmodule HuddlzWeb.ProfileLive do
          |> assign(:password_form, form |> to_form())}
     end
   end
-
-  @impl true
-  def handle_event("noop", _params, socket), do: {:noreply, socket}
 
   @impl true
   def handle_event("validate_avatar", _params, socket) do
