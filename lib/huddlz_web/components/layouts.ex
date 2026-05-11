@@ -372,33 +372,21 @@ defmodule HuddlzWeb.Layouts do
                 </div>
                 <span class="name">{group.name}</span>
               </a>
-              <div class="sb-sub">
+              <div :if={@active_group_slug == group.slug} class="sb-sub">
                 <a
-                  class={[
-                    "sb-sub-item",
-                    (@active_group_slug == group.slug and @active_organize_section == :overview) &&
-                      "active"
-                  ]}
+                  class={["sb-sub-item", @active_organize_section == :overview && "active"]}
                   href={"/organize/#{group.slug}"}
                 >
                   Overview
                 </a>
                 <a
-                  class={[
-                    "sb-sub-item",
-                    (@active_group_slug == group.slug and @active_organize_section == :huddlz) &&
-                      "active"
-                  ]}
+                  class={["sb-sub-item", @active_organize_section == :huddlz && "active"]}
                   href={"/organize/#{group.slug}/huddlz"}
                 >
                   Huddlz
                 </a>
                 <a
-                  class={[
-                    "sb-sub-item",
-                    (@active_group_slug == group.slug and @active_organize_section == :members) &&
-                      "active"
-                  ]}
+                  class={["sb-sub-item", @active_organize_section == :members && "active"]}
                   href={"/organize/#{group.slug}/members"}
                 >
                   Members
