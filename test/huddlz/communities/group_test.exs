@@ -358,6 +358,82 @@ defmodule Huddlz.Communities.GroupTest do
     end
   end
 
+  describe "get_organizable" do
+    # Regression: admins used to be auto-included here via a `role == :admin`
+    # filter clause, which flooded the v3 sidebar with every group in the DB.
+    # The admin override now lives in OrganizeLive's per-slug auth helper, not
+    # in the list query — so this action returns only groups the actor truly
+    # organizes, even for admins.
+
+    test "returns groups the actor owns" do
+      owner = generate(user(role: :user))
+      mine = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+      _theirs = generate(group(is_public: true))
+
+      result = Communities.get_organizable_groups!(actor: owner)
+
+      assert Enum.map(result, & &1.id) == [mine.id]
+    end
+
+    test "returns groups the actor is an :organizer member of" do
+      owner = generate(user(role: :user))
+      co = generate(user(role: :user))
+      group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+
+      generate(
+        group_member(
+          group_id: group.id,
+          user_id: co.id,
+          role: "organizer",
+          actor: owner
+        )
+      )
+
+      result = Communities.get_organizable_groups!(actor: co)
+
+      assert Enum.map(result, & &1.id) == [group.id]
+    end
+
+    test "does NOT auto-include every group for admins" do
+      admin = generate(user(role: :admin))
+      _strangers_group = generate(group(is_public: true))
+
+      result = Communities.get_organizable_groups!(actor: admin)
+
+      assert result == [],
+             "admins should only see groups they actually organize in this list, not every group in the DB"
+    end
+
+    test "admins still see groups they organize themselves" do
+      admin = generate(user(role: :admin))
+      mine = generate(group(is_public: true, owner_id: admin.id, actor: admin))
+      _strangers_group = generate(group(is_public: true))
+
+      result = Communities.get_organizable_groups!(actor: admin)
+
+      assert Enum.map(result, & &1.id) == [mine.id]
+    end
+
+    test "excludes groups where the actor is only a :member" do
+      owner = generate(user(role: :user))
+      member = generate(user(role: :user))
+      group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+
+      generate(
+        group_member(
+          group_id: group.id,
+          user_id: member.id,
+          role: "member",
+          actor: owner
+        )
+      )
+
+      result = Communities.get_organizable_groups!(actor: member)
+
+      assert result == []
+    end
+  end
+
   describe "attribute constraints" do
     test "rejects description over 5000 characters" do
       owner = generate(user())
