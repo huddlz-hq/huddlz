@@ -16,6 +16,24 @@ defmodule AccountRoleChangedNotificationSteps do
     {:ok, context}
   end
 
+  step "the admin {string} tries to update {string} to role {string}",
+       %{args: [admin_email, target_email, new_role]} = context do
+    admin = find_user!(context.users, admin_email)
+    target = find_user!(context.users, target_email)
+    role_atom = String.to_existing_atom(new_role)
+
+    result = Accounts.update_role(target, role_atom, actor: admin)
+
+    {:ok, Map.put(context, :update_role_result, result)}
+  end
+
+  step "the role update should be rejected", context do
+    case context[:update_role_result] do
+      {:error, _} -> {:ok, context}
+      other -> flunk("expected the role update to be rejected, got: #{inspect(other)}")
+    end
+  end
+
   step "a role-change notification should be sent to {string} naming role {string}",
        %{args: [email, role]} = context do
     Oban.drain_queue(queue: :notifications)

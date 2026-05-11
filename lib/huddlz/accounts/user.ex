@@ -151,6 +151,22 @@ defmodule Huddlz.Accounts.User do
       require_atomic? false
       accept [:role]
 
+      # Refuse self-role-change so an admin can't demote themselves and lock
+      # themselves out of `/admin`. A nil actor (system call with
+      # `authorize?: false`) is allowed through; the UI never sends one.
+      validate fn changeset, %{actor: actor} ->
+        cond do
+          is_nil(actor) ->
+            :ok
+
+          actor.id == changeset.data.id ->
+            {:error, field: :role, message: "can't change your own role"}
+
+          true ->
+            :ok
+        end
+      end
+
       change after_action(fn changeset, user, %{actor: actor} ->
                previous_role = changeset.data.role
 
