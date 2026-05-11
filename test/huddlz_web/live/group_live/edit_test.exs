@@ -33,6 +33,21 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       |> assert_has("input[name='form[slug]'][value='test-group']")
     end
 
+    test "renders v3 chrome with the three panels in order", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/edit")
+      |> assert_has("aside.sidebar")
+      |> assert_has(".panel:nth-of-type(1) h2", text: "Cover image")
+      |> assert_has(".panel:nth-of-type(2) h2", text: "The basics")
+      |> assert_has(".panel:nth-of-type(3) h2", text: "Visibility")
+      |> assert_has(".slug-control .slug-prefix", text: "huddlz.com/groups/")
+    end
+
     test "non-owner cannot access edit page", %{conn: conn, non_owner: non_owner, group: group} do
       conn
       |> login(non_owner)

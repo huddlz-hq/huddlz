@@ -54,16 +54,12 @@ defmodule GroupManagementSteps do
     # Fill in each field using PhoenixTest
     session = context[:session] || context[:conn]
 
-    editing_group = context[:editing_group] || detect_editing_group(session, context)
-
     session =
       raw_table
       |> Enum.reduce(session, fn [field, value], session ->
         case field do
           "Location" ->
             view = session.view
-
-            _ = editing_group
 
             send(
               view.pid,
@@ -133,15 +129,5 @@ defmodule GroupManagementSteps do
     session = context[:session] || context[:conn]
     assert_has(session, "*", text: "is required")
     context
-  end
-
-  # Detect if we're on a group edit page by checking the rendered HTML for the edit form
-  defp detect_editing_group(session, context) do
-    html = render(session.view)
-
-    if html =~ "edit-group-form" do
-      groups = Map.get(context, :groups, [])
-      List.first(groups)
-    end
   end
 end
