@@ -2572,6 +2572,56 @@ body.v3 .discover-back {
   font-size: 13px;
 }
 
+/* ───────────────────────────────────────  ADMIN PANEL  ──────────── */
+body.v3 .admin-search {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+body.v3 .admin-search .form-input { flex: 1; min-width: 0; }
+body.v3 .admin-search .btn-primary,
+body.v3 .admin-search .btn-secondary { flex: 0 0 auto; }
+
+body.v3 .admin-table-wrap { overflow-x: auto; }
+
+body.v3 .admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+body.v3 .admin-table thead th {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+body.v3 .admin-table tbody td {
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  vertical-align: middle;
+}
+
+body.v3 .admin-table tbody tr:last-child td { border-bottom: 0; }
+body.v3 .admin-table tbody tr:hover td { background: rgba(24, 203, 212, 0.04); }
+
+body.v3 .role-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+body.v3 .role-form .form-select { width: auto; padding: 6px 10px; }
+body.v3 .role-form .btn-primary { padding: 6px 14px; }
+
 /* ───────────────────────────────────────  PAGINATION  ──────────── */
 body.v3 .pagination {
   display: flex;
