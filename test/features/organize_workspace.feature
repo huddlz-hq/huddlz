@@ -33,7 +33,6 @@ Feature: Organizer workspace
     Then I should see "Overview"
     And I should see "Groups"
     And I should see "Huddlz"
-    And I should see "Calendar"
     And I should see "Attendees"
     And I should see "Members"
 
@@ -150,48 +149,6 @@ Feature: Organizer workspace
     And I am signed in as "host@example.com"
     When I visit "/organize/huddlz"
     Then the page should link "Synthwave Night" to its huddl edit screen
-
-  Scenario: Calendar tab agenda is the default view and shows upcoming huddlz
-    Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
-    And the huddl "Synthwave Night" exists in group "Cyberpunk Builders" hosted by "host@example.com"
-    And I am signed in as "host@example.com"
-    When I visit "/organize/calendar"
-    Then I should see "Calendar."
-    And I should see "// Agenda"
-    And I should see "Synthwave Night"
-    And I should see "Cyberpunk Builders"
-
-  Scenario: Calendar agenda shows the empty state when nothing is upcoming
-    Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
-    And I am signed in as "host@example.com"
-    When I visit "/organize/calendar"
-    Then I should see "// Agenda"
-    And I should see "Nothing on the calendar."
-
-  Scenario: Calendar agenda hides past huddlz
-    Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
-    And the past huddl "Last Year's Demoday" exists in group "Cyberpunk Builders" hosted by "host@example.com"
-    And I am signed in as "host@example.com"
-    When I visit "/organize/calendar"
-    Then I should see "// Agenda"
-    And I should not see "Last Year's Demoday"
-
-  Scenario: Calendar does not show huddlz from groups the actor does not organize
-    Given a public group "Phoenix Devs" exists with owner "stranger@example.com"
-    And the huddl "External Meetup" exists in group "Phoenix Devs" hosted by "stranger@example.com"
-    And I am signed in as "host@example.com"
-    When I visit "/organize/calendar"
-    Then I should not see "External Meetup"
-
-  Scenario: Calendar month view renders the day-of-week header and month nav
-    Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
-    And I am signed in as "host@example.com"
-    When I visit "/organize/calendar?view=month"
-    Then I should see "// Month"
-    And I should see "Sun"
-    And I should see "Mon"
-    And I should see "Sat"
-    And I should see "Today"
 
   Scenario: Attendees tab shows the empty state when the actor has no upcoming huddlz
     Given a public group "Cyberpunk Builders" exists with owner "host@example.com"

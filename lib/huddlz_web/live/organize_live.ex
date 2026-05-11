@@ -1,7 +1,7 @@
 defmodule HuddlzWeb.OrganizeLive do
   @moduledoc """
   Organizer workspace shell. Sidebar tabs (Overview, Groups, Huddlz,
-  Calendar, Attendees, Members) live at /organize and /organize/<tab>.
+  Attendees, Members) live at /organize and /organize/<tab>.
   """
   use HuddlzWeb, :live_view
 
@@ -15,8 +15,6 @@ defmodule HuddlzWeb.OrganizeLive do
   @attendees_huddl_loads [:rsvp_count, :waitlist_count, :group]
   @group_loads [:current_image_url, :member_count]
   @member_role_order [:owner, :organizer, :member]
-  @calendar_huddl_loads [:rsvp_count, :group]
-  @calendar_max_pills 2
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
 
@@ -38,13 +36,7 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:selected_waitlist, [])
      |> assign(:members_groups, [])
      |> assign(:selected_group, nil)
-     |> assign(:selected_members, [])
-     |> assign(:calendar_view, :agenda)
-     |> assign(:calendar_huddlz, [])
-     |> assign(:calendar_huddlz_by_date, %{})
-     |> assign(:calendar_month_cursor, nil)
-     |> assign(:calendar_grid_start, nil)
-     |> assign(:calendar_grid_weeks, [])}
+     |> assign(:selected_members, [])}
   end
 
   @impl true
@@ -106,35 +98,6 @@ defmodule HuddlzWeb.OrganizeLive do
     |> assign(:selected_waitlist, load_waitlist(selected, user))
   end
 
-  defp load_action(socket, :calendar, params, user) do
-    view = parse_calendar_view(params["view"])
-    today = Date.utc_today()
-
-    case view do
-      :agenda ->
-        huddlz = load_calendar_agenda_huddlz(user)
-
-        socket
-        |> assign(:calendar_view, :agenda)
-        |> assign(:calendar_huddlz, huddlz)
-        |> assign(:calendar_huddlz_by_date, group_huddlz_by_date(huddlz))
-        |> assign(:calendar_month_cursor, beginning_of_month(today))
-
-      :month ->
-        cursor = parse_year_month(params["ym"]) || beginning_of_month(today)
-        {grid_start, grid_end_exclusive, weeks} = month_grid(cursor)
-        huddlz = load_calendar_month_huddlz(user, grid_start, grid_end_exclusive)
-
-        socket
-        |> assign(:calendar_view, :month)
-        |> assign(:calendar_huddlz, huddlz)
-        |> assign(:calendar_huddlz_by_date, group_huddlz_by_date(huddlz))
-        |> assign(:calendar_month_cursor, cursor)
-        |> assign(:calendar_grid_start, grid_start)
-        |> assign(:calendar_grid_weeks, weeks)
-    end
-  end
-
   defp load_action(socket, :members, params, user) do
     groups = load_owned_groups(user)
     selected = find_selected_group(groups, params["group"])
@@ -188,84 +151,11 @@ defmodule HuddlzWeb.OrganizeLive do
   defp parse_huddlz_filter("past"), do: :past
   defp parse_huddlz_filter(_), do: :live
 
-  defp parse_calendar_view("month"), do: :month
-  defp parse_calendar_view(_), do: :agenda
-
-  defp parse_year_month(nil), do: nil
-
-  defp parse_year_month(value) when is_binary(value) do
-    with [y, m] <- String.split(value, "-", parts: 2),
-         {year, ""} <- Integer.parse(y),
-         {month, ""} <- Integer.parse(m),
-         true <- month in 1..12,
-         {:ok, date} <- Date.new(year, month, 1) do
-      date
-    else
-      _ -> nil
-    end
-  end
-
-  defp parse_year_month(_), do: nil
-
-  defp beginning_of_month(%Date{} = date), do: %{date | day: 1}
-
-  defp prev_month(%Date{year: y, month: 1}), do: %Date{year: y - 1, month: 12, day: 1}
-  defp prev_month(%Date{year: y, month: m}), do: %Date{year: y, month: m - 1, day: 1}
-
-  defp next_month(%Date{year: y, month: 12}), do: %Date{year: y + 1, month: 1, day: 1}
-  defp next_month(%Date{year: y, month: m}), do: %Date{year: y, month: m + 1, day: 1}
-
-  defp month_grid(%Date{} = cursor) do
-    first_of_month = beginning_of_month(cursor)
-    days_to_sunday = Date.day_of_week(first_of_month, :sunday) - 1
-    grid_start = Date.add(first_of_month, -days_to_sunday)
-    grid_end_exclusive = Date.add(grid_start, 42)
-
-    weeks =
-      0..41
-      |> Enum.map(&Date.add(grid_start, &1))
-      |> Enum.chunk_every(7)
-
-    {grid_start, grid_end_exclusive, weeks}
-  end
-
-  defp group_huddlz_by_date(huddlz) do
-    Enum.group_by(huddlz, fn h -> DateTime.to_date(h.starts_at) end)
-  end
-
   defp state_sort_dir(:past), do: :desc
   defp state_sort_dir(_), do: :asc
 
   defp load_owned_groups(user) do
     Communities.get_by_owner!(actor: user, load: @group_loads, query: [sort: [name: :asc]])
-  end
-
-  defp load_calendar_agenda_huddlz(user) do
-    Communities.huddlz_for_organizer!(:live,
-      actor: user,
-      load: @calendar_huddl_loads,
-      query: [sort: [starts_at: :asc]]
-    )
-  end
-
-  defp load_calendar_month_huddlz(user, %Date{} = grid_start, %Date{} = grid_end_exclusive) do
-    visible_from = DateTime.new!(grid_start, ~T[00:00:00], "Etc/UTC")
-    visible_to = DateTime.new!(grid_end_exclusive, ~T[00:00:00], "Etc/UTC")
-
-    [:live, :past]
-    |> Enum.flat_map(fn state ->
-      Communities.huddlz_for_organizer!(state,
-        actor: user,
-        load: @calendar_huddl_loads,
-        query: [
-          filter: [
-            starts_at: [greater_than_or_equal: visible_from, less_than: visible_to]
-          ],
-          sort: [starts_at: :asc]
-        ]
-      )
-    end)
-    |> Enum.sort_by(& &1.starts_at, DateTime)
   end
 
   defp load_upcoming_huddlz([], _user), do: []
@@ -299,16 +189,6 @@ defmodule HuddlzWeb.OrganizeLive do
             <.huddlz_tab
               huddlz={@huddlz_list}
               filter={@huddlz_filter}
-              owned_groups={@owned_groups}
-            />
-          <% :calendar -> %>
-            <.calendar_tab
-              view={@calendar_view}
-              huddlz={@calendar_huddlz}
-              huddlz_by_date={@calendar_huddlz_by_date}
-              month_cursor={@calendar_month_cursor}
-              grid_start={@calendar_grid_start}
-              grid_weeks={@calendar_grid_weeks}
               owned_groups={@owned_groups}
             />
           <% :attendees -> %>
@@ -1047,275 +927,6 @@ defmodule HuddlzWeb.OrganizeLive do
     """
   end
 
-  attr :view, :atom, required: true
-  attr :huddlz, :list, required: true
-  attr :huddlz_by_date, :map, required: true
-  attr :month_cursor, :any, required: true
-  attr :grid_start, :any, required: true
-  attr :grid_weeks, :list, required: true
-  attr :owned_groups, :list, required: true
-
-  defp calendar_tab(assigns) do
-    ~H"""
-    <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <div>
-        <span class="mono-label text-primary/70">// Calendar</span>
-        <h1 class="text-3xl font-extrabold tracking-tight text-base-content mt-2">
-          Calendar.
-        </h1>
-        <p class="mt-2 text-base-content/60 max-w-2xl">
-          Every huddl across the groups you organize. Switch between an agenda list of
-          what's coming up and a month grid for at-a-glance scheduling.
-        </p>
-      </div>
-      <.button variant="primary" navigate={create_huddl_path(@owned_groups)}>Create huddl</.button>
-    </header>
-
-    <nav class="flex flex-wrap items-center gap-2" aria-label="Calendar view">
-      <.page_tab patch={~p"/organize/calendar"} active={@view == :agenda}>Agenda</.page_tab>
-      <.page_tab patch={~p"/organize/calendar?view=month"} active={@view == :month}>
-        Month
-      </.page_tab>
-    </nav>
-
-    <%= case @view do %>
-      <% :agenda -> %>
-        <.calendar_agenda huddlz={@huddlz} huddlz_by_date={@huddlz_by_date} />
-      <% :month -> %>
-        <.calendar_month
-          cursor={@month_cursor}
-          grid_start={@grid_start}
-          weeks={@grid_weeks}
-          huddlz_by_date={@huddlz_by_date}
-          total_count={length(@huddlz)}
-        />
-    <% end %>
-    """
-  end
-
-  attr :huddlz, :list, required: true
-  attr :huddlz_by_date, :map, required: true
-
-  defp calendar_agenda(assigns) do
-    sorted_dates =
-      assigns.huddlz_by_date
-      |> Map.keys()
-      |> Enum.sort_by(& &1, Date)
-
-    today = Date.utc_today()
-    assigns = assign(assigns, sorted_dates: sorted_dates, today: today)
-
-    ~H"""
-    <%= if @huddlz == [] do %>
-      <.surface_panel class="p-8">
-        <span class="mono-label text-primary/70">// Agenda</span>
-        <h2 class="text-xl font-extrabold tracking-tight text-base-content mt-2">
-          Nothing on the calendar.
-        </h2>
-        <p class="mt-2 text-sm text-base-content/60 max-w-xl">
-          When you publish a huddl, it'll appear here grouped by day so you can see
-          what's coming up across every group you organize.
-        </p>
-      </.surface_panel>
-    <% else %>
-      <section>
-        <div class="flex items-baseline justify-between gap-2">
-          <h2 class="text-lg font-extrabold tracking-tight text-base-content flex items-baseline gap-3">
-            <span class="mono-label text-primary/70">// Agenda</span>
-            <span class="text-sm font-body font-normal text-base-content/40">
-              ({length(@huddlz)})
-            </span>
-          </h2>
-        </div>
-
-        <div class="mt-4 space-y-6">
-          <%= for date <- @sorted_dates do %>
-            <.surface_panel>
-              <div class="border-b border-base-300 px-5 py-3 flex items-baseline gap-3">
-                <span class="mono-label text-primary/70">
-                  // {agenda_date_eyebrow(date, @today)}
-                </span>
-                <p class="text-sm font-extrabold tracking-tight text-base-content">
-                  {agenda_date_label(date)}
-                </p>
-                <span class="text-xs font-body font-normal text-base-content/40">
-                  ({length(Map.fetch!(@huddlz_by_date, date))})
-                </span>
-              </div>
-              <ul class="divide-y divide-base-300">
-                <%= for huddl <- Map.fetch!(@huddlz_by_date, date) do %>
-                  <.calendar_agenda_row huddl={huddl} />
-                <% end %>
-              </ul>
-            </.surface_panel>
-          <% end %>
-        </div>
-      </section>
-    <% end %>
-    """
-  end
-
-  attr :huddl, :map, required: true
-
-  defp calendar_agenda_row(assigns) do
-    ~H"""
-    <li>
-      <.link
-        navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}/edit"}
-        class="flex items-center gap-4 px-5 py-4 hover:bg-base-200/40 transition-colors group"
-      >
-        <span class="mono-label text-base-content/60 w-20 flex-shrink-0">
-          {format_huddl_time(@huddl.starts_at)}
-        </span>
-        <div class="flex-1 min-w-0">
-          <h3 class="text-base font-extrabold tracking-tight text-base-content group-hover:text-primary transition-colors truncate">
-            {@huddl.title}
-          </h3>
-          <p class="text-xs text-base-content/60 mt-1 truncate">{@huddl.group.name}</p>
-        </div>
-        <.huddl_badge variant="cyan" class="flex-shrink-0">
-          {rsvp_label(@huddl.rsvp_count)}
-        </.huddl_badge>
-        <.icon
-          name="hero-chevron-right"
-          class="w-4 h-4 text-base-content/40 group-hover:text-primary transition-colors flex-shrink-0"
-        />
-      </.link>
-    </li>
-    """
-  end
-
-  attr :cursor, :any, required: true
-  attr :grid_start, :any, required: true
-  attr :weeks, :list, required: true
-  attr :huddlz_by_date, :map, required: true
-  attr :total_count, :integer, required: true
-
-  defp calendar_month(assigns) do
-    assigns =
-      assign(assigns,
-        prev_path: month_path(prev_month(assigns.cursor)),
-        next_path: month_path(next_month(assigns.cursor)),
-        today: Date.utc_today()
-      )
-
-    ~H"""
-    <section class="space-y-4">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <h2 class="text-lg font-extrabold tracking-tight text-base-content flex items-baseline gap-3">
-          <span class="mono-label text-primary/70">// Month</span>
-          <span class="text-base font-extrabold tracking-tight">
-            {format_month_year(@cursor)}
-          </span>
-          <span class="text-xs font-body font-normal text-base-content/40">
-            ({@total_count})
-          </span>
-        </h2>
-
-        <div class="flex items-center gap-1">
-          <.link
-            patch={@prev_path}
-            class="inline-flex items-center justify-center w-8 h-8 border border-base-300 rounded-hz-control hover:border-primary/60 hover:text-primary transition-colors text-base-content/70"
-            aria-label="Previous month"
-          >
-            <.icon name="hero-chevron-left" class="w-4 h-4" />
-          </.link>
-          <.link
-            patch={~p"/organize/calendar?view=month"}
-            class="inline-flex items-center px-3 h-8 text-xs font-extrabold uppercase tracking-wider border border-base-300 rounded-hz-control hover:border-primary/60 hover:text-primary text-base-content/70 transition-colors"
-          >
-            Today
-          </.link>
-          <.link
-            patch={@next_path}
-            class="inline-flex items-center justify-center w-8 h-8 border border-base-300 rounded-hz-control hover:border-primary/60 hover:text-primary transition-colors text-base-content/70"
-            aria-label="Next month"
-          >
-            <.icon name="hero-chevron-right" class="w-4 h-4" />
-          </.link>
-        </div>
-      </div>
-
-      <.surface_panel>
-        <div class="grid grid-cols-7 border-b border-base-300">
-          <%= for day_name <- ~w(Sun Mon Tue Wed Thu Fri Sat) do %>
-            <div class="px-2 py-2 text-center mono-label text-primary/70">
-              {day_name}
-            </div>
-          <% end %>
-        </div>
-
-        <%= for {week, week_index} <- Enum.with_index(@weeks) do %>
-          <div class={[
-            "grid grid-cols-7",
-            week_index < length(@weeks) - 1 && "border-b border-base-300"
-          ]}>
-            <%= for {date, day_index} <- Enum.with_index(week) do %>
-              <div class={[
-                "min-h-24 p-2 flex flex-col gap-1",
-                day_index < 6 && "border-r border-base-300",
-                day_in_month?(date, @cursor) && "bg-base-100",
-                !day_in_month?(date, @cursor) && "bg-base-200/40"
-              ]}>
-                <div class="flex items-center justify-between">
-                  <span class={[
-                    "text-xs font-extrabold tabular-nums",
-                    day_in_month?(date, @cursor) && "text-base-content/80",
-                    !day_in_month?(date, @cursor) && "text-base-content/30",
-                    Date.compare(date, @today) == :eq &&
-                      "text-primary inline-flex items-center justify-center w-5 h-5 border border-primary"
-                  ]}>
-                    {date.day}
-                  </span>
-                </div>
-                <.calendar_month_cell
-                  huddlz={Map.get(@huddlz_by_date, date, [])}
-                  in_month={day_in_month?(date, @cursor)}
-                />
-              </div>
-            <% end %>
-          </div>
-        <% end %>
-      </.surface_panel>
-
-      <p class="text-xs text-base-content/40 max-w-xl">
-        Past months show huddlz that took place. Week view, drag-to-reschedule, and
-        calendar sync (iCal) aren't wired up yet.
-      </p>
-    </section>
-    """
-  end
-
-  attr :huddlz, :list, required: true
-  attr :in_month, :boolean, required: true
-
-  defp calendar_month_cell(assigns) do
-    visible = Enum.take(assigns.huddlz, @calendar_max_pills)
-    overflow = max(length(assigns.huddlz) - @calendar_max_pills, 0)
-    assigns = assign(assigns, visible: visible, overflow: overflow)
-
-    ~H"""
-    <div class="flex flex-col gap-1">
-      <%= for huddl <- @visible do %>
-        <.link
-          navigate={~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}/edit"}
-          class={[
-            "block px-1.5 py-0.5 text-[11px] leading-tight font-bold truncate border transition-colors",
-            @in_month && "border-primary/30 text-primary hover:border-primary hover:bg-primary/10",
-            !@in_month && "border-base-300 text-base-content/40 hover:text-base-content/70"
-          ]}
-          title={"#{format_huddl_time(huddl.starts_at)} · #{huddl.title}"}
-        >
-          {format_huddl_time(huddl.starts_at)} · {huddl.title}
-        </.link>
-      <% end %>
-      <p :if={@overflow > 0} class="text-[11px] text-base-content/50 px-1.5">
-        +{@overflow} more
-      </p>
-    </div>
-    """
-  end
-
   defp create_huddl_path(_owned_groups), do: ~p"/organize/huddlz/new"
 
   defp rsvp_label(0), do: "0 RSVPs"
@@ -1405,33 +1016,4 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   defp format_starts_at(_), do: ""
-
-  defp format_huddl_time(%DateTime{} = dt) do
-    dt
-    |> Calendar.strftime("%I:%M %p")
-    |> String.trim_leading("0")
-  end
-
-  defp format_huddl_time(_), do: ""
-
-  defp format_month_year(%Date{} = date), do: Calendar.strftime(date, "%B %Y")
-
-  defp agenda_date_label(%Date{} = date), do: Calendar.strftime(date, "%A, %b %-d")
-
-  defp agenda_date_eyebrow(%Date{} = date, %Date{} = today) do
-    case Date.diff(date, today) do
-      0 -> "Today"
-      1 -> "Tomorrow"
-      n when n in 2..6 -> Calendar.strftime(date, "%a")
-      _ -> Calendar.strftime(date, "%b %-d")
-    end
-  end
-
-  defp day_in_month?(%Date{month: m}, %Date{month: m}), do: true
-  defp day_in_month?(_, _), do: false
-
-  defp month_path(%Date{} = cursor) do
-    ym = Calendar.strftime(cursor, "%Y-%m")
-    ~p"/organize/calendar?#{[view: "month", ym: ym]}"
-  end
 end
