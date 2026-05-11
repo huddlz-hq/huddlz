@@ -53,5 +53,20 @@ defmodule Huddlz.Accounts.AdminAuthorizationTest do
         Accounts.update_role!(verified, :admin, actor: regular)
       end
     end
+
+    test "admins cannot change their own role (footgun guard)", %{admin: admin} do
+      # Regression: an admin demoting themselves locks them out of `/admin`
+      # with no recovery path through the UI. Block it at the action level.
+      assert {:error, %Ash.Error.Invalid{}} =
+               Accounts.update_role(admin, :user, actor: admin)
+    end
+
+    test "admins can still change other admins' roles", %{admin: admin} do
+      # Sanity: the self-role guard is scoped to self, not "any admin".
+      other_admin = generate(user(role: :admin))
+
+      assert {:ok, demoted} = Accounts.update_role(other_admin, :user, actor: admin)
+      assert demoted.role == :user
+    end
   end
 end

@@ -72,9 +72,12 @@ defmodule Huddlz.Accounts.UserTest do
       refute Ash.can?({User, :update_role}, regular_user)
       refute Ash.can?({User, :update_role}, verified_user)
 
-      # Verify our policy is working as intended - regular and users cannot update roles
+      # Verify our policy is working as intended — non-admin actors can't
+      # update any user's role. Use distinct actor + target so the policy
+      # check fires (the self-role-change validation runs earlier and would
+      # otherwise raise Ash.Error.Invalid before the policy is reached).
       assert_raise Ash.Error.Forbidden, fn ->
-        Accounts.update_role!(regular_user, :admin, actor: regular_user)
+        Accounts.update_role!(admin_user, :user, actor: regular_user)
       end
 
       assert_raise Ash.Error.Forbidden, fn ->

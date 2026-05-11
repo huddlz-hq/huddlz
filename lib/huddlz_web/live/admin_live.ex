@@ -123,14 +123,18 @@ defmodule HuddlzWeb.AdminLive do
                     <span class={["pill", role_pill_variant(user.role)]}>{user.role}</span>
                   </td>
                   <td data-label="Actions">
-                    <form phx-submit="update_role" class="role-form">
-                      <input type="hidden" name="user_id" value={user.id} />
-                      <select name="role" class="form-select">
-                        <option value="user" selected={user.role == :user}>User</option>
-                        <option value="admin" selected={user.role == :admin}>Admin</option>
-                      </select>
-                      <button type="submit" class="btn-primary">Update</button>
-                    </form>
+                    <%= if user.id == @current_user.id do %>
+                      <span class="muted">You</span>
+                    <% else %>
+                      <form phx-submit="update_role" class="role-form">
+                        <input type="hidden" name="user_id" value={user.id} />
+                        <select name="role" class="form-select">
+                          <option value="user" selected={user.role == :user}>User</option>
+                          <option value="admin" selected={user.role == :admin}>Admin</option>
+                        </select>
+                        <button type="submit" class="btn-primary">Update</button>
+                      </form>
+                    <% end %>
                   </td>
                 </tr>
               </tbody>

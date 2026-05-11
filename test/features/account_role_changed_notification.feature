@@ -20,9 +20,10 @@ Feature: Account role changed notification email
     When the admin "adm@example.com" updates "already@example.com" to role "admin"
     Then no role-change notification should be sent
 
-  Scenario: No email is sent when an admin updates their own role
+  Scenario: An admin cannot change their own role
     Given the following users exist:
       | email             | display_name | role  |
       | self@example.com  | Solo         | admin |
-    When the admin "self@example.com" updates "self@example.com" to role "user"
-    Then no role-change notification should be sent
+    When the admin "self@example.com" tries to update "self@example.com" to role "user"
+    Then the role update should be rejected
+    And no role-change notification should be sent
