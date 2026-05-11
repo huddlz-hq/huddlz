@@ -2491,9 +2491,13 @@ body.v3 .toggle .track {
   position: relative;
   width: 36px;
   height: 20px;
+  flex: 0 0 36px;
   border-radius: 999px;
   background: var(--line-strong);
   border: 1px solid var(--soft);
+  padding: 0;
+  opacity: 1;
+  rotate: 0deg;
   transition: background 120ms ease, border-color 120ms ease;
 }
 
