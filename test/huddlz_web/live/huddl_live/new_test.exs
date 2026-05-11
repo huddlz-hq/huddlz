@@ -363,8 +363,8 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       # Should still be on the same page
       assert_path(session, ~p"/groups/#{group.slug}/huddlz/new")
 
-      # Should show validation error
-      assert_has(session, "p.form-error")
+      # Should show validation error attached to the empty title field
+      assert_has(session, "input#form_title + p.form-error")
     end
 
     test "selecting a saved location preserves other form fields", %{
@@ -428,8 +428,8 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         # Clear the field to trigger validation
         |> fill_in("Title", with: "")
 
-      # Check for validation error displayed below the input
-      assert_has(session, "p.form-error")
+      # Check that the validation error renders in the same form-row as the title input
+      assert_has(session, "input#form_title + p.form-error")
     end
   end
 
