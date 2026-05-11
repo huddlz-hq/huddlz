@@ -56,7 +56,12 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.v3_app flash={@flash} current_user={@current_user} active="settings">
+    <Layouts.v3_app
+      flash={@flash}
+      current_user={@current_user}
+      sidebar_owned_groups={@sidebar_owned_groups}
+      active="settings"
+    >
       <div class="page-head">
         <div>
           <h1>Settings</h1>

@@ -155,7 +155,12 @@ defmodule HuddlzWeb.MyHuddlzLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.v3_app flash={@flash} current_user={@current_user} active="my-huddlz">
+    <Layouts.v3_app
+      flash={@flash}
+      current_user={@current_user}
+      sidebar_owned_groups={@sidebar_owned_groups}
+      active="my-huddlz"
+    >
       <div class="page-head">
         <div>
           <h1>My huddlz</h1>

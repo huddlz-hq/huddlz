@@ -64,7 +64,12 @@ defmodule HuddlzWeb.ProfileLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.v3_app flash={@flash} current_user={@current_user} active="profile">
+    <Layouts.v3_app
+      flash={@flash}
+      current_user={@current_user}
+      sidebar_owned_groups={@sidebar_owned_groups}
+      active="profile"
+    >
       <div class="page-head">
         <div>
           <h1>Profile</h1>
