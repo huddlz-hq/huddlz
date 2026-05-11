@@ -2,6 +2,7 @@ defmodule HuddlzWeb.GroupLive.EditTest do
   use HuddlzWeb.ConnCase, async: true
 
   import Huddlz.Generator
+  import Phoenix.LiveViewTest
 
   describe "Edit Group" do
     setup do
@@ -47,14 +48,11 @@ defmodule HuddlzWeb.GroupLive.EditTest do
         |> fill_in("Group Name", with: "Updated Group Name")
         |> fill_in("Description", with: "Updated description", exact: false)
 
-      # Simulate adding a new location via modal
       view = session.view
-
-      Phoenix.LiveViewTest.render_patch(view, ~p"/groups/#{group.slug}/edit/locations/new")
 
       send(
         view.pid,
-        {:location_selected, "modal-location-autocomplete",
+        {:location_selected, "group-location",
          %{
            place_id: "test_place_id",
            display_text: "Updated location",
@@ -65,7 +63,6 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       )
 
       Phoenix.LiveViewTest.render(view)
-      Phoenix.LiveViewTest.render_submit(view, "select_modal_location", %{})
 
       session
       |> click_button("Save Changes")
@@ -81,9 +78,9 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       |> visit(~p"/groups/#{group.slug}/edit")
       |> fill_in("URL Slug", with: "new-slug")
       |> assert_has("h3", text: "Warning: URL Change")
-      |> assert_has("p", text: "Changing the slug will break existing links")
-      |> assert_has("span", text: "/groups/test-group")
-      |> assert_has("span", text: "/groups/new-slug")
+      |> assert_has(".slug-warn p", text: "Changing the slug will break existing links")
+      |> assert_has(".slug-warn span", text: "/groups/test-group")
+      |> assert_has(".slug-warn span", text: "/groups/new-slug")
     end
 
     test "updating slug redirects to new URL", %{conn: conn, owner: owner, group: group} do
@@ -110,7 +107,6 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       owner: owner,
       group: group
     } do
-      # Set coordinates on the group so the location displays
       Ash.Changeset.for_update(group, :update_details, %{location: "Original location"},
         actor: owner
       )
@@ -127,25 +123,21 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       |> refute_has("#saved-location-picker-input")
     end
 
-    test "location modal uses city/region search", %{conn: conn, owner: owner, group: group} do
-      session =
+    test "location field uses city/region search, not address search", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      {:ok, _view, html} =
         conn
         |> login(owner)
-        |> visit(~p"/groups/#{group.slug}/edit")
+        |> live(~p"/groups/#{group.slug}/edit")
 
-      view = session.view
-      Phoenix.LiveViewTest.render_patch(view, ~p"/groups/#{group.slug}/edit/locations/new")
-
-      html = Phoenix.LiveViewTest.render(view)
-
-      # Modal should show city/region search, not address search
-      assert html =~ "Search for a city or region"
-      assert html =~ "Use This Location"
       refute html =~ "Save Address"
       refute html =~ "Location Name"
     end
 
-    test "can clear and set location via city modal", %{conn: conn, owner: owner, group: group} do
+    test "can set a new location inline and save", %{conn: conn, owner: owner, group: group} do
       session =
         conn
         |> login(owner)
@@ -153,17 +145,9 @@ defmodule HuddlzWeb.GroupLive.EditTest do
 
       view = session.view
 
-      # Clear the existing location
-      Phoenix.LiveViewTest.render_click(view, "clear_location")
-      html = Phoenix.LiveViewTest.render(view)
-      assert html =~ "Search for a city or region..."
-
-      # Open modal and select a new city
-      Phoenix.LiveViewTest.render_patch(view, ~p"/groups/#{group.slug}/edit/locations/new")
-
       send(
         view.pid,
-        {:location_selected, "modal-location-autocomplete",
+        {:location_selected, "group-location",
          %{
            place_id: "test_place_id",
            display_text: "Austin, TX, USA",
@@ -174,12 +158,7 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       )
 
       Phoenix.LiveViewTest.render(view)
-      Phoenix.LiveViewTest.render_submit(view, "select_modal_location", %{})
 
-      html = Phoenix.LiveViewTest.render(view)
-      assert html =~ "Austin, TX, USA"
-
-      # Save and verify
       session
       |> click_button("Save Changes")
       |> assert_has("div[role='alert']", text: "Group updated successfully")

@@ -268,8 +268,8 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         |> login(owner)
         |> live(~p"/groups/#{group.slug}/edit")
 
-      assert has_element?(view, "label", "Group Image")
-      assert has_element?(view, "*", "Upload a banner image")
+      assert has_element?(view, "h2", "Cover image")
+      assert has_element?(view, ".upload-zone")
     end
 
     test "shows current image when group has one", %{conn: conn, owner: owner, group: group} do
