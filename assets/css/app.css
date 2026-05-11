@@ -1297,7 +1297,7 @@ body.v3 .row.members-row { grid-template-columns: 48px 1fr 120px 110px; }
 
 
 body.v3 .row .row-title { font-weight: 700; color: var(--text); }
-body.v3 .row .pill {
+body.v3 .pill {
   display: inline-flex;
   align-items: center;
   height: 22px;
