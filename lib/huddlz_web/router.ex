@@ -92,18 +92,11 @@ defmodule HuddlzWeb.Router do
       live "/profile", ProfileLive, :index
       live "/profile/notifications", ProfileLive.Notifications, :index
 
-      # Organizer workspace
-      live "/organize", OrganizeLive, :overview
-      live "/organize/groups", OrganizeLive, :groups
-      live "/organize/huddlz", OrganizeLive, :huddlz
-      live "/organize/huddlz/new", HuddlLive.New, :workspace_new
-
-      live "/organize/huddlz/new/locations/new",
-           HuddlLive.New,
-           :workspace_new_location
-
-      live "/organize/attendees", OrganizeLive, :attendees
-      live "/organize/members", OrganizeLive, :members
+      # Organizer workspace — per-group structure
+      live "/organize", OrganizeLive, :index
+      live "/organize/:group_slug", OrganizeLive, :overview
+      live "/organize/:group_slug/huddlz", OrganizeLive, :huddlz
+      live "/organize/:group_slug/members", OrganizeLive, :members
 
       # Group routes
       live "/groups/new", GroupLive.New, :new

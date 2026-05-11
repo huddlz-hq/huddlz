@@ -7,7 +7,6 @@ defmodule HuddlzWeb.HuddlLive.New do
   import HuddlzWeb.HuddlLive.FormHelpers
   import HuddlzWeb.HuddlLive.FormComponent
   import HuddlzWeb.Live.Helpers.UploadHelpers
-  import HuddlzWeb.OrganizeLive.Components
 
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
@@ -24,12 +23,7 @@ defmodule HuddlzWeb.HuddlLive.New do
 
     with {:ok, group} <- get_group_by_slug(group_slug, user),
          :ok <- authorize({Huddl, :create, %{group_id: group.id}}, user) do
-      socket =
-        socket
-        |> assign(:workspace_mode?, false)
-        |> init_create_form_socket(group, user)
-
-      {:ok, socket}
+      {:ok, init_create_form_socket(socket, group, user)}
     else
       {:error, :not_found} ->
         {:ok,
@@ -44,27 +38,6 @@ defmodule HuddlzWeb.HuddlLive.New do
            message: "You don't have permission to create huddlz for this group",
            resource_path: ~p"/groups/#{group_slug}"
          )}
-    end
-  end
-
-  def mount(_params, _session, socket) do
-    user = socket.assigns.current_user
-
-    case load_owned_groups(user) do
-      [] ->
-        {:ok,
-         socket
-         |> put_flash(:error, "Create a group before scheduling a huddl.")
-         |> push_navigate(to: ~p"/organize/groups")}
-
-      [first | _] = groups ->
-        socket =
-          socket
-          |> assign(:workspace_mode?, true)
-          |> assign(:owned_groups, groups)
-          |> init_create_form_socket(first, user)
-
-        {:ok, socket}
     end
   end
 
@@ -91,10 +64,6 @@ defmodule HuddlzWeb.HuddlLive.New do
       auto_upload: true,
       progress: &handle_upload_progress/3
     )
-  end
-
-  defp load_owned_groups(user) do
-    Communities.get_by_owner!(actor: user, query: [sort: [name: :asc]])
   end
 
   defp assign_create_form(socket, group, user) do
@@ -126,12 +95,10 @@ defmodule HuddlzWeb.HuddlLive.New do
   @impl true
   def handle_params(_params, _uri, socket) do
     socket =
-      case socket.assigns.live_action do
-        action when action in [:new_location, :workspace_new_location] ->
-          ModalLocationHelpers.clear(socket)
-
-        _ ->
-          socket
+      if socket.assigns.live_action == :new_location do
+        ModalLocationHelpers.clear(socket)
+      else
+        socket
       end
 
     {:noreply, socket}
@@ -185,98 +152,40 @@ defmodule HuddlzWeb.HuddlLive.New do
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash} current_user={@current_user}>
-      <%= if @workspace_mode? do %>
-        <.workspace_chrome active={:huddlz} current_user={@current_user}>
-          <header>
-            <span class="mono-label text-primary/70">// Create huddl</span>
-            <h1 class="text-3xl font-extrabold tracking-tight text-base-content mt-2">
-              Schedule a new huddl.
-            </h1>
-            <p class="mt-2 text-base-content/60 max-w-2xl">
-              Cover image, basics, when and how, address. Defaults to the first group you organize.
-            </p>
-          </header>
+      <.link
+        navigate={~p"/groups/#{@group.slug}"}
+        class="text-sm font-semibold leading-6 hover:underline"
+      >
+        <.icon name="hero-arrow-left" class="h-3 w-3" /> Back to {@group.name}
+      </.link>
 
-          <div class="border border-base-300 p-5">
-            <span class="mono-label text-primary/70">// Group</span>
-            <label
-              for="workspace-group-select"
-              class="block text-lg font-extrabold tracking-tight text-base-content mt-2"
-            >
-              Which group is this huddl for?
-            </label>
-            <p class="text-xs text-base-content/60 mt-1">
-              Switching groups resets the form to that group's defaults.
-            </p>
+      <.header>
+        Create New Huddl
+        <:subtitle>
+          Creating a huddl for <span class="font-semibold">{@group.name}</span>
+        </:subtitle>
+      </.header>
 
-            <form phx-change="select_group">
-              <select
-                id="workspace-group-select"
-                name="group_id"
-                class="mt-3 w-full bg-base-200 border border-base-300 px-3 py-2 text-sm font-bold focus:border-primary focus:outline-none"
-              >
-                <option
-                  :for={group <- @owned_groups}
-                  value={group.id}
-                  selected={group.id == @group.id}
-                >
-                  {group.name}
-                </option>
-              </select>
-            </form>
-          </div>
-
-          <.create_huddl_form_body
-            form={@form}
-            group={@group}
-            group_locations={@group_locations}
-            selected_location={@selected_location}
-            show_physical_location={@show_physical_location}
-            show_virtual_link={@show_virtual_link}
-            calculated_end_time={@calculated_end_time}
-            uploads={@uploads}
-            image_error={@image_error}
-            pending_preview_url={@pending_preview_url}
-            new_location_path={~p"/organize/huddlz/new/locations/new"}
-            cancel_path={~p"/organize/huddlz"}
-          />
-        </.workspace_chrome>
-      <% else %>
-        <.link
-          navigate={~p"/groups/#{@group.slug}"}
-          class="text-sm font-semibold leading-6 hover:underline"
-        >
-          <.icon name="hero-arrow-left" class="h-3 w-3" /> Back to {@group.name}
-        </.link>
-
-        <.header>
-          Create New Huddl
-          <:subtitle>
-            Creating a huddl for <span class="font-semibold">{@group.name}</span>
-          </:subtitle>
-        </.header>
-
-        <.create_huddl_form_body
-          form={@form}
-          group={@group}
-          group_locations={@group_locations}
-          selected_location={@selected_location}
-          show_physical_location={@show_physical_location}
-          show_virtual_link={@show_virtual_link}
-          calculated_end_time={@calculated_end_time}
-          uploads={@uploads}
-          image_error={@image_error}
-          pending_preview_url={@pending_preview_url}
-          new_location_path={~p"/groups/#{@group.slug}/huddlz/new/locations/new"}
-          cancel_path={~p"/groups/#{@group.slug}"}
-        />
-      <% end %>
+      <.create_huddl_form_body
+        form={@form}
+        group={@group}
+        group_locations={@group_locations}
+        selected_location={@selected_location}
+        show_physical_location={@show_physical_location}
+        show_virtual_link={@show_virtual_link}
+        calculated_end_time={@calculated_end_time}
+        uploads={@uploads}
+        image_error={@image_error}
+        pending_preview_url={@pending_preview_url}
+        new_location_path={~p"/groups/#{@group.slug}/huddlz/new/locations/new"}
+        cancel_path={~p"/groups/#{@group.slug}"}
+      />
 
       <.modal
-        :if={@live_action in [:new_location, :workspace_new_location]}
+        :if={@live_action == :new_location}
         id="new-location-modal"
         show
-        on_cancel={JS.patch(new_huddl_path_for_assigns(assigns))}
+        on_cancel={JS.patch(~p"/groups/#{@group.slug}/huddlz/new")}
       >
         <h2 class="font-display text-xl tracking-tight text-glow mb-6">Add New Address</h2>
 
@@ -311,7 +220,7 @@ defmodule HuddlzWeb.HuddlLive.New do
               Save Address
             </.button>
             <.link
-              patch={new_huddl_path_for_assigns(assigns)}
+              patch={~p"/groups/#{@group.slug}/huddlz/new"}
               class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
             >
               Cancel
@@ -475,24 +384,6 @@ defmodule HuddlzWeb.HuddlLive.New do
     """
   end
 
-  defp new_huddl_path_for_assigns(%{workspace_mode?: true}), do: ~p"/organize/huddlz/new"
-
-  defp new_huddl_path_for_assigns(%{group: group}),
-    do: ~p"/groups/#{group.slug}/huddlz/new"
-
-  @impl true
-  def handle_event("select_group", %{"group_id" => group_id}, socket) do
-    user = socket.assigns.current_user
-
-    case Enum.find(socket.assigns.owned_groups, &(&1.id == group_id)) do
-      nil ->
-        {:noreply, socket}
-
-      group ->
-        {:noreply, init_create_form_socket(socket, group, user)}
-    end
-  end
-
   @impl true
   def handle_event("cancel_image_upload", %{"ref" => ref}, socket) do
     {:noreply, cancel_upload(socket, :huddl_image, ref)}
@@ -630,19 +521,11 @@ defmodule HuddlzWeb.HuddlLive.New do
     end
   end
 
-  defp success_redirect_path(socket, huddl) do
-    if socket.assigns[:workspace_mode?] do
-      ~p"/groups/#{socket.assigns.group.slug}/huddlz/#{huddl.id}"
-    else
-      ~p"/groups/#{socket.assigns.group.slug}"
-    end
+  defp success_redirect_path(socket, _huddl) do
+    ~p"/groups/#{socket.assigns.group.slug}"
   end
 
   defp new_huddl_path(socket) do
-    if socket.assigns[:workspace_mode?] do
-      ~p"/organize/huddlz/new"
-    else
-      ~p"/groups/#{socket.assigns.group.slug}/huddlz/new"
-    end
+    ~p"/groups/#{socket.assigns.group.slug}/huddlz/new"
   end
 end

@@ -68,8 +68,8 @@ defmodule HuddlzWeb.LiveUserAuth do
   # single-column shell rendered by `Layouts.v3_app` in chromeless mode.
   #
   # Also loads the user details the sidebar reads (profile picture URL, home
-  # location) so the bottom-of-sidebar avatar can render an uploaded image
-  # rather than a blank gradient square.
+  # location) plus the groups the user organizes, which appear as `sb-org-row`
+  # entries in the v3 sidebar.
   def on_mount(:v3_app, _params, _session, socket) do
     body_class =
       if socket.assigns[:current_user], do: "v3", else: "v3 is-signed-out"
@@ -77,7 +77,8 @@ defmodule HuddlzWeb.LiveUserAuth do
     {:cont,
      socket
      |> maybe_load_user_details()
-     |> assign(:body_class, body_class)}
+     |> assign(:body_class, body_class)
+     |> assign_new(:sidebar_owned_groups, fn -> load_sidebar_owned_groups(socket) end)}
   end
 
   defp maybe_load_user_details(%{assigns: %{current_user: user}} = socket)
@@ -93,4 +94,10 @@ defmodule HuddlzWeb.LiveUserAuth do
   end
 
   defp maybe_load_user_details(socket), do: socket
+
+  defp load_sidebar_owned_groups(%{assigns: %{current_user: user}}) when not is_nil(user) do
+    Huddlz.Communities.get_by_owner!(actor: user, query: [sort: [name: :asc]])
+  end
+
+  defp load_sidebar_owned_groups(_socket), do: []
 end
