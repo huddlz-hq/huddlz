@@ -574,7 +574,7 @@ defmodule HuddlzWeb.OrganizeLive do
       <.surface_panel class="p-8">
         <span class="mono-label text-primary/70">// No upcoming huddlz</span>
         <h2 class="text-xl font-extrabold tracking-tight text-base-content mt-2">
-          Nothing on the calendar.
+          No huddlz scheduled.
         </h2>
         <p class="mt-2 text-sm text-base-content/60 max-w-xl">
           When you publish a huddl, it'll appear here so you can review RSVPs and waitlist
@@ -1002,7 +1002,7 @@ defmodule HuddlzWeb.OrganizeLive do
   defp empty_eyebrow(_), do: "No live huddlz"
 
   defp empty_heading(:past), do: "No past huddlz yet."
-  defp empty_heading(_), do: "Nothing on the calendar."
+  defp empty_heading(_), do: "No huddlz scheduled."
 
   defp empty_body(:past),
     do: "Once a huddl wraps up, it'll show up here so you can revisit attendance and notes."

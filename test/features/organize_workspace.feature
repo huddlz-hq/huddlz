@@ -109,7 +109,7 @@ Feature: Organizer workspace
     When I visit "/organize/huddlz"
     Then I should see "Manage your huddlz."
     And I should see "// No live huddlz"
-    And I should see "Nothing on the calendar."
+    And I should see "No huddlz scheduled."
     And I should see "Create your first huddl"
 
   Scenario: Huddlz tab lists live huddlz across every group the actor organizes
@@ -156,7 +156,7 @@ Feature: Organizer workspace
     When I visit "/organize/attendees"
     Then I should see "Track attendees."
     And I should see "// No upcoming huddlz"
-    And I should see "Nothing on the calendar."
+    And I should see "No huddlz scheduled."
 
   Scenario: Attendees tab lists upcoming huddlz with RSVP and waitlist counts
     Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
