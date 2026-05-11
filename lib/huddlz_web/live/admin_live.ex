@@ -106,37 +106,35 @@ defmodule HuddlzWeb.AdminLive do
           <%= if Enum.empty?(@users) do %>
             <p class="muted">No users found matching your search criteria.</p>
           <% else %>
-            <div class="admin-table-wrap">
-              <table class="admin-table">
-                <thead>
-                  <tr>
-                    <th>Email</th>
-                    <th>Display Name</th>
-                    <th>Role</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr :for={user <- @users}>
-                    <td>{user.email}</td>
-                    <td>{user.display_name || "—"}</td>
-                    <td>
-                      <span class={["pill", role_pill_variant(user.role)]}>{user.role}</span>
-                    </td>
-                    <td>
-                      <form phx-submit="update_role" class="role-form">
-                        <input type="hidden" name="user_id" value={user.id} />
-                        <select name="role" class="form-select">
-                          <option value="user" selected={user.role == :user}>User</option>
-                          <option value="admin" selected={user.role == :admin}>Admin</option>
-                        </select>
-                        <button type="submit" class="btn-primary">Update</button>
-                      </form>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Display Name</th>
+                  <th>Role</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr :for={user <- @users}>
+                  <td data-label="Email">{user.email}</td>
+                  <td data-label="Display Name">{user.display_name || "—"}</td>
+                  <td data-label="Role">
+                    <span class={["pill", role_pill_variant(user.role)]}>{user.role}</span>
+                  </td>
+                  <td data-label="Actions">
+                    <form phx-submit="update_role" class="role-form">
+                      <input type="hidden" name="user_id" value={user.id} />
+                      <select name="role" class="form-select">
+                        <option value="user" selected={user.role == :user}>User</option>
+                        <option value="admin" selected={user.role == :admin}>Admin</option>
+                      </select>
+                      <button type="submit" class="btn-primary">Update</button>
+                    </form>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           <% end %>
         <% end %>
       </div>

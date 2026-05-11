@@ -2577,18 +2577,18 @@ body.v3 .admin-search {
   display: flex;
   gap: 10px;
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
-body.v3 .admin-search .form-input { flex: 1; min-width: 0; }
+body.v3 .admin-search .form-input { flex: 1; min-width: 180px; }
 body.v3 .admin-search .btn-primary,
 body.v3 .admin-search .btn-secondary { flex: 0 0 auto; }
-
-body.v3 .admin-table-wrap { overflow-x: auto; }
 
 body.v3 .admin-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
+  table-layout: auto;
 }
 
 body.v3 .admin-table thead th {
@@ -2599,15 +2599,16 @@ body.v3 .admin-table thead th {
   text-transform: uppercase;
   color: var(--muted);
   text-align: left;
-  padding: 10px 12px;
+  padding: 10px 8px;
   border-bottom: 1px solid var(--line-strong);
 }
 
 body.v3 .admin-table tbody td {
-  padding: 12px;
+  padding: 10px 8px;
   border-bottom: 1px solid var(--line);
   color: var(--text);
   vertical-align: middle;
+  word-break: break-word;
 }
 
 body.v3 .admin-table tbody tr:last-child td { border-bottom: 0; }
@@ -2616,11 +2617,43 @@ body.v3 .admin-table tbody tr:hover td { background: rgba(24, 203, 212, 0.04); }
 body.v3 .role-form {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
-body.v3 .role-form .form-select { width: auto; padding: 6px 10px; }
-body.v3 .role-form .btn-primary { padding: 6px 14px; }
+body.v3 .role-form .form-select { width: auto; padding: 6px 8px; min-width: 88px; }
+body.v3 .role-form .btn-primary { padding: 6px 12px; }
+
+@media (max-width: 720px) {
+  body.v3 .admin-table thead { display: none; }
+
+  body.v3 .admin-table,
+  body.v3 .admin-table tbody,
+  body.v3 .admin-table tr,
+  body.v3 .admin-table td { display: block; width: 100%; }
+
+  body.v3 .admin-table tbody tr {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  body.v3 .admin-table tbody tr:last-child { border-bottom: 0; }
+  body.v3 .admin-table tbody td { border-bottom: 0; padding: 4px 0; }
+
+  body.v3 .admin-table tbody td::before {
+    content: attr(data-label);
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+
+  body.v3 .role-form { margin-top: 6px; }
+}
 
 /* ───────────────────────────────────────  PAGINATION  ──────────── */
 body.v3 .pagination {
