@@ -112,6 +112,22 @@ defmodule Huddlz.Communities.Group do
       prepare Huddlz.Communities.Group.Preparations.ApplyTrigramSearch
     end
 
+    read :get_organizable do
+      description """
+      Groups the current actor can manage in the organizer workspace. Returns
+      groups they own, are an :organizer GroupMember of, or — for admins —
+      every group. Sorted alphabetically by name.
+      """
+
+      pagination offset?: true, countable: true, required?: false, default_limit: 50
+
+      filter expr(
+               ^actor(:role) == :admin or
+                 owner_id == ^actor(:id) or
+                 exists(group_members, user_id == ^actor(:id) and role == :organizer)
+             )
+    end
+
     read :get_joined do
       description "Get groups the current actor has joined but does not own. Optional `:search` arg applies trigram search."
 

@@ -358,7 +358,7 @@ defmodule HuddlzWeb.Layouts do
             <span class="label">My calendar</span>
           </a>
 
-          <div :if={@sidebar_owned_groups != [] or @active == "organize"} class="sb-orgs">
+          <div class="sb-orgs">
             <%= for {group, idx} <- Enum.with_index(@sidebar_owned_groups) do %>
               <a
                 class={[
@@ -395,7 +395,7 @@ defmodule HuddlzWeb.Layouts do
             <% end %>
             <a class="sb-org-row create" href="/groups/new">
               <div class="plus-mark">+</div>
-              <span class="name">Create group</span>
+              <span class="name">New group</span>
             </a>
           </div>
         </nav>

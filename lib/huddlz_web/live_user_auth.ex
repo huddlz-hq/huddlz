@@ -96,7 +96,7 @@ defmodule HuddlzWeb.LiveUserAuth do
   defp maybe_load_user_details(socket), do: socket
 
   defp load_sidebar_owned_groups(%{assigns: %{current_user: user}}) when not is_nil(user) do
-    Huddlz.Communities.get_by_owner!(actor: user, query: [sort: [name: :asc]])
+    Huddlz.Communities.get_organizable_groups!(actor: user, query: [sort: [name: :asc]])
   end
 
   defp load_sidebar_owned_groups(_socket), do: []

@@ -99,16 +99,30 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   defp load_owned_groups(user) do
-    Communities.get_by_owner!(actor: user, load: @group_loads, query: [sort: [name: :asc]])
+    Communities.get_organizable_groups!(
+      actor: user,
+      load: @group_loads,
+      query: [sort: [name: :asc]]
+    )
   end
 
   defp load_group(slug, user) do
-    with {:ok, group} when not is_nil(group) <-
-           Communities.get_by_slug(slug, actor: user, load: @group_loads),
-         true <- group.owner_id == user.id do
-      {:ok, group}
-    else
-      _ -> :error
+    case Communities.get_by_slug(slug, actor: user, load: @group_loads) do
+      {:ok, %{} = group} ->
+        if organizable_by?(group, user), do: {:ok, group}, else: :error
+
+      _ ->
+        :error
+    end
+  end
+
+  defp organizable_by?(_group, %{role: :admin}), do: true
+  defp organizable_by?(%{owner_id: owner_id}, %{id: actor_id}) when owner_id == actor_id, do: true
+
+  defp organizable_by?(group, user) do
+    case Communities.get_membership_in_group(group.id, actor: user) do
+      {:ok, %{role: :organizer}} -> true
+      _ -> false
     end
   end
 
