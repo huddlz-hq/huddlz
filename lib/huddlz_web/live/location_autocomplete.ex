@@ -191,6 +191,9 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
           phx-keydown="keydown"
           name={"#{@id}_search"}
           autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
           data-testid="location-input"
           role="combobox"
           aria-expanded={to_string(@show_suggestions && @suggestions != [])}
@@ -308,6 +311,9 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
             phx-keydown="keydown"
             name={"#{@id}_search"}
             autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
             data-testid="location-input"
             role="combobox"
             aria-expanded={to_string(@show_suggestions && @suggestions != [])}
@@ -433,6 +439,9 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
             phx-keydown="keydown"
             name={"#{@id}_search"}
             autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
             data-testid="location-input"
             role="combobox"
             aria-expanded={to_string(@show_suggestions && @suggestions != [])}
