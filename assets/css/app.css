@@ -2469,12 +2469,15 @@ body.v3 .edit-scope-row strong { color: var(--text); }
 body.v3 .toggle {
   display: inline-flex;
   align-items: center;
+  align-self: flex-start;
   gap: 10px;
   cursor: pointer;
   width: auto;
   height: auto;
   padding: 0;
   border: 0;
+  background: transparent;
+  color: var(--soft);
   box-shadow: none;
   appearance: auto;
   grid-template-columns: none;
