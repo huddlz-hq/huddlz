@@ -597,6 +597,66 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has(".eyebrow", text: "In-person huddl")
       |> assert_has(".eyebrow", text: "Happening now")
     end
+
+    test "shows completed banner and 'attended' copy for past huddlz", %{
+      conn: conn,
+      member: member,
+      owner: owner,
+      group: group
+    } do
+      completed_huddl =
+        generate(
+          past_huddl(
+            title: "Wrapped-up workshop",
+            description: "Already happened",
+            starts_at: DateTime.add(DateTime.utc_now(), -2, :day),
+            ends_at: DateTime.add(DateTime.utc_now(), -1, :day),
+            event_type: :virtual,
+            virtual_link: "https://zoom.us/j/old",
+            is_private: false,
+            group_id: group.id,
+            creator_id: owner.id
+          )
+        )
+
+      conn
+      |> login(member)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{completed_huddl.id}")
+      |> assert_has(".eyebrow", text: "Completed")
+      |> assert_has(".rsvp-banner.muted", text: "This huddl has ended")
+      |> assert_has(".facts .label", text: "Attended")
+      |> assert_has(".facts .value .muted", text: "Link expired")
+      |> refute_has("button", text: "RSVP to this huddl")
+      |> refute_has("button", text: "Cancel RSVP")
+    end
+
+    test "hides Organize section from non-owners", %{
+      conn: conn,
+      member: member,
+      group: group,
+      huddl: huddl
+    } do
+      # "Organized by" is always shown; assert the Organize action stack is gone instead.
+      conn
+      |> login(member)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+      |> refute_has("a", text: "Edit huddl")
+      |> refute_has("button", text: "Delete huddl")
+    end
+
+    test "shows Organize section with edit and delete for owner", %{
+      conn: conn,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+      |> assert_has(".huddl-side-section h3", text: "Organize")
+      |> assert_has("a", text: "Edit huddl")
+      |> assert_has("button", text: "Delete huddl")
+    end
   end
 
   defp create_verified_user do

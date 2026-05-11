@@ -148,7 +148,12 @@ defmodule HuddlzWeb.HuddlLive.Show do
                     <% @huddl.status == :completed -> %>
                       <span class="muted">Link expired</span>
                     <% @huddl.visible_virtual_link -> %>
-                      <a class="virtual-link-text" href={@huddl.visible_virtual_link} target="_blank">
+                      <a
+                        class="virtual-link-text"
+                        href={@huddl.visible_virtual_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         Join virtually
                       </a>
                     <% @current_user -> %>
@@ -279,6 +284,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
       class="btn-secondary virtual-link"
       href={@huddl.visible_virtual_link}
       target="_blank"
+      rel="noopener noreferrer"
     >
       <svg
         width="14"
