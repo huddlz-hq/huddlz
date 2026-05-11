@@ -10,6 +10,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   alias HuddlzWeb.MetaHelpers
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
+  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -54,222 +55,337 @@ defmodule HuddlzWeb.HuddlLive.Show do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_user={@current_user}>
-      <.header>
-        {@huddl.title}
-        <:subtitle>
-          <%= if @huddl.is_private do %>
-            <span class="text-xs px-2.5 py-1 bg-base-300 text-base-content/50 font-medium">
-              Private
+    <Layouts.v3_app flash={@flash} current_user={@current_user} active="discover">
+      <div class={["hero", status_hero_class(@huddl.status)]}>
+        <img
+          :if={@huddl.display_image_url}
+          class="hero-img"
+          src={HuddlImages.url(@huddl.display_image_url)}
+          alt={@huddl.title}
+        />
+        <div class="hero-content">
+          <span class={["eyebrow", status_eyebrow_class(@huddl.status)]}>
+            {hero_eyebrow(@huddl)}
+          </span>
+          <h1>{@huddl.title}</h1>
+          <div class="meta">
+            <span :for={{segment, idx} <- Enum.with_index(hero_meta_segments(@huddl))}>
+              <%= if idx > 0 do %>
+                <span class="meta-sep">·</span>
+              <% end %>
+              <span>{segment}</span>
             </span>
-          <% end %>
-        </:subtitle>
-        <:actions>
-          <%= if @can_edit_huddl do %>
-            <.link
-              navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}/edit"}
-              class="inline-flex items-center gap-1.5 text-sm font-medium text-base-content/50 hover:text-base-content transition-colors"
-            >
-              <.icon name="hero-pencil" class="h-4 w-4" /> Edit Huddl
-            </.link>
-          <% end %>
-          <%= if @can_delete_huddl do %>
-            <.button
-              phx-click="delete_huddl"
-              data-confirm="Are you sure you want to delete this huddl?"
-              variant="danger"
-            >
-              <.icon name="hero-trash" class="h-4 w-4" /> Delete Huddl
-            </.button>
-          <% end %>
-          <%= if @current_user && @huddl.status == :upcoming do %>
-            <%= case @attendance do %>
-              <% :attending -> %>
-                <div class="flex items-center gap-4">
-                  <div class="text-success font-semibold">
-                    <.icon name="hero-check-circle" class="h-5 w-5 inline" /> You're attending!
-                  </div>
-                  <button
-                    phx-click="cancel_rsvp"
-                    phx-disable-with="Cancelling..."
-                    class="px-3 py-1.5 text-xs font-medium bg-error/10 text-error hover:bg-error/20 transition-colors"
-                  >
-                    Cancel RSVP
-                  </button>
-                </div>
-              <% :waitlisted -> %>
-                <div class="flex items-center gap-4">
-                  <div class="text-warning font-semibold">
-                    <.icon name="hero-clock" class="h-5 w-5 inline" />
-                    On waitlist ({@waitlist_position} of {@huddl.waitlist_count})
-                  </div>
-                  <button
-                    phx-click="leave_waitlist"
-                    phx-disable-with="Leaving..."
-                    class="px-3 py-1.5 text-xs font-medium bg-error/10 text-error hover:bg-error/20 transition-colors"
-                  >
-                    Leave Waitlist
-                  </button>
-                </div>
-              <% :none -> %>
-                <%= if event_full?(@huddl) do %>
-                  <.button phx-click="join_waitlist">
-                    Huddl Full — Join Waitlist
-                  </.button>
-                <% else %>
-                  <.button phx-click="rsvp">
-                    RSVP to this huddl
-                  </.button>
-                <% end %>
-            <% end %>
-          <% end %>
-        </:actions>
-      </.header>
+          </div>
+        </div>
+      </div>
 
-      <div class="mt-8">
-        <div class="mb-6">
-          <%= if @huddl.display_image_url do %>
-            <div class="border border-base-300 overflow-hidden">
-              <img
-                src={HuddlImages.url(@huddl.display_image_url)}
-                alt={@huddl.title}
-                class="w-full aspect-video object-cover"
-              />
-            </div>
+      <div class="huddl-frame">
+        <div class="huddl-intro prose">
+          <%= if @huddl.description do %>
+            <p :for={paragraph <- description_paragraphs(@huddl.description)}>{paragraph}</p>
           <% else %>
-            <div class="w-full aspect-video bg-base-100 border border-base-300 overflow-hidden flex items-center justify-center">
-              <span class="text-4xl font-bold text-base-content/40 text-center px-8 line-clamp-2">
-                {@huddl.title}
-              </span>
-            </div>
+            <p>No description provided.</p>
           <% end %>
         </div>
 
-        <p class="text-base-content/60">
-          {@huddl.description || "No description provided."}
-        </p>
+        <aside class="huddl-side">
+          <h3>RSVP</h3>
 
-        <%= if @huddl.max_attendees do %>
-          <div class="mt-6 border border-base-300 p-4">
-            <div class="flex items-center justify-between gap-3 text-sm">
-              <span class="font-medium flex items-center gap-2">
-                <.icon name="hero-user-group" class="h-4 w-4" />
-                {capacity_label(@huddl)}
-              </span>
-              <span class={capacity_status_class(@huddl)}>
-                {capacity_status(@huddl)}
-              </span>
-            </div>
-            <div class="mt-3 h-2 bg-base-200 overflow-hidden">
-              <div class="h-full bg-primary" style={"width: #{capacity_percent(@huddl)}%"}></div>
+          <ul class="facts">
+            <li>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="9" /><path d="M12 6v6l4 2" />
+              </svg>
+              <div>
+                <div class="label">When</div>
+                <div class="value">{format_fact_when(@huddl)}</div>
+              </div>
+            </li>
+
+            <li :if={@huddl.event_type in [:in_person, :hybrid] && @huddl.physical_location}>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              <div>
+                <div class="label">Where</div>
+                <div class="value">{@huddl.physical_location}</div>
+              </div>
+            </li>
+
+            <li :if={@huddl.event_type in [:virtual, :hybrid]}>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="6" width="13" height="12" rx="2" /><path d="m16 10 5-3v10l-5-3" />
+              </svg>
+              <div>
+                <div class="label">Virtual access</div>
+                <div class="value">
+                  <%= cond do %>
+                    <% @huddl.status == :completed -> %>
+                      <span class="muted">Link expired</span>
+                    <% @huddl.visible_virtual_link -> %>
+                      <a class="virtual-link-text" href={@huddl.visible_virtual_link} target="_blank">
+                        Join virtually
+                      </a>
+                    <% @current_user -> %>
+                      <span class="muted">Virtual link available after RSVP</span>
+                    <% true -> %>
+                      <span class="muted">Sign in and RSVP to get virtual link</span>
+                  <% end %>
+                </div>
+              </div>
+            </li>
+
+            <li>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9.5" cy="7" r="4" />
+              </svg>
+              <div>
+                <div class="label">{capacity_fact_label(@huddl)}</div>
+                <div class="value">{format_fact_capacity(@huddl)}</div>
+              </div>
+            </li>
+          </ul>
+
+          <div :if={@huddl.max_attendees} class={["bar", capacity_bar_class(@huddl)]}>
+            <span style={"width:#{capacity_percent(@huddl)}%"}></span>
+          </div>
+
+          <div class="rsvp-state">
+            {render_rsvp_state(assigns)}
+          </div>
+
+          <div :if={@can_edit_huddl || @can_delete_huddl} class="huddl-side-section">
+            <h3>Organize</h3>
+            <div class="side-actions">
+              <.v3_button
+                :if={@can_edit_huddl}
+                variant={:secondary}
+                navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}/edit"}
+              >
+                Edit huddl
+              </.v3_button>
+              <.v3_button
+                :if={@can_delete_huddl}
+                variant={:destructive}
+                phx-click="delete_huddl"
+                data-confirm="Are you sure you want to delete this huddl?"
+              >
+                Delete huddl
+              </.v3_button>
             </div>
           </div>
-        <% end %>
 
-        <dl class="mt-6">
-          <div class="flex items-start gap-3 py-3">
-            <dt class="w-32 shrink-0 font-medium text-base-content/50">Status</dt>
-            <dd class={["flex items-center gap-2", status_text_class(@huddl.status)]}>
-              <.icon name={status_icon(@huddl.status)} class="h-4 w-4" />
-              {humanize(@huddl.status)}
-            </dd>
-          </div>
-
-          <div class="flex items-start gap-3 py-3">
-            <dt class="w-32 shrink-0 font-medium text-base-content/50">Type</dt>
-            <dd class="flex items-center gap-2">
-              <.icon name={type_detail_icon(@huddl.event_type)} class="h-4 w-4" />
-              {humanize(@huddl.event_type)}
-            </dd>
-          </div>
-
-          <div class="flex items-start gap-3 py-3">
-            <dt class="w-32 shrink-0 font-medium text-base-content/50">When</dt>
-            <dd class="flex items-center gap-2">
-              <.icon name="hero-calendar" class="h-4 w-4" />
-              {format_datetime(@huddl.starts_at)}
-              <%= if @huddl.ends_at do %>
-                - {format_time_only(@huddl.ends_at)}
-              <% end %>
-            </dd>
-          </div>
-
-          <%= if @huddl.event_type in [:in_person, :hybrid] && @huddl.physical_location do %>
-            <div class="flex items-start gap-3 py-3">
-              <dt class="w-32 shrink-0 font-medium text-base-content/50">Where</dt>
-              <dd class="flex items-center gap-2">
-                <.icon name="hero-map-pin" class="h-4 w-4" />
-                {@huddl.physical_location}
-              </dd>
-            </div>
-          <% end %>
-
-          <%= if @huddl.event_type in [:virtual, :hybrid] do %>
-            <div class="flex items-start gap-3 py-3">
-              <dt class="w-32 shrink-0 font-medium text-base-content/50">Virtual Access</dt>
-              <dd class="flex items-center gap-2">
-                <.icon name="hero-video-camera" class="h-4 w-4" />
-                <%= cond do %>
-                  <% @huddl.status == :completed -> %>
-                    <span class="text-base-content/50">Link expired</span>
-                  <% @huddl.visible_virtual_link -> %>
-                    <a
-                      href={@huddl.visible_virtual_link}
-                      target="_blank"
-                      class="text-primary hover:underline font-medium"
-                    >
-                      Join virtually
-                    </a>
-                  <% @current_user -> %>
-                    <span class="text-base-content/50">
-                      Virtual link available after RSVP
-                    </span>
-                  <% true -> %>
-                    <span class="text-base-content/50">
-                      Sign in and RSVP to get virtual link
-                    </span>
-                <% end %>
-              </dd>
-            </div>
-          <% end %>
-
-          <%= if @huddl.status != :completed do %>
-            <div class="flex items-start gap-3 py-3">
-              <dt class="w-32 shrink-0 font-medium text-base-content/50">Attendance</dt>
-              <dd class="flex items-center gap-2">
-                <.icon name="hero-user-group" class="h-4 w-4" />
-                <%= if @huddl.rsvp_count == 0 do %>
-                  Be the first to RSVP!
-                <% else %>
-                  {@huddl.rsvp_count} {if @huddl.rsvp_count == 1, do: "person", else: "people"} attending
-                <% end %>
-              </dd>
-            </div>
-          <% else %>
-            <div class="flex items-start gap-3 py-3">
-              <dt class="w-32 shrink-0 font-medium text-base-content/50">Attended</dt>
-              <dd class="flex items-center gap-2">
-                <.icon name="hero-user-group" class="h-4 w-4" />
-                <%= if @huddl.rsvp_count == 0 do %>
-                  No one attended
-                <% else %>
-                  {@huddl.rsvp_count} {if @huddl.rsvp_count == 1, do: "person", else: "people"} attended
-                <% end %>
-              </dd>
-            </div>
-          <% end %>
-
-          <div class="flex items-start gap-3 py-3">
-            <dt class="w-32 shrink-0 font-medium text-base-content/50">Organized by</dt>
-            <dd class="flex items-center gap-2">
+          <div class="huddl-side-section">
+            <h3>Organized by</h3>
+            <div class="creator-row">
               <.avatar user={@huddl.creator} size={:sm} />
-              {@huddl.creator.display_name || @huddl.creator.email}
-            </dd>
+              <span>{@huddl.creator.display_name || @huddl.creator.email}</span>
+            </div>
           </div>
-        </dl>
+        </aside>
       </div>
-    </Layouts.app>
+    </Layouts.v3_app>
     """
+  end
+
+  defp render_rsvp_state(%{huddl: %{status: status}} = assigns)
+       when status in [:completed, :cancelled] do
+    ~H"""
+    <div class={["rsvp-banner", status_banner_class(@huddl.status)]}>
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <%= if @huddl.status == :cancelled do %>
+          <circle cx="12" cy="12" r="9" /><path d="M15 9l-6 6M9 9l6 6" />
+        <% else %>
+          <path d="M5 13l4 4L19 7" />
+        <% end %>
+      </svg>
+      <span>{status_banner_text(@huddl.status)}</span>
+    </div>
+    """
+  end
+
+  defp render_rsvp_state(%{current_user: nil} = assigns) do
+    ~H"""
+    <.v3_button variant={:primary} navigate={~p"/sign-in"} class="rsvp-cta">
+      Sign in to RSVP
+    </.v3_button>
+    """
+  end
+
+  defp render_rsvp_state(%{attendance: :attending} = assigns) do
+    ~H"""
+    <div class="rsvp-banner cyan">
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M5 13l4 4L19 7" />
+      </svg>
+      <span>You're attending</span>
+    </div>
+    <a
+      :if={@huddl.visible_virtual_link}
+      class="btn-secondary virtual-link"
+      href={@huddl.visible_virtual_link}
+      target="_blank"
+    >
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <rect x="3" y="6" width="13" height="12" rx="2" /><path d="m16 10 5-3v10l-5-3" />
+      </svg>
+      Join the online room
+    </a>
+    <.v3_button
+      variant={:muted}
+      phx-click="cancel_rsvp"
+      phx-disable-with="Cancelling..."
+      class="rsvp-cta"
+    >
+      Cancel RSVP
+    </.v3_button>
+    """
+  end
+
+  defp render_rsvp_state(%{attendance: :waitlisted} = assigns) do
+    ~H"""
+    <div class="rsvp-banner warn">
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+      </svg>
+      <span>On waitlist · #{@waitlist_position} of {@huddl.waitlist_count}</span>
+    </div>
+    <.v3_button
+      variant={:muted}
+      phx-click="leave_waitlist"
+      phx-disable-with="Leaving..."
+      class="rsvp-cta"
+    >
+      Leave waitlist
+    </.v3_button>
+    """
+  end
+
+  defp render_rsvp_state(assigns) do
+    if event_full?(assigns.huddl) do
+      ~H"""
+      <div class="rsvp-banner warn">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+        </svg>
+        <span>This huddl is full</span>
+      </div>
+      <.v3_button variant={:primary} phx-click="join_waitlist" class="rsvp-cta">
+        Join waitlist
+      </.v3_button>
+      """
+    else
+      ~H"""
+      <.v3_button
+        variant={:primary}
+        phx-click="rsvp"
+        phx-disable-with="RSVPing..."
+        class="rsvp-cta"
+      >
+        RSVP to this huddl
+      </.v3_button>
+      <div :if={@huddl.event_type in [:virtual, :hybrid]} class="virtual-hint">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <rect x="3" y="6" width="13" height="12" rx="2" /><path d="m16 10 5-3v10l-5-3" />
+        </svg>
+        <span>Online link visible after you RSVP.</span>
+      </div>
+      """
+    end
   end
 
   @impl true
@@ -439,28 +555,138 @@ defmodule HuddlzWeb.HuddlLive.Show do
     end
   end
 
-  defp format_datetime(datetime) do
-    Calendar.strftime(datetime, "%B %d, %Y at %I:%M %p")
+  defp hero_eyebrow(huddl) do
+    "#{event_type_label(huddl.event_type)} · #{status_label(huddl.status)}"
+  end
+
+  defp event_type_label(:in_person), do: "In-person huddl"
+  defp event_type_label(:virtual), do: "Online huddl"
+  defp event_type_label(:hybrid), do: "Hybrid huddl"
+  defp event_type_label(_), do: "Huddl"
+
+  defp status_label(:upcoming), do: "Upcoming"
+  defp status_label(:in_progress), do: "Happening now"
+  defp status_label(:completed), do: "Completed"
+  defp status_label(:cancelled), do: "Cancelled"
+  defp status_label(other), do: to_string(other) |> String.capitalize()
+
+  defp status_hero_class(:cancelled), do: "is-cancelled"
+  defp status_hero_class(_), do: nil
+
+  defp status_eyebrow_class(:in_progress), do: "eyebrow-warn"
+  defp status_eyebrow_class(:completed), do: "eyebrow-muted"
+  defp status_eyebrow_class(:cancelled), do: "eyebrow-magenta"
+  defp status_eyebrow_class(_), do: nil
+
+  defp status_banner_class(:completed), do: "muted"
+  defp status_banner_class(:cancelled), do: "magenta"
+
+  defp status_banner_text(:completed), do: "This huddl has ended"
+  defp status_banner_text(:cancelled), do: "This huddl was cancelled"
+
+  defp hero_meta_segments(huddl) do
+    [
+      huddl.group.name,
+      hero_when_segment(huddl),
+      hero_location_segment(huddl)
+    ]
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp hero_when_segment(%{status: :in_progress} = huddl) do
+    if huddl.ends_at do
+      "Started #{format_time_only(huddl.starts_at)} · ends #{format_time_only(huddl.ends_at)}"
+    else
+      "Started #{format_time_only(huddl.starts_at)}"
+    end
+  end
+
+  defp hero_when_segment(%{status: :cancelled} = huddl) do
+    "Was scheduled for #{format_short_date(huddl.starts_at)}"
+  end
+
+  defp hero_when_segment(%{status: :completed} = huddl) do
+    "#{format_short_date(huddl.starts_at)} · #{huddl.rsvp_count} attended"
+  end
+
+  defp hero_when_segment(huddl) do
+    "#{format_short_date(huddl.starts_at)} · #{format_time_only(huddl.starts_at)}"
+  end
+
+  defp hero_location_segment(%{event_type: :hybrid, physical_location: loc}) when is_binary(loc),
+    do: "#{loc} · & online"
+
+  defp hero_location_segment(%{event_type: :in_person, physical_location: loc})
+       when is_binary(loc),
+       do: loc
+
+  defp hero_location_segment(%{event_type: :virtual}), do: "Online"
+  defp hero_location_segment(_), do: nil
+
+  defp format_fact_when(huddl) do
+    cond do
+      huddl.ends_at && same_day?(huddl.starts_at, huddl.ends_at) ->
+        "#{format_short_date(huddl.starts_at)} · #{format_time_only(huddl.starts_at)} – #{format_time_only(huddl.ends_at)} UTC"
+
+      huddl.ends_at ->
+        "#{format_short_date(huddl.starts_at)} #{format_time_only(huddl.starts_at)} → #{format_short_date(huddl.ends_at)} #{format_time_only(huddl.ends_at)} UTC"
+
+      true ->
+        "#{format_short_date(huddl.starts_at)} · #{format_time_only(huddl.starts_at)} UTC"
+    end
+  end
+
+  defp same_day?(%DateTime{} = a, %DateTime{} = b),
+    do: DateTime.to_date(a) == DateTime.to_date(b)
+
+  defp capacity_fact_label(%{status: :completed}), do: "Attended"
+  defp capacity_fact_label(_), do: "Capacity"
+
+  defp format_fact_capacity(%{status: :completed} = huddl) do
+    case huddl.rsvp_count do
+      0 -> "No one attended"
+      1 -> "1 person attended"
+      n -> "#{n} people attended"
+    end
+  end
+
+  defp format_fact_capacity(%{rsvp_count: 0, max_attendees: nil}), do: "Be the first to RSVP!"
+
+  defp format_fact_capacity(%{rsvp_count: count, max_attendees: nil}),
+    do: "#{count} #{person_label(count)} attending"
+
+  defp format_fact_capacity(%{max_attendees: max} = huddl) when is_integer(max) and max > 0 do
+    base = "#{huddl.rsvp_count}/#{max} spots filled · #{capacity_status(huddl)}"
+
+    case huddl.waitlist_count do
+      n when is_integer(n) and n > 0 -> "#{base} · #{n} waitlisted"
+      _ -> base
+    end
+  end
+
+  defp person_label(1), do: "person"
+  defp person_label(_), do: "people"
+
+  defp capacity_bar_class(huddl) do
+    cond do
+      event_full?(huddl) -> "warn"
+      capacity_percent(huddl) >= 80 -> "warn"
+      true -> nil
+    end
+  end
+
+  defp description_paragraphs(text) do
+    text
+    |> String.split(~r/\r?\n\r?\n/, trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+  end
+
+  defp format_short_date(datetime) do
+    Calendar.strftime(datetime, "%a, %b %-d")
   end
 
   defp format_time_only(datetime) do
-    Calendar.strftime(datetime, "%I:%M %p")
+    Calendar.strftime(datetime, "%-I:%M %p")
   end
-
-  defp status_text_class(:upcoming), do: "text-primary"
-  defp status_text_class(:in_progress), do: "text-success"
-  defp status_text_class(:completed), do: "text-base-content/50"
-  defp status_text_class(:cancelled), do: "text-error"
-  defp status_text_class(_), do: ""
-
-  defp status_icon(:upcoming), do: "hero-clock"
-  defp status_icon(:in_progress), do: "hero-play-circle"
-  defp status_icon(:completed), do: "hero-check-circle"
-  defp status_icon(:cancelled), do: "hero-x-circle"
-  defp status_icon(_), do: "hero-question-mark-circle"
-
-  defp type_detail_icon(:in_person), do: "hero-map-pin"
-  defp type_detail_icon(:virtual), do: "hero-video-camera"
-  defp type_detail_icon(:hybrid), do: "hero-globe-alt"
-  defp type_detail_icon(_), do: "hero-calendar"
 end
