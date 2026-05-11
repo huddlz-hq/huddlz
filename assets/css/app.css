@@ -2207,6 +2207,19 @@ body.v3 .form-foot {
   gap: 10px;
 }
 
+/* No top border or gap — for foots stacked under their own panel/form. */
+body.v3 .form-foot.is-flush {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* Flex columns inside .form-row-inline. The basis values match the
+   clickthrough mockup's inline date/time/duration trio. */
+body.v3 .form-col-sm { flex: 1 1 140px; }
+body.v3 .form-col-md { flex: 1 1 180px; }
+body.v3 .form-col-lg { flex: 1 1 220px; }
+
 body.v3 .location-control {
   position: relative;
   display: flex;

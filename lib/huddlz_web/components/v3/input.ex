@@ -132,6 +132,28 @@ defmodule HuddlzWeb.V3.Input do
     """
   end
 
+  attr :field, FormField, required: true, doc: "form field whose errors to render"
+
+  @doc """
+  Renders `<p class="form-error">` lines for a form field whose markup isn't
+  produced by `v3_input/v3_textarea/v3_select` (e.g. an inline raw input or a
+  radio-card group). Hidden until the field has been touched (`used_input?/1`).
+  """
+  def v3_field_errors(%{field: %FormField{} = field} = assigns) do
+    errors =
+      if Phoenix.Component.used_input?(field) do
+        Enum.map(field.errors, &translate_error/1)
+      else
+        []
+      end
+
+    assigns = Phoenix.Component.assign(assigns, :errors, errors)
+
+    ~H"""
+    <p :for={msg <- @errors} class="form-error">{msg}</p>
+    """
+  end
+
   defp translate_error({msg, opts}) do
     Enum.reduce(opts, msg, fn {key, value}, acc ->
       String.replace(acc, "%{#{key}}", fn _ -> to_string(value) end)

@@ -258,6 +258,7 @@ defmodule HuddlzWeb.HuddlLive.New do
               </:icon>
             </.event_type_option>
           </div>
+          <.v3_field_errors field={@form[:event_type]} />
         </div>
 
         <div class="panel">
@@ -266,48 +267,28 @@ defmodule HuddlzWeb.HuddlLive.New do
           </div>
           <div class="form-grid">
             <div class="form-row form-row-inline">
-              <div style="flex:1 1 180px">
-                <label class="form-label" for={@form[:date].id}>Date</label>
-                <input
+              <div class="form-col-md">
+                <.v3_input
+                  field={@form[:date]}
                   type="date"
-                  id={@form[:date].id}
-                  name={@form[:date].name}
-                  value={@form[:date].value}
+                  label="Date"
                   min={Date.utc_today() |> Date.to_iso8601()}
-                  class="form-input"
                 />
-                <.field_errors field={@form[:date]} />
               </div>
-              <div style="flex:1 1 140px">
-                <label class="form-label" for={@form[:start_time].id}>Start time</label>
-                <input
-                  type="time"
-                  id={@form[:start_time].id}
-                  name={@form[:start_time].name}
-                  value={@form[:start_time].value}
-                  class="form-input"
+              <div class="form-col-sm">
+                <.v3_input field={@form[:start_time]} type="time" label="Start time" />
+              </div>
+              <div class="form-col-sm">
+                <.v3_select
+                  field={@form[:duration_minutes]}
+                  label="Duration"
+                  prompt="Select duration…"
+                  options={duration_options()}
                 />
-                <.field_errors field={@form[:start_time]} />
-              </div>
-              <div style="flex:1 1 140px">
-                <label class="form-label" for={@form[:duration_minutes].id}>Duration</label>
-                <select
-                  id={@form[:duration_minutes].id}
-                  name={@form[:duration_minutes].name}
-                  class="form-select"
-                >
-                  <option value="">Select duration…</option>
-                  <%= for {label, mins} <- duration_options() do %>
-                    <option value={mins} selected={to_string(@form[:duration_minutes].value) == mins}>
-                      {label}
-                    </option>
-                  <% end %>
-                </select>
-                <.field_errors field={@form[:duration_minutes]} />
               </div>
             </div>
 
-            <p :if={@calculated_end_time} class="form-help" style="margin-top:-4px">
+            <p :if={@calculated_end_time} class="form-help">
               Ends at: <strong>{@calculated_end_time}</strong>
             </p>
 
@@ -329,30 +310,19 @@ defmodule HuddlzWeb.HuddlLive.New do
 
             <%= if Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_recurring].value) do %>
               <div class="form-row form-row-inline">
-                <div style="flex:1 1 200px">
-                  <label class="form-label" for={@form[:frequency].id}>Frequency</label>
-                  <select
-                    id={@form[:frequency].id}
-                    name={@form[:frequency].name}
-                    class="form-select"
+                <div class="form-col-md">
+                  <.v3_select
+                    field={@form[:frequency]}
+                    label="Frequency"
+                    options={[{"Weekly", "weekly"}, {"Monthly", "monthly"}]}
                     required
-                  >
-                    <option value="weekly" selected={to_string(@form[:frequency].value) == "weekly"}>
-                      Weekly
-                    </option>
-                    <option value="monthly" selected={to_string(@form[:frequency].value) == "monthly"}>
-                      Monthly
-                    </option>
-                  </select>
+                  />
                 </div>
-                <div style="flex:1 1 200px">
-                  <label class="form-label" for={@form[:repeat_until].id}>Repeat until</label>
-                  <input
+                <div class="form-col-md">
+                  <.v3_input
+                    field={@form[:repeat_until]}
                     type="date"
-                    id={@form[:repeat_until].id}
-                    name={@form[:repeat_until].name}
-                    value={@form[:repeat_until].value}
-                    class="form-input"
+                    label="Repeat until"
                     required
                   />
                 </div>
@@ -517,7 +487,7 @@ defmodule HuddlzWeb.HuddlLive.New do
           <% end %>
         </div>
 
-        <div class="form-foot" style="border:0; margin:0">
+        <div class="form-foot is-flush">
           <.v3_button variant={:primary} type="submit" phx-disable-with="Scheduling…">
             Schedule huddl
           </.v3_button>
@@ -559,7 +529,7 @@ defmodule HuddlzWeb.HuddlLive.New do
             />
           </div>
 
-          <div class="form-foot" style="border:0; margin-top:18px">
+          <div class="form-foot is-flush" style="margin-top:18px">
             <.v3_button variant={:primary} type="submit" disabled={is_nil(@modal_location_address)}>
               Save address
             </.v3_button>
@@ -603,29 +573,6 @@ defmodule HuddlzWeb.HuddlLive.New do
       </div>
     </label>
     """
-  end
-
-  attr :field, Phoenix.HTML.FormField, required: true
-
-  defp field_errors(assigns) do
-    errors =
-      if Phoenix.Component.used_input?(assigns.field) do
-        Enum.map(assigns.field.errors, &translate_field_error/1)
-      else
-        []
-      end
-
-    assigns = Phoenix.Component.assign(assigns, :errors, errors)
-
-    ~H"""
-    <p :for={msg <- @errors} class="form-error">{msg}</p>
-    """
-  end
-
-  defp translate_field_error({msg, opts}) do
-    Enum.reduce(opts, msg, fn {key, value}, acc ->
-      String.replace(acc, "%{#{key}}", fn _ -> to_string(value) end)
-    end)
   end
 
   defp duration_options do
