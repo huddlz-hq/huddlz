@@ -306,7 +306,8 @@ defmodule Huddlz.Generator do
         physical_location: "123 Main St, Anytown, USA",
         is_private: false,
         huddl_template_id: nil,
-        is_recurring: false
+        is_recurring: false,
+        max_attendees: nil
       ],
       overrides: opts,
       actor: actor
