@@ -85,7 +85,13 @@ defmodule HuddlzWeb.LiveUserAuth do
        when not is_nil(user) do
     case Ash.load(
            user,
-           [:current_profile_picture_url, :home_location, :home_latitude, :home_longitude],
+           [
+             :current_profile_picture_url,
+             :home_location,
+             :home_latitude,
+             :home_longitude,
+             :is_admin
+           ],
            actor: user
          ) do
       {:ok, loaded_user} -> assign(socket, :current_user, loaded_user)
