@@ -2490,8 +2490,11 @@ body.v3 .toggle .track {
   height: 20px;
   border-radius: 999px;
   background: var(--line-strong);
-  transition: background 120ms ease;
+  border: 1px solid var(--soft);
+  transition: background 120ms ease, border-color 120ms ease;
 }
+
+body.v3 .toggle input:checked + .track { border-color: var(--cyan); }
 
 body.v3 .toggle .track::after {
   content: "";
