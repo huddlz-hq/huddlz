@@ -114,16 +114,19 @@ defmodule Huddlz.Communities.Group do
 
     read :get_organizable do
       description """
-      Groups the current actor can manage in the organizer workspace. Returns
-      groups they own, are an :organizer GroupMember of, or — for admins —
-      every group. Sorted alphabetically by name.
+      Groups the actor actually organizes — they own the group, or are an
+      `:organizer` GroupMember of it. Sorted alphabetically by name.
+
+      Admins are not auto-included via this action; the admin bypass for
+      managing a specific group lives in `OrganizeLive`'s per-slug auth
+      check, not in the list query, so the sidebar/picker stay scoped to
+      groups the actor truly organizes.
       """
 
       pagination offset?: true, countable: true, required?: false, default_limit: 50
 
       filter expr(
-               ^actor(:role) == :admin or
-                 owner_id == ^actor(:id) or
+               owner_id == ^actor(:id) or
                  exists(group_members, user_id == ^actor(:id) and role == :organizer)
              )
     end
