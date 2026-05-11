@@ -108,7 +108,6 @@ defmodule HuddlzWeb.Router do
 
       # Group routes
       live "/groups/new", GroupLive.New, :new
-      live "/groups/:slug/edit/locations/new", GroupLive.Edit, :new_location
       live "/groups/:slug/edit", GroupLive.Edit, :edit
       live "/groups/:slug", GroupLive.Show, :show
 

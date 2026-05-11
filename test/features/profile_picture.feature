@@ -36,12 +36,12 @@ Feature: Profile Picture Management
     And the following profile pictures exist:
       | user_email          | storage_path                                      |
       | alice@example.com   | /uploads/profile_pictures/alice/avatar.jpg        |
-    When I visit the edit page for "Avatar Group"
+    When I visit the locations page for "Avatar Group"
     Then I should see the navbar avatar with image
 
   Scenario: Navbar shows initials when user has no profile picture
     Given a public group "Initials Group" exists with owner "alice@example.com"
-    When I visit the edit page for "Initials Group"
+    When I visit the locations page for "Initials Group"
     Then I should see the navbar avatar with initials "AU"
 
   Scenario: Member section shows member initials on the group page

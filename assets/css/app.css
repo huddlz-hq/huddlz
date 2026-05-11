@@ -2314,9 +2314,46 @@ body.v3 .upload-meta { font-size: 12px; }
 body.v3 .image-preview .card-cover {
   border-radius: var(--radius-sm);
   width: 100%;
+  aspect-ratio: 16 / 9;
   background-size: cover;
   background-position: center;
 }
+
+body.v3 .image-preview-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  margin-top: 10px;
+  gap: 12px;
+}
+
+body.v3 .image-preview-actions { display: flex; gap: 8px; }
+body.v3 .image-preview-progress { margin-top: 12px; }
+body.v3 .upload-replace { cursor: pointer; }
+
+/* Slug-change warning panel */
+body.v3 .slug-warn {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--warn);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 184, 64, 0.06);
+  color: var(--soft);
+  font-size: 13px;
+}
+
+body.v3 .slug-warn h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--warn);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+body.v3 .slug-warn p { margin: 4px 0; }
+body.v3 .slug-warn .mono { font-family: var(--mono); font-size: 12px; }
 
 /* Event-type radio cards */
 body.v3 .event-type-grid {

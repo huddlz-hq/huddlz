@@ -63,21 +63,11 @@ defmodule GroupManagementSteps do
           "Location" ->
             view = session.view
 
-            {component_id, needs_modal_submit?} =
-              if editing_group,
-                do: {"modal-location-autocomplete", true},
-                else: {"group-location", false}
-
-            if needs_modal_submit? do
-              Phoenix.LiveViewTest.render_patch(
-                view,
-                "/groups/#{editing_group.slug}/edit/locations/new"
-              )
-            end
+            _ = editing_group
 
             send(
               view.pid,
-              {:location_selected, component_id,
+              {:location_selected, "group-location",
                %{
                  place_id: "test_place_id",
                  display_text: value,
@@ -88,10 +78,6 @@ defmodule GroupManagementSteps do
             )
 
             render(view)
-
-            if needs_modal_submit? do
-              Phoenix.LiveViewTest.render_submit(view, "select_modal_location", %{})
-            end
 
             session
 
@@ -123,6 +109,16 @@ defmodule GroupManagementSteps do
     session = context[:session] || context[:conn]
     session = session |> visit("/groups/#{group.slug}/edit")
     Map.merge(context, %{session: session, conn: session, editing_group: group})
+  end
+
+  step "I visit the locations page for {string}",
+       %{args: [group_name]} = context do
+    groups = Map.get(context, :groups, [])
+    group = Enum.find(groups, fn g -> g.name |> to_string() == group_name end)
+
+    session = context[:session] || context[:conn]
+    session = session |> visit("/groups/#{group.slug}/locations")
+    Map.merge(context, %{session: session, conn: session})
   end
 
   # Assertions specific to groups

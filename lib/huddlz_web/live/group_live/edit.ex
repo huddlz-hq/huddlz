@@ -18,9 +18,9 @@ defmodule HuddlzWeb.GroupLive.Edit do
   alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
-  alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
+  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
 
   @impl true
   def mount(%{"slug" => slug}, _session, socket) do
@@ -65,7 +65,6 @@ defmodule HuddlzWeb.GroupLive.Edit do
     |> assign(:pending_image_id, nil)
     |> assign(:pending_preview_url, nil)
     |> assign(:selected_location_data, build_initial_location_data(group))
-    |> ModalLocationHelpers.init()
     |> assign(:upload_processing, false)
     |> allow_upload(:group_image,
       accept: ~w(.jpg .jpeg .png .webp),
@@ -74,17 +73,6 @@ defmodule HuddlzWeb.GroupLive.Edit do
       auto_upload: true,
       progress: &handle_upload_progress/3
     )
-  end
-
-  @impl true
-  def handle_params(_params, _uri, socket) do
-    socket =
-      case socket.assigns.live_action do
-        :new_location -> ModalLocationHelpers.clear(socket)
-        _ -> socket
-      end
-
-    {:noreply, socket}
   end
 
   defp handle_upload_progress(:group_image, entry, socket) do
@@ -133,278 +121,234 @@ defmodule HuddlzWeb.GroupLive.Edit do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_user={@current_user}>
-      <.link
-        navigate={~p"/groups/#{@original_slug}"}
-        class="text-sm font-semibold leading-6 hover:underline"
-      >
-        <.icon name="hero-arrow-left" class="h-3 w-3" /> Back to {@group.name}
-      </.link>
-
-      <.header>
-        Edit Group
-        <:subtitle>Update your group details</:subtitle>
-      </.header>
-
-      <form
-        id="edit-group-form"
-        phx-submit="update_group"
-        phx-change="validate"
-        class="space-y-6 mt-6"
-      >
-        <.input field={@form[:name]} type="text" label="Group Name" autocomplete="off" required />
-
+    <Layouts.v3_app flash={@flash} current_user={@current_user} active="my-groups">
+      <div class="page-head">
         <div>
-          <.input
-            field={@form[:slug]}
-            type="text"
-            label="URL Slug"
-            pattern="[a-z0-9-]+"
-            title="Only lowercase letters, numbers, and hyphens allowed"
-            required
-          />
-          <p class="text-sm text-base-content/60 mt-1">
-            Your group is available at:
-          </p>
-          <p class="font-mono text-sm mt-1 break-all">
-            {url(~p"/groups/#{@form[:slug].value || "..."}")}
-          </p>
-
-          <%= if @slug_changed do %>
-            <div class="border border-warning/30 p-4 bg-warning/5 mt-2">
-              <div class="flex">
-                <div class="flex-shrink-0">
-                  <.icon name="hero-exclamation-triangle" class="h-5 w-5 text-warning" />
-                </div>
-                <div class="ml-3">
-                  <h3 class="text-sm font-medium text-warning">
-                    Warning: URL Change
-                  </h3>
-                  <div class="mt-2 text-sm text-base-content/50">
-                    <p>Changing the slug will break existing links to this group.</p>
-                    <p class="mt-1 break-all">
-                      Old URL: <span class="font-mono">{url(~p"/groups/#{@original_slug}")}</span>
-                    </p>
-                    <p class="break-all">
-                      New URL: <span class="font-mono">{url(~p"/groups/#{@form[:slug].value}")}</span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          <% end %>
+          <h1>Edit Group</h1>
+          <p>Update group details, photo, and visibility. Changes save when you hit save.</p>
         </div>
+      </div>
 
-        <.input field={@form[:description]} type="textarea" label="Description" rows="4" />
-
-        <div>
-          <label class="mono-label text-primary/70 mb-1.5 block">Location</label>
-          <%= if @selected_location_data do %>
-            <div class="flex items-center h-10 pl-6 border-0 border-b border-primary/50 bg-transparent group relative">
-              <.icon
-                name="hero-map-pin"
-                class="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-primary"
-              />
-              <.link
-                patch={~p"/groups/#{@original_slug}/edit/locations/new"}
-                class="flex items-center flex-1 min-w-0 cursor-pointer"
-              >
-                <span class="text-sm text-base-content truncate flex-1">
-                  {@selected_location_data.display_text}
-                </span>
-                <.icon
-                  name="hero-pencil"
-                  class="w-3.5 h-3.5 ml-2 text-transparent group-hover:text-primary/50 transition-colors"
-                />
-              </.link>
-              <button
-                type="button"
-                phx-click="clear_location"
-                class="ml-2 text-base-content/40 hover:text-error transition-colors"
-              >
-                <.icon name="hero-x-mark" class="w-4 h-4" />
-              </button>
-            </div>
-          <% else %>
-            <.link
-              patch={~p"/groups/#{@original_slug}/edit/locations/new"}
-              class="flex items-center h-10 pl-6 border-0 border-b border-base-300 bg-transparent hover:border-primary/50 transition-colors relative"
-            >
-              <.icon
-                name="hero-map-pin"
-                class="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40"
-              />
-              <span class="text-sm text-base-content/50">Search for a city or region...</span>
-            </.link>
-          <% end %>
-        </div>
-
-        <div>
-          <label class="mono-label text-primary/70 mb-2 block">
-            Group Image
-          </label>
-          <p class="text-base-content/50 text-sm mb-3">
-            Upload a banner image for your group (16:9 ratio recommended).
-          </p>
-
-          <%= if @pending_preview_url do %>
-            <div class="mb-4">
-              <div class="relative inline-block">
-                <img
-                  src={@pending_preview_url}
-                  alt="New image preview"
-                  class="max-w-md aspect-video object-cover"
-                />
-                <button
-                  type="button"
-                  phx-click="cancel_pending_image"
-                  class="absolute top-2 right-2 p-1.5 bg-error/10 text-error hover:bg-error/20 transition-colors"
-                >
-                  <.icon name="hero-x-mark" class="w-4 h-4" />
-                </button>
-              </div>
-              <p class="text-sm text-success mt-2 flex items-center gap-1">
-                <.icon name="hero-check-circle" class="w-4 h-4" /> New image uploaded. Save to apply.
-              </p>
-            </div>
-          <% else %>
-            <%= if @group.current_image_url && @uploads.group_image.entries == [] do %>
-              <div class="mb-4">
-                <div class="relative inline-block">
-                  <img
-                    src={GroupImages.url(@group.current_image_url)}
-                    alt={@group.name}
-                    class="max-w-md aspect-video object-cover"
-                  />
-                  <button
-                    type="button"
-                    phx-click="remove_image"
-                    class="absolute top-2 right-2 p-1.5 bg-error/10 text-error hover:bg-error/20 transition-colors"
-                    data-confirm="Are you sure you want to remove this image?"
-                  >
-                    <.icon name="hero-trash" class="w-4 h-4" />
-                  </button>
-                </div>
-                <p class="text-sm text-base-content/50 mt-2">
-                  Current image. Upload a new one to replace it.
-                </p>
-              </div>
-            <% end %>
-          <% end %>
-
-          <div
-            class="border border-dashed border-base-300 p-4 text-center hover:border-primary transition-colors"
-            phx-drop-target={@uploads.group_image.ref}
-          >
-            <.live_file_input upload={@uploads.group_image} class="hidden" />
-            <label for={@uploads.group_image.ref} class="cursor-pointer flex flex-col items-center">
-              <.icon name="hero-photo" class="w-8 h-8 text-base-content/50 mb-2" />
-              <span class="text-sm text-base-content/50">
-                Click to upload or drag and drop
-              </span>
-              <span class="text-xs text-base-content/50 mt-1">
-                JPG, PNG, or WebP (max 5MB)
-              </span>
-            </label>
+      <.form for={@form} id="edit-group-form" phx-change="validate" phx-submit="update_group">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Cover image</h2>
           </div>
 
-          <%= if @image_error do %>
-            <p class="text-error text-sm mt-2">{@image_error}</p>
-          <% end %>
+          <.live_file_input upload={@uploads.group_image} class="hidden" />
 
-          <%= for entry <- @uploads.group_image.entries do %>
-            <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
-              <.live_img_preview entry={entry} class="w-32 aspect-video object-cover" />
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium truncate">{entry.client_name}</p>
-                <div class="w-full bg-base-300 h-1.5 mt-1">
-                  <div
-                    class="bg-primary h-1.5 transition-all"
-                    style={"width: #{entry.progress}%"}
-                  >
+          <%= cond do %>
+            <% @pending_preview_url -> %>
+              <div class="image-preview" phx-drop-target={@uploads.group_image.ref}>
+                <div
+                  class="card-cover"
+                  style={"background-image: url('#{@pending_preview_url}')"}
+                >
+                </div>
+                <div class="image-preview-foot">
+                  <span class="muted">New image uploaded. Save to apply.</span>
+                  <div class="image-preview-actions">
+                    <.v3_button variant={:primary} type="submit" phx-disable-with="Saving...">
+                      Save
+                    </.v3_button>
+                    <label for={@uploads.group_image.ref} class="btn-secondary upload-replace">
+                      Replace
+                    </label>
+                    <.v3_button variant={:muted} type="button" phx-click="cancel_pending_image">
+                      Remove
+                    </.v3_button>
                   </div>
                 </div>
               </div>
-              <button
-                type="button"
-                phx-click="cancel_image_upload"
-                phx-value-ref={entry.ref}
-                class="p-1 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
-              >
-                <.icon name="hero-x-mark" class="w-4 h-4" />
-              </button>
-            </div>
+            <% @group.current_image_url && @uploads.group_image.entries == [] -> %>
+              <div class="image-preview" phx-drop-target={@uploads.group_image.ref}>
+                <div
+                  class="card-cover"
+                  style={"background-image: url('#{GroupImages.url(@group.current_image_url)}')"}
+                >
+                </div>
+                <div class="image-preview-foot">
+                  <span class="muted">Current image. Upload a new one to replace it.</span>
+                  <div class="image-preview-actions">
+                    <label for={@uploads.group_image.ref} class="btn-secondary upload-replace">
+                      Replace
+                    </label>
+                    <.v3_button
+                      variant={:muted}
+                      type="button"
+                      phx-click="remove_image"
+                      data-confirm="Are you sure you want to remove this image?"
+                    >
+                      Remove
+                    </.v3_button>
+                  </div>
+                </div>
+              </div>
+            <% true -> %>
+              <div class="upload-zone" phx-drop-target={@uploads.group_image.ref}>
+                <div class="upload-icon">
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="9" cy="9" r="2" />
+                    <path d="m21 15-5-5L5 21" />
+                  </svg>
+                </div>
+                <label for={@uploads.group_image.ref} class="upload-prompt">
+                  Drop a 16:9 image, or <span class="upload-link">browse</span>
+                </label>
+                <div class="upload-meta muted">JPG, PNG, WebP · 5 MB max</div>
+              </div>
 
-            <%= for err <- upload_errors(@uploads.group_image, entry) do %>
-              <p class="text-error text-sm mt-1">{upload_error_to_string(err)}</p>
-            <% end %>
+              <%= for entry <- @uploads.group_image.entries do %>
+                <div class="image-preview image-preview-progress">
+                  <.live_img_preview entry={entry} class="card-cover-img" />
+                  <div class="image-preview-foot">
+                    <span class="muted">{entry.client_name} · {entry.progress}%</span>
+                    <.v3_button
+                      variant={:muted}
+                      type="button"
+                      phx-click="cancel_image_upload"
+                      phx-value-ref={entry.ref}
+                    >
+                      Cancel
+                    </.v3_button>
+                  </div>
+                </div>
+
+                <%= for err <- upload_errors(@uploads.group_image, entry) do %>
+                  <p class="form-error">{upload_error_to_string(err)}</p>
+                <% end %>
+              <% end %>
           <% end %>
+
+          <p :if={@image_error} class="form-error">{@image_error}</p>
 
           <%= for err <- upload_errors(@uploads.group_image) do %>
-            <p class="text-error text-sm mt-2">{upload_error_to_string(err)}</p>
+            <p class="form-error">{upload_error_to_string(err)}</p>
           <% end %>
         </div>
 
-        <div>
-          <label class="mono-label text-primary/70 mb-2 block">
-            Privacy
-          </label>
-          <.input
-            field={@form[:is_public]}
-            type="checkbox"
-            label="Public group (visible to everyone)"
-          />
-          <p class="text-sm text-base-content/50">
-            Public groups are visible to all users. Private groups are only visible to members.
-          </p>
-        </div>
-
-        <div class="flex gap-4">
-          <.button type="submit" phx-disable-with="Saving...">
-            Save Changes
-          </.button>
-          <.link
-            navigate={~p"/groups/#{@original_slug}"}
-            class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
-          >
-            Cancel
-          </.link>
-        </div>
-      </form>
-
-      <.modal
-        :if={@live_action == :new_location}
-        id="new-location-modal"
-        show
-        on_cancel={JS.patch(~p"/groups/#{@original_slug}/edit")}
-      >
-        <h2 class="font-display text-xl tracking-tight text-glow mb-6">Set Location</h2>
-
-        <form phx-submit="select_modal_location">
-          <.live_component
-            module={HuddlzWeb.Live.LocationAutocomplete}
-            id="modal-location-autocomplete"
-            label="Search for a city or region"
-            placeholder="Search for a city or region..."
-            types={["locality", "sublocality", "administrative_area_level_2"]}
-            fetch_coordinates={true}
-            show_clear={true}
-          />
-
-          <div class="mt-6 flex gap-4">
-            <.button type="submit" disabled={is_nil(@modal_location_address)}>
-              Use This Location
-            </.button>
-            <.link
-              patch={~p"/groups/#{@original_slug}/edit"}
-              class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
-            >
-              Cancel
-            </.link>
+        <div class="panel">
+          <div class="panel-head">
+            <h2>The basics</h2>
           </div>
-        </form>
-      </.modal>
-    </Layouts.app>
+          <div class="form-grid">
+            <.v3_input
+              field={@form[:name]}
+              label="Group Name"
+              autocomplete="off"
+            />
+
+            <div class="form-row">
+              <label class="form-label" for={@form[:slug].id}>URL Slug</label>
+              <div class="slug-control">
+                <span class="slug-prefix">huddlz.com/groups/</span>
+                <input
+                  id={@form[:slug].id}
+                  type="text"
+                  name={@form[:slug].name}
+                  value={@form[:slug].value}
+                  class="form-input"
+                  pattern="[a-z0-9-]+"
+                  title="Only lowercase letters, numbers, and hyphens allowed"
+                />
+              </div>
+              <p :if={!@slug_changed} class="form-help">
+                Your group is available at: {url(~p"/groups/#{@form[:slug].value || "..."}")}
+              </p>
+              <div :if={@slug_changed} class="slug-warn">
+                <h3>Warning: URL Change</h3>
+                <p>Changing the slug will break existing links to this group.</p>
+                <p>Old URL: <span class="mono">{url(~p"/groups/#{@original_slug}")}</span></p>
+                <p>New URL: <span class="mono">{url(~p"/groups/#{@form[:slug].value}")}</span></p>
+              </div>
+            </div>
+
+            <.v3_textarea
+              field={@form[:description]}
+              label="Description"
+              rows="4"
+            />
+
+            <div class="form-row">
+              <label class="form-label" for="group-location-input">Location</label>
+              <.live_component
+                module={HuddlzWeb.Live.LocationAutocomplete}
+                id="group-location"
+                variant={:v3_form}
+                field_name="form[location]"
+                value={@form[:location].value}
+                latitude={@selected_location_data && @selected_location_data.latitude}
+                longitude={@selected_location_data && @selected_location_data.longitude}
+                placeholder="Search for a city or region..."
+                types={["locality", "sublocality", "administrative_area_level_2"]}
+                fetch_coordinates={true}
+                show_clear={true}
+              />
+              <p class="form-help">
+                Optional. Helps people find your group when they search nearby.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Visibility</h2>
+              <div class="panel-sub">
+                Public groups are findable in Discover. Private groups are only visible to members.
+              </div>
+            </div>
+          </div>
+          <div class="settings-list row-list pref-list">
+            <div class="row">
+              <div>
+                <label class="row-title" for="group-is-public">Public group</label>
+                <div class="row-desc">
+                  Anyone can find and join this group. Huddlz are visible without signing in.
+                </div>
+              </div>
+              <label class="toggle">
+                <input type="hidden" name={@form[:is_public].name} value="false" />
+                <input
+                  id="group-is-public"
+                  type="checkbox"
+                  name={@form[:is_public].name}
+                  value="true"
+                  checked={Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_public].value)}
+                />
+                <span class="track"></span>
+                <span class="toggle-text">
+                  {if Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_public].value),
+                    do: "On",
+                    else: "Off"}
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-foot">
+          <.v3_button variant={:primary} type="submit" phx-disable-with="Saving...">
+            Save Changes
+          </.v3_button>
+          <.v3_button variant={:secondary} navigate={~p"/groups/#{@original_slug}"}>
+            Cancel
+          </.v3_button>
+        </div>
+      </.form>
+    </Layouts.v3_app>
     """
   end
 
@@ -439,12 +383,9 @@ defmodule HuddlzWeb.GroupLive.Edit do
     group = socket.assigns.group
     user = socket.assigns.current_user
 
-    # Soft-delete all images for the group
     case soft_delete_all_group_images(group, user) do
       :ok ->
-        # Reload group to clear the image
-        {:ok, updated_group} =
-          Ash.load(group, [:current_image_url], actor: user)
+        {:ok, updated_group} = Ash.load(group, [:current_image_url], actor: user)
 
         {:noreply,
          socket
@@ -452,33 +393,8 @@ defmodule HuddlzWeb.GroupLive.Edit do
          |> assign(:group, updated_group)}
 
       {:error, _} ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "Failed to remove image")}
+        {:noreply, put_flash(socket, :error, "Failed to remove image")}
     end
-  end
-
-  @impl true
-  def handle_event("clear_location", _params, socket) do
-    {:noreply,
-     socket
-     |> assign(:selected_location_data, nil)
-     |> apply_group_location_to_form("")}
-  end
-
-  @impl true
-  def handle_event("select_modal_location", _params, socket) do
-    location_data = %{
-      display_text: socket.assigns.modal_location_address,
-      latitude: socket.assigns.modal_location_lat,
-      longitude: socket.assigns.modal_location_lng
-    }
-
-    {:noreply,
-     socket
-     |> assign(:selected_location_data, location_data)
-     |> apply_group_location_to_form(location_data.display_text)
-     |> push_patch(to: ~p"/groups/#{socket.assigns.original_slug}/edit")}
   end
 
   @impl true
@@ -491,7 +407,6 @@ defmodule HuddlzWeb.GroupLive.Edit do
            before_submit: prepare_source_with_coordinates(socket.assigns.selected_location_data)
          ) do
       {:ok, updated_group} ->
-        # Assign pending image to the group if one was uploaded
         assign_pending_image_to_group(socket, updated_group)
 
         {:noreply,
@@ -505,13 +420,25 @@ defmodule HuddlzWeb.GroupLive.Edit do
   end
 
   @impl true
-  def handle_info({:location_selected, "modal-location-autocomplete", payload}, socket) do
-    {:noreply, ModalLocationHelpers.apply_selected(socket, payload)}
+  def handle_info({:location_selected, "group-location", payload}, socket) do
+    location_data = %{
+      display_text: payload.display_text,
+      latitude: payload.latitude,
+      longitude: payload.longitude
+    }
+
+    {:noreply,
+     socket
+     |> assign(:selected_location_data, location_data)
+     |> apply_group_location_to_form(location_data.display_text)}
   end
 
   @impl true
-  def handle_info({:location_cleared, "modal-location-autocomplete"}, socket) do
-    {:noreply, ModalLocationHelpers.clear(socket)}
+  def handle_info({:location_cleared, "group-location"}, socket) do
+    {:noreply,
+     socket
+     |> assign(:selected_location_data, nil)
+     |> apply_group_location_to_form("")}
   end
 
   defp assign_pending_image_to_group(socket, group) do
@@ -520,7 +447,6 @@ defmodule HuddlzWeb.GroupLive.Edit do
         :ok
 
       image_id ->
-        # Soft-delete existing images before assigning new one
         soft_delete_all_group_images(group, socket.assigns.current_user)
 
         with {:ok, image} <- Ash.get(GroupImage, image_id) do
