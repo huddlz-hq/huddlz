@@ -97,7 +97,7 @@ defmodule EditHuddlSteps do
 
     Phoenix.LiveViewTest.render(session.view)
 
-    session = click_button(session, "Save Address")
+    session = click_button(session, "Save address")
 
     Map.merge(context, %{session: session, conn: session})
   end

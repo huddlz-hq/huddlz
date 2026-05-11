@@ -192,7 +192,8 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       )
 
       # Recurring fields should also be shown
-      assert_has(session, "*", text: "This is a recurring huddl")
+      assert_has(session, "*", text: "Editing one date")
+      assert_has(session, "button", text: "Whole series")
     end
 
     test "shows all required form fields", %{
@@ -208,7 +209,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
 
       assert_has(session, "input[name='form[title]']")
       assert_has(session, "textarea[name='form[description]']")
-      assert_has(session, "select[name='form[event_type]']")
+      assert_has(session, "input[name='form[event_type]'][type='radio']")
     end
 
     test "shows calculated end time", %{
@@ -252,7 +253,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
         |> login(owner)
         |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
         |> fill_in("Title", with: "Updated Title")
-        |> click_button("Save Huddl")
+        |> click_button("Save changes")
 
       assert_has(session, "*", text: "Huddl updated successfully!")
 
@@ -277,9 +278,9 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
         |> login(owner)
         |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
         |> fill_in("Date", with: new_date)
-        |> fill_in("Start Time", with: "10:00")
+        |> fill_in("Start time", with: "10:00")
         |> select("Duration", option: "1.5 hours")
-        |> click_button("Save Huddl")
+        |> click_button("Save changes")
 
       assert_has(session, "*", text: "Huddl updated successfully!")
 
@@ -335,8 +336,8 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
         conn
         |> login(owner)
         |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
-        |> fill_in("Max Attendees", with: "1")
-        |> click_button("Save Huddl")
+        |> fill_in("Max attendees", with: "1")
+        |> click_button("Save changes")
 
       assert_path(session, ~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
       assert_has(session, "*", text: "cannot be less than the current RSVP count")
