@@ -5,7 +5,6 @@ defmodule HuddlzWeb.HuddlLive.New do
   use HuddlzWeb, :live_view
 
   import HuddlzWeb.HuddlLive.FormHelpers
-  import HuddlzWeb.HuddlLive.FormComponent
   import HuddlzWeb.Live.Helpers.UploadHelpers
 
   alias Huddlz.Communities
@@ -16,6 +15,7 @@ defmodule HuddlzWeb.HuddlLive.New do
   alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
+  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
 
   @impl true
   def mount(%{"group_slug" => group_slug}, _session, socket) do
@@ -84,7 +84,7 @@ defmodule HuddlzWeb.HuddlLive.New do
       )
 
     socket
-    |> assign(:page_title, "Create New Huddl")
+    |> assign(:page_title, "Schedule a huddl")
     |> assign(:group, group)
     |> assign(:form, to_form(form))
     |> assign(:show_virtual_link, false)
@@ -151,35 +151,379 @@ defmodule HuddlzWeb.HuddlLive.New do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_user={@current_user}>
-      <.link
-        navigate={~p"/groups/#{@group.slug}"}
-        class="text-sm font-semibold leading-6 hover:underline"
-      >
-        <.icon name="hero-arrow-left" class="h-3 w-3" /> Back to {@group.name}
-      </.link>
+    <Layouts.v3_app
+      flash={@flash}
+      current_user={@current_user}
+      sidebar_owned_groups={@sidebar_owned_groups}
+      active="my-groups"
+    >
+      <div class="page-head">
+        <div>
+          <h1>Schedule a huddl</h1>
+          <p>
+            Creating a huddl for <strong>{@group.name}</strong>. Members get an email when you publish.
+          </p>
+        </div>
+      </div>
 
-      <.header>
-        Create New Huddl
-        <:subtitle>
-          Creating a huddl for <span class="font-semibold">{@group.name}</span>
-        </:subtitle>
-      </.header>
+      <.form for={@form} id="huddl-form" phx-change="validate" phx-submit="save">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>The basics</h2>
+          </div>
+          <div class="form-grid">
+            <.v3_input
+              field={@form[:title]}
+              label="Title"
+              placeholder="e.g. Ash Framework workshop"
+              autocomplete="off"
+            />
+            <.v3_textarea
+              field={@form[:description]}
+              label="Description"
+              rows="4"
+              placeholder="What you'll do, what to bring, who it's for."
+            />
+          </div>
+        </div>
 
-      <.create_huddl_form_body
-        form={@form}
-        group={@group}
-        group_locations={@group_locations}
-        selected_location={@selected_location}
-        show_physical_location={@show_physical_location}
-        show_virtual_link={@show_virtual_link}
-        calculated_end_time={@calculated_end_time}
-        uploads={@uploads}
-        image_error={@image_error}
-        pending_preview_url={@pending_preview_url}
-        new_location_path={~p"/groups/#{@group.slug}/huddlz/new/locations/new"}
-        cancel_path={~p"/groups/#{@group.slug}"}
-      />
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Format</h2>
+          </div>
+          <div class="event-type-grid">
+            <.event_type_option
+              field={@form[:event_type]}
+              value="in_person"
+              title="In person"
+              desc="Single physical location."
+            >
+              <:icon>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" /><circle
+                    cx="12"
+                    cy="10"
+                    r="3"
+                  />
+                </svg>
+              </:icon>
+            </.event_type_option>
+            <.event_type_option
+              field={@form[:event_type]}
+              value="virtual"
+              title="Virtual"
+              desc="Online only — no physical address."
+            >
+              <:icon>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="3" y="6" width="13" height="12" rx="2" /><path d="m16 10 5-3v10l-5-3" />
+                </svg>
+              </:icon>
+            </.event_type_option>
+            <.event_type_option
+              field={@form[:event_type]}
+              value="hybrid"
+              title="Hybrid"
+              desc="In-person plus an online stream."
+            >
+              <:icon>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" /><circle
+                    cx="12"
+                    cy="10"
+                    r="3"
+                  /><path d="m22 22-2-2" />
+                </svg>
+              </:icon>
+            </.event_type_option>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>When</h2>
+          </div>
+          <div class="form-grid">
+            <div class="form-row form-row-inline">
+              <div style="flex:1 1 180px">
+                <label class="form-label" for={@form[:date].id}>Date</label>
+                <input
+                  type="date"
+                  id={@form[:date].id}
+                  name={@form[:date].name}
+                  value={@form[:date].value}
+                  min={Date.utc_today() |> Date.to_iso8601()}
+                  class="form-input"
+                />
+                <.field_errors field={@form[:date]} />
+              </div>
+              <div style="flex:1 1 140px">
+                <label class="form-label" for={@form[:start_time].id}>Start time</label>
+                <input
+                  type="time"
+                  id={@form[:start_time].id}
+                  name={@form[:start_time].name}
+                  value={@form[:start_time].value}
+                  class="form-input"
+                />
+                <.field_errors field={@form[:start_time]} />
+              </div>
+              <div style="flex:1 1 140px">
+                <label class="form-label" for={@form[:duration_minutes].id}>Duration</label>
+                <select
+                  id={@form[:duration_minutes].id}
+                  name={@form[:duration_minutes].name}
+                  class="form-select"
+                >
+                  <option value="">Select duration…</option>
+                  <%= for {label, mins} <- duration_options() do %>
+                    <option value={mins} selected={to_string(@form[:duration_minutes].value) == mins}>
+                      {label}
+                    </option>
+                  <% end %>
+                </select>
+                <.field_errors field={@form[:duration_minutes]} />
+              </div>
+            </div>
+
+            <p :if={@calculated_end_time} class="form-help" style="margin-top:-4px">
+              Ends at: <strong>{@calculated_end_time}</strong>
+            </p>
+
+            <div class="form-row">
+              <label class="toggle">
+                <input type="hidden" name={@form[:is_recurring].name} value="false" />
+                <input
+                  id={@form[:is_recurring].id}
+                  type="checkbox"
+                  name={@form[:is_recurring].name}
+                  value="true"
+                  checked={Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_recurring].value)}
+                />
+                <span class="track"></span>
+                <span class="toggle-text">Recurring huddl</span>
+              </label>
+              <p class="form-help">Repeats on a schedule until you stop it.</p>
+            </div>
+
+            <%= if Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_recurring].value) do %>
+              <div class="form-row form-row-inline">
+                <div style="flex:1 1 200px">
+                  <label class="form-label" for={@form[:frequency].id}>Frequency</label>
+                  <select
+                    id={@form[:frequency].id}
+                    name={@form[:frequency].name}
+                    class="form-select"
+                    required
+                  >
+                    <option value="weekly" selected={to_string(@form[:frequency].value) == "weekly"}>
+                      Weekly
+                    </option>
+                    <option value="monthly" selected={to_string(@form[:frequency].value) == "monthly"}>
+                      Monthly
+                    </option>
+                  </select>
+                </div>
+                <div style="flex:1 1 200px">
+                  <label class="form-label" for={@form[:repeat_until].id}>Repeat until</label>
+                  <input
+                    type="date"
+                    id={@form[:repeat_until].id}
+                    name={@form[:repeat_until].name}
+                    value={@form[:repeat_until].value}
+                    class="form-input"
+                    required
+                  />
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Where</h2>
+          </div>
+          <div class="form-grid">
+            <%= if @show_physical_location do %>
+              <div class="form-row">
+                <.live_component
+                  module={HuddlzWeb.Live.SavedLocationPicker}
+                  id="saved-location-picker"
+                  group_locations={@group_locations}
+                  selected_location={@selected_location}
+                  new_location_path={~p"/groups/#{@group.slug}/huddlz/new/locations/new"}
+                />
+              </div>
+            <% end %>
+
+            <%= if @show_virtual_link do %>
+              <.v3_input
+                field={@form[:virtual_link]}
+                type="url"
+                label="Online link"
+                placeholder="https://meet.example.com/..."
+                help="Only attendees see this link."
+              />
+            <% end %>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Capacity &amp; visibility</h2>
+          </div>
+          <div class="form-grid">
+            <.v3_input
+              field={@form[:max_attendees]}
+              type="number"
+              label="Max attendees"
+              min="1"
+              placeholder="No limit"
+              help="Leave blank for unlimited. When full, new RSVPs go to a waitlist."
+            />
+
+            <%= if @group.is_public do %>
+              <div class="form-row">
+                <label class="toggle">
+                  <input type="hidden" name={@form[:is_private].name} value="false" />
+                  <input
+                    id={@form[:is_private].id}
+                    type="checkbox"
+                    name={@form[:is_private].name}
+                    value="true"
+                    checked={Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_private].value)}
+                  />
+                  <span class="track"></span>
+                  <span class="toggle-text">Members only</span>
+                </label>
+                <p class="form-help">
+                  Only group members can RSVP. Useful for private workshops or socials.
+                </p>
+              </div>
+            <% else %>
+              <p class="form-help">
+                <.icon name="hero-lock-closed" class="h-4 w-4 inline" />
+                This will be a private huddl (private groups can only create private huddlz).
+              </p>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Cover image</h2>
+          </div>
+
+          <.live_file_input upload={@uploads.huddl_image} class="hidden" />
+
+          <%= if @pending_preview_url do %>
+            <div class="image-preview" phx-drop-target={@uploads.huddl_image.ref}>
+              <div
+                class="card-cover"
+                style={"background-image: url('#{@pending_preview_url}')"}
+              >
+              </div>
+              <div
+                class="muted"
+                style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-top:10px"
+              >
+                <span>Image uploaded · ready to publish.</span>
+                <div style="display:flex; gap:8px">
+                  <label for={@uploads.huddl_image.ref} class="btn-secondary" style="cursor:pointer">
+                    Replace
+                  </label>
+                  <.v3_button variant={:muted} type="button" phx-click="cancel_pending_image">
+                    Remove
+                  </.v3_button>
+                </div>
+              </div>
+            </div>
+          <% else %>
+            <div class="upload-zone" phx-drop-target={@uploads.huddl_image.ref}>
+              <div class="upload-icon">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-5-5L5 21" />
+                </svg>
+              </div>
+              <label for={@uploads.huddl_image.ref} class="upload-prompt">
+                Drop a 16:9 image, or <span class="upload-link">browse</span>
+              </label>
+              <div class="upload-meta muted">JPG, PNG, WebP · 5 MB max · optional</div>
+            </div>
+
+            <%= for entry <- @uploads.huddl_image.entries do %>
+              <div class="image-preview" style="margin-top:12px">
+                <div class="card-cover">
+                  <.live_img_preview entry={entry} class="card-cover-img" />
+                </div>
+                <div
+                  class="muted"
+                  style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-top:10px"
+                >
+                  <span>{entry.client_name} · {entry.progress}%</span>
+                  <.v3_button
+                    variant={:muted}
+                    type="button"
+                    phx-click="cancel_image_upload"
+                    phx-value-ref={entry.ref}
+                  >
+                    Cancel
+                  </.v3_button>
+                </div>
+              </div>
+
+              <%= for err <- upload_errors(@uploads.huddl_image, entry) do %>
+                <p class="form-error">{upload_error_to_string(err)}</p>
+              <% end %>
+            <% end %>
+          <% end %>
+
+          <p :if={@image_error} class="form-error">{@image_error}</p>
+
+          <%= for err <- upload_errors(@uploads.huddl_image) do %>
+            <p class="form-error">{upload_error_to_string(err)}</p>
+          <% end %>
+        </div>
+
+        <div class="form-foot" style="border:0; margin:0">
+          <.v3_button variant={:primary} type="submit" phx-disable-with="Scheduling…">
+            Schedule huddl
+          </.v3_button>
+          <.v3_button variant={:secondary} navigate={~p"/groups/#{@group.slug}"}>Cancel</.v3_button>
+        </div>
+      </.form>
 
       <.modal
         :if={@live_action == :new_location}
@@ -201,8 +545,8 @@ defmodule HuddlzWeb.HuddlLive.New do
           />
 
           <div class="mt-4">
-            <label class="mono-label text-primary/70 mb-1.5 block" for="location-name-input">
-              Location Name (optional)
+            <label class="form-label" for="location-name-input">
+              Location name (optional)
             </label>
             <input
               type="text"
@@ -211,177 +555,90 @@ defmodule HuddlzWeb.HuddlLive.New do
               value={@modal_location_name}
               phx-debounce="100"
               placeholder="e.g., Community Center"
-              class="w-full h-10 border-0 border-b border-base-300 bg-transparent focus:border-primary focus:ring-0 focus:outline-none text-base-content text-sm"
+              class="form-input"
             />
           </div>
 
-          <div class="mt-6 flex gap-4">
-            <.button type="submit" disabled={is_nil(@modal_location_address)}>
-              Save Address
-            </.button>
-            <.link
-              patch={~p"/groups/#{@group.slug}/huddlz/new"}
-              class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
-            >
+          <div class="form-foot" style="border:0; margin-top:18px">
+            <.v3_button variant={:primary} type="submit" disabled={is_nil(@modal_location_address)}>
+              Save address
+            </.v3_button>
+            <.v3_button variant={:secondary} patch={~p"/groups/#{@group.slug}/huddlz/new"}>
               Cancel
-            </.link>
+            </.v3_button>
           </div>
         </form>
       </.modal>
-    </Layouts.app>
+    </Layouts.v3_app>
     """
   end
 
-  attr :form, :any, required: true
-  attr :group, :map, required: true
-  attr :group_locations, :list, required: true
-  attr :selected_location, :any, required: true
-  attr :show_physical_location, :boolean, required: true
-  attr :show_virtual_link, :boolean, required: true
-  attr :calculated_end_time, :string, default: nil
-  attr :uploads, :map, required: true
-  attr :image_error, :any, default: nil
-  attr :pending_preview_url, :any, default: nil
-  attr :new_location_path, :string, required: true
-  attr :cancel_path, :string, required: true
+  attr :field, Phoenix.HTML.FormField, required: true
+  attr :value, :string, required: true
+  attr :title, :string, required: true
+  attr :desc, :string, required: true
+  slot :icon, required: true
 
-  defp create_huddl_form_body(assigns) do
+  defp event_type_option(assigns) do
+    radio_id = "event-type-#{assigns.value}"
+    assigns = Phoenix.Component.assign(assigns, :radio_id, radio_id)
+
     ~H"""
-    <.form for={@form} id="huddl-form" phx-change="validate" phx-submit="save" class="space-y-6">
-      <.huddl_form_fields
-        form={@form}
-        show_physical_location={@show_physical_location}
-        show_virtual_link={@show_virtual_link}
-        calculated_end_time={@calculated_end_time}
-        is_public={@group.is_public}
-        group_locations={@group_locations}
-        selected_location={@selected_location}
-        new_location_path={@new_location_path}
-      >
-        <:image_section>
-          <div>
-            <label class="mono-label text-primary/70 mb-2 block">
-              Huddl Image
-            </label>
-            <p class="text-base-content/50 text-sm mb-3">
-              Upload a banner image for this huddl (16:9 ratio recommended). If none is provided, the group image will be used.
-            </p>
-
-            <div
-              class="border border-dashed border-base-300 p-4 text-center hover:border-primary transition-colors"
-              phx-drop-target={@uploads.huddl_image.ref}
-            >
-              <.live_file_input upload={@uploads.huddl_image} class="hidden" />
-              <label
-                for={@uploads.huddl_image.ref}
-                class="cursor-pointer flex flex-col items-center"
-              >
-                <.icon name="hero-photo" class="w-8 h-8 text-base-content/50 mb-2" />
-                <span class="text-sm text-base-content/50">
-                  Click to upload or drag and drop
-                </span>
-                <span class="text-xs text-base-content/50 mt-1">
-                  JPG, PNG, or WebP (max 5MB)
-                </span>
-              </label>
-            </div>
-
-            <%= if @image_error do %>
-              <p class="text-error text-sm mt-2">{@image_error}</p>
-            <% end %>
-
-            <%= if @pending_preview_url do %>
-              <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
-                <img
-                  src={@pending_preview_url}
-                  class="w-32 aspect-video object-cover"
-                  alt="Preview"
-                />
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-success flex items-center gap-1">
-                    <.icon name="hero-check-circle" class="w-4 h-4" /> Image uploaded
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  phx-click="cancel_pending_image"
-                  class="p-1 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
-                >
-                  <.icon name="hero-x-mark" class="w-4 h-4" />
-                </button>
-              </div>
-            <% else %>
-              <%= for entry <- @uploads.huddl_image.entries do %>
-                <div class="mt-3 flex items-center gap-3 p-3 bg-base-200">
-                  <.live_img_preview entry={entry} class="w-32 aspect-video object-cover" />
-                  <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium truncate">{entry.client_name}</p>
-                    <div class="w-full bg-base-300 h-1.5 mt-1">
-                      <div
-                        class="bg-primary h-1.5 transition-all"
-                        style={"width: #{entry.progress}%"}
-                      >
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    phx-click="cancel_image_upload"
-                    phx-value-ref={entry.ref}
-                    class="p-1 hover:bg-base-300 text-base-content/50 hover:text-base-content transition-colors"
-                  >
-                    <.icon name="hero-x-mark" class="w-4 h-4" />
-                  </button>
-                </div>
-
-                <%= for err <- upload_errors(@uploads.huddl_image, entry) do %>
-                  <p class="text-error text-sm mt-1">{upload_error_to_string(err)}</p>
-                <% end %>
-              <% end %>
-            <% end %>
-
-            <%= for err <- upload_errors(@uploads.huddl_image) do %>
-              <p class="text-error text-sm mt-2">{upload_error_to_string(err)}</p>
-            <% end %>
-          </div>
-        </:image_section>
-
-        <:recurring_section>
-          <.input field={@form[:is_recurring]} type="checkbox" label="Make this a recurring huddl" />
-
-          <%= if @form[:is_recurring].value do %>
-            <div class="grid gap-4 sm:grid-cols-2">
-              <.input
-                field={@form[:frequency]}
-                type="select"
-                label="Frequency"
-                options={[
-                  {"Weekly", "weekly"},
-                  {"Monthly", "monthly"}
-                ]}
-                required
-              />
-              <.input field={@form[:repeat_until]} type="date" label="Repeat Until" required />
-            </div>
-          <% end %>
-        </:recurring_section>
-
-        <:actions>
-          <div class="flex gap-4">
-            <.button type="submit" phx-disable-with="Creating...">
-              Create Huddl
-            </.button>
-            <.link
-              navigate={@cancel_path}
-              class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
-            >
-              Cancel
-            </.link>
-          </div>
-        </:actions>
-      </.huddl_form_fields>
-    </.form>
+    <label for={@radio_id} class="sr-only">{@title}</label>
+    <label
+      for={@radio_id}
+      class={["event-type-option", to_string(@field.value) == @value && "is-active"]}
+    >
+      <input
+        id={@radio_id}
+        type="radio"
+        name={@field.name}
+        value={@value}
+        checked={to_string(@field.value) == @value}
+      />
+      <div class="event-type-icon">{render_slot(@icon)}</div>
+      <div>
+        <div class="event-type-title">{@title}</div>
+        <div class="event-type-desc">{@desc}</div>
+      </div>
+    </label>
     """
+  end
+
+  attr :field, Phoenix.HTML.FormField, required: true
+
+  defp field_errors(assigns) do
+    errors =
+      if Phoenix.Component.used_input?(assigns.field) do
+        Enum.map(assigns.field.errors, &translate_field_error/1)
+      else
+        []
+      end
+
+    assigns = Phoenix.Component.assign(assigns, :errors, errors)
+
+    ~H"""
+    <p :for={msg <- @errors} class="form-error">{msg}</p>
+    """
+  end
+
+  defp translate_field_error({msg, opts}) do
+    Enum.reduce(opts, msg, fn {key, value}, acc ->
+      String.replace(acc, "%{#{key}}", fn _ -> to_string(value) end)
+    end)
+  end
+
+  defp duration_options do
+    [
+      {"30 minutes", "30"},
+      {"1 hour", "60"},
+      {"1.5 hours", "90"},
+      {"2 hours", "120"},
+      {"2.5 hours", "150"},
+      {"3 hours", "180"},
+      {"4 hours", "240"},
+      {"6 hours", "360"}
+    ]
   end
 
   @impl true
