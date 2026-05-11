@@ -1350,6 +1350,8 @@ body.v3 .rsvp-banner {
 
 body.v3 .rsvp-banner.cyan { color: var(--cyan); border-color: rgba(24, 203, 212, 0.4); background: var(--cyan-soft); }
 body.v3 .rsvp-banner.warn { color: var(--warn); border-color: rgba(246, 193, 119, 0.35); background: rgba(246, 193, 119, 0.08); }
+body.v3 .rsvp-banner.magenta { color: var(--magenta); border-color: rgba(232, 79, 180, 0.35); background: rgba(232, 79, 180, 0.08); }
+body.v3 .rsvp-banner.muted { color: var(--muted); }
 body.v3 .rsvp-banner svg { flex: 0 0 auto; }
 
 body.v3 .virtual-hint {
@@ -1369,6 +1371,38 @@ body.v3 .btn-secondary.virtual-link {
 }
 
 body.v3 .btn-secondary.virtual-link:hover { border-color: var(--cyan); }
+
+/* Stretch RSVP-state buttons to fill the aside */
+body.v3 .rsvp-state { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+body.v3 .rsvp-state .btn-primary,
+body.v3 .rsvp-state .btn-secondary { width: 100%; justify-content: center; }
+body.v3 .rsvp-state .rsvp-banner { width: 100%; }
+
+/* Inline "Join virtually" link inside .facts .value */
+body.v3 .facts .value .virtual-link-text { color: var(--cyan); font-weight: 700; }
+body.v3 .facts .value .virtual-link-text:hover { text-decoration: underline; }
+body.v3 .facts .value .muted { color: var(--muted); font-weight: 500; font-size: 12px; }
+
+/* Magenta-warn destructive button (delete huddl) */
+body.v3 .btn-secondary.destructive-btn { color: var(--magenta); border-color: rgba(232, 79, 180, 0.4); }
+body.v3 .btn-secondary.destructive-btn:hover { color: var(--magenta); border-color: var(--magenta); }
+
+/* "Organized by" row in huddl-side */
+body.v3 .creator-row { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+
+/* Cancelled-hero strikethrough on title */
+body.v3 .hero.is-cancelled .hero-content h1 {
+  text-decoration: line-through;
+  text-decoration-color: rgba(232, 79, 180, 0.45);
+}
+
+/* Eyebrow color variants for huddl status */
+body.v3 .eyebrow.eyebrow-warn { color: var(--warn); }
+body.v3 .eyebrow.eyebrow-muted { color: var(--muted); opacity: 0.85; }
+body.v3 .eyebrow.eyebrow-magenta { color: var(--magenta); }
+
+/* Spacing between hero meta segments and separators */
+body.v3 .hero-content .meta .meta-sep { color: var(--muted); margin: 0 4px; }
 
 /* ─────────────────────────────────────────  CALENDAR  ────────── */
 body.v3 .cal-toolbar {

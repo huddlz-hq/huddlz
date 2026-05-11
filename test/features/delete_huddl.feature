@@ -16,12 +16,12 @@ Feature: Delete Huddl
   Scenario: Owner deletes an in-person huddl
     Given I am signed in as "owner@example.com"
     When I visit the "Future Workshop" huddl page
-    Then I should see "Delete Huddl"
-    When I click "Delete Huddl"
+    Then I should see "Delete huddl"
+    When I click "Delete huddl"
     Then I should be redirected to the "Tech Meetup" group page
     And I should see "Huddl deleted successfully!"
 
   Scenario: Non-owner cannot delete a huddl
     Given I am signed in as "non_owner@example.com"
     When I visit the "Future Workshop" huddl page
-    Then I should not see "Delete Huddl"
+    Then I should not see "Delete huddl"

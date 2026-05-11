@@ -23,13 +23,13 @@ Feature: Waitlist
   Scenario: User joins the waitlist when the huddl is full
     Given I am logged in as "hopeful@example.com"
     When I visit the "Capped Code Review" huddl page
-    Then I should see "Huddl Full"
-    And I should see "Join Waitlist"
+    Then I should see "This huddl is full"
+    And I should see "Join waitlist"
 
-    When I click "Huddl Full — Join Waitlist"
+    When I click "Join waitlist"
     Then I should see "Added to the waitlist"
     And I should see "On waitlist"
-    And I should see "Leave Waitlist"
+    And I should see "Leave waitlist"
 
   Scenario: User leaves the waitlist
     Given I am logged in as "hopeful@example.com"
@@ -37,9 +37,9 @@ Feature: Waitlist
     When I visit the "Capped Code Review" huddl page
     Then I should see "On waitlist"
 
-    When I click "Leave Waitlist"
+    When I click "Leave waitlist"
     Then I should see "Removed from the waitlist"
-    And I should see "Join Waitlist"
+    And I should see "Join waitlist"
     And I should not see "On waitlist"
 
   Scenario: User is promoted when an attendee cancels
@@ -47,5 +47,5 @@ Feature: Waitlist
     And I have joined the waitlist for "Capped Code Review"
     When "member@example.com" cancels their RSVP to "Capped Code Review"
     And I visit the "Capped Code Review" huddl page
-    Then I should see "You're attending!"
+    Then I should see "You're attending"
     And I should not see "On waitlist"

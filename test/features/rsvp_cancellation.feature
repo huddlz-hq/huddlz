@@ -29,14 +29,14 @@ Feature: RSVP Cancellation
     
     When I click "RSVP to this huddl"
     Then I should see "Successfully RSVPed to this huddl!"
-    And I should see "You're attending!"
+    And I should see "You're attending"
     And I should see "Cancel RSVP"
     And I should see "1 person attending"
     
     When I click "Cancel RSVP"
     Then I should see "RSVP cancelled successfully"
     And I should see "RSVP to this huddl"
-    And I should not see "You're attending!"
+    And I should not see "You're attending"
     And I should see "Be the first to RSVP!"
 
   Scenario: User can RSVP again after cancelling
@@ -48,7 +48,7 @@ Feature: RSVP Cancellation
     
     When I click "RSVP to this huddl"
     Then I should see "Successfully RSVPed to this huddl!"
-    And I should see "You're attending!"
+    And I should see "You're attending"
     And I should see "1 person attending"
 
   Scenario: Multiple users can manage their RSVPs independently
@@ -65,7 +65,7 @@ Feature: RSVP Cancellation
     When I log out
     And I am logged in as "member@example.com"
     And I visit the "Virtual Code Review" huddl page
-    Then I should see "You're attending!"
+    Then I should see "You're attending"
     And I should see "1 person attending"
 
   Scenario: Cannot cancel RSVP for past events
