@@ -311,6 +311,19 @@ defmodule HuddlzWeb.Layouts do
     default: nil,
     doc: "active surface key for nav highlighting (e.g. \"discover\", \"my-huddlz\")"
 
+  attr :active_group_slug, :string,
+    default: nil,
+    doc: "slug of the group currently being organized (expands its sb-org-row sub-tabs)"
+
+  attr :active_organize_section, :atom,
+    default: nil,
+    values: [nil, :overview, :huddlz, :members],
+    doc: "active sub-tab inside an organize-group section"
+
+  attr :sidebar_owned_groups, :list,
+    default: [],
+    doc: "groups the current_user organizes — rendered as sb-org-row entries"
+
   attr :query, :string, default: "", doc: "current search query — prefilled in topbar input"
   slot :inner_block, required: true
 
@@ -344,6 +357,49 @@ defmodule HuddlzWeb.Layouts do
             <.v3_nav_icon name="calendar" />
             <span class="label">My calendar</span>
           </a>
+
+          <div :if={@sidebar_owned_groups != [] or @active == "organize"} class="sb-orgs">
+            <%= for {group, idx} <- Enum.with_index(@sidebar_owned_groups) do %>
+              <a
+                class={[
+                  "sb-org-row",
+                  @active_group_slug == group.slug && "active"
+                ]}
+                href={"/organize/#{group.slug}"}
+              >
+                <div class={["group-mark", group_mark_variant(idx)]}>
+                  {group_initials(group.name)}
+                </div>
+                <span class="name">{group.name}</span>
+              </a>
+              <%= if @active_group_slug == group.slug do %>
+                <div class="sb-sub">
+                  <a
+                    class={["sb-sub-item", @active_organize_section == :overview && "active"]}
+                    href={"/organize/#{group.slug}"}
+                  >
+                    Overview
+                  </a>
+                  <a
+                    class={["sb-sub-item", @active_organize_section == :huddlz && "active"]}
+                    href={"/organize/#{group.slug}/huddlz"}
+                  >
+                    Huddlz
+                  </a>
+                  <a
+                    class={["sb-sub-item", @active_organize_section == :members && "active"]}
+                    href={"/organize/#{group.slug}/members"}
+                  >
+                    Members
+                  </a>
+                </div>
+              <% end %>
+            <% end %>
+            <a class="sb-org-row create" href="/groups/new">
+              <div class="plus-mark">+</div>
+              <span class="name">Create group</span>
+            </a>
+          </div>
         </nav>
 
         <div class="sb-account">
@@ -713,4 +769,26 @@ defmodule HuddlzWeb.Layouts do
   end
 
   defp first_name(_), do: "Account"
+
+  defp group_initials(nil), do: "??"
+
+  defp group_initials(name) do
+    name
+    |> to_string()
+    |> String.trim()
+    |> String.split(~r/[\s\-_]+/, trim: true)
+    |> case do
+      [] -> "??"
+      [single] -> single |> String.slice(0, 2) |> String.upcase()
+      [first, second | _] -> String.upcase(String.first(first) <> String.first(second))
+    end
+  end
+
+  defp group_mark_variant(idx) do
+    case rem(idx, 3) do
+      0 -> ""
+      1 -> "mark-magenta"
+      2 -> "mark-warm"
+    end
+  end
 end
