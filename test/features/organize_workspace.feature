@@ -60,6 +60,28 @@ Feature: Organizer workspace
     Then I should see "You don't organize that group."
     And I should see "You don't organize any groups yet."
 
+  Scenario: A co-organizer can open the workspace for a group they help run
+    Given the following users exist:
+      | email                  | role     | display_name |
+      | co.organizer@example.com | verified | Co Organizer |
+    And a public group "Cyberpunk Builders" exists with owner "host@example.com"
+    And "co.organizer@example.com" is an organizer of "Cyberpunk Builders"
+    And I am signed in as "co.organizer@example.com"
+    When I visit "/organize/cyberpunk-builders"
+    Then I should see "Cyberpunk Builders"
+    And I should see "Members"
+    And I should not see "You don't organize that group."
+
+  Scenario: An admin can open the workspace for any group
+    Given the following users exist:
+      | email             | role  | display_name |
+      | admin@example.com | admin | Admin User   |
+    And a public group "Phoenix Devs" exists with owner "stranger@example.com"
+    And I am signed in as "admin@example.com"
+    When I visit "/organize/phoenix-devs"
+    Then I should see "Phoenix Devs"
+    And I should not see "You don't organize that group."
+
   Scenario: Group overview shows zeroed KPIs and empty upcoming list
     Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
     And I am signed in as "host@example.com"
