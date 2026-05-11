@@ -54,12 +54,6 @@ defmodule HuddlzWeb.OrganizeLive.Components do
         />
         <.sidebar_link
           active={@active}
-          action={:calendar}
-          label="Calendar"
-          path={~p"/organize/calendar"}
-        />
-        <.sidebar_link
-          active={@active}
           action={:attendees}
           label="Attendees"
           path={~p"/organize/attendees"}
