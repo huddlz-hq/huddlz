@@ -145,6 +145,8 @@ defmodule HuddlzWeb.AdminLive do
   defp user_count_label(1), do: "1 user"
   defp user_count_label(n), do: "#{n} users"
 
-  defp role_pill_variant(:admin), do: "cyan"
-  defp role_pill_variant(_), do: "muted"
+  # Mirrors `ProfileLive`'s mapping so the same user's role pill renders the
+  # same color across both pages.
+  defp role_pill_variant(:admin), do: "magenta"
+  defp role_pill_variant(_), do: "cyan"
 end
