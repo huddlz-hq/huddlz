@@ -242,7 +242,11 @@ defmodule HuddlzWeb.GroupLive.Show do
                     class={["member-mark", member_mark_variant(idx)]}
                     title={member.display_name || "Member"}
                   >
-                    {member_initials(member)}
+                    <%= if url = Avatar.picture_url(member) do %>
+                      <img src={url} alt={member.display_name || ""} />
+                    <% else %>
+                      {member_initials(member)}
+                    <% end %>
                   </div>
                 </div>
                 <div :if={extras > 0} class="member-mini">
