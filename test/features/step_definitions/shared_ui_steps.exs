@@ -146,6 +146,13 @@ defmodule SharedUISteps do
     Map.merge(context, %{session: session, conn: session})
   end
 
+  step "I choose {string}", %{args: [option]} = context do
+    session = context[:session] || context[:conn]
+    session = choose(session, option)
+
+    Map.merge(context, %{session: session, conn: session})
+  end
+
   # Button presence checks
   step "the {string} button should be visible", %{args: [button_text]} = context do
     session = context[:session] || context[:conn]

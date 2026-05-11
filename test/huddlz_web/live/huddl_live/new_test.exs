@@ -47,7 +47,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> login(owner)
         |> visit(~p"/groups/#{group.slug}/huddlz/new")
 
-      assert_has(session, "h1", text: "Create New Huddl")
+      assert_has(session, "h1", text: "Schedule a huddl")
       assert_has(session, "#huddl-form")
 
       # The group name should be somewhere on the page
@@ -65,7 +65,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> login(organizer)
         |> visit(~p"/groups/#{group.slug}/huddlz/new")
 
-      assert_has(session, "h1", text: "Create New Huddl")
+      assert_has(session, "h1", text: "Schedule a huddl")
       assert_has(session, "#huddl-form")
 
       # The group name should be somewhere on the page
@@ -153,7 +153,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       assert_has(session, "input[name='form[date]'][type='date']")
       assert_has(session, "input[name='form[start_time]']")
       assert_has(session, "select[name='form[duration_minutes]']")
-      assert_has(session, "select[name='form[event_type]']")
+      assert_has(session, "input[name='form[event_type]'][type='radio']")
     end
 
     test "shows 16:9 ratio guidance for cover image", %{
@@ -166,7 +166,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> login(owner)
         |> visit(~p"/groups/#{group.slug}/huddlz/new")
 
-      assert_has(session, "p", text: "16:9 ratio recommended")
+      assert_has(session, "*", text: "Drop a 16:9 image")
     end
 
     test "shows is_private checkbox for public groups", %{
@@ -180,7 +180,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> visit(~p"/groups/#{group.slug}/huddlz/new")
 
       assert_has(session, "input[name='form[is_private]'][type='checkbox']")
-      assert session.conn.resp_body =~ "Make this a private huddl"
+      assert session.conn.resp_body =~ "Members only"
     end
 
     test "shows private huddl notice for private groups", %{
@@ -220,7 +220,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}/huddlz/new")
       # Change to virtual
-      |> select("Huddl Type", option: "Virtual", exact: false)
+      |> choose("Virtual")
       |> refute_has("#saved-location-picker")
       |> assert_has("input[name='form[virtual_link]']")
     end
@@ -230,7 +230,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}/huddlz/new")
       # Change to hybrid
-      |> select("Huddl Type", option: "Hybrid (Both In-Person and Virtual)", exact: false)
+      |> choose("Hybrid")
       |> assert_has("#saved-location-picker")
       |> assert_has("input[name='form[virtual_link]']")
     end
@@ -255,13 +255,13 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> fill_in("Title", with: "Test Huddl")
         |> fill_in("Description", with: "A test huddl description")
         |> fill_in("Date", with: date)
-        |> fill_in("Start Time", with: time)
+        |> fill_in("Start time", with: time)
         |> select("Duration", option: "2 hours")
 
       # Set physical location through autocomplete component
       select_physical_location(session.view, "123 Main St")
 
-      session = click_button(session, "Create Huddl")
+      session = click_button(session, "Schedule huddl")
 
       # Should redirect to group page
       assert_path(session, ~p"/groups/#{group.slug}")
@@ -295,14 +295,14 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> fill_in("Title", with: "Capped Huddl")
         |> fill_in("Description", with: "Limited seats")
         |> fill_in("Date", with: date)
-        |> fill_in("Start Time", with: "14:30")
+        |> fill_in("Start time", with: "14:30")
         |> select("Duration", option: "2 hours")
-        |> fill_in("Max Attendees", with: "5")
+        |> fill_in("Max attendees", with: "5")
 
       select_physical_location(session.view, "123 Main St")
 
       session
-      |> click_button("Create Huddl")
+      |> click_button("Schedule huddl")
       |> assert_path(~p"/groups/#{group.slug}")
 
       huddl =
@@ -330,14 +330,14 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> login(owner)
         |> visit(~p"/groups/#{private_group.slug}/huddlz/new")
         # First change to virtual to show the virtual_link field
-        |> select("Huddl Type", option: "Virtual", exact: false)
+        |> choose("Virtual")
         |> fill_in("Title", with: "Private Group Huddl")
         |> fill_in("Description", with: "A huddl in a private group")
         |> fill_in("Date", with: date)
-        |> fill_in("Start Time", with: time)
+        |> fill_in("Start time", with: time)
         |> select("Duration", option: "2 hours")
-        |> fill_in("Virtual Meeting Link", with: "https://zoom.us/j/123456789")
-        |> click_button("Create Huddl")
+        |> fill_in("Online link", with: "https://zoom.us/j/123456789")
+        |> click_button("Schedule huddl")
 
       # Should redirect to group page
       assert_path(session, ~p"/groups/#{private_group.slug}")
@@ -358,13 +358,13 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> login(owner)
         |> visit(~p"/groups/#{group.slug}/huddlz/new")
         # Try to submit without filling required fields
-        |> click_button("Create Huddl")
+        |> click_button("Schedule huddl")
 
       # Should still be on the same page
       assert_path(session, ~p"/groups/#{group.slug}/huddlz/new")
 
-      # Should show validation error (checking for error class on input)
-      assert_has(session, "input.border-error")
+      # Should show validation error
+      assert_has(session, "p.form-error")
     end
 
     test "selecting a saved location preserves other form fields", %{
@@ -392,7 +392,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> visit(~p"/groups/#{group.slug}/huddlz/new")
         |> fill_in("Title", with: "My New Huddl")
         |> fill_in("Date", with: tomorrow)
-        |> fill_in("Start Time", with: "15:00")
+        |> fill_in("Start time", with: "15:00")
         |> select("Duration", option: "2 hours")
 
       view = session.view
@@ -428,8 +428,8 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         # Clear the field to trigger validation
         |> fill_in("Title", with: "")
 
-      # Check for validation error class on the input
-      assert_has(session, "input#form_title.border-error")
+      # Check for validation error displayed below the input
+      assert_has(session, "p.form-error")
     end
   end
 
@@ -450,12 +450,12 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> visit(~p"/groups/#{group.slug}/huddlz/new")
         |> fill_in("Title", with: "Test Huddl")
         |> fill_in("Date", with: date)
-        |> fill_in("Start Time", with: "14:30")
+        |> fill_in("Start time", with: "14:30")
         |> select("Duration", option: "1 hour")
 
       select_physical_location(session.view, "123 Main St")
 
-      session = click_button(session, "Create Huddl")
+      session = click_button(session, "Schedule huddl")
 
       # Should still be on the same page with error
       assert_path(session, ~p"/groups/#{group.slug}/huddlz/new")
@@ -479,12 +479,12 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> fill_in("Title", with: "Test Huddl with Manual Time")
         |> fill_in("Date", with: date)
         # Enter a time that's not on a 15-minute increment
-        |> fill_in("Start Time", with: "09:47")
+        |> fill_in("Start time", with: "09:47")
         |> select("Duration", option: "1 hour")
 
       select_physical_location(session.view, "123 Main St")
 
-      session = click_button(session, "Create Huddl")
+      session = click_button(session, "Schedule huddl")
 
       # Should redirect to group page (successful creation)
       assert_path(session, ~p"/groups/#{group.slug}")
@@ -509,7 +509,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> visit(~p"/groups/#{group.slug}/huddlz/new")
         |> fill_in("Title", with: "Test Duration Calculation")
         |> fill_in("Date", with: date)
-        |> fill_in("Start Time", with: "15:00")
+        |> fill_in("Start time", with: "15:00")
         |> select("Duration", option: "1.5 hours")
 
       select_physical_location(session.view, "123 Main St")
@@ -517,7 +517,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       # Check that end time is displayed on the form
       assert session.conn.resp_body =~ "Ends at:"
 
-      session = click_button(session, "Create Huddl")
+      session = click_button(session, "Schedule huddl")
 
       # Should redirect to group page
       assert_path(session, ~p"/groups/#{group.slug}")
@@ -547,12 +547,12 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> visit(~p"/groups/#{group.slug}/huddlz/new")
         |> fill_in("Title", with: "Test Day Boundary")
         |> fill_in("Date", with: date)
-        |> fill_in("Start Time", with: "23:00")
+        |> fill_in("Start time", with: "23:00")
         |> select("Duration", option: "6 hours")
 
       select_physical_location(session.view, "123 Main St")
 
-      session = click_button(session, "Create Huddl")
+      session = click_button(session, "Schedule huddl")
 
       # Should redirect to group page
       assert_path(session, ~p"/groups/#{group.slug}")

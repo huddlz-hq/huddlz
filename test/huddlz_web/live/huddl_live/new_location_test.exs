@@ -51,7 +51,7 @@ defmodule HuddlzWeb.HuddlLive.NewLocationTest do
         |> live(~p"/groups/#{group.slug}/huddlz/new/locations/new")
 
       # Save button should be disabled initially
-      assert has_element?(view, "button[disabled]", "Save Address")
+      assert has_element?(view, "button[disabled]", "Save address")
     end
 
     test "selecting an address enables save and pre-populates name", %{
@@ -83,7 +83,7 @@ defmodule HuddlzWeb.HuddlLive.NewLocationTest do
       assert html =~ "Austin Convention Center"
 
       # Save button should no longer be disabled
-      refute has_element?(view, "button[disabled]", "Save Address")
+      refute has_element?(view, "button[disabled]", "Save address")
     end
 
     test "saving creates location and returns to huddl form", %{

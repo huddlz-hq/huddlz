@@ -131,7 +131,7 @@ defmodule CreateHuddlSteps do
     # Check if we're on the new huddl page or got redirected
     has_form =
       try do
-        assert_has(session, "*", text: "Create New Huddl")
+        assert_has(session, "*", text: "Schedule a huddl")
         true
       rescue
         _ -> false
@@ -171,7 +171,7 @@ defmodule CreateHuddlSteps do
 
   step "I should be on the new huddl page for {string}", %{args: [group_name]} = context do
     session = context[:session] || context[:conn]
-    assert_has(session, "*", text: "Create New Huddl")
+    assert_has(session, "*", text: "Schedule a huddl")
     assert_has(session, "*", text: group_name)
     context
   end
@@ -263,13 +263,13 @@ defmodule CreateHuddlSteps do
       if form_data["event_type"] do
         event_type_label =
           case form_data["event_type"] do
-            "in_person" -> "In-Person"
+            "in_person" -> "In person"
             "virtual" -> "Virtual"
-            "hybrid" -> "Hybrid (Both In-Person and Virtual)"
-            _ -> "In-Person"
+            "hybrid" -> "Hybrid"
+            _ -> "In person"
           end
 
-        select(session, "Huddl Type", option: event_type_label, exact: false)
+        choose(session, event_type_label)
       else
         session
       end
@@ -308,13 +308,13 @@ defmodule CreateHuddlSteps do
             session
 
           "virtual_link" ->
-            fill_in(session, "Virtual Meeting Link", with: value, exact: false)
+            fill_in(session, "Online link", with: value, exact: false)
 
           "date" ->
             fill_in(session, "Date", with: value, exact: false)
 
           "start_time" ->
-            fill_in(session, "Start Time", with: value, exact: false)
+            fill_in(session, "Start time", with: value, exact: false)
 
           "duration_minutes" ->
             select(session, "Duration", option: format_duration_option(value), exact: false)
@@ -330,7 +330,7 @@ defmodule CreateHuddlSteps do
             select(session, "Frequency", option: value, exact: false)
 
           "repeat_until" ->
-            fill_in(session, "Repeat Until", with: value, exact: false)
+            fill_in(session, "Repeat until", with: value, exact: false)
 
           # Already handled above
           "event_type" ->
@@ -342,14 +342,14 @@ defmodule CreateHuddlSteps do
       end)
 
     # Submit the form
-    session = click_button(session, "Create Huddl")
+    session = click_button(session, "Schedule huddl")
 
     Map.merge(context, %{session: session, conn: session})
   end
 
   step "I submit the form without filling it", context do
     session = context[:session] || context[:conn]
-    session = click_button(session, "Create Huddl")
+    session = click_button(session, "Schedule huddl")
     Map.merge(context, %{session: session, conn: session})
   end
 
@@ -410,7 +410,7 @@ defmodule CreateHuddlSteps do
 
   step "I should remain on the new huddl page", context do
     session = context[:session] || context[:conn]
-    assert_has(session, "*", text: "Create New Huddl")
+    assert_has(session, "*", text: "Schedule a huddl")
     context
   end
 

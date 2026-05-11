@@ -63,7 +63,7 @@ Feature: Create Huddl
     Then I should see a "Create Huddl" button
     When I click "Create Huddl"
     Then I should be on the new huddl page for "Tech Meetup"
-    When I check "Make this a recurring huddl"
+    When I check "Recurring huddl"
     When I fill in the huddl form with:
       | Field             | Value                       |
       | Title             | Monthly Tech Talk           |
@@ -83,7 +83,7 @@ Feature: Create Huddl
     Then I should see a "Create Huddl" button
     When I click "Create Huddl"
     Then I should be on the new huddl page for "Tech Meetup"
-    When I check "Make this a recurring huddl"
+    When I check "Recurring huddl"
     When I fill in the huddl form with:
       | Field             | Value                       |
       | Title             | Weekly Tech Talk            |
@@ -101,15 +101,15 @@ Feature: Create Huddl
     Given I am signed in as "owner@example.com"
     When I visit the new huddl page for "Tech Meetup"
     Then I should see "Physical Location" field
-    And I should not see "Virtual Meeting Link" field
-    When I select "Hybrid (Both In-Person and Virtual)" from "Huddl Type"
+    And I should not see "Online link" field
+    When I choose "Hybrid"
     Then I should see "Physical Location" field
-    And I should see "Virtual Meeting Link" field
+    And I should see "Online link" field
 
   Scenario: Private groups create private huddls only
     Given I am signed in as "owner@example.com"
     When I visit the new huddl page for "Private Group"
-    Then I should not see a checkbox for "Make this a private huddl"
+    Then I should not see a checkbox for "Members only"
     And I should see "This will be a private huddl"
     When I fill in the huddl form with:
       | Field             | Value                        |
