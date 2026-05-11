@@ -81,7 +81,12 @@ defmodule HuddlzWeb.GroupLive.Show do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.v3_app flash={@flash} current_user={@current_user} active="discover">
+    <Layouts.v3_app
+      flash={@flash}
+      current_user={@current_user}
+      sidebar_owned_groups={@sidebar_owned_groups}
+      active="discover"
+    >
       <div class="hero">
         <img
           :if={@group.current_image_url}

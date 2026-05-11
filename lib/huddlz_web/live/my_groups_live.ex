@@ -136,7 +136,12 @@ defmodule HuddlzWeb.MyGroupsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.v3_app flash={@flash} current_user={@current_user} active="my-groups">
+    <Layouts.v3_app
+      flash={@flash}
+      current_user={@current_user}
+      sidebar_owned_groups={@sidebar_owned_groups}
+      active="my-groups"
+    >
       <div class="page-head">
         <div>
           <h1>My groups</h1>

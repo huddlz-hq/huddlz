@@ -539,6 +539,7 @@ defmodule HuddlzWeb.HuddlLive do
     <Layouts.v3_app
       flash={@flash}
       current_user={@current_user}
+      sidebar_owned_groups={@sidebar_owned_groups}
       active="discover"
       query={@search_query || ""}
     >

@@ -372,28 +372,38 @@ defmodule HuddlzWeb.Layouts do
                 </div>
                 <span class="name">{group.name}</span>
               </a>
-              <%= if @active_group_slug == group.slug do %>
-                <div class="sb-sub">
-                  <a
-                    class={["sb-sub-item", @active_organize_section == :overview && "active"]}
-                    href={"/organize/#{group.slug}"}
-                  >
-                    Overview
-                  </a>
-                  <a
-                    class={["sb-sub-item", @active_organize_section == :huddlz && "active"]}
-                    href={"/organize/#{group.slug}/huddlz"}
-                  >
-                    Huddlz
-                  </a>
-                  <a
-                    class={["sb-sub-item", @active_organize_section == :members && "active"]}
-                    href={"/organize/#{group.slug}/members"}
-                  >
-                    Members
-                  </a>
-                </div>
-              <% end %>
+              <div class="sb-sub">
+                <a
+                  class={[
+                    "sb-sub-item",
+                    (@active_group_slug == group.slug and @active_organize_section == :overview) &&
+                      "active"
+                  ]}
+                  href={"/organize/#{group.slug}"}
+                >
+                  Overview
+                </a>
+                <a
+                  class={[
+                    "sb-sub-item",
+                    (@active_group_slug == group.slug and @active_organize_section == :huddlz) &&
+                      "active"
+                  ]}
+                  href={"/organize/#{group.slug}/huddlz"}
+                >
+                  Huddlz
+                </a>
+                <a
+                  class={[
+                    "sb-sub-item",
+                    (@active_group_slug == group.slug and @active_organize_section == :members) &&
+                      "active"
+                  ]}
+                  href={"/organize/#{group.slug}/members"}
+                >
+                  Members
+                </a>
+              </div>
             <% end %>
             <a class="sb-org-row create" href="/groups/new">
               <div class="plus-mark">+</div>
