@@ -1300,6 +1300,7 @@ body.v3 .row .row-title { font-weight: 700; color: var(--text); }
 body.v3 .pill {
   display: inline-flex;
   align-items: center;
+  vertical-align: middle;
   height: 22px;
   padding: 0 10px;
   border: 1px solid var(--line-strong);
@@ -2604,11 +2605,12 @@ body.v3 .admin-table thead th {
 }
 
 body.v3 .admin-table tbody td {
-  padding: 10px 8px;
+  padding: 12px 8px;
   border-bottom: 1px solid var(--line);
   color: var(--text);
   vertical-align: middle;
   word-break: break-word;
+  line-height: 1.4;
 }
 
 body.v3 .admin-table tbody tr:last-child td { border-bottom: 0; }
@@ -2618,11 +2620,17 @@ body.v3 .role-form {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
-body.v3 .role-form .form-select { width: auto; padding: 6px 8px; min-width: 88px; }
-body.v3 .role-form .btn-primary { padding: 6px 12px; }
+body.v3 .role-form .form-select {
+  width: auto;
+  height: 36px;
+  padding: 0 10px;
+  min-width: 88px;
+}
+body.v3 .role-form .btn-primary { padding: 0 14px; }
 
 @media (max-width: 720px) {
   body.v3 .admin-table thead { display: none; }
