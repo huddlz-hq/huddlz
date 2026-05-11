@@ -1310,6 +1310,7 @@ body.v3 .pill {
   font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 body.v3 .pill.cyan { color: var(--cyan); border-color: rgba(24, 203, 212, 0.4); }
@@ -2591,6 +2592,15 @@ body.v3 .admin-table {
   font-size: 14px;
   table-layout: auto;
 }
+
+body.v3 .admin-table th:nth-child(1),
+body.v3 .admin-table td:nth-child(1) { min-width: 180px; }
+
+body.v3 .admin-table th:nth-child(3),
+body.v3 .admin-table td:nth-child(3) { min-width: 84px; white-space: nowrap; }
+
+body.v3 .admin-table th:nth-child(4),
+body.v3 .admin-table td:nth-child(4) { min-width: 200px; white-space: nowrap; }
 
 body.v3 .admin-table thead th {
   font-family: var(--mono);
