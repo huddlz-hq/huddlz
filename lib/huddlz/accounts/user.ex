@@ -582,6 +582,16 @@ defmodule Huddlz.Accounts.User do
     end
   end
 
+  calculations do
+    calculate :is_admin, :boolean, expr(role == :admin) do
+      description """
+      Single expression for "this user is an admin". Use this — instead of
+      a fresh `role == :admin` check — in expressions and code so the rule
+      stays in one place if admin semantics ever broaden.
+      """
+    end
+  end
+
   aggregates do
     first :current_profile_picture_url, :profile_pictures, :thumbnail_path do
       description "Returns the thumbnail path of the user's current profile picture"
@@ -593,6 +603,19 @@ defmodule Huddlz.Accounts.User do
   identities do
     identity :unique_email, [:email]
   end
+
+  @doc """
+  True when the given user has the `:admin` role. Nil-safe so callers can
+  pass `current_user` directly without a separate nil guard.
+
+  Reads the `:is_admin` calculation when it has been loaded; falls back to
+  inspecting `:role` directly so callers that haven't loaded the calc
+  (e.g. policies handing us a raw actor) still get a correct answer.
+  """
+  def admin?(%{is_admin: true}), do: true
+  def admin?(%{is_admin: false}), do: false
+  def admin?(%{role: :admin}), do: true
+  def admin?(_), do: false
 
   defp enqueue_email_changed(user, previous_email, audience) do
     payload = %{"audience" => audience, "old_email" => previous_email}

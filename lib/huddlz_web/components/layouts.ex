@@ -4,6 +4,7 @@ defmodule HuddlzWeb.Layouts do
   """
   use HuddlzWeb, :html
 
+  alias Huddlz.Accounts.User
   alias HuddlzWeb.Avatar
 
   embed_templates "layouts/*"
@@ -119,7 +120,7 @@ defmodule HuddlzWeb.Layouts do
                       Profile &amp; preferences
                     </a>
                   </li>
-                  <%= if @current_user.role == :admin do %>
+                  <%= if User.admin?(@current_user) do %>
                     <li>
                       <a
                         href="/admin"
@@ -416,7 +417,7 @@ defmodule HuddlzWeb.Layouts do
             <.v3_nav_icon name="help" />
             <span class="label">Help</span>
           </a>
-          <%= if @current_user && @current_user.role == :admin do %>
+          <%= if User.admin?(@current_user) do %>
             <a class={["sb-item", @active == "admin" && "active"]} href="/admin">
               <.v3_nav_icon name="shield" />
               <span class="label">Admin</span>
