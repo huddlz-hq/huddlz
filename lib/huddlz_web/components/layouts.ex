@@ -344,6 +344,47 @@ defmodule HuddlzWeb.Layouts do
             <.v3_nav_icon name="calendar" />
             <span class="label">My calendar</span>
           </a>
+          <a
+            class={["sb-item", String.starts_with?(@active || "", "organize") && "active"]}
+            href="/organize"
+          >
+            <.v3_nav_icon name="grid" />
+            <span class="label">Organize</span>
+          </a>
+          <%= if String.starts_with?(@active || "", "organize") do %>
+            <div class="sb-sub">
+              <a
+                class={["sb-sub-item", @active == "organize" && "active"]}
+                href="/organize"
+              >
+                Overview
+              </a>
+              <a
+                class={["sb-sub-item", @active == "organize-groups" && "active"]}
+                href="/organize/groups"
+              >
+                Groups
+              </a>
+              <a
+                class={["sb-sub-item", @active == "organize-huddlz" && "active"]}
+                href="/organize/huddlz"
+              >
+                Huddlz
+              </a>
+              <a
+                class={["sb-sub-item", @active == "organize-attendees" && "active"]}
+                href="/organize/attendees"
+              >
+                Attendees
+              </a>
+              <a
+                class={["sb-sub-item", @active == "organize-members" && "active"]}
+                href="/organize/members"
+              >
+                Members
+              </a>
+            </div>
+          <% end %>
         </nav>
 
         <div class="sb-account">
@@ -611,6 +652,33 @@ defmodule HuddlzWeb.Layouts do
       stroke-linejoin="round"
     >
       <path d="M12 3 4 6v6c0 5 3.5 8.5 8 9 4.5-.5 8-4 8-9V6l-8-3z" />
+    </svg>
+    """
+  end
+
+  defp v3_nav_icon(%{name: "grid"} = assigns) do
+    ~H"""
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <rect x="3" y="3" width="7" height="7" rx="1" /><rect
+        x="14"
+        y="3"
+        width="7"
+        height="7"
+        rx="1"
+      /><rect x="3" y="14" width="7" height="7" rx="1" /><rect
+        x="14"
+        y="14"
+        width="7"
+        height="7"
+        rx="1"
+      />
     </svg>
     """
   end

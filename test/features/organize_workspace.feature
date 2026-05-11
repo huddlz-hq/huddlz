@@ -19,13 +19,12 @@ Feature: Organizer workspace
   Scenario: Signed-in user with no groups sees the empty-state CTA
     Given I am signed in as "host@example.com"
     When I visit "/organize"
-    Then I should see "Organizer workspace."
-    And I should see "// Workspace"
-    And I should see "// Get started"
+    Then I should see "Organizer workspace"
+    And I should see "Get started"
     And I should see "You don't organize any groups yet."
     And I should see "Create your first group"
-    And I should not see "// Upcoming huddlz"
-    And I should not see "// Open RSVPs"
+    And I should not see "Upcoming huddlz"
+    And I should not see "Open RSVPs"
 
   Scenario: Sidebar lists every workspace tab
     Given I am signed in as "host@example.com"
@@ -46,9 +45,9 @@ Feature: Organizer workspace
     Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
     And I am signed in as "host@example.com"
     When I visit "/organize"
-    Then I should see "// Upcoming huddlz"
-    And I should see "// Open RSVPs"
-    And I should see "// Groups managed"
+    Then I should see "Upcoming huddlz"
+    And I should see "Open RSVPs"
+    And I should see "Groups managed"
     And I should see "No upcoming huddlz right now. Create one to get started."
 
   Scenario: Owner sees their upcoming huddl on the Overview
@@ -56,7 +55,7 @@ Feature: Organizer workspace
     And the huddl "Synthwave Night" exists in group "Cyberpunk Builders" hosted by "host@example.com"
     And I am signed in as "host@example.com"
     When I visit "/organize"
-    Then I should see "// Upcoming huddlz"
+    Then I should see "Upcoming huddlz"
     And I should see "Synthwave Night"
     And I should see "Cyberpunk Builders"
 
@@ -66,7 +65,7 @@ Feature: Organizer workspace
     And "attendee@example.com" has RSVPed to "Synthwave Night"
     And I am signed in as "host@example.com"
     When I visit "/organize"
-    Then I should see "// Open RSVPs"
+    Then I should see "Open RSVPs"
     And I should see "1 RSVP"
 
   Scenario: Groups tab shows the empty state when the actor owns no groups

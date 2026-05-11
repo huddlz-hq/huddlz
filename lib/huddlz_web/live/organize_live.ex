@@ -5,8 +5,6 @@ defmodule HuddlzWeb.OrganizeLive do
   """
   use HuddlzWeb, :live_view
 
-  import HuddlzWeb.OrganizeLive.Components
-
   alias Huddlz.Communities
   alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
@@ -17,6 +15,7 @@ defmodule HuddlzWeb.OrganizeLive do
   @member_role_order [:owner, :organizer, :member]
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
+  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -173,40 +172,38 @@ defmodule HuddlzWeb.OrganizeLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_user={@current_user}>
-      <.workspace_chrome active={@active} current_user={@current_user}>
-        <%= case @active do %>
-          <% :overview -> %>
-            <.overview_tab
-              owned_groups={@owned_groups}
-              upcoming_huddlz={@upcoming_huddlz}
-              upcoming_count={@upcoming_count}
-              open_rsvps={@open_rsvps}
-            />
-          <% :groups -> %>
-            <.groups_tab groups={@groups_list} />
-          <% :huddlz -> %>
-            <.huddlz_tab
-              huddlz={@huddlz_list}
-              filter={@huddlz_filter}
-              owned_groups={@owned_groups}
-            />
-          <% :attendees -> %>
-            <.attendees_tab
-              huddlz={@attendees_huddlz}
-              selected={@selected_huddl}
-              attendees={@selected_attendees}
-              waitlist={@selected_waitlist}
-            />
-          <% :members -> %>
-            <.members_tab
-              groups={@members_groups}
-              selected={@selected_group}
-              members={@selected_members}
-            />
-        <% end %>
-      </.workspace_chrome>
-    </Layouts.app>
+    <Layouts.v3_app flash={@flash} current_user={@current_user} active={active_key(@active)}>
+      <%= case @active do %>
+        <% :overview -> %>
+          <.overview_tab
+            owned_groups={@owned_groups}
+            upcoming_huddlz={@upcoming_huddlz}
+            upcoming_count={@upcoming_count}
+            open_rsvps={@open_rsvps}
+          />
+        <% :groups -> %>
+          <.groups_tab groups={@groups_list} />
+        <% :huddlz -> %>
+          <.huddlz_tab
+            huddlz={@huddlz_list}
+            filter={@huddlz_filter}
+            owned_groups={@owned_groups}
+          />
+        <% :attendees -> %>
+          <.attendees_tab
+            huddlz={@attendees_huddlz}
+            selected={@selected_huddl}
+            attendees={@selected_attendees}
+            waitlist={@selected_waitlist}
+          />
+        <% :members -> %>
+          <.members_tab
+            groups={@members_groups}
+            selected={@selected_group}
+            members={@selected_members}
+          />
+      <% end %>
+    </Layouts.v3_app>
     """
   end
 
@@ -218,112 +215,103 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :open_rsvps, :integer, required: true
 
   defp overview_tab(assigns) do
-    assigns = assign(assigns, :preview_limit, @upcoming_preview_limit)
+    members_total = Enum.reduce(assigns.owned_groups, 0, &(&1.member_count + &2))
+
+    assigns =
+      assigns
+      |> assign(:preview_limit, @upcoming_preview_limit)
+      |> assign(:members_total, members_total)
 
     ~H"""
-    <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div class="page-head">
       <div>
-        <span class="mono-label text-primary/70">// Overview</span>
-        <h1 class="text-3xl font-extrabold tracking-tight text-base-content mt-2">
-          Organizer workspace.
-        </h1>
-        <p class="mt-2 text-base-content/60 max-w-2xl">
-          A scannable summary of the huddlz and groups you run.
-        </p>
+        <h1>Organizer workspace</h1>
+        <p>A scannable summary of the huddlz and groups you run.</p>
       </div>
-      <div class="flex flex-wrap gap-2">
-        <.button navigate={~p"/groups/new"}>Create group</.button>
-        <.button variant="primary" navigate={create_huddl_path(@owned_groups)}>
-          Create huddl
-        </.button>
+      <div :if={@owned_groups != []} class="actions">
+        <a class="btn-secondary" href={~p"/groups/new"}>Create group</a>
+        <a class="btn-primary" href={create_huddl_path(@owned_groups)}>+ Create huddl</a>
       </div>
-    </header>
+    </div>
 
     <%= if @owned_groups == [] do %>
-      <.empty_state />
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Get started</h2>
+        </div>
+        <p class="muted">
+          You don't organize any groups yet. Create a group to start hosting huddlz —
+          once you have one, this overview fills in with upcoming huddlz, RSVP totals,
+          and quick actions.
+        </p>
+        <div style="margin-top:16px">
+          <a class="btn-primary" href={~p"/groups/new"}>Create your first group</a>
+        </div>
+      </div>
     <% else %>
-      <section class="grid gap-4 sm:grid-cols-3" aria-label="Workspace metrics">
-        <.metric_tile label="Upcoming huddlz" value={@upcoming_count} />
-        <.metric_tile label="Open RSVPs" value={@open_rsvps} />
-        <.metric_tile label="Groups managed" value={length(@owned_groups)} />
-      </section>
+      <div class="kpis">
+        <div class="kpi">
+          <div class="label">Members</div>
+          <div class="value">{@members_total}</div>
+          <div class="delta muted">Across {group_count_label(length(@owned_groups))}</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Upcoming</div>
+          <div class="value">{@upcoming_count}</div>
+          <div class="delta muted">Huddlz scheduled</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Open RSVPs</div>
+          <div class="value">{@open_rsvps}</div>
+          <div class="delta muted">Across upcoming huddlz</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Groups managed</div>
+          <div class="value">{length(@owned_groups)}</div>
+          <div class="delta muted">Owned by you</div>
+        </div>
+      </div>
 
-      <section>
-        <div class="flex items-baseline justify-between gap-2">
-          <h2 class="text-lg font-extrabold tracking-tight text-base-content flex items-baseline gap-3">
-            <span class="mono-label text-primary/70">// Upcoming huddlz</span>
-            <span class="text-sm font-body font-normal text-base-content/40">
-              ({@upcoming_count})
-            </span>
-          </h2>
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Upcoming huddlz</h2>
+            <div class="panel-sub">Next on the calendar across your groups</div>
+          </div>
           <.link
             :if={@upcoming_count > @preview_limit}
             navigate={~p"/organize/huddlz"}
-            class="text-xs font-bold text-primary hover:underline"
+            class="pill"
           >
-            View all →
+            View all
           </.link>
         </div>
 
         <%= if @upcoming_huddlz == [] do %>
-          <.surface_panel variant="dashed" class="p-8 mt-4 text-center text-base-content/50">
-            No upcoming huddlz right now. Create one to get started.
-          </.surface_panel>
+          <p class="muted">No upcoming huddlz right now. Create one to get started.</p>
         <% else %>
-          <.surface_panel tag="ul" class="mt-4 divide-y divide-base-300">
-            <%= for huddl <- Enum.take(@upcoming_huddlz, @preview_limit) do %>
-              <li class="flex items-center justify-between gap-4 px-5 py-4">
-                <div class="min-w-0">
-                  <.link
-                    navigate={~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"}
-                    class="text-base font-extrabold tracking-tight text-base-content hover:text-primary transition-colors block truncate"
-                  >
+          <div class="row-list">
+            <div
+              :for={huddl <- Enum.take(@upcoming_huddlz, @preview_limit)}
+              class="row"
+              style="grid-template-columns:1fr auto"
+            >
+              <div>
+                <div class="row-title">
+                  <.link navigate={~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"}>
                     {huddl.title}
                   </.link>
-                  <p class="text-xs text-base-content/60 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span>{format_starts_at(huddl.starts_at)}</span>
-                    <span class="text-base-content/30">·</span>
-                    <span>{huddl.group.name}</span>
-                  </p>
                 </div>
-                <.huddl_badge variant="cyan" class="flex-shrink-0">
-                  {rsvp_label(huddl.rsvp_count)}
-                </.huddl_badge>
-              </li>
-            <% end %>
-          </.surface_panel>
+                <div class="meta">
+                  {format_starts_at(huddl.starts_at)} · {huddl.group.name}
+                </div>
+              </div>
+              <span class="pill">{rsvp_label(huddl.rsvp_count)}</span>
+            </div>
+          </div>
         <% end %>
-      </section>
+      </div>
     <% end %>
-    """
-  end
-
-  attr :label, :string, required: true
-  attr :value, :integer, required: true
-
-  defp metric_tile(assigns) do
-    ~H"""
-    <.surface_panel class="p-6">
-      <span class="mono-label text-primary/70">// {@label}</span>
-      <p class="text-3xl font-extrabold tracking-tight text-base-content mt-2">{@value}</p>
-    </.surface_panel>
-    """
-  end
-
-  defp empty_state(assigns) do
-    ~H"""
-    <.surface_panel class="p-8">
-      <span class="mono-label text-primary/70">// Get started</span>
-      <h2 class="text-xl font-extrabold tracking-tight text-base-content mt-2">
-        You don't organize any groups yet.
-      </h2>
-      <p class="mt-2 text-sm text-base-content/60 max-w-xl">
-        Create a group to start hosting huddlz. Once you have a group, this overview will fill in with upcoming huddlz, RSVP totals, and quick actions.
-      </p>
-      <.button variant="primary" navigate={~p"/groups/new"} class="mt-4">
-        Create your first group
-      </.button>
-    </.surface_panel>
     """
   end
 
@@ -1016,4 +1004,13 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   defp format_starts_at(_), do: ""
+
+  defp active_key(:overview), do: "organize"
+  defp active_key(:groups), do: "organize-groups"
+  defp active_key(:huddlz), do: "organize-huddlz"
+  defp active_key(:attendees), do: "organize-attendees"
+  defp active_key(:members), do: "organize-members"
+
+  defp group_count_label(1), do: "1 group"
+  defp group_count_label(n), do: "#{n} groups"
 end
