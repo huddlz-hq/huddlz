@@ -227,6 +227,83 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
     end
   end
 
+  describe "recurring edit scope" do
+    setup do
+      owner = generate(user(role: :user))
+      group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+
+      recurring_huddl =
+        generate(
+          huddl(
+            title: "Recurring Huddl",
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            physical_location: "456 Oak Ave",
+            is_recurring: true,
+            frequency: :weekly,
+            repeat_until: Date.utc_today() |> Date.add(60)
+          )
+        )
+
+      %{owner: owner, group: group, huddl: recurring_huddl}
+    end
+
+    test "defaults to instance scope on load", %{
+      conn: conn,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+
+      assert_has(session, "*", text: "Editing one date")
+      assert_has(session, "input[type='hidden'][name='form[edit_type]'][value='instance']")
+      refute_has(session, "select[name='form[frequency]']")
+      refute_has(session, "input[name='form[repeat_until]']")
+    end
+
+    test "clicking 'Whole series' flips scope and reveals series fields", %{
+      conn: conn,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+        |> click_button("Whole series")
+
+      assert_has(session, "*", text: "Editing every upcoming date")
+      assert_has(session, "input[type='hidden'][name='form[edit_type]'][value='all']")
+      assert_has(session, "select[name='form[frequency]']")
+      assert_has(session, "input[name='form[repeat_until]']")
+    end
+
+    test "clicking 'Just this huddl' after 'Whole series' restores instance scope", %{
+      conn: conn,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+        |> click_button("Whole series")
+        |> click_button("Just this huddl")
+
+      assert_has(session, "*", text: "Editing one date")
+      assert_has(session, "input[type='hidden'][name='form[edit_type]'][value='instance']")
+      refute_has(session, "select[name='form[frequency]']")
+      refute_has(session, "input[name='form[repeat_until]']")
+    end
+  end
+
   describe "form submission" do
     setup do
       owner = generate(user(role: :user))
