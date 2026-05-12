@@ -3,7 +3,8 @@
 
   <p class="lede">
     You're about to turn off the <strong>{@entry.label}</strong>
-    email. You can re-enable it any time from <.link navigate={~p"/profile/notifications"}>your notification preferences</.link>.
+    email. You can re-enable it any time from
+    <.link navigate={~p"/profile/notifications"}>your notification preferences</.link>.
   </p>
 
   <div class="auth-card">
@@ -15,10 +16,13 @@
       method="post"
       id="unsubscribe-confirmation-form"
     >
-      <div class="form-foot is-flush">
-        <.v3_button variant={:primary} type="submit">Unsubscribe</.v3_button>
-        <.v3_button variant={:secondary} navigate={~p"/"}>Cancel</.v3_button>
+      <div class="form-foot">
+        <button type="submit" class="btn-primary">Unsubscribe</button>
       </div>
     </.form>
+  </div>
+
+  <div class="auth-aside">
+    <.link navigate={~p"/"}>Cancel</.link>
   </div>
 </Layouts.auth_shell>
