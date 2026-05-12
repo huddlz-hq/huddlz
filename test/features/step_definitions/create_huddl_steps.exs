@@ -203,26 +203,26 @@ defmodule CreateHuddlSteps do
 
           # Legacy support for old test format
           "Start Date & Time" ->
-            start_time = parse_relative_time(value)
-            date = DateTime.to_date(start_time)
-            time = DateTime.to_time(start_time)
+            start_dt = parse_relative_time(value)
+            date = DateTime.to_date(start_dt)
+            time = DateTime.to_time(start_dt)
 
             acc
             |> Map.put("date", Date.to_iso8601(date))
             |> Map.put("start_time", Time.to_iso8601(time) |> String.slice(0..4))
+            |> Map.put("start_datetime", start_dt)
 
           "End Date & Time" ->
-            # Calculate duration from start and end times if both exist
-            if Map.has_key?(acc, "date") && Map.has_key?(acc, "start_time") do
-              end_time = parse_relative_time(value)
+            # Calculate duration from the start datetime captured earlier in this table.
+            # `field_data` here is only the current row, so we must read from `acc`.
+            case Map.get(acc, "start_datetime") do
+              nil ->
+                acc
 
-              start_time =
-                parse_relative_time(field_data["Start Date & Time"] || "Tomorrow at 2:00 PM")
-
-              duration_minutes = DateTime.diff(end_time, start_time, :minute)
-              Map.put(acc, "duration_minutes", Integer.to_string(duration_minutes))
-            else
-              acc
+              start_dt ->
+                end_dt = parse_relative_time(value)
+                duration_minutes = DateTime.diff(end_dt, start_dt, :minute)
+                Map.put(acc, "duration_minutes", Integer.to_string(duration_minutes))
             end
 
           "Huddl Type" ->
@@ -386,6 +386,22 @@ defmodule CreateHuddlSteps do
       |> Ash.read!(actor: context.current_user, authorize?: true)
 
     assert length(huddlz) == count, "Expected #{count} huddlz, got #{length(huddlz)}"
+
+    context
+  end
+
+  step "the huddl {string} should be {int} minutes long",
+       %{args: [title, expected_minutes]} = context do
+    huddl =
+      Huddl
+      |> Ash.Query.filter(title == ^title)
+      |> Ash.read_one!(actor: context.current_user, authorize?: true)
+
+    assert huddl != nil, "Huddl '#{title}' was not created"
+    actual_minutes = DateTime.diff(huddl.ends_at, huddl.starts_at, :minute)
+
+    assert actual_minutes == expected_minutes,
+           "Expected huddl '#{title}' to be #{expected_minutes} minutes long, got #{actual_minutes}"
 
     context
   end
