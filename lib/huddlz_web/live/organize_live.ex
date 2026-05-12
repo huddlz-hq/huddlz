@@ -71,7 +71,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
       :error ->
         socket
-        |> put_flash(:error, "You don't organize that group.")
+        |> put_flash(:error, "That group doesn't exist, or you don't organize it.")
         |> push_navigate(to: ~p"/organize")
     end
   end

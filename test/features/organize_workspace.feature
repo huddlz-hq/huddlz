@@ -64,7 +64,13 @@ Feature: Organizer workspace
     Given a public group "Phoenix Devs" exists with owner "stranger@example.com"
     And I am signed in as "host@example.com"
     When I visit "/organize/phoenix-devs"
-    Then I should see "You don't organize that group."
+    Then I should see "That group doesn't exist, or you don't organize it."
+    And I should see "You don't organize any groups yet."
+
+  Scenario: Visiting an unknown group slug redirects back to the picker with the same flash
+    Given I am signed in as "host@example.com"
+    When I visit "/organize/no-such-group"
+    Then I should see "That group doesn't exist, or you don't organize it."
     And I should see "You don't organize any groups yet."
 
   Scenario: A co-organizer can open the workspace for a group they help run
@@ -77,7 +83,7 @@ Feature: Organizer workspace
     When I visit "/organize/cyberpunk-builders"
     Then I should see "Cyberpunk Builders"
     And I should see "Members"
-    And I should not see "You don't organize that group."
+    And I should not see "That group doesn't exist, or you don't organize it."
 
   Scenario: An admin can open the workspace for any group
     Given the following users exist:
@@ -87,7 +93,7 @@ Feature: Organizer workspace
     And I am signed in as "admin@example.com"
     When I visit "/organize/phoenix-devs"
     Then I should see "Phoenix Devs"
-    And I should not see "You don't organize that group."
+    And I should not see "That group doesn't exist, or you don't organize it."
 
   Scenario: Group overview shows zeroed KPIs and empty upcoming list
     Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
