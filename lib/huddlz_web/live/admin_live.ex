@@ -123,9 +123,7 @@ defmodule HuddlzWeb.AdminLive do
                     <span class={["pill", role_pill_variant(user.role)]}>{user.role}</span>
                   </td>
                   <td data-label="Actions">
-                    <%= if user.id == @current_user.id do %>
-                      <span class="muted">You</span>
-                    <% else %>
+                    <%= if Ash.can?({user, :update_role}, @current_user) do %>
                       <form phx-submit="update_role" class="role-form">
                         <input type="hidden" name="user_id" value={user.id} />
                         <select name="role" class="form-select">
@@ -134,6 +132,8 @@ defmodule HuddlzWeb.AdminLive do
                         </select>
                         <button type="submit" class="btn-primary">Update</button>
                       </form>
+                    <% else %>
+                      <span class="muted">You</span>
                     <% end %>
                   </td>
                 </tr>

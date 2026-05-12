@@ -440,7 +440,23 @@ defmodule Huddlz.Accounts.User do
       authorize_if always()
     end
 
+    # Self-role-change is forbidden for everyone, including admins. This
+    # regular policy runs before the admin bypass below — and because the
+    # bypass excludes :update_role, admins are subject to it. Without this,
+    # an admin could demote themselves and lock /admin out; `Ash.can?` would
+    # also report self-edits as allowed, so UIs couldn't pre-disable the
+    # control.
+    policy action(:update_role) do
+      description "Admins can change anyone's role except their own"
+      forbid_if expr(id == ^actor(:id))
+      authorize_if actor_attribute_equals(:role, :admin)
+    end
+
+    # Broad admin bypass — applies to everything EXCEPT :update_role, which
+    # is gated by the regular policy above so admins are not exempt from the
+    # self-role-change block.
     bypass actor_attribute_equals(:role, :admin) do
+      forbid_if action(:update_role)
       authorize_if always()
     end
 
