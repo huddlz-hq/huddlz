@@ -35,6 +35,7 @@ Feature: Huddl Image Management
       | End Date & Time   | tomorrow at 11:00 AM |
     And I submit the form
     Then I should see "Huddl created successfully"
+    And the huddl "Code Review Session" should be 60 minutes long
     And the huddl "Code Review Session" should use the group image
 
   Scenario: Creating a huddl with its own image

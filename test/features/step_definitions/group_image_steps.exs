@@ -73,11 +73,9 @@ defmodule GroupImageSteps do
   step "I cancel the pending image", context do
     session = context[:session] || context[:conn]
 
-    # Click the Remove button on the pending image preview (fires phx-click="cancel_pending_image")
-    session =
-      unwrap(session, fn view ->
-        Phoenix.LiveViewTest.render_click(view, "cancel_pending_image", %{})
-      end)
+    # Scope to the pending image preview so we only see its Remove button
+    # (other "Remove" controls may exist elsewhere on the page).
+    session = within(session, ".image-preview", fn scoped -> click_button(scoped, "Remove") end)
 
     Map.merge(context, %{session: session, conn: session})
   end
