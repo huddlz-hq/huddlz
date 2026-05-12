@@ -533,18 +533,23 @@ defmodule HuddlzWeb.HuddlLive.Edit do
       >
         <h2 class="font-display text-xl tracking-tight text-glow mb-6">Add New Address</h2>
 
-        <form phx-submit="save_location" phx-change="modal_form_changed">
-          <.live_component
-            module={HuddlzWeb.Live.LocationAutocomplete}
-            id="modal-address-autocomplete"
-            label="Search for an address"
-            placeholder="Search for an address or venue..."
-            types={[]}
-            fetch_coordinates={true}
-            show_clear={true}
-          />
+        <form phx-submit="save_location" phx-change="modal_form_changed" class="form-grid">
+          <div class="form-row">
+            <label class="form-label" for="modal-address-autocomplete-input">
+              Search for an address
+            </label>
+            <.live_component
+              module={HuddlzWeb.Live.LocationAutocomplete}
+              id="modal-address-autocomplete"
+              variant={:v3_form}
+              placeholder="Search for an address or venue..."
+              types={[]}
+              fetch_coordinates={true}
+              show_clear={true}
+            />
+          </div>
 
-          <div class="mt-4">
+          <div class="form-row">
             <label class="form-label" for="location-name-input">
               Location name (optional)
             </label>
@@ -559,7 +564,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
             />
           </div>
 
-          <div class="form-foot is-flush" style="margin-top:18px">
+          <div class="form-foot is-flush">
             <.v3_button variant={:primary} type="submit" disabled={is_nil(@modal_location_address)}>
               Save address
             </.v3_button>
