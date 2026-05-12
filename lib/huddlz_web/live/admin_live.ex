@@ -7,7 +7,7 @@ defmodule HuddlzWeb.AdminLive do
   alias Huddlz.Accounts
   alias HuddlzWeb.Layouts
 
-  on_mount {HuddlzWeb.LiveUserAuth, role_required: :admin}
+  on_mount {HuddlzWeb.LiveUserAuth, :admin_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
 
   @impl true
