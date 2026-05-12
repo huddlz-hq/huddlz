@@ -71,6 +71,10 @@ defmodule HuddlzWeb.GroupLive.Locations do
       sidebar_owned_groups={@sidebar_owned_groups}
       active="my-groups"
     >
+      <p class="locations-back">
+        <.link navigate={~p"/groups/#{@group.slug}"}>← Back to {@group.name}</.link>
+      </p>
+
       <div class="page-head">
         <div>
           <h1>Saved Locations</h1>
@@ -85,10 +89,6 @@ defmodule HuddlzWeb.GroupLive.Locations do
           </.v3_button>
         </div>
       </div>
-
-      <p class="locations-back">
-        <.link navigate={~p"/groups/#{@group.slug}"}>← Back to {@group.name}</.link>
-      </p>
 
       <.v3_panel>
         <:head>
@@ -169,7 +169,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
           Saved venues show up in the venue picker for everyone in your group.
         </p>
 
-        <form phx-submit="save_new_location" phx-change="modal_form_changed">
+        <form phx-submit="save_new_location" phx-change="modal_form_changed" class="form-grid">
           <.live_component
             module={HuddlzWeb.Live.LocationAutocomplete}
             id="modal-address-autocomplete"
@@ -180,7 +180,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
             show_clear={true}
           />
 
-          <div class="form-row" style="margin-top:16px">
+          <div class="form-row">
             <label class="form-label" for="location-name-input">Location name (optional)</label>
             <input
               type="text"
@@ -193,7 +193,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
             />
           </div>
 
-          <div class="form-foot is-flush" style="margin-top:18px">
+          <div class="form-foot is-flush">
             <.v3_button variant={:primary} type="submit" disabled={is_nil(@modal_location_address)}>
               Save Address
             </.v3_button>

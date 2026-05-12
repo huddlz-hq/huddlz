@@ -270,11 +270,13 @@ body.v3.is-signed-out .main { min-height: 100vh; }
    viewport including the persistent v3 sidebar rail. When rendered inside a
    signed-in v3 page, shift the modal backdrop + dialog right of the rail so
    the modal visually centers within the main content area and the sidebar
-   stays visible/interactive. Coupled to the wrapper classes in
-   `HuddlzWeb.CoreComponents.modal/1`. */
+   stays visible/interactive. Hooks onto the `data-cc-modal` attribute on
+   `HuddlzWeb.CoreComponents.modal/1` so the shift can't accidentally apply
+   to other `fixed inset-0` patterns. TODO(phase-8): remove with the rest
+   of the legacy modal when core_components.ex is deleted. */
 @media (min-width: 761px) {
   body.v3:not(.is-landing):not(.is-auth):not(.is-signed-out)
-    .relative.z-50 > .fixed.inset-0 {
+    [data-cc-modal] > .fixed.inset-0 {
     left: var(--rail-w);
   }
 }
@@ -1324,7 +1326,7 @@ body.v3 .row.location-row .location-rename .form-input { flex: 1 1 220px; min-wi
 body.v3 .row.location-row .location-rename-actions { display: flex; gap: 8px; }
 
 body.v3 .locations-back {
-  margin: -8px 0 16px;
+  margin: 0 0 12px;
   font-size: 13px;
 }
 body.v3 .locations-back a { color: var(--muted); }

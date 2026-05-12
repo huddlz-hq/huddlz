@@ -27,6 +27,17 @@ defmodule HuddlzWeb.GroupLive.LocationsTest do
       |> assert_has("h1", text: "Saved Locations")
     end
 
+    test "page is wrapped in the v3 sidebar shell", %{conn: conn, owner: owner, group: group} do
+      # Guards against accidentally reverting `on_mount {LiveUserAuth, :v3_app}`
+      # or losing the `<Layouts.v3_app>` wrapper — both regressions would put
+      # us back on legacy chrome with no sidebar/topbar.
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/locations")
+      |> assert_has("aside.sidebar")
+      |> assert_has(".content-topbar")
+    end
+
     test "organizer can access the page", %{conn: conn, organizer: organizer, group: group} do
       conn
       |> login(organizer)
