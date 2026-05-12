@@ -195,7 +195,7 @@ defmodule HuddlzWeb.OrganizeLive do
           You don't organize any groups yet. Create a group to start hosting huddlz —
           each group gets its own workspace here.
         </p>
-        <div style="margin-top:16px">
+        <div class="panel-cta">
           <a class="btn-primary" href={~p"/groups/new"}>Create your first group</a>
         </div>
       </div>
@@ -208,8 +208,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <div class="row-list">
           <a
             :for={group <- @groups}
-            class="row"
-            style="grid-template-columns: 1fr auto; align-items:center; text-decoration:none; color:inherit"
+            class="row row-split"
             href={~p"/organize/#{group.slug}"}
           >
             <div>
@@ -293,8 +292,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <div class="row-list">
           <div
             :for={huddl <- Enum.take(@upcoming_huddlz, @preview_limit)}
-            class="row"
-            style="grid-template-columns:1fr auto"
+            class="row row-split"
           >
             <div>
               <div class="row-title">
@@ -346,7 +344,7 @@ defmodule HuddlzWeb.OrganizeLive do
           <h2>{empty_huddlz_heading(@filter)}</h2>
         </div>
         <p class="muted">{empty_huddlz_body(@filter)}</p>
-        <div :if={@filter == :live} style="margin-top:16px">
+        <div :if={@filter == :live} class="panel-cta">
           <a class="btn-primary" href={~p"/groups/#{@group.slug}/huddlz/new"}>
             Create your first huddl
           </a>
@@ -361,8 +359,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <div class="row-list">
           <div
             :for={huddl <- @huddlz}
-            class="row"
-            style="grid-template-columns:1fr auto auto"
+            class="row row-split-two"
           >
             <div>
               <div class="row-title">
@@ -373,7 +370,7 @@ defmodule HuddlzWeb.OrganizeLive do
               <div class="meta">{format_starts_at(huddl.starts_at)}</div>
             </div>
             <span class="pill">{rsvp_label(huddl.rsvp_count)}</span>
-            <span class="pill" style={status_pill_style(huddl.status)}>
+            <span class={["pill", status_pill_class(huddl.status)]}>
               {format_status(huddl.status)}
             </span>
           </div>
@@ -401,8 +398,8 @@ defmodule HuddlzWeb.OrganizeLive do
   defp empty_huddlz_body(_),
     do: "Schedule a huddl to start hosting. Every huddl you create for this group lands here."
 
-  defp status_pill_style(:cancelled), do: "color:var(--muted)"
-  defp status_pill_style(_), do: nil
+  defp status_pill_class(:cancelled), do: "muted"
+  defp status_pill_class(_), do: nil
 
   defp format_status(:upcoming), do: "Upcoming"
   defp format_status(:in_progress), do: "In progress"
@@ -444,27 +441,21 @@ defmodule HuddlzWeb.OrganizeLive do
       </div>
 
       <%= for {role, rows} <- @grouped do %>
-        <div style="margin-top:18px">
-          <div style="display:flex; align-items:baseline; gap:10px; margin-bottom:8px">
-            <h3 style="margin:0; font-family:var(--mono); font-size:13px; color:var(--text)">
-              {role_heading(role)}
-            </h3>
-            <span class="muted" style="font-size:12px">({length(rows)})</span>
+        <div class="role-section">
+          <div class="role-section-head">
+            <h3>{role_heading(role)}</h3>
+            <span class="muted count">({length(rows)})</span>
           </div>
           <%= if rows == [] do %>
-            <p class="muted" style="font-size:13px">{role_empty_copy(role)}</p>
+            <p class="muted role-section-empty">{role_empty_copy(role)}</p>
           <% else %>
             <div class="row-list">
-              <div
-                :for={entry <- rows}
-                class="row"
-                style="grid-template-columns: 1fr auto"
-              >
+              <div :for={entry <- rows} class="row row-split">
                 <div>
                   <div class="row-title">{member_name(entry)}</div>
                   <div class="meta">{format_member_meta(entry)}</div>
                 </div>
-                <span class="pill" style={role_pill_style(role)}>{role_label(role)}</span>
+                <span class={["pill", role_pill_class(role)]}>{role_label(role)}</span>
               </div>
             </div>
           <% end %>
@@ -482,9 +473,9 @@ defmodule HuddlzWeb.OrganizeLive do
   defp role_label(:organizer), do: "Organizer"
   defp role_label(:member), do: "Member"
 
-  defp role_pill_style(:owner), do: "color:var(--cyan)"
-  defp role_pill_style(:organizer), do: "color:var(--warn)"
-  defp role_pill_style(_), do: nil
+  defp role_pill_class(:owner), do: "cyan"
+  defp role_pill_class(:organizer), do: "warn"
+  defp role_pill_class(_), do: nil
 
   defp role_empty_copy(:organizer),
     do: "No co-organizers yet. Promote a member to organizer to share the load."
