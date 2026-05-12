@@ -178,6 +178,23 @@ defmodule Huddlz.Communities.Group do
       filter expr(slug == ^arg(:slug))
     end
 
+    read :get_for_organize do
+      description """
+      Get a group by slug, but only when the actor can manage it as an
+      organizer — they own the group, are an `:organizer` GroupMember, or are
+      an admin (via the resource-level admin bypass). Drives `OrganizeLive`'s
+      per-slug auth check; nil result means "not organizable by this actor."
+      """
+
+      get? true
+
+      argument :slug, :string do
+        allow_nil? false
+      end
+
+      filter expr(slug == ^arg(:slug))
+    end
+
     update :update_details do
       description "Update group details"
       accept [:name, :description, :location, :is_public, :slug]
@@ -244,6 +261,14 @@ defmodule Huddlz.Communities.Group do
       # Explicitly forbid users that are not the owner
       forbid_unless relates_to_actor_via(:owner)
       authorize_if relates_to_actor_via(:owner)
+    end
+
+    # Owner or :organizer member can open the per-group organizer workspace.
+    # Admins are covered by the bypass at the top of this block.
+    policy action(:get_for_organize) do
+      description "Owner or :organizer member can manage this group as an organizer"
+      authorize_if expr(owner_id == ^actor(:id))
+      authorize_if expr(exists(group_members, user_id == ^actor(:id) and role == :organizer))
     end
 
     # Anyone can read public groups, owner and members can read private groups

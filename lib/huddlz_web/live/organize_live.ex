@@ -13,7 +13,6 @@ defmodule HuddlzWeb.OrganizeLive do
   """
   use HuddlzWeb, :live_view
 
-  alias Huddlz.Accounts.User
   alias Huddlz.Communities
   alias HuddlzWeb.Layouts
 
@@ -99,25 +98,9 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   defp load_group(slug, user) do
-    case Communities.get_by_slug(slug, actor: user, load: @group_loads) do
-      {:ok, %{} = group} ->
-        if organizable_by?(group, user), do: {:ok, group}, else: :error
-
-      _ ->
-        :error
-    end
-  end
-
-  defp organizable_by?(%{owner_id: owner_id}, %{id: actor_id}) when owner_id == actor_id, do: true
-
-  defp organizable_by?(group, user) do
-    if User.admin?(user) do
-      true
-    else
-      case Communities.get_membership_in_group(group.id, actor: user) do
-        {:ok, %{role: :organizer}} -> true
-        _ -> false
-      end
+    case Communities.get_group_for_organize(slug, actor: user, load: @group_loads) do
+      {:ok, %Huddlz.Communities.Group{} = group} -> {:ok, group}
+      _ -> :error
     end
   end
 
