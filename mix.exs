@@ -120,7 +120,7 @@ defmodule Huddlz.MixProject do
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
       {:corsica, "~> 2.1"},
-      {:cucumber, "~> 0.9.0", only: [:dev, :test]},
+      {:cucumber, "~> 0.9.1", only: [:dev, :test]},
       {:mox, "~> 1.0", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:phoenix_test, "~> 0.11.1", only: :test},

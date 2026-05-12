@@ -389,6 +389,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
             <h2>Cover image</h2>
           </div>
 
+          <label for={@uploads.huddl_image.ref} class="sr-only">Cover image</label>
           <.live_file_input upload={@uploads.huddl_image} class="hidden" />
 
           <.image_preview
@@ -524,7 +525,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     <div class="image-preview" phx-drop-target={@upload_ref}>
       <div class="card-cover" style={"background-image: url('#{@pending_preview_url}')"}></div>
       <div class="image-preview-foot">
-        <span>New image uploaded · saves with the rest of the huddl.</span>
+        <span>New image uploaded. Save to apply.</span>
         <div class="image-preview-actions">
           <label for={@upload_ref} class="btn-secondary" style="cursor:pointer">Replace</label>
           <.button variant={:muted} type="button" phx-click="cancel_pending_image">
@@ -617,7 +618,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         {:ok, updated_huddl} =
           get_huddl(huddl.id, socket.assigns.group_slug, socket.assigns.current_user)
 
-        {:noreply, assign(socket, :huddl, updated_huddl)}
+        {:noreply, socket |> assign(:huddl, updated_huddl) |> put_flash(:info, "Image removed")}
 
       _ ->
         {:noreply, socket}
