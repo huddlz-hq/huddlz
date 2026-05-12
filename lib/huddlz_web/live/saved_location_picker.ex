@@ -64,54 +64,56 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
 
   def render(assigns) do
     ~H"""
-    <div id={@id} class="relative" phx-click-away="dismiss" phx-target={@myself}>
-      <label class="mono-label text-primary/70 mb-1.5 block">Physical Location</label>
+    <div
+      id={@id}
+      class="form-row filter-location-wrap"
+      phx-click-away="dismiss"
+      phx-target={@myself}
+    >
+      <label class="form-label" for={"#{@id}-input"}>Physical Location</label>
 
       <%= if @selected_location do %>
-        <div data-testid="saved-location-selected">
-          <div class="flex items-center gap-2 h-10 pr-6 border-0 border-b border-primary/50 bg-transparent">
-            <.icon name="hero-map-pin" class="w-4 h-4 text-primary flex-shrink-0" />
-            <span
-              class="text-sm text-base-content truncate flex-1"
-              data-testid="saved-location-display"
+        <div class="location-display" data-testid="saved-location-selected">
+          <div class="location-current">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
             >
+              <path d="M12 22s7-7.6 7-13a7 7 0 0 0-14 0c0 5.4 7 13 7 13z" />
+              <circle cx="12" cy="9" r="2.5" />
+            </svg>
+            <span data-testid="saved-location-display">
               {@selected_location.name || @selected_location.address}
             </span>
-            <span
-              :if={@selected_location.name}
-              class="text-xs text-base-content/40 ml-2 truncate hidden sm:inline"
-            >
-              {@selected_location.address}
-            </span>
           </div>
-          <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
+          <div class="location-actions">
             <button
               type="button"
+              class="btn-secondary"
               phx-click="edit"
               phx-target={@myself}
               data-testid="saved-location-change"
-              aria-label="Change location"
-              class="inline-flex items-center gap-1.5 text-primary/70 hover:text-primary transition-colors"
             >
-              <.icon name="hero-pencil" class="h-3.5 w-3.5" /> Change address
+              Change address…
             </button>
-            <.link
-              patch={@new_location_path}
-              class="inline-flex items-center gap-1.5 text-primary/70 hover:text-primary transition-colors"
-            >
-              <.icon name="hero-plus" class="h-3.5 w-3.5" /> Add new address
+            <.link patch={@new_location_path} class="btn-secondary">
+              Add new address
             </.link>
           </div>
         </div>
       <% else %>
-        <div class="relative">
-          <.icon
-            name="hero-map-pin"
-            class="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40"
-          />
+        <div class="location-control">
           <input
             type="text"
             id={"#{@id}-input"}
+            class="form-input"
             value={@search_text}
             placeholder={
               if @group_locations == [],
@@ -129,61 +131,54 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
             aria-expanded={to_string(@show_dropdown && @filtered_locations != [])}
             aria-controls={"#{@id}-listbox"}
             disabled={@group_locations == []}
-            class={[
-              "w-full h-10 pl-6 pr-6 border-0 border-b border-base-300 bg-transparent",
-              "focus:border-primary focus:ring-0 focus:outline-none text-base-content text-sm",
-              @group_locations == [] && "opacity-50 cursor-not-allowed"
-            ]}
           />
           <button
             :if={@previous_location}
             type="button"
+            class="form-clear"
             phx-click="cancel_edit"
             phx-target={@myself}
-            class="absolute right-0 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content transition-colors"
             aria-label="Cancel"
           >
-            <.icon name="hero-x-mark" class="w-4 h-4" />
+            ×
           </button>
-
-          <div
-            :if={@show_dropdown && @filtered_locations != []}
-            id={"#{@id}-listbox"}
-            role="listbox"
-            class="absolute z-50 w-full mt-1 border border-base-300 bg-base-200 max-h-60 overflow-y-auto shadow-[0_4px_20px_oklch(75%_0.18_195/0.15)]"
-          >
-            <button
-              :for={loc <- @filtered_locations}
-              type="button"
-              phx-click="select"
-              phx-value-id={loc.id}
-              phx-target={@myself}
-              class="w-full text-left px-4 py-3 border-b border-base-300 last:border-b-0 cursor-pointer border-l-2 border-l-transparent hover:bg-primary/20 hover:border-l-primary"
-            >
-              <span class="font-medium text-base-content">{loc.name || loc.address}</span>
-              <span :if={loc.name} class="text-sm text-base-content/50 ml-1">{loc.address}</span>
-            </button>
-          </div>
-
-          <p
-            :if={
-              @show_dropdown && @filtered_locations == [] && @search_text != "" &&
-                @group_locations != []
-            }
-            class="absolute z-50 w-full mt-1 px-4 py-3 border border-base-300 bg-base-200 text-sm text-base-content/50 shadow-[0_4px_20px_oklch(75%_0.18_195/0.15)]"
-          >
-            No matching locations found
-          </p>
         </div>
-      <% end %>
 
-      <.link
-        :if={!@selected_location}
-        patch={@new_location_path}
-        class="mt-2 inline-flex items-center gap-1.5 text-sm text-primary/70 hover:text-primary transition-colors"
-      >
-        <.icon name="hero-plus" class="h-3.5 w-3.5" /> Add new address
-      </.link>
+        <div
+          :if={@show_dropdown && @filtered_locations != []}
+          id={"#{@id}-listbox"}
+          role="listbox"
+          class="filter-location-listbox"
+          style="min-width: 100%"
+        >
+          <button
+            :for={loc <- @filtered_locations}
+            type="button"
+            phx-click="select"
+            phx-value-id={loc.id}
+            phx-target={@myself}
+            class="filter-location-option"
+          >
+            <span class="opt-main">{loc.name || loc.address}</span>
+            <span :if={loc.name} class="opt-secondary">{loc.address}</span>
+          </button>
+        </div>
+
+        <p
+          :if={
+            @show_dropdown && @filtered_locations == [] && @search_text != "" &&
+              @group_locations != []
+          }
+          class="filter-location-listbox empty"
+          style="min-width: 100%"
+        >
+          No matching locations found
+        </p>
+
+        <.link patch={@new_location_path} class="btn-secondary saved-location-add">
+          Add new address
+        </.link>
+      <% end %>
     </div>
     """
   end
