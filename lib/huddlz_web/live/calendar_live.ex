@@ -14,7 +14,7 @@ defmodule HuddlzWeb.CalendarLive do
   @card_loads [:status, :group]
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
-  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
+  on_mount {HuddlzWeb.LiveUserAuth, :app}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -228,7 +228,7 @@ defmodule HuddlzWeb.CalendarLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.v3_app
+    <Layouts.app
       flash={@flash}
       current_user={@current_user}
       sidebar_owned_groups={@sidebar_owned_groups}
@@ -329,7 +329,7 @@ defmodule HuddlzWeb.CalendarLive do
           <span class="cal-legend-swatch" style="background:var(--muted)"></span> Past
         </span>
       </div>
-    </Layouts.v3_app>
+    </Layouts.app>
     """
   end
 
@@ -400,9 +400,9 @@ defmodule HuddlzWeb.CalendarLive do
           >
             <span class="meta">{format_agenda_when(entry.huddl.starts_at)}</span>
             <span class="row-title">{entry.huddl.title}</span>
-            <.v3_pill variant={agenda_pill_variant(entry, @today)}>
+            <.pill variant={agenda_pill_variant(entry, @today)}>
               {agenda_pill_label(entry, @today)}
-            </.v3_pill>
+            </.pill>
           </.link>
         </div>
       </div>

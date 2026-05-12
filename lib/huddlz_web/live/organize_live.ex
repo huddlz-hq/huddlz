@@ -1,7 +1,7 @@
 defmodule HuddlzWeb.OrganizeLive do
   @moduledoc """
   Per-group organizer workspace. Each owned group is its own workspace,
-  reached at `/organize/:group_slug` and rendered inside `<Layouts.v3_app>`
+  reached at `/organize/:group_slug` and rendered inside `<Layouts.app>`
   with the group's row in the sidebar `sb-orgs` section expanded.
 
   Routes:
@@ -25,7 +25,7 @@ defmodule HuddlzWeb.OrganizeLive do
   @upcoming_preview_limit 5
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
-  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
+  on_mount {HuddlzWeb.LiveUserAuth, :app}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -166,7 +166,7 @@ defmodule HuddlzWeb.OrganizeLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.v3_app
+    <Layouts.app
       flash={@flash}
       current_user={@current_user}
       sidebar_owned_groups={@sidebar_owned_groups}
@@ -188,7 +188,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <% :members -> %>
           <.members_view group={@group} members={@members} />
       <% end %>
-    </Layouts.v3_app>
+    </Layouts.app>
     """
   end
 

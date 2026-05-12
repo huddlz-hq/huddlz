@@ -1,4 +1,4 @@
-defmodule HuddlzWeb.V3.Pill do
+defmodule HuddlzWeb.Components.Pill do
   @moduledoc """
   V3 status pill — small inline badge used for RSVP states, role tags, etc.
   """
@@ -12,7 +12,7 @@ defmodule HuddlzWeb.V3.Pill do
   attr :rest, :global
   slot :inner_block, required: true
 
-  def v3_pill(assigns) do
+  def pill(assigns) do
     ~H"""
     <span class={["pill", variant_class(@variant), @class]} {@rest}>
       {render_slot(@inner_block)}

@@ -9,7 +9,7 @@ defmodule HuddlzWeb.ProfileLive do
   alias HuddlzWeb.Layouts
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
-  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
+  on_mount {HuddlzWeb.LiveUserAuth, :app}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -64,7 +64,7 @@ defmodule HuddlzWeb.ProfileLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.v3_app
+    <Layouts.app
       flash={@flash}
       current_user={@current_user}
       sidebar_owned_groups={@sidebar_owned_groups}
@@ -124,7 +124,7 @@ defmodule HuddlzWeb.ProfileLive do
               </div>
               <p class="form-help">Your email can't be changed from this page.</p>
             </div>
-            <.v3_input
+            <.input
               field={@form[:display_name]}
               label="Display name"
               placeholder="Enter your display name"
@@ -132,7 +132,7 @@ defmodule HuddlzWeb.ProfileLive do
             />
           </div>
           <div class="form-foot">
-            <.v3_button variant={:primary} type="submit">Save changes</.v3_button>
+            <.button variant={:primary} type="submit">Save changes</.button>
           </div>
         </div>
       </.form>
@@ -150,7 +150,7 @@ defmodule HuddlzWeb.ProfileLive do
           <.live_component
             module={HuddlzWeb.Live.LocationAutocomplete}
             id="profile-location"
-            variant={:v3_form}
+            variant={:form}
             field_name="home_location"
             value={@current_user.home_location}
             latitude={@current_user.home_latitude}
@@ -182,7 +182,7 @@ defmodule HuddlzWeb.ProfileLive do
           </div>
           <div class="form-grid">
             <%= if @current_user.hashed_password do %>
-              <.v3_input
+              <.input
                 field={@password_form[:current_password]}
                 type="password"
                 label="Current password"
@@ -190,7 +190,7 @@ defmodule HuddlzWeb.ProfileLive do
                 autocomplete="current-password"
               />
             <% end %>
-            <.v3_input
+            <.input
               field={@password_form[:password]}
               type="password"
               label="New password"
@@ -198,7 +198,7 @@ defmodule HuddlzWeb.ProfileLive do
               autocomplete="new-password"
               help="At least 8 characters."
             />
-            <.v3_input
+            <.input
               field={@password_form[:password_confirmation]}
               type="password"
               label="Confirm new password"
@@ -207,13 +207,13 @@ defmodule HuddlzWeb.ProfileLive do
             />
           </div>
           <div class="form-foot">
-            <.v3_button variant={:primary} type="submit">
+            <.button variant={:primary} type="submit">
               {if @current_user.hashed_password, do: "Update", else: "Set"} password
-            </.v3_button>
+            </.button>
           </div>
         </div>
       </.form>
-    </Layouts.v3_app>
+    </Layouts.app>
     """
   end
 

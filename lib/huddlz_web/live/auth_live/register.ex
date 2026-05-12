@@ -56,7 +56,7 @@ defmodule HuddlzWeb.AuthLive.Register do
         class="auth-card"
       >
         <div class="form-grid">
-          <.v3_input
+          <.input
             field={@form[:email]}
             type="email"
             label="Email"
@@ -64,7 +64,7 @@ defmodule HuddlzWeb.AuthLive.Register do
             autocomplete="email"
           />
 
-          <.v3_input
+          <.input
             field={@form[:display_name]}
             type="text"
             label="Display Name"
@@ -80,7 +80,7 @@ defmodule HuddlzWeb.AuthLive.Register do
             Generate random name
           </button>
 
-          <.v3_input
+          <.input
             field={@form[:password]}
             type="password"
             label="Password"
@@ -90,7 +90,7 @@ defmodule HuddlzWeb.AuthLive.Register do
             phx-debounce="blur"
           />
 
-          <.v3_input
+          <.input
             field={@form[:password_confirmation]}
             type="password"
             label="Confirm Password"

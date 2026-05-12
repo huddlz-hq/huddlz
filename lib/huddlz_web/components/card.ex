@@ -1,4 +1,4 @@
-defmodule HuddlzWeb.V3.Card do
+defmodule HuddlzWeb.Components.Card do
   @moduledoc """
   V3 card — anchor card used for huddlz, groups, and saved items in grid views.
 
@@ -24,7 +24,7 @@ defmodule HuddlzWeb.V3.Card do
   slot :body, required: true, doc: "card body — group label, title, meta"
   slot :foot, doc: "optional card foot — pill + relative time"
 
-  def v3_card(assigns) do
+  def card(assigns) do
     ~H"""
     <.link
       href={@href}
@@ -47,12 +47,12 @@ defmodule HuddlzWeb.V3.Card do
   end
 
   @doc """
-  Renders a date stamp (used inside a `<:cover>` slot of `v3_card`).
+  Renders a date stamp (used inside a `<:cover>` slot of `card`).
   """
   attr :month, :string, required: true, doc: "3-letter month abbreviation, uppercase"
   attr :day, :any, required: true, doc: "day of month"
 
-  def v3_date_stamp(assigns) do
+  def date_stamp(assigns) do
     ~H"""
     <div class="date-stamp">
       <span class="m">{@month}</span>
@@ -62,14 +62,14 @@ defmodule HuddlzWeb.V3.Card do
   end
 
   @doc """
-  Renders a card type tag (used inside a `<:cover>` slot of `v3_card`).
+  Renders a card type tag (used inside a `<:cover>` slot of `card`).
 
   Variants: `:in_person`, `:online`, `:hybrid`.
   """
   attr :variant, :atom, values: [:in_person, :online, :hybrid], required: true
   slot :inner_block, required: true
 
-  def v3_card_tag(assigns) do
+  def card_tag(assigns) do
     ~H"""
     <span class={["card-tag", tag_class(@variant)]}>{render_slot(@inner_block)}</span>
     """

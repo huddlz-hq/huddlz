@@ -1,16 +1,16 @@
-defmodule HuddlzWeb.V3Test do
+defmodule HuddlzWeb.ComponentsTest do
   use ExUnit.Case, async: true
 
   import Phoenix.Component
   import Phoenix.LiveViewTest
 
-  use HuddlzWeb.V3
+  use HuddlzWeb.Components
 
-  describe "v3_pill/1" do
+  describe "pill/1" do
     test "renders default pill with no extra variant class" do
       assigns = %{}
 
-      html = rendered_to_string(~H"<.v3_pill>Going</.v3_pill>")
+      html = rendered_to_string(~H"<.pill>Going</.pill>")
 
       assert html =~ "Going"
       assert html =~ ~s(class="pill)
@@ -21,9 +21,9 @@ defmodule HuddlzWeb.V3Test do
     test "renders cyan/warn/muted variants" do
       assigns = %{}
 
-      cyan = rendered_to_string(~H"<.v3_pill variant={:cyan}>Hosting</.v3_pill>")
-      warn = rendered_to_string(~H"<.v3_pill variant={:warn}>Waitlist</.v3_pill>")
-      muted = rendered_to_string(~H"<.v3_pill variant={:muted}>Past</.v3_pill>")
+      cyan = rendered_to_string(~H"<.pill variant={:cyan}>Hosting</.pill>")
+      warn = rendered_to_string(~H"<.pill variant={:warn}>Waitlist</.pill>")
+      muted = rendered_to_string(~H"<.pill variant={:muted}>Past</.pill>")
 
       assert cyan =~ "pill cyan"
       assert warn =~ "pill warn"
@@ -31,12 +31,12 @@ defmodule HuddlzWeb.V3Test do
     end
   end
 
-  describe "v3_chip/1" do
+  describe "chip/1" do
     test "renders a button chip by default with active state" do
       assigns = %{}
 
-      active = rendered_to_string(~H"<.v3_chip active>Upcoming · 6</.v3_chip>")
-      inactive = rendered_to_string(~H"<.v3_chip>Past</.v3_chip>")
+      active = rendered_to_string(~H"<.chip active>Upcoming · 6</.chip>")
+      inactive = rendered_to_string(~H"<.chip>Past</.chip>")
 
       assert active =~ "<button"
       assert active =~ "chip is-active"
@@ -49,7 +49,7 @@ defmodule HuddlzWeb.V3Test do
 
     test "renders a link when href is given" do
       assigns = %{}
-      html = rendered_to_string(~H|<.v3_chip href="/discover">Discover</.v3_chip>|)
+      html = rendered_to_string(~H|<.chip href="/discover">Discover</.chip>|)
 
       assert html =~ "<a"
       assert html =~ ~s(href="/discover")
@@ -57,10 +57,10 @@ defmodule HuddlzWeb.V3Test do
     end
   end
 
-  describe "v3_button/1" do
+  describe "button/1" do
     test "renders btn-primary variant" do
       assigns = %{}
-      html = rendered_to_string(~H"<.v3_button variant={:primary}>Save</.v3_button>")
+      html = rendered_to_string(~H"<.button variant={:primary}>Save</.button>")
 
       assert html =~ "btn-primary"
       assert html =~ "Save"
@@ -69,8 +69,8 @@ defmodule HuddlzWeb.V3Test do
     test "renders secondary by default and as a link with href" do
       assigns = %{}
 
-      btn = rendered_to_string(~H"<.v3_button>Cancel</.v3_button>")
-      link = rendered_to_string(~H|<.v3_button href="/discover">Browse</.v3_button>|)
+      btn = rendered_to_string(~H"<.button>Cancel</.button>")
+      link = rendered_to_string(~H|<.button href="/discover">Browse</.button>|)
 
       assert btn =~ "<button"
       assert btn =~ "btn-secondary"
@@ -87,8 +87,8 @@ defmodule HuddlzWeb.V3Test do
       # rendered but didn't actually submit.
       assigns = %{}
 
-      submit = rendered_to_string(~H|<.v3_button type="submit">Save</.v3_button>|)
-      default = rendered_to_string(~H"<.v3_button>Cancel</.v3_button>")
+      submit = rendered_to_string(~H|<.button type="submit">Save</.button>|)
+      default = rendered_to_string(~H"<.button>Cancel</.button>")
 
       assert submit =~ ~s(type="submit")
       refute submit =~ ~s(type="button")
@@ -96,19 +96,19 @@ defmodule HuddlzWeb.V3Test do
     end
   end
 
-  describe "v3_panel/1" do
+  describe "panel/1" do
     test "renders panel with optional head and sub" do
       assigns = %{}
 
       html =
         rendered_to_string(~H"""
-        <.v3_panel>
+        <.panel>
           <:head>
             <h2>Members</h2>
           </:head>
           <:sub>Roster summary</:sub>
           Body content
-        </.v3_panel>
+        </.panel>
         """)
 
       assert html =~ ~s(class="panel)
@@ -121,7 +121,7 @@ defmodule HuddlzWeb.V3Test do
 
     test "renders panel without head when not given" do
       assigns = %{}
-      html = rendered_to_string(~H"<.v3_panel>Just body</.v3_panel>")
+      html = rendered_to_string(~H"<.panel>Just body</.panel>")
 
       assert html =~ "Just body"
       refute html =~ "panel-head"
@@ -129,25 +129,25 @@ defmodule HuddlzWeb.V3Test do
     end
   end
 
-  describe "v3_card/1" do
+  describe "card/1" do
     test "renders an anchor card with body, optional cover and foot" do
       assigns = %{}
 
       html =
         rendered_to_string(~H"""
-        <.v3_card href="/groups/foo" gradient={3}>
+        <.card href="/groups/foo" gradient={3}>
           <:cover>
-            <.v3_date_stamp month="MAY" day={22} />
-            <.v3_card_tag variant={:hybrid}>Hybrid</.v3_card_tag>
+            <.date_stamp month="MAY" day={22} />
+            <.card_tag variant={:hybrid}>Hybrid</.card_tag>
           </:cover>
           <:body>
             <span class="card-group">Phoenix Elixir</span>
             <div class="card-title">Ash workshop</div>
           </:body>
           <:foot>
-            <.v3_pill variant={:cyan}>Hosting</.v3_pill>
+            <.pill variant={:cyan}>Hosting</.pill>
           </:foot>
-        </.v3_card>
+        </.card>
         """)
 
       assert html =~ "<a"
@@ -163,15 +163,15 @@ defmodule HuddlzWeb.V3Test do
     end
   end
 
-  describe "v3_list_row/1" do
+  describe "list_row/1" do
     test "renders a row with passed content and class" do
       assigns = %{}
 
       html =
         rendered_to_string(~H"""
-        <.v3_list_row class="notif-row unread">
+        <.list_row class="notif-row unread">
           <div class="row-title">New invite</div>
-        </.v3_list_row>
+        </.list_row>
         """)
 
       assert html =~ ~s(class="row notif-row unread")
@@ -179,13 +179,13 @@ defmodule HuddlzWeb.V3Test do
     end
   end
 
-  describe "v3_input/1" do
+  describe "input/1" do
     test "renders form-row with label, input, help" do
       assigns = %{}
 
       html =
         rendered_to_string(~H"""
-        <.v3_input
+        <.input
           name="title"
           value=""
           label="Title"
@@ -202,13 +202,13 @@ defmodule HuddlzWeb.V3Test do
     end
   end
 
-  describe "v3_textarea/1" do
+  describe "textarea/1" do
     test "renders form-textarea" do
       assigns = %{}
 
       html =
         rendered_to_string(~H"""
-        <.v3_textarea name="description" value="" label="Description" />
+        <.textarea name="description" value="" label="Description" />
         """)
 
       assert html =~ "<textarea"
@@ -217,13 +217,13 @@ defmodule HuddlzWeb.V3Test do
     end
   end
 
-  describe "v3_select/1" do
+  describe "select/1" do
     test "renders form-select with options and prompt" do
       assigns = %{}
 
       html =
         rendered_to_string(~H"""
-        <.v3_select
+        <.select
           name="frequency"
           value=""
           label="Frequency"

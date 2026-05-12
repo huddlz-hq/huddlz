@@ -21,7 +21,7 @@ defmodule HuddlzWeb.NotificationsLive do
   @valid_filters ~w(inbox invites)
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
-  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
+  on_mount {HuddlzWeb.LiveUserAuth, :app}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -185,7 +185,7 @@ defmodule HuddlzWeb.NotificationsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.v3_app
+    <Layouts.app
       flash={@flash}
       current_user={@current_user}
       sidebar_owned_groups={@sidebar_owned_groups}
@@ -204,12 +204,12 @@ defmodule HuddlzWeb.NotificationsLive do
       </div>
 
       <div class="filters">
-        <.v3_chip patch={filter_path(:inbox, 1)} active={@filter == :inbox}>
+        <.chip patch={filter_path(:inbox, 1)} active={@filter == :inbox}>
           Inbox · {@counts.inbox} unread
-        </.v3_chip>
-        <.v3_chip patch={filter_path(:invites, 1)} active={@filter == :invites}>
+        </.chip>
+        <.chip patch={filter_path(:invites, 1)} active={@filter == :invites}>
           Invites · {@counts.invites}
-        </.v3_chip>
+        </.chip>
       </div>
 
       <%= if Enum.empty?(@notifications) do %>
@@ -222,14 +222,14 @@ defmodule HuddlzWeb.NotificationsLive do
             <% end %>
           </div>
         </div>
-        <.v3_pagination
+        <.pagination
           :if={@page_info.total_pages > 1}
           current_page={@page_info.current_page}
           total_pages={@page_info.total_pages}
           event_name="change_page"
         />
       <% end %>
-    </Layouts.v3_app>
+    </Layouts.app>
     """
   end
 

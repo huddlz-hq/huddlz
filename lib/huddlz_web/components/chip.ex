@@ -1,4 +1,4 @@
-defmodule HuddlzWeb.V3.Chip do
+defmodule HuddlzWeb.Components.Chip do
   @moduledoc """
   V3 filter chip — used in `chip-group` filter bars.
 
@@ -15,7 +15,7 @@ defmodule HuddlzWeb.V3.Chip do
 
   slot :inner_block, required: true
 
-  def v3_chip(%{rest: rest} = assigns) do
+  def chip(%{rest: rest} = assigns) do
     if rest[:href] || rest[:navigate] || rest[:patch] do
       ~H"""
       <.link class={["chip", @active && "is-active", @class]} {@rest}>

@@ -1,6 +1,6 @@
-defmodule HuddlzWeb.V3.Input do
+defmodule HuddlzWeb.Components.Input do
   @moduledoc """
-  V3 form primitives — `v3_input/1`, `v3_textarea/1`, `v3_select/1`.
+  V3 form primitives — `input/1`, `textarea/1`, `select/1`.
 
   Each renders a `form-row` containing a `form-label`, the field control, and
   optional `form-help` / `form-error` text. They accept either a
@@ -25,7 +25,7 @@ defmodule HuddlzWeb.V3.Input do
   attr :rest, :global, include: ~w(autocomplete disabled form list max maxlength min minlength
                 pattern placeholder readonly required step inputmode)
 
-  def v3_input(%{field: %FormField{} = field} = assigns) do
+  def input(%{field: %FormField{} = field} = assigns) do
     errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
 
     assigns
@@ -33,10 +33,10 @@ defmodule HuddlzWeb.V3.Input do
     |> assign(:errors, Enum.map(errors, &translate_error/1))
     |> assign_new(:name, fn -> field.name end)
     |> assign_new(:value, fn -> field.value end)
-    |> v3_input()
+    |> input()
   end
 
-  def v3_input(assigns) do
+  def input(assigns) do
     assigns = assign_new(assigns, :id, fn -> assigns[:name] end)
 
     ~H"""
@@ -68,7 +68,7 @@ defmodule HuddlzWeb.V3.Input do
   attr :rest, :global, include: ~w(autocomplete disabled form maxlength minlength
                 placeholder readonly required rows cols)
 
-  def v3_textarea(%{field: %FormField{} = field} = assigns) do
+  def textarea(%{field: %FormField{} = field} = assigns) do
     errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
 
     assigns
@@ -76,10 +76,10 @@ defmodule HuddlzWeb.V3.Input do
     |> assign(:errors, Enum.map(errors, &translate_error/1))
     |> assign_new(:name, fn -> field.name end)
     |> assign_new(:value, fn -> field.value end)
-    |> v3_textarea()
+    |> textarea()
   end
 
-  def v3_textarea(assigns) do
+  def textarea(assigns) do
     assigns = assign_new(assigns, :id, fn -> assigns[:name] end)
 
     ~H"""
@@ -105,7 +105,7 @@ defmodule HuddlzWeb.V3.Input do
 
   attr :rest, :global, include: ~w(autocomplete disabled form multiple required size)
 
-  def v3_select(%{field: %FormField{} = field} = assigns) do
+  def select(%{field: %FormField{} = field} = assigns) do
     errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
 
     assigns
@@ -113,10 +113,10 @@ defmodule HuddlzWeb.V3.Input do
     |> assign(:errors, Enum.map(errors, &translate_error/1))
     |> assign_new(:name, fn -> field.name end)
     |> assign_new(:value, fn -> field.value end)
-    |> v3_select()
+    |> select()
   end
 
-  def v3_select(assigns) do
+  def select(assigns) do
     assigns = assign_new(assigns, :id, fn -> assigns[:name] end)
 
     ~H"""
@@ -136,10 +136,10 @@ defmodule HuddlzWeb.V3.Input do
 
   @doc """
   Renders `<p class="form-error">` lines for a form field whose markup isn't
-  produced by `v3_input/v3_textarea/v3_select` (e.g. an inline raw input or a
+  produced by `input/textarea/select` (e.g. an inline raw input or a
   radio-card group). Hidden until the field has been touched (`used_input?/1`).
   """
-  def v3_field_errors(%{field: %FormField{} = field} = assigns) do
+  def field_errors(%{field: %FormField{} = field} = assigns) do
     errors =
       if Phoenix.Component.used_input?(field) do
         Enum.map(field.errors, &translate_error/1)

@@ -27,8 +27,8 @@ defmodule HuddlzWeb.AuthLive.SignIn do
         class="auth-card"
       >
         <div class="form-grid">
-          <.v3_input field={f[:email]} type="email" label="Email" autocomplete="email" />
-          <.v3_input
+          <.input field={f[:email]} type="email" label="Email" autocomplete="email" />
+          <.input
             field={f[:password]}
             type="password"
             label="Password"

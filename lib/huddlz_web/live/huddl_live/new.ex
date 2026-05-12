@@ -15,7 +15,7 @@ defmodule HuddlzWeb.HuddlLive.New do
   alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
-  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
+  on_mount {HuddlzWeb.LiveUserAuth, :app}
 
   @impl true
   def mount(%{"group_slug" => group_slug}, _session, socket) do
@@ -151,7 +151,7 @@ defmodule HuddlzWeb.HuddlLive.New do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.v3_app
+    <Layouts.app
       flash={@flash}
       current_user={@current_user}
       sidebar_owned_groups={@sidebar_owned_groups}
@@ -172,13 +172,13 @@ defmodule HuddlzWeb.HuddlLive.New do
             <h2>The basics</h2>
           </div>
           <div class="form-grid">
-            <.v3_input
+            <.input
               field={@form[:title]}
               label="Title"
               placeholder="e.g. Ash Framework workshop"
               autocomplete="off"
             />
-            <.v3_textarea
+            <.textarea
               field={@form[:description]}
               label="Description"
               rows="4"
@@ -258,7 +258,7 @@ defmodule HuddlzWeb.HuddlLive.New do
               </:icon>
             </.event_type_option>
           </div>
-          <.v3_field_errors field={@form[:event_type]} />
+          <.field_errors field={@form[:event_type]} />
         </div>
 
         <div class="panel">
@@ -268,7 +268,7 @@ defmodule HuddlzWeb.HuddlLive.New do
           <div class="form-grid">
             <div class="form-row form-row-inline">
               <div class="form-col-md">
-                <.v3_input
+                <.input
                   field={@form[:date]}
                   type="date"
                   label="Date"
@@ -276,10 +276,10 @@ defmodule HuddlzWeb.HuddlLive.New do
                 />
               </div>
               <div class="form-col-sm">
-                <.v3_input field={@form[:start_time]} type="time" label="Start time" />
+                <.input field={@form[:start_time]} type="time" label="Start time" />
               </div>
               <div class="form-col-sm">
-                <.v3_select
+                <.select
                   field={@form[:duration_minutes]}
                   label="Duration"
                   prompt="Select duration…"
@@ -311,7 +311,7 @@ defmodule HuddlzWeb.HuddlLive.New do
             <%= if Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_recurring].value) do %>
               <div class="form-row form-row-inline">
                 <div class="form-col-md">
-                  <.v3_select
+                  <.select
                     field={@form[:frequency]}
                     label="Frequency"
                     options={[{"Weekly", "weekly"}, {"Monthly", "monthly"}]}
@@ -319,7 +319,7 @@ defmodule HuddlzWeb.HuddlLive.New do
                   />
                 </div>
                 <div class="form-col-md">
-                  <.v3_input
+                  <.input
                     field={@form[:repeat_until]}
                     type="date"
                     label="Repeat until"
@@ -349,7 +349,7 @@ defmodule HuddlzWeb.HuddlLive.New do
             <% end %>
 
             <%= if @show_virtual_link do %>
-              <.v3_input
+              <.input
                 field={@form[:virtual_link]}
                 type="url"
                 label="Online link"
@@ -365,7 +365,7 @@ defmodule HuddlzWeb.HuddlLive.New do
             <h2>Capacity &amp; visibility</h2>
           </div>
           <div class="form-grid">
-            <.v3_input
+            <.input
               field={@form[:max_attendees]}
               type="number"
               label="Max attendees"
@@ -424,9 +424,9 @@ defmodule HuddlzWeb.HuddlLive.New do
                   <label for={@uploads.huddl_image.ref} class="btn-secondary" style="cursor:pointer">
                     Replace
                   </label>
-                  <.v3_button variant={:muted} type="button" phx-click="cancel_pending_image">
+                  <.button variant={:muted} type="button" phx-click="cancel_pending_image">
                     Remove
-                  </.v3_button>
+                  </.button>
                 </div>
               </div>
             </div>
@@ -463,14 +463,14 @@ defmodule HuddlzWeb.HuddlLive.New do
                   style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-top:10px"
                 >
                   <span>{entry.client_name} · {entry.progress}%</span>
-                  <.v3_button
+                  <.button
                     variant={:muted}
                     type="button"
                     phx-click="cancel_image_upload"
                     phx-value-ref={entry.ref}
                   >
                     Cancel
-                  </.v3_button>
+                  </.button>
                 </div>
               </div>
 
@@ -488,10 +488,10 @@ defmodule HuddlzWeb.HuddlLive.New do
         </div>
 
         <div class="form-foot is-flush">
-          <.v3_button variant={:primary} type="submit" phx-disable-with="Scheduling…">
+          <.button variant={:primary} type="submit" phx-disable-with="Scheduling…">
             Schedule huddl
-          </.v3_button>
-          <.v3_button variant={:secondary} navigate={~p"/groups/#{@group.slug}"}>Cancel</.v3_button>
+          </.button>
+          <.button variant={:secondary} navigate={~p"/groups/#{@group.slug}"}>Cancel</.button>
         </div>
       </.form>
 
@@ -511,7 +511,7 @@ defmodule HuddlzWeb.HuddlLive.New do
             <.live_component
               module={HuddlzWeb.Live.LocationAutocomplete}
               id="modal-address-autocomplete"
-              variant={:v3_form}
+              variant={:form}
               placeholder="Search for an address or venue..."
               types={[]}
               fetch_coordinates={true}
@@ -535,16 +535,16 @@ defmodule HuddlzWeb.HuddlLive.New do
           </div>
 
           <div class="form-foot is-flush">
-            <.v3_button variant={:primary} type="submit" disabled={is_nil(@modal_location_address)}>
+            <.button variant={:primary} type="submit" disabled={is_nil(@modal_location_address)}>
               Save address
-            </.v3_button>
-            <.v3_button variant={:secondary} patch={~p"/groups/#{@group.slug}/huddlz/new"}>
+            </.button>
+            <.button variant={:secondary} patch={~p"/groups/#{@group.slug}/huddlz/new"}>
               Cancel
-            </.v3_button>
+            </.button>
           </div>
         </form>
       </.modal>
-    </Layouts.v3_app>
+    </Layouts.app>
     """
   end
 

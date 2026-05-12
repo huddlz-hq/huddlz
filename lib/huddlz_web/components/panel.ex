@@ -1,16 +1,16 @@
-defmodule HuddlzWeb.V3.Panel do
+defmodule HuddlzWeb.Components.Panel do
   @moduledoc """
   V3 panel surface — bordered container with optional `panel-head` (h2 + pill)
   and `panel-sub` (subtitle).
 
   ```
-  <.v3_panel>
+  <.panel>
     <:head>
       <h2>Members</h2>
     </:head>
     <:sub>43 active this week</:sub>
     Panel content here.
-  </.v3_panel>
+  </.panel>
   ```
   """
   use Phoenix.Component
@@ -22,7 +22,7 @@ defmodule HuddlzWeb.V3.Panel do
   slot :sub, doc: "subtitle text rendered under the head"
   slot :inner_block, required: true
 
-  def v3_panel(assigns) do
+  def panel(assigns) do
     ~H"""
     <section class={["panel", @class]} {@rest}>
       <header :if={@head != []} class="panel-head">

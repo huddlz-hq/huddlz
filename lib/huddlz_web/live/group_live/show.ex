@@ -13,7 +13,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   alias HuddlzWeb.MetaHelpers
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
-  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
+  on_mount {HuddlzWeb.LiveUserAuth, :app}
 
   @member_grid_visible 7
 
@@ -81,7 +81,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.v3_app
+    <Layouts.app
       flash={@flash}
       current_user={@current_user}
       sidebar_owned_groups={@sidebar_owned_groups}
@@ -195,45 +195,45 @@ defmodule HuddlzWeb.GroupLive.Show do
 
           <%= if @current_user do %>
             <div :if={role_pill(assigns)} class="role-pill">
-              <.v3_pill variant={:cyan}>{role_pill(assigns)}</.v3_pill>
+              <.pill variant={:cyan}>{role_pill(assigns)}</.pill>
             </div>
             <div class="side-actions">
-              <.v3_button
+              <.button
                 :if={@can_create_huddl}
                 variant={:primary}
                 navigate={~p"/groups/#{@group.slug}/huddlz/new"}
               >
                 + Create Huddl
-              </.v3_button>
-              <.v3_button
+              </.button>
+              <.button
                 :if={@can_edit_group}
                 variant={:secondary}
                 navigate={~p"/groups/#{@group.slug}/edit"}
               >
                 Edit Group
-              </.v3_button>
-              <.v3_button
+              </.button>
+              <.button
                 :if={@can_manage_locations}
                 variant={:secondary}
                 navigate={~p"/groups/#{@group.slug}/locations"}
               >
                 Locations
-              </.v3_button>
-              <.v3_button
+              </.button>
+              <.button
                 :if={!@is_member and @can_join_group}
                 variant={:primary}
                 phx-click="join_group"
               >
                 Join Group
-              </.v3_button>
-              <.v3_button
+              </.button>
+              <.button
                 :if={@can_leave_group}
                 variant={:muted}
                 phx-click="leave_group"
                 data-confirm="Are you sure you want to leave this group?"
               >
                 Leave Group
-              </.v3_button>
+              </.button>
             </div>
           <% end %>
 
@@ -302,7 +302,7 @@ defmodule HuddlzWeb.GroupLive.Show do
             <.huddl_grid huddlz={@upcoming_huddlz} empty_message="No upcoming huddlz scheduled." />
           <% else %>
             <.huddl_grid huddlz={@past_huddlz} empty_message="No past huddlz found." />
-            <.v3_pagination
+            <.pagination
               :if={@past_total_pages > 1}
               current_page={@past_page}
               total_pages={@past_total_pages}
@@ -311,7 +311,7 @@ defmodule HuddlzWeb.GroupLive.Show do
           <% end %>
         </div>
       </div>
-    </Layouts.v3_app>
+    </Layouts.app>
     """
   end
 
@@ -326,7 +326,7 @@ defmodule HuddlzWeb.GroupLive.Show do
       </p>
     <% else %>
       <div class="grid two">
-        <.v3_card
+        <.card
           :for={{huddl, idx} <- Enum.with_index(@huddlz)}
           navigate={~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"}
           gradient={Integer.mod(idx, 6) + 1}
@@ -338,10 +338,10 @@ defmodule HuddlzWeb.GroupLive.Show do
               src={HuddlImages.url(huddl.display_image_url)}
               alt={huddl.title}
             />
-            <.v3_date_stamp month={huddl_month(huddl)} day={huddl_day(huddl)} />
-            <.v3_card_tag variant={tag_variant(huddl.event_type)}>
+            <.date_stamp month={huddl_month(huddl)} day={huddl_day(huddl)} />
+            <.card_tag variant={tag_variant(huddl.event_type)}>
               {tag_label(huddl.event_type)}
-            </.v3_card_tag>
+            </.card_tag>
           </:cover>
           <:body>
             <span class="card-group">{huddl_kind_label(huddl)}</span>
@@ -354,7 +354,7 @@ defmodule HuddlzWeb.GroupLive.Show do
               <% end %>
             </div>
           </:body>
-        </.v3_card>
+        </.card>
       </div>
     <% end %>
     """
