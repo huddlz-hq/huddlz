@@ -121,7 +121,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   defp maybe_add_recurring_params(params, huddl) do
     if huddl.huddl_template_id do
       Map.merge(params, %{
-        "is_recurring" => "true",
         "repeat_until" => huddl.huddl_template.repeat_until,
         "frequency" => to_string(huddl.huddl_template.frequency)
       })
