@@ -42,6 +42,13 @@ Feature: Organizer workspace
     Then I should see "You don't organize any groups yet."
     And I should not see "Phoenix Devs"
 
+  Scenario: /organize picker lists owned groups alphabetically by name
+    Given a public group "Synth Society" exists with owner "host@example.com"
+    And a public group "Cyberpunk Builders" exists with owner "host@example.com"
+    And I am signed in as "host@example.com"
+    When I visit "/organize"
+    Then the picker should list "Cyberpunk Builders" before "Synth Society"
+
   Scenario: Sidebar shows each owned group with sub-tabs when active
     Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
     And a public group "Synth Society" exists with owner "host@example.com"

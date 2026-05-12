@@ -56,6 +56,17 @@ defmodule OrganizeWorkspaceSteps do
     context
   end
 
+  step "the picker should list {string} before {string}",
+       %{args: [first, second]} = context do
+    session = context[:session] || context[:conn]
+
+    session
+    |> assert_has("a.row .row-title", text: first, at: 1)
+    |> assert_has("a.row .row-title", text: second, at: 2)
+
+    context
+  end
+
   defp lookup_group(name) do
     Huddlz.Communities.Group
     |> Ash.Query.filter(name: name)
