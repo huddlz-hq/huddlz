@@ -170,15 +170,20 @@ defmodule HuddlzWeb.GroupLive.Locations do
         </p>
 
         <form phx-submit="save_new_location" phx-change="modal_form_changed" class="form-grid">
-          <.live_component
-            module={HuddlzWeb.Live.LocationAutocomplete}
-            id="modal-address-autocomplete"
-            label="Search for an address"
-            placeholder="Search for an address or venue..."
-            types={[]}
-            fetch_coordinates={true}
-            show_clear={true}
-          />
+          <div class="form-row">
+            <label class="form-label" for="modal-address-autocomplete-input">
+              Search for an address
+            </label>
+            <.live_component
+              module={HuddlzWeb.Live.LocationAutocomplete}
+              id="modal-address-autocomplete"
+              variant={:v3_form}
+              placeholder="Search for an address or venue..."
+              types={[]}
+              fetch_coordinates={true}
+              show_clear={true}
+            />
+          </div>
 
           <div class="form-row">
             <label class="form-label" for="location-name-input">Location name (optional)</label>
