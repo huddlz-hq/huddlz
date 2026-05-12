@@ -62,17 +62,16 @@ defmodule HuddlzWeb.LiveUserAuth do
     {:cont, maybe_load_user_details(socket)}
   end
 
-  # Flips the body class to `"v3"` so v3-scoped styles in app.css take effect.
-  # Pair with `<Layouts.v3_app>` in the LiveView template. Adds `is-signed-out`
-  # when there's no actor, so the body switches from the sidebar grid to the
-  # single-column shell rendered by `Layouts.v3_app` in chromeless mode.
+  # Pair with `<Layouts.v3_app>` in the LiveView template. Assigns
+  # `is-signed-out` when there's no actor so the body switches from the
+  # sidebar grid to the single-column shell rendered by `Layouts.v3_app`
+  # in chromeless mode.
   #
   # Also loads the user details the sidebar reads (profile picture URL, home
   # location) plus the groups the user organizes, which appear as `sb-org-row`
-  # entries in the v3 sidebar.
+  # entries in the sidebar.
   def on_mount(:v3_app, _params, _session, socket) do
-    body_class =
-      if socket.assigns[:current_user], do: "v3", else: "v3 is-signed-out"
+    body_class = if socket.assigns[:current_user], do: "", else: "is-signed-out"
 
     {:cont,
      socket

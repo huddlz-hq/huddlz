@@ -16,7 +16,7 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
     {:ok,
      socket
      |> assign(:page_title, "Reset password")
-     |> assign(:body_class, "v3 is-auth")
+     |> assign(:body_class, "is-auth")
      |> assign(:form, to_form(form))
      |> assign(:submitted, false)}
   end

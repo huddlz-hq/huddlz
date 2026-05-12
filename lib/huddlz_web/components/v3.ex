@@ -6,7 +6,7 @@ defmodule HuddlzWeb.V3 do
   clickthrough mockup at `/dev/design/clickthrough/*` is the design source
   of truth. Components defined under `HuddlzWeb.V3.*` mirror the v3
   vocabulary (`card`, `panel`, `chip`, `pill`, `row`, etc.) and are styled
-  from `body.v3 { ... }` rules in `assets/css/app.css`.
+  by the rules in `assets/css/app.css`.
 
   Importing this module brings every v3 function component into scope under
   a `v3_*` prefix (e.g. `<.v3_button>`, `<.v3_card>`, `<.v3_pill>`),
