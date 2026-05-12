@@ -140,6 +140,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
             <h2>Cover image</h2>
           </div>
 
+          <label for={@uploads.group_image.ref} class="sr-only">Cover image</label>
           <.live_file_input upload={@uploads.group_image} class="hidden" />
 
           <%= cond do %>

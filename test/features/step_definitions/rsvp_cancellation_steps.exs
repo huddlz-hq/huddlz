@@ -68,7 +68,11 @@ defmodule RsvpCancellationSteps do
       |> Ash.Query.load(:owner)
       |> Ash.read_one!(authorize?: false)
 
-    starts_at = parse_relative_time(huddl_data["starts_at"])
+    starts_at =
+      case Map.get(huddl_data, "starts_at") do
+        nil -> DateTime.add(DateTime.utc_now(), 86_400, :second)
+        relative -> parse_relative_time(relative)
+      end
 
     ends_at =
       case Map.get(huddl_data, "ends_at") do

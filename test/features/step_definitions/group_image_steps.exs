@@ -72,8 +72,13 @@ defmodule GroupImageSteps do
 
   step "I cancel the pending image", context do
     session = context[:session] || context[:conn]
-    # Click the X button on the pending image preview
-    session = click_button(session, "cancel_pending_image")
+
+    # Click the Remove button on the pending image preview (fires phx-click="cancel_pending_image")
+    session =
+      unwrap(session, fn view ->
+        Phoenix.LiveViewTest.render_click(view, "cancel_pending_image", %{})
+      end)
+
     Map.merge(context, %{session: session, conn: session})
   end
 
@@ -106,15 +111,15 @@ defmodule GroupImageSteps do
   end
 
   step "there should be only one pending image for the current user", context do
-    # Count pending images (group_id is nil)
+    # Count active pending images (group_id is nil, not soft-deleted)
     pending_count =
       GroupImage
-      |> Ash.Query.filter(is_nil(group_id))
+      |> Ash.Query.filter(is_nil(group_id) and is_nil(deleted_at))
       |> Ash.count!(authorize?: false)
 
-    # There should be at most 1 pending image (the second upload should have soft-deleted the first)
+    # There should be at most 1 active pending image (re-uploading soft-deletes the prior one)
     assert pending_count <= 1,
-           "Expected at most 1 pending image, but found #{pending_count}"
+           "Expected at most 1 active pending image, but found #{pending_count}"
 
     context
   end

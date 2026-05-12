@@ -70,14 +70,13 @@ Feature: Group Image Management
     Given a public group "Edit Test Group" exists with owner "owner@example.com"
     And I am signed in as "owner@example.com"
     When I visit the edit page for group "Edit Test Group"
-    Then I should see "Group Image"
-    And I should see "Upload a banner image for your group"
+    Then I should see "Cover image"
 
   Scenario: Owner can upload a new image for existing group
     Given a public group "Add Image Group" exists with owner "owner@example.com"
     And I am signed in as "owner@example.com"
     When I visit the edit page for group "Add Image Group"
-    And I upload "test/fixtures/test_image.jpg" to "Group Image"
+    And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "New image uploaded. Save to apply."
     When I click "Save Changes"
     Then I should see "Group updated successfully"
@@ -89,7 +88,7 @@ Feature: Group Image Management
     And I am signed in as "owner@example.com"
     When I visit the edit page for group "Replace Image Group"
     Then I should see "Current image"
-    When I upload "test/fixtures/test_image.jpg" to "Group Image"
+    When I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "New image uploaded. Save to apply."
     When I click "Save Changes"
     Then I should see "Group updated successfully"
@@ -101,7 +100,7 @@ Feature: Group Image Management
     And I am signed in as "owner@example.com"
     When I visit the edit page for group "Remove Image Group"
     Then I should see "Current image"
-    When I click "Remove image"
+    When I click the "Remove" button
     Then I should see "Image removed"
     And the group "Remove Image Group" should not have an image
 
@@ -110,7 +109,7 @@ Feature: Group Image Management
     And the group "Cancel Replace Group" has an image
     And I am signed in as "owner@example.com"
     When I visit the edit page for group "Cancel Replace Group"
-    And I upload "test/fixtures/test_image.jpg" to "Group Image"
+    And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "New image uploaded. Save to apply."
     When I cancel the pending image
     Then I should see "Current image"

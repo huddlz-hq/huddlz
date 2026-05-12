@@ -17,23 +17,23 @@ Feature: Huddl Image Management
     Given a public group "Tech Meetup" exists with owner "owner@example.com"
     And I am signed in as "owner@example.com"
     When I visit the new huddl page for group "Tech Meetup"
-    Then I should see "Huddl Image"
-    And I should see "Upload a banner image"
-    And I should see "Click to upload or drag and drop"
+    Then I should see "Cover image"
+    And I should see "Drop a 16:9 image"
 
   Scenario: Creating a huddl without an image falls back to group image
     Given a public group "Tech Meetup" exists with owner "owner@example.com"
     And the group "Tech Meetup" has an image
     And I am signed in as "owner@example.com"
     When I visit the new huddl page for group "Tech Meetup"
-    And I fill in "Title" with "Code Review Session"
-    And I fill in "Description" with "Weekly code review"
-    And I select "In Person" from "Huddl Type"
-    And I fill in "Location" with "Conference Room A"
-    And I fill in the date field with tomorrow's date
-    And I fill in the start time with "10:00"
-    And I select a duration of "60" minutes
-    And I click "Create Huddl"
+    And I fill in the huddl form with:
+      | Field             | Value                |
+      | Title             | Code Review Session  |
+      | Description       | Weekly code review   |
+      | Huddl Type        | In-Person            |
+      | Physical Location | Conference Room A    |
+      | Start Date & Time | tomorrow at 10:00 AM |
+      | End Date & Time   | tomorrow at 11:00 AM |
+    And I submit the form
     Then I should see "Huddl created successfully"
     And the huddl "Code Review Session" should use the group image
 
@@ -42,16 +42,17 @@ Feature: Huddl Image Management
     And the group "Tech Meetup" has an image
     And I am signed in as "owner@example.com"
     When I visit the new huddl page for group "Tech Meetup"
-    And I fill in "Title" with "Workshop"
-    And I fill in "Description" with "Hands-on workshop"
-    And I select "In Person" from "Huddl Type"
-    And I fill in "Location" with "Lab"
-    And I upload "test/fixtures/test_image.jpg" to "Huddl Image"
+    And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "Image uploaded"
-    When I fill in the date field with tomorrow's date
-    And I fill in the start time with "14:00"
-    And I select a duration of "120" minutes
-    And I click "Create Huddl"
+    When I fill in the huddl form with:
+      | Field             | Value                |
+      | Title             | Workshop             |
+      | Description       | Hands-on workshop    |
+      | Huddl Type        | In-Person            |
+      | Physical Location | Lab                  |
+      | Start Date & Time | tomorrow at 2:00 PM  |
+      | End Date & Time   | tomorrow at 4:00 PM  |
+    And I submit the form
     Then I should see "Huddl created successfully"
     And the huddl "Workshop" should have its own image
 
@@ -64,8 +65,8 @@ Feature: Huddl Image Management
       | Existing Huddl | Test desc   | in_person  | Test Location     | owner@example.com    |
     And I am signed in as "owner@example.com"
     When I visit the edit page for huddl "Existing Huddl"
-    Then I should see "Huddl Image"
-    And I should see "Upload a banner image"
+    Then I should see "Cover image"
+    And I should see "Drop a 16:9 image"
 
   Scenario: Owner can upload a new image for existing huddl
     Given a public group "Tech Meetup" exists with owner "owner@example.com"
@@ -74,9 +75,9 @@ Feature: Huddl Image Management
       | Add Image    | Test desc   | in_person  | Test Location     | owner@example.com    |
     And I am signed in as "owner@example.com"
     When I visit the edit page for huddl "Add Image"
-    And I upload "test/fixtures/test_image.jpg" to "Huddl Image"
+    And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "New image uploaded. Save to apply."
-    When I click "Save Changes"
+    When I click "Save changes"
     Then I should see "Huddl updated successfully"
     And the huddl "Add Image" should have its own image
 
@@ -90,7 +91,7 @@ Feature: Huddl Image Management
     And I am signed in as "owner@example.com"
     When I visit the edit page for huddl "Remove Image"
     Then I should see "Current image"
-    When I click "Remove image"
+    When I click the "Remove" button
     Then I should see "Image removed"
     And the huddl "Remove Image" should use the group image
 
@@ -101,16 +102,17 @@ Feature: Huddl Image Management
     And "organizer@example.com" is an organizer of "Tech Meetup"
     And I am signed in as "organizer@example.com"
     When I visit the new huddl page for group "Tech Meetup"
-    And I fill in "Title" with "Organizer Huddl"
-    And I fill in "Description" with "Created by organizer"
-    And I select "Virtual" from "Huddl Type"
-    And I fill in "Virtual Meeting Link" with "https://meet.example.com"
-    And I upload "test/fixtures/test_image.jpg" to "Huddl Image"
+    And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "Image uploaded"
-    When I fill in the date field with tomorrow's date
-    And I fill in the start time with "15:00"
-    And I select a duration of "60" minutes
-    And I click "Create Huddl"
+    When I fill in the huddl form with:
+      | Field             | Value                    |
+      | Title             | Organizer Huddl          |
+      | Description       | Created by organizer     |
+      | Huddl Type        | Virtual                  |
+      | Virtual Link      | https://meet.example.com |
+      | Start Date & Time | tomorrow at 3:00 PM      |
+      | End Date & Time   | tomorrow at 4:00 PM      |
+    And I submit the form
     Then I should see "Huddl created successfully"
     And the huddl "Organizer Huddl" should have its own image
 
