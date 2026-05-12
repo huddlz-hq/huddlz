@@ -7,6 +7,7 @@ defmodule HuddlzWeb.LiveUserAuth do
   use HuddlzWeb, :verified_routes
 
   alias AshAuthentication.Phoenix.LiveSession
+  alias Huddlz.Accounts.User
 
   # This is used for nested liveviews to fetch the current user.
   # To use, place the following at the top of that liveview:
@@ -48,10 +49,12 @@ defmodule HuddlzWeb.LiveUserAuth do
     end
   end
 
-  def on_mount([role_required: role_required], _params, _session, socket) do
-    current_user = socket.assigns[:current_user]
-
-    if current_user && current_user.role == role_required do
+  # Gate a LiveView on admin-only access. The "is this user an admin?" rule
+  # lives on the User resource (`User.admin?/1` + the `:is_admin` calculation),
+  # so this hook stays in sync with the policy bypass that uses the same role
+  # check on every Ash action.
+  def on_mount(:admin_required, _params, _session, socket) do
+    if User.admin?(socket.assigns[:current_user]) do
       {:cont, socket}
     else
       {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/sign-in")}
