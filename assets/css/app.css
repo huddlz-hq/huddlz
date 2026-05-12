@@ -265,21 +265,19 @@ body.is-signed-out .main { min-height: 100vh; }
   body:not(.is-landing):not(.is-auth):not(.is-signed-out) { grid-template-columns: var(--rail-w) 1fr; }
 }
 
-/* core_components <.modal> centers via `fixed inset-0`, which spans the full
-   viewport including the persistent v3 sidebar rail. When rendered inside a
-   signed-in v3 page, shift the modal backdrop + dialog right of the rail so
-   the modal visually centers within the main content area and the sidebar
-   stays visible/interactive. Hooks onto the `data-cc-modal` attribute on
-   `HuddlzWeb.CoreComponents.modal/1` so the shift can't accidentally apply
-   to other `fixed inset-0` patterns. TODO(phase-8): remove with the rest
-   of the legacy modal when core_components.ex is deleted. */
+/* `<.modal>` centers via `fixed inset-0`, which spans the full viewport
+   including the persistent v3 sidebar rail. When rendered on a signed-in
+   page with chrome, shift the modal backdrop + dialog right of the rail
+   so the modal visually centers within the main content area and the
+   sidebar stays visible/interactive. Hooks onto the `data-cc-modal`
+   attribute on `HuddlzWeb.Components.Modal.modal/1` so the shift can't
+   accidentally apply to other `fixed inset-0` patterns. */
 @media (min-width: 761px) {
   body:not(.is-landing):not(.is-auth):not(.is-signed-out)
     [data-cc-modal] > .fixed.inset-0 {
     left: var(--rail-w);
   }
 }
-
 
 /* Mobile nav toggle (CSS-only checkbox hack) */
 body .nav-toggle { display: none; }

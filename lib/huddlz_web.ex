@@ -87,9 +87,7 @@ defmodule HuddlzWeb do
 
       # HTML escaping functionality
       import Phoenix.HTML
-      # Core UI components
-      import HuddlzWeb.CoreComponents
-      # V3 design components — see HuddlzWeb.Components for the migration context.
+      # Design components (`<.flash>`, `<.icon>`, `<.avatar>`, `<.button>`, etc.)
       use HuddlzWeb.Components
 
       # Common modules used in templates
