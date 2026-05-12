@@ -15,10 +15,9 @@ defmodule HuddlzWeb.OrganizeLive do
 
   alias Huddlz.Accounts.User
   alias Huddlz.Communities
-  alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
 
-  @group_loads [:current_image_url, :member_count]
+  @group_loads [:member_count]
   @huddl_loads [:rsvp_count, :status, :group]
   @upcoming_loads [:rsvp_count, :group]
   @member_role_order [:owner, :organizer, :member]
@@ -56,7 +55,7 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   defp load_action(socket, :index, _params, user) do
-    owned_groups = load_owned_groups(user)
+    owned_groups = Ash.load!(socket.assigns.sidebar_owned_groups, @group_loads, actor: user)
 
     socket
     |> assign(:group, nil)
@@ -97,14 +96,6 @@ defmodule HuddlzWeb.OrganizeLive do
   defp load_section(socket, :members, group, user) do
     members = list_group_members(group, user)
     assign(socket, :members, members)
-  end
-
-  defp load_owned_groups(user) do
-    Communities.get_organizable_groups!(
-      actor: user,
-      load: @group_loads,
-      query: [sort: [name: :asc]]
-    )
   end
 
   defp load_group(slug, user) do
@@ -446,10 +437,7 @@ defmodule HuddlzWeb.OrganizeLive do
       @member_role_order
       |> Enum.map(fn role -> {role, Enum.filter(assigns.members, &(&1.role == role))} end)
 
-    assigns =
-      assigns
-      |> assign(:grouped, grouped)
-      |> assign(:cover_url, cover_url(assigns.group))
+    assigns = assign(assigns, :grouped, grouped)
 
     ~H"""
     <div class="page-head">
@@ -502,11 +490,6 @@ defmodule HuddlzWeb.OrganizeLive do
     </div>
     """
   end
-
-  defp cover_url(%{current_image_url: url}) when is_binary(url) and url != "",
-    do: GroupImages.url(url)
-
-  defp cover_url(_), do: nil
 
   defp role_heading(:owner), do: "Owner"
   defp role_heading(:organizer), do: "Co-organizers"
