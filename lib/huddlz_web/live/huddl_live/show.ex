@@ -686,6 +686,24 @@ defmodule HuddlzWeb.HuddlLive.Show do
     end
   end
 
+  defp event_full?(%{max_attendees: nil}), do: false
+  defp event_full?(huddl), do: huddl.rsvp_count >= huddl.max_attendees
+
+  defp capacity_percent(%{max_attendees: nil}), do: 0
+
+  defp capacity_percent(huddl) do
+    min(round(huddl.rsvp_count / huddl.max_attendees * 100), 100)
+  end
+
+  defp capacity_status(huddl) do
+    cond do
+      event_full?(huddl) -> "Huddl Full"
+      capacity_percent(huddl) >= 80 -> "Almost full"
+      capacity_percent(huddl) >= 50 -> "Filling up"
+      true -> "Plenty of space"
+    end
+  end
+
   defp description_paragraphs(text) do
     text
     |> String.split(~r/\r?\n\r?\n/, trim: true)

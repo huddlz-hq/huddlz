@@ -10,14 +10,13 @@ defmodule HuddlzWeb.V3 do
 
   Importing this module brings every v3 function component into scope under
   a `v3_*` prefix (e.g. `<.v3_button>`, `<.v3_card>`, `<.v3_pill>`),
-  avoiding collisions with the legacy daisy-styled components in
+  avoiding collisions with the surviving daisy-styled components in
   `HuddlzWeb.CoreComponents` during the migration window.
 
-  After the migration completes we delete `core_components.ex` and
-  `community_components.ex`, drop the `v3_` prefix on these functions, and
-  flatten the namespace to `HuddlzWeb.Components.*`. See
-  `~/.claude/plans/user-prompt-we-have-created-iterative-bird.md` for the
-  full migration plan.
+  Phase 8 cleanup: drop the `v3_` prefix on these functions and flatten
+  the namespace to `HuddlzWeb.Components.*` once `core_components.ex` is
+  gone. See `~/.claude/plans/user-prompt-we-have-created-iterative-bird.md`
+  for the full migration plan.
   """
 
   defmacro __using__(_opts) do
