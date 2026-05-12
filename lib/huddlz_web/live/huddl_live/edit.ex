@@ -196,10 +196,18 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         <%= if @huddl.huddl_template_id do %>
           <div class="panel">
             <div class="edit-scope-row">
-              <span class="eyebrow" style={edit_scope_eyebrow_style(@form)}>
-                {edit_scope_eyebrow_text(@form)}
-              </span>
-              <p>{edit_scope_description(@form, @huddl)}</p>
+              <%= case edit_type_value(@form) do %>
+                <% "all" -> %>
+                  <span class="eyebrow eyebrow-warn">Editing every upcoming date</span>
+                  <p>
+                    Your changes apply to all upcoming dates in this series. Past instances are unchanged.
+                  </p>
+                <% _ -> %>
+                  <span class="eyebrow">Editing one date</span>
+                  <p>
+                    This is a recurring huddl. Changes apply only to <strong>{Calendar.strftime(@huddl.starts_at, "%a, %b %-d")}</strong>.
+                  </p>
+              <% end %>
               <input
                 type="hidden"
                 id={@form[:edit_type].id}
@@ -449,58 +457,11 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
           <.live_file_input upload={@uploads.huddl_image} class="hidden" />
 
-          <%= cond do %>
-            <% @pending_preview_url -> %>
-              <div class="image-preview" phx-drop-target={@uploads.huddl_image.ref}>
-                <div
-                  class="card-cover"
-                  style={"background-image: url('#{@pending_preview_url}')"}
-                >
-                </div>
-                <div class="image-preview-foot">
-                  <span>New image uploaded · saves with the rest of the huddl.</span>
-                  <div class="image-preview-actions">
-                    <label for={@uploads.huddl_image.ref} class="btn-secondary" style="cursor:pointer">
-                      Replace
-                    </label>
-                    <.v3_button variant={:muted} type="button" phx-click="cancel_pending_image">
-                      Discard
-                    </.v3_button>
-                  </div>
-                </div>
-              </div>
-            <% @huddl.current_image_url -> %>
-              <div class="image-preview">
-                <div
-                  class="card-cover"
-                  style={"background-image: url('#{HuddlImages.url(@huddl.current_image_url)}')"}
-                >
-                </div>
-                <div class="image-preview-foot">
-                  <span>Current image.</span>
-                  <div class="image-preview-actions">
-                    <label for={@uploads.huddl_image.ref} class="btn-secondary" style="cursor:pointer">
-                      Replace
-                    </label>
-                    <.v3_button variant={:muted} type="button" phx-click="remove_current_image">
-                      Remove
-                    </.v3_button>
-                  </div>
-                </div>
-              </div>
-            <% @huddl.group.current_image_url -> %>
-              <div class="image-preview">
-                <div
-                  class="card-cover"
-                  style={"background-image: url('#{GroupImages.url(@huddl.group.current_image_url)}')"}
-                >
-                </div>
-                <div class="image-preview-foot">
-                  <span>Using group image — upload one specific to this huddl below.</span>
-                </div>
-              </div>
-            <% true -> %>
-          <% end %>
+          <.image_preview
+            pending_preview_url={@pending_preview_url}
+            huddl={@huddl}
+            upload_ref={@uploads.huddl_image.ref}
+          />
 
           <div class="upload-zone" phx-drop-target={@uploads.huddl_image.ref}>
             <div class="upload-icon">
@@ -647,6 +608,66 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     """
   end
 
+  attr :pending_preview_url, :string, default: nil
+  attr :huddl, :map, required: true
+  attr :upload_ref, :string, required: true
+
+  defp image_preview(%{pending_preview_url: url} = assigns) when is_binary(url) do
+    ~H"""
+    <div class="image-preview" phx-drop-target={@upload_ref}>
+      <div class="card-cover" style={"background-image: url('#{@pending_preview_url}')"}></div>
+      <div class="image-preview-foot">
+        <span>New image uploaded · saves with the rest of the huddl.</span>
+        <div class="image-preview-actions">
+          <label for={@upload_ref} class="btn-secondary" style="cursor:pointer">Replace</label>
+          <.v3_button variant={:muted} type="button" phx-click="cancel_pending_image">
+            Discard
+          </.v3_button>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp image_preview(%{huddl: %{current_image_url: url}} = assigns) when is_binary(url) do
+    ~H"""
+    <div class="image-preview">
+      <div
+        class="card-cover"
+        style={"background-image: url('#{HuddlImages.url(@huddl.current_image_url)}')"}
+      >
+      </div>
+      <div class="image-preview-foot">
+        <span>Current image.</span>
+        <div class="image-preview-actions">
+          <label for={@upload_ref} class="btn-secondary" style="cursor:pointer">Replace</label>
+          <.v3_button variant={:muted} type="button" phx-click="remove_current_image">
+            Remove
+          </.v3_button>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp image_preview(%{huddl: %{group: %{current_image_url: url}}} = assigns)
+       when is_binary(url) do
+    ~H"""
+    <div class="image-preview">
+      <div
+        class="card-cover"
+        style={"background-image: url('#{GroupImages.url(@huddl.group.current_image_url)}')"}
+      >
+      </div>
+      <div class="image-preview-foot">
+        <span>Using group image — upload one specific to this huddl below.</span>
+      </div>
+    </div>
+    """
+  end
+
+  defp image_preview(assigns), do: ~H""
+
   defp duration_options do
     [
       {"30 minutes", "30"},
@@ -664,36 +685,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     case AshPhoenix.Form.value(form.source, :edit_type) do
       "all" -> "all"
       _ -> "instance"
-    end
-  end
-
-  defp edit_scope_eyebrow_text(form) do
-    case edit_type_value(form) do
-      "all" -> "Editing every upcoming date"
-      _ -> "Editing one date"
-    end
-  end
-
-  defp edit_scope_eyebrow_style(form) do
-    case edit_type_value(form) do
-      "all" -> "color:var(--warn)"
-      _ -> "color:var(--cyan)"
-    end
-  end
-
-  defp edit_scope_description(form, huddl) do
-    case edit_type_value(form) do
-      "all" ->
-        Phoenix.HTML.raw(
-          "Your changes apply to all upcoming dates in this series. Past instances are unchanged."
-        )
-
-      _ ->
-        date = huddl.starts_at |> DateTime.to_date() |> Calendar.strftime("%a, %b %-d")
-
-        Phoenix.HTML.raw(
-          "This is a recurring huddl. Changes apply only to <strong>#{date}</strong>."
-        )
     end
   end
 
