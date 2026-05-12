@@ -434,6 +434,102 @@ defmodule Huddlz.Communities.GroupTest do
     end
   end
 
+  describe "get_for_organize" do
+    # Backs the per-slug auth check in OrganizeLive: succeeds when the actor
+    # can manage the group (owner, :organizer member, or admin via the
+    # resource-level bypass), and returns NotFound otherwise — the action is
+    # `get? true`, so policy-filtered rows surface as `Ash.Error.Query.NotFound`
+    # under the default `not_found_error?: true`. The LiveView treats both
+    # success-with-wrong-shape and error as "not organizable".
+
+    test "owner gets their group" do
+      owner = generate(user(role: :user))
+      group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+
+      assert {:ok, %Group{id: id}} =
+               Communities.get_group_for_organize(group.slug, actor: owner)
+
+      assert id == group.id
+    end
+
+    test ":organizer member gets the group" do
+      owner = generate(user(role: :user))
+      co = generate(user(role: :user))
+      group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+
+      generate(
+        group_member(
+          group_id: group.id,
+          user_id: co.id,
+          role: "organizer",
+          actor: owner
+        )
+      )
+
+      assert {:ok, %Group{id: id}} =
+               Communities.get_group_for_organize(group.slug, actor: co)
+
+      assert id == group.id
+    end
+
+    test "regular :member is excluded" do
+      owner = generate(user(role: :user))
+      member = generate(user(role: :user))
+      group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+
+      generate(
+        group_member(
+          group_id: group.id,
+          user_id: member.id,
+          role: "member",
+          actor: owner
+        )
+      )
+
+      assert {:error, %Ash.Error.Invalid{errors: [%Ash.Error.Query.NotFound{}]}} =
+               Communities.get_group_for_organize(group.slug, actor: member)
+    end
+
+    test "non-member of a public group is excluded" do
+      owner = generate(user(role: :user))
+      stranger = generate(user(role: :user))
+      group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+
+      assert {:error, %Ash.Error.Invalid{errors: [%Ash.Error.Query.NotFound{}]}} =
+               Communities.get_group_for_organize(group.slug, actor: stranger)
+    end
+
+    test "non-member of a private group is excluded" do
+      owner = generate(user(role: :user))
+      stranger = generate(user(role: :user))
+      group = generate(group(is_public: false, owner_id: owner.id, actor: owner))
+
+      assert {:error, %Ash.Error.Invalid{errors: [%Ash.Error.Query.NotFound{}]}} =
+               Communities.get_group_for_organize(group.slug, actor: stranger)
+    end
+
+    test "admin can open any group's slug via the resource-level bypass" do
+      # Mirrors the action's docstring: admins are not auto-included in the
+      # picker (`:get_organizable`), but the per-slug check intentionally lets
+      # an admin into any group's organizer workspace.
+      admin = generate(user(role: :admin))
+      owner = generate(user(role: :user))
+      group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+
+      assert {:ok, %Group{id: id}} =
+               Communities.get_group_for_organize(group.slug, actor: admin)
+
+      assert id == group.id
+    end
+
+    test "unknown slug returns NotFound" do
+      actor = generate(user(role: :user))
+
+      assert {:error, %Ash.Error.Invalid{errors: [%Ash.Error.Query.NotFound{}]}} =
+               Communities.get_group_for_organize("no-such-slug", actor: actor)
+    end
+  end
+
   describe "attribute constraints" do
     test "rejects description over 5000 characters" do
       owner = generate(user())

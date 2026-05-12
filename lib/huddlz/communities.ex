@@ -51,6 +51,7 @@ defmodule Huddlz.Communities do
       define :get_joined_groups, action: :get_joined
       define :my_groups, action: :my_groups, args: [{:optional, :relationship}]
       define :get_by_slug, action: :get_by_slug, args: [:slug]
+      define :get_group_for_organize, action: :get_for_organize, args: [:slug], get?: true
 
       define :update_details,
         action: :update_details,
