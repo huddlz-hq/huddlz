@@ -1322,6 +1322,31 @@ body .row.location-row .location-rename {
 body .row.location-row .location-rename .form-input { flex: 1 1 220px; min-width: 0; }
 body .row.location-row .location-rename-actions { display: flex; gap: 8px; }
 
+/* Generic row layout modifiers — used by OrganizeLive picker/overview/huddlz/members. */
+body .row.row-split { grid-template-columns: 1fr auto; }
+body .row.row-split-two { grid-template-columns: 1fr auto auto; }
+body a.row { text-decoration: none; color: inherit; }
+
+/* Members-by-role sections inside the OrganizeLive members panel. */
+body .role-section { margin-top: 18px; }
+body .role-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+body .role-section-head h3 {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+}
+body .role-section-head .count { font-size: 12px; }
+body .role-section-empty { font-size: 13px; }
+
+/* Trailing CTA inside a panel (e.g. "Create your first huddl" empty state). */
+body .panel-cta { margin-top: 16px; }
+
 body .locations-back {
   margin: 0 0 12px;
   font-size: 13px;
