@@ -1295,6 +1295,27 @@ body.v3 .row .row-title .title-tag {
 body.v3 .row.huddlz-row { grid-template-columns: 56px 1fr 130px 120px 120px 80px; }
 body.v3 .row.members-row { grid-template-columns: 48px 1fr 120px 110px; }
 
+/* Used by /groups/:slug/locations — title + trailing Rename/Delete buttons. */
+body.v3 .row.location-row { grid-template-columns: 1fr auto; gap: 18px; }
+body.v3 .row.location-row .row-desc { color: var(--muted); font-size: 12px; margin-top: 2px; }
+body.v3 .row.location-row .location-actions { display: flex; gap: 8px; align-items: center; }
+body.v3 .row.location-row .location-rename {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+body.v3 .row.location-row .location-rename .form-input { flex: 1 1 220px; min-width: 0; }
+body.v3 .row.location-row .location-rename-actions { display: flex; gap: 8px; }
+
+body.v3 .locations-back {
+  margin: -8px 0 16px;
+  font-size: 13px;
+}
+body.v3 .locations-back a { color: var(--muted); }
+body.v3 .locations-back a:hover { color: var(--cyan); }
+
 
 body.v3 .row .row-title { font-weight: 700; color: var(--text); }
 body.v3 .pill {

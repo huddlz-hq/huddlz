@@ -46,16 +46,18 @@ defmodule ProfilePictureSteps do
   end
 
   step "I should see the navbar avatar with image", context do
-    # The navbar avatar should contain an img tag when user has profile picture
-    # Now looking for thumbnail paths which end with _thumb.jpg
-    assert_has(context.session, "header img[src*='_thumb.jpg']")
+    # v3 chrome puts the user avatar in the sidebar's .sb-user link
+    # rather than the topbar. Image users get an <img> with the thumbnail src.
+    session = context[:session] || context[:conn]
+    assert_has(session, "aside.sidebar .sb-user img[src*='_thumb.jpg']")
     context
   end
 
   step "I should see the navbar avatar with initials {string}", %{args: [initials]} = context do
-    # The navbar avatar should show initials when no profile picture
+    # v3 chrome puts the user avatar in the sidebar's .sb-user link
+    # rather than the topbar. Initials render inside the .avatar span.
     session = context[:session] || context[:conn]
-    assert_has(session, "header", text: initials)
+    assert_has(session, "aside.sidebar .sb-user .avatar", text: initials)
     context
   end
 
