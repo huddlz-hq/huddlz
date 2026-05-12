@@ -80,7 +80,7 @@ defmodule HuddlzWeb.AuthLive.SignIn do
     {:ok,
      socket
      |> assign(:page_title, "Sign in")
-     |> assign(:body_class, "v3 is-auth")
+     |> assign(:body_class, "is-auth")
      |> assign(:password_form, password_form)
      |> assign(:trigger_action, false)}
   end

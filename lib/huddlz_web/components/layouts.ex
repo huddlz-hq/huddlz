@@ -17,8 +17,9 @@ defmodule HuddlzWeb.Layouts do
   but reads the real `current_user` and renders an admin link when the user
   is an admin.
 
-  Pair with `on_mount {HuddlzWeb.LiveUserAuth, :v3_app}` to flip the body
-  class to `"v3"` so the v3 styles in `app.css` take effect.
+  Pair with `on_mount {HuddlzWeb.LiveUserAuth, :v3_app}`, which loads
+  the sidebar's `sb-org-row` groups and sets the chromeless-mode body
+  class when there's no actor.
   """
   attr :flash, :map, required: true
   attr :current_user, :map, default: nil
@@ -195,7 +196,7 @@ defmodule HuddlzWeb.Layouts do
   and `/reset/:token`. Renders the brand topbar, the flash group, and an
   `auth-frame` container around the inner content.
 
-  Pair with `assign(socket, :body_class, "v3 is-auth")` in the LiveView's
+  Pair with `assign(socket, :body_class, "is-auth")` in the LiveView's
   `mount/3` so the v3 auth styles in `app.css` take effect.
   """
   attr :flash, :map, required: true
