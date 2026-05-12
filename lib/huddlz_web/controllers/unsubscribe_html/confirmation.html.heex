@@ -1,19 +1,12 @@
-<Layouts.app flash={@flash} current_user={@current_user}>
-  <section class="mx-auto max-w-xl border border-base-300 p-6 mt-8">
-    <span class="mono-label text-primary/70">Unsubscribe</span>
-    <h1 class="font-display text-2xl tracking-tight text-glow mt-2">
-      Confirm unsubscribe
-    </h1>
-    <p class="text-base-content/70 mt-3">
-      You're about to turn off the <strong class="text-base-content">{@entry.label}</strong>
-      email. You can re-enable it any time from <.link
-        navigate={~p"/profile/notifications"}
-        class="text-primary underline underline-offset-4 hover:text-secondary"
-      >
-        your notification preferences
-      </.link>.
-    </p>
+<Layouts.auth_shell flash={@flash}>
+  <h1>Confirm unsubscribe</h1>
 
+  <p class="lede">
+    You're about to turn off the <strong>{@entry.label}</strong>
+    email. You can re-enable it any time from <.link navigate={~p"/profile/notifications"}>your notification preferences</.link>.
+  </p>
+
+  <div class="auth-card">
     <.form
       :let={_f}
       for={%{}}
@@ -21,15 +14,11 @@
       action={~p"/unsubscribe/#{@token}"}
       method="post"
       id="unsubscribe-confirmation-form"
-      class="mt-6 flex items-center gap-3"
     >
-      <.button type="submit">Unsubscribe</.button>
-      <.link
-        navigate={~p"/"}
-        class="text-base-content/60 hover:text-base-content text-sm underline underline-offset-4"
-      >
-        Cancel
-      </.link>
+      <div class="form-foot is-flush">
+        <.v3_button variant={:primary} type="submit">Unsubscribe</.v3_button>
+        <.v3_button variant={:secondary} navigate={~p"/"}>Cancel</.v3_button>
+      </div>
     </.form>
-  </section>
-</Layouts.app>
+  </div>
+</Layouts.auth_shell>

@@ -20,7 +20,9 @@ defmodule HuddlzWeb.UnsubscribeController do
   def show(conn, %{"token" => token}) do
     case verify(token) do
       {:ok, _user_id, _trigger, entry} ->
-        render(conn, :confirmation, token: token, entry: entry)
+        conn
+        |> assign(:body_class, "v3 is-auth")
+        |> render(:confirmation, token: token, entry: entry)
 
       :error ->
         invalid_link(conn)

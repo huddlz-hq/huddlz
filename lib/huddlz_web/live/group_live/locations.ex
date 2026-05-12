@@ -11,6 +11,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
   alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
+  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -64,44 +65,51 @@ defmodule HuddlzWeb.GroupLive.Locations do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_user={@current_user}>
-      <.link
-        navigate={~p"/groups/#{@group.slug}"}
-        class="text-sm font-semibold leading-6 hover:underline"
-      >
-        <.icon name="hero-arrow-left" class="h-3 w-3" /> Back to {@group.name}
-      </.link>
+    <Layouts.v3_app
+      flash={@flash}
+      current_user={@current_user}
+      sidebar_owned_groups={@sidebar_owned_groups}
+      active="my-groups"
+    >
+      <div class="page-head">
+        <div>
+          <h1>Saved Locations</h1>
+          <p>
+            Manage saved addresses for <strong>{@group.name}</strong>.
+            They appear in the venue picker when you schedule a huddl.
+          </p>
+        </div>
+        <div class="actions">
+          <.v3_button variant={:primary} patch={~p"/groups/#{@group.slug}/locations/new"}>
+            Add Address
+          </.v3_button>
+        </div>
+      </div>
 
-      <.header>
-        Saved Locations
-        <:subtitle>
-          Manage saved addresses for <span class="font-semibold">{@group.name}</span>
-        </:subtitle>
-        <:actions>
-          <.link
-            patch={~p"/groups/#{@group.slug}/locations/new"}
-            class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-content text-sm font-medium btn-neon"
-          >
-            <.icon name="hero-plus" class="h-4 w-4" /> Add Address
-          </.link>
-        </:actions>
-      </.header>
+      <p class="locations-back">
+        <.link navigate={~p"/groups/#{@group.slug}"}>← Back to {@group.name}</.link>
+      </p>
 
-      <div class="mt-8 space-y-2">
+      <.v3_panel>
+        <:head>
+          <h2>Addresses</h2>
+        </:head>
+        <:sub :if={@locations != []}>
+          Click a row's actions to rename or remove it.
+        </:sub>
+
         <%= if @locations == [] do %>
-          <div class="border border-dashed border-base-300 p-8 text-center">
-            <.icon name="hero-map-pin" class="w-8 h-8 text-base-content/30 mx-auto mb-3" />
-            <p class="text-base-content/50 text-sm">No saved locations yet.</p>
-            <p class="text-base-content/40 text-xs mt-1">
-              Add addresses that your group uses regularly.
+          <div class="empty-state">
+            <p>No saved locations yet.</p>
+            <p class="muted">
+              Add addresses that your group uses regularly so you can pick them when scheduling a huddl.
             </p>
           </div>
         <% else %>
-          <div :for={loc <- @locations} class="border border-base-300 p-4 flex items-center gap-4">
-            <.icon name="hero-map-pin" class="w-5 h-5 text-primary/70 shrink-0" />
-            <div class="flex-1 min-w-0">
+          <div class="row-list">
+            <.v3_list_row :for={loc <- @locations} class="location-row">
               <%= if @editing_location_id == loc.id do %>
-                <form phx-submit="save_rename" class="flex items-center gap-2">
+                <form phx-submit="save_rename" class="location-rename">
                   <input type="hidden" name="location_id" value={loc.id} />
                   <input
                     type="text"
@@ -109,55 +117,46 @@ defmodule HuddlzWeb.GroupLive.Locations do
                     value={@editing_name}
                     phx-change="update_editing_name"
                     phx-debounce="100"
-                    class="flex-1 h-8 border-0 border-b border-base-300 bg-transparent focus:border-primary focus:ring-0 focus:outline-none text-base-content text-sm"
+                    class="form-input"
+                    aria-label="Location name"
                     autofocus
                   />
-                  <button
-                    type="submit"
-                    class="text-xs text-primary hover:text-primary/80 transition-colors"
-                  >
-                    Save
-                  </button>
-                  <button
-                    type="button"
-                    phx-click="cancel_rename"
-                    class="text-xs text-base-content/40 hover:text-base-content transition-colors"
-                  >
-                    Cancel
-                  </button>
+                  <div class="location-rename-actions">
+                    <.v3_button variant={:primary} type="submit">Save</.v3_button>
+                    <.v3_button variant={:secondary} type="button" phx-click="cancel_rename">
+                      Cancel
+                    </.v3_button>
+                  </div>
                 </form>
               <% else %>
-                <p class="text-sm font-medium text-base-content truncate">
-                  {loc.name || loc.address}
-                </p>
-                <p :if={loc.name} class="text-xs text-base-content/40 truncate">{loc.address}</p>
+                <div class="location-info">
+                  <div class="row-title">{loc.name || loc.address}</div>
+                  <div :if={loc.name} class="row-desc">{loc.address}</div>
+                </div>
+                <div class="location-actions">
+                  <.v3_button
+                    variant={:secondary}
+                    type="button"
+                    phx-click="start_rename"
+                    phx-value-id={loc.id}
+                  >
+                    Rename
+                  </.v3_button>
+                  <.v3_button
+                    variant={:destructive}
+                    type="button"
+                    phx-click="delete_location"
+                    phx-value-id={loc.id}
+                    data-confirm="Are you sure you want to delete this location?"
+                  >
+                    Delete
+                  </.v3_button>
+                </div>
               <% end %>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <button
-                :if={@editing_location_id != loc.id}
-                type="button"
-                phx-click="start_rename"
-                phx-value-id={loc.id}
-                class="p-1 text-base-content/30 hover:text-base-content transition-colors"
-                title="Rename"
-              >
-                <.icon name="hero-pencil" class="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                phx-click="delete_location"
-                phx-value-id={loc.id}
-                data-confirm="Are you sure you want to delete this location?"
-                class="p-1 text-base-content/30 hover:text-error transition-colors"
-                title="Delete"
-              >
-                <.icon name="hero-trash" class="w-4 h-4" />
-              </button>
-            </div>
+            </.v3_list_row>
           </div>
         <% end %>
-      </div>
+      </.v3_panel>
 
       <.modal
         :if={@live_action == :new_location}
@@ -165,7 +164,10 @@ defmodule HuddlzWeb.GroupLive.Locations do
         show
         on_cancel={JS.patch(~p"/groups/#{@group.slug}/locations")}
       >
-        <h2 class="font-display text-xl tracking-tight text-glow mb-6">Add New Address</h2>
+        <h2 class="modal-title">Add New Address</h2>
+        <p class="modal-sub">
+          Saved venues show up in the venue picker for everyone in your group.
+        </p>
 
         <form phx-submit="save_new_location" phx-change="modal_form_changed">
           <.live_component
@@ -178,10 +180,8 @@ defmodule HuddlzWeb.GroupLive.Locations do
             show_clear={true}
           />
 
-          <div class="mt-4">
-            <label class="mono-label text-primary/70 mb-1.5 block" for="location-name-input">
-              Location Name (optional)
-            </label>
+          <div class="form-row" style="margin-top:16px">
+            <label class="form-label" for="location-name-input">Location name (optional)</label>
             <input
               type="text"
               id="location-name-input"
@@ -189,24 +189,21 @@ defmodule HuddlzWeb.GroupLive.Locations do
               value={@modal_location_name}
               phx-debounce="100"
               placeholder="e.g., Community Center"
-              class="w-full h-10 border-0 border-b border-base-300 bg-transparent focus:border-primary focus:ring-0 focus:outline-none text-base-content text-sm"
+              class="form-input"
             />
           </div>
 
-          <div class="mt-6 flex gap-4">
-            <.button type="submit" disabled={is_nil(@modal_location_address)}>
+          <div class="form-foot is-flush" style="margin-top:18px">
+            <.v3_button variant={:primary} type="submit" disabled={is_nil(@modal_location_address)}>
               Save Address
-            </.button>
-            <.link
-              patch={~p"/groups/#{@group.slug}/locations"}
-              class="px-6 py-2 text-sm font-medium border border-base-300 hover:border-primary/30 transition-colors"
-            >
+            </.v3_button>
+            <.v3_button variant={:secondary} patch={~p"/groups/#{@group.slug}/locations"}>
               Cancel
-            </.link>
+            </.v3_button>
           </div>
         </form>
       </.modal>
-    </Layouts.app>
+    </Layouts.v3_app>
     """
   end
 

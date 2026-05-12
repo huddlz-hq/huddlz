@@ -18,15 +18,15 @@ defmodule HuddlzWeb.UnsubscribeControllerTest do
       refute reloaded_user(user).notification_preferences["rsvp_received"] == false
     end
 
-    test "renders inside the standard application layout", %{conn: conn} do
+    test "renders inside the v3 auth-shell layout", %{conn: conn} do
       user = generate(user())
       token = Notifications.unsubscribe_token(user, :rsvp_received)
 
       session = visit(conn, "/unsubscribe/#{token}")
 
-      # Standard app layout shell — navbar brand and footer link
-      assert_has(session, "header a", text: "huddlz")
-      assert_has(session, "footer a", text: "GitHub")
+      # v3 chromeless wrapper — brand topbar + auth-frame container.
+      assert_has(session, ".auth-topbar a[href='/']")
+      assert_has(session, ".auth-frame h1", text: "Confirm unsubscribe")
     end
 
     test "rejects unknown triggers without changing preferences", %{conn: conn} do
