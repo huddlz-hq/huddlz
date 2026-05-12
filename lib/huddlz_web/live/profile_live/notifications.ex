@@ -16,7 +16,7 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
   alias HuddlzWeb.Layouts
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
-  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
+  on_mount {HuddlzWeb.LiveUserAuth, :app}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -56,7 +56,7 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.v3_app
+    <Layouts.app
       flash={@flash}
       current_user={@current_user}
       sidebar_owned_groups={@sidebar_owned_groups}
@@ -91,10 +91,10 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
         />
 
         <div class="form-foot" style="border:0; margin:0 0 32px">
-          <.v3_button variant={:primary} type="submit">Save preferences</.v3_button>
+          <.button variant={:primary} type="submit">Save preferences</.button>
         </div>
       </form>
-    </Layouts.v3_app>
+    </Layouts.app>
     """
   end
 

@@ -25,11 +25,11 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   attr :fetch_coordinates, :boolean, default: true
 
   attr :variant, :atom,
-    values: [:default, :filter_pill, :v3_form],
+    values: [:default, :filter_pill, :form],
     default: :default,
     doc:
       "render style — `:filter_pill` mounts inside the v3 `.filter-location` chrome; " <>
-        "`:v3_form` renders the panel-style `.location-display` block used on `/profile`"
+        "`:form` renders the panel-style `.location-display` block used on `/profile`"
 
   def mount(socket) do
     {:ok,
@@ -111,7 +111,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   end
 
   def render(%{variant: :filter_pill} = assigns), do: render_filter_pill(assigns)
-  def render(%{variant: :v3_form} = assigns), do: render_v3_form(assigns)
+  def render(%{variant: :form} = assigns), do: render_form(assigns)
   def render(assigns), do: render_default(assigns)
 
   defp render_default(assigns) do
@@ -374,7 +374,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   # "Change location…" and "Clear" buttons (matching the clickthrough mockup);
   # when searching, falls back to a `.form-input` + `.filter-location-listbox`
   # dropdown so the suggestions reuse the v3 panel styling.
-  defp render_v3_form(assigns) do
+  defp render_form(assigns) do
     ~H"""
     <div
       id={@id}

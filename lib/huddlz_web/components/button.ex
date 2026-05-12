@@ -1,4 +1,4 @@
-defmodule HuddlzWeb.V3.Button do
+defmodule HuddlzWeb.Components.Button do
   @moduledoc """
   V3 button — `btn-primary` (cyan fill, one per surface) or `btn-secondary`
   (outline). Renders a `<button>` by default; pass `href`/`navigate`/`patch`
@@ -24,7 +24,7 @@ defmodule HuddlzWeb.V3.Button do
 
   slot :inner_block, required: true
 
-  def v3_button(%{rest: rest} = assigns) do
+  def button(%{rest: rest} = assigns) do
     if rest[:href] || rest[:navigate] || rest[:patch] do
       ~H"""
       <.link class={[base_class(@variant), @class]} {@rest}>

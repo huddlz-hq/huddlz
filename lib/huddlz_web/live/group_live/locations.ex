@@ -11,7 +11,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
   alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
-  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
+  on_mount {HuddlzWeb.LiveUserAuth, :app}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -65,7 +65,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.v3_app
+    <Layouts.app
       flash={@flash}
       current_user={@current_user}
       sidebar_owned_groups={@sidebar_owned_groups}
@@ -84,13 +84,13 @@ defmodule HuddlzWeb.GroupLive.Locations do
           </p>
         </div>
         <div class="actions">
-          <.v3_button variant={:primary} patch={~p"/groups/#{@group.slug}/locations/new"}>
+          <.button variant={:primary} patch={~p"/groups/#{@group.slug}/locations/new"}>
             Add Address
-          </.v3_button>
+          </.button>
         </div>
       </div>
 
-      <.v3_panel>
+      <.panel>
         <:head>
           <h2>Addresses</h2>
         </:head>
@@ -107,7 +107,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
           </div>
         <% else %>
           <div class="row-list">
-            <.v3_list_row :for={loc <- @locations} class="location-row">
+            <.list_row :for={loc <- @locations} class="location-row">
               <%= if @editing_location_id == loc.id do %>
                 <form phx-submit="save_rename" class="location-rename">
                   <input type="hidden" name="location_id" value={loc.id} />
@@ -122,10 +122,10 @@ defmodule HuddlzWeb.GroupLive.Locations do
                     autofocus
                   />
                   <div class="location-rename-actions">
-                    <.v3_button variant={:primary} type="submit">Save</.v3_button>
-                    <.v3_button variant={:secondary} type="button" phx-click="cancel_rename">
+                    <.button variant={:primary} type="submit">Save</.button>
+                    <.button variant={:secondary} type="button" phx-click="cancel_rename">
                       Cancel
-                    </.v3_button>
+                    </.button>
                   </div>
                 </form>
               <% else %>
@@ -134,15 +134,15 @@ defmodule HuddlzWeb.GroupLive.Locations do
                   <div :if={loc.name} class="row-desc">{loc.address}</div>
                 </div>
                 <div class="location-actions">
-                  <.v3_button
+                  <.button
                     variant={:secondary}
                     type="button"
                     phx-click="start_rename"
                     phx-value-id={loc.id}
                   >
                     Rename
-                  </.v3_button>
-                  <.v3_button
+                  </.button>
+                  <.button
                     variant={:destructive}
                     type="button"
                     phx-click="delete_location"
@@ -150,13 +150,13 @@ defmodule HuddlzWeb.GroupLive.Locations do
                     data-confirm="Are you sure you want to delete this location?"
                   >
                     Delete
-                  </.v3_button>
+                  </.button>
                 </div>
               <% end %>
-            </.v3_list_row>
+            </.list_row>
           </div>
         <% end %>
-      </.v3_panel>
+      </.panel>
 
       <.modal
         :if={@live_action == :new_location}
@@ -177,7 +177,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
             <.live_component
               module={HuddlzWeb.Live.LocationAutocomplete}
               id="modal-address-autocomplete"
-              variant={:v3_form}
+              variant={:form}
               placeholder="Search for an address or venue..."
               types={[]}
               fetch_coordinates={true}
@@ -199,16 +199,16 @@ defmodule HuddlzWeb.GroupLive.Locations do
           </div>
 
           <div class="form-foot is-flush">
-            <.v3_button variant={:primary} type="submit" disabled={is_nil(@modal_location_address)}>
+            <.button variant={:primary} type="submit" disabled={is_nil(@modal_location_address)}>
               Save Address
-            </.v3_button>
-            <.v3_button variant={:secondary} patch={~p"/groups/#{@group.slug}/locations"}>
+            </.button>
+            <.button variant={:secondary} patch={~p"/groups/#{@group.slug}/locations"}>
               Cancel
-            </.v3_button>
+            </.button>
           </div>
         </form>
       </.modal>
-    </Layouts.v3_app>
+    </Layouts.app>
     """
   end
 

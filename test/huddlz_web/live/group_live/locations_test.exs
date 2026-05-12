@@ -28,8 +28,8 @@ defmodule HuddlzWeb.GroupLive.LocationsTest do
     end
 
     test "page is wrapped in the v3 sidebar shell", %{conn: conn, owner: owner, group: group} do
-      # Guards against accidentally reverting `on_mount {LiveUserAuth, :v3_app}`
-      # or losing the `<Layouts.v3_app>` wrapper — both regressions would put
+      # Guards against accidentally reverting `on_mount {LiveUserAuth, :app}`
+      # or losing the `<Layouts.app>` wrapper — both regressions would put
       # us back on legacy chrome with no sidebar/topbar.
       conn
       |> login(owner)

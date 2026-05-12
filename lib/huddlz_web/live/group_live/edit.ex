@@ -20,7 +20,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
   alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
-  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
+  on_mount {HuddlzWeb.LiveUserAuth, :app}
 
   @impl true
   def mount(%{"slug" => slug}, _session, socket) do
@@ -121,7 +121,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.v3_app
+    <Layouts.app
       flash={@flash}
       current_user={@current_user}
       sidebar_owned_groups={@sidebar_owned_groups}
@@ -153,15 +153,15 @@ defmodule HuddlzWeb.GroupLive.Edit do
                 <div class="image-preview-foot">
                   <span class="muted">New image uploaded. Save to apply.</span>
                   <div class="image-preview-actions">
-                    <.v3_button variant={:primary} type="submit" phx-disable-with="Saving...">
+                    <.button variant={:primary} type="submit" phx-disable-with="Saving...">
                       Save
-                    </.v3_button>
+                    </.button>
                     <label for={@uploads.group_image.ref} class="btn-secondary upload-replace">
                       Replace
                     </label>
-                    <.v3_button variant={:muted} type="button" phx-click="cancel_pending_image">
+                    <.button variant={:muted} type="button" phx-click="cancel_pending_image">
                       Remove
-                    </.v3_button>
+                    </.button>
                   </div>
                 </div>
               </div>
@@ -178,14 +178,14 @@ defmodule HuddlzWeb.GroupLive.Edit do
                     <label for={@uploads.group_image.ref} class="btn-secondary upload-replace">
                       Replace
                     </label>
-                    <.v3_button
+                    <.button
                       variant={:muted}
                       type="button"
                       phx-click="remove_image"
                       data-confirm="Are you sure you want to remove this image?"
                     >
                       Remove
-                    </.v3_button>
+                    </.button>
                   </div>
                 </div>
               </div>
@@ -219,14 +219,14 @@ defmodule HuddlzWeb.GroupLive.Edit do
                   <.live_img_preview entry={entry} class="card-cover-img" />
                   <div class="image-preview-foot">
                     <span class="muted">{entry.client_name} · {entry.progress}%</span>
-                    <.v3_button
+                    <.button
                       variant={:muted}
                       type="button"
                       phx-click="cancel_image_upload"
                       phx-value-ref={entry.ref}
                     >
                       Cancel
-                    </.v3_button>
+                    </.button>
                   </div>
                 </div>
 
@@ -248,7 +248,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
             <h2>The basics</h2>
           </div>
           <div class="form-grid">
-            <.v3_input
+            <.input
               field={@form[:name]}
               label="Group Name"
               autocomplete="off"
@@ -279,7 +279,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
               </div>
             </div>
 
-            <.v3_textarea
+            <.textarea
               field={@form[:description]}
               label="Description"
               rows="4"
@@ -290,7 +290,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
               <.live_component
                 module={HuddlzWeb.Live.LocationAutocomplete}
                 id="group-location"
-                variant={:v3_form}
+                variant={:form}
                 field_name="form[location]"
                 value={@form[:location].value}
                 latitude={@selected_location_data && @selected_location_data.latitude}
@@ -345,15 +345,15 @@ defmodule HuddlzWeb.GroupLive.Edit do
         </div>
 
         <div class="form-foot">
-          <.v3_button variant={:primary} type="submit" phx-disable-with="Saving...">
+          <.button variant={:primary} type="submit" phx-disable-with="Saving...">
             Save Changes
-          </.v3_button>
-          <.v3_button variant={:secondary} navigate={~p"/groups/#{@original_slug}"}>
+          </.button>
+          <.button variant={:secondary} navigate={~p"/groups/#{@original_slug}"}>
             Cancel
-          </.v3_button>
+          </.button>
         </div>
       </.form>
-    </Layouts.v3_app>
+    </Layouts.app>
     """
   end
 

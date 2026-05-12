@@ -48,7 +48,7 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
           class="auth-card"
         >
           <div class="form-grid">
-            <.v3_input
+            <.input
               field={@form[:email]}
               type="email"
               label="Email"

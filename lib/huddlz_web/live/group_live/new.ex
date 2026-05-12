@@ -21,7 +21,7 @@ defmodule HuddlzWeb.GroupLive.New do
   alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
-  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
+  on_mount {HuddlzWeb.LiveUserAuth, :app}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -189,7 +189,7 @@ defmodule HuddlzWeb.GroupLive.New do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.v3_app
+    <Layouts.app
       flash={@flash}
       current_user={@current_user}
       sidebar_owned_groups={@sidebar_owned_groups}
@@ -210,7 +210,7 @@ defmodule HuddlzWeb.GroupLive.New do
             <h2>The basics</h2>
           </div>
           <div class="form-grid">
-            <.v3_input
+            <.input
               field={@form[:name]}
               label="Group name"
               placeholder="e.g. Phoenix Elixir Meetup"
@@ -222,7 +222,7 @@ defmodule HuddlzWeb.GroupLive.New do
                 URL: {url(~p"/groups/#{@form[:slug].value || "..."}")}
               </div>
             </div>
-            <.v3_textarea
+            <.textarea
               field={@form[:description]}
               label="Description"
               placeholder="Tell people what your group is about, what huddlz to expect, and who should join."
@@ -233,7 +233,7 @@ defmodule HuddlzWeb.GroupLive.New do
               <.live_component
                 module={HuddlzWeb.Live.LocationAutocomplete}
                 id="group-location"
-                variant={:v3_form}
+                variant={:form}
                 field_name="form[location]"
                 value={@form[:location].value}
                 latitude={@selected_location_data && @selected_location_data.latitude}
@@ -273,9 +273,9 @@ defmodule HuddlzWeb.GroupLive.New do
                   <label for={@uploads.group_image.ref} class="btn-secondary" style="cursor:pointer">
                     Replace
                   </label>
-                  <.v3_button variant={:muted} type="button" phx-click="cancel_pending_image">
+                  <.button variant={:muted} type="button" phx-click="cancel_pending_image">
                     Remove
-                  </.v3_button>
+                  </.button>
                 </div>
               </div>
             </div>
@@ -312,14 +312,14 @@ defmodule HuddlzWeb.GroupLive.New do
                   style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-top:10px"
                 >
                   <span>{entry.client_name} · {entry.progress}%</span>
-                  <.v3_button
+                  <.button
                     variant={:muted}
                     type="button"
                     phx-click="cancel_image_upload"
                     phx-value-ref={entry.ref}
                   >
                     Cancel
-                  </.v3_button>
+                  </.button>
                 </div>
               </div>
 
@@ -374,13 +374,13 @@ defmodule HuddlzWeb.GroupLive.New do
         </div>
 
         <div class="form-foot" style="border:0; margin:0">
-          <.v3_button variant={:primary} type="submit" phx-disable-with="Creating…">
+          <.button variant={:primary} type="submit" phx-disable-with="Creating…">
             Create group
-          </.v3_button>
-          <.v3_button variant={:secondary} navigate={~p"/my-groups"}>Cancel</.v3_button>
+          </.button>
+          <.button variant={:secondary} navigate={~p"/my-groups"}>Cancel</.button>
         </div>
       </.form>
-    </Layouts.v3_app>
+    </Layouts.app>
     """
   end
 end

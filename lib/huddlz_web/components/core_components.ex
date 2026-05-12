@@ -4,7 +4,7 @@ defmodule HuddlzWeb.CoreComponents do
   `modal/1` and its `show_modal/2`/`hide_modal/2` JS commands.
 
   Everything else (button, input, table, pagination, the form-field
-  pickers, etc.) was replaced by `HuddlzWeb.V3.*` during the v3 migration.
+  pickers, etc.) was replaced by `HuddlzWeb.Components.*` during the v3 migration.
   These four are the last holdouts — modal and flash will likely follow.
   """
   use Phoenix.Component

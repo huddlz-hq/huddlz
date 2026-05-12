@@ -89,8 +89,8 @@ defmodule HuddlzWeb do
       import Phoenix.HTML
       # Core UI components
       import HuddlzWeb.CoreComponents
-      # V3 design components — see HuddlzWeb.V3 for the migration context.
-      use HuddlzWeb.V3
+      # V3 design components — see HuddlzWeb.Components for the migration context.
+      use HuddlzWeb.Components
 
       # Common modules used in templates
       alias HuddlzWeb.Layouts

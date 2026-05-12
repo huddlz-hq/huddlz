@@ -79,14 +79,14 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
             <.expired_token_state />
           <% else %>
             <div class="form-grid">
-              <.v3_input
+              <.input
                 field={f[:password]}
                 type="password"
                 label="New password"
                 autocomplete="new-password"
                 help="At least 8 characters."
               />
-              <.v3_input
+              <.input
                 field={f[:password_confirmation]}
                 type="password"
                 label="Confirm new password"

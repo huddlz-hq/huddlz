@@ -20,7 +20,7 @@ defmodule HuddlzWeb.MyGroupsLive do
   @valid_filters ~w(all hosting joined)
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
-  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
+  on_mount {HuddlzWeb.LiveUserAuth, :app}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -136,7 +136,7 @@ defmodule HuddlzWeb.MyGroupsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.v3_app
+    <Layouts.app
       flash={@flash}
       current_user={@current_user}
       sidebar_owned_groups={@sidebar_owned_groups}
@@ -153,15 +153,15 @@ defmodule HuddlzWeb.MyGroupsLive do
       </div>
 
       <div class="filters">
-        <.v3_chip patch={filter_path(:all, 1)} active={@filter == :all}>
+        <.chip patch={filter_path(:all, 1)} active={@filter == :all}>
           All · {@counts.all}
-        </.v3_chip>
-        <.v3_chip patch={filter_path(:hosting, 1)} active={@filter == :hosting}>
+        </.chip>
+        <.chip patch={filter_path(:hosting, 1)} active={@filter == :hosting}>
           Hosting · {@counts.hosting}
-        </.v3_chip>
-        <.v3_chip patch={filter_path(:joined, 1)} active={@filter == :joined}>
+        </.chip>
+        <.chip patch={filter_path(:joined, 1)} active={@filter == :joined}>
           Joined · {@counts.joined}
-        </.v3_chip>
+        </.chip>
       </div>
 
       <%= if Enum.empty?(@groups) do %>
@@ -169,21 +169,21 @@ defmodule HuddlzWeb.MyGroupsLive do
       <% else %>
         <div class="grid">
           <%= for {group, idx} <- Enum.with_index(@groups) do %>
-            <.v3_my_group_card
+            <.my_group_card
               group={group}
               role={role_for(group, @current_user)}
               gradient={Integer.mod(idx, 6) + 1}
             />
           <% end %>
         </div>
-        <.v3_pagination
+        <.pagination
           :if={@page_info.total_pages > 1}
           current_page={@page_info.current_page}
           total_pages={@page_info.total_pages}
           event_name="change_page"
         />
       <% end %>
-    </Layouts.v3_app>
+    </Layouts.app>
     """
   end
 
@@ -191,9 +191,9 @@ defmodule HuddlzWeb.MyGroupsLive do
   attr :role, :atom, required: true
   attr :gradient, :integer, required: true
 
-  defp v3_my_group_card(assigns) do
+  defp my_group_card(assigns) do
     ~H"""
-    <.v3_card navigate={~p"/groups/#{@group.slug}"} gradient={@gradient}>
+    <.card navigate={~p"/groups/#{@group.slug}"} gradient={@gradient}>
       <:cover>
         <img
           :if={@group.current_image_url}
@@ -210,7 +210,7 @@ defmodule HuddlzWeb.MyGroupsLive do
           <span>{member_count_label(@group)}</span>
         </div>
       </:body>
-    </.v3_card>
+    </.card>
     """
   end
 

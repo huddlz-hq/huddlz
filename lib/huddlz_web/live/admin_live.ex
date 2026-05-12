@@ -8,7 +8,7 @@ defmodule HuddlzWeb.AdminLive do
   alias HuddlzWeb.Layouts
 
   on_mount {HuddlzWeb.LiveUserAuth, role_required: :admin}
-  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
+  on_mount {HuddlzWeb.LiveUserAuth, :app}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -71,7 +71,7 @@ defmodule HuddlzWeb.AdminLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.v3_app
+    <Layouts.app
       flash={@flash}
       current_user={@current_user}
       sidebar_owned_groups={@sidebar_owned_groups}
@@ -142,7 +142,7 @@ defmodule HuddlzWeb.AdminLive do
           <% end %>
         <% end %>
       </div>
-    </Layouts.v3_app>
+    </Layouts.app>
     """
   end
 

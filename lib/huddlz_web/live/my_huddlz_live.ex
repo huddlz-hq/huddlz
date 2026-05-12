@@ -26,7 +26,7 @@ defmodule HuddlzWeb.MyHuddlzLive do
   @valid_filters ~w(upcoming waitlisted past)
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
-  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
+  on_mount {HuddlzWeb.LiveUserAuth, :app}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -155,7 +155,7 @@ defmodule HuddlzWeb.MyHuddlzLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.v3_app
+    <Layouts.app
       flash={@flash}
       current_user={@current_user}
       sidebar_owned_groups={@sidebar_owned_groups}
@@ -172,15 +172,15 @@ defmodule HuddlzWeb.MyHuddlzLive do
       </div>
 
       <div class="filters">
-        <.v3_chip patch={filter_path(:upcoming, 1)} active={@filter == :upcoming}>
+        <.chip patch={filter_path(:upcoming, 1)} active={@filter == :upcoming}>
           Upcoming · {@counts.upcoming}
-        </.v3_chip>
-        <.v3_chip patch={filter_path(:waitlisted, 1)} active={@filter == :waitlisted}>
+        </.chip>
+        <.chip patch={filter_path(:waitlisted, 1)} active={@filter == :waitlisted}>
           Waitlisted · {@counts.waitlisted}
-        </.v3_chip>
-        <.v3_chip patch={filter_path(:past, 1)} active={@filter == :past}>
+        </.chip>
+        <.chip patch={filter_path(:past, 1)} active={@filter == :past}>
           Past · {@counts.past}
-        </.v3_chip>
+        </.chip>
       </div>
 
       <%= if Enum.empty?(@huddls) do %>
@@ -188,17 +188,17 @@ defmodule HuddlzWeb.MyHuddlzLive do
       <% else %>
         <div class="grid">
           <%= for {huddl, idx} <- Enum.with_index(@huddls) do %>
-            <.v3_my_huddl_card huddl={huddl} filter={@filter} gradient={Integer.mod(idx, 6) + 1} />
+            <.my_huddl_card huddl={huddl} filter={@filter} gradient={Integer.mod(idx, 6) + 1} />
           <% end %>
         </div>
-        <.v3_pagination
+        <.pagination
           :if={@page_info.total_pages > 1}
           current_page={@page_info.current_page}
           total_pages={@page_info.total_pages}
           event_name="change_page"
         />
       <% end %>
-    </Layouts.v3_app>
+    </Layouts.app>
     """
   end
 
@@ -206,9 +206,9 @@ defmodule HuddlzWeb.MyHuddlzLive do
   attr :filter, :atom, required: true
   attr :gradient, :integer, required: true
 
-  defp v3_my_huddl_card(assigns) do
+  defp my_huddl_card(assigns) do
     ~H"""
-    <.v3_card
+    <.card
       navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}"}
       gradient={@gradient}
     >
@@ -219,10 +219,10 @@ defmodule HuddlzWeb.MyHuddlzLive do
           src={HuddlImages.url(@huddl.display_image_url)}
           alt={@huddl.title}
         />
-        <.v3_date_stamp month={huddl_month(@huddl)} day={huddl_day(@huddl)} />
-        <.v3_card_tag variant={tag_variant(@huddl.event_type)}>
+        <.date_stamp month={huddl_month(@huddl)} day={huddl_day(@huddl)} />
+        <.card_tag variant={tag_variant(@huddl.event_type)}>
           {tag_label(@huddl.event_type)}
-        </.v3_card_tag>
+        </.card_tag>
       </:cover>
       <:body>
         <span :if={@huddl.group} class="card-group">{@huddl.group.name}</span>
@@ -236,10 +236,10 @@ defmodule HuddlzWeb.MyHuddlzLive do
         </div>
       </:body>
       <:foot>
-        <.v3_pill variant={pill_variant(@filter)}>{pill_label(@filter)}</.v3_pill>
+        <.pill variant={pill_variant(@filter)}>{pill_label(@filter)}</.pill>
         <span class="muted" style="font-size:12px">{relative_time(@huddl.starts_at)}</span>
       </:foot>
-    </.v3_card>
+    </.card>
     """
   end
 

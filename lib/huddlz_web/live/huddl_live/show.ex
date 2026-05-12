@@ -10,7 +10,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   alias HuddlzWeb.MetaHelpers
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
-  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
+  on_mount {HuddlzWeb.LiveUserAuth, :app}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -55,7 +55,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.v3_app
+    <Layouts.app
       flash={@flash}
       current_user={@current_user}
       sidebar_owned_groups={@sidebar_owned_groups}
@@ -201,21 +201,21 @@ defmodule HuddlzWeb.HuddlLive.Show do
           <div :if={@can_edit_huddl || @can_delete_huddl} class="huddl-side-section">
             <h3>Organize</h3>
             <div class="side-actions">
-              <.v3_button
+              <.button
                 :if={@can_edit_huddl}
                 variant={:secondary}
                 navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}/edit"}
               >
                 Edit huddl
-              </.v3_button>
-              <.v3_button
+              </.button>
+              <.button
                 :if={@can_delete_huddl}
                 variant={:destructive}
                 phx-click="delete_huddl"
                 data-confirm="Are you sure you want to delete this huddl?"
               >
                 Delete huddl
-              </.v3_button>
+              </.button>
             </div>
           </div>
 
@@ -228,7 +228,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
           </div>
         </aside>
       </div>
-    </Layouts.v3_app>
+    </Layouts.app>
     """
   end
 
@@ -260,9 +260,9 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   defp render_rsvp_state(%{current_user: nil} = assigns) do
     ~H"""
-    <.v3_button variant={:primary} navigate={~p"/sign-in"} class="rsvp-cta">
+    <.button variant={:primary} navigate={~p"/sign-in"} class="rsvp-cta">
       Sign in to RSVP
-    </.v3_button>
+    </.button>
     """
   end
 
@@ -306,14 +306,14 @@ defmodule HuddlzWeb.HuddlLive.Show do
       </svg>
       Join the online room
     </a>
-    <.v3_button
+    <.button
       variant={:muted}
       phx-click="cancel_rsvp"
       phx-disable-with="Cancelling..."
       class="rsvp-cta"
     >
       Cancel RSVP
-    </.v3_button>
+    </.button>
     """
   end
 
@@ -335,14 +335,14 @@ defmodule HuddlzWeb.HuddlLive.Show do
       </svg>
       <span>On waitlist · #{@waitlist_position} of {@huddl.waitlist_count}</span>
     </div>
-    <.v3_button
+    <.button
       variant={:muted}
       phx-click="leave_waitlist"
       phx-disable-with="Leaving..."
       class="rsvp-cta"
     >
       Leave waitlist
-    </.v3_button>
+    </.button>
     """
   end
 
@@ -365,20 +365,20 @@ defmodule HuddlzWeb.HuddlLive.Show do
         </svg>
         <span>This huddl is full</span>
       </div>
-      <.v3_button variant={:primary} phx-click="join_waitlist" class="rsvp-cta">
+      <.button variant={:primary} phx-click="join_waitlist" class="rsvp-cta">
         Join waitlist
-      </.v3_button>
+      </.button>
       """
     else
       ~H"""
-      <.v3_button
+      <.button
         variant={:primary}
         phx-click="rsvp"
         phx-disable-with="RSVPing..."
         class="rsvp-cta"
       >
         RSVP to this huddl
-      </.v3_button>
+      </.button>
       <div :if={@huddl.event_type in [:virtual, :hybrid]} class="virtual-hint">
         <svg
           width="14"

@@ -20,7 +20,7 @@ defmodule HuddlzWeb.HuddlLive do
   @page_size 20
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
-  on_mount {HuddlzWeb.LiveUserAuth, :v3_app}
+  on_mount {HuddlzWeb.LiveUserAuth, :app}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -536,7 +536,7 @@ defmodule HuddlzWeb.HuddlLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.v3_app
+    <Layouts.app
       flash={@flash}
       current_user={@current_user}
       sidebar_owned_groups={@sidebar_owned_groups}
@@ -611,60 +611,60 @@ defmodule HuddlzWeb.HuddlLive do
         <div class="filter-group">
           <span class="filter-label">Type</span>
           <div class="chip-group">
-            <.v3_chip
+            <.chip
               patch={format_toggle_url("in_person", assigns)}
               active={@event_type_filter == "in_person"}
             >
               In person
-            </.v3_chip>
-            <.v3_chip
+            </.chip>
+            <.chip
               patch={format_toggle_url("virtual", assigns)}
               active={@event_type_filter == "virtual"}
             >
               Virtual
-            </.v3_chip>
-            <.v3_chip
+            </.chip>
+            <.chip
               patch={format_toggle_url("hybrid", assigns)}
               active={@event_type_filter == "hybrid"}
             >
               Hybrid
-            </.v3_chip>
+            </.chip>
           </div>
         </div>
 
         <div class="filter-group">
           <span class="filter-label">When</span>
           <div class="chip-group">
-            <.v3_chip
+            <.chip
               patch={date_toggle_url("upcoming", assigns)}
               active={@date_filter == "upcoming"}
             >
               All upcoming
-            </.v3_chip>
-            <.v3_chip
+            </.chip>
+            <.chip
               patch={date_toggle_url("this_week", assigns)}
               active={@date_filter == "this_week"}
             >
               This week
-            </.v3_chip>
-            <.v3_chip
+            </.chip>
+            <.chip
               patch={date_toggle_url("this_month", assigns)}
               active={@date_filter == "this_month"}
             >
               This month
-            </.v3_chip>
+            </.chip>
           </div>
         </div>
 
         <div class="filter-group">
           <span class="filter-label">Sort</span>
           <div class="chip-group">
-            <.v3_chip patch={sort_toggle_url("soonest", assigns)} active={@sort == :soonest}>
+            <.chip patch={sort_toggle_url("soonest", assigns)} active={@sort == :soonest}>
               Soonest
-            </.v3_chip>
-            <.v3_chip patch={sort_toggle_url("newest", assigns)} active={@sort == :newest}>
+            </.chip>
+            <.chip patch={sort_toggle_url("newest", assigns)} active={@sort == :newest}>
               Newest
-            </.v3_chip>
+            </.chip>
           </div>
         </div>
       </div>
@@ -685,10 +685,10 @@ defmodule HuddlzWeb.HuddlLive do
         <% else %>
           <div class="grid">
             <%= for {{huddl, distance}, idx} <- Enum.with_index(@huddls) do %>
-              <.v3_huddl_card huddl={huddl} distance={distance} gradient={Integer.mod(idx, 6) + 1} />
+              <.huddl_card huddl={huddl} distance={distance} gradient={Integer.mod(idx, 6) + 1} />
             <% end %>
           </div>
-          <.v3_pagination
+          <.pagination
             :if={@page_info.total_pages > 1}
             current_page={@page_info.current_page}
             total_pages={@page_info.total_pages}
@@ -701,10 +701,10 @@ defmodule HuddlzWeb.HuddlLive do
         <% else %>
           <div class="grid">
             <%= for {group, idx} <- Enum.with_index(@groups) do %>
-              <.v3_group_card group={group} gradient={Integer.mod(idx, 6) + 1} />
+              <.group_card group={group} gradient={Integer.mod(idx, 6) + 1} />
             <% end %>
           </div>
-          <.v3_pagination
+          <.pagination
             :if={@page_info.total_pages > 1}
             current_page={@page_info.current_page}
             total_pages={@page_info.total_pages}
@@ -712,7 +712,7 @@ defmodule HuddlzWeb.HuddlLive do
           />
         <% end %>
       <% end %>
-    </Layouts.v3_app>
+    </Layouts.app>
     """
   end
 
@@ -720,9 +720,9 @@ defmodule HuddlzWeb.HuddlLive do
   attr :distance, :float, default: nil
   attr :gradient, :integer, default: 1
 
-  defp v3_huddl_card(assigns) do
+  defp huddl_card(assigns) do
     ~H"""
-    <.v3_card
+    <.card
       navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}"}
       gradient={@gradient}
     >
@@ -733,10 +733,10 @@ defmodule HuddlzWeb.HuddlLive do
           src={HuddlImages.url(@huddl.display_image_url)}
           alt={@huddl.title}
         />
-        <.v3_date_stamp month={huddl_month(@huddl)} day={huddl_day(@huddl)} />
-        <.v3_card_tag variant={tag_variant(@huddl.event_type)}>
+        <.date_stamp month={huddl_month(@huddl)} day={huddl_day(@huddl)} />
+        <.card_tag variant={tag_variant(@huddl.event_type)}>
           {tag_label(@huddl.event_type)}
-        </.v3_card_tag>
+        </.card_tag>
       </:cover>
       <:body>
         <span :if={Map.has_key?(@huddl, :group) && @huddl.group} class="card-group">
@@ -755,16 +755,16 @@ defmodule HuddlzWeb.HuddlLive do
           <% end %>
         </div>
       </:body>
-    </.v3_card>
+    </.card>
     """
   end
 
   attr :group, :map, required: true
   attr :gradient, :integer, default: 1
 
-  defp v3_group_card(assigns) do
+  defp group_card(assigns) do
     ~H"""
-    <.v3_card navigate={~p"/groups/#{@group.slug}"} gradient={@gradient}>
+    <.card navigate={~p"/groups/#{@group.slug}"} gradient={@gradient}>
       <:cover>
         <img
           :if={@group.current_image_url}
@@ -780,7 +780,7 @@ defmodule HuddlzWeb.HuddlLive do
           <span>{member_count_label(@group)}</span>
         </div>
       </:body>
-    </.v3_card>
+    </.card>
     """
   end
 

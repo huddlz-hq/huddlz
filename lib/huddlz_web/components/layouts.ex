@@ -10,16 +10,16 @@ defmodule HuddlzWeb.Layouts do
   embed_templates "layouts/*"
 
   @doc """
-  V3 app layout — sidebar + topbar shell wrapping the inner content.
+  Main app layout — sidebar + topbar shell wrapping the inner content.
 
   Mirrors the clickthrough mockup at `/dev/design/clickthrough/explore` (and
   the `clickthrough_shell` function component in `HuddlzWeb.DevDesignHTML`),
   but reads the real `current_user` and renders an admin link when the user
   is an admin.
 
-  Pair with `on_mount {HuddlzWeb.LiveUserAuth, :v3_app}`, which loads
-  the sidebar's `sb-org-row` groups and sets the chromeless-mode body
-  class when there's no actor.
+  Pair with `on_mount {HuddlzWeb.LiveUserAuth, :app}`, which loads the
+  sidebar's `sb-org-row` groups and sets the chromeless-mode body class
+  when there's no actor.
   """
   attr :flash, :map, required: true
   attr :current_user, :map, default: nil
@@ -44,7 +44,7 @@ defmodule HuddlzWeb.Layouts do
   attr :query, :string, default: "", doc: "current search query — prefilled in topbar input"
   slot :inner_block, required: true
 
-  def v3_app(assigns) do
+  def app(assigns) do
     assigns = assign_new(assigns, :signed_in, fn -> assigns.current_user != nil end)
 
     ~H"""
@@ -59,19 +59,19 @@ defmodule HuddlzWeb.Layouts do
 
         <nav class="sb-nav">
           <a class={["sb-item", @active == "discover" && "active"]} href="/discover">
-            <.v3_nav_icon name="search" />
+            <.nav_icon name="search" />
             <span class="label">Discover</span>
           </a>
           <a class={["sb-item", @active == "my-huddlz" && "active"]} href="/my-huddlz">
-            <.v3_nav_icon name="ticket" />
+            <.nav_icon name="ticket" />
             <span class="label">My huddlz</span>
           </a>
           <a class={["sb-item", @active == "my-groups" && "active"]} href="/my-groups">
-            <.v3_nav_icon name="users" />
+            <.nav_icon name="users" />
             <span class="label">My groups</span>
           </a>
           <a class={["sb-item", @active == "calendar" && "active"]} href="/calendar">
-            <.v3_nav_icon name="calendar" />
+            <.nav_icon name="calendar" />
             <span class="label">My calendar</span>
           </a>
 
@@ -119,23 +119,23 @@ defmodule HuddlzWeb.Layouts do
 
         <div class="sb-account">
           <a class={["sb-item", @active == "profile" && "active"]} href="/profile">
-            <.v3_nav_icon name="user" />
+            <.nav_icon name="user" />
             <span class="label">Profile</span>
           </a>
           <a
             class={["sb-item", @active == "settings" && "active"]}
             href="/profile/notifications"
           >
-            <.v3_nav_icon name="cog" />
+            <.nav_icon name="cog" />
             <span class="label">Settings</span>
           </a>
           <a class={["sb-item", @active == "help" && "active"]} href="/help">
-            <.v3_nav_icon name="help" />
+            <.nav_icon name="help" />
             <span class="label">Help</span>
           </a>
           <%= if User.admin?(@current_user) do %>
             <a class={["sb-item", @active == "admin" && "active"]} href="/admin">
-              <.v3_nav_icon name="shield" />
+              <.nav_icon name="shield" />
               <span class="label">Admin</span>
             </a>
           <% end %>
@@ -155,7 +155,7 @@ defmodule HuddlzWeb.Layouts do
       <header class="content-topbar">
         <%= if @signed_in do %>
           <label for="nav-toggle" class="nav-trigger" aria-label="Open navigation">
-            <.v3_nav_icon name="bars" />
+            <.nav_icon name="bars" />
           </label>
         <% else %>
           <a class="topbar-brand" href="/" aria-label="huddlz home">
@@ -174,7 +174,7 @@ defmodule HuddlzWeb.Layouts do
               href="/notifications"
               aria-label="Notifications"
             >
-              <.v3_nav_icon name="bell" />
+              <.nav_icon name="bell" />
             </a>
           <% else %>
             <a class="btn-secondary" href="/sign-in">Sign in</a>
@@ -263,7 +263,7 @@ defmodule HuddlzWeb.Layouts do
 
   attr :name, :string, required: true
 
-  defp v3_nav_icon(%{name: "search"} = assigns) do
+  defp nav_icon(%{name: "search"} = assigns) do
     ~H"""
     <svg
       viewBox="0 0 24 24"
@@ -278,7 +278,7 @@ defmodule HuddlzWeb.Layouts do
     """
   end
 
-  defp v3_nav_icon(%{name: "ticket"} = assigns) do
+  defp nav_icon(%{name: "ticket"} = assigns) do
     ~H"""
     <svg
       viewBox="0 0 24 24"
@@ -296,7 +296,7 @@ defmodule HuddlzWeb.Layouts do
     """
   end
 
-  defp v3_nav_icon(%{name: "users"} = assigns) do
+  defp nav_icon(%{name: "users"} = assigns) do
     ~H"""
     <svg
       viewBox="0 0 24 24"
@@ -311,7 +311,7 @@ defmodule HuddlzWeb.Layouts do
     """
   end
 
-  defp v3_nav_icon(%{name: "calendar"} = assigns) do
+  defp nav_icon(%{name: "calendar"} = assigns) do
     ~H"""
     <svg
       viewBox="0 0 24 24"
@@ -326,7 +326,7 @@ defmodule HuddlzWeb.Layouts do
     """
   end
 
-  defp v3_nav_icon(%{name: "user"} = assigns) do
+  defp nav_icon(%{name: "user"} = assigns) do
     ~H"""
     <svg
       viewBox="0 0 24 24"
@@ -341,7 +341,7 @@ defmodule HuddlzWeb.Layouts do
     """
   end
 
-  defp v3_nav_icon(%{name: "cog"} = assigns) do
+  defp nav_icon(%{name: "cog"} = assigns) do
     ~H"""
     <svg
       viewBox="0 0 24 24"
@@ -356,7 +356,7 @@ defmodule HuddlzWeb.Layouts do
     """
   end
 
-  defp v3_nav_icon(%{name: "help"} = assigns) do
+  defp nav_icon(%{name: "help"} = assigns) do
     ~H"""
     <svg
       viewBox="0 0 24 24"
@@ -371,7 +371,7 @@ defmodule HuddlzWeb.Layouts do
     """
   end
 
-  defp v3_nav_icon(%{name: "shield"} = assigns) do
+  defp nav_icon(%{name: "shield"} = assigns) do
     ~H"""
     <svg
       viewBox="0 0 24 24"
@@ -386,7 +386,7 @@ defmodule HuddlzWeb.Layouts do
     """
   end
 
-  defp v3_nav_icon(%{name: "bars"} = assigns) do
+  defp nav_icon(%{name: "bars"} = assigns) do
     ~H"""
     <svg
       viewBox="0 0 24 24"
@@ -401,7 +401,7 @@ defmodule HuddlzWeb.Layouts do
     """
   end
 
-  defp v3_nav_icon(%{name: "bell"} = assigns) do
+  defp nav_icon(%{name: "bell"} = assigns) do
     ~H"""
     <svg
       width="16"

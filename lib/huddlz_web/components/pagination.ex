@@ -1,4 +1,4 @@
-defmodule HuddlzWeb.V3.Pagination do
+defmodule HuddlzWeb.Components.Pagination do
   @moduledoc """
   V3 pagination — `<nav class="pagination">` with prev/next page-nav buttons
   flanking an `<ol class="page-numbers">`. Page-number entries collapse to an
@@ -18,7 +18,7 @@ defmodule HuddlzWeb.V3.Pagination do
 
   attr :class, :any, default: nil
 
-  def v3_pagination(assigns) do
+  def pagination(assigns) do
     ~H"""
     <nav class={["pagination", @class]} aria-label="Pagination">
       <button
