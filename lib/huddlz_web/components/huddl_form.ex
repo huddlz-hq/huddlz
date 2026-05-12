@@ -9,11 +9,19 @@ defmodule HuddlzWeb.Components.HuddlForm do
 
   <.input type="select" options={duration_options()} ... />
   ```
-
-  `event_type_option/1` is also exported so a form that needs a divergent
-  layout can assemble its own grid without forking the wrapper.
   """
   use Phoenix.Component
+
+  @duration_options [
+    {"30 minutes", "30"},
+    {"1 hour", "60"},
+    {"1.5 hours", "90"},
+    {"2 hours", "120"},
+    {"2.5 hours", "150"},
+    {"3 hours", "180"},
+    {"4 hours", "240"},
+    {"6 hours", "360"}
+  ]
 
   attr :field, Phoenix.HTML.FormField, required: true
   attr :value, :string, required: true
@@ -21,7 +29,7 @@ defmodule HuddlzWeb.Components.HuddlForm do
   attr :desc, :string, required: true
   slot :icon, required: true
 
-  def event_type_option(assigns) do
+  defp event_type_option(assigns) do
     radio_id = "event-type-#{assigns.value}"
     assigns = assign(assigns, :radio_id, radio_id)
 
@@ -121,16 +129,5 @@ defmodule HuddlzWeb.Components.HuddlForm do
     """
   end
 
-  def duration_options do
-    [
-      {"30 minutes", "30"},
-      {"1 hour", "60"},
-      {"1.5 hours", "90"},
-      {"2 hours", "120"},
-      {"2.5 hours", "150"},
-      {"3 hours", "180"},
-      {"4 hours", "240"},
-      {"6 hours", "360"}
-    ]
-  end
+  def duration_options, do: @duration_options
 end
