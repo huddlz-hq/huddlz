@@ -596,6 +596,7 @@ defmodule HuddlzWeb.CoreComponents do
     ~H"""
     <div
       id={@id}
+      data-cc-modal
       phx-mounted={@show && show_modal(@id)}
       phx-remove={hide_modal(@id)}
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
