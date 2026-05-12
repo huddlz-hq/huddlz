@@ -68,5 +68,21 @@ defmodule Huddlz.Accounts.AdminAuthorizationTest do
       assert {:ok, demoted} = Accounts.update_role(other_admin, :user, actor: admin)
       assert demoted.role == :user
     end
+
+    test "Ash.can? rejects self-role-change at the record level", %{admin: admin} do
+      # Drives the AdminLive UI gate: the self-edit form is hidden via
+      # `Ash.can?({user, :update_role}, current_user)`. If this slips back to
+      # true, admins would render an Update button on their own row that the
+      # action's validate would then reject — confusing footgun.
+      refute Ash.can?({admin, :update_role}, admin)
+    end
+
+    test "Ash.can? allows record-level update on other admins", %{admin: admin} do
+      # Counterpart to the self-block: the scoped admin bypass must still
+      # authorize when the target isn't the actor.
+      other = generate(user(role: :admin))
+
+      assert Ash.can?({other, :update_role}, admin)
+    end
   end
 end
