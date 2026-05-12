@@ -36,7 +36,7 @@ defmodule HuddlzWeb.AuthLive.Register do
     {:ok,
      socket
      |> assign(:page_title, "Create account")
-     |> assign(:body_class, "v3 is-auth")
+     |> assign(:body_class, "is-auth")
      |> assign(:check_errors, false)
      |> assign_form(password_form)}
   end

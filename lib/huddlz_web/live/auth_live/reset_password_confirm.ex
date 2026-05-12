@@ -16,7 +16,7 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
     socket =
       socket
       |> assign(:page_title, "Set new password")
-      |> assign(:body_class, "v3 is-auth")
+      |> assign(:body_class, "is-auth")
 
     with {:ok, %{"sub" => subject}, _resource} <- AshAuthentication.Jwt.verify(token, User),
          {:ok, user} <- AshAuthentication.subject_to_user(subject, User) do
@@ -45,7 +45,7 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
     {:ok,
      socket
      |> assign(:page_title, "Set new password")
-     |> assign(:body_class, "v3 is-auth")
+     |> assign(:body_class, "is-auth")
      |> assign(:token_valid, false)
      |> assign(:trigger_action, false)}
   end

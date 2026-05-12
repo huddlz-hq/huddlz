@@ -12,7 +12,7 @@ defmodule HuddlzWeb.LandingLive do
     {:ok,
      socket
      |> assign(:page_title, "huddlz")
-     |> assign(:body_class, "v3 is-landing")}
+     |> assign(:body_class, "is-landing")}
   end
 
   @impl true
