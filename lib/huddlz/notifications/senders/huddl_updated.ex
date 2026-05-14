@@ -22,6 +22,7 @@ defmodule Huddlz.Notifications.Senders.HuddlUpdated do
   alias Huddlz.Mailer
   alias Huddlz.Notifications.DateTimeFormatter
   alias Huddlz.Notifications.Footer
+  alias Huddlz.Notifications.Senders.ChangedFields
   alias Huddlz.Notifications.Senders.HeaderSafe
   alias Huddlz.Notifications.Senders.HtmlEscape
 
@@ -39,7 +40,7 @@ defmodule Huddlz.Notifications.Senders.HuddlUpdated do
       )
 
     safe_when = HtmlEscape.escape(when_text)
-    safe_changed = HtmlEscape.escape(changed_summary(payload))
+    safe_changed = HtmlEscape.escape(ChangedFields.summary(payload))
     huddl_url = huddl_url(payload)
 
     {footer_html, footer_text} = Footer.build(user, :huddl_updated)
@@ -65,7 +66,7 @@ defmodule Huddlz.Notifications.Senders.HuddlUpdated do
 
     The huddl "#{huddl_title(payload)}" in "#{group_name(payload)}" has been updated.
 
-    What changed: #{changed_summary(payload)}.
+    What changed: #{ChangedFields.summary(payload)}.
 
     It is currently scheduled for #{when_text}. See the latest details at
     #{huddl_url}.
@@ -86,17 +87,4 @@ defmodule Huddlz.Notifications.Senders.HuddlUpdated do
 
   defp huddl_url(%{"group_slug" => slug}) when is_binary(slug), do: url(~p"/groups/#{slug}")
   defp huddl_url(_), do: url(~p"/discover")
-
-  defp changed_summary(%{"changed_fields" => fields}) when is_list(fields) and fields != [] do
-    Enum.map_join(fields, ", ", &humanize_field/1)
-  end
-
-  defp changed_summary(_), do: "huddl details"
-
-  defp humanize_field("title"), do: "the title"
-  defp humanize_field("starts_at"), do: "the start time"
-  defp humanize_field("ends_at"), do: "the end time"
-  defp humanize_field("physical_location"), do: "the location"
-  defp humanize_field("virtual_link"), do: "the virtual link"
-  defp humanize_field(other) when is_binary(other), do: other
 end
