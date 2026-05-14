@@ -18,7 +18,6 @@ defmodule Huddlz.Notifications.Senders.HuddlNew do
 
   @behaviour Huddlz.Notifications.Sender
 
-  use HuddlzWeb, :verified_routes
   import Swoosh.Email
 
   alias Huddlz.Mailer
@@ -26,6 +25,7 @@ defmodule Huddlz.Notifications.Senders.HuddlNew do
   alias Huddlz.Notifications.Footer
   alias Huddlz.Notifications.Senders.HeaderSafe
   alias Huddlz.Notifications.Senders.HtmlEscape
+  alias Huddlz.Notifications.Senders.Urls
 
   @impl true
   def build(user, payload) do
@@ -41,7 +41,7 @@ defmodule Huddlz.Notifications.Senders.HuddlNew do
       )
 
     safe_when = HtmlEscape.escape(when_text)
-    huddl_url = huddl_url(payload)
+    huddl_url = Urls.huddl_url(payload)
 
     {footer_html, footer_text} = Footer.build(user, :huddl_new)
 
@@ -74,12 +74,4 @@ defmodule Huddlz.Notifications.Senders.HuddlNew do
 
   defp group_name(%{"group_name" => name}) when is_binary(name), do: name
   defp group_name(_), do: "a group"
-
-  defp huddl_url(%{"group_slug" => slug, "huddl_id" => id})
-       when is_binary(slug) and is_binary(id) do
-    url(~p"/groups/#{slug}/huddlz/#{id}")
-  end
-
-  defp huddl_url(%{"group_slug" => slug}) when is_binary(slug), do: url(~p"/groups/#{slug}")
-  defp huddl_url(_), do: url(~p"/discover")
 end
