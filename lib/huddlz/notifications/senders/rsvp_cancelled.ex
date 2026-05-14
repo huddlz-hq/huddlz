@@ -18,13 +18,13 @@ defmodule Huddlz.Notifications.Senders.RsvpCancelled do
 
   @behaviour Huddlz.Notifications.Sender
 
-  use HuddlzWeb, :verified_routes
   import Swoosh.Email
 
   alias Huddlz.Mailer
   alias Huddlz.Notifications.Footer
   alias Huddlz.Notifications.Senders.HeaderSafe
   alias Huddlz.Notifications.Senders.HtmlEscape
+  alias Huddlz.Notifications.Senders.Urls
 
   @impl true
   def build(user, payload) do
@@ -32,7 +32,7 @@ defmodule Huddlz.Notifications.Senders.RsvpCancelled do
     safe_title = HtmlEscape.escape(huddl_title(payload))
     safe_group = HtmlEscape.escape(group_name(payload))
     safe_rsvper = HtmlEscape.escape(rsvper_display_name(payload))
-    huddl_url = huddl_url(payload)
+    huddl_url = Urls.huddl_url(payload)
 
     {footer_html, footer_text} = Footer.build(user, :rsvp_cancelled)
 
@@ -69,10 +69,4 @@ defmodule Huddlz.Notifications.Senders.RsvpCancelled do
 
   defp rsvper_display_name(%{"rsvper_display_name" => name}) when is_binary(name), do: name
   defp rsvper_display_name(_), do: "Someone"
-
-  defp huddl_url(%{"group_slug" => slug, "huddl_id" => id})
-       when is_binary(slug) and is_binary(id),
-       do: url(~p"/groups/#{slug}/huddlz/#{id}")
-
-  defp huddl_url(_), do: url(~p"/discover")
 end
