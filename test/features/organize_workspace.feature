@@ -73,13 +73,13 @@ Feature: Organizer workspace
     Then I should see "That group doesn't exist, or you don't organize it."
     And I should see "You don't organize any groups yet."
 
-  Scenario: A co-organizer can open the workspace for a group they help run
+  Scenario: An organizer can open the workspace for a group they help run
     Given the following users exist:
       | email                  | role     | display_name |
-      | co.organizer@example.com | verified | Co Organizer |
+      | organizer@example.com | verified | Group Organizer |
     And a public group "Cyberpunk Builders" exists with owner "host@example.com"
-    And "co.organizer@example.com" is an organizer of "Cyberpunk Builders"
-    And I am signed in as "co.organizer@example.com"
+    And "organizer@example.com" is an organizer of "Cyberpunk Builders"
+    And I am signed in as "organizer@example.com"
     When I visit "/organize/cyberpunk-builders"
     Then I should see "Cyberpunk Builders"
     And I should see "Members"
@@ -179,7 +179,7 @@ Feature: Organizer workspace
     When I visit "/organize/cyberpunk-builders/members"
     Then I should see "Owner"
     And I should see "Members"
-    And I should see "Co-organizers"
+    And I should see "Organizers"
     And I should see "Host User"
     And I should see "Attendee"
-    And I should see "No co-organizers yet. Promote a member to organizer to share the load."
+    And I should see "No organizers yet. Promote a member to organizer to share the load."
