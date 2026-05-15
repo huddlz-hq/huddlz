@@ -238,6 +238,72 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
         <div class="panel">
           <div class="panel-head">
+            <h2>Cover image</h2>
+          </div>
+
+          <label for={@uploads.huddl_image.ref} class="sr-only">Cover image</label>
+          <.live_file_input upload={@uploads.huddl_image} class="hidden" />
+
+          <.image_preview
+            pending_preview_url={@pending_preview_url}
+            huddl={@huddl}
+            upload_ref={@uploads.huddl_image.ref}
+          />
+
+          <div class="upload-zone" phx-drop-target={@uploads.huddl_image.ref}>
+            <div class="upload-icon">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-5-5L5 21" />
+              </svg>
+            </div>
+            <label for={@uploads.huddl_image.ref} class="upload-prompt">
+              Drop a 16:9 image, or <span class="upload-link">browse</span>
+            </label>
+            <div class="upload-meta muted">JPG, PNG, WebP · 5 MB max</div>
+          </div>
+
+          <%= for entry <- @uploads.huddl_image.entries do %>
+            <div class="image-preview" style="margin-top:12px">
+              <div class="card-cover">
+                <.live_img_preview entry={entry} class="card-cover-img" />
+              </div>
+              <div class="image-preview-foot">
+                <span>{entry.client_name} · {entry.progress}%</span>
+                <.button
+                  variant={:muted}
+                  type="button"
+                  phx-click="cancel_image_upload"
+                  phx-value-ref={entry.ref}
+                >
+                  Cancel
+                </.button>
+              </div>
+            </div>
+
+            <%= for err <- upload_errors(@uploads.huddl_image, entry) do %>
+              <p class="form-error">{upload_error_to_string(err)}</p>
+            <% end %>
+          <% end %>
+
+          <p :if={@image_error} class="form-error">{@image_error}</p>
+
+          <%= for err <- upload_errors(@uploads.huddl_image) do %>
+            <p class="form-error">{upload_error_to_string(err)}</p>
+          <% end %>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
             <h2>The basics</h2>
           </div>
           <div class="form-grid">
@@ -382,72 +448,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
               </p>
             <% end %>
           </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-head">
-            <h2>Cover image</h2>
-          </div>
-
-          <label for={@uploads.huddl_image.ref} class="sr-only">Cover image</label>
-          <.live_file_input upload={@uploads.huddl_image} class="hidden" />
-
-          <.image_preview
-            pending_preview_url={@pending_preview_url}
-            huddl={@huddl}
-            upload_ref={@uploads.huddl_image.ref}
-          />
-
-          <div class="upload-zone" phx-drop-target={@uploads.huddl_image.ref}>
-            <div class="upload-icon">
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.6"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-5-5L5 21" />
-              </svg>
-            </div>
-            <label for={@uploads.huddl_image.ref} class="upload-prompt">
-              Drop a 16:9 image, or <span class="upload-link">browse</span>
-            </label>
-            <div class="upload-meta muted">JPG, PNG, WebP · 5 MB max</div>
-          </div>
-
-          <%= for entry <- @uploads.huddl_image.entries do %>
-            <div class="image-preview" style="margin-top:12px">
-              <div class="card-cover">
-                <.live_img_preview entry={entry} class="card-cover-img" />
-              </div>
-              <div class="image-preview-foot">
-                <span>{entry.client_name} · {entry.progress}%</span>
-                <.button
-                  variant={:muted}
-                  type="button"
-                  phx-click="cancel_image_upload"
-                  phx-value-ref={entry.ref}
-                >
-                  Cancel
-                </.button>
-              </div>
-            </div>
-
-            <%= for err <- upload_errors(@uploads.huddl_image, entry) do %>
-              <p class="form-error">{upload_error_to_string(err)}</p>
-            <% end %>
-          <% end %>
-
-          <p :if={@image_error} class="form-error">{@image_error}</p>
-
-          <%= for err <- upload_errors(@uploads.huddl_image) do %>
-            <p class="form-error">{upload_error_to_string(err)}</p>
-          <% end %>
         </div>
 
         <div class="form-foot is-flush">
