@@ -306,7 +306,7 @@ defmodule Huddlz.Communities.Huddl do
 
     read :huddlz_for_organizer do
       description """
-      Huddlz across every group the actor owns or co-organizes.
+      Huddlz across every group the actor owns or organizes.
 
       Note: this is intentionally broader than `Group.get_by_owner` (owner-only).
       The Workspace Groups + Members tabs still scope to owned groups; if those

@@ -466,7 +466,7 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   defp role_heading(:owner), do: "Owner"
-  defp role_heading(:organizer), do: "Co-organizers"
+  defp role_heading(:organizer), do: "Organizers"
   defp role_heading(:member), do: "Members"
 
   defp role_label(:owner), do: "Owner"
@@ -478,7 +478,7 @@ defmodule HuddlzWeb.OrganizeLive do
   defp role_pill_class(_), do: nil
 
   defp role_empty_copy(:organizer),
-    do: "No co-organizers yet. Promote a member to organizer to share the load."
+    do: "No organizers yet. Promote a member to organizer to share the load."
 
   defp role_empty_copy(:member), do: "Nobody has joined yet."
   defp role_empty_copy(_), do: ""
