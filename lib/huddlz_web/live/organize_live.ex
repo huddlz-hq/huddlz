@@ -444,7 +444,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <div class="role-section">
           <div class="role-section-head">
             <h3>{role_heading(role)}</h3>
-            <span class="muted count">({length(rows)})</span>
+            <span :if={role != :owner} class="muted count">({length(rows)})</span>
           </div>
           <%= if rows == [] do %>
             <p class="muted role-section-empty">{role_empty_copy(role)}</p>
