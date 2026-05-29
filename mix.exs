@@ -76,6 +76,8 @@ defmodule Huddlz.MixProject do
       {:ash_json_api, "~> 1.0"},
       {:oban, "~> 2.0"},
       {:ash_oban, "~> 0.6"},
+      {:ash_rate_limiter, "~> 1.0"},
+      {:hammer, "~> 7.0"},
       {:usage_rules, "~> 1.0", only: [:dev]},
       {:bcrypt_elixir, "~> 3.0"},
       {:ash_ops, "~> 0.2.4"},

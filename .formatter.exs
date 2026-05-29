@@ -4,6 +4,7 @@
     :absinthe,
     :ash_json_api,
     :ash_oban,
+    :ash_rate_limiter,
     :oban,
     :ash_authentication,
     :ash_authentication_phoenix,
