@@ -2,6 +2,7 @@ defmodule HuddlzWeb.Api.AuthController do
   use HuddlzWeb, :controller
 
   alias AshAuthentication.TokenResource
+  alias AshRateLimiter.LimitExceeded
   alias Huddlz.Accounts.{ApiKey, Token, User}
 
   def register(conn, params) do
@@ -15,9 +16,15 @@ defmodule HuddlzWeb.Api.AuthController do
         |> json(%{token: Ash.Resource.get_metadata(user, :token), user: serialize_self(user)})
 
       {:error, error} ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{errors: format_errors(error)})
+        case rate_limit_error(error) do
+          nil ->
+            conn
+            |> put_status(:unprocessable_entity)
+            |> json(%{errors: format_errors(error)})
+
+          limit_exceeded ->
+            too_many_requests(conn, limit_exceeded)
+        end
     end
   end
 
@@ -29,10 +36,14 @@ defmodule HuddlzWeb.Api.AuthController do
       {:ok, %User{} = user} ->
         json(conn, %{token: Ash.Resource.get_metadata(user, :token), user: serialize_self(user)})
 
+      {:error, error} ->
+        case rate_limit_error(error) do
+          nil -> invalid_credentials(conn)
+          limit_exceeded -> too_many_requests(conn, limit_exceeded)
+        end
+
       _ ->
-        conn
-        |> put_status(:unauthorized)
-        |> json(%{error: "Invalid email or password"})
+        invalid_credentials(conn)
     end
   end
 
@@ -63,17 +74,29 @@ defmodule HuddlzWeb.Api.AuthController do
   end
 
   def password_reset(conn, params) do
-    case Map.get(params, "email") do
-      email when is_binary(email) and email != "" ->
-        User
-        |> Ash.ActionInput.for_action(:request_password_reset_token, %{email: email})
-        |> Ash.run_action()
+    result =
+      case Map.get(params, "email") do
+        email when is_binary(email) and email != "" ->
+          User
+          |> Ash.ActionInput.for_action(:request_password_reset_token, %{email: email})
+          |> Ash.run_action()
+
+        _ ->
+          :ok
+      end
+
+    # Always 204 so the response can't be used to probe which emails exist — except
+    # when rate limited, where a 429 is purely a function of request volume.
+    case result do
+      {:error, error} ->
+        case rate_limit_error(error) do
+          nil -> send_resp(conn, :no_content, "")
+          limit_exceeded -> too_many_requests(conn, limit_exceeded)
+        end
 
       _ ->
-        :ok
+        send_resp(conn, :no_content, "")
     end
-
-    send_resp(conn, :no_content, "")
   end
 
   @api_key_min_days 1
@@ -160,6 +183,33 @@ defmodule HuddlzWeb.Api.AuthController do
     conn
     |> put_status(:unauthorized)
     |> json(%{error: "Authentication required"})
+  end
+
+  defp invalid_credentials(conn) do
+    conn
+    |> put_status(:unauthorized)
+    |> json(%{error: "Invalid email or password"})
+  end
+
+  # Walk the Ash error tree for a rate-limit error, which arrives wrapped in the
+  # usual Forbidden/Invalid classes.
+  defp rate_limit_error(%LimitExceeded{} = error), do: error
+
+  defp rate_limit_error(%{errors: errors}) when is_list(errors),
+    do: Enum.find_value(errors, &rate_limit_error/1)
+
+  defp rate_limit_error(errors) when is_list(errors),
+    do: Enum.find_value(errors, &rate_limit_error/1)
+
+  defp rate_limit_error(_), do: nil
+
+  # The limiter doesn't surface the exact wait, so advertise the full window (an
+  # upper bound) as Retry-After.
+  defp too_many_requests(conn, %LimitExceeded{per: per}) do
+    conn
+    |> put_resp_header("retry-after", Integer.to_string(max(1, div(per, 1000))))
+    |> put_status(:too_many_requests)
+    |> json(%{error: "Too many requests. Please try again later."})
   end
 
   defp not_found(conn) do
