@@ -304,6 +304,24 @@ defmodule Huddlz.Communities.Huddl do
       prepare build(sort: [starts_at: :desc])
     end
 
+    read :siblings_in_series do
+      description """
+      Every later instance in the same recurring series, used internally when
+      regenerating a series ("edit all"). Deliberately omits the
+      FilterByVisibility preparation: series regeneration must find every
+      instance regardless of the editor's visibility (e.g. a private series, or
+      an admin who isn't a group member). Invoke only with `authorize?: false`.
+      """
+
+      argument :huddl_template_id, :uuid, allow_nil?: false
+      argument :starting_after, :utc_datetime, allow_nil?: false
+
+      filter expr(
+               huddl_template_id == ^arg(:huddl_template_id) and
+                 starts_at > ^arg(:starting_after)
+             )
+    end
+
     read :huddlz_for_organizer do
       description """
       Huddlz across every group the actor owns or organizes.
