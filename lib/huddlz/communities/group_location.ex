@@ -77,8 +77,12 @@ defmodule Huddlz.Communities.GroupLocation do
       authorize_if Huddlz.Communities.Huddl.Checks.GroupOwnerOrOrganizer
     end
 
+    # Locations belong to a group. Mirror the Group read policy so a private
+    # group's saved meeting addresses are only visible to its members, while
+    # public groups' locations stay readable by anyone (including anonymous).
     policy action_type(:read) do
-      authorize_if always()
+      authorize_if expr(group.is_public == true)
+      authorize_if relates_to_actor_via([:group, :members])
     end
 
     policy action_type([:update, :destroy]) do
