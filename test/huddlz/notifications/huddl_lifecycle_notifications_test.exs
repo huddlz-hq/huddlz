@@ -13,7 +13,33 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
   require Ash.Query
 
   alias Huddlz.Communities.Huddl
+  alias Huddlz.Communities.HuddlAttendee
   alias Huddlz.Notifications.DeliverWorker
+
+  # Later instances of `source`'s series, oldest first.
+  defp future_occurrences(source) do
+    Huddl
+    |> Ash.Query.for_read(:siblings_in_series, %{
+      huddl_template_id: source.huddl_template_id,
+      starting_after: source.starts_at
+    })
+    |> Ash.read!(authorize?: false)
+    |> Enum.sort_by(& &1.starts_at, DateTime)
+  end
+
+  defp rsvped?(huddl_id, user_id) do
+    HuddlAttendee
+    |> Ash.Query.filter(huddl_id == ^huddl_id and user_id == ^user_id)
+    |> Ash.read!(authorize?: false)
+    |> Enum.any?()
+  end
+
+  defp huddl_exists?(huddl_id) do
+    Huddl
+    |> Ash.Query.for_read(:get_for_recurrence, %{id: huddl_id})
+    |> Ash.read_one!(authorize?: false)
+    |> is_struct()
+  end
 
   describe "C1: huddl_new" do
     test "emails every non-actor group member when a huddl is created" do
@@ -199,8 +225,8 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
     end
   end
 
-  describe "C4: huddl_series_updated" do
-    test "edit_type=all sends huddl_series_updated to the next instance's RSVPs" do
+  describe "edit_type=all: in-place updates preserve RSVPs and notify subscribers" do
+    test "emails the edited instance's own RSVPs" do
       owner = generate(user(role: :user))
       attendee = generate(user(display_name: "Attendee"))
 
@@ -252,13 +278,139 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
       assert %{success: 1} = Oban.drain_queue(queue: :notifications)
 
       assert_email_sent(fn email ->
-        email.subject =~ "Recurring series updated:" and
-          email.to == [{"", to_string(attendee.email)}] and
-          email.html_body =~ "next upcoming instance"
+        email.subject == "Updated: Saturday Soccer (renamed)" and
+          email.to == [{"", to_string(attendee.email)}]
       end)
     end
 
-    test "edit_type=instance still sends C2 (huddl_updated), not C4" do
+    test "updates future occurrences in place, keeping their RSVPs, and emails those subscribers" do
+      owner = generate(user(role: :user))
+      attendee = generate(user(display_name: "Attendee"))
+
+      group =
+        generate(
+          group(
+            name: "Pickup Sports",
+            slug: "pickup-sports",
+            is_public: true,
+            owner_id: owner.id,
+            actor: owner
+          )
+        )
+
+      original =
+        generate(
+          huddl(
+            title: "Saturday Soccer",
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            date: Date.add(Date.utc_today(), 1),
+            is_recurring: true,
+            frequency: "weekly",
+            repeat_until: Date.add(Date.utc_today(), 30)
+          )
+        )
+
+      # Materialise the future occurrences via the create-path worker.
+      assert %{success: 1} = Oban.drain_queue(queue: :default)
+      [occurrence | _] = future_occurrences(original)
+
+      occurrence
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
+      |> Ash.update!()
+
+      Oban.drain_queue(queue: :notifications)
+      flush_mailbox()
+
+      original
+      |> Ash.Changeset.for_update(
+        :update,
+        %{
+          title: "Saturday Soccer (renamed)",
+          edit_type: "all",
+          repeat_until: Date.add(Date.utc_today(), 30),
+          frequency: "weekly"
+        },
+        actor: owner
+      )
+      |> Ash.update!()
+
+      Oban.drain_queue(queue: :notifications)
+
+      # Same occurrence row, updated in place — RSVP preserved, not cancelled.
+      assert huddl_exists?(occurrence.id)
+      assert rsvped?(occurrence.id, attendee.id)
+
+      assert_email_sent(fn email ->
+        email.subject == "Updated: Saturday Soccer (renamed)" and
+          email.to == [{"", to_string(attendee.email)}]
+      end)
+    end
+
+    test "cancels occurrences dropped by shortening the series and notifies their RSVPs" do
+      owner = generate(user(role: :user))
+      attendee = generate(user(display_name: "Attendee"))
+
+      group =
+        generate(
+          group(
+            name: "Pickup Sports",
+            slug: "pickup-sports",
+            is_public: true,
+            owner_id: owner.id,
+            actor: owner
+          )
+        )
+
+      original =
+        generate(
+          huddl(
+            title: "Saturday Soccer",
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            date: Date.add(Date.utc_today(), 1),
+            is_recurring: true,
+            frequency: "weekly",
+            repeat_until: Date.add(Date.utc_today(), 30)
+          )
+        )
+
+      assert %{success: 1} = Oban.drain_queue(queue: :default)
+      dropped = List.last(future_occurrences(original))
+
+      dropped
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
+      |> Ash.update!()
+
+      Oban.drain_queue(queue: :notifications)
+      flush_mailbox()
+
+      # Shorten the series so the last occurrence is no longer scheduled.
+      original
+      |> Ash.Changeset.for_update(
+        :update,
+        %{
+          edit_type: "all",
+          repeat_until: Date.add(Date.utc_today(), 16),
+          frequency: "weekly"
+        },
+        actor: owner
+      )
+      |> Ash.update!()
+
+      Oban.drain_queue(queue: :notifications)
+
+      refute huddl_exists?(dropped.id)
+
+      assert_email_sent(fn email ->
+        email.subject == "Cancelled: Saturday Soccer" and
+          email.to == [{"", to_string(attendee.email)}]
+      end)
+    end
+
+    test "edit_type=instance still sends C2 (huddl_updated)" do
       owner = generate(user(role: :user))
       attendee = generate(user())
 

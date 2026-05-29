@@ -1,22 +1,28 @@
 defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz do
   @moduledoc """
-  Edit a huddl series
+  Propagates an "edit all" to the rest of a recurring series.
+
+  Updates every later instance **in place** so subscribers keep their RSVPs and
+  are notified their event changed (see `RecurrenceHelper.reconcile_future_instances/3`);
+  it never deletes-and-recreates occupied occurrences.
   """
   use Ash.Resource.Change
 
   alias Huddlz.Communities.Huddl.RecurrenceHelper
 
-  def change(changeset, _opts, _context) do
+  def change(changeset, _opts, context) do
+    actor = context.actor
+
     Ash.Changeset.after_action(changeset, fn _changeset, huddl ->
       if Ash.Changeset.get_argument(changeset, :edit_type) == "all" do
-        regenerate_series(changeset, huddl)
+        reconcile_series(changeset, huddl, actor)
       else
         {:ok, huddl}
       end
     end)
   end
 
-  defp regenerate_series(changeset, huddl) do
+  defp reconcile_series(changeset, huddl, actor) do
     repeat_until = Ash.Changeset.get_argument(changeset, :repeat_until)
     frequency = Ash.Changeset.get_argument(changeset, :frequency)
 
@@ -26,7 +32,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz do
 
     case huddl.huddl_template do
       nil ->
-        # Not part of a series; nothing to regenerate.
+        # Not part of a series; nothing to reconcile.
         {:ok, huddl}
 
       huddl_template ->
@@ -38,10 +44,10 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz do
           })
           |> Ash.update(authorize?: false)
 
-        # Regenerate synchronously: "edit all" is a rare organizer action, and
-        # keeping it inline preserves immediate consistency (the create path
-        # defers the same fan-out to RegenerateRecurringSeries instead).
-        RecurrenceHelper.regenerate_series(huddl, huddl_template)
+        # Synchronous: "edit all" is a rare organizer action, bounded at the
+        # series cap, and immediate consistency is preferable here. The create
+        # path defers its fan-out to RegenerateRecurringSeries instead.
+        RecurrenceHelper.reconcile_future_instances(huddl, huddl_template, actor)
 
         {:ok, huddl}
     end
