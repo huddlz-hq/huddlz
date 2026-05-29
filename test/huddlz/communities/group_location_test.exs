@@ -214,6 +214,75 @@ defmodule Huddlz.Communities.GroupLocationTest do
 
       assert length(locations) == 1
     end
+
+    test "anonymous user can read a public group's locations" do
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      generate(group_location(group_id: group.id, name: "Public Location", actor: owner))
+
+      {:ok, locations} =
+        GroupLocation
+        |> Ash.Query.for_read(:by_group, %{group_id: group.id})
+        |> Ash.read(actor: nil)
+
+      assert length(locations) == 1
+    end
+
+    test "non-member cannot read a private group's locations" do
+      owner = generate(user(role: :user))
+      outsider = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, is_public: false, actor: owner))
+      generate(group_location(group_id: group.id, name: "Secret HQ", actor: owner))
+
+      {:ok, locations} =
+        GroupLocation
+        |> Ash.Query.for_read(:by_group, %{group_id: group.id})
+        |> Ash.read(actor: outsider)
+
+      assert locations == []
+    end
+
+    test "anonymous user cannot read a private group's locations" do
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, is_public: false, actor: owner))
+      generate(group_location(group_id: group.id, name: "Secret HQ", actor: owner))
+
+      {:ok, locations} =
+        GroupLocation
+        |> Ash.Query.for_read(:by_group, %{group_id: group.id})
+        |> Ash.read(actor: nil)
+
+      assert locations == []
+    end
+
+    test "member can read a private group's locations" do
+      owner = generate(user(role: :user))
+      member = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, is_public: false, actor: owner))
+      generate(group_member(group_id: group.id, user_id: member.id, role: :member, actor: owner))
+      generate(group_location(group_id: group.id, name: "Members Only", actor: owner))
+
+      {:ok, locations} =
+        GroupLocation
+        |> Ash.Query.for_read(:by_group, %{group_id: group.id})
+        |> Ash.read(actor: member)
+
+      assert length(locations) == 1
+      assert hd(locations).name == "Members Only"
+    end
+
+    test "owner can read their private group's locations" do
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, is_public: false, actor: owner))
+      generate(group_location(group_id: group.id, name: "HQ", actor: owner))
+
+      {:ok, locations} =
+        GroupLocation
+        |> Ash.Query.for_read(:by_group, %{group_id: group.id})
+        |> Ash.read(actor: owner)
+
+      assert length(locations) == 1
+    end
   end
 
   describe "group_location update" do
