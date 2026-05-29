@@ -114,7 +114,6 @@ defmodule Huddlz.Communities.Huddl do
         :is_private,
         :thumbnail_url,
         :max_attendees,
-        :creator_id,
         :group_id,
         :huddl_template_id
       ]
@@ -136,6 +135,7 @@ defmodule Huddlz.Communities.Huddl do
       argument :provided_longitude, :float, allow_nil?: true, public?: false
 
       validate Huddlz.Communities.Huddl.Validations.FutureDateValidation
+      change Huddlz.Communities.Huddl.Changes.SetCreatorToActor
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.AddHuddlTemplate

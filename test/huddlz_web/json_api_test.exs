@@ -25,7 +25,7 @@ defmodule HuddlzWeb.JsonApiTest do
       %{owner: owner, group: group, huddl: huddl}
     end
 
-    test "unauthenticated POST returns error", %{conn: conn, group: group, owner: owner} do
+    test "unauthenticated POST returns error", %{conn: conn, group: group} do
       starts_at =
         DateTime.utc_now()
         |> DateTime.add(7, :day)
@@ -46,7 +46,6 @@ defmodule HuddlzWeb.JsonApiTest do
             physical_location: "123 Main St",
             starts_at: starts_at,
             ends_at: ends_at,
-            creator_id: owner.id,
             group_id: group.id
           }
         }
@@ -84,7 +83,6 @@ defmodule HuddlzWeb.JsonApiTest do
             physical_location: "456 Oak Ave",
             starts_at: starts_at,
             ends_at: ends_at,
-            creator_id: owner.id,
             group_id: group.id
           }
         }

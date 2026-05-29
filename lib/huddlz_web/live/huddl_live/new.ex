@@ -77,7 +77,6 @@ defmodule HuddlzWeb.HuddlLive.New do
         actor: user,
         params: %{
           "group_id" => group.id,
-          "creator_id" => user.id,
           "date" => Date.to_iso8601(tomorrow),
           "start_time" => Time.to_iso8601(default_time) |> String.slice(0..4),
           "duration_minutes" => "60"
@@ -519,7 +518,6 @@ defmodule HuddlzWeb.HuddlLive.New do
     params =
       params
       |> Map.put("group_id", socket.assigns.group.id)
-      |> Map.put("creator_id", socket.assigns.current_user.id)
       |> inject_saved_location_params(socket.assigns[:selected_location])
 
     case AshPhoenix.Form.submit(socket.assigns.form,

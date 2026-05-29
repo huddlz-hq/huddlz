@@ -57,8 +57,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :in_person,
                    physical_location: "123 Main St",
-                   group_id: group.id,
-                   creator_id: user.id
+                   group_id: group.id
                  },
                  actor: user
                )
@@ -77,8 +76,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :virtual,
                    virtual_link: "https://zoom.us/j/organizer",
-                   group_id: group.id,
-                   creator_id: user.id
+                   group_id: group.id
                  },
                  actor: user
                )
@@ -99,12 +97,54 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :in_person,
                    physical_location: "123 Main St",
-                   group_id: group.id,
-                   creator_id: user.id
+                   group_id: group.id
                  },
                  actor: user
                )
                |> Ash.create()
+    end
+
+    test "rejects a supplied creator_id (not an accepted input)", %{
+      owner: owner,
+      outsider: outsider,
+      public_group: group
+    } do
+      assert {:error, %Ash.Error.Invalid{}} =
+               Huddl
+               |> Ash.Changeset.for_create(
+                 :create,
+                 %{
+                   title: "Spoof Attempt",
+                   starts_at: DateTime.utc_now() |> DateTime.add(1, :day),
+                   ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
+                   event_type: :virtual,
+                   virtual_link: "https://zoom.us/j/spoof",
+                   group_id: group.id,
+                   creator_id: outsider.id
+                 },
+                 actor: owner
+               )
+               |> Ash.create()
+    end
+
+    test "derives the creator from the actor", %{owner: owner, public_group: group} do
+      assert {:ok, huddl} =
+               Huddl
+               |> Ash.Changeset.for_create(
+                 :create,
+                 %{
+                   title: "Authored Huddl",
+                   starts_at: DateTime.utc_now() |> DateTime.add(1, :day),
+                   ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
+                   event_type: :virtual,
+                   virtual_link: "https://zoom.us/j/authored",
+                   group_id: group.id
+                 },
+                 actor: owner
+               )
+               |> Ash.create()
+
+      assert huddl.creator_id == owner.id
     end
 
     test "private group only allows owner or organizer to create huddl", %{
@@ -126,8 +166,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :in_person,
                    physical_location: "Secret Place",
-                   group_id: group.id,
-                   creator_id: owner.id
+                   group_id: group.id
                  },
                  actor: owner
                )
@@ -145,8 +184,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :in_person,
                    physical_location: "Secret Place",
-                   group_id: group.id,
-                   creator_id: organizer.id
+                   group_id: group.id
                  },
                  actor: organizer
                )
@@ -164,8 +202,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :in_person,
                    physical_location: "Secret Place",
-                   group_id: group.id,
-                   creator_id: member.id
+                   group_id: group.id
                  },
                  actor: member
                )
@@ -183,8 +220,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :in_person,
                    physical_location: "Secret Place",
-                   group_id: group.id,
-                   creator_id: outsider.id
+                   group_id: group.id
                  },
                  actor: outsider
                )
@@ -205,8 +241,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
             ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
             event_type: :in_person,
             physical_location: "123 Main St",
-            group_id: group.id,
-            creator_id: owner.id
+            group_id: group.id
           },
           actor: owner
         )
@@ -232,8 +267,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
             ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
             event_type: :in_person,
             physical_location: "123 Main St",
-            group_id: group.id,
-            creator_id: owner.id
+            group_id: group.id
           },
           actor: owner
         )
@@ -263,8 +297,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :hybrid,
                    physical_location: "123 Main St",
-                   group_id: group.id,
-                   creator_id: user.id
+                   group_id: group.id
                  },
                  actor: user
                )

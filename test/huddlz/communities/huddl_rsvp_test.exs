@@ -54,8 +54,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
             event_type: :virtual,
             virtual_link: "https://zoom.us/j/123456",
             is_private: false,
-            group_id: group.id,
-            creator_id: owner.id
+            group_id: group.id
           },
           actor: owner
         )
@@ -231,7 +230,6 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
             virtual_link: "https://zoom.us/j/999",
             is_private: false,
             group_id: group.id,
-            creator_id: owner.id,
             max_attendees: 1
           },
           actor: owner
@@ -406,8 +404,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
             event_type: :in_person,
             physical_location: "Secret Location",
             is_private: true,
-            group_id: private_group.id,
-            creator_id: owner.id
+            group_id: private_group.id
           },
           actor: owner
         )
@@ -469,8 +466,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
             event_type: :virtual,
             virtual_link: "https://zoom.us/j/123456",
             is_private: false,
-            group_id: group.id,
-            creator_id: owner.id
+            group_id: group.id
           },
           actor: owner
         )
@@ -672,8 +668,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
             event_type: :virtual,
             virtual_link: "https://zoom.us/j/123456",
             is_private: false,
-            group_id: group.id,
-            creator_id: owner.id
+            group_id: group.id
           },
           actor: owner
         )

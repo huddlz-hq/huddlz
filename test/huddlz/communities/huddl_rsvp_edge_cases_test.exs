@@ -62,8 +62,7 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
             event_type: :virtual,
             virtual_link: "https://zoom.us/j/concurrent",
             is_private: false,
-            group_id: group.id,
-            creator_id: owner.id
+            group_id: group.id
           },
           actor: owner
         )
@@ -116,8 +115,7 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
             event_type: :virtual,
             virtual_link: "https://zoom.us/j/startingsoon",
             is_private: false,
-            group_id: group.id,
-            creator_id: owner.id
+            group_id: group.id
           },
           actor: owner
         )
@@ -154,8 +152,7 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
             event_type: :virtual,
             virtual_link: "https://zoom.us/j/counttest",
             is_private: false,
-            group_id: group.id,
-            creator_id: owner.id
+            group_id: group.id
           },
           actor: owner
         )
@@ -203,8 +200,7 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
             event_type: :virtual,
             virtual_link: "https://zoom.us/j/admintest",
             is_private: false,
-            group_id: group.id,
-            creator_id: owner.id
+            group_id: group.id
           },
           actor: owner
         )

@@ -148,7 +148,6 @@ defmodule Huddlz.Geocoding.GeocodeChangeTest do
             date: future_date,
             start_time: ~T[14:00:00],
             duration_minutes: 60,
-            creator_id: owner.id,
             group_id: group.id
           },
           actor: owner

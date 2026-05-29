@@ -257,17 +257,17 @@ defmodule Huddlz.Generator do
   Create a huddl with random data.
   """
   def huddl(opts \\ []) do
-    actor =
-      opts[:actor] ||
-        once(:default_actor, fn ->
-          generate(user(role: opts[:actor_role] || :user))
-        end)
-
     creator_id =
       opts[:creator_id] ||
         once(:default_creator_id, fn ->
           generate(user(role: :user)).id
         end)
+
+    # creator_id is no longer an accepted input — the :create action derives
+    # the creator from the actor. Author the huddl as the requested creator by
+    # using them as the actor (unless an explicit actor is given).
+    actor =
+      opts[:actor] || Ash.get!(User, creator_id, authorize?: false)
 
     group_id =
       opts[:group_id] ||
@@ -300,7 +300,6 @@ defmodule Huddlz.Generator do
         start_time: start_time,
         duration_minutes: duration_minutes,
         thumbnail_url: thumbnail_url,
-        creator_id: creator_id,
         group_id: group_id,
         event_type: :in_person,
         physical_location: "123 Main St, Anytown, USA",
