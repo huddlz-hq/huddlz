@@ -103,16 +103,40 @@ there's a second consumer is premature.
 
 ## Rate limiting
 
-**Status:** none.
-**Why:** No threat model yet — only first-party clients in flight.
-**To do:**
+**Status:** the authentication actions are rate limited; the rest of the
+API is not yet.
 
-- Add `:hammer` (Redis-backed in prod, ETS in dev) plug in front of
-  `/api/auth/*` first (brute-force protection on register and
-  sign_in).
-- Per-user-or-key buckets on `/api/json/*` and `/gql`. Start
+The auth limits are enforced at the **Ash action layer** (via
+`ash_rate_limiter`) rather than in a plug, because the browser sign-in
+and registration run the credential check over the LiveView websocket —
+a request-level plug never sees those attempts. The action is the one
+point every caller funnels through (JSON API, AshAuthentication's
+generated routes, and the LiveViews), so one rule covers them all.
+
+Limits are **per email**, configured under `:auth_rate_limits` (see
+`config/config.exs`): sign-in 10/min, register 5/min, password-reset
+3/hour. The store is `Huddlz.RateLimit`, a Hammer ETS counter kept
+loosely in sync across nodes by broadcasting each hit over
+`Phoenix.PubSub` (eventually consistent — fine for these coarse caps and
+needs no extra infrastructure). Because enforcement is on the action, the
+store can later be swapped for a strongly-consistent one (Postgres/Redis)
+without touching any limit. The API surfaces an exceeded limit as `429`
+with a `Retry-After`.
+
+**Deferred:**
+
+- **Per-IP limits** (password spray from one source, bulk signups). IP
+  is only reliably available on the HTTP paths, not the LiveView socket
+  (AshAuthentication threads `remote_ip` into action context only on its
+  HTTP dispatcher). Adding per-IP limits means threading the client IP
+  into the action context from each entry point (incl. reading peer/
+  forwarded IP at LiveView mount).
+- **Per-user-or-key buckets on `/api/json/*` and `/gql`.** Start
   permissive — the goal is to stop runaway scripts, not to throttle
   legitimate use.
+- **A friendlier rate-limit message in the auth LiveViews** (today an
+  exceeded limit shows the generic auth error, not a "too many attempts"
+  notice).
 
 ## RemoveMemberByIds membership-existence leak
 
