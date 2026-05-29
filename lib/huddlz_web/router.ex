@@ -5,6 +5,14 @@ defmodule HuddlzWeb.Router do
 
   import AshAuthentication.Plug.Helpers
 
+  # Bound total GraphQL query cost. Resource relationships aren't exposed as
+  # GraphQL fields, so deep nesting isn't possible — this caps query *breadth*,
+  # chiefly alias amplification (N aliased list queries -> N DB queries) from an
+  # anonymous client. A list query costs ~3 and legitimate requests are shallow
+  # (a handful of fields), so 100 leaves ample headroom while blocking alias
+  # floods. Tune as the schema grows.
+  @graphql_max_complexity 100
+
   pipeline :graphql do
     plug :load_from_bearer
     plug :set_actor, :user
@@ -35,9 +43,14 @@ defmodule HuddlzWeb.Router do
     forward "/playground", Absinthe.Plug.GraphiQL,
       schema: Module.concat(["HuddlzWeb.GraphqlSchema"]),
       socket: Module.concat(["HuddlzWeb.GraphqlSocket"]),
-      interface: :playground
+      interface: :playground,
+      analyze_complexity: true,
+      max_complexity: @graphql_max_complexity
 
-    forward "/", Absinthe.Plug, schema: Module.concat(["HuddlzWeb.GraphqlSchema"])
+    forward "/", Absinthe.Plug,
+      schema: Module.concat(["HuddlzWeb.GraphqlSchema"]),
+      analyze_complexity: true,
+      max_complexity: @graphql_max_complexity
   end
 
   scope "/api/json" do

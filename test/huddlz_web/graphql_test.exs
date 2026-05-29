@@ -148,5 +148,23 @@ defmodule HuddlzWeb.GraphqlTest do
       assert is_list(results)
       assert Enum.any?(results, fn r -> r["id"] == huddl.id end)
     end
+
+    test "rejects an overly complex query", %{conn: conn} do
+      # Each searchHuddlz costs 3; 100 aliased copies far exceed max_complexity,
+      # blocking unauthenticated alias-amplification queries.
+      aliased =
+        Enum.map_join(1..100, " ", fn i -> "a#{i}: searchHuddlz { results { id } }" end)
+
+      query = "query { #{aliased} }"
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/json")
+        |> post("/gql", Jason.encode!(%{query: query}))
+
+      body = json_response(conn, 200)
+      assert body["errors"] != nil
+      assert Enum.any?(body["errors"], fn e -> e["message"] =~ "too complex" end)
+    end
   end
 end
