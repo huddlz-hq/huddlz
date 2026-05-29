@@ -19,6 +19,16 @@ config :ash, :missed_notifications, :ignore
 # Set environment to test for test-specific behavior
 config :huddlz, env: :test
 
+# Rate limiting is off by default in test so the suite isn't throttled; the
+# rate-limit test files enable it for their own scope. Limits are small so those
+# tests trip the limit in a few calls.
+config :huddlz, :rate_limit_enabled, false
+
+config :huddlz, :auth_rate_limits,
+  sign_in: [limit: 5, per: :timer.minutes(1)],
+  register: [limit: 5, per: :timer.minutes(1)],
+  password_reset: [limit: 5, per: :timer.hours(1)]
+
 # Configure PhoenixTest
 config :phoenix_test, :endpoint, HuddlzWeb.Endpoint
 
