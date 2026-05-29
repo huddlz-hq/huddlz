@@ -25,11 +25,7 @@ defmodule HuddlzWeb.GraphqlTest do
       %{owner: owner, group: group, huddl: huddl}
     end
 
-    test "unauthenticated create mutation returns error", %{
-      conn: conn,
-      group: group,
-      owner: owner
-    } do
+    test "unauthenticated create mutation returns error", %{conn: conn, group: group} do
       starts_at =
         DateTime.utc_now()
         |> DateTime.add(7, :day)
@@ -60,7 +56,6 @@ defmodule HuddlzWeb.GraphqlTest do
           eventType: "in_person",
           physicalLocation: "123 Main St",
           groupId: group.id,
-          creatorId: owner.id,
           startsAt: starts_at,
           endsAt: ends_at
         }
@@ -114,7 +109,6 @@ defmodule HuddlzWeb.GraphqlTest do
           eventType: "in_person",
           physicalLocation: "456 Oak Ave",
           groupId: group.id,
-          creatorId: owner.id,
           startsAt: starts_at,
           endsAt: ends_at
         }

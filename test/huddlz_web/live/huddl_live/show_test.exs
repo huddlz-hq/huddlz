@@ -57,8 +57,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             event_type: :virtual,
             virtual_link: "https://zoom.us/j/123456789",
             is_private: false,
-            group_id: group.id,
-            creator_id: owner.id
+            group_id: group.id
           },
           actor: owner
         )
@@ -152,8 +151,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             event_type: :in_person,
             physical_location: "123 Main St",
             is_private: false,
-            group_id: group.id,
-            creator_id: owner.id
+            group_id: group.id
           },
           actor: owner
         )
@@ -346,8 +344,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             event_type: :in_person,
             physical_location: "123 Main St, City",
             is_private: false,
-            group_id: group.id,
-            creator_id: owner.id
+            group_id: group.id
           },
           actor: owner
         )
@@ -374,8 +371,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             physical_location: "Conference Room A",
             virtual_link: "https://meet.example.com/hybrid",
             is_private: false,
-            group_id: group.id,
-            creator_id: owner.id
+            group_id: group.id
           },
           actor: owner
         )
@@ -425,8 +421,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             event_type: :in_person,
             physical_location: "Secret Location",
             is_private: true,
-            group_id: private_group.id,
-            creator_id: owner.id
+            group_id: private_group.id
           },
           actor: owner
         )

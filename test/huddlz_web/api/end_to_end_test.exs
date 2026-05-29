@@ -69,7 +69,6 @@ defmodule HuddlzWeb.Api.EndToEndTest do
           date: Date.add(Date.utc_today(), 7),
           start_time: ~T[14:00:00],
           duration_minutes: 60,
-          creator_id: user_id,
           group_id: group_id,
           event_type: :in_person,
           physical_location: "123 Test St",

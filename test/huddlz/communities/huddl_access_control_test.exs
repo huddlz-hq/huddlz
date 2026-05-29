@@ -46,8 +46,7 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                    ends_at: DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.add(2, :hour),
                    event_type: :in_person,
                    physical_location: "123 Main St",
-                   group_id: group.id,
-                   creator_id: owner.id
+                   group_id: group.id
                  },
                  actor: owner
                )
@@ -70,8 +69,7 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                    ends_at: DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.add(2, :hour),
                    event_type: :virtual,
                    virtual_link: "https://zoom.us/j/123456",
-                   group_id: group.id,
-                   creator_id: organizer.id
+                   group_id: group.id
                  },
                  actor: organizer
                )
@@ -92,8 +90,7 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                    ends_at: DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.add(2, :hour),
                    event_type: :in_person,
                    physical_location: "123 Main St",
-                   group_id: group.id,
-                   creator_id: member.id
+                   group_id: group.id
                  },
                  actor: member
                )
@@ -112,8 +109,7 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                    ends_at: DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.add(2, :hour),
                    event_type: :in_person,
                    physical_location: "123 Main St",
-                   group_id: group.id,
-                   creator_id: non_member.id
+                   group_id: group.id
                  },
                  actor: non_member
                )
@@ -132,8 +128,7 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                    ends_at: DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.add(2, :hour),
                    event_type: :in_person,
                    physical_location: "123 Main St",
-                   group_id: group.id,
-                   creator_id: admin.id
+                   group_id: group.id
                  },
                  actor: admin
                )
@@ -161,8 +156,7 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                    physical_location: "123 Main St",
                    # Explicitly set to false
                    is_private: false,
-                   group_id: private_group.id,
-                   creator_id: owner.id
+                   group_id: private_group.id
                  },
                  actor: owner
                )
@@ -189,8 +183,7 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                    event_type: :in_person,
                    physical_location: "123 Main St",
                    is_private: false,
-                   group_id: public_group.id,
-                   creator_id: owner.id
+                   group_id: public_group.id
                  },
                  actor: owner
                )
@@ -211,8 +204,7 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                    event_type: :in_person,
                    physical_location: "123 Main St",
                    is_private: true,
-                   group_id: public_group.id,
-                   creator_id: owner.id
+                   group_id: public_group.id
                  },
                  actor: owner
                )
@@ -486,7 +478,6 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                  event_type: :virtual,
                  starts_at: DateTime.add(DateTime.utc_now(), 7, :day),
                  ends_at: DateTime.add(DateTime.utc_now(), 7 * 24 * 3600 + 3600, :second),
-                 creator_id: owner.id,
                  group_id: group.id
                })
                |> Ash.create(actor: owner)
@@ -503,7 +494,6 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                  event_type: :in_person,
                  starts_at: DateTime.add(DateTime.utc_now(), 7, :day),
                  ends_at: DateTime.add(DateTime.utc_now(), 7 * 24 * 3600 + 3600, :second),
-                 creator_id: owner.id,
                  group_id: group.id
                })
                |> Ash.create(actor: owner)
@@ -520,7 +510,6 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                  event_type: :virtual,
                  starts_at: DateTime.add(DateTime.utc_now(), 7, :day),
                  ends_at: DateTime.add(DateTime.utc_now(), 7 * 24 * 3600 + 3600, :second),
-                 creator_id: owner.id,
                  group_id: group.id
                })
                |> Ash.create(actor: owner)

@@ -37,10 +37,14 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
           physical_location: huddl.physical_location,
           is_private: huddl.is_private,
           thumbnail_url: huddl.thumbnail_url,
-          creator_id: huddl.creator_id,
           group_id: huddl.group_id,
           huddl_template_id: huddl_template.id
         })
+        # creator_id is not an accepted input — the :create action derives it
+        # from the actor. This internal, actorless generation sets it directly
+        # so each instance inherits the parent huddl's creator (SetCreatorToActor
+        # leaves it untouched when no actor is present).
+        |> Ash.Changeset.force_change_attribute(:creator_id, huddl.creator_id)
         |> Ash.create!(authorize?: false)
 
       generate_huddlz_from_template(huddl_template, new_huddl, count + 1)

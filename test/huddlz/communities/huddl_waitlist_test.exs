@@ -65,8 +65,7 @@ defmodule Huddlz.Communities.HuddlWaitlistTest do
             event_type: :virtual,
             virtual_link: "https://zoom.us/j/000",
             is_private: false,
-            group_id: group.id,
-            creator_id: owner.id
+            group_id: group.id
           },
           actor: owner
         )
@@ -372,7 +371,6 @@ defmodule Huddlz.Communities.HuddlWaitlistTest do
           virtual_link: "https://zoom.us/j/123456",
           is_private: false,
           group_id: group.id,
-          creator_id: owner.id,
           max_attendees: 1
         },
         actor: owner
