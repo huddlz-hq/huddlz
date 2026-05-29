@@ -27,7 +27,7 @@ defmodule Huddlz.Communities.Huddl.Changes.JoinWaitlist do
       is_nil(huddl.max_attendees) ->
         Ash.Changeset.add_error(cs, "This huddl has no capacity limit; RSVP directly")
 
-      not at_capacity?(huddl) ->
+      not huddl.at_capacity ->
         Ash.Changeset.add_error(cs, "This huddl still has open spots; RSVP directly")
 
       true ->
@@ -51,7 +51,7 @@ defmodule Huddlz.Communities.Huddl.Changes.JoinWaitlist do
     Huddl
     |> Ash.Query.filter(id == ^huddl_id)
     |> Ash.Query.lock("FOR UPDATE")
-    |> Ash.Query.load(:rsvp_count)
+    |> Ash.Query.load(:at_capacity)
     |> Ash.read_one!(authorize?: false)
   end
 
@@ -60,7 +60,4 @@ defmodule Huddlz.Communities.Huddl.Changes.JoinWaitlist do
     |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl_id}, actor: %{id: user_id})
     |> Ash.read_one(authorize?: false)
   end
-
-  defp at_capacity?(%{max_attendees: nil}), do: false
-  defp at_capacity?(%{max_attendees: max, rsvp_count: count}), do: count >= max
 end
