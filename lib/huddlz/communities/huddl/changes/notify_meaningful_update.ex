@@ -1,29 +1,22 @@
 defmodule Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate do
   @moduledoc """
-  Enqueues notifications when a huddl is edited in a way that affects
-  an attendee's plans — i.e. one of `:title`, `:starts_at`, `:ends_at`,
-  `:physical_location`, or `:virtual_link` is in the changeset.
-  Cosmetic edits (description, thumbnail, etc.) do not trigger an
-  email.
+  Enqueues notifications when a huddl is edited in a way that affects an
+  attendee's plans — i.e. one of `:title`, `:starts_at`, `:ends_at`,
+  `:physical_location`, or `:virtual_link` is in the changeset. Cosmetic edits
+  (description, thumbnail, etc.) do not trigger an email.
 
-  Branches on the `edit_type` action argument:
+  Emails everyone who has RSVP'd to the huddl (except the person making the edit)
+  to tell them it changed. This fires for both a single-huddl edit and an "edit
+  all" on a series: the series edit updates each future occurrence through its
+  own `:update`, so every changed occurrence emails its own attendees from here.
 
-    * `"instance"` (default) — C2: fan out `:huddl_updated` to the
-      current huddl's RSVPs, excluding the actor.
-    * `"all"` — C4: `EditRecurringHuddlz` has regenerated every
-      future instance in the series. Fan out
-      `:huddl_series_updated` to the RSVPs of the *next upcoming
-      instance only*, excluding the actor. Subsequent instances rely
-      on their own D1/D2 reminders.
-
-  Both branches use the same "meaningful field" gate.
+  In `docs/notifications.md` terms this is notification C2 (`:huddl_updated`). The
+  per-series digest C4 (`:huddl_series_updated`) is deliberately not sent for now;
+  its sender is kept for a possible future "one summary per attendee" option.
   """
 
   use Ash.Resource.Change
 
-  require Ash.Query
-
-  alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.Huddl.Changes.RecipientHelpers
 
   @meaningful_attrs [:title, :starts_at, :ends_at, :physical_location, :virtual_link]
@@ -43,58 +36,13 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate do
   end
 
   defp notify(cs, huddl) do
-    case Ash.Changeset.get_argument(cs, :edit_type) do
-      "all" -> notify_series(cs, huddl)
-      _ -> notify_instance(cs, huddl)
-    end
-  end
-
-  defp notify_instance(cs, huddl) do
     huddl = Ash.load!(huddl, [:group], authorize?: false)
     changed_fields = cs.context[:huddl_updated_changed_fields] || []
 
     recipients =
       RecipientHelpers.rsvp_user_ids(huddl.id, exclude: RecipientHelpers.actor_id(cs))
 
-    payload = base_payload(huddl, changed_fields)
-
-    RecipientHelpers.deliver_each(recipients, :huddl_updated, payload)
-
-    {:ok, huddl}
-  end
-
-  defp notify_series(cs, huddl) do
-    case fetch_next_upcoming_instance(huddl) do
-      nil ->
-        {:ok, huddl}
-
-      next ->
-        next = Ash.load!(next, [:group], authorize?: false)
-        changed_fields = cs.context[:huddl_updated_changed_fields] || []
-
-        recipients =
-          RecipientHelpers.rsvp_user_ids(next.id, exclude: RecipientHelpers.actor_id(cs))
-
-        payload = base_payload(next, changed_fields)
-
-        RecipientHelpers.deliver_each(recipients, :huddl_series_updated, payload)
-
-        {:ok, huddl}
-    end
-  end
-
-  defp fetch_next_upcoming_instance(%Huddl{huddl_template_id: nil}), do: nil
-
-  defp fetch_next_upcoming_instance(%Huddl{huddl_template_id: template_id}) do
-    Huddl
-    |> Ash.Query.filter(huddl_template_id == ^template_id and starts_at > now())
-    |> Ash.Query.sort(starts_at: :asc)
-    |> Ash.Query.limit(1)
-    |> Ash.read_one!(authorize?: false)
-  end
-
-  defp base_payload(huddl, changed_fields) do
-    %{
+    payload = %{
       "huddl_id" => huddl.id,
       "huddl_title" => to_string(huddl.title),
       "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at),
@@ -102,5 +50,9 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate do
       "group_slug" => to_string(huddl.group.slug),
       "changed_fields" => Enum.map(changed_fields, &Atom.to_string/1)
     }
+
+    RecipientHelpers.deliver_each(recipients, :huddl_updated, payload)
+
+    {:ok, huddl}
   end
 end
