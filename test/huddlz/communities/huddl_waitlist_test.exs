@@ -333,6 +333,73 @@ defmodule Huddlz.Communities.HuddlWaitlistTest do
     end
   end
 
+  describe "at_capacity calculation" do
+    setup do
+      owner = generate(user(role: :user))
+      member = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      generate(group_member(group_id: group.id, user_id: member.id, role: :member, actor: owner))
+      %{owner: owner, member: member, group: group}
+    end
+
+    test "is false when rsvp_count is below max_attendees", %{owner: owner, group: group} do
+      huddl = capped_huddl(owner, group, 2)
+      assert load_at_capacity(huddl) == false
+    end
+
+    test "is true once rsvp_count reaches max_attendees", %{
+      owner: owner,
+      member: member,
+      group: group
+    } do
+      huddl = capped_huddl(owner, group, 1)
+
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
+      |> Ash.update!()
+
+      assert load_at_capacity(huddl) == true
+    end
+
+    test "is false for an uncapped huddl regardless of rsvp_count", %{
+      owner: owner,
+      member: member,
+      group: group
+    } do
+      huddl = capped_huddl(owner, group, nil)
+
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
+      |> Ash.update!()
+
+      assert load_at_capacity(huddl) == false
+    end
+  end
+
+  defp capped_huddl(owner, group, max_attendees) do
+    Huddl
+    |> Ash.Changeset.for_create(
+      :create,
+      %{
+        title: "Capacity Calc Huddl",
+        description: "x",
+        starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
+        ends_at: DateTime.add(DateTime.utc_now(), 2, :day),
+        event_type: :virtual,
+        virtual_link: "https://zoom.us/j/cap",
+        is_private: false,
+        group_id: group.id,
+        max_attendees: max_attendees
+      },
+      actor: owner
+    )
+    |> Ash.create!()
+  end
+
+  defp load_at_capacity(huddl) do
+    huddl |> Ash.reload!() |> Ash.load!(:at_capacity, authorize?: false) |> Map.get(:at_capacity)
+  end
+
   defp setup_group_and_capped_huddl(_) do
     owner = generate(user(role: :user))
     member = generate(user(role: :user))

@@ -627,6 +627,11 @@ defmodule Huddlz.Communities.Huddl do
       calculation expr(is_private == false and group.is_public == true)
     end
 
+    calculate :at_capacity, :boolean do
+      description "Whether the huddl has reached max_attendees (no open seats remain)"
+      calculation expr(not is_nil(max_attendees) and rsvp_count >= max_attendees)
+    end
+
     calculate :display_image_url, :string do
       description "Returns huddl's image, falling back to group image if none"
       calculation Huddlz.Communities.Huddl.Calculations.DisplayImageUrl

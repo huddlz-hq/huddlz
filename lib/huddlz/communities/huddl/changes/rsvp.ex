@@ -31,7 +31,7 @@ defmodule Huddlz.Communities.Huddl.Changes.Rsvp do
   end
 
   defp claim_or_reject(cs, huddl, user_id) do
-    if at_capacity?(huddl) do
+    if huddl.at_capacity do
       Ash.Changeset.add_error(cs, "This huddl is full")
     else
       create_rsvp!(huddl.id, user_id)
@@ -45,7 +45,7 @@ defmodule Huddlz.Communities.Huddl.Changes.Rsvp do
     Huddl
     |> Ash.Query.filter(id == ^huddl_id)
     |> Ash.Query.lock("FOR UPDATE")
-    |> Ash.Query.load(:rsvp_count)
+    |> Ash.Query.load(:at_capacity)
     |> Ash.read_one!(authorize?: false)
   end
 
@@ -54,9 +54,6 @@ defmodule Huddlz.Communities.Huddl.Changes.Rsvp do
     |> Ash.Query.for_read(:check_rsvp, %{huddl_id: huddl_id}, actor: %{id: user_id})
     |> Ash.read_one(authorize?: false)
   end
-
-  defp at_capacity?(%{max_attendees: nil}), do: false
-  defp at_capacity?(%{max_attendees: max, rsvp_count: count}), do: count >= max
 
   defp create_rsvp!(huddl_id, user_id) do
     HuddlAttendee
