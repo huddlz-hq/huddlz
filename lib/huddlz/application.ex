@@ -17,6 +17,7 @@ defmodule Huddlz.Application do
          Application.fetch_env!(:huddlz, Oban)
        )},
       {Phoenix.PubSub, name: Huddlz.PubSub},
+      {Huddlz.RateLimit, clean_period: :timer.minutes(1)},
       # Start a worker by calling: Huddlz.Worker.start_link(arg)
       # {Huddlz.Worker, arg},
       # Start to serve requests, typically the last entry
