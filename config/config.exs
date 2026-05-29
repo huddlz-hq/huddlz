@@ -34,6 +34,13 @@ config :huddlz, Oban,
   repo: Huddlz.Repo,
   plugins: [{Oban.Plugins.Cron, []}]
 
+# Per-email rate limits on the authentication actions, enforced at the Ash action
+# layer (see `Huddlz.Accounts.User` and `Huddlz.RateLimit`).
+config :huddlz, :auth_rate_limits,
+  sign_in: [limit: 10, per: :timer.minutes(1)],
+  register: [limit: 5, per: :timer.minutes(1)],
+  password_reset: [limit: 3, per: :timer.hours(1)]
+
 config :ash,
   allow_forbidden_field_for_relationships_by_default?: true,
   include_embedded_source_by_default?: false,

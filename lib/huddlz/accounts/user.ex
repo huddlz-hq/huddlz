@@ -5,12 +5,32 @@ defmodule Huddlz.Accounts.User do
 
   require Logger
 
+  alias Huddlz.RateLimit.Keys
+
   use Ash.Resource,
     otp_app: :huddlz,
     domain: Huddlz.Accounts,
     authorizers: [Ash.Policy.Authorizer],
-    extensions: [AshAuthentication, AshGraphql.Resource],
+    extensions: [AshAuthentication, AshGraphql.Resource, AshRateLimiter],
     data_layer: AshPostgres.DataLayer
+
+  # Per-email rate limits on the auth actions, enforced at the action layer (see
+  # `Huddlz.RateLimit` and `Huddlz.RateLimit.Keys`). Tunable per environment via the
+  # `:auth_rate_limits` config; defaults below are used if it is unset.
+  @sign_in_rate_limit Application.compile_env(:huddlz, [:auth_rate_limits, :sign_in],
+                        limit: 10,
+                        per: :timer.minutes(1)
+                      )
+  @register_rate_limit Application.compile_env(:huddlz, [:auth_rate_limits, :register],
+                         limit: 5,
+                         per: :timer.minutes(1)
+                       )
+  @password_reset_rate_limit Application.compile_env(
+                               :huddlz,
+                               [:auth_rate_limits, :password_reset],
+                               limit: 3,
+                               per: :timer.hours(1)
+                             )
 
   graphql do
     type :user
@@ -80,6 +100,28 @@ defmodule Huddlz.Accounts.User do
     custom_indexes do
       index "email gin_trgm_ops", name: "users_email_gin_index", using: "GIN"
     end
+  end
+
+  rate_limit do
+    backend Huddlz.RateLimit
+
+    action :sign_in_with_password,
+      limit: @sign_in_rate_limit[:limit],
+      per: @sign_in_rate_limit[:per],
+      key: &Keys.sign_in/2,
+      on: :before_transaction
+
+    action :register_with_password,
+      limit: @register_rate_limit[:limit],
+      per: @register_rate_limit[:per],
+      key: &Keys.register/2,
+      on: :before_transaction
+
+    action :request_password_reset_token,
+      limit: @password_reset_rate_limit[:limit],
+      per: @password_reset_rate_limit[:per],
+      key: &Keys.password_reset/2,
+      on: :before_transaction
   end
 
   actions do
