@@ -14,11 +14,10 @@ defmodule Huddlz.Communities.Group.Changes.AddOwnerAsMember do
 
       Huddlz.Communities.GroupMember
       |> Ash.Changeset.for_create(
-        :add_member,
+        :add_owner,
         %{
           group_id: group.id,
-          user_id: group.owner_id,
-          role: "owner"
+          user_id: group.owner_id
         },
         actor: actor
       )

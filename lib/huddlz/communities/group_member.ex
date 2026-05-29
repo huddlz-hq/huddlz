@@ -80,9 +80,48 @@ defmodule Huddlz.Communities.GroupMember do
         default "member"
       end
 
+      # The :owner role is never settable through this action — owners are
+      # minted only by group creation and Group.:transfer_ownership (via the
+      # internal :add_owner action). This mirrors :change_role, which also
+      # refuses :owner.
+      validate fn changeset, _context ->
+        case Ash.Changeset.get_argument(changeset, :role) do
+          role when role in ["member", "organizer"] ->
+            :ok
+
+          _ ->
+            {:error,
+             field: :role,
+             message:
+               "must be \"member\" or \"organizer\" (use transfer_ownership to set the owner)"}
+        end
+      end
+
       change manage_relationship(:group_id, :group, type: :append)
       change manage_relationship(:user_id, :user, type: :append)
       change set_attribute(:role, arg(:role))
+      change Huddlz.Communities.GroupMember.Changes.NotifyAdded
+    end
+
+    create :add_owner do
+      description """
+      Internal helper used by group creation and Group.:transfer_ownership to
+      add the owner as an :owner member. Always forbidden by policy — callers
+      must pass `authorize?: false`. Owner promotion otherwise only happens via
+      Group.:transfer_ownership.
+      """
+
+      argument :group_id, :uuid do
+        allow_nil? false
+      end
+
+      argument :user_id, :uuid do
+        allow_nil? false
+      end
+
+      change manage_relationship(:group_id, :group, type: :append)
+      change manage_relationship(:user_id, :user, type: :append)
+      change set_attribute(:role, :owner)
       change Huddlz.Communities.GroupMember.Changes.NotifyAdded
     end
 
@@ -198,11 +237,19 @@ defmodule Huddlz.Communities.GroupMember do
       authorize_if always()
     end
 
-    # Only group owners can add members (custom check for create)
+    # Owners may add members or organizers; organizers may add regular
+    # members only. Granting the organizer role is owner-only (mirroring
+    # :change_role), so an organizer cannot escalate a confederate — or
+    # themselves — into the organizer tier.
     policy action(:add_member) do
-      # Only the owner or an organizer (must be verified) can add members
       authorize_if GroupOwner
+      forbid_if expr(^arg(:role) == "organizer")
       authorize_if GroupOrganizer
+    end
+
+    # Internal-only — must be called with `authorize?: false`.
+    policy action(:add_owner) do
+      forbid_if always()
     end
 
     # Group owners can remove members

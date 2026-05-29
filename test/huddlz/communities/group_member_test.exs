@@ -441,4 +441,128 @@ defmodule Huddlz.Communities.GroupMemberTest do
       assert private_result == []
     end
   end
+
+  describe "add_member role hardening" do
+    setup do
+      owner = generate(user(role: :user))
+      organizer = generate(user(role: :user))
+      target = generate(user(role: :user))
+
+      group = generate(group(is_public: true, actor: owner))
+
+      # Owner promotes `organizer` to the organizer role
+      {:ok, _} =
+        GroupMember
+        |> Ash.Changeset.for_create(:add_member, %{
+          group_id: group.id,
+          user_id: organizer.id,
+          role: :organizer
+        })
+        |> Ash.create(actor: owner)
+
+      {:ok, %{owner: owner, organizer: organizer, target: target, group: group}}
+    end
+
+    test "owner cannot mint an :owner membership via add_member", %{
+      owner: owner,
+      target: target,
+      group: group
+    } do
+      assert {:error, %Ash.Error.Invalid{}} =
+               GroupMember
+               |> Ash.Changeset.for_create(:add_member, %{
+                 group_id: group.id,
+                 user_id: target.id,
+                 role: :owner
+               })
+               |> Ash.create(actor: owner)
+    end
+
+    test "organizer cannot mint an :owner membership via add_member", %{
+      organizer: organizer,
+      target: target,
+      group: group
+    } do
+      assert {:error, %Ash.Error.Invalid{}} =
+               GroupMember
+               |> Ash.Changeset.for_create(:add_member, %{
+                 group_id: group.id,
+                 user_id: target.id,
+                 role: :owner
+               })
+               |> Ash.create(actor: organizer)
+    end
+
+    test "organizer cannot grant the organizer role (owner-only)", %{
+      organizer: organizer,
+      target: target,
+      group: group
+    } do
+      assert {:error, %Ash.Error.Forbidden{}} =
+               GroupMember
+               |> Ash.Changeset.for_create(:add_member, %{
+                 group_id: group.id,
+                 user_id: target.id,
+                 role: :organizer
+               })
+               |> Ash.create(actor: organizer)
+    end
+
+    test "organizer can add a regular member", %{
+      organizer: organizer,
+      target: target,
+      group: group
+    } do
+      assert {:ok, membership} =
+               GroupMember
+               |> Ash.Changeset.for_create(:add_member, %{
+                 group_id: group.id,
+                 user_id: target.id,
+                 role: :member
+               })
+               |> Ash.create(actor: organizer)
+
+      assert membership.role == :member
+    end
+
+    test "owner can still grant the organizer role", %{
+      owner: owner,
+      target: target,
+      group: group
+    } do
+      assert {:ok, membership} =
+               GroupMember
+               |> Ash.Changeset.for_create(:add_member, %{
+                 group_id: group.id,
+                 user_id: target.id,
+                 role: :organizer
+               })
+               |> Ash.create(actor: owner)
+
+      assert membership.role == :organizer
+    end
+
+    test "group creation adds the owner as an :owner member", %{owner: owner, group: group} do
+      owner_membership =
+        GroupMember
+        |> Ash.Query.filter(group_id == ^group.id and user_id == ^owner.id)
+        |> Ash.read_one!(authorize?: false)
+
+      assert owner_membership.role == :owner
+    end
+
+    test ":add_owner is forbidden through the authorized API", %{
+      owner: owner,
+      target: target,
+      group: group
+    } do
+      assert {:error, %Ash.Error.Forbidden{}} =
+               GroupMember
+               |> Ash.Changeset.for_create(:add_owner, %{
+                 group_id: group.id,
+                 user_id: target.id
+               })
+               |> Ash.create(actor: owner)
+    end
+  end
 end

@@ -93,10 +93,9 @@ defmodule Huddlz.Communities.Group.Changes.TransferOwnership do
     case fetch_membership(group_id, user_id) do
       nil ->
         GroupMember
-        |> Ash.Changeset.for_create(:add_member, %{
+        |> Ash.Changeset.for_create(:add_owner, %{
           group_id: group_id,
-          user_id: user_id,
-          role: "owner"
+          user_id: user_id
         })
         |> Ash.create(authorize?: false)
         |> ok_or_error()
