@@ -391,7 +391,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   end
 
   def handle_event("change_past_page", %{"page" => page_str}, socket) do
-    page = String.to_integer(page_str)
+    page = parse_page(page_str)
 
     {past_huddlz, total_pages} =
       get_past_group_huddlz_paginated(
@@ -547,6 +547,21 @@ defmodule HuddlzWeb.GroupLive.Show do
 
     {page_result.results, total_pages}
   end
+
+  # Mirrors the clamped parser the other pagination LiveViews use, so a
+  # crafted non-numeric "page" value over the socket can't crash the process.
+  defp parse_page(nil), do: 1
+  defp parse_page(""), do: 1
+
+  defp parse_page(val) when is_binary(val) do
+    case Integer.parse(val) do
+      {n, _} when n >= 1 -> n
+      _ -> 1
+    end
+  end
+
+  defp parse_page(val) when is_integer(val) and val >= 1, do: val
+  defp parse_page(_), do: 1
 
   defp role_pill(%{can_edit_group: true}), do: "Owner"
   defp role_pill(%{is_member: true}), do: "Joined"
