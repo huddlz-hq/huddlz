@@ -131,6 +131,18 @@ defmodule Huddlz.StorageTest do
                ProfilePictures.store(temp_path, "avatar.gif", "image/gif", user_id)
     end
 
+    test "store/4 rejects a disallowed content type even with a valid extension", %{
+      test_id: test_id,
+      user_id: user_id
+    } do
+      temp_path = Path.join(System.tmp_dir!(), "upload_#{test_id}.png")
+      File.write!(temp_path, "not really an image")
+      on_exit(fn -> File.rm(temp_path) end)
+
+      assert {:error, "Invalid file type. Allowed: JPG, PNG, WebP"} =
+               ProfilePictures.store(temp_path, "avatar.png", "text/html", user_id)
+    end
+
     test "store/4 rejects files that are too large", %{test_id: test_id, user_id: user_id} do
       temp_path = Path.join(System.tmp_dir!(), "upload_#{test_id}.png")
       # Create a file larger than 5MB
@@ -192,6 +204,52 @@ defmodule Huddlz.StorageTest do
       # 5MB = 5 * 1024 * 1024 = 5,242,880 bytes
       assert {:error, _} = ProfilePictures.validate_file_size(5_242_881)
       assert {:error, _} = ProfilePictures.validate_file_size(10_000_000)
+    end
+  end
+
+  # The content-type allowlist runs before the file is read/decoded, so a
+  # bogus content type is rejected regardless of the bytes on disk. These
+  # cover that the allowlist is wired into every store entry point (it was
+  # previously dead code, leaving the client-supplied content type trusted).
+  describe "Storage.HuddlImages content-type allowlist" do
+    alias Huddlz.Storage.HuddlImages
+
+    setup do
+      temp_path = Path.join(System.tmp_dir!(), "huddl_#{:rand.uniform(999_999)}.png")
+      File.write!(temp_path, "not really an image")
+      on_exit(fn -> File.rm(temp_path) end)
+      {:ok, temp_path: temp_path}
+    end
+
+    test "store/4 rejects a disallowed content type", %{temp_path: temp_path} do
+      assert {:error, "Invalid file type. Allowed: JPG, PNG, WebP"} =
+               HuddlImages.store(temp_path, "banner.png", "text/html", "huddl-1")
+    end
+
+    test "store_pending/3 rejects a disallowed content type", %{temp_path: temp_path} do
+      assert {:error, "Invalid file type. Allowed: JPG, PNG, WebP"} =
+               HuddlImages.store_pending(temp_path, "banner.png", "application/pdf")
+    end
+  end
+
+  describe "Storage.GroupImages content-type allowlist" do
+    alias Huddlz.Storage.GroupImages
+
+    setup do
+      temp_path = Path.join(System.tmp_dir!(), "group_#{:rand.uniform(999_999)}.png")
+      File.write!(temp_path, "not really an image")
+      on_exit(fn -> File.rm(temp_path) end)
+      {:ok, temp_path: temp_path}
+    end
+
+    test "store/4 rejects a disallowed content type", %{temp_path: temp_path} do
+      assert {:error, "Invalid file type. Allowed: JPG, PNG, WebP"} =
+               GroupImages.store(temp_path, "banner.png", "text/html", "group-1")
+    end
+
+    test "store_pending/3 rejects a disallowed content type", %{temp_path: temp_path} do
+      assert {:error, "Invalid file type. Allowed: JPG, PNG, WebP"} =
+               GroupImages.store_pending(temp_path, "banner.png", "application/pdf")
     end
   end
 end
