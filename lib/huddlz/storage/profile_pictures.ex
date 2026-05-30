@@ -24,6 +24,7 @@ defmodule Huddlz.Storage.ProfilePictures do
   """
   def store(source_path, original_filename, content_type, user_id) do
     with :ok <- validate_extension(original_filename),
+         :ok <- validate_file_type(content_type),
          {:ok, %{size: size}} <- File.stat(source_path),
          :ok <- validate_file_size(size),
          {:ok, image_binary} <- File.read(source_path),
