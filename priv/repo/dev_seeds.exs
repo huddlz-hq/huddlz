@@ -82,8 +82,7 @@ if Enum.empty?(existing_groups) do
           description:
             "A group for Elixir enthusiasts in the Phoenix area. We meet monthly to discuss Elixir, Phoenix, LiveView, and more!",
           location: "Phoenix, AZ",
-          is_public: true,
-          owner_id: alice.id
+          is_public: true
         },
         actor: alice
       )
@@ -96,8 +95,7 @@ if Enum.empty?(existing_groups) do
           description:
             "Join us for our weekly book discussions. We read everything from fiction to technical books.",
           location: "Online",
-          is_public: true,
-          owner_id: bob.id
+          is_public: true
         },
         actor: bob
       )
@@ -110,8 +108,7 @@ if Enum.empty?(existing_groups) do
           description:
             "Weekend hiking trips for all skill levels. Safety first, adventure always!",
           location: "Various Trails",
-          is_public: true,
-          owner_id: carol.id
+          is_public: true
         },
         actor: carol
       )
@@ -123,8 +120,7 @@ if Enum.empty?(existing_groups) do
           name: "Private Tech Talks",
           description: "Exclusive tech talks for members only.",
           location: "Tech Hub",
-          is_public: false,
-          owner_id: admin.id
+          is_public: false
         },
         actor: admin
       )
@@ -251,8 +247,7 @@ if Enum.empty?(existing_groups) do
               |> DateTime.truncate(:second),
             physical_location: physical_location,
             virtual_link: virtual_link,
-            group_id: phoenix_group.id,
-            creator_id: Enum.random([alice.id, bob.id])
+            group_id: phoenix_group.id
           },
           actor: alice
         )
@@ -296,8 +291,7 @@ if Enum.empty?(existing_groups) do
               DateTime.add(DateTime.utc_now(), -days_ago * 24 * 3600 + 2 * 3600, :second)
               |> DateTime.truncate(:second),
             physical_location: "Central Library, Meeting Room #{Enum.random(["A", "B", "C"])}",
-            group_id: book_group.id,
-            creator_id: bob.id
+            group_id: book_group.id
           },
           actor: bob
         )
@@ -343,8 +337,7 @@ if Enum.empty?(existing_groups) do
               |> DateTime.truncate(:second),
             physical_location:
               "#{Enum.at(["North", "South", "East", "West"], rem(i - 1, 4))} Trailhead Parking",
-            group_id: hiking_group.id,
-            creator_id: carol.id
+            group_id: hiking_group.id
           },
           actor: carol
         )
@@ -376,8 +369,7 @@ if Enum.empty?(existing_groups) do
               DateTime.add(DateTime.utc_now(), 120 - minutes_ago, :minute)
               |> DateTime.truncate(:second),
             virtual_link: "https://zoom.us/j/live#{i}",
-            group_id: phoenix_group.id,
-            creator_id: alice.id
+            group_id: phoenix_group.id
           },
           actor: alice
         )
@@ -415,7 +407,6 @@ if Enum.empty?(existing_groups) do
             physical_location: "Tech Hub Conference Room",
             virtual_link: "https://privatemeeting.example.com/#{i}",
             group_id: private_group.id,
-            creator_id: admin.id,
             is_private: true
           },
           actor: admin
