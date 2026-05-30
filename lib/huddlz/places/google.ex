@@ -22,13 +22,17 @@ defmodule Huddlz.Places.Google do
 
     body = if types != [], do: Map.put(body, :includedPrimaryTypes, types), else: body
 
-    case Req.post(@autocomplete_url,
-           json: body,
-           headers: [
-             {"X-Goog-Api-Key", api_key()},
-             {"Content-Type", "application/json"}
-           ]
-         ) do
+    opts =
+      [
+        json: body,
+        redirect: false,
+        headers: [
+          {"X-Goog-Api-Key", api_key()},
+          {"Content-Type", "application/json"}
+        ]
+      ] ++ req_test_options()
+
+    case Req.post(@autocomplete_url, opts) do
       {:ok, %{status: 200, body: %{"suggestions" => suggestions}}} ->
         {:ok, parse_suggestions(suggestions)}
 
@@ -49,13 +53,17 @@ defmodule Huddlz.Places.Google do
   def place_details(place_id, session_token) when is_binary(place_id) do
     url = "https://places.googleapis.com/v1/places/#{place_id}"
 
-    case Req.get(url,
-           headers: [
-             {"X-Goog-Api-Key", api_key()},
-             {"X-Goog-FieldMask", "location"}
-           ],
-           params: [sessionToken: session_token]
-         ) do
+    opts =
+      [
+        redirect: false,
+        headers: [
+          {"X-Goog-Api-Key", api_key()},
+          {"X-Goog-FieldMask", "location"}
+        ],
+        params: [sessionToken: session_token]
+      ] ++ req_test_options()
+
+    case Req.get(url, opts) do
       {:ok, %{status: 200, body: %{"location" => %{"latitude" => lat, "longitude" => lng}}}} ->
         {:ok, %{latitude: lat, longitude: lng}}
 
@@ -87,5 +95,17 @@ defmodule Huddlz.Places.Google do
 
   defp api_key do
     Application.get_env(:huddlz, :google_maps)[:api_key]
+  end
+
+  # These are direct calls to Google's Places host, which never legitimately
+  # redirects. `redirect: false` is set on both requests so the
+  # X-Goog-Api-Key header can't be forwarded to another host if a 3xx is ever
+  # returned (Req's cross-host credential stripping only covers `authorization`,
+  # not arbitrary custom headers).
+  defp req_test_options do
+    case Application.get_env(:huddlz, :places_req_plug) do
+      nil -> []
+      plug -> [plug: plug]
+    end
   end
 end
