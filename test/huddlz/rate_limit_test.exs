@@ -46,4 +46,14 @@ defmodule Huddlz.RateLimitTest do
     assert {:allow, _} = RateLimit.hit(key, @scale, 3)
     assert {:deny, _} = RateLimit.hit(key, @scale, 3)
   end
+
+  test "when disabled, every hit is allowed and nothing is counted" do
+    Application.put_env(:huddlz, :rate_limit_enabled, false)
+    key = unique_key()
+
+    # Well past a limit of 1 — the kill-switch means no counting and no denial.
+    for _ <- 1..10 do
+      assert {:allow, 0} = RateLimit.hit(key, @scale, 1)
+    end
+  end
 end
