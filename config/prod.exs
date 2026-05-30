@@ -9,6 +9,10 @@ config :huddlz, HuddlzWeb.Endpoint,
   cache_static_manifest: "priv/static/cache_manifest.json",
   force_ssl: [rewrite_on: [:x_forwarded_proto], hsts: true]
 
+# Only transmit the session cookie over HTTPS (read by the endpoint's
+# @session_options). Dev/test leave this unset so cookies work over http.
+config :huddlz, :session, secure: true
+
 # Configures Swoosh API Client
 config :swoosh, api_client: Swoosh.ApiClient.Req
 
