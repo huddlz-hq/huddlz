@@ -15,8 +15,9 @@ defmodule Huddlz.Accounts.User do
     data_layer: AshPostgres.DataLayer
 
   # Per-email rate limits on the auth actions, enforced at the action layer (see
-  # `Huddlz.RateLimit` and `Huddlz.RateLimit.Keys`). Tunable per environment via the
-  # `:auth_rate_limits` config; defaults below are used if it is unset.
+  # `Huddlz.RateLimit` and `Huddlz.RateLimit.Keys`). Read from `:auth_rate_limits` at
+  # COMPILE time (the DSL needs literal values), so retuning the limits requires a
+  # recompile/redeploy, not just a runtime config change. Defaults below apply if unset.
   @sign_in_rate_limit Application.compile_env(:huddlz, [:auth_rate_limits, :sign_in],
                         limit: 10,
                         per: :timer.minutes(1)
