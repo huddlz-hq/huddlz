@@ -5,11 +5,16 @@ defmodule HuddlzWeb.Endpoint do
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
   # Set :encryption_salt if you would also like to encrypt it.
+  # `secure: true` keeps the session cookie off plaintext HTTP. It is only set
+  # in production (dev/test run over http); force_ssl + HSTS already redirect
+  # http→https there, and this closes the first-request window before HSTS is
+  # honored by the browser.
   @session_options [
     store: :cookie,
     key: "_huddlz_key",
     signing_salt: "QBw0kYUu",
-    same_site: "Lax"
+    same_site: "Lax",
+    secure: Application.compile_env(:huddlz, [:session, :secure], false)
   ]
 
   socket "/live", Phoenix.LiveView.Socket,
