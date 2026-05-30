@@ -125,12 +125,21 @@ with a `Retry-After`.
 
 **Deferred:**
 
-- **Per-IP limits** (password spray from one source, bulk signups). IP
-  is only reliably available on the HTTP paths, not the LiveView socket
+- **Per-IP limits** (password spray from one source, bulk signups, and —
+  importantly — closing the targeted-lockout vector below). IP is only
+  reliably available on the HTTP paths, not the LiveView socket
   (AshAuthentication threads `remote_ip` into action context only on its
   HTTP dispatcher). Adding per-IP limits means threading the client IP
   into the action context from each entry point (incl. reading peer/
   forwarded IP at LiveView mount).
+
+  The sign-in limit is currently **per email only**, which carries a known
+  trade-off: someone who knows a victim's email can spend junk attempts to
+  lock that account out of sign-in for the window — a cheap, targeted DoS.
+  Per-IP (or an IP+email combination, or an escalating delay instead of a
+  hard deny on sign-in) is what closes this, so it is the priority here —
+  not merely anti-spray. Accepted for now: pre-launch, low user count, and
+  the per-email cap still buys real brute-force protection in the meantime.
 - **Per-user-or-key buckets on `/api/json/*` and `/gql`.** Start
   permissive — the goal is to stop runaway scripts, not to throttle
   legitimate use.
