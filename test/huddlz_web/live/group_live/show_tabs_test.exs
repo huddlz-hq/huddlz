@@ -210,6 +210,23 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       refute has_element?(view, "h3", "Past Event 20")
     end
 
+    test "ignores a non-numeric page value instead of crashing", %{conn: conn, group: group} do
+      {:ok, view, _html} = live(conn, ~p"/groups/#{group.slug}")
+
+      # Switch to past events tab and move off page 1 so the fallback is observable.
+      view |> element("button", "Past") |> render_click()
+      view |> element("button", "2") |> render_click()
+      assert has_element?(view, "button.page-num.is-active", "2")
+
+      # A crafted socket event with a non-numeric page must not crash the
+      # LiveView; it falls back to page 1. String.to_integer/1 would have
+      # raised ArgumentError here and dropped the process.
+      html = render_hook(view, "change_past_page", %{"page" => "not-a-number"})
+
+      assert html =~ "Past Event 1"
+      assert has_element?(view, "button.page-num.is-active", "1")
+    end
+
     test "shows no past events message when group has no past events", %{conn: conn, user: user} do
       # Create a new group with no past events
       new_group = generate(group(owner_id: user.id, is_public: true, actor: user))
