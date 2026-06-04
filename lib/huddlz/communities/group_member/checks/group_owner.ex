@@ -5,8 +5,6 @@ defmodule Huddlz.Communities.GroupMember.Checks.GroupOwner do
 
   use Ash.Policy.SimpleCheck
 
-  require Ash.Query
-
   alias Huddlz.Communities.Group
 
   @impl true

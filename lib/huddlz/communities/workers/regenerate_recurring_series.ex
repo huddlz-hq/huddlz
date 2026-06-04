@@ -11,8 +11,6 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeries do
   alias Huddlz.Communities.Huddl.RecurrenceHelper
   alias Huddlz.Communities.HuddlTemplate
 
-  require Ash.Query
-
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"huddl_id" => huddl_id}}) do
     huddl =

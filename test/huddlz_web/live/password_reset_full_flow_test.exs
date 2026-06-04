@@ -53,7 +53,7 @@ defmodule HuddlzWeb.PasswordResetFullFlowTest do
           end
         end)
 
-      refute reset_link == false, "Should find reset link in email"
+      assert is_binary(reset_link), "Should find reset link in email"
 
       # Extract just the path from the full URL
       %{path: reset_path} = URI.parse(reset_link)

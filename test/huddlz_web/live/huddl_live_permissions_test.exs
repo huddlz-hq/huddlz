@@ -2,7 +2,6 @@ defmodule HuddlzWeb.HuddlLivePermissionsTest do
   use HuddlzWeb.ConnCase, async: true
 
   import Huddlz.Generator
-  require Ash.Query
 
   describe "Huddl RSVP and permissions" do
     setup do

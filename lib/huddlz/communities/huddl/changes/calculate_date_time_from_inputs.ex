@@ -5,7 +5,6 @@ defmodule Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs do
   """
 
   use Ash.Resource.Change
-  require Ash.Query
 
   def change(changeset, _opts, _context) do
     date = Ash.Changeset.get_argument(changeset, :date)

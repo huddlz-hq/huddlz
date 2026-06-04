@@ -10,8 +10,6 @@ defmodule Huddlz.Communities.Group do
     authorizers: [Ash.Policy.Authorizer],
     extensions: [AshJsonApi.Resource, AshGraphql.Resource]
 
-  require Ash.Query
-
   graphql do
     type :group
 

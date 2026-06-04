@@ -9,8 +9,6 @@ defmodule Huddlz.Communities.GroupMember.Changes.NotifyRemoved do
 
   use Ash.Resource.Change
 
-  require Ash.Query
-
   alias Huddlz.Communities.Group
   alias Huddlz.Notifications
 

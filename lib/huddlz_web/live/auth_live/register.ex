@@ -8,7 +8,6 @@ defmodule HuddlzWeb.AuthLive.Register do
   alias AshPhoenix.Form
   alias Huddlz.Accounts.DisplayNameGenerator
   alias Huddlz.Accounts.User
-  require Ash
 
   @impl true
   def mount(_params, _session, socket) do

@@ -10,7 +10,6 @@ defmodule Huddlz.Notifications.RsvpNotificationsTest do
   use Oban.Testing, repo: Huddlz.Repo
 
   import Swoosh.TestAssertions
-  require Ash.Query
 
   alias Huddlz.Notifications.DeliverWorker
 
