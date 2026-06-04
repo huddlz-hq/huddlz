@@ -55,7 +55,7 @@ metadata:
 ## Searching Documentation
 
 ```sh
-mix usage_rules.search_docs "search term" -p ash -p ash_authentication_phoenix -p ash_graphql -p ash_json_api -p ash_oban -p ash_ops -p ash_phoenix -p ash_postgres
+mix usage_rules.search_docs "search term" -p ash -p ash_authentication_phoenix -p ash_graphql -p ash_json_api -p ash_oban -p ash_ops -p ash_phoenix -p ash_postgres -p ash_rate_limiter
 ```
 
 ## Available Mix Tasks
@@ -77,6 +77,7 @@ mix usage_rules.search_docs "search term" -p ash -p ash_authentication_phoenix -
 - `mix ash.generate_resource_diagrams` - Generates Mermaid Resource Diagrams for each Ash domain
 - `mix ash.gettext.extract` - Extracts Ash error messages into a .pot file
 - `mix ash.install` - Installs Ash into a project. Should be called with `mix igniter.install ash`
+- `mix ash.manifest.dump` - Dump the Ash app manifest as JSON
 - `mix ash.migrate` - Runs all migration tasks for any extension on any resource/domain in your application.
 - `mix ash.patch.extend` - Adds an extension or extensions to the given domain/resource
 - `mix ash.reset` - Runs all tear down & setup tasks for any extension on any resource/domain in your application.
@@ -108,4 +109,6 @@ mix usage_rules.search_docs "search term" -p ash -p ash_authentication_phoenix -
 - `mix ash_postgres.setup_vector` - Sets up pgvector for AshPostgres
 - `mix ash_postgres.setup_vector.docs`
 - `mix ash_postgres.squash_snapshots` - Cleans snapshots folder, leaving only one snapshot per resource
+- `mix ash_rate_limiter.install` - Installs AshRateLimiter
+- `mix ash_rate_limiter.upgrade` - Upgrades AshRateLimiter
 <!-- usage-rules-skill-end -->
