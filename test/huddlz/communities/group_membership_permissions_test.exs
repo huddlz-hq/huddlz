@@ -3,8 +3,6 @@ defmodule Huddlz.Communities.GroupMembershipPermissionsTest do
 
   alias Huddlz.Communities.GroupMember
 
-  require Ash.Query
-
   setup do
     admin = generate(user(role: :admin))
     verified = generate(user())

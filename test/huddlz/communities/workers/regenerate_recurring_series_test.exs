@@ -5,8 +5,6 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.Workers.RegenerateRecurringSeries
 
-  require Ash.Query
-
   # Creates a recurring huddl through the :create action. Pins the start to
   # "tomorrow" so the weekly cadence is deterministic: with repeat_until 22 days
   # out, exactly 2 future instances are generated (days +7 and +14).

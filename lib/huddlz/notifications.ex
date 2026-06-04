@@ -39,6 +39,17 @@ defmodule Huddlz.Notifications do
   alias Huddlz.Notifications.Triggers
   alias HuddlzWeb.Endpoint
 
+  # The trigger registry references sender modules for phases that haven't
+  # shipped yet (e.g. the deferred digests). Those modules don't exist on
+  # disk, and `deliver_now/2` guards the dynamic dispatch with
+  # `ensure_sender_implemented!/2`. Tell the compiler not to flag the
+  # not-yet-defined `build/2` calls — the runtime guard is the contract.
+  @compile {:no_warn_undefined,
+            [
+              {Huddlz.Notifications.Senders.WeeklyDigest, :build, 2},
+              {Huddlz.Notifications.Senders.ReactivationNudge, :build, 2}
+            ]}
+
   @unsubscribe_salt "notifications:unsubscribe"
   # 30 days — long enough for an email to sit in an inbox over a vacation.
   @unsubscribe_max_age 60 * 60 * 24 * 30

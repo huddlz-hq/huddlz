@@ -45,8 +45,8 @@ defmodule HuddlzWeb.ApiCase do
       {:ok, token, _claims} ->
         Plug.Conn.put_req_header(conn, "authorization", "Bearer " <> token)
 
-      {:error, reason} ->
-        raise "Failed to generate JWT for test user: #{inspect(reason)}"
+      :error ->
+        raise "Failed to generate JWT for test user"
     end
   end
 

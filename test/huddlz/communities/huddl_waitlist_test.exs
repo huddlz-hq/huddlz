@@ -6,8 +6,6 @@ defmodule Huddlz.Communities.HuddlWaitlistTest do
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.HuddlAttendee
 
-  require Ash.Query
-
   describe "joining the waitlist" do
     setup :setup_group_and_capped_huddl
 

@@ -14,8 +14,8 @@ defmodule Huddlz.Test.Helpers.Authentication do
         |> Phoenix.ConnTest.init_test_session(%{})
         |> Plug.Conn.put_session(:user_token, token)
 
-      {:error, reason} ->
-        raise "Failed to generate token: #{inspect(reason)}"
+      :error ->
+        raise "Failed to generate token for test user"
     end
   end
 

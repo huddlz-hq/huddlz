@@ -3,8 +3,6 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
 
   alias Huddlz.Communities.Huddl
 
-  require Ash.Query
-
   setup do
     owner = generate(user())
     organizer = generate(user())

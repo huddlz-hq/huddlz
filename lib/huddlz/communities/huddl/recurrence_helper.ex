@@ -15,8 +15,6 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
 
   alias Huddlz.Communities.Huddl
 
-  require Ash.Query
-
   @max_instances 104
 
   # Fields copied from the source huddl onto every generated/reconciled instance.

@@ -283,8 +283,6 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
     end
 
     test "anonymous actor with relationship filter returns []", %{} do
-      require Ash.Query
-
       {:ok, %{results: results}} =
         Huddlz.Communities.Huddl
         |> Ash.Query.for_read(:search, %{relationship: :hosting, date_filter: :all}, actor: nil)

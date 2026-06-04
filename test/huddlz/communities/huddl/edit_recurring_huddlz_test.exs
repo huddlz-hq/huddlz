@@ -6,8 +6,6 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
   alias Huddlz.Communities.HuddlTemplate
   alias Huddlz.Generator
 
-  require Ash.Query
-
   # Builds a recurring series: a source huddl linked to a weekly template plus
   # its generated future instances. `is_public` controls whether the group (and
   # therefore every instance) is private — the bug only surfaces for private
