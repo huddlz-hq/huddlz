@@ -5,7 +5,7 @@ defmodule Huddlz.MixProject do
     [
       app: :huddlz,
       version: "0.1.0",
-      elixir: "~> 1.15",
+      elixir: "~> 1.20",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       consolidate_protocols: Mix.env() != :dev,
@@ -90,7 +90,7 @@ defmodule Huddlz.MixProject do
       {:ash, "~> 3.0"},
       {:tidewave, "~> 0.1", only: [:dev]},
       {:igniter, "~> 0.5", only: [:dev, :test]},
-      {:faker, "~> 0.18", only: [:dev, :test]},
+      {:faker_fork, "~> 0.19", only: [:dev, :test]},
       {:phoenix, "~> 1.8"},
       {:phoenix_ecto, "~> 4.5"},
       {:ecto_sql, "~> 3.10"},
