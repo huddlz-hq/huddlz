@@ -26,6 +26,7 @@ mix usage_rules.search_docs "search term" -p igniter
 - `mix igniter.move_files` - Moves any relevant files to their 'correct' location.
 - `mix igniter.phx.install`
 - `mix igniter.refactor.rename_function` - Rename functions across a project with automatic reference updates.
+- `mix igniter.refactor.rename_module` - Rename a module across a project with automatic reference updates.
 - `mix igniter.refactor.unless_to_if_not` - Rewrites occurrences of `unless x` to `if !x` across the project.
 - `mix igniter.remove` - Removes the provided deps from `mix.exs`
 - `mix igniter.setup` - Creates or updates a .igniter.exs file, used to configure Igniter for end user's preferences.
