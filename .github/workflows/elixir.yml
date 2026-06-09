@@ -110,3 +110,72 @@ jobs:
     # Customize this step as desired.
     - name: Check Linting
       run: mix credo --strict
+
+  # Run the dev onboarding flow (`mix ecto.setup`: create, migrate, seeds.exs,
+  # dev_seeds.exs) against a fresh database. The seed scripts call resource
+  # actions directly and refuse to run in MIX_ENV=test, so the test suite
+  # can't catch them drifting from the actions they call — this job can.
+  seeds:
+    services:
+      db:
+        image: postgis/postgis:17-3.5
+        ports: ['5432:5432']
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    runs-on: ubuntu-latest
+    name: Seed on OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
+    env:
+      MIX_ENV: dev
+    strategy:
+      matrix:
+        otp: ['29.0.1']
+        elixir: ['1.20.0']
+    steps:
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        otp-version: ${{matrix.otp}}
+        elixir-version: ${{matrix.elixir}}
+
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # The example file works as-is: the placeholder Google Maps key makes
+    # geocoding fail soft (warning + nil coordinates), which is exactly what
+    # a fresh contributor without real credentials experiences.
+    - name: Setup dev environment
+      run: cp .dev.env.example .dev.env
+
+    - name: Cache deps
+      id: cache-deps
+      uses: actions/cache@v3
+      env:
+        cache-name: cache-elixir-deps
+      with:
+        path: deps
+        key: ${{ runner.os }}-mix-${{ env.cache-name }}-${{ hashFiles('**/mix.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-mix-${{ env.cache-name }}-
+
+    - name: Cache compiled build
+      id: cache-build
+      uses: actions/cache@v3
+      env:
+        cache-name: cache-compiled-dev-build
+      with:
+        path: _build
+        key: ${{ runner.os }}-mix-${{ env.cache-name }}-${{ hashFiles('**/mix.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-mix-${{ env.cache-name }}-
+
+    - name: Install dependencies
+      run: mix deps.get
+
+    - name: Create, migrate, and seed the database
+      run: mix ecto.setup
