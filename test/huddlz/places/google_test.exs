@@ -27,6 +27,21 @@ defmodule Huddlz.Places.GoogleTest do
       assert suggestion.main_text == "Austin"
       assert suggestion.display_text == "Austin, TX, USA"
     end
+
+    test "returns request_failed without retrying when the request times out" do
+      test_pid = self()
+
+      Req.Test.stub(Google, fn conn ->
+        send(test_pid, :request_attempted)
+        Req.Test.transport_error(conn, :timeout)
+      end)
+
+      assert {:error, {:request_failed, %Req.TransportError{reason: :timeout}}} =
+               Google.autocomplete("Austin", "session-token", [])
+
+      assert_received :request_attempted
+      refute_received :request_attempted
+    end
   end
 
   describe "place_details/2" do
@@ -37,6 +52,21 @@ defmodule Huddlz.Places.GoogleTest do
 
       assert {:ok, %{latitude: 30.2672, longitude: -97.7431}} =
                Google.place_details("place-123", "session-token")
+    end
+
+    test "returns request_failed without retrying when the request times out" do
+      test_pid = self()
+
+      Req.Test.stub(Google, fn conn ->
+        send(test_pid, :request_attempted)
+        Req.Test.transport_error(conn, :timeout)
+      end)
+
+      assert {:error, {:request_failed, %Req.TransportError{reason: :timeout}}} =
+               Google.place_details("place-123", "session-token")
+
+      assert_received :request_attempted
+      refute_received :request_attempted
     end
   end
 
