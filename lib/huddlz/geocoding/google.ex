@@ -7,6 +7,11 @@ defmodule Huddlz.Geocoding.Google do
 
   @geocoding_url "https://maps.googleapis.com/maps/api/geocode/json"
 
+  # Geocoding runs in the request path; cap how long a slow Google response
+  # can hold a connection, and don't let Req's default retry-with-backoff
+  # multiply that wait.
+  @req_options [receive_timeout: :timer.seconds(5), retry: false]
+
   @accepted_types ~w(
     street_address route premise subpremise
     locality sublocality neighborhood postal_code
@@ -34,7 +39,7 @@ defmodule Huddlz.Geocoding.Google do
   end
 
   defp fetch_coordinates(address, key) do
-    opts = [params: [address: address, key: key]] ++ req_test_options()
+    opts = [params: [address: address, key: key]] ++ @req_options ++ req_test_options()
     Req.get(@geocoding_url, opts)
   end
 

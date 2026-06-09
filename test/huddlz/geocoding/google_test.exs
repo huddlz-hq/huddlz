@@ -120,6 +120,21 @@ defmodule Huddlz.Geocoding.GoogleTest do
       assert {:error, {:api_error, "REQUEST_DENIED"}} = Google.geocode("Austin, TX")
     end
 
+    test "returns request_failed without retrying when the request times out" do
+      test_pid = self()
+
+      Req.Test.stub(Google, fn conn ->
+        send(test_pid, :request_attempted)
+        Req.Test.transport_error(conn, :timeout)
+      end)
+
+      assert {:error, {:request_failed, %Req.TransportError{reason: :timeout}}} =
+               Google.geocode("Austin, TX")
+
+      assert_received :request_attempted
+      refute_received :request_attempted
+    end
+
     test "rejects empty address" do
       assert {:error, :invalid_address} = Google.geocode("")
     end

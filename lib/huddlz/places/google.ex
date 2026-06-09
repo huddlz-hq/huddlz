@@ -7,6 +7,11 @@ defmodule Huddlz.Places.Google do
 
   @autocomplete_url "https://places.googleapis.com/v1/places:autocomplete"
 
+  # Autocomplete fires per keystroke from LiveView; cap how long a slow
+  # Google response can hold a connection, and don't let Req's default
+  # retry-with-backoff multiply that wait.
+  @req_options [receive_timeout: :timer.seconds(5), retry: false]
+
   @impl true
   def autocomplete(query, _session_token, _opts) when is_binary(query) and byte_size(query) < 2 do
     {:ok, []}
@@ -30,7 +35,7 @@ defmodule Huddlz.Places.Google do
           {"X-Goog-Api-Key", api_key()},
           {"Content-Type", "application/json"}
         ]
-      ] ++ req_test_options()
+      ] ++ @req_options ++ req_test_options()
 
     case Req.post(@autocomplete_url, opts) do
       {:ok, %{status: 200, body: %{"suggestions" => suggestions}}} ->
@@ -61,7 +66,7 @@ defmodule Huddlz.Places.Google do
           {"X-Goog-FieldMask", "location"}
         ],
         params: [sessionToken: session_token]
-      ] ++ req_test_options()
+      ] ++ @req_options ++ req_test_options()
 
     case Req.get(url, opts) do
       {:ok, %{status: 200, body: %{"location" => %{"latitude" => lat, "longitude" => lng}}}} ->
