@@ -456,23 +456,9 @@ defmodule Huddlz.Communities.Huddl do
       authorize_if always()
     end
 
-    # RSVP policies
-    policy action(:rsvp) do
-      description "Users can RSVP to huddlz they have access to"
-      authorize_if expr(is_private == false and group.is_public == true)
-      authorize_if expr(exists(group.members, id == ^actor(:id)))
-    end
-
-    # Cancel RSVP policies (also covers leaving the waitlist)
-    policy action(:cancel_rsvp) do
-      description "Users can cancel their own RSVPs or leave the waitlist"
-      authorize_if expr(is_private == false and group.is_public == true)
-      authorize_if expr(exists(group.members, id == ^actor(:id)))
-    end
-
-    # Waitlist join policy mirrors RSVP visibility
-    policy action(:join_waitlist) do
-      description "Users can join the waitlist for huddlz they have access to"
+    # RSVP, cancellation, and waitlist all share the same visibility rule
+    policy action([:rsvp, :cancel_rsvp, :join_waitlist]) do
+      description "Users can manage their attendance on huddlz they have access to"
       authorize_if expr(is_private == false and group.is_public == true)
       authorize_if expr(exists(group.members, id == ^actor(:id)))
     end
