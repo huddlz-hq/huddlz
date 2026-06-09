@@ -314,7 +314,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has(".rsvp-banner.warn", text: "This huddl is full")
       |> assert_has(".facts .value", text: "1/1 spots filled")
       |> refute_has("button", text: "RSVP to this huddl")
-      |> assert_has("button", text: "Join waitlist")
+      |> assert_has("button[phx-disable-with='Joining waitlist...']", text: "Join waitlist")
     end
 
     test "non-authenticated users see sign-in prompt for virtual link", %{

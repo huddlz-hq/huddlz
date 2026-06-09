@@ -365,7 +365,12 @@ defmodule HuddlzWeb.HuddlLive.Show do
         </svg>
         <span>This huddl is full</span>
       </div>
-      <.button variant={:primary} phx-click="join_waitlist" class="rsvp-cta">
+      <.button
+        variant={:primary}
+        phx-click="join_waitlist"
+        phx-disable-with="Joining waitlist..."
+        class="rsvp-cta"
+      >
         Join waitlist
       </.button>
       """
