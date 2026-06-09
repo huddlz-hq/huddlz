@@ -13,9 +13,15 @@ defmodule Huddlz.Notifications.DeliverWorker do
   Delivery failures retry with the worker's default exponential backoff.
   Skipped or unknown-user jobs return `{:cancel, reason}` so they don't
   retry.
+
+  Jobs with identical args enqueued within a minute are deduplicated —
+  an accidental double-enqueue would otherwise email the user twice.
   """
 
-  use Oban.Worker, queue: :notifications, max_attempts: 5
+  use Oban.Worker,
+    queue: :notifications,
+    max_attempts: 5,
+    unique: [period: 60]
 
   alias Huddlz.Accounts.User
   alias Huddlz.Notifications

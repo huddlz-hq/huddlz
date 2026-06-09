@@ -23,6 +23,27 @@ defmodule Huddlz.Notifications.DeliverWorkerTest do
       )
     end
 
+    test "deduplicates identical jobs enqueued in quick succession" do
+      user = generate(user(confirmed_at: DateTime.utc_now()))
+
+      assert {:ok, %Oban.Job{conflict?: false}} = Notifications.deliver(user, :password_changed)
+      assert {:ok, %Oban.Job{conflict?: true}} = Notifications.deliver(user, :password_changed)
+
+      assert [_only_job] = all_enqueued(worker: DeliverWorker)
+    end
+
+    test "does not deduplicate jobs with different payloads" do
+      user = generate(user(confirmed_at: DateTime.utc_now()))
+
+      assert {:ok, %Oban.Job{conflict?: false}} =
+               Notifications.deliver(user, :password_changed, %{"source" => "a"})
+
+      assert {:ok, %Oban.Job{conflict?: false}} =
+               Notifications.deliver(user, :password_changed, %{"source" => "b"})
+
+      assert [_, _] = all_enqueued(worker: DeliverWorker)
+    end
+
     test "raises on unknown triggers up front rather than after enqueue" do
       user = generate(user())
 
