@@ -223,6 +223,7 @@ defmodule HuddlzWeb.GroupLive.Show do
                 :if={!@is_member and @can_join_group}
                 variant={:primary}
                 phx-click="join_group"
+                phx-disable-with="Joining..."
               >
                 Join Group
               </.button>
@@ -230,6 +231,7 @@ defmodule HuddlzWeb.GroupLive.Show do
                 :if={@can_leave_group}
                 variant={:muted}
                 phx-click="leave_group"
+                phx-disable-with="Leaving..."
                 data-confirm="Are you sure you want to leave this group?"
               >
                 Leave Group
