@@ -367,6 +367,26 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       assert_has(session, "input#form_title + p.form-error")
     end
 
+    test "shows physical location error when submitting in-person huddl without a location", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      tomorrow = Date.utc_today() |> Date.add(1) |> Date.to_iso8601()
+
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/huddlz/new")
+      |> fill_in("Title", with: "Test Huddl")
+      |> fill_in("Date", with: tomorrow)
+      |> fill_in("Start time", with: "14:00")
+      |> select("Duration", option: "1 hour")
+      # Leave event type as in-person (default), no location selected
+      |> click_button("Schedule huddl")
+      |> assert_path(~p"/groups/#{group.slug}/huddlz/new")
+      |> assert_has("p.form-error", text: "is required for in-person huddlz")
+    end
+
     test "selecting a saved location preserves other form fields", %{
       conn: conn,
       owner: owner,

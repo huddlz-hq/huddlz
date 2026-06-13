@@ -279,6 +279,7 @@ defmodule HuddlzWeb.HuddlLive.New do
                   selected_location={@selected_location}
                   new_location_path={~p"/groups/#{@group.slug}/huddlz/new/locations/new"}
                 />
+                <.field_errors field={@form[:physical_location]} always_show={true} />
               </div>
             <% end %>
 

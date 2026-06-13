@@ -394,6 +394,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
                     ~p"/groups/#{@group_slug}/huddlz/#{@huddl.id}/edit/locations/new"
                   }
                 />
+                <.field_errors field={@form[:physical_location]} always_show={true} />
               </div>
             <% end %>
 
