@@ -133,15 +133,16 @@ defmodule HuddlzWeb.Components.Input do
   end
 
   attr :field, FormField, required: true, doc: "form field whose errors to render"
+  attr :always_show, :boolean, default: false
 
   @doc """
   Renders `<p class="form-error">` lines for a form field whose markup isn't
   produced by `input/textarea/select` (e.g. an inline raw input or a
-  radio-card group). Hidden until the field has been touched (`used_input?/1`).
+  radio-card group). Hidden until the field has been touched (`used_input?/1`) or always_show is set.
   """
   def field_errors(%{field: %FormField{} = field} = assigns) do
     errors =
-      if Phoenix.Component.used_input?(field) do
+      if assigns.always_show || Phoenix.Component.used_input?(field) do
         Enum.map(field.errors, &translate_error/1)
       else
         []
