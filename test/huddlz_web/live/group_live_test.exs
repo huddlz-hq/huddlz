@@ -93,6 +93,37 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> fill_in("Group name", with: "ab")
       |> assert_has("p", text: "length must be greater than or equal to")
     end
+
+    test "shows location error when submitting with a location that is too long", %{
+      conn: conn,
+      verified: verified
+    } do
+      session =
+        conn
+        |> login(verified)
+        |> visit(~p"/groups/new")
+        |> fill_in("Group name", with: "Test Group")
+        |> fill_in("Description", with: "A test group description")
+
+      send(
+        session.view.pid,
+        {:location_selected, "group-location",
+         %{
+           place_id: "test_place_id",
+           display_text: String.duplicate("x", 501),
+           main_text: "Too Long",
+           latitude: 30.27,
+           longitude: -97.74
+         }}
+      )
+
+      Phoenix.LiveViewTest.render(session.view)
+
+      session
+      |> click_button("Create group")
+      |> assert_path(~p"/groups/new")
+      |> assert_has("p.form-error", text: "length must be less than or equal to 500")
+    end
   end
 
   describe "Show" do

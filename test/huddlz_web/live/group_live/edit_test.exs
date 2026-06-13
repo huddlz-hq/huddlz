@@ -109,6 +109,36 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       |> assert_has("h1", text: "Test Group")
     end
 
+    test "shows location error when submitting with a location that is too long", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/edit")
+
+      send(
+        session.view.pid,
+        {:location_selected, "group-location",
+         %{
+           place_id: "test_place_id",
+           display_text: String.duplicate("x", 501),
+           main_text: "Too Long",
+           latitude: 30.27,
+           longitude: -97.74
+         }}
+      )
+
+      Phoenix.LiveViewTest.render(session.view)
+
+      session
+      |> click_button("Save Changes")
+      |> assert_path(~p"/groups/#{group.slug}/edit")
+      |> assert_has("p.form-error", text: "length must be less than or equal to 500")
+    end
+
     test "cancel button returns to group page", %{conn: conn, owner: owner, group: group} do
       conn
       |> login(owner)
