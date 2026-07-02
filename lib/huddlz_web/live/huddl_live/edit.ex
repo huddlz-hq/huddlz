@@ -49,13 +49,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         |> assign(:pending_image_id, nil)
         |> assign(:pending_preview_url, nil)
         |> assign(:upload_processing, false)
-        |> allow_upload(:huddl_image,
-          accept: ~w(.jpg .jpeg .png .webp),
-          max_entries: 1,
-          max_file_size: 5_000_000,
-          auto_upload: true,
-          progress: &handle_upload_progress/3
-        )
+        |> allow_image_upload(:huddl_image, &handle_upload_progress/3)
 
       {:noreply, socket}
     else

@@ -58,13 +58,7 @@ defmodule HuddlzWeb.HuddlLive.New do
   defp maybe_allow_image_upload(%{assigns: %{uploads: %{huddl_image: _}}} = socket), do: socket
 
   defp maybe_allow_image_upload(socket) do
-    allow_upload(socket, :huddl_image,
-      accept: ~w(.jpg .jpeg .png .webp),
-      max_entries: 1,
-      max_file_size: 5_000_000,
-      auto_upload: true,
-      progress: &handle_upload_progress/3
-    )
+    allow_image_upload(socket, :huddl_image, &handle_upload_progress/3)
   end
 
   defp assign_create_form(socket, group, user) do
