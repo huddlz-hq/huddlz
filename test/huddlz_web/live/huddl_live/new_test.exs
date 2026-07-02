@@ -381,9 +381,14 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       |> fill_in("Date", with: tomorrow)
       |> fill_in("Start time", with: "14:00")
       |> select("Duration", option: "1 hour")
+      # Editing other fields must not surface the untouched location's error
+      |> refute_has("p.form-error", text: "is required for in-person huddlz")
       # Leave event type as in-person (default), no location selected
       |> click_button("Schedule huddl")
       |> assert_path(~p"/groups/#{group.slug}/huddlz/new")
+      |> assert_has("p.form-error", text: "is required for in-person huddlz")
+      # The error persists through later edits once the submit has failed
+      |> fill_in("Title", with: "Test Huddl Again")
       |> assert_has("p.form-error", text: "is required for in-person huddlz")
     end
 

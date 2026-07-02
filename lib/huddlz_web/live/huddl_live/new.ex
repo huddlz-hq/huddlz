@@ -273,7 +273,7 @@ defmodule HuddlzWeb.HuddlLive.New do
                   selected_location={@selected_location}
                   new_location_path={~p"/groups/#{@group.slug}/huddlz/new/locations/new"}
                 />
-                <.field_errors field={@form[:physical_location]} always_show={true} />
+                <.field_errors field={@form[:physical_location]} />
               </div>
             <% end %>
 
@@ -490,7 +490,10 @@ defmodule HuddlzWeb.HuddlLive.New do
 
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
-    params = inject_saved_location_params(params, socket.assigns[:selected_location])
+    params =
+      params
+      |> inject_saved_location_params(socket.assigns[:selected_location])
+      |> mark_location_used_after_submit(socket.assigns.form)
 
     socket =
       socket
@@ -507,6 +510,7 @@ defmodule HuddlzWeb.HuddlLive.New do
       params
       |> Map.put("group_id", socket.assigns.group.id)
       |> inject_saved_location_params(socket.assigns[:selected_location])
+      |> mark_location_used(socket.assigns.form)
 
     case AshPhoenix.Form.submit(socket.assigns.form,
            params: params,

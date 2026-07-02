@@ -71,6 +71,37 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
   end
 
   @doc """
+  Ensures the "physical_location" key is present in the params so
+  `Phoenix.Component.used_input?/1` treats the picker-backed field as used
+  and its validation errors display. The saved-location picker renders no
+  client-side input, so the browser never sends this key on its own. Falls
+  back to the form's current value to avoid clearing an existing location
+  on update.
+
+  Call on every submit. On validate, use `mark_location_used_after_submit/2`
+  so errors stay hidden while the user is still filling in the form but
+  remain visible while fixing a failed submit.
+  """
+  def mark_location_used(params, form) do
+    Map.put_new(params, "physical_location", current_location_value(form))
+  end
+
+  def mark_location_used_after_submit(params, form) do
+    if form.source.submitted_once? do
+      mark_location_used(params, form)
+    else
+      params
+    end
+  end
+
+  defp current_location_value(form) do
+    case Phoenix.HTML.Form.input_value(form, :physical_location) do
+      nil -> ""
+      value -> to_string(value)
+    end
+  end
+
+  @doc """
   Returns a `before_submit` function that applies pre-existing coordinates
   directly to the changeset. Used with `AshPhoenix.Form.submit/2`'s
   `:before_submit` option, which runs after `for_create`/`for_update`

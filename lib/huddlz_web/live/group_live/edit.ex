@@ -295,7 +295,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
                 fetch_coordinates={true}
                 show_clear={true}
               />
-              <.field_errors field={@form[:location]} always_show={true} />
+              <.field_errors field={@form[:location]} />
               <p class="form-help">
                 Optional. Helps people find your group when they search nearby.
               </p>
