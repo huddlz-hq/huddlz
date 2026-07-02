@@ -1,9 +1,9 @@
 defmodule GroupManagementSteps do
   use Cucumber.StepDefinition
   import PhoenixTest
-  import Phoenix.LiveViewTest, only: [render: 1]
 
   import Huddlz.Generator
+  import Huddlz.Test.Helpers.LocationSelection, only: [select_location: 2]
 
   alias Huddlz.Accounts.User
 
@@ -59,23 +59,12 @@ defmodule GroupManagementSteps do
       |> Enum.reduce(session, fn [field, value], session ->
         case field do
           "Location" ->
-            view = session.view
-
-            send(
-              view.pid,
-              {:location_selected, "group-location",
-               %{
-                 place_id: "test_place_id",
-                 display_text: value,
-                 main_text: value,
-                 latitude: 37.77,
-                 longitude: -122.42
-               }}
+            select_location(session,
+              display_text: value,
+              main_text: value,
+              latitude: 37.77,
+              longitude: -122.42
             )
-
-            render(view)
-
-            session
 
           _ ->
             fill_in(session, field, with: value)

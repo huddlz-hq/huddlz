@@ -3,6 +3,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
 
   import Huddlz.Generator
   import Huddlz.Test.Helpers.Authentication, only: [login: 2]
+  import Huddlz.Test.Helpers.LocationSelection
   import Phoenix.LiveViewTest
 
   alias Huddlz.Communities.Huddl
@@ -518,8 +519,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       |> form("#huddl-form", %{"form" => %{"title" => "My Updated Title"}})
       |> render_change()
 
-      send(view.pid, {:saved_location_selected, "saved-location-picker", location})
-      render(view)
+      select_saved_location(view, location)
 
       # Location should be in selected state
       assert has_element?(view, "[data-testid='saved-location-selected']")

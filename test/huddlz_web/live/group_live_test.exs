@@ -2,6 +2,7 @@ defmodule HuddlzWeb.GroupLiveTest do
   use HuddlzWeb.ConnCase, async: true
 
   import Huddlz.Generator
+  import Huddlz.Test.Helpers.LocationSelection
 
   alias Huddlz.Communities.Group
 
@@ -47,23 +48,8 @@ defmodule HuddlzWeb.GroupLiveTest do
         |> fill_in("Description", with: "A test group")
         |> check("Public group")
 
-      view = session.view
-
-      send(
-        view.pid,
-        {:location_selected, "group-location",
-         %{
-           place_id: "test_place_id",
-           display_text: "Test City, TX, USA",
-           main_text: "Test City",
-           latitude: 30.27,
-           longitude: -97.74
-         }}
-      )
-
-      Phoenix.LiveViewTest.render(view)
-
       session
+      |> select_location(display_text: "Test City, TX, USA", main_text: "Test City")
       |> click_button("Create group")
 
       group =
@@ -105,21 +91,8 @@ defmodule HuddlzWeb.GroupLiveTest do
         |> fill_in("Group name", with: "Test Group")
         |> fill_in("Description", with: "A test group description")
 
-      send(
-        session.view.pid,
-        {:location_selected, "group-location",
-         %{
-           place_id: "test_place_id",
-           display_text: String.duplicate("x", 501),
-           main_text: "Too Long",
-           latitude: 30.27,
-           longitude: -97.74
-         }}
-      )
-
-      Phoenix.LiveViewTest.render(session.view)
-
       session
+      |> select_location(display_text: String.duplicate("x", 501), main_text: "Too Long")
       |> click_button("Create group")
       |> assert_path(~p"/groups/new")
       |> assert_has("p.form-error", text: "length must be less than or equal to 500")
