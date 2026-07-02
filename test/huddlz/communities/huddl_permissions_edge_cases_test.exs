@@ -301,11 +301,9 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                )
                |> Ash.create()
 
-      # Check that there's an error related to virtual_link
-      error_messages = Enum.map_join(errors, " ", & &1.message)
-
-      assert String.contains?(error_messages, "virtual_link") or
-               String.contains?(error_messages, "virtual link")
+      # The error must attach to the missing field only
+      assert Enum.any?(errors, &(&1.field == :virtual_link))
+      refute Enum.any?(errors, &(&1.field == :physical_location))
     end
   end
 end

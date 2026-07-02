@@ -392,6 +392,47 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       |> assert_has("p.form-error", text: "is required for in-person huddlz")
     end
 
+    test "hybrid huddl error shows under the missing virtual link, not the chosen location", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      location =
+        generate(
+          group_location(
+            group_id: group.id,
+            name: "Austin Coffee",
+            address: "Austin Coffee, Austin, TX, USA",
+            latitude: 30.27,
+            longitude: -97.74,
+            actor: owner
+          )
+        )
+
+      tomorrow = Date.utc_today() |> Date.add(1) |> Date.to_iso8601()
+
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/new")
+        |> fill_in("Title", with: "Hybrid Huddl")
+        |> fill_in("Date", with: tomorrow)
+        |> fill_in("Start time", with: "15:00")
+        |> select("Duration", option: "1 hour")
+        |> choose("Hybrid")
+
+      send(session.view.pid, {:saved_location_selected, "saved-location-picker", location})
+
+      session
+      |> click_button("Schedule huddl")
+      |> assert_path(~p"/groups/#{group.slug}/huddlz/new")
+      # Only the missing virtual link is flagged, right under its own input
+      |> assert_has("input#form_virtual_link ~ p.form-error",
+        text: "is required for hybrid huddlz"
+      )
+      |> assert_has("p.form-error", text: "is required for hybrid huddlz", count: 1)
+    end
+
     test "selecting a saved location preserves other form fields", %{
       conn: conn,
       owner: owner,
