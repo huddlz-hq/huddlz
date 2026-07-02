@@ -35,7 +35,6 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:huddlz_list, [])
      |> assign(:huddlz_filter, :live)
      |> assign(:upcoming_huddlz, [])
-     |> assign(:upcoming_count, 0)
      |> assign(:open_rsvps, 0)
      |> assign(:members, [])}
   end
@@ -82,7 +81,6 @@ defmodule HuddlzWeb.OrganizeLive do
 
     socket
     |> assign(:upcoming_huddlz, upcoming)
-    |> assign(:upcoming_count, length(upcoming))
     |> assign(:open_rsvps, open_rsvps)
   end
 
@@ -154,7 +152,6 @@ defmodule HuddlzWeb.OrganizeLive do
           <.overview_view
             group={@group}
             upcoming_huddlz={@upcoming_huddlz}
-            upcoming_count={@upcoming_count}
             open_rsvps={@open_rsvps}
           />
         <% :huddlz -> %>
@@ -228,11 +225,13 @@ defmodule HuddlzWeb.OrganizeLive do
   # ─────────────────────────────────────────  OVERVIEW  ───
   attr :group, :map, required: true
   attr :upcoming_huddlz, :list, required: true
-  attr :upcoming_count, :integer, required: true
   attr :open_rsvps, :integer, required: true
 
   defp overview_view(assigns) do
-    assigns = assign(assigns, :preview_limit, @upcoming_preview_limit)
+    assigns =
+      assigns
+      |> assign(:preview_limit, @upcoming_preview_limit)
+      |> assign(:upcoming_count, length(assigns.upcoming_huddlz))
 
     ~H"""
     <div class="page-head">
@@ -413,9 +412,8 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :members, :list, required: true
 
   defp members_view(assigns) do
-    grouped =
-      @member_role_order
-      |> Enum.map(fn role -> {role, Enum.filter(assigns.members, &(&1.role == role))} end)
+    by_role = Enum.group_by(assigns.members, & &1.role)
+    grouped = Enum.map(@member_role_order, fn role -> {role, Map.get(by_role, role, [])} end)
 
     assigns = assign(assigns, :grouped, grouped)
 
