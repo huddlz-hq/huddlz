@@ -494,9 +494,17 @@ defmodule Huddlz.Communities.Huddl do
       message "is required for virtual huddlz"
     end
 
-    validate present([:physical_location, :virtual_link]) do
+    # Split per field so each error attaches only to the attribute that is
+    # actually missing; a combined present/2 fans its error out to both
+    # fields, flagging the one the user already filled in.
+    validate present([:physical_location]) do
       where attribute_equals(:event_type, :hybrid)
-      message "both physical location and virtual link are required for hybrid huddlz"
+      message "is required for hybrid huddlz"
+    end
+
+    validate present([:virtual_link]) do
+      where attribute_equals(:event_type, :hybrid)
+      message "is required for hybrid huddlz"
     end
   end
 
