@@ -11,6 +11,7 @@ defmodule HuddlzWeb.HuddlLive do
   use HuddlzWeb, :live_view
 
   import HuddlzWeb.Live.Helpers.HuddlCardHelpers
+  import HuddlzWeb.Live.Helpers.ParamHelpers
 
   alias Huddlz.Communities
   alias Huddlz.Storage.GroupImages
@@ -113,7 +114,6 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   defp parse_sort("newest"), do: :newest
-  defp parse_sort(:newest), do: :newest
   defp parse_sort(_), do: :soonest
 
   defp parse_location_params(params, socket) do
@@ -165,9 +165,6 @@ defmodule HuddlzWeb.HuddlLive do
 
   defp normalize_date_filter(_), do: "upcoming"
 
-  defp parse_distance(nil), do: 25
-  defp parse_distance(""), do: 25
-
   defp parse_distance(val) when is_binary(val) do
     case Integer.parse(val) do
       {n, _} when n in 5..100 -> n
@@ -177,19 +174,6 @@ defmodule HuddlzWeb.HuddlLive do
 
   defp parse_distance(val) when is_integer(val) and val in 5..100, do: val
   defp parse_distance(_), do: 25
-
-  defp parse_page(nil), do: 1
-  defp parse_page(""), do: 1
-
-  defp parse_page(val) when is_binary(val) do
-    case Integer.parse(val) do
-      {n, _} when n >= 1 -> n
-      _ -> 1
-    end
-  end
-
-  defp parse_page(val) when is_integer(val) and val >= 1, do: val
-  defp parse_page(_), do: 1
 
   defp page_title(:groups, _), do: "groups"
   defp page_title(:huddlz, :hosting), do: "huddlz you're hosting"

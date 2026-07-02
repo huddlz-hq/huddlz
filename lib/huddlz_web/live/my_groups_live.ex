@@ -10,6 +10,8 @@ defmodule HuddlzWeb.MyGroupsLive do
   """
   use HuddlzWeb, :live_view
 
+  import HuddlzWeb.Live.Helpers.ParamHelpers
+
   alias Huddlz.Communities
   alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
@@ -61,19 +63,6 @@ defmodule HuddlzWeb.MyGroupsLive do
 
   defp parse_filter(value) when value in @valid_filters, do: String.to_existing_atom(value)
   defp parse_filter(_), do: :all
-
-  defp parse_page(nil), do: 1
-  defp parse_page(""), do: 1
-
-  defp parse_page(val) when is_binary(val) do
-    case Integer.parse(val) do
-      {n, _} when n >= 1 -> n
-      _ -> 1
-    end
-  end
-
-  defp parse_page(val) when is_integer(val) and val >= 1, do: val
-  defp parse_page(_), do: 1
 
   defp load_counts(user) do
     %{
