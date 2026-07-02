@@ -2,6 +2,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
   use HuddlzWeb.ConnCase, async: true
 
   import Huddlz.Generator
+  import Huddlz.Test.Helpers.LocationSelection
   import Mox
   import Phoenix.LiveViewTest
 
@@ -421,9 +422,8 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> select("Duration", option: "1 hour")
         |> choose("Hybrid")
 
-      send(session.view.pid, {:saved_location_selected, "saved-location-picker", location})
-
       session
+      |> select_saved_location(location)
       |> click_button("Schedule huddl")
       |> assert_path(~p"/groups/#{group.slug}/huddlz/new")
       # Only the missing virtual link is flagged, right under its own input
@@ -464,8 +464,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       view = session.view
 
       # Simulate selecting a saved location
-      send(view.pid, {:saved_location_selected, "saved-location-picker", location})
-      render(view)
+      select_saved_location(view, location)
 
       # Location should be in selected state
       assert has_element?(
@@ -708,7 +707,6 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       longitude: -97.74
     }
 
-    send(view.pid, {:saved_location_selected, "saved-location-picker", location})
-    render(view)
+    select_saved_location(view, location)
   end
 end

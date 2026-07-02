@@ -6,6 +6,7 @@ defmodule EditHuddlSteps do
   use Cucumber.StepDefinition
 
   import Huddlz.Generator
+  import Huddlz.Test.Helpers.LocationSelection
   import PhoenixTest
 
   alias Huddlz.Communities.Group
@@ -68,8 +69,7 @@ defmodule EditHuddlSteps do
     session = context[:session] || context[:conn]
     location = lookup_saved_location(context, name)
 
-    send(session.view.pid, {:saved_location_selected, "saved-location-picker", location})
-    Phoenix.LiveViewTest.render(session.view)
+    select_saved_location(session, location)
 
     Map.merge(context, %{session: session, conn: session})
   end
@@ -83,19 +83,14 @@ defmodule EditHuddlSteps do
 
     # Simulate the LocationAutocomplete component selecting a place. The parent
     # huddl-edit LiveView captures the coords on its socket, ready for save.
-    send(
-      session.view.pid,
-      {:location_selected, "modal-address-autocomplete",
-       %{
-         place_id: "p_test_#{System.unique_integer([:positive])}",
-         display_text: address,
-         main_text: address,
-         latitude: lat,
-         longitude: lng
-       }}
+    select_location(session,
+      id: "modal-address-autocomplete",
+      place_id: "p_test_#{System.unique_integer([:positive])}",
+      display_text: address,
+      main_text: address,
+      latitude: lat,
+      longitude: lng
     )
-
-    Phoenix.LiveViewTest.render(session.view)
 
     session = click_button(session, "Save address")
 

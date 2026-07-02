@@ -2,6 +2,7 @@ defmodule HuddlzWeb.GroupLive.LocationsTest do
   use HuddlzWeb.ConnCase, async: true
 
   import Huddlz.Generator
+  import Huddlz.Test.Helpers.LocationSelection
   import Phoenix.LiveViewTest
 
   describe "locations management page" do
@@ -156,19 +157,11 @@ defmodule HuddlzWeb.GroupLive.LocationsTest do
         |> live(~p"/groups/#{group.slug}/locations/new")
 
       # Simulate LocationAutocomplete selecting a place
-      send(
-        view.pid,
-        {:location_selected, "modal-address-autocomplete",
-         %{
-           place_id: "ChIJ_test",
-           display_text: "123 Main St, Austin, TX",
-           main_text: "123 Main St",
-           latitude: 30.27,
-           longitude: -97.74
-         }}
+      select_location(view,
+        id: "modal-address-autocomplete",
+        display_text: "123 Main St, Austin, TX",
+        main_text: "123 Main St"
       )
-
-      render(view)
 
       # Save button should now be enabled and name pre-populated
       assert has_element?(view, "input#location-name-input[value='123 Main St']")

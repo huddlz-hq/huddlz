@@ -1,8 +1,8 @@
 defmodule CreateHuddlSteps do
   use Cucumber.StepDefinition
   import Huddlz.Generator
+  import Huddlz.Test.Helpers.LocationSelection, only: [select_saved_location: 2]
   import PhoenixTest
-  import Phoenix.LiveViewTest
   import ExUnit.Assertions
   alias Huddlz.Communities.Huddl
   require Ash.Query
@@ -302,10 +302,7 @@ defmodule CreateHuddlSteps do
               |> Ash.create(actor: current_user)
 
             # Simulate the SavedLocationPicker selecting this location
-            view = session.view
-            send(view.pid, {:saved_location_selected, "saved-location-picker", location})
-            render(view)
-            session
+            select_saved_location(session, location)
 
           "virtual_link" ->
             fill_in(session, "Online link", with: value, exact: false)

@@ -5,6 +5,7 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
   use HuddlzWeb.ConnCase, async: true
 
   import Huddlz.Generator
+  import Huddlz.Test.Helpers.LocationSelection
   import Phoenix.LiveViewTest
 
   alias Huddlz.Communities.Huddl
@@ -194,7 +195,6 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
       longitude: -97.74
     }
 
-    send(view.pid, {:saved_location_selected, "saved-location-picker", location})
-    render(view)
+    select_saved_location(view, location)
   end
 end

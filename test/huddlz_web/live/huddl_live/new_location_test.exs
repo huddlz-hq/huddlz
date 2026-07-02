@@ -5,6 +5,7 @@ defmodule HuddlzWeb.HuddlLive.NewLocationTest do
   use HuddlzWeb.ConnCase, async: true
 
   import Huddlz.Generator
+  import Huddlz.Test.Helpers.LocationSelection
   import Phoenix.LiveViewTest
 
   describe "add new address modal from huddl form" do
@@ -65,16 +66,10 @@ defmodule HuddlzWeb.HuddlLive.NewLocationTest do
         |> live(~p"/groups/#{group.slug}/huddlz/new/locations/new")
 
       # Simulate LocationAutocomplete selecting a place
-      send(
-        view.pid,
-        {:location_selected, "modal-address-autocomplete",
-         %{
-           place_id: "ChIJ_test",
-           display_text: "500 E Cesar Chavez St, Austin, TX",
-           main_text: "Austin Convention Center",
-           latitude: 30.263,
-           longitude: -97.739
-         }}
+      select_location(view,
+        id: "modal-address-autocomplete",
+        display_text: "500 E Cesar Chavez St, Austin, TX",
+        main_text: "Austin Convention Center"
       )
 
       html = render(view)
@@ -97,19 +92,11 @@ defmodule HuddlzWeb.HuddlLive.NewLocationTest do
         |> live(~p"/groups/#{group.slug}/huddlz/new/locations/new")
 
       # Simulate selecting an address
-      send(
-        view.pid,
-        {:location_selected, "modal-address-autocomplete",
-         %{
-           place_id: "ChIJ_test",
-           display_text: "500 E Cesar Chavez St, Austin, TX",
-           main_text: "Convention Center",
-           latitude: 30.263,
-           longitude: -97.739
-         }}
+      select_location(view,
+        id: "modal-address-autocomplete",
+        display_text: "500 E Cesar Chavez St, Austin, TX",
+        main_text: "Convention Center"
       )
-
-      render(view)
 
       # Submit the form
       view

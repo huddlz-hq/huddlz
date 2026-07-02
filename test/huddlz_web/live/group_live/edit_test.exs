@@ -2,6 +2,7 @@ defmodule HuddlzWeb.GroupLive.EditTest do
   use HuddlzWeb.ConnCase, async: true
 
   import Huddlz.Generator
+  import Huddlz.Test.Helpers.LocationSelection
   import Phoenix.LiveViewTest
 
   describe "Edit Group" do
@@ -63,23 +64,13 @@ defmodule HuddlzWeb.GroupLive.EditTest do
         |> fill_in("Group Name", with: "Updated Group Name")
         |> fill_in("Description", with: "Updated description", exact: false)
 
-      view = session.view
-
-      send(
-        view.pid,
-        {:location_selected, "group-location",
-         %{
-           place_id: "test_place_id",
-           display_text: "Updated location",
-           main_text: "Updated location",
-           latitude: 40.71,
-           longitude: -74.01
-         }}
-      )
-
-      Phoenix.LiveViewTest.render(view)
-
       session
+      |> select_location(
+        display_text: "Updated location",
+        main_text: "Updated location",
+        latitude: 40.71,
+        longitude: -74.01
+      )
       |> click_button("Save Changes")
       |> assert_has("div[role='alert']", text: "Group updated successfully")
       |> assert_has("h1", text: "Updated Group Name")
@@ -119,21 +110,8 @@ defmodule HuddlzWeb.GroupLive.EditTest do
         |> login(owner)
         |> visit(~p"/groups/#{group.slug}/edit")
 
-      send(
-        session.view.pid,
-        {:location_selected, "group-location",
-         %{
-           place_id: "test_place_id",
-           display_text: String.duplicate("x", 501),
-           main_text: "Too Long",
-           latitude: 30.27,
-           longitude: -97.74
-         }}
-      )
-
-      Phoenix.LiveViewTest.render(session.view)
-
       session
+      |> select_location(display_text: String.duplicate("x", 501), main_text: "Too Long")
       |> click_button("Save Changes")
       |> assert_path(~p"/groups/#{group.slug}/edit")
       |> assert_has("p.form-error", text: "length must be less than or equal to 500")
@@ -188,23 +166,8 @@ defmodule HuddlzWeb.GroupLive.EditTest do
         |> login(owner)
         |> visit(~p"/groups/#{group.slug}/edit")
 
-      view = session.view
-
-      send(
-        view.pid,
-        {:location_selected, "group-location",
-         %{
-           place_id: "test_place_id",
-           display_text: "Austin, TX, USA",
-           main_text: "Austin",
-           latitude: 30.27,
-           longitude: -97.74
-         }}
-      )
-
-      Phoenix.LiveViewTest.render(view)
-
       session
+      |> select_location()
       |> click_button("Save Changes")
       |> assert_has("div[role='alert']", text: "Group updated successfully")
       |> assert_has(".hero .meta span", text: "Austin, TX, USA")
