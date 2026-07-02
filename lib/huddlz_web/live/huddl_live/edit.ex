@@ -634,13 +634,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
   @impl true
   def handle_event("save", %{"form" => params}, socket) do
-    params =
-      case params["event_type"] do
-        "virtual" -> Map.put(params, "physical_location", nil)
-        "in_person" -> Map.put(params, "virtual_link", nil)
-        _ -> params
-      end
-
     params = inject_saved_location_params(params, socket.assigns[:selected_location])
 
     case AshPhoenix.Form.submit(socket.assigns.form,
