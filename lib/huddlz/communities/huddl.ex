@@ -185,6 +185,7 @@ defmodule Huddlz.Communities.Huddl do
       require_atomic? false
 
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
+      change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz
       change Huddlz.Geocoding.ApplyProvidedCoordinates
       change {Huddlz.Geocoding.GeocodeChange, field: :physical_location}

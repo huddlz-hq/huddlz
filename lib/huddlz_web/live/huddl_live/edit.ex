@@ -636,13 +636,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   @impl true
   def handle_event("save", %{"form" => params}, socket) do
     params =
-      if socket.assigns.huddl.group.is_public do
-        params
-      else
-        Map.put(params, "is_private", "true")
-      end
-
-    params =
       case params["event_type"] do
         "virtual" -> Map.put(params, "physical_location", nil)
         "in_person" -> Map.put(params, "virtual_link", nil)
