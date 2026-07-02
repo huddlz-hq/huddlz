@@ -503,13 +503,6 @@ defmodule HuddlzWeb.HuddlLive.New do
   @impl true
   def handle_event("save", %{"form" => params}, socket) do
     params =
-      if socket.assigns.group.is_public do
-        params
-      else
-        Map.put(params, "is_private", "true")
-      end
-
-    params =
       params
       |> Map.put("group_id", socket.assigns.group.id)
       |> inject_saved_location_params(socket.assigns[:selected_location])
