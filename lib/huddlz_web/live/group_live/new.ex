@@ -41,13 +41,7 @@ defmodule HuddlzWeb.GroupLive.New do
        |> assign(:pending_preview_url, nil)
        |> assign(:selected_location_data, nil)
        |> assign(:upload_processing, false)
-       |> allow_upload(:group_image,
-         accept: ~w(.jpg .jpeg .png .webp),
-         max_entries: 1,
-         max_file_size: 5_000_000,
-         auto_upload: true,
-         progress: &handle_upload_progress/3
-       )}
+       |> allow_image_upload(:group_image, &handle_upload_progress/3)}
     else
       {:ok,
        socket

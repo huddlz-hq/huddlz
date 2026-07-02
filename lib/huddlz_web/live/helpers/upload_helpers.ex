@@ -4,6 +4,19 @@ defmodule HuddlzWeb.Live.Helpers.UploadHelpers do
   """
 
   @doc """
+  Standard single-image upload config (JPG/PNG/WebP, 5MB max, auto-upload).
+  """
+  def allow_image_upload(socket, name, progress_handler) do
+    Phoenix.LiveView.allow_upload(socket, name,
+      accept: ~w(.jpg .jpeg .png .webp),
+      max_entries: 1,
+      max_file_size: 5_000_000,
+      auto_upload: true,
+      progress: progress_handler
+    )
+  end
+
+  @doc """
   Converts a LiveView upload error atom to a user-friendly string.
   """
   def upload_error_to_string(:too_large), do: "File is too large (max 5MB)"

@@ -7,6 +7,7 @@ defmodule HuddlzWeb.ProfileLive do
   alias Huddlz.Storage.ProfilePictures
   alias HuddlzWeb.Avatar
   alias HuddlzWeb.Layouts
+  alias HuddlzWeb.Live.Helpers.UploadHelpers
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -52,13 +53,7 @@ defmodule HuddlzWeb.ProfileLive do
      |> assign(:current_user, user_with_avatar)
      |> assign(:avatar_error, nil)
      |> assign(:location_error, nil)
-     |> allow_upload(:avatar,
-       accept: ~w(.jpg .jpeg .png .webp),
-       max_entries: 1,
-       max_file_size: 5_000_000,
-       auto_upload: true,
-       progress: &handle_upload_progress/3
-     )}
+     |> UploadHelpers.allow_image_upload(:avatar, &handle_upload_progress/3)}
   end
 
   @impl true
