@@ -4,7 +4,6 @@ defmodule HuddlzWeb.Components.Avatar do
   """
   use Phoenix.Component
 
-  alias Huddlz.Storage.ProfilePictures
   alias HuddlzWeb.Components.Icon
 
   attr :user, :map,
@@ -35,8 +34,8 @@ defmodule HuddlzWeb.Components.Avatar do
       assigns
       |> assign(:size_class, size_classes[assigns.size])
       |> assign(:icon_size, icon_sizes[assigns.size])
-      |> assign(:initials, get_initials(assigns.user))
-      |> assign(:avatar_url, get_avatar_url(assigns.user))
+      |> assign(:initials, HuddlzWeb.Avatar.initials(assigns.user))
+      |> assign(:avatar_url, HuddlzWeb.Avatar.picture_url(assigns.user))
 
     ~H"""
     <div class={[
@@ -59,30 +58,6 @@ defmodule HuddlzWeb.Components.Avatar do
     </div>
     """
   end
-
-  defp get_initials(nil), do: nil
-  defp get_initials(%{display_name: nil}), do: nil
-  defp get_initials(%{display_name: ""}), do: nil
-
-  defp get_initials(%{display_name: name}) do
-    name
-    |> String.trim()
-    |> String.split(~r/\s+/)
-    |> Enum.take(2)
-    |> Enum.map_join(&String.first/1)
-    |> String.upcase()
-  end
-
-  defp get_initials(_), do: nil
-
-  defp get_avatar_url(nil), do: nil
-
-  defp get_avatar_url(%{current_profile_picture_url: url})
-       when is_binary(url) and url != "" do
-    ProfilePictures.url(url)
-  end
-
-  defp get_avatar_url(_), do: nil
 
   defp get_display_name(nil), do: "User"
   defp get_display_name(%{display_name: name}) when is_binary(name) and name != "", do: name
