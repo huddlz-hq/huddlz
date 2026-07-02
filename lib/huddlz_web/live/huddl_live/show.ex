@@ -12,6 +12,17 @@ defmodule HuddlzWeb.HuddlLive.Show do
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
 
+  @huddl_loads [
+    :status,
+    :rsvp_count,
+    :waitlist_count,
+    :at_capacity,
+    :visible_virtual_link,
+    :display_image_url,
+    :group,
+    creator: [:current_profile_picture_url]
+  ]
+
   @impl true
   def mount(_params, _session, socket) do
     {:ok, socket}
@@ -22,7 +33,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
     case get_huddl(id, group_slug, socket.assigns.current_user) do
       {:ok, huddl} ->
         user = socket.assigns.current_user
-        attendance = check_attendance(huddl, user)
+        {attendance, waitlist_position} = attendance_info(huddl, user)
 
         {:noreply,
          socket
@@ -30,8 +41,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
          |> assign(:meta, huddl_meta(huddl))
          |> assign(:huddl, huddl)
          |> assign(:attendance, attendance)
-         |> assign(:has_rsvped, attendance == :attending)
-         |> assign(:waitlist_position, waitlist_position(huddl, user))
+         |> assign(:waitlist_position, waitlist_position)
          |> assign(:can_edit_huddl, Ash.can?({huddl, :update}, user))
          |> assign(:can_delete_huddl, Ash.can?({huddl, :destroy}, user))}
 
@@ -347,7 +357,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   end
 
   defp render_rsvp_state(assigns) do
-    if event_full?(assigns.huddl) do
+    if assigns.huddl.at_capacity do
       ~H"""
       <div class="rsvp-banner warn">
         <svg
@@ -479,18 +489,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   end
 
   defp get_huddl(id, group_slug, user) do
-    case Communities.get_huddl(id,
-           load: [
-             :status,
-             :rsvp_count,
-             :waitlist_count,
-             :visible_virtual_link,
-             :display_image_url,
-             :group,
-             creator: [:current_profile_picture_url]
-           ],
-           actor: user
-         ) do
+    case Communities.get_huddl(id, load: @huddl_loads, actor: user) do
       {:ok, huddl} ->
         if huddl.group.slug == group_slug do
           {:ok, huddl}
@@ -507,29 +506,24 @@ defmodule HuddlzWeb.HuddlLive.Show do
   end
 
   defp reload_huddl(huddl, user) do
-    Communities.get_huddl(huddl.id,
-      load: [
-        :status,
-        :rsvp_count,
-        :waitlist_count,
-        :visible_virtual_link,
-        :display_image_url,
-        :group,
-        creator: [:current_profile_picture_url]
-      ],
-      actor: user
-    )
+    Communities.get_huddl(huddl.id, load: @huddl_loads, actor: user)
   end
 
   defp refresh_attendance(socket, huddl, user) do
-    {:ok, reloaded} = reload_huddl(huddl, user)
-    attendance = check_attendance(reloaded, user)
+    case reload_huddl(huddl, user) do
+      {:ok, reloaded} ->
+        {attendance, waitlist_position} = attendance_info(reloaded, user)
 
-    socket
-    |> assign(:huddl, reloaded)
-    |> assign(:attendance, attendance)
-    |> assign(:has_rsvped, attendance == :attending)
-    |> assign(:waitlist_position, waitlist_position(reloaded, user))
+        socket
+        |> assign(:huddl, reloaded)
+        |> assign(:attendance, attendance)
+        |> assign(:waitlist_position, waitlist_position)
+
+      {:error, _} ->
+        socket
+        |> put_flash(:error, "This huddl is no longer available.")
+        |> push_navigate(to: ~p"/groups/#{huddl.group.slug}")
+    end
   end
 
   defp huddl_meta(huddl) do
@@ -542,33 +536,29 @@ defmodule HuddlzWeb.HuddlLive.Show do
     }
   end
 
-  defp check_attendance(_huddl, nil), do: :none
+  defp attendance_info(_huddl, nil), do: {:none, nil}
 
-  defp check_attendance(huddl, user) do
+  defp attendance_info(huddl, user) do
     case Communities.check_user_rsvp(huddl.id, actor: user) do
-      {:ok, []} -> :none
-      {:ok, [%{waitlisted_at: nil} | _]} -> :attending
-      {:ok, [%{waitlisted_at: _} | _]} -> :waitlisted
-      {:error, _} -> :none
+      {:ok, [%{waitlisted_at: nil} | _]} ->
+        {:attending, nil}
+
+      {:ok, [%{waitlisted_at: %DateTime{} = my_at} | _]} ->
+        {:waitlisted, waitlist_position(huddl, my_at)}
+
+      _ ->
+        {:none, nil}
     end
   end
 
-  defp waitlist_position(_huddl, nil), do: nil
-
-  defp waitlist_position(huddl, user) do
+  defp waitlist_position(huddl, %DateTime{} = my_at) do
     require Ash.Query
 
-    case Communities.check_user_rsvp(huddl.id, actor: user) do
-      {:ok, [%{waitlisted_at: %DateTime{} = my_at} | _]} ->
-        Huddlz.Communities.HuddlAttendee
-        |> Ash.Query.filter(
-          huddl_id == ^huddl.id and not is_nil(waitlisted_at) and waitlisted_at <= ^my_at
-        )
-        |> Ash.count!(authorize?: false)
-
-      _ ->
-        nil
-    end
+    Huddlz.Communities.HuddlAttendee
+    |> Ash.Query.filter(
+      huddl_id == ^huddl.id and not is_nil(waitlisted_at) and waitlisted_at <= ^my_at
+    )
+    |> Ash.count!(authorize?: false)
   end
 
   defp hero_eyebrow(huddl) do
@@ -684,15 +674,8 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp person_label(_), do: "people"
 
   defp capacity_bar_class(huddl) do
-    cond do
-      event_full?(huddl) -> "warn"
-      capacity_percent(huddl) >= 80 -> "warn"
-      true -> nil
-    end
+    if capacity_percent(huddl) >= 80, do: "warn"
   end
-
-  defp event_full?(%{max_attendees: nil}), do: false
-  defp event_full?(huddl), do: huddl.rsvp_count >= huddl.max_attendees
 
   defp capacity_percent(%{max_attendees: nil}), do: 0
 
@@ -702,7 +685,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   defp capacity_status(huddl) do
     cond do
-      event_full?(huddl) -> "Huddl Full"
+      huddl.at_capacity -> "Huddl Full"
       capacity_percent(huddl) >= 80 -> "Almost full"
       capacity_percent(huddl) >= 50 -> "Filling up"
       true -> "Plenty of space"
