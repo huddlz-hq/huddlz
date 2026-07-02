@@ -461,6 +461,34 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       assert_has(session, "#saved-location-picker")
     end
 
+    test "switching to in-person shows location error only after a failed save", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      huddl =
+        generate(
+          huddl(
+            title: "Virtual Huddl",
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            event_type: :virtual,
+            virtual_link: "https://example.com/meet"
+          )
+        )
+
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+      |> choose("In person")
+      # Revealing the picker must not immediately flag the missing location
+      |> refute_has("p.form-error", text: "is required for in-person huddlz")
+      |> click_button("Save changes")
+      |> assert_path(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+      |> assert_has("p.form-error", text: "is required for in-person huddlz")
+    end
+
     test "selecting a saved location preserves other form fields", %{
       conn: conn,
       owner: owner,

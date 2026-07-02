@@ -133,16 +133,22 @@ defmodule HuddlzWeb.Components.Input do
   end
 
   attr :field, FormField, required: true, doc: "form field whose errors to render"
-  attr :always_show, :boolean, default: false
 
   @doc """
   Renders `<p class="form-error">` lines for a form field whose markup isn't
   produced by `input/textarea/select` (e.g. an inline raw input or a
-  radio-card group). Hidden until the field has been touched (`used_input?/1`) or always_show is set.
+  radio-card group). Hidden until the field has been touched (`used_input?/1`).
+
+  For fields with no client-side input at all (custom pickers), ensure the
+  param key is present once errors should show — see
+  `HuddlzWeb.HuddlLive.FormHelpers.mark_location_used/2`. LiveView's form
+  change tracking only re-renders this component when the field's value,
+  errors, or used state change, so visibility must be derived from field
+  state, not external flags.
   """
   def field_errors(%{field: %FormField{} = field} = assigns) do
     errors =
-      if assigns.always_show || Phoenix.Component.used_input?(field) do
+      if Phoenix.Component.used_input?(field) do
         Enum.map(field.errors, &translate_error/1)
       else
         []
