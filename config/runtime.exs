@@ -19,12 +19,13 @@ end
 # =============================================================================
 
 database_url = required!("DATABASE_URL")
-pool_size = optional("POOL_SIZE", "10") |> integer!()
+pool_size = optional("POOL_SIZE", "8") |> integer!()
 ecto_ipv6 = optional("ECTO_IPV6", "false") |> boolean!()
 
 config :huddlz, Huddlz.Repo,
   url: database_url,
   pool_size: pool_size,
+  prepare: :unnamed,
   socket_options: if(ecto_ipv6, do: [:inet6], else: [])
 
 # =============================================================================

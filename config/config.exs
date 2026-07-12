@@ -23,7 +23,7 @@ config :ash_oban, pro?: false
 
 config :huddlz, Oban,
   engine: Oban.Engines.Basic,
-  notifier: Oban.Notifiers.Postgres,
+  notifier: Oban.Notifiers.PG,
   queues: [
     default: 10,
     notifications: 10,
