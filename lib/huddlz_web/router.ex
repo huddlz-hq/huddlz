@@ -37,6 +37,10 @@ defmodule HuddlzWeb.Router do
     plug HuddlzWeb.ApiAuth, resource: Huddlz.Accounts.User, required?: false
   end
 
+  scope "/", HuddlzWeb do
+    get "/healthz", HealthController, :show
+  end
+
   scope "/gql" do
     pipe_through [:graphql]
 
