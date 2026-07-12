@@ -10,7 +10,7 @@ kill_signal = 'SIGTERM'
 [build]
 
 [deploy]
-  release_command = '/app/bin/migrate'
+  release_command = "/bin/sh -lc 'DATABASE_URL=$DIRECT_DATABASE_URL POOL_SIZE=2 /app/bin/migrate'"
 
 [env]
   PHX_HOST = 'huddlz.fly.dev'
