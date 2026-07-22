@@ -92,16 +92,12 @@ config :huddlz, Huddlz.Mailer, mailer_opts
 # Google Maps Configuration (geocoding + places)
 # =============================================================================
 
-if config_env() != :test do
-  case optional("GOOGLE_MAPS_API_KEY") do
-    nil ->
-      config :huddlz, :places, adapter: Huddlz.Places.DevStub
+google_maps_api_key =
+  if config_env() == :prod,
+    do: required!("GOOGLE_MAPS_API_KEY"),
+    else: optional("GOOGLE_MAPS_API_KEY")
 
-    api_key ->
-      config :huddlz, :google_maps, api_key: api_key
-      config :huddlz, :places, adapter: Huddlz.Places.Google
-  end
-end
+config :huddlz, :google_maps, api_key: google_maps_api_key
 
 if config_env() == :prod do
   required!("AWS_ACCESS_KEY_ID")

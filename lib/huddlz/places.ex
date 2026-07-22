@@ -1,7 +1,7 @@
 defmodule Huddlz.Places do
   @moduledoc """
   Places autocomplete behaviour and facade.
-  Delegates to the configured adapter (Google Places in production, Mox in test).
+  Delegates to the adapter configured for the current environment.
   """
 
   @type suggestion :: %{
@@ -21,16 +21,12 @@ defmodule Huddlz.Places do
   @callback place_details(place_id :: String.t(), session_token :: String.t()) ::
               {:ok, coordinates()} | {:error, term()}
 
+  @adapter Application.compile_env(:huddlz, [:places, :adapter], Huddlz.Places.Google)
+
   def autocomplete(query, session_token, opts \\ []),
-    do: adapter().autocomplete(query, session_token, opts)
+    do: @adapter.autocomplete(query, session_token, opts)
 
-  def place_details(place_id, session_token), do: adapter().place_details(place_id, session_token)
-
-  defp adapter do
-    :huddlz
-    |> Application.get_env(:places, [])
-    |> Keyword.fetch!(:adapter)
-  end
+  def place_details(place_id, session_token), do: @adapter.place_details(place_id, session_token)
 
   @spec error_message(atom()) :: String.t()
   def error_message(:not_found), do: "Could not find that location."
