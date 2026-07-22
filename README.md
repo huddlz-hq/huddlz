@@ -57,10 +57,22 @@ This installs Elixir 1.19.5 (OTP 28) and Erlang 28.4 as specified in `.mise.toml
 
 To start your Phoenix server:
 
+* Copy `.dev.env.example` to `.dev.env` and customize the local settings
 * Run `mix setup` to install and setup dependencies
 * Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
 
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+
+### Google Maps in development
+
+Location search uses Google Places when `GOOGLE_MAPS_API_KEY` is set in
+`.dev.env`. Create a key in Google Cloud with the Places API (New) enabled,
+restrict it to the APIs used by huddlz, and set conservative usage quotas and
+billing alerts. The `.dev.env` file is ignored by Git and must not be committed.
+
+If the key is omitted, development automatically uses a fixed set of preset
+locations. This keyless mode avoids Google API usage and is useful for routine
+local development.
 
 ## Development
 

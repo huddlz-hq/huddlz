@@ -4,10 +4,6 @@ defmodule Huddlz.Places.DevStub do
 
   Returns a fixed preset of locations regardless of the search query so the
   LocationAutocomplete component is fully usable without a Google API key.
-
-  To enable, add to config/dev.exs:
-
-      config :huddlz, :places, adapter: Huddlz.Places.DevStub
   """
 
   @behaviour Huddlz.Places
@@ -85,7 +81,7 @@ defmodule Huddlz.Places.DevStub do
   def place_details(place_id, _session_token) do
     case Map.fetch(@coordinates, place_id) do
       {:ok, coords} -> {:ok, coords}
-      :error -> {:ok, %{latitude: 37.7749, longitude: -122.4194}}
+      :error -> {:error, :not_found}
     end
   end
 end
