@@ -1940,44 +1940,74 @@ body.is-landing {
 body .land-topbar {
   display: flex;
   align-items: center;
-  height: 80px;
-  padding: 0 64px;
+  height: 72px;
+  padding: 0 clamp(24px, 4vw, 64px);
   border-bottom: 1px solid var(--line);
 }
 
 body .land-topbar .nav { margin-left: auto; display: flex; align-items: center; gap: 16px; }
 
-body .land-topbar .nav a {
+body .land-topbar .nav .btn-secondary {
   color: var(--soft);
   font-size: 14px;
-  font-weight: 580;
+  font-weight: 600;
 }
 
-body .land-topbar .nav a:hover { color: var(--text); }
+body .land-topbar .nav .btn-secondary:hover { color: var(--text); }
+
+body .land-topbar .nav .btn-primary {
+  color: #001011;
+  font-size: 14px;
+  box-shadow: 0 0 22px rgba(24, 203, 212, 0.16);
+}
+
+body.is-landing .btn-primary,
+body.is-landing .btn-secondary {
+  transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease,
+    box-shadow 140ms ease, transform 140ms ease;
+}
+
+body.is-landing .btn-primary:hover {
+  background: #5fe1e7;
+  color: #001011;
+  box-shadow: 0 8px 28px rgba(24, 203, 212, 0.2);
+  transform: translateY(-1px);
+}
+
+body.is-landing .btn-primary:focus-visible,
+body.is-landing .btn-secondary:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
 
 body .land-hero {
   max-width: 1080px;
   margin: 0 auto;
-  padding: 96px 32px 80px;
+  padding: 68px 32px 56px;
   text-align: center;
 }
 
 body .land-hero h1 {
-  margin: 16px auto 24px;
+  margin: 14px auto 20px;
   font-family: var(--mono);
-  font-size: clamp(44px, 6.4vw, 88px);
-  line-height: 0.98;
-  letter-spacing: -0.01em;
-  max-width: 12ch;
+  font-size: clamp(44px, 5.2vw, 74px);
+  line-height: 1.02;
+  letter-spacing: -0.025em;
   text-shadow: 0 0 40px rgba(24, 203, 212, 0.24);
 }
 
+body .land-hero h1 span { display: block; }
+
+@media (min-width: 560px) {
+  body .land-hero h1 span { white-space: nowrap; }
+}
+
 body .land-hero p {
-  max-width: 620px;
-  margin: 0 auto 32px;
-  color: var(--soft);
-  font-size: 19px;
-  line-height: 1.5;
+  max-width: 700px;
+  margin: 0 auto 28px;
+  color: #c3ced0;
+  font-size: 17px;
+  line-height: 1.55;
 }
 
 body .land-cta { display: flex; justify-content: center; gap: 12px; }
@@ -1986,8 +2016,8 @@ body .land-cta .btn-primary, body .land-cta .btn-secondary { height: 48px; paddi
 
 body .land-features {
   max-width: 1180px;
-  margin: 56px auto 0;
-  padding: 0 32px 96px;
+  margin: 0 auto;
+  padding: 0 32px 72px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 18px;
@@ -2000,8 +2030,15 @@ body .land-features {
 body .feat {
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--panel);
+  background: rgba(5, 8, 8, 0.88);
   padding: 28px 26px;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+body .feat:hover {
+  border-color: var(--line-strong);
+  background: var(--panel-2);
+  transform: translateY(-2px);
 }
 
 body .feat .feat-mark {
@@ -2017,7 +2054,16 @@ body .feat .feat-mark {
 }
 
 body .feat h3 { margin: 0 0 8px; font-size: 17px; font-weight: 700; color: var(--text); }
-body .feat p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+body .feat p { margin: 0; color: var(--soft); font-size: 14px; line-height: 1.6; }
+
+@media (prefers-reduced-motion: reduce) {
+  body.is-landing .btn-primary,
+  body.is-landing .btn-secondary,
+  body .feat { transition: none; }
+
+  body.is-landing .btn-primary:hover,
+  body .feat:hover { transform: none; }
+}
 
 body .land-foot {
   border-top: 1px solid var(--line);
@@ -2865,10 +2911,11 @@ body .page-nav:disabled {
   body .row.members-row { grid-template-columns: 48px 1fr; }
   /* Land marketing */
   body .land-topbar { height: 64px; padding: 0 16px; }
-  body .land-hero { padding: 56px 16px 48px; }
+  body .land-hero { padding: 48px 16px 40px; }
+  body .land-hero h1 { font-size: clamp(34px, 10.5vw, 48px); }
+  body .land-hero p { font-size: 16px; }
   body .land-features { padding: 0 16px 64px; }
   body .profile-head { flex-direction: column; align-items: flex-start; gap: 14px; }
   body .pagination { justify-content: center; flex-wrap: wrap; }
   body .pagination .page-numbers { order: -1; flex-basis: 100%; justify-content: center; flex-wrap: wrap; }
 }
-

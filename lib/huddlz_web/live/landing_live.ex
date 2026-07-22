@@ -33,9 +33,12 @@ defmodule HuddlzWeb.LandingLive do
 
     <section class="land-hero">
       <span class="eyebrow">In-person and online · everywhere</span>
-      <h1>Find your people.<br />Run the meetup.</h1>
+      <h1>
+        <span>Find your people.</span>
+        <span>Run the huddl.</span>
+      </h1>
       <p>
-        huddlz is the calmer, AI-native home for community events — discover huddlz worth showing up to, organize the ones you run, and skip the noise.
+        huddlz is a calmer home for communities and the huddlz that bring them together. Discover what fits, keep RSVPs organized, and give your group one place to gather.
       </p>
       <div class="land-cta">
         <.link navigate={~p"/discover"} class="btn-primary">Browse huddlz</.link>
@@ -60,7 +63,7 @@ defmodule HuddlzWeb.LandingLive do
         </span>
         <h3>Discovery that learns you</h3>
         <p>
-          Conversational search, semantic recommendations, and saved queries that update as new huddlz drop. No more sifting feeds.
+          Search by interest, place, time, or a plain-language idea. Save the search and hear when a matching huddl appears.
         </p>
       </div>
       <div class="feat">
@@ -80,7 +83,7 @@ defmodule HuddlzWeb.LandingLive do
         </span>
         <h3>Organize without the spreadsheet</h3>
         <p>
-          RSVPs, invites, capacity, waitlists, and recurring huddlz — all from one rail. Members and insights one tap away.
+          Publish one-off or recurring huddlz, manage capacity and waitlists, invite members, and keep every RSVP together.
         </p>
       </div>
       <div class="feat">
@@ -100,7 +103,7 @@ defmodule HuddlzWeb.LandingLive do
         </span>
         <h3>Bring your agent</h3>
         <p>
-          Browse, RSVP, and schedule huddlz from the LLM you already use. MCP tools, an agent-friendly API, and human-clear copy.
+          Ask your LLM to find a huddl, check the details, RSVP, or add it to your schedule through MCP and API tools.
         </p>
       </div>
     </section>
