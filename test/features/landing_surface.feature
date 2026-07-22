@@ -12,7 +12,7 @@ Feature: Landing surface
   Scenario: Anonymous visitor sees the landing hero and CTAs
     When I visit "/"
     Then I should see "Find your people."
-    And I should see "Run the meetup."
+    And I should see "Run the huddl."
     And I should see "In-person and online · everywhere"
     And I should see "Browse huddlz"
     And I should see "Start a group"
