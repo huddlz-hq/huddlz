@@ -45,9 +45,10 @@ defmodule Huddlz.MixProject do
 
   defp usage_rules do
     [
-      file: "CLAUDE.md",
+      file: "AGENTS.md",
       usage_rules: [:usage_rules],
       skills: [
+        location: ".agents/skills",
         build: [
           "ash-framework": [
             description:
