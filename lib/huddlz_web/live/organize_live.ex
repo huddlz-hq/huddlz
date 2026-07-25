@@ -14,9 +14,11 @@ defmodule HuddlzWeb.OrganizeLive do
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities
+  alias Huddlz.Communities.MembershipEvents
+  alias HuddlzWeb.GroupRole
   alias HuddlzWeb.Layouts
 
-  @group_loads [:member_count]
+  @group_loads [:member_count, :group_members]
   @huddl_loads [:rsvp_count, :status, :group]
   @upcoming_loads [:rsvp_count, :group]
   @member_role_order [:owner, :organizer, :member]
@@ -36,7 +38,8 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:huddlz_filter, :live)
      |> assign(:upcoming_huddlz, [])
      |> assign(:open_rsvps, 0)
-     |> assign(:members, [])}
+     |> assign(:members, [])
+     |> assign(:subscribed_group_id, nil)}
   end
 
   @impl true
@@ -64,6 +67,7 @@ defmodule HuddlzWeb.OrganizeLive do
     case load_group(slug, user) do
       {:ok, group} ->
         socket
+        |> subscribe_to_membership_changes(group)
         |> assign(:group, group)
         |> assign(:page_title, "#{group.name} · Organizer")
         |> load_section(action, group, user)
@@ -129,6 +133,49 @@ defmodule HuddlzWeb.OrganizeLive do
     )
   end
 
+  @impl true
+  def handle_info(
+        {:group_membership_changed, group_id},
+        %{assigns: %{group: %{id: group_id}}} = socket
+      ) do
+    user = socket.assigns.current_user
+
+    case load_group(socket.assigns.group.slug, user) do
+      {:ok, group} ->
+        {:noreply,
+         socket
+         |> assign(:group, group)
+         |> load_section(socket.assigns.live_action, group, user)}
+
+      :error ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Your organizer access to this group has changed.")
+         |> push_navigate(to: ~p"/organize")}
+    end
+  end
+
+  def handle_info(
+        {:user_group_membership_changed, user_id, _group_id},
+        %{assigns: %{current_user: %{id: user_id}, live_action: :index}} = socket
+      ) do
+    {:noreply, load_action(socket, :index, %{}, socket.assigns.current_user)}
+  end
+
+  def handle_info({:user_group_membership_changed, _user_id, _group_id}, socket),
+    do: {:noreply, socket}
+
+  def handle_info({:group_membership_changed, _group_id}, socket), do: {:noreply, socket}
+
+  defp subscribe_to_membership_changes(socket, group) do
+    if connected?(socket) and socket.assigns.subscribed_group_id != group.id do
+      :ok = MembershipEvents.subscribe(group.id)
+      assign(socket, :subscribed_group_id, group.id)
+    else
+      socket
+    end
+  end
+
   defp parse_huddlz_filter("past"), do: :past
   defp parse_huddlz_filter(_), do: :live
 
@@ -147,7 +194,7 @@ defmodule HuddlzWeb.OrganizeLive do
     >
       <%= case @live_action do %>
         <% :index -> %>
-          <.picker_view groups={@owned_groups} />
+          <.picker_view groups={@owned_groups} current_user={@current_user} />
         <% :overview -> %>
           <.overview_view
             group={@group}
@@ -170,6 +217,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
   # ─────────────────────────────────────────  PICKER (/organize)  ───
   attr :groups, :list, required: true
+  attr :current_user, :map, required: true
 
   defp picker_view(assigns) do
     ~H"""
@@ -214,7 +262,15 @@ defmodule HuddlzWeb.OrganizeLive do
                 {member_label(group.member_count)} · {visibility_label(group.is_public)}
               </div>
             </div>
-            <span class="pill">Open →</span>
+            <div class="flex items-center gap-2">
+              <.pill
+                class="group-role"
+                variant={GroupRole.pill_variant(GroupRole.for_group(group, @current_user))}
+              >
+                {group |> GroupRole.for_group(@current_user) |> GroupRole.label()}
+              </.pill>
+              <span class="pill">Open →</span>
+            </div>
           </a>
         </div>
       </div>

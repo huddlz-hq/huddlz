@@ -493,6 +493,17 @@ body .sb-org-row .name {
   text-overflow: ellipsis;
 }
 
+body .sb-org-row .group-role {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 body .sb-org-row:hover {
   background: rgba(24, 203, 212, 0.06);
   color: var(--text);

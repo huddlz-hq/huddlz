@@ -8,6 +8,7 @@ defmodule HuddlzWeb.LiveUserAuth do
 
   alias AshAuthentication.Phoenix.LiveSession
   alias Huddlz.Accounts.User
+  alias Huddlz.Communities.MembershipEvents
 
   # This is used for nested liveviews to fetch the current user.
   # To use, place the following at the top of that liveview:
@@ -76,11 +77,19 @@ defmodule HuddlzWeb.LiveUserAuth do
   def on_mount(:app, _params, _session, socket) do
     body_class = if socket.assigns[:current_user], do: "", else: "is-signed-out"
 
-    {:cont,
-     socket
-     |> maybe_load_user_details()
-     |> assign(:body_class, body_class)
-     |> assign_new(:sidebar_owned_groups, fn -> load_sidebar_owned_groups(socket) end)}
+    socket =
+      socket
+      |> maybe_load_user_details()
+      |> assign(:body_class, body_class)
+      |> assign_new(:sidebar_owned_groups, fn -> load_sidebar_owned_groups(socket) end)
+      |> subscribe_to_membership_changes()
+      |> Phoenix.LiveView.attach_hook(
+        :refresh_group_navigation,
+        :handle_info,
+        &refresh_group_navigation/2
+      )
+
+    {:cont, socket}
   end
 
   defp maybe_load_user_details(%{assigns: %{current_user: user}} = socket)
@@ -104,8 +113,37 @@ defmodule HuddlzWeb.LiveUserAuth do
   defp maybe_load_user_details(socket), do: socket
 
   defp load_sidebar_owned_groups(%{assigns: %{current_user: user}}) when not is_nil(user) do
-    Huddlz.Communities.get_organizable_groups!(actor: user, query: [sort: [name: :asc]])
+    Huddlz.Communities.get_organizable_groups!(
+      actor: user,
+      load: :group_members,
+      query: [sort: [name: :asc]]
+    )
   end
 
   defp load_sidebar_owned_groups(_socket), do: []
+
+  defp subscribe_to_membership_changes(%{assigns: %{current_user: %{id: user_id}}} = socket) do
+    if Phoenix.LiveView.connected?(socket) do
+      :ok = MembershipEvents.subscribe_user(user_id)
+    end
+
+    socket
+  end
+
+  defp subscribe_to_membership_changes(socket), do: socket
+
+  defp refresh_group_navigation(
+         {:user_group_membership_changed, user_id, _group_id},
+         %{assigns: %{current_user: %{id: user_id}}} = socket
+       ) do
+    socket = assign(socket, :sidebar_owned_groups, load_sidebar_owned_groups(socket))
+
+    if socket.view in [HuddlzWeb.MyGroupsLive, HuddlzWeb.OrganizeLive] do
+      {:cont, socket}
+    else
+      {:halt, socket}
+    end
+  end
+
+  defp refresh_group_navigation(_message, socket), do: {:cont, socket}
 end

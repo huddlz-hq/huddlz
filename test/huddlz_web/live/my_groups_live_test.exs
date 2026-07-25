@@ -80,7 +80,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
   end
 
   describe "Hosting filter" do
-    test "shows only owned groups with Hosting tag", %{
+    test "shows only owned groups with Owner tag", %{
       conn: conn,
       member: member,
       other: other
@@ -98,7 +98,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
       |> assert_has(".filters .chip.is-active", text: "Hosting")
       |> assert_has(".grid .card .card-title", text: "Owned One")
       |> refute_has(".grid .card .card-title", text: "Joined One")
-      |> assert_has(".grid .card .card-tag", text: "Hosting")
+      |> assert_has(".grid .card .card-tag", text: "Owner")
     end
 
     test "empty state copy", %{conn: conn, member: member} do
@@ -110,7 +110,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
   end
 
   describe "Joined filter" do
-    test "shows only joined groups with Joined tag", %{
+    test "shows only joined groups with Member tag", %{
       conn: conn,
       member: member,
       other: other
@@ -129,7 +129,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
       |> assert_has(".filters .chip.is-active", text: "Joined")
       |> assert_has(".grid .card .card-title", text: "Joined One")
       |> refute_has(".grid .card .card-title", text: "Owned One")
-      |> assert_has(".grid .card .card-tag", text: "Joined")
+      |> assert_has(".grid .card .card-tag", text: "Member")
     end
 
     test "empty state copy", %{conn: conn, member: member} do
