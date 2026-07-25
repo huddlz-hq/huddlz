@@ -18,6 +18,8 @@ Feature: Delete Huddl
     When I visit the "Future Workshop" huddl page
     Then I should see "Delete huddl"
     When I click "Delete huddl"
+    Then I should see "Delete this huddl?"
+    When I confirm deleting the huddl
     Then I should be redirected to the "Tech Meetup" group page
     And I should see "Huddl deleted successfully!"
 

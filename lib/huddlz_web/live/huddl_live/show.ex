@@ -25,7 +25,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, socket}
+    {:ok, assign(socket, :confirming_delete?, false)}
   end
 
   @impl true
@@ -221,8 +221,8 @@ defmodule HuddlzWeb.HuddlLive.Show do
               <.button
                 :if={@can_delete_huddl}
                 variant={:destructive}
-                phx-click="delete_huddl"
-                data-confirm="Are you sure you want to delete this huddl?"
+                id="open-delete-huddl-modal"
+                phx-click={JS.push_focus() |> JS.push("confirm_delete_huddl")}
               >
                 Delete huddl
               </.button>
@@ -238,6 +238,51 @@ defmodule HuddlzWeb.HuddlLive.Show do
           </div>
         </aside>
       </div>
+
+      <.modal
+        :if={@confirming_delete?}
+        id="delete-huddl-modal"
+        show
+        on_cancel={JS.push("cancel_delete_huddl")}
+      >
+        <div class="delete-confirm">
+          <div class="delete-confirm-icon" aria-hidden="true">
+            <.icon name="hero-exclamation-triangle" class="h-6 w-6" />
+          </div>
+
+          <div class="delete-confirm-copy">
+            <span class="eyebrow eyebrow-magenta">Permanent action</span>
+            <h2 id="delete-huddl-modal-title">Delete this huddl?</h2>
+            <p>
+              <strong>{@huddl.title}</strong> will be permanently deleted. All RSVPs will be
+              canceled, and everyone who RSVP'd will be notified.
+            </p>
+            <p :if={@huddl.huddl_template_id} class="delete-confirm-series-note">
+              This deletes only the selected occurrence. Other occurrences in the recurring
+              series will remain.
+            </p>
+          </div>
+        </div>
+
+        <div class="delete-confirm-actions">
+          <.button
+            variant={:muted}
+            id="cancel-delete-huddl"
+            phx-click="cancel_delete_huddl"
+          >
+            Keep huddl
+          </.button>
+          <.button
+            variant={:destructive}
+            class="delete-confirm-submit"
+            id="confirm-delete-huddl"
+            phx-click="delete_huddl"
+            phx-disable-with="Deleting…"
+          >
+            Delete huddl
+          </.button>
+        </div>
+      </.modal>
     </Layouts.app>
     """
   end
@@ -472,6 +517,14 @@ defmodule HuddlzWeb.HuddlLive.Show do
     end
   end
 
+  def handle_event("confirm_delete_huddl", _, socket) do
+    {:noreply, assign(socket, :confirming_delete?, true)}
+  end
+
+  def handle_event("cancel_delete_huddl", _, socket) do
+    {:noreply, assign(socket, :confirming_delete?, false)}
+  end
+
   def handle_event("delete_huddl", _, socket) do
     huddl = socket.assigns.huddl
     user = socket.assigns.current_user
@@ -484,7 +537,10 @@ defmodule HuddlzWeb.HuddlLive.Show do
          |> redirect(to: ~p"/groups/#{huddl.group.slug}")}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Failed to delete huddl.")}
+        {:noreply,
+         socket
+         |> assign(:confirming_delete?, false)
+         |> put_flash(:error, "Failed to delete huddl.")}
     end
   end
 
