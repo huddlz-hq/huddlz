@@ -54,10 +54,12 @@ defmodule HuddlzWeb.LiveUserAuth do
   # so this hook stays in sync with the policy bypass that uses the same role
   # check on every Ash action.
   def on_mount(:admin_required, _params, _session, socket) do
-    if User.admin?(socket.assigns[:current_user]) do
-      {:cont, socket}
-    else
-      {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/sign-in")}
+    case socket.assigns[:current_user] do
+      nil ->
+        {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/sign-in")}
+
+      user ->
+        authorize_admin(user, socket)
     end
   end
 
@@ -102,6 +104,17 @@ defmodule HuddlzWeb.LiveUserAuth do
   end
 
   defp maybe_load_user_details(socket), do: socket
+
+  defp authorize_admin(user, socket) do
+    if User.admin?(user) do
+      {:cont, socket}
+    else
+      {:halt,
+       socket
+       |> Phoenix.LiveView.put_flash(:error, "You don't have access to the admin area.")
+       |> Phoenix.LiveView.redirect(to: ~p"/my-huddlz")}
+    end
+  end
 
   defp load_sidebar_owned_groups(%{assigns: %{current_user: user}}) when not is_nil(user) do
     Huddlz.Communities.get_organizable_groups!(actor: user, query: [sort: [name: :asc]])
