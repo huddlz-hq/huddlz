@@ -180,7 +180,7 @@ defmodule Huddlz.Accounts.User do
       description "Update a user's display_name"
       accept [:display_name]
 
-      validate attribute_does_not_equal(:display_name, "")
+      validate present(:display_name), message: "is required"
       validate string_length(:display_name, min: 1, max: 70)
     end
 
