@@ -184,8 +184,8 @@ defmodule HuddlzWeb.HuddlLive.Edit do
       <div class="page-head">
         <div>
           <h1>Editing {@huddl.title}</h1>
-          <p>
-            Updates to time, location, capacity, or privacy will email everyone who's RSVP'd.
+          <p id="attendee-notification-explanation">
+            Updates to the title, time, location, capacity, or privacy will notify affected people who've RSVP'd.
           </p>
         </div>
       </div>

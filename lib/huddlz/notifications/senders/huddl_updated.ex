@@ -1,7 +1,8 @@
 defmodule Huddlz.Notifications.Senders.HuddlUpdated do
   @moduledoc """
   Sender for C2: a meaningful field on a huddl was changed (`title`,
-  `starts_at`, `ends_at`, `physical_location`, or `virtual_link`).
+  `starts_at`, `ends_at`, `physical_location`, `virtual_link`,
+  `max_attendees`, or `is_private`).
 
   Sent to every user who has currently RSVP'd, excluding the actor.
   Activity category — preferences and the unsubscribe footer apply.

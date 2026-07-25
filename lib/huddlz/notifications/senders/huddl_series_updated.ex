@@ -3,10 +3,10 @@ defmodule Huddlz.Notifications.Senders.HuddlSeriesUpdated do
   Sender for C4: a recurring huddl series was modified (the editor
   chose `edit_type: "all"`).
 
-  Sent to the RSVPs of the *next* upcoming instance in the series,
-  not to every instance's RSVPs — subsequent instances rely on their
-  own D1/D2 reminders to surface the new schedule. Activity category
-  — preferences and the unsubscribe footer apply.
+  Sent once to each person with an RSVP on a retained occurrence. The
+  payload points to that person's next upcoming RSVP, so the target remains
+  useful and authorized without sending one message per occurrence. Activity
+  category — preferences and the unsubscribe footer apply.
 
   Required payload keys are the same as C2 (`huddl_id`,
   `huddl_title`, `starts_at_iso`, `group_name`, `group_slug`,
@@ -61,8 +61,7 @@ defmodule Huddlz.Notifications.Senders.HuddlSeriesUpdated do
     is now scheduled for #{safe_when}. See it at
     <a href="#{huddl_url}">#{huddl_url}</a>.</p>
 
-    <p>Future instances in the series will be covered by their own
-    24-hour and 1-hour reminders.</p>
+    <p>You will still receive the usual reminders for each huddl you are attending.</p>
     #{footer_html}
     """)
     |> text_body("""
@@ -75,8 +74,7 @@ defmodule Huddlz.Notifications.Senders.HuddlSeriesUpdated do
     Your next upcoming instance, "#{huddl_title(payload)}", is now scheduled for
     #{when_text}. See it at #{huddl_url}.
 
-    Future instances in the series will be covered by their own 24-hour and
-    1-hour reminders.
+    You will still receive the usual reminders for each huddl you are attending.
     #{footer_text}
     """)
   end
