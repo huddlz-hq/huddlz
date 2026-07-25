@@ -242,8 +242,11 @@ defmodule HuddlzWeb.HuddlLive.New do
                   <.select
                     field={@form[:frequency]}
                     label="Frequency"
-                    options={[{"Weekly", "weekly"}, {"Monthly", "monthly"}]}
-                    required
+                    options={[
+                      {"Weekly", "weekly"},
+                      {"Every two weeks", "every_two_weeks"},
+                      {"Monthly", "monthly"}
+                    ]}
                   />
                 </div>
                 <div class="form-col-md">
@@ -251,7 +254,6 @@ defmodule HuddlzWeb.HuddlLive.New do
                     field={@form[:repeat_until]}
                     type="date"
                     label="Repeat until"
-                    required
                   />
                 </div>
               </div>

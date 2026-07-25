@@ -80,6 +80,40 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
     end
   end
 
+  describe "generate_huddlz_from_template/2 every two weeks" do
+    test "generates occurrences on the selected weekday every 14 days", ctx do
+      repeat_until = Date.add(DateTime.to_date(ctx.starts_at), 43)
+
+      template =
+        HuddlTemplate
+        |> Ash.Changeset.for_create(:create, %{
+          interval: 2,
+          unit: :week,
+          repeat_until: repeat_until
+        })
+        |> Ash.create!(authorize?: false)
+
+      RecurrenceHelper.generate_huddlz_from_template(template, ctx.huddl)
+
+      dates =
+        Huddl
+        |> Ash.Query.filter(huddl_template_id == ^template.id)
+        |> Ash.read!(authorize?: false)
+        |> Enum.map(&DateTime.to_date(&1.starts_at))
+        |> Enum.sort(Date)
+
+      source_date = DateTime.to_date(ctx.starts_at)
+
+      assert dates == [
+               Date.add(source_date, 14),
+               Date.add(source_date, 28),
+               Date.add(source_date, 42)
+             ]
+
+      assert Enum.all?(dates, &(Date.day_of_week(&1) == Date.day_of_week(source_date)))
+    end
+  end
+
   describe "generate_huddlz_from_template/2 monthly" do
     test "generates monthly recurring huddlz up to repeat_until", ctx do
       repeat_until = Date.add(Date.utc_today(), 65)
