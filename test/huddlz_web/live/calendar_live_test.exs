@@ -69,7 +69,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> assert_has(".cal-toolbar")
       |> assert_has(".cal-nav-today", text: "Today")
       |> assert_has(".cal-view-tabs .scope-tab.is-active", text: "Month")
-      |> assert_has(".cal-legend", text: "Going")
+      |> refute_has("#calendar-legend")
     end
 
     test "shows the current month name and 0 huddlz when empty", %{
@@ -108,7 +108,11 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn
       |> login(attendee)
       |> visit(calendar_path_for(tomorrow()))
-      |> assert_has(".cal-pill", text: "Going Show")
+      |> assert_has(
+        "#calendar-entry-#{huddl.id}.cal-pill.going[data-status=going]",
+        text: "Going ·"
+      )
+      |> assert_has("#calendar-legend [data-status=going]", text: "Going")
     end
 
     test "waitlisted huddl renders the tentative variant", %{
@@ -130,7 +134,11 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn
       |> login(attendee)
       |> visit(calendar_path_for(tomorrow()))
-      |> assert_has(".cal-pill.tentative", text: "Sold Out")
+      |> assert_has(
+        "#calendar-entry-#{huddl.id}.cal-pill.waitlisted[data-status=waitlist]",
+        text: "Waitlist ·"
+      )
+      |> assert_has("#calendar-legend [data-status=waitlist]", text: "Waitlist")
     end
 
     test "past attended huddl renders the past variant", %{
@@ -145,7 +153,11 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn
       |> login(attendee)
       |> visit(calendar_path_for(Date.add(Date.utc_today(), -2)))
-      |> assert_has(".cal-pill.past", text: "Old Workshop")
+      |> assert_has(
+        "#calendar-entry-#{past.id}.cal-pill.past[data-status=past]",
+        text: "Past ·"
+      )
+      |> assert_has("#calendar-legend [data-status=past]", text: "Past")
     end
 
     test "hosting (creator) appears even without an RSVP", %{
@@ -153,12 +165,17 @@ defmodule HuddlzWeb.CalendarLiveTest do
       host: host,
       public_group: public_group
     } do
-      _huddl = create_huddl(host, public_group, title: "I Am Hosting", date: tomorrow())
+      huddl = create_huddl(host, public_group, title: "I Am Hosting", date: tomorrow())
+      rsvp!(huddl, host, :cancel_rsvp)
 
       conn
       |> login(host)
       |> visit(calendar_path_for(tomorrow()))
-      |> assert_has(".cal-pill", text: "I Am Hosting")
+      |> assert_has(
+        "#calendar-entry-#{huddl.id}.cal-pill.hosting[data-status=hosting]",
+        text: "Hosting ·"
+      )
+      |> assert_has("#calendar-legend [data-status=hosting]", text: "Hosting")
     end
 
     test "creator RSVP does not duplicate the huddl or month count", %{
@@ -174,6 +191,10 @@ defmodule HuddlzWeb.CalendarLiveTest do
         |> login(host)
         |> visit(calendar_path_for(tomorrow()))
         |> assert_has(".cal-month-count", text: "1 huddl")
+        |> assert_has(
+          "#calendar-entry-#{huddl.id}[data-status=hosting-going]",
+          text: "Hosting + Going"
+        )
 
       assert session.view
              |> Phoenix.LiveViewTest.render()
@@ -213,6 +234,36 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> login(attendee)
       |> visit("/calendar?month=#{next_month_param(Date.utc_today())}")
       |> assert_has(".cal-month-count", text: "1 huddl")
+    end
+
+    test "month legend includes statuses on visible adjacent-month huddlz", %{
+      conn: conn,
+      attendee: attendee,
+      host: host,
+      public_group: public_group
+    } do
+      focus_date = tomorrow()
+      in_month = create_huddl(host, public_group, title: "In Month", date: focus_date)
+      rsvp!(in_month, attendee, :rsvp)
+
+      outside_date = calendar_grid_end(focus_date)
+
+      outside =
+        create_huddl(host, public_group,
+          title: "Outside Month",
+          max_attendees: 1,
+          date: outside_date
+        )
+
+      outside = Ash.reload!(outside)
+      rsvp!(outside, attendee, :join_waitlist)
+
+      conn
+      |> login(attendee)
+      |> visit(calendar_path_for(focus_date))
+      |> assert_has("#calendar-entry-#{outside.id}.out-of-month-pill[data-status=waitlist]")
+      |> assert_has("#calendar-legend [data-status=going]", text: "Going")
+      |> assert_has("#calendar-legend [data-status=waitlist]", text: "Waitlist")
     end
 
     test "cal-pill links to the huddl detail page", %{
@@ -286,7 +337,87 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> login(attendee)
       |> visit(calendar_path_for(tomorrow(), view: "agenda"))
       |> assert_has(".row .row-title", text: "Agenda Item")
-      |> assert_has(".pill", text: "Going")
+      |> assert_has(
+        "#calendar-entry-#{huddl.id} .cal-entry-status[data-status=going]",
+        text: "Going"
+      )
+    end
+
+    test "agenda uses the same combined Hosting + Going status without duplication", %{
+      conn: conn,
+      host: host,
+      public_group: public_group
+    } do
+      huddl = create_huddl(host, public_group, title: "Hosted Agenda", date: tomorrow())
+
+      session =
+        conn
+        |> login(host)
+        |> visit(calendar_path_for(tomorrow(), view: "agenda"))
+        |> assert_has(
+          "#calendar-entry-#{huddl.id} .cal-entry-status[data-status=hosting-going]",
+          text: "Hosting + Going"
+        )
+
+      assert session.view
+             |> Phoenix.LiveViewTest.render()
+             |> LazyHTML.from_fragment()
+             |> LazyHTML.query("#calendar-entry-#{huddl.id}")
+             |> Enum.count() == 1
+    end
+
+    test "agenda represents hosting without attendance", %{
+      conn: conn,
+      host: host,
+      public_group: public_group
+    } do
+      huddl = create_huddl(host, public_group, title: "Hosting Agenda", date: tomorrow())
+      rsvp!(huddl, host, :cancel_rsvp)
+
+      conn
+      |> login(host)
+      |> visit(calendar_path_for(tomorrow(), view: "agenda"))
+      |> assert_has(
+        "#calendar-entry-#{huddl.id} .cal-entry-status[data-status=hosting]",
+        text: "Hosting"
+      )
+      |> assert_has("#calendar-legend [data-status=hosting]", text: "Hosting")
+    end
+
+    test "agenda represents waitlisted and past statuses with text", %{
+      conn: conn,
+      attendee: attendee,
+      host: host,
+      public_group: public_group
+    } do
+      waitlisted =
+        create_huddl(host, public_group,
+          title: "Agenda Waitlist",
+          max_attendees: 1,
+          date: tomorrow()
+        )
+
+      waitlisted = Ash.reload!(waitlisted)
+      rsvp!(waitlisted, attendee, :join_waitlist)
+
+      conn
+      |> login(attendee)
+      |> visit(calendar_path_for(tomorrow(), view: "agenda"))
+      |> assert_has(
+        "#calendar-entry-#{waitlisted.id} .cal-entry-status[data-status=waitlist]",
+        text: "Waitlist"
+      )
+
+      past = create_past_huddl(host, public_group, title: "Agenda Past")
+      rsvp!(past, attendee, :rsvp)
+
+      conn
+      |> login(attendee)
+      |> visit(calendar_path_for(Date.add(Date.utc_today(), -2), view: "agenda"))
+      |> assert_has(
+        "#calendar-entry-#{past.id} .cal-entry-status[data-status=past]",
+        text: "Past"
+      )
     end
 
     test "empty agenda shows helpful copy", %{conn: conn, attendee: attendee} do
@@ -314,6 +445,15 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
   defp current_month_name do
     Date.utc_today() |> Calendar.strftime("%B %Y")
+  end
+
+  defp calendar_grid_end(date) do
+    month_first = %{date | day: 1}
+    offset = rem(Date.day_of_week(month_first), 7)
+
+    month_first
+    |> Date.add(-offset)
+    |> Date.add(41)
   end
 
   defp next_month_param(date) do

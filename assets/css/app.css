@@ -1702,6 +1702,16 @@ body .cal-pill {
 
 body .cal-pill:hover { background: var(--cyan-soft); border-color: var(--cyan); }
 
+body .cal-pill.hosting {
+  border-color: rgba(232, 79, 180, 0.4);
+  color: var(--magenta);
+}
+
+body .cal-pill.hosting:hover {
+  background: rgba(232, 79, 180, 0.08);
+  border-color: var(--magenta);
+}
+
 body .cal-pill.tentative {
   border-color: rgba(246, 193, 119, 0.4);
   color: var(--warn);
@@ -1744,6 +1754,11 @@ body .cal-legend-swatch {
   border-radius: 2px;
   display: inline-block;
 }
+
+body .cal-legend-swatch.cyan { background: var(--cyan); }
+body .cal-legend-swatch.magenta { background: var(--magenta); }
+body .cal-legend-swatch.warn { background: var(--warn); }
+body .cal-legend-swatch.muted { background: var(--muted); }
 
 body .cal-legend-note { margin-left: auto; font-size: 12px; }
 

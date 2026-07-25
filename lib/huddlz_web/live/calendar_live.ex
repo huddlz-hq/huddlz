@@ -21,7 +21,8 @@ defmodule HuddlzWeb.CalendarLive do
     {:ok,
      socket
      |> assign(:page_title, "My calendar")
-     |> assign(:today, Date.utc_today())}
+     |> assign(:today, Date.utc_today())
+     |> stream_configure(:legend_items, dom_id: &"calendar-legend-item-#{&1.key}")}
   end
 
   @impl true
@@ -34,6 +35,7 @@ defmodule HuddlzWeb.CalendarLive do
     entries = load_entries(user, grid_start, grid_end)
     entries_by_day = group_by_day(entries)
     in_month_count = Enum.count(entries, &in_focus_month?(&1.huddl, focus_month))
+    legend_items = legend_items(entries, focus_month, view_mode, socket.assigns.today)
 
     {:noreply,
      socket
@@ -43,7 +45,9 @@ defmodule HuddlzWeb.CalendarLive do
      |> assign(:grid_end, grid_end)
      |> assign(:entries, entries)
      |> assign(:entries_by_day, entries_by_day)
-     |> assign(:in_month_count, in_month_count)}
+     |> assign(:in_month_count, in_month_count)
+     |> assign(:legend_empty?, legend_items == [])
+     |> stream(:legend_items, legend_items, reset: true)}
   end
 
   defp parse_month(nil, today), do: first_of_month(today)
@@ -86,12 +90,13 @@ defmodule HuddlzWeb.CalendarLive do
 
     [:hosting, :attending, :waitlisted]
     |> Enum.flat_map(fn role -> fetch(user, role) end)
-    |> Enum.uniq_by(& &1.huddl.id)
+    |> merge_entry_roles()
     |> Enum.filter(fn %{huddl: h} ->
       h.starts_at &&
         DateTime.compare(h.starts_at, grid_start_dt) != :lt &&
         DateTime.compare(h.starts_at, grid_end_dt) != :gt
     end)
+    |> Enum.sort_by(& &1.huddl.starts_at, DateTime)
   end
 
   defp fetch(user, role) do
@@ -115,6 +120,14 @@ defmodule HuddlzWeb.CalendarLive do
         Logger.warning("CalendarLive search failed (#{role}): #{inspect(reason)}")
         []
     end
+  end
+
+  defp merge_entry_roles(entries) do
+    entries
+    |> Enum.group_by(& &1.huddl.id)
+    |> Enum.map(fn {_id, [%{huddl: huddl} | _] = matches} ->
+      %{huddl: huddl, roles: MapSet.new(matches, & &1.role)}
+    end)
   end
 
   defp group_by_day(entries) do
@@ -175,20 +188,18 @@ defmodule HuddlzWeb.CalendarLive do
     if day_in_focus?(day, focus_month), do: base, else: base <> " out-of-month-pill"
   end
 
-  defp base_pill_class(%{role: role, huddl: %{starts_at: starts_at}}, %Date{} = today) do
-    starts_date = DateTime.to_date(starts_at)
-    past? = Date.compare(starts_date, today) == :lt
-
-    cond do
-      past? -> "cal-pill past"
-      role == :waitlisted -> "cal-pill tentative"
-      true -> "cal-pill"
+  defp base_pill_class(entry, today) do
+    case entry_status(entry, today).variant do
+      :muted -> "cal-pill past"
+      :warn -> "cal-pill tentative waitlisted"
+      :magenta -> "cal-pill hosting"
+      :cyan -> "cal-pill going"
     end
   end
 
-  defp format_pill_label(%{huddl: %{starts_at: dt, title: title}}) do
+  defp format_pill_label(%{huddl: %{starts_at: dt, title: title}} = entry, today) do
     time = Calendar.strftime(dt, "%-I:%M %p")
-    "#{time} · #{title}"
+    "#{entry_status(entry, today).label} · #{time} · #{title}"
   end
 
   defp huddl_path(%{huddl: %{id: id, group: %{slug: slug}}}),
@@ -200,26 +211,49 @@ defmodule HuddlzWeb.CalendarLive do
     |> Enum.sort_by(fn %{huddl: %{starts_at: dt}} -> dt end, DateTime)
   end
 
-  defp agenda_pill_variant(%{role: role, huddl: %{starts_at: dt}}, %Date{} = today) do
-    past? = Date.compare(DateTime.to_date(dt), today) == :lt
-
-    cond do
-      past? -> :muted
-      role == :waitlisted -> :warn
-      true -> :default
+  defp entry_status(%{huddl: %{starts_at: starts_at}} = entry, %Date{} = today) do
+    if Date.compare(DateTime.to_date(starts_at), today) == :lt do
+      %{key: "past", label: "Past", variant: :muted, rank: 5}
+    else
+      relationship_status(entry)
     end
   end
 
-  defp agenda_pill_label(%{role: role, huddl: %{starts_at: dt}}, %Date{} = today) do
-    past? = Date.compare(DateTime.to_date(dt), today) == :lt
+  defp relationship_status(%{roles: roles}) do
+    hosting? = MapSet.member?(roles, :hosting)
+    attending? = MapSet.member?(roles, :attending)
+    waitlisted? = MapSet.member?(roles, :waitlisted)
 
     cond do
-      past? -> "Past"
-      role == :hosting -> "Hosting"
-      role == :waitlisted -> "Waitlist"
-      true -> "Going"
+      hosting? and attending? ->
+        %{key: "hosting-going", label: "Hosting + Going", variant: :magenta, rank: 0}
+
+      hosting? and waitlisted? ->
+        %{key: "hosting-waitlist", label: "Hosting + Waitlist", variant: :magenta, rank: 1}
+
+      hosting? ->
+        %{key: "hosting", label: "Hosting", variant: :magenta, rank: 2}
+
+      waitlisted? ->
+        %{key: "waitlist", label: "Waitlist", variant: :warn, rank: 4}
+
+      attending? ->
+        %{key: "going", label: "Going", variant: :cyan, rank: 3}
     end
   end
+
+  defp legend_items(entries, focus_month, view_mode, today) do
+    entries
+    |> visible_entries(focus_month, view_mode)
+    |> Enum.map(&entry_status(&1, today))
+    |> Enum.uniq_by(& &1.key)
+    |> Enum.sort_by(& &1.rank)
+  end
+
+  defp visible_entries(entries, _focus_month, :month), do: entries
+  defp visible_entries(entries, focus_month, :agenda), do: agenda_entries(entries, focus_month)
+
+  defp legend_swatch_class(%{variant: variant}), do: ["cal-legend-swatch", variant]
 
   defp format_agenda_when(%DateTime{} = dt) do
     Calendar.strftime(dt, "%a %b %-d · %-I:%M %p")
@@ -318,15 +352,21 @@ defmodule HuddlzWeb.CalendarLive do
         <.agenda_view entries={@entries} focus_month={@focus_month} today={@today} />
       <% end %>
 
-      <div class="cal-legend">
-        <span class="cal-legend-item">
-          <span class="cal-legend-swatch" style="background:var(--cyan)"></span> Going
-        </span>
-        <span class="cal-legend-item">
-          <span class="cal-legend-swatch" style="background:var(--warn)"></span> Tentative / waitlist
-        </span>
-        <span class="cal-legend-item">
-          <span class="cal-legend-swatch" style="background:var(--muted)"></span> Past
+      <div
+        :if={!@legend_empty?}
+        id="calendar-legend"
+        class="cal-legend"
+        aria-label="Calendar statuses"
+        phx-update="stream"
+      >
+        <span
+          :for={{id, item} <- @streams.legend_items}
+          id={id}
+          class="cal-legend-item"
+          data-status={item.key}
+        >
+          <span class={legend_swatch_class(item)} aria-hidden="true"></span>
+          {item.label}
         </span>
       </div>
     </Layouts.app>
@@ -356,11 +396,13 @@ defmodule HuddlzWeb.CalendarLive do
             <span class={day_num_class(day, @today)}>{day.day}</span>
             <%= for entry <- Map.get(@entries_by_day, day, []) do %>
               <.link
+                id={"calendar-entry-#{entry.huddl.id}"}
                 navigate={huddl_path(entry)}
                 class={pill_class_for(entry, day, @focus_month, @today)}
                 title={entry.huddl.title}
+                data-status={entry_status(entry, @today).key}
               >
-                {format_pill_label(entry)}
+                {format_pill_label(entry, @today)}
               </.link>
             <% end %>
           </div>
@@ -394,14 +436,19 @@ defmodule HuddlzWeb.CalendarLive do
         <div class="row-list" style="padding:6px 20px">
           <.link
             :for={entry <- @sorted}
+            id={"calendar-entry-#{entry.huddl.id}"}
             navigate={huddl_path(entry)}
             class="row"
             style="grid-template-columns: 200px 1fr auto; text-decoration: none"
           >
             <span class="meta">{format_agenda_when(entry.huddl.starts_at)}</span>
             <span class="row-title">{entry.huddl.title}</span>
-            <.pill variant={agenda_pill_variant(entry, @today)}>
-              {agenda_pill_label(entry, @today)}
+            <.pill
+              variant={entry_status(entry, @today).variant}
+              class="cal-entry-status"
+              data-status={entry_status(entry, @today).key}
+            >
+              {entry_status(entry, @today).label}
             </.pill>
           </.link>
         </div>
