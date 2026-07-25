@@ -67,7 +67,8 @@ defmodule Huddlz.Accounts.AuthRateLimitTest do
         email: email,
         display_name: "Rate Limit Test",
         password: "password123",
-        password_confirmation: "password123"
+        password_confirmation: "password123",
+        legal_acceptance: true
       })
       |> Ash.create()
     end

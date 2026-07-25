@@ -14,7 +14,8 @@ defmodule HuddlzWeb.BasicPasswordResetTest do
           email: "test@example.com",
           password: "oldpassword123",
           password_confirmation: "oldpassword123",
-          display_name: "Test User"
+          display_name: "Test User",
+          legal_acceptance: true
         })
         |> Ash.create()
 
@@ -52,7 +53,8 @@ defmodule HuddlzWeb.BasicPasswordResetTest do
           email: "form.test@example.com",
           password: "oldpassword123",
           password_confirmation: "oldpassword123",
-          display_name: "Form Test User"
+          display_name: "Form Test User",
+          legal_acceptance: true
         })
         |> Ash.create()
 

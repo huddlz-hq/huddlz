@@ -11,6 +11,7 @@ Feature: Password Authentication
       | display_name             | New User               |
       | password                 | SuperSecret123!        |
       | password_confirmation    | SuperSecret123!        |
+    And I check "I agree to the Terms of Service and Code of Conduct and acknowledge the Privacy Policy."
     And I click "Create account"
     Then I should be signed in
     And I should see "huddlz"

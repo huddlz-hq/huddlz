@@ -8,6 +8,7 @@ defmodule HuddlzWeb.AuthLive.Register do
   alias AshPhoenix.Form
   alias Huddlz.Accounts.DisplayNameGenerator
   alias Huddlz.Accounts.User
+  alias Huddlz.Legal
   alias HuddlzWeb.AuthReturnTo
 
   @impl true
@@ -99,6 +100,34 @@ defmodule HuddlzWeb.AuthLive.Register do
             autocomplete="new-password"
             phx-debounce="blur"
           />
+
+          <div class="legal-acceptance">
+            <input type="hidden" name={@form[:legal_acceptance].name} value="false" />
+            <label class="legal-acceptance-control" for={@form[:legal_acceptance].id}>
+              <input
+                type="checkbox"
+                id={@form[:legal_acceptance].id}
+                name={@form[:legal_acceptance].name}
+                value="true"
+                checked={
+                  Phoenix.HTML.Form.normalize_value(
+                    "checkbox",
+                    @form[:legal_acceptance].value
+                  )
+                }
+              />
+              <span>{Legal.acceptance_text()}</span>
+            </label>
+            <p class="legal-acceptance-links">
+              Read the <a href={~p"/terms"} target="_blank" rel="noopener">Terms of Service</a>, <a
+                href={~p"/code-of-conduct"}
+                target="_blank"
+                rel="noopener"
+              >Code of Conduct</a>, and <a href={~p"/privacy"} target="_blank" rel="noopener">Privacy Policy</a>.
+              Each opens in a new tab.
+            </p>
+            <.field_errors field={@form[:legal_acceptance]} />
+          </div>
         </div>
         <div class="form-foot">
           <button type="submit" class="btn-primary" phx-disable-with="Creating account...">

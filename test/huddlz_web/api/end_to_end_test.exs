@@ -17,7 +17,8 @@ defmodule HuddlzWeb.Api.EndToEndTest do
         "email" => "happy-path@example.com",
         "display_name" => "Happy Path",
         "password" => "correct horse battery staple",
-        "password_confirmation" => "correct horse battery staple"
+        "password_confirmation" => "correct horse battery staple",
+        "legal_acceptance" => true
       })
       |> json_response(201)
 

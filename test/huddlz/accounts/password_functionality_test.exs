@@ -12,7 +12,8 @@ defmodule Huddlz.Accounts.PasswordFunctionalityTest do
                  email: "test@example.com",
                  password: "SuperSecret123!",
                  password_confirmation: "SuperSecret123!",
-                 display_name: "Test User"
+                 display_name: "Test User",
+                 legal_acceptance: true
                })
                |> Ash.create()
 
@@ -28,7 +29,8 @@ defmodule Huddlz.Accounts.PasswordFunctionalityTest do
                  email: "test@example.com",
                  password: "SuperSecret123!",
                  password_confirmation: "DifferentPassword",
-                 display_name: "Test User"
+                 display_name: "Test User",
+                 legal_acceptance: true
                })
                |> Ash.create()
 
@@ -42,7 +44,8 @@ defmodule Huddlz.Accounts.PasswordFunctionalityTest do
                  email: "test@example.com",
                  password: "short",
                  password_confirmation: "short",
-                 display_name: "Test User"
+                 display_name: "Test User",
+                 legal_acceptance: true
                })
                |> Ash.create()
 

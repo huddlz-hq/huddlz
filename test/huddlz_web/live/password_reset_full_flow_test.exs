@@ -14,7 +14,8 @@ defmodule HuddlzWeb.PasswordResetFullFlowTest do
           email: "reset.flow@example.com",
           password: "oldpassword123",
           password_confirmation: "oldpassword123",
-          display_name: "Reset Flow User"
+          display_name: "Reset Flow User",
+          legal_acceptance: true
         })
         |> Ash.create()
 
@@ -78,7 +79,8 @@ defmodule HuddlzWeb.PasswordResetFullFlowTest do
           email: "submit.reset@example.com",
           password: "oldpassword123",
           password_confirmation: "oldpassword123",
-          display_name: "Submit Reset User"
+          display_name: "Submit Reset User",
+          legal_acceptance: true
         })
         |> Ash.create()
 
@@ -137,7 +139,8 @@ defmodule HuddlzWeb.PasswordResetFullFlowTest do
           email: "newpwd.test@example.com",
           password: "oldpassword123",
           password_confirmation: "oldpassword123",
-          display_name: "New Pwd User"
+          display_name: "New Pwd User",
+          legal_acceptance: true
         })
         |> Ash.create()
 
