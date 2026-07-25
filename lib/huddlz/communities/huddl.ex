@@ -131,11 +131,17 @@ defmodule Huddlz.Communities.Huddl do
       argument :repeat_until, :date, allow_nil?: true
       argument :frequency, :string, allow_nil?: true
 
+      argument :recurrence_interval, :integer do
+        allow_nil? true
+        constraints min: 1, max: 4
+      end
+
       argument :provided_latitude, :float, allow_nil?: true, public?: false
       argument :provided_longitude, :float, allow_nil?: true, public?: false
       argument :pending_image_id, :uuid, allow_nil?: true, public?: false
 
       validate Huddlz.Communities.Huddl.Validations.FutureDateValidation
+      validate Huddlz.Communities.Huddl.Validations.RecurrenceIntervalValidation
       change Huddlz.Communities.Huddl.Changes.SetCreatorToActor
       change Huddlz.Communities.Huddl.Changes.AddCreatorAsAttendee
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
@@ -178,6 +184,11 @@ defmodule Huddlz.Communities.Huddl do
       argument :repeat_until, :date
       argument :frequency, :string
 
+      argument :recurrence_interval, :integer do
+        allow_nil? true
+        constraints min: 1, max: 4
+      end
+
       argument :edit_type, :string do
         constraints allow_empty?: true
         default "instance"
@@ -188,6 +199,7 @@ defmodule Huddlz.Communities.Huddl do
 
       require_atomic? false
 
+      validate Huddlz.Communities.Huddl.Validations.RecurrenceIntervalValidation
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.ClearUnusedLocationFields

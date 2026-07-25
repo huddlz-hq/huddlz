@@ -307,6 +307,7 @@ defmodule Huddlz.Generator do
         is_private: false,
         huddl_template_id: nil,
         is_recurring: false,
+        recurrence_interval: 1,
         max_attendees: nil
       ],
       overrides: opts,

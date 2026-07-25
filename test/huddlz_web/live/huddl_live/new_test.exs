@@ -319,25 +319,32 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       |> assert_has("*", text: "1/5 spots filled")
     end
 
-    test "creates an every-two-weeks recurring huddl", %{
+    test "creates an every-three-weeks recurring huddl and describes its cadence", %{
       conn: conn,
       owner: owner,
       group: group
     } do
       first_date = Date.utc_today() |> Date.add(1)
-      repeat_until = Date.add(first_date, 43)
+      repeat_until = Date.add(first_date, 64)
+      weekday = Calendar.strftime(first_date, "%A")
 
       session =
         conn
         |> login(owner)
         |> visit(~p"/groups/#{group.slug}/huddlz/new")
-        |> fill_in("Title", with: "Every Other Week Huddl")
+        |> fill_in("Title", with: "Every Three Weeks Huddl")
         |> fill_in("Date", with: Date.to_iso8601(first_date))
         |> fill_in("Start time", with: "14:30")
         |> select("Duration", option: "2 hours")
         |> check("Recurring huddl")
-        |> select("Frequency", option: "Every two weeks")
+        |> select("Repeat every", option: "3 weeks")
         |> fill_in("Repeat until", with: Date.to_iso8601(repeat_until))
+
+      assert_has(
+        session,
+        "#recurring-cadence-summary",
+        text: "Every 3 weeks on #{weekday}"
+      )
 
       select_physical_location(session.view, "123 Main St")
 
@@ -347,13 +354,53 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
 
       template =
         Huddl
-        |> Ash.Query.filter(title == "Every Other Week Huddl" and group_id == ^group.id)
+        |> Ash.Query.filter(title == "Every Three Weeks Huddl" and group_id == ^group.id)
         |> Ash.read_one!(actor: owner)
         |> Ash.load!(:huddl_template, actor: owner)
         |> Map.fetch!(:huddl_template)
 
-      assert template.interval == 2
+      assert template.interval == 3
       assert template.unit == :week
+    end
+
+    test "shows an inline error for an unsupported weekly interval", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      first_date = Date.utc_today() |> Date.add(1)
+
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/new")
+        |> fill_in("Title", with: "Invalid Recurrence Huddl")
+        |> fill_in("Date", with: Date.to_iso8601(first_date))
+        |> fill_in("Start time", with: "14:30")
+        |> select("Duration", option: "2 hours")
+        |> check("Recurring huddl")
+
+      select_physical_location(session.view, "123 Main St")
+
+      render_change(session.view, "validate", %{
+        "form" => %{
+          "title" => "Invalid Recurrence Huddl",
+          "date" => Date.to_iso8601(first_date),
+          "start_time" => "14:30",
+          "duration_minutes" => "120",
+          "event_type" => "in_person",
+          "is_recurring" => "true",
+          "frequency" => "weekly",
+          "recurrence_interval" => "5",
+          "repeat_until" => Date.to_iso8601(Date.add(first_date, 40))
+        }
+      })
+
+      assert has_element?(
+               session.view,
+               "#form_recurrence_interval-error-0",
+               "must be less than or equal to 4"
+             )
     end
 
     test "creates private huddl for private group", %{conn: conn, owner: owner} do

@@ -95,16 +95,14 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     do: :ok
 
   def generate_huddlz_from_template(template, source, count) do
-    interval_days = interval_days(template)
-    starts_at = DateTime.add(source.starts_at, interval_days, :day)
-    ends_at = DateTime.add(source.ends_at, interval_days, :day)
+    source
+    |> desired_occurrences(template)
+    |> Enum.drop(count)
+    |> Enum.each(fn {starts_at, ends_at} ->
+      create_instance!(source, template, starts_at, ends_at)
+    end)
 
-    if Date.before?(DateTime.to_date(starts_at), template.repeat_until) do
-      new_huddl = create_instance!(source, template, starts_at, ends_at)
-      generate_huddlz_from_template(template, new_huddl, count + 1)
-    else
-      :ok
-    end
+    :ok
   end
 
   # Later instances in the series, read through the dedicated visibility-free
@@ -122,12 +120,11 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   # at @max_instances. Times shift with the source, so editing the time moves
   # every future occurrence.
   defp desired_occurrences(source, template) do
-    interval_days = interval_days(template)
     duration = DateTime.diff(source.ends_at, source.starts_at, :second)
 
     1..@max_instances
     |> Enum.reduce_while([], fn k, acc ->
-      starts_at = DateTime.add(source.starts_at, k * interval_days, :day)
+      starts_at = shift_datetime(source.starts_at, template, k)
 
       if Date.before?(DateTime.to_date(starts_at), template.repeat_until) do
         {:cont, [{starts_at, DateTime.add(starts_at, duration, :second)} | acc]}
@@ -239,4 +236,25 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
 
   defp interval_days(%{interval: interval, unit: :week}), do: interval * 7
   defp interval_days(%{interval: interval, unit: :month}), do: interval * 30
+
+  defp shift_datetime(datetime, %{unit: :week} = template, occurrence_number) do
+    shifted_date =
+      datetime
+      |> DateTime.to_date()
+      |> Date.add(occurrence_number * interval_days(template))
+
+    new_datetime(shifted_date, DateTime.to_time(datetime), datetime.time_zone)
+  end
+
+  defp shift_datetime(datetime, %{unit: :month} = template, occurrence_number) do
+    DateTime.add(datetime, occurrence_number * interval_days(template), :day)
+  end
+
+  defp new_datetime(date, time, time_zone) do
+    case DateTime.new(date, time, time_zone) do
+      {:ok, datetime} -> datetime
+      {:ambiguous, first, _second} -> first
+      {:gap, _before, after_gap} -> after_gap
+    end
+  end
 end

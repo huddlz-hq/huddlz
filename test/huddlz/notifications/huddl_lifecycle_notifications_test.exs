@@ -269,7 +269,8 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
           title: "Saturday Soccer (renamed)",
           edit_type: "all",
           repeat_until: Date.add(Date.utc_today(), 60),
-          frequency: "weekly"
+          frequency: "weekly",
+          recurrence_interval: 1
         },
         actor: owner
       )
@@ -330,7 +331,8 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
           title: "Saturday Soccer (renamed)",
           edit_type: "all",
           repeat_until: Date.add(Date.utc_today(), 30),
-          frequency: "weekly"
+          frequency: "weekly",
+          recurrence_interval: 1
         },
         actor: owner
       )
@@ -394,7 +396,8 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
         %{
           edit_type: "all",
           repeat_until: Date.add(Date.utc_today(), 16),
-          frequency: "weekly"
+          frequency: "weekly",
+          recurrence_interval: 1
         },
         actor: owner
       )

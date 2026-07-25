@@ -124,6 +124,7 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
           group_id: group.id,
           is_recurring: true,
           frequency: "weekly",
+          recurrence_interval: 1,
           repeat_until: Date.add(Date.utc_today(), 22)
         },
         actor: owner
@@ -279,6 +280,7 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
           group_id: group.id,
           is_recurring: true,
           frequency: "weekly",
+          recurrence_interval: 1,
           repeat_until: Date.add(Date.utc_today(), 22)
         },
         actor: owner

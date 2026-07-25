@@ -22,16 +22,23 @@ defmodule Huddlz.Communities.Huddl.Changes.AddHuddlTemplate do
   # and set the id directly. This avoids the re-entrant :update that previously
   # ran inside the :create transaction to backfill huddl_template_id.
   defp create_and_link_template(changeset) do
-    template =
-      HuddlTemplate
-      |> Ash.Changeset.for_create(:create, %{
+    template_attrs =
+      %{
         repeat_until: Ash.Changeset.get_argument(changeset, :repeat_until),
         frequency: Ash.Changeset.get_argument(changeset, :frequency)
-      })
+      }
+      |> maybe_put_interval(Ash.Changeset.get_argument(changeset, :recurrence_interval))
+
+    template =
+      HuddlTemplate
+      |> Ash.Changeset.for_create(:create, template_attrs)
       |> Ash.create!(authorize?: false)
 
     Ash.Changeset.force_change_attribute(changeset, :huddl_template_id, template.id)
   end
+
+  defp maybe_put_interval(attrs, nil), do: attrs
+  defp maybe_put_interval(attrs, interval), do: Map.put(attrs, :interval, interval)
 
   # Generating up to 104 instances (each a full create) is too much work for the
   # request transaction, so defer it to Oban once the parent huddl commits. The
