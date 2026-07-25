@@ -75,6 +75,52 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> assert_has("aside.sidebar .sb-user img.avatar[src*='_thumb.jpg']")
     end
 
+    test "opens and cancels the styled profile picture removal dialog", %{
+      conn: conn,
+      user: user
+    } do
+      create_profile_picture(user)
+
+      session =
+        conn
+        |> login(user)
+        |> visit("/profile")
+        |> refute_has("#remove-avatar-dialog")
+        |> click_button("Remove")
+        |> assert_has("#remove-avatar-dialog [role='dialog']")
+        |> assert_has("#remove-avatar-dialog-title", text: "Remove your profile picture?")
+        |> assert_has("#remove-avatar-dialog", text: "initials will appear instead")
+
+      session
+      |> within("#remove-avatar-dialog", fn session ->
+        click_button(session, "Keep picture")
+      end)
+      |> refute_has("#remove-avatar-dialog")
+      |> assert_has("main img.big-avatar[src*='_thumb.jpg']")
+      |> assert_has("aside.sidebar .sb-user img.avatar[src*='_thumb.jpg']")
+    end
+
+    test "confirming profile picture removal updates profile and sidebar fallbacks", %{
+      conn: conn,
+      user: user
+    } do
+      create_profile_picture(user)
+
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> click_button("Remove")
+      |> within("#remove-avatar-dialog", fn session ->
+        click_button(session, "Remove picture")
+      end)
+      |> refute_has("#remove-avatar-dialog")
+      |> assert_has("*", text: "Profile picture removed")
+      |> refute_has("main img.big-avatar")
+      |> assert_has("main .big-avatar", text: "TU")
+      |> refute_has("aside.sidebar .sb-user img.avatar")
+      |> assert_has("aside.sidebar .sb-user .avatar", text: "TU")
+    end
+
     test "displays user profile when authenticated", %{conn: conn, user: user} do
       conn
       |> login(user)
@@ -353,5 +399,19 @@ defmodule HuddlzWeb.ProfileLiveTest do
 
       refute has_element?(view, "p", "Location search is currently unavailable")
     end
+  end
+
+  defp create_profile_picture(user) do
+    Huddlz.Accounts.create_profile_picture!(
+      %{
+        filename: "avatar.jpg",
+        content_type: "image/jpeg",
+        size_bytes: 1000,
+        storage_path: "/uploads/profile_pictures/#{user.id}/avatar.jpg",
+        thumbnail_path: "/uploads/profile_pictures/#{user.id}/avatar_thumb.jpg",
+        user_id: user.id
+      },
+      actor: user
+    )
   end
 end
