@@ -7,10 +7,11 @@ defmodule HuddlzWeb.GroupLive.Show do
   import HuddlzWeb.Live.Helpers.HuddlCardHelpers
 
   alias Huddlz.Communities
-  alias Huddlz.Communities.{GroupLocation, GroupMember, Huddl}
+  alias Huddlz.Communities.{GroupLocation, GroupMember, Huddl, MembershipEvents}
   alias Huddlz.Storage.GroupImages
   alias Huddlz.Storage.HuddlImages
   alias HuddlzWeb.Avatar
+  alias HuddlzWeb.GroupRole
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
   alias Phoenix.LiveView.JS
@@ -22,7 +23,10 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :leave_dialog_open, false)}
+    {:ok,
+     socket
+     |> assign(:leave_dialog_open, false)
+     |> assign(:subscribed_group_id, nil)}
   end
 
   @impl true
@@ -37,12 +41,14 @@ defmodule HuddlzWeb.GroupLive.Show do
 
         {:noreply,
          socket
+         |> subscribe_to_membership_changes(group)
          |> assign(:page_title, group.name)
          |> assign(:meta, group_meta(group))
          |> assign(:group, group)
          |> assign(:members, members)
          |> assign(:member_count, group.member_count)
          |> assign(:is_member, !is_nil(membership))
+         |> assign(:membership_role, membership && membership.role)
          |> assign_action_permissions(group, user, membership)
          |> assign(:active_tab, "upcoming")
          |> assign(:upcoming_huddlz, upcoming_huddlz)
@@ -56,6 +62,47 @@ defmodule HuddlzWeb.GroupLive.Show do
            resource_name: "Group",
            fallback_path: ~p"/discover?#{[scope: "groups"]}"
          )}
+    end
+  end
+
+  @impl true
+  def handle_info(
+        {:group_membership_changed, group_id},
+        %{assigns: %{group: %{id: group_id}}} = socket
+      ) do
+    {:noreply, refresh_current_role(socket)}
+  end
+
+  def handle_info({:group_membership_changed, _group_id}, socket), do: {:noreply, socket}
+
+  defp subscribe_to_membership_changes(socket, group) do
+    if connected?(socket) and socket.assigns.subscribed_group_id != group.id do
+      :ok = MembershipEvents.subscribe(group.id)
+      assign(socket, :subscribed_group_id, group.id)
+    else
+      socket
+    end
+  end
+
+  defp refresh_current_role(socket) do
+    user = socket.assigns.current_user
+
+    case get_group_by_slug(socket.assigns.group.slug, user) do
+      {:ok, group} ->
+        membership = current_user_membership(group, user)
+
+        socket
+        |> assign(:group, group)
+        |> assign(:member_count, group.member_count)
+        |> assign(:is_member, !is_nil(membership))
+        |> assign(:membership_role, membership && membership.role)
+        |> assign_action_permissions(group, user, membership)
+
+      {:error, _reason} ->
+        handle_error(socket, :not_found,
+          resource_name: "Group",
+          fallback_path: ~p"/discover?#{[scope: "groups"]}"
+        )
     end
   end
 
@@ -197,8 +244,13 @@ defmodule HuddlzWeb.GroupLive.Show do
           </ul>
 
           <%= if @current_user do %>
-            <div :if={role_pill(assigns)} class="role-pill">
-              <.pill variant={:cyan}>{role_pill(assigns)}</.pill>
+            <div :if={@membership_role} class="role-pill">
+              <.pill
+                id="current-group-role"
+                variant={GroupRole.pill_variant(@membership_role)}
+              >
+                {GroupRole.label(@membership_role)}
+              </.pill>
             </div>
             <div class="side-actions">
               <.button
@@ -480,6 +532,7 @@ defmodule HuddlzWeb.GroupLive.Show do
          |> put_flash(:info, "Successfully joined the group!")
          |> assign(:group, group)
          |> assign(:is_member, true)
+         |> assign(:membership_role, membership.role)
          |> assign(:members, members)
          |> assign(:member_count, group.member_count)
          |> assign_action_permissions(group, user, membership)}
@@ -512,6 +565,7 @@ defmodule HuddlzWeb.GroupLive.Show do
          |> assign(:leave_dialog_open, false)
          |> assign(:group, group)
          |> assign(:is_member, false)
+         |> assign(:membership_role, nil)
          |> assign(:members, nil)
          |> assign(:member_count, group.member_count)
          |> assign_action_permissions(group, user, nil)}
@@ -631,10 +685,6 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   defp parse_page(val) when is_integer(val) and val >= 1, do: val
   defp parse_page(_), do: 1
-
-  defp role_pill(%{can_edit_group: true}), do: "Owner"
-  defp role_pill(%{is_member: true}), do: "Joined"
-  defp role_pill(_assigns), do: nil
 
   defp split_members(members) do
     visible = Enum.take(members, @member_grid_visible)

@@ -14,10 +14,11 @@ defmodule HuddlzWeb.MyGroupsLive do
 
   alias Huddlz.Communities
   alias Huddlz.Storage.GroupImages
+  alias HuddlzWeb.GroupRole
   alias HuddlzWeb.Layouts
   require Logger
 
-  @group_loads [:current_image_url, :member_count]
+  @group_loads [:current_image_url, :member_count, :group_members]
   @page_size 20
   @valid_filters ~w(all hosting joined)
 
@@ -59,6 +60,28 @@ defmodule HuddlzWeb.MyGroupsLive do
   def handle_event("change_page", %{"page" => page_str}, socket) do
     page = parse_page(page_str)
     {:noreply, push_patch(socket, to: filter_path(socket.assigns.filter, page))}
+  end
+
+  @impl true
+  def handle_info(
+        {:user_group_membership_changed, user_id, _group_id},
+        %{assigns: %{current_user: %{id: user_id}}} = socket
+      ) do
+    user = socket.assigns.current_user
+    filter = socket.assigns.filter
+    page = socket.assigns.page_info.current_page
+
+    socket =
+      socket
+      |> assign(:counts, load_counts(user))
+      |> load_results(filter, page, user)
+
+    if page > socket.assigns.page_info.total_pages do
+      {:noreply,
+       push_patch(socket, to: filter_path(filter, socket.assigns.page_info.total_pages))}
+    else
+      {:noreply, socket}
+    end
   end
 
   defp parse_filter(value) when value in @valid_filters, do: String.to_existing_atom(value)
@@ -118,10 +141,6 @@ defmodule HuddlzWeb.MyGroupsLive do
 
   defp filter_path(filter, _page), do: ~p"/my-groups?#{[filter: filter]}"
 
-  defp role_for(group, user) do
-    if group.owner_id == user.id, do: :hosting, else: :joined
-  end
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -160,7 +179,7 @@ defmodule HuddlzWeb.MyGroupsLive do
           <%= for {group, idx} <- Enum.with_index(@groups) do %>
             <.my_group_card
               group={group}
-              role={role_for(group, @current_user)}
+              role={GroupRole.for_group(group, @current_user)}
               gradient={Integer.mod(idx, 6) + 1}
             />
           <% end %>
@@ -190,7 +209,7 @@ defmodule HuddlzWeb.MyGroupsLive do
           src={GroupImages.url(@group.current_image_url)}
           alt={@group.name}
         />
-        <span class={["card-tag", role_class(@role)]}>{role_label(@role)}</span>
+        <span class={["card-tag", GroupRole.card_class(@role)]}>{GroupRole.label(@role)}</span>
       </:cover>
       <:body>
         <span :if={@group.location} class="card-group">{@group.location}</span>
@@ -212,12 +231,6 @@ defmodule HuddlzWeb.MyGroupsLive do
 
   defp empty_message(:hosting), do: "You haven't created a group yet."
   defp empty_message(:joined), do: "You haven't joined any groups yet."
-
-  defp role_class(:hosting), do: "hybrid"
-  defp role_class(:joined), do: "in-person"
-
-  defp role_label(:hosting), do: "Hosting"
-  defp role_label(:joined), do: "Joined"
 
   defp member_count_label(group) do
     case Map.get(group, :member_count) do

@@ -6,6 +6,7 @@ defmodule HuddlzWeb.Layouts do
 
   alias Huddlz.Accounts.User
   alias HuddlzWeb.Avatar
+  alias HuddlzWeb.GroupRole
 
   embed_templates "layouts/*"
 
@@ -88,6 +89,9 @@ defmodule HuddlzWeb.Layouts do
                   {group_initials(group.name)}
                 </div>
                 <span class="name">{group.name}</span>
+                <span class="group-role">
+                  {group |> GroupRole.for_group(@current_user) |> GroupRole.label()}
+                </span>
               </a>
               <div :if={@active_group_slug == group.slug} class="sb-sub">
                 <a

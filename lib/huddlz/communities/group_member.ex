@@ -101,6 +101,7 @@ defmodule Huddlz.Communities.GroupMember do
       change manage_relationship(:user_id, :user, type: :append)
       change set_attribute(:role, arg(:role))
       change Huddlz.Communities.GroupMember.Changes.NotifyAdded
+      change Huddlz.Communities.GroupMember.Changes.BroadcastMembershipChanged
     end
 
     create :add_owner do
@@ -123,6 +124,7 @@ defmodule Huddlz.Communities.GroupMember do
       change manage_relationship(:user_id, :user, type: :append)
       change set_attribute(:role, :owner)
       change Huddlz.Communities.GroupMember.Changes.NotifyAdded
+      change Huddlz.Communities.GroupMember.Changes.BroadcastMembershipChanged
     end
 
     destroy :remove_member do
@@ -141,6 +143,7 @@ defmodule Huddlz.Communities.GroupMember do
       filter expr(user_id == ^arg(:user_id))
 
       change Huddlz.Communities.GroupMember.Changes.NotifyRemoved
+      change Huddlz.Communities.GroupMember.Changes.BroadcastMembershipChanged
     end
 
     action :remove_member_by_ids, :struct do
@@ -168,6 +171,7 @@ defmodule Huddlz.Communities.GroupMember do
       end
 
       change Huddlz.Communities.GroupMember.Changes.NotifyRoleChanged
+      change Huddlz.Communities.GroupMember.Changes.BroadcastMembershipChanged
     end
 
     update :set_role do
@@ -179,6 +183,7 @@ defmodule Huddlz.Communities.GroupMember do
 
       accept [:role]
       require_atomic? false
+      change Huddlz.Communities.GroupMember.Changes.BroadcastMembershipChanged
     end
 
     create :join_group do
@@ -192,16 +197,20 @@ defmodule Huddlz.Communities.GroupMember do
       change relate_actor(:user)
       change set_attribute(:role, :member)
       change Huddlz.Communities.GroupMember.Changes.NotifyJoined
+      change Huddlz.Communities.GroupMember.Changes.BroadcastMembershipChanged
     end
 
     destroy :leave_group do
       description "Leave a group (member removes themselves; owners must transfer ownership first)"
+      require_atomic? false
 
       # Encoded as a validation, not just a policy guard, so the admin bypass
       # cannot delete an owner's membership row and corrupt group state.
       validate attribute_does_not_equal(:role, :owner) do
         message "owners cannot leave their own group; transfer ownership first"
       end
+
+      change Huddlz.Communities.GroupMember.Changes.BroadcastMembershipChanged
     end
 
     read :get_by_group do
