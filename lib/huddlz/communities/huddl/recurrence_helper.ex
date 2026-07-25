@@ -87,6 +87,10 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   repeat_until date. Each new huddl copies the source huddl's properties and
   advances the start/end times by the appropriate interval.
 
+  Monthly huddlz retain the source's selected calendar day. When a month does
+  not contain that day, the occurrence uses the month's final day; later
+  months restore the selected day when it exists again.
+
   Stops after `@max_instances` (#{@max_instances}) to prevent unbounded generation.
   """
   def generate_huddlz_from_template(template, source, count \\ 0)
@@ -95,13 +99,14 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     do: :ok
 
   def generate_huddlz_from_template(template, source, count) do
-    interval_days = interval_days(template)
-    starts_at = DateTime.add(source.starts_at, interval_days, :day)
-    ends_at = DateTime.add(source.ends_at, interval_days, :day)
+    occurrence_number = count + 1
+    starts_at = occurrence_datetime(source.starts_at, template, occurrence_number)
+    duration = DateTime.diff(source.ends_at, source.starts_at, :second)
+    ends_at = DateTime.add(starts_at, duration, :second)
 
     if Date.before?(DateTime.to_date(starts_at), template.repeat_until) do
-      new_huddl = create_instance!(source, template, starts_at, ends_at)
-      generate_huddlz_from_template(template, new_huddl, count + 1)
+      create_instance!(source, template, starts_at, ends_at)
+      generate_huddlz_from_template(template, source, occurrence_number)
     else
       :ok
     end
@@ -122,12 +127,11 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   # at @max_instances. Times shift with the source, so editing the time moves
   # every future occurrence.
   defp desired_occurrences(source, template) do
-    interval_days = interval_days(template)
     duration = DateTime.diff(source.ends_at, source.starts_at, :second)
 
     1..@max_instances
     |> Enum.reduce_while([], fn k, acc ->
-      starts_at = DateTime.add(source.starts_at, k * interval_days, :day)
+      starts_at = occurrence_datetime(source.starts_at, template, k)
 
       if Date.before?(DateTime.to_date(starts_at), template.repeat_until) do
         {:cont, [{starts_at, DateTime.add(starts_at, duration, :second)} | acc]}
@@ -237,6 +241,13 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     end
   end
 
-  defp interval_days(%{interval: interval, unit: :week}), do: interval * 7
-  defp interval_days(%{interval: interval, unit: :month}), do: interval * 30
+  defp occurrence_datetime(datetime, %{interval: interval, unit: :week}, occurrence_number) do
+    DateTime.shift(datetime, week: interval * occurrence_number)
+  end
+
+  # Shift every occurrence from the source, rather than from the previously
+  # clamped occurrence. This makes Jan 31 become Feb 28/29 and then Mar 31.
+  defp occurrence_datetime(datetime, %{interval: interval, unit: :month}, occurrence_number) do
+    DateTime.shift(datetime, month: interval * occurrence_number)
+  end
 end

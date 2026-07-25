@@ -17,7 +17,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
     group =
       Generator.generate(Generator.group(owner_id: owner.id, is_public: is_public, actor: owner))
 
-    starts_at = DateTime.add(DateTime.utc_now(), 1, :day)
+    starts_at = opts[:starts_at] || DateTime.add(DateTime.utc_now(), 1, :day)
     ends_at = DateTime.add(starts_at, 1, :hour)
 
     source =
@@ -44,7 +44,10 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
 
     template =
       HuddlTemplate
-      |> Ash.Changeset.for_create(:create, %{frequency: :weekly, repeat_until: repeat_until})
+      |> Ash.Changeset.for_create(:create, %{
+        frequency: opts[:frequency] || :weekly,
+        repeat_until: repeat_until
+      })
       |> Ash.create!(authorize?: false)
 
     source =
@@ -69,7 +72,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
     |> Ash.read!(authorize?: false)
   end
 
-  defp edit_all(source, owner, repeat_until) do
+  defp edit_all(source, owner, repeat_until, frequency \\ "weekly") do
     source
     |> Ash.Changeset.for_update(
       :update,
@@ -77,7 +80,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
         title: "Renamed series",
         edit_type: "all",
         repeat_until: repeat_until,
-        frequency: "weekly"
+        frequency: frequency
       },
       actor: owner
     )
@@ -200,5 +203,49 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
              waitlist_entries(occurrence),
              &(&1.user_id == waitlister.id and not is_nil(&1.waitlisted_at))
            )
+  end
+
+  test "edit-all preserves monthly cadence and RSVPs across short months" do
+    repeat_until = ~D[2024-05-01]
+
+    %{owner: owner, source: source, template: template} =
+      build_series(true,
+        starts_at: ~U[2024-01-31 18:30:00Z],
+        repeat_until: repeat_until,
+        frequency: :monthly
+      )
+
+    instances =
+      future_instances(template.id, source.starts_at)
+      |> Enum.sort_by(& &1.starts_at, DateTime)
+
+    assert Enum.map(instances, &DateTime.to_date(&1.starts_at)) == [
+             ~D[2024-02-29],
+             ~D[2024-03-31],
+             ~D[2024-04-30]
+           ]
+
+    march = instance_on(instances, ~D[2024-03-31])
+    attendee = Generator.generate(Generator.user())
+
+    march
+    |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
+    |> Ash.update!()
+
+    edit_all(source, owner, repeat_until, "monthly")
+
+    reconciled =
+      future_instances(template.id, source.starts_at)
+      |> Enum.sort_by(& &1.starts_at, DateTime)
+
+    assert Enum.map(reconciled, &DateTime.to_date(&1.starts_at)) == [
+             ~D[2024-02-29],
+             ~D[2024-03-31],
+             ~D[2024-04-30]
+           ]
+
+    reconciled_march = instance_on(reconciled, ~D[2024-03-31])
+    assert reconciled_march.id == march.id
+    assert Enum.any?(attendee_entries(reconciled_march), &(&1.user_id == attendee.id))
   end
 end
