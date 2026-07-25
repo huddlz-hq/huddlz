@@ -3,6 +3,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
 
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.Huddl.RecurrenceHelper
+  alias Huddlz.Communities.HuddlAttendee
   alias Huddlz.Communities.HuddlTemplate
   alias Huddlz.Generator
 
@@ -10,7 +11,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
   # its generated future instances. `is_public` controls whether the group (and
   # therefore every instance) is private — the bug only surfaces for private
   # series, where the old actor-less read could not see the instances.
-  defp build_series(is_public) do
+  defp build_series(is_public, opts \\ []) do
     owner = Generator.generate(Generator.user())
 
     group =
@@ -25,6 +26,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
           creator_id: owner.id,
           group_id: group.id,
           is_private: not is_public,
+          max_attendees: opts[:max_attendees],
           actor: owner
         )
       )
@@ -38,7 +40,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
       )
       |> Ash.update!()
 
-    repeat_until = Date.add(Date.utc_today(), 22)
+    repeat_until = opts[:repeat_until] || Date.add(Date.utc_today(), 22)
 
     template =
       HuddlTemplate
@@ -82,6 +84,22 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
     |> Ash.update!()
   end
 
+  defp attendee_entries(huddl) do
+    HuddlAttendee
+    |> Ash.Query.for_read(:by_huddl, %{huddl_id: huddl.id})
+    |> Ash.read!(authorize?: false)
+  end
+
+  defp waitlist_entries(huddl) do
+    HuddlAttendee
+    |> Ash.Query.for_read(:waitlist_for_huddl, %{huddl_id: huddl.id})
+    |> Ash.read!(authorize?: false)
+  end
+
+  defp instance_on(instances, date) do
+    Enum.find(instances, &(DateTime.to_date(&1.starts_at) == date))
+  end
+
   test "edit-all on a private series regenerates instances without duplicating them" do
     %{owner: owner, source: source, template: template, repeat_until: repeat_until} =
       build_series(false)
@@ -105,5 +123,82 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
     edit_all(source, owner, repeat_until)
 
     assert length(future_instances(template.id, source.starts_at)) == 2
+  end
+
+  test "reconciliation fills a beginning gap without moving a later RSVP" do
+    repeat_until = Date.add(Date.utc_today(), 36)
+
+    %{owner: owner, source: source, template: template} =
+      build_series(true, repeat_until: repeat_until)
+
+    [first, subscribed | _] =
+      future_instances(template.id, source.starts_at)
+      |> Enum.sort_by(& &1.starts_at, DateTime)
+
+    attendee = Generator.generate(Generator.user())
+
+    subscribed
+    |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
+    |> Ash.update!()
+
+    subscribed_date = DateTime.to_date(subscribed.starts_at)
+    Ash.destroy!(first, authorize?: false)
+
+    assert :ok = RecurrenceHelper.reconcile_future_instances(source, template, owner)
+
+    reconciled =
+      future_instances(template.id, source.starts_at)
+      |> Enum.sort_by(& &1.starts_at, DateTime)
+
+    occurrence = instance_on(reconciled, subscribed_date)
+
+    assert occurrence.id == subscribed.id
+    assert Enum.any?(attendee_entries(occurrence), &(&1.user_id == attendee.id))
+  end
+
+  test "reconciliation fills a middle gap without moving RSVPs or waitlist entries" do
+    repeat_until = Date.add(Date.utc_today(), 36)
+
+    %{owner: owner, source: source, template: template} =
+      build_series(true, repeat_until: repeat_until, max_attendees: 2)
+
+    [_first, gap, subscribed | _] =
+      future_instances(template.id, source.starts_at)
+      |> Enum.sort_by(& &1.starts_at, DateTime)
+
+    attendee = Generator.generate(Generator.user())
+    waitlister = Generator.generate(Generator.user())
+
+    subscribed
+    |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
+    |> Ash.update!()
+
+    subscribed
+    |> Ash.reload!()
+    |> Ash.Changeset.for_update(:join_waitlist, %{}, actor: waitlister)
+    |> Ash.update!()
+
+    subscribed_date = DateTime.to_date(subscribed.starts_at)
+    Ash.destroy!(gap, authorize?: false)
+
+    assert :ok = RecurrenceHelper.reconcile_future_instances(source, template, owner)
+
+    reconciled =
+      future_instances(template.id, source.starts_at)
+      |> Enum.sort_by(& &1.starts_at, DateTime)
+
+    occurrence = instance_on(reconciled, subscribed_date)
+
+    assert occurrence.id == subscribed.id
+
+    assert Enum.any?(
+             attendee_entries(occurrence),
+             &(&1.user_id == attendee.id and is_nil(&1.waitlisted_at))
+           )
+
+    assert Enum.any?(
+             waitlist_entries(occurrence),
+             &(&1.user_id == waitlister.id and not is_nil(&1.waitlisted_at))
+           )
   end
 end
