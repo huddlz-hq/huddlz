@@ -208,6 +208,33 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("h1", text: "Browse groups")
     end
+
+    test "member count is consistent for visitors and every group role", %{
+      conn: conn,
+      owner: owner,
+      organizer: organizer,
+      verified_member: member,
+      verified_non_member: non_member,
+      public_group: group
+    } do
+      [
+        conn,
+        login(conn, non_member),
+        login(conn, member),
+        login(conn, organizer),
+        login(conn, owner)
+      ]
+      |> Enum.each(fn viewer_conn ->
+        viewer_conn
+        |> visit(~p"/groups/#{group.slug}")
+        |> assert_has(".facts li", text: "Members 4")
+      end)
+
+      conn
+      |> login(member)
+      |> visit(~p"/groups/#{group.slug}")
+      |> assert_has(".member-grid .member-mark", count: 4)
+    end
   end
 
   defp member_initials(%{display_name: name}) when is_binary(name) and name != "" do

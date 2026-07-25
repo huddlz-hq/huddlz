@@ -300,13 +300,20 @@ defmodule HuddlzWeb.HuddlLiveTest do
       %{host: host}
     end
 
-    test "lists public groups", %{conn: conn, host: host} do
-      generate(group(is_public: true, owner_id: host.id, actor: host, name: "Elixir Club"))
+    test "lists public groups with the complete member count", %{conn: conn, host: host} do
+      group =
+        generate(group(is_public: true, owner_id: host.id, actor: host, name: "Elixir Club"))
+
+      for _ <- 1..2 do
+        member = generate(user(role: :user))
+        generate(group_member(group_id: group.id, user_id: member.id, actor: host))
+      end
 
       conn
       |> visit("/discover?scope=groups")
       |> assert_has("h1", text: "Browse groups")
       |> assert_has("h2", text: "Elixir Club")
+      |> assert_has(".grid .card .card-meta", text: "3 members")
     end
 
     test "hides huddlz when scope=groups", %{conn: conn, host: host} do

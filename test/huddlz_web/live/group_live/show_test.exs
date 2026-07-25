@@ -88,15 +88,32 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
       conn
       |> login(member)
       |> visit(~p"/groups/#{group.slug}")
+      |> assert_has(".facts li", text: "Members 2")
       |> click_button("Leave Group")
       |> within("#leave-group-dialog", fn session ->
         click_button(session, "Yes, leave group")
       end)
       |> assert_has("*", text: "Successfully left the group")
+      |> assert_has(".facts li", text: "Members 1")
       |> refute_has("button", text: "Leave Group")
       |> assert_has("button", text: "Join Group")
       |> visit(~p"/my-groups")
       |> refute_has("*", text: "Membership Test Group")
+    end
+
+    test "joining updates the member count without a refresh", %{
+      conn: conn,
+      group: group
+    } do
+      visitor = generate(user(role: :user))
+
+      conn
+      |> login(visitor)
+      |> visit(~p"/groups/#{group.slug}")
+      |> assert_has(".facts li", text: "Members 1")
+      |> click_button("Join Group")
+      |> assert_has("*", text: "Successfully joined the group!")
+      |> assert_has(".facts li", text: "Members 2")
     end
 
     test "owner cannot open the leave dialog", %{conn: conn, owner: owner, group: group} do

@@ -35,6 +35,16 @@ Feature: Organizer workspace
     And I should see "Public"
     And I should see "Private"
 
+  Scenario: Organizer views show the complete member count
+    Given a public group "Cyberpunk Builders" exists with owner "host@example.com"
+    And "attendee@example.com" is a member of "Cyberpunk Builders"
+    And "stranger@example.com" is a member of "Cyberpunk Builders"
+    And I am signed in as "host@example.com"
+    When I visit "/organize"
+    Then I should see "3 members"
+    When I visit "/organize/cyberpunk-builders"
+    Then the organizer member count should be 3
+
   Scenario: /organize picker does not list groups the actor does not own
     Given a public group "Phoenix Devs" exists with owner "stranger@example.com"
     And I am signed in as "host@example.com"
