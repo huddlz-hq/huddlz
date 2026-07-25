@@ -13,7 +13,10 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
       destroys dates that fall off the schedule.
   """
 
+  alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
+  alias Huddlz.Communities.HuddlImage
+  alias Huddlz.Storage.HuddlImages
 
   @max_instances 104
 
@@ -23,8 +26,10 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     :title,
     :description,
     :physical_location,
+    :virtual_link,
     :is_private,
-    :thumbnail_url
+    :thumbnail_url,
+    :max_attendees
   ]
 
   @doc """
@@ -34,7 +39,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   cascade-deletes RSVPs. "Edit all" uses `reconcile_future_instances/3` instead.
   """
   def regenerate_series(source, template) do
-    source |> future_instances() |> Enum.each(&Ash.destroy!(&1, authorize?: false))
+    source |> future_instances() |> Enum.each(&destroy_instance!(&1))
     generate_huddlz_from_template(template, source)
     :ok
   end
@@ -74,7 +79,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     # Cancel dates the series lost.
     existing
     |> Enum.drop(length(desired))
-    |> Enum.each(&Ash.destroy!(&1, actor: actor, authorize?: false))
+    |> Enum.each(&destroy_instance!(&1, actor))
 
     :ok
   end
@@ -136,19 +141,70 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   end
 
   defp create_instance!(source, template, starts_at, ends_at) do
-    Huddl
-    |> Ash.Changeset.new()
-    # Reuse the source's already-resolved coordinates so the instance skips
-    # geocoding (ApplyProvidedCoordinates short-circuits GeocodeChange). Private
-    # args, so set before for_create; nil is ignored, so virtual huddlz work.
-    |> Ash.Changeset.set_argument(:provided_latitude, source.latitude)
-    |> Ash.Changeset.set_argument(:provided_longitude, source.longitude)
-    |> Ash.Changeset.for_create(:create, instance_attrs(source, starts_at, ends_at, template))
-    # creator_id is not an accepted input — the :create action derives it from
-    # the actor. This actorless generation sets it directly so each instance
-    # inherits the source's creator (SetCreatorToActor no-ops without an actor).
-    |> Ash.Changeset.force_change_attribute(:creator_id, source.creator_id)
-    |> Ash.create!(authorize?: false)
+    instance =
+      Huddl
+      |> Ash.Changeset.new()
+      # Reuse the source's already-resolved coordinates so the instance skips
+      # geocoding (ApplyProvidedCoordinates short-circuits GeocodeChange). Private
+      # args, so set before for_create; nil is ignored, so virtual huddlz work.
+      |> Ash.Changeset.set_argument(:provided_latitude, source.latitude)
+      |> Ash.Changeset.set_argument(:provided_longitude, source.longitude)
+      |> Ash.Changeset.for_create(:create, instance_attrs(source, starts_at, ends_at, template))
+      # creator_id is not an accepted input — the :create action derives it from
+      # the actor. This actorless generation sets it directly so each instance
+      # inherits the source's creator (SetCreatorToActor no-ops without an actor).
+      |> Ash.Changeset.force_change_attribute(:creator_id, source.creator_id)
+      |> Ash.create!(authorize?: false)
+
+    copy_current_image!(source, instance)
+    instance
+  end
+
+  defp copy_current_image!(source, instance) do
+    case Communities.list_huddl_images(source.id, authorize?: false) do
+      {:ok, []} ->
+        :ok
+
+      {:ok, [image | _]} ->
+        attrs = duplicate_image!(image, instance.id)
+
+        HuddlImage
+        |> Ash.Changeset.for_create(:create, Map.put(attrs, :huddl_id, instance.id))
+        |> Ash.create(authorize?: false)
+        |> case do
+          {:ok, _image} ->
+            :ok
+
+          {:error, error} ->
+            HuddlImages.delete(attrs.storage_path)
+            HuddlImages.delete(attrs.thumbnail_path)
+            raise error
+        end
+
+      {:error, error} ->
+        raise error
+    end
+  end
+
+  defp duplicate_image!(image, instance_id) do
+    case HuddlImages.duplicate(image, instance_id) do
+      {:ok, attrs} -> attrs
+      {:error, reason} -> raise "failed to copy recurring huddl image: #{inspect(reason)}"
+    end
+  end
+
+  defp destroy_instance!(instance, actor \\ nil) do
+    instance.id
+    |> Communities.list_huddl_images(authorize?: false)
+    |> then(fn
+      {:ok, images} ->
+        Enum.each(images, &Ash.destroy!(&1, action: :hard_delete, authorize?: false))
+
+      {:error, error} ->
+        raise error
+    end)
+
+    Ash.destroy!(instance, actor: actor, authorize?: false)
   end
 
   # Updates a kept instance in place via the :update action with

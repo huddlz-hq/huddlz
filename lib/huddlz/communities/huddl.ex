@@ -133,12 +133,14 @@ defmodule Huddlz.Communities.Huddl do
 
       argument :provided_latitude, :float, allow_nil?: true, public?: false
       argument :provided_longitude, :float, allow_nil?: true, public?: false
+      argument :pending_image_id, :uuid, allow_nil?: true, public?: false
 
       validate Huddlz.Communities.Huddl.Validations.FutureDateValidation
       change Huddlz.Communities.Huddl.Changes.SetCreatorToActor
       change Huddlz.Communities.Huddl.Changes.AddCreatorAsAttendee
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
+      change Huddlz.Communities.Huddl.Changes.AssignPendingImage
       change Huddlz.Communities.Huddl.Changes.AddHuddlTemplate
       change Huddlz.Communities.Huddl.Changes.ClearUnusedLocationFields
       change Huddlz.Geocoding.ApplyProvidedCoordinates

@@ -44,6 +44,20 @@ defmodule Huddlz.StorageTest do
       refute File.exists?(full_path)
     end
 
+    test "copy/3 duplicates a stored file at a new path", %{test_id: test_id} do
+      source_path = "/uploads/test_#{test_id}/source.txt"
+      destination_path = "/uploads/test_#{test_id}/destination.txt"
+      source_full_path = Path.join("priv/static", source_path)
+
+      File.mkdir_p!(Path.dirname(source_full_path))
+      File.write!(source_full_path, "copy me")
+
+      assert {:ok, ^destination_path} =
+               Local.copy(source_path, destination_path, "text/plain")
+
+      assert File.read!(Path.join("priv/static", destination_path)) == "copy me"
+    end
+
     test "delete/1 returns ok for non-existent file", %{test_id: test_id} do
       storage_path = "/uploads/test_#{test_id}/nonexistent.txt"
       assert :ok = Local.delete(storage_path)

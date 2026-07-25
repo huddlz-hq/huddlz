@@ -62,6 +62,9 @@ defmodule Huddlz.Notifications.Summary do
   defp title(:huddl_series_updated, %{"huddl_title" => huddl}),
     do: "Series updated: #{huddl}"
 
+  defp title(:recurring_huddl_generation_failed, %{"huddl_title" => huddl}),
+    do: "Recurring dates need attention: #{huddl}"
+
   # Reminders
   defp title(:huddl_reminder_24h, %{"huddl_title" => huddl}),
     do: "Reminder: #{huddl} (24h)"
