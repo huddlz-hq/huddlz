@@ -226,7 +226,9 @@ defmodule HuddlzWeb.MyHuddlzLive do
         </div>
       </:body>
       <:foot>
-        <.pill variant={pill_variant(@filter)}>{pill_label(@filter)}</.pill>
+        <.pill variant={pill_variant(@huddl, @filter)}>
+          {pill_label(@huddl, @filter)}
+        </.pill>
         <span class="muted" style="font-size:12px">{relative_time(@huddl.starts_at)}</span>
       </:foot>
     </.card>
@@ -251,13 +253,15 @@ defmodule HuddlzWeb.MyHuddlzLive do
   defp empty_message(:past),
     do: "No past attendance yet."
 
-  defp pill_variant(:upcoming), do: :default
-  defp pill_variant(:waitlisted), do: :warn
-  defp pill_variant(:past), do: :muted
+  defp pill_variant(%{status: :cancelled}, _filter), do: :magenta
+  defp pill_variant(_huddl, :upcoming), do: :default
+  defp pill_variant(_huddl, :waitlisted), do: :warn
+  defp pill_variant(_huddl, :past), do: :muted
 
-  defp pill_label(:upcoming), do: "Going"
-  defp pill_label(:waitlisted), do: "Waitlist"
-  defp pill_label(:past), do: "Attended"
+  defp pill_label(%{status: :cancelled}, _filter), do: "Cancelled"
+  defp pill_label(_huddl, :upcoming), do: "Going"
+  defp pill_label(_huddl, :waitlisted), do: "Waitlist"
+  defp pill_label(_huddl, :past), do: "Attended"
 
   defp relative_time(%DateTime{} = dt) do
     diff_seconds = DateTime.diff(dt, DateTime.utc_now(), :second)

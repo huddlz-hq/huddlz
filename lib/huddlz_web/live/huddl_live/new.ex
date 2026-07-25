@@ -156,7 +156,8 @@ defmodule HuddlzWeb.HuddlLive.New do
         <div>
           <h1>Schedule a huddl</h1>
           <p>
-            Creating a huddl for <strong>{@group.name}</strong>. Members get an email when you publish.
+            Creating a huddl for <strong>{@group.name}</strong>. Save privately while you prepare,
+            or publish when it is ready for members.
           </p>
         </div>
       </div>
@@ -397,10 +398,27 @@ defmodule HuddlzWeb.HuddlLive.New do
         </div>
 
         <div class="form-foot is-flush">
-          <.button variant={:primary} type="submit" phx-disable-with="Scheduling…">
+          <.button
+            id="publish-huddl"
+            variant={:primary}
+            type="submit"
+            name="intent"
+            value="publish"
+            phx-disable-with="Publishing…"
+          >
             Schedule huddl
           </.button>
-          <.button variant={:secondary} navigate={~p"/groups/#{@group.slug}"}>Cancel</.button>
+          <.button
+            id="save-huddl-draft"
+            variant={:secondary}
+            type="submit"
+            name="intent"
+            value="draft"
+            phx-disable-with="Saving…"
+          >
+            Save as draft
+          </.button>
+          <.button variant={:muted} navigate={~p"/groups/#{@group.slug}"}>Cancel</.button>
         </div>
       </.form>
 
@@ -484,10 +502,14 @@ defmodule HuddlzWeb.HuddlLive.New do
   end
 
   @impl true
-  def handle_event("save", %{"form" => params}, socket) do
+  def handle_event("save", %{"form" => params} = event_params, socket) do
+    lifecycle_state =
+      if event_params["intent"] == "draft", do: "draft", else: "published"
+
     params =
       params
       |> Map.put("group_id", socket.assigns.group.id)
+      |> Map.put("lifecycle_state", lifecycle_state)
       |> inject_saved_location_params(socket.assigns[:selected_location])
       |> mark_location_used(socket.assigns.form)
 
@@ -501,10 +523,20 @@ defmodule HuddlzWeb.HuddlLive.New do
              )
          ) do
       {:ok, huddl} ->
+        {message, path} =
+          case huddl.lifecycle_state do
+            :draft ->
+              {"Draft saved. Publish it when you are ready.",
+               ~p"/groups/#{socket.assigns.group.slug}/huddlz/#{huddl.id}"}
+
+            :published ->
+              {"Huddl created successfully!", ~p"/groups/#{socket.assigns.group.slug}"}
+          end
+
         {:noreply,
          socket
-         |> put_flash(:info, "Huddl created successfully!")
-         |> redirect(to: success_redirect_path(socket, huddl))}
+         |> put_flash(:info, message)
+         |> redirect(to: path)}
 
       {:error, form} ->
         {:noreply, assign(socket, :form, to_form(form))}
@@ -591,10 +623,6 @@ defmodule HuddlzWeb.HuddlLive.New do
       {:ok, group} -> {:ok, group}
       {:error, _} -> {:error, :not_found}
     end
-  end
-
-  defp success_redirect_path(socket, _huddl) do
-    ~p"/groups/#{socket.assigns.group.slug}"
   end
 
   defp new_huddl_path(socket) do

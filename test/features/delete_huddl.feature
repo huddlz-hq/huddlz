@@ -1,8 +1,8 @@
 @async @database @conn
-Feature: Delete Huddl
+Feature: Cancel Huddl
   As a group owner or organizer
-  I want to delete huddlz for my groups
-  So that huddlz that are no longer occurring are removed
+  I want to cancel published huddlz for my groups
+  So that attendees are informed without losing history
 
   Background:
     Given the following users exist:
@@ -13,17 +13,17 @@ Feature: Delete Huddl
       | name            | creator_name | group_name
       | Future Workshop | Group Owner  | Tech Meetup
 
-  Scenario: Owner deletes an in-person huddl
+  Scenario: Owner cancels an in-person huddl
     Given I am signed in as "owner@example.com"
     When I visit the "Future Workshop" huddl page
-    Then I should see "Delete huddl"
-    When I click "Delete huddl"
-    Then I should see "Delete this huddl?"
-    When I confirm deleting the huddl
-    Then I should be redirected to the "Tech Meetup" group page
-    And I should see "Huddl deleted successfully!"
+    Then I should see "Cancel huddl"
+    When I click "Cancel huddl"
+    Then I should see "Cancel this huddl?"
+    When I confirm cancelling the huddl
+    Then I should see "This huddl was cancelled"
+    And I should see "Huddl cancelled. Attendees have been notified."
 
-  Scenario: Non-owner cannot delete a huddl
+  Scenario: Non-owner cannot cancel a huddl
     Given I am signed in as "non_owner@example.com"
     When I visit the "Future Workshop" huddl page
-    Then I should not see "Delete huddl"
+    Then I should not see "Cancel huddl"

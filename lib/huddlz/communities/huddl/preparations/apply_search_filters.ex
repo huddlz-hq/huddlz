@@ -9,12 +9,23 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
 
   def prepare(query, _opts, context) do
     query
+    |> apply_lifecycle_filter()
     |> apply_text_filter()
     |> apply_date_filter()
     |> apply_event_type_filter()
     |> apply_location_filter()
     |> apply_relationship_filter(context)
     |> apply_sort()
+  end
+
+  defp apply_lifecycle_filter(query) do
+    case Ash.Query.get_argument(query, :relationship) do
+      relationship when relationship in [:hosting, :attending, :waitlisted] ->
+        Ash.Query.filter(query, lifecycle_state in [:published, :cancelled])
+
+      _ ->
+        Ash.Query.filter(query, lifecycle_state == :published)
+    end
   end
 
   defp apply_text_filter(query) do

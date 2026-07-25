@@ -264,6 +264,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
       base
       |> Map.put(:group_id, source.group_id)
       |> Map.put(:huddl_template_id, template.id)
+      |> Map.put(:lifecycle_state, source.lifecycle_state)
     else
       base
     end

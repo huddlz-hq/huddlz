@@ -28,10 +28,19 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyNewInGroup do
   end
 
   defp notify(cs, huddl) do
-    case RecipientHelpers.actor_id(cs) do
-      nil -> {:ok, huddl}
-      actor_id -> notify_with_actor(cs, huddl, actor_id)
+    with true <- notification_due?(cs, huddl),
+         actor_id when not is_nil(actor_id) <- RecipientHelpers.actor_id(cs) do
+      notify_with_actor(cs, huddl, actor_id)
+    else
+      _ -> {:ok, huddl}
     end
+  end
+
+  defp notification_due?(%{action_type: :create}, %{lifecycle_state: :published}), do: true
+
+  defp notification_due?(cs, _huddl) do
+    cs.context[:lifecycle_transition] == :published and
+      Ash.Changeset.get_argument(cs, :notify_members?) != false
   end
 
   defp notify_with_actor(_cs, huddl, actor_id) do

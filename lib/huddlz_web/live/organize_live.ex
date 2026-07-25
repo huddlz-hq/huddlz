@@ -34,7 +34,7 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:group, nil)
      |> assign(:owned_groups, [])
      |> assign(:huddlz_list, [])
-     |> assign(:huddlz_filter, :live)
+     |> assign(:huddlz_filter, :published)
      |> assign(:upcoming_huddlz, [])
      |> assign(:open_rsvps, 0)
      |> assign(:invitation_count, 0)
@@ -214,8 +214,10 @@ defmodule HuddlzWeb.OrganizeLive do
     end
   end
 
+  defp parse_huddlz_filter("draft"), do: :draft
+  defp parse_huddlz_filter("cancelled"), do: :cancelled
   defp parse_huddlz_filter("past"), do: :past
-  defp parse_huddlz_filter(_), do: :live
+  defp parse_huddlz_filter(_), do: :published
 
   defp state_sort_dir(:past), do: :desc
   defp state_sort_dir(_), do: :asc
@@ -439,8 +441,23 @@ defmodule HuddlzWeb.OrganizeLive do
     </div>
 
     <div class="filters">
-      <.link patch={huddlz_filter_path(@group, :live)} class={filter_chip_class(@filter == :live)}>
-        Live
+      <.link
+        patch={huddlz_filter_path(@group, :draft)}
+        class={filter_chip_class(@filter == :draft)}
+      >
+        Draft
+      </.link>
+      <.link
+        patch={huddlz_filter_path(@group, :published)}
+        class={filter_chip_class(@filter == :published)}
+      >
+        Published
+      </.link>
+      <.link
+        patch={huddlz_filter_path(@group, :cancelled)}
+        class={filter_chip_class(@filter == :cancelled)}
+      >
+        Cancelled
       </.link>
       <.link patch={huddlz_filter_path(@group, :past)} class={filter_chip_class(@filter == :past)}>
         Past
@@ -453,7 +470,7 @@ defmodule HuddlzWeb.OrganizeLive do
           <h2>{empty_huddlz_heading(@filter)}</h2>
         </div>
         <p class="muted">{empty_huddlz_body(@filter)}</p>
-        <div :if={@filter == :live} class="panel-cta">
+        <div :if={@filter in [:draft, :published]} class="panel-cta">
           <a class="btn-primary" href={~p"/groups/#{@group.slug}/huddlz/new"}>
             Create your first huddl
           </a>
@@ -489,17 +506,29 @@ defmodule HuddlzWeb.OrganizeLive do
     """
   end
 
-  defp huddlz_filter_path(group, :past), do: ~p"/organize/#{group.slug}/huddlz?filter=past"
-  defp huddlz_filter_path(group, _), do: ~p"/organize/#{group.slug}/huddlz"
+  defp huddlz_filter_path(group, :published), do: ~p"/organize/#{group.slug}/huddlz"
+
+  defp huddlz_filter_path(group, filter),
+    do: ~p"/organize/#{group.slug}/huddlz?filter=#{filter}"
 
   defp filter_chip_class(true), do: "chip is-active"
   defp filter_chip_class(false), do: "chip"
 
+  defp filter_heading(:draft), do: "Draft huddlz"
+  defp filter_heading(:cancelled), do: "Cancelled huddlz"
   defp filter_heading(:past), do: "Past huddlz"
-  defp filter_heading(_), do: "Live huddlz"
+  defp filter_heading(_), do: "Published huddlz"
 
+  defp empty_huddlz_heading(:draft), do: "No draft huddlz"
+  defp empty_huddlz_heading(:cancelled), do: "No cancelled huddlz"
   defp empty_huddlz_heading(:past), do: "No past huddlz yet"
   defp empty_huddlz_heading(_), do: "No huddlz scheduled"
+
+  defp empty_huddlz_body(:draft),
+    do: "Save a draft when you want to prepare a huddl before members can see it."
+
+  defp empty_huddlz_body(:cancelled),
+    do: "Cancelled huddlz stay here with their RSVP history and organizer context."
 
   defp empty_huddlz_body(:past),
     do: "Once a huddl wraps up, it'll show here so you can revisit attendance and notes."
@@ -511,6 +540,7 @@ defmodule HuddlzWeb.OrganizeLive do
   defp status_pill_class(_), do: nil
 
   defp format_status(:upcoming), do: "Upcoming"
+  defp format_status(:draft), do: "Draft"
   defp format_status(:in_progress), do: "In progress"
   defp format_status(:past), do: "Past"
   defp format_status(:cancelled), do: "Cancelled"
