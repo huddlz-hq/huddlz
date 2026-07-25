@@ -12,24 +12,30 @@ defmodule HuddlzWeb.LayoutsTest do
       one = render_app(1)
       capped = render_app(100)
 
-      assert zero =~ ~s|id="notification-nav-link"|
-      assert zero =~ ~s|aria-label="Notifications"|
-      refute zero =~ ~s|id="notification-nav-badge"|
+      assert has_selector?(zero, ~s|#notification-nav-link[aria-label="Notifications"]|)
+      refute has_selector?(zero, "#notification-nav-badge")
 
-      assert one =~ ~s|aria-label="Notifications, 1 unread"|
-      assert one =~ ~s|id="notification-nav-badge"|
+      assert has_selector?(
+               one,
+               ~s|#notification-nav-link[aria-label="Notifications, 1 unread"]|
+             )
+
+      assert has_selector?(one, "#notification-nav-badge")
       assert badge_text(one) == "1"
 
-      assert capped =~ ~s|aria-label="Notifications, 100 unread"|
+      assert has_selector?(
+               capped,
+               ~s|#notification-nav-link[aria-label="Notifications, 100 unread"]|
+             )
+
       assert badge_text(capped) == "99+"
     end
 
     test "keeps the badge in the responsive topbar rather than the desktop sidebar" do
-      html = render_app(3)
-      {:ok, document} = Floki.parse_document(html)
+      document = render_app(3)
 
-      assert Floki.find(document, ".content-topbar #notification-nav-badge") != []
-      assert Floki.find(document, ".sidebar #notification-nav-badge") == []
+      assert has_selector?(document, ".content-topbar #notification-nav-badge")
+      refute has_selector?(document, ".sidebar #notification-nav-badge")
     end
   end
 
@@ -48,14 +54,20 @@ defmodule HuddlzWeb.LayoutsTest do
       Content
     </Layouts.app>
     """)
+    |> LazyHTML.from_fragment()
   end
 
-  defp badge_text(html) do
-    {:ok, document} = Floki.parse_document(html)
-
+  defp badge_text(document) do
     document
-    |> Floki.find("#notification-nav-badge")
-    |> Floki.text()
+    |> LazyHTML.query("#notification-nav-badge")
+    |> LazyHTML.text()
     |> String.trim()
+  end
+
+  defp has_selector?(document, selector) do
+    document
+    |> LazyHTML.query(selector)
+    |> Enum.empty?()
+    |> Kernel.not()
   end
 end
