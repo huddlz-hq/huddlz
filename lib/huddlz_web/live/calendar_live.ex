@@ -295,12 +295,14 @@ defmodule HuddlzWeb.CalendarLive do
           <.link
             patch={month_path(@focus_month, :month)}
             class={["scope-tab", @view_mode == :month && "is-active"]}
+            aria-current={@view_mode == :month && "page"}
           >
             Month
           </.link>
           <.link
             patch={month_path(@focus_month, :agenda)}
             class={["scope-tab", @view_mode == :agenda && "is-active"]}
+            aria-current={@view_mode == :agenda && "page"}
           >
             Agenda
           </.link>

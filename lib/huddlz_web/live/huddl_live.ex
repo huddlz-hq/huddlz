@@ -548,12 +548,14 @@ defmodule HuddlzWeb.HuddlLive do
         <.link
           patch={chip_path(:huddlz, assigns)}
           class={["scope-tab", @scope == :huddlz && "is-active"]}
+          aria-current={@scope == :huddlz && "page"}
         >
           Huddlz
         </.link>
         <.link
           patch={chip_path(:groups, assigns)}
           class={["scope-tab", @scope == :groups && "is-active"]}
+          aria-current={@scope == :groups && "page"}
         >
           Groups
         </.link>
