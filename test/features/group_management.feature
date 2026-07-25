@@ -51,9 +51,8 @@ Feature: Group Management
   Scenario: Cannot view private group as non-member
     Given a private group "VIP Club" exists with owner "admin@example.com"
     And I am signed in as "regular@example.com"
-    When I visit the group page for "VIP Club"
-    Then I should be redirected to "/discover?scope=groups"
-    And I should see "Group not found"
+    When I try to visit the group page for "VIP Club"
+    Then I should see the branded not found recovery page
 
   Scenario: Owner can edit group details
     Given a public group "Book Club" exists with owner "verified@example.com"

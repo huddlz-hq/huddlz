@@ -1,6 +1,7 @@
 defmodule GroupManagementSteps do
   use Cucumber.StepDefinition
   import PhoenixTest
+  import Phoenix.ConnTest, only: [assert_error_sent: 2, dispatch: 4]
 
   import Huddlz.Generator
   import Huddlz.Test.Helpers.LocationSelection, only: [select_location: 2]
@@ -43,6 +44,20 @@ defmodule GroupManagementSteps do
     session = context[:session] || context[:conn]
     session = session |> visit("/groups/#{group.slug}")
     Map.merge(context, %{session: session, conn: session})
+  end
+
+  step "I try to visit the group page for {string}",
+       %{args: [group_name]} = context do
+    groups = Map.get(context, :groups, [])
+    group = Enum.find(groups, fn group -> to_string(group.name) == group_name end)
+    session = context[:session] || context[:conn]
+
+    {404, _headers, body} =
+      assert_error_sent 404, fn ->
+        dispatch(session.conn, HuddlzWeb.Endpoint, :get, "/groups/#{group.slug}")
+      end
+
+    Map.put(context, :error_body, body)
   end
 
   # Form interaction steps

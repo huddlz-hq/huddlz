@@ -3,9 +3,11 @@ defmodule HuddlzWeb.Live.ErrorHelpers do
   Centralized error handling helpers for LiveViews.
 
   Provides consistent error handling patterns including flash messages
-  and redirects for common error scenarios like :not_found and :not_authorized.
+  and redirects for common error scenarios like `:not_found` and `:not_authorized`.
   """
   import Phoenix.LiveView
+
+  alias HuddlzWeb.NotFoundError
 
   @doc """
   Handles common error scenarios with appropriate flash messages and redirects.
@@ -79,4 +81,9 @@ defmodule HuddlzWeb.Live.ErrorHelpers do
   def authorize(action_tuple, actor) do
     if Ash.can?(action_tuple, actor), do: :ok, else: {:error, :not_authorized}
   end
+
+  @doc """
+  Raises a status-aware exception for a missing or inaccessible detail page.
+  """
+  def not_found!, do: raise(NotFoundError)
 end

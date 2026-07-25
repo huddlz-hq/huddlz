@@ -16,8 +16,8 @@ Feature: Private group invitations
     Then I should see "Invitation sent to invitee@example.com."
     And an invitation email should be sent to "invitee@example.com" for "Quiet Makers"
     Given I am signed in as "invitee@example.com"
-    When I visit the group page for "Quiet Makers"
-    Then I should see "Group not found"
+    When I try to visit the group page for "Quiet Makers"
+    Then I should see the branded not found recovery page
     When I open my invitation to "Quiet Makers"
     And I click "Accept invitation"
     Then I should see "Welcome to Quiet Makers."

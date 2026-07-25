@@ -242,11 +242,281 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* ─────────────────────────────────────────────  ERROR RECOVERY  ─────
+   A self-contained, static shell: no LiveView or JavaScript required. */
+body.error-page {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background:
+    linear-gradient(rgba(24, 203, 212, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(24, 203, 212, 0.025) 1px, transparent 1px),
+    radial-gradient(circle at 72% 18%, rgba(24, 203, 212, 0.12), transparent 32rem),
+    #020404;
+  background-size: 3rem 3rem, 3rem 3rem, auto, auto;
+}
+
+.error-topbar,
+.error-footer {
+  width: min(100% - 2rem, 78rem);
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.error-topbar {
+  min-height: 5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.error-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.error-brand .brand-glyph {
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--cyan);
+  color: #020404;
+  font-weight: 900;
+}
+
+.error-brand .brand-text {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.error-topbar-label,
+.error-kicker,
+.error-footer {
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.error-topbar-label {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.error-main {
+  width: min(100% - 2rem, 78rem);
+  margin-inline: auto;
+  display: grid;
+  align-items: center;
+  padding-block: clamp(3rem, 9vw, 8rem);
+}
+
+.error-panel {
+  display: grid;
+  grid-template-columns: minmax(18rem, 0.9fr) minmax(22rem, 1.1fr);
+  align-items: center;
+  gap: clamp(3rem, 9vw, 8rem);
+}
+
+.error-status {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(3.5rem, 1fr) auto;
+  align-items: center;
+  color: var(--text);
+  font-size: clamp(7rem, 18vw, 15rem);
+  font-weight: 900;
+  line-height: 0.72;
+  letter-spacing: -0.1em;
+  text-shadow: 0 0 4rem rgba(24, 203, 212, 0.12);
+}
+
+.error-signal {
+  height: 0.7em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.25rem, 0.8vw, 0.65rem);
+  margin-inline: 0.12em 0.06em;
+}
+
+.error-signal i {
+  width: clamp(0.25rem, 0.7vw, 0.55rem);
+  height: clamp(0.25rem, 0.7vw, 0.55rem);
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 1.25rem rgba(24, 203, 212, 0.45);
+}
+
+.error-signal i:nth-child(2) {
+  opacity: 0.55;
+}
+
+.error-signal i:nth-child(3) {
+  opacity: 0.2;
+}
+
+.error-copy {
+  max-width: 37rem;
+  padding-left: clamp(1.5rem, 4vw, 3.5rem);
+  border-left: 1px solid var(--line-strong);
+}
+
+.error-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0 0 1.25rem;
+  color: var(--cyan);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.error-kicker-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 0 0.3rem rgba(24, 203, 212, 0.1);
+}
+
+.error-copy h1 {
+  max-width: 11ch;
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(2.5rem, 6vw, 5.25rem);
+  font-weight: 900;
+  line-height: 0.96;
+  letter-spacing: -0.06em;
+}
+
+.error-copy > p:not(.error-kicker) {
+  max-width: 35rem;
+  margin: 1.5rem 0 0;
+  color: var(--soft);
+  font-size: clamp(1rem, 1.5vw, 1.15rem);
+  line-height: 1.7;
+}
+
+.error-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-top: 2rem;
+}
+
+.error-action {
+  min-height: 2.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  text-decoration: none;
+}
+
+.error-text-link {
+  min-height: 2.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-inline: 0.35rem;
+  color: var(--soft);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.error-text-link:hover {
+  color: var(--cyan);
+}
+
+.error-brand:focus-visible,
+.error-action:focus-visible,
+.error-text-link:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 4px;
+}
+
+.error-footer {
+  min-height: 4.5rem;
+  justify-content: flex-start;
+  gap: 0.7rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
+@media (max-width: 760px) {
+  body.error-page {
+    background-size: 2rem 2rem, 2rem 2rem, auto, auto;
+  }
+
+  .error-panel {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+
+  .error-status {
+    width: min(100%, 24rem);
+    font-size: clamp(7rem, 38vw, 11rem);
+  }
+
+  .error-copy {
+    padding: 1.75rem 0 0;
+    border-top: 1px solid var(--line-strong);
+    border-left: 0;
+  }
+
+  .error-copy h1 {
+    max-width: 12ch;
+  }
+}
+
+@media (max-width: 440px) {
+  .error-topbar,
+  .error-footer,
+  .error-main {
+    width: min(100% - 1.5rem, 78rem);
+  }
+
+  .error-main {
+    padding-block: 2.5rem;
+  }
+
+  .error-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .error-action,
+  .error-text-link {
+    width: 100%;
+  }
+
+  .error-text-link {
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .error-text-link {
+    transition: none;
+  }
+}
+
 
 
 
 /* ─────────────────────────────────────────────  APP SHELL  ───── */
-body:not(.is-landing):not(.is-auth):not(.is-signed-out) {
+body:not(.is-landing):not(.is-auth):not(.is-signed-out):not(.error-page) {
   display: grid;
   grid-template-columns: var(--rail-w) 1fr;
   min-height: 100vh;
@@ -262,7 +532,9 @@ body.is-signed-out .main { min-height: 100vh; }
 @media (max-width: 1100px) {
   body { --rail-w: 240px; }
 
-  body:not(.is-landing):not(.is-auth):not(.is-signed-out) { grid-template-columns: var(--rail-w) 1fr; }
+  body:not(.is-landing):not(.is-auth):not(.is-signed-out):not(.error-page) {
+    grid-template-columns: var(--rail-w) 1fr;
+  }
 }
 
 /* `<.modal>` centers via `fixed inset-0`, which spans the full viewport
@@ -286,7 +558,7 @@ body .nav-scrim { display: none; }
 
 @media (max-width: 760px) {
 
-  body:not(.is-landing):not(.is-auth):not(.is-signed-out) {
+  body:not(.is-landing):not(.is-auth):not(.is-signed-out):not(.error-page) {
     grid-template-columns: 1fr;
   }
 

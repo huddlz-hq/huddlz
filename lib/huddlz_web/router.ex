@@ -27,7 +27,7 @@ defmodule HuddlzWeb.Router do
     plug :put_root_layout, html: {HuddlzWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    plug :load_from_session
+    plug :load_from_session_unless_loaded
     plug :prevent_authenticated_page_caching
   end
 
@@ -167,6 +167,14 @@ defmodule HuddlzWeb.Router do
     end
   end
 
+  if Application.compile_env(:huddlz, :env) == :test do
+    scope "/__test__", HuddlzWeb do
+      pipe_through :browser
+
+      get "/errors/500", TestErrorController, :show
+    end
+  end
+
   # Other scopes may use custom stacks.
   # scope "/api", HuddlzWeb do
   #   pipe_through :api
@@ -181,6 +189,11 @@ defmodule HuddlzWeb.Router do
   end
 
   defp prevent_authenticated_page_caching(conn, _opts), do: conn
+
+  defp load_from_session_unless_loaded(%{assigns: %{current_user: _current_user}} = conn, _opts),
+    do: conn
+
+  defp load_from_session_unless_loaded(conn, _opts), do: load_from_session(conn, [])
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:huddlz, :dev_routes) do
