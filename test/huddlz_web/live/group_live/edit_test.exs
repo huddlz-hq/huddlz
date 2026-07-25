@@ -35,7 +35,7 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       |> assert_has("#group-visibility-current", text: "Public")
       |> assert_has("#group-visibility-selection", text: "Public group")
       |> assert_has(
-        "#group-is-public[role='switch'][aria-labelledby='group-public-toggle-label'][aria-describedby='group-visibility-description group-visibility-consequence']"
+        "#group-is-public[role='switch'][aria-checked='true'][aria-labelledby='group-public-toggle-label'][aria-describedby='group-visibility-description group-visibility-consequence']"
       )
       |> assert_has("#group-visibility-consequence", text: "No visibility change pending")
     end

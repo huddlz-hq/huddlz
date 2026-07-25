@@ -345,27 +345,17 @@ defmodule HuddlzWeb.GroupLive.New do
           <div class="settings-list row-list pref-list">
             <div class="row">
               <div>
-                <label class="row-title" for="group-is-public">Public group</label>
+                <label class="row-title" for={@form[:is_public].id}>Public group</label>
                 <div class="row-desc">
                   Anyone can find and join this group. Huddlz are visible without signing in.
                 </div>
               </div>
-              <label class="toggle">
-                <input type="hidden" name={@form[:is_public].name} value="false" />
-                <input
-                  id="group-is-public"
-                  type="checkbox"
-                  name={@form[:is_public].name}
-                  value="true"
-                  checked={Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_public].value)}
-                />
-                <span class="track"></span>
-                <span class="toggle-text">
-                  {if Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_public].value),
-                    do: "On",
-                    else: "Off"}
-                </span>
-              </label>
+              <.toggle
+                field={@form[:is_public]}
+                label="Public group"
+                show_state_text
+                labelled_externally
+              />
             </div>
           </div>
         </div>

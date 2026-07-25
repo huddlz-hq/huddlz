@@ -12,6 +12,49 @@ defmodule HuddlzWeb.Components.Input do
   alias Phoenix.HTML.Form
   alias Phoenix.HTML.FormField
 
+  attr :field, FormField, required: true
+  attr :label, :string, required: true
+  attr :show_state_text, :boolean, default: false
+  attr :labelled_externally, :boolean, default: false
+  attr :disabled, :boolean, default: false
+
+  @doc """
+  Renders a native checkbox with switch semantics.
+
+  The input remains in the accessibility tree and keyboard order while the
+  visible track receives the focus treatment.
+  """
+  def toggle(assigns) do
+    checked = Form.normalize_value("checkbox", assigns.field.value) == true
+
+    assigns =
+      assigns
+      |> assign(:checked, checked)
+      |> assign(:visible_label, toggle_label(assigns.label, assigns.show_state_text, checked))
+
+    ~H"""
+    <div class="toggle">
+      <input type="hidden" name={@field.name} value="false" />
+      <input
+        id={@field.id}
+        type="checkbox"
+        role="switch"
+        name={@field.name}
+        value="true"
+        checked={@checked}
+        aria-checked={to_string(@checked)}
+        aria-label={!@labelled_externally && @label}
+        disabled={@disabled}
+      />
+      <span class="track" aria-hidden="true"></span>
+      <span class="toggle-text" aria-hidden="true">{@visible_label}</span>
+      <label for={@field.id} class="toggle-hitbox" aria-hidden={@labelled_externally}>
+        <span :if={!@labelled_externally} class="sr-only">{@label}</span>
+      </label>
+    </div>
+    """
+  end
+
   attr :id, :any, default: nil
   attr :name, :any
   attr :label, :string, default: nil
@@ -255,4 +298,8 @@ defmodule HuddlzWeb.Components.Input do
 
   defp help_id(id), do: "#{id}-help"
   defp error_id(id, index), do: "#{id}-error-#{index}"
+
+  defp toggle_label(_label, true, true), do: "On"
+  defp toggle_label(_label, true, false), do: "Off"
+  defp toggle_label(label, false, _checked), do: label
 end
