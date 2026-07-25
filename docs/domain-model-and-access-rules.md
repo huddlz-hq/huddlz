@@ -1,4 +1,4 @@
-# Architecture
+# Domain Model and Access Rules
 
 ## Entity Relationships
 
@@ -120,4 +120,3 @@ stateDiagram-v2
 | `upcoming` | `starts_at > now()` |
 | `in_progress` | `starts_at <= now() <= ends_at` |
 | `completed` | `ends_at < now()` |
-

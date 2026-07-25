@@ -1,136 +1,48 @@
 # huddlz
 
-huddlz is a social networking platform focused on facilitating real-life meetups and events, prioritizing in-person connections over digital interactions. The platform aims to support tech meetup organizers and other community builders with tools for event management and attendee coordination.
-
-> **Naming Convention**: In huddlz, a singular event is called a "huddl" and multiple events are called "huddlz", matching the platform name. For branding purposes, we always use lowercase in UI and documentation.
-
-[![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-blue.svg)](LICENSE.md)
-
-## Current Features
-
-- **Huddl Listing** - Discover upcoming discussion events directly on the landing page
-- **Search Functionality** - Find huddls by keyword across titles and descriptions
-- **Password Authentication** - Secure login with password reset functionality
-
-### Project Status
-
-Huddlz is under active development. The landing page with huddl listings has been implemented, providing immediate value to users visiting the site. Users can browse available huddls and search for events matching their interests without requiring authentication.
-
-## Technology Stack
-
-- **Backend**: Elixir with Phoenix Framework
-- **Frontend**: Phoenix LiveView for interactive UI components
-- **Data Layer**: Ash Framework for domain modeling
-- **Authentication**: Ash Authentication with password-based login
-- **Database**: PostgreSQL
-- **Testing**: Cucumber/Gherkin for behavior-driven development
-
-## Dependencies
-
-### System Dependencies
-
-**macOS:**
-```bash
-brew bundle  # or: brew install vips
-```
-
-**Ubuntu/Debian:**
-```bash
-apt install libvips-dev
-```
-
-**Fedora:**
-```bash
-dnf install vips-devel
-```
-
-### Language Runtimes
-
-This project uses [mise](https://mise.jdx.dev/) for version management:
-```bash
-mise install
-```
-
-This installs Elixir 1.19.5 (OTP 28) and Erlang 28.4 as specified in `.mise.toml`.
-
-## Getting Started
-
-To start your Phoenix server:
-
-* Copy `.dev.env.example` to `.dev.env` and customize the local settings
-* Run `mix setup` to install and setup dependencies
-* Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
-
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
-
-### Google Maps in development
-
-Location search uses Google Places when `GOOGLE_MAPS_API_KEY` is set in
-`.dev.env`. Create a key in Google Cloud with the Places API (New) enabled,
-restrict it to the APIs used by huddlz, and set conservative usage quotas and
-billing alerts. The `.dev.env` file is ignored by Git and must not be committed.
-
-If the key is omitted, development automatically uses a fixed set of preset
-locations. This keyless mode avoids Google API usage and is useful for routine
-local development.
-
-## Development
-
-### Testing
-
-* Run all tests: `mix test`
-* Run a specific test file: `mix test path/to/test_file.exs`
-* Run Cucumber features: `mix test test/features/`
-
-### Code Quality
-
-* Format code: `mix format`
-
-## Contributing
-
-* [Commit Style Guidelines](docs/commit-style.md) - Please follow these guidelines when contributing to this project
-* This project follows behavior-driven development with Cucumber - see [Testing Guidelines](docs/testing.md)
+huddlz is a service that helps organizers and communities bring people
+together in person. This repository contains the application source and
+documentation for contributors and readers.
 
 ## Documentation
 
-* [Vision](docs/vision.md) - Project vision and goals
-* [Testing](docs/testing.md) - Testing approach and guidelines
-* [Testing Approach](docs/testing_approach.md) - PhoenixTest patterns and best practices
-* [PhoenixTest Migration](docs/phoenix_test_migration.md) - Guide for migrating tests to PhoenixTest
-* [Development Lifecycle](docs/development_lifecycle.md) - Complete development workflow from requirements to implementation
+### Project direction
 
-## Deployment
+- [Vision](docs/vision.md) describes the project's purpose, values, and goals.
+- [Domain model and access rules](docs/domain-model-and-access-rules.md)
+  documents the domain model and permissions.
 
-### Required Environment Variables
+### Domain and feature specifications
 
-The following environment variables must be set in production:
+- [Group membership](docs/group_membership.md) defines membership roles,
+  verification, and access rules.
+- [Email notifications](docs/notifications.md) specifies notification
+  categories, triggers, and delivery rules.
+- [API follow-ups](docs/api-followups.md) records deferred work for the
+  JSON:API and GraphQL surfaces.
 
-* `DATABASE_URL` - PostgreSQL database connection string
-* `SECRET_KEY_BASE` - Secret key for session encryption (generate with `mix phx.gen.secret`)
-* `TOKEN_SIGNING_SECRET` - Secret for signing authentication tokens
-* `SENDGRID_API_KEY` - SendGrid API key for sending emails (required for password reset functionality)
+### Contributing
 
-### Optional Environment Variables
+- [Testing](docs/testing.md) explains the project's test-first development
+  approach.
+- [Commit style](docs/commit-style.md) contains the commit-message guidelines.
 
-* `RENDER_EXTERNAL_HOSTNAME` - Hostname for the application (defaults to "huddlz.com")
-* `PORT` - Port to bind to (defaults to 4000)
-* `POOL_SIZE` - Database connection pool size (defaults to 10)
+## Local development
 
-Ready to run in production? Please [check the Phoenix deployment guides](https://hexdocs.pm/phoenix/deployment.html) for detailed instructions.
+Install `vips` and the language runtimes defined in
+[`.mise.toml`](.mise.toml), then run:
+
+```sh
+mise install
+mix setup
+mix phx.server
+```
+
+`mix setup` creates local environment files from the checked-in examples when
+needed. Run the test suite with `mix test`.
 
 ## License
 
-Huddlz is licensed under the [Business Source License 1.1](LICENSE.md) (BSL 1.1). This license:
-
-* Allows you to freely use, modify, and distribute the software for non-commercial purposes
-* Allows contributions to the project
-* Restricts commercial use without a separate agreement
-* Automatically converts to Apache License 2.0 5 years after the release of v1.0.0
-
-## Learn more
-
-* Official website: https://www.phoenixframework.org/
-* Guides: https://hexdocs.pm/phoenix/overview.html
-* Docs: https://hexdocs.pm/phoenix
-* Forum: https://elixirforum.com/c/phoenix-forum
-* Source: https://github.com/phoenixframework/phoenix
+The source is licensed under the [Business Source License 1.1](LICENSE.md).
+Review the license for the applicable use restrictions and change-license
+terms.

@@ -1,187 +1,101 @@
-# Test-First Development with Cucumber
+# Outside-In Behavior-Driven Testing
 
-We practice test-first development by starting with a feature description before writing any implementation code. Features are described in plain language using Gherkin syntax, making them easy to understand and review.
+huddlz develops features from observable behavior inward. Behavior tests are
+the primary specification and the starting point for feature work: describe
+what a person or external caller should observe in Cucumber/Gherkin before
+writing the implementation, then use that scenario to drive a vertical slice
+through the system.
 
-## Example Workflow
+Keep scenarios in the language of the domain. A scenario should explain the
+capability or rule without describing LiveView events, database writes, module
+calls, or other implementation details.
 
-1. **Write a Feature File**
+## The three testing rings
 
-Create a file in `test/features/` (e.g., `calculator.feature`):
+The test suite has three concentric rings, ordered from outside to inside.
 
-```gherkin
-Feature: Calculator
-  Scenario: Adding two numbers
-    Given I have entered 5 into the calculator
-    And I have entered 7 into the calculator
-    When I press add
-    Then the result should be 12
+### 1. Behavior tests
+
+Cucumber scenarios in `test/features/*.feature` express user-observable or
+externally observable behavior with Given/When/Then steps. Step definitions
+live in `test/features/step_definitions/`, with shared setup in
+`test/features/support/`.
+
+Start feature development here. Write one meaningful scenario, see it fail,
+implement the smallest vertical slice that makes it pass, and repeat.
+
+A Cucumber scenario does not have to drive every rule through a full browser
+or UI path. Use PhoenixTest when the behavior is genuinely about the web
+experience. For domain, notification, or other non-UI behavior, a step may use
+the appropriate public application boundary instead. The scenario must remain
+business-readable and verify an observable outcome regardless of the seam it
+drives.
+
+### 2. Integration tests
+
+Elixir integration tests exercise collaborations through public boundaries.
+They live primarily under `test/huddlz/` and `test/huddlz_web/` and use the
+project's ExUnit case modules, including `Huddlz.DataCase`,
+`HuddlzWeb.ConnCase`, and `HuddlzWeb.ApiCase`, where appropriate.
+
+Add integration tests when they provide faster feedback than a behavior
+scenario, isolate a boundary failure, or protect a contract such as an Ash
+action, policy, API, controller, LiveView, worker, or notification flow.
+
+### 3. Focused unit tests
+
+Use focused ExUnit tests for complex or high-value logic that benefits from
+fast, precise protection. Examples include calculations, transformations,
+parsing, recurrence rules, token handling, and other logic with meaningful
+edge cases.
+
+Unit tests are not automatically required for coverage. Add them when the
+smaller seam makes failures easier to diagnose or protects logic more clearly
+than the outer rings alone.
+
+## How the rings work together
+
+The ring order describes the order of intent and design, not a required ratio
+of behavior, integration, and unit tests. Begin with the behavior that matters,
+then add lower-level tests only where they contribute distinct confidence,
+feedback speed, or diagnostic value.
+
+Intentional overlap is acceptable. A Cucumber scenario can specify a huddl
+workflow while an integration test protects its authorization boundary and a
+unit test covers a difficult recurrence edge case. Avoid only overlap that
+repeats the same assertions against implementation details without adding
+distinct protection.
+
+Prefer stable behavior and contracts over internal structure. Tests should
+survive refactoring when externally observable behavior is unchanged. Avoid
+assertions about private functions, internal call order, incidental markup, or
+database representation unless that detail is itself a supported contract.
+
+## Development workflow
+
+1. Describe the next user-observable behavior in a focused Gherkin scenario.
+2. Choose the public seam that demonstrates that behavior at the appropriate
+   layer.
+3. Run the relevant test and confirm it fails for the expected reason.
+4. Implement the smallest vertical slice that makes it pass.
+5. Add integration or unit tests when they provide distinct protection.
+6. Continue in small red-to-green slices until the behavior is complete.
+
+During development, run the narrowest relevant ExUnit test with:
+
+```sh
+mix test path/to/test.exs
+mix test path/to/test.exs:line
 ```
 
-2. **Write a Test Module**
+Run `mix test` when broader suite feedback is useful. When the change is
+complete, run the full project validation once:
 
-Create a test file in `test/lib/` (e.g., `calculator_test.exs`):
-
-```elixir
-defmodule CalculatorTest do
-  use Cucumber, feature: "calculator.feature"
-
-  defstep "I have entered {int} into the calculator", context do
-    number = List.first(context.args)
-    numbers = Map.get(context, :numbers, [])
-    {:ok, %{numbers: numbers ++ [number]}}
-  end
-
-  defstep "I press add", context do
-    result = Enum.sum(context.numbers)
-    {:ok, %{result: result}}
-  end
-
-  defstep "the result should be {int}", context do
-    expected = List.first(context.args)
-    assert context.result == expected
-    :ok
-  end
-end
+```sh
+mix precommit
 ```
 
-## Writing Effective Feature Files
-
-Feature files are the single source of truth for new functionality. Each feature file should:
-
-- Be saved in `test/features/` as `{feature_name}.feature`.
-- Use clear Gherkin syntax (`Feature`, `Scenario`, `Given`, `When`, `Then`).
-- Cover all relevant scenarios, including both success and error cases.
-- Describe what the user will experience in each scenario, including edge cases and validation errors.
-- Be updated as understanding evolves—feature files are living documents.
-
-### Example Feature File
-
-```gherkin
-Feature: User Login
-
-  Scenario: Successful login
-    Given the user is on the login page
-    When the user enters valid credentials
-    Then the user is redirected to the dashboard
-
-  Scenario: Login with invalid password
-    Given the user is on the login page
-    When the user enters an incorrect password
-    Then an error message is displayed
-
-  Scenario: Login with missing fields
-    Given the user is on the login page
-    When the user submits the form without entering credentials
-    Then a validation error is shown
-```
-
-## Checklist for Feature Files
-
-- [ ] All user interactions are described
-- [ ] Both success and error scenarios are included
-- [ ] Edge cases and validation are covered
-- [ ] User experience is clear in each scenario
-- [ ] Gherkin syntax is used consistently
-
-3. **Run the Tests**
-
-Run your tests as usual:
-
-```
-mix test
-```
-
-This approach ensures that every feature starts with a clear specification and is always covered by automated tests.
-
-## Test Support Guidelines
-
-### Test Fixtures
-
-Create reusable test fixtures to set up test data consistently across test scenarios:
-
-1. Place fixtures in `test/support/` directory
-2. Create specific fixture modules for each domain concept (e.g., `SoireeFixture`)
-3. Design fixtures to be idempotent (can be run multiple times without side effects)
-4. Make fixtures flexible with optional parameters for different test needs
-
-Example fixture:
-```elixir
-defmodule Huddlz.SoireeFixture do
-  def create_sample_soirees(count \\ 3) do
-    # Create test host with consistent email for lookup
-    host = get_or_create_test_host("test.host@example.com")
-
-    # Create soirées with sequential information
-    for i <- 1..count do
-      create_soiree(%{
-        title: "Test Soirée #{i}",
-        host_id: host.id
-      })
-    end
-  end
-end
-```
-
-### Test Generators
-
-For more complex data needs, create generators that produce realistic test data:
-
-1. Use the `Ash.Generator` module to create test data generators
-2. Place generators in the appropriate domain module: `lib/huddlz/domain/generators/`
-3. Use libraries like `Faker` to create diverse, realistic test data
-4. Make generators customizable with options to override default values
-
-Example generator:
-```elixir
-defmodule Huddlz.Soirees.Generators.SoireeGenerator do
-  use Ash.Generator
-
-  def soiree(opts \\ []) do
-    seed_generator(
-      %Soiree{
-        title: sequence(:title, &"Soirée #{&1}"),
-        description: Faker.Lorem.paragraph(),
-        starts_at: random_future_date()
-      },
-      overrides: opts
-    )
-  end
-end
-```
-
-### LiveView Testing
-
-When testing LiveView components:
-
-1. Use `PhoenixTest` for all LiveView interactions (imported via `HuddlzWeb.ConnCase`)
-2. Test user interactions with `fill_in/3`, `select/3`, `click_button/2`, and `visit/2`
-3. Verify page content using `assert_has/3` and `refute_has/3`
-4. Structure assertions to verify behavior, not implementation
-5. Use background setup steps to establish a known state
-
-#### PhoenixTest Patterns
-
-```elixir
-# Basic navigation and assertions
-session = conn |> visit("/groups")
-assert_has(session, "h1", text: "Groups")
-
-# Form interactions
-session
-|> fill_in("Name", with: "Book Club")
-|> select("Group type", option: "Public")
-|> click_button("Create Group")
-|> assert_has(".alert", text: "Group created")
-
-# Authentication
-conn
-|> login(user)  # Helper from ConnCase
-|> visit("/protected/page")
-```
-
-**Note**: PhoenixTest requires proper labels with `for` attributes on form inputs. If your forms use placeholders without labels, add visually hidden labels:
-
-```html
-<label for="search-query" class="sr-only">Search</label>
-<input id="search-query" name="query" placeholder="Search..." />
-```
+`mix precommit` runs compilation with warnings as errors, formatting,
+dependency cleanup, the test suite, and Credo. Do not run all of those commands
+separately by default; rerun an individual command when diagnosing or fixing a
+specific validation failure.

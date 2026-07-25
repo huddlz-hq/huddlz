@@ -2,13 +2,10 @@ This is a web application written using the Phoenix web framework.
 
 ### Commit Messages
 
-- Follow conventional commits format: `type(scope): concise description`
-- Do not include AI attribution lines or AI-generated signatures
-- "Co-Authored-By" is reserved for human collaborators only
-- Keep first line under 70 characters, no period at the end
-- Use imperative, present tense: "add" not "added" or "adds"
-- Include a descriptive body with bullet points for specific changes when appropriate
-- See `docs/commit-style.md` for complete guidelines
+- Use Conventional Commits
+- Do not add AI co-author trailers or generated signatures; reserve
+  `Co-Authored-By` trailers for human collaborators
+- Consult `docs/commit-style.md` before committing
 
 ### Naming Conventions
 
