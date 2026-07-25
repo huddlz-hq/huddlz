@@ -8,20 +8,13 @@ defmodule Huddlz.Communities.HuddlTemplate.Changes.SetRecurrenceFromFrequency do
 
   @impl true
   def change(changeset, _opts, _context) do
-    case Ash.Changeset.get_argument(changeset, :frequency) do
-      :weekly ->
-        set_recurrence(changeset, 1, :week)
-
-      :every_two_weeks ->
-        set_recurrence(changeset, 2, :week)
-
-      :monthly ->
-        set_recurrence(changeset, 1, :month)
-
-      nil ->
-        changeset
-    end
+    set_recurrence(changeset, Ash.Changeset.get_argument(changeset, :frequency))
   end
+
+  defp set_recurrence(changeset, :weekly), do: set_recurrence(changeset, 1, :week)
+  defp set_recurrence(changeset, :every_two_weeks), do: set_recurrence(changeset, 2, :week)
+  defp set_recurrence(changeset, :monthly), do: set_recurrence(changeset, 1, :month)
+  defp set_recurrence(changeset, nil), do: changeset
 
   defp set_recurrence(changeset, interval, unit) do
     changeset
