@@ -26,7 +26,8 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
           domain: domain,
           as: "user",
           id: "user-password-reset-password-with-token",
-          context: %{strategy: strategy, private: %{ash_authentication?: true}}
+          context: %{strategy: strategy, private: %{ash_authentication?: true}},
+          post_process_errors: &HuddlzWeb.PasswordFormErrors.post_process/3
         )
 
       {:ok,
@@ -59,7 +60,6 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
         <p class="lede">Almost there. Pick a new password and you'll be signed in.</p>
 
         <.form
-          :let={f}
           for={@form}
           phx-change="validate"
           phx-submit="reset_password"
@@ -71,23 +71,23 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
         >
           <input
             type="hidden"
-            name={Phoenix.HTML.Form.input_name(f, :reset_token)}
+            name={Phoenix.HTML.Form.input_name(@form, :reset_token)}
             value={@token}
           />
 
-          <%= if f[:reset_token].errors != [] do %>
+          <%= if @form[:reset_token].errors != [] do %>
             <.expired_token_state />
           <% else %>
             <div class="form-grid">
               <.input
-                field={f[:password]}
+                field={@form[:password]}
                 type="password"
                 label="New password"
                 autocomplete="new-password"
                 help="At least 8 characters."
               />
               <.input
-                field={f[:password_confirmation]}
+                field={@form[:password_confirmation]}
                 type="password"
                 label="Confirm new password"
                 autocomplete="new-password"

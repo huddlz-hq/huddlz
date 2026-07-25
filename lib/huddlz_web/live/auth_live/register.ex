@@ -31,7 +31,8 @@ defmodule HuddlzWeb.AuthLive.Register do
       User
       |> Form.for_create(:register_with_password,
         as: "user",
-        context: context
+        context: context,
+        post_process_errors: &HuddlzWeb.PasswordFormErrors.post_process/3
       )
 
     {:ok,

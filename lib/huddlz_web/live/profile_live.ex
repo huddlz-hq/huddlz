@@ -25,17 +25,7 @@ defmodule HuddlzWeb.ProfileLive do
       )
       |> to_form()
 
-    action =
-      if user.hashed_password, do: :change_password, else: :set_password
-
-    password_form =
-      user
-      |> AshPhoenix.Form.for_update(action,
-        domain: Huddlz.Accounts,
-        forms: [auto?: true],
-        actor: user
-      )
-      |> to_form()
+    password_form = password_form(user)
 
     email_form = email_form(user)
 
@@ -369,22 +359,11 @@ defmodule HuddlzWeb.ProfileLive do
   def handle_event("update_password", %{"form" => params}, socket) do
     case AshPhoenix.Form.submit(socket.assigns.password_form.source, params: params) do
       {:ok, updated_user} ->
-        action = if updated_user.hashed_password, do: :change_password, else: :set_password
-
-        password_form =
-          updated_user
-          |> AshPhoenix.Form.for_update(action,
-            domain: Huddlz.Accounts,
-            forms: [auto?: true],
-            actor: updated_user
-          )
-          |> to_form()
-
         {:noreply,
          socket
          |> put_flash(:info, "Password updated successfully")
          |> assign(:current_user, updated_user)
-         |> assign(:password_form, password_form)}
+         |> assign(:password_form, password_form(updated_user))}
 
       {:error, form} ->
         {:noreply,
@@ -504,6 +483,19 @@ defmodule HuddlzWeb.ProfileLive do
   end
 
   defp email_change_error(_form, _path, error), do: error
+
+  defp password_form(user) do
+    action = if user.hashed_password, do: :change_password, else: :set_password
+
+    user
+    |> AshPhoenix.Form.for_update(action,
+      domain: Huddlz.Accounts,
+      forms: [auto?: true],
+      actor: user,
+      post_process_errors: &HuddlzWeb.PasswordFormErrors.post_process/3
+    )
+    |> to_form()
+  end
 
   defp handle_upload_progress(:avatar, entry, socket) do
     if entry.done? do
