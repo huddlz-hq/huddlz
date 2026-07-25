@@ -1,6 +1,6 @@
 [tools]
-elixir = "1.20.0-otp-29"
-erlang = "29.0.1"
+elixir = "1.20.2-otp-29"
+erlang = "29.0.3"
 
 [tasks.sync-rules]
 description = "Sync AGENTS.md and .agents/skills/ from mix.exs usage_rules config"
