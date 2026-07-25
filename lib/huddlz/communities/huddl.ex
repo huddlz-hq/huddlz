@@ -197,6 +197,12 @@ defmodule Huddlz.Communities.Huddl do
         default "instance"
       end
 
+      argument :suppress_update_notification, :boolean do
+        allow_nil? false
+        default false
+        public? false
+      end
+
       argument :provided_latitude, :float, allow_nil?: true, public?: false
       argument :provided_longitude, :float, allow_nil?: true, public?: false
 

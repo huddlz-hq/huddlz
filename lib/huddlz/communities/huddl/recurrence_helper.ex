@@ -108,9 +108,10 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     end
   end
 
+  @doc false
   # Later instances in the series, read through the dedicated visibility-free
   # action so a private series is reached in full regardless of actor.
-  defp future_instances(source) do
+  def future_instances(source) do
     Huddl
     |> Ash.Query.for_read(:siblings_in_series, %{
       huddl_template_id: source.huddl_template_id,
@@ -216,6 +217,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     |> Ash.Changeset.new()
     |> Ash.Changeset.set_argument(:provided_latitude, source.latitude)
     |> Ash.Changeset.set_argument(:provided_longitude, source.longitude)
+    |> Ash.Changeset.set_argument(:suppress_update_notification, true)
     |> Ash.Changeset.for_update(
       :update,
       instance_attrs(source, starts_at, ends_at) |> Map.put(:edit_type, "instance")

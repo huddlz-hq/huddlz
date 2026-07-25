@@ -219,6 +219,21 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       )
     end
 
+    test "explains the same attendee-affecting changes as the domain", %{
+      conn: conn,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+      |> assert_has(
+        "#attendee-notification-explanation",
+        text: "title, time, location, capacity, or privacy"
+      )
+    end
+
     test "shows calculated end time", %{
       conn: conn,
       owner: owner,

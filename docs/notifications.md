@@ -49,9 +49,9 @@ Each trigger has an ID (e.g. C3) used throughout the doc and the GitHub issues.
 | ID | Trigger | Recipient | Category | Notes |
 |---|---|---|---|---|
 | C1 | New huddl created in a group | All group members | Activity | Default ON. Body links to settings page. |
-| C2 | Huddl details meaningfully changed | All current RSVPs | Activity | "Meaningful" = `starts_at`, `ends_at`, `location`, `virtual_link`, `title`. Skip cosmetic edits. |
+| C2 | Huddl details meaningfully changed | All current RSVPs | Activity | "Meaningful" = `starts_at`, `ends_at`, `location`, `virtual_link`, `title`, `capacity`, or `privacy`. Skip cosmetic and no-op edits. |
 | C3 | Huddl cancelled / deleted | All current RSVPs | Transactional | Highest priority. People may have travel plans. |
-| C4 | Recurring series modified | RSVPs of the next upcoming instance only | Activity | Subsequent instances are covered by their own reminders (D1/D2). |
+| C4 | Recurring series modified | Deduplicated RSVPs across retained upcoming instances | Activity | One summary per person, linked to their next retained RSVP. Subsequent instances are covered by their own reminders (D1/D2). |
 
 ### D. Huddl reminders (time-based, Oban cron)
 
@@ -106,7 +106,7 @@ Locked for v1, no re-litigation:
 
 1. C1 audience = every group member. Mitigated by the settings page.
 2. E1/E2 volume = per-RSVP, no cap. Daily digest is a v2 idea.
-3. C4 = one email about the next upcoming instance. Later instances rely on D1/D2.
+3. C4 = one email per affected person about their next retained RSVP. Later instances rely on D1/D2.
 4. `.ics` attachments ship in v1 on E3, D1, D2.
 5. Defaults: Activity ON, Digest OFF, Transactional always on.
 

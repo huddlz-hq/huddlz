@@ -168,6 +168,48 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
       end)
     end
 
+    test "includes capacity and privacy in the attendee-affecting change set" do
+      owner = generate(user(role: :user))
+      attendee = generate(user(display_name: "Attendee"))
+
+      group =
+        generate(group(name: "Pickup Sports", is_public: true, owner_id: owner.id, actor: owner))
+
+      huddl =
+        generate(
+          huddl(
+            title: "Saturday Soccer",
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            max_attendees: 10
+          )
+        )
+
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
+      |> Ash.update!()
+
+      Oban.drain_queue(queue: :notifications)
+      flush_mailbox()
+
+      huddl
+      |> Ash.Changeset.for_update(
+        :update,
+        %{max_attendees: 5, is_private: true},
+        actor: owner
+      )
+      |> Ash.update!()
+
+      assert %{success: 1} = Oban.drain_queue(queue: :notifications)
+
+      assert_email_sent(fn email ->
+        email.to == [{"", to_string(attendee.email)}] and
+          email.html_body =~ "the capacity" and
+          email.html_body =~ "the privacy"
+      end)
+    end
+
     test "skips notification when no meaningful field changes" do
       owner = generate(user(role: :user))
       attendee = generate(user())
@@ -192,6 +234,40 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
       |> Ash.update!()
 
       refute_enqueued(worker: DeliverWorker)
+    end
+
+    test "deduplicates repeated stale submissions of the same meaningful update" do
+      owner = generate(user(role: :user))
+      attendee = generate(user())
+
+      group =
+        generate(group(name: "Pickup Sports", is_public: true, owner_id: owner.id, actor: owner))
+
+      huddl =
+        generate(huddl(title: "Saturday Soccer", group_id: group.id, actor: owner))
+
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
+      |> Ash.update!()
+
+      Oban.drain_queue(queue: :notifications)
+      flush_mailbox()
+
+      first_submission =
+        Ash.Changeset.for_update(huddl, :update, %{title: "Renamed"}, actor: owner)
+
+      repeated_stale_submission =
+        Ash.Changeset.for_update(huddl, :update, %{title: "Renamed"}, actor: owner)
+
+      Ash.update!(first_submission)
+      Ash.update!(repeated_stale_submission)
+
+      assert %{success: 1} = Oban.drain_queue(queue: :notifications)
+
+      assert_email_sent(fn email ->
+        email.subject == "Updated: Renamed" and
+          email.to == [{"", to_string(attendee.email)}]
+      end)
     end
 
     test "skips the actor (the editor) even if they had RSVPd" do
@@ -226,7 +302,70 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
   end
 
   describe "edit_type=all: in-place updates preserve RSVPs and notify subscribers" do
-    test "emails the edited instance's own RSVPs" do
+    test "sends one series summary to a person attending multiple occurrences" do
+      owner = generate(user(role: :user))
+      attendee = generate(user(display_name: "Attendee"))
+
+      group =
+        generate(
+          group(
+            name: "Pickup Sports",
+            slug: "pickup-sports",
+            is_public: true,
+            owner_id: owner.id,
+            actor: owner
+          )
+        )
+
+      original =
+        generate(
+          huddl(
+            title: "Saturday Soccer",
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            date: Date.add(Date.utc_today(), 1),
+            is_recurring: true,
+            frequency: "weekly",
+            repeat_until: Date.add(Date.utc_today(), 30)
+          )
+        )
+
+      assert %{success: 1} = Oban.drain_queue(queue: :default)
+      occurrences = Enum.take(future_occurrences(original), 2)
+
+      for occurrence <- [original | occurrences] do
+        occurrence
+        |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
+        |> Ash.update!()
+      end
+
+      Oban.drain_queue(queue: :notifications)
+      flush_mailbox()
+
+      original
+      |> Ash.Changeset.for_update(
+        :update,
+        %{
+          title: "Saturday Soccer (renamed)",
+          edit_type: "all",
+          repeat_until: Date.add(Date.utc_today(), 30),
+          frequency: "weekly"
+        },
+        actor: owner
+      )
+      |> Ash.update!()
+
+      assert %{success: 1} = Oban.drain_queue(queue: :notifications)
+      emails = drain_mailbox()
+
+      assert Enum.count(emails) == 1
+      [email] = emails
+      assert email.subject == "Recurring series updated: Saturday Soccer (renamed)"
+      assert email.to == [{"", to_string(attendee.email)}]
+    end
+
+    test "includes the edited instance's own RSVPs in the series summary" do
       owner = generate(user(role: :user))
       attendee = generate(user(display_name: "Attendee"))
 
@@ -269,7 +408,7 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
           title: "Saturday Soccer (renamed)",
           edit_type: "all",
           repeat_until: Date.add(Date.utc_today(), 60),
-          frequency: "weekly"
+          frequency: "every_two_weeks"
         },
         actor: owner
       )
@@ -278,12 +417,13 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
       assert %{success: 1} = Oban.drain_queue(queue: :notifications)
 
       assert_email_sent(fn email ->
-        email.subject == "Updated: Saturday Soccer (renamed)" and
-          email.to == [{"", to_string(attendee.email)}]
+        email.subject == "Recurring series updated: Saturday Soccer (renamed)" and
+          email.to == [{"", to_string(attendee.email)}] and
+          email.html_body =~ "the recurring schedule"
       end)
     end
 
-    test "updates future occurrences in place, keeping their RSVPs, and emails those subscribers" do
+    test "updates future occurrences in place and summarizes changes for their subscribers" do
       owner = generate(user(role: :user))
       attendee = generate(user(display_name: "Attendee"))
 
@@ -343,8 +483,9 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
       assert rsvped?(occurrence.id, attendee.id)
 
       assert_email_sent(fn email ->
-        email.subject == "Updated: Saturday Soccer (renamed)" and
-          email.to == [{"", to_string(attendee.email)}]
+        email.subject == "Recurring series updated: Saturday Soccer (renamed)" and
+          email.to == [{"", to_string(attendee.email)}] and
+          email.html_body =~ occurrence.id
       end)
     end
 

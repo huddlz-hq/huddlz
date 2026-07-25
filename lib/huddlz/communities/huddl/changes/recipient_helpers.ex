@@ -9,6 +9,8 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
 
   alias Huddlz.Accounts.User
   alias Huddlz.Communities.GroupMember
+  alias Huddlz.Communities.Huddl
+  alias Huddlz.Communities.Huddl.RecurrenceHelper
   alias Huddlz.Communities.HuddlAttendee
   alias Huddlz.Notifications
 
@@ -29,6 +31,37 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
     |> Enum.map(& &1.user_id)
     |> Enum.uniq()
     |> Enum.reject(&(&1 == actor_id))
+  end
+
+  @doc """
+  Returns one next-upcoming huddl per person who has an RSVP on the source
+  occurrence or any later occurrence in its recurring series.
+
+  Choosing a target per recipient keeps a whole-series summary useful for
+  people who attend different dates and ensures the link points to a huddl
+  they can still access after reconciliation.
+  """
+  @spec series_rsvp_targets(Huddl.t(), keyword()) :: [{Ecto.UUID.t(), Huddl.t()}]
+  def series_rsvp_targets(%Huddl{} = source, opts \\ []) do
+    actor_id = Keyword.get(opts, :exclude)
+    huddlz = [source | RecurrenceHelper.future_instances(source)]
+    huddlz_by_id = Map.new(huddlz, &{&1.id, &1})
+    huddl_ids = Map.keys(huddlz_by_id)
+
+    HuddlAttendee
+    |> Ash.Query.filter(huddl_id in ^huddl_ids)
+    |> Ash.Query.select([:user_id, :huddl_id])
+    |> Ash.read!(authorize?: false)
+    |> Enum.reject(&(&1.user_id == actor_id))
+    |> Enum.group_by(& &1.user_id)
+    |> Enum.map(fn {user_id, attendances} ->
+      next_huddl =
+        attendances
+        |> Enum.map(&Map.fetch!(huddlz_by_id, &1.huddl_id))
+        |> Enum.min_by(& &1.starts_at, DateTime)
+
+      {user_id, next_huddl}
+    end)
   end
 
   @doc """

@@ -16,5 +16,8 @@ defmodule Huddlz.Notifications.Senders.ChangedFields do
   defp humanize("ends_at"), do: "the end time"
   defp humanize("physical_location"), do: "the location"
   defp humanize("virtual_link"), do: "the virtual link"
+  defp humanize("max_attendees"), do: "the capacity"
+  defp humanize("is_private"), do: "the privacy"
+  defp humanize("schedule"), do: "the recurring schedule"
   defp humanize(other) when is_binary(other), do: other
 end

@@ -2,37 +2,55 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate do
   @moduledoc """
   Enqueues notifications when a huddl is edited in a way that affects an
   attendee's plans — i.e. one of `:title`, `:starts_at`, `:ends_at`,
-  `:physical_location`, or `:virtual_link` is in the changeset. Cosmetic edits
-  (description, thumbnail, etc.) do not trigger an email.
+  `:physical_location`, `:virtual_link`, `:max_attendees`, or `:is_private` is
+  in the changeset. Cosmetic edits (description, thumbnail, etc.) do not
+  trigger a notification.
 
   Emails everyone who has RSVP'd to the huddl (except the person making the edit)
-  to tell them it changed. This fires for both a single-huddl edit and an "edit
-  all" on a series: the series edit updates each future occurrence through its
-  own `:update`, so every changed occurrence emails its own attendees from here.
-
-  In `docs/notifications.md` terms this is notification C2 (`:huddl_updated`). The
-  per-series digest C4 (`:huddl_series_updated`) is deliberately not sent for now;
-  its sender is kept for a possible future "one summary per attendee" option.
+  to tell them it changed. Whole-series edits are handled by
+  `EditRecurringHuddlz`, which sends one C4 summary per affected person instead
+  of allowing this C2 notifier to fan out once per occurrence.
   """
 
   use Ash.Resource.Change
 
   alias Huddlz.Communities.Huddl.Changes.RecipientHelpers
 
-  @meaningful_attrs [:title, :starts_at, :ends_at, :physical_location, :virtual_link]
+  @attendee_affecting_attrs [
+    :title,
+    :starts_at,
+    :ends_at,
+    :physical_location,
+    :virtual_link,
+    :max_attendees,
+    :is_private
+  ]
 
   @impl true
   def change(changeset, _opts, _context) do
-    changed_fields =
-      Enum.filter(@meaningful_attrs, &Ash.Changeset.changing_attribute?(changeset, &1))
+    changed_fields = changed_fields(changeset)
 
-    if changed_fields == [] do
+    if changed_fields == [] or series_edit?(changeset) or suppressed?(changeset) do
       changeset
     else
       changeset
       |> Ash.Changeset.put_context(:huddl_updated_changed_fields, changed_fields)
       |> Ash.Changeset.after_action(&notify/2)
     end
+  end
+
+  @doc false
+  @spec changed_fields(Ash.Changeset.t()) :: [atom()]
+  def changed_fields(changeset) do
+    Enum.filter(@attendee_affecting_attrs, fn attribute ->
+      Ash.Changeset.changing_attribute?(changeset, attribute)
+    end)
+  end
+
+  defp series_edit?(changeset), do: Ash.Changeset.get_argument(changeset, :edit_type) == "all"
+
+  defp suppressed?(changeset) do
+    Ash.Changeset.get_argument(changeset, :suppress_update_notification) == true
   end
 
   defp notify(cs, huddl) do
