@@ -57,6 +57,8 @@ defmodule HuddlzWeb.AuthLive.Register do
         phx-submit="register"
         class="auth-card"
       >
+        <.error_summary form={@form} />
+
         <div class="form-grid">
           <.input
             field={@form[:email]}
@@ -109,6 +111,8 @@ defmodule HuddlzWeb.AuthLive.Register do
                 id={@form[:legal_acceptance].id}
                 name={@form[:legal_acceptance].name}
                 value="true"
+                aria-invalid={field_invalid?(@form[:legal_acceptance]) && "true"}
+                aria-describedby={field_error_ids(@form[:legal_acceptance])}
                 checked={
                   Phoenix.HTML.Form.normalize_value(
                     "checkbox",

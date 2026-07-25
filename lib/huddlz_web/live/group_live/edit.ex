@@ -129,6 +129,8 @@ defmodule HuddlzWeb.GroupLive.Edit do
       </div>
 
       <.form for={@form} id="edit-group-form" phx-change="validate" phx-submit="update_group">
+        <.error_summary form={@form} />
+
         <div class="panel">
           <div class="panel-head">
             <h2>Cover image</h2>
@@ -259,10 +261,13 @@ defmodule HuddlzWeb.GroupLive.Edit do
                   name={@form[:slug].name}
                   value={@form[:slug].value}
                   class="form-input"
+                  aria-invalid={field_invalid?(@form[:slug]) && "true"}
+                  aria-describedby={field_error_ids(@form[:slug])}
                   pattern="[a-z0-9-]+"
                   title="Only lowercase letters, numbers, and hyphens allowed"
                 />
               </div>
+              <.field_errors field={@form[:slug]} />
               <p :if={!@slug_changed} class="form-help">
                 Your group is available at: {url(~p"/groups/#{@form[:slug].value || "..."}")}
               </p>
@@ -280,7 +285,13 @@ defmodule HuddlzWeb.GroupLive.Edit do
               rows="4"
             />
 
-            <div class="form-row">
+            <div
+              id={@form[:location].id}
+              class="form-row"
+              tabindex="-1"
+              aria-invalid={field_invalid?(@form[:location]) && "true"}
+              aria-describedby={field_error_ids(@form[:location])}
+            >
               <label class="form-label" for="group-location-input">Location</label>
               <.live_component
                 module={HuddlzWeb.Live.LocationAutocomplete}

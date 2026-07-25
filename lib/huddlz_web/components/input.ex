@@ -179,7 +179,73 @@ defmodule HuddlzWeb.Components.Input do
     assigns = Phoenix.Component.assign(assigns, :errors, errors)
 
     ~H"""
-    <p :for={msg <- @errors} class="form-error">{msg}</p>
+    <p
+      :for={{msg, index} <- Enum.with_index(@errors)}
+      id={error_id(@field.id, index)}
+      class="form-error"
+    >
+      {msg}
+    </p>
+    """
+  end
+
+  def field_invalid?(%FormField{} = field) do
+    Phoenix.Component.used_input?(field) && field.errors != []
+  end
+
+  def field_error_ids(%FormField{} = field) do
+    if Phoenix.Component.used_input?(field) do
+      field.errors
+      |> Enum.with_index()
+      |> Enum.map_join(" ", fn {_error, index} -> error_id(field.id, index) end)
+    end
+  end
+
+  attr :form, Phoenix.HTML.Form, required: true
+
+  @doc """
+  Summarizes the form's visible validation errors and links each one to its
+  field. The focus-management hook moves focus here after a failed submit.
+  """
+  def error_summary(assigns) do
+    entries =
+      Enum.flat_map(assigns.form.errors, fn {field_name, error} ->
+        field = assigns.form[field_name]
+
+        if Phoenix.Component.used_input?(field) do
+          [
+            %{
+              field_name: field_name,
+              field_id: field.id,
+              label: Phoenix.Naming.humanize(field_name),
+              message: translate_error(error)
+            }
+          ]
+        else
+          []
+        end
+      end)
+
+    assigns = assign(assigns, :entries, entries)
+
+    ~H"""
+    <div
+      :if={@entries != []}
+      id={"#{@form.id}-error-summary"}
+      class="form-error-summary"
+      role="alert"
+      tabindex="-1"
+      data-error-summary
+    >
+      <p class="form-error-summary-title">Please fix the following:</p>
+      <ul>
+        <li :for={entry <- @entries}>
+          <a id={"#{@form.id}-error-link-#{entry.field_name}"} href={"##{entry.field_id}"}>
+            {entry.label}: {entry.message}
+          </a>
+        </li>
+      </ul>
+    </div>
     """
   end
 

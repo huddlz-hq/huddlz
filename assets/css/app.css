@@ -242,6 +242,11 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+body :where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+
 
 
 
@@ -258,6 +263,28 @@ body.is-signed-out {
 }
 
 body.is-signed-out .main { min-height: 100vh; }
+
+body .skip-link {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 100;
+  padding: 10px 14px;
+  border: 1px solid var(--cyan);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  transform: translateY(calc(-100% - 20px));
+  transition: transform 120ms ease;
+}
+
+body .skip-link:focus {
+  transform: translateY(0);
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
 
 @media (max-width: 1100px) {
   body { --rail-w: 240px; }
@@ -2584,6 +2611,40 @@ body .form-textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
 
 body .form-help { color: var(--muted); font-size: 12px; }
 body .form-error { color: var(--warn); font-size: 12px; }
+
+body .form-error-summary {
+  max-width: 560px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  border-left: 3px solid var(--warn);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--warn) 8%, transparent);
+  color: var(--soft);
+  font-size: 13px;
+}
+
+body .form-error-summary:focus {
+  outline: 2px solid var(--warn);
+  outline-offset: 3px;
+}
+
+body .form-error-summary-title {
+  margin: 0 0 6px;
+  color: var(--text);
+  font-weight: 800;
+}
+
+body .form-error-summary ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+body .form-error-summary a {
+  color: var(--warn);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 
 body .form-control.read-only {
   display: flex;

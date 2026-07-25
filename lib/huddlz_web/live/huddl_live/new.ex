@@ -161,6 +161,8 @@ defmodule HuddlzWeb.HuddlLive.New do
       </div>
 
       <.form for={@form} id="huddl-form" phx-change="validate" phx-submit="save">
+        <.error_summary form={@form} />
+
         <div class="panel">
           <div class="panel-head">
             <h2>The basics</h2>
@@ -267,7 +269,13 @@ defmodule HuddlzWeb.HuddlLive.New do
           </div>
           <div class="form-grid">
             <%= if @show_physical_location do %>
-              <div class="form-row">
+              <div
+                id={@form[:physical_location].id}
+                class="form-row"
+                tabindex="-1"
+                aria-invalid={field_invalid?(@form[:physical_location]) && "true"}
+                aria-describedby={field_error_ids(@form[:physical_location])}
+              >
                 <.live_component
                   module={HuddlzWeb.Live.SavedLocationPicker}
                   id="saved-location-picker"
@@ -435,7 +443,12 @@ defmodule HuddlzWeb.HuddlLive.New do
       >
         <h2 class="font-display text-xl tracking-tight text-glow mb-6">Add New Address</h2>
 
-        <form phx-submit="save_location" phx-change="modal_form_changed" class="form-grid">
+        <form
+          id="new-saved-location-form"
+          phx-submit="save_location"
+          phx-change="modal_form_changed"
+          class="form-grid"
+        >
           <div class="form-row">
             <label class="form-label" for="modal-address-autocomplete-input">
               Search for an address

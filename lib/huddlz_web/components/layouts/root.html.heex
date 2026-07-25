@@ -43,6 +43,7 @@
     </script>
   </head>
   <body class={Map.get(assigns, :body_class, "")}>
+    <div id="page-change-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
     {@inner_content}
   </body>
 </html>

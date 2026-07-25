@@ -27,6 +27,8 @@ defmodule HuddlzWeb.AuthLive.SignIn do
         method="post"
         class="auth-card"
       >
+        <.error_summary form={@password_form} />
+
         <div class="form-grid">
           <.input field={f[:email]} type="email" label="Email" autocomplete="email" />
           <.input
