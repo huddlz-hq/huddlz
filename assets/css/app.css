@@ -2973,6 +2973,7 @@ body .visibility-selection {
 
 body .visibility-toggle {
   position: relative;
+  min-height: 44px;
 }
 
 body .visibility-toggle input[type="checkbox"] {

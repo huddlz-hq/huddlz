@@ -89,7 +89,7 @@ Feature: Group Management
     When I visit the edit page for "Book Club"
     Then I should see "Current visibility"
     And I should see "Private"
-    When I check "Private group"
+    When I check "Public group"
     Then I should see "Public group"
     And I should see "Anyone can find and join this group"
     And I should see "otherwise-public huddlz will become discoverable again"

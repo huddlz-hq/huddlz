@@ -335,13 +335,16 @@ defmodule HuddlzWeb.GroupLive.Edit do
               class="row visibility-selection"
             >
               <div>
-                <label id="group-visibility-label" class="row-title" for="group-is-public">
+                <div id="group-visibility-label" class="row-title">
                   {visibility_label(@selected_public?)} group
-                </label>
+                </div>
                 <div id="group-visibility-description" class="row-desc">
                   {visibility_description(@selected_public?)}
                 </div>
               </div>
+              <label id="group-public-toggle-label" for="group-is-public" class="sr-only">
+                Public group
+              </label>
               <label class="toggle visibility-toggle">
                 <input type="hidden" name={@form[:is_public].name} value="false" />
                 <input
@@ -350,7 +353,8 @@ defmodule HuddlzWeb.GroupLive.Edit do
                   name={@form[:is_public].name}
                   value="true"
                   checked={@selected_public?}
-                  aria-labelledby="group-visibility-label"
+                  role="switch"
+                  aria-labelledby="group-public-toggle-label"
                   aria-describedby="group-visibility-description group-visibility-consequence"
                 />
                 <span class="track"></span>
