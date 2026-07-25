@@ -314,6 +314,7 @@ body .nav-scrim { display: none; }
     left: 0;
     bottom: 0;
     width: min(320px, 86vw);
+    height: auto;
     z-index: 60;
     transform: translateX(-100%);
     transition: transform 200ms ease;
@@ -631,6 +632,7 @@ body .topbar-brand {
 
 body .topbar-search {
   flex: 1 1 auto;
+  min-width: 0;
   max-width: 560px;
   margin: 0;
   display: flex;
@@ -1901,6 +1903,22 @@ body .hero-img {
   z-index: 0;
 }
 
+/* Huddl media keeps its full composition in a consistent 16:9 stage. */
+body .huddl-hero {
+  height: auto;
+  aspect-ratio: 16 / 9;
+  isolation: isolate;
+}
+
+body .huddl-hero .hero-media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(135deg, #06424a 0%, #0c1c20 50%, #1a0c30 100%);
+}
+
+body .huddl-hero .hero-img { object-fit: contain; }
+
 body .hero::after {
   content: "";
   position: absolute;
@@ -1932,6 +1950,11 @@ body .hero-content .meta {
   color: var(--soft);
   font-size: 13px;
 }
+
+body .huddl-hero .hero-content,
+body .huddl-hero .meta,
+body .huddl-intro,
+body .huddl-side { min-width: 0; }
 
 body .huddl-frame {
   display: grid;
@@ -1993,7 +2016,7 @@ body .facts li {
 body .facts svg { width: 16px; height: 16px; flex: 0 0 auto; color: var(--cyan); margin-top: 2px; }
 
 body .facts .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
-body .facts .value { color: var(--text); font-weight: 600; }
+body .facts .value { color: var(--text); font-weight: 600; overflow-wrap: anywhere; }
 
 body .prose { color: var(--soft); font-size: 15px; line-height: 1.65; }
 body .prose p { margin: 0 0 16px; }
@@ -3192,7 +3215,8 @@ body .page-nav:disabled {
   body .page-head { flex-direction: column; align-items: stretch; gap: 16px; margin-bottom: 20px; }
   body .page-head h1 { font-size: 26px; }
   body .page-head .actions { flex-wrap: wrap; }
-  body .hero { height: 200px; margin-bottom: 20px; }
+  body .hero:not(.huddl-hero) { height: 200px; }
+  body .hero { margin-bottom: 20px; }
   body .hero-content { padding: 18px 16px; }
   body .hero-content h1 { font-size: 26px; }
   body .panel { padding: 14px 14px; }
@@ -3211,4 +3235,55 @@ body .page-nav:disabled {
   body .profile-head { flex-direction: column; align-items: flex-start; gap: 14px; }
   body .pagination { justify-content: center; flex-wrap: wrap; }
   body .pagination .page-numbers { order: -1; flex-basis: 100%; justify-content: center; flex-wrap: wrap; }
+}
+
+@media (max-width: 520px) {
+  body .huddl-hero {
+    display: block;
+    height: auto;
+    aspect-ratio: auto;
+    min-height: 0;
+    overflow: visible;
+    background: transparent;
+    margin-bottom: 24px;
+  }
+
+  body .huddl-hero::after { display: none; }
+
+  body .huddl-hero .hero-media {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+
+  body .huddl-hero .hero-content {
+    display: block;
+    position: relative;
+    padding: 18px 4px 0;
+    color: var(--text);
+  }
+
+  body .huddl-hero .hero-content .eyebrow {
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  body .huddl-hero .hero-content h1 {
+    font-size: clamp(24px, 8vw, 30px);
+    overflow-wrap: anywhere;
+    text-shadow: none;
+  }
+
+  body .huddl-hero .hero-content .meta {
+    display: grid;
+    gap: 4px;
+    margin-top: 12px;
+  }
+
+  body .huddl-hero .hero-content .meta > span { white-space: normal; }
+  body .huddl-hero .hero-content .meta .meta-sep { display: none; }
 }

@@ -390,9 +390,11 @@ defmodule HuddlzWeb.GroupLive.Show do
           <:cover>
             <img
               :if={huddl.display_image_url}
+              id={"group-huddl-card-cover-#{huddl.id}"}
               class="card-cover-img"
               src={HuddlImages.url(huddl.display_image_url)}
-              alt={huddl.title}
+              alt=""
+              phx-hook="ImageFallback"
             />
             <.date_stamp month={huddl_month(huddl)} day={huddl_day(huddl)} />
             <.card_tag variant={tag_variant(huddl.event_type)}>

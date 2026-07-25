@@ -26,6 +26,29 @@ import topbar from "../vendor/topbar"
 
 const Hooks = {}
 
+Hooks.ImageFallback = {
+  mounted() {
+    this._hideBrokenImage = () => {
+      this.el.hidden = true
+    }
+
+    this.el.addEventListener("error", this._hideBrokenImage)
+    this.updateVisibility()
+  },
+
+  updated() {
+    this.updateVisibility()
+  },
+
+  destroyed() {
+    this.el.removeEventListener("error", this._hideBrokenImage)
+  },
+
+  updateVisibility() {
+    this.el.hidden = this.el.complete && this.el.naturalWidth === 0
+  }
+}
+
 Hooks.LocationAutocomplete = {
   mounted() {
     this.setupInput()

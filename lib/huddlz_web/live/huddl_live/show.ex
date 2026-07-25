@@ -71,13 +71,17 @@ defmodule HuddlzWeb.HuddlLive.Show do
       sidebar_owned_groups={@sidebar_owned_groups}
       active="discover"
     >
-      <div class={["hero", status_hero_class(@huddl.status)]}>
-        <img
-          :if={@huddl.display_image_url}
-          class="hero-img"
-          src={HuddlImages.url(@huddl.display_image_url)}
-          alt={@huddl.title}
-        />
+      <div class={["hero", "huddl-hero", status_hero_class(@huddl.status)]}>
+        <div class="hero-media">
+          <img
+            :if={@huddl.display_image_url}
+            id={"huddl-cover-#{@huddl.id}"}
+            class="hero-img"
+            src={HuddlImages.url(@huddl.display_image_url)}
+            alt=""
+            phx-hook="ImageFallback"
+          />
+        </div>
         <div class="hero-content">
           <span class={["eyebrow", status_eyebrow_class(@huddl.status)]}>
             {hero_eyebrow(@huddl)}
