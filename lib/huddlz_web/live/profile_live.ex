@@ -37,6 +37,8 @@ defmodule HuddlzWeb.ProfileLive do
       )
       |> to_form()
 
+    email_form = email_form(user)
+
     # Load user with profile picture calculation
     {:ok, user_with_avatar} =
       Ash.load(
@@ -49,6 +51,7 @@ defmodule HuddlzWeb.ProfileLive do
      socket
      |> assign(:page_title, "Profile")
      |> assign(:form, form)
+     |> assign(:email_form, email_form)
      |> assign(:password_form, password_form)
      |> assign(:current_user, user_with_avatar)
      |> assign(:avatar_error, nil)
@@ -117,7 +120,7 @@ defmodule HuddlzWeb.ProfileLive do
                   {role_label(@current_user.role)}
                 </span>
               </div>
-              <p class="form-help">Your email can't be changed from this page.</p>
+              <p class="form-help">This is the email you use to sign in.</p>
             </div>
             <.input
               field={@form[:display_name]}
@@ -128,6 +131,44 @@ defmodule HuddlzWeb.ProfileLive do
           </div>
           <div class="form-foot">
             <.button variant={:primary} type="submit">Save changes</.button>
+          </div>
+        </div>
+      </.form>
+
+      <.form
+        for={@email_form}
+        id="email-change-form"
+        phx-submit="change_email"
+        phx-change="validate_email"
+      >
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Change email</h2>
+              <div class="panel-sub">
+                Update your sign-in email after confirming your current password.
+              </div>
+            </div>
+          </div>
+          <div class="form-grid">
+            <.input
+              field={@email_form[:email]}
+              type="text"
+              label="New email"
+              placeholder="Enter your new email"
+              autocomplete="email"
+              inputmode="email"
+            />
+            <.input
+              field={@email_form[:current_password]}
+              type="password"
+              label="Confirm current password"
+              placeholder="Enter your current password"
+              autocomplete="current-password"
+            />
+          </div>
+          <div class="form-foot">
+            <.button variant={:primary} type="submit">Change email</.button>
           </div>
         </div>
       </.form>
@@ -272,6 +313,46 @@ defmodule HuddlzWeb.ProfileLive do
   end
 
   @impl true
+  def handle_event("validate_email", %{"email_change" => params}, socket) do
+    form =
+      socket.assigns.email_form.source
+      |> AshPhoenix.Form.validate(params)
+      |> to_form()
+
+    {:noreply, assign(socket, :email_form, form)}
+  end
+
+  @impl true
+  def handle_event("change_email", %{"email_change" => params}, socket) do
+    case AshPhoenix.Form.submit(socket.assigns.email_form.source, params: params) do
+      {:ok, updated_user} ->
+        {:ok, updated_user} =
+          Ash.load(
+            updated_user,
+            [:current_profile_picture_url, :home_location, :home_latitude, :home_longitude],
+            actor: updated_user
+          )
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Email updated successfully")
+         |> assign(:current_user, updated_user)
+         |> assign(:email_form, email_form(updated_user))}
+
+      {:error, form} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Email could not be updated. Please check the errors below.")
+         |> assign(
+           :email_form,
+           form
+           |> AshPhoenix.Form.clear_value(:current_password)
+           |> to_form()
+         )}
+    end
+  end
+
+  @impl true
   def handle_event("validate_password", %{"form" => params}, socket) do
     form =
       socket.assigns.password_form.source
@@ -392,6 +473,34 @@ defmodule HuddlzWeb.ProfileLive do
         {:error, reason}
     end
   end
+
+  defp email_form(user) do
+    user
+    |> AshPhoenix.Form.for_update(:change_email,
+      domain: Huddlz.Accounts,
+      forms: [auto?: true],
+      actor: user,
+      as: "email_change",
+      params: %{"email" => ""},
+      post_process_errors: &email_change_error/3
+    )
+    |> to_form()
+  end
+
+  defp email_change_error(_form, _path, {:email, message, _vars} = error) do
+    cond do
+      String.starts_with?(message, "must match the pattern") ->
+        {:email, "Enter a valid email address.", []}
+
+      message == "has already been taken" ->
+        {:email, "That email is already in use.", []}
+
+      true ->
+        error
+    end
+  end
+
+  defp email_change_error(_form, _path, error), do: error
 
   defp handle_upload_progress(:avatar, entry, socket) do
     if entry.done? do

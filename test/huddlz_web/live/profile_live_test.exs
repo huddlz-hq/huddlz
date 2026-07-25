@@ -1,10 +1,14 @@
 defmodule HuddlzWeb.ProfileLiveTest do
   use HuddlzWeb.ConnCase, async: true
+  use Oban.Testing, repo: Huddlz.Repo
 
   import Mox
   import PhoenixTest
   import Phoenix.LiveViewTest
   import Huddlz.Test.Helpers.Authentication
+
+  alias Huddlz.Accounts.User
+  alias Huddlz.Notifications.DeliverWorker
 
   setup :verify_on_exit!
 
@@ -134,6 +138,124 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> visit("/profile")
       |> fill_in("Display name", with: "")
       |> assert_has("form")
+    end
+  end
+
+  describe "Email change" do
+    setup do
+      user =
+        generate(
+          user_with_password(
+            email: "profile-email-#{System.unique_integer([:positive])}@example.com",
+            display_name: "Email Change User",
+            password: "OldPassword123!"
+          )
+        )
+
+      %{user: user}
+    end
+
+    test "changes the signed-in identity and sends both security notices", %{
+      conn: conn,
+      user: user
+    } do
+      new_email = "changed-#{System.unique_integer([:positive])}@example.com"
+
+      session =
+        conn
+        |> login(user)
+        |> visit("/profile")
+        |> assert_has("#email-change-form")
+        |> fill_in("New email", with: new_email)
+        |> fill_in("Confirm current password", with: "OldPassword123!")
+        |> click_button("Change email")
+        |> assert_has("*", text: "Email updated successfully")
+        |> assert_has("aside.sidebar .sb-user", text: new_email)
+
+      session
+      |> visit("/profile/notifications")
+      |> assert_has("aside.sidebar .sb-user", text: new_email)
+      |> visit("/profile")
+      |> refute_has("#email_change_current_password[value='OldPassword123!']")
+
+      assert User |> Ash.get!(user.id, authorize?: false) |> Map.fetch!(:email) |> to_string() ==
+               new_email
+
+      enqueued =
+        all_enqueued(worker: DeliverWorker)
+        |> Enum.filter(&(&1.args["trigger"] == "email_changed"))
+
+      assert enqueued |> Enum.map(& &1.args["payload"]["audience"]) |> Enum.sort() ==
+               ["new", "old"]
+    end
+
+    test "shows a field error for an invalid email and clears the submitted password", %{
+      conn: conn,
+      user: user
+    } do
+      session =
+        conn
+        |> login(user)
+        |> visit("/profile")
+        |> fill_in("New email", with: "not-an-email")
+        |> fill_in("Confirm current password", with: "OldPassword123!")
+        |> click_button("Change email")
+
+      session
+      |> assert_has("#email_change_email[aria-invalid='true']")
+      |> assert_has("#email_change_email-error-0", text: "Enter a valid email address.")
+      |> refute_has("#email_change_current_password[value='OldPassword123!']")
+
+      assert User |> Ash.get!(user.id, authorize?: false) |> Map.fetch!(:email) == user.email
+    end
+
+    test "rejects the current email as the new email", %{conn: conn, user: user} do
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> fill_in("New email", with: to_string(user.email))
+      |> fill_in("Confirm current password", with: "OldPassword123!")
+      |> click_button("Change email")
+      |> assert_has("#email_change_email-error-0", text: "Enter a different email address.")
+
+      refute_enqueued(worker: DeliverWorker, args: %{"trigger" => "email_changed"})
+    end
+
+    test "shows a field error when the new email is already used", %{conn: conn, user: user} do
+      taken_email = "taken-#{System.unique_integer([:positive])}@example.com"
+      _other_user = create_user(%{email: taken_email})
+
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> fill_in("New email", with: taken_email)
+      |> fill_in("Confirm current password", with: "OldPassword123!")
+      |> click_button("Change email")
+      |> assert_has("#email_change_email-error-0", text: "That email is already in use.")
+
+      assert User |> Ash.get!(user.id, authorize?: false) |> Map.fetch!(:email) == user.email
+    end
+
+    test "wrong current password leaves the identity unchanged and clears the password", %{
+      conn: conn,
+      user: user
+    } do
+      session =
+        conn
+        |> login(user)
+        |> visit("/profile")
+        |> fill_in(
+          "New email",
+          with: "wrong-password-#{System.unique_integer([:positive])}@example.com"
+        )
+        |> fill_in("Confirm current password", with: "WrongPassword")
+        |> click_button("Change email")
+        |> assert_has("*", text: "Email could not be updated")
+        |> refute_has("#email_change_current_password[value='WrongPassword']")
+
+      assert User |> Ash.get!(user.id, authorize?: false) |> Map.fetch!(:email) == user.email
+      refute_enqueued(worker: DeliverWorker, args: %{"trigger" => "email_changed"})
+      assert_has(session, "#email-change-form")
     end
   end
 

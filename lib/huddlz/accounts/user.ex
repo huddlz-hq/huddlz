@@ -278,6 +278,20 @@ defmodule Huddlz.Accounts.User do
       validate {AshAuthentication.Strategy.Password.PasswordValidation,
                 strategy_name: :password, password_argument: :current_password}
 
+      validate fn changeset, _context ->
+        current_email = to_string(changeset.data.email)
+
+        requested_email =
+          Map.get(changeset.params, :email) || Map.get(changeset.params, "email")
+
+        if not is_nil(requested_email) and
+             String.downcase(to_string(requested_email)) == String.downcase(current_email) do
+          {:error, field: :email, message: "Enter a different email address."}
+        else
+          :ok
+        end
+      end
+
       change after_action(fn changeset, user, _ctx ->
                previous_email = to_string(changeset.data.email)
                new_email = to_string(user.email)
