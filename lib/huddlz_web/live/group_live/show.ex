@@ -7,7 +7,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   import HuddlzWeb.Live.Helpers.HuddlCardHelpers
 
   alias Huddlz.Communities
-  alias Huddlz.Communities.{GroupLocation, GroupMember, Huddl}
+  alias Huddlz.Communities.{GroupLocation, GroupMember, Huddl, MembershipEvents}
   alias Huddlz.Storage.GroupImages
   alias Huddlz.Storage.HuddlImages
   alias HuddlzWeb.Avatar
@@ -22,7 +22,10 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :leave_dialog_open, false)}
+    {:ok,
+     socket
+     |> assign(:leave_dialog_open, false)
+     |> assign(:subscribed_group_id, nil)}
   end
 
   @impl true
@@ -37,6 +40,7 @@ defmodule HuddlzWeb.GroupLive.Show do
 
         {:noreply,
          socket
+         |> subscribe_to_membership_changes(group)
          |> assign(:page_title, group.name)
          |> assign(:meta, group_meta(group))
          |> assign(:group, group)
@@ -56,6 +60,47 @@ defmodule HuddlzWeb.GroupLive.Show do
            resource_name: "Group",
            fallback_path: ~p"/discover?#{[scope: "groups"]}"
          )}
+    end
+  end
+
+  @impl true
+  def handle_info(
+        {:group_membership_changed, group_id},
+        %{assigns: %{group: %{id: group_id}}} = socket
+      ) do
+    {:noreply, refresh_membership_state(socket)}
+  end
+
+  def handle_info({:group_membership_changed, _group_id}, socket), do: {:noreply, socket}
+
+  defp subscribe_to_membership_changes(socket, group) do
+    if connected?(socket) and socket.assigns.subscribed_group_id != group.id do
+      :ok = MembershipEvents.subscribe(group.id)
+      assign(socket, :subscribed_group_id, group.id)
+    else
+      socket
+    end
+  end
+
+  defp refresh_membership_state(socket) do
+    user = socket.assigns.current_user
+
+    case get_group_by_slug(socket.assigns.group.slug, user) do
+      {:ok, group} ->
+        membership = current_user_membership(group, user)
+
+        socket
+        |> assign(:group, group)
+        |> assign(:members, get_members(group, user, !is_nil(membership)))
+        |> assign(:member_count, group.member_count)
+        |> assign(:is_member, !is_nil(membership))
+        |> assign_action_permissions(group, user, membership)
+
+      {:error, _reason} ->
+        handle_error(socket, :not_found,
+          resource_name: "Group",
+          fallback_path: ~p"/discover?#{[scope: "groups"]}"
+        )
     end
   end
 

@@ -99,6 +99,34 @@ defmodule HuddlzWeb.OrganizeLiveMembersTest do
            ) == {:ok, nil}
   end
 
+  test "organizer cannot confirm a stale removal after the member is promoted", %{
+    conn: conn,
+    owner: owner,
+    organizer: organizer,
+    group: group,
+    member_membership: member_membership
+  } do
+    {:ok, view, _html} =
+      conn
+      |> login(organizer)
+      |> live(~p"/organize/#{group.slug}/members")
+
+    view
+    |> element("#remove-member-#{member_membership.id}")
+    |> render_click()
+
+    assert {:ok, _membership} =
+             Communities.change_member_role(member_membership, :organizer, actor: owner)
+
+    assert has_element?(view, "#member-action-dialog")
+
+    view
+    |> element("#member-action-form")
+    |> render_submit()
+
+    assert Ash.get!(GroupMember, member_membership.id, authorize?: false).role == :organizer
+  end
+
   test "ownership transfer requires typed confirmation and swaps the roles", %{
     conn: conn,
     owner: owner,
@@ -155,5 +183,42 @@ defmodule HuddlzWeb.OrganizeLiveMembersTest do
              Communities.change_member_role(organizer_membership, :member, actor: owner)
 
     assert_redirect(view, ~p"/organize")
+  end
+
+  test "an already-mounted group page updates the affected member's access", %{
+    conn: conn,
+    owner: owner,
+    member: member,
+    group: group,
+    member_membership: member_membership
+  } do
+    {:ok, view, _html} =
+      conn
+      |> login(member)
+      |> live(~p"/groups/#{group.slug}")
+
+    create_huddl_selector = "a[href='/groups/#{group.slug}/huddlz/new']"
+    refute has_element?(view, create_huddl_selector)
+
+    assert {:ok, promoted_membership} =
+             Communities.change_member_role(member_membership, :organizer, actor: owner)
+
+    assert has_element?(view, create_huddl_selector)
+
+    assert :ok =
+             Communities.remove_member(
+               promoted_membership,
+               group.id,
+               member.id,
+               actor: owner
+             )
+
+    refute has_element?(view, create_huddl_selector)
+
+    assert has_element?(
+             view,
+             ".huddl-side-section .muted",
+             "Only members can see who's in this group."
+           )
   end
 end
