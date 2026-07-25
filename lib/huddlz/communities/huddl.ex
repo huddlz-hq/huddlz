@@ -341,6 +341,19 @@ defmodule Huddlz.Communities.Huddl do
       filter expr(id == ^arg(:id))
     end
 
+    read :get_for_mutation do
+      description """
+      Internal, visibility-free fetch of a single huddl by id for trusted
+      attendance and capacity changes that must lock the current database row.
+      Deliberately omits FilterByVisibility; invoke only with
+      `authorize?: false`.
+      """
+
+      get? true
+      argument :id, :uuid, allow_nil?: false
+      filter expr(id == ^arg(:id))
+    end
+
     read :huddlz_for_organizer do
       description """
       Huddlz across every group the actor owns or organizes.

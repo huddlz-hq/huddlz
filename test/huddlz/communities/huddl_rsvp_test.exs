@@ -452,6 +452,120 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
     end
   end
 
+  describe "members-only huddl mutations" do
+    setup do
+      owner = generate(user(role: :user))
+      member = generate(user(role: :user))
+      non_member = generate(user(role: :user))
+
+      {group, _members} =
+        generate_group_with_members(
+          owner: owner,
+          members: [%{user: member, role: :member}]
+        )
+
+      huddl =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            is_private: true,
+            max_attendees: nil
+          )
+        )
+
+      %{owner: owner, member: member, non_member: non_member, huddl: huddl}
+    end
+
+    test "member can RSVP with unlimited capacity and cancel", %{
+      member: member,
+      huddl: huddl
+    } do
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
+      |> Ash.update!()
+
+      assert rsvp_count(huddl, member) == 2
+
+      huddl
+      |> Ash.reload!(actor: member)
+      |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: member)
+      |> Ash.update!()
+
+      assert rsvp_count(huddl, member) == 1
+    end
+
+    test "member can RSVP with finite capacity", %{
+      owner: owner,
+      member: member,
+      huddl: huddl
+    } do
+      capped =
+        huddl
+        |> Ash.Changeset.for_update(:update, %{max_attendees: 2}, actor: owner)
+        |> Ash.update!()
+
+      capped
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
+      |> Ash.update!()
+
+      assert rsvp_count(capped, member) == 2
+    end
+
+    test "organizer capacity changes use the current members-only RSVP count", %{
+      owner: owner,
+      member: member,
+      huddl: huddl
+    } do
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
+      |> Ash.update!()
+
+      assert_raise Ash.Error.Invalid,
+                   ~r/cannot be less than the current RSVP count/,
+                   fn ->
+                     huddl
+                     |> Ash.reload!(actor: owner)
+                     |> Ash.Changeset.for_update(:update, %{max_attendees: 1}, actor: owner)
+                     |> Ash.update!()
+                   end
+
+      updated =
+        huddl
+        |> Ash.reload!(actor: owner)
+        |> Ash.Changeset.for_update(:update, %{max_attendees: 3}, actor: owner)
+        |> Ash.update!()
+
+      assert updated.max_attendees == 3
+    end
+
+    test "non-member cannot RSVP", %{owner: owner, non_member: non_member, huddl: huddl} do
+      assert_raise Ash.Error.Forbidden, fn ->
+        huddl
+        |> Ash.Changeset.for_update(:rsvp, %{}, actor: non_member)
+        |> Ash.update!()
+      end
+
+      assert rsvp_count(huddl, owner) == 1
+    end
+
+    test "a missing locked huddl returns an Ash error", %{
+      owner: owner,
+      member: member,
+      huddl: huddl
+    } do
+      Ash.destroy!(huddl, actor: owner)
+
+      assert {:error, error} =
+               huddl
+               |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
+               |> Ash.update(authorize?: false)
+
+      assert Exception.message(error) =~ "This huddl is no longer available"
+    end
+  end
+
   describe "RSVP cancellation functionality" do
     setup do
       owner = generate(user(role: :user))
@@ -817,5 +931,12 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
   # Helper to load the rsvp_count aggregate from the database
   defp rsvp_count(huddl) do
     huddl |> Ash.reload!() |> Ash.load!(:rsvp_count, authorize?: false) |> Map.get(:rsvp_count)
+  end
+
+  defp rsvp_count(huddl, actor) do
+    huddl
+    |> Ash.reload!(actor: actor)
+    |> Ash.load!(:rsvp_count, actor: actor)
+    |> Map.get(:rsvp_count)
   end
 end
