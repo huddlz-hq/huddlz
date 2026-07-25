@@ -8,9 +8,10 @@ defmodule HuddlzWeb.AuthLive.Register do
   alias AshPhoenix.Form
   alias Huddlz.Accounts.DisplayNameGenerator
   alias Huddlz.Accounts.User
+  alias HuddlzWeb.AuthReturnTo
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
     strategy = AshAuthentication.Info.strategy!(User, :password)
 
     context = %{
@@ -37,6 +38,7 @@ defmodule HuddlzWeb.AuthLive.Register do
      |> assign(:page_title, "Create account")
      |> assign(:body_class, "is-auth")
      |> assign(:check_errors, false)
+     |> assign(:return_to, AuthReturnTo.validate(params["return_to"]))
      |> assign_form(password_form)}
   end
 
@@ -106,7 +108,7 @@ defmodule HuddlzWeb.AuthLive.Register do
       </.form>
 
       <div class="auth-aside">
-        Already have an account? <.link navigate={~p"/sign-in"}>Sign in</.link>
+        Already have an account? <.link navigate={sign_in_path(@return_to)}>Sign in</.link>
       </div>
     </Layouts.auth_shell>
     """
@@ -172,14 +174,14 @@ defmodule HuddlzWeb.AuthLive.Register do
     token = result.__metadata__.token
 
     if token do
-      redirect(socket, to: "/auth/user/password/sign_in_with_token?token=#{token}")
+      redirect(socket, to: sign_in_token_path(token, socket.assigns.return_to))
     else
       socket
       |> put_flash(
         :error,
         "Registration succeeded but automatic sign-in failed. Please sign in manually."
       )
-      |> redirect(to: "/sign-in")
+      |> redirect(to: sign_in_path(socket.assigns.return_to))
     end
   end
 
@@ -197,5 +199,16 @@ defmodule HuddlzWeb.AuthLive.Register do
     else
       "Registration failed. Please check your inputs and try again."
     end
+  end
+
+  defp sign_in_path(nil), do: ~p"/sign-in"
+
+  defp sign_in_path(return_to), do: ~p"/sign-in?#{[return_to: return_to]}"
+
+  defp sign_in_token_path(token, nil), do: "/auth/user/password/sign_in_with_token?token=#{token}"
+
+  defp sign_in_token_path(token, return_to) do
+    "/auth/user/password/sign_in_with_token?" <>
+      URI.encode_query(token: token, return_to: return_to)
   end
 end

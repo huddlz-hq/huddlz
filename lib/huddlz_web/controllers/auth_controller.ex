@@ -2,8 +2,10 @@ defmodule HuddlzWeb.AuthController do
   use HuddlzWeb, :controller
   use AshAuthentication.Phoenix.Controller
 
+  alias HuddlzWeb.AuthReturnTo
+
   def success(conn, activity, user, _token) do
-    return_to = get_session(conn, :return_to) || ~p"/"
+    return_to = return_to(conn)
 
     message =
       case activity do
@@ -56,11 +58,17 @@ defmodule HuddlzWeb.AuthController do
   end
 
   def sign_out(conn, _params) do
-    return_to = get_session(conn, :return_to) || ~p"/"
+    return_to = return_to(conn)
 
     conn
     |> clear_session(:huddlz)
     |> put_flash(:info, "You are now signed out")
     |> redirect(to: return_to)
+  end
+
+  defp return_to(conn) do
+    [conn.params["return_to"], get_session(conn, :return_to)]
+    |> Enum.find_value(&AuthReturnTo.validate/1)
+    |> Kernel.||(~p"/")
   end
 end
