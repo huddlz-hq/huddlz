@@ -10,11 +10,13 @@ defmodule Huddlz.Communities.GroupMember.Changes.NotifyRemoved do
   use Ash.Resource.Change
 
   alias Huddlz.Communities.Group
+  alias Huddlz.Communities.MembershipEvents
   alias Huddlz.Notifications
 
   @impl true
   def change(changeset, _opts, _context) do
-    Ash.Changeset.after_action(changeset, fn cs, member ->
+    changeset
+    |> Ash.Changeset.after_action(fn cs, member ->
       actor_id = actor_id(cs)
 
       if member.user_id != actor_id do
@@ -22,6 +24,14 @@ defmodule Huddlz.Communities.GroupMember.Changes.NotifyRemoved do
       end
 
       {:ok, member}
+    end)
+    |> Ash.Changeset.after_transaction(fn
+      _changeset, {:ok, member} = result ->
+        MembershipEvents.broadcast(member.group_id)
+        result
+
+      _changeset, result ->
+        result
     end)
   end
 

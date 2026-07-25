@@ -4,8 +4,7 @@ defmodule Huddlz.Communities.Group.Changes.TransferOwnership do
 
     * Sets `owner_id` to the new owner.
     * Demotes the previous owner's GroupMember row to `:organizer`.
-    * Promotes the new owner's GroupMember row to `:owner`, creating the
-      membership if the new owner is not already in the group.
+    * Promotes the new owner's existing GroupMember row to `:owner`.
     * Enqueues B7 notifications to both the previous and new owners.
 
   Runs as a single `after_action` hook so it lands inside the same Ash
@@ -18,6 +17,7 @@ defmodule Huddlz.Communities.Group.Changes.TransferOwnership do
 
   alias Huddlz.Accounts.User
   alias Huddlz.Communities.GroupMember
+  alias Huddlz.Communities.MembershipEvents
   alias Huddlz.Notifications
 
   @impl true
@@ -33,6 +33,14 @@ defmodule Huddlz.Communities.Group.Changes.TransferOwnership do
         notify(group, previous_owner_id, new_owner_id)
         {:ok, group}
       end
+    end)
+    |> Ash.Changeset.after_transaction(fn
+      _changeset, {:ok, group} = result ->
+        MembershipEvents.broadcast(group.id)
+        result
+
+      _changeset, result ->
+        result
     end)
   end
 
@@ -92,13 +100,7 @@ defmodule Huddlz.Communities.Group.Changes.TransferOwnership do
   defp promote(group_id, user_id) do
     case fetch_membership(group_id, user_id) do
       nil ->
-        GroupMember
-        |> Ash.Changeset.for_create(:add_owner, %{
-          group_id: group_id,
-          user_id: user_id
-        })
-        |> Ash.create(authorize?: false)
-        |> ok_or_error()
+        {:error, "new owner must already be a group member"}
 
       membership ->
         membership

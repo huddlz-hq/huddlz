@@ -14,6 +14,7 @@ defmodule HuddlzWeb.OrganizeLive do
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities
+  alias Huddlz.Communities.MembershipEvents
   alias HuddlzWeb.Layouts
 
   @group_loads [:member_count]
@@ -36,7 +37,10 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:huddlz_filter, :live)
      |> assign(:upcoming_huddlz, [])
      |> assign(:open_rsvps, 0)
-     |> assign(:members, [])}
+     |> assign(:members, [])
+     |> assign(:subscribed_group_id, nil)
+     |> assign(:pending_member_action, nil)
+     |> assign(:ownership_confirmation, "")}
   end
 
   @impl true
@@ -64,6 +68,7 @@ defmodule HuddlzWeb.OrganizeLive do
     case load_group(slug, user) do
       {:ok, group} ->
         socket
+        |> subscribe_to_membership_changes(group)
         |> assign(:group, group)
         |> assign(:page_title, "#{group.name} · Organizer")
         |> load_section(action, group, user)
@@ -129,6 +134,15 @@ defmodule HuddlzWeb.OrganizeLive do
     )
   end
 
+  defp subscribe_to_membership_changes(socket, group) do
+    if connected?(socket) and socket.assigns.subscribed_group_id != group.id do
+      :ok = MembershipEvents.subscribe(group.id)
+      assign(socket, :subscribed_group_id, group.id)
+    else
+      socket
+    end
+  end
+
   defp parse_huddlz_filter("past"), do: :past
   defp parse_huddlz_filter(_), do: :live
 
@@ -157,8 +171,15 @@ defmodule HuddlzWeb.OrganizeLive do
         <% :huddlz -> %>
           <.huddlz_view group={@group} huddlz={@huddlz_list} filter={@huddlz_filter} />
         <% :members -> %>
-          <.members_view group={@group} members={@members} />
+          <.members_view group={@group} members={@members} current_user={@current_user} />
       <% end %>
+
+      <.member_action_dialog
+        :if={@pending_member_action}
+        action={@pending_member_action}
+        group={@group}
+        ownership_confirmation={@ownership_confirmation}
+      />
     </Layouts.app>
     """
   end
@@ -410,6 +431,7 @@ defmodule HuddlzWeb.OrganizeLive do
   # ─────────────────────────────────────────  MEMBERS  ───
   attr :group, :map, required: true
   attr :members, :list, required: true
+  attr :current_user, :map, required: true
 
   defp members_view(assigns) do
     by_role = Enum.group_by(assigns.members, & &1.role)
@@ -448,12 +470,19 @@ defmodule HuddlzWeb.OrganizeLive do
             <p class="muted role-section-empty">{role_empty_copy(role)}</p>
           <% else %>
             <div class="row-list">
-              <div :for={entry <- rows} class="row row-split">
+              <div :for={entry <- rows} class="row row-split gap-4">
                 <div>
                   <div class="row-title">{member_name(entry)}</div>
                   <div class="meta">{format_member_meta(entry)}</div>
                 </div>
-                <span class={["pill", role_pill_class(role)]}>{role_label(role)}</span>
+                <div class="flex flex-wrap items-center justify-end gap-2">
+                  <span class={["pill", role_pill_class(role)]}>{role_label(role)}</span>
+                  <.member_actions
+                    entry={entry}
+                    group={@group}
+                    current_user={@current_user}
+                  />
+                </div>
               </div>
             </div>
           <% end %>
@@ -462,6 +491,341 @@ defmodule HuddlzWeb.OrganizeLive do
     </div>
     """
   end
+
+  attr :entry, :map, required: true
+  attr :group, :map, required: true
+  attr :current_user, :map, required: true
+
+  defp member_actions(assigns) do
+    assigns =
+      assign(assigns,
+        can_promote:
+          member_action_allowed?(:promote, assigns.entry, assigns.group, assigns.current_user),
+        can_demote:
+          member_action_allowed?(:demote, assigns.entry, assigns.group, assigns.current_user),
+        can_remove:
+          member_action_allowed?(:remove, assigns.entry, assigns.group, assigns.current_user),
+        can_transfer:
+          member_action_allowed?(:transfer, assigns.entry, assigns.group, assigns.current_user)
+      )
+
+    ~H"""
+    <div
+      :if={@can_promote or @can_demote or @can_remove or @can_transfer}
+      class="flex flex-wrap justify-end gap-2"
+      aria-label={"Manage #{member_name(@entry)}"}
+    >
+      <.button
+        :if={@can_promote}
+        id={"promote-member-#{@entry.id}"}
+        phx-click="open_member_action"
+        phx-value-id={@entry.id}
+        phx-value-action="promote"
+        class="text-sm"
+      >
+        Promote
+      </.button>
+      <.button
+        :if={@can_demote}
+        id={"demote-member-#{@entry.id}"}
+        phx-click="open_member_action"
+        phx-value-id={@entry.id}
+        phx-value-action="demote"
+        class="text-sm"
+      >
+        Demote
+      </.button>
+      <.button
+        :if={@can_transfer}
+        id={"transfer-owner-#{@entry.id}"}
+        phx-click="open_member_action"
+        phx-value-id={@entry.id}
+        phx-value-action="transfer"
+        class="text-sm"
+      >
+        Transfer ownership
+      </.button>
+      <.button
+        :if={@can_remove}
+        id={"remove-member-#{@entry.id}"}
+        variant={:destructive}
+        phx-click="open_member_action"
+        phx-value-id={@entry.id}
+        phx-value-action="remove"
+        class="text-sm"
+      >
+        Remove
+      </.button>
+    </div>
+    """
+  end
+
+  attr :action, :map, required: true
+  attr :group, :map, required: true
+  attr :ownership_confirmation, :string, required: true
+
+  defp member_action_dialog(assigns) do
+    ~H"""
+    <.modal
+      id="member-action-dialog"
+      show
+      on_cancel={JS.push("cancel_member_action")}
+    >
+      <div class="pr-8">
+        <h2 id="member-action-dialog-title" class="text-xl font-bold text-base-content">
+          {member_action_title(@action)}
+        </h2>
+        <p class="mt-3 text-sm leading-6 text-base-content/70">
+          {member_action_description(@action, @group)}
+        </p>
+      </div>
+
+      <form
+        id="member-action-form"
+        phx-submit="confirm_member_action"
+        phx-change="validate_member_action_confirmation"
+        class="mt-6"
+      >
+        <.input
+          :if={@action.type == :transfer}
+          id="ownership-confirmation"
+          name="confirmation"
+          label={"Type #{@group.name} to confirm"}
+          value={@ownership_confirmation}
+          autocomplete="off"
+          help="Ownership transfer changes who controls the group immediately."
+        />
+
+        <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <.button id="member-action-cancel" phx-click="cancel_member_action">
+            Cancel
+          </.button>
+          <.button
+            id="member-action-confirm"
+            type="submit"
+            variant={member_action_button_variant(@action.type)}
+            disabled={@action.type == :transfer and @ownership_confirmation != to_string(@group.name)}
+            phx-disable-with="Saving..."
+          >
+            {member_action_confirm_label(@action.type)}
+          </.button>
+        </div>
+      </form>
+    </.modal>
+    """
+  end
+
+  @impl true
+  def handle_event("open_member_action", %{"id" => id, "action" => action}, socket) do
+    with {:ok, action_type} <- parse_member_action(action),
+         %{} = member <- Enum.find(socket.assigns.members, &(&1.id == id)),
+         true <-
+           member_action_allowed?(
+             action_type,
+             member,
+             socket.assigns.group,
+             socket.assigns.current_user
+           ) do
+      {:noreply,
+       socket
+       |> assign(:pending_member_action, %{type: action_type, member: member})
+       |> assign(:ownership_confirmation, "")}
+    else
+      _ -> {:noreply, put_flash(socket, :error, "That membership action is not available.")}
+    end
+  end
+
+  def handle_event("cancel_member_action", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:pending_member_action, nil)
+     |> assign(:ownership_confirmation, "")}
+  end
+
+  def handle_event(
+        "validate_member_action_confirmation",
+        %{"confirmation" => confirmation},
+        socket
+      ) do
+    {:noreply, assign(socket, :ownership_confirmation, confirmation)}
+  end
+
+  def handle_event("validate_member_action_confirmation", _params, socket), do: {:noreply, socket}
+
+  def handle_event(
+        "confirm_member_action",
+        _params,
+        %{assigns: %{pending_member_action: nil}} = socket
+      ) do
+    {:noreply, socket}
+  end
+
+  def handle_event("confirm_member_action", _params, socket) do
+    action = socket.assigns.pending_member_action
+
+    if confirmation_valid?(action.type, socket) do
+      perform_member_action(socket, action)
+    else
+      {:noreply, put_flash(socket, :error, "Type the group name exactly to transfer ownership.")}
+    end
+  end
+
+  @impl true
+  def handle_info(
+        {:group_membership_changed, group_id},
+        %{assigns: %{group: %{id: group_id}}} = socket
+      ) do
+    {:noreply, refresh_after_membership_change(socket)}
+  end
+
+  def handle_info({:group_membership_changed, _group_id}, socket), do: {:noreply, socket}
+
+  defp perform_member_action(socket, action) do
+    case run_member_action(action, socket.assigns.group, socket.assigns.current_user) do
+      {:ok, _result} ->
+        {:noreply,
+         socket
+         |> assign(:pending_member_action, nil)
+         |> assign(:ownership_confirmation, "")
+         |> put_flash(:info, member_action_success(action))
+         |> refresh_after_membership_change()}
+
+      :ok ->
+        {:noreply,
+         socket
+         |> assign(:pending_member_action, nil)
+         |> assign(:ownership_confirmation, "")
+         |> put_flash(:info, member_action_success(action))
+         |> refresh_after_membership_change()}
+
+      {:error, _error} ->
+        {:noreply,
+         socket
+         |> assign(:pending_member_action, nil)
+         |> assign(:ownership_confirmation, "")
+         |> put_flash(:error, "The membership could not be updated. Please try again.")}
+    end
+  end
+
+  defp run_member_action(%{type: :promote, member: member}, _group, user) do
+    Communities.change_member_role(member, :organizer, actor: user)
+  end
+
+  defp run_member_action(%{type: :demote, member: member}, _group, user) do
+    Communities.change_member_role(member, :member, actor: user)
+  end
+
+  defp run_member_action(%{type: :remove, member: member}, group, user) do
+    Communities.remove_member(member, group.id, member.user_id, actor: user)
+  end
+
+  defp run_member_action(%{type: :transfer, member: member}, group, user) do
+    Communities.transfer_group_ownership(group, member.user_id, actor: user)
+  end
+
+  defp refresh_after_membership_change(socket) do
+    user = socket.assigns.current_user
+    group = socket.assigns.group
+
+    case load_group(group.slug, user) do
+      {:ok, reloaded_group} ->
+        socket
+        |> assign(:group, reloaded_group)
+        |> refresh_members_if_visible(reloaded_group, user)
+
+      :error ->
+        socket
+        |> put_flash(:error, "Your organizer access to #{group.name} has changed.")
+        |> push_navigate(to: ~p"/organize")
+    end
+  end
+
+  defp refresh_members_if_visible(%{assigns: %{live_action: :members}} = socket, group, user) do
+    assign(socket, :members, list_group_members(group, user))
+  end
+
+  defp refresh_members_if_visible(socket, _group, _user), do: socket
+
+  defp member_action_allowed?(:promote, %{role: :member} = member, _group, user) do
+    Ash.can?({member, :change_role, %{role: :organizer}}, user)
+  end
+
+  defp member_action_allowed?(:demote, %{role: :organizer} = member, _group, user) do
+    Ash.can?({member, :change_role, %{role: :member}}, user)
+  end
+
+  defp member_action_allowed?(:remove, %{role: role} = member, group, user)
+       when role in [:member, :organizer] do
+    Ash.can?(
+      {member, :remove_member, %{group_id: group.id, user_id: member.user_id}},
+      user
+    )
+  end
+
+  defp member_action_allowed?(:transfer, %{role: role} = member, group, user)
+       when role in [:member, :organizer] do
+    Ash.can?({group, :transfer_ownership, %{new_owner_id: member.user_id}}, user)
+  end
+
+  defp member_action_allowed?(_action, _member, _group, _user), do: false
+
+  defp parse_member_action("promote"), do: {:ok, :promote}
+  defp parse_member_action("demote"), do: {:ok, :demote}
+  defp parse_member_action("remove"), do: {:ok, :remove}
+  defp parse_member_action("transfer"), do: {:ok, :transfer}
+  defp parse_member_action(_action), do: :error
+
+  defp confirmation_valid?(:transfer, socket) do
+    socket.assigns.ownership_confirmation == to_string(socket.assigns.group.name)
+  end
+
+  defp confirmation_valid?(_action, _socket), do: true
+
+  defp member_action_title(%{type: :promote, member: member}),
+    do: "Promote #{member_name(member)}?"
+
+  defp member_action_title(%{type: :demote, member: member}),
+    do: "Demote #{member_name(member)}?"
+
+  defp member_action_title(%{type: :remove, member: member}),
+    do: "Remove #{member_name(member)}?"
+
+  defp member_action_title(%{type: :transfer, member: member}),
+    do: "Transfer ownership to #{member_name(member)}?"
+
+  defp member_action_description(%{type: :promote}, group),
+    do: "This person will be able to organize #{group.name} and manage regular members."
+
+  defp member_action_description(%{type: :demote}, group),
+    do: "This person will immediately lose organizer access to #{group.name}."
+
+  defp member_action_description(%{type: :remove}, group),
+    do:
+      "This person will lose access to private #{group.name} content. Their existing RSVP records are preserved."
+
+  defp member_action_description(%{type: :transfer}, group),
+    do:
+      "You will become an organizer. The new owner will control #{group.name}, including roles and ownership."
+
+  defp member_action_confirm_label(:promote), do: "Promote to organizer"
+  defp member_action_confirm_label(:demote), do: "Demote to member"
+  defp member_action_confirm_label(:remove), do: "Remove from group"
+  defp member_action_confirm_label(:transfer), do: "Transfer ownership"
+
+  defp member_action_button_variant(:promote), do: :primary
+  defp member_action_button_variant(_action), do: :destructive
+
+  defp member_action_success(%{type: :promote, member: member}),
+    do: "#{member_name(member)} is now an organizer."
+
+  defp member_action_success(%{type: :demote, member: member}),
+    do: "#{member_name(member)} is now a member."
+
+  defp member_action_success(%{type: :remove, member: member}),
+    do: "#{member_name(member)} was removed from the group."
+
+  defp member_action_success(%{type: :transfer, member: member}),
+    do: "Ownership transferred to #{member_name(member)}."
 
   defp role_heading(:owner), do: "Owner"
   defp role_heading(:organizer), do: "Organizers"

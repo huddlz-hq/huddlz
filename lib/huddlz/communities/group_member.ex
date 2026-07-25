@@ -140,6 +140,10 @@ defmodule Huddlz.Communities.GroupMember do
       filter expr(group_id == ^arg(:group_id))
       filter expr(user_id == ^arg(:user_id))
 
+      validate attribute_does_not_equal(:role, :owner) do
+        message "the group owner cannot be removed; transfer ownership first"
+      end
+
       change Huddlz.Communities.GroupMember.Changes.NotifyRemoved
     end
 
@@ -162,6 +166,14 @@ defmodule Huddlz.Communities.GroupMember do
       description "Change a member's role within a group (owner only). Cannot promote to :owner — use Group.:transfer_ownership."
       accept [:role]
       require_atomic? false
+
+      validate fn changeset, _context ->
+        if changeset.data.role == :owner do
+          {:error, field: :role, message: "the group owner cannot be demoted"}
+        else
+          :ok
+        end
+      end
 
       validate attribute_in(:role, [:member, :organizer]) do
         message "must be :member or :organizer (use transfer_ownership to change the owner)"
@@ -252,9 +264,13 @@ defmodule Huddlz.Communities.GroupMember do
       forbid_if always()
     end
 
-    # Group owners can remove members
+    # Owners may remove organizers or members, but never the owner. Organizers
+    # may remove regular members only.
     policy action(:remove_member) do
+      forbid_if expr(role == :owner)
       authorize_if GroupOwner
+      forbid_if expr(role != :member)
+      authorize_if GroupOrganizer
     end
 
     # Group owners can change a member's role, but never their own.

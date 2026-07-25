@@ -3,6 +3,7 @@ defmodule Huddlz.Communities.GroupMemberTest do
 
   require Ash.Query
 
+  alias Huddlz.Communities
   alias Huddlz.Communities.GroupMember
 
   describe "group membership" do
@@ -113,6 +114,72 @@ defmodule Huddlz.Communities.GroupMemberTest do
       refute Enum.any?(memberships, fn m -> m.user_id == member.id end)
     end
 
+    test "organizer can remove regular members but not organizers", %{
+      owner: owner,
+      member: member,
+      non_member: organizer,
+      group: group
+    } do
+      organizer_membership =
+        generate(
+          group_member(
+            group_id: group.id,
+            user_id: organizer.id,
+            role: :organizer,
+            actor: owner
+          )
+        )
+
+      member_membership =
+        generate(
+          group_member(
+            group_id: group.id,
+            user_id: member.id,
+            role: :member,
+            actor: owner
+          )
+        )
+
+      assert :ok =
+               Communities.remove_member(
+                 member_membership,
+                 group.id,
+                 member.id,
+                 actor: organizer
+               )
+
+      assert {:error, %Ash.Error.Forbidden{}} =
+               Communities.remove_member(
+                 organizer_membership,
+                 group.id,
+                 organizer.id,
+                 actor: organizer
+               )
+    end
+
+    test "even an admin cannot remove or demote the sole owner", %{
+      owner: owner,
+      group: group
+    } do
+      admin = generate(user(role: :admin))
+
+      owner_membership =
+        GroupMember
+        |> Ash.Query.filter(group_id: group.id, user_id: owner.id)
+        |> Ash.read_one!(authorize?: false)
+
+      assert {:error, %Ash.Error.Invalid{}} =
+               Communities.remove_member(
+                 owner_membership,
+                 group.id,
+                 owner.id,
+                 actor: admin
+               )
+
+      assert {:error, %Ash.Error.Invalid{}} =
+               Communities.change_member_role(owner_membership, :member, actor: admin)
+    end
+
     test "owner can change a member's role to organizer", %{
       owner: owner,
       member: member,
@@ -162,7 +229,7 @@ defmodule Huddlz.Communities.GroupMemberTest do
         |> Ash.Query.filter(group_id: group.id, user_id: owner.id)
         |> Ash.read_one!(authorize?: false)
 
-      assert {:error, %Ash.Error.Forbidden{}} =
+      assert {:error, %Ash.Error.Invalid{}} =
                owner_membership
                |> Ash.Changeset.for_update(:change_role, %{role: :organizer})
                |> Ash.update(actor: owner)
