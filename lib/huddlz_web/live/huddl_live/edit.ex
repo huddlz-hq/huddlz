@@ -424,18 +424,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
             <%= if @huddl.group.is_public do %>
               <div class="form-row">
-                <label class="toggle">
-                  <input type="hidden" name={@form[:is_private].name} value="false" />
-                  <input
-                    id={@form[:is_private].id}
-                    type="checkbox"
-                    name={@form[:is_private].name}
-                    value="true"
-                    checked={Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_private].value)}
-                  />
-                  <span class="track"></span>
-                  <span class="toggle-text">Members only</span>
-                </label>
+                <.toggle field={@form[:is_private]} label="Members only" />
                 <p class="form-help">
                   Only group members can RSVP. Useful for private workshops or socials.
                 </p>

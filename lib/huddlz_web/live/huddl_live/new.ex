@@ -221,18 +221,7 @@ defmodule HuddlzWeb.HuddlLive.New do
             </p>
 
             <div class="form-row">
-              <label class="toggle">
-                <input type="hidden" name={@form[:is_recurring].name} value="false" />
-                <input
-                  id={@form[:is_recurring].id}
-                  type="checkbox"
-                  name={@form[:is_recurring].name}
-                  value="true"
-                  checked={Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_recurring].value)}
-                />
-                <span class="track"></span>
-                <span class="toggle-text">Recurring huddl</span>
-              </label>
+              <.toggle field={@form[:is_recurring]} label="Recurring huddl" />
               <p class="form-help">Repeats on a schedule until you stop it.</p>
             </div>
 
@@ -306,18 +295,7 @@ defmodule HuddlzWeb.HuddlLive.New do
 
             <%= if @group.is_public do %>
               <div class="form-row">
-                <label class="toggle">
-                  <input type="hidden" name={@form[:is_private].name} value="false" />
-                  <input
-                    id={@form[:is_private].id}
-                    type="checkbox"
-                    name={@form[:is_private].name}
-                    value="true"
-                    checked={Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_private].value)}
-                  />
-                  <span class="track"></span>
-                  <span class="toggle-text">Members only</span>
-                </label>
+                <.toggle field={@form[:is_private]} label="Members only" />
                 <p class="form-help">
                   Only group members can RSVP. Useful for private workshops or socials.
                 </p>

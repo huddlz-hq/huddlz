@@ -211,6 +211,12 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       assert_has(session, "input[name='form[title]']")
       assert_has(session, "textarea[name='form[description]']")
       assert_has(session, "input[name='form[event_type]'][type='radio']")
+      assert_has(session, "fieldset.huddl-format-fieldset legend", text: "Huddl format")
+
+      assert_has(
+        session,
+        ".toggle input[name='form[is_private]'][type='checkbox'][role='switch'][aria-checked='false']"
+      )
     end
 
     test "shows calculated end time", %{

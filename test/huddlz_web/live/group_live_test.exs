@@ -3,6 +3,7 @@ defmodule HuddlzWeb.GroupLiveTest do
 
   import Huddlz.Generator
   import Huddlz.Test.Helpers.LocationSelection
+  import Phoenix.LiveViewTest
 
   alias Huddlz.Communities.Group
 
@@ -29,7 +30,31 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> assert_has("label.form-label", text: "Group name")
       |> assert_has("label.form-label", text: "Description")
       |> assert_has("label.form-label", text: "Location")
-      |> assert_has("label.row-title", text: "Public group")
+      |> assert_has(".row-title", text: "Public group")
+    end
+
+    test "exposes group visibility as a labeled keyboard-operable switch", %{
+      conn: conn,
+      verified: verified
+    } do
+      {:ok, view, _html} =
+        conn
+        |> login(verified)
+        |> live(~p"/groups/new")
+
+      assert has_element?(
+               view,
+               ".toggle input[name='form[is_public]'][type='checkbox'][role='switch'][aria-checked='true'][checked]"
+             )
+
+      view
+      |> form("#group-form", %{"form" => %{"is_public" => "false"}})
+      |> render_change()
+
+      assert has_element?(
+               view,
+               ".toggle input[name='form[is_public]'][role='switch'][aria-checked='false']:not([checked])"
+             )
     end
 
     test "allows all users to create groups", %{conn: conn, regular: regular} do

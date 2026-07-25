@@ -155,6 +155,22 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       assert_has(session, "input[name='form[start_time]']")
       assert_has(session, "select[name='form[duration_minutes]']")
       assert_has(session, "input[name='form[event_type]'][type='radio']")
+      assert_has(session, "fieldset.huddl-format-fieldset legend", text: "Huddl format")
+
+      assert_has(
+        session,
+        ".event-type-option:has(label[for='event-type-in_person']) input#event-type-in_person[type='radio'][checked]"
+      )
+
+      assert_has(
+        session,
+        ".event-type-option:has(label[for='event-type-virtual']) input#event-type-virtual[type='radio']"
+      )
+
+      assert_has(
+        session,
+        ".toggle input[name='form[is_recurring]'][role='switch'][aria-checked='false']"
+      )
     end
 
     test "shows 16:9 ratio guidance for cover image", %{
@@ -180,8 +196,16 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> login(owner)
         |> visit(~p"/groups/#{group.slug}/huddlz/new")
 
-      assert_has(session, "input[name='form[is_private]'][type='checkbox']")
-      assert session.conn.resp_body =~ "Members only"
+      assert_has(
+        session,
+        ".toggle input[name='form[is_private]'][type='checkbox'][role='switch'][aria-checked='false']"
+      )
+
+      session
+      |> check("Members only")
+      |> assert_has(
+        ".toggle input[name='form[is_private]'][role='switch'][aria-checked='true'][checked]"
+      )
     end
 
     test "shows private huddl notice for private groups", %{

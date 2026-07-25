@@ -354,6 +354,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
                   value="true"
                   checked={@selected_public?}
                   role="switch"
+                  aria-checked={to_string(@selected_public?)}
                   aria-labelledby="group-public-toggle-label"
                   aria-describedby="group-visibility-description group-visibility-consequence"
                 />

@@ -3196,6 +3196,7 @@ body .event-type-grid {
 
 
 body .event-type-option {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -3207,6 +3208,14 @@ body .event-type-option {
   transition: border-color 120ms ease, background 120ms ease;
 }
 
+body .huddl-format-hitbox,
+body .toggle-hitbox {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  cursor: pointer;
+}
+
 body .event-type-option:hover { border-color: var(--line-strong); }
 
 body .event-type-option.is-active {
@@ -3214,7 +3223,32 @@ body .event-type-option.is-active {
   background: var(--cyan-soft);
 }
 
-body .event-type-option input { display: none; }
+body .huddl-format-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+body .choice-control-input,
+body .toggle input[type="checkbox"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+body .event-type-option:has(.choice-control-input:focus-visible) {
+  border-color: var(--cyan);
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
 
 body .event-type-icon {
   width: 36px;
@@ -3248,6 +3282,7 @@ body .edit-scope-row strong { color: var(--text); }
    `.track` rect by ~4px on unchecked rows. Drop the whole daisy footprint
    until the migration retires daisy entirely. */
 body .toggle {
+  position: relative;
   display: inline-flex;
   align-items: center;
   align-self: flex-start;
@@ -3266,8 +3301,6 @@ body .toggle {
   place-content: normal;
 }
 
-body .toggle input { display: none; }
-
 body .toggle .track {
   position: relative;
   width: 36px;
@@ -3283,6 +3316,11 @@ body .toggle .track {
 }
 
 body .toggle input:checked + .track { border-color: var(--cyan); }
+
+body .toggle input:focus-visible + .track {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
 
 body .toggle .track::after {
   content: "";

@@ -96,6 +96,25 @@ defmodule HuddlzWeb.ComponentsTest do
     end
   end
 
+  describe "toggle/1" do
+    test "renders a labeled native checkbox with switch state" do
+      form = to_form(%{"enabled" => "true"}, as: :settings)
+      assigns = %{field: form[:enabled]}
+
+      html =
+        rendered_to_string(~H"""
+        <.toggle field={@field} label="Email notifications" />
+        """)
+
+      assert html =~ ~s(type="checkbox")
+      assert html =~ ~s(role="switch")
+      assert html =~ ~s(aria-checked="true")
+      assert html =~ ~s(checked)
+      assert html =~ "Email notifications"
+      refute html =~ ~s(display: none)
+    end
+  end
+
   describe "panel/1" do
     test "renders panel with optional head and sub" do
       assigns = %{}
