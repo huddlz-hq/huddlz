@@ -109,6 +109,7 @@ defmodule HuddlzWeb.Router do
       live "/my-groups", MyGroupsLive, :index
       live "/calendar", CalendarLive, :index
       live "/notifications", NotificationsLive, :index
+      live "/notifications/:id/open", NotificationsLive, :open
       live "/admin", AdminLive, :index
       live "/profile", ProfileLive, :index
       live "/profile/notifications", ProfileLive.Notifications, :index

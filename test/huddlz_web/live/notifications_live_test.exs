@@ -1,6 +1,7 @@
 defmodule HuddlzWeb.NotificationsLiveTest do
   use HuddlzWeb.ConnCase, async: false
 
+  alias Huddlz.Communities
   alias Huddlz.Notifications
 
   setup do
@@ -17,6 +18,39 @@ defmodule HuddlzWeb.NotificationsLiveTest do
     deliver!(user, trigger, payload)
     {:ok, %{results: [n | _]}} = Notifications.list_for_user(actor: user, page: [limit: 100])
     n
+  end
+
+  defp create_huddl_target(owner, group_opts \\ [], huddl_opts \\ []) do
+    group =
+      generate(
+        group(
+          Keyword.merge(
+            [owner_id: owner.id, actor: owner, is_public: true],
+            group_opts
+          )
+        )
+      )
+
+    huddl =
+      generate(
+        huddl(
+          Keyword.merge(
+            [creator_id: owner.id, actor: owner, group_id: group.id, title: "Boat Drinks"],
+            huddl_opts
+          )
+        )
+      )
+
+    {group, huddl}
+  end
+
+  defp huddl_notification(user, group, huddl) do
+    seed_notification(user, :rsvp_confirmation, %{
+      "huddl_id" => huddl.id,
+      "huddl_title" => huddl.title,
+      "group_slug" => group.slug,
+      "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at)
+    })
   end
 
   describe "anonymous access" do
@@ -186,21 +220,169 @@ defmodule HuddlzWeb.NotificationsLiveTest do
   end
 
   describe "row destinations" do
-    test "rows with a source_url render an Open link", %{conn: conn, user: user} do
-      deliver!(user, :rsvp_confirmation, %{
-        "huddl_id" => "00000000-0000-0000-0000-000000000000",
-        "huddl_title" => "Boat Drinks",
-        "group_slug" => "phoenix-elixir",
-        "starts_at_iso" => "2026-05-09T18:00:00Z"
-      })
+    test "accessible targets render an Open link through the notification-aware route", %{
+      conn: conn,
+      user: user
+    } do
+      {group, huddl} = create_huddl_target(user)
+      notification = huddl_notification(user, group, huddl)
 
       conn
       |> login(user)
       |> visit("/notifications")
       |> assert_has(
-        ~s|.notif-row a.pill[href="/groups/phoenix-elixir/huddlz/00000000-0000-0000-0000-000000000000"]|,
+        ~s|#notification-#{notification.id}-open[href="/notifications/#{notification.id}/open"]|,
         text: "Open"
       )
+      |> click_link("#notification-#{notification.id}-open", "Open")
+      |> assert_path("/groups/#{group.slug}/huddlz/#{huddl.id}")
+    end
+
+    test "deleted huddlz keep their historical copy and render a markable resolved state", %{
+      conn: conn,
+      user: user
+    } do
+      {group, huddl} = create_huddl_target(user)
+      notification = huddl_notification(user, group, huddl)
+      :ok = Communities.destroy_huddl(huddl, actor: user)
+
+      conn
+      |> login(user)
+      |> visit("/notifications")
+      |> assert_has("#notification-#{notification.id} .row-title", text: "Boat Drinks")
+      |> assert_has("#notification-#{notification.id}-resolved",
+        text: "Destination unavailable"
+      )
+      |> refute_has("#notification-#{notification.id}-open")
+      |> click_button("#notification-#{notification.id} button", "Mark read")
+      |> assert_has(".filters .chip", text: "Inbox · 0 unread")
+    end
+
+    test "deleted groups render a resolved state without a broken link", %{
+      conn: conn,
+      user: user
+    } do
+      group =
+        generate(group(owner_id: user.id, actor: user, is_public: true, name: "Quiet Group"))
+
+      notification =
+        seed_notification(user, :group_member_added, %{
+          "group_slug" => group.slug,
+          "group_name" => group.name
+        })
+
+      :ok = Ash.destroy(group, actor: user)
+
+      conn
+      |> login(user)
+      |> visit("/notifications")
+      |> assert_has("#notification-#{notification.id} .row-title", text: "Quiet Group")
+      |> assert_has("#notification-#{notification.id}-resolved")
+      |> refute_has("#notification-#{notification.id}-open")
+    end
+
+    test "losing private-group membership hides the destination without revealing current details",
+         %{
+           conn: conn,
+           user: user
+         } do
+      owner = generate(user(role: :user, confirmed_at: DateTime.utc_now()))
+
+      {group, huddl} =
+        create_huddl_target(owner, [is_public: false], is_private: true, title: "Secret Plans")
+
+      membership =
+        generate(
+          group_member(
+            group_id: group.id,
+            user_id: user.id,
+            role: :member,
+            actor: owner
+          )
+        )
+
+      notification = huddl_notification(user, group, huddl)
+      :ok = Ash.destroy(membership, authorize?: false)
+
+      conn
+      |> login(user)
+      |> visit("/notifications")
+      |> assert_has("#notification-#{notification.id}-resolved")
+      |> refute_has("#notification-#{notification.id}-open")
+    end
+
+    test "private targets are resolved for people who were never authorized", %{
+      conn: conn,
+      user: user
+    } do
+      owner = generate(user(role: :user, confirmed_at: DateTime.utc_now()))
+
+      {group, huddl} =
+        create_huddl_target(owner, [is_public: false], is_private: true, title: "Private Huddl")
+
+      notification = huddl_notification(user, group, huddl)
+
+      conn
+      |> login(user)
+      |> visit("/notifications")
+      |> assert_has("#notification-#{notification.id}-resolved")
+      |> refute_has("#notification-#{notification.id}-open")
+    end
+
+    test "clicking a target removed after render returns to a notification-aware fallback", %{
+      conn: conn,
+      user: user
+    } do
+      {group, huddl} = create_huddl_target(user)
+      notification = huddl_notification(user, group, huddl)
+
+      session =
+        conn
+        |> login(user)
+        |> visit("/notifications")
+        |> assert_has("#notification-#{notification.id}-open", text: "Open")
+
+      :ok = Communities.destroy_huddl(huddl, actor: user)
+
+      session
+      |> click_link("#notification-#{notification.id}-open", "Open")
+      |> assert_path("/notifications")
+      |> assert_has("[role=alert]",
+        text: "That notification destination is no longer available"
+      )
+    end
+
+    test "restoring access makes a previously resolved target actionable again", %{
+      conn: conn,
+      user: user
+    } do
+      owner = generate(user(role: :user, confirmed_at: DateTime.utc_now()))
+
+      {group, huddl} =
+        create_huddl_target(owner, [is_public: false], is_private: true, title: "Welcome Back")
+
+      notification = huddl_notification(user, group, huddl)
+
+      conn
+      |> login(user)
+      |> visit("/notifications")
+      |> assert_has("#notification-#{notification.id}-resolved")
+      |> refute_has("#notification-#{notification.id}-open")
+
+      generate(
+        group_member(
+          group_id: group.id,
+          user_id: user.id,
+          role: :member,
+          actor: owner
+        )
+      )
+
+      conn
+      |> login(user)
+      |> visit("/notifications")
+      |> assert_has("#notification-#{notification.id}-open", text: "Open")
+      |> refute_has("#notification-#{notification.id}-resolved")
     end
   end
 

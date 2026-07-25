@@ -1837,10 +1837,26 @@ body .huddl-side-section h3 {
 body .pref-list .row { grid-template-columns: 1fr auto; gap: 18px; }
 
 /* Notification row */
-body .row.notif-row { grid-template-columns: 14px 1fr 80px; gap: 14px; }
+body .row.notif-row { grid-template-columns: 14px minmax(0, 1fr) auto; gap: 14px; }
 body .row.notif-row.unread .row-title { color: var(--text); }
 body .row.notif-row:not(.unread) .row-title { color: var(--soft); }
 body .row.notif-row:not(.unread) .meta { color: var(--muted); }
+
+body .notification-row-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+body .notif-resolved {
+  max-width: 12rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: right;
+}
 
 body .notif-mark {
   width: 8px;
@@ -1853,6 +1869,23 @@ body .notif-mark {
 body .notif-mark.cyan { background: var(--cyan); box-shadow: 0 0 8px rgba(24, 203, 212, 0.5); }
 body .notif-mark.warn { background: var(--warn); box-shadow: 0 0 8px rgba(246, 193, 119, 0.5); }
 body .notif-mark.muted { background: var(--line-strong); box-shadow: none; }
+
+@media (max-width: 760px) {
+  body .row.notif-row {
+    grid-template-columns: 14px minmax(0, 1fr);
+  }
+
+  body .notification-row-action {
+    grid-column: 2;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  body .notif-resolved {
+    max-width: none;
+    text-align: left;
+  }
+}
 
 /* Tiny avatar pip used in member list */
 body .member-mark {
