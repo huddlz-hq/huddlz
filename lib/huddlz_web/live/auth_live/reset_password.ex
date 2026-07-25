@@ -8,10 +8,14 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
 
   alias AshPhoenix.Form
   alias Huddlz.Accounts.User
+  alias HuddlzWeb.AuthFormErrors
 
   @impl true
   def mount(_params, _session, socket) do
-    form = Form.for_action(User, :request_password_reset_token)
+    form =
+      Form.for_action(User, :request_password_reset_token,
+        post_process_errors: &AuthFormErrors.post_process/3
+      )
 
     {:ok,
      socket
@@ -45,6 +49,7 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
           id="reset-password-form"
           phx-change="validate"
           phx-submit="request_reset"
+          novalidate
           class="auth-card"
         >
           <div class="form-grid">
@@ -78,16 +83,20 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
   end
 
   def handle_event("request_reset", %{"form" => params}, socket) do
-    _form = socket.assigns.form.source |> Form.validate(params)
+    form = socket.assigns.form.source |> Form.validate(params)
 
-    input = Ash.ActionInput.for_action(User, :request_password_reset_token, params)
+    if form.valid? do
+      input = Ash.ActionInput.for_action(User, :request_password_reset_token, params)
 
-    case Ash.run_action(input) do
-      :ok ->
-        {:noreply, assign(socket, :submitted, true)}
+      case Ash.run_action(input) do
+        :ok ->
+          {:noreply, assign(socket, :submitted, true)}
 
-      {:error, _} ->
-        {:noreply, assign(socket, :submitted, true)}
+        {:error, _} ->
+          {:noreply, assign(socket, :submitted, true)}
+      end
+    else
+      {:noreply, assign(socket, form: to_form(form))}
     end
   end
 end
