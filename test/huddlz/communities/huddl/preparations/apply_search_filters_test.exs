@@ -264,7 +264,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
       assert hosted.id in ids
     end
 
-    test ":attending excludes huddlz the actor created (even if they RSVPed)", %{
+    test ":attending includes huddlz the actor created when they RSVPed", %{
       owner: owner,
       hosted_by_owner: hosted
     } do
@@ -279,7 +279,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
         )
         |> Ash.read(actor: owner, page: [limit: 50, count: true])
 
-      refute hosted.id in Enum.map(results, & &1.id)
+      assert hosted.id in Enum.map(results, & &1.id)
     end
 
     test "anonymous actor with relationship filter returns []", %{} do

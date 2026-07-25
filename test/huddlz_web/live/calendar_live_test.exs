@@ -164,6 +164,27 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> assert_has(".cal-pill", text: "I Am Hosting")
     end
 
+    test "creator RSVP does not duplicate the huddl or month count", %{
+      conn: conn,
+      host: host,
+      public_group: public_group
+    } do
+      huddl = create_huddl(host, public_group, title: "Hosted and Going", date: tomorrow())
+      rsvp!(huddl, host, :rsvp)
+
+      session =
+        conn
+        |> login(host)
+        |> visit(calendar_path_for(tomorrow()))
+        |> assert_has(".cal-month-count", text: "1 huddl")
+
+      assert session.view
+             |> Phoenix.LiveViewTest.render()
+             |> LazyHTML.from_fragment()
+             |> LazyHTML.query(".cal-pill")
+             |> Enum.count() == 1
+    end
+
     test "does not leak another user's RSVP'd huddl", %{
       conn: conn,
       attendee: attendee,

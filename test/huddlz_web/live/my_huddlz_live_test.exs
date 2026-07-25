@@ -123,6 +123,36 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       |> visit("/my-huddlz")
       |> assert_has(".filters .chip", text: "Upcoming · 1")
     end
+
+    test "shows a creator's huddl only after they RSVP and removes it after cancellation", %{
+      conn: conn,
+      host: host,
+      public_group: public_group
+    } do
+      huddl = create_huddl(host, public_group, title: "Creator RSVP")
+
+      conn
+      |> login(host)
+      |> visit("/my-huddlz")
+      |> refute_has("h3.card-title", text: "Creator RSVP")
+      |> assert_has(".filters .chip", text: "Upcoming · 0")
+
+      rsvp!(huddl, host, :rsvp)
+
+      conn
+      |> login(host)
+      |> visit("/my-huddlz")
+      |> assert_has("h3.card-title", text: "Creator RSVP")
+      |> assert_has(".filters .chip", text: "Upcoming · 1")
+
+      rsvp!(Ash.reload!(huddl), host, :cancel_rsvp)
+
+      conn
+      |> login(host)
+      |> visit("/my-huddlz")
+      |> refute_has("h3.card-title", text: "Creator RSVP")
+      |> assert_has(".filters .chip", text: "Upcoming · 0")
+    end
   end
 
   describe "Waitlisted filter" do
@@ -189,6 +219,22 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       |> login(attendee)
       |> visit("/my-huddlz?filter=past")
       |> assert_has("p", text: "No past attendance yet.")
+    end
+
+    test "places a creator's RSVP in Past after the huddl ends", %{
+      conn: conn,
+      host: host,
+      public_group: public_group
+    } do
+      past = create_past_huddl(host, public_group, title: "Creator Attended")
+      rsvp!(past, host, :rsvp)
+
+      conn
+      |> login(host)
+      |> visit("/my-huddlz?filter=past")
+      |> assert_has("h3.card-title", text: "Creator Attended")
+      |> assert_has(".filters .chip", text: "Past · 1")
+      |> assert_has(".pill", text: "Attended")
     end
   end
 

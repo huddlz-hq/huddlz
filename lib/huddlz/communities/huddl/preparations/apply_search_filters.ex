@@ -113,8 +113,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
       :attending ->
         Ash.Query.filter(
           query,
-          exists(attendees, user_id == ^actor.id and is_nil(waitlisted_at)) and
-            creator_id != ^actor.id
+          exists(attendees, user_id == ^actor.id and is_nil(waitlisted_at))
         )
 
       :waitlisted ->
