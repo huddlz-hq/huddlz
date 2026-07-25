@@ -74,6 +74,22 @@ Feature: Group Management
     When I visit the edit page for "Book Club"
     Then I should see "You don't have permission to edit this group"
 
+  Scenario: Member confirms before leaving a group
+    Given a public group "Book Club" exists with owner "verified@example.com"
+    And "regular@example.com" is a member of "Book Club"
+    And I am signed in as "regular@example.com"
+    When I visit the group page for "Book Club"
+    And I click "Leave Group"
+    Then I should see the leave dialog for "Book Club"
+    When I click "Cancel"
+    Then the "Leave Group" button should be visible
+    When I click "Leave Group"
+    And I click "Yes, leave group"
+    Then the "Leave Group" button should not be visible
+    And the "Join Group" button should be visible
+    When I visit "/my-groups"
+    Then I should not see "Book Club"
+
   Scenario: Group name is required
     Given I am signed in as "verified@example.com"
     When I visit "/groups/new"

@@ -29,7 +29,47 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
       |> assert_has("button[phx-disable-with='Joining...']", text: "Join Group")
     end
 
-    test "leave button shows a pending state while submitting", %{
+    test "leave button opens an in-app confirmation without changing membership", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      member = generate(user(role: :user))
+
+      generate(
+        group_member(
+          group_id: group.id,
+          user_id: member.id,
+          role: :member,
+          actor: owner
+        )
+      )
+
+      session =
+        conn
+        |> login(member)
+        |> visit(~p"/groups/#{group.slug}")
+        |> refute_has("button[data-confirm]", text: "Leave Group")
+        |> click_button("Leave Group")
+        |> assert_has("#leave-group-dialog [role='dialog']")
+        |> assert_has("#leave-group-dialog-title", text: "Leave Membership Test Group?")
+        |> assert_has("#leave-group-dialog", text: "member roster")
+        |> assert_has("#leave-group-dialog", text: "My groups")
+        |> assert_has("#leave-group-dialog", text: "notifications")
+        |> assert_has(
+          "#leave-group-dialog-container[phx-key='escape'][phx-window-keydown][phx-click-away]"
+        )
+        |> assert_has("#leave-group-dialog-cancel", text: "Cancel")
+
+      session
+      |> within("#leave-group-dialog", fn session ->
+        click_button(session, "Cancel")
+      end)
+      |> refute_has("#leave-group-dialog")
+      |> assert_has("button", text: "Leave Group")
+    end
+
+    test "confirming leave updates the group page and My groups", %{
       conn: conn,
       owner: owner,
       group: group
@@ -48,7 +88,23 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
       conn
       |> login(member)
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("button[phx-disable-with='Leaving...']", text: "Leave Group")
+      |> click_button("Leave Group")
+      |> within("#leave-group-dialog", fn session ->
+        click_button(session, "Yes, leave group")
+      end)
+      |> assert_has("*", text: "Successfully left the group")
+      |> refute_has("button", text: "Leave Group")
+      |> assert_has("button", text: "Join Group")
+      |> visit(~p"/my-groups")
+      |> refute_has("*", text: "Membership Test Group")
+    end
+
+    test "owner cannot open the leave dialog", %{conn: conn, owner: owner, group: group} do
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}")
+      |> refute_has("button", text: "Leave Group")
+      |> refute_has("#leave-group-dialog")
     end
   end
 end

@@ -13,6 +13,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   alias HuddlzWeb.Avatar
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
+  alias Phoenix.LiveView.JS
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -21,7 +22,7 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, socket}
+    {:ok, assign(socket, :leave_dialog_open, false)}
   end
 
   @impl true
@@ -232,9 +233,7 @@ defmodule HuddlzWeb.GroupLive.Show do
               <.button
                 :if={@can_leave_group}
                 variant={:muted}
-                phx-click="leave_group"
-                phx-disable-with="Leaving..."
-                data-confirm="Are you sure you want to leave this group?"
+                phx-click="open_leave_dialog"
               >
                 Leave Group
               </.button>
@@ -315,6 +314,59 @@ defmodule HuddlzWeb.GroupLive.Show do
           <% end %>
         </div>
       </div>
+
+      <.modal
+        :if={@leave_dialog_open}
+        id="leave-group-dialog"
+        show
+        on_cancel={JS.push("cancel_leave_group")}
+      >
+        <div class="flex gap-4 pr-8">
+          <div class="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-warning/30 bg-warning/10 text-warning">
+            <.icon name="hero-arrow-right-start-on-rectangle" class="h-5 w-5" />
+          </div>
+          <div>
+            <h2 id="leave-group-dialog-title" class="text-xl font-bold text-base-content">
+              Leave {@group.name}?
+            </h2>
+            <p class="mt-2 text-sm leading-6 text-base-content/70">
+              Leaving this group will:
+            </p>
+          </div>
+        </div>
+
+        <ul class="mt-5 space-y-3 rounded-hz-card border border-base-300 bg-base-100/50 p-4 text-sm text-base-content/80">
+          <li class="flex gap-3">
+            <.icon name="hero-user-group" class="mt-0.5 h-4 w-4 shrink-0 text-base-content/50" />
+            <span>Remove you from the <strong class="text-base-content">member roster</strong></span>
+          </li>
+          <li class="flex gap-3">
+            <.icon name="hero-rectangle-stack" class="mt-0.5 h-4 w-4 shrink-0 text-base-content/50" />
+            <span>Remove this group from <strong class="text-base-content">My groups</strong></span>
+          </li>
+          <li class="flex gap-3">
+            <.icon name="hero-bell-slash" class="mt-0.5 h-4 w-4 shrink-0 text-base-content/50" />
+            <span>Stop <strong class="text-base-content">notifications</strong> from this group</span>
+          </li>
+        </ul>
+
+        <p class="mt-4 text-sm text-base-content/60">
+          You can rejoin later if the group is public or you receive another invitation.
+        </p>
+
+        <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <.button id="leave-group-dialog-cancel" phx-click="cancel_leave_group">
+            Cancel
+          </.button>
+          <.button
+            variant={:destructive}
+            phx-click="leave_group"
+            phx-disable-with="Leaving..."
+          >
+            Yes, leave group
+          </.button>
+        </div>
+      </.modal>
     </Layouts.app>
     """
   end
@@ -437,16 +489,27 @@ defmodule HuddlzWeb.GroupLive.Show do
     end
   end
 
-  def handle_event("leave_group", _, socket) do
+  def handle_event("open_leave_dialog", _, %{assigns: %{can_leave_group: true}} = socket) do
+    {:noreply, assign(socket, :leave_dialog_open, true)}
+  end
+
+  def handle_event("open_leave_dialog", _, socket), do: {:noreply, socket}
+
+  def handle_event("cancel_leave_group", _, socket) do
+    {:noreply, assign(socket, :leave_dialog_open, false)}
+  end
+
+  def handle_event("leave_group", _, %{assigns: %{leave_dialog_open: true}} = socket) do
     user = socket.assigns.current_user
 
     case leave_group(socket.assigns.group, user) do
-      {:ok, _} ->
+      :ok ->
         group = reload_group(socket.assigns.group, user)
 
         {:noreply,
          socket
          |> put_flash(:info, "Successfully left the group")
+         |> assign(:leave_dialog_open, false)
          |> assign(:group, group)
          |> assign(:is_member, false)
          |> assign(:members, nil)
@@ -457,6 +520,8 @@ defmodule HuddlzWeb.GroupLive.Show do
         {:noreply, put_flash(socket, :error, "Failed to leave group")}
     end
   end
+
+  def handle_event("leave_group", _, socket), do: {:noreply, socket}
 
   @group_loads [:current_image_url, :member_count, owner: [:current_profile_picture_url]]
 

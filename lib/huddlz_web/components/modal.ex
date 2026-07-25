@@ -49,6 +49,7 @@ defmodule HuddlzWeb.Components.Modal do
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
               class="relative border border-base-300 bg-base-200 rounded-hz-modal shadow-pop p-6"
             >
+              {render_slot(@inner_block)}
               <button
                 phx-click={JS.exec("data-cancel", to: "##{@id}")}
                 type="button"
@@ -57,7 +58,6 @@ defmodule HuddlzWeb.Components.Modal do
               >
                 <Icon.icon name="hero-x-mark" class="h-5 w-5" />
               </button>
-              {render_slot(@inner_block)}
             </.focus_wrap>
           </div>
         </div>
