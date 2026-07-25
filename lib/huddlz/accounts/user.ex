@@ -7,6 +7,8 @@ defmodule Huddlz.Accounts.User do
 
   alias Huddlz.RateLimit.Keys
 
+  @email_pattern ~r/^[^\s]+@[^\s]+$/
+
   use Ash.Resource,
     otp_app: :huddlz,
     domain: Huddlz.Accounts,
@@ -366,13 +368,21 @@ defmodule Huddlz.Accounts.User do
 
       argument :email, :ci_string do
         description "The email to use for retrieving the user."
-        allow_nil? false
+        allow_nil? true
       end
 
       argument :password, :string do
         description "The password to check for the matching user."
         allow_nil? false
         sensitive? true
+      end
+
+      validate present(:email) do
+        message "Email is required."
+      end
+
+      validate match(:email, @email_pattern) do
+        message "Enter a valid email address."
       end
 
       # validates the provided email and password and generates a token
@@ -434,6 +444,10 @@ defmodule Huddlz.Accounts.User do
         sensitive? true
       end
 
+      validate match(:email, @email_pattern) do
+        message "Enter a valid email address."
+      end
+
       # Hashes the provided password
       change AshAuthentication.Strategy.Password.HashPasswordChange
 
@@ -474,6 +488,10 @@ defmodule Huddlz.Accounts.User do
 
       argument :email, :ci_string do
         allow_nil? false
+      end
+
+      validate match(:email, @email_pattern) do
+        message "Enter a valid email address."
       end
 
       # creates a reset token and invokes the relevant senders
@@ -627,13 +645,19 @@ defmodule Huddlz.Accounts.User do
     end
   end
 
+  validations do
+    validate match(:email, @email_pattern) do
+      where changing(:email)
+      message "Enter a valid email address."
+    end
+  end
+
   attributes do
     uuid_primary_key :id
 
     attribute :email, :ci_string do
       allow_nil? false
       public? true
-      constraints match: ~S/^[^\s]+@[^\s]+$/
     end
 
     attribute :display_name, :string do
