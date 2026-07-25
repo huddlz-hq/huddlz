@@ -18,6 +18,7 @@ defmodule Huddlz.Application do
        )},
       {Phoenix.PubSub, name: Huddlz.PubSub},
       {Huddlz.RateLimit, clean_period: :timer.minutes(1)},
+      Huddlz.MCP.Transport,
       # Start a worker by calling: Huddlz.Worker.start_link(arg)
       # {Huddlz.Worker, arg},
       # Start to serve requests, typically the last entry

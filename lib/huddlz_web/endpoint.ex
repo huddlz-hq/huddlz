@@ -58,10 +58,20 @@ defmodule HuddlzWeb.Endpoint do
   plug Corsica,
     origins: {HuddlzWeb.Cors, :allowed?, []},
     allow_credentials: true,
-    allow_headers: ["content-type", "authorization"],
+    allow_headers: [
+      "content-type",
+      "authorization",
+      "accept",
+      "mcp-session-id",
+      "mcp-protocol-version",
+      "last-event-id"
+    ],
     allow_methods: ~w(GET POST PUT PATCH DELETE OPTIONS HEAD),
-    expose_headers: ["x-request-id"],
+    expose_headers: ["x-request-id", "mcp-session-id"],
     max_age: 600
+
+  # MCP must read its raw JSON-RPC body before the global JSON parser.
+  plug HuddlzWeb.MCPPlug
 
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json, AshJsonApi.Plug.Parser, Absinthe.Plug.Parser],

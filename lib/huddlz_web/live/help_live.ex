@@ -94,6 +94,21 @@ defmodule HuddlzWeb.HelpLive do
               <.pill>Open ↗</.pill>
             </a>
             <a
+              id="help-mcp"
+              class="row help-link-row"
+              href="https://github.com/huddlz-hq/huddlz/blob/main/docs/mcp.md"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <div>
+                <div class="row-title">MCP server guide</div>
+                <div class="row-desc">
+                  Connect an agent, create credentials, and review available tools.
+                </div>
+              </div>
+              <.pill>Read ↗</.pill>
+            </a>
+            <a
               class="row help-link-row"
               href="https://github.com/huddlz-hq/huddlz"
               target="_blank"

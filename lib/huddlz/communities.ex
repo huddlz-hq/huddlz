@@ -37,6 +37,8 @@ defmodule Huddlz.Communities do
       define :rsvp_huddl, action: :rsvp
       define :cancel_rsvp_huddl, action: :cancel_rsvp
       define :join_waitlist_huddl, action: :join_waitlist
+      define :create_huddl_from_attrs, action: :create
+      define :update_huddl_from_attrs, action: :update
       define :destroy_huddl, action: :destroy
     end
 
@@ -56,6 +58,10 @@ defmodule Huddlz.Communities do
       define :update_details,
         action: :update_details,
         args: [:name, :description, :location, :is_public, :slug]
+
+      define :create_group_from_attrs, action: :create_group
+      define :update_group_from_attrs, action: :update_details
+      define :destroy_group, action: :destroy
 
       define :transfer_group_ownership,
         action: :transfer_ownership,
@@ -92,6 +98,8 @@ defmodule Huddlz.Communities do
       define :get_by_group, action: :get_by_group, args: [:group_id]
       define :get_by_user, action: :get_by_user
       define :get_membership_in_group, action: :get_in_group, args: [:group_id], get?: true
+      define :join_group_from_attrs, action: :join_group
+      define :leave_group, action: :leave_group
     end
 
     resource Huddlz.Communities.HuddlAttendee do
