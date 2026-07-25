@@ -96,6 +96,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
       "date" => Date.to_iso8601(date),
       "start_time" => Calendar.strftime(start_time, "%H:%M"),
       "duration_minutes" => to_string(duration_minutes),
+      "event_type" => to_string(huddl.event_type),
       "max_attendees" => if(huddl.max_attendees, do: to_string(huddl.max_attendees), else: "")
     }
 
