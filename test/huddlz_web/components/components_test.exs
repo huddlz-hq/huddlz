@@ -6,6 +6,40 @@ defmodule HuddlzWeb.ComponentsTest do
 
   use HuddlzWeb.Components
 
+  describe "app layout accessibility" do
+    test "puts a skip link before signed-in navigation and exposes a focusable main landmark" do
+      assigns = %{
+        flash: %{},
+        current_user: %Huddlz.Accounts.User{
+          email: "person@example.com",
+          display_name: "A Person",
+          role: :user
+        }
+      }
+
+      html =
+        rendered_to_string(~H"""
+        <HuddlzWeb.Layouts.app flash={@flash} current_user={@current_user}>
+          <h1>Dashboard</h1>
+        </HuddlzWeb.Layouts.app>
+        """)
+
+      document = LazyHTML.from_fragment(html)
+
+      assert LazyHTML.filter(
+               document,
+               "a.skip-link[href='#main-content'] + #nav-toggle + .nav-scrim + aside.sidebar"
+             )
+             |> Enum.any?()
+
+      assert LazyHTML.filter(document, "#main-content[tabindex='-1'][aria-label='Main content']")
+             |> Enum.any?()
+
+      assert LazyHTML.filter(document, "#main-content[phx-hook='FocusManagement']")
+             |> Enum.any?()
+    end
+  end
+
   describe "pill/1" do
     test "renders default pill with no extra variant class" do
       assigns = %{}
@@ -199,6 +233,49 @@ defmodule HuddlzWeb.ComponentsTest do
       assert html =~ ~s(class="form-input)
       assert html =~ ~s(name="title")
       assert html =~ ~s(class="form-help")
+    end
+
+    test "summarizes invalid fields with focusable links" do
+      assigns = %{
+        form:
+          to_form(
+            %{"email" => "", "display_name" => ""},
+            as: :user,
+            errors: [
+              email: {"can't be blank", []},
+              display_name: {"is too short", []}
+            ]
+          )
+      }
+
+      html = rendered_to_string(~H"<.error_summary form={@form} />")
+      document = LazyHTML.from_fragment(html)
+
+      assert LazyHTML.filter(
+               document,
+               "#user-error-summary[role='alert'][tabindex='-1'][data-error-summary]"
+             )
+             |> Enum.any?()
+
+      assert LazyHTML.query(document, "#user-error-summary a")
+             |> Enum.count() == 2
+    end
+
+    test "gives custom-field errors stable IDs for aria-describedby" do
+      assigns = %{
+        form:
+          to_form(
+            %{"choice" => ""},
+            as: :settings,
+            errors: [choice: {"must be selected", []}]
+          )
+      }
+
+      html = rendered_to_string(~H"<.field_errors field={@form[:choice]} />")
+      document = LazyHTML.from_fragment(html)
+
+      assert LazyHTML.filter(document, "#settings_choice-error-0")
+             |> Enum.any?()
     end
   end
 

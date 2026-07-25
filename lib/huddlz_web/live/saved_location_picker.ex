@@ -103,7 +103,11 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
             >
               Change address…
             </button>
-            <.link patch={@new_location_path} class="btn-secondary">
+            <.link
+              patch={@new_location_path}
+              class="btn-secondary"
+              phx-click={JS.push_focus()}
+            >
               Add new address
             </.link>
           </div>
@@ -175,7 +179,11 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
           No matching locations found
         </p>
 
-        <.link patch={@new_location_path} class="btn-secondary saved-location-add">
+        <.link
+          patch={@new_location_path}
+          class="btn-secondary saved-location-add"
+          phx-click={JS.push_focus()}
+        >
           Add new address
         </.link>
       <% end %>

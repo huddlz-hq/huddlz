@@ -26,6 +26,52 @@ import topbar from "../vendor/topbar"
 
 const Hooks = {}
 
+const focusWithoutScrolling = (element) => {
+  if (!element) return
+
+  try {
+    element.focus({preventScroll: true})
+  } catch (_error) {
+    element.focus()
+  }
+}
+
+Hooks.FocusManagement = {
+  mounted() {
+    this.submittedForm = null
+    this.submittedFormId = null
+    this.handleSubmit = (event) => {
+      this.submittedForm = event.target
+      this.submittedFormId = event.target.id || null
+    }
+
+    this.el.addEventListener("submit", this.handleSubmit, true)
+  },
+
+  updated() {
+    if (!this.submittedForm) return
+
+    const submittedForm =
+      (this.submittedFormId && document.getElementById(this.submittedFormId)) ||
+      (this.submittedForm.isConnected && this.submittedForm)
+
+    const focusTarget =
+      submittedForm?.querySelector("[data-error-summary]") ||
+      submittedForm?.querySelector("[aria-invalid='true']") ||
+      this.el.querySelector("[role='alert']:not([hidden])")
+
+    if (focusTarget) {
+      window.requestAnimationFrame(() => focusTarget.focus())
+      this.submittedForm = null
+      this.submittedFormId = null
+    }
+  },
+
+  destroyed() {
+    this.el.removeEventListener("submit", this.handleSubmit, true)
+  }
+}
+
 Hooks.LocationAutocomplete = {
   mounted() {
     this.setupInput()
@@ -75,6 +121,28 @@ const liveSocket = new LiveSocket("/live", Socket, {
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
 window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
+
+let liveNavigationPending = false
+
+window.addEventListener("phx:page-loading-start", ({detail}) => {
+  if (detail?.kind === "redirect") {
+    liveNavigationPending = true
+  }
+})
+
+window.addEventListener("phx:page-loading-stop", () => {
+  if (!liveNavigationPending) return
+
+  liveNavigationPending = false
+  window.requestAnimationFrame(() => {
+    const main = document.getElementById("main-content")
+    focusWithoutScrolling(main)
+
+    const announcer = document.getElementById("page-change-announcer")
+    const heading = main?.querySelector("h1")
+    if (announcer) announcer.textContent = heading?.textContent?.trim() || document.title
+  })
+})
 
 // connect if there are any LiveViews on the page
 liveSocket.connect()

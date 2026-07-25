@@ -69,6 +69,8 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
           id="reset-password-confirm-form"
           class="auth-card"
         >
+          <.error_summary form={@form} />
+
           <input
             type="hidden"
             name={Phoenix.HTML.Form.input_name(f, :reset_token)}

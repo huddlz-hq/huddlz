@@ -23,6 +23,24 @@ defmodule HuddlzWeb.HuddlLive.NewLocationTest do
 
       assert has_element?(view, "#new-location-modal")
       assert has_element?(view, "h2", "Add New Address")
+      assert has_element?(view, "#new-location-modal[phx-remove*='pop_focus']")
+    end
+
+    test "modal trigger saves focus for restoration", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      {:ok, view, _html} =
+        conn
+        |> login(owner)
+        |> live(~p"/groups/#{group.slug}/huddlz/new")
+
+      assert has_element?(
+               view,
+               "#saved-location-picker a.saved-location-add[phx-click*='push_focus']",
+               "Add new address"
+             )
     end
 
     test "modal contains autocomplete inside a form", %{

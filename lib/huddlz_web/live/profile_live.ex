@@ -103,7 +103,9 @@ defmodule HuddlzWeb.ProfileLive do
         </form>
       </div>
 
-      <.form for={@form} phx-submit="save" phx-change="validate">
+      <.form for={@form} id="profile-form" phx-submit="save" phx-change="validate">
+        <.error_summary form={@form} />
+
         <div class="panel">
           <div class="panel-head">
             <h2>Account information</h2>
@@ -162,6 +164,8 @@ defmodule HuddlzWeb.ProfileLive do
         phx-submit="update_password"
         phx-change="validate_password"
       >
+        <.error_summary form={@password_form} />
+
         <div class="panel">
           <div class="panel-head">
             <div>

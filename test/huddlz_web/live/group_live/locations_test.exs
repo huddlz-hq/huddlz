@@ -121,6 +121,8 @@ defmodule HuddlzWeb.GroupLive.LocationsTest do
         |> login(owner)
         |> live(~p"/groups/#{group.slug}/locations")
 
+      assert has_element?(view, "a[phx-click*='push_focus']", "Add Address")
+
       # Click the "Add Address" link — it's a live_patch
       view
       |> element("a", "Add Address")
@@ -129,6 +131,7 @@ defmodule HuddlzWeb.GroupLive.LocationsTest do
       # Modal should now be visible
       assert has_element?(view, "#new-location-modal")
       assert has_element?(view, "h2", "Add New Address")
+      assert has_element?(view, "#new-location-modal[phx-remove*='pop_focus']")
     end
 
     test "add address modal renders autocomplete inside a form", %{

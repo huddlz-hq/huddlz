@@ -27,6 +27,7 @@ defmodule HuddlzWeb.Components.Flash do
       id={@id}
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
       role="alert"
+      tabindex="-1"
       class="w-full cursor-pointer mb-4"
       {@rest}
     >

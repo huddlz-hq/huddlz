@@ -84,7 +84,11 @@ defmodule HuddlzWeb.GroupLive.Locations do
           </p>
         </div>
         <div class="actions">
-          <.button variant={:primary} patch={~p"/groups/#{@group.slug}/locations/new"}>
+          <.button
+            variant={:primary}
+            patch={~p"/groups/#{@group.slug}/locations/new"}
+            phx-click={JS.push_focus()}
+          >
             Add Address
           </.button>
         </div>
@@ -109,7 +113,11 @@ defmodule HuddlzWeb.GroupLive.Locations do
           <div class="row-list">
             <.list_row :for={loc <- @locations} class="location-row">
               <%= if @editing_location_id == loc.id do %>
-                <form phx-submit="save_rename" class="location-rename">
+                <form
+                  id={"rename-location-#{loc.id}"}
+                  phx-submit="save_rename"
+                  class="location-rename"
+                >
                   <input type="hidden" name="location_id" value={loc.id} />
                   <input
                     type="text"
@@ -169,7 +177,12 @@ defmodule HuddlzWeb.GroupLive.Locations do
           Saved venues show up in the venue picker for everyone in your group.
         </p>
 
-        <form phx-submit="save_new_location" phx-change="modal_form_changed" class="form-grid">
+        <form
+          id="new-saved-location-form"
+          phx-submit="save_new_location"
+          phx-change="modal_form_changed"
+          class="form-grid"
+        >
           <div class="form-row">
             <label class="form-label" for="modal-address-autocomplete-input">
               Search for an address

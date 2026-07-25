@@ -59,7 +59,15 @@ defmodule HuddlzWeb.Components.HuddlForm do
 
   def event_type_grid(assigns) do
     ~H"""
-    <div class="event-type-grid">
+    <div
+      id={@field.id}
+      class="event-type-grid"
+      role="radiogroup"
+      aria-label="Choose a huddl format"
+      aria-invalid={HuddlzWeb.Components.Input.field_invalid?(@field) && "true"}
+      aria-describedby={HuddlzWeb.Components.Input.field_error_ids(@field)}
+      tabindex="-1"
+    >
       <.event_type_option
         field={@field}
         value="in_person"

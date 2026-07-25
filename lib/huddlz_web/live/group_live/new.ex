@@ -199,6 +199,8 @@ defmodule HuddlzWeb.GroupLive.New do
       </div>
 
       <.form for={@form} id="group-form" phx-change="validate" phx-submit="save">
+        <.error_summary form={@form} />
+
         <div class="panel">
           <div class="panel-head">
             <h2>The basics</h2>
@@ -222,7 +224,13 @@ defmodule HuddlzWeb.GroupLive.New do
               placeholder="Tell people what your group is about, what huddlz to expect, and who should join."
               help="Up to 5,000 characters."
             />
-            <div class="form-row">
+            <div
+              id={@form[:location].id}
+              class="form-row"
+              tabindex="-1"
+              aria-invalid={field_invalid?(@form[:location]) && "true"}
+              aria-describedby={field_error_ids(@form[:location])}
+            >
               <label class="form-label" for="group-location-input">Location</label>
               <.live_component
                 module={HuddlzWeb.Live.LocationAutocomplete}

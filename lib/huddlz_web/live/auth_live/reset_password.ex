@@ -47,6 +47,8 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
           phx-submit="request_reset"
           class="auth-card"
         >
+          <.error_summary form={@form} />
+
           <div class="form-grid">
             <.input
               field={@form[:email]}

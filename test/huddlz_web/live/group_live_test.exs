@@ -73,6 +73,10 @@ defmodule HuddlzWeb.GroupLiveTest do
 
       session
       |> assert_has(
+        "#form-error-summary[role='alert'][tabindex='-1'][data-error-summary] a[href='#form_name']",
+        text: "Name: is required"
+      )
+      |> assert_has(
         "input[name='form[name]'][aria-invalid='true'][aria-describedby='form_name-help form_name-error-0']"
       )
       |> assert_has("#form_name-help", text: "3–100 characters.")

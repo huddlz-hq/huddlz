@@ -49,6 +49,9 @@ defmodule HuddlzWeb.Layouts do
 
     ~H"""
     <%= if @signed_in do %>
+      <a class="skip-link" href="#main-content" phx-click={JS.focus(to: "#main-content")}>
+        Skip to main content
+      </a>
       <input type="checkbox" id="nav-toggle" class="nav-toggle" />
       <label for="nav-toggle" class="nav-scrim" aria-hidden="true"></label>
       <aside class="sidebar">
@@ -161,7 +164,13 @@ defmodule HuddlzWeb.Layouts do
       </aside>
     <% end %>
 
-    <main class="main">
+    <main
+      id="main-content"
+      class="main"
+      tabindex="-1"
+      aria-label="Main content"
+      phx-hook="FocusManagement"
+    >
       <header class="content-topbar">
         <%= if @signed_in do %>
           <label for="nav-toggle" class="nav-trigger" aria-label="Open navigation">
@@ -224,9 +233,15 @@ defmodule HuddlzWeb.Layouts do
         </a>
       </header>
 
-      <div class="auth-frame">
+      <main
+        id="main-content"
+        class="auth-frame"
+        tabindex="-1"
+        aria-label="Main content"
+        phx-hook="FocusManagement"
+      >
         {render_slot(@inner_block)}
-      </div>
+      </main>
     </div>
     """
   end
