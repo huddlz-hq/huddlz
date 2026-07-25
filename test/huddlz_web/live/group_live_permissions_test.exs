@@ -173,11 +173,15 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       verified_non_member: user,
       private_group: group
     } do
-      # Verified non-members should not be able to see private groups
-      conn
-      |> login(user)
-      |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("h1", text: "Browse groups")
+      assert {404, _headers, body} =
+               assert_error_sent(404, fn ->
+                 conn
+                 |> login(user)
+                 |> get(~p"/groups/#{group.slug}")
+               end)
+
+      assert body =~ "This path doesn’t lead to a huddl."
+      refute body =~ to_string(group.name)
     end
 
     test "regular non-member cannot access private group", %{
@@ -185,11 +189,15 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
       regular_non_member: user,
       private_group: group
     } do
-      # Regular non-members should not be able to see private groups
-      conn
-      |> login(user)
-      |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("h1", text: "Browse groups")
+      assert {404, _headers, body} =
+               assert_error_sent(404, fn ->
+                 conn
+                 |> login(user)
+                 |> get(~p"/groups/#{group.slug}")
+               end)
+
+      assert body =~ "This path doesn’t lead to a huddl."
+      refute body =~ to_string(group.name)
     end
 
     test "anonymous user cannot see member list in public group", %{
@@ -203,10 +211,13 @@ defmodule HuddlzWeb.GroupLivePermissionsTest do
     end
 
     test "anonymous user cannot access private group", %{conn: conn, private_group: group} do
-      # Anonymous users should see not found for private groups
-      conn
-      |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("h1", text: "Browse groups")
+      assert {404, _headers, body} =
+               assert_error_sent(404, fn ->
+                 get(conn, ~p"/groups/#{group.slug}")
+               end)
+
+      assert body =~ "This path doesn’t lead to a huddl."
+      refute body =~ to_string(group.name)
     end
 
     test "member count is consistent for visitors and every group role", %{

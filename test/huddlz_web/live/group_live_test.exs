@@ -266,20 +266,20 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> assert_has(".role-pill .pill", text: "Owner")
     end
 
-    test "redirects non-members from private groups", %{
+    test "private groups are indistinguishable from missing groups", %{
       conn: conn,
       non_member: non_member,
       private_group: group
     } do
-      session =
-        conn
-        |> login(non_member)
-        |> visit(~p"/groups/#{group.slug}")
+      assert {404, _headers, body} =
+               assert_error_sent(404, fn ->
+                 conn
+                 |> login(non_member)
+                 |> get(~p"/groups/#{group.slug}")
+               end)
 
-      assert_path(session, ~p"/discover", query_params: %{"scope" => "groups"})
-
-      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~
-               "Group not found"
+      assert body =~ "This path doesn’t lead to a huddl."
+      refute body =~ to_string(group.name)
     end
 
     test "allows owner to view private group", %{
@@ -296,10 +296,12 @@ defmodule HuddlzWeb.GroupLiveTest do
     end
 
     test "handles non-existent group", %{conn: conn} do
-      session = conn |> visit(~p"/groups/#{Ash.UUID.generate()}")
+      assert {404, _headers, body} =
+               assert_error_sent(404, fn ->
+                 get(conn, ~p"/groups/#{Ash.UUID.generate()}")
+               end)
 
-      assert_path(session, ~p"/discover", query_params: %{"scope" => "groups"})
-      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~ "Group not found"
+      assert body =~ "This path doesn’t lead to a huddl."
     end
   end
 end

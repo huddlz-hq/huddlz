@@ -57,11 +57,7 @@ defmodule HuddlzWeb.GroupLive.Show do
          |> assign(:past_total_pages, 0)}
 
       {:error, _reason} ->
-        {:noreply,
-         handle_error(socket, :not_found,
-           resource_name: "Group",
-           fallback_path: ~p"/discover?#{[scope: "groups"]}"
-         )}
+        not_found!()
     end
   end
 

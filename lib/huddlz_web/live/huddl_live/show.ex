@@ -65,19 +65,10 @@ defmodule HuddlzWeb.HuddlLive.Show do
          )}
 
       {:error, :not_found} ->
-        {:noreply,
-         handle_error(socket, :not_found,
-           resource_name: "Huddl",
-           fallback_path: ~p"/groups/#{group_slug}"
-         )}
+        not_found!()
 
       {:error, :not_authorized} ->
-        {:noreply,
-         handle_error(socket, :not_authorized,
-           resource_name: "huddl",
-           action: "access",
-           fallback_path: ~p"/discover?#{[scope: "groups"]}"
-         )}
+        not_found!()
     end
   end
 

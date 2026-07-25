@@ -289,10 +289,15 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       non_member: non_member,
       private_group: private_group
     } do
-      conn = login(conn, non_member)
+      assert {404, _headers, body} =
+               assert_error_sent(404, fn ->
+                 conn
+                 |> login(non_member)
+                 |> get(~p"/groups/#{private_group.slug}")
+               end)
 
-      {:error, {:redirect, %{to: "/discover?scope=groups"}}} =
-        live(conn, ~p"/groups/#{private_group.slug}")
+      assert body =~ "This path doesn’t lead to a huddl."
+      refute body =~ to_string(private_group.name)
     end
 
     test "group members can access private group tabs", %{

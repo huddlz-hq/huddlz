@@ -16,6 +16,7 @@ defmodule SharedUISteps do
   """
   use Cucumber.StepDefinition
   import PhoenixTest
+  import ExUnit.Assertions, only: [assert: 1]
 
   import Phoenix.ConnTest, only: [build_conn: 0]
 
@@ -93,6 +94,11 @@ defmodule SharedUISteps do
   step "I should see {string} in the flash", %{args: [message]} = context do
     session = context[:session] || context[:conn]
     assert_has(session, "*", text: message)
+    context
+  end
+
+  step "I should see the branded not found recovery page", context do
+    assert context.error_body =~ "This path doesn’t lead to a huddl."
     context
   end
 

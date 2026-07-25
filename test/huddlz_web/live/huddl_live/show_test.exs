@@ -434,7 +434,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has("a.virtual-link-text", text: "Join virtually")
     end
 
-    test "cannot access private huddl without membership", %{
+    test "private huddl is indistinguishable from a missing huddl", %{
       conn: conn,
       non_member: non_member,
       owner: owner
@@ -473,14 +473,15 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
         )
         |> Ash.create!()
 
-      # Non-member should be redirected
-      session =
-        conn
-        |> login(non_member)
-        |> visit(~p"/groups/#{private_group.slug}/huddlz/#{private_huddl.id}")
+      assert {404, _headers, body} =
+               assert_error_sent(404, fn ->
+                 conn
+                 |> login(non_member)
+                 |> get(~p"/groups/#{private_group.slug}/huddlz/#{private_huddl.id}")
+               end)
 
-      # Should redirect to the groups scope of /discover when huddl is not found (due to authorization)
-      assert_path(session, ~p"/discover", query_params: %{"scope" => "groups"})
+      assert body =~ "This path doesn’t lead to a huddl."
+      refute body =~ to_string(private_huddl.title)
     end
 
     test "shows Cancel RSVP button when user has RSVPed", %{
