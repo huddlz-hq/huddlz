@@ -102,6 +102,12 @@ defmodule Huddlz.Notifications.Triggers do
       default: true,
       label: "A recurring huddl series I'm in was updated"
     },
+    recurring_huddl_generation_failed: %{
+      category: :transactional,
+      sender: Senders.RecurringHuddlGenerationFailed,
+      default: true,
+      label: "Recurring huddl dates need attention"
+    },
 
     # D — Huddl reminders
     huddl_reminder_24h: %{

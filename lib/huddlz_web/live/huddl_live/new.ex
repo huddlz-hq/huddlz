@@ -515,11 +515,13 @@ defmodule HuddlzWeb.HuddlLive.New do
     case AshPhoenix.Form.submit(socket.assigns.form,
            params: params,
            actor: socket.assigns.current_user,
-           before_submit: prepare_source_with_coordinates(socket.assigns[:selected_location])
+           before_submit:
+             prepare_source_for_submit(
+               socket.assigns[:selected_location],
+               socket.assigns[:pending_image_id]
+             )
          ) do
       {:ok, huddl} ->
-        assign_pending_image_to_huddl(socket, huddl)
-
         {:noreply,
          socket
          |> put_flash(:info, "Huddl created successfully!")
@@ -589,19 +591,20 @@ defmodule HuddlzWeb.HuddlLive.New do
     {:noreply, ModalLocationHelpers.clear(socket)}
   end
 
-  defp assign_pending_image_to_huddl(socket, huddl) do
-    case socket.assigns[:pending_image_id] do
-      nil ->
-        :ok
+  defp prepare_source_for_submit(location, pending_image_id) do
+    coordinate_preparer = prepare_source_with_coordinates(location)
 
-      image_id ->
-        with {:ok, image} <- Communities.get_huddl_image_by_id(image_id) do
-          Communities.assign_huddl_image_to_huddl(image, huddl.id,
-            actor: socket.assigns.current_user
-          )
-        end
+    fn changeset ->
+      changeset
+      |> coordinate_preparer.()
+      |> maybe_set_pending_image(pending_image_id)
     end
   end
+
+  defp maybe_set_pending_image(changeset, nil), do: changeset
+
+  defp maybe_set_pending_image(changeset, pending_image_id),
+    do: Ash.Changeset.set_argument(changeset, :pending_image_id, pending_image_id)
 
   defp get_group_by_slug(slug, actor) do
     case Huddlz.Communities.get_by_slug(slug, actor: actor, load: [:owner]) do

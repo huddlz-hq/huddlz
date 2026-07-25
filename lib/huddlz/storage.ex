@@ -13,6 +13,9 @@ defmodule Huddlz.Storage do
   @doc "Store a file from source_path to storage_path and return the storage path"
   @callback put(source_path, storage_path, content_type) :: {:ok, storage_path} | {:error, term()}
 
+  @doc "Copy a stored file to a new storage path"
+  @callback copy(path, path, content_type) :: {:ok, path} | {:error, term()}
+
   @doc "Delete a file by its storage path"
   @callback delete(path) :: :ok | {:error, term()}
 
@@ -29,6 +32,13 @@ defmodule Huddlz.Storage do
   """
   def put(source_path, storage_path, content_type) do
     @adapter.put(source_path, storage_path, content_type)
+  end
+
+  @doc """
+  Copy an existing stored file to a new storage path.
+  """
+  def copy(source_path, destination_path, content_type) do
+    @adapter.copy(source_path, destination_path, content_type)
   end
 
   @doc """

@@ -75,6 +75,34 @@ defmodule Huddlz.Storage.HuddlImages do
     end
   end
 
+  @doc """
+  Copy a stored huddl image and its thumbnail to paths owned by another huddl.
+
+  Returns metadata suitable for creating a `HuddlImage` record. If either copy
+  fails, any destination file already written is removed.
+  """
+  def duplicate(image, huddl_id) do
+    storage_path = generate_path(huddl_id, image.filename)
+    thumbnail_path = duplicate_thumbnail_path(image, storage_path)
+
+    with {:ok, _path} <- Storage.copy(image.storage_path, storage_path, image.content_type),
+         :ok <- duplicate_thumbnail(image.thumbnail_path, thumbnail_path) do
+      {:ok,
+       %{
+         filename: image.filename,
+         content_type: image.content_type,
+         size_bytes: image.size_bytes,
+         storage_path: storage_path,
+         thumbnail_path: thumbnail_path
+       }}
+    else
+      {:error, reason} ->
+        delete(storage_path)
+        delete(thumbnail_path)
+        {:error, reason}
+    end
+  end
+
   defp store_thumbnail(binary, path) do
     # Write thumbnail to a temp file, then store it
     temp_path = Path.join(System.tmp_dir!(), "thumb_#{:erlang.unique_integer([:positive])}.jpg")
@@ -132,6 +160,19 @@ defmodule Huddlz.Storage.HuddlImages do
   """
   def generate_thumbnail_path(original_path) do
     String.replace(original_path, ~r/\.\w+$/, "_thumb.jpg")
+  end
+
+  defp duplicate_thumbnail_path(thumbnail_path, storage_path) do
+    if thumbnail_path, do: generate_thumbnail_path(storage_path)
+  end
+
+  defp duplicate_thumbnail(nil, nil), do: :ok
+
+  defp duplicate_thumbnail(source_path, destination_path) do
+    case Storage.copy(source_path, destination_path, "image/jpeg") do
+      {:ok, _path} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   @doc """

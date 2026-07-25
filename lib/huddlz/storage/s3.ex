@@ -34,6 +34,41 @@ defmodule Huddlz.Storage.S3 do
   end
 
   @impl true
+  def copy(source_path, destination_path, content_type) do
+    bucket = bucket_name()
+    source_key = normalize_key(source_path)
+    destination_key = normalize_key(destination_path)
+    req = Req.new() |> ReqS3.attach()
+
+    with {:ok, %{status: get_status, body: content}} when get_status in 200..299 <-
+           Req.get(req, url: "s3://#{bucket}/#{source_key}"),
+         {:ok, %{status: put_status}} when put_status in 200..299 <-
+           Req.put(req,
+             url: "s3://#{bucket}/#{destination_key}",
+             body: content,
+             headers: [{"content-type", content_type}]
+           ) do
+      {:ok, destination_path}
+    else
+      {:ok, %{status: status, body: body}} ->
+        Logger.error(
+          "S3 copy failed: status=#{status} source=#{source_key} " <>
+            "destination=#{destination_key} body=#{inspect(body)}"
+        )
+
+        {:error, "Storage copy failed"}
+
+      {:error, reason} ->
+        Logger.error(
+          "S3 copy error: source=#{source_key} destination=#{destination_key} " <>
+            "reason=#{inspect(reason)}"
+        )
+
+        {:error, "Storage copy failed"}
+    end
+  end
+
+  @impl true
   def delete(path) do
     bucket = bucket_name()
     key = normalize_key(path)

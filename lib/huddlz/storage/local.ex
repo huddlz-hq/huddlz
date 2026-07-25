@@ -22,6 +22,19 @@ defmodule Huddlz.Storage.Local do
   end
 
   @impl true
+  def copy(source_path, destination_path, _content_type) do
+    source_full_path = full_path(source_path)
+    destination_full_path = full_path(destination_path)
+
+    destination_full_path |> Path.dirname() |> File.mkdir_p!()
+
+    case File.cp(source_full_path, destination_full_path) do
+      :ok -> {:ok, destination_path}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @impl true
   def delete(storage_path) do
     full_path = full_path(storage_path)
 
