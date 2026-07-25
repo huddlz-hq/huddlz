@@ -1903,7 +1903,7 @@ body .hero-img {
   z-index: 0;
 }
 
-/* Huddl media keeps its full composition in a consistent 16:9 stage. */
+/* huddl media keeps its full composition in a consistent 16:9 stage. */
 body .huddl-hero {
   height: auto;
   aspect-ratio: 16 / 9;

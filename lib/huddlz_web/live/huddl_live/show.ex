@@ -80,6 +80,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
             src={HuddlImages.url(@huddl.display_image_url)}
             alt=""
             phx-hook="ImageFallback"
+            phx-update="ignore"
           />
         </div>
         <div class="hero-content">
