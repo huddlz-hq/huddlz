@@ -21,6 +21,7 @@ defmodule HuddlzWeb.Api.SensitiveFieldsAuditTest do
     test "does not expose virtual_link directly", %{conn: conn} do
       fields = type_field_names(conn, "Huddl")
       refute Enum.empty?(fields), "Huddl type should be present in the schema"
+      assert "visibleVirtualLink" in fields
 
       for f <- @forbidden_huddl_fields do
         refute f in fields, "Huddl type unexpectedly exposes #{f}"

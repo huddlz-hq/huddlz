@@ -205,6 +205,42 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has("a.virtual-link-text", text: "Join virtually")
     end
 
+    test "hides the virtual link while waitlisted and reveals it on promotion", %{
+      conn: conn,
+      member: member,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      huddl
+      |> Ash.Changeset.for_update(:update, %{max_attendees: 1}, actor: owner)
+      |> Ash.update!()
+
+      session =
+        conn
+        |> login(member)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+        |> click_button("Join waitlist")
+        |> assert_has(".rsvp-banner.warn", text: "On waitlist")
+        |> assert_has(
+          ".facts .value .muted",
+          text: "Virtual link available when your RSVP is confirmed"
+        )
+        |> refute_has("a.virtual-link-text", text: "Join virtually")
+
+      huddl
+      |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: owner)
+      |> Ash.update!()
+
+      session
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+      |> assert_has(".rsvp-banner.cyan", text: "You're attending")
+      |> assert_has("a.virtual-link-text", text: "Join virtually")
+      |> click_button("Cancel RSVP")
+      |> assert_has(".facts .value .muted", text: "Virtual link available after RSVP")
+      |> refute_has("a.virtual-link-text", text: "Join virtually")
+    end
+
     test "prevents duplicate RSVPs", %{conn: conn, member: member, group: group, huddl: huddl} do
       # First RSVP
       updated_huddl =
