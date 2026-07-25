@@ -18,6 +18,7 @@ defmodule Huddlz.Communities.Group.Changes.TransferOwnership do
 
   alias Huddlz.Accounts.User
   alias Huddlz.Communities.GroupMember
+  alias Huddlz.Communities.MembershipEvents
   alias Huddlz.Notifications
 
   @impl true
@@ -33,6 +34,14 @@ defmodule Huddlz.Communities.Group.Changes.TransferOwnership do
         notify(group, previous_owner_id, new_owner_id)
         {:ok, group}
       end
+    end)
+    |> Ash.Changeset.after_transaction(fn
+      _changeset, {:ok, group} = result ->
+        MembershipEvents.broadcast(group.id)
+        result
+
+      _changeset, result ->
+        result
     end)
   end
 

@@ -14,6 +14,7 @@ defmodule HuddlzWeb.OrganizeLive do
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities
+  alias Huddlz.Communities.{Group, Huddl, MembershipEvents}
   alias HuddlzWeb.Layouts
 
   @group_loads [:member_count]
@@ -36,7 +37,12 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:huddlz_filter, :live)
      |> assign(:upcoming_huddlz, [])
      |> assign(:open_rsvps, 0)
-     |> assign(:members, [])}
+     |> assign(:members, [])
+     |> assign(:can_create_group, false)
+     |> assign(:can_edit_group, false)
+     |> assign(:can_create_huddl, false)
+     |> assign(:editable_huddl_ids, MapSet.new())
+     |> assign(:subscribed_group_id, nil)}
   end
 
   @impl true
@@ -58,14 +64,17 @@ defmodule HuddlzWeb.OrganizeLive do
     socket
     |> assign(:group, nil)
     |> assign(:owned_groups, owned_groups)
+    |> assign(:can_create_group, Ash.can?({Group, :create_group}, user))
   end
 
   defp load_action(socket, action, %{"group_slug" => slug}, user) do
     case load_group(slug, user) do
       {:ok, group} ->
         socket
+        |> subscribe_to_membership_changes(group)
         |> assign(:group, group)
         |> assign(:page_title, "#{group.name} · Organizer")
+        |> assign_group_permissions(group, user)
         |> load_section(action, group, user)
 
       :error ->
@@ -87,7 +96,10 @@ defmodule HuddlzWeb.OrganizeLive do
   defp load_section(socket, :huddlz, group, user) do
     state = socket.assigns.huddlz_filter
     huddlz = list_group_huddlz(group, state, user)
-    assign(socket, :huddlz_list, huddlz)
+
+    socket
+    |> assign(:huddlz_list, huddlz)
+    |> assign(:editable_huddl_ids, editable_huddl_ids(huddlz, user))
   end
 
   defp load_section(socket, :members, group, user) do
@@ -129,6 +141,27 @@ defmodule HuddlzWeb.OrganizeLive do
     )
   end
 
+  defp assign_group_permissions(socket, group, user) do
+    socket
+    |> assign(:can_edit_group, Ash.can?({group, :update_details}, user))
+    |> assign(:can_create_huddl, Ash.can?({Huddl, :create, %{group_id: group.id}}, user))
+  end
+
+  defp editable_huddl_ids(huddlz, user) do
+    huddlz
+    |> Enum.filter(&Ash.can?({&1, :update}, user))
+    |> MapSet.new(& &1.id)
+  end
+
+  defp subscribe_to_membership_changes(socket, group) do
+    if connected?(socket) and socket.assigns.subscribed_group_id != group.id do
+      :ok = MembershipEvents.subscribe(group.id)
+      assign(socket, :subscribed_group_id, group.id)
+    else
+      socket
+    end
+  end
+
   defp parse_huddlz_filter("past"), do: :past
   defp parse_huddlz_filter(_), do: :live
 
@@ -147,17 +180,25 @@ defmodule HuddlzWeb.OrganizeLive do
     >
       <%= case @live_action do %>
         <% :index -> %>
-          <.picker_view groups={@owned_groups} />
+          <.picker_view groups={@owned_groups} can_create_group={@can_create_group} />
         <% :overview -> %>
           <.overview_view
             group={@group}
             upcoming_huddlz={@upcoming_huddlz}
             open_rsvps={@open_rsvps}
+            can_edit_group={@can_edit_group}
+            can_create_huddl={@can_create_huddl}
           />
         <% :huddlz -> %>
-          <.huddlz_view group={@group} huddlz={@huddlz_list} filter={@huddlz_filter} />
+          <.huddlz_view
+            group={@group}
+            huddlz={@huddlz_list}
+            filter={@huddlz_filter}
+            can_create_huddl={@can_create_huddl}
+            editable_huddl_ids={@editable_huddl_ids}
+          />
         <% :members -> %>
-          <.members_view group={@group} members={@members} />
+          <.members_view group={@group} members={@members} can_edit_group={@can_edit_group} />
       <% end %>
     </Layouts.app>
     """
@@ -170,6 +211,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
   # ─────────────────────────────────────────  PICKER (/organize)  ───
   attr :groups, :list, required: true
+  attr :can_create_group, :boolean, required: true
 
   defp picker_view(assigns) do
     ~H"""
@@ -178,8 +220,10 @@ defmodule HuddlzWeb.OrganizeLive do
         <h1>Organizer workspace</h1>
         <p>Pick a group to manage, or start a new one.</p>
       </div>
-      <div :if={@groups != []} class="actions">
-        <a class="btn-primary" href={~p"/groups/new"}>+ Create group</a>
+      <div :if={@groups != [] and @can_create_group} class="actions">
+        <a id="organize-create-group" class="btn-primary" href={~p"/groups/new"}>
+          + Create group
+        </a>
       </div>
     </div>
 
@@ -192,8 +236,10 @@ defmodule HuddlzWeb.OrganizeLive do
           You don't organize any groups yet. Create a group to start hosting huddlz —
           each group gets its own workspace here.
         </p>
-        <div class="panel-cta">
-          <a class="btn-primary" href={~p"/groups/new"}>Create your first group</a>
+        <div :if={@can_create_group} class="panel-cta">
+          <a id="organize-create-first-group" class="btn-primary" href={~p"/groups/new"}>
+            Create your first group
+          </a>
         </div>
       </div>
     <% else %>
@@ -226,6 +272,8 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :group, :map, required: true
   attr :upcoming_huddlz, :list, required: true
   attr :open_rsvps, :integer, required: true
+  attr :can_edit_group, :boolean, required: true
+  attr :can_create_huddl, :boolean, required: true
 
   defp overview_view(assigns) do
     assigns =
@@ -240,8 +288,20 @@ defmodule HuddlzWeb.OrganizeLive do
         <p>A scannable summary of this group's huddlz and members.</p>
       </div>
       <div class="actions">
-        <a class="btn-secondary" href={~p"/groups/#{@group.slug}/edit"}>Edit group</a>
-        <a class="btn-primary" href={~p"/groups/#{@group.slug}/huddlz/new"}>
+        <a
+          :if={@can_edit_group}
+          id="organize-edit-group"
+          class="btn-secondary"
+          href={~p"/groups/#{@group.slug}/edit"}
+        >
+          Edit group
+        </a>
+        <a
+          :if={@can_create_huddl}
+          id="organize-create-huddl"
+          class="btn-primary"
+          href={~p"/groups/#{@group.slug}/huddlz/new"}
+        >
           + Create huddl
         </a>
       </div>
@@ -313,6 +373,8 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :group, :map, required: true
   attr :huddlz, :list, required: true
   attr :filter, :atom, required: true
+  attr :can_create_huddl, :boolean, required: true
+  attr :editable_huddl_ids, :any, required: true
 
   defp huddlz_view(assigns) do
     ~H"""
@@ -322,7 +384,12 @@ defmodule HuddlzWeb.OrganizeLive do
         <p>Every huddl in {@group.name}. Click one to manage it.</p>
       </div>
       <div class="actions">
-        <a class="btn-primary" href={~p"/groups/#{@group.slug}/huddlz/new"}>
+        <a
+          :if={@can_create_huddl}
+          id="organize-schedule-huddl"
+          class="btn-primary"
+          href={~p"/groups/#{@group.slug}/huddlz/new"}
+        >
           + Schedule huddl
         </a>
       </div>
@@ -343,8 +410,12 @@ defmodule HuddlzWeb.OrganizeLive do
           <h2>{empty_huddlz_heading(@filter)}</h2>
         </div>
         <p class="muted">{empty_huddlz_body(@filter)}</p>
-        <div :if={@filter == :live} class="panel-cta">
-          <a class="btn-primary" href={~p"/groups/#{@group.slug}/huddlz/new"}>
+        <div :if={@filter == :live and @can_create_huddl} class="panel-cta">
+          <a
+            id="organize-create-first-huddl"
+            class="btn-primary"
+            href={~p"/groups/#{@group.slug}/huddlz/new"}
+          >
             Create your first huddl
           </a>
         </div>
@@ -362,9 +433,16 @@ defmodule HuddlzWeb.OrganizeLive do
           >
             <div>
               <div class="row-title">
-                <.link navigate={~p"/groups/#{@group.slug}/huddlz/#{huddl.id}/edit"}>
+                <.link
+                  :if={MapSet.member?(@editable_huddl_ids, huddl.id)}
+                  id={"organize-edit-huddl-#{huddl.id}"}
+                  navigate={~p"/groups/#{@group.slug}/huddlz/#{huddl.id}/edit"}
+                >
                   {huddl.title}
                 </.link>
+                <span :if={!MapSet.member?(@editable_huddl_ids, huddl.id)}>
+                  {huddl.title}
+                </span>
               </div>
               <div class="meta">{format_starts_at(huddl.starts_at)}</div>
             </div>
@@ -410,6 +488,7 @@ defmodule HuddlzWeb.OrganizeLive do
   # ─────────────────────────────────────────  MEMBERS  ───
   attr :group, :map, required: true
   attr :members, :list, required: true
+  attr :can_edit_group, :boolean, required: true
 
   defp members_view(assigns) do
     by_role = Enum.group_by(assigns.members, & &1.role)
@@ -424,7 +503,14 @@ defmodule HuddlzWeb.OrganizeLive do
         <p>Who's part of {@group.name}.</p>
       </div>
       <div class="actions">
-        <a class="btn-secondary" href={~p"/groups/#{@group.slug}/edit"}>Edit group</a>
+        <a
+          :if={@can_edit_group}
+          id="organize-edit-group"
+          class="btn-secondary"
+          href={~p"/groups/#{@group.slug}/edit"}
+        >
+          Edit group
+        </a>
       </div>
     </div>
 
@@ -514,4 +600,36 @@ defmodule HuddlzWeb.OrganizeLive do
   defp rsvp_label(0), do: "0 RSVPs"
   defp rsvp_label(1), do: "1 RSVP"
   defp rsvp_label(n), do: "#{n} RSVPs"
+
+  @impl true
+  def handle_info(
+        {:group_membership_changed, group_id},
+        %{assigns: %{group: %{id: group_id}}} = socket
+      ) do
+    {:noreply, refresh_after_membership_change(socket)}
+  end
+
+  def handle_info({:group_membership_changed, _group_id}, socket), do: {:noreply, socket}
+
+  defp refresh_after_membership_change(socket) do
+    user = socket.assigns.current_user
+    group = socket.assigns.group
+
+    case load_group(group.slug, user) do
+      {:ok, reloaded_group} ->
+        sidebar_groups =
+          Communities.get_organizable_groups!(actor: user, query: [sort: [name: :asc]])
+
+        socket
+        |> assign(:group, reloaded_group)
+        |> assign(:sidebar_owned_groups, sidebar_groups)
+        |> assign_group_permissions(reloaded_group, user)
+        |> load_section(socket.assigns.live_action, reloaded_group, user)
+
+      :error ->
+        socket
+        |> put_flash(:error, "Your organizer access to #{group.name} has changed.")
+        |> push_navigate(to: ~p"/organize")
+    end
+  end
 end
