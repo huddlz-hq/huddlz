@@ -32,8 +32,8 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       |> assert_has("h1", text: "Edit Group")
       |> assert_has("input[name='form[name]'][value='Test Group']")
       |> assert_has("input[name='form[slug]'][value='test-group']")
-      |> assert_has("#group-visibility-current[data-visibility='public']", text: "Public")
-      |> assert_has("#group-visibility-selection[data-visibility='public']", text: "Public group")
+      |> assert_has("#group-visibility-current", text: "Public")
+      |> assert_has("#group-visibility-selection", text: "Public group")
       |> assert_has(
         "#group-is-public[aria-labelledby='group-visibility-label'][aria-describedby='group-visibility-description group-visibility-consequence']"
       )
@@ -93,13 +93,11 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}/edit")
       |> uncheck("Public group")
-      |> assert_has("#group-visibility-current[data-visibility='public']", text: "Public")
-      |> assert_has("#group-visibility-selection[data-visibility='private']",
-        text: "Private group"
-      )
+      |> assert_has("#group-visibility-current", text: "Public")
+      |> assert_has("#group-visibility-selection", text: "Private group")
       |> assert_has(
         "#group-visibility-description",
-        text: "Only current members can access this group and its huddlz"
+        text: "Access is limited to current members and platform admins"
       )
       |> assert_has(
         "#group-visibility-consequence",
@@ -127,9 +125,9 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       conn
       |> login(owner)
       |> visit(~p"/groups/#{private_group.slug}/edit")
-      |> assert_has("#group-visibility-current[data-visibility='private']", text: "Private")
+      |> assert_has("#group-visibility-current", text: "Private")
       |> check("Private group")
-      |> assert_has("#group-visibility-selection[data-visibility='public']", text: "Public group")
+      |> assert_has("#group-visibility-selection", text: "Public group")
       |> assert_has(
         "#group-visibility-description",
         text: "Anyone can find and join this group"
@@ -167,8 +165,8 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       |> uncheck("Public group")
       |> click_link("Cancel")
       |> visit(~p"/groups/#{group.slug}/edit")
-      |> assert_has("#group-visibility-current[data-visibility='public']", text: "Public")
-      |> assert_has("#group-visibility-selection[data-visibility='public']", text: "Public group")
+      |> assert_has("#group-visibility-current", text: "Public")
+      |> assert_has("#group-visibility-selection", text: "Public group")
     end
 
     test "slug change shows warning", %{conn: conn, owner: owner, group: group} do

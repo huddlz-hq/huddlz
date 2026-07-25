@@ -114,6 +114,16 @@ defmodule HuddlzWeb.GroupLive.Edit do
 
   @impl true
   def render(assigns) do
+    selected_public? = public_group?(assigns.form)
+
+    assigns =
+      assigns
+      |> assign(:selected_public?, selected_public?)
+      |> assign(
+        :visibility_changed?,
+        visibility_changed?(assigns.group.is_public, selected_public?)
+      )
+
     ~H"""
     <Layouts.app
       flash={@flash}
@@ -314,7 +324,6 @@ defmodule HuddlzWeb.GroupLive.Edit do
             <div
               id="group-visibility-current"
               class="visibility-current"
-              data-visibility={visibility_value(@group.is_public)}
             >
               <span>Current visibility</span>
               <strong>{visibility_label(@group.is_public)}</strong>
@@ -324,14 +333,13 @@ defmodule HuddlzWeb.GroupLive.Edit do
             <div
               id="group-visibility-selection"
               class="row visibility-selection"
-              data-visibility={visibility_value(public_group?(@form))}
             >
               <div>
                 <label id="group-visibility-label" class="row-title" for="group-is-public">
-                  {visibility_label(public_group?(@form))} group
+                  {visibility_label(@selected_public?)} group
                 </label>
                 <div id="group-visibility-description" class="row-desc">
-                  {visibility_description(public_group?(@form))}
+                  {visibility_description(@selected_public?)}
                 </div>
               </div>
               <label class="toggle visibility-toggle">
@@ -341,13 +349,13 @@ defmodule HuddlzWeb.GroupLive.Edit do
                   type="checkbox"
                   name={@form[:is_public].name}
                   value="true"
-                  checked={public_group?(@form)}
+                  checked={@selected_public?}
                   aria-labelledby="group-visibility-label"
                   aria-describedby="group-visibility-description group-visibility-consequence"
                 />
                 <span class="track"></span>
                 <span class="toggle-text">
-                  {visibility_label(public_group?(@form))}
+                  {visibility_label(@selected_public?)}
                 </span>
               </label>
             </div>
@@ -356,21 +364,20 @@ defmodule HuddlzWeb.GroupLive.Edit do
             id="group-visibility-consequence"
             class={[
               "visibility-consequence",
-              visibility_changed?(@group.is_public, public_group?(@form)) &&
-                "visibility-consequence-pending"
+              @visibility_changed? && "visibility-consequence-pending"
             ]}
             role="status"
             aria-live="polite"
           >
             <.icon
               name={
-                if visibility_changed?(@group.is_public, public_group?(@form)),
+                if @visibility_changed?,
                   do: "hero-arrow-right",
                   else: "hero-check"
               }
               class="visibility-consequence-icon size-4"
             />
-            <span>{visibility_consequence(@group.is_public, public_group?(@form))}</span>
+            <span>{visibility_consequence(@group.is_public, @selected_public?)}</span>
           </div>
         </div>
 
@@ -537,7 +544,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
     do: "Anyone can find and join this group. Its public huddlz are visible without signing in."
 
   defp visibility_description(false),
-    do: "Only current members can access this group and its huddlz."
+    do: "Access is limited to current members and platform admins for this group and its huddlz."
 
   defp visibility_consequence(saved_public?, saved_public?),
     do:
