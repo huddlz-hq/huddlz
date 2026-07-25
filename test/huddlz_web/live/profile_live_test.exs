@@ -185,6 +185,170 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> fill_in("Display name", with: "")
       |> assert_has("form")
     end
+
+    test "keeps a cleared display name empty and shows a friendly error", %{
+      conn: conn,
+      user: user
+    } do
+      view = conn |> login(user) |> visit("/profile") |> Map.fetch!(:view)
+
+      view
+      |> form("#profile-form", %{"form" => %{"display_name" => "Corrected Name"}})
+      |> render_change()
+
+      view
+      |> form("#profile-form", %{"form" => %{"display_name" => ""}})
+      |> render_change()
+
+      assert has_element?(view, "#form_display_name[value='']")
+      assert has_element?(view, "#form_display_name-error-0", "is required")
+    end
+
+    test "shows a friendly error for a whitespace-only display name", %{
+      conn: conn,
+      user: user
+    } do
+      view = conn |> login(user) |> visit("/profile") |> Map.fetch!(:view)
+
+      view
+      |> form("#profile-form", %{"form" => %{"display_name" => "   "}})
+      |> render_change()
+
+      assert has_element?(view, "#form_display_name-error-0", "is required")
+      refute has_element?(view, "#profile-form", "must not equal")
+    end
+
+    test "never renders password values on load", %{conn: conn, user: user} do
+      view = conn |> login(user) |> visit("/profile") |> Map.fetch!(:view)
+
+      assert has_element?(
+               view,
+               "#password-form input[name='form[password]'][value='']"
+             )
+
+      assert has_element?(
+               view,
+               "#password-form input[name='form[password_confirmation]'][value='']"
+             )
+    end
+
+    test "keeps cleared invalid password values empty", %{conn: conn, user: user} do
+      view = conn |> login(user) |> visit("/profile") |> Map.fetch!(:view)
+
+      view
+      |> form("#password-form", %{
+        "form" => %{
+          "password" => "short",
+          "password_confirmation" => "different"
+        }
+      })
+      |> render_change()
+
+      view
+      |> form("#password-form", %{
+        "form" => %{
+          "password" => "",
+          "password_confirmation" => ""
+        }
+      })
+      |> render_change()
+
+      assert has_element?(
+               view,
+               "#password-form input[name='form[password]'][value='']"
+             )
+
+      assert has_element?(
+               view,
+               "#password-form input[name='form[password_confirmation]'][value='']"
+             )
+    end
+
+    test "clears password values after a successful submission", %{conn: conn, user: user} do
+      view = conn |> login(user) |> visit("/profile") |> Map.fetch!(:view)
+
+      view
+      |> form("#password-form", %{
+        "form" => %{
+          "password" => "NewPassword123!",
+          "password_confirmation" => "NewPassword123!"
+        }
+      })
+      |> render_submit()
+
+      assert has_element?(view, "#password-form input[name='form[password]'][value='']")
+
+      assert has_element?(
+               view,
+               "#password-form input[name='form[password_confirmation]'][value='']"
+             )
+    end
+
+    test "clears every password field while preserving errors after a failed submission", %{
+      conn: conn
+    } do
+      user =
+        Huddlz.Generator.generate(
+          Huddlz.Generator.user_with_password(password: "CurrentPassword123!")
+        )
+
+      view = conn |> login(user) |> visit("/profile") |> Map.fetch!(:view)
+
+      view
+      |> form("#password-form", %{
+        "form" => %{
+          "current_password" => "WrongCurrentPassword",
+          "password" => "short",
+          "password_confirmation" => "different"
+        }
+      })
+      |> render_submit()
+
+      assert has_element?(
+               view,
+               "#password-form input[name='form[current_password]'][value='']"
+             )
+
+      assert has_element?(
+               view,
+               "#password-form input[name='form[password]'][value='']"
+             )
+
+      assert has_element?(
+               view,
+               "#password-form input[name='form[password_confirmation]'][value='']"
+             )
+
+      assert has_element?(view, "[id$='current-password-error-0']")
+      assert has_element?(view, "[id$='password-error-0']")
+      assert has_element?(view, "[id$='password-confirmation-error-0']")
+    end
+
+    test "updates password validation errors as values are corrected", %{conn: conn, user: user} do
+      view = conn |> login(user) |> visit("/profile") |> Map.fetch!(:view)
+
+      view
+      |> form("#password-form", %{
+        "form" => %{
+          "password" => "short",
+          "password_confirmation" => "different"
+        }
+      })
+      |> render_change()
+
+      assert has_element?(view, "#password-form .form-error")
+
+      view
+      |> form("#password-form", %{
+        "form" => %{
+          "password" => "NewPassword123!",
+          "password_confirmation" => "NewPassword123!"
+        }
+      })
+      |> render_change()
+
+      refute has_element?(view, "#password-form .form-error")
+    end
   end
 
   describe "Email change" do

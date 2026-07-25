@@ -54,6 +54,7 @@ defmodule HuddlzWeb.ProfileLive do
      |> assign(:form, form)
      |> assign(:email_form, email_form)
      |> assign(:password_form, password_form)
+     |> assign(:password_input_reset_generation, 0)
      |> assign(:current_user, user_with_avatar)
      |> assign(:avatar_error, nil)
      |> assign(:remove_avatar_dialog_open, false)
@@ -108,7 +109,7 @@ defmodule HuddlzWeb.ProfileLive do
         </form>
       </div>
 
-      <.form for={@form} phx-submit="save" phx-change="validate">
+      <.form for={@form} id="profile-form" phx-submit="save" phx-change="validate">
         <div class="panel">
           <div class="panel-head">
             <h2>Account information</h2>
@@ -126,6 +127,7 @@ defmodule HuddlzWeb.ProfileLive do
             </div>
             <.input
               field={@form[:display_name]}
+              value={form_value(@form, :display_name)}
               label="Display name"
               placeholder="Enter your display name"
               help="Names aren't unique on huddlz — pick anything you like."
@@ -224,7 +226,10 @@ defmodule HuddlzWeb.ProfileLive do
             <%= if @current_user.hashed_password do %>
               <.input
                 field={@password_form[:current_password]}
+                id={"password-#{@password_input_reset_generation}-current-password"}
+                value=""
                 type="password"
+                phx-update="ignore"
                 label="Current password"
                 placeholder="Enter your current password"
                 autocomplete="current-password"
@@ -232,7 +237,10 @@ defmodule HuddlzWeb.ProfileLive do
             <% end %>
             <.input
               field={@password_form[:password]}
+              id={"password-#{@password_input_reset_generation}-password"}
+              value=""
               type="password"
+              phx-update="ignore"
               label="New password"
               placeholder="Enter your new password"
               autocomplete="new-password"
@@ -240,7 +248,10 @@ defmodule HuddlzWeb.ProfileLive do
             />
             <.input
               field={@password_form[:password_confirmation]}
+              id={"password-#{@password_input_reset_generation}-password-confirmation"}
+              value=""
               type="password"
+              phx-update="ignore"
               label="Confirm new password"
               placeholder="Confirm your new password"
               autocomplete="new-password"
@@ -319,6 +330,10 @@ defmodule HuddlzWeb.ProfileLive do
 
   defp role_pill_color(:admin), do: "magenta"
   defp role_pill_color(_), do: "cyan"
+
+  defp form_value(form, field) do
+    Map.get(form.source.raw_params, to_string(field), form[field].value)
+  end
 
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
@@ -427,13 +442,15 @@ defmodule HuddlzWeb.ProfileLive do
          socket
          |> put_flash(:info, "Password updated successfully")
          |> assign(:current_user, updated_user)
-         |> assign(:password_form, password_form)}
+         |> assign(:password_form, password_form)
+         |> update(:password_input_reset_generation, &(&1 + 1))}
 
       {:error, form} ->
         {:noreply,
          socket
          |> put_flash(:error, "Failed to update password. Please check the errors below.")
-         |> assign(:password_form, form |> to_form())}
+         |> assign(:password_form, form |> to_form())
+         |> update(:password_input_reset_generation, &(&1 + 1))}
     end
   end
 
