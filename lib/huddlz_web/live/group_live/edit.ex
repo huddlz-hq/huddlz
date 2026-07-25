@@ -304,39 +304,73 @@ defmodule HuddlzWeb.GroupLive.Edit do
         </div>
 
         <div class="panel">
-          <div class="panel-head">
+          <div class="panel-head visibility-panel-head">
             <div>
               <h2>Visibility</h2>
               <div class="panel-sub">
-                Public groups are findable in Discover. Private groups are only visible to members.
+                Choose who can find this group and its huddlz.
               </div>
+            </div>
+            <div
+              id="group-visibility-current"
+              class="visibility-current"
+              data-visibility={visibility_value(@group.is_public)}
+            >
+              <span>Current visibility</span>
+              <strong>{visibility_label(@group.is_public)}</strong>
             </div>
           </div>
           <div class="settings-list row-list pref-list">
-            <div class="row">
+            <div
+              id="group-visibility-selection"
+              class="row visibility-selection"
+              data-visibility={visibility_value(public_group?(@form))}
+            >
               <div>
-                <label class="row-title" for="group-is-public">Public group</label>
-                <div class="row-desc">
-                  Anyone can find and join this group. Huddlz are visible without signing in.
+                <label id="group-visibility-label" class="row-title" for="group-is-public">
+                  {visibility_label(public_group?(@form))} group
+                </label>
+                <div id="group-visibility-description" class="row-desc">
+                  {visibility_description(public_group?(@form))}
                 </div>
               </div>
-              <label class="toggle">
+              <label class="toggle visibility-toggle">
                 <input type="hidden" name={@form[:is_public].name} value="false" />
                 <input
                   id="group-is-public"
                   type="checkbox"
                   name={@form[:is_public].name}
                   value="true"
-                  checked={Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_public].value)}
+                  checked={public_group?(@form)}
+                  aria-labelledby="group-visibility-label"
+                  aria-describedby="group-visibility-description group-visibility-consequence"
                 />
                 <span class="track"></span>
                 <span class="toggle-text">
-                  {if Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_public].value),
-                    do: "On",
-                    else: "Off"}
+                  {visibility_label(public_group?(@form))}
                 </span>
               </label>
             </div>
+          </div>
+          <div
+            id="group-visibility-consequence"
+            class={[
+              "visibility-consequence",
+              visibility_changed?(@group.is_public, public_group?(@form)) &&
+                "visibility-consequence-pending"
+            ]}
+            role="status"
+            aria-live="polite"
+          >
+            <.icon
+              name={
+                if visibility_changed?(@group.is_public, public_group?(@form)),
+                  do: "hero-arrow-right",
+                  else: "hero-check"
+              }
+              class="visibility-consequence-icon size-4"
+            />
+            <span>{visibility_consequence(@group.is_public, public_group?(@form))}</span>
           </div>
         </div>
 
@@ -412,7 +446,10 @@ defmodule HuddlzWeb.GroupLive.Edit do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Group updated successfully")
+         |> put_flash(
+           :info,
+           "Group updated successfully. Visibility is now #{visibility_value(updated_group.is_public)}."
+         )
          |> redirect(to: ~p"/groups/#{updated_group.slug}")}
 
       {:error, form} ->
@@ -483,6 +520,36 @@ defmodule HuddlzWeb.GroupLive.Edit do
       nil
     end
   end
+
+  defp public_group?(form),
+    do: Phoenix.HTML.Form.normalize_value("checkbox", form[:is_public].value)
+
+  defp visibility_changed?(saved_public?, selected_public?),
+    do: saved_public? != selected_public?
+
+  defp visibility_label(true), do: "Public"
+  defp visibility_label(false), do: "Private"
+
+  defp visibility_value(true), do: "public"
+  defp visibility_value(false), do: "private"
+
+  defp visibility_description(true),
+    do: "Anyone can find and join this group. Its public huddlz are visible without signing in."
+
+  defp visibility_description(false),
+    do: "Only current members can access this group and its huddlz."
+
+  defp visibility_consequence(saved_public?, saved_public?),
+    do:
+      "No visibility change pending. Saving keeps this group #{visibility_value(saved_public?)}."
+
+  defp visibility_consequence(true, false),
+    do:
+      "When you save, this group and all existing huddlz will leave public discovery. Current members keep their memberships."
+
+  defp visibility_consequence(false, true),
+    do:
+      "When you save, this group and otherwise-public huddlz will become discoverable again. Current members keep their memberships."
 
   defp get_group_by_slug(slug, actor) do
     case Huddlz.Communities.get_by_slug(slug,
