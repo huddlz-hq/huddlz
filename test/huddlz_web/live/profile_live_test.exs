@@ -168,7 +168,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
         |> assert_has("#email-change-form")
         |> fill_in("New email", with: new_email)
         |> fill_in("Confirm current password", with: "OldPassword123!")
-        |> click_button("Change email")
+        |> click_button("#change-email-button", "Change email")
         |> assert_has("*", text: "Email updated successfully")
         |> assert_has("aside.sidebar .sb-user", text: new_email)
 
@@ -199,7 +199,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
         |> visit("/profile")
         |> fill_in("New email", with: "not-an-email")
         |> fill_in("Confirm current password", with: "OldPassword123!")
-        |> click_button("Change email")
+        |> click_button("#change-email-button", "Change email")
 
       session
       |> assert_has("#email_change_email[aria-invalid='true']")
@@ -215,7 +215,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> visit("/profile")
       |> fill_in("New email", with: to_string(user.email))
       |> fill_in("Confirm current password", with: "OldPassword123!")
-      |> click_button("Change email")
+      |> click_button("#change-email-button", "Change email")
       |> assert_has("#email_change_email-error-0", text: "Enter a different email address.")
 
       refute_enqueued(worker: DeliverWorker, args: %{"trigger" => "email_changed"})
@@ -230,7 +230,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> visit("/profile")
       |> fill_in("New email", with: taken_email)
       |> fill_in("Confirm current password", with: "OldPassword123!")
-      |> click_button("Change email")
+      |> click_button("#change-email-button", "Change email")
       |> assert_has("#email_change_email-error-0", text: "That email is already in use.")
 
       assert User |> Ash.get!(user.id, authorize?: false) |> Map.fetch!(:email) == user.email
@@ -249,13 +249,18 @@ defmodule HuddlzWeb.ProfileLiveTest do
           with: "wrong-password-#{System.unique_integer([:positive])}@example.com"
         )
         |> fill_in("Confirm current password", with: "WrongPassword")
-        |> click_button("Change email")
+        |> click_button("#change-email-button", "Change email")
         |> assert_has("*", text: "Email could not be updated")
         |> refute_has("#email_change_current_password[value='WrongPassword']")
 
       assert User |> Ash.get!(user.id, authorize?: false) |> Map.fetch!(:email) == user.email
       refute_enqueued(worker: DeliverWorker, args: %{"trigger" => "email_changed"})
-      assert_has(session, "#email-change-form")
+
+      session
+      |> fill_in("Confirm current password", with: "OldPassword123!")
+      |> click_button("#change-email-button", "Change email")
+      |> assert_has("*", text: "Email updated successfully")
+      |> refute_has("*", text: "Email could not be updated")
     end
   end
 

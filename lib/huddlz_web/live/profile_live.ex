@@ -168,7 +168,9 @@ defmodule HuddlzWeb.ProfileLive do
             />
           </div>
           <div class="form-foot">
-            <.button variant={:primary} type="submit">Change email</.button>
+            <.button id="change-email-button" variant={:primary} type="submit">
+              Change email
+            </.button>
           </div>
         </div>
       </.form>
@@ -335,6 +337,7 @@ defmodule HuddlzWeb.ProfileLive do
 
         {:noreply,
          socket
+         |> clear_flash(:error)
          |> put_flash(:info, "Email updated successfully")
          |> assign(:current_user, updated_user)
          |> assign(:email_form, email_form(updated_user))}
