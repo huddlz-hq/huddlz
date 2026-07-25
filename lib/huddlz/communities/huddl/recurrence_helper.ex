@@ -60,25 +60,23 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   """
   def reconcile_future_instances(source, template, actor) do
     desired = desired_occurrences(source, template)
-    existing = source |> future_instances() |> Enum.sort_by(& &1.starts_at, DateTime)
+    existing_by_date = Map.new(future_instances(source), &{occurrence_date(&1.starts_at), &1})
 
-    # Update the overlapping positions in place.
-    desired
-    |> Enum.zip(existing)
-    |> Enum.each(fn {{starts_at, ends_at}, instance} ->
-      update_instance!(instance, source, starts_at, ends_at, actor)
-    end)
+    unmatched_existing =
+      Enum.reduce(desired, existing_by_date, fn {starts_at, ends_at}, remaining ->
+        case Map.pop(remaining, occurrence_date(starts_at)) do
+          {nil, remaining} ->
+            create_instance!(source, template, starts_at, ends_at)
+            remaining
 
-    # Create dates the series gained.
-    desired
-    |> Enum.drop(length(existing))
-    |> Enum.each(fn {starts_at, ends_at} ->
-      create_instance!(source, template, starts_at, ends_at)
-    end)
+          {instance, remaining} ->
+            update_instance!(instance, source, starts_at, ends_at, actor)
+            remaining
+        end
+      end)
 
-    # Cancel dates the series lost.
-    existing
-    |> Enum.drop(length(desired))
+    unmatched_existing
+    |> Map.values()
     |> Enum.each(&destroy_instance!(&1, actor))
 
     :ok
@@ -139,6 +137,8 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     end)
     |> Enum.reverse()
   end
+
+  defp occurrence_date(datetime), do: DateTime.to_date(datetime)
 
   defp create_instance!(source, template, starts_at, ends_at) do
     instance =

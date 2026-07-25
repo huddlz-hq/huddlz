@@ -285,6 +285,153 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       assert_has(session, "input[name='form[repeat_until]']")
     end
 
+    test "whole-series editing keeps virtual controls and their value", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      virtual_huddl =
+        create_recurring_huddl(owner, group,
+          title: "Virtual Series",
+          event_type: :virtual,
+          virtual_link: "https://meet.example.com/virtual-series"
+        )
+
+      session = open_whole_series_edit(conn, owner, group, virtual_huddl)
+
+      assert_has(session, "#event-type-virtual[checked]")
+
+      assert_has(
+        session,
+        "input[name='form[virtual_link]'][value='https://meet.example.com/virtual-series']"
+      )
+
+      refute_has(session, "#saved-location-picker")
+
+      save_whole_series(session)
+
+      assert Enum.all?(load_series_huddlz(virtual_huddl, owner), fn huddl ->
+               huddl.event_type == :virtual and
+                 huddl.virtual_link == "https://meet.example.com/virtual-series" and
+                 is_nil(huddl.physical_location)
+             end)
+    end
+
+    test "whole-series editing keeps hybrid controls and their values", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      location =
+        generate(
+          group_location(
+            group_id: group.id,
+            name: "Community Studio",
+            address: "456 Oak Ave",
+            actor: owner
+          )
+        )
+
+      hybrid_huddl =
+        create_recurring_huddl(owner, group,
+          title: "Hybrid Series",
+          event_type: :hybrid,
+          physical_location: location.address,
+          virtual_link: "https://meet.example.com/hybrid-series"
+        )
+
+      session = open_whole_series_edit(conn, owner, group, hybrid_huddl)
+
+      assert_has(session, "#event-type-hybrid[checked]")
+      assert_has(session, "[data-testid='saved-location-display']", text: location.name)
+
+      assert_has(
+        session,
+        "input[name='form[virtual_link]'][value='https://meet.example.com/hybrid-series']"
+      )
+
+      save_whole_series(session)
+
+      assert Enum.all?(load_series_huddlz(hybrid_huddl, owner), fn huddl ->
+               huddl.event_type == :hybrid and
+                 huddl.virtual_link == "https://meet.example.com/hybrid-series" and
+                 huddl.physical_location == location.address
+             end)
+    end
+
+    test "whole-series editing keeps in-person controls without requiring an online link", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      location =
+        generate(
+          group_location(
+            group_id: group.id,
+            name: "Neighborhood Hall",
+            address: "789 Main St",
+            actor: owner
+          )
+        )
+
+      in_person_huddl =
+        create_recurring_huddl(owner, group,
+          title: "In-person Series",
+          event_type: :in_person,
+          physical_location: location.address,
+          virtual_link: nil
+        )
+
+      session = open_whole_series_edit(conn, owner, group, in_person_huddl)
+
+      assert_has(session, "#event-type-in_person[checked]")
+      assert_has(session, "[data-testid='saved-location-display']", text: location.name)
+      refute_has(session, "input[name='form[virtual_link]']")
+
+      save_whole_series(session)
+
+      assert Enum.all?(load_series_huddlz(in_person_huddl, owner), fn huddl ->
+               huddl.event_type == :in_person and
+                 huddl.physical_location == location.address and
+                 is_nil(huddl.virtual_link)
+             end)
+    end
+
+    test "whole-series format changes propagate to every huddl", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      location =
+        generate(
+          group_location(
+            group_id: group.id,
+            name: "Original Venue",
+            address: "123 Original St",
+            actor: owner
+          )
+        )
+
+      hybrid_huddl =
+        create_recurring_huddl(owner, group,
+          title: "Changing Format Series",
+          event_type: :hybrid,
+          physical_location: location.address,
+          virtual_link: "https://meet.example.com/changed-series"
+        )
+
+      conn
+      |> open_whole_series_edit(owner, group, hybrid_huddl)
+      |> choose("Virtual")
+      |> save_whole_series()
+
+      assert Enum.all?(load_series_huddlz(hybrid_huddl, owner), fn huddl ->
+               huddl.event_type == :virtual and
+                 huddl.virtual_link == "https://meet.example.com/changed-series" and
+                 is_nil(huddl.physical_location)
+             end)
+    end
+
     test "clicking 'Just this huddl' after 'Whole series' restores instance scope", %{
       conn: conn,
       owner: owner,
@@ -303,120 +450,6 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       refute_has(session, "select[name='form[frequency]']")
       refute_has(session, "input[name='form[repeat_until]']")
     end
-
-    test "whole-series editing preserves a virtual huddl's online controls", %{
-      conn: conn,
-      owner: owner,
-      group: group,
-      huddl: huddl
-    } do
-      huddl =
-        huddl
-        |> Ash.Changeset.for_update(
-          :update,
-          %{
-            event_type: :virtual,
-            virtual_link: "https://meet.example.com/recurring"
-          },
-          actor: owner
-        )
-        |> Ash.update!()
-
-      session =
-        conn
-        |> login(owner)
-        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
-        |> click_button("Whole series")
-
-      assert_has(
-        session,
-        "input[name='form[virtual_link]'][value='https://meet.example.com/recurring']"
-      )
-
-      refute_has(session, "#saved-location-picker")
-
-      session
-      |> click_button("Save changes")
-      |> assert_has("*", text: "Huddl updated successfully!")
-
-      updated_huddl = read_huddl(huddl.id, owner)
-      assert updated_huddl.event_type == :virtual
-      assert updated_huddl.virtual_link == "https://meet.example.com/recurring"
-      assert is_nil(updated_huddl.physical_location)
-    end
-
-    test "whole-series editing preserves a hybrid huddl's location and online controls", %{
-      conn: conn,
-      owner: owner,
-      group: group,
-      huddl: huddl
-    } do
-      huddl =
-        huddl
-        |> Ash.Changeset.for_update(
-          :update,
-          %{
-            event_type: :hybrid,
-            physical_location: "456 Oak Ave",
-            virtual_link: "https://meet.example.com/hybrid"
-          },
-          actor: owner
-        )
-        |> Ash.update!()
-
-      session =
-        conn
-        |> login(owner)
-        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
-        |> click_button("Whole series")
-
-      assert_has(session, "#saved-location-picker")
-
-      assert_has(
-        session,
-        "input[name='form[virtual_link]'][value='https://meet.example.com/hybrid']"
-      )
-
-      session
-      |> click_button("Save changes")
-      |> assert_has("*", text: "Huddl updated successfully!")
-
-      updated_huddl = read_huddl(huddl.id, owner)
-      assert updated_huddl.event_type == :hybrid
-      assert updated_huddl.physical_location == "456 Oak Ave"
-      assert updated_huddl.virtual_link == "https://meet.example.com/hybrid"
-    end
-
-    test "whole-series editing keeps an in-person huddl free of online controls", %{
-      conn: conn,
-      owner: owner,
-      group: group,
-      huddl: huddl
-    } do
-      session =
-        conn
-        |> login(owner)
-        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
-        |> click_button("Whole series")
-
-      assert_has(session, "#saved-location-picker")
-      refute_has(session, "input[name='form[virtual_link]']")
-
-      session
-      |> click_button("Save changes")
-      |> assert_has("*", text: "Huddl updated successfully!")
-
-      updated_huddl = read_huddl(huddl.id, owner)
-      assert updated_huddl.event_type == :in_person
-      assert updated_huddl.physical_location == "456 Oak Ave"
-      assert is_nil(updated_huddl.virtual_link)
-    end
-  end
-
-  defp read_huddl(id, actor) do
-    Huddl
-    |> Ash.Query.filter(id == ^id)
-    |> Ash.read_one!(actor: actor)
   end
 
   describe "form submission" do
@@ -642,5 +675,50 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       assert has_element?(view, "input[name='form[title]'][value='My Updated Title']")
       assert has_element?(view, "input[name='form[date]'][value='#{expected_date}']")
     end
+  end
+
+  defp create_recurring_huddl(owner, group, attrs) do
+    huddl_attrs =
+      Keyword.merge(
+        [
+          group_id: group.id,
+          creator_id: owner.id,
+          actor: owner,
+          is_recurring: true,
+          frequency: :weekly,
+          repeat_until: Date.utc_today() |> Date.add(60)
+        ],
+        attrs
+      )
+
+    recurring_huddl = generate(huddl(huddl_attrs))
+
+    assert %{success: success_count} = Oban.drain_queue(queue: :default)
+    assert success_count > 0
+
+    recurring_huddl
+  end
+
+  defp open_whole_series_edit(conn, owner, group, huddl) do
+    conn
+    |> login(owner)
+    |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+    |> click_button("Whole series")
+  end
+
+  defp save_whole_series(session) do
+    session
+    |> click_button("Save changes")
+    |> assert_has("*", text: "Huddl updated successfully!")
+  end
+
+  defp load_series_huddlz(huddl, owner) do
+    series_huddlz =
+      Huddl
+      |> Ash.Query.filter(huddl_template_id == ^huddl.huddl_template_id)
+      |> Ash.read!(actor: owner)
+
+    assert length(series_huddlz) > 1
+    series_huddlz
   end
 end
