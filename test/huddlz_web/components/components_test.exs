@@ -49,11 +49,14 @@ defmodule HuddlzWeb.ComponentsTest do
 
     test "renders a link when href is given" do
       assigns = %{}
-      html = rendered_to_string(~H|<.chip href="/discover">Discover</.chip>|)
+      active = rendered_to_string(~H|<.chip href="/discover" active>Discover</.chip>|)
+      inactive = rendered_to_string(~H|<.chip href="/discover">Discover</.chip>|)
 
-      assert html =~ "<a"
-      assert html =~ ~s(href="/discover")
-      assert html =~ "chip"
+      assert active =~ "<a"
+      assert active =~ ~s(href="/discover")
+      assert active =~ "chip"
+      assert active =~ ~s(aria-current="page")
+      refute inactive =~ "aria-current"
     end
   end
 

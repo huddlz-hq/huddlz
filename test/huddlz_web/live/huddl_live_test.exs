@@ -362,8 +362,15 @@ defmodule HuddlzWeb.HuddlLiveTest do
     test "scope chips render with Huddlz active by default", %{conn: conn} do
       conn
       |> visit("/discover")
-      |> assert_has(".scope-tab.is-active", text: "Huddlz")
-      |> assert_has(".scope-tab", text: "Groups")
+      |> assert_has(".scope-tab.is-active[aria-current='page']", text: "Huddlz")
+      |> refute_has(".scope-tab:not(.is-active)[aria-current]")
+    end
+
+    test "scope=groups exposes Groups as the current view", %{conn: conn} do
+      conn
+      |> visit("/discover?scope=groups")
+      |> assert_has(".scope-tab.is-active[aria-current='page']", text: "Groups")
+      |> refute_has(".scope-tab:not(.is-active)[aria-current]")
     end
 
     test "scope=groups empty state when no public groups", %{conn: conn} do
