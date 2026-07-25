@@ -303,6 +303,120 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       refute_has(session, "select[name='form[frequency]']")
       refute_has(session, "input[name='form[repeat_until]']")
     end
+
+    test "whole-series editing preserves a virtual huddl's online controls", %{
+      conn: conn,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      huddl =
+        huddl
+        |> Ash.Changeset.for_update(
+          :update,
+          %{
+            event_type: :virtual,
+            virtual_link: "https://meet.example.com/recurring"
+          },
+          actor: owner
+        )
+        |> Ash.update!()
+
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+        |> click_button("Whole series")
+
+      assert_has(
+        session,
+        "input[name='form[virtual_link]'][value='https://meet.example.com/recurring']"
+      )
+
+      refute_has(session, "#saved-location-picker")
+
+      session
+      |> click_button("Save changes")
+      |> assert_has("*", text: "Huddl updated successfully!")
+
+      updated_huddl = read_huddl(huddl.id, owner)
+      assert updated_huddl.event_type == :virtual
+      assert updated_huddl.virtual_link == "https://meet.example.com/recurring"
+      assert is_nil(updated_huddl.physical_location)
+    end
+
+    test "whole-series editing preserves a hybrid huddl's location and online controls", %{
+      conn: conn,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      huddl =
+        huddl
+        |> Ash.Changeset.for_update(
+          :update,
+          %{
+            event_type: :hybrid,
+            physical_location: "456 Oak Ave",
+            virtual_link: "https://meet.example.com/hybrid"
+          },
+          actor: owner
+        )
+        |> Ash.update!()
+
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+        |> click_button("Whole series")
+
+      assert_has(session, "#saved-location-picker")
+
+      assert_has(
+        session,
+        "input[name='form[virtual_link]'][value='https://meet.example.com/hybrid']"
+      )
+
+      session
+      |> click_button("Save changes")
+      |> assert_has("*", text: "Huddl updated successfully!")
+
+      updated_huddl = read_huddl(huddl.id, owner)
+      assert updated_huddl.event_type == :hybrid
+      assert updated_huddl.physical_location == "456 Oak Ave"
+      assert updated_huddl.virtual_link == "https://meet.example.com/hybrid"
+    end
+
+    test "whole-series editing keeps an in-person huddl free of online controls", %{
+      conn: conn,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+        |> click_button("Whole series")
+
+      assert_has(session, "#saved-location-picker")
+      refute_has(session, "input[name='form[virtual_link]']")
+
+      session
+      |> click_button("Save changes")
+      |> assert_has("*", text: "Huddl updated successfully!")
+
+      updated_huddl = read_huddl(huddl.id, owner)
+      assert updated_huddl.event_type == :in_person
+      assert updated_huddl.physical_location == "456 Oak Ave"
+      assert is_nil(updated_huddl.virtual_link)
+    end
+  end
+
+  defp read_huddl(id, actor) do
+    Huddl
+    |> Ash.Query.filter(id == ^id)
+    |> Ash.read_one!(actor: actor)
   end
 
   describe "form submission" do
