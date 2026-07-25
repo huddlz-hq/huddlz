@@ -49,28 +49,66 @@ defmodule HuddlzWeb.Layouts do
 
     ~H"""
     <%= if @signed_in do %>
-      <input type="checkbox" id="nav-toggle" class="nav-toggle" />
-      <label for="nav-toggle" class="nav-scrim" aria-hidden="true"></label>
-      <aside class="sidebar">
-        <a class="sidebar-brand" href="/">
-          <div class="brand-glyph">h</div>
-          <div class="brand-text">huddlz</div>
-        </a>
+      <button
+        type="button"
+        class="nav-scrim"
+        data-mobile-nav-scrim
+        aria-label="Close navigation"
+        tabindex="-1"
+      >
+      </button>
+      <aside
+        id="mobile-navigation-drawer"
+        class="sidebar"
+        data-mobile-nav-state="closed"
+        aria-label="Primary navigation"
+      >
+        <div class="sidebar-brand">
+          <a href="/" aria-label="huddlz home">
+            <div class="brand-glyph">h</div>
+            <div class="brand-text">huddlz</div>
+          </a>
+          <button
+            type="button"
+            id="mobile-nav-close"
+            class="nav-close"
+            data-mobile-nav-close
+            aria-label="Close navigation"
+          >
+            <.icon name="hero-x-mark" class="size-5" />
+          </button>
+        </div>
 
         <nav class="sb-nav">
-          <a class={["sb-item", @active == "discover" && "active"]} href="/discover">
+          <a
+            class={["sb-item", @active == "discover" && "active"]}
+            href="/discover"
+            aria-current={@active == "discover" && "page"}
+          >
             <.nav_icon name="search" />
             <span class="label">Discover</span>
           </a>
-          <a class={["sb-item", @active == "my-huddlz" && "active"]} href="/my-huddlz">
+          <a
+            class={["sb-item", @active == "my-huddlz" && "active"]}
+            href="/my-huddlz"
+            aria-current={@active == "my-huddlz" && "page"}
+          >
             <.nav_icon name="ticket" />
             <span class="label">My huddlz</span>
           </a>
-          <a class={["sb-item", @active == "my-groups" && "active"]} href="/my-groups">
+          <a
+            class={["sb-item", @active == "my-groups" && "active"]}
+            href="/my-groups"
+            aria-current={@active == "my-groups" && "page"}
+          >
             <.nav_icon name="users" />
             <span class="label">My groups</span>
           </a>
-          <a class={["sb-item", @active == "calendar" && "active"]} href="/calendar">
+          <a
+            class={["sb-item", @active == "calendar" && "active"]}
+            href="/calendar"
+            aria-current={@active == "calendar" && "page"}
+          >
             <.nav_icon name="calendar" />
             <span class="label">My calendar</span>
           </a>
@@ -83,6 +121,9 @@ defmodule HuddlzWeb.Layouts do
                   @active_group_slug == group.slug && "active"
                 ]}
                 href={"/organize/#{group.slug}"}
+                aria-current={
+                  @active_group_slug == group.slug && is_nil(@active_organize_section) && "page"
+                }
               >
                 <div class={["group-mark", group_mark_variant(idx)]}>
                   {group_initials(group.name)}
@@ -93,18 +134,21 @@ defmodule HuddlzWeb.Layouts do
                 <a
                   class={["sb-sub-item", @active_organize_section == :overview && "active"]}
                   href={"/organize/#{group.slug}"}
+                  aria-current={@active_organize_section == :overview && "page"}
                 >
                   Overview
                 </a>
                 <a
                   class={["sb-sub-item", @active_organize_section == :huddlz && "active"]}
                   href={"/organize/#{group.slug}/huddlz"}
+                  aria-current={@active_organize_section == :huddlz && "page"}
                 >
                   Huddlz
                 </a>
                 <a
                   class={["sb-sub-item", @active_organize_section == :members && "active"]}
                   href={"/organize/#{group.slug}/members"}
+                  aria-current={@active_organize_section == :members && "page"}
                 >
                   Members
                 </a>
@@ -118,18 +162,27 @@ defmodule HuddlzWeb.Layouts do
         </nav>
 
         <div class="sb-account">
-          <a class={["sb-item", @active == "profile" && "active"]} href="/profile">
+          <a
+            class={["sb-item", @active == "profile" && "active"]}
+            href="/profile"
+            aria-current={@active == "profile" && "page"}
+          >
             <.nav_icon name="user" />
             <span class="label">Profile</span>
           </a>
           <a
             class={["sb-item", @active == "settings" && "active"]}
             href="/profile/notifications"
+            aria-current={@active == "settings" && "page"}
           >
             <.nav_icon name="cog" />
             <span class="label">Settings</span>
           </a>
-          <a class={["sb-item", @active == "help" && "active"]} href="/help">
+          <a
+            class={["sb-item", @active == "help" && "active"]}
+            href="/help"
+            aria-current={@active == "help" && "page"}
+          >
             <.nav_icon name="help" />
             <span class="label">Help</span>
           </a>
@@ -144,7 +197,11 @@ defmodule HuddlzWeb.Layouts do
             <span class="label">Sign out</span>
           </.link>
           <%= if User.admin?(@current_user) do %>
-            <a class={["sb-item", @active == "admin" && "active"]} href="/admin">
+            <a
+              class={["sb-item", @active == "admin" && "active"]}
+              href="/admin"
+              aria-current={@active == "admin" && "page"}
+            >
               <.nav_icon name="shield" />
               <span class="label">Admin</span>
             </a>
@@ -161,12 +218,20 @@ defmodule HuddlzWeb.Layouts do
       </aside>
     <% end %>
 
-    <main class="main">
+    <main class="main" data-mobile-nav-background>
       <header class="content-topbar">
         <%= if @signed_in do %>
-          <label for="nav-toggle" class="nav-trigger" aria-label="Open navigation">
+          <button
+            type="button"
+            id="mobile-nav-trigger"
+            class="nav-trigger"
+            data-mobile-nav-trigger
+            aria-label="Open navigation"
+            aria-controls="mobile-navigation-drawer"
+            aria-expanded="false"
+          >
             <.nav_icon name="bars" />
-          </label>
+          </button>
         <% else %>
           <a class="topbar-brand" href="/" aria-label="huddlz home">
             <div class="brand-glyph">h</div>
