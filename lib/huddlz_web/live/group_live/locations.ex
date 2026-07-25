@@ -7,6 +7,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
   import HuddlzWeb.HuddlLive.FormHelpers, only: [load_group_locations: 2]
 
   alias Huddlz.Communities
+  alias Huddlz.Communities.GroupLocation.DeletionImpact
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
 
@@ -43,6 +44,8 @@ defmodule HuddlzWeb.GroupLive.Locations do
             |> ModalLocationHelpers.init()
             |> assign(:editing_location_id, nil)
             |> assign(:editing_name, "")
+            |> assign(:deleting_location, nil)
+            |> assign(:delete_location_references, [])
 
           {:noreply, socket}
         else
@@ -145,9 +148,9 @@ defmodule HuddlzWeb.GroupLive.Locations do
                   <.button
                     variant={:destructive}
                     type="button"
-                    phx-click="delete_location"
+                    id={"open-delete-location-#{loc.id}"}
+                    phx-click={JS.push_focus() |> JS.push("confirm_delete_location")}
                     phx-value-id={loc.id}
-                    data-confirm="Are you sure you want to delete this location?"
                   >
                     Delete
                   </.button>
@@ -157,6 +160,57 @@ defmodule HuddlzWeb.GroupLive.Locations do
           </div>
         <% end %>
       </.panel>
+
+      <.modal
+        :if={@deleting_location}
+        id="delete-location-modal"
+        show
+        on_cancel={JS.push("cancel_delete_location")}
+      >
+        <div class="delete-confirm">
+          <div class="delete-confirm-icon" aria-hidden="true">
+            <.icon name="hero-exclamation-triangle" class="h-6 w-6" />
+          </div>
+
+          <div class="delete-confirm-copy">
+            <span class="eyebrow eyebrow-magenta">
+              {if @delete_location_references == [], do: "Permanent action", else: "In use"}
+            </span>
+            <h2 id="delete-location-modal-title">Delete this saved location?</h2>
+            <p>
+              <strong>{@deleting_location.name || @deleting_location.address}</strong>
+              <span :if={@deleting_location.name}>{" — " <> @deleting_location.address}</span>
+            </p>
+            <p :if={@delete_location_references == []}>
+              It will no longer appear in future venue pickers. Past huddlz keep their
+              saved venue address.
+            </p>
+            <p :if={@delete_location_references != []} class="delete-confirm-series-note">
+              {DeletionImpact.error_message(length(@delete_location_references))}
+            </p>
+          </div>
+        </div>
+
+        <div class="delete-confirm-actions">
+          <.button
+            variant={:muted}
+            id="cancel-delete-location"
+            phx-click="cancel_delete_location"
+          >
+            Keep location
+          </.button>
+          <.button
+            variant={:destructive}
+            class="delete-confirm-submit"
+            id="confirm-delete-location"
+            phx-click="delete_location"
+            phx-disable-with="Deleting…"
+            disabled={@delete_location_references != []}
+          >
+            Delete location
+          </.button>
+        </div>
+      </.modal>
 
       <.modal
         :if={@live_action == :new_location}
@@ -293,20 +347,51 @@ defmodule HuddlzWeb.GroupLive.Locations do
   end
 
   @impl true
-  def handle_event("delete_location", %{"id" => id}, socket) do
-    loc = Enum.find(socket.assigns.locations, &(&1.id == id))
+  def handle_event("confirm_delete_location", %{"id" => id}, socket) do
+    case Enum.find(socket.assigns.locations, &(&1.id == id)) do
+      nil ->
+        {:noreply, put_flash(socket, :error, "That location is no longer available.")}
 
-    case Communities.delete_group_location(loc, actor: socket.assigns.current_user) do
+      location ->
+        case DeletionImpact.active_references(location) do
+          {:ok, references} ->
+            {:noreply,
+             assign(socket,
+               deleting_location: location,
+               delete_location_references: references
+             )}
+
+          {:error, _error} ->
+            {:noreply,
+             put_flash(socket, :error, "Failed to check whether the location is in use.")}
+        end
+    end
+  end
+
+  @impl true
+  def handle_event("cancel_delete_location", _params, socket) do
+    {:noreply, clear_delete_location(socket)}
+  end
+
+  @impl true
+  def handle_event("delete_location", _params, %{assigns: %{deleting_location: nil}} = socket) do
+    {:noreply, put_flash(socket, :error, "That location is no longer available.")}
+  end
+
+  def handle_event("delete_location", _params, socket) do
+    location = socket.assigns.deleting_location
+    user = socket.assigns.current_user
+
+    case Communities.delete_group_location(location, actor: user) do
       :ok ->
-        locations = load_group_locations(socket.assigns.group.id, socket.assigns.current_user)
-
         {:noreply,
          socket
-         |> assign(:locations, locations)
+         |> refresh_locations()
+         |> clear_delete_location()
          |> put_flash(:info, "Location deleted")}
 
-      {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Failed to delete location")}
+      {:error, _error} ->
+        handle_failed_deletion(socket, location)
     end
   end
 
@@ -335,5 +420,39 @@ defmodule HuddlzWeb.GroupLive.Locations do
       {Huddlz.Communities.GroupLocation, :create, %{group_id: group.id}},
       user
     )
+  end
+
+  defp handle_failed_deletion(socket, location) do
+    socket = refresh_locations(socket)
+
+    if Enum.any?(socket.assigns.locations, &(&1.id == location.id)) do
+      case DeletionImpact.active_references(location) do
+        {:ok, references} ->
+          {:noreply,
+           socket
+           |> assign(:delete_location_references, references)
+           |> put_flash(:error, "This location cannot be deleted while it is in use.")}
+
+        {:error, _error} ->
+          {:noreply,
+           socket
+           |> clear_delete_location()
+           |> put_flash(:error, "Failed to delete location. Please try again.")}
+      end
+    else
+      {:noreply,
+       socket
+       |> clear_delete_location()
+       |> put_flash(:info, "Location was already deleted.")}
+    end
+  end
+
+  defp refresh_locations(socket) do
+    locations = load_group_locations(socket.assigns.group.id, socket.assigns.current_user)
+    assign(socket, :locations, locations)
+  end
+
+  defp clear_delete_location(socket) do
+    assign(socket, deleting_location: nil, delete_location_references: [])
   end
 end

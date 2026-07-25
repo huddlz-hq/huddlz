@@ -90,7 +90,11 @@ defmodule HuddlzWeb.GroupLive.LocationsTest do
       |> assert_has("*", text: "No saved locations yet")
     end
 
-    test "can delete a location", %{conn: conn, owner: owner, group: group} do
+    test "opens and cancels a styled deletion dialog without changing the location", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
       location =
         generate(
           group_location(
@@ -109,10 +113,143 @@ defmodule HuddlzWeb.GroupLive.LocationsTest do
       assert has_element?(view, "*", "Old Venue")
 
       view
-      |> element("button[phx-click='delete_location'][phx-value-id='#{location.id}']")
+      |> element("#open-delete-location-#{location.id}")
       |> render_click()
 
-      refute has_element?(view, "*", "Old Venue")
+      assert has_element?(view, "#delete-location-modal [role='dialog']")
+      assert has_element?(view, "#delete-location-modal-title", "Delete this saved location?")
+      assert has_element?(view, "#delete-location-modal", "Old Venue")
+      assert has_element?(view, "#delete-location-modal", "999 Old St, Austin, TX")
+
+      refute has_element?(
+               view,
+               "#open-delete-location-#{location.id}[data-confirm]"
+             )
+
+      view
+      |> element("#cancel-delete-location")
+      |> render_click()
+
+      refute has_element?(view, "#delete-location-modal")
+      assert has_element?(view, "*", "Old Venue")
+    end
+
+    test "confirms deletion of an unreferenced location", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      location =
+        generate(
+          group_location(
+            group_id: group.id,
+            name: "Disposable Venue",
+            address: "999 Old St, Austin, TX",
+            actor: owner
+          )
+        )
+
+      {:ok, view, _html} =
+        conn
+        |> login(owner)
+        |> live(~p"/groups/#{group.slug}/locations")
+
+      view
+      |> element("#open-delete-location-#{location.id}")
+      |> render_click()
+
+      assert has_element?(
+               view,
+               "#delete-location-modal",
+               "It will no longer appear in future venue pickers"
+             )
+
+      view
+      |> element("#confirm-delete-location")
+      |> render_click()
+
+      refute has_element?(view, "*", "Disposable Venue")
+      assert render(view) =~ "Location deleted"
+    end
+
+    test "blocks deletion while an upcoming huddl uses the saved location", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      location =
+        generate(
+          group_location(
+            group_id: group.id,
+            name: "Scheduled Venue",
+            address: "100 Future St, Austin, TX",
+            actor: owner
+          )
+        )
+
+      generate(
+        huddl_at_location(
+          group_id: group.id,
+          creator_id: owner.id,
+          physical_location: location.address,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
+          ends_at: DateTime.add(DateTime.utc_now(), 1, :day)
+        )
+      )
+
+      {:ok, view, _html} =
+        conn
+        |> login(owner)
+        |> live(~p"/groups/#{group.slug}/locations")
+
+      view
+      |> element("#open-delete-location-#{location.id}")
+      |> render_click()
+
+      assert has_element?(
+               view,
+               "#delete-location-modal",
+               "This location is used by 1 upcoming huddl"
+             )
+
+      assert has_element?(view, "#confirm-delete-location[disabled]")
+      assert has_element?(view, "*", "Scheduled Venue")
+    end
+
+    test "handles a location deleted concurrently while its dialog is open", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      location =
+        generate(
+          group_location(
+            group_id: group.id,
+            name: "Concurrent Venue",
+            actor: owner
+          )
+        )
+
+      {:ok, view, _html} =
+        conn
+        |> login(owner)
+        |> live(~p"/groups/#{group.slug}/locations")
+
+      view
+      |> element("#open-delete-location-#{location.id}")
+      |> render_click()
+
+      assert :ok = Huddlz.Communities.delete_group_location(location, actor: owner)
+
+      view
+      |> element("#confirm-delete-location")
+      |> render_click()
+
+      refute has_element?(view, "#delete-location-modal")
+      refute has_element?(view, "*", "Concurrent Venue")
+      assert render(view) =~ "Location was already deleted"
     end
 
     test "add address modal opens via patch", %{conn: conn, owner: owner, group: group} do

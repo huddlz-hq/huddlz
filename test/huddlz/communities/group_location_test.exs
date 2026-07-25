@@ -1,6 +1,9 @@
 defmodule Huddlz.Communities.GroupLocationTest do
   use Huddlz.DataCase, async: true
 
+  require Ash.Query
+
+  alias Huddlz.Communities
   alias Huddlz.Communities.GroupLocation
 
   describe "group_location creation" do
@@ -338,7 +341,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
       group = generate(group(owner_id: owner.id, actor: owner))
       location = generate(group_location(group_id: group.id, actor: owner))
 
-      assert :ok = Ash.destroy(location, actor: owner)
+      assert :ok = Communities.delete_group_location(location, actor: owner)
     end
 
     test "organizer can delete a location" do
@@ -352,7 +355,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
 
       location = generate(group_location(group_id: group.id, actor: owner))
 
-      assert :ok = Ash.destroy(location, actor: organizer)
+      assert :ok = Communities.delete_group_location(location, actor: organizer)
     end
 
     test "regular member cannot delete" do
@@ -362,7 +365,115 @@ defmodule Huddlz.Communities.GroupLocationTest do
       generate(group_member(group_id: group.id, user_id: member.id, role: :member, actor: owner))
       location = generate(group_location(group_id: group.id, actor: owner))
 
-      assert {:error, %Ash.Error.Forbidden{}} = Ash.destroy(location, actor: member)
+      assert {:error, %Ash.Error.Forbidden{}} =
+               Communities.delete_group_location(location, actor: member)
+    end
+
+    test "cannot delete a location used by an upcoming huddl" do
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+
+      location =
+        generate(
+          group_location(
+            group_id: group.id,
+            name: "Tomorrow's Venue",
+            address: "100 Future St, Austin, TX",
+            actor: owner
+          )
+        )
+
+      generate(
+        huddl_at_location(
+          group_id: group.id,
+          creator_id: owner.id,
+          physical_location: location.address,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
+          ends_at: DateTime.add(DateTime.utc_now(), 1, :day)
+        )
+      )
+
+      assert {:error, error} = Communities.delete_group_location(location, actor: owner)
+      assert Exception.message(error) =~ "used by 1 upcoming huddl"
+
+      assert {:ok, [_location]} =
+               Communities.list_group_locations(group.id, actor: owner)
+    end
+
+    test "deleting a location used only by a past huddl preserves its venue address" do
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+
+      location =
+        generate(
+          group_location(
+            group_id: group.id,
+            name: "Historic Hall",
+            address: "200 History Ln, Austin, TX",
+            actor: owner
+          )
+        )
+
+      huddl =
+        generate(
+          past_huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            physical_location: location.address,
+            latitude: location.latitude,
+            longitude: location.longitude
+          )
+        )
+
+      assert :ok = Communities.delete_group_location(location, actor: owner)
+
+      reloaded_huddl =
+        Huddlz.Communities.Huddl
+        |> Ash.Query.filter(id == ^huddl.id)
+        |> Ash.read_one!(authorize?: false)
+
+      assert reloaded_huddl.physical_location == "200 History Ln, Austin, TX"
+      assert {:ok, []} = Communities.list_group_locations(group.id, actor: owner)
+    end
+
+    test "a matching address in another group does not block deletion" do
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      other_group = generate(group(owner_id: owner.id, actor: owner))
+
+      location =
+        generate(
+          group_location(
+            group_id: group.id,
+            address: "300 Shared St, Austin, TX",
+            actor: owner
+          )
+        )
+
+      generate(
+        huddl_at_location(
+          group_id: other_group.id,
+          creator_id: owner.id,
+          physical_location: location.address,
+          starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
+          ends_at: DateTime.add(DateTime.utc_now(), 1, :day)
+        )
+      )
+
+      assert :ok = Communities.delete_group_location(location, actor: owner)
+    end
+
+    test "repeated deletion returns a handled error" do
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      location = generate(group_location(group_id: group.id, actor: owner))
+
+      assert :ok = Communities.delete_group_location(location, actor: owner)
+      assert {:error, error} = Communities.delete_group_location(location, actor: owner)
+      assert Exception.message(error) =~ "Forbidden"
+      assert {:ok, []} = Communities.list_group_locations(group.id, actor: owner)
     end
   end
 
