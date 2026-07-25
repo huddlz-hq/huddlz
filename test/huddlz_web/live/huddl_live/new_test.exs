@@ -223,7 +223,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       # Change to virtual
       |> choose("Virtual")
       |> refute_has("#saved-location-picker")
-      |> assert_has("input[name='form[virtual_link]']")
+      |> assert_has("input[name='form[virtual_link]'][type='text'][inputmode='url']")
     end
 
     test "shows both fields for hybrid events", %{conn: conn, owner: owner, group: group} do
@@ -366,6 +366,98 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
 
       # Should show validation error attached to the empty title field
       assert_has(session, "input#form_title + p.form-error")
+    end
+
+    test "shows a friendly inline error for a malformed virtual link", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      tomorrow = Date.utc_today() |> Date.add(1) |> Date.to_iso8601()
+
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/huddlz/new")
+      |> choose("Virtual")
+      |> fill_in("Title", with: "Virtual Huddl")
+      |> fill_in("Date", with: tomorrow)
+      |> fill_in("Start time", with: "14:00")
+      |> select("Duration", option: "1 hour")
+      |> fill_in("Online link", with: "meet.example.com/no-scheme")
+      |> click_button("Schedule huddl")
+      |> assert_path(~p"/groups/#{group.slug}/huddlz/new")
+      |> assert_has(
+        "input[name='form[virtual_link]'][aria-invalid='true'][aria-describedby='form_virtual_link-help form_virtual_link-error-0']"
+      )
+      |> assert_has(
+        "#form_virtual_link-error-0[role='alert']",
+        text: "Must be a valid web address starting with http:// or https://"
+      )
+    end
+
+    test "shows friendly capacity validation and allows clearing back to unlimited", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      tomorrow = Date.utc_today() |> Date.add(1) |> Date.to_iso8601()
+
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/new")
+        |> fill_in("Max attendees", with: "0")
+        |> assert_has(
+          "input[name='form[max_attendees]'][aria-invalid='true'][aria-describedby='form_max_attendees-help form_max_attendees-error-0']"
+        )
+        |> assert_has("#form_max_attendees-error-0", text: "Must be at least 1")
+        |> fill_in("Max attendees", with: "")
+        |> refute_has("input[name='form[max_attendees]'][value='0']")
+        |> refute_has("#form_max_attendees-error-0")
+        |> fill_in("Title", with: "Unlimited Huddl")
+        |> fill_in("Date", with: tomorrow)
+        |> fill_in("Start time", with: "14:00")
+        |> select("Duration", option: "1 hour")
+
+      select_physical_location(session.view, "123 Main St")
+
+      session
+      |> click_button("Schedule huddl")
+      |> assert_path(~p"/groups/#{group.slug}")
+
+      huddl =
+        Huddl
+        |> Ash.Query.filter(title == "Unlimited Huddl" and group_id == ^group.id)
+        |> Ash.read_one!(actor: owner)
+
+      assert is_nil(huddl.max_attendees)
+    end
+
+    test "recurrence requirements are validated by the model instead of the browser", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      tomorrow = Date.utc_today() |> Date.add(1) |> Date.to_iso8601()
+
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/new")
+        |> check("Recurring huddl")
+        |> refute_has("select[name='form[frequency]'][required]")
+        |> refute_has("input[name='form[repeat_until]'][required]")
+        |> fill_in("Title", with: "Recurring Huddl")
+        |> fill_in("Date", with: tomorrow)
+        |> fill_in("Start time", with: "14:00")
+        |> select("Duration", option: "1 hour")
+
+      select_physical_location(session.view, "123 Main St")
+
+      session
+      |> click_button("Schedule huddl")
+      |> assert_path(~p"/groups/#{group.slug}/huddlz/new")
+      |> assert_has("#form_repeat_until-error-0", text: "is required for recurring huddlz")
     end
 
     test "shows physical location error when submitting in-person huddl without a location", %{
@@ -526,7 +618,12 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       assert_path(session, ~p"/groups/#{group.slug}/huddlz/new")
 
       # Should show validation error
-      assert_has(session, "*", text: "must be in the future")
+      assert_has(
+        session,
+        "input[name='form[date]'][aria-invalid='true'][aria-describedby='form_date-error-0']"
+      )
+
+      assert_has(session, "#form_date-error-0", text: "must be in the future")
     end
 
     test "accepts manual time entry outside of 15-minute increments", %{

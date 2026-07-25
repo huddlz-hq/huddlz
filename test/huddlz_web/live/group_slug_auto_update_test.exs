@@ -19,7 +19,7 @@ defmodule HuddlzWeb.GroupSlugAutoUpdateTest do
       # Type "A" - too short, slug not generated yet
       html = render_change(view, "validate", %{"form" => %{"name" => "A"}})
       assert html =~ "/groups/..."
-      assert html =~ "length must be greater than or equal to 3"
+      assert html =~ "Must be between 3 and 100 characters"
 
       # Type "As" - still too short
       html = render_change(view, "validate", %{"form" => %{"name" => "As"}})

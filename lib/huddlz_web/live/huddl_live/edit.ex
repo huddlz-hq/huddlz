@@ -359,7 +359,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
                     field={@form[:frequency]}
                     label="Frequency"
                     options={[{"Weekly", "weekly"}, {"Monthly", "monthly"}]}
-                    required
                   />
                 </div>
                 <div class="form-col-md">
@@ -367,7 +366,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
                     field={@form[:repeat_until]}
                     type="date"
                     label="Repeat until"
-                    required
                   />
                 </div>
               </div>
@@ -398,7 +396,9 @@ defmodule HuddlzWeb.HuddlLive.Edit do
             <%= if @show_virtual_link do %>
               <.input
                 field={@form[:virtual_link]}
-                type="url"
+                type="text"
+                inputmode="url"
+                autocomplete="url"
                 label="Online link"
                 placeholder="https://meet.example.com/..."
                 help="Only attendees see this link."
@@ -416,7 +416,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
               field={@form[:max_attendees]}
               type="number"
               label="Max attendees"
-              min="1"
               placeholder="No limit"
               help="Leave blank for unlimited. When full, new RSVPs go to a waitlist."
             />

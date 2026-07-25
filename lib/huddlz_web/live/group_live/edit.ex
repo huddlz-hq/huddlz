@@ -250,6 +250,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
             />
 
             <div class="form-row">
+              <% slug_errors = visible_errors(@form[:slug]) %>
               <label class="form-label" for={@form[:slug].id}>URL Slug</label>
               <div class="slug-control">
                 <span class="slug-prefix">huddlz.com/groups/</span>
@@ -259,10 +260,18 @@ defmodule HuddlzWeb.GroupLive.Edit do
                   name={@form[:slug].name}
                   value={@form[:slug].value}
                   class="form-input"
-                  pattern="[a-z0-9-]+"
-                  title="Only lowercase letters, numbers, and hyphens allowed"
+                  aria-invalid={slug_errors != [] && "true"}
+                  aria-describedby={slug_errors != [] && "#{@form[:slug].id}-error-0"}
                 />
               </div>
+              <p
+                :for={{error, index} <- Enum.with_index(slug_errors)}
+                id={"#{@form[:slug].id}-error-#{index}"}
+                class="form-error"
+                role="alert"
+              >
+                {error}
+              </p>
               <p :if={!@slug_changed} class="form-help">
                 Your group is available at: {url(~p"/groups/#{@form[:slug].value || "..."}")}
               </p>
@@ -482,6 +491,20 @@ defmodule HuddlzWeb.GroupLive.Edit do
     else
       nil
     end
+  end
+
+  defp visible_errors(field) do
+    if Phoenix.Component.used_input?(field) do
+      Enum.map(field.errors, &translate_error/1)
+    else
+      []
+    end
+  end
+
+  defp translate_error({message, opts}) do
+    Enum.reduce(opts, message, fn {key, value}, translated ->
+      String.replace(translated, "%{#{key}}", to_string(value))
+    end)
   end
 
   defp get_group_by_slug(slug, actor) do

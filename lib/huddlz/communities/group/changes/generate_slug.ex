@@ -34,8 +34,16 @@ defmodule Huddlz.Communities.Group.Changes.GenerateSlug do
       _ ->
         case Ash.Changeset.get_attribute(changeset, :name) do
           nil -> nil
-          name -> name |> to_string() |> Slug.slugify()
+          name -> slugify_valid_name(name)
         end
+    end
+  end
+
+  defp slugify_valid_name(name) do
+    name = to_string(name)
+
+    if String.length(name) in 3..100 do
+      Slug.slugify(name)
     end
   end
 end

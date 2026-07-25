@@ -90,7 +90,7 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> assert_has(
         "input[name='form[name]'][aria-invalid='true'][aria-describedby='form_name-help form_name-error-0']"
       )
-      |> assert_has("#form_name-error-0", text: "length must be greater than or equal to")
+      |> assert_has("#form_name-error-0", text: "Must be between 3 and 100 characters")
     end
 
     test "associates help text without marking valid fields invalid", %{
