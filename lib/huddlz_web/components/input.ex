@@ -37,7 +37,7 @@ defmodule HuddlzWeb.Components.Input do
   end
 
   def input(assigns) do
-    assigns = assign_new(assigns, :id, fn -> assigns[:name] end)
+    assigns = prepare_accessibility(assigns)
 
     ~H"""
     <div class="form-row">
@@ -48,10 +48,14 @@ defmodule HuddlzWeb.Components.Input do
         name={@name}
         value={Form.normalize_value(@type, @value)}
         class={["form-input", @class]}
+        aria-invalid={@invalid? && "true"}
+        aria-describedby={@describedby}
         {@rest}
       />
-      <p :if={@help && @errors == []} class="form-help">{@help}</p>
-      <p :for={msg <- @errors} class="form-error">{msg}</p>
+      <p :if={@help} id={help_id(@id)} class="form-help">{@help}</p>
+      <p :for={{msg, index} <- Enum.with_index(@errors)} id={error_id(@id, index)} class="form-error">
+        {msg}
+      </p>
     </div>
     """
   end
@@ -80,14 +84,23 @@ defmodule HuddlzWeb.Components.Input do
   end
 
   def textarea(assigns) do
-    assigns = assign_new(assigns, :id, fn -> assigns[:name] end)
+    assigns = prepare_accessibility(assigns)
 
     ~H"""
     <div class="form-row">
       <label :if={@label} for={@id} class="form-label">{@label}</label>
-      <textarea id={@id} name={@name} class={["form-textarea", @class]} {@rest}>{Form.normalize_value("textarea", @value)}</textarea>
-      <p :if={@help && @errors == []} class="form-help">{@help}</p>
-      <p :for={msg <- @errors} class="form-error">{msg}</p>
+      <textarea
+        id={@id}
+        name={@name}
+        class={["form-textarea", @class]}
+        aria-invalid={@invalid? && "true"}
+        aria-describedby={@describedby}
+        {@rest}
+      >{Form.normalize_value("textarea", @value)}</textarea>
+      <p :if={@help} id={help_id(@id)} class="form-help">{@help}</p>
+      <p :for={{msg, index} <- Enum.with_index(@errors)} id={error_id(@id, index)} class="form-error">
+        {msg}
+      </p>
     </div>
     """
   end
@@ -117,17 +130,26 @@ defmodule HuddlzWeb.Components.Input do
   end
 
   def select(assigns) do
-    assigns = assign_new(assigns, :id, fn -> assigns[:name] end)
+    assigns = prepare_accessibility(assigns)
 
     ~H"""
     <div class="form-row">
       <label :if={@label} for={@id} class="form-label">{@label}</label>
-      <select id={@id} name={@name} class={["form-select", @class]} {@rest}>
+      <select
+        id={@id}
+        name={@name}
+        class={["form-select", @class]}
+        aria-invalid={@invalid? && "true"}
+        aria-describedby={@describedby}
+        {@rest}
+      >
         <option :if={@prompt} value="">{@prompt}</option>
         {Phoenix.HTML.Form.options_for_select(@options, @value)}
       </select>
-      <p :if={@help && @errors == []} class="form-help">{@help}</p>
-      <p :for={msg <- @errors} class="form-error">{msg}</p>
+      <p :if={@help} id={help_id(@id)} class="form-help">{@help}</p>
+      <p :for={{msg, index} <- Enum.with_index(@errors)} id={error_id(@id, index)} class="form-error">
+        {msg}
+      </p>
     </div>
     """
   end
@@ -166,4 +188,26 @@ defmodule HuddlzWeb.Components.Input do
       String.replace(acc, "%{#{key}}", fn _ -> to_string(value) end)
     end)
   end
+
+  defp prepare_accessibility(assigns) do
+    assigns = assign_new(assigns, :id, fn -> assigns[:name] end)
+    id = assigns[:id]
+    errors = assigns[:errors]
+
+    assigns
+    |> assign(:invalid?, errors != [])
+    |> assign(:describedby, describedby_ids(id, assigns[:help], errors))
+  end
+
+  defp describedby_ids(id, help, errors) do
+    [
+      help && help_id(id)
+      | Enum.map(Enum.with_index(errors), fn {_error, index} -> error_id(id, index) end)
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(" ")
+  end
+
+  defp help_id(id), do: "#{id}-help"
+  defp error_id(id, index), do: "#{id}-error-#{index}"
 end

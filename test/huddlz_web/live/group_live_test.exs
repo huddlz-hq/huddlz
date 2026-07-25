@@ -63,21 +63,48 @@ defmodule HuddlzWeb.GroupLiveTest do
     end
 
     test "shows errors with invalid data", %{conn: conn, verified: verified} do
-      conn
-      |> login(verified)
-      |> visit(~p"/groups/new")
-      |> fill_in("Group name", with: "")
-      |> fill_in("Description", with: "Missing name")
-      |> click_button("Create group")
-      |> assert_has("p", text: "is required")
+      session =
+        conn
+        |> login(verified)
+        |> visit(~p"/groups/new")
+        |> fill_in("Group name", with: "")
+        |> fill_in("Description", with: "Missing name")
+        |> click_button("Create group")
+
+      session
+      |> assert_has(
+        "input[name='form[name]'][aria-invalid='true'][aria-describedby='form_name-help form_name-error-0']"
+      )
+      |> assert_has("#form_name-help", text: "3–100 characters.")
+      |> assert_has("#form_name-error-0", text: "is required")
     end
 
     test "validates on change", %{conn: conn, verified: verified} do
-      conn
-      |> login(verified)
-      |> visit(~p"/groups/new")
-      |> fill_in("Group name", with: "ab")
-      |> assert_has("p", text: "length must be greater than or equal to")
+      session =
+        conn
+        |> login(verified)
+        |> visit(~p"/groups/new")
+        |> fill_in("Group name", with: "ab")
+
+      session
+      |> assert_has(
+        "input[name='form[name]'][aria-invalid='true'][aria-describedby='form_name-help form_name-error-0']"
+      )
+      |> assert_has("#form_name-error-0", text: "length must be greater than or equal to")
+    end
+
+    test "associates help text without marking valid fields invalid", %{
+      conn: conn,
+      verified: verified
+    } do
+      session =
+        conn
+        |> login(verified)
+        |> visit(~p"/groups/new")
+
+      session
+      |> assert_has("input[name='form[name]'][aria-describedby='form_name-help']")
+      |> refute_has("input[name='form[name]'][aria-invalid='true']")
     end
 
     test "shows location error when submitting with a location that is too long", %{
