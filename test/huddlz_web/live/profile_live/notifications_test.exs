@@ -30,6 +30,7 @@ defmodule HuddlzWeb.ProfileLive.NotificationsTest do
       |> login(user)
       |> visit("/profile/notifications")
       |> assert_has(".panel-head h2", text: "Transactional")
+      |> assert_has("*", text: "Critical account and huddl updates")
       |> assert_has(".panel-head h2", text: "Activity")
       |> assert_has(".panel-head h2", text: "Digest")
     end
