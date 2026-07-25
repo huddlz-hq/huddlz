@@ -14,6 +14,11 @@ defmodule HuddlzWeb.ProfileLiveTest do
 
   setup do
     user = create_user(%{display_name: "Test User"})
+
+    on_exit(fn ->
+      File.rm_rf!("priv/static/uploads/profile_pictures/#{user.id}")
+    end)
+
     %{user: user}
   end
 
@@ -261,6 +266,195 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> click_button("#change-email-button", "Change email")
       |> assert_has("*", text: "Email updated successfully")
       |> refute_has("*", text: "Email could not be updated")
+    end
+  end
+
+  describe "Profile picture upload" do
+    test "shows an accessible error for an unsupported format", %{conn: conn, user: user} do
+      {:ok, view, _html} =
+        conn
+        |> login(user)
+        |> live(~p"/profile")
+
+      upload =
+        file_input(view, "#avatar-form", :avatar, [
+          %{name: "avatar.gif", content: "GIF89a", type: "image/gif"}
+        ])
+
+      assert {:error, [[_ref, :not_accepted]]} = render_upload(upload, "avatar.gif")
+
+      assert has_element?(
+               view,
+               "#avatar-upload-error[role='alert']",
+               "Choose a JPG, PNG, or WebP image."
+             )
+
+      assert has_element?(view, "#avatar-form input[type='file'][aria-invalid='true']")
+    end
+
+    test "shows an accessible error for an oversized image", %{conn: conn, user: user} do
+      {:ok, view, _html} =
+        conn
+        |> login(user)
+        |> live(~p"/profile")
+
+      upload =
+        file_input(view, "#avatar-form", :avatar, [
+          %{
+            name: "large.jpg",
+            content: :binary.copy(<<0>>, 5_000_001),
+            type: "image/jpeg"
+          }
+        ])
+
+      assert {:error, [[_ref, :too_large]]} = render_upload(upload, "large.jpg")
+      assert has_element?(view, "#avatar-upload-error", "Image must be 5 MB or smaller.")
+    end
+
+    test "announces upload progress and successful replacement", %{conn: conn, user: user} do
+      {:ok, view, _html} =
+        conn
+        |> login(user)
+        |> live(~p"/profile")
+
+      upload =
+        file_input(view, "#avatar-form", :avatar, [
+          %{
+            name: "avatar.jpg",
+            content: File.read!("test/fixtures/test_image.jpg"),
+            type: "image/jpeg"
+          }
+        ])
+
+      render_upload(upload, "avatar.jpg", 49)
+
+      assert has_element?(
+               view,
+               "#avatar-upload-status [role='status']",
+               "Uploading avatar.jpg: 49%"
+             )
+
+      render_upload(upload, "avatar.jpg", 51)
+      assert has_element?(view, "#flash-info", "Profile picture updated successfully")
+      assert has_element?(view, "#profile-avatar[src*='_thumb.jpg']")
+      assert has_element?(view, "#sidebar-user img.avatar[src*='_thumb.jpg']")
+    end
+
+    test "reports corrupt content and preserves the existing picture", %{conn: conn, user: user} do
+      existing_path = "/uploads/profile_pictures/#{user.id}/existing.jpg"
+      existing_thumbnail_path = "/uploads/profile_pictures/#{user.id}/existing_thumb.jpg"
+
+      Huddlz.Accounts.create_profile_picture!(
+        %{
+          filename: "existing.jpg",
+          content_type: "image/jpeg",
+          size_bytes: 1000,
+          storage_path: existing_path,
+          thumbnail_path: existing_thumbnail_path,
+          user_id: user.id
+        },
+        actor: user
+      )
+
+      {:ok, view, _html} =
+        conn
+        |> login(user)
+        |> live(~p"/profile")
+
+      upload =
+        file_input(view, "#avatar-form", :avatar, [
+          %{name: "corrupt.jpg", content: "not an image", type: "image/jpeg"}
+        ])
+
+      render_upload(upload, "corrupt.jpg")
+
+      assert has_element?(
+               view,
+               "#avatar-upload-error",
+               "That file could not be read as an image."
+             )
+
+      assert has_element?(view, "#profile-avatar[src='#{existing_thumbnail_path}']")
+
+      assert has_element?(
+               view,
+               "#sidebar-user img.avatar[src='#{existing_thumbnail_path}']"
+             )
+    end
+
+    test "a failed replacement preserves the existing picture", %{conn: conn, user: user} do
+      existing_thumbnail_path = "/uploads/profile_pictures/#{user.id}/existing_thumb.jpg"
+
+      Huddlz.Accounts.create_profile_picture!(
+        %{
+          filename: "existing.jpg",
+          content_type: "image/jpeg",
+          size_bytes: 1000,
+          storage_path: "/uploads/profile_pictures/#{user.id}/existing.jpg",
+          thumbnail_path: existing_thumbnail_path,
+          user_id: user.id
+        },
+        actor: user
+      )
+
+      upload_directory = "priv/static/uploads/profile_pictures/#{user.id}"
+      File.mkdir_p!(Path.dirname(upload_directory))
+      File.write!(upload_directory, "block replacement storage")
+
+      {:ok, view, _html} =
+        conn
+        |> login(user)
+        |> live(~p"/profile")
+
+      upload =
+        file_input(view, "#avatar-form", :avatar, [
+          %{
+            name: "replacement.jpg",
+            content: File.read!("test/fixtures/test_image.jpg"),
+            type: "image/jpeg"
+          }
+        ])
+
+      render_upload(upload, "replacement.jpg")
+
+      assert has_element?(
+               view,
+               "#avatar-upload-error",
+               "The image could not be uploaded. Please try again."
+             )
+
+      assert has_element?(view, "#profile-avatar[src='#{existing_thumbnail_path}']")
+      assert has_element?(view, "#sidebar-user img.avatar[src='#{existing_thumbnail_path}']")
+    end
+
+    test "clears a failed upload when another image is selected", %{conn: conn, user: user} do
+      {:ok, view, _html} =
+        conn
+        |> login(user)
+        |> live(~p"/profile")
+
+      file_input(view, "#avatar-form", :avatar, [
+        %{name: "corrupt.jpg", content: "not an image", type: "image/jpeg"}
+      ])
+      |> render_upload("corrupt.jpg")
+
+      assert has_element?(view, "#avatar-upload-error")
+
+      replacement_upload =
+        file_input(view, "#avatar-form", :avatar, [
+          %{
+            name: "replacement.jpg",
+            content: File.read!("test/fixtures/test_image.jpg"),
+            type: "image/jpeg"
+          }
+        ])
+
+      render_upload(replacement_upload, "replacement.jpg", 1)
+      render_change(element(view, "#avatar-form"))
+      refute has_element?(view, "#avatar-upload-error")
+
+      render_upload(replacement_upload, "replacement.jpg", 99)
+      assert has_element?(view, "#flash-info", "Profile picture updated successfully")
     end
   end
 
