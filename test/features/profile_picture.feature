@@ -64,13 +64,34 @@ Feature: Profile Picture Management
     Then I should see the creator avatar with image
 
   Scenario: Avatar shows initials after profile picture is removed
-    Given the following profile pictures exist:
+    Given the following groups exist:
+      | name       | slug       | owner_email       | visibility |
+      | Test Group | test-group | alice@example.com | public     |
+    And a huddl "Test Huddl" exists in "Test Group" created by "alice@example.com"
+    And the following profile pictures exist:
       | user_email          | storage_path                                      |
       | alice@example.com   | /uploads/profile_pictures/alice/avatar.jpg        |
     When I visit "/profile"
     And I click "Remove"
+    Then I should see "Remove your profile picture?"
+    And I should see "initials will appear instead"
+    When I click "Remove picture"
     Then I should see "Profile picture removed"
     And I should see the avatar fallback showing initials
+    And I should see the navbar avatar with initials "AU"
+    When I visit the huddl "Test Huddl" page
+    Then I should see the creator avatar with initials "AU"
+
+  Scenario: Canceling profile picture removal preserves the picture
+    Given the following profile pictures exist:
+      | user_email        | storage_path                               |
+      | alice@example.com | /uploads/profile_pictures/alice/avatar.jpg |
+    When I visit "/profile"
+    And I click "Remove"
+    Then I should see "Remove your profile picture?"
+    When I click "Keep picture"
+    Then I should not see "Remove your profile picture?"
+    And I should see the profile avatar with an image
 
   Scenario: Removing profile picture shows initials not previous picture
     Given the following profile pictures exist:
@@ -81,5 +102,7 @@ Feature: Profile Picture Management
       | alice@example.com   | /uploads/profile_pictures/alice/second.jpg       |
     When I visit "/profile"
     And I click "Remove"
+    Then I should see "Remove your profile picture?"
+    When I click "Remove picture"
     Then I should see "Profile picture removed"
     And I should see the avatar fallback showing initials

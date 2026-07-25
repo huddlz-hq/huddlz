@@ -18,6 +18,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
   alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
+  alias Phoenix.LiveView.JS
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -62,6 +63,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
     |> assign(:original_slug, group.slug)
     |> assign(:slug_changed, false)
     |> assign(:image_error, nil)
+    |> assign(:remove_image_dialog_open, false)
     |> assign(:pending_image_id, nil)
     |> assign(:pending_preview_url, nil)
     |> assign(:selected_location_data, build_initial_location_data(group))
@@ -175,9 +177,9 @@ defmodule HuddlzWeb.GroupLive.Edit do
                     </label>
                     <.button
                       variant={:muted}
+                      id="open-remove-group-image-dialog"
                       type="button"
-                      phx-click="remove_image"
-                      data-confirm="Are you sure you want to remove this image?"
+                      phx-click={JS.push_focus() |> JS.push("open_remove_image_dialog")}
                     >
                       Remove
                     </.button>
@@ -349,6 +351,48 @@ defmodule HuddlzWeb.GroupLive.Edit do
           </.button>
         </div>
       </.form>
+
+      <.modal
+        :if={@remove_image_dialog_open}
+        id="remove-group-image-dialog"
+        show
+        on_cancel={JS.push("cancel_remove_image")}
+      >
+        <div class="delete-confirm">
+          <div class="delete-confirm-icon" aria-hidden="true">
+            <.icon name="hero-photo" class="h-6 w-6" />
+          </div>
+
+          <div class="delete-confirm-copy">
+            <span class="eyebrow eyebrow-magenta">Group cover</span>
+            <h2 id="remove-group-image-dialog-title">Remove this group cover image?</h2>
+            <p>
+              The current cover for <strong>{@group.name}</strong> will be removed. Group and
+              huddl cards will use the <strong>branded group fallback</strong> until a new cover
+              is uploaded.
+            </p>
+          </div>
+        </div>
+
+        <div class="delete-confirm-actions">
+          <.button
+            variant={:muted}
+            id="cancel-remove-group-image"
+            phx-click="cancel_remove_image"
+          >
+            Keep image
+          </.button>
+          <.button
+            variant={:destructive}
+            class="delete-confirm-submit"
+            id="confirm-remove-group-image"
+            phx-click="remove_image"
+            phx-disable-with="Removing…"
+          >
+            Remove image
+          </.button>
+        </div>
+      </.modal>
     </Layouts.app>
     """
   end
@@ -380,7 +424,26 @@ defmodule HuddlzWeb.GroupLive.Edit do
   end
 
   @impl true
-  def handle_event("remove_image", _params, socket) do
+  def handle_event("open_remove_image_dialog", _params, socket) do
+    {:noreply,
+     assign(
+       socket,
+       :remove_image_dialog_open,
+       !is_nil(socket.assigns.group.current_image_url)
+     )}
+  end
+
+  @impl true
+  def handle_event("cancel_remove_image", _params, socket) do
+    {:noreply, assign(socket, :remove_image_dialog_open, false)}
+  end
+
+  @impl true
+  def handle_event(
+        "remove_image",
+        _params,
+        %{assigns: %{remove_image_dialog_open: true}} = socket
+      ) do
     group = socket.assigns.group
     user = socket.assigns.current_user
 
@@ -391,12 +454,18 @@ defmodule HuddlzWeb.GroupLive.Edit do
         {:noreply,
          socket
          |> put_flash(:info, "Image removed")
+         |> assign(:remove_image_dialog_open, false)
          |> assign(:group, updated_group)}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Failed to remove image")}
+        {:noreply,
+         socket
+         |> assign(:remove_image_dialog_open, false)
+         |> put_flash(:error, "Failed to remove image")}
     end
   end
+
+  def handle_event("remove_image", _params, socket), do: {:noreply, socket}
 
   @impl true
   def handle_event("update_group", %{"form" => params}, socket) do

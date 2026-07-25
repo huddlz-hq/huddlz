@@ -8,6 +8,7 @@ defmodule HuddlzWeb.ProfileLive do
   alias HuddlzWeb.Avatar
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.UploadHelpers
+  alias Phoenix.LiveView.JS
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -55,6 +56,7 @@ defmodule HuddlzWeb.ProfileLive do
      |> assign(:password_form, password_form)
      |> assign(:current_user, user_with_avatar)
      |> assign(:avatar_error, nil)
+     |> assign(:remove_avatar_dialog_open, false)
      |> assign(:location_error, nil)
      |> UploadHelpers.allow_image_upload(:avatar, &handle_upload_progress/3)}
   end
@@ -87,10 +89,10 @@ defmodule HuddlzWeb.ProfileLive do
             </label>
             <%= if @current_user.current_profile_picture_url do %>
               <button
+                id="open-remove-avatar-dialog"
                 type="button"
                 class="btn-secondary muted-btn"
-                phx-click="remove_avatar"
-                data-confirm="Are you sure you want to remove your profile picture?"
+                phx-click={JS.push_focus() |> JS.push("open_remove_avatar_dialog")}
               >
                 Remove
               </button>
@@ -251,6 +253,47 @@ defmodule HuddlzWeb.ProfileLive do
           </div>
         </div>
       </.form>
+
+      <.modal
+        :if={@remove_avatar_dialog_open}
+        id="remove-avatar-dialog"
+        show
+        on_cancel={JS.push("cancel_remove_avatar")}
+      >
+        <div class="delete-confirm">
+          <div class="delete-confirm-icon" aria-hidden="true">
+            <.icon name="hero-user-circle" class="h-6 w-6" />
+          </div>
+
+          <div class="delete-confirm-copy">
+            <span class="eyebrow eyebrow-magenta">Profile picture</span>
+            <h2 id="remove-avatar-dialog-title">Remove your profile picture?</h2>
+            <p>
+              Your current picture will be removed. Your <strong>initials will appear instead</strong>
+              everywhere your profile is shown.
+            </p>
+          </div>
+        </div>
+
+        <div class="delete-confirm-actions">
+          <.button
+            variant={:muted}
+            id="cancel-remove-avatar"
+            phx-click="cancel_remove_avatar"
+          >
+            Keep picture
+          </.button>
+          <.button
+            variant={:destructive}
+            class="delete-confirm-submit"
+            id="confirm-remove-avatar"
+            phx-click="remove_avatar"
+            phx-disable-with="Removing…"
+          >
+            Remove picture
+          </.button>
+        </div>
+      </.modal>
     </Layouts.app>
     """
   end
@@ -400,7 +443,26 @@ defmodule HuddlzWeb.ProfileLive do
   end
 
   @impl true
-  def handle_event("remove_avatar", _params, socket) do
+  def handle_event("open_remove_avatar_dialog", _params, socket) do
+    {:noreply,
+     assign(
+       socket,
+       :remove_avatar_dialog_open,
+       !is_nil(socket.assigns.current_user.current_profile_picture_url)
+     )}
+  end
+
+  @impl true
+  def handle_event("cancel_remove_avatar", _params, socket) do
+    {:noreply, assign(socket, :remove_avatar_dialog_open, false)}
+  end
+
+  @impl true
+  def handle_event(
+        "remove_avatar",
+        _params,
+        %{assigns: %{remove_avatar_dialog_open: true}} = socket
+      ) do
     user = socket.assigns.current_user
 
     # Soft-delete all profile pictures for the user
@@ -413,14 +475,18 @@ defmodule HuddlzWeb.ProfileLive do
         {:noreply,
          socket
          |> put_flash(:info, "Profile picture removed")
+         |> assign(:remove_avatar_dialog_open, false)
          |> assign(:current_user, updated_user)}
 
       {:error, _} ->
         {:noreply,
          socket
+         |> assign(:remove_avatar_dialog_open, false)
          |> put_flash(:error, "Failed to remove profile picture")}
     end
   end
+
+  def handle_event("remove_avatar", _params, socket), do: {:noreply, socket}
 
   @impl true
   def handle_info(
