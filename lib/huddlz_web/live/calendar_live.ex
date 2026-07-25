@@ -167,8 +167,26 @@ defmodule HuddlzWeb.CalendarLive do
     Enum.map(0..41, &Date.add(grid_start, &1))
   end
 
+  defp weeks_in_grid(grid_start) do
+    grid_start
+    |> days_in_grid()
+    |> Enum.chunk_every(7)
+  end
+
   defp day_in_focus?(%Date{} = day, %Date{year: y, month: m}),
     do: day.year == y and day.month == m
+
+  defp format_full_date(%Date{} = day), do: Calendar.strftime(day, "%A, %B %-d, %Y")
+
+  defp day_accessible_label(day, focus_month, today) do
+    [
+      format_full_date(day),
+      Date.compare(day, today) == :eq && "today",
+      !day_in_focus?(day, focus_month) && "outside the selected month"
+    ]
+    |> Enum.reject(&(&1 in [nil, false]))
+    |> Enum.join(", ")
+  end
 
   defp pill_class_for(entry, day, focus_month, today) do
     base = base_pill_class(entry, today)
@@ -189,6 +207,20 @@ defmodule HuddlzWeb.CalendarLive do
   defp format_pill_label(%{huddl: %{starts_at: dt, title: title}}) do
     time = Calendar.strftime(dt, "%-I:%M %p")
     "#{time} · #{title}"
+  end
+
+  defp format_calendar_link_label(entry, today) do
+    date_and_time = Calendar.strftime(entry.huddl.starts_at, "%A, %B %-d, %Y at %-I:%M %p")
+    "#{entry.huddl.title}, #{calendar_status_label(entry, today)}, #{date_and_time}"
+  end
+
+  defp calendar_status_label(%{role: role, huddl: %{starts_at: dt}}, today) do
+    cond do
+      Date.compare(DateTime.to_date(dt), today) == :lt -> "Past"
+      role == :hosting -> "Hosting"
+      role == :waitlisted -> "Waitlisted"
+      true -> "Going"
+    end
   end
 
   defp huddl_path(%{huddl: %{id: id, group: %{slug: slug}}}),
@@ -295,12 +327,14 @@ defmodule HuddlzWeb.CalendarLive do
           <.link
             patch={month_path(@focus_month, :month)}
             class={["scope-tab", @view_mode == :month && "is-active"]}
+            aria-current={if @view_mode == :month, do: "page"}
           >
             Month
           </.link>
           <.link
             patch={month_path(@focus_month, :agenda)}
             class={["scope-tab", @view_mode == :agenda && "is-active"]}
+            aria-current={if @view_mode == :agenda, do: "page"}
           >
             Agenda
           </.link>
@@ -341,33 +375,65 @@ defmodule HuddlzWeb.CalendarLive do
   defp month_grid(assigns) do
     ~H"""
     <div class="panel" style="padding:0">
-      <div class="cal-grid">
-        <div class="cal-day-name">Sun</div>
-        <div class="cal-day-name">Mon</div>
-        <div class="cal-day-name">Tue</div>
-        <div class="cal-day-name">Wed</div>
-        <div class="cal-day-name">Thu</div>
-        <div class="cal-day-name">Fri</div>
-        <div class="cal-day-name">Sat</div>
-      </div>
-      <div class="cal-grid">
-        <%= for day <- days_in_grid(@grid_start) do %>
-          <div class={cell_class(day, @focus_month)}>
-            <span class={day_num_class(day, @today)}>{day.day}</span>
-            <%= for entry <- Map.get(@entries_by_day, day, []) do %>
-              <.link
-                navigate={huddl_path(entry)}
-                class={pill_class_for(entry, day, @focus_month, @today)}
-                title={entry.huddl.title}
-              >
-                {format_pill_label(entry)}
-              </.link>
-            <% end %>
-          </div>
-        <% end %>
-      </div>
+      <table id="month-calendar" class="cal-calendar">
+        <caption class="sr-only">
+          Month calendar for {format_month(@focus_month)}
+        </caption>
+        <thead>
+          <tr>
+            <th :for={{short, full} <- weekday_names()} scope="col" class="cal-day-name">
+              <abbr title={full}>{short}</abbr>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr :for={week <- weeks_in_grid(@grid_start)}>
+            <td
+              :for={day <- week}
+              class={cell_class(day, @focus_month)}
+              aria-label={day_accessible_label(day, @focus_month, @today)}
+              aria-current={if Date.compare(day, @today) == :eq, do: "date"}
+            >
+              <div class="cal-cell-content">
+                <div class="cal-day-heading" aria-hidden="true">
+                  <time datetime={Date.to_iso8601(day)} class={day_num_class(day, @today)}>
+                    {day.day}
+                  </time>
+                  <span :if={Date.compare(day, @today) == :eq} class="cal-day-context">
+                    Today
+                  </span>
+                  <span :if={!day_in_focus?(day, @focus_month)} class="cal-day-context">
+                    {Calendar.strftime(day, "%b")}
+                  </span>
+                </div>
+                <.link
+                  :for={entry <- Map.get(@entries_by_day, day, [])}
+                  navigate={huddl_path(entry)}
+                  class={pill_class_for(entry, day, @focus_month, @today)}
+                  aria-label={format_calendar_link_label(entry, @today)}
+                  title={entry.huddl.title}
+                >
+                  {format_pill_label(entry)}
+                </.link>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
     """
+  end
+
+  defp weekday_names do
+    [
+      {"Sun", "Sunday"},
+      {"Mon", "Monday"},
+      {"Tue", "Tuesday"},
+      {"Wed", "Wednesday"},
+      {"Thu", "Thursday"},
+      {"Fri", "Friday"},
+      {"Sat", "Saturday"}
+    ]
   end
 
   defp cell_class(day, focus_month) do

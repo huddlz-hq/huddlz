@@ -1624,9 +1624,14 @@ body .cal-nav-today {
 
 body .cal-nav-today:hover { color: var(--cyan); border-color: var(--cyan); }
 
-body .cal-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+body .cal-calendar {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+body .cal-calendar caption {
+  caption-side: top;
 }
 
 body .cal-day-name {
@@ -1642,28 +1647,44 @@ body .cal-day-name {
   text-align: center;
 }
 
+body .cal-day-name abbr {
+  text-decoration: none;
+}
+
 body .cal-day-name:not(:last-child) { border-right: 1px solid var(--line); }
 
 body .cal-cell {
+  height: 100px;
+  padding: 0;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  background: rgba(2, 4, 4, 0.3);
+}
+
+body .cal-cell-content {
   min-height: 100px;
   padding: 8px 8px 6px;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  background: rgba(2, 4, 4, 0.3);
 }
 
-body .cal-cell:nth-child(7n) { /* last column */
+body .cal-cell:last-child {
   border-right: 0;
 }
 
-body .cal-cell:not(:nth-child(7n)) { border-right: 1px solid var(--line); }
-
-body .cal-grid:nth-of-type(2) .cal-cell { border-bottom: 1px solid var(--line); }
-body .cal-grid:nth-of-type(2) .cal-cell:nth-last-child(-n+7) { border-bottom: 0; }
+body .cal-calendar tbody tr:last-child .cal-cell { border-bottom: 0; }
 
 body .cal-cell.out-of-month { background: rgba(2, 4, 4, 0.55); }
 body .cal-cell.out-of-month .cal-day-num { color: var(--muted); opacity: 0.5; }
+
+body .cal-day-heading {
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
 
 body .cal-day-num {
   display: inline-flex;
@@ -1683,6 +1704,15 @@ body .cal-day-num.is-today {
   border: 1px solid var(--cyan);
   border-radius: 50%;
   box-shadow: 0 0 8px rgba(24, 203, 212, 0.4);
+}
+
+body .cal-day-context {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 body .cal-pill {
@@ -1749,11 +1779,14 @@ body .cal-legend-note { margin-left: auto; font-size: 12px; }
 
 @media (max-width: 760px) {
 
-  body .cal-cell { min-height: 64px; padding: 4px; }
+  body .cal-cell { height: 64px; }
+  body .cal-cell-content { min-height: 64px; padding: 4px; }
   body .cal-day-name { padding: 6px 2px; font-size: 10px; letter-spacing: 0.08em; }
   body .cal-pill { font-size: 10px; padding: 2px 4px; }
   body .cal-day-num { font-size: 11px; }
   body .cal-day-num.is-today { width: 18px; height: 18px; }
+  body .cal-day-heading { min-height: 18px; }
+  body .cal-day-context { font-size: 8px; }
   body .cal-legend-note { margin-left: 0; flex: 1 1 100%; }
 }
 
