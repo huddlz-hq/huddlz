@@ -72,7 +72,7 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
       <form phx-submit="save">
         <.read_only_panel
           title="Transactional"
-          description="Critical account and event updates. Always on — these can't be disabled."
+          description="Critical account and huddl updates. Always on — these can't be disabled."
           triggers={@triggers_by_category.transactional}
         />
 
