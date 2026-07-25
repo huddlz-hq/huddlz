@@ -132,7 +132,7 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
       |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: member)
       |> Ash.update!()
 
-      assert rsvp_count(huddl) == 0
+      assert rsvp_count(huddl) == 1
     end
 
     test "RSVP count is always consistent with attendee records", %{
@@ -158,12 +158,12 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
         )
         |> Ash.create!()
 
-      # Try to cancel without RSVPing first - count stays at 0
+      # Cancelling a non-existent member RSVP leaves the creator attending.
       huddl
       |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: member)
       |> Ash.update!()
 
-      assert rsvp_count(huddl) == 0
+      assert rsvp_count(huddl) == 1
 
       # RSVP then cancel - count is always consistent
       huddl
@@ -171,14 +171,14 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
       |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
-      assert rsvp_count(huddl) == 1
+      assert rsvp_count(huddl) == 2
 
       huddl
       |> Ash.reload!()
       |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: member)
       |> Ash.update!()
 
-      assert rsvp_count(huddl) == 0
+      assert rsvp_count(huddl) == 1
     end
 
     test "admin can see RSVP cancellations work correctly", %{
@@ -218,7 +218,7 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
         |> Ash.Query.load(:rsvp_count)
         |> Ash.read_one!(actor: admin)
 
-      assert admin_view.rsvp_count == 1
+      assert admin_view.rsvp_count == 2
 
       # Member cancels
       huddl
@@ -233,7 +233,7 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
         |> Ash.Query.load(:rsvp_count)
         |> Ash.read_one!(actor: admin)
 
-      assert admin_view_after.rsvp_count == 0
+      assert admin_view_after.rsvp_count == 1
     end
   end
 

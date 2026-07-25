@@ -611,10 +611,10 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
 
       assert %DateTime{} = stamped_huddl.reminder_24h_sent_at
 
-      assert %{success: 2} = Oban.drain_queue(queue: :notifications)
+      assert %{success: 3} = Oban.drain_queue(queue: :notifications)
       emails = drain_mailbox()
 
-      for recipient <- [attendee_a, attendee_b] do
+      for recipient <- [owner, attendee_a, attendee_b] do
         assert Enum.any?(emails, fn email ->
                  email.subject == "Tomorrow: Saturday Soccer" and
                    email.to == [{"", to_string(recipient.email)}] and
@@ -701,7 +701,7 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
       # action invocation only happens by manual call. Even then the
       # caller still gets one delivery; we just confirm nothing about
       # idempotency at the action level — see the filter test above.
-      assert %{success: 1} = Oban.drain_queue(queue: :notifications)
+      assert %{success: 2} = Oban.drain_queue(queue: :notifications)
 
       candidates =
         Huddl
@@ -747,12 +747,13 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
 
       assert %DateTime{} = stamped.reminder_1h_sent_at
 
-      assert %{success: 1} = Oban.drain_queue(queue: :notifications)
+      assert %{success: 2} = Oban.drain_queue(queue: :notifications)
+      emails = drain_mailbox()
 
-      assert_email_sent(fn email ->
-        email.subject == "Starting soon: Morning Standup" and
-          email.to == [{"", to_string(attendee.email)}]
-      end)
+      assert Enum.any?(emails, fn email ->
+               email.subject == "Starting soon: Morning Standup" and
+                 email.to == [{"", to_string(attendee.email)}]
+             end)
     end
   end
 

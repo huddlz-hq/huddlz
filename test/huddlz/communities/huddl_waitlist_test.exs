@@ -347,14 +347,9 @@ defmodule Huddlz.Communities.HuddlWaitlistTest do
 
     test "is true once rsvp_count reaches max_attendees", %{
       owner: owner,
-      member: member,
       group: group
     } do
       huddl = capped_huddl(owner, group, 1)
-
-      huddl
-      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
-      |> Ash.update!()
 
       assert load_at_capacity(huddl) == true
     end
@@ -441,6 +436,10 @@ defmodule Huddlz.Communities.HuddlWaitlistTest do
         actor: owner
       )
       |> Ash.create!()
+
+    huddl
+    |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: owner)
+    |> Ash.update!()
 
     %{
       owner: owner,

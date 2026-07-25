@@ -57,6 +57,32 @@ Feature: Create Huddl
     Then I should be redirected to the "Tech Meetup" group page
     And I should see "Huddl created successfully!"
 
+  @creator_attendance
+  Scenario: Creator automatically attends and can later cancel their RSVP
+    Given I am signed in as "owner@example.com"
+    When I visit the new huddl page for "Tech Meetup"
+    And I fill in the huddl form with:
+      | Field             | Value                         |
+      | Title             | Creator Attendance            |
+      | Description       | The creator initially hosts   |
+      | Start Date & Time | tomorrow at 6:00 PM          |
+      | End Date & Time   | tomorrow at 8:00 PM          |
+      | Huddl Type        | Virtual                      |
+      | Virtual Link      | https://example.com/creator  |
+    And I submit the form
+    And I visit "/my-huddlz"
+    Then I should see "Creator Attendance"
+
+    When I visit the "Creator Attendance" huddl page
+    Then I should see "You're attending"
+    And I should see "Cancel RSVP"
+    And I should see "1 person attending"
+
+    When I click "Cancel RSVP"
+    Then I should see "RSVP cancelled successfully"
+    When I visit "/my-huddlz"
+    Then I should not see "Creator Attendance"
+
   Scenario: Owner creates a monthly recurring huddl
     Given I am signed in as "owner@example.com"
     When I visit the "Tech Meetup" group page

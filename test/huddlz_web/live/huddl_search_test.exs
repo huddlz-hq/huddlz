@@ -112,7 +112,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       conn
       |> visit("/discover")
       |> assert_has("h3", text: "Capped Huddl")
-      |> assert_has(".card-meta span", text: "0 / 5 RSVPs")
+      |> assert_has(".card-meta span", text: "1 / 5 RSVPs")
     end
 
     test "renders RSVP-out-of-capacity meta for limited huddlz with at least one RSVP", %{

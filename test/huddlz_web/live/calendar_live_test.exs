@@ -124,9 +124,6 @@ defmodule HuddlzWeb.CalendarLiveTest do
           date: tomorrow()
         )
 
-      filler = generate(user(role: :user))
-      rsvp!(huddl, filler, :rsvp)
-
       huddl = Ash.reload!(huddl)
       rsvp!(huddl, attendee, :join_waitlist)
 

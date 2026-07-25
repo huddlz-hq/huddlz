@@ -316,7 +316,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       conn
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
-      |> assert_has("*", text: "0/5 spots filled")
+      |> assert_has("*", text: "1/5 spots filled")
     end
 
     test "creates private huddl for private group", %{conn: conn, owner: owner} do
