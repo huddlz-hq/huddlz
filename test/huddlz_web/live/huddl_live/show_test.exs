@@ -115,21 +115,25 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
       |> Ash.update!()
 
-      image_fallback_attributes = "[phx-hook='ImageFallback'][phx-update='ignore'][alt='']"
+      image_fallback_attributes = "[phx-hook='ImageFallback'][alt='']"
 
       session =
         conn
         |> login(member)
         |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
         |> assert_has("#huddl-cover-#{huddl.id}#{image_fallback_attributes}")
+        |> refute_has("#huddl-cover-#{huddl.id}[phx-update='ignore']")
 
       session
       |> visit(~p"/discover")
       |> assert_has("#huddl-card-cover-#{huddl.id}#{image_fallback_attributes}")
+      |> refute_has("#huddl-card-cover-#{huddl.id}[phx-update='ignore']")
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("#group-huddl-card-cover-#{huddl.id}#{image_fallback_attributes}")
+      |> refute_has("#group-huddl-card-cover-#{huddl.id}[phx-update='ignore']")
       |> visit(~p"/my-huddlz")
       |> assert_has("#my-huddl-card-cover-#{huddl.id}#{image_fallback_attributes}")
+      |> refute_has("#my-huddl-card-cover-#{huddl.id}[phx-update='ignore']")
     end
 
     test "renders rich link preview metadata", %{conn: conn, group: group, huddl: huddl} do

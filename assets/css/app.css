@@ -3284,6 +3284,9 @@ body .page-nav:disabled {
     margin-top: 12px;
   }
 
-  body .huddl-hero .hero-content .meta > span { white-space: normal; }
+  body .huddl-hero .hero-content .meta > span {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
   body .huddl-hero .hero-content .meta .meta-sep { display: none; }
 }

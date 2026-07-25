@@ -210,7 +210,6 @@ defmodule HuddlzWeb.MyHuddlzLive do
           src={HuddlImages.url(@huddl.display_image_url)}
           alt=""
           phx-hook="ImageFallback"
-          phx-update="ignore"
         />
         <.date_stamp month={huddl_month(@huddl)} day={huddl_day(@huddl)} />
         <.card_tag variant={tag_variant(@huddl.event_type)}>
