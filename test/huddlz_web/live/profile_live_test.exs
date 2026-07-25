@@ -27,6 +27,16 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> assert_has("h1", text: "Profile")
       |> assert_has("aside.sidebar")
       |> assert_has(".sb-item.active", text: "Profile")
+      |> assert_has(
+        "#sign-out-link[href='/sign-out'][data-method='delete'][data-csrf][aria-label='Sign out']",
+        text: "Sign out"
+      )
+    end
+
+    test "does not show sign out in signed-out navigation", %{conn: conn} do
+      conn
+      |> visit("/discover")
+      |> refute_has("a", text: "Sign out")
     end
 
     test "sidebar shows initials when the user has no profile picture", %{

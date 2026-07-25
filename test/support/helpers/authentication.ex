@@ -13,6 +13,7 @@ defmodule Huddlz.Test.Helpers.Authentication do
         conn
         |> Phoenix.ConnTest.init_test_session(%{})
         |> Plug.Conn.put_session(:user_token, token)
+        |> Plug.Conn.put_session(:live_socket_id, live_socket_id(token))
 
       :error ->
         raise "Failed to generate token for test user"
@@ -23,4 +24,6 @@ defmodule Huddlz.Test.Helpers.Authentication do
     opts = Enum.into(opts, [])
     Huddlz.Generator.generate(Huddlz.Generator.user(opts))
   end
+
+  defp live_socket_id(token), do: "users_sessions:#{Base.url_encode64(token)}"
 end

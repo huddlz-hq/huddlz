@@ -28,6 +28,7 @@ defmodule HuddlzWeb.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :load_from_session
+    plug :prevent_authenticated_page_caching
   end
 
   pipeline :api do
@@ -168,6 +169,16 @@ defmodule HuddlzWeb.Router do
   # scope "/api", HuddlzWeb do
   #   pipe_through :api
   # end
+
+  defp prevent_authenticated_page_caching(
+         %{assigns: %{current_user: current_user}} = conn,
+         _opts
+       )
+       when not is_nil(current_user) do
+    Plug.Conn.put_resp_header(conn, "cache-control", "no-store")
+  end
+
+  defp prevent_authenticated_page_caching(conn, _opts), do: conn
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:huddlz, :dev_routes) do

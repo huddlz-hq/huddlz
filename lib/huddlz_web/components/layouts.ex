@@ -133,6 +133,16 @@ defmodule HuddlzWeb.Layouts do
             <.nav_icon name="help" />
             <span class="label">Help</span>
           </a>
+          <.link
+            id="sign-out-link"
+            class="sb-item"
+            href={~p"/sign-out"}
+            method="delete"
+            aria-label="Sign out"
+          >
+            <.icon name="hero-arrow-right-start-on-rectangle" class="size-[18px]" />
+            <span class="label">Sign out</span>
+          </.link>
           <%= if User.admin?(@current_user) do %>
             <a class={["sb-item", @active == "admin" && "active"]} href="/admin">
               <.nav_icon name="shield" />
