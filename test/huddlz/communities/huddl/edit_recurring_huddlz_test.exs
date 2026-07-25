@@ -77,7 +77,8 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
         title: "Renamed series",
         edit_type: "all",
         repeat_until: repeat_until,
-        frequency: "weekly"
+        frequency: "weekly",
+        recurrence_interval: 1
       },
       actor: owner
     )

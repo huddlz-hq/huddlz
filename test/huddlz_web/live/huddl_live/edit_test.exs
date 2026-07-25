@@ -282,26 +282,28 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       assert_has(session, "*", text: "Editing every upcoming date")
       assert_has(session, "input[type='hidden'][name='form[edit_type]'][value='all']")
       assert_has(session, "select[name='form[frequency]']")
+      assert_has(session, "select[name='form[recurrence_interval]']")
       assert_has(session, "input[name='form[repeat_until]']")
     end
 
-    test "whole-series editing preserves an every-two-weeks cadence", %{
+    test "whole-series editing preserves a four-week cadence", %{
       conn: conn,
       owner: owner,
       group: group
     } do
       every_other_week_huddl =
         create_recurring_huddl(owner, group,
-          title: "Every Other Week Series",
-          frequency: :every_two_weeks,
-          repeat_until: Date.utc_today() |> Date.add(60)
+          title: "Every Four Weeks Series",
+          frequency: :weekly,
+          recurrence_interval: 4,
+          repeat_until: Date.utc_today() |> Date.add(120)
         )
 
       session = open_whole_series_edit(conn, owner, group, every_other_week_huddl)
 
       assert_has(
         session,
-        "select[name='form[frequency]'] option[value='every_two_weeks'][selected]"
+        "select[name='form[recurrence_interval]'] option[value='4'][selected]"
       )
 
       save_whole_series(session)
@@ -312,7 +314,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
         |> Ash.load!(:huddl_template, actor: owner)
         |> Map.fetch!(:huddl_template)
 
-      assert template.interval == 2
+      assert template.interval == 4
       assert template.unit == :week
 
       dates =
@@ -323,7 +325,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
 
       assert dates
              |> Enum.chunk_every(2, 1, :discard)
-             |> Enum.all?(fn [first, second] -> Date.diff(second, first) == 14 end)
+             |> Enum.all?(fn [first, second] -> Date.diff(second, first) == 28 end)
     end
 
     test "whole-series editing keeps virtual controls and their value", %{

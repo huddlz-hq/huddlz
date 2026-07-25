@@ -121,7 +121,8 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     if huddl.huddl_template_id do
       Map.merge(params, %{
         "repeat_until" => huddl.huddl_template.repeat_until,
-        "frequency" => huddl.huddl_template |> HuddlTemplate.cadence() |> to_string()
+        "frequency" => huddl.huddl_template |> HuddlTemplate.cadence() |> to_string(),
+        "recurrence_interval" => to_string(huddl.huddl_template.interval)
       })
     else
       params
@@ -354,26 +355,12 @@ defmodule HuddlzWeb.HuddlLive.Edit do
             </p>
 
             <%= if @huddl.huddl_template_id && edit_type_value(@form) == "all" do %>
-              <div class="form-row form-row-inline">
-                <div class="form-col-md">
-                  <.select
-                    field={@form[:frequency]}
-                    label="Frequency"
-                    options={[
-                      {"Weekly", "weekly"},
-                      {"Every two weeks", "every_two_weeks"},
-                      {"Monthly", "monthly"}
-                    ]}
-                  />
-                </div>
-                <div class="form-col-md">
-                  <.input
-                    field={@form[:repeat_until]}
-                    type="date"
-                    label="Repeat until"
-                  />
-                </div>
-              </div>
+              <.recurrence_fields
+                frequency_field={@form[:frequency]}
+                interval_field={@form[:recurrence_interval]}
+                repeat_until_field={@form[:repeat_until]}
+                date_field={@form[:date]}
+              />
             <% end %>
           </div>
         </div>

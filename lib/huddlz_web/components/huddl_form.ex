@@ -1,7 +1,6 @@
 defmodule HuddlzWeb.Components.HuddlForm do
   @moduledoc """
-  Presentation primitives shared by the huddl create and edit forms:
-  the event-type radio cards and the duration select options.
+  Presentation primitives shared by the huddl create and edit forms.
 
   ```
   <.event_type_grid field={@form[:event_type]} />
@@ -11,6 +10,8 @@ defmodule HuddlzWeb.Components.HuddlForm do
   ```
   """
   use Phoenix.Component
+
+  import HuddlzWeb.Components.Input, only: [input: 1, select: 1]
 
   @duration_options [
     {"30 minutes", "30"},
@@ -128,6 +129,90 @@ defmodule HuddlzWeb.Components.HuddlForm do
     </div>
     """
   end
+
+  attr :frequency_field, Phoenix.HTML.FormField, required: true
+  attr :interval_field, Phoenix.HTML.FormField, required: true
+  attr :repeat_until_field, Phoenix.HTML.FormField, required: true
+  attr :date_field, Phoenix.HTML.FormField, required: true
+
+  def recurrence_fields(assigns) do
+    assigns =
+      assigns
+      |> assign(:weekly?, field_value(assigns.frequency_field) != "monthly")
+      |> assign(:cadence_summary, cadence_summary(assigns))
+
+    ~H"""
+    <div class="form-row form-row-inline" id="recurring-fields">
+      <div class="form-col-md">
+        <.select
+          field={@frequency_field}
+          label="Frequency"
+          options={[
+            {"Weekly", "weekly"},
+            {"Monthly", "monthly"}
+          ]}
+        />
+      </div>
+      <div :if={@weekly?} class="form-col-md">
+        <.select
+          field={@interval_field}
+          label="Repeat every"
+          options={[
+            {"1 week", "1"},
+            {"2 weeks", "2"},
+            {"3 weeks", "3"},
+            {"4 weeks", "4"}
+          ]}
+        />
+      </div>
+      <div class="form-col-md">
+        <.input field={@repeat_until_field} type="date" label="Repeat until" />
+      </div>
+    </div>
+    <p id="recurring-cadence-summary" class="form-help" aria-live="polite">
+      {@cadence_summary}
+    </p>
+    """
+  end
+
+  defp cadence_summary(assigns) do
+    case field_value(assigns.frequency_field) do
+      "monthly" ->
+        "Monthly on day #{day_of_month(assigns.date_field)}"
+
+      _ ->
+        interval = field_value(assigns.interval_field) || "1"
+        unit = if interval == "1", do: "week", else: "weeks"
+        "Every #{interval} #{unit} on #{weekday(assigns.date_field)}"
+    end
+  end
+
+  defp field_value(field), do: field.value && to_string(field.value)
+
+  defp weekday(field) do
+    case parse_date(field.value) do
+      {:ok, date} -> Calendar.strftime(date, "%A")
+      :error -> "the selected weekday"
+    end
+  end
+
+  defp day_of_month(field) do
+    case parse_date(field.value) do
+      {:ok, date} -> date.day
+      :error -> "the selected date"
+    end
+  end
+
+  defp parse_date(%Date{} = date), do: {:ok, date}
+
+  defp parse_date(value) when is_binary(value) do
+    case Date.from_iso8601(value) do
+      {:ok, date} -> {:ok, date}
+      _ -> :error
+    end
+  end
+
+  defp parse_date(_value), do: :error
 
   def duration_options, do: @duration_options
 end

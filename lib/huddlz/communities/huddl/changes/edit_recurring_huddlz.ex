@@ -25,6 +25,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz do
   defp reconcile_series(changeset, huddl, actor) do
     repeat_until = Ash.Changeset.get_argument(changeset, :repeat_until)
     frequency = Ash.Changeset.get_argument(changeset, :frequency)
+    recurrence_interval = Ash.Changeset.get_argument(changeset, :recurrence_interval)
 
     # The update result doesn't carry loaded relationships, and API/GraphQL
     # callers may not have preloaded the template, so load it here.
@@ -36,12 +37,16 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz do
         {:ok, huddl}
 
       huddl_template ->
-        {:ok, huddl_template} =
-          huddl_template
-          |> Ash.Changeset.for_update(:update, %{
+        template_attrs =
+          %{
             repeat_until: repeat_until,
             frequency: frequency
-          })
+          }
+          |> maybe_put_interval(recurrence_interval)
+
+        {:ok, huddl_template} =
+          huddl_template
+          |> Ash.Changeset.for_update(:update, template_attrs)
           |> Ash.update(authorize?: false)
 
         # Synchronous: "edit all" is a rare organizer action, bounded at the
@@ -52,4 +57,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz do
         {:ok, huddl}
     end
   end
+
+  defp maybe_put_interval(attrs, nil), do: attrs
+  defp maybe_put_interval(attrs, interval), do: Map.put(attrs, :interval, interval)
 end

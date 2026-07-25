@@ -79,7 +79,7 @@ defmodule Huddlz.Communities.HuddlTemplate do
 
     attribute :interval, :integer do
       allow_nil? false
-      constraints min: 1
+      constraints min: 1, max: 4
       default 1
     end
 
@@ -93,7 +93,6 @@ defmodule Huddlz.Communities.HuddlTemplate do
   @doc """
   Returns the form-facing cadence represented by an explicit interval and unit.
   """
-  def cadence(%__MODULE__{interval: 1, unit: :week}), do: :weekly
-  def cadence(%__MODULE__{interval: 2, unit: :week}), do: :every_two_weeks
-  def cadence(%__MODULE__{interval: 1, unit: :month}), do: :monthly
+  def cadence(%__MODULE__{unit: :week}), do: :weekly
+  def cadence(%__MODULE__{unit: :month}), do: :monthly
 end

@@ -73,7 +73,9 @@ defmodule HuddlzWeb.HuddlLive.New do
           "group_id" => group.id,
           "date" => Date.to_iso8601(tomorrow),
           "start_time" => Time.to_iso8601(default_time) |> String.slice(0..4),
-          "duration_minutes" => "60"
+          "duration_minutes" => "60",
+          "frequency" => "weekly",
+          "recurrence_interval" => "1"
         }
       )
 
@@ -237,26 +239,12 @@ defmodule HuddlzWeb.HuddlLive.New do
             </div>
 
             <%= if Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_recurring].value) do %>
-              <div class="form-row form-row-inline">
-                <div class="form-col-md">
-                  <.select
-                    field={@form[:frequency]}
-                    label="Frequency"
-                    options={[
-                      {"Weekly", "weekly"},
-                      {"Every two weeks", "every_two_weeks"},
-                      {"Monthly", "monthly"}
-                    ]}
-                  />
-                </div>
-                <div class="form-col-md">
-                  <.input
-                    field={@form[:repeat_until]}
-                    type="date"
-                    label="Repeat until"
-                  />
-                </div>
-              </div>
+              <.recurrence_fields
+                frequency_field={@form[:frequency]}
+                interval_field={@form[:recurrence_interval]}
+                repeat_until_field={@form[:repeat_until]}
+                date_field={@form[:date]}
+              />
             <% end %>
           </div>
         </div>
