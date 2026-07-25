@@ -327,7 +327,10 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
       |> assert_has(".facts .value .muted", text: "Sign in and RSVP to get virtual link")
       |> refute_has("button", text: "RSVP to this huddl")
-      |> assert_has("a", text: "Sign in to RSVP")
+      |> assert_has(
+        "a[href='/sign-in?return_to=%2Fgroups%2F#{group.slug}%2Fhuddlz%2F#{huddl.id}']",
+        text: "Sign in to RSVP"
+      )
     end
 
     test "handles different huddl types correctly", %{

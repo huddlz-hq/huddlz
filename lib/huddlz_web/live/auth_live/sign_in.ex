@@ -7,6 +7,7 @@ defmodule HuddlzWeb.AuthLive.SignIn do
 
   alias AshPhoenix.Form
   alias Huddlz.Accounts.User
+  alias HuddlzWeb.AuthReturnTo
 
   @impl true
   def render(assigns) do
@@ -22,7 +23,7 @@ defmodule HuddlzWeb.AuthLive.SignIn do
         phx-submit="sign_in_with_password"
         phx-change="validate_password"
         phx-trigger-action={@trigger_action}
-        action="/auth/user/password/sign_in"
+        action={sign_in_path(@return_to)}
         method="post"
         class="auth-card"
       >
@@ -46,14 +47,14 @@ defmodule HuddlzWeb.AuthLive.SignIn do
         <.link navigate={~p"/reset"}>Forgot your password?</.link>
       </div>
       <div class="auth-aside">
-        Don't have an account? <.link navigate={~p"/register"}>Sign up</.link>
+        Don't have an account? <.link navigate={register_path(@return_to)}>Sign up</.link>
       </div>
     </Layouts.auth_shell>
     """
   end
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
     strategy = AshAuthentication.Info.strategy!(User, :password)
 
     context = %{
@@ -82,6 +83,7 @@ defmodule HuddlzWeb.AuthLive.SignIn do
      |> assign(:page_title, "Sign in")
      |> assign(:body_class, "is-auth")
      |> assign(:password_form, password_form)
+     |> assign(:return_to, AuthReturnTo.validate(params["return_to"]))
      |> assign(:trigger_action, false)}
   end
 
@@ -96,7 +98,7 @@ defmodule HuddlzWeb.AuthLive.SignIn do
 
           {:noreply,
            redirect(socket,
-             to: "/auth/user/password/sign_in_with_token?token=#{token}"
+             to: sign_in_token_path(token, socket.assigns.return_to)
            )}
 
         {:error, form} ->
@@ -132,4 +134,21 @@ defmodule HuddlzWeb.AuthLive.SignIn do
 
     {:noreply, assign(socket, :password_form, form)}
   end
+
+  defp sign_in_path(nil), do: "/auth/user/password/sign_in"
+
+  defp sign_in_path(return_to) do
+    "/auth/user/password/sign_in?" <> URI.encode_query(return_to: return_to)
+  end
+
+  defp sign_in_token_path(token, nil), do: "/auth/user/password/sign_in_with_token?token=#{token}"
+
+  defp sign_in_token_path(token, return_to) do
+    "/auth/user/password/sign_in_with_token?" <>
+      URI.encode_query(token: token, return_to: return_to)
+  end
+
+  defp register_path(nil), do: ~p"/register"
+
+  defp register_path(return_to), do: ~p"/register?#{[return_to: return_to]}"
 end

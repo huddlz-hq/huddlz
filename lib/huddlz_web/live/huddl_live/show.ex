@@ -315,7 +315,11 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   defp render_rsvp_state(%{current_user: nil} = assigns) do
     ~H"""
-    <.button variant={:primary} navigate={~p"/sign-in"} class="rsvp-cta">
+    <.button
+      variant={:primary}
+      navigate={rsvp_sign_in_path(@huddl.group.slug, @huddl.id)}
+      class="rsvp-cta"
+    >
       Sign in to RSVP
     </.button>
     """
@@ -457,6 +461,11 @@ defmodule HuddlzWeb.HuddlLive.Show do
       </div>
       """
     end
+  end
+
+  defp rsvp_sign_in_path(group_slug, huddl_id) do
+    return_to = "/groups/#{group_slug}/huddlz/#{huddl_id}"
+    "/sign-in?" <> URI.encode_query(return_to: return_to)
   end
 
   @impl true
