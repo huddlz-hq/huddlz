@@ -3,6 +3,50 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
 
   import Huddlz.Test.Helpers.Authentication
 
+  alias Huddlz.Communities
+
+  describe "responsive group cover" do
+    setup do
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+
+      %{owner: owner, group: group}
+    end
+
+    test "renders a branded fallback when no cover is available", %{conn: conn, group: group} do
+      conn
+      |> visit(~p"/groups/#{group.slug}")
+      |> assert_has("#group-detail-hero.group-hero")
+      |> assert_has("#group-detail-cover-#{group.id} [aria-hidden='true']")
+      |> assert_has("#group-detail-cover-#{group.id} .group-cover-label", text: "huddlz group")
+      |> refute_has("#group-detail-cover-#{group.id} img")
+    end
+
+    test "makes cover images decorative and restores the fallback on load errors", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      {:ok, _image} =
+        Communities.create_group_image(
+          %{
+            filename: "cover.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/group_images/#{group.id}/cover.jpg",
+            thumbnail_path: "/uploads/group_images/#{group.id}/cover_thumb.jpg",
+            group_id: group.id
+          },
+          actor: owner
+        )
+
+      conn
+      |> visit(~p"/groups/#{group.slug}")
+      |> assert_has("#group-detail-cover-#{group.id}-image[phx-hook='ImageFallback'][alt='']")
+      |> assert_has("#group-detail-cover-#{group.id} .group-cover-fallback")
+    end
+  end
+
   describe "membership action buttons" do
     setup do
       owner = generate(user(role: :user))

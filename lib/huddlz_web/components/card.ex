@@ -8,6 +8,8 @@ defmodule HuddlzWeb.Components.Card do
   """
   use Phoenix.Component
 
+  alias Huddlz.Storage.GroupImages
+
   attr :href, :string, default: nil
   attr :navigate, :string, default: nil
   attr :patch, :string, default: nil
@@ -47,6 +49,44 @@ defmodule HuddlzWeb.Components.Card do
   end
 
   @doc """
+  Renders group cover media with a branded fallback that remains visible when
+  the image is absent or cannot be loaded.
+  """
+  attr :group, :map, required: true
+  attr :id, :string, required: true
+  attr :variant, :atom, values: [:card, :hero, :thumb], default: :card
+
+  attr :gradient, :integer,
+    values: [1, 2, 3, 4, 5, 6],
+    default: 1,
+    doc: "1–6 selects the fallback gradient"
+
+  def group_cover(assigns) do
+    assigns = assign(assigns, :initials, group_initials(assigns.group.name))
+
+    ~H"""
+    <div
+      id={@id}
+      class={["group-cover", "group-cover--#{@variant}", "gradient-#{@gradient}"]}
+      data-testid="group-cover"
+    >
+      <div class="group-cover-fallback" aria-hidden="true">
+        <span class="group-cover-signal">{@initials}</span>
+        <span :if={@variant != :thumb} class="group-cover-label">huddlz group</span>
+      </div>
+      <img
+        :if={@group.current_image_url}
+        id={"#{@id}-image"}
+        class="group-cover-image"
+        src={GroupImages.url(@group.current_image_url)}
+        alt=""
+        phx-hook="ImageFallback"
+      />
+    </div>
+    """
+  end
+
+  @doc """
   Renders a date stamp (used inside a `<:cover>` slot of `card`).
   """
   attr :month, :string, required: true, doc: "3-letter month abbreviation, uppercase"
@@ -78,4 +118,13 @@ defmodule HuddlzWeb.Components.Card do
   defp tag_class(:in_person), do: "in-person"
   defp tag_class(:online), do: "online"
   defp tag_class(:hybrid), do: "hybrid"
+
+  defp group_initials(name) do
+    name
+    |> to_string()
+    |> String.split(~r/\s+/, trim: true)
+    |> Enum.take(2)
+    |> Enum.map_join(&String.first/1)
+    |> String.upcase()
+  end
 end

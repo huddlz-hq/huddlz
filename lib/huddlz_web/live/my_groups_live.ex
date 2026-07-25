@@ -13,7 +13,6 @@ defmodule HuddlzWeb.MyGroupsLive do
   import HuddlzWeb.Live.Helpers.ParamHelpers
 
   alias Huddlz.Communities
-  alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
   require Logger
 
@@ -184,11 +183,10 @@ defmodule HuddlzWeb.MyGroupsLive do
     ~H"""
     <.card navigate={~p"/groups/#{@group.slug}"} gradient={@gradient}>
       <:cover>
-        <img
-          :if={@group.current_image_url}
-          class="card-cover-img"
-          src={GroupImages.url(@group.current_image_url)}
-          alt={@group.name}
+        <.group_cover
+          id={"my-group-cover-#{@group.id}"}
+          group={@group}
+          gradient={@gradient}
         />
         <span class={["card-tag", role_class(@role)]}>{role_label(@role)}</span>
       </:cover>

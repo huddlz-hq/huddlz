@@ -316,6 +316,22 @@ defmodule HuddlzWeb.HuddlLiveTest do
       |> assert_has(".grid .card .card-meta", text: "3 members")
     end
 
+    test "renders the shared cover fallback for groups without an image", %{
+      conn: conn,
+      host: host
+    } do
+      group =
+        generate(group(is_public: true, owner_id: host.id, actor: host, name: "Fallback Club"))
+
+      conn
+      |> visit("/discover?scope=groups")
+      |> assert_has("#discover-group-cover-#{group.id}[data-testid='group-cover']")
+      |> assert_has(
+        "#discover-group-cover-#{group.id} .group-cover-label",
+        text: "huddlz group"
+      )
+    end
+
     test "hides huddlz when scope=groups", %{conn: conn, host: host} do
       public_group = generate(group(is_public: true, owner_id: host.id, actor: host))
 

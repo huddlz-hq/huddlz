@@ -26,6 +26,29 @@ import topbar from "../vendor/topbar"
 
 const Hooks = {}
 
+Hooks.ImageFallback = {
+  mounted() {
+    this.handleError = () => this.el.classList.add("is-unavailable")
+    this.el.addEventListener("error", this.handleError)
+
+    if (this.el.complete && this.el.naturalWidth === 0) {
+      this.handleError()
+    }
+  },
+
+  updated() {
+    if (this.el.complete && this.el.naturalWidth === 0) {
+      this.handleError()
+    } else {
+      this.el.classList.remove("is-unavailable")
+    }
+  },
+
+  destroyed() {
+    this.el.removeEventListener("error", this.handleError)
+  }
+}
+
 Hooks.LocationAutocomplete = {
   mounted() {
     this.setupInput()
