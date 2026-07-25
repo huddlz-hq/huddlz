@@ -1839,10 +1839,31 @@ body .huddl-side-section h3 {
 body .pref-list .row { grid-template-columns: 1fr auto; gap: 18px; }
 
 /* Notification row */
-body .row.notif-row { grid-template-columns: 14px 1fr 80px; gap: 14px; }
+body .row.notif-row { grid-template-columns: 14px minmax(0, 1fr) auto; gap: 14px; }
 body .row.notif-row.unread .row-title { color: var(--text); }
 body .row.notif-row:not(.unread) .row-title { color: var(--soft); }
 body .row.notif-row:not(.unread) .meta { color: var(--muted); }
+body .notif-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+body .notif-actions .pill {
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+body .notif-actions a.pill:hover,
+body .notif-actions button.pill:hover {
+  color: var(--text);
+  border-color: var(--cyan-dim);
+  background: var(--cyan-soft);
+}
+body .notif-actions a.pill:focus-visible,
+body .notif-actions button.pill:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
 
 body .notif-mark {
   width: 8px;
@@ -3299,6 +3320,9 @@ body .page-nav:disabled {
   /* Listings on org pages: collapse multi-column rows */
   body .row.huddlz-row, body .row.members-row { grid-template-columns: 56px 1fr; row-gap: 8px; }
   body .row.members-row { grid-template-columns: 48px 1fr; }
+  body .row.notif-row { grid-template-columns: 14px minmax(0, 1fr); }
+  body .notif-actions { grid-column: 2; justify-content: flex-start; }
+  body .notif-actions .pill { min-width: 44px; height: 44px; justify-content: center; }
   /* Land marketing */
   body .land-topbar { height: 64px; padding: 0 16px; }
   body .land-hero { padding: 48px 16px 40px; }
