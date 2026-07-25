@@ -326,8 +326,8 @@ defmodule HuddlzWeb.ProfileLive do
   def handle_event("change_email", %{"email_change" => params}, socket) do
     case AshPhoenix.Form.submit(socket.assigns.email_form.source, params: params) do
       {:ok, updated_user} ->
-        {:ok, updated_user} =
-          Ash.load(
+        updated_user =
+          Ash.load!(
             updated_user,
             [:current_profile_picture_url, :home_location, :home_latitude, :home_longitude],
             actor: updated_user
