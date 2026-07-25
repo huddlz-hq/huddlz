@@ -171,6 +171,10 @@ defmodule HuddlzWeb.HuddlLive.Show do
                       >
                         Join virtually
                       </a>
+                    <% @attendance == :waitlisted -> %>
+                      <span class="muted">
+                        Virtual link available when your RSVP is confirmed
+                      </span>
                     <% @current_user -> %>
                       <span class="muted">Virtual link available after RSVP</span>
                     <% true -> %>

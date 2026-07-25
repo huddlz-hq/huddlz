@@ -366,6 +366,53 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
       assert result.virtual_link == "https://zoom.us/j/secret123"
     end
 
+    test "waitlisted members cannot see virtual links until they are promoted", %{
+      owner: owner,
+      member: member,
+      virtual_huddl: virtual_huddl
+    } do
+      virtual_huddl
+      |> Ash.Changeset.for_update(:update, %{max_attendees: 1}, actor: owner)
+      |> Ash.update!()
+
+      virtual_huddl
+      |> Ash.Changeset.for_update(:join_waitlist, %{}, actor: member)
+      |> Ash.update!()
+
+      assert visible_virtual_link(virtual_huddl, member) == nil
+
+      virtual_huddl
+      |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: owner)
+      |> Ash.update!()
+
+      assert visible_virtual_link(virtual_huddl, member) == "https://zoom.us/j/secret123"
+
+      virtual_huddl
+      |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: member)
+      |> Ash.update!()
+
+      assert visible_virtual_link(virtual_huddl, member) == nil
+    end
+
+    test "group organizers can see virtual links without an RSVP", %{
+      owner: owner,
+      non_member: organizer,
+      group: group,
+      virtual_huddl: virtual_huddl
+    } do
+      generate(
+        group_member(
+          group_id: group.id,
+          user_id: organizer.id,
+          role: :organizer,
+          actor: owner
+        )
+      )
+
+      assert visible_virtual_link(virtual_huddl, organizer) ==
+               "https://zoom.us/j/secret123"
+    end
+
     test "non-members cannot see virtual links", %{
       non_member: non_member,
       virtual_huddl: virtual_huddl
@@ -389,6 +436,14 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
 
       assert result.visible_virtual_link == nil
     end
+  end
+
+  defp visible_virtual_link(huddl, actor) do
+    Huddl
+    |> Ash.Query.filter(id == ^huddl.id)
+    |> Ash.Query.load(:visible_virtual_link)
+    |> Ash.read_one!(actor: actor)
+    |> Map.fetch!(:visible_virtual_link)
   end
 
   describe "update and destroy authorization" do

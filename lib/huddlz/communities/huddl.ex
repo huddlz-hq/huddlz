@@ -642,10 +642,23 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     calculate :visible_virtual_link, :string do
-      description "Returns the virtual link only if the actor has RSVPed to the huddl"
+      description """
+      Returns the virtual link only to group organizers or actors with a
+      confirmed RSVP. Waitlisted attendance rows do not grant access.
+      """
+
+      public? true
 
       calculation expr(
-                    if exists(attendees, user_id == ^actor(:id)) do
+                    if group.owner_id == ^actor(:id) or
+                         exists(
+                           group.group_members,
+                           user_id == ^actor(:id) and role == :organizer
+                         ) or
+                         exists(
+                           attendees,
+                           user_id == ^actor(:id) and is_nil(waitlisted_at)
+                         ) do
                       virtual_link
                     else
                       nil
