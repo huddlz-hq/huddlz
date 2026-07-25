@@ -179,14 +179,19 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
   end
 
   describe "card content" do
-    test "renders member count", %{conn: conn, member: member} do
-      _g =
+    test "renders the complete member count", %{conn: conn, member: member} do
+      group =
         generate(group(name: "Crowded Crew", is_public: true, owner_id: member.id, actor: member))
+
+      for _ <- 1..2 do
+        member_user = generate(user(role: :user))
+        generate(group_member(group_id: group.id, user_id: member_user.id, actor: member))
+      end
 
       conn
       |> login(member)
       |> visit("/my-groups")
-      |> assert_has(".grid .card .card-meta", text: "1 member")
+      |> assert_has(".grid .card .card-meta", text: "3 members")
     end
   end
 

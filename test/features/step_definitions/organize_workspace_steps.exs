@@ -67,6 +67,12 @@ defmodule OrganizeWorkspaceSteps do
     context
   end
 
+  step "the organizer member count should be {int}", %{args: [count]} = context do
+    session = context[:session] || context[:conn]
+    assert_has(session, ".kpi", text: "Members #{count}")
+    context
+  end
+
   defp lookup_group(name) do
     Huddlz.Communities.Group
     |> Ash.Query.filter(name: name)

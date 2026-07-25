@@ -132,4 +132,10 @@ defmodule GroupManagementSteps do
 
     context
   end
+
+  step "the group member count should be {int}", %{args: [count]} = context do
+    session = context[:session] || context[:conn]
+    assert_has(session, ".facts li", text: "Members #{count}")
+    context
+  end
 end

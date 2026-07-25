@@ -376,6 +376,7 @@ defmodule Huddlz.Communities.Group do
 
     count :member_count, :group_members do
       description "Total members in the group, including owner and organizers"
+      authorize? false
     end
   end
 
