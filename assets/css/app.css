@@ -1448,6 +1448,83 @@ body .facts .value .muted { color: var(--muted); font-weight: 500; font-size: 12
 body .btn-secondary.destructive-btn { color: var(--magenta); border-color: rgba(232, 79, 180, 0.4); }
 body .btn-secondary.destructive-btn:hover { color: var(--magenta); border-color: var(--magenta); }
 
+/* Huddl deletion confirmation — one focused warning moment, not a browser alert. */
+body .delete-confirm {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 16px;
+  padding: 2px 0 22px;
+  border-bottom: 1px solid var(--line);
+}
+
+body .delete-confirm-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid rgba(232, 79, 180, 0.42);
+  border-radius: var(--radius-sm);
+  color: var(--magenta);
+  background:
+    linear-gradient(135deg, rgba(232, 79, 180, 0.16), rgba(232, 79, 180, 0.04));
+  box-shadow: inset 3px 0 0 rgba(232, 79, 180, 0.72);
+}
+
+body .delete-confirm-copy h2 {
+  margin: 5px 0 9px;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: clamp(21px, 3vw, 27px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+body .delete-confirm-copy p {
+  color: var(--soft);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+body .delete-confirm-copy strong { color: var(--text); }
+
+body .delete-confirm-series-note {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--warn);
+  background: rgba(246, 193, 119, 0.06);
+  color: var(--warn) !important;
+  font-size: 12px !important;
+}
+
+body .delete-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 18px;
+}
+
+body .delete-confirm-submit {
+  color: #fff !important;
+  border-color: var(--magenta) !important;
+  background: rgba(232, 79, 180, 0.86) !important;
+}
+
+body .delete-confirm-submit:hover {
+  background: var(--magenta) !important;
+  box-shadow: 0 0 22px rgba(232, 79, 180, 0.18);
+}
+
+@media (max-width: 520px) {
+  body .delete-confirm {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  body .delete-confirm-icon { width: 40px; height: 40px; }
+  body .delete-confirm-actions { flex-direction: column; }
+  body .delete-confirm-actions .btn-secondary { width: 100%; justify-content: center; }
+}
+
 /* "Organized by" row in huddl-side */
 body .creator-row { display: flex; align-items: center; gap: 10px; font-size: 13px; }
 

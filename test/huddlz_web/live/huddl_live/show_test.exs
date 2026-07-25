@@ -9,6 +9,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.HuddlImage
+  alias Huddlz.Communities.HuddlTemplate
 
   describe "Show huddl details" do
     setup do
@@ -652,6 +653,114 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has("a", text: "Edit huddl")
       |> assert_has("button", text: "Delete huddl")
     end
+
+    test "opens and cancels the styled delete confirmation", %{
+      conn: conn,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+      |> refute_has("#delete-huddl-modal")
+      |> click_button("Delete huddl")
+      |> assert_has("#delete-huddl-modal [role='dialog']")
+      |> assert_has("#delete-huddl-modal-title", text: "Delete this huddl?")
+      |> assert_has("#delete-huddl-modal", text: huddl.title)
+      |> assert_has("#delete-huddl-modal", text: "All RSVPs will be canceled")
+      |> assert_has("#delete-huddl-modal", text: "everyone who RSVP'd will be notified")
+      |> assert_has("#delete-huddl-modal [role='dialog'][aria-modal='true'][tabindex='0']")
+      |> assert_has(
+        "#delete-huddl-modal-container[phx-key='escape'][phx-window-keydown][phx-click-away]"
+      )
+      |> refute_has("#open-delete-huddl-modal[data-confirm]")
+      |> assert_has("#open-delete-huddl-modal[phx-click*='push_focus']")
+      |> within("#delete-huddl-modal", fn session ->
+        click_button(session, "Keep huddl")
+      end)
+      |> refute_has("#delete-huddl-modal")
+      |> assert_path(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+
+      assert huddl_still_exists?(huddl.id)
+    end
+
+    test "explains that deleting a recurring huddl leaves the series intact", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      template =
+        HuddlTemplate
+        |> Ash.Changeset.for_create(:create, %{
+          frequency: :weekly,
+          repeat_until: DateTime.add(DateTime.utc_now(), 30, :day)
+        })
+        |> Ash.create!(authorize?: false)
+
+      recurring_huddl =
+        Huddl
+        |> Ash.Changeset.for_create(
+          :create,
+          %{
+            title: "Weekly Workshop",
+            description: "A recurring workshop",
+            date: Date.add(Date.utc_today(), 2),
+            start_time: ~T[14:00:00],
+            duration_minutes: 60,
+            event_type: :virtual,
+            virtual_link: "https://example.com/weekly-workshop",
+            is_private: false,
+            group_id: group.id,
+            huddl_template_id: template.id
+          },
+          actor: owner
+        )
+        |> Ash.create!()
+
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{recurring_huddl.id}")
+      |> click_button("Delete huddl")
+      |> assert_has(
+        "#delete-huddl-modal .delete-confirm-series-note",
+        text: "This deletes only the selected occurrence"
+      )
+      |> assert_has(
+        "#delete-huddl-modal .delete-confirm-series-note",
+        text: "Other occurrences in the recurring series will remain"
+      )
+    end
+
+    test "deletes the huddl only after modal confirmation", %{
+      conn: conn,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+      |> click_button("Delete huddl")
+      |> within("#delete-huddl-modal", fn session ->
+        click_button(session, "Delete huddl")
+      end)
+      |> assert_path(~p"/groups/#{group.slug}")
+
+      deleted =
+        Huddl
+        |> Ash.Query.for_read(:get_for_recurrence, %{id: huddl.id})
+        |> Ash.read_one!(authorize?: false)
+
+      assert is_nil(deleted)
+    end
+  end
+
+  defp huddl_still_exists?(id) do
+    Huddl
+    |> Ash.Query.for_read(:get_for_recurrence, %{id: id})
+    |> Ash.read_one!(authorize?: false)
+    |> is_struct(Huddl)
   end
 
   defp create_verified_user do
