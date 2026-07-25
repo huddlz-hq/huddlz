@@ -119,4 +119,17 @@ defmodule GroupManagementSteps do
     assert_has(session, "*", text: "is required")
     context
   end
+
+  step "I should see the leave dialog for {string}", %{args: [group_name]} = context do
+    session = context[:session] || context[:conn]
+
+    session
+    |> assert_has("#leave-group-dialog [role='dialog']")
+    |> assert_has("#leave-group-dialog-title", text: "Leave #{group_name}?")
+    |> assert_has("#leave-group-dialog", text: "member roster")
+    |> assert_has("#leave-group-dialog", text: "My groups")
+    |> assert_has("#leave-group-dialog", text: "notifications")
+
+    context
+  end
 end
