@@ -62,7 +62,11 @@ defmodule Huddlz.Communities.GroupMember do
   end
 
   actions do
-    defaults [:create, :read, :destroy]
+    defaults [:create, :read]
+
+    destroy :destroy do
+      require_atomic? false
+    end
 
     create :add_member do
       description "Add a user to a group"
@@ -196,6 +200,7 @@ defmodule Huddlz.Communities.GroupMember do
 
     destroy :leave_group do
       description "Leave a group (member removes themselves; owners must transfer ownership first)"
+      require_atomic? false
 
       # Encoded as a validation, not just a policy guard, so the admin bypass
       # cannot delete an owner's membership row and corrupt group state.
@@ -317,6 +322,11 @@ defmodule Huddlz.Communities.GroupMember do
       description "Default read — only your own membership records"
       authorize_if relates_to_actor_via(:user)
     end
+  end
+
+  changes do
+    change Huddlz.Communities.GroupMember.Changes.BroadcastMembershipChanged,
+      on: [:create, :update, :destroy]
   end
 
   attributes do

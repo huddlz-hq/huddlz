@@ -85,10 +85,38 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
         )
       )
 
-      conn
-      |> login(member)
-      |> visit(~p"/groups/#{group.slug}")
-      |> assert_has(".facts li", text: "Members 2")
+      private_huddl =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            is_private: true,
+            title: "Members Only Planning"
+          )
+        )
+
+      private_past_huddl =
+        generate(
+          past_huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            is_private: true,
+            title: "Members Only Retrospective"
+          )
+        )
+
+      session =
+        conn
+        |> login(member)
+        |> visit(~p"/groups/#{group.slug}")
+        |> assert_has(".facts li", text: "Members 2")
+        |> assert_has("h3", text: private_huddl.title)
+        |> click_button("Past")
+        |> assert_has("h3", text: private_past_huddl.title)
+        |> click_button("Upcoming")
+
+      session
       |> click_button("Leave Group")
       |> within("#leave-group-dialog", fn session ->
         click_button(session, "Yes, leave group")
@@ -97,23 +125,105 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
       |> assert_has(".facts li", text: "Members 1")
       |> refute_has("button", text: "Leave Group")
       |> assert_has("button", text: "Join Group")
+      |> refute_has("h3", text: private_huddl.title)
+      |> click_button("Past")
+      |> refute_has("h3", text: private_past_huddl.title)
       |> visit(~p"/my-groups")
       |> refute_has("*", text: "Membership Test Group")
     end
 
-    test "joining updates the member count without a refresh", %{
+    test "joining refreshes the member count and reveals members-only huddlz", %{
       conn: conn,
+      owner: owner,
       group: group
     } do
       visitor = generate(user(role: :user))
+
+      private_huddl =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            is_private: true,
+            title: "Private Member Welcome"
+          )
+        )
 
       conn
       |> login(visitor)
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has(".facts li", text: "Members 1")
+      |> refute_has("h3", text: private_huddl.title)
       |> click_button("Join Group")
       |> assert_has("*", text: "Successfully joined the group!")
       |> assert_has(".facts li", text: "Members 2")
+      |> assert_has("h3", text: private_huddl.title)
+    end
+
+    test "external role loss and removal refresh an already-mounted page", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      organizer = generate(user(role: :user))
+
+      membership =
+        generate(
+          group_member(
+            group_id: group.id,
+            user_id: organizer.id,
+            role: :organizer,
+            actor: owner
+          )
+        )
+
+      private_huddl =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            is_private: true,
+            title: "Organizer Planning Huddl"
+          )
+        )
+
+      session =
+        conn
+        |> login(organizer)
+        |> visit(~p"/groups/#{group.slug}")
+        |> assert_has("a", text: "Create Huddl")
+        |> assert_has("h3", text: private_huddl.title)
+
+      membership =
+        membership
+        |> Ash.Changeset.for_update(:change_role, %{role: :member}, actor: owner)
+        |> Ash.update!()
+
+      session =
+        session
+        |> refute_has("a", text: "Create Huddl", timeout: 1_000)
+        |> click_button("Leave Group")
+        |> assert_has("#leave-group-dialog")
+
+      membership
+      |> Ash.Changeset.for_destroy(
+        :remove_member,
+        %{group_id: group.id, user_id: organizer.id},
+        actor: owner
+      )
+      |> Ash.destroy!()
+
+      session
+      |> refute_has("#leave-group-dialog", timeout: 1_000)
+      |> assert_has(".facts li", text: "Members 1")
+      |> refute_has("h3", text: private_huddl.title)
+      |> assert_has("button", text: "Join Group")
+      |> unwrap(fn view ->
+        Phoenix.LiveViewTest.render_hook(view, "switch_tab", %{"tab" => "past"})
+      end)
+      |> refute_has("h3", text: private_huddl.title)
     end
 
     test "owner cannot open the leave dialog", %{conn: conn, owner: owner, group: group} do

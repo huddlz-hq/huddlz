@@ -7,7 +7,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   import HuddlzWeb.Live.Helpers.HuddlCardHelpers
 
   alias Huddlz.Communities
-  alias Huddlz.Communities.{GroupLocation, GroupMember, Huddl}
+  alias Huddlz.Communities.{GroupLocation, GroupMember, Huddl, MembershipEvents}
   alias Huddlz.Storage.GroupImages
   alias Huddlz.Storage.HuddlImages
   alias HuddlzWeb.Avatar
@@ -22,7 +22,10 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :leave_dialog_open, false)}
+    {:ok,
+     socket
+     |> assign(:leave_dialog_open, false)
+     |> assign(:subscribed_group_id, nil)}
   end
 
   @impl true
@@ -37,6 +40,7 @@ defmodule HuddlzWeb.GroupLive.Show do
 
         {:noreply,
          socket
+         |> subscribe_to_membership_changes(group)
          |> assign(:page_title, group.name)
          |> assign(:meta, group_meta(group))
          |> assign(:group, group)
@@ -56,6 +60,56 @@ defmodule HuddlzWeb.GroupLive.Show do
            resource_name: "Group",
            fallback_path: ~p"/discover?#{[scope: "groups"]}"
          )}
+    end
+  end
+
+  @impl true
+  def handle_info(
+        {:group_membership_changed, group_id},
+        %{assigns: %{group: %{id: group_id}}} = socket
+      ) do
+    {:noreply, refresh_membership_state(socket)}
+  end
+
+  def handle_info({:group_membership_changed, _group_id}, socket), do: {:noreply, socket}
+
+  defp subscribe_to_membership_changes(socket, group) do
+    if connected?(socket) and socket.assigns.subscribed_group_id != group.id do
+      :ok = MembershipEvents.subscribe(group.id)
+      assign(socket, :subscribed_group_id, group.id)
+    else
+      socket
+    end
+  end
+
+  defp refresh_membership_state(socket) do
+    user = socket.assigns.current_user
+
+    case get_group_by_slug(socket.assigns.group.slug, user) do
+      {:ok, group} ->
+        membership = current_user_membership(group, user)
+        member? = !is_nil(membership)
+
+        {past_huddlz, past_total_pages} =
+          get_past_group_huddlz_paginated(group, user, page: 1, per_page: 10)
+
+        socket
+        |> assign(:group, group)
+        |> assign(:members, get_members(group, user, member?))
+        |> assign(:member_count, group.member_count)
+        |> assign(:is_member, member?)
+        |> assign(:leave_dialog_open, socket.assigns.leave_dialog_open && member?)
+        |> assign_action_permissions(group, user, membership)
+        |> assign(:upcoming_huddlz, get_upcoming_group_huddlz(group, user, limit: 10))
+        |> assign(:past_huddlz, past_huddlz)
+        |> assign(:past_page, 1)
+        |> assign(:past_total_pages, past_total_pages)
+
+      {:error, _reason} ->
+        handle_error(socket, :not_found,
+          resource_name: "Group",
+          fallback_path: ~p"/discover?#{[scope: "groups"]}"
+        )
     end
   end
 
@@ -471,18 +525,10 @@ defmodule HuddlzWeb.GroupLive.Show do
 
     case join_group(socket.assigns.group, user) do
       {:ok, _} ->
-        group = reload_group(socket.assigns.group, user)
-        membership = current_user_membership(group, user)
-        members = get_members(group, user, true)
-
         {:noreply,
          socket
          |> put_flash(:info, "Successfully joined the group!")
-         |> assign(:group, group)
-         |> assign(:is_member, true)
-         |> assign(:members, members)
-         |> assign(:member_count, group.member_count)
-         |> assign_action_permissions(group, user, membership)}
+         |> refresh_membership_state()}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to join group")}
@@ -504,17 +550,10 @@ defmodule HuddlzWeb.GroupLive.Show do
 
     case leave_group(socket.assigns.group, user) do
       :ok ->
-        group = reload_group(socket.assigns.group, user)
-
         {:noreply,
          socket
          |> put_flash(:info, "Successfully left the group")
-         |> assign(:leave_dialog_open, false)
-         |> assign(:group, group)
-         |> assign(:is_member, false)
-         |> assign(:members, nil)
-         |> assign(:member_count, group.member_count)
-         |> assign_action_permissions(group, user, nil)}
+         |> refresh_membership_state()}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to leave group")}
@@ -532,10 +571,6 @@ defmodule HuddlzWeb.GroupLive.Show do
       {:error, %Ash.Error.Query.NotFound{}} -> {:error, :not_found}
       {:error, _} -> {:error, :not_found}
     end
-  end
-
-  defp reload_group(%{slug: slug}, actor) do
-    Communities.get_by_slug!(slug, actor: actor, load: @group_loads)
   end
 
   defp group_meta(group) do
