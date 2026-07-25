@@ -7,6 +7,12 @@ This is a web application written using the Phoenix web framework.
   `Co-Authored-By` trailers for human collaborators
 - Consult `docs/commit-style.md` before committing
 
+### Pull Requests
+
+- Follow the shared pull request guidance in `CONTRIBUTING.md`.
+- Keep agent-authored PR descriptions concise and factual; do not invent
+  verification claims or paste routine command output.
+
 ### Naming Conventions
 
 **IMPORTANT: ALWAYS follow these naming conventions precisely**
