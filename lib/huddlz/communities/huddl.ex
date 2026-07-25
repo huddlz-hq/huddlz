@@ -25,6 +25,8 @@ defmodule Huddlz.Communities.Huddl do
     mutations do
       create :create_huddl, :create
       update :update_huddl, :update
+      update :publish_huddl, :publish
+      update :cancel_huddl, :cancel
       update :rsvp_to_huddl, :rsvp
       update :cancel_rsvp_to_huddl, :cancel_rsvp
       destroy :delete_huddl, :destroy
@@ -44,6 +46,8 @@ defmodule Huddlz.Communities.Huddl do
       index :by_group, route: "/by_group"
       post :create
       patch :update
+      patch :publish, route: "/:id/publish"
+      patch :cancel, route: "/:id/cancel"
       patch :rsvp, route: "/:id/rsvp"
       patch :cancel_rsvp, route: "/:id/cancel_rsvp"
       delete :destroy
@@ -117,7 +121,8 @@ defmodule Huddlz.Communities.Huddl do
         :max_attendees,
         :group_id,
         :group_location_id,
-        :huddl_template_id
+        :huddl_template_id,
+        :lifecycle_state
       ]
 
       # Virtual arguments for form inputs
@@ -137,6 +142,7 @@ defmodule Huddlz.Communities.Huddl do
       argument :provided_longitude, :float, allow_nil?: true, public?: false
       argument :pending_image_id, :uuid, allow_nil?: true, public?: false
 
+      validate one_of(:lifecycle_state, [:draft, :published])
       validate Huddlz.Communities.Huddl.Validations.FutureDateValidation
 
       validate present(:frequency) do
@@ -159,7 +165,33 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Geocoding.ApplyProvidedCoordinates
       change {Huddlz.Geocoding.GeocodeChange, field: :physical_location}
       change Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup
+      change Huddlz.Communities.Huddl.Changes.SetInitialLifecycleTimestamps
       change Huddlz.Communities.Huddl.Changes.NotifyNewInGroup
+    end
+
+    update :publish do
+      description "Publish a draft huddl. Repeated publication is a no-op."
+      require_atomic? false
+
+      argument :publish_series?, :boolean, default: true, public?: false
+      argument :notify_members?, :boolean, default: true, public?: false
+
+      change {Huddlz.Communities.Huddl.Changes.TransitionLifecycle, to: :published}
+      change Huddlz.Communities.Huddl.Changes.PublishRecurringSeries
+      change Huddlz.Communities.Huddl.Changes.NotifyNewInGroup
+    end
+
+    update :cancel do
+      description "Cancel a published huddl without deleting its details or RSVP history."
+      require_atomic? false
+
+      argument :cancellation_reason, :string do
+        allow_nil? true
+        constraints allow_empty?: true, max_length: 1000
+      end
+
+      change {Huddlz.Communities.Huddl.Changes.TransitionLifecycle, to: :cancelled}
+      change Huddlz.Communities.Huddl.Changes.NotifyCancelled
     end
 
     update :update do
@@ -242,13 +274,13 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     read :upcoming do
-      filter expr(ends_at > now())
+      filter expr(lifecycle_state == :published and ends_at > now())
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
       prepare build(sort: [starts_at: :asc])
     end
 
     read :past do
-      filter expr(ends_at < now())
+      filter expr(lifecycle_state == :published and ends_at < now())
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
       prepare build(sort: [starts_at: :desc])
     end
@@ -311,7 +343,10 @@ defmodule Huddlz.Communities.Huddl do
         allow_nil? false
       end
 
-      filter expr(group_id == ^arg(:group_id) and starts_at > now())
+      filter expr(
+               lifecycle_state == :published and group_id == ^arg(:group_id) and
+                 starts_at > now()
+             )
 
       pagination keyset?: true,
                  offset?: true,
@@ -328,7 +363,10 @@ defmodule Huddlz.Communities.Huddl do
         allow_nil? false
       end
 
-      filter expr(group_id == ^arg(:group_id) and ends_at < now())
+      filter expr(
+               lifecycle_state == :published and group_id == ^arg(:group_id) and
+                 ends_at < now()
+             )
 
       pagination keyset?: true,
                  offset?: true,
@@ -371,6 +409,17 @@ defmodule Huddlz.Communities.Huddl do
       filter expr(id == ^arg(:id))
     end
 
+    read :get_for_lifecycle_transition do
+      description """
+      Internal visibility-free fetch used while a lifecycle transition holds a
+      row lock. Invoke only with `authorize?: false`.
+      """
+
+      get? true
+      argument :id, :uuid, allow_nil?: false
+      filter expr(id == ^arg(:id))
+    end
+
     read :huddlz_for_organizer do
       description """
       Huddlz across every group the actor owns or organizes.
@@ -383,8 +432,8 @@ defmodule Huddlz.Communities.Huddl do
 
       argument :state, :atom do
         allow_nil? false
-        default :live
-        constraints one_of: [:live, :past]
+        default :published
+        constraints one_of: [:live, :draft, :published, :cancelled, :past]
       end
 
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
@@ -395,8 +444,11 @@ defmodule Huddlz.Communities.Huddl do
              )
 
       filter expr(
-               (^arg(:state) == :live and ends_at > now()) or
-                 (^arg(:state) == :past and ends_at < now())
+               (^arg(:state) in [:live, :published] and lifecycle_state == :published and
+                  ends_at > now()) or
+                 (^arg(:state) == :draft and lifecycle_state == :draft) or
+                 (^arg(:state) == :cancelled and lifecycle_state == :cancelled) or
+                 (^arg(:state) == :past and lifecycle_state == :published and ends_at < now())
              )
     end
 
@@ -432,7 +484,7 @@ defmodule Huddlz.Communities.Huddl do
       pagination keyset?: true, required?: false, default_limit: 100
 
       filter expr(
-               starts_at > now() and
+               lifecycle_state == :published and starts_at > now() and
                  starts_at < from_now(24, :hour) and
                  is_nil(reminder_24h_sent_at)
              )
@@ -444,7 +496,7 @@ defmodule Huddlz.Communities.Huddl do
       pagination keyset?: true, required?: false, default_limit: 100
 
       filter expr(
-               starts_at > now() and
+               lifecycle_state == :published and starts_at > now() and
                  starts_at < from_now(1, :hour) and
                  is_nil(reminder_1h_sent_at)
              )
@@ -495,13 +547,24 @@ defmodule Huddlz.Communities.Huddl do
     # RSVP, cancellation, and waitlist all share the same visibility rule
     policy action([:rsvp, :cancel_rsvp, :join_waitlist]) do
       description "Users can manage their attendance on huddlz they have access to"
+      forbid_unless expr(lifecycle_state == :published)
       authorize_if expr(is_private == false and group.is_public == true)
       authorize_if expr(exists(group.members, id == ^actor(:id)))
     end
 
-    # Update and delete policies
-    policy action([:update, :destroy]) do
-      description "Only group owners and organizers can update or delete huddlz"
+    policy action(:update) do
+      description "Only group owners and organizers can update active huddlz"
+      forbid_unless expr(lifecycle_state != :cancelled)
+      authorize_if expr(group.owner_id == ^actor(:id))
+
+      authorize_if expr(
+                     exists(group.group_members, user_id == ^actor(:id) and role == :organizer)
+                   )
+    end
+
+    # Lifecycle and deletion policies
+    policy action([:publish, :cancel, :destroy]) do
+      description "Only group owners and organizers can change a huddl lifecycle"
       authorize_if expr(group.owner_id == ^actor(:id))
 
       authorize_if expr(
@@ -610,6 +673,30 @@ defmodule Huddlz.Communities.Huddl do
       public? true
     end
 
+    attribute :lifecycle_state, :atom do
+      allow_nil? false
+      public? true
+      default :published
+      constraints one_of: [:draft, :published, :cancelled]
+      description "Explicit organizer-controlled lifecycle state."
+    end
+
+    attribute :published_at, :utc_datetime_usec do
+      allow_nil? true
+      public? true
+    end
+
+    attribute :cancelled_at, :utc_datetime_usec do
+      allow_nil? true
+      public? true
+    end
+
+    attribute :cancellation_reason, :string do
+      allow_nil? true
+      public? true
+      constraints max_length: 1000
+    end
+
     attribute :latitude, :float do
       allow_nil? true
       description "Geocoded latitude of physical_location or inherited from group"
@@ -678,6 +765,8 @@ defmodule Huddlz.Communities.Huddl do
     calculate :status, :atom do
       calculation expr(
                     cond do
+                      lifecycle_state == :draft -> :draft
+                      lifecycle_state == :cancelled -> :cancelled
                       starts_at > now() -> :upcoming
                       ends_at < now() -> :completed
                       true -> :in_progress
@@ -689,7 +778,8 @@ defmodule Huddlz.Communities.Huddl do
       description "Returns the virtual link only if the actor has RSVPed to the huddl"
 
       calculation expr(
-                    if exists(attendees, user_id == ^actor(:id)) do
+                    if lifecycle_state == :published and
+                         exists(attendees, user_id == ^actor(:id)) do
                       virtual_link
                     else
                       nil

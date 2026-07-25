@@ -25,7 +25,11 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :confirming_delete?, false)}
+    {:ok,
+     socket
+     |> assign(:confirming_delete?, false)
+     |> assign(:confirming_cancel?, false)
+     |> assign(:cancel_form, to_form(%{"cancellation_reason" => ""}, as: :cancel))}
   end
 
   @impl true
@@ -42,8 +46,22 @@ defmodule HuddlzWeb.HuddlLive.Show do
          |> assign(:huddl, huddl)
          |> assign(:attendance, attendance)
          |> assign(:waitlist_position, waitlist_position)
-         |> assign(:can_edit_huddl, Ash.can?({huddl, :update}, user))
-         |> assign(:can_delete_huddl, Ash.can?({huddl, :destroy}, user))}
+         |> assign(
+           :can_edit_huddl,
+           huddl.lifecycle_state != :cancelled && Ash.can?({huddl, :update}, user)
+         )
+         |> assign(
+           :can_publish_huddl,
+           huddl.lifecycle_state == :draft && Ash.can?({huddl, :publish}, user)
+         )
+         |> assign(
+           :can_cancel_huddl,
+           huddl.lifecycle_state == :published && Ash.can?({huddl, :cancel}, user)
+         )
+         |> assign(
+           :can_delete_huddl,
+           huddl.lifecycle_state == :draft && Ash.can?({huddl, :destroy}, user)
+         )}
 
       {:error, :not_found} ->
         {:noreply,
@@ -99,6 +117,13 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
       <div class="huddl-frame">
         <div class="huddl-intro prose">
+          <div
+            :if={@huddl.status == :cancelled && @huddl.cancellation_reason}
+            id="cancellation-reason"
+            class="rsvp-banner magenta"
+          >
+            <strong>Organizer note:</strong> {@huddl.cancellation_reason}
+          </div>
           <%= if @huddl.description do %>
             <p :for={paragraph <- description_paragraphs(@huddl.description)}>{paragraph}</p>
           <% else %>
@@ -211,7 +236,10 @@ defmodule HuddlzWeb.HuddlLive.Show do
             {render_rsvp_state(assigns)}
           </div>
 
-          <div :if={@can_edit_huddl || @can_delete_huddl} class="huddl-side-section">
+          <div
+            :if={@can_edit_huddl || @can_publish_huddl || @can_cancel_huddl || @can_delete_huddl}
+            class="huddl-side-section"
+          >
             <h3>Organize</h3>
             <div class="side-actions">
               <.button
@@ -220,6 +248,23 @@ defmodule HuddlzWeb.HuddlLive.Show do
                 navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}/edit"}
               >
                 Edit huddl
+              </.button>
+              <.button
+                :if={@can_publish_huddl}
+                id="publish-huddl"
+                variant={:primary}
+                phx-click="publish_huddl"
+                phx-disable-with="Publishing…"
+              >
+                Publish huddl
+              </.button>
+              <.button
+                :if={@can_cancel_huddl}
+                variant={:destructive}
+                id="open-cancel-huddl-modal"
+                phx-click={JS.push_focus() |> JS.push("confirm_cancel_huddl")}
+              >
+                Cancel huddl
               </.button>
               <.button
                 :if={@can_delete_huddl}
@@ -286,12 +331,61 @@ defmodule HuddlzWeb.HuddlLive.Show do
           </.button>
         </div>
       </.modal>
+
+      <.modal
+        :if={@confirming_cancel?}
+        id="cancel-huddl-modal"
+        show
+        on_cancel={JS.push("cancel_cancel_huddl")}
+      >
+        <div class="delete-confirm">
+          <div class="delete-confirm-icon" aria-hidden="true">
+            <.icon name="hero-exclamation-triangle" class="h-6 w-6" />
+          </div>
+
+          <div class="delete-confirm-copy">
+            <span class="eyebrow eyebrow-magenta">Attendees will be notified</span>
+            <h2 id="cancel-huddl-modal-title">Cancel this huddl?</h2>
+            <p>
+              <strong>{@huddl.title}</strong> will remain in calendars and RSVP history with a
+              clear cancelled state.
+            </p>
+          </div>
+        </div>
+
+        <.form for={@cancel_form} id="cancel-huddl-form" phx-submit="cancel_huddl">
+          <.input
+            field={@cancel_form[:cancellation_reason]}
+            type="textarea"
+            label="Explanation (optional)"
+            placeholder="Share a brief reason with attendees."
+          />
+          <div class="delete-confirm-actions">
+            <.button
+              variant={:muted}
+              id="keep-published-huddl"
+              type="button"
+              phx-click="cancel_cancel_huddl"
+            >
+              Keep huddl
+            </.button>
+            <.button
+              variant={:destructive}
+              id="confirm-cancel-huddl"
+              type="submit"
+              phx-disable-with="Cancelling…"
+            >
+              Cancel huddl
+            </.button>
+          </div>
+        </.form>
+      </.modal>
     </Layouts.app>
     """
   end
 
   defp render_rsvp_state(%{huddl: %{status: status}} = assigns)
-       when status in [:completed, :cancelled] do
+       when status in [:draft, :completed, :cancelled] do
     ~H"""
     <div class={["rsvp-banner", status_banner_class(@huddl.status)]}>
       <svg
@@ -305,7 +399,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
         stroke-linejoin="round"
         aria-hidden="true"
       >
-        <%= if @huddl.status == :cancelled do %>
+        <%= if @huddl.status in [:draft, :cancelled] do %>
           <circle cx="12" cy="12" r="9" /><path d="M15 9l-6 6M9 9l6 6" />
         <% else %>
           <path d="M5 13l4 4L19 7" />
@@ -533,6 +627,49 @@ defmodule HuddlzWeb.HuddlLive.Show do
     {:noreply, assign(socket, :confirming_delete?, true)}
   end
 
+  def handle_event("confirm_cancel_huddl", _, socket) do
+    {:noreply, assign(socket, :confirming_cancel?, true)}
+  end
+
+  def handle_event("cancel_cancel_huddl", _, socket) do
+    {:noreply, assign(socket, :confirming_cancel?, false)}
+  end
+
+  def handle_event("publish_huddl", _, socket) do
+    huddl = socket.assigns.huddl
+    user = socket.assigns.current_user
+
+    case Communities.publish_huddl(huddl, actor: user) do
+      {:ok, _published} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Huddl published. Members can now discover and RSVP to it.")
+         |> push_navigate(to: ~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}")}
+
+      {:error, _error} ->
+        {:noreply, put_flash(socket, :error, "This huddl could not be published.")}
+    end
+  end
+
+  def handle_event("cancel_huddl", %{"cancel" => params}, socket) do
+    huddl = socket.assigns.huddl
+    user = socket.assigns.current_user
+
+    case Communities.cancel_huddl(huddl, params["cancellation_reason"], actor: user) do
+      {:ok, _cancelled} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Huddl cancelled. Attendees have been notified.")
+         |> push_navigate(to: ~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}")}
+
+      {:error, _error} ->
+        {:noreply,
+         socket
+         |> assign(:confirming_cancel?, false)
+         |> put_flash(:error, "This huddl could not be cancelled.")}
+    end
+  end
+
   def handle_event("cancel_delete_huddl", _, socket) do
     {:noreply, assign(socket, :confirming_delete?, false)}
   end
@@ -639,24 +776,29 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp event_type_label(_), do: "Huddl"
 
   defp status_label(:upcoming), do: "Upcoming"
+  defp status_label(:draft), do: "Draft"
   defp status_label(:in_progress), do: "Happening now"
   defp status_label(:completed), do: "Completed"
   defp status_label(:cancelled), do: "Cancelled"
   defp status_label(other), do: to_string(other) |> String.capitalize()
 
   defp status_hero_class(:cancelled), do: "is-cancelled"
+  defp status_hero_class(:draft), do: "is-cancelled"
   defp status_hero_class(_), do: nil
 
   defp status_eyebrow_class(:in_progress), do: "eyebrow-warn"
   defp status_eyebrow_class(:completed), do: "eyebrow-muted"
   defp status_eyebrow_class(:cancelled), do: "eyebrow-magenta"
+  defp status_eyebrow_class(:draft), do: "eyebrow-muted"
   defp status_eyebrow_class(_), do: nil
 
   defp status_banner_class(:completed), do: "muted"
   defp status_banner_class(:cancelled), do: "magenta"
+  defp status_banner_class(:draft), do: "muted"
 
   defp status_banner_text(:completed), do: "This huddl has ended"
   defp status_banner_text(:cancelled), do: "This huddl was cancelled"
+  defp status_banner_text(:draft), do: "This draft is visible only to organizers"
 
   defp hero_meta_segments(huddl) do
     [

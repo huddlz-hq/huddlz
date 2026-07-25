@@ -5,6 +5,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
   import Huddlz.Generator
 
   alias Huddlz.Accounts.User
+  alias Huddlz.Communities
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Communities.Huddl
@@ -683,10 +684,11 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> login(member)
       |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
       |> refute_has("a", text: "Edit huddl")
+      |> refute_has("button", text: "Cancel huddl")
       |> refute_has("button", text: "Delete huddl")
     end
 
-    test "shows Organize section with edit and delete for owner", %{
+    test "shows Organize section with edit and cancel for owner", %{
       conn: conn,
       owner: owner,
       group: group,
@@ -697,10 +699,11 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
       |> assert_has(".huddl-side-section h3", text: "Organize")
       |> assert_has("a", text: "Edit huddl")
-      |> assert_has("button", text: "Delete huddl")
+      |> assert_has("button", text: "Cancel huddl")
+      |> refute_has("button", text: "Delete huddl")
     end
 
-    test "opens and cancels the styled delete confirmation", %{
+    test "opens and dismisses the styled cancellation confirmation", %{
       conn: conn,
       owner: owner,
       group: group,
@@ -709,23 +712,21 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       conn
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
-      |> refute_has("#delete-huddl-modal")
-      |> click_button("Delete huddl")
-      |> assert_has("#delete-huddl-modal [role='dialog']")
-      |> assert_has("#delete-huddl-modal-title", text: "Delete this huddl?")
-      |> assert_has("#delete-huddl-modal", text: huddl.title)
-      |> assert_has("#delete-huddl-modal", text: "All RSVPs will be canceled")
-      |> assert_has("#delete-huddl-modal", text: "everyone who RSVP'd will be notified")
-      |> assert_has("#delete-huddl-modal [role='dialog'][aria-modal='true'][tabindex='0']")
+      |> refute_has("#cancel-huddl-modal")
+      |> click_button("Cancel huddl")
+      |> assert_has("#cancel-huddl-modal [role='dialog']")
+      |> assert_has("#cancel-huddl-modal-title", text: "Cancel this huddl?")
+      |> assert_has("#cancel-huddl-modal", text: huddl.title)
+      |> assert_has("#cancel-huddl-modal", text: "remain in calendars and RSVP history")
+      |> assert_has("#cancel-huddl-modal [role='dialog'][aria-modal='true'][tabindex='0']")
       |> assert_has(
-        "#delete-huddl-modal-container[phx-key='escape'][phx-window-keydown][phx-click-away]"
+        "#cancel-huddl-modal-container[phx-key='escape'][phx-window-keydown][phx-click-away]"
       )
-      |> refute_has("#open-delete-huddl-modal[data-confirm]")
-      |> assert_has("#open-delete-huddl-modal[phx-click*='push_focus']")
-      |> within("#delete-huddl-modal", fn session ->
+      |> assert_has("#open-cancel-huddl-modal[phx-click*='push_focus']")
+      |> within("#cancel-huddl-modal", fn session ->
         click_button(session, "Keep huddl")
       end)
-      |> refute_has("#delete-huddl-modal")
+      |> refute_has("#cancel-huddl-modal")
       |> assert_path(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
 
       assert huddl_still_exists?(huddl.id)
@@ -758,7 +759,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             virtual_link: "https://example.com/weekly-workshop",
             is_private: false,
             group_id: group.id,
-            huddl_template_id: template.id
+            huddl_template_id: template.id,
+            lifecycle_state: :draft
           },
           actor: owner
         )
@@ -782,11 +784,20 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       conn: conn,
       owner: owner,
       group: group,
-      huddl: huddl
+      huddl: _huddl
     } do
+      draft =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            lifecycle_state: :draft
+          )
+        )
+
       conn
       |> login(owner)
-      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{draft.id}")
       |> click_button("Delete huddl")
       |> within("#delete-huddl-modal", fn session ->
         click_button(session, "Delete huddl")
@@ -795,10 +806,42 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       deleted =
         Huddl
-        |> Ash.Query.for_read(:get_for_recurrence, %{id: huddl.id})
+        |> Ash.Query.for_read(:get_for_recurrence, %{id: draft.id})
         |> Ash.read_one!(authorize?: false)
 
       assert is_nil(deleted)
+    end
+
+    @tag :huddl_lifecycle
+    test "cancels without deleting RSVP history and shows the explanation", %{
+      conn: conn,
+      owner: owner,
+      member: member,
+      group: group,
+      huddl: huddl
+    } do
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
+      |> Ash.update!()
+
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+        |> click_button("Cancel huddl")
+        |> within("#cancel-huddl-modal", fn modal ->
+          modal
+          |> fill_in("Explanation (optional)", with: "The venue lost power.")
+          |> click_button("Cancel huddl")
+        end)
+
+      assert_path(session, ~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+      assert_has(session, ".hero .eyebrow", text: "Cancelled")
+      assert_has(session, "#cancellation-reason", text: "The venue lost power.")
+
+      reloaded = Communities.get_huddl!(huddl.id, actor: member)
+      assert reloaded.lifecycle_state == :cancelled
+      assert length(Communities.list_huddl_attendees!(huddl.id, actor: owner)) == 2
     end
   end
 

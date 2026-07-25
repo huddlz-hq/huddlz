@@ -1,6 +1,7 @@
 defmodule Huddlz.Communities.Huddl.Changes.NotifyCancelled do
   @moduledoc """
-  Enqueues C3 (huddl_cancelled) notifications when a huddl is destroyed.
+  Enqueues C3 (huddl_cancelled) notifications when a published huddl is
+  cancelled. It also supports the legacy hard-delete action.
 
   Captures attendee user_ids and the huddl's display fields in
   `before_action` because the HuddlAttendee rows cascade-delete with
@@ -22,16 +23,27 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyCancelled do
   end
 
   defp capture_recipients_and_payload(cs) do
+    if notification_due?(cs) do
+      capture_notification(cs)
+    else
+      cs
+    end
+  end
+
+  defp capture_notification(cs) do
     huddl = Ash.load!(cs.data, [:group], authorize?: false)
 
     recipients =
       RecipientHelpers.rsvp_user_ids(huddl.id, exclude: RecipientHelpers.actor_id(cs))
 
     payload = %{
+      "huddl_id" => huddl.id,
       "huddl_title" => to_string(huddl.title),
       "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at),
       "group_name" => to_string(huddl.group.name),
-      "group_slug" => to_string(huddl.group.slug)
+      "group_slug" => to_string(huddl.group.slug),
+      "cancellation_reason" =>
+        Ash.Changeset.get_argument(cs, :cancellation_reason) || huddl.cancellation_reason
     }
 
     cs
@@ -40,11 +52,15 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyCancelled do
   end
 
   defp notify(cs, huddl) do
-    recipients = cs.context[:huddl_cancelled_recipients] || []
-    payload = cs.context[:huddl_cancelled_payload] || %{}
-
-    RecipientHelpers.deliver_each(recipients, :huddl_cancelled, payload)
+    if notification_due?(cs) do
+      recipients = cs.context[:huddl_cancelled_recipients] || []
+      payload = cs.context[:huddl_cancelled_payload] || %{}
+      RecipientHelpers.deliver_each(recipients, :huddl_cancelled, payload)
+    end
 
     {:ok, huddl}
   end
+
+  defp notification_due?(%{action_type: :destroy}), do: true
+  defp notification_due?(cs), do: cs.context[:lifecycle_transition] == :cancelled
 end

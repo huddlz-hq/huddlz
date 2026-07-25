@@ -122,6 +122,10 @@ defmodule Huddlz.Notifications.Summary do
   defp description(:huddl_series_updated, payload),
     do: changed_description(payload, "Next huddl: ")
 
+  defp description(:huddl_cancelled, %{"cancellation_reason" => reason})
+       when is_binary(reason) and reason != "",
+       do: reason
+
   defp description(:huddl_reminder_24h, %{"starts_at_iso" => iso}),
     do: maybe_absolute_date("Starts ", iso)
 

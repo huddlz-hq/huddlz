@@ -1,9 +1,10 @@
 defmodule Huddlz.Communities.Huddl.Preparations.FilterByVisibility do
   @moduledoc """
-  Filters huddls based on visibility rules:
-  - Public huddls in public groups are visible to everyone
-  - Private huddls are only visible to group members
-  - All huddls in private groups are only visible to group members
+  Filters huddlz based on visibility and lifecycle rules:
+  - Published public huddlz in public groups are visible to everyone
+  - Published private huddlz are only visible to group members
+  - Drafts are visible only to their organizers
+  - Cancelled huddlz remain visible to organizers and people with RSVP history
 
   This preparation leverages Ash calculations and relationships for a more
   declarative approach to visibility filtering.
@@ -12,23 +13,37 @@ defmodule Huddlz.Communities.Huddl.Preparations.FilterByVisibility do
   require Ash.Query
 
   def prepare(query, _opts, %{actor: nil}) do
-    # Non-authenticated users can only see public huddlz in public groups
-    # Use the is_publicly_visible calculation
     query
     |> Ash.Query.load([:group, :is_publicly_visible])
-    |> Ash.Query.filter(is_publicly_visible == true)
+    |> Ash.Query.filter(lifecycle_state == :published and is_publicly_visible == true)
   end
 
+  def prepare(query, _opts, %{actor: %{role: :admin}}) do
+    Ash.Query.load(query, [:group, :is_publicly_visible])
+  end
+
+  # One declarative database predicate is safer here than merging separately
+  # fetched lifecycle result sets, and keeps every visibility branch in SQL.
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   def prepare(query, _opts, %{actor: actor}) do
-    # For authenticated users, we can use a more elegant approach
-    # leveraging Ash's relationship filtering
     query
     |> Ash.Query.load([:group, :is_publicly_visible])
     |> Ash.Query.filter(
-      # Either the huddl is publicly visible
-      # Or the actor is a member of the group (using exists on the relationship)
-      is_publicly_visible == true or
-        exists(group.members, id == ^actor.id)
+      (lifecycle_state == :published and
+         (is_publicly_visible == true or exists(group.members, id == ^actor.id))) or
+        (lifecycle_state == :draft and
+           (creator_id == ^actor.id or group.owner_id == ^actor.id or
+              exists(
+                group.group_members,
+                user_id == ^actor.id and role == :organizer
+              ))) or
+        (lifecycle_state == :cancelled and
+           (creator_id == ^actor.id or group.owner_id == ^actor.id or
+              exists(
+                group.group_members,
+                user_id == ^actor.id and role == :organizer
+              ) or
+              exists(attendees, user_id == ^actor.id)))
     )
   end
 end

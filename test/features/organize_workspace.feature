@@ -153,7 +153,7 @@ Feature: Organizer workspace
     And the huddl "Synthwave Night" exists in group "Cyberpunk Builders" hosted by "host@example.com"
     And I am signed in as "host@example.com"
     When I visit "/organize/cyberpunk-builders/huddlz"
-    Then I should see "Live huddlz"
+    Then I should see "Published huddlz"
     And I should see "Synthwave Night"
 
   Scenario: Huddlz tab Past filter lists wrapped huddlz

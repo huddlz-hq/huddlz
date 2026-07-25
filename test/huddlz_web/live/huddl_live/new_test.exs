@@ -309,6 +309,39 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       assert duration_minutes == 120
     end
 
+    @tag :huddl_lifecycle
+    test "saves a private organizer draft without publishing it", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      date = Date.utc_today() |> Date.add(1) |> Date.to_iso8601()
+
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/new")
+        |> fill_in("Title", with: "Unpublished Workshop")
+        |> fill_in("Description", with: "Still being prepared")
+        |> fill_in("Date", with: date)
+        |> fill_in("Start time", with: "14:30")
+        |> select("Duration", option: "2 hours")
+
+      select_physical_location(session.view, "123 Main St")
+      session = click_button(session, "Save as draft")
+
+      draft =
+        Huddl
+        |> Ash.Query.filter(title == "Unpublished Workshop" and group_id == ^group.id)
+        |> Ash.read_one!(actor: owner)
+
+      assert_path(session, ~p"/groups/#{group.slug}/huddlz/#{draft.id}")
+      assert_has(session, ".hero .eyebrow", text: "Draft")
+      assert_has(session, "#publish-huddl", text: "Publish huddl")
+      assert draft.lifecycle_state == :draft
+      assert draft.published_at == nil
+    end
+
     test "creates huddl with a capacity limit", %{conn: conn, owner: owner, group: group} do
       tomorrow = Date.utc_today() |> Date.add(1)
       date = Date.to_iso8601(tomorrow)

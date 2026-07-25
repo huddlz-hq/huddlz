@@ -234,6 +234,8 @@ defmodule HuddlzWeb.CalendarLive do
     "#{entry.huddl.title}, #{calendar_status_label(entry, today)}, #{date_and_time}"
   end
 
+  defp calendar_status_label(%{huddl: %{status: :cancelled}}, _today), do: "Cancelled"
+
   defp calendar_status_label(%{huddl: %{starts_at: starts_at}} = entry, today) do
     case Date.compare(DateTime.to_date(starts_at), today) do
       :lt -> past_relationship_label(entry)
@@ -248,6 +250,10 @@ defmodule HuddlzWeb.CalendarLive do
     entries
     |> Enum.filter(fn %{huddl: h} -> in_focus_month?(h, focus_month) end)
     |> Enum.sort_by(fn %{huddl: %{starts_at: dt}} -> dt end, DateTime)
+  end
+
+  defp entry_status(%{huddl: %{status: :cancelled}}, _today) do
+    %EntryStatus{key: "cancelled", label: "Cancelled", variant: :magenta, rank: 8}
   end
 
   defp entry_status(%{huddl: %{starts_at: starts_at}} = entry, %Date{} = today) do

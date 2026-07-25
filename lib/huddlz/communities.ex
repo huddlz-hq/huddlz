@@ -38,6 +38,8 @@ defmodule Huddlz.Communities do
       define :rsvp_huddl, action: :rsvp
       define :cancel_rsvp_huddl, action: :cancel_rsvp
       define :join_waitlist_huddl, action: :join_waitlist
+      define :publish_huddl, action: :publish
+      define :cancel_huddl, action: :cancel, args: [{:optional, :cancellation_reason}]
       define :destroy_huddl, action: :destroy
     end
 
