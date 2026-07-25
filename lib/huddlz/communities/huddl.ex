@@ -136,6 +136,7 @@ defmodule Huddlz.Communities.Huddl do
 
       validate Huddlz.Communities.Huddl.Validations.FutureDateValidation
       change Huddlz.Communities.Huddl.Changes.SetCreatorToActor
+      change Huddlz.Communities.Huddl.Changes.AddCreatorAsAttendee
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.AddHuddlTemplate

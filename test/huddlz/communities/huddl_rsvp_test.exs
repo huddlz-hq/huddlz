@@ -8,6 +8,39 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
 
   require Ash.Query
 
+  describe "creator attendance" do
+    test "creating a huddl confirms the creator's attendance and allows cancellation" do
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+
+      huddl =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            max_attendees: 1
+          )
+        )
+
+      assert rsvp_count(huddl) == 1
+
+      assert [%{user_id: user_id}] =
+               HuddlAttendee
+               |> Ash.Query.for_read(:by_huddl, %{huddl_id: huddl.id})
+               |> Ash.read!(authorize?: false)
+
+      assert user_id == owner.id
+
+      huddl
+      |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: owner)
+      |> Ash.update!()
+
+      assert rsvp_count(huddl) == 0
+      assert Ash.reload!(huddl).creator_id == owner.id
+    end
+  end
+
   describe "RSVP functionality" do
     setup do
       owner = generate(user(role: :user))
@@ -59,6 +92,10 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           actor: owner
         )
         |> Ash.create!()
+
+      huddl
+      |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: owner)
+      |> Ash.update!()
 
       %{
         owner: owner,
@@ -214,7 +251,6 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
     test "max_attendees can be set on :create and is enforced", %{
       owner: owner,
       member: member,
-      non_member: non_member,
       group: group
     } do
       limited_huddl =
@@ -236,14 +272,10 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
         )
         |> Ash.create!()
 
-      limited_huddl
-      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
-      |> Ash.update!()
-
       assert_raise Ash.Error.Invalid, ~r/This huddl is full/, fn ->
         limited_huddl
         |> Ash.reload!()
-        |> Ash.Changeset.for_update(:rsvp, %{}, actor: non_member)
+        |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
         |> Ash.update!()
       end
 
@@ -472,6 +504,10 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
         )
         |> Ash.create!()
 
+      huddl
+      |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: owner)
+      |> Ash.update!()
+
       %{
         owner: owner,
         member: member,
@@ -698,8 +734,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
         |> Ash.read(actor: attendee)
 
       assert {:ok, attendees} = result
-      assert length(attendees) == 1
-      assert hd(attendees).user_id == attendee.id
+      assert length(attendees) == 2
+      assert Enum.any?(attendees, &(&1.user_id == attendee.id))
     end
 
     test "group owner can see attendee list", %{owner: owner, huddl: huddl, attendee: attendee} do
@@ -710,8 +746,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
         |> Ash.read(actor: owner)
 
       assert {:ok, attendees} = result
-      assert length(attendees) == 1
-      assert hd(attendees).user_id == attendee.id
+      assert length(attendees) == 2
+      assert Enum.any?(attendees, &(&1.user_id == attendee.id))
     end
 
     test "group organizer can see attendee list", %{
@@ -726,8 +762,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
         |> Ash.read(actor: organizer)
 
       assert {:ok, attendees} = result
-      assert length(attendees) == 1
-      assert hd(attendees).user_id == attendee.id
+      assert length(attendees) == 2
+      assert Enum.any?(attendees, &(&1.user_id == attendee.id))
     end
 
     test "group member who is not attending cannot see attendee list", %{
@@ -773,8 +809,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
         |> Ash.read(actor: admin)
 
       assert {:ok, attendees} = result
-      assert length(attendees) == 1
-      assert hd(attendees).user_id == attendee.id
+      assert length(attendees) == 2
+      assert Enum.any?(attendees, &(&1.user_id == attendee.id))
     end
   end
 

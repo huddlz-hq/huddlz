@@ -91,7 +91,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has(".facts .label", text: "When")
       |> assert_has(".facts .label", text: "Virtual access")
       |> assert_has(".facts .label", text: "Capacity")
-      |> assert_has(".facts .value", text: "Be the first to RSVP!")
+      |> assert_has(".facts .value", text: "1 person attending")
     end
 
     test "renders rich link preview metadata", %{conn: conn, group: group, huddl: huddl} do
@@ -183,8 +183,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       # Check UI updates after RSVP
       |> assert_has(".rsvp-banner.cyan", text: "You're attending")
       |> refute_has("button", text: "RSVP to this huddl")
-      # Should show 1 person attending
-      |> assert_has(".facts .value", text: "1 person attending")
+      # The creator and member are both attending.
+      |> assert_has(".facts .value", text: "2 people attending")
     end
 
     test "shows virtual link after RSVP", %{
@@ -218,7 +218,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       # Should already show as attending
       |> assert_has(".rsvp-banner.cyan", text: "You're attending")
       |> refute_has("button", text: "RSVP to this huddl")
-      |> assert_has(".facts .value", text: "1 person attending")
+      |> assert_has(".facts .value", text: "2 people attending")
     end
 
     test "shows correct attendee count with multiple RSVPs", %{
@@ -330,7 +330,12 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has("a", text: "Sign in to RSVP")
     end
 
-    test "handles different event types correctly", %{conn: conn, owner: owner, group: group} do
+    test "handles different huddl types correctly", %{
+      conn: conn,
+      owner: owner,
+      non_member: non_member,
+      group: group
+    } do
       # Create in-person huddl
       in_person_huddl =
         Huddl
@@ -352,7 +357,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
         |> Ash.create!()
 
       conn
-      |> login(owner)
+      |> login(non_member)
       |> visit(~p"/groups/#{group.slug}/huddlz/#{in_person_huddl.id}")
       |> assert_has(".facts .value", text: "123 Main St, City")
       |> refute_has(".facts .label", text: "Virtual access")
@@ -379,7 +384,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
         |> Ash.create!()
 
       conn
-      |> login(owner)
+      |> login(non_member)
       |> visit(~p"/groups/#{group.slug}/huddlz/#{hybrid_huddl.id}")
       |> assert_has(".facts .value", text: "Conference Room A")
       |> assert_has(".facts .label", text: "Virtual access")
@@ -516,8 +521,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has("button", text: "RSVP to this huddl")
       |> refute_has(".rsvp-banner.cyan", text: "You're attending")
       |> refute_has("button", text: "Cancel RSVP")
-      # Should show 0 people attending
-      |> assert_has(".facts .value", text: "Be the first to RSVP!")
+      # The creator remains attending.
+      |> assert_has(".facts .value", text: "1 person attending")
     end
 
     test "cancel_rsvp updates attendee count correctly", %{
@@ -567,7 +572,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> click_button("RSVP to this huddl")
       # Check UI updates after second RSVP
       |> assert_has(".rsvp-banner.cyan", text: "You're attending")
-      |> assert_has(".facts .value", text: "1 person attending")
+      |> assert_has(".facts .value", text: "2 people attending")
     end
 
     test "rendering type and status correctly", %{conn: conn, owner: owner, group: group} do

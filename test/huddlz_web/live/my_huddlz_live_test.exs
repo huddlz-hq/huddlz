@@ -124,20 +124,12 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       |> assert_has(".filters .chip", text: "Upcoming · 1")
     end
 
-    test "shows a creator's huddl only after they RSVP and removes it after cancellation", %{
+    test "shows a creator's huddl automatically and removes it after cancellation", %{
       conn: conn,
       host: host,
       public_group: public_group
     } do
       huddl = create_huddl(host, public_group, title: "Creator RSVP")
-
-      conn
-      |> login(host)
-      |> visit("/my-huddlz")
-      |> refute_has("h3.card-title", text: "Creator RSVP")
-      |> assert_has(".filters .chip", text: "Upcoming · 0")
-
-      rsvp!(huddl, host, :rsvp)
 
       conn
       |> login(host)
@@ -160,7 +152,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       huddl =
         create_huddl(ctx.host, ctx.public_group,
           title: "Sold Out Show",
-          max_attendees: 1
+          max_attendees: 2
         )
 
       # First attendee fills the seat

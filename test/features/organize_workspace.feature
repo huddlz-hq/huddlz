@@ -131,7 +131,7 @@ Feature: Organizer workspace
     And I am signed in as "host@example.com"
     When I visit "/organize/cyberpunk-builders"
     Then I should see "Open RSVPs"
-    And I should see "1 RSVP"
+    And I should see "2 RSVPs"
 
   Scenario: Overview does not show huddlz from groups the actor does not organize
     Given a public group "Cyberpunk Builders" exists with owner "host@example.com"

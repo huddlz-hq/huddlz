@@ -27,7 +27,8 @@ defmodule RsvpCancellationSteps do
           name: group_data["name"],
           description: group_data["description"],
           is_public: is_public,
-          owner: owner
+          owner_id: owner.id,
+          actor: owner
         )
       )
 

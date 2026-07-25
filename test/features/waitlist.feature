@@ -17,7 +17,7 @@ Feature: Waitlist
     And "hopeful@example.com" is a member of "Tech Meetup"
     And the following capped huddl exists in "Tech Meetup":
       | title              | description       | event_type | starts_at    | virtual_link                | max_attendees |
-      | Capped Code Review | Limited seats     | virtual    | tomorrow 2pm | https://zoom.us/j/123456789 | 1             |
+      | Capped Code Review | Limited seats     | virtual    | tomorrow 2pm | https://zoom.us/j/123456789 | 2             |
     And "member@example.com" has RSVPed to "Capped Code Review"
 
   Scenario: User joins the waitlist when the huddl is full

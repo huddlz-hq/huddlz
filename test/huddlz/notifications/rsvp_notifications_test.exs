@@ -15,11 +15,8 @@ defmodule Huddlz.Notifications.RsvpNotificationsTest do
 
   describe "E3: rsvp_confirmation" do
     test "emails the rsvper themselves with an .ics attachment" do
-      # Setup: actor IS the sole owner of the group, so E1's recipient
-      # set (owner+organizers minus actor) is empty and only E3 fires.
-      # This keeps the test focused on E3's distinguishing properties
-      # (subject + .ics attachment).
       owner = generate(user(role: :user, display_name: "Owner"))
+      attendee = generate(user(role: :user, display_name: "Attendee"))
 
       group =
         generate(
@@ -46,16 +43,17 @@ defmodule Huddlz.Notifications.RsvpNotificationsTest do
       flush_mailbox()
 
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{}, actor: owner)
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
       |> Ash.update!()
 
       assert %{failure: 0} = Oban.drain_queue(queue: :notifications)
+      emails = drain_mailbox()
 
-      assert_email_sent(fn email ->
-        email.subject == "You're going to Saturday Soccer" and
-          email.to == [{"", to_string(owner.email)}] and
-          Enum.any?(email.attachments, &(&1.content_type == "text/calendar"))
-      end)
+      assert Enum.any?(emails, fn email ->
+               email.subject == "You're going to Saturday Soccer" and
+                 email.to == [{"", to_string(attendee.email)}] and
+                 Enum.any?(email.attachments, &(&1.content_type == "text/calendar"))
+             end)
     end
 
     test "does not fire on duplicate RSVP" do
@@ -96,7 +94,7 @@ defmodule Huddlz.Notifications.RsvpNotificationsTest do
             group_id: group.id,
             creator_id: owner.id,
             actor: owner,
-            max_attendees: 1
+            max_attendees: 2
           )
         )
 
@@ -211,29 +209,18 @@ defmodule Huddlz.Notifications.RsvpNotificationsTest do
       end)
     end
 
-    test "does not fire when the actor is the only owner/organizer (recipient set is empty)" do
+    test "automatic creator attendance does not fire RSVP notifications" do
       owner = generate(user(role: :user))
 
       group =
         generate(group(name: "Solo Group", is_public: true, owner_id: owner.id, actor: owner))
 
-      huddl =
-        generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
-
       Oban.drain_queue(queue: :notifications)
       flush_mailbox()
 
-      huddl
-      |> Ash.Changeset.for_update(:rsvp, %{}, actor: owner)
-      |> Ash.update!()
+      generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
 
-      # Only E3 to the owner. No E1 since owner is the actor.
-      assert %{failure: 0} = Oban.drain_queue(queue: :notifications)
-
-      assert_email_sent(fn email ->
-        email.subject == "You're going to #{huddl.title}" and
-          email.to == [{"", to_string(owner.email)}]
-      end)
+      refute_enqueued(worker: DeliverWorker)
     end
   end
 
