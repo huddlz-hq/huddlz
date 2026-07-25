@@ -41,7 +41,8 @@ defmodule Huddlz.Generator do
         email: StreamData.repeatedly(fn -> Faker.Internet.email() end),
         display_name: StreamData.repeatedly(fn -> Faker.Person.name() end),
         password: password,
-        password_confirmation: password
+        password_confirmation: password,
+        legal_acceptance: true
       ],
       overrides: Keyword.drop(opts, [:password])
     )

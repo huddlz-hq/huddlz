@@ -401,6 +401,12 @@ defmodule Huddlz.Accounts.User do
       description "Register a new user with a email and password."
       accept [:email, :display_name]
 
+      argument :legal_acceptance, :boolean do
+        description "Whether the user affirmatively accepted the current legal documents."
+        allow_nil? false
+        default false
+      end
+
       argument :password, :string do
         description "The proposed password for the user, in plain text."
         allow_nil? false
@@ -422,6 +428,26 @@ defmodule Huddlz.Accounts.User do
 
       # validates that the password matches the confirmation
       validate AshAuthentication.Strategy.Password.PasswordConfirmationValidation
+
+      validate fn changeset, _context ->
+        if Ash.Changeset.get_argument(changeset, :legal_acceptance) do
+          :ok
+        else
+          {:error,
+           field: :legal_acceptance,
+           message:
+             "You must accept the Terms of Service and Code of Conduct to create an account."}
+        end
+      end
+
+      change fn changeset, _context ->
+        changeset
+        |> Ash.Changeset.change_attribute(:legal_terms_accepted_at, DateTime.utc_now())
+        |> Ash.Changeset.change_attribute(
+          :legal_documents_version,
+          Huddlz.Legal.current_version()
+        )
+      end
 
       metadata :token, :string do
         description "A JWT that can be used to authenticate the user."
@@ -640,6 +666,18 @@ defmodule Huddlz.Accounts.User do
       allow_nil? false
       default %{}
       public? true
+    end
+
+    attribute :legal_terms_accepted_at, :utc_datetime_usec do
+      description "UTC timestamp of the user's most recent affirmative legal acceptance"
+      allow_nil? true
+      sensitive? true
+    end
+
+    attribute :legal_documents_version, :string do
+      description "Version of the Terms, Code of Conduct, and Privacy Policy accepted by the user"
+      allow_nil? true
+      sensitive? true
     end
   end
 

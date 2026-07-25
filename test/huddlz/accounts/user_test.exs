@@ -113,7 +113,8 @@ defmodule Huddlz.Accounts.UserTest do
           email: "test#{:rand.uniform(99999)}@example.com",
           password: "password123",
           password_confirmation: "password123",
-          display_name: "John Doe"
+          display_name: "John Doe",
+          legal_acceptance: true
         })
         |> Ash.create!()
 
@@ -127,7 +128,8 @@ defmodule Huddlz.Accounts.UserTest do
           email: "madonna#{:rand.uniform(99999)}@example.com",
           password: "password123",
           password_confirmation: "password123",
-          display_name: "Madonna"
+          display_name: "Madonna",
+          legal_acceptance: true
         })
         |> Ash.create!()
 
@@ -141,7 +143,8 @@ defmodule Huddlz.Accounts.UserTest do
           email: "emoji#{:rand.uniform(99999)}@example.com",
           password: "password123",
           password_confirmation: "password123",
-          display_name: "Sam 🎉"
+          display_name: "Sam 🎉",
+          legal_acceptance: true
         })
         |> Ash.create!()
 
@@ -155,7 +158,8 @@ defmodule Huddlz.Accounts.UserTest do
           email: "jose#{:rand.uniform(99999)}@example.com",
           password: "password123",
           password_confirmation: "password123",
-          display_name: "José García"
+          display_name: "José García",
+          legal_acceptance: true
         })
         |> Ash.create!()
 
@@ -171,7 +175,8 @@ defmodule Huddlz.Accounts.UserTest do
           email: "longname#{:rand.uniform(99999)}@example.com",
           password: "password123",
           password_confirmation: "password123",
-          display_name: long_name
+          display_name: long_name,
+          legal_acceptance: true
         })
         |> Ash.create!()
 
@@ -186,7 +191,8 @@ defmodule Huddlz.Accounts.UserTest do
         |> Ash.Changeset.for_create(:register_with_password, %{
           email: "noname#{:rand.uniform(99999)}@example.com",
           password: "password123",
-          password_confirmation: "password123"
+          password_confirmation: "password123",
+          legal_acceptance: true
         })
         |> Ash.create!()
       end
@@ -200,7 +206,8 @@ defmodule Huddlz.Accounts.UserTest do
           email: "emptyname#{:rand.uniform(99999)}@example.com",
           password: "password123",
           password_confirmation: "password123",
-          display_name: ""
+          display_name: "",
+          legal_acceptance: true
         })
         |> Ash.create!()
       end
@@ -215,7 +222,8 @@ defmodule Huddlz.Accounts.UserTest do
           email: "toolong#{:rand.uniform(99999)}@example.com",
           password: "password123",
           password_confirmation: "password123",
-          display_name: long_name
+          display_name: long_name,
+          legal_acceptance: true
         })
         |> Ash.create!()
       end
@@ -230,7 +238,8 @@ defmodule Huddlz.Accounts.UserTest do
           email: "user1#{:rand.uniform(99999)}@example.com",
           password: "password123",
           password_confirmation: "password123",
-          display_name: shared_name
+          display_name: shared_name,
+          legal_acceptance: true
         })
         |> Ash.create!()
 
@@ -240,7 +249,8 @@ defmodule Huddlz.Accounts.UserTest do
           email: "user2#{:rand.uniform(99999)}@example.com",
           password: "password123",
           password_confirmation: "password123",
-          display_name: shared_name
+          display_name: shared_name,
+          legal_acceptance: true
         })
         |> Ash.create!()
 

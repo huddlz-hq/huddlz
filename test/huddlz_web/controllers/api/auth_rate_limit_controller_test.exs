@@ -32,7 +32,8 @@ defmodule HuddlzWeb.Api.AuthRateLimitControllerTest do
       "email" => email("api-rl-register"),
       "display_name" => "Rate Limit",
       "password" => "password123",
-      "password_confirmation" => "password123"
+      "password_confirmation" => "password123",
+      "legal_acceptance" => true
     }
 
     for _ <- 1..limit_for(:register), do: post(build_conn(), "/api/auth/register", params)

@@ -8,7 +8,8 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
         "email" => "alice@example.com",
         "display_name" => "Alice",
         "password" => "correct horse battery staple",
-        "password_confirmation" => "correct horse battery staple"
+        "password_confirmation" => "correct horse battery staple",
+        "legal_acceptance" => true
       }
 
       conn = post(conn, "/api/auth/register", params)
@@ -29,7 +30,8 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
         "email" => "taken@example.com",
         "display_name" => "New",
         "password" => "correct horse battery staple",
-        "password_confirmation" => "correct horse battery staple"
+        "password_confirmation" => "correct horse battery staple",
+        "legal_acceptance" => true
       }
 
       conn = post(conn, "/api/auth/register", params)
@@ -42,7 +44,8 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
         "email" => "weak@example.com",
         "display_name" => "Weak",
         "password" => "short",
-        "password_confirmation" => "short"
+        "password_confirmation" => "short",
+        "legal_acceptance" => true
       }
 
       conn = post(conn, "/api/auth/register", params)
@@ -55,12 +58,31 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
         "email" => "mismatch@example.com",
         "display_name" => "Mismatch",
         "password" => "correct horse battery staple",
-        "password_confirmation" => "different password"
+        "password_confirmation" => "different password",
+        "legal_acceptance" => true
       }
 
       conn = post(conn, "/api/auth/register", params)
       assert %{"errors" => errors} = json_response(conn, 422)
       assert is_list(errors) and errors != []
+    end
+
+    test "requires explicit legal acceptance", %{conn: conn} do
+      params = %{
+        "email" => "no-legal-acceptance@example.com",
+        "display_name" => "No Acceptance",
+        "password" => "correct horse battery staple",
+        "password_confirmation" => "correct horse battery staple"
+      }
+
+      conn = post(conn, "/api/auth/register", params)
+
+      assert %{"errors" => errors} = json_response(conn, 422)
+
+      assert Enum.any?(errors, fn error ->
+               error["field"] == "legal_acceptance" and
+                 String.contains?(error["message"], "Terms of Service")
+             end)
     end
   end
 
