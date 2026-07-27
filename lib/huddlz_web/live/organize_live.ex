@@ -41,6 +41,8 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:subscribed_group_id, nil)
      |> assign(:pending_member_action, nil)
      |> assign(:member_action_form, member_action_form())
+     |> assign(:transfer_target_form, transfer_target_form())
+     |> assign(:transfer_candidates, [])
      |> stream(:owner_members, [])
      |> stream(:organizer_members, [])
      |> stream(:regular_members, [])}
@@ -178,6 +180,8 @@ defmodule HuddlzWeb.OrganizeLive do
             organizer_members={@streams.organizer_members}
             regular_members={@streams.regular_members}
             role_counts={@member_role_counts}
+            transfer_candidates={@transfer_candidates}
+            transfer_target_form={@transfer_target_form}
             current_user={@current_user}
           />
       <% end %>
@@ -442,6 +446,8 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :organizer_members, :any, required: true
   attr :regular_members, :any, required: true
   attr :role_counts, :map, required: true
+  attr :transfer_candidates, :list, required: true
+  attr :transfer_target_form, Phoenix.HTML.Form, required: true
   attr :current_user, :map, required: true
 
   defp members_view(assigns) do
@@ -451,7 +457,17 @@ defmodule HuddlzWeb.OrganizeLive do
       {:member, assigns.regular_members, assigns.role_counts.member}
     ]
 
-    assigns = assign(assigns, :grouped, grouped)
+    assigns =
+      assigns
+      |> assign(:grouped, grouped)
+      |> assign(
+        :can_transfer_ownership,
+        assigns.group.owner_id == assigns.current_user.id and assigns.transfer_candidates != []
+      )
+      |> assign(
+        :transfer_candidate_options,
+        Enum.map(assigns.transfer_candidates, &{member_name(&1), &1.id})
+      )
 
     ~H"""
     <div class="page-head">
@@ -505,6 +521,45 @@ defmodule HuddlzWeb.OrganizeLive do
         </div>
       <% end %>
     </div>
+
+    <section
+      :if={@can_transfer_ownership}
+      id="ownership-danger-zone"
+      class="panel mt-6 border-error/40"
+      aria-labelledby="ownership-danger-zone-title"
+    >
+      <div class="panel-head">
+        <div>
+          <h2 id="ownership-danger-zone-title">Ownership</h2>
+          <p class="panel-sub">
+            Transfer final control of this group. You will remain an organizer.
+          </p>
+        </div>
+      </div>
+
+      <.form
+        for={@transfer_target_form}
+        id="transfer-ownership-target-form"
+        phx-submit="open_transfer_action"
+        class="mt-5 grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
+      >
+        <.select
+          field={@transfer_target_form[:member_id]}
+          id="ownership-recipient"
+          label="New owner"
+          prompt="Choose an existing member"
+          options={@transfer_candidate_options}
+        />
+        <.button
+          id="open-transfer-ownership"
+          type="submit"
+          variant={:destructive}
+          class="md:mb-px"
+        >
+          Transfer group ownership
+        </.button>
+      </.form>
+    </section>
     """
   end
 
@@ -520,14 +575,12 @@ defmodule HuddlzWeb.OrganizeLive do
         can_demote:
           member_action_allowed?(:demote, assigns.entry, assigns.group, assigns.current_user),
         can_remove:
-          member_action_allowed?(:remove, assigns.entry, assigns.group, assigns.current_user),
-        can_transfer:
-          member_action_allowed?(:transfer, assigns.entry, assigns.group, assigns.current_user)
+          member_action_allowed?(:remove, assigns.entry, assigns.group, assigns.current_user)
       )
 
     ~H"""
     <div
-      :if={@can_promote or @can_demote or @can_remove or @can_transfer}
+      :if={@can_promote or @can_demote or @can_remove}
       class="flex flex-wrap justify-end gap-2"
       aria-label={"Manage #{member_name(@entry)}"}
     >
@@ -550,16 +603,6 @@ defmodule HuddlzWeb.OrganizeLive do
         class="text-sm"
       >
         Demote
-      </.button>
-      <.button
-        :if={@can_transfer}
-        id={"transfer-owner-#{@entry.id}"}
-        phx-click="open_member_action"
-        phx-value-id={@entry.id}
-        phx-value-action="transfer"
-        class="text-sm"
-      >
-        Transfer ownership
       </.button>
       <.button
         :if={@can_remove}
@@ -635,22 +678,25 @@ defmodule HuddlzWeb.OrganizeLive do
 
   @impl true
   def handle_event("open_member_action", %{"id" => id, "action" => action}, socket) do
-    with {:ok, action_type} <- parse_member_action(action),
-         %{} = member <- Map.get(socket.assigns.member_lookup, id),
-         true <-
-           member_action_allowed?(
-             action_type,
-             member,
-             socket.assigns.group,
-             socket.assigns.current_user
-           ) do
-      {:noreply,
-       socket
-       |> assign(:pending_member_action, %{type: action_type, member: member})
-       |> assign(:member_action_form, member_action_form())}
-    else
-      _ -> {:noreply, put_flash(socket, :error, "That membership action is not available.")}
+    case parse_member_action(action) do
+      {:ok, action_type} ->
+        open_member_action(socket, id, action_type)
+
+      _ ->
+        {:noreply, put_flash(socket, :error, "That membership action is not available.")}
     end
+  end
+
+  def handle_event(
+        "open_transfer_action",
+        %{"transfer_target" => %{"member_id" => id}},
+        socket
+      ) do
+    open_member_action(socket, id, :transfer)
+  end
+
+  def handle_event("open_transfer_action", _params, socket) do
+    {:noreply, put_flash(socket, :error, "Choose a member to receive ownership.")}
   end
 
   def handle_event("cancel_member_action", _params, socket) do
@@ -685,6 +731,24 @@ defmodule HuddlzWeb.OrganizeLive do
       perform_member_action(socket, action)
     else
       {:noreply, put_flash(socket, :error, "Type the group name exactly to transfer ownership.")}
+    end
+  end
+
+  defp open_member_action(socket, id, action_type) do
+    with %{} = member <- Map.get(socket.assigns.member_lookup, id),
+         true <-
+           member_action_allowed?(
+             action_type,
+             member,
+             socket.assigns.group,
+             socket.assigns.current_user
+           ) do
+      {:noreply,
+       socket
+       |> assign(:pending_member_action, %{type: action_type, member: member})
+       |> assign(:member_action_form, member_action_form())}
+    else
+      _ -> {:noreply, put_flash(socket, :error, "That membership action is not available.")}
     end
   end
 
@@ -769,6 +833,8 @@ defmodule HuddlzWeb.OrganizeLive do
 
     socket
     |> assign(:member_lookup, Map.new(members, &{&1.id, &1}))
+    |> assign(:transfer_candidates, Enum.reject(members, &(&1.role == :owner)))
+    |> assign(:transfer_target_form, transfer_target_form())
     |> assign(:member_role_counts, %{
       owner: length(Map.get(by_role, :owner, [])),
       organizer: length(Map.get(by_role, :organizer, [])),
@@ -819,6 +885,12 @@ defmodule HuddlzWeb.OrganizeLive do
     params
     |> Map.put_new("confirmation", "")
     |> to_form(as: :member_action)
+  end
+
+  defp transfer_target_form(params \\ %{}) do
+    params
+    |> Map.put_new("member_id", "")
+    |> to_form(as: :transfer_target)
   end
 
   defp member_action_title(%{type: :promote, member: member}),

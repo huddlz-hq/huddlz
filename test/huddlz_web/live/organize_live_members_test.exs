@@ -46,7 +46,9 @@ defmodule HuddlzWeb.OrganizeLiveMembersTest do
     |> assert_has("#remove-member-#{member_membership.id}", text: "Remove")
     |> assert_has("#demote-member-#{organizer_membership.id}", text: "Demote")
     |> assert_has("#remove-member-#{organizer_membership.id}", text: "Remove")
-    |> assert_has("#transfer-owner-#{organizer_membership.id}", text: "Transfer ownership")
+    |> assert_has("#ownership-danger-zone")
+    |> assert_has("#open-transfer-ownership", text: "Transfer group ownership")
+    |> refute_has("[id^='transfer-owner-']")
     |> refute_has("[id^='remove-member-']", text: "Owner Olivia")
   end
 
@@ -135,7 +137,7 @@ defmodule HuddlzWeb.OrganizeLiveMembersTest do
     |> refute_has("#promote-member-#{member_membership.id}")
     |> refute_has("#demote-member-#{organizer_membership.id}")
     |> refute_has("#remove-member-#{organizer_membership.id}")
-    |> refute_has("[id^='transfer-owner-']")
+    |> refute_has("#ownership-danger-zone")
     |> click_button("Remove")
     |> assert_has("#member-action-dialog-title", text: "Remove Member Mia?")
     |> within("#member-action-dialog", fn session ->
@@ -182,17 +184,14 @@ defmodule HuddlzWeb.OrganizeLiveMembersTest do
     conn: conn,
     owner: owner,
     organizer: organizer,
-    group: group,
-    organizer_membership: organizer_membership
+    group: group
   } do
     session =
       conn
       |> login(owner)
       |> visit(~p"/organize/#{group.slug}/members")
-      |> click_button(
-        "#transfer-owner-#{organizer_membership.id}",
-        "Transfer ownership"
-      )
+      |> select("New owner", option: "Organizer Oscar")
+      |> click_button("#open-transfer-ownership", "Transfer group ownership")
       |> assert_has("#member-action-dialog-title", text: "Transfer ownership to Organizer Oscar?")
       |> assert_has("#member-action-confirm[disabled]", text: "Transfer ownership")
 
