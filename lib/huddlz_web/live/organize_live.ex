@@ -13,6 +13,7 @@ defmodule HuddlzWeb.OrganizeLive do
   """
   use HuddlzWeb, :live_view
 
+  alias Huddlz.Accounts
   alias Huddlz.Communities
   alias Huddlz.Communities.MembershipEvents
   alias HuddlzWeb.Layouts
@@ -36,6 +37,8 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:huddlz_filter, :live)
      |> assign(:upcoming_huddlz, [])
      |> assign(:open_rsvps, 0)
+     |> assign(:invitation_count, 0)
+     |> assign(:invitation_form, invitation_form())
      |> assign(:member_lookup, %{})
      |> assign(:member_role_counts, %{owner: 0, organizer: 0, member: 0})
      |> assign(:subscribed_group_id, nil)
@@ -43,6 +46,7 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:member_action_form, member_action_form())
      |> assign(:transfer_target_form, transfer_target_form())
      |> assign(:transfer_candidates, [])
+     |> stream(:invitations, [])
      |> stream(:owner_members, [])
      |> stream(:organizer_members, [])
      |> stream(:regular_members, [])}
@@ -100,7 +104,12 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp load_section(socket, :members, group, user) do
     members = list_group_members(group, user)
-    assign_members(socket, members)
+    invitations = list_group_invitations(group, user)
+
+    socket
+    |> assign_members(members)
+    |> assign(:invitation_count, length(invitations))
+    |> stream(:invitations, invitations, reset: true)
   end
 
   defp load_group(slug, user) do
@@ -136,6 +145,65 @@ defmodule HuddlzWeb.OrganizeLive do
       query: [sort: [created_at: :asc]]
     )
   end
+
+  defp list_group_invitations(group, user) do
+    group.id
+    |> Communities.list_group_invitations!(
+      actor: user,
+      load: [:invitee, :inviter]
+    )
+    |> Enum.map(&normalize_invitation_expiration(&1, user))
+  end
+
+  defp create_invitation(socket, group, user, invitee, role, email, params) do
+    case Communities.invite_to_group(group.id, invitee.id, role, actor: user) do
+      {:ok, _invitation} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Invitation sent to #{email}.")
+         |> assign(:invitation_form, invitation_form())
+         |> refresh_invitations(group, user)}
+
+      {:error, _reason} ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Could not send that invitation. They may already be a member or have a pending invitation."
+         )
+         |> assign(:invitation_form, invitation_form(params))}
+    end
+  end
+
+  defp refresh_invitations(socket, group, user) do
+    invitations = list_group_invitations(group, user)
+
+    socket
+    |> assign(:invitation_count, length(invitations))
+    |> stream(:invitations, invitations, reset: true)
+  end
+
+  defp invitation_form(params \\ %{"email" => "", "role" => "member"}) do
+    to_form(params, as: :invitation)
+  end
+
+  defp parse_invitation_role("organizer"), do: :organizer
+  defp parse_invitation_role(_), do: :member
+
+  defp normalize_invitation_expiration(
+         %{status: :pending, expires_at: expires_at} = invitation,
+         user
+       ) do
+    if DateTime.compare(expires_at, DateTime.utc_now()) == :gt do
+      invitation
+    else
+      invitation
+      |> Communities.expire_group_invitation!(actor: user)
+      |> Communities.load_group_invitation_details!()
+    end
+  end
+
+  defp normalize_invitation_expiration(invitation, _user), do: invitation
 
   defp subscribe_to_membership_changes(socket, group) do
     if connected?(socket) and socket.assigns.subscribed_group_id != group.id do
@@ -183,6 +251,14 @@ defmodule HuddlzWeb.OrganizeLive do
             transfer_candidates={@transfer_candidates}
             transfer_target_form={@transfer_target_form}
             current_user={@current_user}
+          />
+          <.invitations_view
+            :if={!@group.is_public}
+            group={@group}
+            current_user={@current_user}
+            invitation_form={@invitation_form}
+            invitations={@streams.invitations}
+            invitation_count={@invitation_count}
           />
       <% end %>
 
@@ -563,6 +639,91 @@ defmodule HuddlzWeb.OrganizeLive do
     """
   end
 
+  attr :group, :map, required: true
+  attr :current_user, :map, required: true
+  attr :invitation_form, :map, required: true
+  attr :invitations, :any, required: true
+  attr :invitation_count, :integer, required: true
+
+  defp invitations_view(assigns) do
+    ~H"""
+    <div id="group-invitations" class="panel mt-6">
+      <div class="panel-head">
+        <div>
+          <h2>Invite someone</h2>
+          <div class="panel-sub">Invitations expire after 7 days.</div>
+        </div>
+      </div>
+
+      <.form
+        for={@invitation_form}
+        id="group-invitation-form"
+        phx-submit="invite"
+        class="grid gap-4 md:grid-cols-[minmax(0,1fr)_12rem_auto] md:items-end"
+      >
+        <.input
+          field={@invitation_form[:email]}
+          type="email"
+          label="Registered email"
+          placeholder="person@example.com"
+        />
+        <.select
+          field={@invitation_form[:role]}
+          label="Group role"
+          options={invitation_role_options(@group, @current_user)}
+        />
+        <button id="send-group-invitation" type="submit" class="btn-primary">
+          Send invitation
+        </button>
+      </.form>
+
+      <div class="role-section">
+        <div class="role-section-head">
+          <h3>Invitation history</h3>
+          <span class="muted count">({@invitation_count})</span>
+        </div>
+        <div id="invitation-rows" phx-update="stream" class="row-list">
+          <p id="invitations-empty" class="hidden only:block muted role-section-empty">
+            No invitations yet.
+          </p>
+          <div :for={{id, invitation} <- @invitations} id={id} class="row row-split">
+            <div>
+              <div class="row-title">{member_name(%{user: invitation.invitee})}</div>
+              <div class="meta">
+                {role_label(invitation.role)} · {invitation_status_label(invitation.status)}
+              </div>
+            </div>
+            <button
+              :if={invitation.status == :pending}
+              id={"revoke-invitation-#{invitation.id}"}
+              type="button"
+              class="pill"
+              phx-click="revoke_invitation"
+              phx-value-id={invitation.id}
+            >
+              Revoke
+            </button>
+            <span :if={invitation.status != :pending} class="pill">
+              {invitation_status_label(invitation.status)}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp invitation_role_options(group, user) when group.owner_id == user.id,
+    do: [{"Member", "member"}, {"Organizer", "organizer"}]
+
+  defp invitation_role_options(_group, _user), do: [{"Member", "member"}]
+
+  defp invitation_status_label(:pending), do: "Awaiting response"
+  defp invitation_status_label(:accepted), do: "Accepted"
+  defp invitation_status_label(:declined), do: "Declined"
+  defp invitation_status_label(:revoked), do: "Revoked"
+  defp invitation_status_label(:expired), do: "Expired"
+
   attr :entry, :map, required: true
   attr :group, :map, required: true
   attr :current_user, :map, required: true
@@ -677,6 +838,43 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   @impl true
+  def handle_event("invite", %{"invitation" => params}, socket) do
+    group = socket.assigns.group
+    user = socket.assigns.current_user
+    email = String.trim(params["email"] || "")
+    role = parse_invitation_role(params["role"])
+
+    case Accounts.get_by_email(email, actor: user) do
+      {:ok, invitee} ->
+        create_invitation(socket, group, user, invitee, role, email, params)
+
+      {:error, _reason} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "No registered person has that email address.")
+         |> assign(:invitation_form, invitation_form(params))}
+    end
+  end
+
+  def handle_event("revoke_invitation", %{"id" => id}, socket) do
+    user = socket.assigns.current_user
+    group = socket.assigns.group
+    group_id = group.id
+
+    with {:ok, invitation} <-
+           Communities.get_group_invitation(id, actor: user),
+         %{group_id: ^group_id} <- invitation,
+         {:ok, _revoked} <- Communities.revoke_group_invitation(invitation, actor: user) do
+      {:noreply,
+       socket
+       |> put_flash(:info, "Invitation revoked.")
+       |> refresh_invitations(group, user)}
+    else
+      _ ->
+        {:noreply, put_flash(socket, :error, "That invitation could not be revoked.")}
+    end
+  end
+
   def handle_event("open_member_action", %{"id" => id, "action" => action}, socket) do
     case parse_member_action(action) do
       {:ok, action_type} ->

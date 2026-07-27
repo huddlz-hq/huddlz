@@ -114,6 +114,31 @@ defmodule Huddlz.Communities.GroupMember do
       change Huddlz.Communities.GroupMember.Changes.NotifyAdded
     end
 
+    create :accept_invitation do
+      description """
+      Internal helper used only after a GroupInvitation acceptance has been
+      authorized. It grants the invited role without sending the unrelated
+      "added directly" notification.
+      """
+
+      argument :group_id, :uuid do
+        allow_nil? false
+      end
+
+      argument :user_id, :uuid do
+        allow_nil? false
+      end
+
+      argument :role, :atom do
+        allow_nil? false
+        constraints one_of: [:member, :organizer]
+      end
+
+      change manage_relationship(:group_id, :group, type: :append)
+      change manage_relationship(:user_id, :user, type: :append)
+      change set_attribute(:role, arg(:role))
+    end
+
     destroy :remove_member do
       description "Remove a user from a group"
       require_atomic? false
@@ -244,6 +269,10 @@ defmodule Huddlz.Communities.GroupMember do
 
     # Internal-only — must be called with `authorize?: false`.
     policy action(:add_owner) do
+      forbid_if always()
+    end
+
+    policy action(:accept_invitation) do
       forbid_if always()
     end
 
