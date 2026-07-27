@@ -323,6 +323,10 @@ defmodule Huddlz.Communities.Group do
       destination_attribute :group_id
     end
 
+    has_many :group_invitations, Huddlz.Communities.GroupInvitation do
+      destination_attribute :group_id
+    end
+
     many_to_many :members, Huddlz.Accounts.User do
       through Huddlz.Communities.GroupMember
       source_attribute_on_join_resource :group_id

@@ -704,6 +704,10 @@ defmodule Huddlz.Accounts.User do
       destination_attribute :user_id
     end
 
+    has_many :group_invitations, Huddlz.Communities.GroupInvitation do
+      destination_attribute :invitee_id
+    end
+
     has_many :valid_api_keys, Huddlz.Accounts.ApiKey do
       filter expr(valid)
     end
