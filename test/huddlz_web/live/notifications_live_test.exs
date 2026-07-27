@@ -1,6 +1,9 @@
 defmodule HuddlzWeb.NotificationsLiveTest do
   use HuddlzWeb.ConnCase, async: false
 
+  import Phoenix.LiveViewTest,
+    only: [element: 2, has_element?: 2, has_element?: 3, live: 2, render_click: 1]
+
   alias Huddlz.Notifications
 
   setup do
@@ -17,6 +20,15 @@ defmodule HuddlzWeb.NotificationsLiveTest do
     deliver!(user, trigger, payload)
     {:ok, %{results: [n | _]}} = Notifications.list_for_user(actor: user, page: [limit: 100])
     n
+  end
+
+  defp rsvp_payload(group_slug \\ "phoenix-elixir") do
+    %{
+      "huddl_id" => "00000000-0000-0000-0000-000000000000",
+      "huddl_title" => "Boat Drinks",
+      "group_slug" => group_slug,
+      "starts_at_iso" => "2026-05-09T18:00:00Z"
+    }
   end
 
   describe "anonymous access" do
@@ -187,12 +199,7 @@ defmodule HuddlzWeb.NotificationsLiveTest do
 
   describe "row destinations" do
     test "rows with a source_url render an Open link", %{conn: conn, user: user} do
-      deliver!(user, :rsvp_confirmation, %{
-        "huddl_id" => "00000000-0000-0000-0000-000000000000",
-        "huddl_title" => "Boat Drinks",
-        "group_slug" => "phoenix-elixir",
-        "starts_at_iso" => "2026-05-09T18:00:00Z"
-      })
+      deliver!(user, :rsvp_confirmation, rsvp_payload())
 
       conn
       |> login(user)
@@ -200,6 +207,100 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       |> assert_has(
         ~s|.notif-row a.pill[href="/groups/phoenix-elixir/huddlz/00000000-0000-0000-0000-000000000000"]|,
         text: "Open"
+      )
+    end
+
+    test "linked and unlinked unread rows offer a separate Mark read action", %{
+      conn: conn,
+      user: user
+    } do
+      linked =
+        seed_notification(user, :rsvp_confirmation, rsvp_payload())
+
+      unlinked = seed_notification(user, :group_member_removed, %{"group_name" => "Old Club"})
+
+      conn
+      |> login(user)
+      |> visit("/notifications")
+      |> assert_has("#notification-actions-#{linked.id} a", text: "Open")
+      |> assert_has("#mark-notification-read-#{linked.id}", text: "Mark read")
+      |> assert_has("#mark-notification-read-#{unlinked.id}", text: "Mark read")
+      |> refute_has("#notification-actions-#{unlinked.id} a", text: "Open")
+    end
+
+    test "marking a linked notification read updates its row and unread count in place", %{
+      conn: conn,
+      user: user
+    } do
+      notification =
+        seed_notification(user, :rsvp_confirmation, rsvp_payload("missing-group"))
+
+      untouched = seed_notification(user, :password_changed, %{})
+      {:ok, view, _html} = conn |> login(user) |> live("/notifications")
+
+      assert has_element?(view, ".filters .chip", "Inbox · 2 unread")
+
+      view
+      |> element("#mark-notification-read-#{notification.id}")
+      |> render_click()
+
+      assert has_element?(view, ".filters .chip", "Inbox · 1 unread")
+      assert has_element?(view, "#notification-#{notification.id}")
+      assert has_element?(view, "#notification-actions-#{notification.id} a", "Open")
+      refute has_element?(view, "#mark-notification-read-#{notification.id}")
+      assert has_element?(view, "#mark-notification-read-#{untouched.id}", "Mark read")
+    end
+
+    test "a read waitlist promotion remains visible in Invites", %{conn: conn, user: user} do
+      notification =
+        seed_notification(user, :waitlist_promoted, %{
+          "huddl_id" => "00000000-0000-0000-0000-000000000000",
+          "huddl_title" => "Elixir Picnic",
+          "group_slug" => "elixir-picnic",
+          "starts_at_iso" => "2026-08-01T16:00:00Z"
+        })
+
+      conn = login(conn, user)
+      {:ok, view, _html} = live(conn, "/notifications?filter=invites")
+
+      view
+      |> element("#mark-notification-read-#{notification.id}")
+      |> render_click()
+
+      assert has_element?(view, ".filters .chip", "Inbox · 0 unread")
+
+      assert has_element?(
+               view,
+               "#notification-#{notification.id}",
+               "Waitlist promoted: Elixir Picnic"
+             )
+
+      assert has_element?(view, "#notification-actions-#{notification.id} a", "Open")
+      refute has_element?(view, "#mark-notification-read-#{notification.id}")
+
+      {:ok, reloaded_view, _html} = live(conn, "/notifications?filter=invites")
+
+      assert has_element?(
+               reloaded_view,
+               "#notification-#{notification.id}",
+               "Waitlist promoted: Elixir Picnic"
+             )
+
+      refute has_element?(reloaded_view, "#mark-notification-read-#{notification.id}")
+    end
+
+    test "Open and Mark read have distinct accessible names", %{conn: conn, user: user} do
+      notification =
+        seed_notification(user, :rsvp_confirmation, rsvp_payload())
+
+      conn
+      |> login(user)
+      |> visit("/notifications")
+      |> assert_has(
+        "#notification-actions-#{notification.id} a[aria-label=\"Open RSVP confirmed: Boat Drinks\"]"
+      )
+      |> assert_has(
+        "#mark-notification-read-#{notification.id}[aria-label=\"Mark RSVP confirmed: Boat Drinks as read\"]"
       )
     end
   end
