@@ -8,8 +8,6 @@ defmodule Huddlz.Communities.Huddl.Changes.EnforceCapacityFloor do
 
   alias Huddlz.Communities.Huddl
 
-  require Ash.Query
-
   def change(changeset, _opts, _context) do
     Ash.Changeset.before_action(changeset, fn cs ->
       with true <- Ash.Changeset.changing_attribute?(cs, :max_attendees),
@@ -25,7 +23,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EnforceCapacityFloor do
   defp check_floor(cs, new_max) do
     huddl =
       Huddl
-      |> Ash.Query.filter(id == ^cs.data.id)
+      |> Ash.Query.for_read(:get_for_recurrence, %{id: cs.data.id})
       |> Ash.Query.lock("FOR UPDATE")
       |> Ash.Query.load(:rsvp_count)
       |> Ash.read_one!(authorize?: false)

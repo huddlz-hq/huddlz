@@ -307,6 +307,51 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
                    end
     end
 
+    test "organizer cannot reduce capacity below current RSVPs on a private huddl", %{
+      owner: owner,
+      member: member,
+      group: group
+    } do
+      # Regression test: the capacity-floor check must not rely on the
+      # visibility-filtered primary :read action, since a private huddl (or a
+      # huddl in a private group) is invisible to that filter with no actor,
+      # which previously made the RSVP-count lookup return nil and crash
+      # instead of raising the intended validation error.
+      private_huddl =
+        Huddl
+        |> Ash.Changeset.for_create(
+          :create,
+          %{
+            title: "Private Test Huddl",
+            description: "A private test huddl",
+            starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
+            ends_at: DateTime.add(DateTime.utc_now(), 2, :day),
+            event_type: :virtual,
+            virtual_link: "https://zoom.us/j/000000",
+            is_private: true,
+            group_id: group.id
+          },
+          actor: owner
+        )
+        |> Ash.create!()
+
+      # Seed a second attendee directly against HuddlAttendee (bypassing the
+      # :rsvp update action) so this test stays scoped to the capacity-floor
+      # regression, not the separate visibility bug in Huddl.Changes.Rsvp.
+      HuddlAttendee
+      |> Ash.Changeset.for_create(:rsvp, %{huddl_id: private_huddl.id, user_id: member.id})
+      |> Ash.create!(actor: member, authorize?: false)
+
+      assert_raise Ash.Error.Invalid,
+                   ~r/cannot be less than the current RSVP count/,
+                   fn ->
+                     private_huddl
+                     |> Ash.reload!(actor: owner)
+                     |> Ash.Changeset.for_update(:update, %{max_attendees: 1}, actor: owner)
+                     |> Ash.update!()
+                   end
+    end
+
     test "organizer can clear max_attendees even with existing RSVPs", %{
       member: member,
       owner: owner,
