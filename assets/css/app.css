@@ -3237,7 +3237,7 @@ body .page-nav:disabled {
   body .pagination .page-numbers { order: -1; flex-basis: 100%; justify-content: center; flex-wrap: wrap; }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 760px) {
   body .huddl-hero {
     display: block;
     height: auto;

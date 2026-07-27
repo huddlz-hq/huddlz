@@ -73,13 +73,11 @@ defmodule HuddlzWeb.HuddlLive.Show do
     >
       <div class={["hero", "huddl-hero", status_hero_class(@huddl.status)]}>
         <div class="hero-media">
-          <img
+          <.huddl_cover_image
             :if={@huddl.display_image_url}
             id={"huddl-cover-#{@huddl.id}"}
             class="hero-img"
-            src={HuddlImages.url(@huddl.display_image_url)}
-            alt=""
-            phx-hook="ImageFallback"
+            image_url={@huddl.display_image_url}
           />
         </div>
         <div class="hero-content">

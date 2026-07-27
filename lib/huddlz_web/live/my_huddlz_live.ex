@@ -14,7 +14,6 @@ defmodule HuddlzWeb.MyHuddlzLive do
   import HuddlzWeb.Live.Helpers.ParamHelpers
 
   alias Huddlz.Communities
-  alias Huddlz.Storage.HuddlImages
   alias HuddlzWeb.Layouts
   require Logger
 
@@ -203,13 +202,11 @@ defmodule HuddlzWeb.MyHuddlzLive do
       gradient={@gradient}
     >
       <:cover>
-        <img
+        <.huddl_cover_image
           :if={@huddl.display_image_url}
           id={"my-huddl-card-cover-#{@huddl.id}"}
           class="card-cover-img"
-          src={HuddlImages.url(@huddl.display_image_url)}
-          alt=""
-          phx-hook="ImageFallback"
+          image_url={@huddl.display_image_url}
         />
         <.date_stamp month={huddl_month(@huddl)} day={huddl_day(@huddl)} />
         <.card_tag variant={tag_variant(@huddl.event_type)}>

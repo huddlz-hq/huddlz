@@ -26,28 +26,26 @@ import topbar from "../vendor/topbar"
 
 const Hooks = {}
 
-Hooks.ImageFallback = {
-  mounted() {
-    this._hideBrokenImage = () => {
-      this.el.hidden = true
-    }
+const imageFallbackSelector = "img[data-image-fallback]"
 
-    this.el.addEventListener("error", this._hideBrokenImage)
-    this.updateVisibility()
-  },
-
-  updated() {
-    this.updateVisibility()
-  },
-
-  destroyed() {
-    this.el.removeEventListener("error", this._hideBrokenImage)
-  },
-
-  updateVisibility() {
-    this.el.hidden = this.el.complete && this.el.naturalWidth === 0
-  }
+const imageFallbackTarget = (event) => {
+  const image = event.target
+  return image.matches && image.matches(imageFallbackSelector) ? image : null
 }
+
+window.addEventListener("error", (event) => {
+  const image = imageFallbackTarget(event)
+  if (image) image.hidden = true
+}, true)
+
+window.addEventListener("load", (event) => {
+  const image = imageFallbackTarget(event)
+  if (image) image.hidden = false
+}, true)
+
+document.querySelectorAll(imageFallbackSelector).forEach((image) => {
+  image.hidden = image.complete && image.naturalWidth === 0
+})
 
 Hooks.LocationAutocomplete = {
   mounted() {
@@ -91,7 +89,14 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: Hooks
+  hooks: Hooks,
+  dom: {
+    onBeforeElUpdated(fromEl, toEl) {
+      if (fromEl.matches(imageFallbackSelector) && fromEl.hidden) {
+        toEl.hidden = true
+      }
+    }
+  }
 })
 
 // Show progress bar on live navigation and form submits
