@@ -90,8 +90,59 @@ defmodule HuddlzWeb.CalendarLiveTest do
         |> visit("/calendar")
 
       for day <- ~w(Sun Mon Tue Wed Thu Fri Sat) do
-        assert_has(session, ".cal-day-name", text: day)
+        assert_has(session, "#month-calendar th[scope='col']", text: day)
       end
+    end
+
+    test "month grid exposes native table semantics and full date labels", %{
+      conn: conn,
+      attendee: attendee
+    } do
+      today = Date.utc_today()
+      today_label = Calendar.strftime(today, "%A, %B %-d, %Y") <> ", today"
+
+      conn
+      |> login(attendee)
+      |> visit("/calendar")
+      |> assert_has("#month-calendar caption", text: current_month_name())
+      |> assert_has("#month-calendar thead")
+      |> assert_has("#month-calendar tbody tr", count: 6)
+      |> assert_has(~s(#month-calendar td[aria-label="#{today_label}"][aria-current="date"]))
+    end
+
+    test "overflow days name their month in text and accessibility metadata", %{
+      conn: conn,
+      attendee: attendee
+    } do
+      session =
+        conn
+        |> login(attendee)
+        |> visit("/calendar")
+
+      document =
+        session.view
+        |> Phoenix.LiveViewTest.render()
+        |> LazyHTML.from_fragment()
+
+      overflow = LazyHTML.query(document, "#month-calendar td.out-of-month")
+
+      assert [label | _] = LazyHTML.attribute(overflow, "aria-label")
+      assert String.ends_with?(label, "outside the selected month")
+      assert overflow |> LazyHTML.query(".cal-day-context") |> Enum.any?()
+    end
+
+    test "only the selected calendar view is marked current", %{
+      conn: conn,
+      attendee: attendee
+    } do
+      conn
+      |> login(attendee)
+      |> visit("/calendar")
+      |> assert_has(".cal-view-tabs a[aria-current='page']", text: "Month")
+      |> refute_has(".cal-view-tabs a[aria-current]", text: "Agenda")
+      |> visit("/calendar?view=agenda")
+      |> assert_has(".cal-view-tabs a[aria-current='page']", text: "Agenda")
+      |> refute_has(".cal-view-tabs a[aria-current]", text: "Month")
     end
   end
 
@@ -146,6 +197,20 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> login(attendee)
       |> visit(calendar_path_for(Date.add(Date.utc_today(), -2)))
       |> assert_has(".cal-pill.past", text: "Old Workshop")
+    end
+
+    test "past hosted huddl link preserves hosting context", %{
+      conn: conn,
+      host: host,
+      public_group: public_group
+    } do
+      past = create_past_huddl(host, public_group, title: "Hosted Retrospective")
+      when_label = Calendar.strftime(past.starts_at, "%A, %B %-d, %Y at %-I:%M %p")
+
+      conn
+      |> login(host)
+      |> visit(calendar_path_for(DateTime.to_date(past.starts_at)))
+      |> assert_has(~s(.cal-pill[aria-label="Hosted Retrospective, Hosted, past, #{when_label}"]))
     end
 
     test "hosting (creator) appears even without an RSVP", %{
@@ -228,6 +293,30 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> login(attendee)
       |> visit(calendar_path_for(tomorrow()))
       |> assert_has(~s(.cal-pill[href="/groups/#{public_group.slug}/huddlz/#{huddl.id}"]))
+    end
+
+    test "huddl links have date, time, title, and attendance context", %{
+      conn: conn,
+      attendee: attendee,
+      host: host,
+      public_group: public_group
+    } do
+      date = tomorrow()
+      first = create_huddl(host, public_group, title: "Morning Pairing", date: date)
+      second = create_huddl(host, public_group, title: "Evening Pairing", date: date)
+      rsvp!(first, attendee, :rsvp)
+      rsvp!(second, attendee, :rsvp)
+      full_date = Calendar.strftime(date, "%A, %B %-d, %Y")
+
+      conn
+      |> login(attendee)
+      |> visit(calendar_path_for(date))
+      |> assert_has(
+        ~s(#month-calendar td[aria-label^="#{full_date}"] .cal-pill[aria-label^="Morning Pairing, Going, #{full_date} at "])
+      )
+      |> assert_has(
+        ~s(#month-calendar td[aria-label^="#{full_date}"] .cal-pill[aria-label^="Evening Pairing, Going, #{full_date} at "])
+      )
     end
   end
 
