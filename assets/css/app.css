@@ -2973,6 +2973,76 @@ body .toggle .toggle-text {
 body .toggle input:checked ~ .toggle-text { color: var(--cyan); }
 body .toggle input:disabled ~ .toggle-text { color: var(--muted); opacity: 0.7; }
 
+/* Group visibility editor — makes saved vs selected state explicit. */
+body .visibility-current {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+body .visibility-current strong {
+  color: var(--cyan);
+  font-size: 11px;
+}
+
+body .visibility-selection {
+  cursor: default;
+}
+
+body .visibility-toggle {
+  position: relative;
+  min-height: 44px;
+}
+
+body .visibility-toggle input[type="checkbox"] {
+  display: block;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+
+body .visibility-toggle input[type="checkbox"]:focus-visible + .track {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+
+body .visibility-consequence {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+body .visibility-consequence-icon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--soft);
+}
+
+body .visibility-consequence-pending {
+  border-color: var(--cyan-dim);
+  background: rgba(24, 203, 212, 0.055);
+  color: var(--soft);
+}
+
+body .visibility-consequence-pending .visibility-consequence-icon {
+  color: var(--cyan);
+}
+
 /* Insights chip strip on listing pages */
 body .insight-strip {
   display: flex;
@@ -3221,6 +3291,9 @@ body .page-nav:disabled {
   body .hero-content h1 { font-size: 26px; }
   body .panel { padding: 14px 14px; }
   body .panel.split { gap: 18px; }
+  body .visibility-panel-head { flex-direction: column; align-items: flex-start; gap: 10px; }
+  body .visibility-selection { grid-template-columns: 1fr; }
+  body .visibility-toggle { margin-top: 4px; }
   body .filters { gap: 6px; }
   body .insight-strip { gap: 8px; }
   /* Listings on org pages: collapse multi-column rows */

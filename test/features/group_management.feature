@@ -69,6 +69,33 @@ Feature: Group Management
     Then I should see "Group updated successfully"
     And I should see "Updated Book Club"
 
+  Scenario: Owner understands making a public group private
+    Given a public group "Book Club" exists with owner "verified@example.com"
+    And I am signed in as "verified@example.com"
+    When I visit the edit page for "Book Club"
+    Then I should see "Current visibility"
+    And I should see "Public"
+    When I uncheck "Public group"
+    Then I should see "Private group"
+    And I should see "Access is limited to current members and platform admins"
+    And I should see "all existing huddlz will leave public discovery"
+    And I should see "Current members keep their memberships"
+    When I click "Save Changes"
+    Then I should see "Visibility is now private"
+
+  Scenario: Owner understands making a private group public
+    Given a private group "Book Club" exists with owner "verified@example.com"
+    And I am signed in as "verified@example.com"
+    When I visit the edit page for "Book Club"
+    Then I should see "Current visibility"
+    And I should see "Private"
+    When I check "Public group"
+    Then I should see "Public group"
+    And I should see "Anyone can find and join this group"
+    And I should see "otherwise-public huddlz will become discoverable again"
+    When I click "Save Changes"
+    Then I should see "Visibility is now public"
+
   Scenario: Non-owner cannot edit group
     Given a public group "Book Club" exists with owner "verified@example.com"
     And I am signed in as "regular@example.com"

@@ -32,6 +32,12 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       |> assert_has("h1", text: "Edit Group")
       |> assert_has("input[name='form[name]'][value='Test Group']")
       |> assert_has("input[name='form[slug]'][value='test-group']")
+      |> assert_has("#group-visibility-current", text: "Public")
+      |> assert_has("#group-visibility-selection", text: "Public group")
+      |> assert_has(
+        "#group-is-public[role='switch'][aria-labelledby='group-public-toggle-label'][aria-describedby='group-visibility-description group-visibility-consequence']"
+      )
+      |> assert_has("#group-visibility-consequence", text: "No visibility change pending")
     end
 
     test "renders v3 chrome with the three panels in order", %{
@@ -76,6 +82,94 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       |> assert_has("h1", text: "Updated Group Name")
       |> assert_has("p", text: "Updated description")
       |> assert_has(".hero .meta span", text: "Updated location")
+    end
+
+    test "changing a public group to private explains the consequences", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/edit")
+      |> uncheck("Public group")
+      |> assert_has("#group-visibility-current", text: "Public")
+      |> assert_has("#group-visibility-selection", text: "Private group")
+      |> assert_has(
+        "#group-visibility-description",
+        text: "Access is limited to current members and platform admins"
+      )
+      |> assert_has(
+        "#group-visibility-consequence",
+        text: "this group and all existing huddlz will leave public discovery"
+      )
+      |> assert_has("#group-visibility-consequence",
+        text: "Current members keep their memberships"
+      )
+    end
+
+    test "changing a private group to public explains the consequences", %{
+      conn: conn,
+      owner: owner
+    } do
+      private_group =
+        generate(
+          group(
+            name: "Private Test Group",
+            slug: "private-test-group",
+            is_public: false,
+            actor: owner
+          )
+        )
+
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{private_group.slug}/edit")
+      |> assert_has("#group-visibility-current", text: "Private")
+      |> assert_has(
+        "#group-is-public[role='switch'][aria-labelledby='group-public-toggle-label']:not(:checked)"
+      )
+      |> check("Public group")
+      |> assert_has("#group-visibility-selection", text: "Public group")
+      |> assert_has(
+        "#group-visibility-description",
+        text: "Anyone can find and join this group"
+      )
+      |> assert_has(
+        "#group-visibility-consequence",
+        text: "this group and otherwise-public huddlz will become discoverable again"
+      )
+    end
+
+    test "saving names the new visibility in the success feedback", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/edit")
+      |> uncheck("Public group")
+      |> click_button("Save Changes")
+      |> assert_has(
+        "div[role='alert']",
+        text: "Group updated successfully. Visibility is now private."
+      )
+    end
+
+    test "canceling a pending visibility change preserves the saved state", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/edit")
+      |> uncheck("Public group")
+      |> click_link("Cancel")
+      |> visit(~p"/groups/#{group.slug}/edit")
+      |> assert_has("#group-visibility-current", text: "Public")
+      |> assert_has("#group-visibility-selection", text: "Public group")
     end
 
     test "slug change shows warning", %{conn: conn, owner: owner, group: group} do
