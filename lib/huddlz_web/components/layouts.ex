@@ -151,7 +151,7 @@ defmodule HuddlzWeb.Layouts do
           <% end %>
         </div>
 
-        <a class="sb-user" href="/profile" aria-label="View profile">
+        <a id="sidebar-user" class="sb-user" href="/profile" aria-label="View profile">
           <.sb_user_avatar user={@current_user} />
           <div class="who">
             <div class="name">{display_name(@current_user)}</div>

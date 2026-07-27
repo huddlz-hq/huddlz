@@ -20,6 +20,11 @@ Feature: Profile Picture Management
     When I visit "/profile"
     Then I should see the avatar fallback showing initials
 
+  Scenario: Corrupt profile picture content shows a clear error
+    When I visit "/profile"
+    And I upload "test/fixtures/corrupt_image.jpg" to "Upload a photo"
+    Then I should see "That file could not be read as an image"
+
   Scenario: User can see remove button only when they have a profile picture
     When I visit "/profile"
     Then I should not see "Remove"

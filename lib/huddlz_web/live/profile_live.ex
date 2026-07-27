@@ -4,6 +4,8 @@ defmodule HuddlzWeb.ProfileLive do
   """
   use HuddlzWeb, :live_view
 
+  require Logger
+
   alias Huddlz.Storage.ProfilePictures
   alias HuddlzWeb.Avatar
   alias HuddlzWeb.Layouts
@@ -99,13 +101,37 @@ defmodule HuddlzWeb.ProfileLive do
               </button>
             <% end %>
             <div class="muted" style="font-size:12px; margin-top:6px">
-              JPG, PNG, or WebP · 5 MB max
+              <span id="avatar-upload-help">JPG, PNG, or WebP · 5 MB max</span>
             </div>
-            <p :if={@avatar_error} class="form-error">{@avatar_error}</p>
+            <div id="avatar-upload-status" aria-live="polite">
+              <%= for entry <- @uploads.avatar.entries,
+                      upload_errors(@uploads.avatar, entry) == [] and entry.progress < 100 do %>
+                <p class="muted" role="status">
+                  Uploading {entry.client_name}: {entry.progress}%
+                </p>
+              <% end %>
+            </div>
+            <div
+              :if={avatar_upload_error_messages(@uploads.avatar, @avatar_error) != []}
+              id="avatar-upload-error"
+              class="form-error"
+              role="alert"
+              aria-live="assertive"
+            >
+              <p :for={message <- avatar_upload_error_messages(@uploads.avatar, @avatar_error)}>
+                {message}
+              </p>
+            </div>
           </div>
         </div>
         <form id="avatar-form" phx-change="validate_avatar" class="hidden">
-          <.live_file_input upload={@uploads.avatar} />
+          <.live_file_input
+            upload={@uploads.avatar}
+            aria-describedby="avatar-upload-help avatar-upload-error"
+            aria-invalid={
+              avatar_upload_error_messages(@uploads.avatar, @avatar_error) != [] && "true"
+            }
+          />
         </form>
       </div>
 
@@ -315,11 +341,11 @@ defmodule HuddlzWeb.ProfileLive do
     ~H"""
     <%= cond do %>
       <% url = Avatar.picture_url(@user) -> %>
-        <img class="big-avatar" src={url} alt="" aria-hidden="true" />
+        <img id="profile-avatar" class="big-avatar" src={url} alt="" aria-hidden="true" />
       <% initials = Avatar.initials(@user) -> %>
-        <div class="big-avatar">{initials}</div>
+        <div id="profile-avatar" class="big-avatar">{initials}</div>
       <% true -> %>
-        <div class="big-avatar"></div>
+        <div id="profile-avatar" class="big-avatar"></div>
     <% end %>
     """
   end
@@ -330,6 +356,24 @@ defmodule HuddlzWeb.ProfileLive do
 
   defp role_pill_color(:admin), do: "magenta"
   defp role_pill_color(_), do: "cyan"
+
+  defp avatar_upload_error_messages(upload, avatar_error) do
+    entry_errors =
+      Enum.flat_map(upload.entries, fn entry ->
+        upload
+        |> upload_errors(entry)
+        |> Enum.map(&UploadHelpers.upload_error_to_string/1)
+      end)
+
+    config_errors =
+      upload
+      |> upload_errors()
+      |> Enum.map(&UploadHelpers.upload_error_to_string/1)
+
+    [avatar_error | entry_errors ++ config_errors]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+  end
 
   defp form_value(form, field) do
     Map.get(form.source.raw_params, to_string(field), form[field].value)
@@ -456,7 +500,7 @@ defmodule HuddlzWeb.ProfileLive do
 
   @impl true
   def handle_event("validate_avatar", _params, socket) do
-    {:noreply, assign(socket, :avatar_error, nil)}
+    {:noreply, clear_avatar_error_for_new_entry(socket, socket.assigns.uploads.avatar.entries)}
   end
 
   @impl true
@@ -546,6 +590,11 @@ defmodule HuddlzWeb.ProfileLive do
     end
   end
 
+  defp clear_avatar_error_for_new_entry(socket, [_entry | _rest]),
+    do: assign(socket, :avatar_error, nil)
+
+  defp clear_avatar_error_for_new_entry(socket, []), do: socket
+
   defp soft_delete_all_profile_pictures(user) do
     case Huddlz.Accounts.list_profile_pictures(user.id, actor: user) do
       {:ok, pictures} ->
@@ -611,44 +660,48 @@ defmodule HuddlzWeb.ProfileLive do
   end
 
   defp handle_upload_result(socket, user, [{:success, metadata, e}]) do
-    soft_delete_all_profile_pictures(user)
-
-    case create_profile_picture_record(user, %{
-           filename: e.client_name,
-           content_type: e.client_type,
-           size_bytes: metadata.size_bytes,
-           storage_path: metadata.storage_path,
-           thumbnail_path: metadata.thumbnail_path
-         }) do
-      {:ok, _} ->
+    case Huddlz.Accounts.replace_profile_picture(
+           %{
+             filename: e.client_name,
+             content_type: e.client_type,
+             size_bytes: metadata.size_bytes,
+             storage_path: metadata.storage_path,
+             thumbnail_path: metadata.thumbnail_path,
+             user_id: user.id
+           },
+           actor: user
+         ) do
+      {:ok, _new_picture} ->
         {:noreply, reload_user_avatar(socket, user, "Profile picture updated successfully")}
 
-      {:error, _} ->
+      {:error, reason} ->
+        cleanup_stored_profile_picture(metadata, reason)
+
         {:noreply,
          assign(socket, :avatar_error, "Failed to save profile picture. Please try again.")}
     end
   end
 
   defp handle_upload_result(socket, _user, [{:error, reason}]) do
-    {:noreply, assign(socket, :avatar_error, "Upload failed: #{reason}")}
+    {:noreply, assign(socket, :avatar_error, UploadHelpers.format_upload_error(reason))}
   end
 
   defp handle_upload_result(socket, _user, []) do
     {:noreply, socket}
   end
 
-  defp create_profile_picture_record(user, metadata) do
-    Huddlz.Accounts.create_profile_picture(
-      %{
-        filename: metadata.filename,
-        content_type: metadata.content_type,
-        size_bytes: metadata.size_bytes,
-        storage_path: metadata.storage_path,
-        thumbnail_path: metadata.thumbnail_path,
-        user_id: user.id
-      },
-      actor: user
-    )
+  defp cleanup_stored_profile_picture(metadata, replacement_error) do
+    cleanup_errors =
+      [metadata.storage_path, metadata.thumbnail_path]
+      |> Enum.map(&ProfilePictures.delete/1)
+      |> Enum.reject(&(&1 == :ok))
+
+    if cleanup_errors != [] do
+      Logger.error(
+        "Failed to clean up profile picture storage after replacement error: " <>
+          inspect(%{replacement_error: replacement_error, cleanup_errors: cleanup_errors})
+      )
+    end
   end
 
   defp reload_user_avatar(socket, user, flash_message) do
@@ -657,5 +710,6 @@ defmodule HuddlzWeb.ProfileLive do
     socket
     |> put_flash(:info, flash_message)
     |> assign(:current_user, updated_user)
+    |> assign(:avatar_error, nil)
   end
 end
