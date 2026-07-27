@@ -214,20 +214,7 @@ defmodule Huddlz.Communities.Group do
         allow_nil? false
       end
 
-      validate fn changeset, _ctx ->
-        new_owner_id = Ash.Changeset.get_argument(changeset, :new_owner_id)
-
-        cond do
-          is_nil(new_owner_id) ->
-            {:error, field: :new_owner_id, message: "is required"}
-
-          new_owner_id == changeset.data.owner_id ->
-            {:error, field: :new_owner_id, message: "is already the group owner"}
-
-          true ->
-            :ok
-        end
-      end
+      validate Huddlz.Communities.Group.Validations.NewOwnerIsExistingMember
 
       change Huddlz.Communities.Group.Changes.TransferOwnership
     end

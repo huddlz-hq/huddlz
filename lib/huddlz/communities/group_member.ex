@@ -84,18 +84,7 @@ defmodule Huddlz.Communities.GroupMember do
       # minted only by group creation and Group.:transfer_ownership (via the
       # internal :add_owner action). This mirrors :change_role, which also
       # refuses :owner.
-      validate fn changeset, _context ->
-        case Ash.Changeset.get_argument(changeset, :role) do
-          role when role in ["member", "organizer"] ->
-            :ok
-
-          _ ->
-            {:error,
-             field: :role,
-             message:
-               "must be \"member\" or \"organizer\" (use transfer_ownership to set the owner)"}
-        end
-      end
+      validate Huddlz.Communities.GroupMember.Validations.AssignableRole
 
       change manage_relationship(:group_id, :group, type: :append)
       change manage_relationship(:user_id, :user, type: :append)
@@ -140,6 +129,10 @@ defmodule Huddlz.Communities.GroupMember do
       filter expr(group_id == ^arg(:group_id))
       filter expr(user_id == ^arg(:user_id))
 
+      validate attribute_does_not_equal(:role, :owner) do
+        message "the group owner cannot be removed; transfer ownership first"
+      end
+
       change Huddlz.Communities.GroupMember.Changes.NotifyRemoved
     end
 
@@ -162,6 +155,8 @@ defmodule Huddlz.Communities.GroupMember do
       description "Change a member's role within a group (owner only). Cannot promote to :owner — use Group.:transfer_ownership."
       accept [:role]
       require_atomic? false
+
+      validate Huddlz.Communities.GroupMember.Validations.CurrentOwnerCannotChangeRole
 
       validate attribute_in(:role, [:member, :organizer]) do
         message "must be :member or :organizer (use transfer_ownership to change the owner)"
@@ -252,9 +247,13 @@ defmodule Huddlz.Communities.GroupMember do
       forbid_if always()
     end
 
-    # Group owners can remove members
+    # Owners may remove organizers or members, but never the owner. Organizers
+    # may remove regular members only.
     policy action(:remove_member) do
+      forbid_if expr(role == :owner)
       authorize_if GroupOwner
+      forbid_if expr(role != :member)
+      authorize_if GroupOrganizer
     end
 
     # Group owners can change a member's role, but never their own.

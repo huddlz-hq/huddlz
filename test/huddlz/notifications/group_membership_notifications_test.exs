@@ -289,6 +289,15 @@ defmodule Huddlz.Notifications.GroupMembershipNotificationsTest do
       new_owner = generate(user(display_name: "New Owner"))
       group = generate(group(name: "Council", owner_id: previous_owner.id, actor: previous_owner))
 
+      generate(
+        group_member(
+          group_id: group.id,
+          user_id: new_owner.id,
+          role: :member,
+          actor: previous_owner
+        )
+      )
+
       Oban.drain_queue(queue: :notifications)
       flush_mailbox()
 
