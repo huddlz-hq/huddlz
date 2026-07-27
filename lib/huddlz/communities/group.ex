@@ -10,8 +10,6 @@ defmodule Huddlz.Communities.Group do
     authorizers: [Ash.Policy.Authorizer],
     extensions: [AshJsonApi.Resource, AshGraphql.Resource]
 
-  require Ash.Query
-
   graphql do
     type :group
 
@@ -216,32 +214,10 @@ defmodule Huddlz.Communities.Group do
         allow_nil? false
       end
 
-      validate fn changeset, _ctx ->
-        new_owner_id = Ash.Changeset.get_argument(changeset, :new_owner_id)
-
-        cond do
-          is_nil(new_owner_id) ->
-            {:error, field: :new_owner_id, message: "is required"}
-
-          new_owner_id == changeset.data.owner_id ->
-            {:error, field: :new_owner_id, message: "is already the group owner"}
-
-          not existing_member?(changeset.data.id, new_owner_id) ->
-            {:error, field: :new_owner_id, message: "must already be a member of this group"}
-
-          true ->
-            :ok
-        end
-      end
+      validate Huddlz.Communities.Group.Validations.NewOwnerIsExistingMember
 
       change Huddlz.Communities.Group.Changes.TransferOwnership
     end
-  end
-
-  defp existing_member?(group_id, user_id) do
-    Huddlz.Communities.GroupMember
-    |> Ash.Query.filter(group_id == ^group_id and user_id == ^user_id)
-    |> Ash.exists?(authorize?: false)
   end
 
   policies do

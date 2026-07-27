@@ -20,7 +20,6 @@ defmodule HuddlzWeb.OrganizeLive do
   @group_loads [:member_count]
   @huddl_loads [:rsvp_count, :status, :group]
   @upcoming_loads [:rsvp_count, :group]
-  @member_role_order [:owner, :organizer, :member]
   @upcoming_preview_limit 5
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
@@ -37,10 +36,14 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:huddlz_filter, :live)
      |> assign(:upcoming_huddlz, [])
      |> assign(:open_rsvps, 0)
-     |> assign(:members, [])
+     |> assign(:member_lookup, %{})
+     |> assign(:member_role_counts, %{owner: 0, organizer: 0, member: 0})
      |> assign(:subscribed_group_id, nil)
      |> assign(:pending_member_action, nil)
-     |> assign(:ownership_confirmation, "")}
+     |> assign(:member_action_form, member_action_form())
+     |> stream(:owner_members, [])
+     |> stream(:organizer_members, [])
+     |> stream(:regular_members, [])}
   end
 
   @impl true
@@ -56,12 +59,10 @@ defmodule HuddlzWeb.OrganizeLive do
     {:noreply, socket}
   end
 
-  defp load_action(socket, :index, _params, user) do
-    owned_groups = Ash.load!(socket.assigns.sidebar_owned_groups, @group_loads, actor: user)
-
+  defp load_action(socket, :index, _params, _user) do
     socket
     |> assign(:group, nil)
-    |> assign(:owned_groups, owned_groups)
+    |> assign(:owned_groups, socket.assigns.sidebar_owned_groups)
   end
 
   defp load_action(socket, action, %{"group_slug" => slug}, user) do
@@ -97,7 +98,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp load_section(socket, :members, group, user) do
     members = list_group_members(group, user)
-    assign(socket, :members, members)
+    assign_members(socket, members)
   end
 
   defp load_group(slug, user) do
@@ -171,14 +172,21 @@ defmodule HuddlzWeb.OrganizeLive do
         <% :huddlz -> %>
           <.huddlz_view group={@group} huddlz={@huddlz_list} filter={@huddlz_filter} />
         <% :members -> %>
-          <.members_view group={@group} members={@members} current_user={@current_user} />
+          <.members_view
+            group={@group}
+            owner_members={@streams.owner_members}
+            organizer_members={@streams.organizer_members}
+            regular_members={@streams.regular_members}
+            role_counts={@member_role_counts}
+            current_user={@current_user}
+          />
       <% end %>
 
       <.member_action_dialog
         :if={@pending_member_action}
         action={@pending_member_action}
         group={@group}
-        ownership_confirmation={@ownership_confirmation}
+        form={@member_action_form}
       />
     </Layouts.app>
     """
@@ -430,12 +438,18 @@ defmodule HuddlzWeb.OrganizeLive do
 
   # ─────────────────────────────────────────  MEMBERS  ───
   attr :group, :map, required: true
-  attr :members, :list, required: true
+  attr :owner_members, :any, required: true
+  attr :organizer_members, :any, required: true
+  attr :regular_members, :any, required: true
+  attr :role_counts, :map, required: true
   attr :current_user, :map, required: true
 
   defp members_view(assigns) do
-    by_role = Enum.group_by(assigns.members, & &1.role)
-    grouped = Enum.map(@member_role_order, fn role -> {role, Map.get(by_role, role, [])} end)
+    grouped = [
+      {:owner, assigns.owner_members, assigns.role_counts.owner},
+      {:organizer, assigns.organizer_members, assigns.role_counts.organizer},
+      {:member, assigns.regular_members, assigns.role_counts.member}
+    ]
 
     assigns = assign(assigns, :grouped, grouped)
 
@@ -460,32 +474,34 @@ defmodule HuddlzWeb.OrganizeLive do
         </div>
       </div>
 
-      <%= for {role, rows} <- @grouped do %>
+      <%= for {role, rows, count} <- @grouped do %>
         <div class="role-section">
           <div class="role-section-head">
             <h3>{role_heading(role)}</h3>
-            <span :if={role != :owner} class="muted count">({length(rows)})</span>
+            <span :if={role != :owner} class="muted count">({count})</span>
           </div>
-          <%= if rows == [] do %>
-            <p class="muted role-section-empty">{role_empty_copy(role)}</p>
-          <% else %>
-            <div class="row-list">
-              <div :for={entry <- rows} class="row row-split gap-4">
-                <div>
-                  <div class="row-title">{member_name(entry)}</div>
-                  <div class="meta">{format_member_meta(entry)}</div>
-                </div>
-                <div class="flex flex-wrap items-center justify-end gap-2">
-                  <span class={["pill", role_pill_class(role)]}>{role_label(role)}</span>
-                  <.member_actions
-                    entry={entry}
-                    group={@group}
-                    current_user={@current_user}
-                  />
-                </div>
+          <div id={"#{role}-member-rows"} class="row-list" phx-update="stream">
+            <p
+              id={"#{role}-member-rows-empty"}
+              class="hidden only:block muted role-section-empty"
+            >
+              {role_empty_copy(role)}
+            </p>
+            <div :for={{id, entry} <- rows} id={id} class="row row-split gap-4">
+              <div>
+                <div class="row-title">{member_name(entry)}</div>
+                <div class="meta">{format_member_meta(entry)}</div>
+              </div>
+              <div class="flex flex-wrap items-center justify-end gap-2">
+                <span class={["pill", role_pill_class(role)]}>{role_label(role)}</span>
+                <.member_actions
+                  entry={entry}
+                  group={@group}
+                  current_user={@current_user}
+                />
               </div>
             </div>
-          <% end %>
+          </div>
         </div>
       <% end %>
     </div>
@@ -562,9 +578,11 @@ defmodule HuddlzWeb.OrganizeLive do
 
   attr :action, :map, required: true
   attr :group, :map, required: true
-  attr :ownership_confirmation, :string, required: true
+  attr :form, Phoenix.HTML.Form, required: true
 
   defp member_action_dialog(assigns) do
+    assigns = assign(assigns, :ownership_confirmation, assigns.form[:confirmation].value || "")
+
     ~H"""
     <.modal
       id="member-action-dialog"
@@ -580,7 +598,8 @@ defmodule HuddlzWeb.OrganizeLive do
         </p>
       </div>
 
-      <form
+      <.form
+        for={@form}
         id="member-action-form"
         phx-submit="confirm_member_action"
         phx-change="validate_member_action_confirmation"
@@ -588,10 +607,9 @@ defmodule HuddlzWeb.OrganizeLive do
       >
         <.input
           :if={@action.type == :transfer}
+          field={@form[:confirmation]}
           id="ownership-confirmation"
-          name="confirmation"
           label={"Type #{@group.name} to confirm"}
-          value={@ownership_confirmation}
           autocomplete="off"
           help="Ownership transfer changes who controls the group immediately."
         />
@@ -610,7 +628,7 @@ defmodule HuddlzWeb.OrganizeLive do
             {member_action_confirm_label(@action.type)}
           </.button>
         </div>
-      </form>
+      </.form>
     </.modal>
     """
   end
@@ -618,7 +636,7 @@ defmodule HuddlzWeb.OrganizeLive do
   @impl true
   def handle_event("open_member_action", %{"id" => id, "action" => action}, socket) do
     with {:ok, action_type} <- parse_member_action(action),
-         %{} = member <- Enum.find(socket.assigns.members, &(&1.id == id)),
+         %{} = member <- Map.get(socket.assigns.member_lookup, id),
          true <-
            member_action_allowed?(
              action_type,
@@ -629,7 +647,7 @@ defmodule HuddlzWeb.OrganizeLive do
       {:noreply,
        socket
        |> assign(:pending_member_action, %{type: action_type, member: member})
-       |> assign(:ownership_confirmation, "")}
+       |> assign(:member_action_form, member_action_form())}
     else
       _ -> {:noreply, put_flash(socket, :error, "That membership action is not available.")}
     end
@@ -639,15 +657,15 @@ defmodule HuddlzWeb.OrganizeLive do
     {:noreply,
      socket
      |> assign(:pending_member_action, nil)
-     |> assign(:ownership_confirmation, "")}
+     |> assign(:member_action_form, member_action_form())}
   end
 
   def handle_event(
         "validate_member_action_confirmation",
-        %{"confirmation" => confirmation},
+        %{"member_action" => params},
         socket
       ) do
-    {:noreply, assign(socket, :ownership_confirmation, confirmation)}
+    {:noreply, assign(socket, :member_action_form, member_action_form(params))}
   end
 
   def handle_event("validate_member_action_confirmation", _params, socket), do: {:noreply, socket}
@@ -686,7 +704,7 @@ defmodule HuddlzWeb.OrganizeLive do
         {:noreply,
          socket
          |> assign(:pending_member_action, nil)
-         |> assign(:ownership_confirmation, "")
+         |> assign(:member_action_form, member_action_form())
          |> put_flash(:info, member_action_success(action))
          |> refresh_after_membership_change()}
 
@@ -694,7 +712,7 @@ defmodule HuddlzWeb.OrganizeLive do
         {:noreply,
          socket
          |> assign(:pending_member_action, nil)
-         |> assign(:ownership_confirmation, "")
+         |> assign(:member_action_form, member_action_form())
          |> put_flash(:info, member_action_success(action))
          |> refresh_after_membership_change()}
 
@@ -702,7 +720,7 @@ defmodule HuddlzWeb.OrganizeLive do
         {:noreply,
          socket
          |> assign(:pending_member_action, nil)
-         |> assign(:ownership_confirmation, "")
+         |> assign(:member_action_form, member_action_form())
          |> put_flash(:error, "The membership could not be updated. Please try again.")}
     end
   end
@@ -741,10 +759,25 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   defp refresh_members_if_visible(%{assigns: %{live_action: :members}} = socket, group, user) do
-    assign(socket, :members, list_group_members(group, user))
+    assign_members(socket, list_group_members(group, user))
   end
 
   defp refresh_members_if_visible(socket, _group, _user), do: socket
+
+  defp assign_members(socket, members) do
+    by_role = Enum.group_by(members, & &1.role)
+
+    socket
+    |> assign(:member_lookup, Map.new(members, &{&1.id, &1}))
+    |> assign(:member_role_counts, %{
+      owner: length(Map.get(by_role, :owner, [])),
+      organizer: length(Map.get(by_role, :organizer, [])),
+      member: length(Map.get(by_role, :member, []))
+    })
+    |> stream(:owner_members, Map.get(by_role, :owner, []), reset: true)
+    |> stream(:organizer_members, Map.get(by_role, :organizer, []), reset: true)
+    |> stream(:regular_members, Map.get(by_role, :member, []), reset: true)
+  end
 
   defp member_action_allowed?(:promote, %{role: :member} = member, _group, user) do
     Ash.can?({member, :change_role, %{role: :organizer}}, user)
@@ -776,10 +809,17 @@ defmodule HuddlzWeb.OrganizeLive do
   defp parse_member_action(_action), do: :error
 
   defp confirmation_valid?(:transfer, socket) do
-    socket.assigns.ownership_confirmation == to_string(socket.assigns.group.name)
+    socket.assigns.member_action_form[:confirmation].value ==
+      to_string(socket.assigns.group.name)
   end
 
   defp confirmation_valid?(_action, _socket), do: true
+
+  defp member_action_form(params \\ %{}) do
+    params
+    |> Map.put_new("confirmation", "")
+    |> to_form(as: :member_action)
+  end
 
   defp member_action_title(%{type: :promote, member: member}),
     do: "Promote #{member_name(member)}?"

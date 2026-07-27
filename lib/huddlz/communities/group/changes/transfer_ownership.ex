@@ -36,7 +36,7 @@ defmodule Huddlz.Communities.Group.Changes.TransferOwnership do
     end)
     |> Ash.Changeset.after_transaction(fn
       _changeset, {:ok, group} = result ->
-        MembershipEvents.broadcast(group.id)
+        MembershipEvents.broadcast(group.id, [previous_owner_id, new_owner_id])
         result
 
       _changeset, result ->

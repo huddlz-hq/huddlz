@@ -25,7 +25,10 @@ defmodule HuddlzWeb.GroupLive.Show do
     {:ok,
      socket
      |> assign(:leave_dialog_open, false)
-     |> assign(:subscribed_group_id, nil)}
+     |> assign(:subscribed_group_id, nil)
+     |> assign(:members_visible?, false)
+     |> assign(:member_grid_extras, 0)
+     |> stream(:member_grid, [])}
   end
 
   @impl true
@@ -44,7 +47,7 @@ defmodule HuddlzWeb.GroupLive.Show do
          |> assign(:page_title, group.name)
          |> assign(:meta, group_meta(group))
          |> assign(:group, group)
-         |> assign(:members, members)
+         |> assign_member_grid(members)
          |> assign(:member_count, group.member_count)
          |> assign(:is_member, !is_nil(membership))
          |> assign_action_permissions(group, user, membership)
@@ -91,7 +94,7 @@ defmodule HuddlzWeb.GroupLive.Show do
 
         socket
         |> assign(:group, group)
-        |> assign(:members, get_members(group, user, !is_nil(membership)))
+        |> assign_member_grid(get_members(group, user, !is_nil(membership)))
         |> assign(:member_count, group.member_count)
         |> assign(:is_member, !is_nil(membership))
         |> assign_action_permissions(group, user, membership)
@@ -287,23 +290,28 @@ defmodule HuddlzWeb.GroupLive.Show do
 
           <div class="huddl-side-section">
             <h3>Members</h3>
-            <%= if @members do %>
-              <% {visible, extras} = split_members(@members) %>
+            <%= if @members_visible? do %>
               <div class="member-grid compact">
-                <div :for={{member, idx} <- Enum.with_index(visible)} class="member-mini">
+                <div id="member-grid" class="contents" phx-update="stream">
                   <div
-                    class={["member-mark", member_mark_variant(idx)]}
-                    title={member.display_name || "Member"}
+                    :for={{id, entry} <- @streams.member_grid}
+                    id={id}
+                    class="member-mini"
                   >
-                    <%= if url = Avatar.picture_url(member) do %>
-                      <img src={url} alt={member.display_name || ""} />
-                    <% else %>
-                      {member_initials(member)}
-                    <% end %>
+                    <div
+                      class={["member-mark", entry.mark_variant]}
+                      title={entry.member.display_name || "Member"}
+                    >
+                      <%= if url = Avatar.picture_url(entry.member) do %>
+                        <img src={url} alt={entry.member.display_name || ""} />
+                      <% else %>
+                        {member_initials(entry.member)}
+                      <% end %>
+                    </div>
                   </div>
                 </div>
-                <div :if={extras > 0} class="member-mini">
-                  <div class="member-mark m4">+{extras}</div>
+                <div :if={@member_grid_extras > 0} class="member-mini">
+                  <div class="member-mark m4">+{@member_grid_extras}</div>
                 </div>
               </div>
             <% else %>
@@ -525,7 +533,7 @@ defmodule HuddlzWeb.GroupLive.Show do
          |> put_flash(:info, "Successfully joined the group!")
          |> assign(:group, group)
          |> assign(:is_member, true)
-         |> assign(:members, members)
+         |> assign_member_grid(members)
          |> assign(:member_count, group.member_count)
          |> assign_action_permissions(group, user, membership)}
 
@@ -557,7 +565,7 @@ defmodule HuddlzWeb.GroupLive.Show do
          |> assign(:leave_dialog_open, false)
          |> assign(:group, group)
          |> assign(:is_member, false)
-         |> assign(:members, nil)
+         |> assign_member_grid(nil)
          |> assign(:member_count, group.member_count)
          |> assign_action_permissions(group, user, nil)}
 
@@ -681,10 +689,26 @@ defmodule HuddlzWeb.GroupLive.Show do
   defp role_pill(%{is_member: true}), do: "Joined"
   defp role_pill(_assigns), do: nil
 
-  defp split_members(members) do
-    visible = Enum.take(members, @member_grid_visible)
-    extras = max(length(members) - @member_grid_visible, 0)
-    {visible, extras}
+  defp assign_member_grid(socket, nil) do
+    socket
+    |> assign(:members_visible?, false)
+    |> assign(:member_grid_extras, 0)
+    |> stream(:member_grid, [], reset: true)
+  end
+
+  defp assign_member_grid(socket, members) do
+    entries =
+      members
+      |> Enum.take(@member_grid_visible)
+      |> Enum.with_index()
+      |> Enum.map(fn {member, index} ->
+        %{id: member.id, member: member, mark_variant: member_mark_variant(index)}
+      end)
+
+    socket
+    |> assign(:members_visible?, true)
+    |> assign(:member_grid_extras, max(length(members) - @member_grid_visible, 0))
+    |> stream(:member_grid, entries, reset: true)
   end
 
   defp member_mark_variant(idx), do: "m#{Integer.mod(idx, 5) + 1}"

@@ -84,18 +84,7 @@ defmodule Huddlz.Communities.GroupMember do
       # minted only by group creation and Group.:transfer_ownership (via the
       # internal :add_owner action). This mirrors :change_role, which also
       # refuses :owner.
-      validate fn changeset, _context ->
-        case Ash.Changeset.get_argument(changeset, :role) do
-          role when role in ["member", "organizer"] ->
-            :ok
-
-          _ ->
-            {:error,
-             field: :role,
-             message:
-               "must be \"member\" or \"organizer\" (use transfer_ownership to set the owner)"}
-        end
-      end
+      validate Huddlz.Communities.GroupMember.Validations.AssignableRole
 
       change manage_relationship(:group_id, :group, type: :append)
       change manage_relationship(:user_id, :user, type: :append)
@@ -167,13 +156,7 @@ defmodule Huddlz.Communities.GroupMember do
       accept [:role]
       require_atomic? false
 
-      validate fn changeset, _context ->
-        if changeset.data.role == :owner do
-          {:error, field: :role, message: "the group owner cannot be demoted"}
-        else
-          :ok
-        end
-      end
+      validate Huddlz.Communities.GroupMember.Validations.CurrentOwnerCannotChangeRole
 
       validate attribute_in(:role, [:member, :organizer]) do
         message "must be :member or :organizer (use transfer_ownership to change the owner)"

@@ -70,6 +70,57 @@ defmodule HuddlzWeb.OrganizeLiveMembersTest do
     assert Ash.get!(GroupMember, member_membership.id, authorize?: false).role == :organizer
   end
 
+  test "owner can demote an organizer after confirmation", %{
+    conn: conn,
+    owner: owner,
+    group: group,
+    organizer_membership: organizer_membership
+  } do
+    conn
+    |> login(owner)
+    |> visit(~p"/organize/#{group.slug}/members")
+    |> click_button("#demote-member-#{organizer_membership.id}", "Demote")
+    |> assert_has("#member-action-dialog-title", text: "Demote Organizer Oscar?")
+    |> within("#member-action-dialog", fn session ->
+      click_button(session, "Demote to member")
+    end)
+    |> assert_has("#promote-member-#{organizer_membership.id}", text: "Promote")
+  end
+
+  test "owner can remove a regular member after confirmation", %{
+    conn: conn,
+    owner: owner,
+    group: group,
+    member_membership: member_membership
+  } do
+    conn
+    |> login(owner)
+    |> visit(~p"/organize/#{group.slug}/members")
+    |> click_button("#remove-member-#{member_membership.id}", "Remove")
+    |> assert_has("#member-action-dialog-title", text: "Remove Member Mia?")
+    |> within("#member-action-dialog", fn session ->
+      click_button(session, "Remove from group")
+    end)
+    |> refute_has("#remove-member-#{member_membership.id}")
+  end
+
+  test "owner can remove an organizer after confirmation", %{
+    conn: conn,
+    owner: owner,
+    group: group,
+    organizer_membership: organizer_membership
+  } do
+    conn
+    |> login(owner)
+    |> visit(~p"/organize/#{group.slug}/members")
+    |> click_button("#remove-member-#{organizer_membership.id}", "Remove")
+    |> assert_has("#member-action-dialog-title", text: "Remove Organizer Oscar?")
+    |> within("#member-action-dialog", fn session ->
+      click_button(session, "Remove from group")
+    end)
+    |> refute_has("#remove-member-#{organizer_membership.id}")
+  end
+
   test "organizer can remove a regular member but cannot manage privileged roles", %{
     conn: conn,
     organizer: organizer,
@@ -183,6 +234,48 @@ defmodule HuddlzWeb.OrganizeLiveMembersTest do
              Communities.change_member_role(organizer_membership, :member, actor: owner)
 
     assert_redirect(view, ~p"/organize")
+  end
+
+  test "an already-mounted organizer picker shows newly granted access", %{
+    conn: conn,
+    owner: owner,
+    member: member,
+    group: group,
+    member_membership: member_membership
+  } do
+    {:ok, view, _html} =
+      conn
+      |> login(member)
+      |> live(~p"/organize")
+
+    group_link = "a[href='/organize/#{group.slug}']"
+    refute has_element?(view, group_link)
+
+    assert {:ok, _membership} =
+             Communities.change_member_role(member_membership, :organizer, actor: owner)
+
+    assert has_element?(view, group_link)
+  end
+
+  test "an already-mounted organizer picker removes revoked access", %{
+    conn: conn,
+    owner: owner,
+    organizer: organizer,
+    group: group,
+    organizer_membership: organizer_membership
+  } do
+    {:ok, view, _html} =
+      conn
+      |> login(organizer)
+      |> live(~p"/organize")
+
+    group_link = "a[href='/organize/#{group.slug}']"
+    assert has_element?(view, group_link)
+
+    assert {:ok, _membership} =
+             Communities.change_member_role(organizer_membership, :member, actor: owner)
+
+    refute has_element?(view, group_link)
   end
 
   test "an already-mounted group page updates the affected member's access", %{

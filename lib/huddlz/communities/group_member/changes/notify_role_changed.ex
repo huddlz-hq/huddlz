@@ -26,7 +26,7 @@ defmodule Huddlz.Communities.GroupMember.Changes.NotifyRoleChanged do
     end)
     |> Ash.Changeset.after_transaction(fn
       _changeset, {:ok, member} = result when previous_role != member.role ->
-        MembershipEvents.broadcast(member.group_id)
+        MembershipEvents.broadcast(member.group_id, member.user_id)
         result
 
       _changeset, result ->

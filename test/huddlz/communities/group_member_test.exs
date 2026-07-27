@@ -157,6 +157,88 @@ defmodule Huddlz.Communities.GroupMemberTest do
                )
     end
 
+    test "owner can demote an organizer", %{
+      owner: owner,
+      non_member: organizer,
+      group: group
+    } do
+      organizer_membership =
+        generate(
+          group_member(
+            group_id: group.id,
+            user_id: organizer.id,
+            role: :organizer,
+            actor: owner
+          )
+        )
+
+      assert {:ok, updated_membership} =
+               Communities.change_member_role(organizer_membership, :member, actor: owner)
+
+      assert updated_membership.role == :member
+    end
+
+    test "owner can remove an organizer", %{
+      owner: owner,
+      non_member: organizer,
+      group: group
+    } do
+      organizer_membership =
+        generate(
+          group_member(
+            group_id: group.id,
+            user_id: organizer.id,
+            role: :organizer,
+            actor: owner
+          )
+        )
+
+      assert :ok =
+               Communities.remove_member(
+                 organizer_membership,
+                 group.id,
+                 organizer.id,
+                 actor: owner
+               )
+    end
+
+    test "regular members cannot remove another member", %{
+      owner: owner,
+      member: member,
+      non_member: target,
+      group: group
+    } do
+      member_membership =
+        generate(
+          group_member(
+            group_id: group.id,
+            user_id: member.id,
+            role: :member,
+            actor: owner
+          )
+        )
+
+      target_membership =
+        generate(
+          group_member(
+            group_id: group.id,
+            user_id: target.id,
+            role: :member,
+            actor: owner
+          )
+        )
+
+      assert member_membership.role == :member
+
+      assert {:error, %Ash.Error.Forbidden{}} =
+               Communities.remove_member(
+                 target_membership,
+                 group.id,
+                 target.id,
+                 actor: member
+               )
+    end
+
     test "even an admin cannot remove or demote the sole owner", %{
       owner: owner,
       group: group

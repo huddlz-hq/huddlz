@@ -27,7 +27,7 @@ defmodule Huddlz.Communities.GroupMember.Changes.NotifyRemoved do
     end)
     |> Ash.Changeset.after_transaction(fn
       _changeset, {:ok, member} = result ->
-        MembershipEvents.broadcast(member.group_id)
+        MembershipEvents.broadcast(member.group_id, member.user_id)
         result
 
       _changeset, result ->
