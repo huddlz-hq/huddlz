@@ -221,15 +221,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
     test "never renders password values on load", %{conn: conn, user: user} do
       view = conn |> login(user) |> visit("/profile") |> Map.fetch!(:view)
 
-      assert has_element?(
-               view,
-               "#password-form input[name='form[password]'][value='']"
-             )
-
-      assert has_element?(
-               view,
-               "#password-form input[name='form[password_confirmation]'][value='']"
-             )
+      assert_empty_password_inputs(view, 0, [:password, :password_confirmation])
     end
 
     test "keeps cleared invalid password values empty", %{conn: conn, user: user} do
@@ -253,19 +245,13 @@ defmodule HuddlzWeb.ProfileLiveTest do
       })
       |> render_change()
 
-      assert has_element?(
-               view,
-               "#password-form input[name='form[password]'][value='']"
-             )
-
-      assert has_element?(
-               view,
-               "#password-form input[name='form[password_confirmation]'][value='']"
-             )
+      assert_empty_password_inputs(view, 0, [:password, :password_confirmation])
     end
 
     test "clears password values after a successful submission", %{conn: conn, user: user} do
       view = conn |> login(user) |> visit("/profile") |> Map.fetch!(:view)
+
+      assert_empty_password_inputs(view, 0, [:password, :password_confirmation])
 
       view
       |> form("#password-form", %{
@@ -276,12 +262,9 @@ defmodule HuddlzWeb.ProfileLiveTest do
       })
       |> render_submit()
 
-      assert has_element?(view, "#password-form input[name='form[password]'][value='']")
-
-      assert has_element?(
-               view,
-               "#password-form input[name='form[password_confirmation]'][value='']"
-             )
+      refute has_element?(view, "#password-0-password")
+      refute has_element?(view, "#password-0-password-confirmation")
+      assert_empty_password_inputs(view, 1, [:password, :password_confirmation])
     end
 
     test "clears every password field while preserving errors after a failed submission", %{
@@ -294,6 +277,12 @@ defmodule HuddlzWeb.ProfileLiveTest do
 
       view = conn |> login(user) |> visit("/profile") |> Map.fetch!(:view)
 
+      assert_empty_password_inputs(
+        view,
+        0,
+        [:current_password, :password, :password_confirmation]
+      )
+
       view
       |> form("#password-form", %{
         "form" => %{
@@ -304,24 +293,19 @@ defmodule HuddlzWeb.ProfileLiveTest do
       })
       |> render_submit()
 
-      assert has_element?(
-               view,
-               "#password-form input[name='form[current_password]'][value='']"
-             )
+      refute has_element?(view, "#password-0-current-password")
+      refute has_element?(view, "#password-0-password")
+      refute has_element?(view, "#password-0-password-confirmation")
 
-      assert has_element?(
-               view,
-               "#password-form input[name='form[password]'][value='']"
-             )
+      assert_empty_password_inputs(
+        view,
+        1,
+        [:current_password, :password, :password_confirmation]
+      )
 
-      assert has_element?(
-               view,
-               "#password-form input[name='form[password_confirmation]'][value='']"
-             )
-
-      assert has_element?(view, "[id$='current-password-error-0']")
-      assert has_element?(view, "[id$='password-error-0']")
-      assert has_element?(view, "[id$='password-confirmation-error-0']")
+      assert has_element?(view, "#password-1-current-password-error-0")
+      assert has_element?(view, "#password-1-password-error-0")
+      assert has_element?(view, "#password-1-password-confirmation-error-0")
     end
 
     test "updates password validation errors as values are corrected", %{conn: conn, user: user} do
@@ -336,7 +320,20 @@ defmodule HuddlzWeb.ProfileLiveTest do
       })
       |> render_change()
 
-      assert has_element?(view, "#password-form .form-error")
+      assert has_element?(view, "#password-0-password-error-0")
+      assert has_element?(view, "#password-0-password-confirmation-error-0")
+
+      view
+      |> form("#password-form", %{
+        "form" => %{
+          "password" => "NewPassword123!",
+          "password_confirmation" => "different"
+        }
+      })
+      |> render_change()
+
+      refute has_element?(view, "#password-0-password-error-0")
+      assert has_element?(view, "#password-0-password-confirmation-error-0")
 
       view
       |> form("#password-form", %{
@@ -347,7 +344,26 @@ defmodule HuddlzWeb.ProfileLiveTest do
       })
       |> render_change()
 
-      refute has_element?(view, "#password-form .form-error")
+      refute has_element?(view, "#password-0-password-error-0")
+      refute has_element?(view, "#password-0-password-confirmation-error-0")
+    end
+
+    test "does not repopulate password values after reload", %{conn: conn, user: user} do
+      logged_in_conn = login(conn, user)
+      view = logged_in_conn |> visit("/profile") |> Map.fetch!(:view)
+
+      view
+      |> form("#password-form", %{
+        "form" => %{
+          "password" => "short",
+          "password_confirmation" => "different"
+        }
+      })
+      |> render_change()
+
+      reloaded_view = logged_in_conn |> visit("/profile") |> Map.fetch!(:view)
+
+      assert_empty_password_inputs(reloaded_view, 0, [:password, :password_confirmation])
     end
   end
 
@@ -577,5 +593,16 @@ defmodule HuddlzWeb.ProfileLiveTest do
       },
       actor: user
     )
+  end
+
+  defp assert_empty_password_inputs(view, generation, fields) do
+    Enum.each(fields, fn field ->
+      id = field |> to_string() |> String.replace("_", "-")
+
+      assert has_element?(
+               view,
+               "#password-#{generation}-#{id}[name='form[#{field}]'][value=''][phx-update='ignore']"
+             )
+    end)
   end
 end
