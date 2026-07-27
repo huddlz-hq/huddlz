@@ -199,6 +199,20 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> assert_has(".cal-pill.past", text: "Old Workshop")
     end
 
+    test "past hosted huddl link preserves hosting context", %{
+      conn: conn,
+      host: host,
+      public_group: public_group
+    } do
+      past = create_past_huddl(host, public_group, title: "Hosted Retrospective")
+      when_label = Calendar.strftime(past.starts_at, "%A, %B %-d, %Y at %-I:%M %p")
+
+      conn
+      |> login(host)
+      |> visit(calendar_path_for(DateTime.to_date(past.starts_at)))
+      |> assert_has(~s(.cal-pill[aria-label="Hosted Retrospective, Hosted, past, #{when_label}"]))
+    end
+
     test "hosting (creator) appears even without an RSVP", %{
       conn: conn,
       host: host,

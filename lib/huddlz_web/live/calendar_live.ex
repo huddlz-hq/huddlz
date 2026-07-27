@@ -214,14 +214,28 @@ defmodule HuddlzWeb.CalendarLive do
     "#{entry.huddl.title}, #{calendar_status_label(entry, today)}, #{date_and_time}"
   end
 
-  defp calendar_status_label(%{role: role, huddl: %{starts_at: dt}}, today) do
-    cond do
-      Date.compare(DateTime.to_date(dt), today) == :lt -> "Past"
-      role == :hosting -> "Hosting"
-      role == :waitlisted -> "Waitlisted"
-      true -> "Going"
-    end
+  defp attendance_status(%{role: role, huddl: %{starts_at: dt}}, today) do
+    period =
+      case Date.compare(DateTime.to_date(dt), today) do
+        :lt -> :past
+        _ -> :upcoming
+      end
+
+    {role, period}
   end
+
+  defp calendar_status_label(entry, today) do
+    entry
+    |> attendance_status(today)
+    |> calendar_status_label()
+  end
+
+  defp calendar_status_label({:hosting, :past}), do: "Hosted, past"
+  defp calendar_status_label({:attending, :past}), do: "Attended, past"
+  defp calendar_status_label({:waitlisted, :past}), do: "Waitlisted, past"
+  defp calendar_status_label({:hosting, :upcoming}), do: "Hosting"
+  defp calendar_status_label({:attending, :upcoming}), do: "Going"
+  defp calendar_status_label({:waitlisted, :upcoming}), do: "Waitlisted"
 
   defp huddl_path(%{huddl: %{id: id, group: %{slug: slug}}}),
     do: ~p"/groups/#{slug}/huddlz/#{id}"
@@ -242,16 +256,16 @@ defmodule HuddlzWeb.CalendarLive do
     end
   end
 
-  defp agenda_pill_label(%{role: role, huddl: %{starts_at: dt}}, %Date{} = today) do
-    past? = Date.compare(DateTime.to_date(dt), today) == :lt
-
-    cond do
-      past? -> "Past"
-      role == :hosting -> "Hosting"
-      role == :waitlisted -> "Waitlist"
-      true -> "Going"
-    end
+  defp agenda_pill_label(entry, %Date{} = today) do
+    entry
+    |> attendance_status(today)
+    |> agenda_pill_label()
   end
+
+  defp agenda_pill_label({_role, :past}), do: "Past"
+  defp agenda_pill_label({:hosting, :upcoming}), do: "Hosting"
+  defp agenda_pill_label({:attending, :upcoming}), do: "Going"
+  defp agenda_pill_label({:waitlisted, :upcoming}), do: "Waitlist"
 
   defp format_agenda_when(%DateTime{} = dt) do
     Calendar.strftime(dt, "%a %b %-d · %-I:%M %p")
