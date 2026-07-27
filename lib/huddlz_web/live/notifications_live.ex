@@ -118,6 +118,7 @@ defmodule HuddlzWeb.NotificationsLive do
   defp count_invites(user) do
     case Notifications.list_invites_for_user(
            actor: user,
+           query: [filter: [read_at: [is_nil: true]]],
            page: [limit: 1, offset: 0, count: true]
          ) do
       {:ok, %{count: count}} when is_integer(count) -> count
