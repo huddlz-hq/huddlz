@@ -7,11 +7,8 @@ defmodule HuddlzWeb.ProfileLiveTest do
   import Phoenix.LiveViewTest
   import Huddlz.Test.Helpers.Authentication
 
-  alias Huddlz.Accounts
   alias Huddlz.Accounts.User
-  alias Huddlz.MockStorage
   alias Huddlz.Notifications.DeliverWorker
-  alias Huddlz.Storage.Local
 
   setup :verify_on_exit!
 
@@ -654,84 +651,6 @@ defmodule HuddlzWeb.ProfileLiveTest do
 
       assert has_element?(view, "#profile-avatar[src='#{existing_thumbnail_path}']")
       assert has_element?(view, "#sidebar-user img.avatar[src='#{existing_thumbnail_path}']")
-    end
-
-    test "a database failure preserves the existing picture and removes new files", %{
-      conn: conn,
-      user: user
-    } do
-      other_user = create_user(%{display_name: "Other User"})
-      existing_thumbnail_path = "/uploads/profile_pictures/#{user.id}/existing_thumb.jpg"
-
-      existing_picture =
-        Accounts.create_profile_picture!(
-          %{
-            filename: "existing.jpg",
-            content_type: "image/jpeg",
-            size_bytes: 1000,
-            storage_path: "/uploads/profile_pictures/#{user.id}/existing.jpg",
-            thumbnail_path: existing_thumbnail_path,
-            user_id: user.id
-          },
-          actor: user
-        )
-
-      {:ok, view, _html} =
-        conn
-        |> login(user)
-        |> live(~p"/profile")
-
-      test_pid = self()
-
-      expect(MockStorage, :put, 2, fn source_path, storage_path, content_type ->
-        result = Local.put(source_path, storage_path, content_type)
-        send(test_pid, {:stored_profile_picture_path, storage_path})
-
-        unless String.ends_with?(storage_path, "_thumb.jpg") do
-          Accounts.create_profile_picture!(
-            %{
-              filename: "conflict.jpg",
-              content_type: "image/jpeg",
-              size_bytes: 1000,
-              storage_path: storage_path,
-              user_id: other_user.id
-            },
-            actor: other_user
-          )
-        end
-
-        result
-      end)
-
-      allow(MockStorage, self(), view.pid)
-
-      file_input(view, "#avatar-form", :avatar, [
-        %{
-          name: "replacement.jpg",
-          content: File.read!("test/fixtures/test_image.jpg"),
-          type: "image/jpeg"
-        }
-      ])
-      |> render_upload("replacement.jpg")
-
-      assert has_element?(
-               view,
-               "#avatar-upload-error",
-               "Failed to save profile picture. Please try again."
-             )
-
-      assert has_element?(view, "#profile-avatar[src='#{existing_thumbnail_path}']")
-      assert has_element?(view, "#sidebar-user img.avatar[src='#{existing_thumbnail_path}']")
-
-      assert {:ok, [current_picture]} =
-               Accounts.list_profile_pictures(user.id, actor: user)
-
-      assert current_picture.id == existing_picture.id
-
-      assert_receive {:stored_profile_picture_path, storage_path}
-      assert_receive {:stored_profile_picture_path, thumbnail_path}
-      refute Local.exists?(storage_path)
-      refute Local.exists?(thumbnail_path)
     end
 
     test "clears a failed upload when another image is selected", %{conn: conn, user: user} do

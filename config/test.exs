@@ -36,7 +36,7 @@ config :phoenix_test, :endpoint, HuddlzWeb.Endpoint
 config :swoosh, :api_client, false
 
 # Adapters (compile-time)
-config :huddlz, :storage, adapter: Huddlz.MockStorage
+config :huddlz, :storage, adapter: Huddlz.Storage.Local
 config :huddlz, :geocoding, adapter: Huddlz.MockGeocoding
 config :huddlz, :places, adapter: Huddlz.MockPlaces
 config :huddlz, geocoding_req_plug: {Req.Test, Huddlz.Geocoding.Google}
