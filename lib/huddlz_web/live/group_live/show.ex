@@ -9,7 +9,6 @@ defmodule HuddlzWeb.GroupLive.Show do
   alias Huddlz.Communities
   alias Huddlz.Communities.{GroupLocation, GroupMember, Huddl}
   alias Huddlz.Storage.GroupImages
-  alias Huddlz.Storage.HuddlImages
   alias HuddlzWeb.Avatar
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
@@ -388,11 +387,11 @@ defmodule HuddlzWeb.GroupLive.Show do
           gradient={Integer.mod(idx, 6) + 1}
         >
           <:cover>
-            <img
+            <.huddl_cover_image
               :if={huddl.display_image_url}
+              id={"group-huddl-card-cover-#{huddl.id}"}
               class="card-cover-img"
-              src={HuddlImages.url(huddl.display_image_url)}
-              alt={huddl.title}
+              image_url={huddl.display_image_url}
             />
             <.date_stamp month={huddl_month(huddl)} day={huddl_day(huddl)} />
             <.card_tag variant={tag_variant(huddl.event_type)}>
