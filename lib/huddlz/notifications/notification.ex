@@ -65,7 +65,7 @@ defmodule Huddlz.Notifications.Notification do
 
       filter expr(
                user_id == ^actor(:id) and is_nil(read_at) and
-                 trigger in ["waitlist_promoted", "group_member_added"]
+                 trigger in ["waitlist_promoted", "group_member_added", "group_invitation"]
              )
 
       prepare build(sort: [inserted_at: :desc])

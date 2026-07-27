@@ -102,6 +102,42 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
     end
   end
 
+  describe "replace profile picture" do
+    test "creates the replacement and soft-deletes previous pictures" do
+      user = generate(user())
+
+      previous =
+        Accounts.create_profile_picture!(
+          %{
+            filename: "previous.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/profile_pictures/#{user.id}/previous.jpg",
+            user_id: user.id
+          },
+          actor: user
+        )
+
+      assert {:ok, replacement} =
+               Accounts.replace_profile_picture(
+                 %{
+                   filename: "replacement.jpg",
+                   content_type: "image/jpeg",
+                   size_bytes: 2000,
+                   storage_path: "/uploads/profile_pictures/#{user.id}/replacement.jpg",
+                   user_id: user.id
+                 },
+                 actor: user
+               )
+
+      assert {:ok, [current]} = Accounts.list_profile_pictures(user.id, actor: user)
+      assert current.id == replacement.id
+
+      reloaded_previous = Ash.get!(ProfilePicture, previous.id, authorize?: false)
+      assert reloaded_previous.deleted_at
+    end
+  end
+
   describe "list profile pictures" do
     test "lists all profile pictures for a user" do
       user = generate(user())

@@ -26,6 +26,27 @@ import topbar from "../vendor/topbar"
 
 const Hooks = {}
 
+const imageFallbackSelector = "img[data-image-fallback]"
+
+const imageFallbackTarget = (event) => {
+  const image = event.target
+  return image.matches && image.matches(imageFallbackSelector) ? image : null
+}
+
+window.addEventListener("error", (event) => {
+  const image = imageFallbackTarget(event)
+  if (image) image.hidden = true
+}, true)
+
+window.addEventListener("load", (event) => {
+  const image = imageFallbackTarget(event)
+  if (image) image.hidden = false
+}, true)
+
+document.querySelectorAll(imageFallbackSelector).forEach((image) => {
+  image.hidden = image.complete && image.naturalWidth === 0
+})
+
 Hooks.LocationAutocomplete = {
   mounted() {
     this.setupInput()
@@ -68,7 +89,14 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: Hooks
+  hooks: Hooks,
+  dom: {
+    onBeforeElUpdated(fromEl, toEl) {
+      if (fromEl.matches(imageFallbackSelector) && fromEl.hidden) {
+        toEl.hidden = true
+      }
+    }
+  }
 })
 
 // Show progress bar on live navigation and form submits

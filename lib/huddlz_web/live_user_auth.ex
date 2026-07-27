@@ -8,6 +8,7 @@ defmodule HuddlzWeb.LiveUserAuth do
 
   alias AshAuthentication.Phoenix.LiveSession
   alias Huddlz.Accounts.User
+  alias Huddlz.Communities.MembershipEvents
 
   # This is used for nested liveviews to fetch the current user.
   # To use, place the following at the top of that liveview:
@@ -80,7 +81,8 @@ defmodule HuddlzWeb.LiveUserAuth do
      socket
      |> maybe_load_user_details()
      |> assign(:body_class, body_class)
-     |> assign_new(:sidebar_owned_groups, fn -> load_sidebar_owned_groups(socket) end)}
+     |> assign_new(:sidebar_owned_groups, fn -> load_sidebar_owned_groups(socket) end)
+     |> subscribe_to_organizer_access_changes()}
   end
 
   defp maybe_load_user_details(%{assigns: %{current_user: user}} = socket)
@@ -104,8 +106,51 @@ defmodule HuddlzWeb.LiveUserAuth do
   defp maybe_load_user_details(socket), do: socket
 
   defp load_sidebar_owned_groups(%{assigns: %{current_user: user}}) when not is_nil(user) do
-    Huddlz.Communities.get_organizable_groups!(actor: user, query: [sort: [name: :asc]])
+    Huddlz.Communities.get_organizable_groups!(
+      actor: user,
+      load: [:member_count],
+      query: [sort: [name: :asc]]
+    )
   end
 
   defp load_sidebar_owned_groups(_socket), do: []
+
+  defp subscribe_to_organizer_access_changes(%{assigns: %{current_user: %{id: user_id}}} = socket) do
+    if Phoenix.LiveView.connected?(socket) do
+      :ok = MembershipEvents.subscribe_to_user(user_id)
+
+      Phoenix.LiveView.attach_hook(
+        socket,
+        :refresh_organizer_access,
+        :handle_info,
+        &refresh_organizer_access/2
+      )
+    else
+      socket
+    end
+  end
+
+  defp subscribe_to_organizer_access_changes(socket), do: socket
+
+  defp refresh_organizer_access(
+         {:organizer_access_changed, user_id},
+         %{assigns: %{current_user: %{id: user_id}}} = socket
+       ) do
+    groups = load_sidebar_owned_groups(socket)
+
+    socket =
+      socket
+      |> assign(:sidebar_owned_groups, groups)
+      |> maybe_assign_picker_groups(groups)
+
+    {:halt, socket}
+  end
+
+  defp refresh_organizer_access(_message, socket), do: {:cont, socket}
+
+  defp maybe_assign_picker_groups(%{assigns: %{owned_groups: _}} = socket, groups) do
+    assign(socket, :owned_groups, groups)
+  end
+
+  defp maybe_assign_picker_groups(socket, _groups), do: socket
 end

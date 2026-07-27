@@ -45,6 +45,12 @@ defmodule ProfilePictureSteps do
     context
   end
 
+  step "I should see the profile avatar with an image", context do
+    session = context[:session] || context[:conn]
+    assert_has(session, "main img.big-avatar")
+    context
+  end
+
   step "I should see the navbar avatar with image", context do
     # v3 chrome puts the user avatar in the sidebar's .sb-user link
     # rather than the topbar. Image users get an <img> with the thumbnail src.
@@ -122,6 +128,13 @@ defmodule ProfilePictureSteps do
     session = context[:session] || context[:conn]
     # Look for the "Organized by" section which contains the creator avatar
     assert_has(session, "main img[src*='_thumb.jpg']")
+    context
+  end
+
+  step "I should see the creator avatar with initials {string}",
+       %{args: [initials]} = context do
+    session = context[:session] || context[:conn]
+    assert_has(session, ".creator-row > div", text: initials)
     context
   end
 end

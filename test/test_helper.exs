@@ -5,5 +5,6 @@ Ecto.Adapters.SQL.Sandbox.mode(Huddlz.Repo, :manual)
 # without needing explicit Mox expectations. Individual tests can override
 # with Mox.expect/3 or Mox.stub/3.
 Mox.stub_with(Huddlz.MockGeocoding, Huddlz.GeocodingStub)
+Mox.stub_with(Huddlz.MockStorage, Huddlz.Storage.Local)
 
 Cucumber.compile_features!()

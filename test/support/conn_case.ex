@@ -40,6 +40,7 @@ defmodule HuddlzWeb.ConnCase do
 
     Mox.stub_with(Huddlz.MockGeocoding, Huddlz.GeocodingStub)
     Mox.stub_with(Huddlz.MockPlaces, Huddlz.PlacesStub)
+    Mox.stub_with(Huddlz.MockStorage, Huddlz.Storage.Local)
 
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end

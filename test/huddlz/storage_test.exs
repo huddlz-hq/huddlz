@@ -3,6 +3,11 @@ defmodule Huddlz.StorageTest do
 
   alias Huddlz.Storage.Local
 
+  setup do
+    Mox.stub_with(Huddlz.MockStorage, Local)
+    :ok
+  end
+
   describe "Storage.Local" do
     setup do
       # Create a unique test directory

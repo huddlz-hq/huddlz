@@ -170,6 +170,17 @@ defmodule PasswordAuthenticationSteps do
     {:ok, Map.merge(context, %{session: session, conn: session})}
   end
 
+  step "the password fields should be empty", context do
+    session = context[:session] || context[:conn]
+
+    session
+    |> assert_has("#password-form input[name='form[current_password]'][value='']")
+    |> assert_has("#password-form input[name='form[password]'][value='']")
+    |> assert_has("#password-form input[name='form[password_confirmation]'][value='']")
+
+    {:ok, context}
+  end
+
   step "I submit the password sign-in form", context do
     session = context[:session] || context[:conn]
 

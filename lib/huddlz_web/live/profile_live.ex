@@ -6,11 +6,11 @@ defmodule HuddlzWeb.ProfileLive do
 
   require Logger
 
-  alias Huddlz.Accounts.ProfilePicture
   alias Huddlz.Storage.ProfilePictures
   alias HuddlzWeb.Avatar
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.UploadHelpers
+  alias Phoenix.LiveView.JS
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -56,8 +56,10 @@ defmodule HuddlzWeb.ProfileLive do
      |> assign(:form, form)
      |> assign(:email_form, email_form)
      |> assign(:password_form, password_form)
+     |> assign(:password_input_reset_generation, 0)
      |> assign(:current_user, user_with_avatar)
      |> assign(:avatar_error, nil)
+     |> assign(:remove_avatar_dialog_open, false)
      |> assign(:location_error, nil)
      |> UploadHelpers.allow_image_upload(:avatar, &handle_upload_progress/3)}
   end
@@ -90,10 +92,10 @@ defmodule HuddlzWeb.ProfileLive do
             </label>
             <%= if @current_user.current_profile_picture_url do %>
               <button
+                id="open-remove-avatar-dialog"
                 type="button"
                 class="btn-secondary muted-btn"
-                phx-click="remove_avatar"
-                data-confirm="Are you sure you want to remove your profile picture?"
+                phx-click={JS.push_focus() |> JS.push("open_remove_avatar_dialog")}
               >
                 Remove
               </button>
@@ -133,7 +135,7 @@ defmodule HuddlzWeb.ProfileLive do
         </form>
       </div>
 
-      <.form for={@form} phx-submit="save" phx-change="validate">
+      <.form for={@form} id="profile-form" phx-submit="save" phx-change="validate">
         <div class="panel">
           <div class="panel-head">
             <h2>Account information</h2>
@@ -151,6 +153,7 @@ defmodule HuddlzWeb.ProfileLive do
             </div>
             <.input
               field={@form[:display_name]}
+              value={form_value(@form, :display_name)}
               label="Display name"
               placeholder="Enter your display name"
               help="Names aren't unique on huddlz — pick anything you like."
@@ -249,7 +252,10 @@ defmodule HuddlzWeb.ProfileLive do
             <%= if @current_user.hashed_password do %>
               <.input
                 field={@password_form[:current_password]}
+                id={"password-#{@password_input_reset_generation}-current-password"}
+                value=""
                 type="password"
+                phx-update="ignore"
                 label="Current password"
                 placeholder="Enter your current password"
                 autocomplete="current-password"
@@ -257,7 +263,10 @@ defmodule HuddlzWeb.ProfileLive do
             <% end %>
             <.input
               field={@password_form[:password]}
+              id={"password-#{@password_input_reset_generation}-password"}
+              value=""
               type="password"
+              phx-update="ignore"
               label="New password"
               placeholder="Enter your new password"
               autocomplete="new-password"
@@ -265,7 +274,10 @@ defmodule HuddlzWeb.ProfileLive do
             />
             <.input
               field={@password_form[:password_confirmation]}
+              id={"password-#{@password_input_reset_generation}-password-confirmation"}
+              value=""
               type="password"
+              phx-update="ignore"
               label="Confirm new password"
               placeholder="Confirm your new password"
               autocomplete="new-password"
@@ -278,6 +290,47 @@ defmodule HuddlzWeb.ProfileLive do
           </div>
         </div>
       </.form>
+
+      <.modal
+        :if={@remove_avatar_dialog_open}
+        id="remove-avatar-dialog"
+        show
+        on_cancel={JS.push("cancel_remove_avatar")}
+      >
+        <div class="delete-confirm">
+          <div class="delete-confirm-icon" aria-hidden="true">
+            <.icon name="hero-user-circle" class="h-6 w-6" />
+          </div>
+
+          <div class="delete-confirm-copy">
+            <span class="eyebrow eyebrow-magenta">Profile picture</span>
+            <h2 id="remove-avatar-dialog-title">Remove your profile picture?</h2>
+            <p>
+              Your current picture will be removed. Your <strong>initials will appear instead</strong>
+              everywhere your profile is shown.
+            </p>
+          </div>
+        </div>
+
+        <div class="delete-confirm-actions">
+          <.button
+            variant={:muted}
+            id="cancel-remove-avatar"
+            phx-click="cancel_remove_avatar"
+          >
+            Keep picture
+          </.button>
+          <.button
+            variant={:destructive}
+            class="delete-confirm-submit"
+            id="confirm-remove-avatar"
+            phx-click="remove_avatar"
+            phx-disable-with="Removing…"
+          >
+            Remove picture
+          </.button>
+        </div>
+      </.modal>
     </Layouts.app>
     """
   end
@@ -320,6 +373,10 @@ defmodule HuddlzWeb.ProfileLive do
     [avatar_error | entry_errors ++ config_errors]
     |> Enum.reject(&is_nil/1)
     |> Enum.uniq()
+  end
+
+  defp form_value(form, field) do
+    Map.get(form.source.raw_params, to_string(field), form[field].value)
   end
 
   @impl true
@@ -429,13 +486,15 @@ defmodule HuddlzWeb.ProfileLive do
          socket
          |> put_flash(:info, "Password updated successfully")
          |> assign(:current_user, updated_user)
-         |> assign(:password_form, password_form)}
+         |> assign(:password_form, password_form)
+         |> update(:password_input_reset_generation, &(&1 + 1))}
 
       {:error, form} ->
         {:noreply,
          socket
          |> put_flash(:error, "Failed to update password. Please check the errors below.")
-         |> assign(:password_form, form |> to_form())}
+         |> assign(:password_form, form |> to_form())
+         |> update(:password_input_reset_generation, &(&1 + 1))}
     end
   end
 
@@ -445,7 +504,26 @@ defmodule HuddlzWeb.ProfileLive do
   end
 
   @impl true
-  def handle_event("remove_avatar", _params, socket) do
+  def handle_event("open_remove_avatar_dialog", _params, socket) do
+    {:noreply,
+     assign(
+       socket,
+       :remove_avatar_dialog_open,
+       !is_nil(socket.assigns.current_user.current_profile_picture_url)
+     )}
+  end
+
+  @impl true
+  def handle_event("cancel_remove_avatar", _params, socket) do
+    {:noreply, assign(socket, :remove_avatar_dialog_open, false)}
+  end
+
+  @impl true
+  def handle_event(
+        "remove_avatar",
+        _params,
+        %{assigns: %{remove_avatar_dialog_open: true}} = socket
+      ) do
     user = socket.assigns.current_user
 
     # Soft-delete all profile pictures for the user
@@ -458,14 +536,18 @@ defmodule HuddlzWeb.ProfileLive do
         {:noreply,
          socket
          |> put_flash(:info, "Profile picture removed")
+         |> assign(:remove_avatar_dialog_open, false)
          |> assign(:current_user, updated_user)}
 
       {:error, _} ->
         {:noreply,
          socket
+         |> assign(:remove_avatar_dialog_open, false)
          |> put_flash(:error, "Failed to remove profile picture")}
     end
   end
+
+  def handle_event("remove_avatar", _params, socket), do: {:noreply, socket}
 
   @impl true
   def handle_info(
@@ -578,13 +660,17 @@ defmodule HuddlzWeb.ProfileLive do
   end
 
   defp handle_upload_result(socket, user, [{:success, metadata, e}]) do
-    case replace_profile_picture_record(user, %{
-           filename: e.client_name,
-           content_type: e.client_type,
-           size_bytes: metadata.size_bytes,
-           storage_path: metadata.storage_path,
-           thumbnail_path: metadata.thumbnail_path
-         }) do
+    case Huddlz.Accounts.replace_profile_picture(
+           %{
+             filename: e.client_name,
+             content_type: e.client_type,
+             size_bytes: metadata.size_bytes,
+             storage_path: metadata.storage_path,
+             thumbnail_path: metadata.thumbnail_path,
+             user_id: user.id
+           },
+           actor: user
+         ) do
       {:ok, _new_picture} ->
         {:noreply, reload_user_avatar(socket, user, "Profile picture updated successfully")}
 
@@ -602,48 +688,6 @@ defmodule HuddlzWeb.ProfileLive do
 
   defp handle_upload_result(socket, _user, []) do
     {:noreply, socket}
-  end
-
-  defp create_profile_picture_record(user, metadata) do
-    Huddlz.Accounts.create_profile_picture(
-      %{
-        filename: metadata.filename,
-        content_type: metadata.content_type,
-        size_bytes: metadata.size_bytes,
-        storage_path: metadata.storage_path,
-        thumbnail_path: metadata.thumbnail_path,
-        user_id: user.id
-      },
-      actor: user
-    )
-  end
-
-  defp replace_profile_picture_record(user, metadata) do
-    Ash.transact(ProfilePicture, fn ->
-      with {:ok, new_picture} <- create_profile_picture_record(user, metadata),
-           :ok <- soft_delete_previous_profile_pictures(user, new_picture.id) do
-        new_picture
-      end
-    end)
-  end
-
-  defp soft_delete_previous_profile_pictures(user, current_picture_id) do
-    case Huddlz.Accounts.list_profile_pictures(user.id, actor: user) do
-      {:ok, pictures} ->
-        pictures
-        |> Enum.reject(&(&1.id == current_picture_id))
-        |> Enum.reduce_while(:ok, &soft_delete_profile_picture(&1, &2, user))
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  defp soft_delete_profile_picture(picture, :ok, user) do
-    case Huddlz.Accounts.soft_delete_profile_picture(picture, actor: user) do
-      {:ok, _picture} -> {:cont, :ok}
-      {:error, reason} -> {:halt, {:error, reason}}
-    end
   end
 
   defp cleanup_stored_profile_picture(metadata, replacement_error) do
