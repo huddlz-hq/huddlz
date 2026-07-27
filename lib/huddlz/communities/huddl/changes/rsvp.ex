@@ -10,8 +10,6 @@ defmodule Huddlz.Communities.Huddl.Changes.Rsvp do
 
   alias Huddlz.Communities.{Huddl, HuddlAttendee}
 
-  require Ash.Query
-
   def change(changeset, _opts, %{actor: %{id: user_id}}) when not is_nil(user_id) do
     Ash.Changeset.before_action(changeset, &reserve_spot(&1, user_id))
   end
@@ -43,7 +41,7 @@ defmodule Huddlz.Communities.Huddl.Changes.Rsvp do
 
   defp lock_huddl!(huddl_id) do
     Huddl
-    |> Ash.Query.filter(id == ^huddl_id)
+    |> Ash.Query.for_read(:get_for_recurrence, %{id: huddl_id})
     |> Ash.Query.lock("FOR UPDATE")
     |> Ash.Query.load(:at_capacity)
     |> Ash.read_one!(authorize?: false)
@@ -57,7 +55,9 @@ defmodule Huddlz.Communities.Huddl.Changes.Rsvp do
 
   defp create_rsvp!(huddl_id, user_id) do
     HuddlAttendee
-    |> Ash.Changeset.for_create(:rsvp, %{huddl_id: huddl_id, user_id: user_id})
+    |> Ash.Changeset.for_create(:rsvp, %{huddl_id: huddl_id, user_id: user_id},
+      actor: %{id: user_id}
+    )
     |> Ash.create!(authorize?: false)
   end
 end

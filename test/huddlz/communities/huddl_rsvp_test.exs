@@ -307,6 +307,46 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
                    end
     end
 
+    test "member can RSVP to a private huddl", %{
+      owner: owner,
+      member: member,
+      group: group
+    } do
+      # Regression test: Huddl.Changes.Rsvp's lock_huddl!/1 must not rely on
+      # the visibility-filtered primary :read action either, for the same
+      # reason as the capacity-floor check above — a private huddl is
+      # invisible to that filter with no actor, which previously crashed the
+      # RSVP flow instead of recording the attendance.
+      private_huddl =
+        Huddl
+        |> Ash.Changeset.for_create(
+          :create,
+          %{
+            title: "Private RSVP Huddl",
+            description: "A private test huddl",
+            starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
+            ends_at: DateTime.add(DateTime.utc_now(), 2, :day),
+            event_type: :virtual,
+            virtual_link: "https://zoom.us/j/111111",
+            is_private: true,
+            group_id: group.id
+          },
+          actor: owner
+        )
+        |> Ash.create!()
+
+      private_huddl
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
+      |> Ash.update!()
+
+      # rsvp_count/1 reloads with no actor, which the visibility filter would
+      # reject for a private huddl, so check the aggregate with an actor here.
+      assert private_huddl
+             |> Ash.reload!(actor: owner)
+             |> Ash.load!(:rsvp_count, authorize?: false)
+             |> Map.get(:rsvp_count) == 2
+    end
+
     test "organizer cannot reduce capacity below current RSVPs on a private huddl", %{
       owner: owner,
       member: member,
