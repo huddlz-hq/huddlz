@@ -205,10 +205,13 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> login(attendee)
       |> visit(calendar_path_for(Date.add(Date.utc_today(), -2)))
       |> assert_has(
-        "#calendar-entry-#{past.id}.cal-pill.past[data-status=past]",
-        text: "Past ·"
+        "#calendar-entry-#{past.id}.cal-pill.past[data-status=past-attended]",
+        text: "Attended · Past ·"
       )
-      |> assert_has("#calendar-legend [data-status=past]", text: "Past")
+      |> assert_has(
+        "#calendar-legend [data-status=past-attended]",
+        text: "Attended · Past"
+      )
     end
 
     test "past hosted huddl link preserves hosting context", %{
@@ -219,10 +222,25 @@ defmodule HuddlzWeb.CalendarLiveTest do
       past = create_past_huddl(host, public_group, title: "Hosted Retrospective")
       when_label = Calendar.strftime(past.starts_at, "%A, %B %-d, %Y at %-I:%M %p")
 
-      conn
-      |> login(host)
-      |> visit(calendar_path_for(DateTime.to_date(past.starts_at)))
-      |> assert_has(~s(.cal-pill[aria-label="Hosted Retrospective, Hosted, past, #{when_label}"]))
+      session =
+        conn
+        |> login(host)
+        |> visit(calendar_path_for(DateTime.to_date(past.starts_at)))
+        |> assert_has(
+          ~s(#calendar-entry-#{past.id}.cal-pill[data-status=past-hosting][aria-label="Hosted Retrospective, Hosted, past, #{when_label}"]),
+          text: "Hosting · Past ·"
+        )
+        |> assert_has(
+          "#calendar-legend [data-status=past-hosting]",
+          text: "Hosting · Past"
+        )
+
+      session
+      |> visit(calendar_path_for(DateTime.to_date(past.starts_at), view: "agenda"))
+      |> assert_has(
+        "#calendar-entry-#{past.id} .cal-entry-status[data-status=past-hosting]",
+        text: "Hosting · Past"
+      )
     end
 
     test "hosting (creator) appears even without an RSVP", %{
@@ -504,8 +522,8 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> login(attendee)
       |> visit(calendar_path_for(Date.add(Date.utc_today(), -2), view: "agenda"))
       |> assert_has(
-        "#calendar-entry-#{past.id} .cal-entry-status[data-status=past]",
-        text: "Past"
+        "#calendar-entry-#{past.id} .cal-entry-status[data-status=past-attended]",
+        text: "Attended · Past"
       )
     end
 
