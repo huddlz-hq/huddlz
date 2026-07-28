@@ -180,7 +180,7 @@ defmodule Huddlz.Accounts.User do
       description "Update a user's display_name"
       accept [:display_name]
 
-      validate attribute_does_not_equal(:display_name, "")
+      validate present(:display_name), message: "is required"
       validate string_length(:display_name, min: 1, max: 70)
     end
 
@@ -702,6 +702,10 @@ defmodule Huddlz.Accounts.User do
 
     has_many :profile_pictures, Huddlz.Accounts.ProfilePicture do
       destination_attribute :user_id
+    end
+
+    has_many :group_invitations, Huddlz.Communities.GroupInvitation do
+      destination_attribute :invitee_id
     end
 
     has_many :valid_api_keys, Huddlz.Accounts.ApiKey do

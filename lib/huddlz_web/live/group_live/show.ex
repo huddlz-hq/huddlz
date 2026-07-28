@@ -7,9 +7,8 @@ defmodule HuddlzWeb.GroupLive.Show do
   import HuddlzWeb.Live.Helpers.HuddlCardHelpers
 
   alias Huddlz.Communities
-  alias Huddlz.Communities.{GroupLocation, GroupMember, Huddl}
+  alias Huddlz.Communities.{GroupLocation, GroupMember, Huddl, MembershipEvents}
   alias Huddlz.Storage.GroupImages
-  alias Huddlz.Storage.HuddlImages
   alias HuddlzWeb.Avatar
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
@@ -22,7 +21,13 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :leave_dialog_open, false)}
+    {:ok,
+     socket
+     |> assign(:leave_dialog_open, false)
+     |> assign(:subscribed_group_id, nil)
+     |> assign(:members_visible?, false)
+     |> assign(:member_grid_extras, 0)
+     |> stream(:member_grid, [])}
   end
 
   @impl true
@@ -37,10 +42,11 @@ defmodule HuddlzWeb.GroupLive.Show do
 
         {:noreply,
          socket
+         |> subscribe_to_membership_changes(group)
          |> assign(:page_title, group.name)
          |> assign(:meta, group_meta(group))
          |> assign(:group, group)
-         |> assign(:members, members)
+         |> assign_member_grid(members)
          |> assign(:member_count, group.member_count)
          |> assign(:is_member, !is_nil(membership))
          |> assign_action_permissions(group, user, membership)
@@ -56,6 +62,47 @@ defmodule HuddlzWeb.GroupLive.Show do
            resource_name: "Group",
            fallback_path: ~p"/discover?#{[scope: "groups"]}"
          )}
+    end
+  end
+
+  @impl true
+  def handle_info(
+        {:group_membership_changed, group_id},
+        %{assigns: %{group: %{id: group_id}}} = socket
+      ) do
+    {:noreply, refresh_membership_state(socket)}
+  end
+
+  def handle_info({:group_membership_changed, _group_id}, socket), do: {:noreply, socket}
+
+  defp subscribe_to_membership_changes(socket, group) do
+    if connected?(socket) and socket.assigns.subscribed_group_id != group.id do
+      :ok = MembershipEvents.subscribe(group.id)
+      assign(socket, :subscribed_group_id, group.id)
+    else
+      socket
+    end
+  end
+
+  defp refresh_membership_state(socket) do
+    user = socket.assigns.current_user
+
+    case get_group_by_slug(socket.assigns.group.slug, user) do
+      {:ok, group} ->
+        membership = current_user_membership(group, user)
+
+        socket
+        |> assign(:group, group)
+        |> assign_member_grid(get_members(group, user, !is_nil(membership)))
+        |> assign(:member_count, group.member_count)
+        |> assign(:is_member, !is_nil(membership))
+        |> assign_action_permissions(group, user, membership)
+
+      {:error, _reason} ->
+        handle_error(socket, :not_found,
+          resource_name: "Group",
+          fallback_path: ~p"/discover?#{[scope: "groups"]}"
+        )
     end
   end
 
@@ -87,6 +134,7 @@ defmodule HuddlzWeb.GroupLive.Show do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="discover"
     >
@@ -242,23 +290,28 @@ defmodule HuddlzWeb.GroupLive.Show do
 
           <div class="huddl-side-section">
             <h3>Members</h3>
-            <%= if @members do %>
-              <% {visible, extras} = split_members(@members) %>
+            <%= if @members_visible? do %>
               <div class="member-grid compact">
-                <div :for={{member, idx} <- Enum.with_index(visible)} class="member-mini">
+                <div id="member-grid" class="contents" phx-update="stream">
                   <div
-                    class={["member-mark", member_mark_variant(idx)]}
-                    title={member.display_name || "Member"}
+                    :for={{id, entry} <- @streams.member_grid}
+                    id={id}
+                    class="member-mini"
                   >
-                    <%= if url = Avatar.picture_url(member) do %>
-                      <img src={url} alt={member.display_name || ""} />
-                    <% else %>
-                      {member_initials(member)}
-                    <% end %>
+                    <div
+                      class={["member-mark", entry.mark_variant]}
+                      title={entry.member.display_name || "Member"}
+                    >
+                      <%= if url = Avatar.picture_url(entry.member) do %>
+                        <img src={url} alt={entry.member.display_name || ""} />
+                      <% else %>
+                        {member_initials(entry.member)}
+                      <% end %>
+                    </div>
                   </div>
                 </div>
-                <div :if={extras > 0} class="member-mini">
-                  <div class="member-mark m4">+{extras}</div>
+                <div :if={@member_grid_extras > 0} class="member-mini">
+                  <div class="member-mark m4">+{@member_grid_extras}</div>
                 </div>
               </div>
             <% else %>
@@ -388,11 +441,11 @@ defmodule HuddlzWeb.GroupLive.Show do
           gradient={Integer.mod(idx, 6) + 1}
         >
           <:cover>
-            <img
+            <.huddl_cover_image
               :if={huddl.display_image_url}
+              id={"group-huddl-card-cover-#{huddl.id}"}
               class="card-cover-img"
-              src={HuddlImages.url(huddl.display_image_url)}
-              alt={huddl.title}
+              image_url={huddl.display_image_url}
             />
             <.date_stamp month={huddl_month(huddl)} day={huddl_day(huddl)} />
             <.card_tag variant={tag_variant(huddl.event_type)}>
@@ -480,7 +533,7 @@ defmodule HuddlzWeb.GroupLive.Show do
          |> put_flash(:info, "Successfully joined the group!")
          |> assign(:group, group)
          |> assign(:is_member, true)
-         |> assign(:members, members)
+         |> assign_member_grid(members)
          |> assign(:member_count, group.member_count)
          |> assign_action_permissions(group, user, membership)}
 
@@ -512,7 +565,7 @@ defmodule HuddlzWeb.GroupLive.Show do
          |> assign(:leave_dialog_open, false)
          |> assign(:group, group)
          |> assign(:is_member, false)
-         |> assign(:members, nil)
+         |> assign_member_grid(nil)
          |> assign(:member_count, group.member_count)
          |> assign_action_permissions(group, user, nil)}
 
@@ -636,10 +689,26 @@ defmodule HuddlzWeb.GroupLive.Show do
   defp role_pill(%{is_member: true}), do: "Joined"
   defp role_pill(_assigns), do: nil
 
-  defp split_members(members) do
-    visible = Enum.take(members, @member_grid_visible)
-    extras = max(length(members) - @member_grid_visible, 0)
-    {visible, extras}
+  defp assign_member_grid(socket, nil) do
+    socket
+    |> assign(:members_visible?, false)
+    |> assign(:member_grid_extras, 0)
+    |> stream(:member_grid, [], reset: true)
+  end
+
+  defp assign_member_grid(socket, members) do
+    entries =
+      members
+      |> Enum.take(@member_grid_visible)
+      |> Enum.with_index()
+      |> Enum.map(fn {member, index} ->
+        %{id: member.id, member: member, mark_variant: member_mark_variant(index)}
+      end)
+
+    socket
+    |> assign(:members_visible?, true)
+    |> assign(:member_grid_extras, max(length(members) - @member_grid_visible, 0))
+    |> stream(:member_grid, entries, reset: true)
   end
 
   defp member_mark_variant(idx), do: "m#{Integer.mod(idx, 5) + 1}"

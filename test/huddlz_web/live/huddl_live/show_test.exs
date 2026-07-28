@@ -94,6 +94,44 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has(".facts .value", text: "1 person attending")
     end
 
+    test "renders image fallback behavior across huddl surfaces", %{
+      conn: conn,
+      member: member,
+      group: group,
+      huddl: huddl
+    } do
+      HuddlImage
+      |> Ash.Changeset.for_create(:create, %{
+        filename: "cover.jpg",
+        content_type: "image/jpeg",
+        size_bytes: 123,
+        storage_path: "/uploads/huddl_images/#{huddl.id}/cover.jpg",
+        thumbnail_path: "/uploads/huddl_images/#{huddl.id}/cover_thumb.jpg",
+        huddl_id: huddl.id
+      })
+      |> Ash.create!(authorize?: false)
+
+      huddl
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
+      |> Ash.update!()
+
+      image_fallback_attributes = "[data-image-fallback][alt='']"
+
+      session =
+        conn
+        |> login(member)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+        |> assert_has("#huddl-cover-#{huddl.id}#{image_fallback_attributes}")
+
+      session
+      |> visit(~p"/discover")
+      |> assert_has("#huddl-card-cover-#{huddl.id}#{image_fallback_attributes}")
+      |> visit(~p"/groups/#{group.slug}")
+      |> assert_has("#group-huddl-card-cover-#{huddl.id}#{image_fallback_attributes}")
+      |> visit(~p"/my-huddlz")
+      |> assert_has("#my-huddl-card-cover-#{huddl.id}#{image_fallback_attributes}")
+    end
+
     test "renders rich link preview metadata", %{conn: conn, group: group, huddl: huddl} do
       html =
         conn

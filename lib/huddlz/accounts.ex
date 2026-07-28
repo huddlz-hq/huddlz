@@ -26,6 +26,7 @@ defmodule Huddlz.Accounts do
 
     resource Huddlz.Accounts.ProfilePicture do
       define :create_profile_picture, action: :create
+      define :replace_profile_picture, action: :replace
       define :get_current_profile_picture, action: :get_current_for_user, args: [:user_id]
       define :list_profile_pictures, action: :list_for_user, args: [:user_id]
       define :delete_profile_picture, action: :destroy

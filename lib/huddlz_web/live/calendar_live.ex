@@ -11,6 +11,13 @@ defmodule HuddlzWeb.CalendarLive do
   alias HuddlzWeb.Layouts
   require Logger
 
+  defmodule EntryStatus do
+    @moduledoc false
+
+    @enforce_keys [:key, :label, :variant, :rank]
+    defstruct [:key, :label, :variant, :rank]
+  end
+
   @card_loads [:status, :group]
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
@@ -180,8 +187,26 @@ defmodule HuddlzWeb.CalendarLive do
     Enum.map(0..41, &Date.add(grid_start, &1))
   end
 
+  defp weeks_in_grid(grid_start) do
+    grid_start
+    |> days_in_grid()
+    |> Enum.chunk_every(7)
+  end
+
   defp day_in_focus?(%Date{} = day, %Date{year: y, month: m}),
     do: day.year == y and day.month == m
+
+  defp format_full_date(%Date{} = day), do: Calendar.strftime(day, "%A, %B %-d, %Y")
+
+  defp day_accessible_label(day, focus_month, today) do
+    [
+      format_full_date(day),
+      Date.compare(day, today) == :eq && "today",
+      !day_in_focus?(day, focus_month) && "outside the selected month"
+    ]
+    |> Enum.reject(&(&1 in [nil, false]))
+    |> Enum.join(", ")
+  end
 
   defp pill_class_for(entry, day, focus_month, today) do
     base = base_pill_class(entry, today)
@@ -202,6 +227,18 @@ defmodule HuddlzWeb.CalendarLive do
     "#{entry_status(entry, today).label} · #{time} · #{title}"
   end
 
+  defp format_calendar_link_label(entry, today) do
+    date_and_time = Calendar.strftime(entry.huddl.starts_at, "%A, %B %-d, %Y at %-I:%M %p")
+    "#{entry.huddl.title}, #{calendar_status_label(entry, today)}, #{date_and_time}"
+  end
+
+  defp calendar_status_label(%{huddl: %{starts_at: starts_at}} = entry, today) do
+    case Date.compare(DateTime.to_date(starts_at), today) do
+      :lt -> past_relationship_label(entry)
+      _ -> relationship_status(entry).label
+    end
+  end
+
   defp huddl_path(%{huddl: %{id: id, group: %{slug: slug}}}),
     do: ~p"/groups/#{slug}/huddlz/#{id}"
 
@@ -212,10 +249,9 @@ defmodule HuddlzWeb.CalendarLive do
   end
 
   defp entry_status(%{huddl: %{starts_at: starts_at}} = entry, %Date{} = today) do
-    if Date.compare(DateTime.to_date(starts_at), today) == :lt do
-      %{key: "past", label: "Past", variant: :muted, rank: 5}
-    else
-      relationship_status(entry)
+    case Date.compare(DateTime.to_date(starts_at), today) do
+      :lt -> past_status(entry)
+      _ -> relationship_status(entry)
     end
   end
 
@@ -226,19 +262,75 @@ defmodule HuddlzWeb.CalendarLive do
 
     cond do
       hosting? and attending? ->
-        %{key: "hosting-going", label: "Hosting + Going", variant: :magenta, rank: 0}
-
-      hosting? and waitlisted? ->
-        %{key: "hosting-waitlist", label: "Hosting + Waitlist", variant: :magenta, rank: 1}
+        %EntryStatus{
+          key: "hosting-going",
+          label: "Hosting + Going",
+          variant: :magenta,
+          rank: 0
+        }
 
       hosting? ->
-        %{key: "hosting", label: "Hosting", variant: :magenta, rank: 2}
+        %EntryStatus{key: "hosting", label: "Hosting", variant: :magenta, rank: 1}
 
       waitlisted? ->
-        %{key: "waitlist", label: "Waitlist", variant: :warn, rank: 4}
+        %EntryStatus{key: "waitlist", label: "Waitlist", variant: :warn, rank: 3}
 
       attending? ->
-        %{key: "going", label: "Going", variant: :cyan, rank: 3}
+        %EntryStatus{key: "going", label: "Going", variant: :cyan, rank: 2}
+    end
+  end
+
+  defp past_status(%{roles: roles}) do
+    hosting? = MapSet.member?(roles, :hosting)
+    attending? = MapSet.member?(roles, :attending)
+    waitlisted? = MapSet.member?(roles, :waitlisted)
+
+    cond do
+      hosting? and attending? ->
+        %EntryStatus{
+          key: "past-hosting-attended",
+          label: "Hosting + Attended · Past",
+          variant: :muted,
+          rank: 4
+        }
+
+      hosting? ->
+        %EntryStatus{
+          key: "past-hosting",
+          label: "Hosting · Past",
+          variant: :muted,
+          rank: 5
+        }
+
+      waitlisted? ->
+        %EntryStatus{
+          key: "past-waitlisted",
+          label: "Waitlisted · Past",
+          variant: :muted,
+          rank: 7
+        }
+
+      attending? ->
+        %EntryStatus{
+          key: "past-attended",
+          label: "Attended · Past",
+          variant: :muted,
+          rank: 6
+        }
+    end
+  end
+
+  defp past_relationship_label(%{roles: roles}) do
+    hosting? = MapSet.member?(roles, :hosting)
+    attending? = MapSet.member?(roles, :attending)
+    waitlisted? = MapSet.member?(roles, :waitlisted)
+
+    cond do
+      hosting? and attending? -> "Hosted and attended, past"
+      hosting? and waitlisted? -> "Hosted and waitlisted, past"
+      hosting? -> "Hosted, past"
+      waitlisted? -> "Waitlisted, past"
+      attending? -> "Attended, past"
     end
   end
 
@@ -265,6 +357,7 @@ defmodule HuddlzWeb.CalendarLive do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="calendar"
     >
@@ -329,12 +422,14 @@ defmodule HuddlzWeb.CalendarLive do
           <.link
             patch={month_path(@focus_month, :month)}
             class={["scope-tab", @view_mode == :month && "is-active"]}
+            aria-current={if @view_mode == :month, do: "page"}
           >
             Month
           </.link>
           <.link
             patch={month_path(@focus_month, :agenda)}
             class={["scope-tab", @view_mode == :agenda && "is-active"]}
+            aria-current={if @view_mode == :agenda, do: "page"}
           >
             Agenda
           </.link>
@@ -381,35 +476,67 @@ defmodule HuddlzWeb.CalendarLive do
   defp month_grid(assigns) do
     ~H"""
     <div class="panel" style="padding:0">
-      <div class="cal-grid">
-        <div class="cal-day-name">Sun</div>
-        <div class="cal-day-name">Mon</div>
-        <div class="cal-day-name">Tue</div>
-        <div class="cal-day-name">Wed</div>
-        <div class="cal-day-name">Thu</div>
-        <div class="cal-day-name">Fri</div>
-        <div class="cal-day-name">Sat</div>
-      </div>
-      <div class="cal-grid">
-        <%= for day <- days_in_grid(@grid_start) do %>
-          <div class={cell_class(day, @focus_month)}>
-            <span class={day_num_class(day, @today)}>{day.day}</span>
-            <%= for entry <- Map.get(@entries_by_day, day, []) do %>
-              <.link
-                id={"calendar-entry-#{entry.huddl.id}"}
-                navigate={huddl_path(entry)}
-                class={pill_class_for(entry, day, @focus_month, @today)}
-                title={entry.huddl.title}
-                data-status={entry_status(entry, @today).key}
-              >
-                {format_pill_label(entry, @today)}
-              </.link>
-            <% end %>
-          </div>
-        <% end %>
-      </div>
+      <table id="month-calendar" class="cal-calendar">
+        <caption class="sr-only">
+          Month calendar for {format_month(@focus_month)}
+        </caption>
+        <thead>
+          <tr>
+            <th :for={{short, full} <- weekday_names()} scope="col" class="cal-day-name">
+              <abbr title={full}>{short}</abbr>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr :for={week <- weeks_in_grid(@grid_start)}>
+            <td
+              :for={day <- week}
+              class={cell_class(day, @focus_month)}
+              aria-label={day_accessible_label(day, @focus_month, @today)}
+              aria-current={if Date.compare(day, @today) == :eq, do: "date"}
+            >
+              <div class="cal-cell-content">
+                <div class="cal-day-heading" aria-hidden="true">
+                  <time datetime={Date.to_iso8601(day)} class={day_num_class(day, @today)}>
+                    {day.day}
+                  </time>
+                  <span :if={Date.compare(day, @today) == :eq} class="cal-day-context">
+                    Today
+                  </span>
+                  <span :if={!day_in_focus?(day, @focus_month)} class="cal-day-context">
+                    {Calendar.strftime(day, "%b")}
+                  </span>
+                </div>
+                <.link
+                  :for={entry <- Map.get(@entries_by_day, day, [])}
+                  id={"calendar-entry-#{entry.huddl.id}"}
+                  navigate={huddl_path(entry)}
+                  class={pill_class_for(entry, day, @focus_month, @today)}
+                  aria-label={format_calendar_link_label(entry, @today)}
+                  title={entry.huddl.title}
+                  data-status={entry_status(entry, @today).key}
+                >
+                  {format_pill_label(entry, @today)}
+                </.link>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
     """
+  end
+
+  defp weekday_names do
+    [
+      {"Sun", "Sunday"},
+      {"Mon", "Monday"},
+      {"Tue", "Tuesday"},
+      {"Wed", "Wednesday"},
+      {"Thu", "Thursday"},
+      {"Fri", "Friday"},
+      {"Sat", "Saturday"}
+    ]
   end
 
   defp cell_class(day, focus_month) do
