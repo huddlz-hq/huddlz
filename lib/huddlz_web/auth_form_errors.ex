@@ -1,6 +1,6 @@
 defmodule HuddlzWeb.AuthFormErrors do
   @moduledoc """
-  Keeps authentication form errors clear without weakening domain validation.
+  Keeps email form errors clear without weakening domain validation.
   """
 
   @required_messages ["is required", "must be present"]

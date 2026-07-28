@@ -53,7 +53,12 @@ defmodule HuddlzWeb.Components.Input do
         {@rest}
       />
       <p :if={@help} id={help_id(@id)} class="form-help">{@help}</p>
-      <p :for={{msg, index} <- Enum.with_index(@errors)} id={error_id(@id, index)} class="form-error">
+      <p
+        :for={{msg, index} <- Enum.with_index(@errors)}
+        id={error_id(@id, index)}
+        role="alert"
+        class="form-error"
+      >
         {msg}
       </p>
     </div>
@@ -98,7 +103,12 @@ defmodule HuddlzWeb.Components.Input do
         {@rest}
       >{Form.normalize_value("textarea", @value)}</textarea>
       <p :if={@help} id={help_id(@id)} class="form-help">{@help}</p>
-      <p :for={{msg, index} <- Enum.with_index(@errors)} id={error_id(@id, index)} class="form-error">
+      <p
+        :for={{msg, index} <- Enum.with_index(@errors)}
+        id={error_id(@id, index)}
+        role="alert"
+        class="form-error"
+      >
         {msg}
       </p>
     </div>
@@ -147,7 +157,12 @@ defmodule HuddlzWeb.Components.Input do
         {Phoenix.HTML.Form.options_for_select(@options, @value)}
       </select>
       <p :if={@help} id={help_id(@id)} class="form-help">{@help}</p>
-      <p :for={{msg, index} <- Enum.with_index(@errors)} id={error_id(@id, index)} class="form-error">
+      <p
+        :for={{msg, index} <- Enum.with_index(@errors)}
+        id={error_id(@id, index)}
+        role="alert"
+        class="form-error"
+      >
         {msg}
       </p>
     </div>
@@ -179,7 +194,7 @@ defmodule HuddlzWeb.Components.Input do
     assigns = Phoenix.Component.assign(assigns, :errors, errors)
 
     ~H"""
-    <p :for={msg <- @errors} class="form-error">{msg}</p>
+    <p :for={msg <- @errors} role="alert" class="form-error">{msg}</p>
     """
   end
 
