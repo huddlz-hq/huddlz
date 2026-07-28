@@ -50,6 +50,8 @@ RUN mix assets.setup
 
 COPY priv priv
 
+COPY docs/legal docs/legal
+
 COPY lib lib
 
 # Compile the release

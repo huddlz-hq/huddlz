@@ -16,6 +16,10 @@ defmodule Huddlz.Notifications.Target do
   @type resolution :: {:available, String.t()} | :resolved | :none
 
   @spec resolve(Notification.t(), User.t()) :: resolution()
+  def resolve(%Notification{trigger: trigger}, %User{})
+      when trigger in ["group_archived", "huddl_cancelled"],
+      do: :resolved
+
   def resolve(%Notification{source_url: nil}, %User{}), do: :none
 
   def resolve(

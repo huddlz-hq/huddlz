@@ -52,6 +52,8 @@ defmodule Huddlz.Notifications do
             ]}
 
   @unsubscribe_salt "notifications:unsubscribe"
+  @pubsub Huddlz.PubSub
+  @topic_prefix "notifications:unread:"
   # 30 days — long enough for an email to sit in an inbox over a vacation.
   @unsubscribe_max_age 60 * 60 * 24 * 30
 
@@ -112,6 +114,7 @@ defmodule Huddlz.Notifications do
     |> Ash.create()
     |> case do
       {:ok, _notification} ->
+        broadcast_unread_count_changed(user_id)
         :ok
 
       {:error, reason} ->
@@ -178,10 +181,59 @@ defmodule Huddlz.Notifications do
       return_errors?: true
     )
     |> case do
-      %Ash.BulkResult{status: :success} -> :ok
-      %Ash.BulkResult{errors: errors} -> {:error, errors}
+      %Ash.BulkResult{status: :success} ->
+        broadcast_unread_count_changed(user.id)
+        :ok
+
+      %Ash.BulkResult{errors: errors} ->
+        {:error, errors}
     end
   end
+
+  @doc """
+  Mark one notification as read and refresh the actor's live unread count.
+  """
+  @spec mark_read_and_notify(Notification.t(), User.t()) ::
+          {:ok, Notification.t()} | {:error, term()}
+  def mark_read_and_notify(%Notification{} = notification, %User{} = user) do
+    case mark_read(notification, actor: user) do
+      {:ok, _updated} = result ->
+        broadcast_unread_count_changed(user.id)
+        result
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
+  @doc """
+  Return the actor's unread in-app notification count.
+  """
+  @spec unread_count(User.t()) :: {:ok, non_neg_integer()} | {:error, term()}
+  def unread_count(%User{} = user) do
+    Notification
+    |> Ash.Query.for_read(:for_user, %{}, actor: user)
+    |> Ash.Query.filter(is_nil(read_at))
+    |> Ash.count()
+  end
+
+  @doc """
+  Subscribe the current process to unread-count changes for one person.
+  """
+  @spec subscribe_to_unread_count(User.t()) :: :ok | {:error, term()}
+  def subscribe_to_unread_count(%User{id: user_id}) do
+    Phoenix.PubSub.subscribe(@pubsub, unread_count_topic(user_id))
+  end
+
+  defp broadcast_unread_count_changed(user_id) do
+    Phoenix.PubSub.broadcast(
+      @pubsub,
+      unread_count_topic(user_id),
+      {:notification_unread_count_changed, user_id}
+    )
+  end
+
+  defp unread_count_topic(user_id), do: @topic_prefix <> to_string(user_id)
 
   @doc """
   Pure decision function: should this email be sent?

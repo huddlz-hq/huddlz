@@ -17,7 +17,6 @@ defmodule HuddlzWeb.NotificationsLive do
   alias Huddlz.Notifications.Notification
   alias Huddlz.Notifications.Target
   alias HuddlzWeb.Layouts
-  require Ash.Query
   require Logger
 
   @page_size 20
@@ -83,7 +82,7 @@ defmodule HuddlzWeb.NotificationsLive do
     user = socket.assigns.current_user
 
     with {:ok, notification} <- Ash.get(Notification, id, actor: user),
-         {:ok, _} <- Notifications.mark_read(notification, actor: user) do
+         {:ok, _} <- Notifications.mark_read_and_notify(notification, user) do
       {:noreply, refresh(socket, user)}
     else
       {:error, reason} ->
@@ -122,11 +121,7 @@ defmodule HuddlzWeb.NotificationsLive do
   end
 
   defp count_unread_inbox(user) do
-    Notification
-    |> Ash.Query.for_read(:for_user, %{}, actor: user)
-    |> Ash.Query.filter(is_nil(read_at))
-    |> Ash.count()
-    |> case do
+    case Notifications.unread_count(user) do
       {:ok, count} -> count
       _ -> 0
     end
@@ -135,6 +130,7 @@ defmodule HuddlzWeb.NotificationsLive do
   defp count_invites(user) do
     case Notifications.list_invites_for_user(
            actor: user,
+           query: [filter: [read_at: [is_nil: true]]],
            page: [limit: 1, offset: 0, count: true]
          ) do
       {:ok, %{count: count}} when is_integer(count) -> count
@@ -196,6 +192,7 @@ defmodule HuddlzWeb.NotificationsLive do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="notifications"
     >
@@ -261,12 +258,17 @@ defmodule HuddlzWeb.NotificationsLive do
         <div class="row-title">{@notification.title}</div>
         <div :if={meta_line(@notification)} class="meta">{meta_line(@notification)}</div>
       </div>
-      <div class="notification-row-action">
+      <div
+        :if={@target != :none or @unread}
+        class="notif-actions"
+        id={"notification-actions-#{@notification.id}"}
+      >
         <.link
           :if={match?({:available, _}, @target)}
           id={"notification-#{@notification.id}-open"}
           class="pill"
           navigate={~p"/notifications/#{@notification.id}/open"}
+          aria-label={"Open #{@notification.title}"}
         >
           Open
         </.link>
@@ -278,11 +280,14 @@ defmodule HuddlzWeb.NotificationsLive do
           Destination unavailable
         </span>
         <button
-          :if={@unread and not match?({:available, _}, @target)}
+          :if={@unread}
           type="button"
           class="pill"
+          id={"mark-notification-read-#{@notification.id}"}
           phx-click="mark_read"
           phx-value-id={@notification.id}
+          phx-disable-with="Marking…"
+          aria-label={"Mark #{@notification.title} as read"}
         >
           Mark read
         </button>

@@ -2,6 +2,10 @@ defmodule HuddlzWeb.NotificationsLiveTest do
   use HuddlzWeb.ConnCase, async: false
 
   alias Huddlz.Communities
+
+  import Phoenix.LiveViewTest,
+    only: [element: 2, has_element?: 2, has_element?: 3, live: 2, render_click: 1]
+
   alias Huddlz.Notifications
 
   setup do
@@ -281,6 +285,42 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       |> refute_has("#notification-#{notification.id}-open")
     end
 
+    test "canceled huddl lifecycle notifications render a resolved state", %{
+      conn: conn,
+      user: user
+    } do
+      notification =
+        seed_notification(user, :huddl_cancelled, %{
+          "huddl_title" => "Canceled Plans",
+          "group_name" => "Quiet Group",
+          "group_slug" => "quiet-group",
+          "starts_at_iso" => "2026-08-01T16:00:00Z"
+        })
+
+      conn
+      |> login(user)
+      |> visit("/notifications")
+      |> assert_has("#notification-#{notification.id}-resolved")
+      |> refute_has("#notification-#{notification.id}-open")
+    end
+
+    test "archived group lifecycle notifications render a resolved state", %{
+      conn: conn,
+      user: user
+    } do
+      notification =
+        seed_notification(user, :group_archived, %{
+          "group_id" => Ash.UUID.generate(),
+          "group_name" => "Archived Group"
+        })
+
+      conn
+      |> login(user)
+      |> visit("/notifications")
+      |> assert_has("#notification-#{notification.id}-resolved")
+      |> refute_has("#notification-#{notification.id}-open")
+    end
+
     test "losing private-group membership hides the destination without revealing current details",
          %{
            conn: conn,
@@ -383,6 +423,102 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       |> visit("/notifications")
       |> assert_has("#notification-#{notification.id}-open", text: "Open")
       |> refute_has("#notification-#{notification.id}-resolved")
+    end
+
+    test "linked and unlinked unread rows offer a separate Mark read action", %{
+      conn: conn,
+      user: user
+    } do
+      {group, huddl} = create_huddl_target(user)
+      linked = huddl_notification(user, group, huddl)
+
+      unlinked = seed_notification(user, :group_member_removed, %{"group_name" => "Old Club"})
+
+      conn
+      |> login(user)
+      |> visit("/notifications")
+      |> assert_has("#notification-actions-#{linked.id} a", text: "Open")
+      |> assert_has("#mark-notification-read-#{linked.id}", text: "Mark read")
+      |> assert_has("#mark-notification-read-#{unlinked.id}", text: "Mark read")
+      |> refute_has("#notification-actions-#{unlinked.id} a", text: "Open")
+    end
+
+    test "marking a linked notification read updates its row and unread count in place", %{
+      conn: conn,
+      user: user
+    } do
+      {group, huddl} = create_huddl_target(user)
+      notification = huddl_notification(user, group, huddl)
+
+      untouched = seed_notification(user, :password_changed, %{})
+      {:ok, view, _html} = conn |> login(user) |> live("/notifications")
+
+      assert has_element?(view, ".filters .chip", "Inbox · 2 unread")
+
+      view
+      |> element("#mark-notification-read-#{notification.id}")
+      |> render_click()
+
+      assert has_element?(view, ".filters .chip", "Inbox · 1 unread")
+      assert has_element?(view, "#notification-#{notification.id}")
+      assert has_element?(view, "#notification-actions-#{notification.id} a", "Open")
+      refute has_element?(view, "#mark-notification-read-#{notification.id}")
+      assert has_element?(view, "#mark-notification-read-#{untouched.id}", "Mark read")
+    end
+
+    test "a read waitlist promotion remains visible in Invites", %{conn: conn, user: user} do
+      {group, huddl} = create_huddl_target(user)
+
+      notification =
+        seed_notification(user, :waitlist_promoted, %{
+          "huddl_id" => huddl.id,
+          "huddl_title" => huddl.title,
+          "group_slug" => group.slug,
+          "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at)
+        })
+
+      conn = login(conn, user)
+      {:ok, view, _html} = live(conn, "/notifications?filter=invites")
+
+      view
+      |> element("#mark-notification-read-#{notification.id}")
+      |> render_click()
+
+      assert has_element?(view, ".filters .chip", "Inbox · 0 unread")
+
+      assert has_element?(
+               view,
+               "#notification-#{notification.id}",
+               "Waitlist promoted: Boat Drinks"
+             )
+
+      assert has_element?(view, "#notification-actions-#{notification.id} a", "Open")
+      refute has_element?(view, "#mark-notification-read-#{notification.id}")
+
+      {:ok, reloaded_view, _html} = live(conn, "/notifications?filter=invites")
+
+      assert has_element?(
+               reloaded_view,
+               "#notification-#{notification.id}",
+               "Waitlist promoted: Boat Drinks"
+             )
+
+      refute has_element?(reloaded_view, "#mark-notification-read-#{notification.id}")
+    end
+
+    test "Open and Mark read have distinct accessible names", %{conn: conn, user: user} do
+      {group, huddl} = create_huddl_target(user)
+      notification = huddl_notification(user, group, huddl)
+
+      conn
+      |> login(user)
+      |> visit("/notifications")
+      |> assert_has(
+        "#notification-actions-#{notification.id} a[aria-label=\"Open RSVP confirmed: Boat Drinks\"]"
+      )
+      |> assert_has(
+        "#mark-notification-read-#{notification.id}[aria-label=\"Mark RSVP confirmed: Boat Drinks as read\"]"
+      )
     end
   end
 
