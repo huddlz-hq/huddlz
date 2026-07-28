@@ -18,7 +18,7 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeries do
   def perform(%Oban.Job{args: %{"huddl_id" => huddl_id}} = job) do
     huddl =
       Huddl
-      |> Ash.Query.for_read(:get_for_recurrence, %{id: huddl_id})
+      |> Ash.Query.for_read(:get_ignoring_visibility, %{id: huddl_id})
       |> Ash.Query.load(:huddl_template)
       |> Ash.read_one!(authorize?: false)
 
@@ -71,7 +71,7 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeries do
 
   defp get_huddl_for_failure_notification(huddl_id) do
     Huddl
-    |> Ash.Query.for_read(:get_for_recurrence, %{id: huddl_id})
+    |> Ash.Query.for_read(:get_ignoring_visibility, %{id: huddl_id})
     |> Ash.Query.load([:creator, :group])
     |> Ash.read_one(authorize?: false)
   end

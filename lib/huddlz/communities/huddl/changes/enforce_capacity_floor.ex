@@ -23,7 +23,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EnforceCapacityFloor do
   defp check_floor(cs, new_max) do
     huddl =
       Huddl
-      |> Ash.Query.for_read(:get_for_recurrence, %{id: cs.data.id})
+      |> Ash.Query.for_read(:get_ignoring_visibility, %{id: cs.data.id})
       |> Ash.Query.lock("FOR UPDATE")
       |> Ash.Query.load(:rsvp_count)
       |> Ash.read_one!(authorize?: false)

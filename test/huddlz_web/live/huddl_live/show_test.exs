@@ -757,7 +757,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       deleted =
         Huddl
-        |> Ash.Query.for_read(:get_for_recurrence, %{id: huddl.id})
+        |> Ash.Query.for_read(:get_ignoring_visibility, %{id: huddl.id})
         |> Ash.read_one!(authorize?: false)
 
       assert is_nil(deleted)
@@ -766,7 +766,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
   defp huddl_still_exists?(id) do
     Huddl
-    |> Ash.Query.for_read(:get_for_recurrence, %{id: id})
+    |> Ash.Query.for_read(:get_ignoring_visibility, %{id: id})
     |> Ash.read_one!(authorize?: false)
     |> is_struct(Huddl)
   end

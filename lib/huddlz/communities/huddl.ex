@@ -328,12 +328,13 @@ defmodule Huddlz.Communities.Huddl do
              )
     end
 
-    read :get_for_recurrence do
+    read :get_ignoring_visibility do
       description """
-      Internal, visibility-free fetch of a single huddl by id for the
-      recurring-series worker, which runs with no actor. Skips
-      FilterByVisibility so a private series can still be regenerated. Invoke
-      only with `authorize?: false`.
+      Internal, visibility-free fetch of a single huddl by id, for use in
+      actor-less or actor-agnostic contexts (recurring-series worker,
+      capacity-floor enforcement, RSVP locking). Skips FilterByVisibility so a
+      private huddl or series is still found. Invoke only with
+      `authorize?: false`.
       """
 
       get? true

@@ -41,7 +41,7 @@ defmodule Huddlz.Communities.Huddl.Changes.Rsvp do
 
   defp lock_huddl!(huddl_id) do
     Huddl
-    |> Ash.Query.for_read(:get_for_recurrence, %{id: huddl_id})
+    |> Ash.Query.for_read(:get_ignoring_visibility, %{id: huddl_id})
     |> Ash.Query.lock("FOR UPDATE")
     |> Ash.Query.load(:at_capacity)
     |> Ash.read_one!(authorize?: false)

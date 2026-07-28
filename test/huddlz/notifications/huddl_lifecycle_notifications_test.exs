@@ -36,7 +36,7 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
 
   defp huddl_exists?(huddl_id) do
     Huddl
-    |> Ash.Query.for_read(:get_for_recurrence, %{id: huddl_id})
+    |> Ash.Query.for_read(:get_ignoring_visibility, %{id: huddl_id})
     |> Ash.read_one!(authorize?: false)
     |> is_struct()
   end
