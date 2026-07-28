@@ -58,14 +58,15 @@ defmodule Huddlz.Notifications.Notification do
 
     read :invites_for_user do
       description """
-      Unread notifications that need a response from the actor — backs the
-      Invites tab on /me. The "needs response" trigger set is intentionally
-      narrow; revisit when new invitation flows ship.
+      Notifications that need a response from the actor — backs the Invites
+      filter. Read rows remain available as history; callers that need the
+      unread count add a read_at filter. The "needs response" trigger set is
+      intentionally narrow; revisit when new invitation flows ship.
       """
 
       filter expr(
-               user_id == ^actor(:id) and is_nil(read_at) and
-                 trigger in ["waitlist_promoted", "group_member_added"]
+               user_id == ^actor(:id) and
+                 trigger in ["waitlist_promoted", "group_member_added", "group_invitation"]
              )
 
       prepare build(sort: [inserted_at: :desc])

@@ -182,7 +182,7 @@ defmodule Huddlz.Accounts.User do
       description "Update a user's display_name"
       accept [:display_name]
 
-      validate attribute_does_not_equal(:display_name, "")
+      validate present(:display_name), message: "is required"
       validate string_length(:display_name, min: 1, max: 70)
     end
 
@@ -279,6 +279,20 @@ defmodule Huddlz.Accounts.User do
 
       validate {AshAuthentication.Strategy.Password.PasswordValidation,
                 strategy_name: :password, password_argument: :current_password}
+
+      validate fn changeset, _context ->
+        current_email = to_string(changeset.data.email)
+
+        requested_email =
+          Map.get(changeset.params, :email) || Map.get(changeset.params, "email")
+
+        if not is_nil(requested_email) and
+             String.downcase(to_string(requested_email)) == String.downcase(current_email) do
+          {:error, field: :email, message: "Enter a different email address."}
+        else
+          :ok
+        end
+      end
 
       change after_action(fn changeset, user, _ctx ->
                previous_email = to_string(changeset.data.email)
@@ -712,6 +726,10 @@ defmodule Huddlz.Accounts.User do
 
     has_many :profile_pictures, Huddlz.Accounts.ProfilePicture do
       destination_attribute :user_id
+    end
+
+    has_many :group_invitations, Huddlz.Communities.GroupInvitation do
+      destination_attribute :invitee_id
     end
 
     has_many :valid_api_keys, Huddlz.Accounts.ApiKey do

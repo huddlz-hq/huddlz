@@ -64,6 +64,21 @@ defmodule Huddlz.Accounts.User.ChangeEmailTest do
                |> Ash.update()
     end
 
+    test "rejects the user's current email", %{user: user} do
+      assert {:error, %Ash.Error.Invalid{errors: errors}} =
+               Huddlz.Accounts.change_email(
+                 user,
+                 "alice@example.com",
+                 "OldPassword123!",
+                 actor: user
+               )
+
+      assert Enum.any?(errors, fn error ->
+               Map.get(error, :field) == :email and
+                 Exception.message(error) =~ "Enter a different email address."
+             end)
+    end
+
     test "forbids changing another user's email", %{user: user} do
       stranger = generate(user())
 

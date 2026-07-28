@@ -285,6 +285,47 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       assert_has(session, "input[name='form[repeat_until]']")
     end
 
+    test "whole-series editing preserves an every-two-weeks cadence", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      every_other_week_huddl =
+        create_recurring_huddl(owner, group,
+          title: "Every Other Week Series",
+          frequency: :every_two_weeks,
+          repeat_until: Date.utc_today() |> Date.add(60)
+        )
+
+      session = open_whole_series_edit(conn, owner, group, every_other_week_huddl)
+
+      assert_has(
+        session,
+        "select[name='form[frequency]'] option[value='every_two_weeks'][selected]"
+      )
+
+      save_whole_series(session)
+
+      template =
+        every_other_week_huddl
+        |> Ash.reload!(actor: owner)
+        |> Ash.load!(:huddl_template, actor: owner)
+        |> Map.fetch!(:huddl_template)
+
+      assert template.interval == 2
+      assert template.unit == :week
+
+      dates =
+        every_other_week_huddl
+        |> load_series_huddlz(owner)
+        |> Enum.map(&DateTime.to_date(&1.starts_at))
+        |> Enum.sort(Date)
+
+      assert dates
+             |> Enum.chunk_every(2, 1, :discard)
+             |> Enum.all?(fn [first, second] -> Date.diff(second, first) == 14 end)
+    end
+
     test "whole-series editing keeps virtual controls and their value", %{
       conn: conn,
       owner: owner,

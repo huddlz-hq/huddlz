@@ -9,6 +9,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   import HuddlzWeb.Live.Helpers.UploadHelpers
 
   alias Huddlz.Communities
+  alias Huddlz.Communities.HuddlTemplate
   alias Huddlz.Storage.GroupImages
   alias Huddlz.Storage.HuddlImages
   alias HuddlzWeb.Layouts
@@ -120,7 +121,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     if huddl.huddl_template_id do
       Map.merge(params, %{
         "repeat_until" => huddl.huddl_template.repeat_until,
-        "frequency" => to_string(huddl.huddl_template.frequency)
+        "frequency" => huddl.huddl_template |> HuddlTemplate.cadence() |> to_string()
       })
     else
       params
@@ -177,6 +178,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="my-groups"
     >
@@ -358,8 +360,11 @@ defmodule HuddlzWeb.HuddlLive.Edit do
                   <.select
                     field={@form[:frequency]}
                     label="Frequency"
-                    options={[{"Weekly", "weekly"}, {"Monthly", "monthly"}]}
-                    required
+                    options={[
+                      {"Weekly", "weekly"},
+                      {"Every two weeks", "every_two_weeks"},
+                      {"Monthly", "monthly"}
+                    ]}
                   />
                 </div>
                 <div class="form-col-md">
@@ -367,7 +372,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
                     field={@form[:repeat_until]}
                     type="date"
                     label="Repeat until"
-                    required
                   />
                 </div>
               </div>

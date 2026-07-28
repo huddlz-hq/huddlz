@@ -148,6 +148,7 @@ defmodule HuddlzWeb.HuddlLive.New do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="my-groups"
     >
@@ -242,8 +243,11 @@ defmodule HuddlzWeb.HuddlLive.New do
                   <.select
                     field={@form[:frequency]}
                     label="Frequency"
-                    options={[{"Weekly", "weekly"}, {"Monthly", "monthly"}]}
-                    required
+                    options={[
+                      {"Weekly", "weekly"},
+                      {"Every two weeks", "every_two_weeks"},
+                      {"Monthly", "monthly"}
+                    ]}
                   />
                 </div>
                 <div class="form-col-md">
@@ -251,7 +255,6 @@ defmodule HuddlzWeb.HuddlLive.New do
                     field={@form[:repeat_until]}
                     type="date"
                     label="Repeat until"
-                    required
                   />
                 </div>
               </div>

@@ -46,6 +46,17 @@ Feature: Password Authentication
     And I click "Update password"
     Then I should see "Password updated successfully"
 
+  Scenario: Failed password change clears sensitive values
+    Given I am signed in as "failed-password@example.com" with password "OldPassword123!"
+    When I go to my profile page
+    And I fill in the password form with:
+      | current_password      | WrongPassword |
+      | password              | short         |
+      | password_confirmation | different     |
+    And I submit the password form
+    Then I should see "Failed to update password. Please check the errors below."
+    And the password fields should be empty
+
   Scenario: User requests password reset
     Given a user exists with email "forgetful@example.com" and password "ForgottenPassword123!"
     And I am on the sign-in page
