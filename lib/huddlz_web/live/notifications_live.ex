@@ -2,8 +2,10 @@ defmodule HuddlzWeb.NotificationsLive do
   @moduledoc """
   LiveView at `/notifications`. Notification inbox for the signed-in user.
   Two filter chips driven by `?filter=`: default `inbox` is no param;
-  `invites` narrows to notifications that need a response. `?page=N`
-  paginates the active filter.
+  `invites` shows pending group invitations (a live view of
+  `Huddlz.Communities.GroupInvitation`, not a notification log — it reflects
+  accept/decline/revoke/expiry immediately). `?page=N` paginates the active
+  filter.
 
   Replaces the `/me?tab=updates` and `/me?tab=invites` tabs from the legacy
   member dashboard. Redirects from those legacy paths land users on the
@@ -13,6 +15,7 @@ defmodule HuddlzWeb.NotificationsLive do
 
   import HuddlzWeb.Live.Helpers.ParamHelpers
 
+  alias Huddlz.Communities
   alias Huddlz.Notifications
   alias Huddlz.Notifications.Notification
   alias Huddlz.Notifications.Target
@@ -30,7 +33,7 @@ defmodule HuddlzWeb.NotificationsLive do
     {:ok,
      socket
      |> assign(:page_title, "Notifications")
-     |> assign(:notifications, [])
+     |> assign(:items, [])
      |> assign(:notification_targets, %{})
      |> assign(:counts, %{inbox: 0, invites: 0})
      |> assign(:page_info, %{total_pages: 1, current_page: 1, total_count: 0})}
@@ -128,9 +131,8 @@ defmodule HuddlzWeb.NotificationsLive do
   end
 
   defp count_invites(user) do
-    case Notifications.list_invites_for_user(
+    case Communities.list_pending_group_invitations_for_user(
            actor: user,
-           query: [filter: [read_at: [is_nil: true]]],
            page: [limit: 1, offset: 0, count: true]
          ) do
       {:ok, %{count: count}} when is_integer(count) -> count
@@ -146,8 +148,8 @@ defmodule HuddlzWeb.NotificationsLive do
         total_pages = if count && count > 0, do: ceil(count / @page_size), else: 1
 
         socket
-        |> assign(:notifications, results)
-        |> assign(:notification_targets, resolve_targets(results, user))
+        |> assign(:items, results)
+        |> assign(:notification_targets, resolve_targets(filter, results, user))
         |> assign(:page_info, %{
           total_pages: total_pages,
           current_page: page,
@@ -158,7 +160,7 @@ defmodule HuddlzWeb.NotificationsLive do
         Logger.warning("NotificationsLive load failed: #{inspect(reason)}")
 
         socket
-        |> assign(:notifications, [])
+        |> assign(:items, [])
         |> assign(:notification_targets, %{})
         |> assign(:page_info, %{total_pages: 1, current_page: 1, total_count: 0})
     end
@@ -172,7 +174,7 @@ defmodule HuddlzWeb.NotificationsLive do
   end
 
   defp fetch_page(:invites, user, offset) do
-    Notifications.list_invites_for_user(
+    Communities.list_pending_group_invitations_for_user(
       actor: user,
       page: [limit: @page_size, offset: offset, count: true]
     )
@@ -217,16 +219,22 @@ defmodule HuddlzWeb.NotificationsLive do
         </.chip>
       </div>
 
-      <%= if Enum.empty?(@notifications) do %>
+      <%= if Enum.empty?(@items) do %>
         <p class="muted">{empty_message(@filter)}</p>
       <% else %>
         <div class="panel" style="padding:0">
           <div class="row-list" style="padding:6px 20px">
-            <%= for notification <- @notifications do %>
-              <.notification_row
-                notification={notification}
-                target={Map.get(@notification_targets, notification.id, :none)}
-              />
+            <%= if @filter == :invites do %>
+              <%= for invitation <- @items do %>
+                <.invitation_row invitation={invitation} />
+              <% end %>
+            <% else %>
+              <%= for notification <- @items do %>
+                <.notification_row
+                  notification={notification}
+                  target={Map.get(@notification_targets, notification.id, :none)}
+                />
+              <% end %>
             <% end %>
           </div>
         </div>
@@ -296,14 +304,46 @@ defmodule HuddlzWeb.NotificationsLive do
     """
   end
 
-  defp resolve_targets(notifications, user) do
+  defp resolve_targets(:inbox, notifications, user) do
     Map.new(notifications, fn notification ->
       {notification.id, Target.resolve(notification, user)}
     end)
   end
 
+  defp resolve_targets(:invites, _invitations, _user), do: %{}
+
   defp resolved_target_message,
     do: "That notification destination is no longer available or you no longer have access."
+
+  attr :invitation, :map, required: true
+
+  defp invitation_row(assigns) do
+    ~H"""
+    <div id={"invitation-#{@invitation.id}"} class="row notif-row">
+      <div class="notif-mark cyan" aria-hidden="true"></div>
+      <div>
+        <div class="row-title">Invitation to {@invitation.group.name}</div>
+        <div class="meta">{invitation_meta_line(@invitation)}</div>
+      </div>
+      <div class="notif-actions" id={"invitation-actions-#{@invitation.id}"}>
+        <.link
+          class="pill"
+          navigate={~p"/invitations/#{@invitation.id}"}
+          aria-label={"Open invitation to #{@invitation.group.name}"}
+        >
+          Open
+        </.link>
+      </div>
+    </div>
+    """
+  end
+
+  defp invitation_meta_line(%{inviter: inviter, role: role, inserted_at: at}) do
+    "Invited by #{inviter.display_name} · #{invitation_role_label(role)} · #{format_time_ago(at)}"
+  end
+
+  defp invitation_role_label(:organizer), do: "Organizer"
+  defp invitation_role_label(_), do: "Member"
 
   defp filter_blurb(:inbox),
     do: "RSVPs, group activity, and reminders from across huddlz."
@@ -315,8 +355,7 @@ defmodule HuddlzWeb.NotificationsLive do
     do: "No notifications yet. Reminders and group activity will appear here as they happen."
 
   defp empty_message(:invites),
-    do:
-      "No invites right now. When organizers invite you to a huddl or group, they'll show up here."
+    do: "No pending invitations. When organizers invite you to a group, they'll show up here."
 
   defp mark_color(%{read_at: %DateTime{}}), do: "muted"
 

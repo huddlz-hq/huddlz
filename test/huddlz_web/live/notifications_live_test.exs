@@ -6,6 +6,8 @@ defmodule HuddlzWeb.NotificationsLiveTest do
   import Phoenix.LiveViewTest,
     only: [element: 2, has_element?: 2, has_element?: 3, live: 2, render_click: 1]
 
+  alias Ecto.Adapters.SQL
+  alias Huddlz.Communities
   alias Huddlz.Notifications
 
   setup do
@@ -55,6 +57,34 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       "group_slug" => group.slug,
       "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at)
     })
+  end
+
+  defp invite_group_invitation(invitee, opts \\ []) do
+    owner = generate(user(role: :user, confirmed_at: DateTime.utc_now()))
+
+    group =
+      generate(
+        group(
+          name: opts[:group_name] || "Invite Group #{System.unique_integer([:positive])}",
+          owner_id: owner.id,
+          actor: owner,
+          is_public: false
+        )
+      )
+
+    invitation = Communities.invite_to_group!(group.id, invitee.id, :member, actor: owner)
+
+    %{invitation: invitation, owner: owner, group: group}
+  end
+
+  defp expire_in_database(invitation) do
+    expires_at = DateTime.add(DateTime.utc_now(), -1, :day)
+
+    SQL.query!(
+      Huddlz.Repo,
+      "UPDATE group_invitations SET expires_at = $1 WHERE id = $2",
+      [expires_at, Ecto.UUID.dump!(invitation.id)]
+    )
   end
 
   describe "anonymous access" do
@@ -154,37 +184,38 @@ defmodule HuddlzWeb.NotificationsLiveTest do
   end
 
   describe "Invites filter" do
-    test "lists only notifications that need a response", %{conn: conn, user: user} do
-      deliver!(user, :password_changed, %{})
-
-      deliver!(user, :group_member_added, %{
-        "group_slug" => "phoenix-elixir",
-        "group_name" => "Phoenix Elixir"
-      })
+    test "shows a pending group invitation and its count", %{conn: conn, user: user} do
+      %{invitation: invitation, group: group} = invite_group_invitation(user)
 
       conn
       |> login(user)
       |> visit("/notifications?filter=invites")
       |> assert_has(".filters .chip.is-active", text: "Invites")
-      |> assert_has(".notif-row .row-title", text: "Added to Phoenix Elixir")
-      |> refute_has(".notif-row .row-title", text: "Password changed")
+      |> assert_has(".filters .chip", text: "Invites · 1")
+      |> assert_has(".row-title", text: "Invitation to #{group.name}")
+      |> assert_has(~s|a.pill[href="/invitations/#{invitation.id}"]|, text: "Open")
     end
 
-    test "Invites count reflects unread invite-shaped notifications", %{conn: conn, user: user} do
-      deliver!(user, :group_member_added, %{
-        "group_slug" => "g1",
-        "group_name" => "G1"
-      })
+    test "accepting, declining, revoking, or expiring an invitation removes it from the list and count",
+         %{conn: conn, user: user} do
+      %{invitation: accepted} = invite_group_invitation(user)
+      %{invitation: declined} = invite_group_invitation(user)
+      %{invitation: revoked, owner: revoked_owner} = invite_group_invitation(user)
+      %{invitation: expired} = invite_group_invitation(user)
 
-      deliver!(user, :group_member_added, %{
-        "group_slug" => "g2",
-        "group_name" => "G2"
-      })
+      Communities.accept_group_invitation!(accepted, actor: user)
+      Communities.decline_group_invitation!(declined, actor: user)
+      Communities.revoke_group_invitation!(revoked, actor: revoked_owner)
+      expire_in_database(expired)
 
       conn
       |> login(user)
-      |> visit("/notifications")
-      |> assert_has(".filters .chip", text: "Invites · 2")
+      |> visit("/notifications?filter=invites")
+      |> assert_has(".filters .chip", text: "Invites · 0")
+      |> assert_has("p",
+        text:
+          "No pending invitations. When organizers invite you to a group, they'll show up here."
+      )
     end
 
     test "empty state copy", %{conn: conn, user: user} do
@@ -193,8 +224,32 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       |> visit("/notifications?filter=invites")
       |> assert_has("p",
         text:
-          "No invites right now. When organizers invite you to a huddl or group, they'll show up here."
+          "No pending invitations. When organizers invite you to a group, they'll show up here."
       )
+    end
+
+    test "marking the corresponding Inbox notification read has no effect on the Invites tab", %{
+      conn: conn,
+      user: user
+    } do
+      %{invitation: invitation} = invite_group_invitation(user)
+
+      {:ok, %{results: [notification]}} =
+        Notifications.list_for_user(actor: user, page: [limit: 10])
+
+      conn = login(conn, user)
+      {:ok, view, _html} = live(conn, "/notifications")
+
+      view
+      |> element("#mark-notification-read-#{notification.id}")
+      |> render_click()
+
+      assert has_element?(view, ".filters .chip", "Inbox · 0 unread")
+
+      {:ok, invites_view, _html} = live(conn, "/notifications?filter=invites")
+
+      assert has_element?(invites_view, ".filters .chip", "Invites · 1")
+      assert has_element?(invites_view, "#invitation-#{invitation.id}")
     end
   end
 
@@ -464,46 +519,6 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       assert has_element?(view, "#notification-actions-#{notification.id} a", "Open")
       refute has_element?(view, "#mark-notification-read-#{notification.id}")
       assert has_element?(view, "#mark-notification-read-#{untouched.id}", "Mark read")
-    end
-
-    test "a read waitlist promotion remains visible in Invites", %{conn: conn, user: user} do
-      {group, huddl} = create_huddl_target(user)
-
-      notification =
-        seed_notification(user, :waitlist_promoted, %{
-          "huddl_id" => huddl.id,
-          "huddl_title" => huddl.title,
-          "group_slug" => group.slug,
-          "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at)
-        })
-
-      conn = login(conn, user)
-      {:ok, view, _html} = live(conn, "/notifications?filter=invites")
-
-      view
-      |> element("#mark-notification-read-#{notification.id}")
-      |> render_click()
-
-      assert has_element?(view, ".filters .chip", "Inbox · 0 unread")
-
-      assert has_element?(
-               view,
-               "#notification-#{notification.id}",
-               "Waitlist promoted: Boat Drinks"
-             )
-
-      assert has_element?(view, "#notification-actions-#{notification.id} a", "Open")
-      refute has_element?(view, "#mark-notification-read-#{notification.id}")
-
-      {:ok, reloaded_view, _html} = live(conn, "/notifications?filter=invites")
-
-      assert has_element?(
-               reloaded_view,
-               "#notification-#{notification.id}",
-               "Waitlist promoted: Boat Drinks"
-             )
-
-      refute has_element?(reloaded_view, "#mark-notification-read-#{notification.id}")
     end
 
     test "Open and Mark read have distinct accessible names", %{conn: conn, user: user} do
