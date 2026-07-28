@@ -36,6 +36,42 @@ Feature: Password Authentication
     Then I should see "Incorrect email or password"
     And I should not be signed in
 
+  Scenario: User corrects a malformed sign-in email
+    Given I am on the sign-in page
+    When I fill in the password sign-in form with:
+      | email    | not-an-email |
+      | password | Password123! |
+    And I submit the password sign-in form
+    Then I should see "Enter a valid email address."
+
+  Scenario: User corrects a blank sign-in email
+    Given I am on the sign-in page
+    When I fill in the password sign-in form with:
+      | password | Password123! |
+    And I submit the password sign-in form
+    Then I should see "Email is required."
+
+  Scenario: User corrects a malformed registration email
+    Given I am on the registration page
+    When I fill in the password registration form with:
+      | email                 | not-an-email     |
+      | display_name          | New User         |
+      | password              | SuperSecret123!  |
+      | password_confirmation | SuperSecret123!  |
+    And I check "I agree to the Terms of Service and Code of Conduct and acknowledge the Privacy Policy."
+    And I click "Create account"
+    Then I should see "Enter a valid email address."
+
+  Scenario: User corrects a blank registration email
+    Given I am on the registration page
+    When I fill in the password registration form with:
+      | display_name          | New User         |
+      | password              | SuperSecret123!  |
+      | password_confirmation | SuperSecret123!  |
+    And I check "I agree to the Terms of Service and Code of Conduct and acknowledge the Privacy Policy."
+    And I click "Create account"
+    Then I should see "Email is required."
+
   Scenario: User changes existing password
     Given I am signed in as "pwduser@example.com" with password "OldPassword123!"
     When I go to my profile page
@@ -62,6 +98,23 @@ Feature: Password Authentication
     And I am on the sign-in page
     When I visit "/reset"
     And I fill in "Email" with "forgetful@example.com" within "#reset-password-form"
+    And I click "Send reset instructions"
+    Then I should see "If an account exists for that email, you will receive password reset instructions shortly."
+
+  Scenario: User corrects a malformed password-reset email
+    When I visit "/reset"
+    And I fill in "Email" with "not-an-email" within "#reset-password-form"
+    And I click "Send reset instructions"
+    Then I should see "Enter a valid email address."
+
+  Scenario: User corrects a blank password-reset email
+    When I visit "/reset"
+    And I click "Send reset instructions"
+    Then I should see "Email is required."
+
+  Scenario: Password reset does not reveal a nonexistent account
+    When I visit "/reset"
+    And I fill in "Email" with "missing@example.com" within "#reset-password-form"
     And I click "Send reset instructions"
     Then I should see "If an account exists for that email, you will receive password reset instructions shortly."
 

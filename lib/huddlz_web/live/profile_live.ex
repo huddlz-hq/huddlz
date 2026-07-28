@@ -7,6 +7,7 @@ defmodule HuddlzWeb.ProfileLive do
   require Logger
 
   alias Huddlz.Storage.ProfilePictures
+  alias HuddlzWeb.AuthFormErrors
   alias HuddlzWeb.Avatar
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.UploadHelpers
@@ -623,20 +624,15 @@ defmodule HuddlzWeb.ProfileLive do
     |> to_form()
   end
 
-  defp email_change_error(_form, _path, {:email, message, _vars} = error) do
-    cond do
-      String.starts_with?(message, "must match the pattern") ->
-        {:email, "Enter a valid email address.", []}
-
-      message == "has already been taken" ->
+  defp email_change_error(form, path, error) do
+    case AuthFormErrors.post_process(form, path, error) do
+      {:email, "has already been taken", _vars} ->
         {:email, "That email is already in use.", []}
 
-      true ->
-        error
+      processed_error ->
+        processed_error
     end
   end
-
-  defp email_change_error(_form, _path, error), do: error
 
   defp handle_upload_progress(:avatar, entry, socket) do
     if entry.done? do

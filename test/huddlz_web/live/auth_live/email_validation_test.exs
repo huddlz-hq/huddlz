@@ -1,6 +1,7 @@
 defmodule HuddlzWeb.AuthLive.EmailValidationTest do
   use HuddlzWeb.ConnCase, async: true
 
+  import Huddlz.Generator
   import Phoenix.LiveViewTest
 
   describe "sign in email validation" do
@@ -94,6 +95,27 @@ defmodule HuddlzWeb.AuthLive.EmailValidationTest do
       assert_email_error(view, "#form_email", "Email is required.")
       refute has_element?(view, ".auth-state", "Check your email")
     end
+
+    test "shows the neutral success state for an existing account", %{conn: conn} do
+      _user = generate(user_with_password(email: "existing@example.com"))
+      {:ok, view, _html} = live(conn, ~p"/reset")
+
+      view
+      |> form("#reset-password-form", form: %{email: "existing@example.com"})
+      |> render_submit()
+
+      assert_neutral_reset_success(view)
+    end
+
+    test "shows the neutral success state for a nonexistent account", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/reset")
+
+      view
+      |> form("#reset-password-form", form: %{email: "missing@example.com"})
+      |> render_submit()
+
+      assert_neutral_reset_success(view)
+    end
   end
 
   defp assert_email_error(view, input_selector, message) do
@@ -102,7 +124,17 @@ defmodule HuddlzWeb.AuthLive.EmailValidationTest do
              "#{input_selector}[aria-invalid='true'][aria-describedby$='-error-0']"
            )
 
-    assert has_element?(view, "#{input_selector}-error-0", message)
+    assert has_element?(view, "#{input_selector}-error-0[role='alert']", message)
+  end
+
+  defp assert_neutral_reset_success(view) do
+    assert has_element?(
+             view,
+             ".auth-state",
+             "If an account exists for that email, you will receive password reset instructions shortly."
+           )
+
+    refute has_element?(view, "#reset-password-form")
   end
 
   defp valid_registration_params(overrides) do
