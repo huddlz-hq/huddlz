@@ -1,17 +1,31 @@
 defmodule IndividualNotificationReadSteps do
   use Cucumber.StepDefinition
+
+  import Huddlz.Generator
   import PhoenixTest
 
   alias Huddlz.Notifications
 
   step "I have an unread waitlist promotion notification for {string}",
-       %{args: [huddl_title]} = context do
+       %{args: [huddl_title], current_user: user} = context do
+    group = generate(group(owner_id: user.id, actor: user, is_public: true))
+
+    huddl =
+      generate(
+        huddl(
+          creator_id: user.id,
+          actor: user,
+          group_id: group.id,
+          title: huddl_title
+        )
+      )
+
     {:ok, _job} =
-      Notifications.deliver(context.current_user, :waitlist_promoted, %{
-        "group_slug" => "elixir-picnic",
-        "huddl_id" => "00000000-0000-0000-0000-000000000000",
+      Notifications.deliver(user, :waitlist_promoted, %{
+        "group_slug" => group.slug,
+        "huddl_id" => huddl.id,
         "huddl_title" => huddl_title,
-        "starts_at_iso" => "2026-08-01T16:00:00Z"
+        "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at)
       })
 
     context

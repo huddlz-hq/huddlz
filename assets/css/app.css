@@ -2168,6 +2168,15 @@ body .notif-actions button.pill:focus-visible {
   outline-offset: 2px;
 }
 
+body .notif-resolved {
+  max-width: 12rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: right;
+}
+
 body .notif-mark {
   width: 8px;
   height: 8px;
@@ -2179,6 +2188,17 @@ body .notif-mark {
 body .notif-mark.cyan { background: var(--cyan); box-shadow: 0 0 8px rgba(24, 203, 212, 0.5); }
 body .notif-mark.warn { background: var(--warn); box-shadow: 0 0 8px rgba(246, 193, 119, 0.5); }
 body .notif-mark.muted { background: var(--line-strong); box-shadow: none; }
+
+@media (max-width: 760px) {
+  body .row.notif-row {
+    grid-template-columns: 14px minmax(0, 1fr);
+  }
+
+  body .notif-resolved {
+    max-width: none;
+    text-align: left;
+  }
+}
 
 /* Tiny avatar pip used in member list */
 body .member-mark {
