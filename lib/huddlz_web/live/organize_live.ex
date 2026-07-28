@@ -226,6 +226,7 @@ defmodule HuddlzWeb.OrganizeLive do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active_group_slug={@group && @group.slug}
       active_organize_section={active_section(@live_action)}

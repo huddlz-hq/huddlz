@@ -9,8 +9,10 @@ Feature: Individual notification read state
     And I have an unread waitlist promotion notification for "Elixir Picnic"
     When I visit "/notifications?filter=invites"
     Then I should see "Inbox · 1 unread"
+    And persistent navigation should show one unread notification
     When I click the "Mark read" button
     Then I should see "Inbox · 0 unread"
+    And persistent navigation should show no unread notifications
     And I should see "Waitlist promoted: Elixir Picnic"
     And I should see "Open"
     And the "Mark read" button should not be visible

@@ -61,6 +61,25 @@ defmodule HuddlzWeb.GroupInvitationLiveTest do
     assert Enum.any?(Communities.my_groups!(:all, actor: invitee), &(&1.id == group.id))
   end
 
+  test "invitation page keeps the unread notification badge", context do
+    %{conn: conn, owner: owner, invitee: invitee, group: group} = context
+
+    invitation =
+      Communities.invite_to_group!(group.id, invitee.id, :member, actor: owner)
+
+    {:ok, view, _html} =
+      conn
+      |> login(invitee)
+      |> live(~p"/invitations/#{invitation.id}")
+
+    assert has_element?(
+             view,
+             ~s|#notification-nav-link[aria-label="Notifications, 1 unread"]|
+           )
+
+    assert has_element?(view, "#notification-nav-badge", "1")
+  end
+
   test "organizers only see the member role option", context do
     %{conn: conn, owner: owner, invitee: invitee, group: group} = context
     organizer = generate(user())

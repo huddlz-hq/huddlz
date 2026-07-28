@@ -23,6 +23,7 @@ defmodule HuddlzWeb.Layouts do
   """
   attr :flash, :map, required: true
   attr :current_user, :map, default: nil
+  attr :unread_notification_count, :integer, default: 0
 
   attr :active, :string,
     default: nil,
@@ -180,11 +181,20 @@ defmodule HuddlzWeb.Layouts do
         <div class="content-actions">
           <%= if @signed_in do %>
             <a
+              id="notification-nav-link"
               class={["icon-pill", @active == "notifications" && "active"]}
               href="/notifications"
-              aria-label="Notifications"
+              aria-label={notification_label(@unread_notification_count)}
             >
               <.nav_icon name="bell" />
+              <span
+                :if={@unread_notification_count > 0}
+                id="notification-nav-badge"
+                class="notification-badge"
+                aria-hidden="true"
+              >
+                {compact_notification_count(@unread_notification_count)}
+              </span>
             </a>
           <% else %>
             <a class="btn-secondary" href="/sign-in">Sign in</a>
@@ -200,6 +210,14 @@ defmodule HuddlzWeb.Layouts do
     </main>
     """
   end
+
+  defp notification_label(0), do: "Notifications"
+
+  defp notification_label(count),
+    do: "Notifications, #{count} unread"
+
+  defp compact_notification_count(count) when count > 99, do: "99+"
+  defp compact_notification_count(count), do: count
 
   @doc """
   V3 auth shell — chromeless wrapper used by `/sign-in`, `/register`, `/reset`,

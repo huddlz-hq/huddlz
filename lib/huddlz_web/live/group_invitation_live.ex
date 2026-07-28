@@ -132,6 +132,7 @@ defmodule HuddlzWeb.GroupInvitationLive do
       flash={@flash}
       current_user={@current_user}
       sidebar_owned_groups={@sidebar_owned_groups}
+      unread_notification_count={@unread_notification_count}
       active="notifications"
     >
       <div class="page-head">

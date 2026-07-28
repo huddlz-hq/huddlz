@@ -524,6 +524,7 @@ defmodule HuddlzWeb.HuddlLive do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="discover"
       query={@search_query || ""}

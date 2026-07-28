@@ -16,7 +16,6 @@ defmodule HuddlzWeb.NotificationsLive do
   alias Huddlz.Notifications
   alias Huddlz.Notifications.Notification
   alias HuddlzWeb.Layouts
-  require Ash.Query
   require Logger
 
   @page_size 20
@@ -66,7 +65,7 @@ defmodule HuddlzWeb.NotificationsLive do
     user = socket.assigns.current_user
 
     with {:ok, notification} <- Ash.get(Notification, id, actor: user),
-         {:ok, _} <- Notifications.mark_read(notification, actor: user) do
+         {:ok, _} <- Notifications.mark_read_and_notify(notification, user) do
       {:noreply, refresh(socket, user)}
     else
       {:error, reason} ->
@@ -105,11 +104,7 @@ defmodule HuddlzWeb.NotificationsLive do
   end
 
   defp count_unread_inbox(user) do
-    Notification
-    |> Ash.Query.for_read(:for_user, %{}, actor: user)
-    |> Ash.Query.filter(is_nil(read_at))
-    |> Ash.count()
-    |> case do
+    case Notifications.unread_count(user) do
       {:ok, count} -> count
       _ -> 0
     end
@@ -178,6 +173,7 @@ defmodule HuddlzWeb.NotificationsLive do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="notifications"
     >

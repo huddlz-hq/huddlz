@@ -705,6 +705,26 @@ body .icon-pill .dot {
   box-shadow: 0 0 8px var(--magenta);
 }
 
+body .icon-pill .notification-badge {
+  position: absolute;
+  top: -7px;
+  right: -9px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border: 2px solid var(--bg);
+  border-radius: 999px;
+  background: var(--magenta);
+  color: white;
+  display: grid;
+  place-items: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--magenta) 55%, transparent);
+}
+
 body .btn-primary {
   height: 36px;
   padding: 0 16px;
