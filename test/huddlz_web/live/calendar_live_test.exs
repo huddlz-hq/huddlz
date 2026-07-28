@@ -155,14 +155,21 @@ defmodule HuddlzWeb.CalendarLiveTest do
     } do
       huddl = create_huddl(host, public_group, title: "Going Show", date: tomorrow())
       rsvp!(huddl, attendee, :rsvp)
+      time = Calendar.strftime(huddl.starts_at, "%-I:%M %p")
+      tooltip_id = "calendar-entry-tooltip-#{huddl.id}"
 
       conn
       |> login(attendee)
       |> visit(calendar_path_for(tomorrow()))
       |> assert_has(
-        "#calendar-entry-#{huddl.id}.cal-pill.going[data-status=going]",
-        text: "Going ·"
+        "#calendar-entry-#{huddl.id}.cal-pill.going[data-status=going][aria-describedby=#{tooltip_id}]"
       )
+      |> assert_has("#calendar-entry-#{huddl.id} .cal-pill-time", text: time)
+      |> assert_has("#calendar-entry-#{huddl.id} .cal-pill-title", text: "Going Show")
+      |> assert_has("#calendar-entry-#{huddl.id} .cal-pill-status", text: "Going")
+      |> assert_has("##{tooltip_id}[role=tooltip]", text: "#{time} · Going Show · Going")
+      |> assert_has("#calendar-touch-entry-#{huddl.id}", text: "Going Show")
+      |> assert_has("#calendar-touch-entry-#{huddl.id}", text: "Going")
       |> assert_has("#calendar-legend [data-status=going]", text: "Going")
     end
 
@@ -187,7 +194,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> visit(calendar_path_for(tomorrow()))
       |> assert_has(
         "#calendar-entry-#{huddl.id}.cal-pill.waitlisted[data-status=waitlist]",
-        text: "Waitlist ·"
+        text: "Waitlist"
       )
       |> assert_has("#calendar-legend [data-status=waitlist]", text: "Waitlist")
     end
@@ -206,7 +213,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> visit(calendar_path_for(Date.add(Date.utc_today(), -2)))
       |> assert_has(
         "#calendar-entry-#{past.id}.cal-pill.past[data-status=past-attended]",
-        text: "Attended · Past ·"
+        text: "Attended · Past"
       )
       |> assert_has(
         "#calendar-legend [data-status=past-attended]",
@@ -228,7 +235,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
         |> visit(calendar_path_for(DateTime.to_date(past.starts_at)))
         |> assert_has(
           ~s(#calendar-entry-#{past.id}.cal-pill[data-status=past-hosting][aria-label="Hosted Retrospective, Hosted, past, #{when_label}"]),
-          text: "Hosting · Past ·"
+          text: "Hosting · Past"
         )
         |> assert_has(
           "#calendar-legend [data-status=past-hosting]",
@@ -256,7 +263,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> visit(calendar_path_for(tomorrow()))
       |> assert_has(
         "#calendar-entry-#{huddl.id}.cal-pill.hosting[data-status=hosting]",
-        text: "Hosting ·"
+        text: "Hosting"
       )
       |> assert_has("#calendar-legend [data-status=hosting]", text: "Hosting")
     end
@@ -345,6 +352,10 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> login(attendee)
       |> visit(calendar_path_for(focus_date))
       |> assert_has("#calendar-entry-#{outside.id}.out-of-month-pill[data-status=waitlist]")
+      |> assert_has(
+        "#calendar-touch-entry-#{outside.id}[data-status=waitlist]",
+        text: "Outside Month"
+      )
       |> assert_has("#calendar-legend [data-status=going]", text: "Going")
       |> assert_has("#calendar-legend [data-status=waitlist]", text: "Waitlist")
     end

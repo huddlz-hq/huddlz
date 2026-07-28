@@ -222,9 +222,11 @@ defmodule HuddlzWeb.CalendarLive do
     end
   end
 
-  defp format_pill_label(%{huddl: %{starts_at: dt, title: title}} = entry, today) do
-    time = Calendar.strftime(dt, "%-I:%M %p")
-    "#{entry_status(entry, today).label} · #{time} · #{title}"
+  defp format_pill_time(%{huddl: %{starts_at: starts_at}}),
+    do: Calendar.strftime(starts_at, "%-I:%M %p")
+
+  defp format_pill_tooltip(%{huddl: %{title: title}} = entry, today) do
+    "#{format_pill_time(entry)} · #{title} · #{entry_status(entry, today).label}"
   end
 
   defp format_calendar_link_label(entry, today) do
@@ -438,6 +440,7 @@ defmodule HuddlzWeb.CalendarLive do
 
       <%= if @view_mode == :month do %>
         <.month_grid
+          entries={@entries}
           focus_month={@focus_month}
           grid_start={@grid_start}
           entries_by_day={@entries_by_day}
@@ -470,59 +473,108 @@ defmodule HuddlzWeb.CalendarLive do
 
   attr :focus_month, Date, required: true
   attr :grid_start, Date, required: true
+  attr :entries, :list, required: true
   attr :entries_by_day, :map, required: true
   attr :today, Date, required: true
 
   defp month_grid(assigns) do
     ~H"""
-    <div class="panel" style="padding:0">
-      <table id="month-calendar" class="cal-calendar">
-        <caption class="sr-only">
-          Month calendar for {format_month(@focus_month)}
-        </caption>
-        <thead>
-          <tr>
-            <th :for={{short, full} <- weekday_names()} scope="col" class="cal-day-name">
-              <abbr title={full}>{short}</abbr>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr :for={week <- weeks_in_grid(@grid_start)}>
-            <td
-              :for={day <- week}
-              class={cell_class(day, @focus_month)}
-              aria-label={day_accessible_label(day, @focus_month, @today)}
-              aria-current={if Date.compare(day, @today) == :eq, do: "date"}
-            >
-              <div class="cal-cell-content">
-                <div class="cal-day-heading" aria-hidden="true">
-                  <time datetime={Date.to_iso8601(day)} class={day_num_class(day, @today)}>
-                    {day.day}
-                  </time>
-                  <span :if={Date.compare(day, @today) == :eq} class="cal-day-context">
-                    Today
-                  </span>
-                  <span :if={!day_in_focus?(day, @focus_month)} class="cal-day-context">
-                    {Calendar.strftime(day, "%b")}
-                  </span>
+    <div>
+      <div class="panel cal-calendar-panel" style="padding:0">
+        <table id="month-calendar" class="cal-calendar">
+          <caption class="sr-only">
+            Month calendar for {format_month(@focus_month)}
+          </caption>
+          <thead>
+            <tr>
+              <th :for={{short, full} <- weekday_names()} scope="col" class="cal-day-name">
+                <abbr title={full}>{short}</abbr>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr :for={week <- weeks_in_grid(@grid_start)}>
+              <td
+                :for={day <- week}
+                class={cell_class(day, @focus_month)}
+                aria-label={day_accessible_label(day, @focus_month, @today)}
+                aria-current={if Date.compare(day, @today) == :eq, do: "date"}
+              >
+                <div class="cal-cell-content">
+                  <div class="cal-day-heading" aria-hidden="true">
+                    <time datetime={Date.to_iso8601(day)} class={day_num_class(day, @today)}>
+                      {day.day}
+                    </time>
+                    <span :if={Date.compare(day, @today) == :eq} class="cal-day-context">
+                      Today
+                    </span>
+                    <span :if={!day_in_focus?(day, @focus_month)} class="cal-day-context">
+                      {Calendar.strftime(day, "%b")}
+                    </span>
+                  </div>
+                  <.link
+                    :for={entry <- Map.get(@entries_by_day, day, [])}
+                    id={"calendar-entry-#{entry.huddl.id}"}
+                    navigate={huddl_path(entry)}
+                    class={pill_class_for(entry, day, @focus_month, @today)}
+                    aria-label={format_calendar_link_label(entry, @today)}
+                    aria-describedby={"calendar-entry-tooltip-#{entry.huddl.id}"}
+                    data-status={entry_status(entry, @today).key}
+                  >
+                    <span class="cal-pill-primary" aria-hidden="true">
+                      <time
+                        class="cal-pill-time"
+                        datetime={DateTime.to_iso8601(entry.huddl.starts_at)}
+                      >
+                        {format_pill_time(entry)}
+                      </time>
+                      <span class="cal-pill-separator">·</span>
+                      <span class="cal-pill-title">{entry.huddl.title}</span>
+                    </span>
+                    <span class="cal-pill-status" aria-hidden="true">
+                      {entry_status(entry, @today).label}
+                    </span>
+                    <span
+                      id={"calendar-entry-tooltip-#{entry.huddl.id}"}
+                      class="cal-pill-tooltip"
+                      role="tooltip"
+                    >
+                      {format_pill_tooltip(entry, @today)}
+                    </span>
+                  </.link>
                 </div>
-                <.link
-                  :for={entry <- Map.get(@entries_by_day, day, [])}
-                  id={"calendar-entry-#{entry.huddl.id}"}
-                  navigate={huddl_path(entry)}
-                  class={pill_class_for(entry, day, @focus_month, @today)}
-                  aria-label={format_calendar_link_label(entry, @today)}
-                  title={entry.huddl.title}
-                  data-status={entry_status(entry, @today).key}
-                >
-                  {format_pill_label(entry, @today)}
-                </.link>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <section
+        :if={@entries != []}
+        id="calendar-touch-agenda"
+        class="cal-touch-agenda"
+        aria-labelledby="calendar-touch-agenda-title"
+      >
+        <div class="cal-touch-agenda-heading">
+          <p class="cal-touch-agenda-kicker">Calendar details</p>
+          <h2 id="calendar-touch-agenda-title">Huddlz shown above</h2>
+        </div>
+        <div class="cal-touch-agenda-list">
+          <.link
+            :for={entry <- @entries}
+            id={"calendar-touch-entry-#{entry.huddl.id}"}
+            navigate={huddl_path(entry)}
+            class="cal-touch-entry"
+            data-status={entry_status(entry, @today).key}
+          >
+            <time datetime={DateTime.to_iso8601(entry.huddl.starts_at)}>
+              {format_agenda_when(entry.huddl.starts_at)}
+            </time>
+            <span class="cal-touch-entry-title">{entry.huddl.title}</span>
+            <span class="cal-touch-entry-status">{entry_status(entry, @today).label}</span>
+          </.link>
+        </div>
+      </section>
     </div>
     """
   end
