@@ -424,6 +424,63 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       |> refute_has("#notification-#{notification.id}-open")
     end
 
+    test "a pending group invitation renders an Open link to the invitation", %{
+      conn: conn,
+      user: user
+    } do
+      %{invitation: invitation, group: group} = invite_group_invitation(user)
+
+      {:ok, %{results: [notification]}} =
+        Notifications.list_for_user(actor: user, page: [limit: 10])
+
+      conn
+      |> login(user)
+      |> visit("/notifications")
+      |> assert_has("#notification-#{notification.id} .row-title",
+        text: "Invitation to #{group.name}"
+      )
+      |> assert_has(
+        "#notification-#{notification.id}-open[href=\"/notifications/#{notification.id}/open\"]",
+        text: "Open"
+      )
+      |> click_link("#notification-#{notification.id}-open", "Open")
+      |> assert_path("/invitations/#{invitation.id}")
+    end
+
+    test "an accepted group invitation still opens to show its status", %{
+      conn: conn,
+      user: user
+    } do
+      %{invitation: invitation} = invite_group_invitation(user)
+      Communities.accept_group_invitation!(invitation, actor: user)
+
+      {:ok, %{results: [notification]}} =
+        Notifications.list_for_user(actor: user, page: [limit: 10])
+
+      conn
+      |> login(user)
+      |> visit("/notifications")
+      |> assert_has("#notification-#{notification.id}-open", text: "Open")
+    end
+
+    test "a group invitation whose group was deleted renders a resolved state", %{
+      conn: conn,
+      user: user
+    } do
+      %{invitation: _invitation, owner: owner, group: group} = invite_group_invitation(user)
+
+      {:ok, %{results: [notification]}} =
+        Notifications.list_for_user(actor: user, page: [limit: 10])
+
+      :ok = Ash.destroy(group, actor: owner)
+
+      conn
+      |> login(user)
+      |> visit("/notifications")
+      |> assert_has("#notification-#{notification.id}-resolved", text: "Destination unavailable")
+      |> refute_has("#notification-#{notification.id}-open")
+    end
+
     test "clicking a target removed after render returns to a notification-aware fallback", %{
       conn: conn,
       user: user

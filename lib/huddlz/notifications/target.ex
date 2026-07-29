@@ -23,6 +23,17 @@ defmodule Huddlz.Notifications.Target do
   def resolve(%Notification{source_url: nil}, %User{}), do: :none
 
   def resolve(
+        %Notification{trigger: "group_invitation", payload: %{"invitation_id" => id}},
+        %User{} = user
+      )
+      when is_binary(id) do
+    case Communities.get_my_group_invitation(id, actor: user) do
+      {:ok, _invitation} -> {:available, "/invitations/#{id}"}
+      _ -> :resolved
+    end
+  end
+
+  def resolve(
         %Notification{payload: %{"huddl_id" => huddl_id, "group_slug" => group_slug}},
         %User{} = user
       )
