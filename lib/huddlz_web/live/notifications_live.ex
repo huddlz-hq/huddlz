@@ -16,6 +16,7 @@ defmodule HuddlzWeb.NotificationsLive do
   import HuddlzWeb.Live.Helpers.ParamHelpers
 
   alias Huddlz.Communities
+  alias Huddlz.Communities.GroupInvitation
   alias Huddlz.Notifications
   alias Huddlz.Notifications.Notification
   alias Huddlz.Notifications.Target
@@ -131,11 +132,11 @@ defmodule HuddlzWeb.NotificationsLive do
   end
 
   defp count_invites(user) do
-    case Communities.list_pending_group_invitations_for_user(
-           actor: user,
-           page: [limit: 1, offset: 0, count: true]
-         ) do
-      {:ok, %{count: count}} when is_integer(count) -> count
+    GroupInvitation
+    |> Ash.Query.for_read(:pending_for_user, %{}, actor: user)
+    |> Ash.count()
+    |> case do
+      {:ok, count} -> count
       _ -> 0
     end
   end
