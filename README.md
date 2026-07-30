@@ -20,6 +20,8 @@ documentation for contributors and readers.
   categories, triggers, and delivery rules.
 - [API follow-ups](docs/api-followups.md) records deferred work for the
   JSON:API and GraphQL surfaces.
+- [MCP server](docs/mcp.md) explains remote client setup, credentials, tools,
+  pagination, rate limits, and security.
 
 ### Contributing
 

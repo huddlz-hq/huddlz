@@ -8,11 +8,14 @@ defmodule HuddlzWeb.HelpLiveTest do
     |> assert_has("#help-support a[href='https://github.com/huddlz-hq/huddlz/issues']")
     |> assert_has("#help-developers a[href='/api/json/swaggerui']")
     |> assert_has("#help-developers a[href='/gql/playground']")
+    |> assert_has(
+      "#help-mcp[href='https://github.com/huddlz-hq/huddlz/blob/main/docs/mcp.md']",
+      text: "MCP server guide"
+    )
     |> assert_has("#help-developers a[href='https://github.com/huddlz-hq/huddlz']")
     |> assert_has("#help-legal a[href='/terms']")
     |> assert_has("#help-legal a[href='/code-of-conduct']")
     |> assert_has("#help-legal a[href='/privacy']")
     |> refute_has("#help-directory", text: "Coming soon")
-    |> refute_has("#help-directory", text: "MCP")
   end
 end

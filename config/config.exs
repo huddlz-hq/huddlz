@@ -41,6 +41,11 @@ config :huddlz, :auth_rate_limits,
   register: [limit: 5, per: :timer.minutes(1)],
   password_reset: [limit: 3, per: :timer.hours(1)]
 
+config :huddlz, :mcp_rate_limits,
+  authenticated: 120,
+  anonymous: 30,
+  per: :timer.minutes(1)
+
 config :ash,
   allow_forbidden_field_for_relationships_by_default?: true,
   include_embedded_source_by_default?: false,
