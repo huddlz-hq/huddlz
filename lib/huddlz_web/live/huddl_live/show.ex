@@ -68,16 +68,19 @@ defmodule HuddlzWeb.HuddlLive.Show do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="discover"
     >
-      <div class={["hero", status_hero_class(@huddl.status)]}>
-        <img
-          :if={@huddl.display_image_url}
-          class="hero-img"
-          src={HuddlImages.url(@huddl.display_image_url)}
-          alt={@huddl.title}
-        />
+      <div class={["hero", "huddl-hero", status_hero_class(@huddl.status)]}>
+        <div class="hero-media">
+          <.huddl_cover_image
+            :if={@huddl.display_image_url}
+            id={"huddl-cover-#{@huddl.id}"}
+            class="hero-img"
+            image_url={@huddl.display_image_url}
+          />
+        </div>
         <div class="hero-content">
           <span class={["eyebrow", status_eyebrow_class(@huddl.status)]}>
             {hero_eyebrow(@huddl)}

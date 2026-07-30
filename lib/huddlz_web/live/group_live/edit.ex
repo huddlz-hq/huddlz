@@ -18,6 +18,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
   alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
+  alias Phoenix.LiveView.JS
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -62,6 +63,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
     |> assign(:original_slug, group.slug)
     |> assign(:slug_changed, false)
     |> assign(:image_error, nil)
+    |> assign(:remove_image_dialog_open, false)
     |> assign(:pending_image_id, nil)
     |> assign(:pending_preview_url, nil)
     |> assign(:selected_location_data, build_initial_location_data(group))
@@ -114,10 +116,21 @@ defmodule HuddlzWeb.GroupLive.Edit do
 
   @impl true
   def render(assigns) do
+    selected_public? = public_group?(assigns.form)
+
+    assigns =
+      assigns
+      |> assign(:selected_public?, selected_public?)
+      |> assign(
+        :visibility_changed?,
+        visibility_changed?(assigns.group.is_public, selected_public?)
+      )
+
     ~H"""
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="my-groups"
     >
@@ -175,9 +188,9 @@ defmodule HuddlzWeb.GroupLive.Edit do
                     </label>
                     <.button
                       variant={:muted}
+                      id="open-remove-group-image-dialog"
                       type="button"
-                      phx-click="remove_image"
-                      data-confirm="Are you sure you want to remove this image?"
+                      phx-click={JS.push_focus() |> JS.push("open_remove_image_dialog")}
                     >
                       Remove
                     </.button>
@@ -301,39 +314,74 @@ defmodule HuddlzWeb.GroupLive.Edit do
         </div>
 
         <div class="panel">
-          <div class="panel-head">
+          <div class="panel-head visibility-panel-head">
             <div>
               <h2>Visibility</h2>
               <div class="panel-sub">
-                Public groups are findable in Discover. Private groups are only visible to members.
+                Choose who can find this group and its huddlz.
               </div>
+            </div>
+            <div
+              id="group-visibility-current"
+              class="visibility-current"
+            >
+              <span>Current visibility</span>
+              <strong>{visibility_label(@group.is_public)}</strong>
             </div>
           </div>
           <div class="settings-list row-list pref-list">
-            <div class="row">
+            <div
+              id="group-visibility-selection"
+              class="row visibility-selection"
+            >
               <div>
-                <label class="row-title" for="group-is-public">Public group</label>
-                <div class="row-desc">
-                  Anyone can find and join this group. Huddlz are visible without signing in.
+                <div id="group-visibility-label" class="row-title">
+                  {visibility_label(@selected_public?)} group
+                </div>
+                <div id="group-visibility-description" class="row-desc">
+                  {visibility_description(@selected_public?)}
                 </div>
               </div>
-              <label class="toggle">
+              <label id="group-public-toggle-label" for="group-is-public" class="sr-only">
+                Public group
+              </label>
+              <label class="toggle visibility-toggle">
                 <input type="hidden" name={@form[:is_public].name} value="false" />
                 <input
                   id="group-is-public"
                   type="checkbox"
                   name={@form[:is_public].name}
                   value="true"
-                  checked={Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_public].value)}
+                  checked={@selected_public?}
+                  role="switch"
+                  aria-labelledby="group-public-toggle-label"
+                  aria-describedby="group-visibility-description group-visibility-consequence"
                 />
                 <span class="track"></span>
                 <span class="toggle-text">
-                  {if Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_public].value),
-                    do: "On",
-                    else: "Off"}
+                  {visibility_label(@selected_public?)}
                 </span>
               </label>
             </div>
+          </div>
+          <div
+            id="group-visibility-consequence"
+            class={[
+              "visibility-consequence",
+              @visibility_changed? && "visibility-consequence-pending"
+            ]}
+            role="status"
+            aria-live="polite"
+          >
+            <.icon
+              name={
+                if @visibility_changed?,
+                  do: "hero-arrow-right",
+                  else: "hero-check"
+              }
+              class="visibility-consequence-icon size-4"
+            />
+            <span>{visibility_consequence(@group.is_public, @selected_public?)}</span>
           </div>
         </div>
 
@@ -346,6 +394,48 @@ defmodule HuddlzWeb.GroupLive.Edit do
           </.button>
         </div>
       </.form>
+
+      <.modal
+        :if={@remove_image_dialog_open}
+        id="remove-group-image-dialog"
+        show
+        on_cancel={JS.push("cancel_remove_image")}
+      >
+        <div class="delete-confirm">
+          <div class="delete-confirm-icon" aria-hidden="true">
+            <.icon name="hero-photo" class="h-6 w-6" />
+          </div>
+
+          <div class="delete-confirm-copy">
+            <span class="eyebrow eyebrow-magenta">Group cover</span>
+            <h2 id="remove-group-image-dialog-title">Remove this group cover image?</h2>
+            <p>
+              The current cover for <strong>{@group.name}</strong> will be removed. Group and
+              huddl cards will use the <strong>branded group fallback</strong> until a new cover
+              is uploaded.
+            </p>
+          </div>
+        </div>
+
+        <div class="delete-confirm-actions">
+          <.button
+            variant={:muted}
+            id="cancel-remove-group-image"
+            phx-click="cancel_remove_image"
+          >
+            Keep image
+          </.button>
+          <.button
+            variant={:destructive}
+            class="delete-confirm-submit"
+            id="confirm-remove-group-image"
+            phx-click="remove_image"
+            phx-disable-with="Removing…"
+          >
+            Remove image
+          </.button>
+        </div>
+      </.modal>
     </Layouts.app>
     """
   end
@@ -377,7 +467,26 @@ defmodule HuddlzWeb.GroupLive.Edit do
   end
 
   @impl true
-  def handle_event("remove_image", _params, socket) do
+  def handle_event("open_remove_image_dialog", _params, socket) do
+    {:noreply,
+     assign(
+       socket,
+       :remove_image_dialog_open,
+       !is_nil(socket.assigns.group.current_image_url)
+     )}
+  end
+
+  @impl true
+  def handle_event("cancel_remove_image", _params, socket) do
+    {:noreply, assign(socket, :remove_image_dialog_open, false)}
+  end
+
+  @impl true
+  def handle_event(
+        "remove_image",
+        _params,
+        %{assigns: %{remove_image_dialog_open: true}} = socket
+      ) do
     group = socket.assigns.group
     user = socket.assigns.current_user
 
@@ -388,12 +497,18 @@ defmodule HuddlzWeb.GroupLive.Edit do
         {:noreply,
          socket
          |> put_flash(:info, "Image removed")
+         |> assign(:remove_image_dialog_open, false)
          |> assign(:group, updated_group)}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Failed to remove image")}
+        {:noreply,
+         socket
+         |> assign(:remove_image_dialog_open, false)
+         |> put_flash(:error, "Failed to remove image")}
     end
   end
+
+  def handle_event("remove_image", _params, socket), do: {:noreply, socket}
 
   @impl true
   def handle_event("update_group", %{"form" => params}, socket) do
@@ -409,7 +524,10 @@ defmodule HuddlzWeb.GroupLive.Edit do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Group updated successfully")
+         |> put_flash(
+           :info,
+           "Group updated successfully. Visibility is now #{visibility_value(updated_group.is_public)}."
+         )
          |> redirect(to: ~p"/groups/#{updated_group.slug}")}
 
       {:error, form} ->
@@ -480,6 +598,36 @@ defmodule HuddlzWeb.GroupLive.Edit do
       nil
     end
   end
+
+  defp public_group?(form),
+    do: Phoenix.HTML.Form.normalize_value("checkbox", form[:is_public].value)
+
+  defp visibility_changed?(saved_public?, selected_public?),
+    do: saved_public? != selected_public?
+
+  defp visibility_label(true), do: "Public"
+  defp visibility_label(false), do: "Private"
+
+  defp visibility_value(true), do: "public"
+  defp visibility_value(false), do: "private"
+
+  defp visibility_description(true),
+    do: "Anyone can find and join this group. Its public huddlz are visible without signing in."
+
+  defp visibility_description(false),
+    do: "Access is limited to current members and platform admins for this group and its huddlz."
+
+  defp visibility_consequence(saved_public?, saved_public?),
+    do:
+      "No visibility change pending. Saving keeps this group #{visibility_value(saved_public?)}."
+
+  defp visibility_consequence(true, false),
+    do:
+      "When you save, this group and all existing huddlz will leave public discovery. Current members keep their memberships."
+
+  defp visibility_consequence(false, true),
+    do:
+      "When you save, this group and otherwise-public huddlz will become discoverable again. Current members keep their memberships."
 
   defp get_group_by_slug(slug, actor) do
     case Huddlz.Communities.get_by_slug(slug,

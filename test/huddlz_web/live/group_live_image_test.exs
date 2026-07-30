@@ -414,7 +414,11 @@ defmodule HuddlzWeb.GroupLiveImageTest do
       assert flash["error"] =~ "permission"
     end
 
-    test "removing existing image works", %{conn: conn, owner: owner, group: group} do
+    test "opens and cancels the styled image removal dialog", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
       # Add an existing image
       {:ok, _image} =
         Communities.create_group_image(
@@ -436,18 +440,78 @@ defmodule HuddlzWeb.GroupLiveImageTest do
 
       # Should show current image with remove button
       assert has_element?(view, "*", "Current image")
-      assert has_element?(view, "button[phx-click='remove_image']")
+      assert has_element?(view, "#open-remove-group-image-dialog")
 
-      # Remove the image
-      view |> element("button[phx-click='remove_image']") |> render_click()
+      view
+      |> element("#open-remove-group-image-dialog")
+      |> render_click()
 
-      # Verify image was removed
+      assert has_element?(view, "#remove-group-image-dialog [role='dialog']")
+
+      assert has_element?(
+               view,
+               "#remove-group-image-dialog-title",
+               "Remove this group cover image?"
+             )
+
+      assert has_element?(view, "#remove-group-image-dialog", to_string(group.name))
+      assert has_element?(view, "#remove-group-image-dialog", "branded group fallback")
+
+      view
+      |> element("#cancel-remove-group-image")
+      |> render_click()
+
+      refute has_element?(view, "#remove-group-image-dialog")
+
+      unchanged_group =
+        Group
+        |> Ash.get!(group.id, authorize?: false)
+        |> Ash.load!(:current_image_url, authorize?: false)
+
+      assert unchanged_group.current_image_url != nil
+    end
+
+    test "confirming image removal immediately shows the upload fallback", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      {:ok, _image} =
+        Communities.create_group_image(
+          %{
+            filename: "to_remove.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/group_images/#{group.id}/to_remove.jpg",
+            thumbnail_path: "/uploads/group_images/#{group.id}/to_remove_thumb.jpg",
+            group_id: group.id
+          },
+          actor: owner
+        )
+
+      {:ok, view, _html} =
+        conn
+        |> login(owner)
+        |> live(~p"/groups/#{group.slug}/edit")
+
+      view
+      |> element("#open-remove-group-image-dialog")
+      |> render_click()
+
+      view
+      |> element("#confirm-remove-group-image")
+      |> render_click()
+
       updated_group =
         Group
         |> Ash.get!(group.id, authorize?: false)
         |> Ash.load!(:current_image_url, authorize?: false)
 
       assert updated_group.current_image_url == nil
+      refute has_element?(view, "#remove-group-image-dialog")
+      refute has_element?(view, ".image-preview", "Current image")
+      assert has_element?(view, ".upload-zone", "Drop a 16:9 image")
+      assert has_element?(view, "*", "Image removed")
     end
   end
 

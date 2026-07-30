@@ -15,8 +15,8 @@ defmodule HuddlzWeb.NotificationsLive do
 
   alias Huddlz.Notifications
   alias Huddlz.Notifications.Notification
+  alias Huddlz.Notifications.Target
   alias HuddlzWeb.Layouts
-  require Ash.Query
   require Logger
 
   @page_size 20
@@ -31,11 +31,27 @@ defmodule HuddlzWeb.NotificationsLive do
      socket
      |> assign(:page_title, "Notifications")
      |> assign(:notifications, [])
+     |> assign(:notification_targets, %{})
      |> assign(:counts, %{inbox: 0, invites: 0})
      |> assign(:page_info, %{total_pages: 1, current_page: 1, total_count: 0})}
   end
 
   @impl true
+  def handle_params(%{"id" => id}, _uri, socket) do
+    user = socket.assigns.current_user
+
+    with {:ok, notification} <- Notifications.get_notification(id, actor: user),
+         {:available, destination} <- Target.resolve(notification, user) do
+      {:noreply, push_navigate(socket, to: destination)}
+    else
+      _ ->
+        {:noreply,
+         socket
+         |> put_flash(:info, resolved_target_message())
+         |> push_navigate(to: ~p"/notifications")}
+    end
+  end
+
   def handle_params(params, _uri, socket) do
     filter = parse_filter(params["filter"])
     page = parse_page(params["page"])
@@ -66,7 +82,7 @@ defmodule HuddlzWeb.NotificationsLive do
     user = socket.assigns.current_user
 
     with {:ok, notification} <- Ash.get(Notification, id, actor: user),
-         {:ok, _} <- Notifications.mark_read(notification, actor: user) do
+         {:ok, _} <- Notifications.mark_read_and_notify(notification, user) do
       {:noreply, refresh(socket, user)}
     else
       {:error, reason} ->
@@ -105,11 +121,7 @@ defmodule HuddlzWeb.NotificationsLive do
   end
 
   defp count_unread_inbox(user) do
-    Notification
-    |> Ash.Query.for_read(:for_user, %{}, actor: user)
-    |> Ash.Query.filter(is_nil(read_at))
-    |> Ash.count()
-    |> case do
+    case Notifications.unread_count(user) do
       {:ok, count} -> count
       _ -> 0
     end
@@ -118,6 +130,7 @@ defmodule HuddlzWeb.NotificationsLive do
   defp count_invites(user) do
     case Notifications.list_invites_for_user(
            actor: user,
+           query: [filter: [read_at: [is_nil: true]]],
            page: [limit: 1, offset: 0, count: true]
          ) do
       {:ok, %{count: count}} when is_integer(count) -> count
@@ -134,6 +147,7 @@ defmodule HuddlzWeb.NotificationsLive do
 
         socket
         |> assign(:notifications, results)
+        |> assign(:notification_targets, resolve_targets(results, user))
         |> assign(:page_info, %{
           total_pages: total_pages,
           current_page: page,
@@ -145,6 +159,7 @@ defmodule HuddlzWeb.NotificationsLive do
 
         socket
         |> assign(:notifications, [])
+        |> assign(:notification_targets, %{})
         |> assign(:page_info, %{total_pages: 1, current_page: 1, total_count: 0})
     end
   end
@@ -177,6 +192,7 @@ defmodule HuddlzWeb.NotificationsLive do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="notifications"
     >
@@ -207,7 +223,10 @@ defmodule HuddlzWeb.NotificationsLive do
         <div class="panel" style="padding:0">
           <div class="row-list" style="padding:6px 20px">
             <%= for notification <- @notifications do %>
-              <.notification_row notification={notification} />
+              <.notification_row
+                notification={notification}
+                target={Map.get(@notification_targets, notification.id, :none)}
+              />
             <% end %>
           </div>
         </div>
@@ -223,6 +242,7 @@ defmodule HuddlzWeb.NotificationsLive do
   end
 
   attr :notification, :map, required: true
+  attr :target, :any, required: true
 
   defp notification_row(assigns) do
     read? = !is_nil(assigns.notification.read_at)
@@ -238,22 +258,52 @@ defmodule HuddlzWeb.NotificationsLive do
         <div class="row-title">{@notification.title}</div>
         <div :if={meta_line(@notification)} class="meta">{meta_line(@notification)}</div>
       </div>
-      <%= if @notification.source_url do %>
-        <.link class="pill" navigate={@notification.source_url}>Open</.link>
-      <% else %>
+      <div
+        :if={@target != :none or @unread}
+        class="notif-actions"
+        id={"notification-actions-#{@notification.id}"}
+      >
+        <.link
+          :if={match?({:available, _}, @target)}
+          id={"notification-#{@notification.id}-open"}
+          class="pill"
+          navigate={~p"/notifications/#{@notification.id}/open"}
+          aria-label={"Open #{@notification.title}"}
+        >
+          Open
+        </.link>
+        <span
+          :if={@target == :resolved}
+          id={"notification-#{@notification.id}-resolved"}
+          class="notif-resolved"
+        >
+          Destination unavailable
+        </span>
         <button
           :if={@unread}
           type="button"
           class="pill"
+          id={"mark-notification-read-#{@notification.id}"}
           phx-click="mark_read"
           phx-value-id={@notification.id}
+          phx-disable-with="Marking…"
+          aria-label={"Mark #{@notification.title} as read"}
         >
           Mark read
         </button>
-      <% end %>
+      </div>
     </div>
     """
   end
+
+  defp resolve_targets(notifications, user) do
+    Map.new(notifications, fn notification ->
+      {notification.id, Target.resolve(notification, user)}
+    end)
+  end
+
+  defp resolved_target_message,
+    do: "That notification destination is no longer available or you no longer have access."
 
   defp filter_blurb(:inbox),
     do: "RSVPs, group activity, and reminders from across huddlz."

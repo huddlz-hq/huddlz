@@ -1,8 +1,6 @@
 defmodule Huddlz.Communities.GroupTest do
   use Huddlz.DataCase, async: true
 
-  require Ash.Query
-
   alias Huddlz.Communities
   alias Huddlz.Communities.Group
 
@@ -627,30 +625,33 @@ defmodule Huddlz.Communities.GroupTest do
       assert Enum.any?(memberships, &(&1.user_id == owner.id and &1.role == :organizer))
     end
 
-    test "owner can transfer ownership to a non-member (auto-adds them)", %{
+    test "owner cannot transfer ownership to a non-member", %{
       owner: owner,
       group: group
     } do
       new_owner = generate(user(role: :user))
 
-      assert {:ok, transferred} =
+      assert {:error, %Ash.Error.Invalid{}} =
                group
                |> Ash.Changeset.for_update(:transfer_ownership, %{new_owner_id: new_owner.id})
                |> Ash.update(actor: owner)
 
-      assert transferred.owner_id == new_owner.id
-
-      new_owner_membership =
-        Huddlz.Communities.GroupMember
-        |> Ash.Query.filter(group_id: group.id, user_id: new_owner.id)
-        |> Ash.read_one!(authorize?: false)
-
-      assert new_owner_membership.role == :owner
+      assert Ash.get!(Group, group.id, authorize?: false).owner_id == owner.id
     end
 
     test "non-owner cannot transfer ownership", %{group: group} do
+      owner = Ash.get!(Huddlz.Accounts.User, group.owner_id, authorize?: false)
       stranger = generate(user(role: :user))
       target = generate(user(role: :user))
+
+      generate(
+        group_member(
+          group_id: group.id,
+          user_id: target.id,
+          role: :member,
+          actor: owner
+        )
+      )
 
       assert {:error, %Ash.Error.Forbidden{}} =
                group

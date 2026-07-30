@@ -1,15 +1,24 @@
 defmodule HuddlzWeb.ProfileLiveTest do
   use HuddlzWeb.ConnCase, async: true
+  use Oban.Testing, repo: Huddlz.Repo
 
   import Mox
   import PhoenixTest
   import Phoenix.LiveViewTest
   import Huddlz.Test.Helpers.Authentication
 
+  alias Huddlz.Accounts.User
+  alias Huddlz.Notifications.DeliverWorker
+
   setup :verify_on_exit!
 
   setup do
     user = create_user(%{display_name: "Test User"})
+
+    on_exit(fn ->
+      File.rm_rf!("priv/static/uploads/profile_pictures/#{user.id}")
+    end)
+
     %{user: user}
   end
 
@@ -27,6 +36,16 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> assert_has("h1", text: "Profile")
       |> assert_has("aside.sidebar")
       |> assert_has(".sb-item.active", text: "Profile")
+      |> assert_has(
+        "#sign-out-link[href='/sign-out'][data-method='delete'][data-csrf][aria-label='Sign out']",
+        text: "Sign out"
+      )
+    end
+
+    test "does not show sign out in signed-out navigation", %{conn: conn} do
+      conn
+      |> visit("/discover")
+      |> refute_has("a", text: "Sign out")
     end
 
     test "sidebar shows initials when the user has no profile picture", %{
@@ -59,6 +78,52 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> login(user)
       |> visit("/profile")
       |> assert_has("aside.sidebar .sb-user img.avatar[src*='_thumb.jpg']")
+    end
+
+    test "opens and cancels the styled profile picture removal dialog", %{
+      conn: conn,
+      user: user
+    } do
+      create_profile_picture(user)
+
+      session =
+        conn
+        |> login(user)
+        |> visit("/profile")
+        |> refute_has("#remove-avatar-dialog")
+        |> click_button("Remove")
+        |> assert_has("#remove-avatar-dialog [role='dialog']")
+        |> assert_has("#remove-avatar-dialog-title", text: "Remove your profile picture?")
+        |> assert_has("#remove-avatar-dialog", text: "initials will appear instead")
+
+      session
+      |> within("#remove-avatar-dialog", fn session ->
+        click_button(session, "Keep picture")
+      end)
+      |> refute_has("#remove-avatar-dialog")
+      |> assert_has("main img.big-avatar[src*='_thumb.jpg']")
+      |> assert_has("aside.sidebar .sb-user img.avatar[src*='_thumb.jpg']")
+    end
+
+    test "confirming profile picture removal updates profile and sidebar fallbacks", %{
+      conn: conn,
+      user: user
+    } do
+      create_profile_picture(user)
+
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> click_button("Remove")
+      |> within("#remove-avatar-dialog", fn session ->
+        click_button(session, "Remove picture")
+      end)
+      |> refute_has("#remove-avatar-dialog")
+      |> assert_has("*", text: "Profile picture removed")
+      |> refute_has("main img.big-avatar")
+      |> assert_has("main .big-avatar", text: "TU")
+      |> refute_has("aside.sidebar .sb-user img.avatar")
+      |> assert_has("aside.sidebar .sb-user .avatar", text: "TU")
     end
 
     test "displays user profile when authenticated", %{conn: conn, user: user} do
@@ -124,6 +189,498 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> visit("/profile")
       |> fill_in("Display name", with: "")
       |> assert_has("form")
+    end
+
+    test "keeps a cleared display name empty and shows a friendly error", %{
+      conn: conn,
+      user: user
+    } do
+      view = conn |> login(user) |> visit("/profile") |> Map.fetch!(:view)
+
+      view
+      |> form("#profile-form", %{"form" => %{"display_name" => "Corrected Name"}})
+      |> render_change()
+
+      view
+      |> form("#profile-form", %{"form" => %{"display_name" => ""}})
+      |> render_change()
+
+      assert has_element?(view, "#form_display_name[value='']")
+      assert has_element?(view, "#form_display_name-error-0", "is required")
+    end
+
+    test "shows a friendly error for a whitespace-only display name", %{
+      conn: conn,
+      user: user
+    } do
+      view = conn |> login(user) |> visit("/profile") |> Map.fetch!(:view)
+
+      view
+      |> form("#profile-form", %{"form" => %{"display_name" => "   "}})
+      |> render_change()
+
+      assert has_element?(view, "#form_display_name-error-0", "is required")
+      refute has_element?(view, "#profile-form", "must not equal")
+    end
+
+    test "never renders password values on load", %{conn: conn, user: user} do
+      view = conn |> login(user) |> visit("/profile") |> Map.fetch!(:view)
+
+      assert_empty_password_inputs(view, 0, [:password, :password_confirmation])
+    end
+
+    test "keeps cleared invalid password values empty", %{conn: conn, user: user} do
+      view = conn |> login(user) |> visit("/profile") |> Map.fetch!(:view)
+
+      view
+      |> form("#password-form", %{
+        "form" => %{
+          "password" => "short",
+          "password_confirmation" => "different"
+        }
+      })
+      |> render_change()
+
+      view
+      |> form("#password-form", %{
+        "form" => %{
+          "password" => "",
+          "password_confirmation" => ""
+        }
+      })
+      |> render_change()
+
+      assert_empty_password_inputs(view, 0, [:password, :password_confirmation])
+    end
+
+    test "clears password values after a successful submission", %{conn: conn, user: user} do
+      view = conn |> login(user) |> visit("/profile") |> Map.fetch!(:view)
+
+      assert_empty_password_inputs(view, 0, [:password, :password_confirmation])
+
+      view
+      |> form("#password-form", %{
+        "form" => %{
+          "password" => "NewPassword123!",
+          "password_confirmation" => "NewPassword123!"
+        }
+      })
+      |> render_submit()
+
+      refute has_element?(view, "#password-0-password")
+      refute has_element?(view, "#password-0-password-confirmation")
+      assert_empty_password_inputs(view, 1, [:password, :password_confirmation])
+    end
+
+    test "clears every password field while preserving errors after a failed submission", %{
+      conn: conn
+    } do
+      user =
+        Huddlz.Generator.generate(
+          Huddlz.Generator.user_with_password(password: "CurrentPassword123!")
+        )
+
+      view = conn |> login(user) |> visit("/profile") |> Map.fetch!(:view)
+
+      assert_empty_password_inputs(
+        view,
+        0,
+        [:current_password, :password, :password_confirmation]
+      )
+
+      view
+      |> form("#password-form", %{
+        "form" => %{
+          "current_password" => "WrongCurrentPassword",
+          "password" => "short",
+          "password_confirmation" => "different"
+        }
+      })
+      |> render_submit()
+
+      refute has_element?(view, "#password-0-current-password")
+      refute has_element?(view, "#password-0-password")
+      refute has_element?(view, "#password-0-password-confirmation")
+
+      assert_empty_password_inputs(
+        view,
+        1,
+        [:current_password, :password, :password_confirmation]
+      )
+
+      assert has_element?(view, "#password-1-current-password-error-0")
+      assert has_element?(view, "#password-1-password-error-0")
+      assert has_element?(view, "#password-1-password-confirmation-error-0")
+    end
+
+    test "updates password validation errors as values are corrected", %{conn: conn, user: user} do
+      view = conn |> login(user) |> visit("/profile") |> Map.fetch!(:view)
+
+      view
+      |> form("#password-form", %{
+        "form" => %{
+          "password" => "short",
+          "password_confirmation" => "different"
+        }
+      })
+      |> render_change()
+
+      assert has_element?(view, "#password-0-password-error-0")
+      assert has_element?(view, "#password-0-password-confirmation-error-0")
+
+      view
+      |> form("#password-form", %{
+        "form" => %{
+          "password" => "NewPassword123!",
+          "password_confirmation" => "different"
+        }
+      })
+      |> render_change()
+
+      refute has_element?(view, "#password-0-password-error-0")
+      assert has_element?(view, "#password-0-password-confirmation-error-0")
+
+      view
+      |> form("#password-form", %{
+        "form" => %{
+          "password" => "NewPassword123!",
+          "password_confirmation" => "NewPassword123!"
+        }
+      })
+      |> render_change()
+
+      refute has_element?(view, "#password-0-password-error-0")
+      refute has_element?(view, "#password-0-password-confirmation-error-0")
+    end
+
+    test "does not repopulate password values after reload", %{conn: conn, user: user} do
+      logged_in_conn = login(conn, user)
+      view = logged_in_conn |> visit("/profile") |> Map.fetch!(:view)
+
+      view
+      |> form("#password-form", %{
+        "form" => %{
+          "password" => "short",
+          "password_confirmation" => "different"
+        }
+      })
+      |> render_change()
+
+      reloaded_view = logged_in_conn |> visit("/profile") |> Map.fetch!(:view)
+
+      assert_empty_password_inputs(reloaded_view, 0, [:password, :password_confirmation])
+    end
+  end
+
+  describe "Email change" do
+    setup do
+      user =
+        generate(
+          user_with_password(
+            email: "profile-email-#{System.unique_integer([:positive])}@example.com",
+            display_name: "Email Change User",
+            password: "OldPassword123!"
+          )
+        )
+
+      %{user: user}
+    end
+
+    test "changes the signed-in identity and sends both security notices", %{
+      conn: conn,
+      user: user
+    } do
+      new_email = "changed-#{System.unique_integer([:positive])}@example.com"
+
+      session =
+        conn
+        |> login(user)
+        |> visit("/profile")
+        |> assert_has("#email-change-form")
+        |> fill_in("New email", with: new_email)
+        |> fill_in("Confirm current password", with: "OldPassword123!")
+        |> click_button("#change-email-button", "Change email")
+        |> assert_has("*", text: "Email updated successfully")
+        |> assert_has("aside.sidebar .sb-user", text: new_email)
+
+      session
+      |> visit("/profile/notifications")
+      |> assert_has("aside.sidebar .sb-user", text: new_email)
+      |> visit("/profile")
+      |> refute_has("#email_change_current_password[value='OldPassword123!']")
+
+      assert User |> Ash.get!(user.id, authorize?: false) |> Map.fetch!(:email) |> to_string() ==
+               new_email
+
+      enqueued =
+        all_enqueued(worker: DeliverWorker)
+        |> Enum.filter(&(&1.args["trigger"] == "email_changed"))
+
+      assert enqueued |> Enum.map(& &1.args["payload"]["audience"]) |> Enum.sort() ==
+               ["new", "old"]
+    end
+
+    test "shows a field error for an invalid email and clears the submitted password", %{
+      conn: conn,
+      user: user
+    } do
+      session =
+        conn
+        |> login(user)
+        |> visit("/profile")
+        |> fill_in("New email", with: "not-an-email")
+        |> fill_in("Confirm current password", with: "OldPassword123!")
+        |> click_button("#change-email-button", "Change email")
+
+      session
+      |> assert_has("#email_change_email[aria-invalid='true']")
+      |> assert_has("#email_change_email-error-0", text: "Enter a valid email address.")
+      |> refute_has("#email_change_current_password[value='OldPassword123!']")
+
+      assert User |> Ash.get!(user.id, authorize?: false) |> Map.fetch!(:email) == user.email
+    end
+
+    test "rejects the current email as the new email", %{conn: conn, user: user} do
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> fill_in("New email", with: to_string(user.email))
+      |> fill_in("Confirm current password", with: "OldPassword123!")
+      |> click_button("#change-email-button", "Change email")
+      |> assert_has("#email_change_email-error-0", text: "Enter a different email address.")
+
+      refute_enqueued(worker: DeliverWorker, args: %{"trigger" => "email_changed"})
+    end
+
+    test "shows a field error when the new email is already used", %{conn: conn, user: user} do
+      taken_email = "taken-#{System.unique_integer([:positive])}@example.com"
+      _other_user = create_user(%{email: taken_email})
+
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> fill_in("New email", with: taken_email)
+      |> fill_in("Confirm current password", with: "OldPassword123!")
+      |> click_button("#change-email-button", "Change email")
+      |> assert_has("#email_change_email-error-0", text: "That email is already in use.")
+
+      assert User |> Ash.get!(user.id, authorize?: false) |> Map.fetch!(:email) == user.email
+    end
+
+    test "wrong current password leaves the identity unchanged and clears the password", %{
+      conn: conn,
+      user: user
+    } do
+      session =
+        conn
+        |> login(user)
+        |> visit("/profile")
+        |> fill_in(
+          "New email",
+          with: "wrong-password-#{System.unique_integer([:positive])}@example.com"
+        )
+        |> fill_in("Confirm current password", with: "WrongPassword")
+        |> click_button("#change-email-button", "Change email")
+        |> assert_has("*", text: "Email could not be updated")
+        |> refute_has("#email_change_current_password[value='WrongPassword']")
+
+      assert User |> Ash.get!(user.id, authorize?: false) |> Map.fetch!(:email) == user.email
+      refute_enqueued(worker: DeliverWorker, args: %{"trigger" => "email_changed"})
+
+      session
+      |> fill_in("Confirm current password", with: "OldPassword123!")
+      |> click_button("#change-email-button", "Change email")
+      |> assert_has("*", text: "Email updated successfully")
+      |> refute_has("*", text: "Email could not be updated")
+    end
+  end
+
+  describe "Profile picture upload" do
+    test "shows an accessible error for an unsupported format", %{conn: conn, user: user} do
+      {:ok, view, _html} =
+        conn
+        |> login(user)
+        |> live(~p"/profile")
+
+      upload =
+        file_input(view, "#avatar-form", :avatar, [
+          %{name: "avatar.gif", content: "GIF89a", type: "image/gif"}
+        ])
+
+      assert {:error, [[_ref, :not_accepted]]} = render_upload(upload, "avatar.gif")
+
+      assert has_element?(
+               view,
+               "#avatar-upload-error[role='alert']",
+               "Choose a JPG, PNG, or WebP image."
+             )
+
+      assert has_element?(view, "#avatar-form input[type='file'][aria-invalid='true']")
+    end
+
+    test "shows an accessible error for an oversized image", %{conn: conn, user: user} do
+      {:ok, view, _html} =
+        conn
+        |> login(user)
+        |> live(~p"/profile")
+
+      upload =
+        file_input(view, "#avatar-form", :avatar, [
+          %{
+            name: "large.jpg",
+            content: :binary.copy(<<0>>, 5_000_001),
+            type: "image/jpeg"
+          }
+        ])
+
+      assert {:error, [[_ref, :too_large]]} = render_upload(upload, "large.jpg")
+      assert has_element?(view, "#avatar-upload-error", "Image must be 5 MB or smaller.")
+    end
+
+    test "announces upload progress and successful replacement", %{conn: conn, user: user} do
+      {:ok, view, _html} =
+        conn
+        |> login(user)
+        |> live(~p"/profile")
+
+      upload =
+        file_input(view, "#avatar-form", :avatar, [
+          %{
+            name: "avatar.jpg",
+            content: File.read!("test/fixtures/test_image.jpg"),
+            type: "image/jpeg"
+          }
+        ])
+
+      render_upload(upload, "avatar.jpg", 49)
+
+      assert has_element?(
+               view,
+               "#avatar-upload-status [role='status']",
+               "Uploading avatar.jpg: 49%"
+             )
+
+      render_upload(upload, "avatar.jpg", 51)
+      assert has_element?(view, "#flash-info", "Profile picture updated successfully")
+      assert has_element?(view, "#profile-avatar[src*='_thumb.jpg']")
+      assert has_element?(view, "#sidebar-user img.avatar[src*='_thumb.jpg']")
+    end
+
+    test "reports corrupt content and preserves the existing picture", %{conn: conn, user: user} do
+      existing_path = "/uploads/profile_pictures/#{user.id}/existing.jpg"
+      existing_thumbnail_path = "/uploads/profile_pictures/#{user.id}/existing_thumb.jpg"
+
+      Huddlz.Accounts.create_profile_picture!(
+        %{
+          filename: "existing.jpg",
+          content_type: "image/jpeg",
+          size_bytes: 1000,
+          storage_path: existing_path,
+          thumbnail_path: existing_thumbnail_path,
+          user_id: user.id
+        },
+        actor: user
+      )
+
+      {:ok, view, _html} =
+        conn
+        |> login(user)
+        |> live(~p"/profile")
+
+      upload =
+        file_input(view, "#avatar-form", :avatar, [
+          %{name: "corrupt.jpg", content: "not an image", type: "image/jpeg"}
+        ])
+
+      render_upload(upload, "corrupt.jpg")
+
+      assert has_element?(
+               view,
+               "#avatar-upload-error",
+               "That file could not be read as an image."
+             )
+
+      assert has_element?(view, "#profile-avatar[src='#{existing_thumbnail_path}']")
+
+      assert has_element?(
+               view,
+               "#sidebar-user img.avatar[src='#{existing_thumbnail_path}']"
+             )
+    end
+
+    test "a storage failure preserves the existing picture", %{conn: conn, user: user} do
+      existing_thumbnail_path = "/uploads/profile_pictures/#{user.id}/existing_thumb.jpg"
+
+      Huddlz.Accounts.create_profile_picture!(
+        %{
+          filename: "existing.jpg",
+          content_type: "image/jpeg",
+          size_bytes: 1000,
+          storage_path: "/uploads/profile_pictures/#{user.id}/existing.jpg",
+          thumbnail_path: existing_thumbnail_path,
+          user_id: user.id
+        },
+        actor: user
+      )
+
+      upload_directory = "priv/static/uploads/profile_pictures/#{user.id}"
+      File.mkdir_p!(Path.dirname(upload_directory))
+      File.write!(upload_directory, "block replacement storage")
+
+      {:ok, view, _html} =
+        conn
+        |> login(user)
+        |> live(~p"/profile")
+
+      upload =
+        file_input(view, "#avatar-form", :avatar, [
+          %{
+            name: "replacement.jpg",
+            content: File.read!("test/fixtures/test_image.jpg"),
+            type: "image/jpeg"
+          }
+        ])
+
+      render_upload(upload, "replacement.jpg")
+
+      assert has_element?(
+               view,
+               "#avatar-upload-error",
+               "The image could not be uploaded. Please try again."
+             )
+
+      assert has_element?(view, "#profile-avatar[src='#{existing_thumbnail_path}']")
+      assert has_element?(view, "#sidebar-user img.avatar[src='#{existing_thumbnail_path}']")
+    end
+
+    test "clears a failed upload when another image is selected", %{conn: conn, user: user} do
+      {:ok, view, _html} =
+        conn
+        |> login(user)
+        |> live(~p"/profile")
+
+      file_input(view, "#avatar-form", :avatar, [
+        %{name: "corrupt.jpg", content: "not an image", type: "image/jpeg"}
+      ])
+      |> render_upload("corrupt.jpg")
+
+      assert has_element?(view, "#avatar-upload-error")
+
+      replacement_upload =
+        file_input(view, "#avatar-form", :avatar, [
+          %{
+            name: "replacement.jpg",
+            content: File.read!("test/fixtures/test_image.jpg"),
+            type: "image/jpeg"
+          }
+        ])
+
+      render_upload(replacement_upload, "replacement.jpg", 1)
+      render_change(element(view, "#avatar-form"))
+      refute has_element?(view, "#avatar-upload-error")
+
+      render_upload(replacement_upload, "replacement.jpg", 99)
+      assert has_element?(view, "#flash-info", "Profile picture updated successfully")
     end
   end
 
@@ -216,5 +773,30 @@ defmodule HuddlzWeb.ProfileLiveTest do
 
       refute has_element?(view, "p", "Location search is currently unavailable")
     end
+  end
+
+  defp create_profile_picture(user) do
+    Huddlz.Accounts.create_profile_picture!(
+      %{
+        filename: "avatar.jpg",
+        content_type: "image/jpeg",
+        size_bytes: 1000,
+        storage_path: "/uploads/profile_pictures/#{user.id}/avatar.jpg",
+        thumbnail_path: "/uploads/profile_pictures/#{user.id}/avatar_thumb.jpg",
+        user_id: user.id
+      },
+      actor: user
+    )
+  end
+
+  defp assert_empty_password_inputs(view, generation, fields) do
+    Enum.each(fields, fn field ->
+      id = field |> to_string() |> String.replace("_", "-")
+
+      assert has_element?(
+               view,
+               "#password-#{generation}-#{id}[name='form[#{field}]'][value=''][phx-update='ignore']"
+             )
+    end)
   end
 end

@@ -102,6 +102,89 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
     end
   end
 
+  describe "replace profile picture" do
+    test "creates the replacement and soft-deletes previous pictures" do
+      user = generate(user())
+
+      previous =
+        Accounts.create_profile_picture!(
+          %{
+            filename: "previous.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/profile_pictures/#{user.id}/previous.jpg",
+            user_id: user.id
+          },
+          actor: user
+        )
+
+      assert {:ok, replacement} =
+               Accounts.replace_profile_picture(
+                 %{
+                   filename: "replacement.jpg",
+                   content_type: "image/jpeg",
+                   size_bytes: 2000,
+                   storage_path: "/uploads/profile_pictures/#{user.id}/replacement.jpg",
+                   user_id: user.id
+                 },
+                 actor: user
+               )
+
+      assert {:ok, [current]} = Accounts.list_profile_pictures(user.id, actor: user)
+      assert current.id == replacement.id
+
+      reloaded_previous = Ash.get!(ProfilePicture, previous.id, authorize?: false)
+      assert reloaded_previous.deleted_at
+    end
+
+    test "a failed replacement leaves the current picture active" do
+      user = generate(user())
+      other_user = generate(user())
+      conflicting_path = "/uploads/profile_pictures/#{other_user.id}/conflicting.jpg"
+
+      current =
+        Accounts.create_profile_picture!(
+          %{
+            filename: "current.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/profile_pictures/#{user.id}/current.jpg",
+            user_id: user.id
+          },
+          actor: user
+        )
+
+      Accounts.create_profile_picture!(
+        %{
+          filename: "conflict.jpg",
+          content_type: "image/jpeg",
+          size_bytes: 1000,
+          storage_path: conflicting_path,
+          user_id: other_user.id
+        },
+        actor: other_user
+      )
+
+      assert {:error, _reason} =
+               Accounts.replace_profile_picture(
+                 %{
+                   filename: "replacement.jpg",
+                   content_type: "image/jpeg",
+                   size_bytes: 2000,
+                   storage_path: conflicting_path,
+                   user_id: user.id
+                 },
+                 actor: user
+               )
+
+      assert {:ok, [active_picture]} =
+               Accounts.list_profile_pictures(user.id, actor: user)
+
+      assert active_picture.id == current.id
+      refute active_picture.deleted_at
+    end
+  end
+
   describe "list profile pictures" do
     test "lists all profile pictures for a user" do
       user = generate(user())
