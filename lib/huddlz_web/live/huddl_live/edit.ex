@@ -778,8 +778,16 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   end
 
   defp find_matching_location(huddl, group_locations) do
-    if huddl.physical_location do
-      Enum.find(group_locations, fn loc -> loc.address == huddl.physical_location end)
-    end
+    Enum.find(group_locations, &(&1.id == huddl.group_location_id)) ||
+      find_legacy_matching_location(huddl, group_locations)
   end
+
+  defp find_legacy_matching_location(
+         %{group_location_id: nil, physical_location: address},
+         locations
+       )
+       when not is_nil(address),
+       do: Enum.find(locations, &(&1.address == address))
+
+  defp find_legacy_matching_location(_huddl, _locations), do: nil
 end

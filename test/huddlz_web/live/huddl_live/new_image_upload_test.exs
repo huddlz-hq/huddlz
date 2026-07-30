@@ -188,7 +188,6 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
   # Helper to simulate selecting a physical location via SavedLocationPicker
   defp select_physical_location(view, text) do
     location = %Huddlz.Communities.GroupLocation{
-      id: Ash.UUID.generate(),
       name: text,
       address: text,
       latitude: 30.27,

@@ -23,9 +23,16 @@ defmodule Huddlz.Communities.Huddl.Changes.ClearUnusedLocationFields do
 
   defp clear_unused_field(changeset) do
     case Ash.Changeset.get_attribute(changeset, :event_type) do
-      :virtual -> Ash.Changeset.force_change_attribute(changeset, :physical_location, nil)
-      :in_person -> Ash.Changeset.force_change_attribute(changeset, :virtual_link, nil)
-      _ -> changeset
+      :virtual ->
+        changeset
+        |> Ash.Changeset.force_change_attribute(:physical_location, nil)
+        |> Ash.Changeset.force_change_attribute(:group_location_id, nil)
+
+      :in_person ->
+        Ash.Changeset.force_change_attribute(changeset, :virtual_link, nil)
+
+      _ ->
+        changeset
     end
   end
 end

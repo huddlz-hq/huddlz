@@ -78,6 +78,7 @@ defmodule Huddlz.Communities.Huddl do
 
     references do
       reference :group, on_delete: :delete
+      reference :group_location, on_delete: :nilify
     end
 
     custom_indexes do
@@ -115,6 +116,7 @@ defmodule Huddlz.Communities.Huddl do
         :thumbnail_url,
         :max_attendees,
         :group_id,
+        :group_location_id,
         :huddl_template_id
       ]
 
@@ -174,6 +176,7 @@ defmodule Huddlz.Communities.Huddl do
         :is_private,
         :thumbnail_url,
         :max_attendees,
+        :group_location_id,
         :huddl_template_id
       ]
 
@@ -641,6 +644,12 @@ defmodule Huddlz.Communities.Huddl do
     belongs_to :group, Huddlz.Communities.Group do
       attribute_type :uuid
       allow_nil? false
+      primary_key? false
+    end
+
+    belongs_to :group_location, Huddlz.Communities.GroupLocation do
+      attribute_type :uuid
+      allow_nil? true
       primary_key? false
     end
 

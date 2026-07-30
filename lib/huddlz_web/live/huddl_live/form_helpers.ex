@@ -45,29 +45,42 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
     end
   end
 
-  def apply_location_to_form(socket, location_text) do
-    current_params = socket.assigns.form.source.params || %{}
-    updated_params = Map.put(current_params, "physical_location", location_text)
-    form = AshPhoenix.Form.validate(socket.assigns.form, updated_params)
-    assign(socket, :form, Phoenix.Component.to_form(form))
-  end
-
   def apply_saved_location_to_form(socket, location) do
+    current_params = socket.assigns.form.source.params || %{}
+
+    updated_params =
+      current_params
+      |> Map.put("physical_location", location.address)
+      |> Map.put("group_location_id", location.id)
+
+    form = AshPhoenix.Form.validate(socket.assigns.form, updated_params)
+
     socket
     |> assign(:selected_location, location)
-    |> apply_location_to_form(location.address)
+    |> assign(:form, Phoenix.Component.to_form(form))
   end
 
   def clear_saved_location(socket) do
+    current_params = socket.assigns.form.source.params || %{}
+
+    updated_params =
+      current_params
+      |> Map.put("physical_location", "")
+      |> Map.put("group_location_id", nil)
+
+    form = AshPhoenix.Form.validate(socket.assigns.form, updated_params)
+
     socket
     |> assign(:selected_location, nil)
-    |> apply_location_to_form("")
+    |> assign(:form, Phoenix.Component.to_form(form))
   end
 
-  def inject_saved_location_params(params, nil), do: params
+  def inject_saved_location_params(params, nil), do: Map.put(params, "group_location_id", nil)
 
   def inject_saved_location_params(params, location) do
-    Map.put(params, "physical_location", location.address)
+    params
+    |> Map.put("physical_location", location.address)
+    |> Map.put("group_location_id", location.id)
   end
 
   @doc """

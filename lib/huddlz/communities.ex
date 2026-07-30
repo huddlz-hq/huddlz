@@ -130,8 +130,36 @@ defmodule Huddlz.Communities do
         args: [:name, :address, :latitude, :longitude, :group_id]
 
       define :list_group_locations, action: :by_group, args: [:group_id]
+      define :get_group_location, action: :read, get_by: [:id]
       define :update_group_location, action: :update
-      define :delete_group_location, action: :destroy
+      define :destroy_group_location, action: :destroy
+    end
+  end
+
+  @doc """
+  Deletes a saved location and distinguishes an already-completed deletion
+  from a failed deletion.
+
+  Concurrent callers can safely treat `{:ok, :already_deleted}` as success.
+  """
+  def delete_group_location(location, opts \\ []) do
+    case destroy_group_location(location, opts) do
+      :ok ->
+        :ok
+
+      {:error, error} ->
+        deletion_result_after_error(location.id, error)
+    end
+  end
+
+  defp deletion_result_after_error(location_id, original_error) do
+    case get_group_location(location_id,
+           authorize?: false,
+           not_found_error?: false
+         ) do
+      {:ok, nil} -> {:ok, :already_deleted}
+      {:ok, _location} -> {:error, original_error}
+      {:error, _lookup_error} -> {:error, original_error}
     end
   end
 

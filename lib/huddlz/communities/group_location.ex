@@ -48,7 +48,13 @@ defmodule Huddlz.Communities.GroupLocation do
   end
 
   actions do
-    defaults [:read, :destroy]
+    defaults [:read]
+
+    destroy :destroy do
+      primary? true
+      require_atomic? false
+      change Huddlz.Communities.GroupLocation.Changes.PreventScheduledDeletion
+    end
 
     create :create do
       primary? true
@@ -138,6 +144,10 @@ defmodule Huddlz.Communities.GroupLocation do
     belongs_to :group, Huddlz.Communities.Group do
       attribute_type :uuid
       allow_nil? false
+    end
+
+    has_many :huddlz, Huddlz.Communities.Huddl do
+      destination_attribute :group_location_id
     end
   end
 

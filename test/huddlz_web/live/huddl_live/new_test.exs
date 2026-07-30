@@ -615,6 +615,17 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
                view,
                "select[name='form[duration_minutes]'] option[value='120'][selected]"
              )
+
+      view
+      |> element("#huddl-form")
+      |> render_submit()
+
+      assert %Huddl{group_location_id: group_location_id} =
+               Huddl
+               |> Ash.Query.filter(title == "My New Huddl")
+               |> Ash.read_one!(authorize?: false)
+
+      assert group_location_id == location.id
     end
 
     test "validates form on change", %{conn: conn, owner: owner, group: group} do
@@ -840,7 +851,6 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
   # Helper to simulate selecting a physical location via SavedLocationPicker
   defp select_physical_location(view, text) do
     location = %Huddlz.Communities.GroupLocation{
-      id: Ash.UUID.generate(),
       name: text,
       address: text,
       latitude: 30.27,

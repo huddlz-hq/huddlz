@@ -396,7 +396,8 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       assert Enum.all?(load_series_huddlz(hybrid_huddl, owner), fn huddl ->
                huddl.event_type == :hybrid and
                  huddl.virtual_link == "https://meet.example.com/hybrid-series" and
-                 huddl.physical_location == location.address
+                 huddl.physical_location == location.address and
+                 huddl.group_location_id == location.id
              end)
     end
 
@@ -434,6 +435,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       assert Enum.all?(load_series_huddlz(in_person_huddl, owner), fn huddl ->
                huddl.event_type == :in_person and
                  huddl.physical_location == location.address and
+                 huddl.group_location_id == location.id and
                  is_nil(huddl.virtual_link)
              end)
     end
@@ -785,6 +787,17 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       # Other form fields must be preserved
       assert has_element?(view, "input[name='form[title]'][value='My Updated Title']")
       assert has_element?(view, "input[name='form[date]'][value='#{expected_date}']")
+
+      view
+      |> element("#huddl-form")
+      |> render_submit()
+
+      assert %Huddl{group_location_id: group_location_id} =
+               Huddl
+               |> Ash.Query.filter(id == ^huddl.id)
+               |> Ash.read_one!(authorize?: false)
+
+      assert group_location_id == location.id
     end
   end
 

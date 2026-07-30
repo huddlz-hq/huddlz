@@ -26,6 +26,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     :title,
     :description,
     :physical_location,
+    :group_location_id,
     :virtual_link,
     :is_private,
     :thumbnail_url,
