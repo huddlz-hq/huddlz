@@ -1,7 +1,7 @@
 defmodule Huddlz.Communities.GroupLocation.Changes.PreventScheduledDeletion do
   @moduledoc """
   Prevents removal of a saved location while current or upcoming huddlz still
-  use its snapshotted venue address.
+  reference it.
   """
 
   use Ash.Resource.Change

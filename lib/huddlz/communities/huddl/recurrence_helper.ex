@@ -26,6 +26,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     :title,
     :description,
     :physical_location,
+    :group_location_id,
     :virtual_link,
     :is_private,
     :thumbnail_url,
@@ -95,7 +96,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     do: :ok
 
   def generate_huddlz_from_template(template, source, count) do
-    interval_days = frequency_days(template.frequency)
+    interval_days = interval_days(template)
     starts_at = DateTime.add(source.starts_at, interval_days, :day)
     ends_at = DateTime.add(source.ends_at, interval_days, :day)
 
@@ -122,7 +123,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   # at @max_instances. Times shift with the source, so editing the time moves
   # every future occurrence.
   defp desired_occurrences(source, template) do
-    interval_days = frequency_days(template.frequency)
+    interval_days = interval_days(template)
     duration = DateTime.diff(source.ends_at, source.starts_at, :second)
 
     1..@max_instances
@@ -237,6 +238,6 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     end
   end
 
-  defp frequency_days(:weekly), do: 7
-  defp frequency_days(:monthly), do: 30
+  defp interval_days(%{interval: interval, unit: :week}), do: interval * 7
+  defp interval_days(%{interval: interval, unit: :month}), do: interval * 30
 end

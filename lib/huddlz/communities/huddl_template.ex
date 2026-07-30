@@ -24,8 +24,16 @@ defmodule Huddlz.Communities.HuddlTemplate do
 
       accept [
         :repeat_until,
-        :frequency
+        :interval,
+        :unit
       ]
+
+      argument :frequency, :atom do
+        allow_nil? true
+        constraints one_of: [:weekly, :every_two_weeks, :monthly]
+      end
+
+      change Huddlz.Communities.HuddlTemplate.Changes.SetRecurrenceFromFrequency
     end
 
     update :update do
@@ -33,9 +41,16 @@ defmodule Huddlz.Communities.HuddlTemplate do
 
       accept [
         :repeat_until,
-        :frequency
+        :interval,
+        :unit
       ]
 
+      argument :frequency, :atom do
+        allow_nil? true
+        constraints one_of: [:weekly, :every_two_weeks, :monthly]
+      end
+
+      change Huddlz.Communities.HuddlTemplate.Changes.SetRecurrenceFromFrequency
       require_atomic? false
     end
   end
@@ -62,10 +77,23 @@ defmodule Huddlz.Communities.HuddlTemplate do
       allow_nil? false
     end
 
-    attribute :frequency, :atom do
+    attribute :interval, :integer do
       allow_nil? false
-      constraints one_of: [:weekly, :monthly]
-      default :weekly
+      constraints min: 1
+      default 1
+    end
+
+    attribute :unit, :atom do
+      allow_nil? false
+      constraints one_of: [:week, :month]
+      default :week
     end
   end
+
+  @doc """
+  Returns the form-facing cadence represented by an explicit interval and unit.
+  """
+  def cadence(%__MODULE__{interval: 1, unit: :week}), do: :weekly
+  def cadence(%__MODULE__{interval: 2, unit: :week}), do: :every_two_weeks
+  def cadence(%__MODULE__{interval: 1, unit: :month}), do: :monthly
 end

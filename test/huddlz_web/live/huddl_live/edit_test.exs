@@ -285,6 +285,47 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       assert_has(session, "input[name='form[repeat_until]']")
     end
 
+    test "whole-series editing preserves an every-two-weeks cadence", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      every_other_week_huddl =
+        create_recurring_huddl(owner, group,
+          title: "Every Other Week Series",
+          frequency: :every_two_weeks,
+          repeat_until: Date.utc_today() |> Date.add(60)
+        )
+
+      session = open_whole_series_edit(conn, owner, group, every_other_week_huddl)
+
+      assert_has(
+        session,
+        "select[name='form[frequency]'] option[value='every_two_weeks'][selected]"
+      )
+
+      save_whole_series(session)
+
+      template =
+        every_other_week_huddl
+        |> Ash.reload!(actor: owner)
+        |> Ash.load!(:huddl_template, actor: owner)
+        |> Map.fetch!(:huddl_template)
+
+      assert template.interval == 2
+      assert template.unit == :week
+
+      dates =
+        every_other_week_huddl
+        |> load_series_huddlz(owner)
+        |> Enum.map(&DateTime.to_date(&1.starts_at))
+        |> Enum.sort(Date)
+
+      assert dates
+             |> Enum.chunk_every(2, 1, :discard)
+             |> Enum.all?(fn [first, second] -> Date.diff(second, first) == 14 end)
+    end
+
     test "whole-series editing keeps virtual controls and their value", %{
       conn: conn,
       owner: owner,
@@ -355,7 +396,8 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       assert Enum.all?(load_series_huddlz(hybrid_huddl, owner), fn huddl ->
                huddl.event_type == :hybrid and
                  huddl.virtual_link == "https://meet.example.com/hybrid-series" and
-                 huddl.physical_location == location.address
+                 huddl.physical_location == location.address and
+                 huddl.group_location_id == location.id
              end)
     end
 
@@ -393,6 +435,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       assert Enum.all?(load_series_huddlz(in_person_huddl, owner), fn huddl ->
                huddl.event_type == :in_person and
                  huddl.physical_location == location.address and
+                 huddl.group_location_id == location.id and
                  is_nil(huddl.virtual_link)
              end)
     end
@@ -574,6 +617,76 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
 
       assert reloaded.max_attendees == nil
     end
+
+    test "clearing an invalid capacity restores unlimited capacity", %{
+      conn: conn,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+        |> fill_in("Max attendees", with: "0")
+        |> assert_has("#form_max_attendees-error-0", text: "Must be at least 1")
+        |> fill_in("Max attendees", with: "")
+        |> refute_has("input[name='form[max_attendees]'][value='0']")
+        |> refute_has("#form_max_attendees-error-0")
+        |> click_button("Save changes")
+
+      assert_has(session, "*", text: "Huddl updated successfully!")
+
+      reloaded =
+        Huddl
+        |> Ash.Query.filter(id == ^huddl.id)
+        |> Ash.read_one!(actor: owner)
+
+      assert is_nil(reloaded.max_attendees)
+    end
+  end
+
+  describe "virtual link validation" do
+    setup do
+      owner = generate(user(role: :user))
+      group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+
+      huddl =
+        generate(
+          huddl(
+            title: "Virtual Huddl",
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            event_type: :virtual,
+            virtual_link: "https://meet.example.com/original"
+          )
+        )
+
+      %{owner: owner, group: group, huddl: huddl}
+    end
+
+    test "shows a friendly inline error for a malformed link", %{
+      conn: conn,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+      |> assert_has("input[name='form[virtual_link]'][type='text'][inputmode='url']")
+      |> fill_in("Online link", with: "javascript:alert(1)")
+      |> click_button("Save changes")
+      |> assert_path(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+      |> assert_has(
+        "input[name='form[virtual_link]'][aria-invalid='true'][aria-describedby='form_virtual_link-help form_virtual_link-error-0']"
+      )
+      |> assert_has(
+        "#form_virtual_link-error-0",
+        text: "Must be a valid web address starting with http:// or https://"
+      )
+    end
   end
 
   describe "saved location picker" do
@@ -674,6 +787,17 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       # Other form fields must be preserved
       assert has_element?(view, "input[name='form[title]'][value='My Updated Title']")
       assert has_element?(view, "input[name='form[date]'][value='#{expected_date}']")
+
+      view
+      |> element("#huddl-form")
+      |> render_submit()
+
+      assert %Huddl{group_location_id: group_location_id} =
+               Huddl
+               |> Ash.Query.filter(id == ^huddl.id)
+               |> Ash.read_one!(authorize?: false)
+
+      assert group_location_id == location.id
     end
   end
 

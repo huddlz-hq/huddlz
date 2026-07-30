@@ -304,6 +304,7 @@ defmodule Huddlz.Generator do
         group_id: group_id,
         event_type: :in_person,
         physical_location: "123 Main St, Anytown, USA",
+        group_location_id: nil,
         is_private: false,
         huddl_template_id: nil,
         is_recurring: false,

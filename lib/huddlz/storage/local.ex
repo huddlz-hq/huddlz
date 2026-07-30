@@ -12,12 +12,9 @@ defmodule Huddlz.Storage.Local do
   def put(source_path, storage_path, _content_type) do
     full_path = full_path(storage_path)
 
-    # Ensure directory exists
-    full_path |> Path.dirname() |> File.mkdir_p!()
-
-    case File.cp(source_path, full_path) do
-      :ok -> {:ok, storage_path}
-      {:error, reason} -> {:error, reason}
+    with :ok <- full_path |> Path.dirname() |> File.mkdir_p(),
+         :ok <- File.cp(source_path, full_path) do
+      {:ok, storage_path}
     end
   end
 
@@ -26,11 +23,9 @@ defmodule Huddlz.Storage.Local do
     source_full_path = full_path(source_path)
     destination_full_path = full_path(destination_path)
 
-    destination_full_path |> Path.dirname() |> File.mkdir_p!()
-
-    case File.cp(source_full_path, destination_full_path) do
-      :ok -> {:ok, destination_path}
-      {:error, reason} -> {:error, reason}
+    with :ok <- destination_full_path |> Path.dirname() |> File.mkdir_p(),
+         :ok <- File.cp(source_full_path, destination_full_path) do
+      {:ok, destination_path}
     end
   end
 

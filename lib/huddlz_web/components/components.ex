@@ -20,6 +20,7 @@ defmodule HuddlzWeb.Components do
       import HuddlzWeb.Components.Card
       import HuddlzWeb.Components.Chip
       import HuddlzWeb.Components.Flash
+      import HuddlzWeb.Components.HuddlCoverImage
       import HuddlzWeb.Components.Icon
       import HuddlzWeb.Components.Input
       import HuddlzWeb.Components.ListRow

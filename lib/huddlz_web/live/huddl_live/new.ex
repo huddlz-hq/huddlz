@@ -148,6 +148,7 @@ defmodule HuddlzWeb.HuddlLive.New do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="my-groups"
     >
@@ -200,7 +201,6 @@ defmodule HuddlzWeb.HuddlLive.New do
                   field={@form[:date]}
                   type="date"
                   label="Date"
-                  min={Date.utc_today() |> Date.to_iso8601()}
                 />
               </div>
               <div class="form-col-sm">
@@ -242,8 +242,11 @@ defmodule HuddlzWeb.HuddlLive.New do
                   <.select
                     field={@form[:frequency]}
                     label="Frequency"
-                    options={[{"Weekly", "weekly"}, {"Monthly", "monthly"}]}
-                    required
+                    options={[
+                      {"Weekly", "weekly"},
+                      {"Every two weeks", "every_two_weeks"},
+                      {"Monthly", "monthly"}
+                    ]}
                   />
                 </div>
                 <div class="form-col-md">
@@ -251,7 +254,6 @@ defmodule HuddlzWeb.HuddlLive.New do
                     field={@form[:repeat_until]}
                     type="date"
                     label="Repeat until"
-                    required
                   />
                 </div>
               </div>
@@ -265,22 +267,22 @@ defmodule HuddlzWeb.HuddlLive.New do
           </div>
           <div class="form-grid">
             <%= if @show_physical_location do %>
-              <div class="form-row">
-                <.live_component
-                  module={HuddlzWeb.Live.SavedLocationPicker}
-                  id="saved-location-picker"
-                  group_locations={@group_locations}
-                  selected_location={@selected_location}
-                  new_location_path={~p"/groups/#{@group.slug}/huddlz/new/locations/new"}
-                />
-                <.field_errors field={@form[:physical_location]} />
-              </div>
+              <.live_component
+                module={HuddlzWeb.Live.SavedLocationPicker}
+                id="saved-location-picker"
+                group_locations={@group_locations}
+                selected_location={@selected_location}
+                new_location_path={~p"/groups/#{@group.slug}/huddlz/new/locations/new"}
+                field={@form[:physical_location]}
+              />
             <% end %>
 
             <%= if @show_virtual_link do %>
               <.input
                 field={@form[:virtual_link]}
-                type="url"
+                type="text"
+                inputmode="url"
+                autocomplete="url"
                 label="Online link"
                 placeholder="https://meet.example.com/..."
                 help="Only attendees see this link."
@@ -298,7 +300,6 @@ defmodule HuddlzWeb.HuddlLive.New do
               field={@form[:max_attendees]}
               type="number"
               label="Max attendees"
-              min="1"
               placeholder="No limit"
               help="Leave blank for unlimited. When full, new RSVPs go to a waitlist."
             />

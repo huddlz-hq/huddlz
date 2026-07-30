@@ -87,11 +87,33 @@ defmodule Huddlz.Communities do
 
     resource Huddlz.Communities.GroupMember do
       define :add_member, action: :add_member, args: [:group_id, :user_id, :role]
+      define :get_group_member, action: :read, get_by: [:group_id, :user_id]
+
+      define :accept_invitation_membership,
+        action: :accept_invitation,
+        args: [:group_id, :user_id, :role]
+
+      define :set_member_role_from_invitation, action: :set_role, args: [:role]
       define :remove_member, action: :remove_member, args: [:group_id, :user_id]
       define :change_member_role, action: :change_role, args: [:role]
       define :get_by_group, action: :get_by_group, args: [:group_id]
       define :get_by_user, action: :get_by_user
       define :get_membership_in_group, action: :get_in_group, args: [:group_id], get?: true
+    end
+
+    resource Huddlz.Communities.GroupInvitation do
+      define :invite_to_group,
+        action: :invite,
+        args: [:group_id, :invitee_id, {:optional, :role}]
+
+      define :list_my_group_invitations, action: :mine
+      define :get_group_invitation, action: :read, get_by: [:id]
+      define :get_my_group_invitation, action: :get_mine, args: [:id], get?: true
+      define :list_group_invitations, action: :for_group, args: [:group_id]
+      define :accept_group_invitation, action: :accept
+      define :decline_group_invitation, action: :decline
+      define :revoke_group_invitation, action: :revoke
+      define :expire_group_invitation, action: :expire
     end
 
     resource Huddlz.Communities.HuddlAttendee do
@@ -108,8 +130,44 @@ defmodule Huddlz.Communities do
         args: [:name, :address, :latitude, :longitude, :group_id]
 
       define :list_group_locations, action: :by_group, args: [:group_id]
+      define :get_group_location, action: :read, get_by: [:id]
       define :update_group_location, action: :update
-      define :delete_group_location, action: :destroy
+      define :destroy_group_location, action: :destroy
     end
+  end
+
+  @doc """
+  Deletes a saved location and distinguishes an already-completed deletion
+  from a failed deletion.
+
+  Concurrent callers can safely treat `{:ok, :already_deleted}` as success.
+  """
+  def delete_group_location(location, opts \\ []) do
+    case destroy_group_location(location, opts) do
+      :ok ->
+        :ok
+
+      {:error, error} ->
+        deletion_result_after_error(location.id, error)
+    end
+  end
+
+  defp deletion_result_after_error(location_id, original_error) do
+    case get_group_location(location_id,
+           authorize?: false,
+           not_found_error?: false
+         ) do
+      {:ok, nil} -> {:ok, :already_deleted}
+      {:ok, _location} -> {:error, original_error}
+      {:error, _lookup_error} -> {:error, original_error}
+    end
+  end
+
+  @doc """
+  Loads the private invitation details after an invitation action has already
+  authorized access to the invitation itself.
+  """
+  def load_group_invitation_details!(invitation) do
+    Ash.load!(invitation, [:group, :invitee, :inviter], authorize?: false)
   end
 end

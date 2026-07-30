@@ -1,6 +1,8 @@
 defmodule HuddlzWeb.AdminLiveTest do
   use HuddlzWeb.ConnCase, async: true
 
+  import Phoenix.LiveViewTest
+
   alias Huddlz.Accounts.User
 
   # Sample user data
@@ -45,19 +47,25 @@ defmodule HuddlzWeb.AdminLiveTest do
     end
 
     test "redirects if user is a non-admin user", %{conn: conn, regular_user: regular_user} do
-      # With user in session, should redirect to home
-      conn
-      |> login(regular_user)
-      |> visit(~p"/admin")
-      |> assert_path(~p"/my-huddlz")
+      conn = login(conn, regular_user)
+
+      assert {:error,
+              {:redirect,
+               %{
+                 to: "/my-huddlz",
+                 flash: %{"error" => "You don't have access to the admin area."}
+               }}} = live(conn, ~p"/admin")
+
+      # The denied request must not clear the authenticated session.
+      assert {:ok, _view, _html} = live(conn, ~p"/profile")
     end
 
     test "redirects all non-admin users", %{conn: conn, verified_user: verified_user} do
-      # All non-admin users should be redirected
       conn
       |> login(verified_user)
       |> visit(~p"/admin")
       |> assert_path(~p"/my-huddlz")
+      |> assert_has("div[role='alert']", text: "You don't have access to the admin area.")
     end
 
     test "renders admin panel for admin users", %{conn: conn, admin_user: admin_user} do

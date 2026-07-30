@@ -7,6 +7,8 @@ defmodule Huddlz.Accounts.User do
 
   alias Huddlz.RateLimit.Keys
 
+  @email_pattern ~r/^[^\s]+@[^\s]+$/
+
   use Ash.Resource,
     otp_app: :huddlz,
     domain: Huddlz.Accounts,
@@ -180,7 +182,7 @@ defmodule Huddlz.Accounts.User do
       description "Update a user's display_name"
       accept [:display_name]
 
-      validate attribute_does_not_equal(:display_name, "")
+      validate present(:display_name), message: "is required"
       validate string_length(:display_name, min: 1, max: 70)
     end
 
@@ -278,6 +280,20 @@ defmodule Huddlz.Accounts.User do
       validate {AshAuthentication.Strategy.Password.PasswordValidation,
                 strategy_name: :password, password_argument: :current_password}
 
+      validate fn changeset, _context ->
+        current_email = to_string(changeset.data.email)
+
+        requested_email =
+          Map.get(changeset.params, :email) || Map.get(changeset.params, "email")
+
+        if not is_nil(requested_email) and
+             String.downcase(to_string(requested_email)) == String.downcase(current_email) do
+          {:error, field: :email, message: "Enter a different email address."}
+        else
+          :ok
+        end
+      end
+
       change after_action(fn changeset, user, _ctx ->
                previous_email = to_string(changeset.data.email)
                new_email = to_string(user.email)
@@ -352,13 +368,21 @@ defmodule Huddlz.Accounts.User do
 
       argument :email, :ci_string do
         description "The email to use for retrieving the user."
-        allow_nil? false
+        allow_nil? true
       end
 
       argument :password, :string do
         description "The password to check for the matching user."
         allow_nil? false
         sensitive? true
+      end
+
+      validate present(:email) do
+        message "Email is required."
+      end
+
+      validate match(:email, @email_pattern) do
+        message "Enter a valid email address."
       end
 
       # validates the provided email and password and generates a token
@@ -420,6 +444,10 @@ defmodule Huddlz.Accounts.User do
         sensitive? true
       end
 
+      validate match(:email, @email_pattern) do
+        message "Enter a valid email address."
+      end
+
       # Hashes the provided password
       change AshAuthentication.Strategy.Password.HashPasswordChange
 
@@ -460,6 +488,10 @@ defmodule Huddlz.Accounts.User do
 
       argument :email, :ci_string do
         allow_nil? false
+      end
+
+      validate match(:email, @email_pattern) do
+        message "Enter a valid email address."
       end
 
       # creates a reset token and invokes the relevant senders
@@ -613,13 +645,19 @@ defmodule Huddlz.Accounts.User do
     end
   end
 
+  validations do
+    validate match(:email, @email_pattern) do
+      where changing(:email)
+      message "Enter a valid email address."
+    end
+  end
+
   attributes do
     uuid_primary_key :id
 
     attribute :email, :ci_string do
       allow_nil? false
       public? true
-      constraints match: ~S/^[^\s]+@[^\s]+$/
     end
 
     attribute :display_name, :string do
@@ -688,6 +726,10 @@ defmodule Huddlz.Accounts.User do
 
     has_many :profile_pictures, Huddlz.Accounts.ProfilePicture do
       destination_attribute :user_id
+    end
+
+    has_many :group_invitations, Huddlz.Communities.GroupInvitation do
+      destination_attribute :invitee_id
     end
 
     has_many :valid_api_keys, Huddlz.Accounts.ApiKey do

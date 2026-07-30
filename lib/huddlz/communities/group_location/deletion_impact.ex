@@ -1,12 +1,10 @@
 defmodule Huddlz.Communities.GroupLocation.DeletionImpact do
   @moduledoc """
-  Finds current and upcoming huddlz whose copied venue address matches a
-  saved location.
+  Finds current and upcoming huddlz linked to a saved location.
 
-  Huddlz intentionally snapshot venue text and coordinates when they are
-  scheduled. That keeps historical venue details intact after an address-book
-  entry is removed. This query identifies the snapshots that still represent
-  active commitments and must therefore block deletion.
+  Huddlz snapshot venue text and coordinates while retaining the saved
+  location identifier. Deleting a location nils that identifier for historical
+  huddlz without changing their displayable venue details.
   """
 
   require Ash.Query
@@ -19,10 +17,10 @@ defmodule Huddlz.Communities.GroupLocation.DeletionImpact do
     Huddl
     |> Ash.Query.filter(
       group_id == ^location.group_id and
-        physical_location == ^location.address and
+        group_location_id == ^location.id and
         ends_at >= ^now
     )
-    |> Ash.Query.select([:title, :starts_at, :huddl_template_id])
+    |> Ash.Query.select([:id])
     |> Ash.read(authorize?: false)
   end
 
@@ -30,7 +28,7 @@ defmodule Huddlz.Communities.GroupLocation.DeletionImpact do
     huddl_label = if reference_count == 1, do: "huddl", else: "huddlz"
     move_instruction = if reference_count == 1, do: "Move it", else: "Move those huddlz"
 
-    "This location is used by #{reference_count} upcoming #{huddl_label}. " <>
+    "This location is used by #{reference_count} current or upcoming #{huddl_label}. " <>
       "#{move_instruction} to another venue before deleting it."
   end
 end

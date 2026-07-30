@@ -3,8 +3,12 @@ defmodule Huddlz.Communities.GroupLocationTest do
 
   require Ash.Query
 
+  alias Ecto.Adapters.SQL.Sandbox
   alias Huddlz.Communities
   alias Huddlz.Communities.GroupLocation
+  alias Huddlz.Communities.Huddl
+  alias Huddlz.Communities.Huddl.RecurrenceHelper
+  alias Huddlz.Communities.HuddlTemplate
 
   describe "group_location creation" do
     test "owner can create a group location" do
@@ -289,6 +293,21 @@ defmodule Huddlz.Communities.GroupLocationTest do
   end
 
   describe "group_location update" do
+    test "rejects a blank location name" do
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      location = generate(group_location(group_id: group.id, name: "Original Name", actor: owner))
+
+      assert {:error, error} =
+               location
+               |> Ash.Changeset.for_update(:update, %{name: ""})
+               |> Ash.update(actor: owner)
+
+      assert Enum.any?(error.errors, fn error ->
+               error.field == :name && error.message == "Name is required"
+             end)
+    end
+
     test "owner can rename a location" do
       owner = generate(user(role: :user))
       group = generate(group(owner_id: owner.id, actor: owner))
@@ -387,6 +406,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
         huddl_at_location(
           group_id: group.id,
           creator_id: owner.id,
+          group_location_id: location.id,
           physical_location: location.address,
           latitude: location.latitude,
           longitude: location.longitude,
@@ -396,7 +416,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
       )
 
       assert {:error, error} = Communities.delete_group_location(location, actor: owner)
-      assert Exception.message(error) =~ "used by 1 upcoming huddl"
+      assert Exception.message(error) =~ "used by 1 current or upcoming huddl"
 
       assert {:ok, [_location]} =
                Communities.list_group_locations(group.id, actor: owner)
@@ -421,6 +441,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
           past_huddl(
             group_id: group.id,
             creator_id: owner.id,
+            group_location_id: location.id,
             physical_location: location.address,
             latitude: location.latitude,
             longitude: location.longitude
@@ -435,45 +456,161 @@ defmodule Huddlz.Communities.GroupLocationTest do
         |> Ash.read_one!(authorize?: false)
 
       assert reloaded_huddl.physical_location == "200 History Ln, Austin, TX"
+      assert is_nil(reloaded_huddl.group_location_id)
       assert {:ok, []} = Communities.list_group_locations(group.id, actor: owner)
     end
 
-    test "a matching address in another group does not block deletion" do
+    test "a matching address does not conflate distinct saved locations" do
       owner = generate(user(role: :user))
       group = generate(group(owner_id: owner.id, actor: owner))
-      other_group = generate(group(owner_id: owner.id, actor: owner))
 
-      location =
+      referenced_location =
         generate(
           group_location(
             group_id: group.id,
+            name: "Referenced",
             address: "300 Shared St, Austin, TX",
+            actor: owner
+          )
+        )
+
+      disposable_location =
+        generate(
+          group_location(
+            group_id: group.id,
+            name: "Disposable",
+            address: referenced_location.address,
             actor: owner
           )
         )
 
       generate(
         huddl_at_location(
-          group_id: other_group.id,
+          group_id: group.id,
           creator_id: owner.id,
-          physical_location: location.address,
+          group_location_id: referenced_location.id,
+          physical_location: referenced_location.address,
           starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
           ends_at: DateTime.add(DateTime.utc_now(), 1, :day)
         )
       )
 
-      assert :ok = Communities.delete_group_location(location, actor: owner)
+      assert :ok = Communities.delete_group_location(disposable_location, actor: owner)
+      assert {:ok, [remaining]} = Communities.list_group_locations(group.id, actor: owner)
+      assert remaining.id == referenced_location.id
     end
 
-    test "repeated deletion returns a handled error" do
+    test "a recurring series blocks deletion through its copied saved-location reference" do
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+
+      location =
+        generate(
+          group_location(
+            group_id: group.id,
+            name: "Series Venue",
+            actor: owner
+          )
+        )
+
+      template =
+        HuddlTemplate
+        |> Ash.Changeset.for_create(:create, %{
+          interval: 1,
+          unit: :week,
+          repeat_until: DateTime.add(DateTime.utc_now(), 10, :day)
+        })
+        |> Ash.create!(authorize?: false)
+
+      starts_at = DateTime.add(DateTime.utc_now(), 1, :day)
+
+      source =
+        generate(
+          huddl_at_location(
+            group_id: group.id,
+            creator_id: owner.id,
+            group_location_id: location.id,
+            huddl_template_id: template.id,
+            physical_location: location.address,
+            starts_at: starts_at,
+            ends_at: DateTime.add(starts_at, 1, :hour)
+          )
+        )
+
+      assert :ok = RecurrenceHelper.generate_huddlz_from_template(template, source)
+
+      assert [_generated] =
+               Huddl
+               |> Ash.Query.filter(id != ^source.id and huddl_template_id == ^template.id)
+               |> Ash.read!(authorize?: false)
+
+      assert {:error, error} = Communities.delete_group_location(location, actor: owner)
+      assert Exception.message(error) =~ "used by 2 current or upcoming huddlz"
+    end
+
+    test "an in-progress huddl is described as current rather than upcoming" do
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      location = generate(group_location(group_id: group.id, actor: owner))
+      now = DateTime.utc_now()
+
+      generate(
+        huddl_at_location(
+          group_id: group.id,
+          creator_id: owner.id,
+          group_location_id: location.id,
+          physical_location: location.address,
+          starts_at: DateTime.add(now, -1, :hour),
+          ends_at: DateTime.add(now, 1, :hour)
+        )
+      )
+
+      assert {:error, error} = Communities.delete_group_location(location, actor: owner)
+      assert Exception.message(error) =~ "1 current or upcoming huddl"
+    end
+
+    test "repeated deletion returns an idempotent result" do
       owner = generate(user(role: :user))
       group = generate(group(owner_id: owner.id, actor: owner))
       location = generate(group_location(group_id: group.id, actor: owner))
 
       assert :ok = Communities.delete_group_location(location, actor: owner)
-      assert {:error, error} = Communities.delete_group_location(location, actor: owner)
-      assert Exception.message(error) =~ "Forbidden"
+
+      assert {:ok, :already_deleted} =
+               Communities.delete_group_location(location, actor: owner)
+
       assert {:ok, []} = Communities.list_group_locations(group.id, actor: owner)
+    end
+
+    test "concurrent deletion attempts both return useful results" do
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      location = generate(group_location(group_id: group.id, actor: owner))
+      test_process = self()
+
+      tasks =
+        Enum.map(1..2, fn _attempt ->
+          Task.async(fn ->
+            send(test_process, {:delete_ready, self()})
+
+            receive do
+              :delete_location ->
+                Communities.delete_group_location(location, actor: owner)
+            end
+          end)
+        end)
+
+      Enum.each(tasks, fn task ->
+        task_pid = task.pid
+        Sandbox.allow(Huddlz.Repo, test_process, task_pid)
+        assert_receive {:delete_ready, ^task_pid}
+      end)
+
+      Enum.each(tasks, &send(&1.pid, :delete_location))
+
+      assert tasks
+             |> Task.await_many()
+             |> Enum.sort() == [:ok, {:ok, :already_deleted}]
     end
   end
 

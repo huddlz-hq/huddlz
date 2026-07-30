@@ -3,6 +3,8 @@ defmodule Huddlz.Communities.Group do
   A group is a community container that can organize huddlz and manage members.
   """
 
+  @name_length 3..100
+
   use Ash.Resource,
     otp_app: :huddlz,
     domain: Huddlz.Communities,
@@ -214,20 +216,7 @@ defmodule Huddlz.Communities.Group do
         allow_nil? false
       end
 
-      validate fn changeset, _ctx ->
-        new_owner_id = Ash.Changeset.get_argument(changeset, :new_owner_id)
-
-        cond do
-          is_nil(new_owner_id) ->
-            {:error, field: :new_owner_id, message: "is required"}
-
-          new_owner_id == changeset.data.owner_id ->
-            {:error, field: :new_owner_id, message: "is already the group owner"}
-
-          true ->
-            :ok
-        end
-      end
+      validate Huddlz.Communities.Group.Validations.NewOwnerIsExistingMember
 
       change Huddlz.Communities.Group.Changes.TransferOwnership
     end
@@ -277,13 +266,28 @@ defmodule Huddlz.Communities.Group do
     end
   end
 
+  validations do
+    validate string_length(:name, min: @name_length.first, max: @name_length.last) do
+      message "Must be between 3 and 100 characters"
+    end
+
+    validate match(:slug, ~r/^[a-z0-9-]+$/) do
+      where action_is(:update_details)
+      message "Use only lowercase letters, numbers, and hyphens"
+    end
+  end
+
+  @doc false
+  def valid_name_length?(name) do
+    String.length(to_string(name)) in @name_length
+  end
+
   attributes do
     uuid_primary_key :id
 
     attribute :name, :ci_string do
       allow_nil? false
       public? true
-      constraints min_length: 3, max_length: 100
     end
 
     attribute :description, :ci_string do
@@ -333,6 +337,10 @@ defmodule Huddlz.Communities.Group do
     end
 
     has_many :group_members, Huddlz.Communities.GroupMember do
+      destination_attribute :group_id
+    end
+
+    has_many :group_invitations, Huddlz.Communities.GroupInvitation do
       destination_attribute :group_id
     end
 

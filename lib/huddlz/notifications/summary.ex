@@ -42,6 +42,7 @@ defmodule Huddlz.Notifications.Summary do
     do: "#{name} joined #{group}"
 
   defp title(:group_member_added, %{"group_name" => group}), do: "Added to #{group}"
+  defp title(:group_invitation, %{"group_name" => group}), do: "Invitation to #{group}"
   defp title(:group_member_removed, %{"group_name" => group}), do: "Removed from #{group}"
   defp title(:group_role_changed, %{"group_name" => group}), do: "Role changed in #{group}"
   defp title(:group_archived, %{"group_name" => group}), do: "Archived: #{group}"
@@ -139,6 +140,9 @@ defmodule Huddlz.Notifications.Summary do
 
   defp source_url(_trigger, %{"group_slug" => slug}) when is_binary(slug),
     do: "/groups/#{slug}"
+
+  defp source_url(:group_invitation, %{"invitation_id" => id}) when is_binary(id),
+    do: "/invitations/#{id}"
 
   defp source_url(:password_changed, _), do: "/profile"
   defp source_url(:email_changed, _), do: "/profile"

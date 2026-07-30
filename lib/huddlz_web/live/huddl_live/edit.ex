@@ -9,6 +9,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   import HuddlzWeb.Live.Helpers.UploadHelpers
 
   alias Huddlz.Communities
+  alias Huddlz.Communities.HuddlTemplate
   alias Huddlz.Storage.GroupImages
   alias Huddlz.Storage.HuddlImages
   alias HuddlzWeb.Layouts
@@ -120,7 +121,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     if huddl.huddl_template_id do
       Map.merge(params, %{
         "repeat_until" => huddl.huddl_template.repeat_until,
-        "frequency" => to_string(huddl.huddl_template.frequency)
+        "frequency" => huddl.huddl_template |> HuddlTemplate.cadence() |> to_string()
       })
     else
       params
@@ -177,6 +178,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="my-groups"
     >
@@ -358,8 +360,11 @@ defmodule HuddlzWeb.HuddlLive.Edit do
                   <.select
                     field={@form[:frequency]}
                     label="Frequency"
-                    options={[{"Weekly", "weekly"}, {"Monthly", "monthly"}]}
-                    required
+                    options={[
+                      {"Weekly", "weekly"},
+                      {"Every two weeks", "every_two_weeks"},
+                      {"Monthly", "monthly"}
+                    ]}
                   />
                 </div>
                 <div class="form-col-md">
@@ -367,7 +372,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
                     field={@form[:repeat_until]}
                     type="date"
                     label="Repeat until"
-                    required
                   />
                 </div>
               </div>
@@ -381,24 +385,22 @@ defmodule HuddlzWeb.HuddlLive.Edit do
           </div>
           <div class="form-grid">
             <%= if @show_physical_location do %>
-              <div class="form-row">
-                <.live_component
-                  module={HuddlzWeb.Live.SavedLocationPicker}
-                  id="saved-location-picker"
-                  group_locations={@group_locations}
-                  selected_location={@selected_location}
-                  new_location_path={
-                    ~p"/groups/#{@group_slug}/huddlz/#{@huddl.id}/edit/locations/new"
-                  }
-                />
-                <.field_errors field={@form[:physical_location]} />
-              </div>
+              <.live_component
+                module={HuddlzWeb.Live.SavedLocationPicker}
+                id="saved-location-picker"
+                group_locations={@group_locations}
+                selected_location={@selected_location}
+                new_location_path={~p"/groups/#{@group_slug}/huddlz/#{@huddl.id}/edit/locations/new"}
+                field={@form[:physical_location]}
+              />
             <% end %>
 
             <%= if @show_virtual_link do %>
               <.input
                 field={@form[:virtual_link]}
-                type="url"
+                type="text"
+                inputmode="url"
+                autocomplete="url"
                 label="Online link"
                 placeholder="https://meet.example.com/..."
                 help="Only attendees see this link."
@@ -416,7 +418,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
               field={@form[:max_attendees]}
               type="number"
               label="Max attendees"
-              min="1"
               placeholder="No limit"
               help="Leave blank for unlimited. When full, new RSVPs go to a waitlist."
             />
@@ -777,8 +778,16 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   end
 
   defp find_matching_location(huddl, group_locations) do
-    if huddl.physical_location do
-      Enum.find(group_locations, fn loc -> loc.address == huddl.physical_location end)
-    end
+    Enum.find(group_locations, &(&1.id == huddl.group_location_id)) ||
+      find_legacy_matching_location(huddl, group_locations)
   end
+
+  defp find_legacy_matching_location(
+         %{group_location_id: nil, physical_location: address},
+         locations
+       )
+       when not is_nil(address),
+       do: Enum.find(locations, &(&1.address == address))
+
+  defp find_legacy_matching_location(_huddl, _locations), do: nil
 end

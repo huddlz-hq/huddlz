@@ -186,6 +186,7 @@ defmodule HuddlzWeb.GroupLive.New do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="my-groups"
     >
@@ -211,7 +212,7 @@ defmodule HuddlzWeb.GroupLive.New do
               autocomplete="off"
               help="3–100 characters."
             />
-            <div class="form-row">
+            <div id="group-slug-preview" class="form-row">
               <div class="form-help">
                 URL: {url(~p"/groups/#{@form[:slug].value || "..."}")}
               </div>

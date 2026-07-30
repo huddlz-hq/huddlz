@@ -17,7 +17,6 @@ defmodule HuddlzWeb.AuthLive.SignIn do
       <p class="lede">Welcome back. Sign in to RSVP, organize, and follow your groups.</p>
 
       <.form
-        :let={f}
         for={@password_form}
         id="password-sign-in-form"
         phx-submit="sign_in_with_password"
@@ -25,12 +24,18 @@ defmodule HuddlzWeb.AuthLive.SignIn do
         phx-trigger-action={@trigger_action}
         action={sign_in_path(@return_to)}
         method="post"
+        novalidate
         class="auth-card"
       >
         <div class="form-grid">
-          <.input field={f[:email]} type="email" label="Email" autocomplete="email" />
           <.input
-            field={f[:password]}
+            field={@password_form[:email]}
+            type="email"
+            label="Email"
+            autocomplete="email"
+          />
+          <.input
+            field={@password_form[:password]}
             type="password"
             label="Password"
             autocomplete="current-password"
@@ -91,38 +96,12 @@ defmodule HuddlzWeb.AuthLive.SignIn do
   def handle_event("sign_in_with_password", %{"user" => params}, socket) do
     strategy = AshAuthentication.Info.strategy!(User, :password)
 
-    if Map.get(strategy, :sign_in_tokens_enabled?) do
-      case Form.submit(socket.assigns.password_form.source, params: params, read_one?: true) do
-        {:ok, user} ->
-          token = user.__metadata__.token
-
-          {:noreply,
-           redirect(socket,
-             to: sign_in_token_path(token, socket.assigns.return_to)
-           )}
-
-        {:error, form} ->
-          {:noreply,
-           socket
-           |> put_flash(:error, "Incorrect email or password")
-           |> assign(
-             :password_form,
-             to_form(Form.clear_value(form, :password))
-           )}
-      end
-    else
-      form =
-        socket.assigns.password_form.source
-        |> Form.validate(params)
-        |> to_form()
-
-      socket =
-        socket
-        |> assign(:password_form, form)
-        |> assign(:trigger_action, form.source.valid?)
-
-      {:noreply, socket}
-    end
+    {:noreply,
+     sign_in_with_password(
+       socket,
+       params,
+       Map.get(strategy, :sign_in_tokens_enabled?)
+     )}
   end
 
   @impl true
@@ -133,6 +112,49 @@ defmodule HuddlzWeb.AuthLive.SignIn do
       |> to_form()
 
     {:noreply, assign(socket, :password_form, form)}
+  end
+
+  defp sign_in_with_password(socket, params, true) do
+    form = Form.validate(socket.assigns.password_form.source, params)
+
+    if form.valid? do
+      submit_password_form(socket, form)
+    else
+      assign_password_form(socket, form)
+    end
+  end
+
+  defp sign_in_with_password(socket, params, false) do
+    form =
+      socket.assigns.password_form.source
+      |> Form.validate(params)
+      |> to_form()
+
+    socket
+    |> assign(:password_form, form)
+    |> assign(:trigger_action, form.source.valid?)
+  end
+
+  defp submit_password_form(socket, form) do
+    case Form.submit(form, params: nil, read_one?: true) do
+      {:ok, user} ->
+        redirect(socket,
+          to: sign_in_token_path(user.__metadata__.token, socket.assigns.return_to)
+        )
+
+      {:error, form} ->
+        socket
+        |> put_flash(:error, "Incorrect email or password")
+        |> assign_password_form(form)
+    end
+  end
+
+  defp assign_password_form(socket, form) do
+    assign(
+      socket,
+      :password_form,
+      to_form(Form.clear_value(form, :password))
+    )
   end
 
   defp sign_in_path(nil), do: "/auth/user/password/sign_in"

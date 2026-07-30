@@ -43,9 +43,10 @@ defmodule HuddlzWeb.GroupLive.Locations do
             |> assign(:locations, locations)
             |> ModalLocationHelpers.init()
             |> assign(:editing_location_id, nil)
-            |> assign(:editing_name, "")
             |> assign(:deleting_location, nil)
-            |> assign(:delete_location_references, [])
+            |> assign(:delete_location_reference_count, 0)
+            |> assign(:delete_location_blocked?, false)
+            |> assign(:rename_form, nil)
 
           {:noreply, socket}
         else
@@ -71,6 +72,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="my-groups"
     >
@@ -112,16 +114,16 @@ defmodule HuddlzWeb.GroupLive.Locations do
           <div class="row-list">
             <.list_row :for={loc <- @locations} class="location-row">
               <%= if @editing_location_id == loc.id do %>
-                <form phx-submit="save_rename" class="location-rename">
-                  <input type="hidden" name="location_id" value={loc.id} />
-                  <input
-                    type="text"
-                    name="name"
-                    value={@editing_name}
-                    phx-change="update_editing_name"
-                    phx-debounce="100"
-                    class="form-input"
-                    aria-label="Location name"
+                <.form
+                  for={@rename_form}
+                  id="location-rename-form"
+                  phx-submit="save_rename"
+                  class="location-rename"
+                >
+                  <.input
+                    field={@rename_form[:name]}
+                    label="Location name"
+                    autocomplete="off"
                     autofocus
                   />
                   <div class="location-rename-actions">
@@ -130,7 +132,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
                       Cancel
                     </.button>
                   </div>
-                </form>
+                </.form>
               <% else %>
                 <div class="location-info">
                   <div class="row-title">{loc.name || loc.address}</div>
@@ -174,19 +176,19 @@ defmodule HuddlzWeb.GroupLive.Locations do
 
           <div class="delete-confirm-copy">
             <span class="eyebrow eyebrow-magenta">
-              {if @delete_location_references == [], do: "Permanent action", else: "In use"}
+              {if @delete_location_blocked?, do: "In use", else: "Permanent action"}
             </span>
             <h2 id="delete-location-modal-title">Delete this saved location?</h2>
             <p>
               <strong>{@deleting_location.name || @deleting_location.address}</strong>
               <span :if={@deleting_location.name}>{" — " <> @deleting_location.address}</span>
             </p>
-            <p :if={@delete_location_references == []}>
+            <p :if={!@delete_location_blocked?}>
               It will no longer appear in future venue pickers. Past huddlz keep their
               saved venue address.
             </p>
-            <p :if={@delete_location_references != []} class="delete-confirm-series-note">
-              {DeletionImpact.error_message(length(@delete_location_references))}
+            <p :if={@delete_location_blocked?} class="delete-confirm-series-note">
+              {DeletionImpact.error_message(@delete_location_reference_count)}
             </p>
           </div>
         </div>
@@ -205,7 +207,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
             id="confirm-delete-location"
             phx-click="delete_location"
             phx-disable-with="Deleting…"
-            disabled={@delete_location_references != []}
+            disabled={@delete_location_blocked?}
           >
             Delete location
           </.button>
@@ -309,29 +311,32 @@ defmodule HuddlzWeb.GroupLive.Locations do
   def handle_event("start_rename", %{"id" => id}, socket) do
     loc = Enum.find(socket.assigns.locations, &(&1.id == id))
 
+    form =
+      loc
+      |> AshPhoenix.Form.for_update(:update,
+        actor: socket.assigns.current_user,
+        as: "rename"
+      )
+      |> to_form()
+
     {:noreply,
      assign(socket,
        editing_location_id: id,
-       editing_name: loc.name || ""
+       rename_form: form
      )}
   end
 
   @impl true
   def handle_event("cancel_rename", _params, socket) do
-    {:noreply, assign(socket, editing_location_id: nil, editing_name: "")}
+    {:noreply, assign(socket, editing_location_id: nil, rename_form: nil)}
   end
 
   @impl true
-  def handle_event("update_editing_name", %{"name" => name}, socket) do
-    {:noreply, assign(socket, :editing_name, name)}
-  end
-
-  @impl true
-  def handle_event("save_rename", %{"location_id" => id, "name" => name}, socket) do
-    loc = Enum.find(socket.assigns.locations, &(&1.id == id))
-    name = if name == "", do: nil, else: name
-
-    case Communities.update_group_location(loc, %{name: name}, actor: socket.assigns.current_user) do
+  def handle_event("save_rename", %{"rename" => params}, socket) do
+    case AshPhoenix.Form.submit(socket.assigns.rename_form,
+           params: params,
+           override_params: params
+         ) do
       {:ok, _} ->
         locations = load_group_locations(socket.assigns.group.id, socket.assigns.current_user)
 
@@ -339,32 +344,28 @@ defmodule HuddlzWeb.GroupLive.Locations do
          socket
          |> assign(:locations, locations)
          |> assign(:editing_location_id, nil)
-         |> assign(:editing_name, "")}
+         |> assign(:rename_form, nil)}
 
-      {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Failed to rename location")}
+      {:error, form} ->
+        {:noreply, assign(socket, :rename_form, form)}
     end
   end
 
   @impl true
   def handle_event("confirm_delete_location", %{"id" => id}, socket) do
-    case Enum.find(socket.assigns.locations, &(&1.id == id)) do
+    with location when not is_nil(location) <-
+           Enum.find(socket.assigns.locations, &(&1.id == id)),
+         {:ok, references} <- DeletionImpact.active_references(location) do
+      {:noreply,
+       socket
+       |> assign(:deleting_location, location)
+       |> assign_delete_references(references)}
+    else
       nil ->
         {:noreply, put_flash(socket, :error, "That location is no longer available.")}
 
-      location ->
-        case DeletionImpact.active_references(location) do
-          {:ok, references} ->
-            {:noreply,
-             assign(socket,
-               deleting_location: location,
-               delete_location_references: references
-             )}
-
-          {:error, _error} ->
-            {:noreply,
-             put_flash(socket, :error, "Failed to check whether the location is in use.")}
-        end
+      {:error, _error} ->
+        {:noreply, put_flash(socket, :error, "Failed to check whether the location is in use.")}
     end
   end
 
@@ -389,6 +390,13 @@ defmodule HuddlzWeb.GroupLive.Locations do
          |> refresh_locations()
          |> clear_delete_location()
          |> put_flash(:info, "Location deleted")}
+
+      {:ok, :already_deleted} ->
+        {:noreply,
+         socket
+         |> refresh_locations()
+         |> clear_delete_location()
+         |> put_flash(:info, "Location was already deleted.")}
 
       {:error, _error} ->
         handle_failed_deletion(socket, location)
@@ -430,7 +438,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
         {:ok, references} ->
           {:noreply,
            socket
-           |> assign(:delete_location_references, references)
+           |> assign_delete_references(references)
            |> put_flash(:error, "This location cannot be deleted while it is in use.")}
 
         {:error, _error} ->
@@ -453,6 +461,17 @@ defmodule HuddlzWeb.GroupLive.Locations do
   end
 
   defp clear_delete_location(socket) do
-    assign(socket, deleting_location: nil, delete_location_references: [])
+    socket
+    |> assign(:deleting_location, nil)
+    |> assign_delete_references([])
+  end
+
+  defp assign_delete_references(socket, references) do
+    reference_count = length(references)
+
+    assign(socket,
+      delete_location_reference_count: reference_count,
+      delete_location_blocked?: reference_count > 0
+    )
   end
 end

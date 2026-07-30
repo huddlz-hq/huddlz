@@ -9,10 +9,8 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
   """
   use HuddlzWeb, :live_component
 
-  attr :id, :string, required: true
-  attr :group_locations, :list, required: true
-  attr :selected_location, :any, default: nil
-  attr :new_location_path, :string, required: true
+  alias HuddlzWeb.Components.Input
+  alias Phoenix.HTML.FormField
 
   def mount(socket) do
     {:ok,
@@ -62,7 +60,20 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
     end
   end
 
+  attr :id, :string, required: true
+  attr :group_locations, :list, required: true
+  attr :selected_location, :any, default: nil
+  attr :new_location_path, :string, required: true
+  attr :field, FormField, required: true
+
   def render(assigns) do
+    error_ids = Input.field_error_ids(assigns.field)
+
+    assigns =
+      assigns
+      |> assign(:field_invalid?, error_ids != [])
+      |> assign(:field_describedby, Enum.join(error_ids, " "))
+
     ~H"""
     <div
       id={@id}
@@ -130,6 +141,8 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
             role="combobox"
             aria-expanded={to_string(@show_dropdown && @filtered_locations != [])}
             aria-controls={"#{@id}-listbox"}
+            aria-invalid={@field_invalid? && "true"}
+            aria-describedby={@field_describedby}
             disabled={@group_locations == []}
           />
           <button
@@ -179,6 +192,7 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
           Add new address
         </.link>
       <% end %>
+      <.field_errors field={@field} />
     </div>
     """
   end
