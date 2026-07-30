@@ -211,7 +211,7 @@ defmodule HuddlzWeb.GroupLive.New do
               autocomplete="off"
               help="3–100 characters."
             />
-            <div class="form-row">
+            <div id="group-slug-preview" class="form-row">
               <div class="form-help">
                 URL: {url(~p"/groups/#{@form[:slug].value || "..."}")}
               </div>

@@ -115,6 +115,53 @@ defmodule HuddlzWeb.GroupLive.LocationsTest do
       refute has_element?(view, "*", "Old Venue")
     end
 
+    test "blank rename stays open with an associated model error", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      location =
+        generate(
+          group_location(
+            group_id: group.id,
+            name: "Community Center",
+            address: "100 Main St, Austin, TX",
+            actor: owner
+          )
+        )
+
+      {:ok, view, _html} =
+        conn
+        |> login(owner)
+        |> live(~p"/groups/#{group.slug}/locations")
+
+      view
+      |> element("button[phx-click='start_rename'][phx-value-id='#{location.id}']")
+      |> render_click()
+
+      view
+      |> form("#location-rename-form", %{"rename" => %{"name" => ""}})
+      |> render_submit()
+
+      assert has_element?(
+               view,
+               "#rename_name:not([value])[aria-invalid='true'][aria-describedby='rename_name-error-0']"
+             )
+
+      assert has_element?(
+               view,
+               "#rename_name-error-0[role='alert']",
+               "Name is required"
+             )
+
+      assert has_element?(view, "#location-rename-form")
+
+      assert {:ok, [reloaded]} =
+               Huddlz.Communities.list_group_locations(group.id, actor: owner)
+
+      assert reloaded.name == "Community Center"
+    end
+
     test "add address modal opens via patch", %{conn: conn, owner: owner, group: group} do
       {:ok, view, _html} =
         conn

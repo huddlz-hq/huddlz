@@ -479,10 +479,16 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       # Leave event type as in-person (default), no location selected
       |> click_button("Schedule huddl")
       |> assert_path(~p"/groups/#{group.slug}/huddlz/new")
-      |> assert_has("p.form-error", text: "is required for in-person huddlz")
+      |> assert_has(
+        "#saved-location-picker-input[aria-invalid='true'][aria-describedby='form_physical_location-error-0']"
+      )
+      |> assert_has(
+        "#form_physical_location-error-0[role='alert']",
+        text: "is required for in-person huddlz"
+      )
       # The error persists through later edits once the submit has failed
       |> fill_in("Title", with: "Test Huddl Again")
-      |> assert_has("p.form-error", text: "is required for in-person huddlz")
+      |> assert_has("#form_physical_location-error-0", text: "is required for in-person huddlz")
     end
 
     test "hybrid huddl error shows under the missing virtual link, not the chosen location", %{

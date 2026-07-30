@@ -21,16 +21,18 @@ defmodule HuddlzWeb.Components.Input do
   attr :errors, :list, default: []
   attr :field, FormField, doc: "a Phoenix.HTML.FormField struct"
   attr :class, :any, default: nil
+  attr :control_class, :any, default: nil
+
+  slot :prefix
+  slot :details
 
   attr :rest, :global, include: ~w(autocomplete disabled form list max maxlength min minlength
                 pattern placeholder readonly required step inputmode)
 
   def input(%{field: %FormField{} = field} = assigns) do
-    errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
-
     assigns
     |> assign(field: nil, id: assigns.id || field.id)
-    |> assign(:errors, Enum.map(errors, &translate_error/1))
+    |> assign(:errors, visible_errors(field))
     |> assign_new(:name, fn -> field.name end)
     |> assign_new(:value, fn -> field.value end)
     |> input()
@@ -42,16 +44,11 @@ defmodule HuddlzWeb.Components.Input do
     ~H"""
     <div class="form-row">
       <label :if={@label} for={@id} class="form-label">{@label}</label>
-      <input
-        type={@type}
-        id={@id}
-        name={@name}
-        value={Form.normalize_value(@type, @value)}
-        class={["form-input", @class]}
-        aria-invalid={@invalid? && "true"}
-        aria-describedby={@describedby}
-        {@rest}
-      />
+      <.input_control :if={@prefix == []} {assigns} />
+      <div :if={@prefix != []} class={@control_class}>
+        {render_slot(@prefix)}
+        <.input_control {assigns} />
+      </div>
       <p :if={@help} id={help_id(@id)} class="form-help">{@help}</p>
       <p
         :for={{msg, index} <- Enum.with_index(@errors)}
@@ -61,7 +58,23 @@ defmodule HuddlzWeb.Components.Input do
       >
         {msg}
       </p>
+      {render_slot(@details)}
     </div>
+    """
+  end
+
+  defp input_control(assigns) do
+    ~H"""
+    <input
+      type={@type}
+      id={@id}
+      name={@name}
+      value={Form.normalize_value(@type, @value)}
+      class={["form-input", @class]}
+      aria-invalid={@invalid? && "true"}
+      aria-describedby={@describedby}
+      {@rest}
+    />
     """
   end
 
@@ -78,11 +91,9 @@ defmodule HuddlzWeb.Components.Input do
                 placeholder readonly required rows cols)
 
   def textarea(%{field: %FormField{} = field} = assigns) do
-    errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
-
     assigns
     |> assign(field: nil, id: assigns.id || field.id)
-    |> assign(:errors, Enum.map(errors, &translate_error/1))
+    |> assign(:errors, visible_errors(field))
     |> assign_new(:name, fn -> field.name end)
     |> assign_new(:value, fn -> field.value end)
     |> textarea()
@@ -129,11 +140,9 @@ defmodule HuddlzWeb.Components.Input do
   attr :rest, :global, include: ~w(autocomplete disabled form multiple required size)
 
   def select(%{field: %FormField{} = field} = assigns) do
-    errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
-
     assigns
     |> assign(field: nil, id: assigns.id || field.id)
-    |> assign(:errors, Enum.map(errors, &translate_error/1))
+    |> assign(:errors, visible_errors(field))
     |> assign_new(:name, fn -> field.name end)
     |> assign_new(:value, fn -> field.value end)
     |> select()
@@ -170,6 +179,7 @@ defmodule HuddlzWeb.Components.Input do
   end
 
   attr :field, FormField, required: true, doc: "form field whose errors to render"
+  attr :id, :any, default: nil
 
   @doc """
   Renders `<p class="form-error">` lines for a form field whose markup isn't
@@ -184,18 +194,38 @@ defmodule HuddlzWeb.Components.Input do
   state, not external flags.
   """
   def field_errors(%{field: %FormField{} = field} = assigns) do
-    errors =
-      if Phoenix.Component.used_input?(field) do
-        Enum.map(field.errors, &translate_error/1)
-      else
-        []
-      end
-
-    assigns = Phoenix.Component.assign(assigns, :errors, errors)
+    assigns =
+      assigns
+      |> Phoenix.Component.assign(:id, assigns.id || field.id)
+      |> Phoenix.Component.assign(:errors, visible_errors(field))
 
     ~H"""
-    <p :for={msg <- @errors} class="form-error" role="alert">{msg}</p>
+    <p
+      :for={{msg, index} <- Enum.with_index(@errors)}
+      id={error_id(@id, index)}
+      class="form-error"
+      role="alert"
+    >
+      {msg}
+    </p>
     """
+  end
+
+  @doc false
+  def visible_errors(%FormField{} = field) do
+    if Phoenix.Component.used_input?(field) do
+      Enum.map(field.errors, &translate_error/1)
+    else
+      []
+    end
+  end
+
+  @doc false
+  def field_error_ids(%FormField{} = field) do
+    field
+    |> visible_errors()
+    |> Enum.with_index()
+    |> Enum.map(fn {_error, index} -> error_id(field.id, index) end)
   end
 
   defp translate_error({msg, opts}) do
@@ -219,7 +249,7 @@ defmodule HuddlzWeb.Components.Input do
       help && help_id(id)
       | Enum.map(Enum.with_index(errors), fn {_error, index} -> error_id(id, index) end)
     ]
-    |> Enum.reject(&is_nil/1)
+    |> Enum.filter(&is_binary/1)
     |> Enum.join(" ")
   end
 

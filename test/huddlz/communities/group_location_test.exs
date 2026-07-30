@@ -286,6 +286,21 @@ defmodule Huddlz.Communities.GroupLocationTest do
   end
 
   describe "group_location update" do
+    test "rejects a blank location name" do
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      location = generate(group_location(group_id: group.id, name: "Original Name", actor: owner))
+
+      assert {:error, error} =
+               location
+               |> Ash.Changeset.for_update(:update, %{name: ""})
+               |> Ash.update(actor: owner)
+
+      assert Enum.any?(error.errors, fn error ->
+               error.field == :name && error.message == "Name is required"
+             end)
+    end
+
     test "owner can rename a location" do
       owner = generate(user(role: :user))
       group = generate(group(owner_id: owner.id, actor: owner))

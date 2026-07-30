@@ -93,6 +93,27 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> assert_has("#form_name-error-0", text: "Must be between 3 and 100 characters")
     end
 
+    test "validates both group name boundaries in the LiveView", %{
+      conn: conn,
+      verified: verified
+    } do
+      session =
+        conn
+        |> login(verified)
+        |> visit(~p"/groups/new")
+        |> fill_in("Group name", with: "abc")
+        |> refute_has("#form_name-error-0")
+        |> fill_in("Group name", with: String.duplicate("a", 100))
+        |> refute_has("#form_name-error-0")
+        |> fill_in("Group name", with: String.duplicate("a", 101))
+
+      assert_has(
+        session,
+        "#form_name-error-0",
+        text: "Must be between 3 and 100 characters"
+      )
+    end
+
     test "associates help text without marking valid fields invalid", %{
       conn: conn,
       verified: verified

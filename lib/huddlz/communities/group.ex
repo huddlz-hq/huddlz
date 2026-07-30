@@ -3,6 +3,8 @@ defmodule Huddlz.Communities.Group do
   A group is a community container that can organize huddlz and manage members.
   """
 
+  @name_length 3..100
+
   use Ash.Resource,
     otp_app: :huddlz,
     domain: Huddlz.Communities,
@@ -278,7 +280,7 @@ defmodule Huddlz.Communities.Group do
   end
 
   validations do
-    validate string_length(:name, min: 3, max: 100) do
+    validate string_length(:name, min: @name_length.first, max: @name_length.last) do
       message "Must be between 3 and 100 characters"
     end
 
@@ -286,6 +288,11 @@ defmodule Huddlz.Communities.Group do
       where action_is(:update_details)
       message "Use only lowercase letters, numbers, and hyphens"
     end
+  end
+
+  @doc false
+  def valid_name_length?(name) do
+    String.length(to_string(name)) in @name_length
   end
 
   attributes do

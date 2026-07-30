@@ -379,18 +379,14 @@ defmodule HuddlzWeb.HuddlLive.Edit do
           </div>
           <div class="form-grid">
             <%= if @show_physical_location do %>
-              <div class="form-row">
-                <.live_component
-                  module={HuddlzWeb.Live.SavedLocationPicker}
-                  id="saved-location-picker"
-                  group_locations={@group_locations}
-                  selected_location={@selected_location}
-                  new_location_path={
-                    ~p"/groups/#{@group_slug}/huddlz/#{@huddl.id}/edit/locations/new"
-                  }
-                />
-                <.field_errors field={@form[:physical_location]} />
-              </div>
+              <.live_component
+                module={HuddlzWeb.Live.SavedLocationPicker}
+                id="saved-location-picker"
+                group_locations={@group_locations}
+                selected_location={@selected_location}
+                new_location_path={~p"/groups/#{@group_slug}/huddlz/#{@huddl.id}/edit/locations/new"}
+                field={@form[:physical_location]}
+              />
             <% end %>
 
             <%= if @show_virtual_link do %>
