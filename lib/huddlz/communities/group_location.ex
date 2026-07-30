@@ -59,6 +59,10 @@ defmodule Huddlz.Communities.GroupLocation do
       primary? true
       accept [:name]
       require_atomic? false
+
+      validate present(:name) do
+        message "Name is required"
+      end
     end
 
     read :by_group do

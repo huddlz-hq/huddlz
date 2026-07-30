@@ -262,30 +262,27 @@ defmodule HuddlzWeb.GroupLive.Edit do
               autocomplete="off"
             />
 
-            <div class="form-row">
-              <label class="form-label" for={@form[:slug].id}>URL Slug</label>
-              <div class="slug-control">
+            <.input
+              field={@form[:slug]}
+              label="URL Slug"
+              control_class="slug-control"
+              help={
+                !@slug_changed &&
+                  "Your group is available at: #{url(~p"/groups/#{@form[:slug].value || "..."}")}"
+              }
+            >
+              <:prefix>
                 <span class="slug-prefix">huddlz.com/groups/</span>
-                <input
-                  id={@form[:slug].id}
-                  type="text"
-                  name={@form[:slug].name}
-                  value={@form[:slug].value}
-                  class="form-input"
-                  pattern="[a-z0-9-]+"
-                  title="Only lowercase letters, numbers, and hyphens allowed"
-                />
-              </div>
-              <p :if={!@slug_changed} class="form-help">
-                Your group is available at: {url(~p"/groups/#{@form[:slug].value || "..."}")}
-              </p>
-              <div :if={@slug_changed} class="slug-warn">
-                <h3>Warning: URL Change</h3>
-                <p>Changing the slug will break existing links to this group.</p>
-                <p>Old URL: <span class="mono">{url(~p"/groups/#{@original_slug}")}</span></p>
-                <p>New URL: <span class="mono">{url(~p"/groups/#{@form[:slug].value}")}</span></p>
-              </div>
-            </div>
+              </:prefix>
+              <:details :if={@slug_changed}>
+                <div class="slug-warn">
+                  <h3>Warning: URL Change</h3>
+                  <p>Changing the slug will break existing links to this group.</p>
+                  <p>Old URL: <span class="mono">{url(~p"/groups/#{@original_slug}")}</span></p>
+                  <p>New URL: <span class="mono">{url(~p"/groups/#{@form[:slug].value}")}</span></p>
+                </div>
+              </:details>
+            </.input>
 
             <.textarea
               field={@form[:description]}

@@ -42,7 +42,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
             |> assign(:locations, locations)
             |> ModalLocationHelpers.init()
             |> assign(:editing_location_id, nil)
-            |> assign(:editing_name, "")
+            |> assign(:rename_form, nil)
 
           {:noreply, socket}
         else
@@ -110,16 +110,16 @@ defmodule HuddlzWeb.GroupLive.Locations do
           <div class="row-list">
             <.list_row :for={loc <- @locations} class="location-row">
               <%= if @editing_location_id == loc.id do %>
-                <form phx-submit="save_rename" class="location-rename">
-                  <input type="hidden" name="location_id" value={loc.id} />
-                  <input
-                    type="text"
-                    name="name"
-                    value={@editing_name}
-                    phx-change="update_editing_name"
-                    phx-debounce="100"
-                    class="form-input"
-                    aria-label="Location name"
+                <.form
+                  for={@rename_form}
+                  id="location-rename-form"
+                  phx-submit="save_rename"
+                  class="location-rename"
+                >
+                  <.input
+                    field={@rename_form[:name]}
+                    label="Location name"
+                    autocomplete="off"
                     autofocus
                   />
                   <div class="location-rename-actions">
@@ -128,7 +128,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
                       Cancel
                     </.button>
                   </div>
-                </form>
+                </.form>
               <% else %>
                 <div class="location-info">
                   <div class="row-title">{loc.name || loc.address}</div>
@@ -256,29 +256,32 @@ defmodule HuddlzWeb.GroupLive.Locations do
   def handle_event("start_rename", %{"id" => id}, socket) do
     loc = Enum.find(socket.assigns.locations, &(&1.id == id))
 
+    form =
+      loc
+      |> AshPhoenix.Form.for_update(:update,
+        actor: socket.assigns.current_user,
+        as: "rename"
+      )
+      |> to_form()
+
     {:noreply,
      assign(socket,
        editing_location_id: id,
-       editing_name: loc.name || ""
+       rename_form: form
      )}
   end
 
   @impl true
   def handle_event("cancel_rename", _params, socket) do
-    {:noreply, assign(socket, editing_location_id: nil, editing_name: "")}
+    {:noreply, assign(socket, editing_location_id: nil, rename_form: nil)}
   end
 
   @impl true
-  def handle_event("update_editing_name", %{"name" => name}, socket) do
-    {:noreply, assign(socket, :editing_name, name)}
-  end
-
-  @impl true
-  def handle_event("save_rename", %{"location_id" => id, "name" => name}, socket) do
-    loc = Enum.find(socket.assigns.locations, &(&1.id == id))
-    name = if name == "", do: nil, else: name
-
-    case Communities.update_group_location(loc, %{name: name}, actor: socket.assigns.current_user) do
+  def handle_event("save_rename", %{"rename" => params}, socket) do
+    case AshPhoenix.Form.submit(socket.assigns.rename_form,
+           params: params,
+           override_params: params
+         ) do
       {:ok, _} ->
         locations = load_group_locations(socket.assigns.group.id, socket.assigns.current_user)
 
@@ -286,10 +289,10 @@ defmodule HuddlzWeb.GroupLive.Locations do
          socket
          |> assign(:locations, locations)
          |> assign(:editing_location_id, nil)
-         |> assign(:editing_name, "")}
+         |> assign(:rename_form, nil)}
 
-      {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Failed to rename location")}
+      {:error, form} ->
+        {:noreply, assign(socket, :rename_form, form)}
     end
   end
 

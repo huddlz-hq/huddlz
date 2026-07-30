@@ -97,7 +97,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
 
       assert Enum.any?(errors, fn error ->
                error.field == :name &&
-                 (error.message =~ "greater than or equal" || to_string(error) =~ "at least 3")
+                 error.message == "Must be between 3 and 100 characters"
              end)
     end
 
@@ -114,7 +114,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
 
       assert Enum.any?(errors, fn error ->
                error.field == :name &&
-                 (error.message =~ "less than or equal" || to_string(error) =~ "at most 100")
+                 error.message == "Must be between 3 and 100 characters"
              end)
     end
 

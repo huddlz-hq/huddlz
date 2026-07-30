@@ -136,6 +136,17 @@ defmodule Huddlz.Communities.Huddl do
       argument :pending_image_id, :uuid, allow_nil?: true, public?: false
 
       validate Huddlz.Communities.Huddl.Validations.FutureDateValidation
+
+      validate present(:frequency) do
+        where argument_equals(:is_recurring, true)
+        message "is required for recurring huddlz"
+      end
+
+      validate present(:repeat_until) do
+        where argument_equals(:is_recurring, true)
+        message "is required for recurring huddlz"
+      end
+
       change Huddlz.Communities.Huddl.Changes.SetCreatorToActor
       change Huddlz.Communities.Huddl.Changes.AddCreatorAsAttendee
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
@@ -187,6 +198,16 @@ defmodule Huddlz.Communities.Huddl do
       argument :provided_longitude, :float, allow_nil?: true, public?: false
 
       require_atomic? false
+
+      validate present(:frequency) do
+        where argument_equals(:edit_type, "all")
+        message "is required when editing the whole series"
+      end
+
+      validate present(:repeat_until) do
+        where argument_equals(:edit_type, "all")
+        message "is required when editing the whole series"
+      end
 
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
@@ -483,6 +504,16 @@ defmodule Huddlz.Communities.Huddl do
   # changes section removed - validation is handled by FutureDateValidation module
 
   validations do
+    validate string_length(:title, min: 3, max: 200) do
+      message "Must be between 3 and 200 characters"
+    end
+
+    validate compare(:max_attendees, greater_than_or_equal_to: 1) do
+      message "Must be at least 1"
+    end
+
+    validate {Huddlz.Communities.Huddl.Validations.WebUrlValidation, attribute: :virtual_link}
+
     validate compare(:ends_at, greater_than: :starts_at) do
       message "must be after the start time"
     end
@@ -517,7 +548,6 @@ defmodule Huddlz.Communities.Huddl do
     attribute :title, :string do
       allow_nil? false
       public? true
-      constraints min_length: 3, max_length: 200
     end
 
     attribute :description, :string do
@@ -569,7 +599,6 @@ defmodule Huddlz.Communities.Huddl do
     attribute :max_attendees, :integer do
       allow_nil? true
       public? true
-      constraints min: 1
     end
 
     attribute :latitude, :float do

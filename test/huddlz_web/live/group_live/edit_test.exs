@@ -84,6 +84,21 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       |> assert_has(".hero .meta span", text: "Updated location")
     end
 
+    test "shows friendly model-backed name validation", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/edit")
+      |> fill_in("Group Name", with: "ab")
+      |> assert_has(
+        "input[name='form[name]'][aria-invalid='true'][aria-describedby='form_name-error-0']"
+      )
+      |> assert_has("#form_name-error-0", text: "Must be between 3 and 100 characters")
+    end
+
     test "changing a public group to private explains the consequences", %{
       conn: conn,
       owner: owner,
@@ -181,6 +196,25 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       |> assert_has(".slug-warn p", text: "Changing the slug will break existing links")
       |> assert_has(".slug-warn span", text: "/groups/test-group")
       |> assert_has(".slug-warn span", text: "/groups/new-slug")
+    end
+
+    test "validates the slug in the model with an associated error", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/edit")
+      |> refute_has("input[name='form[slug]'][pattern]")
+      |> fill_in("URL Slug", with: "Not A Valid Slug")
+      |> assert_has(
+        "input[name='form[slug]'][aria-invalid='true'][aria-describedby='form_slug-error-0']"
+      )
+      |> assert_has(
+        "#form_slug-error-0[role='alert']",
+        text: "Use only lowercase letters, numbers, and hyphens"
+      )
     end
 
     test "updating slug redirects to new URL", %{conn: conn, owner: owner, group: group} do

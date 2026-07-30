@@ -1341,7 +1341,10 @@ body .row.location-row .location-rename {
   align-items: center;
   flex-wrap: wrap;
 }
-body .row.location-row .location-rename .form-input { flex: 1 1 220px; min-width: 0; }
+body .row.location-row .location-rename .form-row {
+  flex: 1 1 320px;
+  min-width: 0;
+}
 body .row.location-row .location-rename-actions { display: flex; gap: 8px; }
 
 /* Generic row layout modifiers — used by OrganizeLive picker/overview/huddlz/members. */
