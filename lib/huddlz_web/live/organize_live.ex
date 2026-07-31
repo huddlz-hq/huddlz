@@ -8,7 +8,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
     * `/organize` — landing picker (owned groups + create CTA, or empty state)
     * `/organize/:group_slug` — overview (KPIs + upcoming huddlz)
-    * `/organize/:group_slug/huddlz` — huddlz list, live/past filter
+    * `/organize/:group_slug/huddlz` — huddlz list, lifecycle filters
     * `/organize/:group_slug/members` — roster grouped by role
   """
   use HuddlzWeb, :live_view
@@ -486,11 +486,15 @@ defmodule HuddlzWeb.OrganizeLive do
         <div class="row-list">
           <div
             :for={huddl <- @huddlz}
+            id={"organize-huddl-#{huddl.id}"}
             class="row row-split-two"
           >
             <div>
               <div class="row-title">
-                <.link navigate={~p"/groups/#{@group.slug}/huddlz/#{huddl.id}/edit"}>
+                <.link
+                  id={"organize-huddl-link-#{huddl.id}"}
+                  navigate={organizer_huddl_path(@group, huddl)}
+                >
                   {huddl.title}
                 </.link>
               </div>
@@ -511,6 +515,13 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp huddlz_filter_path(group, filter),
     do: ~p"/organize/#{group.slug}/huddlz?filter=#{filter}"
+
+  defp organizer_huddl_path(group, %{status: status} = huddl)
+       when status in [:cancelled, :completed],
+       do: ~p"/groups/#{group.slug}/huddlz/#{huddl.id}"
+
+  defp organizer_huddl_path(group, huddl),
+    do: ~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit"
 
   defp filter_chip_class(true), do: "chip is-active"
   defp filter_chip_class(false), do: "chip"
