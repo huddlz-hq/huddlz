@@ -866,7 +866,15 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       assert_path(session, ~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
       assert_has(session, ".hero .eyebrow", text: "Cancelled")
-      assert_has(session, "#cancellation-reason", text: "The venue lost power.")
+
+      assert_has(session, "#cancellation-reason:has(+ .huddl-hero)")
+
+      within(session, "#cancellation-reason", fn update ->
+        update
+        |> assert_has("h2", text: "Important update from the organizer")
+        |> assert_has("p", text: "The venue lost power.")
+      end)
+
       refute_has(session, "button", text: "Publish huddl")
       refute_has(session, "button", text: "Cancel huddl")
       refute_has(session, "a", text: "Edit huddl")
