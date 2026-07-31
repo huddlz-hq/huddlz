@@ -7,9 +7,9 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyNewInGroup do
   Skipped when the create runs without an actor — that path is
   reserved for system-driven creations (e.g. `RecurrenceHelper`
   generating subsequent instances of a recurring series). Group
-  members shouldn't get a "new huddl" email for every weekly
-  occurrence of the same series; the first instance covers it, and
-  D1/D2 reminders cover each occurrence individually.
+  members shouldn't get a notification for a draft or for
+  system-generated recurring instances until an organizer explicitly
+  publishes that huddl.
 
   Recipient resolution happens in `after_action` once the huddl row
   exists, so the new huddl's group is reachable.
@@ -39,8 +39,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyNewInGroup do
   defp notification_due?(%{action_type: :create}, %{lifecycle_state: :published}), do: true
 
   defp notification_due?(cs, _huddl) do
-    cs.context[:lifecycle_transition] == :published and
-      Ash.Changeset.get_argument(cs, :notify_members?) != false
+    cs.context[:lifecycle_transition] == :published
   end
 
   defp notify_with_actor(_cs, huddl, actor_id) do

@@ -21,10 +21,10 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
   defp apply_lifecycle_filter(query) do
     case Ash.Query.get_argument(query, :relationship) do
       relationship when relationship in [:hosting, :attending, :waitlisted] ->
-        Ash.Query.filter(query, lifecycle_state in [:published, :cancelled])
+        Ash.Query.filter(query, lifecycle_state in [:published, :cancelled, :completed])
 
       _ ->
-        Ash.Query.filter(query, lifecycle_state == :published)
+        Ash.Query.filter(query, lifecycle_state in [:published, :completed])
     end
   end
 

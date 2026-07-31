@@ -9,8 +9,8 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
       subscribers to lose.
     * `reconcile_future_instances/3` — used by "edit all". Updates the existing
       future instances *in place* (preserving every RSVP/waitlist spot and
-      notifying their subscribers), creates any newly-added dates, and only
-      destroys dates that fall off the schedule.
+      notifying their subscribers), creates any newly-added dates, and removes
+      dates that fall off the schedule according to their lifecycle state.
   """
 
   alias Huddlz.Communities
@@ -53,8 +53,9 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
       and recomputed times (RSVPs untouched; the series change sends one summary
       per affected person)
     * dates added by extending the series are **created**
-    * surplus dates dropped by shortening the series are
-      **destroyed** (a real cancellation — their subscribers get the cancel notice)
+    * published dates dropped by shortening the series / changing frequency are
+      **cancelled** (their subscribers get the cancel notice and RSVP history remains)
+    * unpublished dates dropped from the series are **destroyed**
 
   `actor` is the editor; it is threaded through so they are excluded from the
   update emails for instances they're attending.
@@ -72,7 +73,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
       create_instance!(source, template, starts_at, ends_at)
     end)
 
-    Enum.each(obsolete_existing, &destroy_instance!(&1, actor))
+    Enum.each(obsolete_existing, &remove_instance!(&1, actor))
 
     :ok
   end
@@ -237,6 +238,18 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
 
     Ash.destroy!(instance, actor: actor, authorize?: false)
   end
+
+  defp remove_instance!(%{lifecycle_state: :draft} = instance, actor) do
+    destroy_instance!(instance, actor)
+  end
+
+  defp remove_instance!(%{lifecycle_state: :published} = instance, actor) do
+    Communities.cancel_huddl!(instance, nil, actor: actor, authorize?: false)
+  end
+
+  defp remove_instance!(%{lifecycle_state: state}, _actor)
+       when state in [:cancelled, :completed],
+       do: :ok
 
   # Updates a kept instance in place via the :update action with
   # edit_type "instance", so the per-instance update notification emails this

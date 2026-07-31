@@ -14,6 +14,7 @@ defmodule HuddlzWeb.MyHuddlzLive do
   import HuddlzWeb.Live.Helpers.ParamHelpers
 
   alias Huddlz.Communities
+  alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
   require Logger
 
@@ -253,15 +254,27 @@ defmodule HuddlzWeb.MyHuddlzLive do
   defp empty_message(:past),
     do: "No past attendance yet."
 
-  defp pill_variant(%{status: :cancelled}, _filter), do: :magenta
-  defp pill_variant(_huddl, :upcoming), do: :default
-  defp pill_variant(_huddl, :waitlisted), do: :warn
-  defp pill_variant(_huddl, :past), do: :muted
+  defp pill_variant(%{status: status}, filter) do
+    case HuddlStatus.contextual_override(status) do
+      %{variant: variant} -> variant
+      nil -> filter_pill_variant(filter)
+    end
+  end
 
-  defp pill_label(%{status: :cancelled}, _filter), do: "Cancelled"
-  defp pill_label(_huddl, :upcoming), do: "Going"
-  defp pill_label(_huddl, :waitlisted), do: "Waitlist"
-  defp pill_label(_huddl, :past), do: "Attended"
+  defp filter_pill_variant(:upcoming), do: :default
+  defp filter_pill_variant(:waitlisted), do: :warn
+  defp filter_pill_variant(:past), do: :muted
+
+  defp pill_label(%{status: status}, filter) do
+    case HuddlStatus.contextual_override(status) do
+      %{label: label} -> label
+      nil -> filter_pill_label(filter)
+    end
+  end
+
+  defp filter_pill_label(:upcoming), do: "Going"
+  defp filter_pill_label(:waitlisted), do: "Waitlist"
+  defp filter_pill_label(:past), do: "Attended"
 
   defp relative_time(%DateTime{} = dt) do
     diff_seconds = DateTime.diff(dt, DateTime.utc_now(), :second)

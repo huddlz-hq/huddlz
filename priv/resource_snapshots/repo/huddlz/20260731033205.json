@@ -177,6 +177,18 @@
       "references": null,
       "scale": null,
       "size": null,
+      "source": "completed_at",
+      "type": "utc_datetime_usec"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
       "source": "cancellation_reason",
       "type": "text"
     },
@@ -284,6 +296,68 @@
       "type": "uuid"
     },
     {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": {
+        "deferrable": false,
+        "destination_attribute": "id",
+        "destination_attribute_default": null,
+        "destination_attribute_generated": null,
+        "index?": false,
+        "match_type": null,
+        "match_with": null,
+        "multitenancy": {
+          "attribute": null,
+          "global": null,
+          "strategy": null
+        },
+        "name": "huddlz_published_by_id_fkey",
+        "on_delete": "nilify",
+        "on_update": null,
+        "primary_key?": true,
+        "schema": "public",
+        "table": "users"
+      },
+      "scale": null,
+      "size": null,
+      "source": "published_by_id",
+      "type": "uuid"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": {
+        "deferrable": false,
+        "destination_attribute": "id",
+        "destination_attribute_default": null,
+        "destination_attribute_generated": null,
+        "index?": false,
+        "match_type": null,
+        "match_with": null,
+        "multitenancy": {
+          "attribute": null,
+          "global": null,
+          "strategy": null
+        },
+        "name": "huddlz_cancelled_by_id_fkey",
+        "on_delete": "nilify",
+        "on_update": null,
+        "primary_key?": true,
+        "schema": "public",
+        "table": "users"
+      },
+      "scale": null,
+      "size": null,
+      "source": "cancelled_by_id",
+      "type": "uuid"
+    },
+    {
       "allow_nil?": false,
       "default": "nil",
       "generated?": false,
@@ -333,6 +407,37 @@
           "global": null,
           "strategy": null
         },
+        "name": "huddlz_group_location_id_fkey",
+        "on_delete": "nilify",
+        "on_update": null,
+        "primary_key?": true,
+        "schema": "public",
+        "table": "group_locations"
+      },
+      "scale": null,
+      "size": null,
+      "source": "group_location_id",
+      "type": "uuid"
+    },
+    {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": {
+        "deferrable": false,
+        "destination_attribute": "id",
+        "destination_attribute_default": null,
+        "destination_attribute_generated": null,
+        "index?": false,
+        "match_type": null,
+        "match_with": null,
+        "multitenancy": {
+          "attribute": null,
+          "global": null,
+          "strategy": null
+        },
         "name": "huddlz_huddl_template_id_fkey",
         "on_delete": null,
         "on_update": null,
@@ -347,7 +452,16 @@
     }
   ],
   "base_filter": null,
-  "check_constraints": [],
+  "check_constraints": [
+    {
+      "attribute": [
+        "lifecycle_state"
+      ],
+      "base_filter": null,
+      "check": "lifecycle_state IN ('draft', 'published', 'cancelled', 'completed')",
+      "name": "huddlz_valid_lifecycle_state"
+    }
+  ],
   "create_table_options": null,
   "custom_indexes": [
     {
@@ -373,7 +487,7 @@
   ],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "F23422709E52344CEF197F977754A3E06A4F80C6612DF91F45AEF0A0DD9032FF",
+  "hash": "E58B0ADC5B79EF8AB7B644461075E9719925770F3A671B532E17009F87991439",
   "identities": [],
   "multitenancy": {
     "attribute": null,

@@ -112,9 +112,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       })
       |> Ash.create!(authorize?: false)
 
-      huddl
-      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
-      |> Ash.update!()
+      Communities.rsvp_huddl!(huddl, actor: member)
 
       image_fallback_attributes = "[data-image-fallback][alt='']"
 
@@ -820,9 +818,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       group: group,
       huddl: huddl
     } do
-      huddl
-      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
-      |> Ash.update!()
+      Communities.rsvp_huddl!(huddl, actor: member)
 
       session =
         conn

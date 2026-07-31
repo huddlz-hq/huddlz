@@ -1,6 +1,8 @@
 defmodule HuddlzWeb.CalendarLiveTest do
   use HuddlzWeb.ConnCase, async: true
 
+  alias Huddlz.Communities
+
   setup do
     host = generate(user(role: :user))
     attendee = generate(user(role: :user))
@@ -171,6 +173,24 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> assert_has("#calendar-touch-entry-#{huddl.id}", text: "Going Show")
       |> assert_has("#calendar-touch-entry-#{huddl.id}", text: "Going")
       |> assert_has("#calendar-legend [data-status=going]", text: "Going")
+    end
+
+    test "cancelled huddl remains visible with a cancelled status", %{
+      conn: conn,
+      attendee: attendee,
+      host: host,
+      public_group: public_group
+    } do
+      huddl = create_huddl(host, public_group, title: "Cancelled Show", date: tomorrow())
+      Communities.rsvp_huddl!(huddl, actor: attendee)
+      Communities.cancel_huddl!(huddl, "Venue unavailable", actor: host)
+
+      conn
+      |> login(attendee)
+      |> visit(calendar_path_for(tomorrow()))
+      |> assert_has("#calendar-entry-#{huddl.id}[data-status=cancelled]")
+      |> assert_has("#calendar-entry-#{huddl.id} .cal-pill-status", text: "Cancelled")
+      |> assert_has("#calendar-legend [data-status=cancelled]", text: "Cancelled")
     end
 
     test "waitlisted huddl renders the tentative variant", %{

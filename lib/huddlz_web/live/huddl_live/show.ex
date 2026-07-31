@@ -6,6 +6,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   alias Huddlz.Communities
   alias Huddlz.Storage.HuddlImages
+  alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
 
@@ -48,19 +49,19 @@ defmodule HuddlzWeb.HuddlLive.Show do
          |> assign(:waitlist_position, waitlist_position)
          |> assign(
            :can_edit_huddl,
-           huddl.lifecycle_state != :cancelled && Ash.can?({huddl, :update}, user)
+           Communities.can_update_huddl?(user, huddl)
          )
          |> assign(
            :can_publish_huddl,
-           huddl.lifecycle_state == :draft && Ash.can?({huddl, :publish}, user)
+           Communities.can_publish_huddl?(user, huddl)
          )
          |> assign(
            :can_cancel_huddl,
-           huddl.lifecycle_state == :published && Ash.can?({huddl, :cancel}, user)
+           Communities.can_cancel_huddl?(user, huddl)
          )
          |> assign(
            :can_delete_huddl,
-           huddl.lifecycle_state == :draft && Ash.can?({huddl, :destroy}, user)
+           Communities.can_destroy_huddl?(user, huddl)
          )}
 
       {:error, :not_found} ->
@@ -90,7 +91,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
       sidebar_owned_groups={@sidebar_owned_groups}
       active="discover"
     >
-      <div class={["hero", "huddl-hero", status_hero_class(@huddl.status)]}>
+      <div class={["hero", "huddl-hero", HuddlStatus.hero_class(@huddl.status)]}>
         <div class="hero-media">
           <.huddl_cover_image
             :if={@huddl.display_image_url}
@@ -100,7 +101,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
           />
         </div>
         <div class="hero-content">
-          <span class={["eyebrow", status_eyebrow_class(@huddl.status)]}>
+          <span class={["eyebrow", HuddlStatus.eyebrow_class(@huddl.status)]}>
             {hero_eyebrow(@huddl)}
           </span>
           <h1>{@huddl.title}</h1>
@@ -387,7 +388,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp render_rsvp_state(%{huddl: %{status: status}} = assigns)
        when status in [:draft, :completed, :cancelled] do
     ~H"""
-    <div class={["rsvp-banner", status_banner_class(@huddl.status)]}>
+    <div class={["rsvp-banner", HuddlStatus.banner_class(@huddl.status)]}>
       <svg
         width="16"
         height="16"
@@ -405,7 +406,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
           <path d="M5 13l4 4L19 7" />
         <% end %>
       </svg>
-      <span>{status_banner_text(@huddl.status)}</span>
+      <span>{HuddlStatus.banner_text(@huddl.status)}</span>
     </div>
     """
   end
@@ -767,38 +768,13 @@ defmodule HuddlzWeb.HuddlLive.Show do
   end
 
   defp hero_eyebrow(huddl) do
-    "#{event_type_label(huddl.event_type)} · #{status_label(huddl.status)}"
+    "#{event_type_label(huddl.event_type)} · #{HuddlStatus.label(huddl.status)}"
   end
 
   defp event_type_label(:in_person), do: "In-person huddl"
   defp event_type_label(:virtual), do: "Online huddl"
   defp event_type_label(:hybrid), do: "Hybrid huddl"
   defp event_type_label(_), do: "Huddl"
-
-  defp status_label(:upcoming), do: "Upcoming"
-  defp status_label(:draft), do: "Draft"
-  defp status_label(:in_progress), do: "Happening now"
-  defp status_label(:completed), do: "Completed"
-  defp status_label(:cancelled), do: "Cancelled"
-  defp status_label(other), do: to_string(other) |> String.capitalize()
-
-  defp status_hero_class(:cancelled), do: "is-cancelled"
-  defp status_hero_class(:draft), do: "is-cancelled"
-  defp status_hero_class(_), do: nil
-
-  defp status_eyebrow_class(:in_progress), do: "eyebrow-warn"
-  defp status_eyebrow_class(:completed), do: "eyebrow-muted"
-  defp status_eyebrow_class(:cancelled), do: "eyebrow-magenta"
-  defp status_eyebrow_class(:draft), do: "eyebrow-muted"
-  defp status_eyebrow_class(_), do: nil
-
-  defp status_banner_class(:completed), do: "muted"
-  defp status_banner_class(:cancelled), do: "magenta"
-  defp status_banner_class(:draft), do: "muted"
-
-  defp status_banner_text(:completed), do: "This huddl has ended"
-  defp status_banner_text(:cancelled), do: "This huddl was cancelled"
-  defp status_banner_text(:draft), do: "This draft is visible only to organizers"
 
   defp hero_meta_segments(huddl) do
     [
