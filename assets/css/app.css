@@ -3312,15 +3312,10 @@ body .toggle .track {
   padding: 0;
   opacity: 1;
   rotate: 0deg;
-  transition: background 120ms ease, border-color 120ms ease;
+  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
 
 body .toggle input:checked + .track { border-color: var(--cyan); }
-
-body .toggle input:focus-visible + .track {
-  outline: 2px solid var(--cyan);
-  outline-offset: 3px;
-}
 
 body .toggle .track::after {
   content: "";
@@ -3337,6 +3332,11 @@ body .toggle .track::after {
 body .toggle input:checked + .track {
   background: var(--cyan);
   box-shadow: 0 0 12px rgba(24, 203, 212, 0.4);
+}
+
+body .toggle input:focus-visible + .track {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px var(--cyan-soft);
 }
 
 body .toggle input:checked + .track::after { transform: translateX(14px); }
