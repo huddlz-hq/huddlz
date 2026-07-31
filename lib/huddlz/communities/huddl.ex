@@ -97,6 +97,9 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     custom_indexes do
+      index [:lifecycle_state, :ends_at],
+        name: "huddlz_lifecycle_state_ends_at_index"
+
       index "ST_MakePoint(longitude, latitude)",
         name: "huddlz_location_gist_index",
         using: "GIST",
@@ -589,7 +592,12 @@ defmodule Huddlz.Communities.Huddl do
 
     policy action(:update) do
       description "Only group owners and organizers can update active huddlz"
-      forbid_unless expr(lifecycle_state in [:draft, :published])
+
+      forbid_unless expr(
+                      lifecycle_state == :draft or
+                        (lifecycle_state == :published and ends_at > now())
+                    )
+
       authorize_if expr(group.owner_id == ^actor(:id))
 
       authorize_if expr(

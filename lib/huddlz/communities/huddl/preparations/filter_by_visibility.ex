@@ -33,19 +33,13 @@ defmodule Huddlz.Communities.Huddl.Preparations.FilterByVisibility do
     |> Ash.Query.filter(
       (lifecycle_state in [:published, :completed] and
          (is_publicly_visible == true or exists(group.members, id == ^actor.id))) or
-        (lifecycle_state == :draft and
+        (lifecycle_state in [:draft, :cancelled] and
            (creator_id == ^actor.id or group.owner_id == ^actor.id or
               exists(
                 group.group_members,
                 user_id == ^actor.id and role == :organizer
               ))) or
-        (lifecycle_state == :cancelled and
-           (creator_id == ^actor.id or group.owner_id == ^actor.id or
-              exists(
-                group.group_members,
-                user_id == ^actor.id and role == :organizer
-              ) or
-              exists(attendees, user_id == ^actor.id)))
+        (lifecycle_state == :cancelled and exists(attendees, user_id == ^actor.id))
     )
   end
 end

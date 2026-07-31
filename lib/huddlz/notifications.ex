@@ -34,7 +34,6 @@ defmodule Huddlz.Notifications do
 
   alias Huddlz.Accounts.User
   alias Huddlz.Mailer
-  alias Huddlz.Notifications.DeliverWorker
   alias Huddlz.Notifications.Notification
   alias Huddlz.Notifications.Summary
   alias Huddlz.Notifications.Triggers
@@ -79,8 +78,7 @@ defmodule Huddlz.Notifications do
     _ = Triggers.fetch!(trigger)
 
     %{user_id: user_id, trigger: Atom.to_string(trigger), payload: payload}
-    |> DeliverWorker.new()
-    |> Oban.insert()
+    |> notification_queue().enqueue()
     |> case do
       {:ok, %Oban.Job{conflict?: true} = job}
       when trigger in @deduplicated_in_app_triggers ->
@@ -99,6 +97,10 @@ defmodule Huddlz.Notifications do
 
         err
     end
+  end
+
+  defp notification_queue do
+    Application.fetch_env!(:huddlz, :notification_queue)
   end
 
   # In-app feed persistence runs alongside the email enqueue. A failure here

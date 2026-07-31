@@ -104,15 +104,18 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
   with `authorize?: false` and skipping any that no longer exist
   (e.g. raced deletion). Used by the C/E-series fanout notifiers.
   """
-  @spec deliver_each([Ecto.UUID.t()], atom(), map()) :: :ok
+  @spec deliver_each([Ecto.UUID.t()], atom(), map()) :: :ok | {:error, term()}
   def deliver_each([], _trigger, _payload), do: :ok
 
   def deliver_each(user_ids, trigger, payload) do
     User
     |> Ash.Query.filter(id in ^user_ids)
     |> Ash.read!(authorize?: false)
-    |> Enum.each(&Notifications.deliver(&1, trigger, payload))
-
-    :ok
+    |> Enum.reduce_while(:ok, fn user, :ok ->
+      case Notifications.deliver(user, trigger, payload) do
+        {:ok, _job} -> {:cont, :ok}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
   end
 end

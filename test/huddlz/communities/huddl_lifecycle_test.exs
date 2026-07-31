@@ -114,6 +114,30 @@ defmodule Huddlz.Communities.HuddlLifecycleTest do
              Communities.complete_huddl(published, authorize?: false)
   end
 
+  @tag :huddl_lifecycle
+  test "an ended huddl cannot be cancelled while completion is pending", context do
+    now = DateTime.utc_now()
+
+    ended =
+      Ash.Seed.seed!(Huddl, %{
+        title: "Already Ended",
+        description: "Waiting for scheduled completion",
+        starts_at: DateTime.add(now, -2, :hour),
+        ends_at: DateTime.add(now, -1, :hour),
+        event_type: :virtual,
+        virtual_link: "https://example.com/ended",
+        is_private: false,
+        group_id: context.group.id,
+        creator_id: context.owner.id,
+        lifecycle_state: :published,
+        published_at: DateTime.add(now, -3, :hour),
+        published_by_id: context.owner.id
+      })
+
+    assert {:error, %Ash.Error.Invalid{}} =
+             Communities.cancel_huddl(ended, nil, actor: context.owner)
+  end
+
   @tag :requires_huddl_template
   test "publishing a recurring draft leaves sibling drafts unpublished", context do
     template =

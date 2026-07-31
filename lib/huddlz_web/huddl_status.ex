@@ -7,7 +7,7 @@ defmodule HuddlzWeb.HuddlStatus do
     draft: %{
       label: "Draft",
       variant: :muted,
-      hero_class: "is-cancelled",
+      hero_class: nil,
       eyebrow_class: "eyebrow-muted",
       banner_class: "muted",
       banner_text: "This draft is visible only to organizers"

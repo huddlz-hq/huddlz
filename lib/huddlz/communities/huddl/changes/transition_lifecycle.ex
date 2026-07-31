@@ -46,16 +46,8 @@ defmodule Huddlz.Communities.Huddl.Changes.TransitionLifecycle do
        ),
        do: reflect_current_lifecycle(changeset, current)
 
-  defp apply_transition(changeset, %{lifecycle_state: :published}, :cancelled, actor_id) do
-    changeset
-    |> Ash.Changeset.force_change_attribute(:lifecycle_state, :cancelled)
-    |> Ash.Changeset.force_change_attribute(:cancelled_at, DateTime.utc_now())
-    |> Ash.Changeset.force_change_attribute(:cancelled_by_id, actor_id)
-    |> Ash.Changeset.force_change_attribute(
-      :cancellation_reason,
-      normalize_reason(Ash.Changeset.get_argument(changeset, :cancellation_reason))
-    )
-    |> Ash.Changeset.put_context(:lifecycle_transition, :cancelled)
+  defp apply_transition(changeset, %{lifecycle_state: :published} = huddl, :cancelled, actor_id) do
+    cancel_before_end(changeset, huddl, actor_id)
   end
 
   defp apply_transition(
@@ -97,6 +89,25 @@ defmodule Huddlz.Communities.Huddl.Changes.TransitionLifecycle do
   defp apply_transition(changeset, %{lifecycle_state: state}, :completed, _actor_id)
        when state in [:draft, :cancelled] do
     Ash.Changeset.add_error(changeset, "Only a published huddl can be completed.")
+  end
+
+  defp cancel_before_end(changeset, huddl, actor_id) do
+    case DateTime.compare(huddl.ends_at, DateTime.utc_now()) do
+      :gt -> apply_cancellation(changeset, actor_id)
+      _comparison -> Ash.Changeset.add_error(changeset, "A completed huddl cannot be cancelled.")
+    end
+  end
+
+  defp apply_cancellation(changeset, actor_id) do
+    changeset
+    |> Ash.Changeset.force_change_attribute(:lifecycle_state, :cancelled)
+    |> Ash.Changeset.force_change_attribute(:cancelled_at, DateTime.utc_now())
+    |> Ash.Changeset.force_change_attribute(:cancelled_by_id, actor_id)
+    |> Ash.Changeset.force_change_attribute(
+      :cancellation_reason,
+      normalize_reason(Ash.Changeset.get_argument(changeset, :cancellation_reason))
+    )
+    |> Ash.Changeset.put_context(:lifecycle_transition, :cancelled)
   end
 
   defp complete_after_end(changeset, ends_at) do

@@ -62,7 +62,13 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   """
   def reconcile_future_instances(source, template, actor) do
     desired = desired_occurrences(source, template)
-    existing = Enum.sort_by(future_instances(source), & &1.starts_at, DateTime)
+
+    existing =
+      source
+      |> future_instances()
+      |> Enum.filter(&(&1.lifecycle_state in [:draft, :published]))
+      |> Enum.sort_by(& &1.starts_at, DateTime)
+
     {retained, new_desired, obsolete_existing} = match_occurrences(existing, desired)
 
     Enum.each(retained, fn {instance, {starts_at, ends_at}} ->
