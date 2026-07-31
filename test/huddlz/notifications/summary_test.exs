@@ -37,6 +37,38 @@ defmodule Huddlz.Notifications.SummaryTest do
       assert result.description == "Starts May 10, 2026"
     end
 
+    test "huddl update copy identifies a time change and includes the new time" do
+      result =
+        Summary.summarize(:huddl_updated, %{
+          "changed_fields" => ["starts_at"],
+          "starts_at_iso" => "2026-05-10T09:30:00Z"
+        })
+
+      assert result.description ==
+               "Changed: the start time. Scheduled for Sun May 10, 2026 at 9:30 AM UTC."
+    end
+
+    test "huddl update copy identifies non-time changes without implying a schedule change" do
+      result =
+        Summary.summarize(:huddl_updated, %{
+          "changed_fields" => ["max_attendees", "is_private"],
+          "starts_at_iso" => "2026-05-10T09:30:00Z"
+        })
+
+      assert result.description == "Changed: the capacity, the privacy."
+    end
+
+    test "series update copy identifies the change and the next retained huddl" do
+      result =
+        Summary.summarize(:huddl_series_updated, %{
+          "changed_fields" => ["schedule"],
+          "starts_at_iso" => "2026-05-10T09:30:00Z"
+        })
+
+      assert result.description ==
+               "Changed: the recurring schedule. Next huddl: Sun May 10, 2026 at 9:30 AM UTC."
+    end
+
     test "description is nil when no date is present" do
       result = Summary.summarize(:rsvp_confirmation, %{"huddl_title" => "Boat Drinks"})
       assert is_nil(result.description)
@@ -50,6 +82,17 @@ defmodule Huddlz.Notifications.SummaryTest do
         })
 
       assert result.source_url == "/groups/phoenix-elixir-meetup/huddlz/abc"
+    end
+
+    test "source_url honors an accessible fallback target" do
+      result =
+        Summary.summarize(:huddl_updated, %{
+          "target_path" => "/notifications",
+          "huddl_id" => "abc",
+          "group_slug" => "phoenix-elixir-meetup"
+        })
+
+      assert result.source_url == "/notifications"
     end
 
     test "source_url falls back to a group page when only group_slug is present" do

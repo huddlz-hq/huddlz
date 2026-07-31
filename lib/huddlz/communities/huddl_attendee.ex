@@ -123,6 +123,17 @@ defmodule Huddlz.Communities.HuddlAttendee do
 
       filter expr(huddl_id == ^arg(:huddl_id) and user_id == ^actor(:id))
     end
+
+    read :notification_recipients do
+      description "Resolve RSVP and waitlist recipients for system-driven huddl notifications"
+
+      argument :huddl_ids, {:array, :uuid} do
+        allow_nil? false
+        constraints min_length: 1
+      end
+
+      filter expr(huddl_id in ^arg(:huddl_ids))
+    end
   end
 
   policies do

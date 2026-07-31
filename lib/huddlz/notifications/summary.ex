@@ -12,7 +12,11 @@ defmodule Huddlz.Notifications.Summary do
   time-relative words ("tomorrow", "in 5 minutes", "now").
   """
 
+  alias Huddlz.Notifications.DateTimeFormatter
+  alias Huddlz.Notifications.Senders.ChangedFields
   alias Huddlz.Notifications.Triggers
+
+  @schedule_fields ["starts_at", "ends_at", "schedule"]
 
   @type result :: %{
           title: String.t(),
@@ -112,8 +116,11 @@ defmodule Huddlz.Notifications.Summary do
   defp description(:huddl_new, %{"starts_at_iso" => iso}),
     do: maybe_absolute_date("Starts ", iso)
 
-  defp description(:huddl_updated, %{"starts_at_iso" => iso}),
-    do: maybe_absolute_date("Now starts ", iso)
+  defp description(:huddl_updated, payload),
+    do: changed_description(payload, "Scheduled for ")
+
+  defp description(:huddl_series_updated, payload),
+    do: changed_description(payload, "Next huddl: ")
 
   defp description(:huddl_reminder_24h, %{"starts_at_iso" => iso}),
     do: maybe_absolute_date("Starts ", iso)
@@ -132,7 +139,32 @@ defmodule Huddlz.Notifications.Summary do
 
   defp maybe_absolute_date(_prefix, _), do: nil
 
+  defp changed_description(payload, schedule_prefix) do
+    changed = "Changed: #{ChangedFields.summary(payload)}."
+
+    if schedule_changed?(payload) do
+      changed <> " " <> schedule_prefix <> formatted_start(payload) <> "."
+    else
+      changed
+    end
+  end
+
+  defp schedule_changed?(%{"changed_fields" => fields}) when is_list(fields),
+    do: Enum.any?(fields, &(&1 in @schedule_fields))
+
+  defp schedule_changed?(_payload), do: false
+
+  defp formatted_start(payload) do
+    DateTimeFormatter.format_starts_at_iso(
+      payload["starts_at_iso"],
+      DateTimeFormatter.time_zone_from_payload(payload),
+      "the scheduled time"
+    )
+  end
+
   # ─── Source URLs ───────────────────────────────────────────────────────
+
+  defp source_url(_trigger, %{"target_path" => "/notifications"}), do: "/notifications"
 
   defp source_url(_trigger, %{"group_slug" => slug, "huddl_id" => huddl_id})
        when is_binary(slug) and is_binary(huddl_id),

@@ -67,6 +67,19 @@ defmodule Huddlz.Notifications.Senders.HuddlUpdatedTest do
       assert email.html_body =~ "/groups/pickup-sports/huddlz/#{huddl_id}"
     end
 
+    test "links privacy-restricted recipients to their accessible updates page" do
+      user = generate(user())
+
+      email =
+        HuddlUpdated.build(
+          user,
+          default_payload(%{"target_path" => "/notifications"})
+        )
+
+      assert email.html_body =~ "/notifications"
+      refute email.html_body =~ "/groups/pickup-sports/huddlz/"
+    end
+
     test "includes the unsubscribe footer (activity)" do
       user = generate(user())
       email = HuddlUpdated.build(user, default_payload())

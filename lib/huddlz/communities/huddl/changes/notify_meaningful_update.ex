@@ -47,6 +47,20 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate do
     end)
   end
 
+  @doc false
+  @spec payload(struct(), struct(), [atom()]) :: map()
+  def payload(huddl, group, changed_fields) do
+    %{
+      "huddl_id" => huddl.id,
+      "huddl_title" => to_string(huddl.title),
+      "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at),
+      "group_name" => to_string(group.name),
+      "group_slug" => to_string(group.slug),
+      "changed_fields" => Enum.map(changed_fields, &Atom.to_string/1)
+    }
+    |> use_accessible_target(huddl)
+  end
+
   defp series_edit?(changeset), do: Ash.Changeset.get_argument(changeset, :edit_type) == "all"
 
   defp suppressed?(changeset) do
@@ -60,17 +74,15 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate do
     recipients =
       RecipientHelpers.rsvp_user_ids(huddl.id, exclude: RecipientHelpers.actor_id(cs))
 
-    payload = %{
-      "huddl_id" => huddl.id,
-      "huddl_title" => to_string(huddl.title),
-      "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at),
-      "group_name" => to_string(huddl.group.name),
-      "group_slug" => to_string(huddl.group.slug),
-      "changed_fields" => Enum.map(changed_fields, &Atom.to_string/1)
-    }
+    payload = payload(huddl, huddl.group, changed_fields)
 
     RecipientHelpers.deliver_each(recipients, :huddl_updated, payload)
 
     {:ok, huddl}
   end
+
+  defp use_accessible_target(payload, %{is_private: true}),
+    do: Map.put(payload, "target_path", "/notifications")
+
+  defp use_accessible_target(payload, _huddl), do: payload
 end

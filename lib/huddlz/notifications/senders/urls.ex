@@ -8,6 +8,8 @@ defmodule Huddlz.Notifications.Senders.Urls do
   use HuddlzWeb, :verified_routes
 
   @spec huddl_url(map()) :: String.t()
+  def huddl_url(%{"target_path" => "/notifications"}), do: url(~p"/notifications")
+
   def huddl_url(%{"group_slug" => slug, "huddl_id" => id})
       when is_binary(slug) and is_binary(id) do
     url(~p"/groups/#{slug}/huddlz/#{id}")

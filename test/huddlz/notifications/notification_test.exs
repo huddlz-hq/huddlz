@@ -27,6 +27,40 @@ defmodule Huddlz.Notifications.NotificationTest do
 
       assert is_nil(notification.read_at)
     end
+
+    test "does not persist a duplicate row when Oban rejects a duplicate job" do
+      user = generate(user(confirmed_at: DateTime.utc_now()))
+      payload = %{"huddl_title" => "Boat Drinks"}
+
+      assert {:ok, %Oban.Job{conflict?: false}} =
+               Notifications.deliver(user, :huddl_updated, payload)
+
+      assert {:ok, %Oban.Job{conflict?: true}} =
+               Notifications.deliver(user, :huddl_updated, payload)
+
+      {:ok, %{results: notifications}} =
+        Notifications.list_for_user(actor: user, page: [limit: 5])
+
+      assert [%Notification{trigger: "huddl_updated"}] = notifications
+    end
+
+    test "preserves distinct non-update activity when email jobs conflict" do
+      user = generate(user(confirmed_at: DateTime.utc_now()))
+
+      assert {:ok, %Oban.Job{conflict?: false}} =
+               Notifications.deliver(user, :password_changed)
+
+      assert {:ok, %Oban.Job{conflict?: true}} =
+               Notifications.deliver(user, :password_changed)
+
+      {:ok, %{results: notifications}} =
+        Notifications.list_for_user(actor: user, page: [limit: 5])
+
+      assert [
+               %Notification{trigger: "password_changed"},
+               %Notification{trigger: "password_changed"}
+             ] = notifications
+    end
   end
 
   describe "list_for_user :for_user" do

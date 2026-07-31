@@ -56,6 +56,9 @@ defmodule Huddlz.Notifications do
   @topic_prefix "notifications:unread:"
   # 30 days — long enough for an email to sit in an inbox over a vacation.
   @unsubscribe_max_age 60 * 60 * 24 * 30
+  # Update notifications describe current state, so identical rapid retries
+  # should share both the email job and the canonical in-app row.
+  @deduplicated_in_app_triggers [:huddl_updated, :huddl_series_updated]
 
   @type deliver_result :: :sent | :skipped | {:error, term()}
 
@@ -75,16 +78,21 @@ defmodule Huddlz.Notifications do
   def deliver(%User{id: user_id}, trigger, payload \\ %{}) when is_atom(trigger) do
     _ = Triggers.fetch!(trigger)
 
-    persist_in_app_notification(user_id, trigger, payload)
-
     %{user_id: user_id, trigger: Atom.to_string(trigger), payload: payload}
     |> DeliverWorker.new()
     |> Oban.insert()
     |> case do
+      {:ok, %Oban.Job{conflict?: true} = job}
+      when trigger in @deduplicated_in_app_triggers ->
+        {:ok, job}
+
       {:ok, job} ->
+        persist_in_app_notification(user_id, trigger, payload)
         {:ok, job}
 
       {:error, reason} = err ->
+        persist_in_app_notification(user_id, trigger, payload)
+
         Logger.warning(
           "Failed to enqueue #{inspect(trigger)} notification for user #{user_id}: #{inspect(reason)}"
         )
