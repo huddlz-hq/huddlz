@@ -49,15 +49,15 @@ defmodule HuddlzWeb.HuddlLive.Show do
          |> assign(:waitlist_position, waitlist_position)
          |> assign(
            :can_edit_huddl,
-           Communities.can_update_huddl?(user, huddl)
+           editable_lifecycle?(huddl) && Communities.can_update_huddl?(user, huddl)
          )
          |> assign(
            :can_publish_huddl,
-           Communities.can_publish_huddl?(user, huddl)
+           huddl.lifecycle_state == :draft && Communities.can_publish_huddl?(user, huddl)
          )
          |> assign(
            :can_cancel_huddl,
-           Communities.can_cancel_huddl?(user, huddl)
+           cancellable_lifecycle?(huddl) && Communities.can_cancel_huddl?(user, huddl)
          )
          |> assign(
            :can_delete_huddl,
@@ -770,6 +770,18 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp hero_eyebrow(huddl) do
     "#{event_type_label(huddl.event_type)} · #{HuddlStatus.label(huddl.status)}"
   end
+
+  defp editable_lifecycle?(%{lifecycle_state: :draft}), do: true
+
+  defp editable_lifecycle?(%{lifecycle_state: :published, ends_at: ends_at}),
+    do: DateTime.after?(ends_at, DateTime.utc_now())
+
+  defp editable_lifecycle?(_huddl), do: false
+
+  defp cancellable_lifecycle?(%{lifecycle_state: :published, ends_at: ends_at}),
+    do: DateTime.after?(ends_at, DateTime.utc_now())
+
+  defp cancellable_lifecycle?(_huddl), do: false
 
   defp event_type_label(:in_person), do: "In-person huddl"
   defp event_type_label(:virtual), do: "Online huddl"

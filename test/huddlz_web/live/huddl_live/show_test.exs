@@ -698,7 +698,40 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has(".huddl-side-section h3", text: "Organize")
       |> assert_has("a", text: "Edit huddl")
       |> assert_has("button", text: "Cancel huddl")
+      |> refute_has("button", text: "Publish huddl")
       |> refute_has("button", text: "Delete huddl")
+    end
+
+    test "hides lifecycle actions after the huddl ends", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      now = DateTime.utc_now()
+
+      ended =
+        Ash.Seed.seed!(Huddl, %{
+          title: "Already Ended",
+          description: "Waiting for scheduled completion",
+          starts_at: DateTime.add(now, -2, :hour),
+          ends_at: DateTime.add(now, -1, :hour),
+          event_type: :virtual,
+          virtual_link: "https://example.com/ended",
+          is_private: false,
+          group_id: group.id,
+          creator_id: owner.id,
+          lifecycle_state: :published,
+          published_at: DateTime.add(now, -3, :hour),
+          published_by_id: owner.id
+        })
+
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{ended.id}")
+      |> assert_has(".eyebrow", text: "Completed")
+      |> refute_has("button", text: "Publish huddl")
+      |> refute_has("button", text: "Cancel huddl")
+      |> refute_has("a", text: "Edit huddl")
     end
 
     test "opens and dismisses the styled cancellation confirmation", %{
@@ -834,6 +867,9 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       assert_path(session, ~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
       assert_has(session, ".hero .eyebrow", text: "Cancelled")
       assert_has(session, "#cancellation-reason", text: "The venue lost power.")
+      refute_has(session, "button", text: "Publish huddl")
+      refute_has(session, "button", text: "Cancel huddl")
+      refute_has(session, "a", text: "Edit huddl")
 
       reloaded = Communities.get_huddl!(huddl.id, actor: member)
       assert reloaded.lifecycle_state == :cancelled

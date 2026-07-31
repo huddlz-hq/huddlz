@@ -53,10 +53,14 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyCancelled do
     if notification_due?(cs) do
       recipients = cs.context[:huddl_cancelled_recipients] || []
       payload = cs.context[:huddl_cancelled_payload] || %{}
-      RecipientHelpers.deliver_each(recipients, :huddl_cancelled, payload)
-    end
 
-    {:ok, huddl}
+      case RecipientHelpers.deliver_each(recipients, :huddl_cancelled, payload) do
+        :ok -> {:ok, huddl}
+        {:error, reason} -> {:error, reason}
+      end
+    else
+      {:ok, huddl}
+    end
   end
 
   defp notification_due?(cs), do: cs.context[:lifecycle_transition] == :cancelled
