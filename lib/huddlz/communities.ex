@@ -40,6 +40,7 @@ defmodule Huddlz.Communities do
       define :join_waitlist_huddl, action: :join_waitlist
       define :publish_huddl, action: :publish
       define :cancel_huddl, action: :cancel, args: [{:optional, :cancellation_reason}]
+      define :complete_huddl, action: :complete
       define :destroy_huddl, action: :destroy
     end
 

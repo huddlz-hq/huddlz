@@ -16,6 +16,7 @@ defmodule HuddlzWeb.OrganizeLive do
   alias Huddlz.Accounts
   alias Huddlz.Communities
   alias Huddlz.Communities.MembershipEvents
+  alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
 
   @group_loads [:member_count]
@@ -496,8 +497,8 @@ defmodule HuddlzWeb.OrganizeLive do
               <div class="meta">{format_starts_at(huddl.starts_at)}</div>
             </div>
             <span class="pill">{rsvp_label(huddl.rsvp_count)}</span>
-            <span class={["pill", status_pill_class(huddl.status)]}>
-              {format_status(huddl.status)}
+            <span class={["pill", HuddlStatus.pill_class(huddl.status)]}>
+              {HuddlStatus.label(huddl.status)}
             </span>
           </div>
         </div>
@@ -535,17 +536,6 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp empty_huddlz_body(_),
     do: "Schedule a huddl to start hosting. Every huddl you create for this group lands here."
-
-  defp status_pill_class(:cancelled), do: "muted"
-  defp status_pill_class(_), do: nil
-
-  defp format_status(:upcoming), do: "Upcoming"
-  defp format_status(:draft), do: "Draft"
-  defp format_status(:in_progress), do: "In progress"
-  defp format_status(:past), do: "Past"
-  defp format_status(:cancelled), do: "Cancelled"
-  defp format_status(other) when is_atom(other), do: other |> to_string() |> String.capitalize()
-  defp format_status(_), do: ""
 
   # ─────────────────────────────────────────  MEMBERS  ───
   attr :group, :map, required: true

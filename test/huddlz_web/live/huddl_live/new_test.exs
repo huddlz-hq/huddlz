@@ -332,8 +332,9 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
 
       draft =
         Huddl
+        |> Ash.Query.for_read(:read, %{}, actor: owner)
         |> Ash.Query.filter(title == "Unpublished Workshop" and group_id == ^group.id)
-        |> Ash.read_one!(actor: owner)
+        |> Ash.read_one!()
 
       assert_path(session, ~p"/groups/#{group.slug}/huddlz/#{draft.id}")
       assert_has(session, ".hero .eyebrow", text: "Draft")

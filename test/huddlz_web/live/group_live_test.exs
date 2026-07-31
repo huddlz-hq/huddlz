@@ -234,6 +234,27 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> assert_has(".facts .label", text: "Members")
     end
 
+    test "does not list draft huddlz on the group page", %{
+      conn: conn,
+      owner: owner,
+      public_group: group
+    } do
+      generate(
+        huddl(
+          title: "Private Draft",
+          group_id: group.id,
+          creator_id: owner.id,
+          lifecycle_state: :draft,
+          actor: owner
+        )
+      )
+
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}")
+      |> refute_has("h3", text: "Private Draft")
+    end
+
     test "displays owner badge for group owner", %{
       conn: conn,
       owner: owner,

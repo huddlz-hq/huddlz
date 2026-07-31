@@ -73,6 +73,15 @@ defmodule Huddlz.Communities.Huddl do
         worker_module_name Huddlz.Notifications.Workers.HuddlReminder1h
         scheduler_module_name Huddlz.Notifications.Workers.HuddlReminder1hScheduler
       end
+
+      trigger :complete_huddl do
+        action :complete
+        read_action :due_for_completion
+        scheduler_cron "*/2 * * * *"
+        queue :default
+        worker_module_name Huddlz.Communities.Workers.CompleteHuddl
+        scheduler_module_name Huddlz.Communities.Workers.CompleteHuddlScheduler
+      end
     end
   end
 
@@ -83,6 +92,8 @@ defmodule Huddlz.Communities.Huddl do
     references do
       reference :group, on_delete: :delete
       reference :group_location, on_delete: :nilify
+      reference :published_by, on_delete: :nilify
+      reference :cancelled_by, on_delete: :nilify
     end
 
     custom_indexes do
@@ -91,13 +102,20 @@ defmodule Huddlz.Communities.Huddl do
         using: "GIST",
         where: "latitude IS NOT NULL AND longitude IS NOT NULL"
     end
+
+    check_constraints do
+      check_constraint :lifecycle_state,
+                       "huddlz_valid_lifecycle_state",
+                       check:
+                         "lifecycle_state IN ('draft', 'published', 'cancelled', 'completed')",
+                       message: "must be draft, published, cancelled, or completed"
+    end
   end
 
   actions do
     destroy :destroy do
       primary? true
       require_atomic? false
-      change Huddlz.Communities.Huddl.Changes.NotifyCancelled
     end
 
     read :read do
@@ -173,11 +191,7 @@ defmodule Huddlz.Communities.Huddl do
       description "Publish a draft huddl. Repeated publication is a no-op."
       require_atomic? false
 
-      argument :publish_series?, :boolean, default: true, public?: false
-      argument :notify_members?, :boolean, default: true, public?: false
-
       change {Huddlz.Communities.Huddl.Changes.TransitionLifecycle, to: :published}
-      change Huddlz.Communities.Huddl.Changes.PublishRecurringSeries
       change Huddlz.Communities.Huddl.Changes.NotifyNewInGroup
     end
 
@@ -192,6 +206,13 @@ defmodule Huddlz.Communities.Huddl do
 
       change {Huddlz.Communities.Huddl.Changes.TransitionLifecycle, to: :cancelled}
       change Huddlz.Communities.Huddl.Changes.NotifyCancelled
+    end
+
+    update :complete do
+      description "Persist completion after a published huddl ends."
+      require_atomic? false
+
+      change {Huddlz.Communities.Huddl.Changes.TransitionLifecycle, to: :completed}
     end
 
     update :update do
@@ -280,7 +301,11 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     read :past do
-      filter expr(lifecycle_state == :published and ends_at < now())
+      filter expr(
+               lifecycle_state == :completed or
+                 (lifecycle_state == :published and ends_at < now())
+             )
+
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
       prepare build(sort: [starts_at: :desc])
     end
@@ -364,8 +389,9 @@ defmodule Huddlz.Communities.Huddl do
       end
 
       filter expr(
-               lifecycle_state == :published and group_id == ^arg(:group_id) and
-                 ends_at < now()
+               group_id == ^arg(:group_id) and
+                 (lifecycle_state == :completed or
+                    (lifecycle_state == :published and ends_at < now()))
              )
 
       pagination keyset?: true,
@@ -448,7 +474,9 @@ defmodule Huddlz.Communities.Huddl do
                   ends_at > now()) or
                  (^arg(:state) == :draft and lifecycle_state == :draft) or
                  (^arg(:state) == :cancelled and lifecycle_state == :cancelled) or
-                 (^arg(:state) == :past and lifecycle_state == :published and ends_at < now())
+                 (^arg(:state) == :past and
+                    (lifecycle_state == :completed or
+                       (lifecycle_state == :published and ends_at < now())))
              )
     end
 
@@ -502,6 +530,13 @@ defmodule Huddlz.Communities.Huddl do
              )
     end
 
+    read :due_for_completion do
+      description "Published huddlz whose scheduled end time has passed."
+
+      pagination keyset?: true, required?: false, default_limit: 100
+      filter expr(lifecycle_state == :published and ends_at <= now())
+    end
+
     update :send_24h_reminder do
       description "Mark and fan out the 24-hour reminder for this huddl. Invoked by the AshOban scheduler."
       require_atomic? false
@@ -538,9 +573,9 @@ defmodule Huddlz.Communities.Huddl do
       authorize_if always()
     end
 
-    # Reminder fan-out actions are invoked by the AshOban scheduler with no actor.
-    policy action([:send_24h_reminder, :send_1h_reminder]) do
-      description "Reminder dispatch runs from background scheduler"
+    # Background lifecycle and reminder actions run through AshOban with no actor.
+    policy action([:complete, :send_24h_reminder, :send_1h_reminder]) do
+      description "Scheduled huddl maintenance runs from background workers"
       authorize_if always()
     end
 
@@ -554,7 +589,7 @@ defmodule Huddlz.Communities.Huddl do
 
     policy action(:update) do
       description "Only group owners and organizers can update active huddlz"
-      forbid_unless expr(lifecycle_state != :cancelled)
+      forbid_unless expr(lifecycle_state in [:draft, :published])
       authorize_if expr(group.owner_id == ^actor(:id))
 
       authorize_if expr(
@@ -562,9 +597,18 @@ defmodule Huddlz.Communities.Huddl do
                    )
     end
 
-    # Lifecycle and deletion policies
-    policy action([:publish, :cancel, :destroy]) do
+    policy action([:publish, :cancel]) do
       description "Only group owners and organizers can change a huddl lifecycle"
+      authorize_if expr(group.owner_id == ^actor(:id))
+
+      authorize_if expr(
+                     exists(group.group_members, user_id == ^actor(:id) and role == :organizer)
+                   )
+    end
+
+    policy action(:destroy) do
+      description "Only group owners and organizers can delete an unpublished draft"
+      forbid_unless expr(lifecycle_state == :draft)
       authorize_if expr(group.owner_id == ^actor(:id))
 
       authorize_if expr(
@@ -677,7 +721,7 @@ defmodule Huddlz.Communities.Huddl do
       allow_nil? false
       public? true
       default :published
-      constraints one_of: [:draft, :published, :cancelled]
+      constraints one_of: [:draft, :published, :cancelled, :completed]
       description "Explicit organizer-controlled lifecycle state."
     end
 
@@ -687,6 +731,11 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     attribute :cancelled_at, :utc_datetime_usec do
+      allow_nil? true
+      public? true
+    end
+
+    attribute :completed_at, :utc_datetime_usec do
       allow_nil? true
       public? true
     end
@@ -734,6 +783,18 @@ defmodule Huddlz.Communities.Huddl do
       primary_key? false
     end
 
+    belongs_to :published_by, Huddlz.Accounts.User do
+      attribute_type :uuid
+      allow_nil? true
+      primary_key? false
+    end
+
+    belongs_to :cancelled_by, Huddlz.Accounts.User do
+      attribute_type :uuid
+      allow_nil? true
+      primary_key? false
+    end
+
     belongs_to :group, Huddlz.Communities.Group do
       attribute_type :uuid
       allow_nil? false
@@ -767,6 +828,7 @@ defmodule Huddlz.Communities.Huddl do
                     cond do
                       lifecycle_state == :draft -> :draft
                       lifecycle_state == :cancelled -> :cancelled
+                      lifecycle_state == :completed -> :completed
                       starts_at > now() -> :upcoming
                       ends_at < now() -> :completed
                       true -> :in_progress

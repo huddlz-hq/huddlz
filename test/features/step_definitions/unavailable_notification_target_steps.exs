@@ -35,7 +35,9 @@ defmodule UnavailableNotificationTargetSteps do
         "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at)
       })
 
-    :ok = Communities.destroy_huddl(huddl, actor: user)
+    # Simulate a target removed outside normal lifecycle policy. Published
+    # huddlz cannot be hard-deleted through the application.
+    :ok = Communities.destroy_huddl(huddl, authorize?: false)
 
     context
   end

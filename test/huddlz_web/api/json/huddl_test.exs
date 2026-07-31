@@ -2,10 +2,19 @@ defmodule HuddlzWeb.Api.Json.HuddlTest do
   use HuddlzWeb.ApiCase, async: true
 
   describe "DELETE /api/json/huddlz/:id" do
-    test "owner can delete the huddl", %{conn: conn} do
+    test "owner can delete a draft huddl", %{conn: conn} do
       owner = generate(user())
       group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
-      h = generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
+
+      h =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            lifecycle_state: :draft
+          )
+        )
 
       conn =
         conn

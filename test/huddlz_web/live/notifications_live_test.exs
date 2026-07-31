@@ -248,7 +248,7 @@ defmodule HuddlzWeb.NotificationsLiveTest do
     } do
       {group, huddl} = create_huddl_target(user)
       notification = huddl_notification(user, group, huddl)
-      :ok = Communities.destroy_huddl(huddl, actor: user)
+      :ok = Communities.destroy_huddl(huddl, authorize?: false)
 
       conn
       |> login(user)
@@ -382,7 +382,7 @@ defmodule HuddlzWeb.NotificationsLiveTest do
         |> visit("/notifications")
         |> assert_has("#notification-#{notification.id}-open", text: "Open")
 
-      :ok = Communities.destroy_huddl(huddl, actor: user)
+      :ok = Communities.destroy_huddl(huddl, authorize?: false)
 
       session
       |> click_link("#notification-#{notification.id}-open", "Open")

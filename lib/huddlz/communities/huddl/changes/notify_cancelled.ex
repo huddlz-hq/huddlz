@@ -1,13 +1,11 @@
 defmodule Huddlz.Communities.Huddl.Changes.NotifyCancelled do
   @moduledoc """
   Enqueues C3 (huddl_cancelled) notifications when a published huddl is
-  cancelled. It also supports the legacy hard-delete action.
+  cancelled.
 
   Captures attendee user_ids and the huddl's display fields in
-  `before_action` because the HuddlAttendee rows cascade-delete with
-  the huddl and the row itself disappears. The actor (the user
-  destroying the huddl, typically an organizer) is excluded from the
-  recipients. Fans out emails in `after_action` once the destroy
+  `before_action`. The actor cancelling the huddl is excluded from the
+  recipients. Fans out emails in `after_action` once the cancellation
   commits.
   """
 
@@ -61,6 +59,5 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyCancelled do
     {:ok, huddl}
   end
 
-  defp notification_due?(%{action_type: :destroy}), do: true
   defp notification_due?(cs), do: cs.context[:lifecycle_transition] == :cancelled
 end

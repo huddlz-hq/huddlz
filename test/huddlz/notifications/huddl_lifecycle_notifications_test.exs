@@ -614,7 +614,9 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
 
       Oban.drain_queue(queue: :notifications)
 
-      refute huddl_exists?(dropped.id)
+      cancelled = Communities.get_huddl!(dropped.id, actor: attendee)
+      assert cancelled.lifecycle_state == :cancelled
+      assert rsvped?(dropped.id, attendee.id)
 
       assert_email_sent(fn email ->
         email.subject == "Cancelled: Saturday Soccer" and
@@ -666,7 +668,7 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
   end
 
   describe "C3: huddl_cancelled" do
-    test "emails every non-actor RSVP when the huddl is destroyed" do
+    test "emails every non-actor RSVP when the huddl is cancelled" do
       owner = generate(user(role: :user, display_name: "Group Owner"))
       attendee_a = generate(user(display_name: "Attendee A"))
       attendee_b = generate(user(display_name: "Attendee B"))
@@ -703,9 +705,7 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
       Oban.drain_queue(queue: :notifications)
       flush_mailbox()
 
-      huddl
-      |> Ash.Changeset.for_destroy(:destroy, %{}, actor: owner)
-      |> Ash.destroy!()
+      Communities.cancel_huddl!(huddl, nil, actor: owner)
 
       assert %{success: 2} = Oban.drain_queue(queue: :notifications)
       emails = drain_mailbox()
@@ -747,9 +747,7 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
       Oban.drain_queue(queue: :notifications)
       flush_mailbox()
 
-      huddl
-      |> Ash.Changeset.for_destroy(:destroy, %{}, actor: owner)
-      |> Ash.destroy!()
+      Communities.cancel_huddl!(huddl, nil, actor: owner)
 
       # Only the non-actor RSVP gets emailed (the success count proves
       # the owner's job was never enqueued).
@@ -772,9 +770,7 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
       Oban.drain_queue(queue: :notifications)
       flush_mailbox()
 
-      huddl
-      |> Ash.Changeset.for_destroy(:destroy, %{}, actor: owner)
-      |> Ash.destroy!()
+      Communities.cancel_huddl!(huddl, nil, actor: owner)
 
       refute_enqueued(worker: DeliverWorker)
     end

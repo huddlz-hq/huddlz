@@ -8,6 +8,7 @@ defmodule HuddlzWeb.CalendarLive do
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities
+  alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
   require Logger
 
@@ -234,12 +235,16 @@ defmodule HuddlzWeb.CalendarLive do
     "#{entry.huddl.title}, #{calendar_status_label(entry, today)}, #{date_and_time}"
   end
 
-  defp calendar_status_label(%{huddl: %{status: :cancelled}}, _today), do: "Cancelled"
+  defp calendar_status_label(%{huddl: %{starts_at: starts_at, status: status}} = entry, today) do
+    case HuddlStatus.contextual_override(status) do
+      %{label: label} ->
+        label
 
-  defp calendar_status_label(%{huddl: %{starts_at: starts_at}} = entry, today) do
-    case Date.compare(DateTime.to_date(starts_at), today) do
-      :lt -> past_relationship_label(entry)
-      _ -> relationship_status(entry).label
+      nil ->
+        case Date.compare(DateTime.to_date(starts_at), today) do
+          :lt -> past_relationship_label(entry)
+          _ -> relationship_status(entry).label
+        end
     end
   end
 
@@ -252,11 +257,14 @@ defmodule HuddlzWeb.CalendarLive do
     |> Enum.sort_by(fn %{huddl: %{starts_at: dt}} -> dt end, DateTime)
   end
 
-  defp entry_status(%{huddl: %{status: :cancelled}}, _today) do
-    %EntryStatus{key: "cancelled", label: "Cancelled", variant: :magenta, rank: 8}
+  defp entry_status(%{huddl: %{status: status}} = entry, %Date{} = today) do
+    case HuddlStatus.contextual_override(status) do
+      nil -> timed_entry_status(entry, today)
+      presentation -> struct!(EntryStatus, presentation)
+    end
   end
 
-  defp entry_status(%{huddl: %{starts_at: starts_at}} = entry, %Date{} = today) do
+  defp timed_entry_status(%{huddl: %{starts_at: starts_at}} = entry, today) do
     case Date.compare(DateTime.to_date(starts_at), today) do
       :lt -> past_status(entry)
       _ -> relationship_status(entry)

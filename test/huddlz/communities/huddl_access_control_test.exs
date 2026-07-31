@@ -455,12 +455,36 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                |> Ash.update()
     end
 
-    test "owner can destroy huddl", %{owner: owner, huddl: huddl} do
-      assert :ok = Ash.destroy(huddl, actor: owner)
+    test "owner can destroy a draft huddl", %{owner: owner, group: group} do
+      draft =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            lifecycle_state: :draft
+          )
+        )
+
+      assert :ok = Ash.destroy(draft, actor: owner)
     end
 
-    test "organizer can destroy huddl", %{organizer: organizer, huddl: huddl} do
-      assert :ok = Ash.destroy(huddl, actor: organizer)
+    test "organizer can destroy a draft huddl", %{
+      owner: owner,
+      organizer: organizer,
+      group: group
+    } do
+      draft =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            lifecycle_state: :draft
+          )
+        )
+
+      assert :ok = Ash.destroy(draft, actor: organizer)
     end
 
     test "member cannot destroy huddl", %{member: member, huddl: huddl} do
