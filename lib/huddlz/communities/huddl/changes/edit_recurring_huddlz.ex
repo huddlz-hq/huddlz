@@ -92,14 +92,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz do
     huddl
     |> RecipientHelpers.series_rsvp_targets(exclude: actor_id)
     |> Enum.each(fn {user_id, target} ->
-      payload = %{
-        "huddl_id" => target.id,
-        "huddl_title" => to_string(target.title),
-        "starts_at_iso" => DateTime.to_iso8601(target.starts_at),
-        "group_name" => to_string(huddl.group.name),
-        "group_slug" => to_string(huddl.group.slug),
-        "changed_fields" => Enum.map(changed_fields, &Atom.to_string/1)
-      }
+      payload = NotifyMeaningfulUpdate.payload(target, huddl.group, changed_fields)
 
       RecipientHelpers.deliver_each([user_id], :huddl_series_updated, payload)
     end)

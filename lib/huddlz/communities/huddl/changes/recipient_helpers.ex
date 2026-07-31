@@ -8,10 +8,10 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
   require Ash.Query
 
   alias Huddlz.Accounts.User
+  alias Huddlz.Communities
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.Huddl.RecurrenceHelper
-  alias Huddlz.Communities.HuddlAttendee
   alias Huddlz.Notifications
 
   @doc """
@@ -24,10 +24,8 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
   def rsvp_user_ids(huddl_id, opts \\ []) do
     actor_id = Keyword.get(opts, :exclude)
 
-    HuddlAttendee
-    |> Ash.Query.filter(huddl_id == ^huddl_id)
-    |> Ash.Query.select([:user_id])
-    |> Ash.read!(authorize?: false)
+    [huddl_id]
+    |> Communities.list_huddl_notification_recipients!(authorize?: false)
     |> Enum.map(& &1.user_id)
     |> Enum.uniq()
     |> Enum.reject(&(&1 == actor_id))
@@ -48,10 +46,8 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
     huddlz_by_id = Map.new(huddlz, &{&1.id, &1})
     huddl_ids = Map.keys(huddlz_by_id)
 
-    HuddlAttendee
-    |> Ash.Query.filter(huddl_id in ^huddl_ids)
-    |> Ash.Query.select([:user_id, :huddl_id])
-    |> Ash.read!(authorize?: false)
+    huddl_ids
+    |> Communities.list_huddl_notification_recipients!(authorize?: false)
     |> Enum.reject(&(&1.user_id == actor_id))
     |> Enum.group_by(& &1.user_id)
     |> Enum.map(fn {user_id, attendances} ->

@@ -34,6 +34,7 @@ defmodule Huddlz.Communities do
         args: [{:optional, :state}],
         get?: false
 
+      define :update_huddl, action: :update
       define :rsvp_huddl, action: :rsvp
       define :cancel_rsvp_huddl, action: :cancel_rsvp
       define :join_waitlist_huddl, action: :join_waitlist
@@ -98,6 +99,11 @@ defmodule Huddlz.Communities do
       define :check_user_rsvp, action: :check_rsvp, args: [:huddl_id]
       define :list_huddl_attendees, action: :by_huddl, args: [:huddl_id], get?: false
       define :list_huddl_waitlist, action: :waitlist_for_huddl, args: [:huddl_id], get?: false
+
+      define :list_huddl_notification_recipients,
+        action: :notification_recipients,
+        args: [:huddl_ids],
+        get?: false
     end
 
     resource Huddlz.Communities.HuddlTemplate

@@ -49,10 +49,10 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   preserving subscribers:
 
     * existing future instances are **updated in place** to the source's fields
-      and recomputed times (RSVPs untouched; each meaningful change emails that
-      instance's subscribers via the per-instance update notification)
+      and recomputed times (RSVPs untouched; the series change sends one summary
+      per affected person)
     * dates added by extending the series are **created**
-    * dates dropped by shortening the series / changing frequency are
+    * surplus dates dropped by shortening the series are
       **destroyed** (a real cancellation — their subscribers get the cancel notice)
 
   `actor` is the editor; it is threaded through so they are excluded from the
@@ -60,26 +60,57 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   """
   def reconcile_future_instances(source, template, actor) do
     desired = desired_occurrences(source, template)
-    existing_by_date = Map.new(future_instances(source), &{occurrence_date(&1.starts_at), &1})
+    existing = Enum.sort_by(future_instances(source), & &1.starts_at, DateTime)
+    {retained, new_desired, obsolete_existing} = match_occurrences(existing, desired)
 
-    unmatched_existing =
-      Enum.reduce(desired, existing_by_date, fn {starts_at, ends_at}, remaining ->
-        case Map.pop(remaining, occurrence_date(starts_at)) do
+    Enum.each(retained, fn {instance, {starts_at, ends_at}} ->
+      update_instance!(instance, source, starts_at, ends_at, actor)
+    end)
+
+    Enum.each(new_desired, fn {starts_at, ends_at} ->
+      create_instance!(source, template, starts_at, ends_at)
+    end)
+
+    Enum.each(obsolete_existing, &destroy_instance!(&1, actor))
+
+    :ok
+  end
+
+  defp match_occurrences(existing, desired) do
+    # Preserve exact calendar-date matches first so repairing a missing
+    # occurrence never shifts a later RSVP onto the gap.
+    existing_by_date = Map.new(existing, &{DateTime.to_date(&1.starts_at), &1})
+
+    {exact_matches, unmatched_desired, remaining_by_date} =
+      Enum.reduce(desired, {[], [], existing_by_date}, fn desired_occurrence,
+                                                          {matches, unmatched, remaining} ->
+        {starts_at, _ends_at} = desired_occurrence
+
+        case Map.pop(remaining, DateTime.to_date(starts_at)) do
           {nil, remaining} ->
-            create_instance!(source, template, starts_at, ends_at)
-            remaining
+            {matches, [desired_occurrence | unmatched], remaining}
 
           {instance, remaining} ->
-            update_instance!(instance, source, starts_at, ends_at, actor)
-            remaining
+            {[{instance, desired_occurrence} | matches], unmatched, remaining}
         end
       end)
 
-    unmatched_existing
-    |> Map.values()
-    |> Enum.each(&destroy_instance!(&1, actor))
+    unmatched_desired = Enum.reverse(unmatched_desired)
 
-    :ok
+    unmatched_existing =
+      remaining_by_date |> Map.values() |> Enum.sort_by(& &1.starts_at, DateTime)
+
+    # Pair anything left in chronological order. This preserves row identity
+    # when an edit shifts the whole schedule to dates with no exact matches.
+    {paired_existing, obsolete_existing} =
+      Enum.split(unmatched_existing, length(unmatched_desired))
+
+    {paired_desired, new_desired} =
+      Enum.split(unmatched_desired, length(paired_existing))
+
+    retained = Enum.reverse(exact_matches) ++ Enum.zip(paired_existing, paired_desired)
+
+    {retained, new_desired, obsolete_existing}
   end
 
   @doc """
@@ -138,8 +169,6 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     end)
     |> Enum.reverse()
   end
-
-  defp occurrence_date(datetime), do: DateTime.to_date(datetime)
 
   defp create_instance!(source, template, starts_at, ends_at) do
     instance =
