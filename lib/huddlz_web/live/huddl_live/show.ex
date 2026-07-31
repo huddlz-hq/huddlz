@@ -91,6 +91,21 @@ defmodule HuddlzWeb.HuddlLive.Show do
       sidebar_owned_groups={@sidebar_owned_groups}
       active="discover"
     >
+      <section
+        :if={@huddl.status == :cancelled && @huddl.cancellation_reason}
+        id="cancellation-reason"
+        class="organizer-update"
+        aria-labelledby="organizer-update-title"
+      >
+        <div class="organizer-update-icon" aria-hidden="true">
+          <.icon name="hero-megaphone" class="size-6" />
+        </div>
+        <div class="organizer-update-copy">
+          <h2 id="organizer-update-title">Important update from the organizer</h2>
+          <p>{@huddl.cancellation_reason}</p>
+        </div>
+      </section>
+
       <div class={["hero", "huddl-hero", HuddlStatus.hero_class(@huddl.status)]}>
         <div class="hero-media">
           <.huddl_cover_image
@@ -118,13 +133,6 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
       <div class="huddl-frame">
         <div class="huddl-intro prose">
-          <div
-            :if={@huddl.status == :cancelled && @huddl.cancellation_reason}
-            id="cancellation-reason"
-            class="rsvp-banner magenta"
-          >
-            <strong>Organizer note:</strong> {@huddl.cancellation_reason}
-          </div>
           <%= if @huddl.description do %>
             <p :for={paragraph <- description_paragraphs(@huddl.description)}>{paragraph}</p>
           <% else %>

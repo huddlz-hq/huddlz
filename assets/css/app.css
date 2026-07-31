@@ -2303,6 +2303,51 @@ body .huddl-hero .meta,
 body .huddl-intro,
 body .huddl-side { min-width: 0; }
 
+body .organizer-update {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 18px 20px;
+  border: 1px solid rgba(232, 79, 180, 0.62);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(105deg, rgba(232, 79, 180, 0.2), rgba(232, 79, 180, 0.1) 62%, rgba(232, 79, 180, 0.05)),
+    var(--panel-2);
+  box-shadow: inset 3px 0 0 rgba(232, 79, 180, 0.82), 0 10px 32px rgba(232, 79, 180, 0.07);
+}
+
+body .organizer-update-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(232, 79, 180, 0.3);
+  border-radius: var(--radius-sm);
+  background: rgba(232, 79, 180, 0.1);
+  color: var(--magenta);
+}
+
+body .organizer-update-copy { min-width: 0; }
+
+body .organizer-update h2 {
+  margin: 0 0 4px;
+  color: #f17bc8;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+body .organizer-update p {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
 body .huddl-frame {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -3699,6 +3744,20 @@ body .page-nav:disabled {
 }
 
 @media (max-width: 760px) {
+  body .organizer-update {
+    align-items: start;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 16px;
+  }
+
+  body .organizer-update-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  body .organizer-update h2 { font-size: 15px; }
+
   body .huddl-hero {
     display: block;
     height: auto;
