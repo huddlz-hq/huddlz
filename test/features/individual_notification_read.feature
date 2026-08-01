@@ -4,10 +4,10 @@ Feature: Individual notification read state
   I want to mark one linked notification read without leaving the page
   So that I can clear its unread state and still understand what happened
 
-  Scenario: A read waitlist promotion remains visible in Invites
+  Scenario: A read waitlist promotion remains visible in the Inbox
     Given I am signed in as "reader@example.com" with password "Password123!"
     And I have an unread waitlist promotion notification for "Elixir Picnic"
-    When I visit "/notifications?filter=invites"
+    When I visit "/notifications"
     Then I should see "Inbox · 1 unread"
     And persistent navigation should show one unread notification
     When I click the "Mark read" button

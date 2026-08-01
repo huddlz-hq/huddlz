@@ -75,10 +75,7 @@ defmodule HuddlzWeb.GroupInvitationLive do
          |> put_flash(:info, "Welcome to #{invitation.group.name}.")}
 
       {:error, _reason} ->
-        {:noreply,
-         socket
-         |> assign(:invitation, normalize_expiration(invitation, user))
-         |> put_flash(:error, "This invitation can no longer be accepted.")}
+        handle_stale_response(socket, invitation, user)
     end
   end
 
@@ -93,10 +90,30 @@ defmodule HuddlzWeb.GroupInvitationLive do
          |> put_flash(:info, "Invitation declined.")}
 
       {:error, _reason} ->
+        handle_stale_response(socket, invitation, user)
+    end
+  end
+
+  defp handle_stale_response(socket, invitation, user) do
+    case load_invitation(invitation.id, user) do
+      {:ok, reloaded} ->
+        reloaded = normalize_expiration(reloaded, user)
+
+        message =
+          if reloaded.status == :pending,
+            do: "Something went wrong. Please try again.",
+            else: unavailable_message(reloaded.status)
+
         {:noreply,
          socket
-         |> assign(:invitation, normalize_expiration(invitation, user))
-         |> put_flash(:error, "This invitation can no longer be declined.")}
+         |> assign(:invitation, reloaded)
+         |> put_flash(:error, message)}
+
+      _ ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "That invitation isn't available.")
+         |> push_navigate(to: ~p"/notifications?filter=invites")}
     end
   end
 

@@ -94,6 +94,31 @@ defmodule Huddlz.Communities.GroupInvitation do
       prepare build(sort: [inserted_at: :desc])
     end
 
+    read :pending_for_user do
+      description "Pending, current invitations addressed to the actor — backs the Invites tab."
+
+      filter expr(invitee_id == ^actor(:id) and status == :pending and expires_at > now())
+
+      prepare build(sort: [inserted_at: :desc])
+
+      # `Group`'s own read policy only authorizes public groups or existing
+      # members — a pending invitee to a private group is neither, so a
+      # normally-authorized `load: [:group, :inviter]` would nil out `:group`.
+      # Load with authorization off instead, same as
+      # `Communities.load_group_invitation_details!/1`.
+      prepare fn query, _context ->
+        Ash.Query.after_action(query, fn _query, results ->
+          Ash.load(results, [:group, :inviter], authorize?: false)
+        end)
+      end
+
+      pagination keyset?: true,
+                 offset?: true,
+                 countable: true,
+                 required?: false,
+                 default_limit: 20
+    end
+
     update :accept do
       description "Accept a current pending invitation and grant membership once."
       accept []
@@ -159,7 +184,7 @@ defmodule Huddlz.Communities.GroupInvitation do
       authorize_if GroupOrganizer
     end
 
-    policy action([:mine, :get_mine]) do
+    policy action([:mine, :get_mine, :pending_for_user]) do
       authorize_if actor_present()
     end
 
