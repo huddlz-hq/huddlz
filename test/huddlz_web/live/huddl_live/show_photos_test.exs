@@ -116,4 +116,103 @@ defmodule HuddlzWeb.HuddlLive.ShowPhotosTest do
       assert has_element?(view, ".photo-tile img")
     end
   end
+
+  describe "uploading photos" do
+    @test_image_path "test/fixtures/test_image.jpg"
+
+    test "creator can upload a single photo", %{conn: conn, owner: owner, group: group} do
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
+
+      {:ok, view, _html} =
+        conn
+        |> login(owner)
+        |> live(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+
+      file_input(view, "#huddl-photo-upload-form", :huddl_photos, [
+        %{
+          name: "photo.jpg",
+          content: File.read!(@test_image_path),
+          type: "image/jpeg"
+        }
+      ])
+      |> render_upload("photo.jpg")
+
+      view
+      |> element("#huddl-photo-upload-form")
+      |> render_submit()
+
+      assert render(view) =~ "Photos uploaded."
+
+      assert {:ok, [_photo]} = Communities.list_huddl_photos(huddl.id, actor: owner)
+    end
+
+    test "confirmed attendee can upload multiple photos in one batch", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      attendee = generate(user(role: :user))
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
+      Communities.rsvp_huddl!(huddl, actor: attendee)
+
+      {:ok, view, _html} =
+        conn
+        |> login(attendee)
+        |> live(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+
+      image = File.read!(@test_image_path)
+
+      file_input(view, "#huddl-photo-upload-form", :huddl_photos, [
+        %{name: "one.jpg", content: image, type: "image/jpeg"}
+      ])
+      |> render_upload("one.jpg")
+
+      file_input(view, "#huddl-photo-upload-form", :huddl_photos, [
+        %{name: "two.jpg", content: image, type: "image/jpeg"}
+      ])
+      |> render_upload("two.jpg")
+
+      view
+      |> element("#huddl-photo-upload-form")
+      |> render_submit()
+
+      assert {:ok, photos} = Communities.list_huddl_photos(huddl.id, actor: attendee)
+      assert length(photos) == 2
+    end
+
+    test "rejects a file that is too large", %{conn: conn, owner: owner, group: group} do
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
+
+      {:ok, view, _html} =
+        conn
+        |> login(owner)
+        |> live(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+
+      too_big = String.duplicate("a", 5_000_001)
+
+      upload =
+        file_input(view, "#huddl-photo-upload-form", :huddl_photos, [
+          %{name: "big.jpg", content: too_big, type: "image/jpeg"}
+        ])
+
+      assert {:error, [[_ref, :too_large]]} = render_upload(upload, "big.jpg")
+      assert render(view) =~ "5 MB or smaller"
+    end
+
+    test "outsider cannot see or submit the upload form", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      outsider = generate(user(role: :user))
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
+
+      {:ok, view, _html} =
+        conn
+        |> login(outsider)
+        |> live(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+
+      refute has_element?(view, "#huddl-photo-upload-form")
+    end
+  end
 end

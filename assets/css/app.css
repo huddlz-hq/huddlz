@@ -4124,3 +4124,26 @@ body .photo-tile img {
   object-fit: cover;
   display: block;
 }
+
+body .photo-upload-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+body .photo-upload-entry figure {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin: 0;
+}
+
+body .photo-upload-entry img { width: 100%; height: 100%; object-fit: cover; }
+
+body .upload-error {
+  color: var(--warn);
+  font-size: 13px;
+  margin: 4px 0;
+}
