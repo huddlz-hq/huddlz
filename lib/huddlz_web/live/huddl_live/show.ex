@@ -31,6 +31,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
      socket
      |> assign(:confirming_delete?, false)
      |> assign(:confirming_cancel?, false)
+     |> assign(:confirming_delete_photo_id, nil)
      |> assign(:cancel_form, to_form(%{"cancellation_reason" => ""}, as: :cancel))
      |> allow_upload(:huddl_photos,
        accept: ~w(.jpg .jpeg .png .webp),
@@ -347,6 +348,16 @@ defmodule HuddlzWeb.HuddlLive.Show do
         <div id="huddl-photos-grid" phx-update="stream" class="photos-grid">
           <div :for={{dom_id, photo} <- @streams.huddl_photos} id={dom_id} class="photo-tile">
             <img src={HuddlPhotos.url(photo.thumbnail_path)} alt="" loading="lazy" />
+            <button
+              :if={photo.uploader_id == @current_user.id || @huddl.creator_id == @current_user.id}
+              type="button"
+              class="photo-delete"
+              phx-click="confirm_delete_photo"
+              phx-value-id={photo.id}
+              aria-label="Delete photo"
+            >
+              <.icon name="hero-trash" class="size-4" />
+            </button>
           </div>
         </div>
       </section>
@@ -443,6 +454,40 @@ defmodule HuddlzWeb.HuddlLive.Show do
             </.button>
           </div>
         </.form>
+      </.modal>
+
+      <.modal
+        :if={@confirming_delete_photo_id}
+        id="delete-photo-modal"
+        show
+        on_cancel={JS.push("cancel_delete_photo")}
+      >
+        <div class="delete-confirm">
+          <div class="delete-confirm-icon" aria-hidden="true">
+            <.icon name="hero-exclamation-triangle" class="h-6 w-6" />
+          </div>
+
+          <div class="delete-confirm-copy">
+            <span class="eyebrow eyebrow-magenta">Permanent action</span>
+            <h2 id="delete-photo-modal-title">Delete this photo?</h2>
+            <p>This photo will be permanently deleted.</p>
+          </div>
+        </div>
+
+        <div class="delete-confirm-actions">
+          <.button variant={:muted} id="cancel-delete-photo" phx-click="cancel_delete_photo">
+            Keep photo
+          </.button>
+          <.button
+            variant={:destructive}
+            class="delete-confirm-submit"
+            id="confirm-delete-photo"
+            phx-click="delete_photo"
+            phx-disable-with="Deleting…"
+          >
+            Delete photo
+          </.button>
+        </div>
       </.modal>
     </Layouts.app>
     """
@@ -744,6 +789,37 @@ defmodule HuddlzWeb.HuddlLive.Show do
       end)
 
     {:noreply, put_upload_result_flash(socket, length(successes), length(results))}
+  end
+
+  @impl true
+  def handle_event("confirm_delete_photo", %{"id" => id}, socket) do
+    {:noreply, assign(socket, :confirming_delete_photo_id, id)}
+  end
+
+  @impl true
+  def handle_event("cancel_delete_photo", _params, socket) do
+    {:noreply, assign(socket, :confirming_delete_photo_id, nil)}
+  end
+
+  @impl true
+  def handle_event("delete_photo", _params, socket) do
+    user = socket.assigns.current_user
+    photo_id = socket.assigns.confirming_delete_photo_id
+
+    with {:ok, photo} <- Communities.get_huddl_photo_by_id(photo_id, actor: user),
+         :ok <- Communities.destroy_huddl_photo(photo, actor: user) do
+      {:noreply,
+       socket
+       |> stream_delete(:huddl_photos, photo)
+       |> update(:photo_count, &(&1 - 1))
+       |> assign(:confirming_delete_photo_id, nil)}
+    else
+      _ ->
+        {:noreply,
+         socket
+         |> assign(:confirming_delete_photo_id, nil)
+         |> put_flash(:error, "Failed to delete photo.")}
+    end
   end
 
   @impl true
