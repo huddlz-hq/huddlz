@@ -5,7 +5,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities
-  alias Huddlz.Storage.HuddlImages
+  alias Huddlz.Storage.HuddlCoverImages
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
@@ -744,7 +744,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
       description: MetaHelpers.description(huddl, "Find and join this huddl on huddlz."),
       type: "event",
       url: url(~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"),
-      image: MetaHelpers.image_url(huddl.display_image_url, HuddlImages)
+      image: MetaHelpers.image_url(huddl.display_image_url, HuddlCoverImages)
     }
   end
 

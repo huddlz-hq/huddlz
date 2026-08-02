@@ -7,7 +7,7 @@ defmodule RecurringHuddlGenerationSteps do
 
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
-  alias Huddlz.Communities.HuddlImage
+  alias Huddlz.Communities.HuddlCoverImage
   alias Huddlz.Communities.Workers.RegenerateRecurringSeries
   alias Huddlz.Notifications
   alias Huddlz.Storage
@@ -93,7 +93,7 @@ defmodule RecurringHuddlGenerationSteps do
       assert occurrence.group_id == context.group.id
 
       assert {:ok, image} =
-               Communities.get_current_huddl_image(occurrence.id, authorize?: false)
+               Communities.get_current_huddl_cover_image(occurrence.id, authorize?: false)
 
       assert image.filename == "recurrence.jpg"
       assert Storage.exists?(image.storage_path)
@@ -159,14 +159,14 @@ defmodule RecurringHuddlGenerationSteps do
 
   defp attach_cover_image(context) do
     source_file = "test/fixtures/test_image.jpg"
-    storage_path = "/uploads/huddl_images/#{context.huddl.id}/recurrence.jpg"
-    thumbnail_path = "/uploads/huddl_images/#{context.huddl.id}/recurrence_thumb.jpg"
+    storage_path = "/uploads/huddl_cover_images/#{context.huddl.id}/recurrence.jpg"
+    thumbnail_path = "/uploads/huddl_cover_images/#{context.huddl.id}/recurrence_thumb.jpg"
 
     assert {:ok, ^storage_path} = Storage.put(source_file, storage_path, "image/jpeg")
     assert {:ok, ^thumbnail_path} = Storage.put(source_file, thumbnail_path, "image/jpeg")
 
     assert {:ok, _image} =
-             HuddlImage
+             HuddlCoverImage
              |> Ash.Changeset.for_create(:create, %{
                filename: "recurrence.jpg",
                content_type: "image/jpeg",

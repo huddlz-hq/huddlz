@@ -115,7 +115,7 @@
           "global": null,
           "strategy": null
         },
-        "name": "huddl_images_huddl_id_fkey",
+        "name": "huddl_cover_images_huddl_id_fkey",
         "on_delete": "delete",
         "on_update": null,
         "primary_key?": true,
@@ -162,12 +162,12 @@
   ],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "FAC570466DB0602AF68AF06DE651B5DAF91F269AB87D0C9BEA76DEAFD210421E",
+  "hash": "204EC0AC68733AF39F9DFB5C339767B788F96EB70CB07C39E05546BB18622120",
   "identities": [
     {
       "all_tenants?": false,
       "base_filter": null,
-      "index_name": "huddl_images_unique_storage_path_index",
+      "index_name": "huddl_cover_images_unique_storage_path_index",
       "keys": [
         {
           "type": "atom",
@@ -186,5 +186,5 @@
   },
   "repo": "Elixir.Huddlz.Repo",
   "schema": null,
-  "table": "huddl_images"
+  "table": "huddl_cover_images"
 }
