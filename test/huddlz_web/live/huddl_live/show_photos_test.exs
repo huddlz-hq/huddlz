@@ -330,4 +330,40 @@ defmodule HuddlzWeb.HuddlLive.ShowPhotosTest do
              )
     end
   end
+
+  describe "lightbox" do
+    test "clicking a thumbnail opens the full-size image, closing hides it", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
+
+      {:ok, _photo} =
+        Communities.create_huddl_photo(
+          %{
+            filename: "photo.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/huddl_photos/#{huddl.id}/photo.jpg",
+            thumbnail_path: "/uploads/huddl_photos/#{huddl.id}/photo_thumb.jpg",
+            huddl_id: huddl.id
+          },
+          actor: owner
+        )
+
+      {:ok, view, _html} =
+        conn
+        |> login(owner)
+        |> live(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+
+      view |> element(".photo-tile button[phx-click='view_photo']") |> render_click()
+
+      assert has_element?(view, "#photo-lightbox img.lightbox-image")
+
+      view |> element("#photo-lightbox button[phx-click='close_photo']") |> render_click()
+
+      refute has_element?(view, "#photo-lightbox[style*='display: block']")
+    end
+  end
 end
