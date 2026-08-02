@@ -31,7 +31,12 @@ defmodule HuddlzWeb.HuddlLive.Show do
      socket
      |> assign(:confirming_delete?, false)
      |> assign(:confirming_cancel?, false)
-     |> assign(:cancel_form, to_form(%{"cancellation_reason" => ""}, as: :cancel))}
+     |> assign(:cancel_form, to_form(%{"cancellation_reason" => ""}, as: :cancel))
+     |> allow_upload(:huddl_photos,
+       accept: ~w(.jpg .jpeg .png .webp),
+       max_entries: 10,
+       max_file_size: 5_000_000
+     )}
   end
 
   @impl true
@@ -304,6 +309,40 @@ defmodule HuddlzWeb.HuddlLive.Show do
         <p :if={@photo_count == 0} class="huddl-photos-empty">
           No photos yet — be the first to share one!
         </p>
+
+        <form
+          id="huddl-photo-upload-form"
+          phx-submit="upload_photos"
+          phx-change="validate_photos"
+        >
+          <.live_file_input upload={@uploads.huddl_photos} />
+
+          <div :for={entry <- @uploads.huddl_photos.entries} class="photo-upload-entry">
+            <figure>
+              <.live_img_preview entry={entry} />
+            </figure>
+            <progress value={entry.progress} max="100">{entry.progress}%</progress>
+            <button type="button" phx-click="cancel_photo_upload" phx-value-ref={entry.ref}>
+              <.icon name="hero-x-mark" class="size-4" />
+            </button>
+            <p :for={err <- upload_errors(@uploads.huddl_photos, entry)} class="upload-error">
+              {photo_upload_error_to_string(err)}
+            </p>
+          </div>
+
+          <p :for={err <- upload_errors(@uploads.huddl_photos)} class="upload-error">
+            {photo_upload_error_to_string(err)}
+          </p>
+
+          <.button
+            :if={@uploads.huddl_photos.entries != []}
+            type="submit"
+            variant={:primary}
+            phx-disable-with="Uploading…"
+          >
+            Upload photos
+          </.button>
+        </form>
 
         <div id="huddl-photos-grid" phx-update="stream" class="photos-grid">
           <div :for={{dom_id, photo} <- @streams.huddl_photos} id={dom_id} class="photo-tile">
@@ -590,6 +629,46 @@ defmodule HuddlzWeb.HuddlLive.Show do
     "/sign-in?" <> URI.encode_query(return_to: return_to)
   end
 
+  defp upload_one_photo(path, entry, huddl_id, user) do
+    with {:ok, metadata} <-
+           HuddlPhotos.store(path, entry.client_name, entry.client_type, huddl_id),
+         {:ok, photo} <-
+           Communities.create_huddl_photo(
+             %{
+               filename: entry.client_name,
+               content_type: entry.client_type,
+               size_bytes: metadata.size_bytes,
+               storage_path: metadata.storage_path,
+               thumbnail_path: metadata.thumbnail_path,
+               huddl_id: huddl_id
+             },
+             actor: user
+           ) do
+      {:ok, {:ok, photo}}
+    else
+      {:error, reason} -> {:ok, {:error, reason}}
+    end
+  end
+
+  defp put_upload_result_flash(socket, total, total),
+    do: put_flash(socket, :info, "Photos uploaded.")
+
+  defp put_upload_result_flash(socket, 0, _total),
+    do: put_flash(socket, :error, "Failed to upload photos. Please try again.")
+
+  defp put_upload_result_flash(socket, successes, total) do
+    put_flash(
+      socket,
+      :error,
+      "#{successes} of #{total} photos uploaded — the rest failed."
+    )
+  end
+
+  defp photo_upload_error_to_string(:too_large), do: "Each photo must be 5 MB or smaller."
+  defp photo_upload_error_to_string(:not_accepted), do: "Choose a JPG, PNG, or WebP image."
+  defp photo_upload_error_to_string(:too_many_files), do: "Choose up to 10 photos at a time."
+  defp photo_upload_error_to_string(err), do: "Upload error: #{inspect(err)}"
+
   @impl true
   def handle_event("rsvp", _, socket) do
     huddl = socket.assigns.huddl
@@ -622,6 +701,38 @@ defmodule HuddlzWeb.HuddlLive.Show do
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Couldn't join the waitlist. Please try again.")}
     end
+  end
+
+  @impl true
+  def handle_event("validate_photos", _params, socket) do
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("cancel_photo_upload", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :huddl_photos, ref)}
+  end
+
+  @impl true
+  def handle_event("upload_photos", _params, socket) do
+    huddl = socket.assigns.huddl
+    user = socket.assigns.current_user
+
+    results =
+      consume_uploaded_entries(socket, :huddl_photos, fn %{path: path}, entry ->
+        upload_one_photo(path, entry, huddl.id, user)
+      end)
+
+    {successes, _failures} = Enum.split_with(results, &match?({:ok, _photo}, &1))
+
+    socket =
+      Enum.reduce(successes, socket, fn {:ok, photo}, acc ->
+        acc
+        |> stream_insert(:huddl_photos, photo, at: 0)
+        |> update(:photo_count, &(&1 + 1))
+      end)
+
+    {:noreply, put_upload_result_flash(socket, length(successes), length(results))}
   end
 
   @impl true
