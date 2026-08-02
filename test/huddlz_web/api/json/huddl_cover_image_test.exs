@@ -1,7 +1,7 @@
-defmodule HuddlzWeb.Api.Json.HuddlImageTest do
+defmodule HuddlzWeb.Api.Json.HuddlCoverImageTest do
   use HuddlzWeb.ApiCase, async: true
 
-  alias Huddlz.Communities.HuddlImage
+  alias Huddlz.Communities.HuddlCoverImage
 
   @fixture Path.expand("../../../fixtures/test_image.jpg", __DIR__)
 
@@ -18,7 +18,7 @@ defmodule HuddlzWeb.Api.Json.HuddlImageTest do
       }
 
       assert {:ok, image} =
-               HuddlImage
+               HuddlCoverImage
                |> Ash.Changeset.for_create(
                  :upload,
                  %{file: upload, huddl_id: huddl.id},
@@ -34,16 +34,16 @@ defmodule HuddlzWeb.Api.Json.HuddlImageTest do
       assert is_binary(image.thumbnail_path)
     end
 
-    test "POST /api/json/huddl_images/upload route is registered", %{conn: conn} do
+    test "POST /api/json/huddl_cover_images/upload route is registered", %{conn: conn} do
       owner = generate(user())
 
       conn =
         conn
         |> authenticated_conn(owner)
         |> put_req_header("content-type", "application/vnd.api+json")
-        |> post("/api/json/huddl_images/upload", %{
+        |> post("/api/json/huddl_cover_images/upload", %{
           "data" => %{
-            "type" => "huddl_image",
+            "type" => "huddl_cover_image",
             "attributes" => %{"huddl_id" => Ash.UUID.generate()}
           }
         })
@@ -63,9 +63,9 @@ defmodule HuddlzWeb.Api.Json.HuddlImageTest do
         conn
         |> authenticated_conn(owner)
         |> multipart_post(
-          "/api/json/huddl_images/upload",
+          "/api/json/huddl_cover_images/upload",
           %{"huddl_id" => huddl.id, "file" => "the_file"},
-          type: "huddl_image",
+          type: "huddl_cover_image",
           file: %{
             part_name: "the_file",
             path: @fixture,
@@ -98,7 +98,7 @@ defmodule HuddlzWeb.Api.Json.HuddlImageTest do
         }
 
         assert {:error, %Ash.Error.Invalid{errors: errors}} =
-                 HuddlImage
+                 HuddlCoverImage
                  |> Ash.Changeset.for_create(
                    :upload,
                    %{file: upload, huddl_id: huddl.id},
@@ -127,7 +127,7 @@ defmodule HuddlzWeb.Api.Json.HuddlImageTest do
       # Bypass policies so the failure is unambiguously the missing parent_id,
       # not the huddl-ownership check that would otherwise deny first.
       assert {:error, %Ash.Error.Invalid{errors: errors}} =
-               HuddlImage
+               HuddlCoverImage
                |> Ash.Changeset.for_create(:upload, %{file: upload}, actor: owner)
                |> Ash.create(authorize?: false)
 
@@ -150,7 +150,7 @@ defmodule HuddlzWeb.Api.Json.HuddlImageTest do
       }
 
       assert {:error, _} =
-               HuddlImage
+               HuddlCoverImage
                |> Ash.Changeset.for_create(
                  :upload,
                  %{file: upload, huddl_id: huddl.id},

@@ -11,7 +11,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   alias Huddlz.Communities
   alias Huddlz.Communities.HuddlTemplate
   alias Huddlz.Storage.GroupImages
-  alias Huddlz.Storage.HuddlImages
+  alias Huddlz.Storage.HuddlCoverImages
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
   alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
@@ -50,7 +50,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         |> assign(:pending_image_id, nil)
         |> assign(:pending_preview_url, nil)
         |> assign(:upload_processing, false)
-        |> allow_image_upload(:huddl_image, &handle_upload_progress/3)
+        |> allow_image_upload(:huddl_cover_image, &handle_upload_progress/3)
 
       {:noreply, socket}
     else
@@ -128,7 +128,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     end
   end
 
-  defp handle_upload_progress(:huddl_image, entry, socket) do
+  defp handle_upload_progress(:huddl_cover_image, entry, socket) do
     if entry.done? do
       {:noreply, process_eager_upload(socket)}
     else
@@ -144,15 +144,15 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
   defp upload_config do
     %{
-      upload_name: :huddl_image,
-      storage: HuddlImages,
-      create_pending: &create_pending_huddl_image/3,
-      cleanup: &soft_delete_pending_huddl_image/2
+      upload_name: :huddl_cover_image,
+      storage: HuddlCoverImages,
+      create_pending: &create_pending_huddl_cover_image/3,
+      cleanup: &soft_delete_pending_huddl_cover_image/2
     }
   end
 
-  defp create_pending_huddl_image(socket, entry, metadata) do
-    Communities.create_pending_huddl_image(
+  defp create_pending_huddl_cover_image(socket, entry, metadata) do
+    Communities.create_pending_huddl_cover_image(
       socket.assigns.huddl.group.id,
       %{
         filename: entry.client_name,
@@ -165,10 +165,10 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     )
   end
 
-  defp soft_delete_pending_huddl_image(socket, image_id) do
-    with {:ok, image} <- Communities.get_huddl_image_by_id(image_id),
+  defp soft_delete_pending_huddl_cover_image(socket, image_id) do
+    with {:ok, image} <- Communities.get_huddl_cover_image_by_id(image_id),
          true <- is_nil(image.huddl_id) do
-      Communities.soft_delete_huddl_image(image, actor: socket.assigns.current_user)
+      Communities.soft_delete_huddl_cover_image(image, actor: socket.assigns.current_user)
     end
   end
 
@@ -240,16 +240,16 @@ defmodule HuddlzWeb.HuddlLive.Edit do
             <h2>Cover image</h2>
           </div>
 
-          <label for={@uploads.huddl_image.ref} class="sr-only">Cover image</label>
-          <.live_file_input upload={@uploads.huddl_image} class="hidden" />
+          <label for={@uploads.huddl_cover_image.ref} class="sr-only">Cover image</label>
+          <.live_file_input upload={@uploads.huddl_cover_image} class="hidden" />
 
           <.image_preview
             pending_preview_url={@pending_preview_url}
             huddl={@huddl}
-            upload_ref={@uploads.huddl_image.ref}
+            upload_ref={@uploads.huddl_cover_image.ref}
           />
 
-          <div class="upload-zone" phx-drop-target={@uploads.huddl_image.ref}>
+          <div class="upload-zone" phx-drop-target={@uploads.huddl_cover_image.ref}>
             <div class="upload-icon">
               <svg
                 width="22"
@@ -265,13 +265,13 @@ defmodule HuddlzWeb.HuddlLive.Edit do
                 <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-5-5L5 21" />
               </svg>
             </div>
-            <label for={@uploads.huddl_image.ref} class="upload-prompt">
+            <label for={@uploads.huddl_cover_image.ref} class="upload-prompt">
               Drop a 16:9 image, or <span class="upload-link">browse</span>
             </label>
             <div class="upload-meta muted">JPG, PNG, WebP · 5 MB max</div>
           </div>
 
-          <%= for entry <- @uploads.huddl_image.entries do %>
+          <%= for entry <- @uploads.huddl_cover_image.entries do %>
             <div class="image-preview" style="margin-top:12px">
               <div class="card-cover">
                 <.live_img_preview entry={entry} class="card-cover-img" />
@@ -289,14 +289,14 @@ defmodule HuddlzWeb.HuddlLive.Edit do
               </div>
             </div>
 
-            <%= for err <- upload_errors(@uploads.huddl_image, entry) do %>
+            <%= for err <- upload_errors(@uploads.huddl_cover_image, entry) do %>
               <p class="form-error">{upload_error_to_string(err)}</p>
             <% end %>
           <% end %>
 
           <p :if={@image_error} class="form-error">{@image_error}</p>
 
-          <%= for err <- upload_errors(@uploads.huddl_image) do %>
+          <%= for err <- upload_errors(@uploads.huddl_cover_image) do %>
             <p class="form-error">{upload_error_to_string(err)}</p>
           <% end %>
         </div>
@@ -530,7 +530,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     <div class="image-preview">
       <div
         class="card-cover"
-        style={"background-image: url('#{HuddlImages.url(@huddl.current_image_url)}')"}
+        style={"background-image: url('#{HuddlCoverImages.url(@huddl.current_image_url)}')"}
       >
       </div>
       <div class="image-preview-foot">
@@ -587,7 +587,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
   @impl true
   def handle_event("cancel_image_upload", %{"ref" => ref}, socket) do
-    {:noreply, cancel_upload(socket, :huddl_image, ref)}
+    {:noreply, cancel_upload(socket, :huddl_cover_image, ref)}
   end
 
   @impl true
@@ -599,9 +599,9 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   def handle_event("remove_current_image", _params, socket) do
     huddl = socket.assigns.huddl
 
-    case Communities.get_current_huddl_image(huddl.id) do
+    case Communities.get_current_huddl_cover_image(huddl.id) do
       {:ok, image} when not is_nil(image) ->
-        Communities.soft_delete_huddl_image(image, actor: socket.assigns.current_user)
+        Communities.soft_delete_huddl_cover_image(image, actor: socket.assigns.current_user)
 
         {:ok, updated_huddl} =
           get_huddl(huddl.id, socket.assigns.group_slug, socket.assigns.current_user)
@@ -723,16 +723,18 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         :ok
 
       image_id ->
-        case Communities.get_current_huddl_image(huddl.id) do
+        case Communities.get_current_huddl_cover_image(huddl.id) do
           {:ok, existing} when not is_nil(existing) ->
-            Communities.soft_delete_huddl_image(existing, actor: socket.assigns.current_user)
+            Communities.soft_delete_huddl_cover_image(existing,
+              actor: socket.assigns.current_user
+            )
 
           _ ->
             :ok
         end
 
-        with {:ok, image} <- Communities.get_huddl_image_by_id(image_id) do
-          Communities.assign_huddl_image_to_huddl(image, huddl.id,
+        with {:ok, image} <- Communities.get_huddl_cover_image_by_id(image_id) do
+          Communities.assign_huddl_cover_image_to_huddl(image, huddl.id,
             actor: socket.assigns.current_user
           )
         end

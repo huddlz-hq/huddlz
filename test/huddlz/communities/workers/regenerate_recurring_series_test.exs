@@ -52,14 +52,14 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
 
   defp attach_cover_image(huddl, _owner) do
     source_file = "test/fixtures/test_image.jpg"
-    storage_path = "/uploads/huddl_images/#{huddl.id}/recurrence.jpg"
-    thumbnail_path = "/uploads/huddl_images/#{huddl.id}/recurrence_thumb.jpg"
+    storage_path = "/uploads/huddl_cover_images/#{huddl.id}/recurrence.jpg"
+    thumbnail_path = "/uploads/huddl_cover_images/#{huddl.id}/recurrence_thumb.jpg"
 
     assert {:ok, ^storage_path} = Storage.put(source_file, storage_path, "image/jpeg")
     assert {:ok, ^thumbnail_path} = Storage.put(source_file, thumbnail_path, "image/jpeg")
 
     assert {:ok, image} =
-             Huddlz.Communities.HuddlImage
+             Huddlz.Communities.HuddlCoverImage
              |> Ash.Changeset.for_create(:create, %{
                filename: "recurrence.jpg",
                content_type: "image/jpeg",
@@ -88,14 +88,14 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
     owner = generate(user(role: :user))
     group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
     source_file = "test/fixtures/test_image.jpg"
-    storage_path = "/uploads/huddl_images/pending/#{Ecto.UUID.generate()}.jpg"
-    thumbnail_path = "/uploads/huddl_images/pending/#{Ecto.UUID.generate()}_thumb.jpg"
+    storage_path = "/uploads/huddl_cover_images/pending/#{Ecto.UUID.generate()}.jpg"
+    thumbnail_path = "/uploads/huddl_cover_images/pending/#{Ecto.UUID.generate()}_thumb.jpg"
 
     assert {:ok, ^storage_path} = Storage.put(source_file, storage_path, "image/jpeg")
     assert {:ok, ^thumbnail_path} = Storage.put(source_file, thumbnail_path, "image/jpeg")
 
     assert {:ok, pending_image} =
-             Communities.create_pending_huddl_image(
+             Communities.create_pending_huddl_cover_image(
                group.id,
                %{
                  filename: "pending.jpg",
@@ -131,14 +131,14 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
       |> Ash.create!()
 
     assert {:ok, source_image} =
-             Communities.get_current_huddl_image(huddl.id, authorize?: false)
+             Communities.get_current_huddl_cover_image(huddl.id, authorize?: false)
 
     assert source_image.id == pending_image.id
     assert %{success: 1} = Oban.drain_queue(queue: :default)
 
     for occurrence <- future_instances(huddl) do
       assert {:ok, occurrence_image} =
-               Communities.get_current_huddl_image(occurrence.id, authorize?: false)
+               Communities.get_current_huddl_cover_image(occurrence.id, authorize?: false)
 
       assert occurrence_image.filename == "pending.jpg"
     end
@@ -182,7 +182,7 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
       assert occurrence.group_id == group.id
 
       assert {:ok, occurrence_image} =
-               Communities.get_current_huddl_image(occurrence.id, authorize?: false)
+               Communities.get_current_huddl_cover_image(occurrence.id, authorize?: false)
 
       assert occurrence_image.filename == source_image.filename
       assert occurrence_image.content_type == source_image.content_type
@@ -233,7 +233,7 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
     old_image_paths =
       Enum.map(first_generation, fn occurrence ->
         assert {:ok, image} =
-                 Communities.get_current_huddl_image(occurrence.id, authorize?: false)
+                 Communities.get_current_huddl_cover_image(occurrence.id, authorize?: false)
 
         image.storage_path
       end)
@@ -247,7 +247,7 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
 
     for occurrence <- second_generation do
       assert {:ok, image} =
-               Communities.get_current_huddl_image(occurrence.id, authorize?: false)
+               Communities.get_current_huddl_cover_image(occurrence.id, authorize?: false)
 
       assert Storage.exists?(image.storage_path)
     end

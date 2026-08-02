@@ -97,7 +97,7 @@ defmodule HuddlzWeb.ApiCase do
   fields are referenced by part name (e.g. `file: "the_file"`) and the
   part is supplied separately via the `:file` opt.
 
-      multipart_post(conn, "/api/json/huddl_images/upload",
+      multipart_post(conn, "/api/json/huddl_cover_images/upload",
         %{"huddl_id" => h.id, "file" => "the_file"},
         file: %{
           part_name: "the_file",
@@ -109,7 +109,7 @@ defmodule HuddlzWeb.ApiCase do
   """
   @spec multipart_post(Plug.Conn.t(), String.t(), map(), keyword()) :: Plug.Conn.t()
   def multipart_post(conn, path, data_attributes, opts) do
-    type = Keyword.get(opts, :type, "huddl_image")
+    type = Keyword.get(opts, :type, "huddl_cover_image")
     file = Keyword.fetch!(opts, :file)
 
     boundary = "----huddlztest" <> Integer.to_string(System.unique_integer([:positive]))

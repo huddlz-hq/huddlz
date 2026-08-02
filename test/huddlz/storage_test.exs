@@ -252,8 +252,8 @@ defmodule Huddlz.StorageTest do
   # bogus content type is rejected regardless of the bytes on disk. These
   # cover that the allowlist is wired into every store entry point (it was
   # previously dead code, leaving the client-supplied content type trusted).
-  describe "Storage.HuddlImages content-type allowlist" do
-    alias Huddlz.Storage.HuddlImages
+  describe "Storage.HuddlCoverImages content-type allowlist" do
+    alias Huddlz.Storage.HuddlCoverImages
 
     setup do
       temp_path = Path.join(System.tmp_dir!(), "huddl_#{:rand.uniform(999_999)}.png")
@@ -264,12 +264,12 @@ defmodule Huddlz.StorageTest do
 
     test "store/4 rejects a disallowed content type", %{temp_path: temp_path} do
       assert {:error, "Invalid file type. Allowed: JPG, PNG, WebP"} =
-               HuddlImages.store(temp_path, "banner.png", "text/html", "huddl-1")
+               HuddlCoverImages.store(temp_path, "banner.png", "text/html", "huddl-1")
     end
 
     test "store_pending/3 rejects a disallowed content type", %{temp_path: temp_path} do
       assert {:error, "Invalid file type. Allowed: JPG, PNG, WebP"} =
-               HuddlImages.store_pending(temp_path, "banner.png", "application/pdf")
+               HuddlCoverImages.store_pending(temp_path, "banner.png", "application/pdf")
     end
   end
 

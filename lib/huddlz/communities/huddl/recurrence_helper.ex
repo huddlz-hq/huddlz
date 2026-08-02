@@ -15,8 +15,8 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
 
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
-  alias Huddlz.Communities.HuddlImage
-  alias Huddlz.Storage.HuddlImages
+  alias Huddlz.Communities.HuddlCoverImage
+  alias Huddlz.Storage.HuddlCoverImages
 
   @max_instances 104
 
@@ -199,14 +199,14 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   end
 
   defp copy_current_image!(source, instance) do
-    case Communities.list_huddl_images(source.id, authorize?: false) do
+    case Communities.list_huddl_cover_images(source.id, authorize?: false) do
       {:ok, []} ->
         :ok
 
       {:ok, [image | _]} ->
         attrs = duplicate_image!(image, instance.id)
 
-        HuddlImage
+        HuddlCoverImage
         |> Ash.Changeset.for_create(:create, Map.put(attrs, :huddl_id, instance.id))
         |> Ash.create(authorize?: false)
         |> case do
@@ -214,8 +214,8 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
             :ok
 
           {:error, error} ->
-            HuddlImages.delete(attrs.storage_path)
-            HuddlImages.delete(attrs.thumbnail_path)
+            HuddlCoverImages.delete(attrs.storage_path)
+            HuddlCoverImages.delete(attrs.thumbnail_path)
             raise error
         end
 
@@ -225,7 +225,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   end
 
   defp duplicate_image!(image, instance_id) do
-    case HuddlImages.duplicate(image, instance_id) do
+    case HuddlCoverImages.duplicate(image, instance_id) do
       {:ok, attrs} -> attrs
       {:error, reason} -> raise "failed to copy recurring huddl image: #{inspect(reason)}"
     end
@@ -233,7 +233,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
 
   defp destroy_instance!(instance, actor \\ nil) do
     instance.id
-    |> Communities.list_huddl_images(authorize?: false)
+    |> Communities.list_huddl_cover_images(authorize?: false)
     |> then(fn
       {:ok, images} ->
         Enum.each(images, &Ash.destroy!(&1, action: :hard_delete, authorize?: false))

@@ -7,7 +7,7 @@ defmodule HuddlzWeb.Components.HuddlCoverImage do
   """
   use Phoenix.Component
 
-  alias Huddlz.Storage.HuddlImages
+  alias Huddlz.Storage.HuddlCoverImages
 
   attr :id, :string, required: true
   attr :image_url, :string, required: true
@@ -18,7 +18,7 @@ defmodule HuddlzWeb.Components.HuddlCoverImage do
     <img
       id={@id}
       class={@class}
-      src={HuddlImages.url(@image_url)}
+      src={HuddlCoverImages.url(@image_url)}
       alt=""
       data-image-fallback
     />
