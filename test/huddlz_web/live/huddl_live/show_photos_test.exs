@@ -256,4 +256,78 @@ defmodule HuddlzWeb.HuddlLive.ShowPhotosTest do
       assert File.ls(upload_dir) in [{:ok, []}, {:error, :enoent}]
     end
   end
+
+  describe "deleting photos" do
+    setup %{owner: owner, group: group} do
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
+
+      {:ok, photo} =
+        Communities.create_huddl_photo(
+          %{
+            filename: "photo.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/huddl_photos/#{huddl.id}/photo.jpg",
+            thumbnail_path: "/uploads/huddl_photos/#{huddl.id}/photo_thumb.jpg",
+            huddl_id: huddl.id
+          },
+          actor: owner
+        )
+
+      %{huddl: huddl, photo: photo}
+    end
+
+    test "uploader sees a delete button and a confirmation before deleting", %{
+      conn: conn,
+      owner: owner,
+      group: group,
+      huddl: huddl,
+      photo: photo
+    } do
+      {:ok, view, _html} =
+        conn
+        |> login(owner)
+        |> live(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+
+      view
+      |> element("button[phx-click='confirm_delete_photo'][phx-value-id='#{photo.id}']")
+      |> render_click()
+
+      assert has_element?(view, "#delete-photo-modal")
+
+      view |> element("#cancel-delete-photo") |> render_click()
+      refute has_element?(view, "#delete-photo-modal[style*='display: block']")
+
+      assert {:ok, [_photo]} = Communities.list_huddl_photos(huddl.id, actor: owner)
+
+      view
+      |> element("button[phx-click='confirm_delete_photo'][phx-value-id='#{photo.id}']")
+      |> render_click()
+
+      view |> element("#confirm-delete-photo") |> render_click()
+
+      assert {:ok, []} = Communities.list_huddl_photos(huddl.id, actor: owner)
+    end
+
+    test "another attendee cannot delete someone else's photo", %{
+      conn: conn,
+      owner: _owner,
+      group: group,
+      huddl: huddl,
+      photo: photo
+    } do
+      other_attendee = generate(user(role: :user))
+      Communities.rsvp_huddl!(huddl, actor: other_attendee)
+
+      {:ok, view, _html} =
+        conn
+        |> login(other_attendee)
+        |> live(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+
+      refute has_element?(
+               view,
+               "button[phx-click='confirm_delete_photo'][phx-value-id='#{photo.id}']"
+             )
+    end
+  end
 end

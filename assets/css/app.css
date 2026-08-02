@@ -4125,6 +4125,25 @@ body .photo-tile img {
   display: block;
 }
 
+body .photo-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(2, 4, 4, 0.65);
+  color: var(--text);
+  cursor: pointer;
+}
+
+body .photo-delete:hover {
+  background: var(--magenta);
+}
+
 body .photo-upload-entry {
   display: flex;
   align-items: center;
