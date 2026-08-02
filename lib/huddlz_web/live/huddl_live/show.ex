@@ -32,6 +32,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
      |> assign(:confirming_delete?, false)
      |> assign(:confirming_cancel?, false)
      |> assign(:confirming_delete_photo_id, nil)
+     |> assign(:selected_photo_url, nil)
      |> assign(:cancel_form, to_form(%{"cancellation_reason" => ""}, as: :cancel))
      |> allow_upload(:huddl_photos,
        accept: ~w(.jpg .jpeg .png .webp),
@@ -347,7 +348,13 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
         <div id="huddl-photos-grid" phx-update="stream" class="photos-grid">
           <div :for={{dom_id, photo} <- @streams.huddl_photos} id={dom_id} class="photo-tile">
-            <img src={HuddlPhotos.url(photo.thumbnail_path)} alt="" loading="lazy" />
+            <button
+              type="button"
+              phx-click="view_photo"
+              phx-value-url={HuddlPhotos.url(photo.storage_path)}
+            >
+              <img src={HuddlPhotos.url(photo.thumbnail_path)} alt="" loading="lazy" />
+            </button>
             <button
               :if={photo.uploader_id == @current_user.id || @huddl.creator_id == @current_user.id}
               type="button"
@@ -486,6 +493,20 @@ defmodule HuddlzWeb.HuddlLive.Show do
             phx-disable-with="Deleting…"
           >
             Delete photo
+          </.button>
+        </div>
+      </.modal>
+
+      <.modal
+        :if={@selected_photo_url}
+        id="photo-lightbox"
+        show
+        on_cancel={JS.push("close_photo")}
+      >
+        <img src={@selected_photo_url} alt="" class="lightbox-image" />
+        <div class="lightbox-actions">
+          <.button variant={:muted} phx-click="close_photo">
+            Close
           </.button>
         </div>
       </.modal>
@@ -820,6 +841,16 @@ defmodule HuddlzWeb.HuddlLive.Show do
          |> assign(:confirming_delete_photo_id, nil)
          |> put_flash(:error, "Failed to delete photo.")}
     end
+  end
+
+  @impl true
+  def handle_event("view_photo", %{"url" => url}, socket) do
+    {:noreply, assign(socket, :selected_photo_url, url)}
+  end
+
+  @impl true
+  def handle_event("close_photo", _params, socket) do
+    {:noreply, assign(socket, :selected_photo_url, nil)}
   end
 
   @impl true
