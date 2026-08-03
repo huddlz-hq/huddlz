@@ -310,7 +310,30 @@ defmodule HuddlzWeb.HuddlLive.Show do
           phx-submit="upload_photos"
           phx-change="validate_photos"
         >
-          <.live_file_input upload={@uploads.huddl_photos} />
+          <label for={@uploads.huddl_photos.ref} class="sr-only">Photos</label>
+          <.live_file_input upload={@uploads.huddl_photos} class="hidden" />
+
+          <div class="upload-zone" phx-drop-target={@uploads.huddl_photos.ref}>
+            <div class="upload-icon">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-5-5L5 21" />
+              </svg>
+            </div>
+            <label for={@uploads.huddl_photos.ref} class="upload-prompt">
+              Drop photos, or <span class="upload-link">browse</span>
+            </label>
+            <div class="upload-meta muted">JPG, PNG, WebP · 5 MB max · up to 10 photos</div>
+          </div>
 
           <div :for={entry <- @uploads.huddl_photos.entries} class="photo-upload-entry">
             <figure>
