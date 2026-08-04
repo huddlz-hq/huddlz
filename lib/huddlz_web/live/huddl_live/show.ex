@@ -526,6 +526,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
         id="photo-lightbox"
         show
         on_cancel={JS.push("close_photo")}
+        class="w-full max-w-4xl"
       >
         <h2 id="photo-lightbox-title" class="sr-only">Photo</h2>
         <img src={@selected_photo_url} alt="" class="lightbox-image" />
