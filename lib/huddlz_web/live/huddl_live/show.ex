@@ -784,6 +784,11 @@ defmodule HuddlzWeb.HuddlLive.Show do
   end
 
   @impl true
+  def handle_event("upload_photos", _params, %{assigns: %{can_view_photos: false}} = socket) do
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event("upload_photos", _params, socket) do
     huddl = socket.assigns.huddl
     user = socket.assigns.current_user
