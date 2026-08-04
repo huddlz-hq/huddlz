@@ -729,6 +729,11 @@ defmodule HuddlzWeb.HuddlLive.Show do
     end
   end
 
+  defp maybe_put_upload_result_flash(socket, _successes, 0), do: socket
+
+  defp maybe_put_upload_result_flash(socket, successes, total),
+    do: put_upload_result_flash(socket, successes, total)
+
   defp put_upload_result_flash(socket, total, total),
     do: put_flash(socket, :info, "Photos uploaded.")
 
@@ -816,7 +821,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
         |> update(:photo_count, &(&1 + 1))
       end)
 
-    {:noreply, put_upload_result_flash(socket, length(successes), length(results))}
+    {:noreply, maybe_put_upload_result_flash(socket, length(successes), length(results))}
   end
 
   @impl true
