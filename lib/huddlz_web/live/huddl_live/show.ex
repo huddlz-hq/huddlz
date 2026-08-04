@@ -345,6 +345,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
               type="button"
               phx-click="view_photo"
               phx-value-url={HuddlPhotos.url(photo.storage_path)}
+              aria-label="View photo"
             >
               <img src={HuddlPhotos.url(photo.thumbnail_path)} alt="" loading="lazy" />
             </button>
@@ -496,6 +497,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
         show
         on_cancel={JS.push("close_photo")}
       >
+        <h2 id="photo-lightbox-title" class="sr-only">Photo</h2>
         <img src={@selected_photo_url} alt="" class="lightbox-image" />
         <div class="lightbox-actions">
           <.button variant={:muted} phx-click="close_photo">
