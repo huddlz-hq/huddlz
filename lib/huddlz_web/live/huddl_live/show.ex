@@ -6,6 +6,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   alias Huddlz.Communities
   alias Huddlz.Storage.HuddlCoverImages
+  alias Huddlz.Storage.HuddlPhotos
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
@@ -39,6 +40,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
       {:ok, huddl} ->
         user = socket.assigns.current_user
         {attendance, waitlist_position} = attendance_info(huddl, user)
+        can_view_photos = can_view_photos?(huddl, user, attendance)
 
         {:noreply,
          socket
@@ -47,6 +49,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
          |> assign(:huddl, huddl)
          |> assign(:attendance, attendance)
          |> assign(:waitlist_position, waitlist_position)
+         |> assign(:can_view_photos, can_view_photos)
          |> assign(
            :can_edit_huddl,
            editable_lifecycle?(huddl) && Communities.can_update_huddl?(user, huddl)
@@ -62,7 +65,8 @@ defmodule HuddlzWeb.HuddlLive.Show do
          |> assign(
            :can_delete_huddl,
            Communities.can_destroy_huddl?(user, huddl)
-         )}
+         )
+         |> load_photos(huddl, user, can_view_photos)}
 
       {:error, :not_found} ->
         not_found!()
@@ -286,6 +290,20 @@ defmodule HuddlzWeb.HuddlLive.Show do
           </div>
         </aside>
       </div>
+
+      <section :if={@can_view_photos} class="huddl-photos">
+        <h2>Photos</h2>
+
+        <p :if={@photo_count == 0} class="huddl-photos-empty">
+          No photos yet — be the first to share one!
+        </p>
+
+        <div id="huddl-photos-grid" phx-update="stream" class="photos-grid">
+          <div :for={{dom_id, photo} <- @streams.huddl_photos} id={dom_id} class="photo-tile">
+            <img src={HuddlPhotos.url(photo.thumbnail_path)} alt="" loading="lazy" />
+          </div>
+        </div>
+      </section>
 
       <.modal
         :if={@confirming_delete?}
@@ -776,6 +794,26 @@ defmodule HuddlzWeb.HuddlLive.Show do
     do: DateTime.after?(ends_at, DateTime.utc_now())
 
   defp editable_lifecycle?(_huddl), do: false
+
+  defp can_view_photos?(%{status: :completed} = huddl, %{id: user_id}, attendance) do
+    attendance == :attending || huddl.creator_id == user_id
+  end
+
+  defp can_view_photos?(_huddl, _user, _attendance), do: false
+
+  defp load_photos(socket, huddl, user, true) do
+    {:ok, photos} = Communities.list_huddl_photos(huddl.id, actor: user)
+
+    socket
+    |> assign(:photo_count, length(photos))
+    |> stream(:huddl_photos, photos, reset: true)
+  end
+
+  defp load_photos(socket, _huddl, _user, false) do
+    socket
+    |> assign(:photo_count, 0)
+    |> stream(:huddl_photos, [], reset: true)
+  end
 
   defp cancellable_lifecycle?(%{lifecycle_state: :published, ends_at: ends_at}),
     do: DateTime.after?(ends_at, DateTime.utc_now())

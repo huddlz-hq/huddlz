@@ -4082,3 +4082,45 @@ body .page-nav:disabled {
   }
   body .huddl-hero .hero-content .meta .meta-sep { display: none; }
 }
+
+/* Post-huddl shared photo gallery */
+body .huddl-photos {
+  margin-top: 32px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+
+body .huddl-photos h2 {
+  margin: 0 0 16px;
+  font-family: var(--mono);
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+
+body .huddl-photos-empty {
+  color: var(--muted);
+  font-size: 14px;
+  padding: 12px 0;
+}
+
+body .photos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+
+body .photo-tile {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+body .photo-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
