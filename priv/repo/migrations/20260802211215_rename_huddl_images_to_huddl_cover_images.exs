@@ -33,13 +33,13 @@ defmodule Huddlz.Repo.Migrations.RenameHuddlImagesToHuddlCoverImages do
   end
 
   def down do
-    execute(
-      "ALTER INDEX huddl_cover_images_unique_storage_path_index RENAME TO huddl_images_unique_storage_path_index"
-    )
-
     drop constraint(:huddl_cover_images, "huddl_cover_images_huddl_id_fkey")
 
-    alter table(:huddl_cover_images) do
+    drop_if_exists index(:huddl_cover_images, [:huddl_id, :inserted_at])
+
+    rename table(:huddl_cover_images), to: table(:huddl_images)
+
+    alter table(:huddl_images) do
       modify :huddl_id,
              references(:huddlz,
                column: :id,
@@ -50,10 +50,10 @@ defmodule Huddlz.Repo.Migrations.RenameHuddlImagesToHuddlCoverImages do
              )
     end
 
-    drop_if_exists index(:huddl_cover_images, [:huddl_id, :inserted_at])
-
     create index(:huddl_images, [:huddl_id, :inserted_at])
 
-    rename table(:huddl_cover_images), to: table(:huddl_images)
+    execute(
+      "ALTER INDEX huddl_cover_images_unique_storage_path_index RENAME TO huddl_images_unique_storage_path_index"
+    )
   end
 end
