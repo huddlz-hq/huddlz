@@ -1,6 +1,6 @@
 defmodule Huddlz.Communities.HuddlPhoto do
   @moduledoc """
-  A photo shared to a huddl's post-event gallery by its creator or a
+  A photo shared to a huddl's post-huddl gallery by its creator or a
   confirmed attendee, once the huddl has ended.
   """
 
@@ -30,7 +30,7 @@ defmodule Huddlz.Communities.HuddlPhoto do
     defaults [:read]
 
     create :create do
-      description "Add a photo to a huddl's post-event gallery"
+      description "Add a photo to a huddl's post-huddl gallery"
       primary? true
       accept [:filename, :content_type, :size_bytes, :storage_path, :thumbnail_path, :huddl_id]
 
