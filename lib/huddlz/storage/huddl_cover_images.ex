@@ -1,4 +1,4 @@
-defmodule Huddlz.Storage.HuddlImages do
+defmodule Huddlz.Storage.HuddlCoverImages do
   @moduledoc """
   High-level helper for huddl image storage operations.
   Handles path generation, validation, thumbnail creation, and storage.
@@ -10,7 +10,7 @@ defmodule Huddlz.Storage.HuddlImages do
   alias Huddlz.ImageProcessing
   alias Huddlz.Storage
 
-  @prefix "huddl_images"
+  @prefix "huddl_cover_images"
   @allowed_extensions ~w(.jpg .jpeg .png .webp)
   @max_file_size 5 * 1024 * 1024
 
@@ -78,7 +78,7 @@ defmodule Huddlz.Storage.HuddlImages do
   @doc """
   Copy a stored huddl image and its thumbnail to paths owned by another huddl.
 
-  Returns metadata suitable for creating a `HuddlImage` record. If either copy
+  Returns metadata suitable for creating a `HuddlCoverImage` record. If either copy
   fails, any destination file already written is removed.
   """
   def duplicate(image, huddl_id) do
@@ -136,7 +136,7 @@ defmodule Huddlz.Storage.HuddlImages do
 
   @doc """
   Generate a unique storage path for a huddl image.
-  Format: /uploads/huddl_images/{huddl_id}/{uuid}.{ext}
+  Format: /uploads/huddl_cover_images/{huddl_id}/{uuid}.{ext}
   """
   def generate_path(huddl_id, original_filename) do
     ext = Path.extname(original_filename) |> String.downcase()
@@ -146,7 +146,7 @@ defmodule Huddlz.Storage.HuddlImages do
 
   @doc """
   Generate a unique storage path for a pending huddl image.
-  Format: /uploads/huddl_images/pending/{uuid}.{ext}
+  Format: /uploads/huddl_cover_images/pending/{uuid}.{ext}
   """
   def generate_pending_path(original_filename) do
     ext = Path.extname(original_filename) |> String.downcase()

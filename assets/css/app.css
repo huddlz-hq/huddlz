@@ -4082,3 +4082,139 @@ body .page-nav:disabled {
   }
   body .huddl-hero .hero-content .meta .meta-sep { display: none; }
 }
+
+/* Post-huddl shared photo gallery */
+body .huddl-photos {
+  margin-top: 32px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+
+body .huddl-photos h2 {
+  margin: 0 0 16px;
+  font-family: var(--mono);
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+
+body .huddl-photos-empty {
+  color: var(--muted);
+  font-size: 14px;
+  padding: 12px 0;
+}
+
+body .photos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+
+body .photo-tile {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+body .photo-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+body .photo-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(2, 4, 4, 0.65);
+  color: var(--text);
+  cursor: pointer;
+}
+
+body .photo-delete:hover {
+  background: var(--magenta);
+}
+
+body .photo-upload-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+body .photo-upload-entry figure {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin: 0;
+}
+
+body .photo-upload-entry img { width: 100%; height: 100%; object-fit: cover; }
+
+body .upload-error {
+  color: var(--warn);
+  font-size: 13px;
+  margin: 4px 0;
+}
+
+body .photo-tile button[phx-click="view_photo"] {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+body .lightbox-image {
+  max-width: 100%;
+  max-height: 80vh;
+  display: block;
+  margin: 0 auto;
+  border-radius: var(--radius-sm);
+}
+
+body .lightbox-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+body .lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(2, 4, 4, 0.65);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+body .lightbox-nav:hover {
+  background: var(--magenta);
+}
+
+body .lightbox-nav-prev {
+  left: 8px;
+}
+
+body .lightbox-nav-next {
+  right: 8px;
+}

@@ -9,7 +9,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Communities.Huddl
-  alias Huddlz.Communities.HuddlImage
+  alias Huddlz.Communities.HuddlCoverImage
   alias Huddlz.Communities.HuddlTemplate
 
   describe "Show huddl details" do
@@ -101,13 +101,13 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       group: group,
       huddl: huddl
     } do
-      HuddlImage
+      HuddlCoverImage
       |> Ash.Changeset.for_create(:create, %{
         filename: "cover.jpg",
         content_type: "image/jpeg",
         size_bytes: 123,
-        storage_path: "/uploads/huddl_images/#{huddl.id}/cover.jpg",
-        thumbnail_path: "/uploads/huddl_images/#{huddl.id}/cover_thumb.jpg",
+        storage_path: "/uploads/huddl_cover_images/#{huddl.id}/cover.jpg",
+        thumbnail_path: "/uploads/huddl_cover_images/#{huddl.id}/cover_thumb.jpg",
         huddl_id: huddl.id
       })
       |> Ash.create!(authorize?: false)
@@ -148,14 +148,14 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
     end
 
     test "renders rich link preview image metadata", %{conn: conn, group: group, huddl: huddl} do
-      thumbnail_path = "/uploads/huddl_images/#{huddl.id}/preview_thumb.jpg"
+      thumbnail_path = "/uploads/huddl_cover_images/#{huddl.id}/preview_thumb.jpg"
 
-      HuddlImage
+      HuddlCoverImage
       |> Ash.Changeset.for_create(:create, %{
         filename: "preview.jpg",
         content_type: "image/jpeg",
         size_bytes: 123,
-        storage_path: "/uploads/huddl_images/#{huddl.id}/preview.jpg",
+        storage_path: "/uploads/huddl_cover_images/#{huddl.id}/preview.jpg",
         thumbnail_path: thumbnail_path,
         huddl_id: huddl.id
       })
