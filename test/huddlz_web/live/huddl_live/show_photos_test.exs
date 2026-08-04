@@ -296,7 +296,7 @@ defmodule HuddlzWeb.HuddlLive.ShowPhotosTest do
       assert has_element?(view, "#delete-photo-modal")
 
       view |> element("#cancel-delete-photo") |> render_click()
-      refute has_element?(view, "#delete-photo-modal[style*='display: block']")
+      refute has_element?(view, "#delete-photo-modal")
 
       assert {:ok, [_photo]} = Communities.list_huddl_photos(huddl.id, actor: owner)
 
@@ -363,7 +363,7 @@ defmodule HuddlzWeb.HuddlLive.ShowPhotosTest do
 
       view |> element("#photo-lightbox button[phx-click='close_photo']") |> render_click()
 
-      refute has_element?(view, "#photo-lightbox[style*='display: block']")
+      refute has_element?(view, "#photo-lightbox")
     end
   end
 end
