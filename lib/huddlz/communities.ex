@@ -106,6 +106,13 @@ defmodule Huddlz.Communities do
       define :soft_delete_huddl_cover_image, action: :soft_delete
     end
 
+    resource Huddlz.Communities.HuddlPhoto do
+      define :create_huddl_photo, action: :create
+      define :get_huddl_photo_by_id, action: :read, get_by: [:id]
+      define :list_huddl_photos, action: :list_for_huddl, args: [:huddl_id]
+      define :destroy_huddl_photo, action: :destroy
+    end
+
     resource Huddlz.Communities.GroupMember do
       define :add_member, action: :add_member, args: [:group_id, :user_id, :role]
       define :get_group_member, action: :read, get_by: [:group_id, :user_id]
