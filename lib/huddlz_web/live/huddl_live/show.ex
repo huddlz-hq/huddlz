@@ -530,6 +530,24 @@ defmodule HuddlzWeb.HuddlLive.Show do
       >
         <h2 id="photo-lightbox-title" class="sr-only">Photo</h2>
         <img src={@selected_photo_url} alt="" class="lightbox-image" />
+        <button
+          :if={length(@photo_urls) > 1}
+          type="button"
+          class="lightbox-nav lightbox-nav-prev"
+          phx-click="prev_photo"
+          aria-label="Previous photo"
+        >
+          <.icon name="hero-chevron-left" class="size-5" />
+        </button>
+        <button
+          :if={length(@photo_urls) > 1}
+          type="button"
+          class="lightbox-nav lightbox-nav-next"
+          phx-click="next_photo"
+          aria-label="Next photo"
+        >
+          <.icon name="hero-chevron-right" class="size-5" />
+        </button>
         <div class="lightbox-actions">
           <.button variant={:muted} phx-click="close_photo">
             Close
@@ -843,6 +861,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
         acc
         |> stream_insert(:huddl_photos, photo, at: 0)
         |> update(:photo_count, &(&1 + 1))
+        |> update(:photo_urls, &[HuddlPhotos.url(photo.storage_path) | &1])
       end)
 
     {:noreply, maybe_put_upload_result_flash(socket, length(successes), length(results))}
@@ -865,10 +884,13 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
     with {:ok, photo} <- Communities.get_huddl_photo_by_id(photo_id, actor: user),
          :ok <- Communities.destroy_huddl_photo(photo, actor: user) do
+      deleted_url = HuddlPhotos.url(photo.storage_path)
+
       {:noreply,
        socket
        |> stream_delete(:huddl_photos, photo)
        |> update(:photo_count, &(&1 - 1))
+       |> update(:photo_urls, &List.delete(&1, deleted_url))
        |> assign(:confirming_delete_photo_id, nil)}
     else
       _ ->
@@ -887,6 +909,16 @@ defmodule HuddlzWeb.HuddlLive.Show do
   @impl true
   def handle_event("close_photo", _params, socket) do
     {:noreply, assign(socket, :selected_photo_url, nil)}
+  end
+
+  @impl true
+  def handle_event("next_photo", _params, socket) do
+    {:noreply, shift_selected_photo(socket, 1)}
+  end
+
+  @impl true
+  def handle_event("prev_photo", _params, socket) do
+    {:noreply, shift_selected_photo(socket, -1)}
   end
 
   @impl true
@@ -1078,13 +1110,29 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
     socket
     |> assign(:photo_count, length(photos))
+    |> assign(:photo_urls, Enum.map(photos, &HuddlPhotos.url(&1.storage_path)))
     |> stream(:huddl_photos, photos, reset: true)
   end
 
   defp load_photos(socket, _huddl, _user, false) do
     socket
     |> assign(:photo_count, 0)
+    |> assign(:photo_urls, [])
     |> stream(:huddl_photos, [], reset: true)
+  end
+
+  defp shift_selected_photo(socket, offset) do
+    urls = socket.assigns.photo_urls
+    count = length(urls)
+
+    case Enum.find_index(urls, &(&1 == socket.assigns.selected_photo_url)) do
+      nil ->
+        socket
+
+      index ->
+        next_url = Enum.at(urls, rem(index + offset + count, count))
+        assign(socket, :selected_photo_url, next_url)
+    end
   end
 
   defp cancellable_lifecycle?(%{lifecycle_state: :published, ends_at: ends_at}),

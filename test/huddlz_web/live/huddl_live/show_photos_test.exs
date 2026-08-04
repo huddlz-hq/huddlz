@@ -5,6 +5,7 @@ defmodule HuddlzWeb.HuddlLive.ShowPhotosTest do
   import Phoenix.LiveViewTest
 
   alias Huddlz.Communities
+  alias Huddlz.Storage.HuddlPhotos
 
   setup do
     owner = generate(user(role: :user))
@@ -364,6 +365,271 @@ defmodule HuddlzWeb.HuddlLive.ShowPhotosTest do
       view |> element("#photo-lightbox button[phx-click='close_photo']") |> render_click()
 
       refute has_element?(view, "#photo-lightbox")
+    end
+
+    test "clicking the next arrow advances the lightbox to the next photo", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
+
+      {:ok, _photo_a} =
+        Communities.create_huddl_photo(
+          %{
+            filename: "a.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/huddl_photos/#{huddl.id}/a.jpg",
+            thumbnail_path: "/uploads/huddl_photos/#{huddl.id}/a_thumb.jpg",
+            huddl_id: huddl.id
+          },
+          actor: owner
+        )
+
+      {:ok, _photo_b} =
+        Communities.create_huddl_photo(
+          %{
+            filename: "b.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/huddl_photos/#{huddl.id}/b.jpg",
+            thumbnail_path: "/uploads/huddl_photos/#{huddl.id}/b_thumb.jpg",
+            huddl_id: huddl.id
+          },
+          actor: owner
+        )
+
+      {:ok, [first, second]} = Communities.list_huddl_photos(huddl.id, actor: owner)
+      first_url = HuddlPhotos.url(first.storage_path)
+      second_url = HuddlPhotos.url(second.storage_path)
+
+      {:ok, view, _html} =
+        conn
+        |> login(owner)
+        |> live(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+
+      view
+      |> element(".photo-tile button[phx-value-url='#{first_url}']")
+      |> render_click()
+
+      assert has_element?(view, "#photo-lightbox img.lightbox-image[src='#{first_url}']")
+
+      view |> element("#photo-lightbox button[phx-click='next_photo']") |> render_click()
+
+      assert has_element?(view, "#photo-lightbox img.lightbox-image[src='#{second_url}']")
+    end
+
+    test "clicking the previous arrow returns to the prior photo", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
+
+      {:ok, _photo_a} =
+        Communities.create_huddl_photo(
+          %{
+            filename: "a.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/huddl_photos/#{huddl.id}/a.jpg",
+            thumbnail_path: "/uploads/huddl_photos/#{huddl.id}/a_thumb.jpg",
+            huddl_id: huddl.id
+          },
+          actor: owner
+        )
+
+      {:ok, _photo_b} =
+        Communities.create_huddl_photo(
+          %{
+            filename: "b.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/huddl_photos/#{huddl.id}/b.jpg",
+            thumbnail_path: "/uploads/huddl_photos/#{huddl.id}/b_thumb.jpg",
+            huddl_id: huddl.id
+          },
+          actor: owner
+        )
+
+      {:ok, [first, second]} = Communities.list_huddl_photos(huddl.id, actor: owner)
+      first_url = HuddlPhotos.url(first.storage_path)
+      second_url = HuddlPhotos.url(second.storage_path)
+
+      {:ok, view, _html} =
+        conn
+        |> login(owner)
+        |> live(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+
+      view
+      |> element(".photo-tile button[phx-value-url='#{second_url}']")
+      |> render_click()
+
+      assert has_element?(view, "#photo-lightbox img.lightbox-image[src='#{second_url}']")
+
+      view |> element("#photo-lightbox button[phx-click='prev_photo']") |> render_click()
+
+      assert has_element?(view, "#photo-lightbox img.lightbox-image[src='#{first_url}']")
+    end
+
+    test "next wraps from the last photo to the first, and previous wraps back", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
+
+      {:ok, _photo_a} =
+        Communities.create_huddl_photo(
+          %{
+            filename: "a.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/huddl_photos/#{huddl.id}/a.jpg",
+            thumbnail_path: "/uploads/huddl_photos/#{huddl.id}/a_thumb.jpg",
+            huddl_id: huddl.id
+          },
+          actor: owner
+        )
+
+      {:ok, _photo_b} =
+        Communities.create_huddl_photo(
+          %{
+            filename: "b.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/huddl_photos/#{huddl.id}/b.jpg",
+            thumbnail_path: "/uploads/huddl_photos/#{huddl.id}/b_thumb.jpg",
+            huddl_id: huddl.id
+          },
+          actor: owner
+        )
+
+      {:ok, [first, second]} = Communities.list_huddl_photos(huddl.id, actor: owner)
+      first_url = HuddlPhotos.url(first.storage_path)
+      second_url = HuddlPhotos.url(second.storage_path)
+
+      {:ok, view, _html} =
+        conn
+        |> login(owner)
+        |> live(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+
+      view
+      |> element(".photo-tile button[phx-value-url='#{second_url}']")
+      |> render_click()
+
+      assert has_element?(view, "#photo-lightbox img.lightbox-image[src='#{second_url}']")
+
+      view |> element("#photo-lightbox button[phx-click='next_photo']") |> render_click()
+
+      assert has_element?(view, "#photo-lightbox img.lightbox-image[src='#{first_url}']")
+
+      view |> element("#photo-lightbox button[phx-click='prev_photo']") |> render_click()
+
+      assert has_element?(view, "#photo-lightbox img.lightbox-image[src='#{second_url}']")
+    end
+
+    test "carousel arrows are hidden when there is only one photo", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
+
+      {:ok, _photo} =
+        Communities.create_huddl_photo(
+          %{
+            filename: "photo.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/huddl_photos/#{huddl.id}/photo.jpg",
+            thumbnail_path: "/uploads/huddl_photos/#{huddl.id}/photo_thumb.jpg",
+            huddl_id: huddl.id
+          },
+          actor: owner
+        )
+
+      {:ok, view, _html} =
+        conn
+        |> login(owner)
+        |> live(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+
+      view |> element(".photo-tile button[phx-click='view_photo']") |> render_click()
+
+      assert has_element?(view, "#photo-lightbox img.lightbox-image")
+      refute has_element?(view, "#photo-lightbox button[phx-click='next_photo']")
+      refute has_element?(view, "#photo-lightbox button[phx-click='prev_photo']")
+    end
+
+    test "carousel navigation skips a photo deleted while the lightbox is open", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
+
+      {:ok, _photo_a} =
+        Communities.create_huddl_photo(
+          %{
+            filename: "a.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/huddl_photos/#{huddl.id}/a.jpg",
+            thumbnail_path: "/uploads/huddl_photos/#{huddl.id}/a_thumb.jpg",
+            huddl_id: huddl.id
+          },
+          actor: owner
+        )
+
+      {:ok, _photo_b} =
+        Communities.create_huddl_photo(
+          %{
+            filename: "b.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/huddl_photos/#{huddl.id}/b.jpg",
+            thumbnail_path: "/uploads/huddl_photos/#{huddl.id}/b_thumb.jpg",
+            huddl_id: huddl.id
+          },
+          actor: owner
+        )
+
+      {:ok, _photo_c} =
+        Communities.create_huddl_photo(
+          %{
+            filename: "c.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/huddl_photos/#{huddl.id}/c.jpg",
+            thumbnail_path: "/uploads/huddl_photos/#{huddl.id}/c_thumb.jpg",
+            huddl_id: huddl.id
+          },
+          actor: owner
+        )
+
+      {:ok, [first, second, third]} = Communities.list_huddl_photos(huddl.id, actor: owner)
+      first_url = HuddlPhotos.url(first.storage_path)
+      third_url = HuddlPhotos.url(third.storage_path)
+
+      {:ok, view, _html} =
+        conn
+        |> login(owner)
+        |> live(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+
+      view
+      |> element(".photo-tile button[phx-value-url='#{first_url}']")
+      |> render_click()
+
+      view
+      |> element("button[phx-click='confirm_delete_photo'][phx-value-id='#{second.id}']")
+      |> render_click()
+
+      view |> element("#confirm-delete-photo") |> render_click()
+
+      view |> element("#photo-lightbox button[phx-click='next_photo']") |> render_click()
+
+      assert has_element?(view, "#photo-lightbox img.lightbox-image[src='#{third_url}']")
     end
   end
 end
