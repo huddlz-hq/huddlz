@@ -116,11 +116,20 @@ defmodule Huddlz.Communities.HuddlPhotoTest do
     test "the creator cannot upload a photo to a cancelled huddl" do
       owner = generate(user(role: :user))
       group = generate(group(owner_id: owner.id, actor: owner))
-      # Use a not-yet-ended huddl: TransitionLifecycle refuses to cancel a
-      # huddl whose ends_at has already passed ("A completed huddl cannot be
-      # cancelled."), so past_huddl can't be cancelled here.
-      huddl = generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
-      cancelled_huddl = Communities.cancel_huddl!(huddl, nil, actor: owner)
+
+      # Seed an already-ended huddl directly as `:cancelled`, bypassing the
+      # `cancel_huddl!` action entirely. Going through the action isn't an
+      # option here: TransitionLifecycle refuses to cancel a huddl whose
+      # ends_at has already passed ("A completed huddl cannot be
+      # cancelled."), so there's no way to reach an ended + cancelled huddl
+      # via the action. Seeding it directly (as
+      # `huddl_lifecycle_test.exs:121-135` does for a similar case) gives an
+      # ended, cancelled huddl and isolates the cancellation branch of the
+      # policy's `forbid_unless`, distinct from the "before huddl ends" test.
+      cancelled_huddl =
+        generate(
+          past_huddl(group_id: group.id, creator_id: owner.id, lifecycle_state: :cancelled)
+        )
 
       attrs = %{
         filename: "photo.jpg",
