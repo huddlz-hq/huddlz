@@ -623,23 +623,34 @@ defmodule HuddlzWeb.HuddlLive.Show do
   end
 
   defp upload_one_photo(path, entry, huddl_id, user) do
-    with {:ok, metadata} <-
-           HuddlPhotos.store(path, entry.client_name, entry.client_type, huddl_id),
-         {:ok, photo} <-
-           Communities.create_huddl_photo(
-             %{
-               filename: entry.client_name,
-               content_type: entry.client_type,
-               size_bytes: metadata.size_bytes,
-               storage_path: metadata.storage_path,
-               thumbnail_path: metadata.thumbnail_path,
-               huddl_id: huddl_id
-             },
-             actor: user
-           ) do
-      {:ok, {:ok, photo}}
-    else
+    case HuddlPhotos.store(path, entry.client_name, entry.client_type, huddl_id) do
+      {:ok, metadata} -> create_huddl_photo_record(metadata, entry, huddl_id, user)
       {:error, reason} -> {:ok, {:error, reason}}
+    end
+  end
+
+  defp create_huddl_photo_record(metadata, entry, huddl_id, user) do
+    attrs = %{
+      filename: entry.client_name,
+      content_type: entry.client_type,
+      size_bytes: metadata.size_bytes,
+      storage_path: metadata.storage_path,
+      thumbnail_path: metadata.thumbnail_path,
+      huddl_id: huddl_id
+    }
+
+    case Communities.create_huddl_photo(attrs, actor: user) do
+      {:ok, photo} ->
+        {:ok, {:ok, photo}}
+
+      {:error, reason} ->
+        # store/4 already wrote the original + thumbnail to storage; since the
+        # database record was never created, clean those orphaned files up.
+        # Best-effort: if delete itself fails, we still report the original
+        # create error to the user rather than masking it.
+        HuddlPhotos.delete(metadata.storage_path)
+        HuddlPhotos.delete(metadata.thumbnail_path)
+        {:ok, {:error, reason}}
     end
   end
 

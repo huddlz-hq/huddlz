@@ -214,5 +214,46 @@ defmodule HuddlzWeb.HuddlLive.ShowPhotosTest do
 
       refute has_element?(view, "#huddl-photo-upload-form")
     end
+
+    test "cleans up the already-stored files when create_huddl_photo fails after a successful store",
+         %{conn: conn, owner: owner, group: group} do
+      attendee = generate(user(role: :user))
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
+      Communities.rsvp_huddl!(huddl, actor: attendee)
+
+      {:ok, view, _html} =
+        conn
+        |> login(attendee)
+        |> live(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+
+      # Revoke the attendee's confirmed-attendee status behind the LiveView's
+      # back (bypassing the "cancel_rsvp" action, since it isn't guaranteed to
+      # be callable on a completed huddl) so that, by the time the
+      # "upload_photos" handle_event runs Communities.create_huddl_photo/2,
+      # the actor is no longer authorized to create a photo record for this
+      # huddl -- while HuddlPhotos.store/4 has already run and written the
+      # original + thumbnail to storage.
+      {:ok, [attendance]} = Communities.check_user_rsvp(huddl.id, actor: attendee)
+      Ash.destroy!(attendance, authorize?: false)
+
+      file_input(view, "#huddl-photo-upload-form", :huddl_photos, [
+        %{
+          name: "photo.jpg",
+          content: File.read!(@test_image_path),
+          type: "image/jpeg"
+        }
+      ])
+      |> render_upload("photo.jpg")
+
+      view
+      |> element("#huddl-photo-upload-form")
+      |> render_submit()
+
+      assert render(view) =~ "Failed to upload photos. Please try again."
+      assert {:ok, []} = Communities.list_huddl_photos(huddl.id, actor: owner)
+
+      upload_dir = Path.join(["priv/static/uploads/huddl_photos", huddl.id])
+      assert File.ls(upload_dir) in [{:ok, []}, {:error, :enoent}]
+    end
   end
 end
