@@ -16,6 +16,7 @@ defmodule HuddlzWeb.Components.Modal do
   attr :id, :string, required: true
   attr :show, :boolean, default: false
   attr :on_cancel, JS, default: %JS{}
+  attr :class, :string, default: "w-full max-w-xl"
   slot :inner_block, required: true
 
   def modal(assigns) do
@@ -41,7 +42,7 @@ defmodule HuddlzWeb.Components.Modal do
         tabindex="0"
       >
         <div class="flex min-h-full items-center justify-center p-4">
-          <div class="w-full max-w-xl">
+          <div class={@class}>
             <.focus_wrap
               id={"#{@id}-container"}
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
