@@ -23,6 +23,7 @@ import "phoenix_html"
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
+import {mountMobileNavigation} from "./mobile_navigation.mjs"
 
 const Hooks = {}
 
@@ -106,6 +107,8 @@ window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
 // connect if there are any LiveViews on the page
 liveSocket.connect()
+
+mountMobileNavigation()
 
 // "/" focuses the chrome search box, GitHub-style. Skipped while the user
 // is already typing in an editable field, or when modifier keys are held.

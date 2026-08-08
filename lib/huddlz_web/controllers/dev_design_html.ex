@@ -36,12 +36,34 @@ defmodule HuddlzWeb.DevDesignHTML do
         {render_slot(@inner_block)}
       <% else %>
         <%= if @signed_in do %>
-          <input type="checkbox" id="nav-toggle" class="nav-toggle" />
-          <label for="nav-toggle" class="nav-scrim" aria-hidden="true"></label>
-          <aside class="sidebar">
+          <button
+            type="button"
+            class="nav-scrim"
+            data-mobile-nav-scrim
+            aria-label="Close navigation"
+            tabindex="-1"
+          >
+          </button>
+          <aside
+            id="mobile-navigation-drawer"
+            class="sidebar"
+            data-mobile-nav-state="closed"
+            aria-label="Primary navigation"
+          >
             <div class="sidebar-brand">
-              <div class="brand-glyph">h</div>
-              <div class="brand-text">huddlz</div>
+              <a href="/dev/design/clickthrough/explore" aria-label="huddlz home">
+                <div class="brand-glyph">h</div>
+                <div class="brand-text">huddlz</div>
+              </a>
+              <button
+                type="button"
+                id="mobile-nav-close"
+                class="nav-close"
+                data-mobile-nav-close
+                aria-label="Close navigation"
+              >
+                <.icon name="hero-x-mark" class="size-5" />
+              </button>
             </div>
 
             <nav class="sb-nav">
@@ -219,10 +241,18 @@ defmodule HuddlzWeb.DevDesignHTML do
           </aside>
         <% end %>
 
-        <main class="main">
+        <main class="main" data-mobile-nav-background>
           <header class="content-topbar">
             <%= if @signed_in do %>
-              <label for="nav-toggle" class="nav-trigger" aria-label="Open navigation">
+              <button
+                type="button"
+                id="mobile-nav-trigger"
+                class="nav-trigger"
+                data-mobile-nav-trigger
+                aria-label="Open navigation"
+                aria-controls="mobile-navigation-drawer"
+                aria-expanded="false"
+              >
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -233,7 +263,7 @@ defmodule HuddlzWeb.DevDesignHTML do
                 >
                   <path d="M4 7h16M4 12h16M4 17h16" />
                 </svg>
-              </label>
+              </button>
             <% else %>
               <a
                 class="topbar-brand"
