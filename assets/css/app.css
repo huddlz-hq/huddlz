@@ -1822,6 +1822,53 @@ body .delete-confirm-submit:hover {
   body .delete-confirm-actions .btn-secondary { width: 100%; justify-content: center; }
 }
 
+body .share-modal-copy h2 {
+  margin: 5px 0 9px;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: clamp(21px, 3vw, 27px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+body .share-modal-link {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+body .share-modal-link .form-row {
+  flex: 1;
+  min-width: 0;
+}
+
+body .share-modal-actions {
+  display: flex;
+  gap: 10px;
+  padding-top: 14px;
+}
+
+body .share-modal-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-top: 22px;
+}
+
+body .qr-frame {
+  display: inline-block;
+  padding: 12px;
+  background: #fff;
+  border-radius: var(--radius-sm);
+  line-height: 0;
+}
+
+@media (max-width: 520px) {
+  body .share-modal-link { flex-direction: column; align-items: stretch; }
+  body .share-modal-actions { flex-direction: column; }
+}
+
 /* "Organized by" row in huddl-side */
 body .creator-row { display: flex; align-items: center; gap: 10px; font-size: 13px; }
 
@@ -1838,6 +1885,27 @@ body .eyebrow.eyebrow-magenta { color: var(--magenta); }
 
 /* Spacing between hero meta segments and separators */
 body .hero-content .meta .meta-sep { color: var(--muted); margin: 0 4px; }
+
+body .hero-content .share-trigger {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--radius-sm);
+  background: rgba(4, 10, 12, 0.55);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+body .hero-content .share-trigger:hover {
+  background: rgba(4, 10, 12, 0.75);
+  border-color: rgba(255, 255, 255, 0.4);
+}
 
 /* ─────────────────────────────────────────  CALENDAR  ────────── */
 body .cal-toolbar {
