@@ -85,6 +85,30 @@ Hooks.LocationAutocomplete = {
   }
 }
 
+Hooks.ClipboardCopy = {
+  mounted() {
+    this.el.addEventListener("click", () => this.copy())
+  },
+
+  copy() {
+    const value = this.el.dataset.value
+    if (!value || !navigator.clipboard) return
+
+    navigator.clipboard.writeText(value)
+      .then(() => this.flashCopied())
+      .catch(() => {})
+  },
+
+  flashCopied() {
+    const label = this.el.querySelector("[data-copy-label]")
+    if (!label) return
+
+    const original = label.textContent
+    label.textContent = "Copied!"
+    setTimeout(() => { label.textContent = original }, 1500)
+  }
+}
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
