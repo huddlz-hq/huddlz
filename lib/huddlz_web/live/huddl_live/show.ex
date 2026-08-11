@@ -237,6 +237,11 @@ defmodule HuddlzWeb.HuddlLive.Show do
             {render_rsvp_state(assigns)}
           </div>
 
+          <div class="huddl-side-section">
+            <h3>Share</h3>
+            <.share_actions id="share-huddl-modal" url={@meta.url} title={@page_title} />
+          </div>
+
           <div
             :if={@can_edit_huddl || @can_publish_huddl || @can_cancel_huddl || @can_delete_huddl}
             class="huddl-side-section"
@@ -291,7 +296,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
       <.share_modal
         id="share-huddl-modal"
         url={@meta.url}
-        title={@huddl.title}
+        title={@share_title}
         label="huddl"
       />
 

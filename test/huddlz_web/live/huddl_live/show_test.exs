@@ -107,6 +107,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> login(member)
       |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
       |> assert_has(".share-trigger[aria-label='Share']")
+      |> assert_has(".share-trigger[phx-click*='share-huddl-modal']")
       |> assert_has("#share-huddl-modal-url[value='#{huddl_url}']")
       |> assert_has("#share-huddl-modal a[href^='mailto:?subject=Virtual%20Meeting']")
       |> assert_has("#share-huddl-modal .qr-frame svg")

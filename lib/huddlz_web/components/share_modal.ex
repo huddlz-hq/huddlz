@@ -83,7 +83,8 @@ defmodule HuddlzWeb.Components.ShareModal do
   defp qr_svg(url) do
     url
     |> EQRCode.encode()
-    |> EQRCode.svg(width: 220, viewbox: true, color: "#000", background_color: "#FFF")
+    |> EQRCode.svg(width: 220, color: "#000", background_color: "#FFF")
+    |> String.replace(~r/^<\?xml[^>]*\?>/, "")
   end
 
   defp mailto_href(url, title) do

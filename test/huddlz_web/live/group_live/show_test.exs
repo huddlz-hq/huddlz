@@ -146,6 +146,7 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
       conn
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has(".share-trigger[aria-label='Share']")
+      |> assert_has(".share-trigger[phx-click*='share-group-modal']")
       |> assert_has("#share-group-modal-url[value='#{group_url}']")
       |> assert_has("#share-group-modal a[href^='mailto:?subject=Share%20Test%20Group']")
       |> assert_has("#share-group-modal .qr-frame svg")
