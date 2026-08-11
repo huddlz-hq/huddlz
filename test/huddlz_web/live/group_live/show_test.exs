@@ -124,4 +124,31 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
       |> refute_has("#leave-group-dialog")
     end
   end
+
+  describe "share links" do
+    test "share button opens a modal with a copy link, mailto email, and QR code", %{
+      conn: conn
+    } do
+      owner = generate(user(role: :user))
+
+      group =
+        generate(
+          group(
+            owner_id: owner.id,
+            is_public: true,
+            name: "Share Test Group",
+            actor: owner
+          )
+        )
+
+      group_url = HuddlzWeb.Endpoint.url() <> ~p"/groups/#{group.slug}"
+
+      conn
+      |> visit(~p"/groups/#{group.slug}")
+      |> assert_has(".share-trigger[aria-label='Share']")
+      |> assert_has("#share-group-modal-url[value='#{group_url}']")
+      |> assert_has("#share-group-modal a[href^='mailto:?subject=Share%20Test%20Group']")
+      |> assert_has("#share-group-modal .qr-frame svg")
+    end
+  end
 end

@@ -92,6 +92,7 @@ defmodule HuddlzWeb.Components.ShareModal do
 
   defp mailto_encode(string) do
     string
+    |> to_string()
     |> URI.encode_www_form()
     |> String.replace("+", "%20")
   end
