@@ -158,7 +158,6 @@ defmodule HuddlzWeb.GroupLive.Show do
               {member_count_label(@member_count)}
             </span>
           </div>
-          <.share_button id="share-group-modal" />
         </div>
       </div>
 
@@ -370,12 +369,7 @@ defmodule HuddlzWeb.GroupLive.Show do
         </div>
       </div>
 
-      <.share_modal
-        id="share-group-modal"
-        url={@meta.url}
-        title={@share_title}
-        label="group"
-      />
+      <.share_modal id="share-group-modal" url={@meta.url} label="group" />
 
       <.modal
         :if={@leave_dialog_open}

@@ -119,7 +119,6 @@ defmodule HuddlzWeb.HuddlLive.Show do
               <span>{segment}</span>
             </span>
           </div>
-          <.share_button id="share-huddl-modal" />
         </div>
       </div>
 
@@ -293,12 +292,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
         </aside>
       </div>
 
-      <.share_modal
-        id="share-huddl-modal"
-        url={@meta.url}
-        title={@share_title}
-        label="huddl"
-      />
+      <.share_modal id="share-huddl-modal" url={@meta.url} label="huddl" />
 
       <.modal
         :if={@confirming_delete?}

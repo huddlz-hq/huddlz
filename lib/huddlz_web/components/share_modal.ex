@@ -1,10 +1,10 @@
 defmodule HuddlzWeb.Components.ShareModal do
   @moduledoc """
-  Share button + modal: copy link, mailto email, and a server-rendered QR
-  code pointing at the current page's canonical URL. Opening/closing is
-  handled entirely client-side via `HuddlzWeb.Components.Modal`'s JS
-  commands — no `handle_event`, no server-side assign for open/closed
-  state.
+  Share options for a page's sidebar: a direct `mailto:` email action and a
+  "QR code" action that opens a modal with a server-rendered QR SVG and a
+  copyable link. Opening/closing the QR modal is handled entirely
+  client-side via `HuddlzWeb.Components.Modal`'s JS commands — no
+  `handle_event`, no server-side assign for open/closed state.
   """
   use Phoenix.Component
 
@@ -13,25 +13,30 @@ defmodule HuddlzWeb.Components.ShareModal do
   alias HuddlzWeb.Components.Input
   alias HuddlzWeb.Components.Modal
 
-  attr :id, :string, required: true, doc: "id of the .share_modal this button opens"
-  attr :class, :any, default: nil
+  attr :id, :string, required: true, doc: "id of the .share_modal the QR code option opens"
+  attr :url, :string, required: true
+  attr :title, :string, required: true
 
-  def share_button(assigns) do
+  def share_actions(assigns) do
     ~H"""
-    <button
-      type="button"
-      class={["share-trigger", @class]}
-      phx-click={Modal.show_modal(@id)}
-      aria-label="Share"
-    >
-      <Icon.icon name="hero-share" class="size-5" />
-    </button>
+    <div class="side-actions">
+      <Button.button variant={:secondary} href={mailto_href(@url, @title)}>
+        <Icon.icon name="hero-envelope" class="size-4" /> Email
+      </Button.button>
+      <Button.button
+        id={"#{@id}-open"}
+        type="button"
+        variant={:secondary}
+        phx-click={Modal.show_modal(@id)}
+      >
+        <Icon.icon name="hero-qr-code" class="size-4" /> QR code
+      </Button.button>
+    </div>
     """
   end
 
   attr :id, :string, required: true
   attr :url, :string, required: true
-  attr :title, :string, required: true
   attr :label, :string, default: "page"
 
   def share_modal(assigns) do
@@ -40,8 +45,14 @@ defmodule HuddlzWeb.Components.ShareModal do
     ~H"""
     <Modal.modal id={@id}>
       <div class="share-modal-copy">
-        <span class="eyebrow">Share</span>
-        <h2 id={"#{@id}-title"}>Share this {@label}</h2>
+        <span class="eyebrow">QR code</span>
+        <h2 id={"#{@id}-title"}>Scan to open this {@label}</h2>
+      </div>
+
+      <div class="share-modal-qr">
+        <div class="qr-frame">
+          {Phoenix.HTML.raw(@qr_svg)}
+        </div>
       </div>
 
       <div class="share-modal-link">
@@ -62,19 +73,6 @@ defmodule HuddlzWeb.Components.ShareModal do
         >
           <span data-copy-label>Copy link</span>
         </button>
-      </div>
-
-      <div class="share-modal-actions">
-        <Button.button variant={:secondary} href={mailto_href(@url, @title)}>
-          Email
-        </Button.button>
-      </div>
-
-      <div class="share-modal-qr">
-        <div class="qr-frame">
-          {Phoenix.HTML.raw(@qr_svg)}
-        </div>
-        <p class="muted">Scan to open this {@label} on a phone.</p>
       </div>
     </Modal.modal>
     """

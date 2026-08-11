@@ -95,7 +95,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has(".facts .value", text: "1 person attending")
     end
 
-    test "share button opens a modal with a copy link, mailto email, and QR code", %{
+    test "sidebar share section offers a mailto email link and a QR code modal", %{
       conn: conn,
       member: member,
       group: group,
@@ -106,10 +106,10 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       conn
       |> login(member)
       |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
-      |> assert_has(".share-trigger[aria-label='Share']")
-      |> assert_has(".share-trigger[phx-click*='share-huddl-modal']")
+      |> assert_has("aside.huddl-side h3", text: "Share")
+      |> assert_has("a[href^='mailto:?subject=Virtual%20Meeting']")
+      |> assert_has("#share-huddl-modal-open[phx-click*='share-huddl-modal']")
       |> assert_has("#share-huddl-modal-url[value='#{huddl_url}']")
-      |> assert_has("#share-huddl-modal a[href^='mailto:?subject=Virtual%20Meeting']")
       |> assert_has("#share-huddl-modal .qr-frame svg")
     end
 
@@ -118,7 +118,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       conn
       |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
-      |> assert_has(".share-trigger[aria-label='Share']")
+      |> assert_has("a[href^='mailto:?subject=Virtual%20Meeting']")
       |> assert_has("#share-huddl-modal-url[value='#{huddl_url}']")
     end
 
