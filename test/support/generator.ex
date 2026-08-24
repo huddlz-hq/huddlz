@@ -149,18 +149,21 @@ defmodule Huddlz.Generator do
       opts[:actor] ||
         case opts[:owner_id] do
           nil ->
+            # `once/2` returns a lazy StreamData; realize it immediately
+            # (per its own documented usage) since we build the changeset
+            # ourselves below instead of threading `actor` through
+            # `changeset_generator/3`'s StreamData pipeline.
             once(:default_actor, fn ->
               generate(user(role: opts[:actor_role] || :user))
             end)
+            |> Enum.at(0)
 
           owner_id ->
             Ash.get!(Huddlz.Accounts.User, owner_id, authorize?: false)
         end
 
-    changeset_generator(
-      Group,
-      :create_group,
-      defaults: [
+    generators =
+      [
         name: StreamData.repeatedly(fn -> Faker.Company.name() end),
         description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
         location: "Test Location",
@@ -171,10 +174,33 @@ defmodule Huddlz.Generator do
         # private-use), which become URL-encoded slugs and break meta/URL
         # assertions.
         slug: nil
-      ],
-      overrides: Keyword.drop(opts, [:owner_id, :actor, :actor_role]),
-      actor: actor
-    )
+      ]
+      |> Keyword.merge(Keyword.drop(opts, [:owner_id, :actor, :actor_role]))
+      |> Map.new()
+
+    changeset_opts =
+      [actor: actor] ++ Keyword.take(opts, [:tenant, :scope, :authorize?, :context])
+
+    # `:time_zone` is a plain accepted attribute with a non-nil default, so
+    # `Ash.Generator`'s own attribute-fill logic (see `generate_attributes/5`
+    # in `Ash.Generator`) would otherwise inject a random string for it on
+    # every call that doesn't ask for an explicit override — clobbering
+    # `SetTimeZoneFromLocation`'s ability to tell "explicit" from "defaulted".
+    # Build input via `action_input/3` directly (instead of
+    # `changeset_generator/3`) so the key can be dropped entirely when no
+    # override is requested, letting the resource's real default/derivation
+    # logic run untouched.
+    Ash.Generator.action_input(Group, :create_group, generators)
+    |> StreamData.map(fn input ->
+      input =
+        if Keyword.has_key?(opts, :time_zone) do
+          input
+        else
+          Map.delete(input, :time_zone)
+        end
+
+      Ash.Changeset.for_create(Group, :create_group, input, changeset_opts)
+    end)
   end
 
   @doc """

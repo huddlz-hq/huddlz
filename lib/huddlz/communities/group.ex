@@ -74,7 +74,7 @@ defmodule Huddlz.Communities.Group do
 
     create :create_group do
       description "Create a new group; the owner is always the current actor."
-      accept [:name, :description, :location, :is_public]
+      accept [:name, :description, :location, :is_public, :time_zone]
 
       argument :slug, :string, allow_nil?: true
       argument :provided_latitude, :float, allow_nil?: true, public?: false
@@ -85,6 +85,7 @@ defmodule Huddlz.Communities.Group do
       change Huddlz.Communities.Group.Changes.GenerateSlug
       change Huddlz.Geocoding.ApplyProvidedCoordinates
       change {Huddlz.Geocoding.GeocodeChange, field: :location}
+      change Huddlz.Communities.Group.Changes.SetTimeZoneFromLocation
     end
 
     read :search do
@@ -197,7 +198,7 @@ defmodule Huddlz.Communities.Group do
 
     update :update_details do
       description "Update group details"
-      accept [:name, :description, :location, :is_public, :slug]
+      accept [:name, :description, :location, :is_public, :slug, :time_zone]
       require_atomic? false
 
       argument :provided_latitude, :float, allow_nil?: true, public?: false
@@ -205,6 +206,7 @@ defmodule Huddlz.Communities.Group do
 
       change Huddlz.Geocoding.ApplyProvidedCoordinates
       change {Huddlz.Geocoding.GeocodeChange, field: :location}
+      change Huddlz.Communities.Group.Changes.SetTimeZoneFromLocation
     end
 
     update :transfer_ownership do
@@ -323,6 +325,14 @@ defmodule Huddlz.Communities.Group do
       allow_nil? true
       description "Geocoded longitude of group location"
       constraints min: -180, max: 180
+    end
+
+    attribute :time_zone, :string do
+      allow_nil? false
+      public? true
+      default "Etc/UTC"
+
+      description "IANA timezone. Geo-derived from the group's location unless the organizer overrides it."
     end
 
     create_timestamp :created_at

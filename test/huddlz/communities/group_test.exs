@@ -810,4 +810,40 @@ defmodule Huddlz.Communities.GroupTest do
       assert Communities.get_joined_groups!(actor: lonely) == []
     end
   end
+
+  describe "time_zone" do
+    test "defaults to Etc/UTC when the location can't be geocoded" do
+      # GeocodingStub returns {:error, :not_found} by default.
+      group = generate(group())
+      assert group.time_zone == "Etc/UTC"
+    end
+
+    test "is geo-derived from the geocoded location" do
+      stub_geocode(%{latitude: 30.27, longitude: -97.74})
+
+      group = generate(group())
+      assert group.time_zone == "America/Chicago"
+    end
+
+    test "an explicit time_zone override is kept even when the location is geocoded" do
+      stub_geocode(%{latitude: 30.27, longitude: -97.74})
+
+      group = generate(group(time_zone: "America/New_York"))
+
+      assert group.time_zone == "America/New_York"
+    end
+
+    test "update_details keeps the existing time_zone when the location doesn't change" do
+      stub_geocode(%{latitude: 30.27, longitude: -97.74})
+      group = generate(group())
+      owner = Ash.get!(Huddlz.Accounts.User, group.owner_id, authorize?: false)
+
+      {:ok, updated} =
+        group
+        |> Ash.Changeset.for_update(:update_details, %{name: "Renamed"}, actor: owner)
+        |> Ash.update()
+
+      assert updated.time_zone == group.time_zone
+    end
+  end
 end
