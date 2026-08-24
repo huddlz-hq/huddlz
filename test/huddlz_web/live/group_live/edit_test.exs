@@ -84,6 +84,23 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       |> assert_has(".hero .meta span", text: "Updated location")
     end
 
+    test "organizer can explicitly set the group's time zone", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/edit")
+      |> assert_has("label", text: "Time zone")
+      |> select("Time zone", option: "America/Denver")
+      |> click_button("Save Changes")
+      |> assert_has("div[role='alert']", text: "Group updated successfully")
+
+      updated = Ash.get!(Huddlz.Communities.Group, group.id, authorize?: false)
+      assert updated.time_zone == "America/Denver"
+    end
+
     test "shows friendly model-backed name validation", %{
       conn: conn,
       owner: owner,
