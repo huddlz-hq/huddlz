@@ -46,3 +46,6 @@ npm-debug.log
 
 # User uploads (development only)
 /priv/static/uploads/
+
+# TzWorld polygon data (downloaded via mix tz_world.update)
+/priv/tz_world_data/

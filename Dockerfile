@@ -48,6 +48,9 @@ RUN mix deps.compile
 
 RUN mix assets.setup
 
+# Download TzWorld polygon data for timezone lookups
+RUN mix tz_world.update
+
 COPY priv priv
 
 COPY docs/legal docs/legal

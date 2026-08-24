@@ -9,6 +9,31 @@ if File.exists?(env_file) do
   env_file |> File.read!() |> parse!() |> System.put_env()
 end
 
+# =============================================================================
+# TzWorld Configuration (all environments)
+# =============================================================================
+#
+# `config/config.exs` also points `:tz_world, :data_dir` at the relative path
+# "priv/tz_world_data" so that `mix tz_world.update` (a plain Mix task that
+# never loads this runtime config) writes the downloaded polygon data into
+# this app's own priv/ dir, keyed off the current working directory (always
+# the project root for `mix setup`, CI, and `RUN mix tz_world.update` in the
+# Dockerfile builder stage, which uses WORKDIR /app).
+#
+# The override below is what the running application actually reads (via
+# `TzWorld.Backend.Memory`/`TzWorld.GeoData.data_dir/0`). It resolves through
+# `Application.app_dir/2`, which is working-directory independent:
+#   - In dev/test, `_build/<env>/lib/huddlz/priv` is a symlink back to this
+#     project's real `priv/`, so it points at the same files `mix
+#     tz_world.update` just wrote.
+#   - In a compiled release, `mix release` bundles this project's `priv/`
+#     (including `tz_world_data/`, already downloaded before `mix release`
+#     runs in the Dockerfile) into `lib/huddlz-<vsn>/priv/`. The release's
+#     `bin/server` script `cd`s into `bin/` before starting, so a bare
+#     relative "priv/tz_world_data" would resolve to the wrong place;
+#     `Application.app_dir/2` finds the real location regardless of CWD.
+config :tz_world, :data_dir, Application.app_dir(:huddlz, "priv/tz_world_data")
+
 # Server mode (only parse if set, nil would raise)
 if optional("PHX_SERVER") do
   config :huddlz, HuddlzWeb.Endpoint, server: true

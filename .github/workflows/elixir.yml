@@ -90,6 +90,10 @@ jobs:
     - name: Install dependencies
       run: mix deps.get
 
+    # Step: Download TzWorld polygon data for timezone lookups
+    - name: Download TzWorld data
+      run: mix tz_world.update
+
     # Step: Compile the project treating any warnings as errors.
     # Customize this step if a different behavior is desired.
     - name: Compiles without warnings
@@ -176,6 +180,9 @@ jobs:
 
     - name: Install dependencies
       run: mix deps.get
+
+    - name: Download TzWorld data
+      run: mix tz_world.update
 
     - name: Create, migrate, and seed the database
       run: mix ecto.setup

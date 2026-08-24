@@ -104,6 +104,19 @@ config :huddlz, :geocoding, adapter: Huddlz.Geocoding.Google
 # Places autocomplete adapter (compile-time)
 config :huddlz, :places, adapter: Huddlz.Places.Google
 
+# TzWorld configuration
+# Data is stored in priv/ (ignored in .gitignore) to persist across builds
+# and must be explicitly downloaded via `mix tz_world.update`.
+#
+# This relative path is what `mix tz_world.update` itself resolves (that
+# plain Mix task never loads config/runtime.exs), so it must stay in sync
+# with the working directory `mix tz_world.update` is always run from:
+# the project root (`mix setup`, CI) or WORKDIR /app (Dockerfile builder
+# stage). The *running application* reads a different, CWD-independent
+# value for this same key, set in config/runtime.exs — see the comment
+# there for why.
+config :tz_world, :data_dir, "priv/tz_world_data"
+
 # Configures the endpoint
 config :huddlz, HuddlzWeb.Endpoint,
   url: [host: "localhost"],

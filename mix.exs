@@ -142,6 +142,11 @@ defmodule Huddlz.MixProject do
   #
   #     $ mix setup
   #
+  # NOTE: The `setup` alias includes `tz_world.update` to download timezone polygon data.
+  # This data is stored in `priv/tz_world_data/` (which is gitignored). The data must be
+  # available for the `Huddlz.Geocoding.TimeZoneLookup` module to function correctly.
+  # If running in a fresh checkout, `mix setup` will handle this automatically.
+  #
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
@@ -150,6 +155,7 @@ defmodule Huddlz.MixProject do
         "cmd cp -n .test.env.example .test.env 2>/dev/null || true",
         "deps.get",
         "ash.setup",
+        "tz_world.update",
         "assets.setup",
         "assets.build",
         "run priv/repo/seeds.exs",
