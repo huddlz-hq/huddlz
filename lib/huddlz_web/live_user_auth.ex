@@ -4,6 +4,7 @@ defmodule HuddlzWeb.LiveUserAuth do
   """
 
   import Phoenix.Component
+  import Phoenix.LiveView, only: [get_connect_params: 1]
   use HuddlzWeb, :verified_routes
 
   alias AshAuthentication.Phoenix.LiveSession
@@ -84,6 +85,7 @@ defmodule HuddlzWeb.LiveUserAuth do
       socket
       |> maybe_load_user_details()
       |> assign(:body_class, body_class)
+      |> assign(:browser_time_zone, get_connect_params(socket)["timezone"])
       |> assign_new(:sidebar_owned_groups, fn -> load_sidebar_owned_groups(socket) end)
       |> assign_new(:unread_notification_count, fn -> load_unread_notification_count(socket) end)
       |> subscribe_to_organizer_access_changes()
