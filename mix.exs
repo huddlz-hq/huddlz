@@ -131,7 +131,9 @@ defmodule Huddlz.MixProject do
       {:phoenix_test, "~> 0.12", only: :test},
       {:slugify, "~> 1.3"},
       {:remote_ip, "~> 1.1"},
-      {:envious, "~> 1.0"}
+      {:envious, "~> 1.0"},
+      {:tz_world, "~> 1.4"},
+      {:geo, "~> 3.6"}
     ]
   end
 
