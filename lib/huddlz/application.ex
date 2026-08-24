@@ -18,6 +18,8 @@ defmodule Huddlz.Application do
        )},
       {Phoenix.PubSub, name: Huddlz.PubSub},
       {Huddlz.RateLimit, clean_period: :timer.minutes(1)},
+      # Start TzWorld backend for timezone lookups
+      TzWorld.Backend.Memory,
       # Start a worker by calling: Huddlz.Worker.start_link(arg)
       # {Huddlz.Worker, arg},
       # Start to serve requests, typically the last entry
