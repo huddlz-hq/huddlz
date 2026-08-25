@@ -64,6 +64,8 @@ defmodule Huddlz.Communities do
       define :transfer_group_ownership,
         action: :transfer_ownership,
         args: [:new_owner_id]
+
+      define :destroy_group, action: :destroy
     end
 
     resource Huddlz.Communities.GroupImage do
@@ -118,6 +120,8 @@ defmodule Huddlz.Communities do
       define :decline_group_invitation, action: :decline
       define :revoke_group_invitation, action: :revoke
       define :expire_group_invitation, action: :expire
+      define :list_pending_group_invitations_for_user, action: :pending_for_user
+      define :count_pending_group_invitations_for_user, action: :count_pending_for_user
     end
 
     resource Huddlz.Communities.HuddlAttendee do

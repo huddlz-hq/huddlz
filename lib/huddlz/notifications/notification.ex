@@ -56,28 +56,6 @@ defmodule Huddlz.Notifications.Notification do
                  default_limit: 20
     end
 
-    read :invites_for_user do
-      description """
-      Notifications that need a response from the actor — backs the Invites
-      filter. Read rows remain available as history; callers that need the
-      unread count add a read_at filter. The "needs response" trigger set is
-      intentionally narrow; revisit when new invitation flows ship.
-      """
-
-      filter expr(
-               user_id == ^actor(:id) and
-                 trigger in ["waitlist_promoted", "group_member_added", "group_invitation"]
-             )
-
-      prepare build(sort: [inserted_at: :desc])
-
-      pagination keyset?: true,
-                 offset?: true,
-                 countable: true,
-                 required?: false,
-                 default_limit: 20
-    end
-
     update :mark_read do
       description "Mark a notification as read. No-op if already read."
       require_atomic? false
@@ -120,10 +98,6 @@ defmodule Huddlz.Notifications.Notification do
     end
 
     policy action(:for_user) do
-      authorize_if actor_present()
-    end
-
-    policy action(:invites_for_user) do
       authorize_if actor_present()
     end
 

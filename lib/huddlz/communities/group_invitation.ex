@@ -18,6 +18,7 @@ defmodule Huddlz.Communities.GroupInvitation do
   alias Huddlz.Communities.GroupInvitation.Changes.NotifyInvitee
   alias Huddlz.Communities.GroupInvitation.Changes.SetExpiration
   alias Huddlz.Communities.GroupInvitation.Checks.InviteeIsNotMember
+  alias Huddlz.Communities.GroupInvitation.Preparations.LoadPendingDetails
   alias Huddlz.Communities.GroupInvitation.Validations.GroupIsPrivate
   alias Huddlz.Communities.GroupInvitation.Validations.PendingAndCurrent
   alias Huddlz.Communities.GroupMember.Checks.GroupOrganizer
@@ -94,6 +95,32 @@ defmodule Huddlz.Communities.GroupInvitation do
       prepare build(sort: [inserted_at: :desc])
     end
 
+    read :pending_for_user do
+      description "Pending, current invitations addressed to the actor — backs the Invites tab."
+
+      filter expr(invitee_id == ^actor(:id) and status == :pending and expires_at > now())
+
+      prepare build(sort: [inserted_at: :desc])
+
+      prepare LoadPendingDetails
+
+      pagination keyset?: true,
+                 offset?: true,
+                 countable: true,
+                 required?: false,
+                 default_limit: 20
+    end
+
+    action :count_pending_for_user, :integer do
+      description "Count pending, current invitations addressed to the actor."
+
+      run fn _input, context ->
+        __MODULE__
+        |> Ash.Query.for_read(:pending_for_user, %{}, actor: context.actor)
+        |> Ash.count()
+      end
+    end
+
     update :accept do
       description "Accept a current pending invitation and grant membership once."
       accept []
@@ -159,7 +186,7 @@ defmodule Huddlz.Communities.GroupInvitation do
       authorize_if GroupOrganizer
     end
 
-    policy action([:mine, :get_mine]) do
+    policy action([:mine, :get_mine, :pending_for_user, :count_pending_for_user]) do
       authorize_if actor_present()
     end
 

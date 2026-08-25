@@ -75,10 +75,7 @@ defmodule HuddlzWeb.GroupInvitationLive do
          |> put_flash(:info, "Welcome to #{invitation.group.name}.")}
 
       {:error, _reason} ->
-        {:noreply,
-         socket
-         |> assign(:invitation, normalize_expiration(invitation, user))
-         |> put_flash(:error, "This invitation can no longer be accepted.")}
+        handle_stale_response(socket, invitation, user)
     end
   end
 
@@ -93,10 +90,30 @@ defmodule HuddlzWeb.GroupInvitationLive do
          |> put_flash(:info, "Invitation declined.")}
 
       {:error, _reason} ->
+        handle_stale_response(socket, invitation, user)
+    end
+  end
+
+  defp handle_stale_response(socket, invitation, user) do
+    case load_invitation(invitation.id, user) do
+      {:ok, reloaded} ->
+        reloaded = normalize_expiration(reloaded, user)
+
+        message =
+          if reloaded.status == :pending,
+            do: "Something went wrong. Please try again.",
+            else: unavailable_message(reloaded.status)
+
         {:noreply,
          socket
-         |> assign(:invitation, normalize_expiration(invitation, user))
-         |> put_flash(:error, "This invitation can no longer be declined.")}
+         |> assign(:invitation, reloaded)
+         |> put_flash(:error, message)}
+
+      _ ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "That invitation isn't available.")
+         |> push_navigate(to: ~p"/notifications?filter=invites")}
     end
   end
 
@@ -135,6 +152,14 @@ defmodule HuddlzWeb.GroupInvitationLive do
       unread_notification_count={@unread_notification_count}
       active="notifications"
     >
+      <.link
+        id="back-to-invitations"
+        class="invitation-back-link"
+        navigate={~p"/notifications?filter=invites"}
+      >
+        <.icon name="hero-arrow-left" class="size-4" /> Back to invitations
+      </.link>
+
       <div class="page-head">
         <div>
           <h1>Group invitation</h1>
@@ -143,21 +168,23 @@ defmodule HuddlzWeb.GroupInvitationLive do
       </div>
 
       <div id="group-invitation" class="panel max-w-2xl">
-        <div class="panel-head">
-          <div>
+        <div class="panel-head invitation-detail-head">
+          <div class="min-w-0">
             <h2>{@invitation.group.name}</h2>
             <div class="panel-sub">
               Invited by {@invitation.inviter.display_name} · {role_label(@invitation.role)}
             </div>
           </div>
-          <span class={["pill", invitation_status_class(@invitation.status)]}>
+          <span
+            id="invitation-status"
+            class={["pill", invitation_status_class(@invitation.status)]}
+          >
             {invitation_status_label(@invitation.status)}
           </span>
         </div>
 
-        <p class="muted">
-          This private group stays hidden until you accept. Accepting adds it to My groups
-          and gives you access to its roster and huddlz.
+        <p id="invitation-status-description" class="muted">
+          {invitation_status_description(@invitation.status)}
         </p>
 
         <div :if={@invitation.status == :pending} class="actions mt-6">
@@ -191,6 +218,26 @@ defmodule HuddlzWeb.GroupInvitationLive do
   defp invitation_status_label(:declined), do: "Declined"
   defp invitation_status_label(:revoked), do: "Revoked"
   defp invitation_status_label(:expired), do: "Expired"
+
+  defp invitation_status_description(:pending) do
+    "This private group stays hidden until you accept. Accepting adds it to My groups and gives you access to its roster and huddlz."
+  end
+
+  defp invitation_status_description(:accepted) do
+    "You accepted this invitation. This private group is now available in My groups."
+  end
+
+  defp invitation_status_description(:declined) do
+    "You declined this invitation. The private group remains hidden from you."
+  end
+
+  defp invitation_status_description(:revoked) do
+    "The organizer revoked this invitation, so it can no longer be accepted."
+  end
+
+  defp invitation_status_description(:expired) do
+    "This invitation expired before it was accepted."
+  end
 
   defp invitation_status_class(:accepted), do: "cyan"
   defp invitation_status_class(status) when status in [:revoked, :expired], do: "muted"
