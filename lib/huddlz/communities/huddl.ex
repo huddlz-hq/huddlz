@@ -143,13 +143,22 @@ defmodule Huddlz.Communities.Huddl do
         :group_id,
         :group_location_id,
         :huddl_template_id,
-        :lifecycle_state,
-        :time_zone
+        :lifecycle_state
       ]
 
       # Virtual arguments for form inputs
       argument :date, :date, allow_nil?: true
       argument :start_time, :time, allow_nil?: true
+
+      # The organizer's explicit time zone pick. Deliberately an argument
+      # rather than the `:time_zone` attribute: the attribute has a static
+      # `"Etc/UTC"` default that `Ash.Changeset.set_defaults/3` force-sets
+      # into `changeset.attributes` before the form renders, which makes an
+      # attribute-bound picker render pre-selected on "Etc/UTC" and submit it
+      # back on every create — indistinguishable from an explicit pick. A
+      # nil-defaulted argument has no such default, so blank really means
+      # "auto-derive from location". See `Changes.ResolveTimeZone`.
+      argument :time_zone_selection, :string, allow_nil?: true
 
       argument :duration_minutes, :integer do
         allow_nil? true

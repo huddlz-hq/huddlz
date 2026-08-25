@@ -253,9 +253,8 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         <.select
           field={@form[:time_zone]}
           label="Time zone"
-          prompt="Auto-detect from location…"
           options={HuddlzWeb.Live.Helpers.TimeZoneOptions.options()}
-          help="Leave blank to use the location's time zone (or your current time zone for a virtual huddl)."
+          help="Change the address to re-derive this from the new location, or pick a zone here to override it."
         />
 
         <.when_panel form={@form} calculated_end_time={@calculated_end_time}>

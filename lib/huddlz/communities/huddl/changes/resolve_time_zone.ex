@@ -13,14 +13,18 @@ defmodule Huddlz.Communities.Huddl.Changes.ResolveTimeZone do
 
   ## Create
 
-  On create, Ash force-sets the resource's static `"Etc/UTC"` default into
-  `changeset.attributes` *before* this change runs (see
-  `Ash.Changeset.set_defaults/3`), so `Ash.Changeset.get_attribute/2` alone
-  can't distinguish "defaulted" from "explicitly submitted". We check
-  `changeset.defaults` (the list of attributes Ash defaulted rather than the
-  caller setting) instead, which is only populated on the defaulting path.
-  When defaulted, we resolve via geocoding with the full fallback chain
-  above; when explicitly submitted, we leave it untouched.
+  `:time_zone` is *not* accepted by the `:create` action; the organizer's
+  explicit pick arrives as the nullable `:time_zone_selection` argument
+  instead. This is what makes "blank means auto-derive" work: the attribute
+  carries a static `"Etc/UTC"` default that `Ash.Changeset.set_defaults/3`
+  force-sets into `changeset.attributes` before a form ever renders, so an
+  attribute-bound picker renders pre-selected on `"Etc/UTC"` and submits it
+  back on every create — leaving nothing to distinguish "defaulted" from
+  "explicitly picked". The argument has no default of its own, so a blank
+  submission really is blank.
+
+  So: a non-empty `:time_zone_selection` wins as-is; otherwise resolve via
+  geocoding with the full fallback chain above.
 
   ## Update
 
@@ -59,10 +63,12 @@ defmodule Huddlz.Communities.Huddl.Changes.ResolveTimeZone do
   end
 
   defp handle_create(changeset) do
-    if :time_zone in changeset.defaults do
-      force_set(changeset, resolve_with_fallback(changeset))
-    else
-      changeset
+    case Ash.Changeset.get_argument(changeset, :time_zone_selection) do
+      selected when is_binary(selected) and selected != "" ->
+        force_set(changeset, selected)
+
+      _ ->
+        force_set(changeset, resolve_with_fallback(changeset))
     end
   end
 

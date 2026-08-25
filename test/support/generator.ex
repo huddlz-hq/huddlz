@@ -173,32 +173,24 @@ defmodule Huddlz.Generator do
         # input bucket and StreamData randomly emits :utf8 strings (CJK,
         # private-use), which become URL-encoded slugs and break meta/URL
         # assertions.
-        slug: nil
+        slug: nil,
+        # `:create_group` doesn't accept `:time_zone`; an explicit pick goes
+        # through the nullable `:time_zone_selection` argument (see
+        # `SetTimeZoneFromLocation`). Pin it to nil by default so
+        # `Ash.Generator`'s optional-input fill doesn't emit a random string
+        # for it (the same trap `:slug` above sidesteps), letting the
+        # resource's real derivation logic run; `time_zone: "..."` on a
+        # generator call maps onto it as the explicit override.
+        time_zone_selection: opts[:time_zone]
       ]
-      |> Keyword.merge(Keyword.drop(opts, [:owner_id, :actor, :actor_role]))
+      |> Keyword.merge(Keyword.drop(opts, [:owner_id, :actor, :actor_role, :time_zone]))
       |> Map.new()
 
     changeset_opts =
       [actor: actor] ++ Keyword.take(opts, [:tenant, :scope, :authorize?, :context])
 
-    # `:time_zone` is a plain accepted attribute with a non-nil default, so
-    # `Ash.Generator`'s own attribute-fill logic (see `generate_attributes/5`
-    # in `Ash.Generator`) would otherwise inject a random string for it on
-    # every call that doesn't ask for an explicit override — clobbering
-    # `SetTimeZoneFromLocation`'s ability to tell "explicit" from "defaulted".
-    # Build input via `action_input/3` directly (instead of
-    # `changeset_generator/3`) so the key can be dropped entirely when no
-    # override is requested, letting the resource's real default/derivation
-    # logic run untouched.
     Ash.Generator.action_input(Group, :create_group, generators)
     |> StreamData.map(fn input ->
-      input =
-        if Keyword.has_key?(opts, :time_zone) do
-          input
-        else
-          Map.delete(input, :time_zone)
-        end
-
       Ash.Changeset.for_create(Group, :create_group, input, changeset_opts)
     end)
   end
@@ -349,31 +341,23 @@ defmodule Huddlz.Generator do
         lifecycle_state: :published,
         huddl_template_id: nil,
         is_recurring: false,
-        max_attendees: nil
+        max_attendees: nil,
+        # `:create` doesn't accept `:time_zone`; an explicit pick goes through
+        # the nullable `:time_zone_selection` argument (see `ResolveTimeZone`).
+        # Pin it to nil by default so `Ash.Generator`'s optional-input fill
+        # doesn't emit a random string for it, letting the resource's real
+        # derivation logic run; `time_zone: "..."` on a generator call maps
+        # onto it as the explicit override.
+        time_zone_selection: opts[:time_zone]
       ]
-      |> Keyword.merge(Keyword.drop(opts, [:creator_id, :actor]))
+      |> Keyword.merge(Keyword.drop(opts, [:creator_id, :actor, :time_zone]))
       |> Map.new()
 
     changeset_opts =
       [actor: actor] ++ Keyword.take(opts, [:tenant, :scope, :authorize?, :context])
 
-    # `:time_zone` is a plain accepted attribute with a non-nil default, so
-    # `Ash.Generator`'s own attribute-fill logic (see `generate_attributes/5`
-    # in `Ash.Generator`) would otherwise inject a random string for it on
-    # every call that doesn't ask for an explicit override — clobbering
-    # `ResolveTimeZone`'s ability to tell "explicit" from "defaulted". Build
-    # input via `action_input/3` directly (instead of `changeset_generator/3`)
-    # so the key can be dropped entirely when no override is requested,
-    # letting the resource's real default/derivation logic run untouched.
     Ash.Generator.action_input(Huddl, :create, generators)
     |> StreamData.map(fn input ->
-      input =
-        if Keyword.has_key?(opts, :time_zone) do
-          input
-        else
-          Map.delete(input, :time_zone)
-        end
-
       # `Ash.Changeset.for_create/4`'s `params` (3rd) argument only accepts
       # public inputs — private (`public?: false`) arguments like
       # `browser_time_zone`/`provided_latitude`/`provided_longitude`/

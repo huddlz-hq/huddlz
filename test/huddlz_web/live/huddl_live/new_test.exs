@@ -938,6 +938,100 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
     end
   end
 
+  describe "time zone on create" do
+    setup do
+      owner = generate(user(role: :user))
+      group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+      %{owner: owner, group: group}
+    end
+
+    test "the picker renders blank rather than pre-selected on the Etc/UTC default", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/new")
+
+      assert_has(session, "label", text: "Time zone")
+
+      # Regression: binding the picker to the `:time_zone` attribute rendered
+      # it pre-selected on the attribute's static "Etc/UTC" default (Ash
+      # force-sets defaults into `changeset.attributes` before the form is
+      # built), which then submitted back as an explicit pick and killed
+      # geo-derivation. The `:time_zone_selection` argument has no default.
+      refute session.conn.resp_body =~ ~s(<option selected value="Etc/UTC">)
+      refute session.conn.resp_body =~ ~s(<option value="Etc/UTC" selected>)
+    end
+
+    test "geo-derives the time zone from the location entered in the real form", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      # Austin, TX -> America/Chicago
+      stub_geocode(%{latitude: 30.27, longitude: -97.74})
+      date = Date.utc_today() |> Date.add(1) |> Date.to_iso8601()
+
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/new")
+        |> fill_in("Title", with: "Derived Zone Huddl")
+        |> fill_in("Description", with: "Its time zone comes from the location.")
+        |> fill_in("Date", with: date)
+        |> fill_in("Start time", with: "14:30")
+        |> select("Duration", option: "2 hours")
+
+      select_physical_location(session.view, "123 Main St")
+      click_button(session, "Schedule huddl")
+
+      huddl =
+        Huddl
+        |> Ash.Query.filter(title == "Derived Zone Huddl" and group_id == ^group.id)
+        |> Ash.read_one!(actor: owner)
+
+      assert huddl.time_zone == "America/Chicago"
+
+      # And the wall-time input was interpreted in that zone, not UTC.
+      assert huddl.starts_at
+             |> DateTime.shift_zone!("America/Chicago")
+             |> DateTime.to_time() == ~T[14:30:00]
+    end
+
+    test "keeps an explicit pick from the real form", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      stub_geocode(%{latitude: 30.27, longitude: -97.74})
+      date = Date.utc_today() |> Date.add(1) |> Date.to_iso8601()
+
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/new")
+        |> fill_in("Title", with: "Explicit Zone Huddl")
+        |> fill_in("Description", with: "Its organizer overrode the time zone.")
+        |> fill_in("Date", with: date)
+        |> fill_in("Start time", with: "14:30")
+        |> select("Duration", option: "2 hours")
+        |> select("Time zone", option: "America/Denver")
+
+      select_physical_location(session.view, "123 Main St")
+      click_button(session, "Schedule huddl")
+
+      huddl =
+        Huddl
+        |> Ash.Query.filter(title == "Explicit Zone Huddl" and group_id == ^group.id)
+        |> Ash.read_one!(actor: owner)
+
+      assert huddl.time_zone == "America/Denver"
+    end
+  end
+
   # Helper to simulate selecting a physical location via SavedLocationPicker
   defp select_physical_location(view, text) do
     location = %Huddlz.Communities.GroupLocation{

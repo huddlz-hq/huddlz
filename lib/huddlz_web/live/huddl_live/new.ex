@@ -196,7 +196,7 @@ defmodule HuddlzWeb.HuddlLive.New do
         <.format_panel form={@form} />
 
         <.select
-          field={@form[:time_zone]}
+          field={@form[:time_zone_selection]}
           label="Time zone"
           prompt="Auto-detect from location…"
           options={HuddlzWeb.Live.Helpers.TimeZoneOptions.options()}

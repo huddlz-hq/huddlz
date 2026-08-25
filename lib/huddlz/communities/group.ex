@@ -74,9 +74,19 @@ defmodule Huddlz.Communities.Group do
 
     create :create_group do
       description "Create a new group; the owner is always the current actor."
-      accept [:name, :description, :location, :is_public, :time_zone]
+      accept [:name, :description, :location, :is_public]
 
       argument :slug, :string, allow_nil?: true
+
+      # The organizer's explicit time zone pick. Deliberately an argument
+      # rather than the `:time_zone` attribute: the attribute has a static
+      # `"Etc/UTC"` default that `Ash.Changeset.set_defaults/3` force-sets
+      # into `changeset.attributes` before the form renders, which makes an
+      # attribute-bound picker render pre-selected on "Etc/UTC" and submit it
+      # back on every create — indistinguishable from an explicit pick. A
+      # nil-defaulted argument has no such default, so blank really means
+      # "auto-derive from location". See `Changes.SetTimeZoneFromLocation`.
+      argument :time_zone_selection, :string, allow_nil?: true
       argument :provided_latitude, :float, allow_nil?: true, public?: false
       argument :provided_longitude, :float, allow_nil?: true, public?: false
 

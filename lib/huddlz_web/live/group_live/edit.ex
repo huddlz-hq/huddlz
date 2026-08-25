@@ -313,7 +313,6 @@ defmodule HuddlzWeb.GroupLive.Edit do
             <.select
               field={@form[:time_zone]}
               label="Time zone"
-              prompt="Auto-detect from location…"
               options={HuddlzWeb.Live.Helpers.TimeZoneOptions.options()}
               help="Applies to new huddlz you create in this group unless you set a different time zone on the huddl itself."
             />
