@@ -1,6 +1,8 @@
 defmodule Huddlz.Communities.HuddlTest do
   use Huddlz.DataCase, async: true
 
+  alias Huddlz.Communities.Huddl
+
   describe "time_zone resolution" do
     test "defaults to Etc/UTC for an in-person huddl whose address can't be geocoded" do
       # GeocodingStub returns {:error, :not_found} by default; the generator's
@@ -62,6 +64,65 @@ defmodule Huddlz.Communities.HuddlTest do
         )
 
       assert huddl.time_zone == "America/Denver"
+    end
+
+    test "update re-derives time_zone when physical_location changes to a new geocoded address" do
+      stub_geocode(%{latitude: 30.27, longitude: -97.74})
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+
+      huddl = generate(huddl(group_id: group.id, actor: owner))
+      assert huddl.time_zone == "America/Chicago"
+
+      stub_geocode(%{latitude: 29.89, longitude: -81.31})
+
+      {:ok, updated} =
+        Huddl
+        |> Ash.get!(huddl.id, authorize?: false)
+        |> Ash.Changeset.for_update(:update, %{physical_location: "Saint Augustine, FL"},
+          actor: owner
+        )
+        |> Ash.update()
+
+      assert updated.time_zone == "America/New_York"
+    end
+
+    test "update keeps an explicit time_zone even when physical_location changes" do
+      stub_geocode(%{latitude: 30.27, longitude: -97.74})
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+
+      huddl = generate(huddl(group_id: group.id, actor: owner))
+
+      stub_geocode(%{latitude: 29.89, longitude: -81.31})
+
+      {:ok, updated} =
+        Huddl
+        |> Ash.get!(huddl.id, authorize?: false)
+        |> Ash.Changeset.for_update(
+          :update,
+          %{physical_location: "Saint Augustine, FL", time_zone: "America/Denver"},
+          actor: owner
+        )
+        |> Ash.update()
+
+      assert updated.time_zone == "America/Denver"
+    end
+
+    test "update that touches neither location nor time_zone leaves it unchanged" do
+      stub_geocode(%{latitude: 30.27, longitude: -97.74})
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+
+      huddl = generate(huddl(group_id: group.id, actor: owner))
+
+      {:ok, updated} =
+        Huddl
+        |> Ash.get!(huddl.id, authorize?: false)
+        |> Ash.Changeset.for_update(:update, %{title: "Renamed"}, actor: owner)
+        |> Ash.update()
+
+      assert updated.time_zone == huddl.time_zone
     end
   end
 

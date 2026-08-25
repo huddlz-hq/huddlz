@@ -845,5 +845,41 @@ defmodule Huddlz.Communities.GroupTest do
 
       assert updated.time_zone == group.time_zone
     end
+
+    test "update_details re-derives time_zone when the location changes" do
+      stub_geocode(%{latitude: 30.27, longitude: -97.74})
+      group = generate(group())
+      assert group.time_zone == "America/Chicago"
+
+      owner = Ash.get!(Huddlz.Accounts.User, group.owner_id, authorize?: false)
+      stub_geocode(%{latitude: 29.89, longitude: -81.31})
+
+      {:ok, updated} =
+        group
+        |> Ash.Changeset.for_update(:update_details, %{location: "Saint Augustine, FL"},
+          actor: owner
+        )
+        |> Ash.update()
+
+      assert updated.time_zone == "America/New_York"
+    end
+
+    test "update_details keeps an explicit time_zone even when the location changes" do
+      stub_geocode(%{latitude: 30.27, longitude: -97.74})
+      group = generate(group())
+      owner = Ash.get!(Huddlz.Accounts.User, group.owner_id, authorize?: false)
+      stub_geocode(%{latitude: 29.89, longitude: -81.31})
+
+      {:ok, updated} =
+        group
+        |> Ash.Changeset.for_update(
+          :update_details,
+          %{location: "Saint Augustine, FL", time_zone: "America/Denver"},
+          actor: owner
+        )
+        |> Ash.update()
+
+      assert updated.time_zone == "America/Denver"
+    end
   end
 end
