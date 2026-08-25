@@ -107,9 +107,12 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> login(member)
       |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
       |> assert_has("aside.huddl-side h3", text: "Share")
-      |> assert_has("a[href^='mailto:?subject=Virtual%20Meeting']")
+      |> assert_has("#share-huddl-modal-email[href^='mailto:?subject=Virtual%20Meeting']")
       |> assert_has("#share-huddl-modal-open[phx-click*='share-huddl-modal']")
       |> assert_has("#share-huddl-modal-url[value='#{huddl_url}']")
+      |> assert_has(
+        "#share-huddl-modal-copy[data-copy-target='#share-huddl-modal-url'] #share-huddl-modal-copy-label[phx-hook='ClipboardCopy'][phx-update='ignore']"
+      )
       |> assert_has("#share-huddl-modal .qr-frame svg")
     end
 
@@ -118,7 +121,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       conn
       |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
-      |> assert_has("a[href^='mailto:?subject=Virtual%20Meeting']")
+      |> assert_has("#share-huddl-modal-email[href^='mailto:?subject=Virtual%20Meeting']")
       |> assert_has("#share-huddl-modal-url[value='#{huddl_url}']")
     end
 

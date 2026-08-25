@@ -20,7 +20,7 @@ defmodule HuddlzWeb.Components.ShareModal do
   def share_actions(assigns) do
     ~H"""
     <div class="side-actions">
-      <Button.button variant={:secondary} href={mailto_href(@url, @title)}>
+      <Button.button id={"#{@id}-email"} variant={:secondary} href={mailto_href(@url, @title)}>
         <Icon.icon name="hero-envelope" class="size-4" /> Email
       </Button.button>
       <Button.button
@@ -67,11 +67,18 @@ defmodule HuddlzWeb.Components.ShareModal do
         <button
           type="button"
           id={"#{@id}-copy"}
-          phx-hook="ClipboardCopy"
           data-value={@url}
+          data-copy-target={"##{@id}-url"}
           class="btn-secondary"
         >
-          <span data-copy-label>Copy link</span>
+          <span
+            id={"#{@id}-copy-label"}
+            phx-hook="ClipboardCopy"
+            phx-update="ignore"
+            aria-live="polite"
+          >
+            Copy link
+          </span>
         </button>
       </div>
     </Modal.modal>
