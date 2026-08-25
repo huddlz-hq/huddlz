@@ -16,3 +16,7 @@ Feature: Individual notification read state
     And I should see "Waitlist promoted: Elixir Picnic"
     And I should see "Open"
     And the "Mark read" button should not be visible
+    When I visit "/notifications?filter=invites"
+    Then I should see "Invites · 0"
+    And I should see "No pending invitations."
+    And I should not see "Waitlist promoted: Elixir Picnic"

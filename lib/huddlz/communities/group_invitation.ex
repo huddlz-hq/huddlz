@@ -18,6 +18,7 @@ defmodule Huddlz.Communities.GroupInvitation do
   alias Huddlz.Communities.GroupInvitation.Changes.NotifyInvitee
   alias Huddlz.Communities.GroupInvitation.Changes.SetExpiration
   alias Huddlz.Communities.GroupInvitation.Checks.InviteeIsNotMember
+  alias Huddlz.Communities.GroupInvitation.Preparations.LoadPendingDetails
   alias Huddlz.Communities.GroupInvitation.Validations.GroupIsPrivate
   alias Huddlz.Communities.GroupInvitation.Validations.PendingAndCurrent
   alias Huddlz.Communities.GroupMember.Checks.GroupOrganizer
@@ -101,22 +102,23 @@ defmodule Huddlz.Communities.GroupInvitation do
 
       prepare build(sort: [inserted_at: :desc])
 
-      # `Group`'s own read policy only authorizes public groups or existing
-      # members — a pending invitee to a private group is neither, so a
-      # normally-authorized `load: [:group, :inviter]` would nil out `:group`.
-      # Load with authorization off instead, same as
-      # `Communities.load_group_invitation_details!/1`.
-      prepare fn query, _context ->
-        Ash.Query.after_action(query, fn _query, results ->
-          Ash.load(results, [:group, :inviter], authorize?: false)
-        end)
-      end
+      prepare LoadPendingDetails
 
       pagination keyset?: true,
                  offset?: true,
                  countable: true,
                  required?: false,
                  default_limit: 20
+    end
+
+    action :count_pending_for_user, :integer do
+      description "Count pending, current invitations addressed to the actor."
+
+      run fn _input, context ->
+        __MODULE__
+        |> Ash.Query.for_read(:pending_for_user, %{}, actor: context.actor)
+        |> Ash.count()
+      end
     end
 
     update :accept do
@@ -184,7 +186,7 @@ defmodule Huddlz.Communities.GroupInvitation do
       authorize_if GroupOrganizer
     end
 
-    policy action([:mine, :get_mine, :pending_for_user]) do
+    policy action([:mine, :get_mine, :pending_for_user, :count_pending_for_user]) do
       authorize_if actor_present()
     end
 

@@ -49,6 +49,8 @@ defmodule HuddlzWeb.GroupInvitationLiveTest do
       |> live(~p"/invitations/#{invitation.id}")
 
     assert has_element?(invitation_view, "#accept-invitation")
+    assert has_element?(invitation_view, "#back-to-invitations", "Back to invitations")
+    assert has_element?(invitation_view, "#invitation-status-description", "stays hidden")
     refute has_element?(invitation_view, "#open-invited-group")
 
     invitation_view
@@ -56,6 +58,13 @@ defmodule HuddlzWeb.GroupInvitationLiveTest do
     |> render_click()
 
     assert has_element?(invitation_view, "#open-invited-group")
+
+    assert has_element?(
+             invitation_view,
+             "#invitation-status-description",
+             "You accepted this invitation."
+           )
+
     refute has_element?(invitation_view, "#accept-invitation")
 
     assert Communities.get_membership_in_group!(group.id, actor: invitee).role == :member
@@ -99,6 +108,7 @@ defmodule HuddlzWeb.GroupInvitationLiveTest do
 
     assert has_element?(view, "#flash-info", "Invitation declined.")
     assert has_element?(view, "span.pill", "Declined")
+    assert has_element?(view, "#invitation-status-description", "You declined this invitation.")
     refute has_element?(view, "#accept-invitation")
     refute has_element?(view, "#decline-invitation")
   end

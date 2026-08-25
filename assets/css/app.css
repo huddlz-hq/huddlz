@@ -2431,6 +2431,12 @@ body .notif-actions {
 body .notif-actions .pill {
   transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
 }
+body .invitation-open-action {
+  min-width: 88px;
+  min-height: 36px;
+  padding-inline: 16px;
+  justify-content: center;
+}
 body .notif-actions a.pill:hover,
 body .notif-actions button.pill:hover {
   color: var(--text);
@@ -2464,6 +2470,27 @@ body .notif-mark.cyan { background: var(--cyan); box-shadow: 0 0 8px rgba(24, 20
 body .notif-mark.warn { background: var(--warn); box-shadow: 0 0 8px rgba(246, 193, 119, 0.5); }
 body .notif-mark.muted { background: var(--line-strong); box-shadow: none; }
 
+body .invitation-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  transition: color 0.15s ease;
+}
+
+body .invitation-back-link:hover { color: var(--cyan); }
+body .invitation-back-link:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+
+body .invitation-detail-head h2 { overflow-wrap: anywhere; }
+
 @media (max-width: 760px) {
   body .row.notif-row {
     grid-template-columns: 14px minmax(0, 1fr);
@@ -2472,6 +2499,14 @@ body .notif-mark.muted { background: var(--line-strong); box-shadow: none; }
   body .notif-resolved {
     max-width: none;
     text-align: left;
+  }
+
+  body .invitation-row .notif-actions { width: 100%; }
+  body .invitation-row .invitation-open-action { width: 100%; }
+  body .invitation-detail-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
 }
 

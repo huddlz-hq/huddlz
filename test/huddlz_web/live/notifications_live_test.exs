@@ -1,10 +1,15 @@
 defmodule HuddlzWeb.NotificationsLiveTest do
   use HuddlzWeb.ConnCase, async: false
 
-  alias Huddlz.Communities
-
   import Phoenix.LiveViewTest,
-    only: [element: 2, has_element?: 2, has_element?: 3, live: 2, render_click: 1]
+    only: [
+      element: 2,
+      has_element?: 2,
+      has_element?: 3,
+      live: 2,
+      render_click: 1,
+      render_patch: 2
+    ]
 
   alias Ecto.Adapters.SQL
   alias Huddlz.Communities
@@ -193,7 +198,10 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       |> assert_has(".filters .chip.is-active", text: "Invites")
       |> assert_has(".filters .chip", text: "Invites · 1")
       |> assert_has(".row-title", text: "Invitation to #{group.name}")
-      |> assert_has(~s|a.pill[href="/invitations/#{invitation.id}"]|, text: "Open")
+      |> assert_has(
+        ~s|#open-invitation-#{invitation.id}[href="/invitations/#{invitation.id}"]|,
+        text: "Open"
+      )
     end
 
     test "accepting, declining, revoking, or expiring an invitation removes it from the list and count",
@@ -250,6 +258,58 @@ defmodule HuddlzWeb.NotificationsLiveTest do
 
       assert has_element?(invites_view, ".filters .chip", "Invites · 1")
       assert has_element?(invites_view, "#invitation-#{invitation.id}")
+    end
+
+    test "waitlist and membership notifications stay in Inbox while Invites shows real invitations",
+         %{conn: conn, user: user} do
+      %{invitation: invitation} = invite_group_invitation(user)
+      {group, huddl} = create_huddl_target(user)
+
+      waitlist_notification =
+        seed_notification(user, :waitlist_promoted, %{
+          "group_slug" => group.slug,
+          "huddl_id" => huddl.id,
+          "huddl_title" => "Elixir Picnic",
+          "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at)
+        })
+
+      member_notification =
+        seed_notification(user, :group_member_added, %{
+          "group_slug" => group.slug,
+          "group_name" => group.name
+        })
+
+      conn
+      |> login(user)
+      |> visit("/notifications")
+      |> assert_has("#notification-#{waitlist_notification.id}")
+      |> assert_has("#notification-#{member_notification.id}")
+      |> visit("/notifications?filter=invites")
+      |> assert_has("#invitation-#{invitation.id}")
+      |> refute_has("#notification-#{waitlist_notification.id}")
+      |> refute_has("#notification-#{member_notification.id}")
+    end
+
+    test "switching filters resets their rendered collections without stale rows", %{
+      conn: conn,
+      user: user
+    } do
+      %{invitation: invitation} = invite_group_invitation(user)
+      notification = seed_notification(user, :password_changed, %{})
+      {:ok, view, _html} = conn |> login(user) |> live("/notifications")
+
+      assert has_element?(view, "#notification-#{notification.id}")
+      refute has_element?(view, "#invitation-#{invitation.id}")
+
+      render_patch(view, "/notifications?filter=invites")
+
+      assert has_element?(view, "#invitation-#{invitation.id}")
+      refute has_element?(view, "#notification-#{notification.id}")
+
+      render_patch(view, "/notifications")
+
+      assert has_element?(view, "#notification-#{notification.id}")
+      refute has_element?(view, "#invitation-#{invitation.id}")
     end
   end
 
@@ -330,7 +390,7 @@ defmodule HuddlzWeb.NotificationsLiveTest do
           "group_name" => group.name
         })
 
-      :ok = Ash.destroy(group, actor: user)
+      :ok = Communities.destroy_group(group, actor: user)
 
       conn
       |> login(user)
@@ -472,13 +532,38 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       {:ok, %{results: [notification]}} =
         Notifications.list_for_user(actor: user, page: [limit: 10])
 
-      :ok = Ash.destroy(group, actor: owner)
+      :ok = Communities.destroy_group(group, actor: owner)
 
       conn
       |> login(user)
       |> visit("/notifications")
       |> assert_has("#notification-#{notification.id}-resolved", text: "Destination unavailable")
       |> refute_has("#notification-#{notification.id}-open")
+    end
+
+    test "an invitation target removed after render returns to the notification fallback", %{
+      conn: conn,
+      user: user
+    } do
+      %{owner: owner, group: group} = invite_group_invitation(user)
+
+      {:ok, %{results: [notification]}} =
+        Notifications.list_for_user(actor: user, page: [limit: 10])
+
+      session =
+        conn
+        |> login(user)
+        |> visit("/notifications")
+        |> assert_has("#notification-#{notification.id}-open", text: "Open")
+
+      :ok = Communities.destroy_group(group, actor: owner)
+
+      session
+      |> click_link("#notification-#{notification.id}-open", "Open")
+      |> assert_path("/notifications")
+      |> assert_has("[role=alert]",
+        text: "That notification destination is no longer available"
+      )
     end
 
     test "clicking a target removed after render returns to a notification-aware fallback", %{

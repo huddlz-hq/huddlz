@@ -306,6 +306,79 @@ defmodule Huddlz.Communities.GroupInvitationTest do
                  page: [limit: 100]
                )
     end
+
+    test "counts only the actor's pending, current invitations", context do
+      %{owner: owner, invitee: invitee, group: group} = context
+
+      Communities.invite_to_group!(group.id, invitee.id, :member, actor: owner)
+
+      accepted_group =
+        generate(
+          group(
+            name: "Accepted Count Group #{System.unique_integer([:positive])}",
+            owner_id: owner.id,
+            actor: owner,
+            is_public: false
+          )
+        )
+
+      accepted_group.id
+      |> Communities.invite_to_group!(invitee.id, :member, actor: owner)
+      |> Communities.accept_group_invitation!(actor: invitee)
+
+      declined_group =
+        generate(
+          group(
+            name: "Declined Count Group #{System.unique_integer([:positive])}",
+            owner_id: owner.id,
+            actor: owner,
+            is_public: false
+          )
+        )
+
+      declined_group.id
+      |> Communities.invite_to_group!(invitee.id, :member, actor: owner)
+      |> Communities.decline_group_invitation!(actor: invitee)
+
+      revoked_group =
+        generate(
+          group(
+            name: "Revoked Count Group #{System.unique_integer([:positive])}",
+            owner_id: owner.id,
+            actor: owner,
+            is_public: false
+          )
+        )
+
+      revoked_group.id
+      |> Communities.invite_to_group!(invitee.id, :member, actor: owner)
+      |> Communities.revoke_group_invitation!(actor: owner)
+
+      expired_group =
+        generate(
+          group(
+            name: "Expired Count Group #{System.unique_integer([:positive])}",
+            owner_id: owner.id,
+            actor: owner,
+            is_public: false
+          )
+        )
+
+      expired_group.id
+      |> Communities.invite_to_group!(invitee.id, :member, actor: owner)
+      |> expire_in_database()
+
+      stranger = generate(user())
+      Communities.invite_to_group!(group.id, stranger.id, :member, actor: owner)
+
+      assert {:ok, 1} = Communities.count_pending_group_invitations_for_user(actor: invitee)
+      assert {:ok, 1} = Communities.count_pending_group_invitations_for_user(actor: stranger)
+    end
+
+    test "requires an actor to count pending invitations" do
+      assert {:error, %Ash.Error.Forbidden{}} =
+               Communities.count_pending_group_invitations_for_user()
+    end
   end
 
   defp expire_in_database(invitation) do
