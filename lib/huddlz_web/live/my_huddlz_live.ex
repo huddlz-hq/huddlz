@@ -14,6 +14,7 @@ defmodule HuddlzWeb.MyHuddlzLive do
   import HuddlzWeb.Live.Helpers.ParamHelpers
 
   alias Huddlz.Communities
+  alias Huddlz.DateTimeFormatting
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
   require Logger
@@ -239,7 +240,7 @@ defmodule HuddlzWeb.MyHuddlzLive do
         <.pill variant={pill_variant(@huddl, @filter)}>
           {pill_label(@huddl, @filter)}
         </.pill>
-        <span class="muted" style="font-size:12px">{relative_time(@huddl.starts_at)}</span>
+        <span class="muted" style="font-size:12px">{relative_time(@huddl, @current_user)}</span>
       </:foot>
     </.card>
     """
@@ -285,7 +286,7 @@ defmodule HuddlzWeb.MyHuddlzLive do
   defp filter_pill_label(:waitlisted), do: "Waitlist"
   defp filter_pill_label(:past), do: "Attended"
 
-  defp relative_time(%DateTime{} = dt) do
+  defp relative_time(%{starts_at: %DateTime{} = dt} = huddl, current_user) do
     diff_seconds = DateTime.diff(dt, DateTime.utc_now(), :second)
     abs_seconds = abs(diff_seconds)
     future? = diff_seconds >= 0
@@ -295,8 +296,17 @@ defmodule HuddlzWeb.MyHuddlzLive do
       abs_seconds < 86_400 -> format_hours(div(abs_seconds, 3600), future?)
       abs_seconds < 7 * 86_400 -> format_days(div(abs_seconds, 86_400), future?)
       abs_seconds < 30 * 86_400 -> format_weeks(div(abs_seconds, 7 * 86_400), future?)
-      true -> Calendar.strftime(dt, "%b %d, %Y")
+      true -> absolute_date(dt, huddl, current_user)
     end
+  end
+
+  # The far-out fallback is a calendar date, so it has to be rendered in the
+  # same zone as the rest of the card (viewer preference, else the huddl's own
+  # zone) — raw UTC can name the wrong day.
+  defp absolute_date(dt, huddl, current_user) do
+    dt
+    |> DateTimeFormatting.shift(DateTimeFormatting.resolve_zone(current_user, huddl))
+    |> Calendar.strftime("%b %d, %Y")
   end
 
   defp format_hours(1, true), do: "1 hour away"

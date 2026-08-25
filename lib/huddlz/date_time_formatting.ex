@@ -6,12 +6,27 @@ defmodule Huddlz.DateTimeFormatting do
 
   @default_time_zone "Etc/UTC"
 
+  @typedoc """
+  Anything carrying a `:time_zone_preference` — in practice a
+  `Huddlz.Accounts.User`, or a plain map in tests.
+  """
+  @type viewer :: %{optional(:time_zone_preference) => String.t() | nil} | nil
+
+  @typedoc """
+  Anything carrying a `:time_zone` — in practice a `Huddlz.Communities.Huddl`
+  or `Huddlz.Communities.Group`, or a plain map in tests.
+  """
+  @type zoned :: %{optional(:time_zone) => String.t() | nil} | nil
+
   @doc """
   Resolves the zone to display a huddl's time in for a given viewer:
   the viewer's `time_zone_preference` if set, else the huddl's own
   `time_zone`, else `"Etc/UTC"`.
+
+  Both arguments are read structurally (`Map.get/2`), so any map with the
+  relevant key works — callers pass loaded records, and tests pass bare maps.
   """
-  @spec resolve_zone(map() | nil, map() | nil) :: String.t()
+  @spec resolve_zone(viewer(), zoned()) :: String.t()
   def resolve_zone(user, huddl) do
     cond do
       present?(user && Map.get(user, :time_zone_preference)) ->
@@ -30,7 +45,7 @@ defmodule Huddlz.DateTimeFormatting do
   "what day is today" on the calendar grid): the viewer's `time_zone_preference`
   if set, else the given browser-detected zone, else `"Etc/UTC"`.
   """
-  @spec resolve_viewer_zone(map() | nil, String.t() | nil) :: String.t()
+  @spec resolve_viewer_zone(viewer(), String.t() | nil) :: String.t()
   def resolve_viewer_zone(user, browser_time_zone) do
     cond do
       present?(user && Map.get(user, :time_zone_preference)) ->

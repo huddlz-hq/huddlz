@@ -16,6 +16,7 @@ defmodule HuddlzWeb.NotificationsLive do
   import HuddlzWeb.Live.Helpers.ParamHelpers
 
   alias Huddlz.Communities
+  alias Huddlz.DateTimeFormatting
   alias Huddlz.Notifications
   alias Huddlz.Notifications.Notification
   alias Huddlz.Notifications.Target
@@ -34,6 +35,13 @@ defmodule HuddlzWeb.NotificationsLive do
      socket
      |> assign(:page_title, "Notifications")
      |> assign(:items_empty?, true)
+     |> assign(
+       :viewer_zone,
+       DateTimeFormatting.resolve_viewer_zone(
+         socket.assigns[:current_user],
+         socket.assigns[:browser_time_zone]
+       )
+     )
      |> assign(:notification_targets, %{})
      |> assign(:counts, %{inbox: 0, invites: 0})
      |> assign(:page_info, %{total_pages: 1, current_page: 1, total_count: 0})
@@ -243,6 +251,7 @@ defmodule HuddlzWeb.NotificationsLive do
                   :for={{dom_id, invitation} <- @streams.invitations}
                   id={dom_id}
                   invitation={invitation}
+                  viewer_zone={@viewer_zone}
                 />
               </div>
             <% else %>
@@ -252,6 +261,7 @@ defmodule HuddlzWeb.NotificationsLive do
                   id={dom_id}
                   notification={notification}
                   target={Map.get(@notification_targets, notification.id, :none)}
+                  viewer_zone={@viewer_zone}
                 />
               </div>
             <% end %>
@@ -271,6 +281,7 @@ defmodule HuddlzWeb.NotificationsLive do
   attr :id, :string, required: true
   attr :notification, :map, required: true
   attr :target, :any, required: true
+  attr :viewer_zone, :string, required: true
 
   defp notification_row(assigns) do
     read? = !is_nil(assigns.notification.read_at)
@@ -284,7 +295,9 @@ defmodule HuddlzWeb.NotificationsLive do
       <div class={["notif-mark", mark_color(@notification)]} aria-hidden="true"></div>
       <div>
         <div class="row-title">{@notification.title}</div>
-        <div :if={meta_line(@notification)} class="meta">{meta_line(@notification)}</div>
+        <div :if={meta_line(@notification, @viewer_zone)} class="meta">
+          {meta_line(@notification, @viewer_zone)}
+        </div>
       </div>
       <div
         :if={@target != :none or @unread}
@@ -337,6 +350,7 @@ defmodule HuddlzWeb.NotificationsLive do
 
   attr :id, :string, required: true
   attr :invitation, :map, required: true
+  attr :viewer_zone, :string, required: true
 
   defp invitation_row(assigns) do
     ~H"""
@@ -344,7 +358,7 @@ defmodule HuddlzWeb.NotificationsLive do
       <div class="notif-mark cyan" aria-hidden="true"></div>
       <div>
         <div class="row-title">Invitation to {@invitation.group.name}</div>
-        <div class="meta">{invitation_meta_line(@invitation)}</div>
+        <div class="meta">{invitation_meta_line(@invitation, @viewer_zone)}</div>
       </div>
       <div class="notif-actions" id={"invitation-actions-#{@invitation.id}"}>
         <.link
@@ -360,8 +374,8 @@ defmodule HuddlzWeb.NotificationsLive do
     """
   end
 
-  defp invitation_meta_line(%{inviter: inviter, role: role, inserted_at: at}) do
-    "Invited by #{inviter.display_name} · #{invitation_role_label(role)} · #{format_time_ago(at)}"
+  defp invitation_meta_line(%{inviter: inviter, role: role, inserted_at: at}, viewer_zone) do
+    "Invited by #{inviter.display_name} · #{invitation_role_label(role)} · #{format_time_ago(at, viewer_zone)}"
   end
 
   defp invitation_role_label(:organizer), do: "Organizer"
@@ -397,15 +411,23 @@ defmodule HuddlzWeb.NotificationsLive do
 
   defp transactional_triggers, do: @transactional_triggers
 
-  defp meta_line(%{description: desc, inserted_at: %DateTime{} = at})
+  defp meta_line(notification, viewer_zone)
+
+  defp meta_line(%{description: desc, inserted_at: %DateTime{} = at}, viewer_zone)
        when is_binary(desc) and desc != "" do
-    "#{desc} · #{format_time_ago(at)}"
+    "#{desc} · #{format_time_ago(at, viewer_zone)}"
   end
 
-  defp meta_line(%{inserted_at: %DateTime{} = at}), do: format_time_ago(at)
-  defp meta_line(_), do: nil
+  defp meta_line(%{inserted_at: %DateTime{} = at}, viewer_zone),
+    do: format_time_ago(at, viewer_zone)
 
-  defp format_time_ago(%DateTime{} = dt) do
+  defp meta_line(_, _viewer_zone), do: nil
+
+  # `inserted_at` is when the notification was delivered — no huddl involved —
+  # so the absolute fallback is rendered in the viewer's own zone (their
+  # preference, else the browser-detected one), matching the calendar's
+  # viewer-only zone resolution.
+  defp format_time_ago(%DateTime{} = dt, viewer_zone) do
     diff = DateTime.diff(DateTime.utc_now(), dt, :second)
 
     cond do
@@ -413,7 +435,7 @@ defmodule HuddlzWeb.NotificationsLive do
       diff < 3600 -> "#{div(diff, 60)}m ago"
       diff < 86_400 -> "#{div(diff, 3600)}h ago"
       diff < 7 * 86_400 -> "#{div(diff, 86_400)}d ago"
-      true -> Calendar.strftime(dt, "%b %d, %Y")
+      true -> dt |> DateTimeFormatting.shift(viewer_zone) |> Calendar.strftime("%b %d, %Y")
     end
   end
 end
