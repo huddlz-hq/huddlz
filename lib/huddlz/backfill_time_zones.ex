@@ -7,6 +7,23 @@ defmodule Huddlz.BackfillTimeZones do
   can't be geo-derived directly inherit their (already-backfilled) group's
   zone.
 
+  Deliberately **not** implemented with `Ash.stream!/2`: the target row set
+  (`time_zone == "Etc/UTC"`) shrinks as each row is successfully backfilled,
+  and an offset-based streaming strategy re-issues `LIMIT/OFFSET` against
+  that same shrinking filtered set on every batch — once a full batch
+  succeeds, the next `OFFSET` lands past the end of the (now smaller)
+  matching set and the stream silently halts, skipping every row after the
+  first batch with no error. (`Huddl`'s primary `:read` action has no
+  `pagination` block at all, so `Ash.stream!/2` can't use stable keyset
+  pagination for it regardless of `allow_stream_with` — it falls back to
+  exactly this unstable offset strategy.) Instead, each pass runs a single
+  unpaginated `Ash.read!/2` to collect the *entire* matching row set
+  up front, before any row is mutated, then iterates that fixed, in-memory
+  list. Legacy backfill row counts are expected to be modest (this is a
+  one-time post-deploy cleanup, not an ongoing bulk job), so loading them
+  into memory in one query is the simplest correct approach and sidesteps
+  the streaming-strategy question entirely.
+
   Run once via `mix run priv/repo/backfill_time_zones.exs` after this
   feature deploys. Safe to re-run — it's a no-op for rows whose `time_zone`
   isn't `"Etc/UTC"`, and for `"Etc/UTC"` rows without derivable coordinates
@@ -28,9 +45,8 @@ defmodule Huddlz.BackfillTimeZones do
   defp backfill_groups do
     Group
     |> Ash.Query.filter(time_zone == "Etc/UTC")
-    |> Ash.stream!(authorize?: false, allow_stream_with: :full_read)
-    |> Stream.each(&backfill_group/1)
-    |> Stream.run()
+    |> Ash.read!(authorize?: false)
+    |> Enum.each(&backfill_group/1)
   end
 
   defp backfill_group(%{latitude: lat, longitude: lng} = group)
@@ -47,9 +63,8 @@ defmodule Huddlz.BackfillTimeZones do
     Huddl
     |> Ash.Query.filter(time_zone == "Etc/UTC")
     |> Ash.Query.load(:group)
-    |> Ash.stream!(authorize?: false, allow_stream_with: :full_read)
-    |> Stream.each(&backfill_huddl/1)
-    |> Stream.run()
+    |> Ash.read!(authorize?: false)
+    |> Enum.each(&backfill_huddl/1)
   end
 
   defp backfill_huddl(%{latitude: lat, longitude: lng} = huddl)
