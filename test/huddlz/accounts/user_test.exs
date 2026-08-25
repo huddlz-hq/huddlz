@@ -381,7 +381,9 @@ defmodule Huddlz.Accounts.UserTest do
         user
         |> Ash.Changeset.for_update(
           :update_display_timezone,
-          %{time_zone_preference: "America/Denver"}, actor: user)
+          %{time_zone_preference: "America/Denver"},
+          actor: user
+        )
         |> Ash.update()
 
       assert updated.time_zone_preference == "America/Denver"
@@ -410,7 +412,9 @@ defmodule Huddlz.Accounts.UserTest do
                user
                |> Ash.Changeset.for_update(
                  :update_display_timezone,
-                 %{time_zone_preference: "America/Denver"}, actor: other)
+                 %{time_zone_preference: "America/Denver"},
+                 actor: other
+               )
                |> Ash.update()
     end
   end

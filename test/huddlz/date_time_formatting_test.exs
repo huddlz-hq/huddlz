@@ -29,7 +29,10 @@ defmodule Huddlz.DateTimeFormattingTest do
     end
 
     test "falls back to the browser-detected zone with no preference" do
-      assert DateTimeFormatting.resolve_viewer_zone(%{time_zone_preference: nil}, "America/Chicago") ==
+      assert DateTimeFormatting.resolve_viewer_zone(
+               %{time_zone_preference: nil},
+               "America/Chicago"
+             ) ==
                "America/Chicago"
     end
 
