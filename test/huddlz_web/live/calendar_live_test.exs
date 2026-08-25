@@ -566,6 +566,38 @@ defmodule HuddlzWeb.CalendarLiveTest do
     end
   end
 
+  describe "day grouping" do
+    test "groups an entry by its huddl's local day, not the raw UTC day", %{conn: conn} do
+      # An 11 PM Pacific huddl on June 15 is 6 AM UTC on June 16 — it must
+      # appear on the June 15 day cell (Pacific-local), not June 16.
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+
+      huddl =
+        generate(
+          huddl(
+            group_id: group.id,
+            actor: owner,
+            time_zone: "America/Los_Angeles",
+            date: ~D[2030-06-15],
+            start_time: ~T[23:00:00],
+            duration_minutes: 60
+          )
+        )
+
+      assert huddl.starts_at |> DateTime.to_date() == ~D[2030-06-16]
+
+      june_15_label = Calendar.strftime(~D[2030-06-15], "%A, %B %-d, %Y")
+      june_16_label = Calendar.strftime(~D[2030-06-16], "%A, %B %-d, %Y")
+
+      conn
+      |> login(owner)
+      |> visit("/calendar?month=2030-06")
+      |> assert_has(~s(td[aria-label^="#{june_15_label}"] .cal-pill), text: huddl.title)
+      |> refute_has(~s(td[aria-label^="#{june_16_label}"] .cal-pill), text: huddl.title)
+    end
+  end
+
   defp tomorrow, do: Date.add(Date.utc_today(), 1)
 
   # Build a /calendar URL pinned to the month containing `date`, so the focus
