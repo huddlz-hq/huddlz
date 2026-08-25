@@ -113,7 +113,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
           </span>
           <h1>{@huddl.title}</h1>
           <div class="meta">
-            <span :for={{segment, idx} <- Enum.with_index(hero_meta_segments(@huddl))}>
+            <span :for={{segment, idx} <- Enum.with_index(hero_meta_segments(@huddl, @current_user))}>
               <%= if idx > 0 do %>
                 <span class="meta-sep">·</span>
               <% end %>
@@ -795,33 +795,42 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp event_type_label(:hybrid), do: "Hybrid huddl"
   defp event_type_label(_), do: "Huddl"
 
-  defp hero_meta_segments(huddl) do
+  defp hero_meta_segments(huddl, current_user) do
     [
       huddl.group.name,
-      hero_when_segment(huddl),
+      hero_when_segment(huddl, current_user),
       hero_location_segment(huddl)
     ]
     |> Enum.reject(&is_nil/1)
   end
 
-  defp hero_when_segment(%{status: :in_progress} = huddl) do
+  defp hero_when_segment(%{status: :in_progress} = huddl, current_user) do
+    zone = DateTimeFormatting.resolve_zone(current_user, huddl)
+    starts_at = DateTimeFormatting.shift(huddl.starts_at, zone)
+
     if huddl.ends_at do
-      "Started #{format_time_only(huddl.starts_at)} · ends #{format_time_only(huddl.ends_at)}"
+      ends_at = DateTimeFormatting.shift(huddl.ends_at, zone)
+      "Started #{format_time_only(starts_at)} · ends #{format_time_only(ends_at)}"
     else
-      "Started #{format_time_only(huddl.starts_at)}"
+      "Started #{format_time_only(starts_at)}"
     end
   end
 
-  defp hero_when_segment(%{status: :cancelled} = huddl) do
-    "Was scheduled for #{format_short_date(huddl.starts_at)}"
+  defp hero_when_segment(%{status: :cancelled} = huddl, current_user) do
+    zone = DateTimeFormatting.resolve_zone(current_user, huddl)
+    "Was scheduled for #{format_short_date(DateTimeFormatting.shift(huddl.starts_at, zone))}"
   end
 
-  defp hero_when_segment(%{status: :completed} = huddl) do
-    "#{format_short_date(huddl.starts_at)} · #{huddl.rsvp_count} attended"
+  defp hero_when_segment(%{status: :completed} = huddl, current_user) do
+    zone = DateTimeFormatting.resolve_zone(current_user, huddl)
+    starts_at = DateTimeFormatting.shift(huddl.starts_at, zone)
+    "#{format_short_date(starts_at)} · #{huddl.rsvp_count} attended"
   end
 
-  defp hero_when_segment(huddl) do
-    "#{format_short_date(huddl.starts_at)} · #{format_time_only(huddl.starts_at)}"
+  defp hero_when_segment(huddl, current_user) do
+    zone = DateTimeFormatting.resolve_zone(current_user, huddl)
+    starts_at = DateTimeFormatting.shift(huddl.starts_at, zone)
+    "#{format_short_date(starts_at)} · #{format_time_only(starts_at)}"
   end
 
   defp hero_location_segment(%{event_type: :hybrid, physical_location: loc}) when is_binary(loc),

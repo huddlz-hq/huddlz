@@ -824,6 +824,67 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> refute_has(".facts .value", text: "5:00 PM")
     end
 
+    test "shows the huddl's local time zone in the hero banner instead of raw UTC", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      # 17:00 UTC on this date is 1:00 PM in America/New_York (EDT).
+      tz_huddl =
+        Ash.Seed.seed!(Huddl, %{
+          title: "Timezone Aware Hero Huddl",
+          description: "Check the hero banner's local time",
+          starts_at: ~U[2030-05-04 17:00:00Z],
+          ends_at: ~U[2030-05-04 19:00:00Z],
+          event_type: :virtual,
+          virtual_link: "https://example.com/tz-hero",
+          is_private: false,
+          group_id: group.id,
+          creator_id: owner.id,
+          lifecycle_state: :published,
+          published_at: DateTime.utc_now(),
+          published_by_id: owner.id,
+          time_zone: "America/New_York"
+        })
+
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{tz_huddl.id}")
+      |> assert_has(".hero .meta", text: "1:00 PM")
+      |> refute_has(".hero .meta", text: "5:00 PM")
+    end
+
+    test "shows the cancelled hero banner's date shifted into the resolved zone", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      # 02:00 UTC on May 5 is still 10:00 PM on May 4 in America/New_York (EDT) —
+      # a date-boundary case that only a real zone shift (not raw UTC) gets right.
+      cancelled_huddl =
+        Ash.Seed.seed!(Huddl, %{
+          title: "Cancelled Timezone Huddl",
+          description: "Check the cancelled hero banner's local date",
+          starts_at: ~U[2030-05-05 02:00:00Z],
+          ends_at: ~U[2030-05-05 04:00:00Z],
+          event_type: :virtual,
+          virtual_link: "https://example.com/tz-cancelled",
+          is_private: false,
+          group_id: group.id,
+          creator_id: owner.id,
+          lifecycle_state: :cancelled,
+          published_at: DateTime.utc_now(),
+          published_by_id: owner.id,
+          time_zone: "America/New_York"
+        })
+
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{cancelled_huddl.id}")
+      |> assert_has(".hero .meta", text: "May 4")
+      |> refute_has(".hero .meta", text: "May 5")
+    end
+
     test "explains that deleting a recurring huddl leaves the series intact", %{
       conn: conn,
       owner: owner,
