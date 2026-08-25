@@ -84,7 +84,22 @@ defmodule HuddlzWeb.HuddlLive.New do
     |> assign(:form, to_form(form))
     |> assign(:show_virtual_link, false)
     |> assign(:show_physical_location, true)
-    |> assign(:calculated_end_time, calculate_end_time(tomorrow, default_time, 60))
+    |> assign(
+      :calculated_end_time,
+      calculate_end_time(tomorrow, default_time, 60, preview_time_zone(socket, %{}))
+    )
+  end
+
+  # The zone the huddl will actually be saved in, as best known while the form
+  # is still being filled in: the organizer's explicit pick if they made one,
+  # else the browser-detected zone. Geo-derivation from the (not-yet-geocoded)
+  # address can't be known client-side, so the browser zone is the closest
+  # stand-in; `ResolveTimeZone` has the final say on submit.
+  defp preview_time_zone(socket, params) do
+    case params["time_zone_selection"] do
+      picked when is_binary(picked) and picked != "" -> picked
+      _ -> socket.assigns[:browser_time_zone] || "Etc/UTC"
+    end
   end
 
   @impl true
@@ -305,7 +320,7 @@ defmodule HuddlzWeb.HuddlLive.New do
     socket =
       socket
       |> update_event_type_visibility(params)
-      |> update_calculated_end_time(params)
+      |> update_calculated_end_time(params, preview_time_zone(socket, params))
 
     form = AshPhoenix.Form.validate(socket.assigns.form, params)
     {:noreply, assign(socket, :form, to_form(form))}

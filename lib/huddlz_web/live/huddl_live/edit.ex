@@ -11,6 +11,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
   alias Huddlz.Communities
   alias Huddlz.Communities.HuddlTemplate
+  alias Huddlz.DateTimeFormatting
   alias Huddlz.Storage.GroupImages
   alias Huddlz.Storage.HuddlImages
   alias HuddlzWeb.Layouts
@@ -80,9 +81,14 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   end
 
   defp assign_edit_form(socket, huddl, group_slug, user) do
-    # Extract date/time/duration from existing starts_at/ends_at
-    date = DateTime.to_date(huddl.starts_at)
-    start_time = DateTime.to_time(huddl.starts_at)
+    # Extract date/time/duration from existing starts_at/ends_at, as wall time
+    # in the huddl's own zone. `CalculateDateTimeFromInputs` interprets the
+    # submitted date/start_time as wall time in that same zone on every save,
+    # so prefilling raw UTC components would shift starts_at/ends_at by the
+    # zone's offset on every edit — even one that only changed the title.
+    starts_at_local = DateTimeFormatting.shift(huddl.starts_at, huddl.time_zone)
+    date = DateTime.to_date(starts_at_local)
+    start_time = DateTime.to_time(starts_at_local)
     duration_minutes = DateTime.diff(huddl.ends_at, huddl.starts_at, :minute)
 
     form =
@@ -114,7 +120,10 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     |> assign(:huddl, huddl)
     |> assign(:show_physical_location, huddl.event_type in [:in_person, :hybrid])
     |> assign(:show_virtual_link, huddl.event_type in [:virtual, :hybrid])
-    |> assign(:calculated_end_time, calculate_end_time(date, start_time, duration_minutes))
+    |> assign(
+      :calculated_end_time,
+      calculate_end_time(date, start_time, duration_minutes, huddl.time_zone)
+    )
     |> assign(:form, to_form(form))
   end
 
@@ -205,7 +214,9 @@ defmodule HuddlzWeb.HuddlLive.Edit do
                 <% _ -> %>
                   <span class="eyebrow">Editing one date</span>
                   <p>
-                    This is a recurring huddl. Changes apply only to <strong>{Calendar.strftime(@huddl.starts_at, "%a, %b %-d")}</strong>.
+                    This is a recurring huddl. Changes apply only to <strong>{@huddl.starts_at
+                    |> DateTimeFormatting.shift(@huddl.time_zone)
+                    |> Calendar.strftime("%a, %b %-d")}</strong>.
                   </p>
               <% end %>
               <input
@@ -390,7 +401,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     socket =
       socket
       |> update_event_type_visibility(updated_params)
-      |> update_calculated_end_time(updated_params)
+      |> update_calculated_end_time(updated_params, socket.assigns.huddl.time_zone)
 
     form = AshPhoenix.Form.validate(socket.assigns.form, updated_params)
     {:noreply, assign(socket, :form, to_form(form))}
@@ -434,7 +445,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     socket =
       socket
       |> update_event_type_visibility(params)
-      |> update_calculated_end_time(params)
+      |> update_calculated_end_time(params, socket.assigns.huddl.time_zone)
 
     form = AshPhoenix.Form.validate(socket.assigns.form, params)
     {:noreply, assign(socket, :form, to_form(form))}

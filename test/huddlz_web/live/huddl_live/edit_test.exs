@@ -607,6 +607,78 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
     end
   end
 
+  describe "non-UTC huddl round-trip" do
+    setup do
+      owner = generate(user(role: :user))
+      group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+
+      huddl =
+        generate(
+          huddl(
+            title: "Eastern Huddl",
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            physical_location: "123 Main St, City",
+            time_zone: "America/New_York"
+          )
+        )
+
+      %{owner: owner, group: group, huddl: huddl}
+    end
+
+    test "prefills date/start time as wall time in the huddl's own zone", %{
+      conn: conn,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      local = DateTime.shift_zone!(huddl.starts_at, "America/New_York")
+
+      # Sanity: the stored instant's UTC clock time differs from its local one,
+      # so a raw-UTC prefill would be visibly wrong.
+      refute DateTime.to_time(huddl.starts_at) == DateTime.to_time(local)
+
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+
+      assert_has(session, "input[name='form[date]'][value='#{Date.to_iso8601(local)}']")
+
+      assert_has(
+        session,
+        "input[name='form[start_time]'][value='#{Calendar.strftime(local, "%H:%M:%S")}']"
+      )
+    end
+
+    test "editing only the title leaves starts_at and ends_at exactly as they were", %{
+      conn: conn,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+        |> fill_in("Title", with: "Eastern Huddl, renamed")
+        |> click_button("Save changes")
+
+      assert_has(session, "*", text: "Huddl updated successfully!")
+
+      updated =
+        Huddl
+        |> Ash.Query.filter(id == ^huddl.id)
+        |> Ash.read_one!(actor: owner)
+
+      assert updated.title == "Eastern Huddl, renamed"
+      assert DateTime.compare(updated.starts_at, huddl.starts_at) == :eq
+      assert DateTime.compare(updated.ends_at, huddl.ends_at) == :eq
+      assert updated.time_zone == "America/New_York"
+    end
+  end
+
   describe "capacity validation" do
     setup do
       owner = generate(user(role: :user))

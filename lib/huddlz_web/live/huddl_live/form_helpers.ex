@@ -5,13 +5,25 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
   """
   import Phoenix.Component, only: [assign: 3]
 
-  def update_calculated_end_time(socket, params) do
+  @doc """
+  Recomputes the live "Ends at:" preview from the form params.
+
+  `time_zone` must be the zone the huddl will actually be saved in (the
+  huddl's own `time_zone` on edit; the organizer's pick, else the browser
+  zone, on create) — the preview interprets the wall-clock inputs in it
+  exactly as `CalculateDateTimeFromInputs` does on submit, so the two agree.
+  """
+  def update_calculated_end_time(socket, params, time_zone) do
     case {params["date"], params["start_time"], params["duration_minutes"]} do
       {d, t, dur} when d != "" and t != "" and dur != "" ->
         with {:ok, date} <- Date.from_iso8601(d),
              {:ok, time} <- parse_time(t),
              {duration, ""} <- Integer.parse(dur) do
-          assign(socket, :calculated_end_time, calculate_end_time(date, time, duration))
+          assign(
+            socket,
+            :calculated_end_time,
+            calculate_end_time(date, time, duration, time_zone)
+          )
         else
           _ -> socket
         end
@@ -29,8 +41,8 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
     |> assign(:show_virtual_link, event_type in ["virtual", "hybrid"])
   end
 
-  def calculate_end_time(date, time, duration_minutes) do
-    case DateTime.new(date, time, "Etc/UTC") do
+  def calculate_end_time(date, time, duration_minutes, time_zone) do
+    case DateTime.new(date, time, normalize_time_zone(time_zone)) do
       {:ok, starts_at} ->
         ends_at = DateTime.add(starts_at, duration_minutes, :minute)
 
@@ -44,6 +56,9 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
         nil
     end
   end
+
+  defp normalize_time_zone(time_zone) when is_binary(time_zone) and time_zone != "", do: time_zone
+  defp normalize_time_zone(_), do: "Etc/UTC"
 
   def apply_saved_location_to_form(socket, location) do
     current_params = socket.assigns.form.source.params || %{}
