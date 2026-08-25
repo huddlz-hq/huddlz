@@ -112,6 +112,7 @@ defmodule Huddlz.MixProject do
        depth: 1},
       {:swoosh, "~> 1.16"},
       {:ical, "~> 2.0"},
+      {:eqrcode, "~> 0.2.1"},
       {:req, "~> 0.5"},
       {:req_s3, "~> 0.2"},
       {:image, "~> 0.62"},

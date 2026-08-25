@@ -95,6 +95,36 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has(".facts .value", text: "1 person attending")
     end
 
+    test "sidebar share section offers a mailto email link and a QR code modal", %{
+      conn: conn,
+      member: member,
+      group: group,
+      huddl: huddl
+    } do
+      huddl_url = HuddlzWeb.Endpoint.url() <> ~p"/groups/#{group.slug}/huddlz/#{huddl.id}"
+
+      conn
+      |> login(member)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+      |> assert_has("aside.huddl-side h3", text: "Share")
+      |> assert_has("#share-huddl-modal-email[href^='mailto:?subject=Virtual%20Meeting']")
+      |> assert_has("#share-huddl-modal-open[phx-click*='share-huddl-modal']")
+      |> assert_has("#share-huddl-modal-url[value='#{huddl_url}']")
+      |> assert_has(
+        "#share-huddl-modal-copy[data-copy-target='#share-huddl-modal-url'] #share-huddl-modal-copy-label[phx-hook='ClipboardCopy'][phx-update='ignore']"
+      )
+      |> assert_has("#share-huddl-modal .qr-frame svg")
+    end
+
+    test "share link works for signed-out visitors", %{conn: conn, group: group, huddl: huddl} do
+      huddl_url = HuddlzWeb.Endpoint.url() <> ~p"/groups/#{group.slug}/huddlz/#{huddl.id}"
+
+      conn
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+      |> assert_has("#share-huddl-modal-email[href^='mailto:?subject=Virtual%20Meeting']")
+      |> assert_has("#share-huddl-modal-url[value='#{huddl_url}']")
+    end
+
     test "renders image fallback behavior across huddl surfaces", %{
       conn: conn,
       member: member,

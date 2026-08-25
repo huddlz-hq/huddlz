@@ -28,6 +28,7 @@ defmodule HuddlzWeb.Components do
       import HuddlzWeb.Components.Pagination
       import HuddlzWeb.Components.Panel
       import HuddlzWeb.Components.Pill
+      import HuddlzWeb.Components.ShareModal
     end
   end
 end

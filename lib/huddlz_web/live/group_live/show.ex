@@ -285,6 +285,11 @@ defmodule HuddlzWeb.GroupLive.Show do
           <% end %>
 
           <div class="huddl-side-section">
+            <h3>Share</h3>
+            <.share_actions id="share-group-modal" url={@meta.url} title={@page_title} />
+          </div>
+
+          <div class="huddl-side-section">
             <h3>Members</h3>
             <%= if @members_visible? do %>
               <div class="member-grid compact">
@@ -363,6 +368,8 @@ defmodule HuddlzWeb.GroupLive.Show do
           <% end %>
         </div>
       </div>
+
+      <.share_modal id="share-group-modal" url={@meta.url} label="group" />
 
       <.modal
         :if={@leave_dialog_open}
