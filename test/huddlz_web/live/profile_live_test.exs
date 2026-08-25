@@ -798,6 +798,30 @@ defmodule HuddlzWeb.ProfileLiveTest do
       updated = Ash.get!(User, user.id, authorize?: false)
       assert updated.time_zone_preference == "America/Denver"
     end
+
+    test "clears time zone preference back to nil", %{conn: conn, user: user} do
+      user =
+        user
+        |> Ash.Changeset.for_update(
+          :update_display_timezone,
+          %{time_zone_preference: "America/Denver"},
+          actor: user
+        )
+        |> Ash.update!()
+
+      session =
+        conn
+        |> login(user)
+        |> visit("/profile")
+        |> select("Time zone", option: "Use each huddl's own time zone")
+
+      session
+      |> within("#time-zone-form", fn session -> click_button(session, "Save") end)
+      |> assert_has("*", text: "Time zone preference updated")
+
+      updated = Ash.get!(User, user.id, authorize?: false)
+      assert updated.time_zone_preference == nil
+    end
   end
 
   defp create_profile_picture(user) do
