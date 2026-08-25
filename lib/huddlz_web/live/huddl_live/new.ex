@@ -195,6 +195,14 @@ defmodule HuddlzWeb.HuddlLive.New do
 
         <.format_panel form={@form} />
 
+        <.select
+          field={@form[:time_zone]}
+          label="Time zone"
+          prompt="Auto-detect from location…"
+          options={HuddlzWeb.Live.Helpers.TimeZoneOptions.options()}
+          help="Leave blank to use the location's time zone (or your current time zone for a virtual huddl)."
+        />
+
         <.when_panel
           form={@form}
           calculated_end_time={@calculated_end_time}
@@ -310,6 +318,7 @@ defmodule HuddlzWeb.HuddlLive.New do
 
     params =
       params
+      |> Map.put("browser_time_zone", socket.assigns.browser_time_zone)
       |> Map.put("group_id", socket.assigns.group.id)
       |> Map.put("lifecycle_state", lifecycle_state)
       |> inject_saved_location_params(socket.assigns[:selected_location])

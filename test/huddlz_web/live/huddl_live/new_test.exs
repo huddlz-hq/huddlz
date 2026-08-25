@@ -686,6 +686,38 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       assert group_location_id == location.id
     end
 
+    test "organizer can explicitly set the huddl's time zone", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      tomorrow = Date.utc_today() |> Date.add(1)
+      date = Date.to_iso8601(tomorrow)
+
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/new")
+        |> fill_in("Title", with: "Timezone Test")
+        |> fill_in("Date", with: date)
+        |> fill_in("Start time", with: "19:00")
+        |> select("Duration", option: "1 hour")
+        |> select("Time zone", option: "America/Los_Angeles")
+
+      select_physical_location(session.view, "123 Main St")
+
+      session
+      |> click_button("Schedule huddl")
+      |> assert_path(~p"/groups/#{group.slug}")
+
+      huddl =
+        Huddl
+        |> Ash.Query.filter(title == "Timezone Test" and group_id == ^group.id)
+        |> Ash.read_one!(actor: owner)
+
+      assert huddl.time_zone == "America/Los_Angeles"
+    end
+
     test "validates form on change", %{conn: conn, owner: owner, group: group} do
       # PhoenixTest automatically triggers form validation on field changes
       # When we fill a field and then clear it, validation should show errors

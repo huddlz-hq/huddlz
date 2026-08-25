@@ -582,6 +582,29 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       duration = DateTime.diff(updated_huddl.ends_at, updated_huddl.starts_at, :minute)
       assert duration == 90
     end
+
+    test "organizer can explicitly set the huddl's time zone", %{
+      conn: conn,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+        |> select("Time zone", option: "America/Los_Angeles")
+        |> click_button("Save changes")
+
+      assert_has(session, "*", text: "Huddl updated successfully!")
+
+      updated_huddl =
+        Huddl
+        |> Ash.Query.filter(id == ^huddl.id)
+        |> Ash.read_one!(actor: owner)
+
+      assert updated_huddl.time_zone == "America/Los_Angeles"
+    end
   end
 
   describe "capacity validation" do

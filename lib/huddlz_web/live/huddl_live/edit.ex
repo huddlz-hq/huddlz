@@ -250,6 +250,14 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
         <.format_panel form={@form} />
 
+        <.select
+          field={@form[:time_zone]}
+          label="Time zone"
+          prompt="Auto-detect from location…"
+          options={HuddlzWeb.Live.Helpers.TimeZoneOptions.options()}
+          help="Leave blank to use the location's time zone (or your current time zone for a virtual huddl)."
+        />
+
         <.when_panel form={@form} calculated_end_time={@calculated_end_time}>
           <:recurring_controls>
             <%= if @huddl.huddl_template_id && edit_type_value(@form) == "all" do %>
@@ -437,6 +445,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   def handle_event("save", %{"form" => params}, socket) do
     params =
       params
+      |> Map.put("browser_time_zone", socket.assigns.browser_time_zone)
       |> inject_saved_location_params(socket.assigns[:selected_location])
       |> mark_location_used(socket.assigns.form)
 
