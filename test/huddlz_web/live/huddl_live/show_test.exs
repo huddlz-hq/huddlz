@@ -794,6 +794,36 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       assert huddl_still_exists?(huddl.id)
     end
 
+    test "shows the huddl's local time zone in the When fact instead of raw UTC", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      # 17:00 UTC on this date is 1:00 PM in America/New_York (EDT).
+      tz_huddl =
+        Ash.Seed.seed!(Huddl, %{
+          title: "Timezone Aware Huddl",
+          description: "Check the local time",
+          starts_at: ~U[2030-05-04 17:00:00Z],
+          ends_at: ~U[2030-05-04 19:00:00Z],
+          event_type: :virtual,
+          virtual_link: "https://example.com/tz",
+          is_private: false,
+          group_id: group.id,
+          creator_id: owner.id,
+          lifecycle_state: :published,
+          published_at: DateTime.utc_now(),
+          published_by_id: owner.id,
+          time_zone: "America/New_York"
+        })
+
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{tz_huddl.id}")
+      |> assert_has(".facts .value", text: "1:00 PM")
+      |> refute_has(".facts .value", text: "5:00 PM")
+    end
+
     test "explains that deleting a recurring huddl leaves the series intact", %{
       conn: conn,
       owner: owner,

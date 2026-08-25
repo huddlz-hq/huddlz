@@ -671,7 +671,12 @@ defmodule HuddlzWeb.HuddlLive do
         <% else %>
           <div class="grid">
             <%= for {{huddl, distance}, idx} <- Enum.with_index(@huddls) do %>
-              <.huddl_card huddl={huddl} distance={distance} gradient={Integer.mod(idx, 6) + 1} />
+              <.huddl_card
+                huddl={huddl}
+                distance={distance}
+                gradient={Integer.mod(idx, 6) + 1}
+                current_user={@current_user}
+              />
             <% end %>
           </div>
           <.pagination
@@ -705,6 +710,7 @@ defmodule HuddlzWeb.HuddlLive do
   attr :huddl, :map, required: true
   attr :distance, :float, default: nil
   attr :gradient, :integer, default: 1
+  attr :current_user, :map, default: nil
 
   defp huddl_card(assigns) do
     ~H"""
@@ -719,7 +725,10 @@ defmodule HuddlzWeb.HuddlLive do
           class="card-cover-img"
           image_url={@huddl.display_image_url}
         />
-        <.date_stamp month={huddl_month(@huddl)} day={huddl_day(@huddl)} />
+        <.date_stamp
+          month={huddl_month(@huddl, @current_user)}
+          day={huddl_day(@huddl, @current_user)}
+        />
         <.card_tag variant={tag_variant(@huddl.event_type)}>
           {tag_label(@huddl.event_type)}
         </.card_tag>
@@ -730,7 +739,7 @@ defmodule HuddlzWeb.HuddlLive do
         </span>
         <h3 class="card-title">{@huddl.title}</h3>
         <div class="card-meta">
-          <span>{format_meta_when(@huddl.starts_at)}</span>
+          <span>{format_meta_when(@huddl, @current_user)}</span>
           <%= if @distance do %>
             <span class="dot"></span>
             <span>{format_distance(@distance)}</span>

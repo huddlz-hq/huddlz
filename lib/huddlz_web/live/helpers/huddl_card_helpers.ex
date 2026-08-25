@@ -4,6 +4,8 @@ defmodule HuddlzWeb.Live.Helpers.HuddlCardHelpers do
   group show): date block, `event_type` tag, and RSVP count labels.
   """
 
+  alias Huddlz.DateTimeFormatting
+
   def tag_variant(:in_person), do: :in_person
   def tag_variant(:virtual), do: :online
   def tag_variant(:hybrid), do: :hybrid
@@ -12,12 +14,26 @@ defmodule HuddlzWeb.Live.Helpers.HuddlCardHelpers do
   def tag_label(:virtual), do: "Online"
   def tag_label(:hybrid), do: "Hybrid"
 
-  def huddl_month(%{starts_at: %DateTime{} = dt}),
-    do: Calendar.strftime(dt, "%b") |> String.upcase()
+  def huddl_month(%{starts_at: %DateTime{}} = huddl, current_user) do
+    huddl.starts_at
+    |> DateTimeFormatting.shift(DateTimeFormatting.resolve_zone(current_user, huddl))
+    |> Calendar.strftime("%b")
+    |> String.upcase()
+  end
 
-  def huddl_day(%{starts_at: %DateTime{} = dt}), do: Calendar.strftime(dt, "%-d")
+  def huddl_day(%{starts_at: %DateTime{}} = huddl, current_user) do
+    huddl.starts_at
+    |> DateTimeFormatting.shift(DateTimeFormatting.resolve_zone(current_user, huddl))
+    |> Calendar.strftime("%-d")
+  end
 
-  def format_meta_when(%DateTime{} = dt) do
+  def format_meta_when(%{starts_at: %DateTime{}} = huddl, current_user) do
+    dt =
+      DateTimeFormatting.shift(
+        huddl.starts_at,
+        DateTimeFormatting.resolve_zone(current_user, huddl)
+      )
+
     "#{Calendar.strftime(dt, "%a")} · #{Calendar.strftime(dt, "%-I:%M %p")}"
   end
 

@@ -5,6 +5,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities
+  alias Huddlz.DateTimeFormatting
   alias Huddlz.Storage.HuddlImages
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
@@ -149,7 +150,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
               </svg>
               <div>
                 <div class="label">When</div>
-                <div class="value">{format_fact_when(@huddl)}</div>
+                <div class="value">{format_fact_when(@huddl, @current_user)}</div>
               </div>
             </li>
 
@@ -833,16 +834,21 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp hero_location_segment(%{event_type: :virtual}), do: "Online"
   defp hero_location_segment(_), do: nil
 
-  defp format_fact_when(huddl) do
-    cond do
-      huddl.ends_at && same_day?(huddl.starts_at, huddl.ends_at) ->
-        "#{format_short_date(huddl.starts_at)} · #{format_time_only(huddl.starts_at)} – #{format_time_only(huddl.ends_at)} UTC"
+  defp format_fact_when(huddl, current_user) do
+    zone = DateTimeFormatting.resolve_zone(current_user, huddl)
+    starts_at = DateTimeFormatting.shift(huddl.starts_at, zone)
+    ends_at = huddl.ends_at && DateTimeFormatting.shift(huddl.ends_at, zone)
+    zone_label = Calendar.strftime(starts_at, "%Z")
 
-      huddl.ends_at ->
-        "#{format_short_date(huddl.starts_at)} #{format_time_only(huddl.starts_at)} → #{format_short_date(huddl.ends_at)} #{format_time_only(huddl.ends_at)} UTC"
+    cond do
+      ends_at && same_day?(starts_at, ends_at) ->
+        "#{format_short_date(starts_at)} · #{format_time_only(starts_at)} – #{format_time_only(ends_at)} #{zone_label}"
+
+      ends_at ->
+        "#{format_short_date(starts_at)} #{format_time_only(starts_at)} → #{format_short_date(ends_at)} #{format_time_only(ends_at)} #{zone_label}"
 
       true ->
-        "#{format_short_date(huddl.starts_at)} · #{format_time_only(huddl.starts_at)} UTC"
+        "#{format_short_date(starts_at)} · #{format_time_only(starts_at)} #{zone_label}"
     end
   end
 

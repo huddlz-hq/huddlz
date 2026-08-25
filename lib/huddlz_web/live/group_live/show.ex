@@ -356,9 +356,17 @@ defmodule HuddlzWeb.GroupLive.Show do
           </div>
 
           <%= if @active_tab == "upcoming" do %>
-            <.huddl_grid huddlz={@upcoming_huddlz} empty_message="No upcoming huddlz scheduled." />
+            <.huddl_grid
+              huddlz={@upcoming_huddlz}
+              empty_message="No upcoming huddlz scheduled."
+              current_user={@current_user}
+            />
           <% else %>
-            <.huddl_grid huddlz={@past_huddlz} empty_message="No past huddlz found." />
+            <.huddl_grid
+              huddlz={@past_huddlz}
+              empty_message="No past huddlz found."
+              current_user={@current_user}
+            />
             <.pagination
               :if={@past_total_pages > 1}
               current_page={@past_page}
@@ -429,6 +437,7 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   attr :huddlz, :list, required: true
   attr :empty_message, :string, required: true
+  attr :current_user, :map, default: nil
 
   defp huddl_grid(assigns) do
     ~H"""
@@ -450,7 +459,10 @@ defmodule HuddlzWeb.GroupLive.Show do
               class="card-cover-img"
               image_url={huddl.display_image_url}
             />
-            <.date_stamp month={huddl_month(huddl)} day={huddl_day(huddl)} />
+            <.date_stamp
+              month={huddl_month(huddl, @current_user)}
+              day={huddl_day(huddl, @current_user)}
+            />
             <.card_tag variant={tag_variant(huddl.event_type)}>
               {tag_label(huddl.event_type)}
             </.card_tag>
@@ -459,7 +471,7 @@ defmodule HuddlzWeb.GroupLive.Show do
             <span class="card-group">{huddl_kind_label(huddl)}</span>
             <h3 class="card-title">{huddl.title}</h3>
             <div class="card-meta">
-              <span>{format_meta_when(huddl.starts_at)}</span>
+              <span>{format_meta_when(huddl, @current_user)}</span>
               <%= if huddl.rsvp_count > 0 || huddl.max_attendees do %>
                 <span class="dot"></span>
                 <span>{rsvp_label(huddl)}</span>

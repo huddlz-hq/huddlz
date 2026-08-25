@@ -242,9 +242,15 @@ defmodule HuddlzWeb.OrganizeLive do
             group={@group}
             upcoming_huddlz={@upcoming_huddlz}
             open_rsvps={@open_rsvps}
+            current_user={@current_user}
           />
         <% :huddlz -> %>
-          <.huddlz_view group={@group} huddlz={@huddlz_list} filter={@huddlz_filter} />
+          <.huddlz_view
+            group={@group}
+            huddlz={@huddlz_list}
+            filter={@huddlz_filter}
+            current_user={@current_user}
+          />
         <% :members -> %>
           <.members_view
             group={@group}
@@ -339,6 +345,7 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :group, :map, required: true
   attr :upcoming_huddlz, :list, required: true
   attr :open_rsvps, :integer, required: true
+  attr :current_user, :map, required: true
 
   defp overview_view(assigns) do
     assigns =
@@ -412,7 +419,7 @@ defmodule HuddlzWeb.OrganizeLive do
                   {huddl.title}
                 </.link>
               </div>
-              <div class="meta">{format_starts_at(huddl.starts_at)}</div>
+              <div class="meta">{format_starts_at(huddl, @current_user)}</div>
             </div>
             <span class="pill">{rsvp_label(huddl.rsvp_count)}</span>
           </div>
@@ -426,6 +433,7 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :group, :map, required: true
   attr :huddlz, :list, required: true
   attr :filter, :atom, required: true
+  attr :current_user, :map, required: true
 
   defp huddlz_view(assigns) do
     ~H"""
@@ -498,7 +506,7 @@ defmodule HuddlzWeb.OrganizeLive do
                   {huddl.title}
                 </.link>
               </div>
-              <div class="meta">{format_starts_at(huddl.starts_at)}</div>
+              <div class="meta">{format_starts_at(huddl, @current_user)}</div>
             </div>
             <span class="pill">{rsvp_label(huddl.rsvp_count)}</span>
             <span class={["pill", HuddlStatus.pill_class(huddl.status)]}>
@@ -1201,8 +1209,15 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp format_date_short(%DateTime{} = at), do: Calendar.strftime(at, "%b %d, %Y")
 
-  defp format_starts_at(%DateTime{} = dt), do: Calendar.strftime(dt, "%b %d, %Y · %I:%M %p")
-  defp format_starts_at(_), do: ""
+  defp format_starts_at(%{starts_at: %DateTime{}} = huddl, current_user) do
+    huddl.starts_at
+    |> Huddlz.DateTimeFormatting.shift(
+      Huddlz.DateTimeFormatting.resolve_zone(current_user, huddl)
+    )
+    |> Calendar.strftime("%b %d, %Y · %I:%M %p")
+  end
+
+  defp format_starts_at(_, _), do: ""
 
   defp visibility_label(true), do: "Public"
   defp visibility_label(false), do: "Private"
