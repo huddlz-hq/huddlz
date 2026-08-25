@@ -775,6 +775,31 @@ defmodule HuddlzWeb.ProfileLiveTest do
     end
   end
 
+  describe "Time zone preference" do
+    test "shows the display time zone panel", %{conn: conn, user: user} do
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> assert_has(".panel-head h2", text: "Display time zone")
+      |> assert_has("#time-zone-form")
+    end
+
+    test "updates time zone preference", %{conn: conn, user: user} do
+      session =
+        conn
+        |> login(user)
+        |> visit("/profile")
+        |> select("Time zone", option: "America/Denver")
+
+      session
+      |> within("#time-zone-form", fn session -> click_button(session, "Save") end)
+      |> assert_has("*", text: "Time zone preference updated")
+
+      updated = Ash.get!(User, user.id, authorize?: false)
+      assert updated.time_zone_preference == "America/Denver"
+    end
+  end
+
   defp create_profile_picture(user) do
     Huddlz.Accounts.create_profile_picture!(
       %{

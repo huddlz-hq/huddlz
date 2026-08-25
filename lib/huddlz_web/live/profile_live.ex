@@ -43,6 +43,16 @@ defmodule HuddlzWeb.ProfileLive do
 
     email_form = email_form(user)
 
+    time_zone_form =
+      user
+      |> AshPhoenix.Form.for_update(:update_display_timezone,
+        domain: Huddlz.Accounts,
+        forms: [auto?: true],
+        actor: user,
+        as: "time_zone_form"
+      )
+      |> to_form()
+
     # Load user with profile picture calculation
     {:ok, user_with_avatar} =
       Ash.load(
@@ -57,6 +67,7 @@ defmodule HuddlzWeb.ProfileLive do
      |> assign(:form, form)
      |> assign(:email_form, email_form)
      |> assign(:password_form, password_form)
+     |> assign(:time_zone_form, time_zone_form)
      |> assign(:password_input_reset_generation, 0)
      |> assign(:current_user, user_with_avatar)
      |> assign(:avatar_error, nil)
@@ -230,6 +241,35 @@ defmodule HuddlzWeb.ProfileLive do
           <p :if={@location_error} class="form-error">{@location_error}</p>
         </form>
       </div>
+
+      <.form
+        for={@time_zone_form}
+        id="time-zone-form"
+        phx-submit="update_time_zone"
+        phx-change="validate_time_zone"
+      >
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Display time zone</h2>
+              <div class="panel-sub">
+                How huddl times are shown to you. Leave blank to see each huddl in its own time zone.
+              </div>
+            </div>
+          </div>
+          <div class="form-grid">
+            <.select
+              field={@time_zone_form[:time_zone_preference]}
+              label="Time zone"
+              prompt="Use each huddl's own time zone"
+              options={HuddlzWeb.Live.Helpers.TimeZoneOptions.options()}
+            />
+          </div>
+          <div class="form-foot">
+            <.button variant={:primary} type="submit">Save</.button>
+          </div>
+        </div>
+      </.form>
 
       <.form
         for={@password_form}
@@ -456,6 +496,44 @@ defmodule HuddlzWeb.ProfileLive do
            |> AshPhoenix.Form.clear_value(:current_password)
            |> to_form()
          )}
+    end
+  end
+
+  @impl true
+  def handle_event("validate_time_zone", %{"time_zone_form" => params}, socket) do
+    form =
+      socket.assigns.time_zone_form.source
+      |> AshPhoenix.Form.validate(params)
+      |> to_form()
+
+    {:noreply, assign(socket, :time_zone_form, form)}
+  end
+
+  @impl true
+  def handle_event("update_time_zone", %{"time_zone_form" => params}, socket) do
+    case AshPhoenix.Form.submit(socket.assigns.time_zone_form.source, params: params) do
+      {:ok, updated_user} ->
+        time_zone_form =
+          updated_user
+          |> AshPhoenix.Form.for_update(:update_display_timezone,
+            domain: Huddlz.Accounts,
+            forms: [auto?: true],
+            actor: updated_user,
+            as: "time_zone_form"
+          )
+          |> to_form()
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Time zone preference updated")
+         |> assign(:current_user, updated_user)
+         |> assign(:time_zone_form, time_zone_form)}
+
+      {:error, form} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Failed to update time zone. Please check the errors below.")
+         |> assign(:time_zone_form, form |> to_form())}
     end
   end
 
