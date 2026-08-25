@@ -37,6 +37,18 @@ defmodule Huddlz.Notifications.SummaryTest do
       assert result.description == "Starts May 10, 2026"
     end
 
+    test "description formats the absolute date in the recipient's zone" do
+      # 00:30 UTC on May 10 is still May 9 in Chicago.
+      result =
+        Summary.summarize(:huddl_reminder_24h, %{
+          "huddl_title" => "Friday Coffee",
+          "starts_at_iso" => "2026-05-10T00:30:00Z",
+          "time_zone" => "America/Chicago"
+        })
+
+      assert result.description == "Starts May 09, 2026"
+    end
+
     test "huddl update copy identifies a time change and includes the new time" do
       result =
         Summary.summarize(:huddl_updated, %{

@@ -12,6 +12,7 @@ defmodule Huddlz.Notifications.Summary do
   time-relative words ("tomorrow", "in 5 minutes", "now").
   """
 
+  alias Huddlz.DateTimeFormatting
   alias Huddlz.Notifications.DateTimeFormatter
   alias Huddlz.Notifications.Senders.ChangedFields
   alias Huddlz.Notifications.Triggers
@@ -110,11 +111,11 @@ defmodule Huddlz.Notifications.Summary do
   # Use absolute dates rather than relative phrasing. Leave nil when a
   # description would just restate the title.
 
-  defp description(:rsvp_confirmation, %{"starts_at_iso" => iso}),
-    do: maybe_absolute_date("Starts ", iso)
+  defp description(:rsvp_confirmation, %{"starts_at_iso" => _} = payload),
+    do: maybe_absolute_date("Starts ", payload)
 
-  defp description(:huddl_new, %{"starts_at_iso" => iso}),
-    do: maybe_absolute_date("Starts ", iso)
+  defp description(:huddl_new, %{"starts_at_iso" => _} = payload),
+    do: maybe_absolute_date("Starts ", payload)
 
   defp description(:huddl_updated, payload),
     do: changed_description(payload, "Scheduled for ")
@@ -126,18 +127,30 @@ defmodule Huddlz.Notifications.Summary do
        when is_binary(reason) and reason != "",
        do: reason
 
-  defp description(:huddl_reminder_24h, %{"starts_at_iso" => iso}),
-    do: maybe_absolute_date("Starts ", iso)
+  defp description(:huddl_reminder_24h, %{"starts_at_iso" => _} = payload),
+    do: maybe_absolute_date("Starts ", payload)
 
-  defp description(:huddl_reminder_1h, %{"starts_at_iso" => iso}),
-    do: maybe_absolute_date("Starts ", iso)
+  defp description(:huddl_reminder_1h, %{"starts_at_iso" => _} = payload),
+    do: maybe_absolute_date("Starts ", payload)
 
   defp description(_, _), do: nil
 
-  defp maybe_absolute_date(prefix, iso) when is_binary(iso) do
+  # Formatted in the recipient's resolved zone, exactly like `formatted_start/1`
+  # — every payload carrying `starts_at_iso` also carries `time_zone`. A raw-UTC
+  # date here would disagree with the "Changed:"/"Next huddl:" copy in the same
+  # feed, and can name the wrong calendar day outright.
+  defp maybe_absolute_date(prefix, %{"starts_at_iso" => iso} = payload) when is_binary(iso) do
     case DateTime.from_iso8601(iso) do
-      {:ok, dt, _} -> prefix <> Calendar.strftime(dt, "%b %d, %Y")
-      _ -> nil
+      {:ok, datetime, _offset} ->
+        formatted =
+          datetime
+          |> DateTimeFormatting.shift(DateTimeFormatter.time_zone_from_payload(payload))
+          |> Calendar.strftime("%b %d, %Y")
+
+        prefix <> formatted
+
+      _ ->
+        nil
     end
   end
 
