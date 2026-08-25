@@ -18,8 +18,14 @@ defmodule Huddlz.Application do
        )},
       {Phoenix.PubSub, name: Huddlz.PubSub},
       {Huddlz.RateLimit, clean_period: :timer.minutes(1)},
-      # Start TzWorld backend for timezone lookups
-      TzWorld.Backend.Memory,
+      # Start TzWorld backend for timezone lookups.
+      #
+      # `DetsWithIndexCache` keeps the polygon data on disk with an in-memory
+      # bounding-box index: ~25MB resident and ~5% slower per lookup than
+      # `Memory`, which holds the whole ~1GB polygon set in RAM. Timezone
+      # lookups only happen on group/huddl create/update (never on a read
+      # path), so the memory saving is worth far more than the latency.
+      TzWorld.Backend.DetsWithIndexCache,
       # Start a worker by calling: Huddlz.Worker.start_link(arg)
       # {Huddlz.Worker, arg},
       # Start to serve requests, typically the last entry
