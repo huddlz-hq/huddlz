@@ -40,6 +40,43 @@ defmodule HuddlzWeb.LiveUserAuthTest do
       assert updated.time_zone_preference == "America/Denver"
     end
 
+    test "does not re-populate a preference the user deliberately cleared", %{conn: conn} do
+      user = generate(user())
+
+      # First visit auto-populates and stamps the "already asked" marker.
+      {:ok, _view, _html} =
+        conn
+        |> login(user)
+        |> put_connect_params(%{"timezone" => "America/Denver"})
+        |> live(~p"/my-huddlz")
+
+      populated = Ash.get!(Huddlz.Accounts.User, user.id, authorize?: false)
+      assert populated.time_zone_preference == "America/Denver"
+      assert populated.time_zone_preference_set_at
+
+      # The user then chooses "Use each huddl's own time zone", clearing it.
+      {:ok, cleared} =
+        populated
+        |> Ash.Changeset.for_update(
+          :update_display_timezone,
+          %{time_zone_preference: nil},
+          actor: populated
+        )
+        |> Ash.update()
+
+      assert cleared.time_zone_preference == nil
+
+      # A later mount with fresh connect params must leave it cleared.
+      {:ok, _view, _html} =
+        conn
+        |> login(cleared)
+        |> put_connect_params(%{"timezone" => "America/Denver"})
+        |> live(~p"/my-huddlz")
+
+      reloaded = Ash.get!(Huddlz.Accounts.User, user.id, authorize?: false)
+      assert reloaded.time_zone_preference == nil
+    end
+
     test "does not override an existing time_zone_preference", %{conn: conn} do
       user = generate(user(time_zone_preference: "America/New_York"))
 

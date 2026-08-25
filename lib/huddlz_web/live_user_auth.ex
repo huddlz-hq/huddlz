@@ -115,10 +115,23 @@ defmodule HuddlzWeb.LiveUserAuth do
 
   defp maybe_load_user_details(socket), do: socket
 
+  # Auto-populates the display time zone from the browser on a user's first
+  # visit, and only ever then.
+  #
+  # `time_zone_preference_set_at` (stamped by `:update_display_timezone` on
+  # every run, auto or manual) is the "we've already asked" marker. Gating on
+  # `time_zone_preference == nil` alone is not enough: nil is also what "use
+  # each huddl's own time zone" looks like, and this hook runs on every
+  # `:app`-mounted LiveView — ProfileLive included — so it would re-populate a
+  # deliberately-cleared preference on the very next navigation.
+  #
+  # Both are checked so that users who already had a preference before the
+  # marker column existed (marker nil, preference set) are still left alone.
   defp maybe_populate_time_zone_preference(
          %{
            assigns: %{
-             current_user: %User{time_zone_preference: nil} = user,
+             current_user:
+               %User{time_zone_preference: nil, time_zone_preference_set_at: nil} = user,
              browser_time_zone: tz
            }
          } =

@@ -202,6 +202,13 @@ defmodule Huddlz.Accounts.User do
     update :update_display_timezone do
       description "Update the user's personal display time zone preference. Nil clears it."
       accept [:time_zone_preference]
+
+      # Stamped on every run — auto-population on first visit as well as the
+      # user's own manual edits. `LiveUserAuth.maybe_populate_time_zone_preference/1`
+      # keys off this marker rather than off `time_zone_preference` being nil,
+      # so a preference the user deliberately cleared ("use each huddl's own
+      # time zone") isn't silently re-populated on the next page load.
+      change set_attribute(:time_zone_preference_set_at, &DateTime.utc_now/0)
     end
 
     update :update_role do
@@ -728,6 +735,18 @@ defmodule Huddlz.Accounts.User do
       description "Viewer's preferred display time zone. Nil means \"use the huddl's own time zone\"."
       allow_nil? true
       public? true
+    end
+
+    attribute :time_zone_preference_set_at, :utc_datetime_usec do
+      description """
+      Stamped the first time `:update_display_timezone` runs for this user,
+      whether from browser auto-detection or their own manual edit. Nil means
+      "never asked" — the only state in which auto-population may fire. This
+      is what distinguishes it from a preference the user deliberately cleared.
+      """
+
+      allow_nil? true
+      public? false
     end
 
     attribute :legal_terms_accepted_at, :utc_datetime_usec do
