@@ -3,6 +3,8 @@ defmodule Huddlz.Notifications.DateTimeFormatter do
   Shared date/time formatting for notification copy.
   """
 
+  alias Huddlz.DateTimeFormatting
+
   @default_time_zone "Etc/UTC"
   @starts_at_format "%a %b %-d, %Y at %-I:%M %p %Z"
 
@@ -12,7 +14,7 @@ defmodule Huddlz.Notifications.DateTimeFormatter do
 
   def format_starts_at(%DateTime{} = datetime, time_zone \\ @default_time_zone) do
     datetime
-    |> shift_or_default(time_zone)
+    |> DateTimeFormatting.shift(time_zone)
     |> Calendar.strftime(@starts_at_format)
   end
 
@@ -26,14 +28,4 @@ defmodule Huddlz.Notifications.DateTimeFormatter do
   end
 
   def format_starts_at_iso(_, _, fallback), do: fallback
-
-  defp shift_or_default(datetime, time_zone) do
-    case DateTime.shift_zone(datetime, normalize_time_zone(time_zone)) do
-      {:ok, shifted} -> shifted
-      _ -> DateTime.shift_zone!(datetime, @default_time_zone)
-    end
-  end
-
-  defp normalize_time_zone(time_zone) when is_binary(time_zone) and time_zone != "", do: time_zone
-  defp normalize_time_zone(_), do: @default_time_zone
 end
