@@ -23,5 +23,34 @@ defmodule HuddlzWeb.LiveUserAuthTest do
 
       assert :sys.get_state(view.pid).socket.assigns.browser_time_zone == nil
     end
+
+    test "populates a nil time_zone_preference from the connect params on first visit", %{
+      conn: conn
+    } do
+      user = generate(user())
+      assert user.time_zone_preference == nil
+
+      {:ok, _view, _html} =
+        conn
+        |> login(user)
+        |> put_connect_params(%{"timezone" => "America/Denver"})
+        |> live(~p"/my-huddlz")
+
+      updated = Ash.get!(Huddlz.Accounts.User, user.id, authorize?: false)
+      assert updated.time_zone_preference == "America/Denver"
+    end
+
+    test "does not override an existing time_zone_preference", %{conn: conn} do
+      user = generate(user(time_zone_preference: "America/New_York"))
+
+      {:ok, _view, _html} =
+        conn
+        |> login(user)
+        |> put_connect_params(%{"timezone" => "America/Denver"})
+        |> live(~p"/my-huddlz")
+
+      updated = Ash.get!(Huddlz.Accounts.User, user.id, authorize?: false)
+      assert updated.time_zone_preference == "America/New_York"
+    end
   end
 end

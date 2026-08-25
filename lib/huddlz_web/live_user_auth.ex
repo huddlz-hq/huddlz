@@ -86,6 +86,7 @@ defmodule HuddlzWeb.LiveUserAuth do
       |> maybe_load_user_details()
       |> assign(:body_class, body_class)
       |> assign(:browser_time_zone, get_connect_params(socket)["timezone"])
+      |> maybe_populate_time_zone_preference()
       |> assign_new(:sidebar_owned_groups, fn -> load_sidebar_owned_groups(socket) end)
       |> assign_new(:unread_notification_count, fn -> load_unread_notification_count(socket) end)
       |> subscribe_to_organizer_access_changes()
@@ -113,6 +114,27 @@ defmodule HuddlzWeb.LiveUserAuth do
   end
 
   defp maybe_load_user_details(socket), do: socket
+
+  defp maybe_populate_time_zone_preference(
+         %{
+           assigns: %{
+             current_user: %User{time_zone_preference: nil} = user,
+             browser_time_zone: tz
+           }
+         } =
+           socket
+       )
+       when is_binary(tz) and tz != "" do
+    case Ash.update(
+           Ash.Changeset.for_update(user, :update_display_timezone, %{time_zone_preference: tz}),
+           actor: user
+         ) do
+      {:ok, updated_user} -> assign(socket, :current_user, updated_user)
+      {:error, _} -> socket
+    end
+  end
+
+  defp maybe_populate_time_zone_preference(socket), do: socket
 
   defp authorize_admin(user, socket) do
     if User.admin?(user) do

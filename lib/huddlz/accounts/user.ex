@@ -145,7 +145,15 @@ defmodule Huddlz.Accounts.User do
     create :create do
       # For testing/seeding only - use authentication actions in production
       primary? true
-      accept [:email, :display_name, :role, :confirmed_at, :hashed_password]
+
+      accept [
+        :email,
+        :display_name,
+        :role,
+        :confirmed_at,
+        :hashed_password,
+        :time_zone_preference
+      ]
     end
 
     read :get_by_subject do
@@ -189,6 +197,11 @@ defmodule Huddlz.Accounts.User do
     update :update_home_location do
       description "Update a user's home location for search pre-fill"
       accept [:home_location, :home_latitude, :home_longitude]
+    end
+
+    update :update_display_timezone do
+      description "Update the user's personal display time zone preference. Nil clears it."
+      accept [:time_zone_preference]
     end
 
     update :update_role do
@@ -624,6 +637,11 @@ defmodule Huddlz.Accounts.User do
       authorize_if expr(id == ^actor(:id))
     end
 
+    policy action(:update_display_timezone) do
+      description "Users can update their own display time zone preference"
+      authorize_if expr(id == ^actor(:id))
+    end
+
     policy action(:change_password) do
       description "Users can change their own password"
       authorize_if expr(id == ^actor(:id))
@@ -703,6 +721,12 @@ defmodule Huddlz.Accounts.User do
       description "Per-trigger email opt-in/out. Missing keys fall back to the trigger's default."
       allow_nil? false
       default %{}
+      public? true
+    end
+
+    attribute :time_zone_preference, :string do
+      description "Viewer's preferred display time zone. Nil means \"use the huddl's own time zone\"."
+      allow_nil? true
       public? true
     end
 

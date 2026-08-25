@@ -367,4 +367,51 @@ defmodule Huddlz.Accounts.UserTest do
       assert user1.display_name == "Unique Name 1"
     end
   end
+
+  describe "time_zone_preference" do
+    test "defaults to nil" do
+      user = Huddlz.Generator.user() |> Huddlz.Generator.generate()
+      assert user.time_zone_preference == nil
+    end
+
+    test "update_display_timezone sets the preference" do
+      user = Huddlz.Generator.user() |> Huddlz.Generator.generate()
+
+      {:ok, updated} =
+        user
+        |> Ash.Changeset.for_update(
+          :update_display_timezone,
+          %{time_zone_preference: "America/Denver"}, actor: user)
+        |> Ash.update()
+
+      assert updated.time_zone_preference == "America/Denver"
+    end
+
+    test "update_display_timezone can clear the preference back to nil" do
+      user =
+        Huddlz.Generator.user(time_zone_preference: "America/Denver")
+        |> Huddlz.Generator.generate()
+
+      {:ok, updated} =
+        user
+        |> Ash.Changeset.for_update(:update_display_timezone, %{time_zone_preference: nil},
+          actor: user
+        )
+        |> Ash.update()
+
+      assert updated.time_zone_preference == nil
+    end
+
+    test "another user cannot update someone else's time zone preference" do
+      user = Huddlz.Generator.user() |> Huddlz.Generator.generate()
+      other = Huddlz.Generator.user() |> Huddlz.Generator.generate()
+
+      assert {:error, _} =
+               user
+               |> Ash.Changeset.for_update(
+                 :update_display_timezone,
+                 %{time_zone_preference: "America/Denver"}, actor: other)
+               |> Ash.update()
+    end
+  end
 end
