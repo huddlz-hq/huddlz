@@ -39,7 +39,7 @@ defmodule Huddlz.Communities.Huddl.Changes.SendReminder do
       "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at)
     }
 
-    RecipientHelpers.deliver_each(user_ids, trigger, payload)
+    RecipientHelpers.deliver_each(user_ids, trigger, payload, huddl)
 
     {:ok, huddl}
   end

@@ -94,7 +94,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz do
     |> Enum.each(fn {user_id, target} ->
       payload = NotifyMeaningfulUpdate.payload(target, huddl.group, changed_fields)
 
-      RecipientHelpers.deliver_each([user_id], :huddl_series_updated, payload)
+      RecipientHelpers.deliver_each([user_id], :huddl_series_updated, payload, target)
     end)
   end
 end

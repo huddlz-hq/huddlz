@@ -54,7 +54,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyCancelled do
       recipients = cs.context[:huddl_cancelled_recipients] || []
       payload = cs.context[:huddl_cancelled_payload] || %{}
 
-      case RecipientHelpers.deliver_each(recipients, :huddl_cancelled, payload) do
+      case RecipientHelpers.deliver_each(recipients, :huddl_cancelled, payload, huddl) do
         :ok -> {:ok, huddl}
         {:error, reason} -> {:error, reason}
       end

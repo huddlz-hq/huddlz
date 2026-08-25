@@ -41,6 +41,6 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyRsvpCancelled do
 
     huddl.group_id
     |> RecipientHelpers.group_organizer_user_ids(exclude: actor.id)
-    |> RecipientHelpers.deliver_each(:rsvp_cancelled, payload)
+    |> RecipientHelpers.deliver_each(:rsvp_cancelled, payload, huddl)
   end
 end

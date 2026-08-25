@@ -62,7 +62,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyNewInGroup do
       "group_slug" => to_string(huddl.group.slug)
     }
 
-    case RecipientHelpers.deliver_each(user_ids, :huddl_new, payload) do
+    case RecipientHelpers.deliver_each(user_ids, :huddl_new, payload, huddl) do
       :ok -> {:ok, huddl}
       {:error, reason} -> {:error, reason}
     end

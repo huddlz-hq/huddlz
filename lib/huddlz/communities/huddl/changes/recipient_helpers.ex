@@ -102,7 +102,10 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
   @doc """
   Fan a notification trigger out to a list of user_ids, fetching users
   with `authorize?: false` and skipping any that no longer exist
-  (e.g. raced deletion). Used by the C/E-series fanout notifiers.
+  (e.g. raced deletion). Used by fanout notifiers whose payload has no
+  huddl to resolve a zone against (e.g. B1 group-join notifications).
+  For huddl-related payloads, prefer `deliver_each/4` so the recipient's
+  resolved time zone is injected.
   """
   @spec deliver_each([Ecto.UUID.t()], atom(), map()) :: :ok | {:error, term()}
   def deliver_each([], _trigger, _payload), do: :ok
@@ -113,6 +116,31 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
     |> Ash.read!(authorize?: false)
     |> Enum.reduce_while(:ok, fn user, :ok ->
       case Notifications.deliver(user, trigger, payload) do
+        {:ok, _job} -> {:cont, :ok}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
+
+  @doc """
+  Fan a notification trigger out to a list of user_ids, fetching users
+  with `authorize?: false` and skipping any that no longer exist
+  (e.g. raced deletion). Injects `"time_zone"` into the payload per
+  recipient, resolved from that recipient's own preference or the given
+  huddl's zone (see `Huddlz.DateTimeFormatting.resolve_zone/2`).
+  """
+  @spec deliver_each([Ecto.UUID.t()], atom(), map(), Huddl.t()) :: :ok | {:error, term()}
+  def deliver_each([], _trigger, _payload, _huddl), do: :ok
+
+  def deliver_each(user_ids, trigger, payload, huddl) do
+    User
+    |> Ash.Query.filter(id in ^user_ids)
+    |> Ash.read!(authorize?: false)
+    |> Enum.reduce_while(:ok, fn user, :ok ->
+      recipient_payload =
+        Map.put(payload, "time_zone", Huddlz.DateTimeFormatting.resolve_zone(user, huddl))
+
+      case Notifications.deliver(user, trigger, recipient_payload) do
         {:ok, _job} -> {:cont, :ok}
         {:error, reason} -> {:halt, {:error, reason}}
       end

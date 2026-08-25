@@ -76,7 +76,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate do
 
     payload = payload(huddl, huddl.group, changed_fields)
 
-    RecipientHelpers.deliver_each(recipients, :huddl_updated, payload)
+    RecipientHelpers.deliver_each(recipients, :huddl_updated, payload, huddl)
 
     {:ok, huddl}
   end

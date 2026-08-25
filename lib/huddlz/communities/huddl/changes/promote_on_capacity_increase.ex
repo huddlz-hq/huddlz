@@ -37,16 +37,20 @@ defmodule Huddlz.Communities.Huddl.Changes.PromoteOnCapacityIncrease do
       end
 
     Enum.each(promoted_ids, fn user_id ->
-      payload = %{
-        "huddl_id" => huddl.id,
-        "huddl_title" => to_string(huddl.title),
-        "group_name" => to_string(huddl.group.name),
-        "group_slug" => to_string(huddl.group.slug)
-      }
-
       case Ash.get(Huddlz.Accounts.User, user_id, authorize?: false) do
-        {:ok, user} -> Notifications.deliver(user, :waitlist_promoted, payload)
-        _ -> :noop
+        {:ok, user} ->
+          payload = %{
+            "huddl_id" => huddl.id,
+            "huddl_title" => to_string(huddl.title),
+            "group_name" => to_string(huddl.group.name),
+            "group_slug" => to_string(huddl.group.slug),
+            "time_zone" => Huddlz.DateTimeFormatting.resolve_zone(user, huddl)
+          }
+
+          Notifications.deliver(user, :waitlist_promoted, payload)
+
+        _ ->
+          :noop
       end
     end)
 

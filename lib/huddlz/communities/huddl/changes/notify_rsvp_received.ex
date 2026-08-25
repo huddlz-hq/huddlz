@@ -41,6 +41,6 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyRsvpReceived do
 
     huddl.group_id
     |> RecipientHelpers.group_organizer_user_ids(exclude: actor.id)
-    |> RecipientHelpers.deliver_each(:rsvp_received, payload)
+    |> RecipientHelpers.deliver_each(:rsvp_received, payload, huddl)
   end
 end
