@@ -143,7 +143,8 @@ defmodule Huddlz.Communities.Huddl do
         :group_id,
         :group_location_id,
         :huddl_template_id,
-        :lifecycle_state
+        :lifecycle_state,
+        :time_zone
       ]
 
       # Virtual arguments for form inputs
@@ -162,9 +163,9 @@ defmodule Huddlz.Communities.Huddl do
       argument :provided_latitude, :float, allow_nil?: true, public?: false
       argument :provided_longitude, :float, allow_nil?: true, public?: false
       argument :pending_image_id, :uuid, allow_nil?: true, public?: false
+      argument :browser_time_zone, :string, allow_nil?: true, public?: false
 
       validate one_of(:lifecycle_state, [:draft, :published])
-      validate Huddlz.Communities.Huddl.Validations.FutureDateValidation
 
       validate present(:frequency) do
         where argument_equals(:is_recurring, true)
@@ -178,7 +179,6 @@ defmodule Huddlz.Communities.Huddl do
 
       change Huddlz.Communities.Huddl.Changes.SetCreatorToActor
       change Huddlz.Communities.Huddl.Changes.AddCreatorAsAttendee
-      change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.AssignPendingImage
       change Huddlz.Communities.Huddl.Changes.AddHuddlTemplate
@@ -186,6 +186,9 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Geocoding.ApplyProvidedCoordinates
       change {Huddlz.Geocoding.GeocodeChange, field: :physical_location}
       change Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup
+      change Huddlz.Communities.Huddl.Changes.ResolveTimeZone
+      validate Huddlz.Communities.Huddl.Validations.FutureDateValidation
+      change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.SetInitialLifecycleTimestamps
       change Huddlz.Communities.Huddl.Changes.NotifyNewInGroup
     end
@@ -233,7 +236,8 @@ defmodule Huddlz.Communities.Huddl do
         :thumbnail_url,
         :max_attendees,
         :group_location_id,
-        :huddl_template_id
+        :huddl_template_id,
+        :time_zone
       ]
 
       # Virtual arguments for form inputs
@@ -261,6 +265,7 @@ defmodule Huddlz.Communities.Huddl do
 
       argument :provided_latitude, :float, allow_nil?: true, public?: false
       argument :provided_longitude, :float, allow_nil?: true, public?: false
+      argument :browser_time_zone, :string, allow_nil?: true, public?: false
 
       require_atomic? false
 
@@ -274,13 +279,25 @@ defmodule Huddlz.Communities.Huddl do
         message "is required when editing the whole series"
       end
 
-      change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.ClearUnusedLocationFields
-      change Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz
       change Huddlz.Geocoding.ApplyProvidedCoordinates
       change {Huddlz.Geocoding.GeocodeChange, field: :physical_location}
       change Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup
+      change Huddlz.Communities.Huddl.Changes.ResolveTimeZone
+      change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
+      # Must run after CalculateDateTimeFromInputs: it captures
+      # `changing_attribute?(changeset, :starts_at/:ends_at)` synchronously
+      # (via NotifyMeaningfulUpdate.changed_fields/1) to decide whether an
+      # "edit all" schedule change is worth notifying the series about, and
+      # those attributes only become "changing" once CalculateDateTimeFromInputs
+      # has run. Deviates from the brief's literal Step 9 ordering (which put
+      # this right after ClearUnusedLocationFields, unchanged from before task
+      # 6) because that position now precedes CalculateDateTimeFromInputs
+      # (which itself had to move down, after ResolveTimeZone) and silently
+      # dropped "edit all" schedule-change notifications — caught by
+      # test/huddlz/notifications/huddl_lifecycle_notifications_test.exs.
+      change Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz
       change Huddlz.Communities.Huddl.Changes.EnforceCapacityFloor
       change Huddlz.Communities.Huddl.Changes.ResetReminderStamps
       change Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate
@@ -764,6 +781,13 @@ defmodule Huddlz.Communities.Huddl do
       allow_nil? true
       description "Geocoded longitude of physical_location or inherited from group"
       constraints min: -180, max: 180
+    end
+
+    attribute :time_zone, :string do
+      allow_nil? false
+      public? true
+      default "Etc/UTC"
+      description "IANA timezone this huddl's date/time inputs and displays are interpreted in."
     end
 
     attribute :reminder_24h_sent_at, :utc_datetime_usec do

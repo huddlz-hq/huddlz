@@ -284,24 +284,40 @@ defmodule Huddlz.Generator do
   Create a huddl with random data.
   """
   def huddl(opts \\ []) do
-    creator_id =
-      opts[:creator_id] ||
-        once(:default_creator_id, fn ->
-          generate(user(role: :user)).id
-        end)
+    # Callers historically pass either a keyword list or a plain map (the
+    # prior `changeset_generator/3`-based implementation tolerated both via
+    # `Map.new/1`); normalize up front since the rest of this function uses
+    # `Keyword` functions directly.
+    opts = Keyword.new(opts)
 
-    # creator_id is no longer an accepted input — the :create action derives
-    # the creator from the actor. Author the huddl as the requested creator by
-    # using them as the actor (unless an explicit actor is given).
-    actor =
-      opts[:actor] || Ash.get!(User, creator_id, authorize?: false)
-
+    # `once/2` returns a lazy StreamData; realize it immediately (per its own
+    # documented usage, and mirroring `group/1`'s identical pattern) since
+    # it's used directly below via `Ash.get!/3` rather than threaded through
+    # a StreamData pipeline.
     group_id =
       opts[:group_id] ||
         once(:default_group_id, fn ->
           owner = generate(user(role: :user))
           generate(group(owner_id: owner.id, is_public: true, actor: owner)).id
         end)
+        |> Enum.at(0)
+
+    # creator_id is no longer an accepted input — the :create action derives
+    # the creator from the actor. Author the huddl as the requested creator by
+    # using them as the actor (unless an explicit actor is given). Default to
+    # the resolved group's owner (rather than an unrelated random user) so a
+    # bare `huddl()` call — no explicit actor/creator_id/group_id — satisfies
+    # the :create policy, which only allows the group's owner/organizers to
+    # create huddlz.
+    creator_id =
+      opts[:creator_id] ||
+        once(:default_creator_id, fn ->
+          Ash.get!(Group, group_id, authorize?: false).owner_id
+        end)
+        |> Enum.at(0)
+
+    actor =
+      opts[:actor] || Ash.get!(User, creator_id, authorize?: false)
 
     # Generate random dates in the future using the new virtual argument pattern
     days_ahead = :rand.uniform(30)
@@ -316,10 +332,8 @@ defmodule Huddlz.Generator do
     thumbnail_url =
       "https://placehold.co/600x400/#{random_hex_color()}/FFFFFF?text=Huddl"
 
-    changeset_generator(
-      Huddl,
-      :create,
-      defaults: [
+    generators =
+      [
         title: StreamData.repeatedly(fn -> Faker.Company.bs() end),
         description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
         # Use virtual arguments instead of starts_at/ends_at
@@ -336,10 +350,50 @@ defmodule Huddlz.Generator do
         huddl_template_id: nil,
         is_recurring: false,
         max_attendees: nil
-      ],
-      overrides: opts,
-      actor: actor
-    )
+      ]
+      |> Keyword.merge(Keyword.drop(opts, [:creator_id, :actor]))
+      |> Map.new()
+
+    changeset_opts =
+      [actor: actor] ++ Keyword.take(opts, [:tenant, :scope, :authorize?, :context])
+
+    # `:time_zone` is a plain accepted attribute with a non-nil default, so
+    # `Ash.Generator`'s own attribute-fill logic (see `generate_attributes/5`
+    # in `Ash.Generator`) would otherwise inject a random string for it on
+    # every call that doesn't ask for an explicit override — clobbering
+    # `ResolveTimeZone`'s ability to tell "explicit" from "defaulted". Build
+    # input via `action_input/3` directly (instead of `changeset_generator/3`)
+    # so the key can be dropped entirely when no override is requested,
+    # letting the resource's real default/derivation logic run untouched.
+    Ash.Generator.action_input(Huddl, :create, generators)
+    |> StreamData.map(fn input ->
+      input =
+        if Keyword.has_key?(opts, :time_zone) do
+          input
+        else
+          Map.delete(input, :time_zone)
+        end
+
+      # `Ash.Changeset.for_create/4`'s `params` (3rd) argument only accepts
+      # public inputs — private (`public?: false`) arguments like
+      # `browser_time_zone`/`provided_latitude`/`provided_longitude`/
+      # `pending_image_id` are silently dropped from it and must instead be
+      # routed through the `:private_arguments` changeset opt.
+      {private_input, input} =
+        Map.split(input, [
+          :browser_time_zone,
+          :provided_latitude,
+          :provided_longitude,
+          :pending_image_id
+        ])
+
+      Ash.Changeset.for_create(
+        Huddl,
+        :create,
+        input,
+        Keyword.put(changeset_opts, :private_arguments, private_input)
+      )
+    end)
   end
 
   @doc """
