@@ -5,6 +5,7 @@ defmodule Huddlz.Communities.Huddl.Validations.FutureDateValidation do
 
   use Ash.Resource.Validation
   alias Ash.Error.Changes.InvalidArgument
+  alias Huddlz.DateTimeFormatting
 
   @impl true
   def init(_opts), do: {:ok, []}
@@ -24,9 +25,14 @@ defmodule Huddlz.Communities.Huddl.Validations.FutureDateValidation do
          start_time when not is_nil(start_time) <-
            Ash.Changeset.get_argument(changeset, :start_time),
          time_zone <- Ash.Changeset.get_attribute(changeset, :time_zone) || "Etc/UTC",
-         {:ok, starts_at} <- DateTime.new(date, start_time, time_zone) do
+         {:ok, starts_at} <- DateTimeFormatting.resolve_wall_time(date, start_time, time_zone) do
       validate_future_datetime(starts_at)
     else
+      # Anything that isn't a resolvable instant — including a wall time that
+      # falls in a spring-forward gap — passes here and is reported by
+      # `CalculateDateTimeFromInputs`, which owns that error message. Using the
+      # same resolver keeps this validation honest about ambiguous (fall-back)
+      # times: it checks the very instant that will be stored.
       _ -> :ok
     end
   end

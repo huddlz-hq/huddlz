@@ -121,9 +121,14 @@ defmodule HuddlzWeb.CalendarLive do
     |> Enum.sort_by(& &1.huddl.starts_at, DateTime)
   end
 
+  # Grid boundaries are wall times in the viewer's zone. In zones whose DST
+  # transition lands at midnight (e.g. America/Santiago), the boundary itself
+  # can fall in the skipped hour — take the first instant after the gap rather
+  # than silently reverting the boundary to UTC.
   defp zone_datetime(date, time, time_zone) do
-    case DateTime.new(date, time, time_zone) do
+    case Huddlz.DateTimeFormatting.resolve_wall_time(date, time, time_zone) do
       {:ok, datetime} -> datetime
+      {:gap, _just_before, just_after} -> just_after
       _ -> DateTime.new!(date, time, "Etc/UTC")
     end
   end

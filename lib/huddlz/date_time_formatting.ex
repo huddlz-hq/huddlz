@@ -45,6 +45,31 @@ defmodule Huddlz.DateTimeFormatting do
   end
 
   @doc """
+  Interprets `date` and `time` as wall time in `time_zone`.
+
+  Wraps `DateTime.new/3` so that its two DST outcomes can't go unhandled:
+
+    * an *ambiguous* wall time (the hour repeated by a fall-back transition)
+      resolves to `{:ok, earlier_instant}` — the first of the two, i.e. still
+      in the pre-transition offset;
+    * a *nonexistent* wall time (the hour skipped by a spring-forward
+      transition) returns `{:gap, just_before, just_after}` for the caller to
+      reject or snap, since no instant matches what was asked for.
+
+  A missing or unrecognized zone falls back to `"Etc/UTC"`.
+  """
+  @spec resolve_wall_time(Date.t(), Time.t(), String.t() | nil) ::
+          {:ok, DateTime.t()} | {:gap, DateTime.t(), DateTime.t()} | {:error, term()}
+  def resolve_wall_time(date, time, time_zone) do
+    case DateTime.new(date, time, normalize(time_zone)) do
+      {:ok, datetime} -> {:ok, datetime}
+      {:ambiguous, earlier, _later} -> {:ok, earlier}
+      {:gap, just_before, just_after} -> {:gap, just_before, just_after}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
   Shifts a `DateTime` into `time_zone`, falling back to `"Etc/UTC"` if the
   zone is missing or unrecognized.
   """

@@ -148,4 +148,58 @@ defmodule Huddlz.Communities.HuddlTest do
       assert huddl.starts_at == ~U[2030-06-16 02:00:00Z]
     end
   end
+
+  describe "daylight saving transitions" do
+    setup do
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+      %{owner: owner, group: group}
+    end
+
+    test "a start time inside a spring-forward gap is a field error, not a crash", %{
+      owner: owner,
+      group: group
+    } do
+      # 2:30 AM on 2027-03-14 never happens in America/New_York: the clocks
+      # jump from 2:00 to 3:00 EDT.
+      assert {:error, %Ash.Error.Invalid{} = error} =
+               create_huddl(group, owner, ~D[2027-03-14], ~T[02:30:00])
+
+      assert Enum.any?(error.errors, &(Map.get(&1, :field) == :start_time))
+      assert Exception.message(error) =~ "the clocks change"
+    end
+
+    test "an ambiguous fall-back start time resolves to the earlier instant", %{
+      owner: owner,
+      group: group
+    } do
+      # 1:30 AM on 2027-11-07 happens twice in America/New_York: once at
+      # 05:30 UTC (EDT, still -4) and again at 06:30 UTC (EST, -5).
+      assert {:ok, huddl} = create_huddl(group, owner, ~D[2027-11-07], ~T[01:30:00])
+
+      assert huddl.starts_at == ~U[2027-11-07 05:30:00Z]
+      assert huddl.time_zone == "America/New_York"
+    end
+
+    defp create_huddl(group, owner, date, start_time) do
+      Huddl
+      |> Ash.Changeset.for_create(
+        :create,
+        %{
+          title: "Clock change huddl",
+          description: "Scheduled across a daylight saving transition.",
+          group_id: group.id,
+          event_type: :virtual,
+          virtual_link: "https://example.com/meet",
+          time_zone_selection: "America/New_York",
+          date: date,
+          start_time: start_time,
+          duration_minutes: 60,
+          lifecycle_state: :published
+        },
+        actor: owner
+      )
+      |> Ash.create()
+    end
+  end
 end

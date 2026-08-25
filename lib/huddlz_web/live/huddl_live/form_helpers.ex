@@ -42,7 +42,7 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
   end
 
   def calculate_end_time(date, time, duration_minutes, time_zone) do
-    case DateTime.new(date, time, normalize_time_zone(time_zone)) do
+    case Huddlz.DateTimeFormatting.resolve_wall_time(date, time, time_zone) do
       {:ok, starts_at} ->
         ends_at = DateTime.add(starts_at, duration_minutes, :minute)
 
@@ -56,9 +56,6 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
         nil
     end
   end
-
-  defp normalize_time_zone(time_zone) when is_binary(time_zone) and time_zone != "", do: time_zone
-  defp normalize_time_zone(_), do: "Etc/UTC"
 
   def apply_saved_location_to_form(socket, location) do
     current_params = socket.assigns.form.source.params || %{}

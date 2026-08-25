@@ -60,4 +60,47 @@ defmodule Huddlz.DateTimeFormattingTest do
       assert DateTimeFormatting.shift(dt, nil).time_zone == "Etc/UTC"
     end
   end
+
+  describe "resolve_wall_time/3" do
+    test "resolves an ordinary wall time in the given zone" do
+      assert {:ok, datetime} =
+               DateTimeFormatting.resolve_wall_time(
+                 ~D[2027-06-15],
+                 ~T[19:00:00],
+                 "America/New_York"
+               )
+
+      assert DateTime.shift_zone!(datetime, "Etc/UTC") == ~U[2027-06-15 23:00:00Z]
+    end
+
+    test "takes the earlier instant for a fall-back ambiguous wall time" do
+      assert {:ok, datetime} =
+               DateTimeFormatting.resolve_wall_time(
+                 ~D[2027-11-07],
+                 ~T[01:30:00],
+                 "America/New_York"
+               )
+
+      assert DateTime.shift_zone!(datetime, "Etc/UTC") == ~U[2027-11-07 05:30:00Z]
+    end
+
+    test "reports a spring-forward gap instead of raising" do
+      assert {:gap, just_before, just_after} =
+               DateTimeFormatting.resolve_wall_time(
+                 ~D[2027-03-14],
+                 ~T[02:30:00],
+                 "America/New_York"
+               )
+
+      assert DateTime.shift_zone!(just_before, "Etc/UTC") == ~U[2027-03-14 06:59:59.999999Z]
+      assert DateTime.shift_zone!(just_after, "Etc/UTC") == ~U[2027-03-14 07:00:00Z]
+    end
+
+    test "falls back to Etc/UTC for a nil zone" do
+      assert {:ok, datetime} =
+               DateTimeFormatting.resolve_wall_time(~D[2027-06-15], ~T[19:00:00], nil)
+
+      assert datetime == ~U[2027-06-15 19:00:00Z]
+    end
+  end
 end
