@@ -10,7 +10,8 @@ defmodule HuddlzWeb.GroupLive.New do
     only: [
       inject_group_location_param: 2,
       prepare_source_with_coordinates: 1,
-      apply_group_location_to_form: 2
+      apply_group_location_to_form: 2,
+      apply_time_zone_to_form: 3
     ]
 
   alias Huddlz.Communities
@@ -166,6 +167,16 @@ defmodule HuddlzWeb.GroupLive.New do
      |> apply_group_location_to_form("")}
   end
 
+  @impl true
+  def handle_info({:time_zone_selected, "group-time-zone", zone_id}, socket) do
+    {:noreply, apply_time_zone_to_form(socket, "time_zone_selection", zone_id)}
+  end
+
+  @impl true
+  def handle_info({:time_zone_cleared, "group-time-zone"}, socket) do
+    {:noreply, apply_time_zone_to_form(socket, "time_zone_selection", nil)}
+  end
+
   defp assign_pending_image_to_group(socket, group) do
     case socket.assigns[:pending_image_id] do
       nil ->
@@ -243,11 +254,12 @@ defmodule HuddlzWeb.GroupLive.New do
                 Optional. Helps people find your group when they search nearby.
               </p>
             </div>
-            <.select
+            <.live_component
+              module={HuddlzWeb.Live.TimeZoneSelect}
+              id="group-time-zone"
               field={@form[:time_zone_selection]}
               label="Time zone"
               prompt="Auto-detect from location…"
-              options={HuddlzWeb.Live.Helpers.TimeZoneOptions.options()}
               help="Applies to new huddlz you create in this group unless you set a different time zone on the huddl itself."
             />
           </div>

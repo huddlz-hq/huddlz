@@ -258,11 +258,12 @@ defmodule HuddlzWeb.ProfileLive do
             </div>
           </div>
           <div class="form-grid">
-            <.select
+            <.live_component
+              module={HuddlzWeb.Live.TimeZoneSelect}
+              id="profile-time-zone"
               field={@time_zone_form[:time_zone_preference]}
               label="Time zone"
               prompt="Use each huddl's own time zone"
-              options={HuddlzWeb.Live.Helpers.TimeZoneOptions.options()}
             />
           </div>
           <div class="form-foot">
@@ -668,6 +669,23 @@ defmodule HuddlzWeb.ProfileLive do
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to clear location")}
     end
+  end
+
+  @impl true
+  def handle_info({:time_zone_selected, "profile-time-zone", zone_id}, socket) do
+    {:noreply, apply_time_zone_preference_to_form(socket, zone_id)}
+  end
+
+  @impl true
+  def handle_info({:time_zone_cleared, "profile-time-zone"}, socket) do
+    {:noreply, apply_time_zone_preference_to_form(socket, nil)}
+  end
+
+  defp apply_time_zone_preference_to_form(socket, zone_id) do
+    current_params = socket.assigns.time_zone_form.source.params || %{}
+    updated_params = Map.put(current_params, "time_zone_preference", zone_id || "")
+    form = AshPhoenix.Form.validate(socket.assigns.time_zone_form.source, updated_params)
+    assign(socket, :time_zone_form, to_form(form))
   end
 
   defp clear_avatar_error_for_new_entry(socket, [_entry | _rest]),

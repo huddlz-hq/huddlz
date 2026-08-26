@@ -2,6 +2,7 @@ defmodule HuddlzWeb.GroupLive.NewTest do
   use HuddlzWeb.ConnCase, async: true
 
   import Huddlz.Test.Helpers.LocationSelection
+  import Huddlz.Test.Helpers.TimeZoneSelection
 
   alias Huddlz.Communities.Group
 
@@ -61,7 +62,8 @@ defmodule HuddlzWeb.GroupLive.NewTest do
         |> visit(~p"/groups/new")
         |> fill_in("Group name", with: "Explicit Zone Group")
         |> fill_in("Description", with: "A group whose organizer overrode the time zone.")
-        |> select("Time zone", option: "America/Denver")
+
+      session = select_time_zone(session, "America/Denver", id: "group-time-zone")
 
       select_location(session, id: "group-location", display_text: "Austin, TX, USA")
 

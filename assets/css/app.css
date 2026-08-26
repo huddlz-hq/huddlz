@@ -1234,6 +1234,213 @@ body .filter-location-error {
   font-size: 12px;
 }
 
+/* Time zone picker */
+body .tz-select {
+  position: relative;
+}
+
+body .tz-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: rgba(2, 4, 4, 0.6);
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+body .tz-select-trigger:hover { border-color: var(--cyan-dim); }
+body .tz-select-trigger:focus-visible {
+  outline: 0;
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px var(--cyan-soft);
+}
+
+body .tz-select-trigger-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+body .tz-select-trigger-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body .tz-select-trigger-label.is-placeholder {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+body .tz-select-trigger-sub {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body .tz-select-chevron {
+  flex: 0 0 auto;
+  color: var(--muted);
+  transition: transform 120ms ease;
+}
+
+body .tz-select-chevron.is-open { transform: rotate(180deg); }
+
+body .tz-select-panel {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+body .tz-select-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+body .tz-select-search-icon { color: var(--muted); flex: 0 0 auto; }
+
+body .tz-select-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+body .tz-select-search input::placeholder { color: var(--muted); }
+
+body .tz-select-list {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+body .tz-select-group-label {
+  padding: 8px 10px 4px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+body .tz-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+body .tz-select-option:hover,
+body .tz-select-option.is-selected {
+  background: var(--cyan-soft);
+}
+
+body .tz-select-option.is-prompt {
+  color: var(--soft);
+  font-style: italic;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  margin-bottom: 4px;
+}
+
+body .tz-select-option-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+body .tz-select-option-text .opt-main {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+body .tz-select-option-text .opt-secondary {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+body .tz-select-option-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+body .tz-select-offset {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+body .tz-select-check { color: var(--cyan); flex: 0 0 auto; }
+
+body .tz-select-empty {
+  padding: 20px 12px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+body .tz-select-show-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  margin-top: 4px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--soft);
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+body .tz-select-show-all:hover { color: var(--cyan); }
+
+body .tz-select-show-all-icon { color: var(--muted); flex: 0 0 auto; }
+
 body .filter-distance {
   display: flex;
   align-items: center;

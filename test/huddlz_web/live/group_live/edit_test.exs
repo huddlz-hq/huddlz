@@ -3,6 +3,7 @@ defmodule HuddlzWeb.GroupLive.EditTest do
 
   import Huddlz.Generator
   import Huddlz.Test.Helpers.LocationSelection
+  import Huddlz.Test.Helpers.TimeZoneSelection
   import Phoenix.LiveViewTest
 
   describe "Edit Group" do
@@ -89,11 +90,14 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       owner: owner,
       group: group
     } do
-      conn
-      |> login(owner)
-      |> visit(~p"/groups/#{group.slug}/edit")
-      |> assert_has("label", text: "Time zone")
-      |> select("Time zone", option: "America/Denver")
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/edit")
+        |> assert_has("label", text: "Time zone")
+
+      session
+      |> select_time_zone("America/Denver", id: "group-time-zone")
       |> click_button("Save Changes")
       |> assert_has("div[role='alert']", text: "Group updated successfully")
 

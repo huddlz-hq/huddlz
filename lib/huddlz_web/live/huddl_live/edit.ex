@@ -261,10 +261,11 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
         <.format_panel form={@form} />
 
-        <.select
+        <.live_component
+          module={HuddlzWeb.Live.TimeZoneSelect}
+          id="huddl-time-zone"
           field={@form[:time_zone]}
           label="Time zone"
-          options={HuddlzWeb.Live.Helpers.TimeZoneOptions.options()}
           help="Change the address to re-derive this from the new location, or pick a zone here to override it."
         />
 
@@ -538,6 +539,11 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   @impl true
   def handle_info({:location_cleared, "modal-address-autocomplete"}, socket) do
     {:noreply, ModalLocationHelpers.clear(socket)}
+  end
+
+  @impl true
+  def handle_info({:time_zone_selected, "huddl-time-zone", zone_id}, socket) do
+    {:noreply, apply_time_zone_to_form(socket, "time_zone", zone_id)}
   end
 
   defp assign_pending_image_to_huddl(socket, huddl) do

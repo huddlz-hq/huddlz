@@ -6,6 +6,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
   import PhoenixTest
   import Phoenix.LiveViewTest
   import Huddlz.Test.Helpers.Authentication
+  import Huddlz.Test.Helpers.TimeZoneSelection
 
   alias Huddlz.Accounts.User
   alias Huddlz.Notifications.DeliverWorker
@@ -789,7 +790,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
         conn
         |> login(user)
         |> visit("/profile")
-        |> select("Time zone", option: "America/Denver")
+        |> select_time_zone("America/Denver", id: "profile-time-zone")
 
       session
       |> within("#time-zone-form", fn session -> click_button(session, "Save") end)
@@ -813,7 +814,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
         conn
         |> login(user)
         |> visit("/profile")
-        |> select("Time zone", option: "Use each huddl's own time zone")
+        |> clear_time_zone(id: "profile-time-zone")
 
       session
       |> within("#time-zone-form", fn session -> click_button(session, "Save") end)

@@ -210,11 +210,12 @@ defmodule HuddlzWeb.HuddlLive.New do
 
         <.format_panel form={@form} />
 
-        <.select
+        <.live_component
+          module={HuddlzWeb.Live.TimeZoneSelect}
+          id="huddl-time-zone"
           field={@form[:time_zone_selection]}
           label="Time zone"
           prompt="Auto-detect from location…"
-          options={HuddlzWeb.Live.Helpers.TimeZoneOptions.options()}
           help="Leave blank to use the location's time zone (or your current time zone for a virtual huddl)."
         />
 
@@ -426,6 +427,28 @@ defmodule HuddlzWeb.HuddlLive.New do
   @impl true
   def handle_info({:location_cleared, "modal-address-autocomplete"}, socket) do
     {:noreply, ModalLocationHelpers.clear(socket)}
+  end
+
+  @impl true
+  def handle_info({:time_zone_selected, "huddl-time-zone", zone_id}, socket) do
+    {:noreply, apply_huddl_time_zone_selection(socket, zone_id)}
+  end
+
+  @impl true
+  def handle_info({:time_zone_cleared, "huddl-time-zone"}, socket) do
+    {:noreply, apply_huddl_time_zone_selection(socket, nil)}
+  end
+
+  defp apply_huddl_time_zone_selection(socket, zone_id) do
+    current_params = socket.assigns.form.source.params || %{}
+    updated_params = Map.put(current_params, "time_zone_selection", zone_id || "")
+
+    socket
+    |> update_calculated_end_time(updated_params, preview_time_zone(socket, updated_params))
+    |> assign(
+      :form,
+      socket.assigns.form.source |> AshPhoenix.Form.validate(updated_params) |> to_form()
+    )
   end
 
   defp prepare_source_for_submit(location, pending_image_id) do

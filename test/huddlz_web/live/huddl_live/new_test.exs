@@ -3,6 +3,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
 
   import Huddlz.Generator
   import Huddlz.Test.Helpers.LocationSelection
+  import Huddlz.Test.Helpers.TimeZoneSelection
   import Mox
   import Phoenix.LiveViewTest
 
@@ -702,7 +703,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> fill_in("Date", with: date)
         |> fill_in("Start time", with: "19:00")
         |> select("Duration", option: "1 hour")
-        |> select("Time zone", option: "America/Los_Angeles")
+        |> select_time_zone("America/Los_Angeles", id: "huddl-time-zone")
 
       select_physical_location(session.view, "123 Main St")
 
@@ -1018,7 +1019,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> fill_in("Date", with: date)
         |> fill_in("Start time", with: "14:30")
         |> select("Duration", option: "2 hours")
-        |> select("Time zone", option: "America/Denver")
+        |> select_time_zone("America/Denver", id: "huddl-time-zone")
 
       select_physical_location(session.view, "123 Main St")
       click_button(session, "Schedule huddl")

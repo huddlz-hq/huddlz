@@ -4,6 +4,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
   import Huddlz.Generator
   import Huddlz.Test.Helpers.Authentication, only: [login: 2]
   import Huddlz.Test.Helpers.LocationSelection
+  import Huddlz.Test.Helpers.TimeZoneSelection
   import Phoenix.LiveViewTest
 
   alias Huddlz.Communities.Huddl
@@ -593,7 +594,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
         conn
         |> login(owner)
         |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
-        |> select("Time zone", option: "America/Los_Angeles")
+        |> select_time_zone("America/Los_Angeles", id: "huddl-time-zone")
         |> click_button("Save changes")
 
       assert_has(session, "*", text: "Huddl updated successfully!")

@@ -10,7 +10,8 @@ defmodule HuddlzWeb.GroupLive.Edit do
     only: [
       inject_group_location_param: 2,
       prepare_source_with_coordinates: 1,
-      apply_group_location_to_form: 2
+      apply_group_location_to_form: 2,
+      apply_time_zone_to_form: 3
     ]
 
   alias Huddlz.Communities
@@ -310,10 +311,11 @@ defmodule HuddlzWeb.GroupLive.Edit do
                 Optional. Helps people find your group when they search nearby.
               </p>
             </div>
-            <.select
+            <.live_component
+              module={HuddlzWeb.Live.TimeZoneSelect}
+              id="group-time-zone"
               field={@form[:time_zone]}
               label="Time zone"
-              options={HuddlzWeb.Live.Helpers.TimeZoneOptions.options()}
               help="Applies to new huddlz you create in this group unless you set a different time zone on the huddl itself."
             />
           </div>
@@ -562,6 +564,11 @@ defmodule HuddlzWeb.GroupLive.Edit do
      socket
      |> assign(:selected_location_data, nil)
      |> apply_group_location_to_form("")}
+  end
+
+  @impl true
+  def handle_info({:time_zone_selected, "group-time-zone", zone_id}, socket) do
+    {:noreply, apply_time_zone_to_form(socket, "time_zone", zone_id)}
   end
 
   defp assign_pending_image_to_group(socket, group) do

@@ -162,6 +162,19 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
     assign(socket, :form, Phoenix.Component.to_form(form))
   end
 
+  @doc """
+  Updates a form's time-zone-ish field (`"time_zone_selection"` on create,
+  `"time_zone"` on edit) from `HuddlzWeb.Live.TimeZoneSelect`, which renders
+  no client-side input the browser could otherwise submit the change
+  through — the picker notifies the parent LiveView directly instead.
+  """
+  def apply_time_zone_to_form(socket, field, zone_id) do
+    current_params = socket.assigns.form.source.params || %{}
+    updated_params = Map.put(current_params, field, zone_id || "")
+    form = AshPhoenix.Form.validate(socket.assigns.form.source, updated_params)
+    assign(socket, :form, Phoenix.Component.to_form(form))
+  end
+
   def load_group_locations(group_id, user) do
     case Huddlz.Communities.list_group_locations(group_id, actor: user) do
       {:ok, locations} -> locations
