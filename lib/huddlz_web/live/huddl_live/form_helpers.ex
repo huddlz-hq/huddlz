@@ -127,20 +127,31 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
   end
 
   @doc """
-  Returns a `before_submit` function that applies pre-existing coordinates
-  directly to the changeset. Used with `AshPhoenix.Form.submit/2`'s
-  `:before_submit` option, which runs after `for_create`/`for_update`
-  (i.e., after Ash resource changes have already executed).
-  """
-  def prepare_source_with_coordinates(nil), do: & &1
+  Injects `provided_latitude`/`provided_longitude` params from an
+  already-geocoded location (a group's `selected_location_data`, or a
+  huddl's saved `GroupLocation`), so `Huddlz.Geocoding.ApplyProvidedCoordinates`
+  applies them as a normal change *before* `GeocodeChange` and
+  `SetTimeZoneFromLocation`/`ResolveTimeZone` run.
 
-  def prepare_source_with_coordinates(location) when is_map(location) do
-    fn changeset ->
-      changeset
-      |> Ash.Changeset.force_change_attribute(:latitude, location.latitude)
-      |> Ash.Changeset.force_change_attribute(:longitude, location.longitude)
-    end
+  Both of those coordinate arguments exist specifically so a caller who
+  already has real coordinates (from `Huddlz.Places`, e.g. the location
+  picker) can skip `GeocodeChange`'s redundant *text* geocode of the
+  `location`/`physical_location` attribute (a second, independent lookup
+  via `Huddlz.Geocoding` — normally Google's Geocoding API, which has no
+  dev-mode fallback the way `Huddlz.Places.Development` does, and which can
+  resolve a slightly different point than the one actually selected). Skip
+  entirely when coordinates aren't known yet, leaving that text-geocode
+  fallback in place for a location typed without ever being selected from a
+  suggestion.
+  """
+  def inject_provided_coordinates(params, %{latitude: lat, longitude: lng})
+      when is_number(lat) and is_number(lng) do
+    params
+    |> Map.put("provided_latitude", lat)
+    |> Map.put("provided_longitude", lng)
   end
+
+  def inject_provided_coordinates(params, _location), do: params
 
   @doc """
   Injects the location text into form params for group forms.

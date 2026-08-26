@@ -9,7 +9,7 @@ defmodule HuddlzWeb.GroupLive.New do
   import HuddlzWeb.HuddlLive.FormHelpers,
     only: [
       inject_group_location_param: 2,
-      prepare_source_with_coordinates: 1,
+      inject_provided_coordinates: 2,
       apply_group_location_to_form: 2,
       apply_time_zone_to_form: 3
     ]
@@ -124,13 +124,13 @@ defmodule HuddlzWeb.GroupLive.New do
       form_params
       |> Map.put("owner_id", socket.assigns.current_user.id)
       |> inject_group_location_param(socket.assigns.selected_location_data)
+      |> inject_provided_coordinates(socket.assigns.selected_location_data)
 
     case socket.assigns.form.source
          |> AshPhoenix.Form.validate(params_with_owner)
          |> AshPhoenix.Form.submit(
            params: params_with_owner,
-           actor: socket.assigns.current_user,
-           before_submit: prepare_source_with_coordinates(socket.assigns.selected_location_data)
+           actor: socket.assigns.current_user
          ) do
       {:ok, group} ->
         assign_pending_image_to_group(socket, group)

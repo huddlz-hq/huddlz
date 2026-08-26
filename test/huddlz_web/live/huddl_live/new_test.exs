@@ -870,8 +870,12 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> Ash.Query.filter(title == "Test Day Boundary" and group_id == ^group.id)
         |> Ash.read_one!(actor: owner)
 
-      # Verify end time is on the next day
-      assert Date.diff(DateTime.to_date(huddl.ends_at), DateTime.to_date(huddl.starts_at)) == 1
+      # Verify end time is on the next day, in the huddl's own time zone (23:00
+      # start in a real zone like America/Chicago can still land on the same
+      # UTC calendar date even though it crosses midnight locally).
+      starts_local = Huddlz.DateTimeFormatting.shift(huddl.starts_at, huddl.time_zone)
+      ends_local = Huddlz.DateTimeFormatting.shift(huddl.ends_at, huddl.time_zone)
+      assert Date.diff(DateTime.to_date(ends_local), DateTime.to_date(starts_local)) == 1
       # Verify duration is 6 hours
       duration_minutes = DateTime.diff(huddl.ends_at, huddl.starts_at, :minute)
       assert duration_minutes == 360
