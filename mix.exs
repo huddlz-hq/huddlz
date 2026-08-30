@@ -111,6 +111,7 @@ defmodule Huddlz.MixProject do
        compile: false,
        depth: 1},
       {:swoosh, "~> 1.16"},
+      {:multipart, "~> 0.4"},
       {:ical, "~> 2.0"},
       {:eqrcode, "~> 0.2.1"},
       {:req, "~> 0.5"},
