@@ -259,7 +259,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
       phx-hook="LocationAutocomplete"
       data-has-highlight={to_string(@suggestion_index >= 0)}
     >
-      <div class="filter-location">
+      <form class="filter-location">
         <svg
           width="14"
           height="14"
@@ -331,7 +331,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
             ×
           </button>
         <% end %>
-      </div>
+      </form>
 
       <%!-- Suggestion dropdown --%>
       <div
