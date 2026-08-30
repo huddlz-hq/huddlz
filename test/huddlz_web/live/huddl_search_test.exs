@@ -257,6 +257,15 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> assert_has(".filter-label", text: "Sort")
     end
 
+    test "location input is associated with its LiveView change form", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/discover")
+
+      assert has_element?(
+               view,
+               "form #location-autocomplete-input[phx-change='search_input']"
+             )
+    end
+
     test "filter bar is hidden under scope=groups", %{conn: conn} do
       conn
       |> visit("/discover?scope=groups")
