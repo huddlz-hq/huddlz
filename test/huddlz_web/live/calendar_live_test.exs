@@ -81,8 +81,8 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn
       |> login(attendee)
       |> visit("/calendar")
-      |> assert_has(".cal-month-name", text: current_month_name())
-      |> assert_has(".cal-month-count", text: "0 huddlz")
+      |> assert_has(".cal-period-name", text: current_month_name())
+      |> assert_has(".cal-period-count", text: "0 huddlz")
     end
 
     test "month grid renders 7 day-name headers", %{conn: conn, attendee: attendee} do
@@ -303,7 +303,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
         conn
         |> login(host)
         |> visit(calendar_path_for(tomorrow()))
-        |> assert_has(".cal-month-count", text: "1 huddl")
+        |> assert_has(".cal-period-count", text: "1 huddl")
         |> assert_has(
           "#calendar-entry-#{huddl.id}[data-status=hosting]",
           text: "Hosting"
@@ -346,7 +346,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn
       |> login(attendee)
       |> visit("/calendar?month=#{next_month_param(Date.utc_today())}")
-      |> assert_has(".cal-month-count", text: "1 huddl")
+      |> assert_has(".cal-period-count", text: "1 huddl")
     end
 
     test "month legend includes statuses on visible adjacent-month huddlz", %{
@@ -452,7 +452,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn
       |> login(attendee)
       |> visit("/calendar?month=not-a-month")
-      |> assert_has(".cal-month-name", text: current_month_name())
+      |> assert_has(".cal-period-name", text: current_month_name())
     end
   end
 

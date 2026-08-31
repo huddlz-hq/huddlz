@@ -80,7 +80,7 @@ defmodule CalendarRelationshipMarkersSteps do
   step "I see the huddl once", context do
     assert_has(
       context.session,
-      "#calendar-today-list #calendar-huddl-#{context.calendar_huddl.id}",
+      "#calendar-huddl-#{context.calendar_huddl.id}",
       count: 1
     )
 

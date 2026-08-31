@@ -1881,7 +1881,7 @@ body .cal-toolbar {
   margin-bottom: 14px;
 }
 
-body .cal-month-title {
+body .cal-period-title {
   display: flex;
   align-items: baseline;
   gap: 12px;
@@ -1899,14 +1899,14 @@ body .cal-month-eyebrow {
   opacity: 0.7;
 }
 
-body .cal-month-name {
+body .cal-period-name {
   font-family: var(--mono);
   font-size: 18px;
   font-weight: 700;
   color: var(--text);
 }
 
-body .cal-month-count {
+body .cal-period-count {
   color: var(--muted);
   font-size: 12px;
 }
