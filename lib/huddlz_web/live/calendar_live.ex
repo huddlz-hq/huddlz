@@ -8,6 +8,7 @@ defmodule HuddlzWeb.CalendarLive do
 
   alias Huddlz.Calendar.Clock
   alias Huddlz.Communities
+  alias Huddlz.Communities.Huddl
   alias Huddlz.TimeZone
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
@@ -29,6 +30,8 @@ defmodule HuddlzWeb.CalendarLive do
     :confirmed_rsvp_for_actor,
     :waitlisted_rsvp_for_actor
   ]
+  @coming_up_limit 3
+  @calendar_horizon ~U[9999-12-31 23:59:59Z]
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -44,6 +47,9 @@ defmodule HuddlzWeb.CalendarLive do
      |> assign(:time_zone, time_zone)
      |> assign(:today, today)
      |> stream_configure(:today_entries, dom_id: &"calendar-huddl-#{&1.huddl.id}")
+     |> stream_configure(:coming_up_entries,
+       dom_id: &"calendar-coming-up-huddl-#{&1.huddl.id}"
+     )
      |> stream_configure(:legend_items, dom_id: &"calendar-legend-item-#{&1.key}")}
   end
 
@@ -90,6 +96,15 @@ defmodule HuddlzWeb.CalendarLive do
     in_month_count = Enum.count(entries, &in_focus_month?(&1.huddl, focus_month))
     legend_items = legend_items(entries, focus_month, view_mode, socket.assigns.today)
 
+    coming_up_entries =
+      load_coming_up_entries(
+        user,
+        view_mode,
+        entries,
+        socket.assigns.today,
+        socket.assigns.time_zone
+      )
+
     socket
     |> assign(:calendar_params, params)
     |> assign(:focus_month, focus_month)
@@ -100,8 +115,10 @@ defmodule HuddlzWeb.CalendarLive do
     |> assign(:entries_by_day, entries_by_day)
     |> assign(:in_month_count, in_month_count)
     |> assign(:today_empty?, entries == [])
+    |> assign(:coming_up_empty?, coming_up_entries == [])
     |> assign(:legend_empty?, legend_items == [])
     |> stream(:today_entries, entries, reset: true)
+    |> stream(:coming_up_entries, coming_up_entries, reset: true)
     |> stream(:legend_items, legend_items, reset: true)
   end
 
@@ -163,6 +180,25 @@ defmodule HuddlzWeb.CalendarLive do
     end)
     |> Enum.sort_by(& &1.huddl.starts_at, DateTime)
   end
+
+  defp load_coming_up_entries(user, :today, [], today, time_zone) do
+    {_range_start, range_end} = local_day_window(today, time_zone)
+
+    case Communities.list_calendar_huddlz(range_end, @calendar_horizon,
+           actor: user,
+           load: @card_loads,
+           query: Ash.Query.limit(Huddl, @coming_up_limit)
+         ) do
+      {:ok, huddlz} ->
+        Enum.map(huddlz, &today_entry(&1, user))
+
+      {:error, reason} ->
+        Logger.warning("CalendarLive Coming up read failed: #{inspect(reason)}")
+        []
+    end
+  end
+
+  defp load_coming_up_entries(_user, _view_mode, _entries, _today, _time_zone), do: []
 
   defp device_time_zone(socket) do
     socket
@@ -604,7 +640,9 @@ defmodule HuddlzWeb.CalendarLive do
         <% :today -> %>
           <.today_view
             today_empty?={@today_empty?}
+            coming_up_empty?={@coming_up_empty?}
             entries={@streams.today_entries}
+            coming_up_entries={@streams.coming_up_entries}
             time_zone={@time_zone}
           />
         <% :month -> %>
@@ -641,7 +679,9 @@ defmodule HuddlzWeb.CalendarLive do
   end
 
   attr :today_empty?, :boolean, required: true
+  attr :coming_up_empty?, :boolean, required: true
   attr :entries, :any, required: true
+  attr :coming_up_entries, :any, required: true
   attr :time_zone, :string, required: true
 
   defp today_view(assigns) do
@@ -651,18 +691,49 @@ defmodule HuddlzWeb.CalendarLive do
       <div id="calendar-today-list" class="grid" phx-update="stream">
         <p :if={@today_empty?} id="calendar-today-empty" class="empty-state muted">
           Nothing on your calendar today.
+          <.link id="calendar-discover-link" navigate={~p"/discover"}>Discover huddlz</.link>
         </p>
-        <.shared_huddl_card
+        <.calendar_huddl_card
           :for={{id, entry} <- @entries}
           id={id}
-          huddl={entry.huddl}
-          relationship_label={today_relationship_label(entry)}
-          relationship_variant={today_relationship_variant(entry)}
-          relationship_testid="calendar-relationship"
-          when_label={today_when_label(entry.huddl, @time_zone)}
+          entry={entry}
+          time_zone={@time_zone}
         />
       </div>
+
+      <section
+        :if={@today_empty? && !@coming_up_empty?}
+        id="calendar-coming-up"
+        aria-labelledby="calendar-coming-up-title"
+      >
+        <h2 id="calendar-coming-up-title">Coming up</h2>
+        <div id="calendar-coming-up-list" class="grid" phx-update="stream">
+          <.calendar_huddl_card
+            :for={{id, entry} <- @coming_up_entries}
+            id={id}
+            entry={entry}
+            time_zone={@time_zone}
+          />
+        </div>
+      </section>
     </section>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :entry, :map, required: true
+  attr :time_zone, :string, required: true
+
+  defp calendar_huddl_card(assigns) do
+    ~H"""
+    <.shared_huddl_card
+      id={@id}
+      huddl={@entry.huddl}
+      relationship_label={today_relationship_label(@entry)}
+      relationship_variant={today_relationship_variant(@entry)}
+      relationship_testid="calendar-relationship"
+      when_label={today_when_label(@entry.huddl, @time_zone)}
+    />
     """
   end
 
