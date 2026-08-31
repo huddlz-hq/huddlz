@@ -317,8 +317,8 @@ defmodule Huddlz.Communities.Huddl do
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
 
       filter expr(
-               lifecycle_state == :published and starts_at >= ^arg(:range_start) and
-                 starts_at <= ^arg(:range_end) and
+               lifecycle_state in [:published, :completed] and starts_at < ^arg(:range_end) and
+                 ends_at > ^arg(:range_start) and
                  (exists(attendees, user_id == ^actor(:id) and is_nil(waitlisted_at)) or
                     exists(group.group_members, user_id == ^actor(:id)))
              )

@@ -28,7 +28,7 @@ defmodule CalendarTodaySteps do
           creator_id: host.id,
           title: "Today Pairing",
           starts_at: starts_at,
-          ends_at: DateTime.add(starts_at, 60, :minute),
+          ends_at: DateTime.add(starts_at, 1, :day),
           is_private: false
         )
       )
@@ -84,7 +84,23 @@ defmodule CalendarTodaySteps do
   end
 
   step "I visit Calendar", %{session: session} = context do
-    Map.put(context, :session, visit(session, "/calendar"))
+    session = visit(session, "/calendar")
+
+    case context[:device_time_zone] do
+      nil ->
+        Map.put(context, :session, session)
+
+      time_zone ->
+        Mox.allow(Huddlz.MockCalendarClock, self(), session.view.pid)
+
+        Phoenix.LiveViewTest.render_hook(
+          session.view,
+          "calendar:set-time-zone",
+          %{"timezone" => time_zone}
+        )
+
+        Map.put(context, :session, session)
+    end
   end
 
   step "Today is selected", %{session: session} = context do

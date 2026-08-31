@@ -26,6 +26,45 @@ import topbar from "../vendor/topbar"
 
 const Hooks = {}
 
+const browserTimeZone = () => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "Etc/UTC"
+  } catch (_error) {
+    return "Etc/UTC"
+  }
+}
+
+const millisecondsUntilNextCalendarDay = (timezone) => {
+  const now = new Date()
+
+  if (timezone === "Etc/UTC") {
+    const nextUtcDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)
+    return Math.max(nextUtcDay - now.getTime(), 1000)
+  }
+
+  const nextLocalDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+  return Math.max(nextLocalDay.getTime() - now.getTime(), 1000)
+}
+
+Hooks.CalendarTimeZone = {
+  mounted() {
+    this.scheduleNextLocalDay()
+  },
+
+  destroyed() {
+    clearTimeout(this.nextLocalDayTimer)
+  },
+
+  scheduleNextLocalDay() {
+    const timezone = browserTimeZone()
+
+    this.nextLocalDayTimer = setTimeout(() => {
+      this.pushEvent("calendar:set-time-zone", {timezone: browserTimeZone()})
+      this.scheduleNextLocalDay()
+    }, millisecondsUntilNextCalendarDay(timezone))
+  }
+}
+
 const imageFallbackSelector = "img[data-image-fallback]"
 
 const imageFallbackTarget = (event) => {
@@ -145,7 +184,10 @@ Hooks.ClipboardCopy = {
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
-  params: {_csrf_token: csrfToken},
+  params: () => ({
+    _csrf_token: csrfToken,
+    timezone: browserTimeZone()
+  }),
   hooks: Hooks,
   dom: {
     onBeforeElUpdated(fromEl, toEl) {

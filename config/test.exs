@@ -39,6 +39,7 @@ config :swoosh, :api_client, false
 config :huddlz, :storage, adapter: Huddlz.Storage.Local
 config :huddlz, :geocoding, adapter: Huddlz.MockGeocoding
 config :huddlz, :places, adapter: Huddlz.MockPlaces
+config :huddlz, :calendar, clock: Huddlz.MockCalendarClock
 config :huddlz, geocoding_req_plug: {Req.Test, Huddlz.Geocoding.Google}
 config :huddlz, places_req_plug: {Req.Test, Huddlz.Places.Google}
 # Real Google adapters read this key for request headers; the configured

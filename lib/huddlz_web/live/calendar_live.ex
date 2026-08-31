@@ -6,6 +6,7 @@ defmodule HuddlzWeb.CalendarLive do
   """
   use HuddlzWeb, :live_view
 
+  alias Huddlz.Calendar.Clock
   alias Huddlz.Communities
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
@@ -32,39 +33,74 @@ defmodule HuddlzWeb.CalendarLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    time_zone = device_time_zone(socket)
+    today = today_in(time_zone)
+
     {:ok,
      socket
      |> assign(:page_title, "Calendar")
-     |> assign(:today, Date.utc_today())
+     |> assign(:time_zone, time_zone)
+     |> assign(:today, today)
      |> stream_configure(:today_entries, dom_id: &"calendar-huddl-#{&1.huddl.id}")
      |> stream_configure(:legend_items, dom_id: &"calendar-legend-item-#{&1.key}")}
   end
 
   @impl true
   def handle_params(params, _uri, socket) do
+    {:noreply, assign_calendar(socket, params)}
+  end
+
+  @impl true
+  def handle_event("calendar:set-time-zone", %{"timezone" => time_zone}, socket) do
+    {:noreply, refresh_time_zone(socket, time_zone)}
+  end
+
+  def handle_event("calendar:set-time-zone", _params, socket) do
+    {:noreply, refresh_time_zone(socket, "Etc/UTC")}
+  end
+
+  defp refresh_time_zone(socket, time_zone) do
+    time_zone = valid_time_zone_or_utc(time_zone)
+
+    socket
+    |> assign(:time_zone, time_zone)
+    |> assign(:today, today_in(time_zone))
+    |> assign_calendar(socket.assigns.calendar_params)
+  end
+
+  defp assign_calendar(socket, params) do
     focus_month = parse_month(params["month"], socket.assigns.today)
     view_mode = parse_view(params)
     {grid_start, grid_end} = month_grid_window(focus_month)
     user = socket.assigns.current_user
 
-    entries = load_entries(user, view_mode, grid_start, grid_end, socket.assigns.today)
+    entries =
+      load_entries(
+        user,
+        view_mode,
+        grid_start,
+        grid_end,
+        socket.assigns.today,
+        socket.assigns.time_zone
+      )
+
     entries_by_day = group_by_day(entries)
     in_month_count = Enum.count(entries, &in_focus_month?(&1.huddl, focus_month))
     legend_items = legend_items(entries, focus_month, view_mode, socket.assigns.today)
 
-    {:noreply,
-     socket
-     |> assign(:focus_month, focus_month)
-     |> assign(:view_mode, view_mode)
-     |> assign(:grid_start, grid_start)
-     |> assign(:grid_end, grid_end)
-     |> assign(:entries, entries)
-     |> assign(:entries_by_day, entries_by_day)
-     |> assign(:in_month_count, in_month_count)
-     |> assign(:today_empty?, entries == [])
-     |> assign(:legend_empty?, legend_items == [])
-     |> stream(:today_entries, entries, reset: true)
-     |> stream(:legend_items, legend_items, reset: true)}
+    socket
+    |> assign(:calendar_params, params)
+    |> assign(:focus_month, focus_month)
+    |> assign(:view_mode, view_mode)
+    |> assign(:grid_start, grid_start)
+    |> assign(:grid_end, grid_end)
+    |> assign(:entries, entries)
+    |> assign(:entries_by_day, entries_by_day)
+    |> assign(:in_month_count, in_month_count)
+    |> assign(:today_empty?, entries == [])
+    |> assign(:legend_empty?, legend_items == [])
+    |> stream(:today_entries, entries, reset: true)
+    |> stream(:legend_items, legend_items, reset: true)
   end
 
   defp parse_month(nil, today), do: first_of_month(today)
@@ -103,16 +139,15 @@ defmodule HuddlzWeb.CalendarLive do
     {grid_start, grid_end}
   end
 
-  defp load_entries(user, :today, _grid_start, _grid_end, today) do
-    range_start = DateTime.new!(today, ~T[00:00:00], "Etc/UTC")
-    range_end = DateTime.new!(today, ~T[23:59:59], "Etc/UTC")
+  defp load_entries(user, :today, _grid_start, _grid_end, today, time_zone) do
+    {range_start, range_end} = local_day_window(today, time_zone)
 
     user
     |> calendar_huddlz(range_start, range_end)
     |> Enum.map(&today_entry/1)
   end
 
-  defp load_entries(user, _view_mode, grid_start, grid_end, _today) do
+  defp load_entries(user, _view_mode, grid_start, grid_end, _today, _time_zone) do
     grid_start_dt = DateTime.new!(grid_start, ~T[00:00:00], "Etc/UTC")
     grid_end_dt = DateTime.new!(grid_end, ~T[23:59:59], "Etc/UTC")
 
@@ -126,6 +161,47 @@ defmodule HuddlzWeb.CalendarLive do
     end)
     |> Enum.sort_by(& &1.huddl.starts_at, DateTime)
   end
+
+  defp device_time_zone(socket) do
+    socket
+    |> get_connect_params()
+    |> then(fn
+      %{"timezone" => time_zone} -> valid_time_zone_or_utc(time_zone)
+      _ -> "Etc/UTC"
+    end)
+  end
+
+  defp valid_time_zone_or_utc(time_zone) when is_binary(time_zone) do
+    case DateTime.shift_zone(~U[2000-01-01 00:00:00Z], time_zone) do
+      {:ok, _datetime} -> time_zone
+      {:error, _reason} -> "Etc/UTC"
+    end
+  end
+
+  defp valid_time_zone_or_utc(_time_zone), do: "Etc/UTC"
+
+  defp today_in(time_zone) do
+    Clock.utc_now()
+    |> DateTime.shift_zone!(time_zone)
+    |> DateTime.to_date()
+  end
+
+  defp local_day_window(today, time_zone) do
+    range_start = local_midnight_in_utc(today, time_zone)
+    range_end = today |> Date.add(1) |> local_midnight_in_utc(time_zone)
+    {range_start, range_end}
+  end
+
+  defp local_midnight_in_utc(date, time_zone) do
+    date
+    |> DateTime.new(~T[00:00:00], time_zone)
+    |> local_day_boundary()
+    |> DateTime.shift_zone!("Etc/UTC")
+  end
+
+  defp local_day_boundary({:ok, datetime}), do: datetime
+  defp local_day_boundary({:ambiguous, first_datetime, _second_datetime}), do: first_datetime
+  defp local_day_boundary({:gap, _just_before, first_datetime}), do: first_datetime
 
   defp calendar_huddlz(user, range_start, range_end) do
     case Communities.list_calendar_huddlz(range_start, range_end,
@@ -141,14 +217,25 @@ defmodule HuddlzWeb.CalendarLive do
     end
   end
 
-  defp today_entry(%{confirmed_rsvp_for_actor: true} = huddl),
-    do: %{huddl: huddl, roles: MapSet.new([:attending])}
-
-  defp today_entry(huddl), do: %{huddl: huddl, roles: MapSet.new()}
-
-  defp today_relationship_label(%{roles: roles}) do
-    if MapSet.member?(roles, :attending), do: "Going"
+  defp today_entry(%{confirmed_rsvp_for_actor: true} = huddl) do
+    build_today_entry(huddl, MapSet.new([:attending]))
   end
+
+  defp today_entry(huddl), do: build_today_entry(huddl, MapSet.new())
+
+  defp build_today_entry(huddl, roles) do
+    entry = %{huddl: huddl, roles: roles}
+    Map.put(entry, :card_status, today_card_status(entry))
+  end
+
+  defp today_relationship_label(%{card_status: nil}), do: nil
+  defp today_relationship_label(%{card_status: status}), do: status.label
+
+  defp today_relationship_variant(%{card_status: nil}), do: :default
+  defp today_relationship_variant(%{card_status: status}), do: status.variant
+
+  defp today_card_status(%{huddl: %{status: :completed}} = entry), do: past_status(entry)
+  defp today_card_status(entry), do: relationship_status(entry)
 
   defp fetch(user, role) do
     case Communities.search_huddlz(
@@ -437,6 +524,8 @@ defmodule HuddlzWeb.CalendarLive do
         </div>
       </div>
 
+      <div id="calendar-time-zone" phx-hook="CalendarTimeZone"></div>
+
       <div class="cal-toolbar">
         <div class="cal-nav">
           <.link
@@ -565,6 +654,7 @@ defmodule HuddlzWeb.CalendarLive do
           id={id}
           huddl={entry.huddl}
           relationship_label={today_relationship_label(entry)}
+          relationship_variant={today_relationship_variant(entry)}
           relationship_testid="calendar-relationship"
         />
       </div>
