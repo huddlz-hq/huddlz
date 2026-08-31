@@ -8,7 +8,9 @@ metadata:
 <!-- usage-rules-skill-start -->
 ## Additional References
 
-- [igniter](references/igniter.md)
+### igniter
+
+- [igniter](references/igniter/igniter.md)
 
 ## Searching Documentation
 

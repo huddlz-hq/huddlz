@@ -8,49 +8,69 @@ metadata:
 <!-- usage-rules-skill-start -->
 ## Additional References
 
-- [actions](references/actions.md)
-- [aggregates](references/aggregates.md)
-- [authorization](references/authorization.md)
-- [calculations](references/calculations.md)
-- [code_interfaces](references/code_interfaces.md)
-- [code_structure](references/code_structure.md)
-- [data_layers](references/data_layers.md)
-- [exist_expressions](references/exist_expressions.md)
-- [generating_code](references/generating_code.md)
-- [migrations](references/migrations.md)
-- [query_filter](references/query_filter.md)
-- [querying_data](references/querying_data.md)
-- [relationships](references/relationships.md)
-- [testing](references/testing.md)
-- [custom_types](references/custom_types.md)
-- [domain_configuration](references/domain_configuration.md)
-- [resource_configuration](references/resource_configuration.md)
-- [best_practices](references/best_practices.md)
-- [debugging_and_error_handling](references/debugging_and_error_handling.md)
-- [defining_triggers](references/defining_triggers.md)
-- [multi_tenancy_support](references/multi_tenancy_support.md)
-- [scheduled_actions](references/scheduled_actions.md)
-- [setting_up_ash_oban](references/setting_up_ash_oban.md)
-- [triggering_jobs_programmatically](references/triggering_jobs_programmatically.md)
-- [working_with_actors](references/working_with_actors.md)
-- [debugging_form_submissions](references/debugging_form_submissions.md)
-- [error_handling](references/error_handling.md)
-- [form_integration](references/form_integration.md)
-- [nested_forms](references/nested_forms.md)
-- [union_forms](references/union_forms.md)
-- [advanced_features](references/advanced_features.md)
-- [check_constraints](references/check_constraints.md)
-- [configuration](references/configuration.md)
-- [custom_indexes](references/custom_indexes.md)
-- [custom_sql_statements](references/custom_sql_statements.md)
-- [foreign_keys](references/foreign_keys.md)
-- [multitenancy](references/multitenancy.md)
-- [ash](references/ash.md)
-- [ash_graphql](references/ash_graphql.md)
-- [ash_json_api](references/ash_json_api.md)
-- [ash_oban](references/ash_oban.md)
-- [ash_phoenix](references/ash_phoenix.md)
-- [ash_postgres](references/ash_postgres.md)
+### ash
+
+- [ash](references/ash/ash.md)
+- [actions](references/ash/actions.md)
+- [aggregates](references/ash/aggregates.md)
+- [authorization](references/ash/authorization.md)
+- [calculations](references/ash/calculations.md)
+- [code_interfaces](references/ash/code_interfaces.md)
+- [code_structure](references/ash/code_structure.md)
+- [data_layers](references/ash/data_layers.md)
+- [exist_expressions](references/ash/exist_expressions.md)
+- [generating_code](references/ash/generating_code.md)
+- [migrations](references/ash/migrations.md)
+- [query_filter](references/ash/query_filter.md)
+- [querying_data](references/ash/querying_data.md)
+- [relationships](references/ash/relationships.md)
+- [testing](references/ash/testing.md)
+
+### ash_graphql
+
+- [ash_graphql](references/ash_graphql/ash_graphql.md)
+- [custom_types](references/ash_graphql/custom_types.md)
+- [domain_configuration](references/ash_graphql/domain_configuration.md)
+- [resource_configuration](references/ash_graphql/resource_configuration.md)
+
+### ash_json_api
+
+- [ash_json_api](references/ash_json_api/ash_json_api.md)
+
+### ash_oban
+
+- [ash_oban](references/ash_oban/ash_oban.md)
+- [best_practices](references/ash_oban/best_practices.md)
+- [debugging_and_error_handling](references/ash_oban/debugging_and_error_handling.md)
+- [defining_triggers](references/ash_oban/defining_triggers.md)
+- [multi_tenancy_support](references/ash_oban/multi_tenancy_support.md)
+- [scheduled_actions](references/ash_oban/scheduled_actions.md)
+- [setting_up_ash_oban](references/ash_oban/setting_up_ash_oban.md)
+- [triggering_jobs_programmatically](references/ash_oban/triggering_jobs_programmatically.md)
+- [working_with_actors](references/ash_oban/working_with_actors.md)
+
+### ash_phoenix
+
+- [ash_phoenix](references/ash_phoenix/ash_phoenix.md)
+- [best_practices](references/ash_phoenix/best_practices.md)
+- [debugging_form_submissions](references/ash_phoenix/debugging_form_submissions.md)
+- [error_handling](references/ash_phoenix/error_handling.md)
+- [form_integration](references/ash_phoenix/form_integration.md)
+- [nested_forms](references/ash_phoenix/nested_forms.md)
+- [union_forms](references/ash_phoenix/union_forms.md)
+
+### ash_postgres
+
+- [ash_postgres](references/ash_postgres/ash_postgres.md)
+- [advanced_features](references/ash_postgres/advanced_features.md)
+- [best_practices](references/ash_postgres/best_practices.md)
+- [check_constraints](references/ash_postgres/check_constraints.md)
+- [configuration](references/ash_postgres/configuration.md)
+- [custom_indexes](references/ash_postgres/custom_indexes.md)
+- [custom_sql_statements](references/ash_postgres/custom_sql_statements.md)
+- [foreign_keys](references/ash_postgres/foreign_keys.md)
+- [migrations](references/ash_postgres/migrations.md)
+- [multitenancy](references/ash_postgres/multitenancy.md)
 
 ## Searching Documentation
 
@@ -82,6 +102,7 @@ mix usage_rules.search_docs "search term" -p ash -p ash_authentication_phoenix -
 - `mix ash.patch.extend` - Adds an extension or extensions to the given domain/resource
 - `mix ash.reset` - Runs all tear down & setup tasks for any extension on any resource/domain in your application.
 - `mix ash.rollback` - Runs all rollback tasks for any extension on any resource/domain in your application.
+- `mix ash.set.domains` - Dynamically discovers and updates Ash domains in config.exs
 - `mix ash.setup` - Runs all setup tasks for any extension on any resource/domain in your application.
 - `mix ash.tear_down` - Runs all tear_down tasks for any extension on any resource/domain in your application.
 - `mix ash_authentication.phoenix.routes` - Prints all routes generated by AshAuthentication Phoenix
