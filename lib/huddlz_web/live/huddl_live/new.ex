@@ -43,8 +43,11 @@ defmodule HuddlzWeb.HuddlLive.New do
   end
 
   defp init_create_form_socket(socket, group, user) do
+    time_zone = device_time_zone(socket)
+
     socket
-    |> assign_create_form(group, user)
+    |> assign_create_form(group, user, time_zone)
+    |> assign(:schedule_time_zone, time_zone)
     |> assign(:group_locations, load_group_locations(group.id, user))
     |> assign(:selected_location, nil)
     |> ModalLocationHelpers.init()
@@ -61,7 +64,7 @@ defmodule HuddlzWeb.HuddlLive.New do
     allow_image_upload(socket, :huddl_image, &handle_upload_progress/3)
   end
 
-  defp assign_create_form(socket, group, user) do
+  defp assign_create_form(socket, group, user, time_zone) do
     tomorrow = Date.utc_today() |> Date.add(1)
     default_time = ~T[14:00:00]
 
@@ -73,7 +76,8 @@ defmodule HuddlzWeb.HuddlLive.New do
           "group_id" => group.id,
           "date" => Date.to_iso8601(tomorrow),
           "start_time" => Time.to_iso8601(default_time) |> String.slice(0..4),
-          "duration_minutes" => "60"
+          "duration_minutes" => "60",
+          "time_zone" => time_zone
         }
       )
 
@@ -489,6 +493,7 @@ defmodule HuddlzWeb.HuddlLive.New do
   def handle_event("validate", %{"form" => params}, socket) do
     params =
       params
+      |> put_schedule_time_zone(socket.assigns.schedule_time_zone)
       |> inject_saved_location_params(socket.assigns[:selected_location])
       |> mark_location_used_after_submit(socket.assigns.form)
 
@@ -510,6 +515,7 @@ defmodule HuddlzWeb.HuddlLive.New do
       params
       |> Map.put("group_id", socket.assigns.group.id)
       |> Map.put("lifecycle_state", lifecycle_state)
+      |> put_schedule_time_zone(socket.assigns.schedule_time_zone)
       |> inject_saved_location_params(socket.assigns[:selected_location])
       |> mark_location_used(socket.assigns.form)
 

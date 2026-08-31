@@ -8,6 +8,7 @@ defmodule HuddlzWeb.CalendarLive do
 
   alias Huddlz.Calendar.Clock
   alias Huddlz.Communities
+  alias Huddlz.TimeZone
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
   require Logger
@@ -61,7 +62,7 @@ defmodule HuddlzWeb.CalendarLive do
   end
 
   defp refresh_time_zone(socket, time_zone) do
-    time_zone = valid_time_zone_or_utc(time_zone)
+    time_zone = TimeZone.valid_or_utc(time_zone)
 
     socket
     |> assign(:time_zone, time_zone)
@@ -166,20 +167,9 @@ defmodule HuddlzWeb.CalendarLive do
   defp device_time_zone(socket) do
     socket
     |> get_connect_params()
-    |> then(fn
-      %{"timezone" => time_zone} -> valid_time_zone_or_utc(time_zone)
-      _ -> "Etc/UTC"
-    end)
+    |> TimeZone.from_connect_params()
+    |> TimeZone.valid_or_utc()
   end
-
-  defp valid_time_zone_or_utc(time_zone) when is_binary(time_zone) do
-    case DateTime.shift_zone(~U[2000-01-01 00:00:00Z], time_zone) do
-      {:ok, _datetime} -> time_zone
-      {:error, _reason} -> "Etc/UTC"
-    end
-  end
-
-  defp valid_time_zone_or_utc(_time_zone), do: "Etc/UTC"
 
   defp today_in(time_zone) do
     Clock.utc_now()
@@ -241,6 +231,19 @@ defmodule HuddlzWeb.CalendarLive do
 
   defp today_relationship_variant(%{card_status: nil}), do: :default
   defp today_relationship_variant(%{card_status: status}), do: status.variant
+
+  defp today_when_label(%{starts_at: starts_at, time_zone: time_zone}, device_time_zone)
+       when is_binary(time_zone) and time_zone != device_time_zone do
+    case DateTime.shift_zone(starts_at, time_zone) do
+      {:ok, local_starts_at} ->
+        Calendar.strftime(local_starts_at, "%a · %-I:%M %p %Z")
+
+      {:error, _reason} ->
+        nil
+    end
+  end
+
+  defp today_when_label(_huddl, _device_time_zone), do: nil
 
   defp today_card_status(%{huddl: %{status: status}} = entry) do
     case HuddlStatus.contextual_override(status) do
@@ -599,7 +602,11 @@ defmodule HuddlzWeb.CalendarLive do
 
       <%= case @view_mode do %>
         <% :today -> %>
-          <.today_view today_empty?={@today_empty?} entries={@streams.today_entries} />
+          <.today_view
+            today_empty?={@today_empty?}
+            entries={@streams.today_entries}
+            time_zone={@time_zone}
+          />
         <% :month -> %>
           <.month_grid
             entries={@entries}
@@ -635,6 +642,7 @@ defmodule HuddlzWeb.CalendarLive do
 
   attr :today_empty?, :boolean, required: true
   attr :entries, :any, required: true
+  attr :time_zone, :string, required: true
 
   defp today_view(assigns) do
     ~H"""
@@ -651,6 +659,7 @@ defmodule HuddlzWeb.CalendarLive do
           relationship_label={today_relationship_label(entry)}
           relationship_variant={today_relationship_variant(entry)}
           relationship_testid="calendar-relationship"
+          when_label={today_when_label(entry.huddl, @time_zone)}
         />
       </div>
     </section>

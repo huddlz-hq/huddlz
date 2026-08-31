@@ -28,11 +28,13 @@ const Hooks = {}
 
 const browserTimeZone = () => {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || "Etc/UTC"
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || null
   } catch (_error) {
-    return "Etc/UTC"
+    return null
   }
 }
+
+const calendarTimeZone = () => browserTimeZone() || "Etc/UTC"
 
 const millisecondsUntilNextCalendarDay = (timezone) => {
   const now = new Date()
@@ -56,10 +58,10 @@ Hooks.CalendarTimeZone = {
   },
 
   scheduleNextLocalDay() {
-    const timezone = browserTimeZone()
+    const timezone = calendarTimeZone()
 
     this.nextLocalDayTimer = setTimeout(() => {
-      this.pushEvent("calendar:set-time-zone", {timezone: browserTimeZone()})
+      this.pushEvent("calendar:set-time-zone", {timezone: calendarTimeZone()})
       this.scheduleNextLocalDay()
     }, millisecondsUntilNextCalendarDay(timezone))
   }

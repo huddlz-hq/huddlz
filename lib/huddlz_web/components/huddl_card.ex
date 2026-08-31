@@ -19,6 +19,7 @@ defmodule HuddlzWeb.Components.HuddlCard do
   attr :relationship_variant, :atom, default: :default
   attr :relationship_testid, :string, default: "huddl-relationship"
   attr :secondary_label, :string, default: nil
+  attr :when_label, :string, default: nil
 
   def shared_huddl_card(assigns) do
     ~H"""
@@ -44,7 +45,7 @@ defmodule HuddlzWeb.Components.HuddlCard do
         <span :if={@huddl.group} class="card-group">{@huddl.group.name}</span>
         <h3 class="card-title">{@huddl.title}</h3>
         <div class="card-meta">
-          <span>{format_meta_when(@huddl.starts_at)}</span>
+          <span data-testid="huddl-when">{@when_label || format_meta_when(@huddl.starts_at)}</span>
           <%= if location_label(@huddl) do %>
             <span class="dot"></span>
             <span class="card-location">{location_label(@huddl)}</span>

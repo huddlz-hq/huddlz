@@ -80,8 +80,9 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
   defp assign_edit_form(socket, huddl, group_slug, user) do
     # Extract date/time/duration from existing starts_at/ends_at
-    date = DateTime.to_date(huddl.starts_at)
-    start_time = DateTime.to_time(huddl.starts_at)
+    local_starts_at = schedule_datetime(huddl.starts_at, huddl.time_zone)
+    date = DateTime.to_date(local_starts_at)
+    start_time = DateTime.to_time(local_starts_at)
     duration_minutes = DateTime.diff(huddl.ends_at, huddl.starts_at, :minute)
 
     form =
@@ -97,6 +98,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
       "date" => Date.to_iso8601(date),
       "start_time" => Calendar.strftime(start_time, "%H:%M"),
       "duration_minutes" => to_string(duration_minutes),
+      "time_zone" => huddl.time_zone,
       "max_attendees" => if(huddl.max_attendees, do: to_string(huddl.max_attendees), else: ""),
       "event_type" => to_string(huddl.event_type),
       "physical_location" => huddl.physical_location || "",
@@ -111,6 +113,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     |> assign(:page_title, huddl.title)
     |> assign(:group_slug, group_slug)
     |> assign(:huddl, huddl)
+    |> assign(:schedule_time_zone, huddl.time_zone)
     |> assign(:show_physical_location, huddl.event_type in [:in_person, :hybrid])
     |> assign(:show_virtual_link, huddl.event_type in [:virtual, :hybrid])
     |> assign(:calculated_end_time, calculate_end_time(date, start_time, duration_minutes))
@@ -574,7 +577,11 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   @impl true
   def handle_event("set_edit_type", %{"type" => type}, socket) when type in ["instance", "all"] do
     current_params = socket.assigns.form.source.params || %{}
-    updated_params = Map.put(current_params, "edit_type", type)
+
+    updated_params =
+      current_params
+      |> Map.put("edit_type", type)
+      |> put_schedule_time_zone(socket.assigns.schedule_time_zone)
 
     socket =
       socket
@@ -617,6 +624,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   def handle_event("validate", %{"form" => params}, socket) do
     params =
       params
+      |> put_schedule_time_zone(socket.assigns.schedule_time_zone)
       |> inject_saved_location_params(socket.assigns[:selected_location])
       |> mark_location_used_after_submit(socket.assigns.form)
 
@@ -633,6 +641,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   def handle_event("save", %{"form" => params}, socket) do
     params =
       params
+      |> put_schedule_time_zone(socket.assigns.schedule_time_zone)
       |> inject_saved_location_params(socket.assigns[:selected_location])
       |> mark_location_used(socket.assigns.form)
 

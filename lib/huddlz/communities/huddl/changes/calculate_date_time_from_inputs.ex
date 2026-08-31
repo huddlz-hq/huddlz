@@ -10,13 +10,14 @@ defmodule Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs do
     date = Ash.Changeset.get_argument(changeset, :date)
     start_time = Ash.Changeset.get_argument(changeset, :start_time)
     duration_minutes = Ash.Changeset.get_argument(changeset, :duration_minutes)
+    time_zone = Ash.Changeset.get_attribute(changeset, :time_zone) || "Etc/UTC"
 
     # Only calculate if all three virtual arguments are provided
     if date && start_time && duration_minutes do
       # Combine date and time into a DateTime
       # Assuming the user's input is in their local timezone, we'll use UTC for now
       # In a real app, you'd want to handle timezone conversion properly
-      case build_datetime(date, start_time) do
+      case build_datetime(date, start_time, time_zone) do
         {:ok, starts_at} ->
           # Calculate ends_at by adding duration
           ends_at = DateTime.add(starts_at, duration_minutes, :minute)
@@ -38,9 +39,19 @@ defmodule Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs do
     end
   end
 
-  defp build_datetime(date, time) do
-    # Convert Elixir Date and Time to DateTime
-    # For now, we'll treat all times as UTC. In production, you'd handle timezone properly
-    DateTime.new(date, time, "Etc/UTC")
+  defp build_datetime(date, time, time_zone) do
+    case DateTime.new(date, time, time_zone) do
+      {:ok, local_starts_at} ->
+        DateTime.shift_zone(local_starts_at, "Etc/UTC")
+
+      {:ambiguous, _first_starts_at, _second_starts_at} ->
+        {:error, "is ambiguous in #{time_zone} due to daylight saving time"}
+
+      {:gap, _before_gap, _after_gap} ->
+        {:error, "does not exist in #{time_zone} due to daylight saving time"}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 end

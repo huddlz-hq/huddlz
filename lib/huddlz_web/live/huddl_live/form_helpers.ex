@@ -5,6 +5,20 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
   """
   import Phoenix.Component, only: [assign: 3]
 
+  def device_time_zone(socket) do
+    socket
+    |> Phoenix.LiveView.get_connect_params()
+    |> Huddlz.TimeZone.from_connect_params()
+  end
+
+  def put_schedule_time_zone(params, time_zone), do: Map.put(params, "time_zone", time_zone)
+
+  def schedule_datetime(datetime, nil), do: datetime
+
+  def schedule_datetime(datetime, time_zone) do
+    DateTime.shift_zone!(datetime, time_zone)
+  end
+
   def update_calculated_end_time(socket, params) do
     case {params["date"], params["start_time"], params["duration_minutes"]} do
       {d, t, dur} when d != "" and t != "" and dur != "" ->

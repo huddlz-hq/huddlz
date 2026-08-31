@@ -300,6 +300,7 @@ defmodule Huddlz.Generator do
         date: future_date,
         start_time: start_time,
         duration_minutes: duration_minutes,
+        time_zone: nil,
         thumbnail_url: thumbnail_url,
         group_id: group_id,
         event_type: :in_person,

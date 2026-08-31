@@ -134,6 +134,7 @@ defmodule Huddlz.Communities.Huddl do
         :description,
         :starts_at,
         :ends_at,
+        :time_zone,
         :event_type,
         :physical_location,
         :virtual_link,
@@ -226,6 +227,7 @@ defmodule Huddlz.Communities.Huddl do
         :description,
         :starts_at,
         :ends_at,
+        :time_zone,
         :event_type,
         :physical_location,
         :virtual_link,
@@ -660,6 +662,7 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     validate {Huddlz.Communities.Huddl.Validations.WebUrlValidation, attribute: :virtual_link}
+    validate Huddlz.Communities.Huddl.Validations.TimeZoneValidation
 
     validate compare(:ends_at, greater_than: :starts_at) do
       message "must be after the start time"
@@ -711,6 +714,12 @@ defmodule Huddlz.Communities.Huddl do
     attribute :ends_at, :utc_datetime do
       allow_nil? false
       public? true
+    end
+
+    attribute :time_zone, :string do
+      allow_nil? true
+      public? true
+      description "Authoritative IANA time zone for the huddl's local schedule."
     end
 
     attribute :event_type, :atom do
