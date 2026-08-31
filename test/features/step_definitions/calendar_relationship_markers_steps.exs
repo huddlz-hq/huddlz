@@ -2,6 +2,7 @@ defmodule CalendarRelationshipMarkersSteps do
   use Cucumber.StepDefinition
 
   import Huddlz.Generator
+  import Huddlz.Test.Helpers.Calendar
   import PhoenixTest
 
   alias Huddlz.Communities.HuddlAttendee
@@ -44,13 +45,11 @@ defmodule CalendarRelationshipMarkersSteps do
   end
 
   step "I organize a group", context do
-    owner = generate(user(role: :user))
-
-    {group, [_membership]} =
-      generate_group_with_members(
-        owner: owner,
-        group: [is_public: true],
-        members: [%{user: context.current_user, role: :organizer}]
+    %{owner: owner, group: group} =
+      create_calendar_member_group(
+        member: context.current_user,
+        role: :organizer,
+        group: [is_public: true]
       )
 
     Map.merge(context, %{calendar_group: group, calendar_owner: owner})
@@ -96,22 +95,6 @@ defmodule CalendarRelationshipMarkersSteps do
     )
 
     context
-  end
-
-  defp create_today_huddl(group, creator, title) do
-    starts_at = DateTime.new!(Date.utc_today(), ~T[12:00:00], "Etc/UTC")
-
-    generate(
-      past_huddl(
-        group_id: group.id,
-        creator_id: creator.id,
-        title: title,
-        starts_at: starts_at,
-        ends_at: DateTime.add(starts_at, 60, :minute),
-        lifecycle_state: :published,
-        is_private: false
-      )
-    )
   end
 
   defp create_rsvp!(huddl, user) do

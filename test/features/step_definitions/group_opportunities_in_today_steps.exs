@@ -3,6 +3,7 @@ defmodule GroupOpportunitiesInTodaySteps do
 
   import ExUnit.Assertions
   import Huddlz.Generator
+  import Huddlz.Test.Helpers.Calendar
   import Huddlz.Test.Helpers.Authentication
   import PhoenixTest
 
@@ -28,12 +29,28 @@ defmodule GroupOpportunitiesInTodaySteps do
   end
 
   step "the group has a published huddl scheduled today", context do
-    Map.put(context, :calendar_huddl, create_today_huddl(context, :published))
+    huddl =
+      create_today_huddl(
+        context.calendar_group,
+        context.calendar_owner,
+        "published group huddl"
+      )
+
+    Map.put(context, :calendar_huddl, huddl)
   end
 
   step "I am an accepted member of a group with a draft huddl scheduled today", context do
     context = create_member_group(context, is_public: true)
-    Map.put(context, :draft_huddl, create_today_huddl(context, :draft))
+
+    huddl =
+      create_today_huddl(
+        context.calendar_group,
+        context.calendar_owner,
+        "draft group huddl",
+        lifecycle_state: :draft
+      )
+
+    Map.put(context, :draft_huddl, huddl)
   end
 
   step "another public group has a published huddl scheduled today", context do
@@ -44,8 +61,9 @@ defmodule GroupOpportunitiesInTodaySteps do
 
     unrelated_huddl =
       create_today_huddl(
-        %{calendar_group: other_group, calendar_owner: other_owner},
-        :published
+        other_group,
+        other_owner,
+        "published group huddl"
       )
 
     Map.merge(context, %{unrelated_group: other_group, unrelated_huddl: unrelated_huddl})
@@ -97,15 +115,8 @@ defmodule GroupOpportunitiesInTodaySteps do
   end
 
   defp create_member_group(context, group_opts) do
-    member = generate(user(role: :user))
-    owner = generate(user(role: :user))
-
-    {group, [_membership]} =
-      generate_group_with_members(
-        owner: owner,
-        group: group_opts,
-        members: [%{user: member, role: :member}]
-      )
+    %{member: member, owner: owner, group: group} =
+      create_calendar_member_group(group: group_opts)
 
     context
     |> sign_in(member)
@@ -115,22 +126,6 @@ defmodule GroupOpportunitiesInTodaySteps do
   defp sign_in(context, user) do
     session = context.conn |> login(user) |> visit("/")
     Map.merge(context, %{current_user: user, session: session})
-  end
-
-  defp create_today_huddl(context, lifecycle_state) do
-    starts_at = DateTime.new!(Date.utc_today(), ~T[12:00:00], "Etc/UTC")
-
-    generate(
-      past_huddl(
-        group_id: context.calendar_group.id,
-        creator_id: context.calendar_owner.id,
-        title: "#{lifecycle_state} group huddl",
-        starts_at: starts_at,
-        ends_at: DateTime.add(starts_at, 60, :minute),
-        lifecycle_state: lifecycle_state,
-        is_private: !context.calendar_group.is_public
-      )
-    )
   end
 
   defp assert_no_personal_relationship!(huddl, user) do
