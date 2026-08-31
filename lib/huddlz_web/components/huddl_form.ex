@@ -1,7 +1,7 @@
 defmodule HuddlzWeb.Components.HuddlForm do
   @moduledoc """
   Presentation primitives shared by the huddl create and edit forms:
-  the event-type radio cards, the duration select options, and the
+  the huddl-format radio cards, the duration select options, and the
   basics/format/when/where/capacity panels and location modal.
 
   ```
@@ -14,7 +14,6 @@ defmodule HuddlzWeb.Components.HuddlForm do
     show_virtual_link={@show_virtual_link} group_locations={@group_locations}
     selected_location={@selected_location} new_location_path={~p"..."} />
   <.capacity_panel form={@form} is_public={@group.is_public} />
-  <.form_footer submit_label="Save" disable_with="Saving…" cancel_path={~p"..."} />
 
   <.location_modal live_action={@live_action} cancel_path={~p"..."}
     modal_location_address={@modal_location_address}
@@ -311,21 +310,6 @@ defmodule HuddlzWeb.Components.HuddlForm do
           </p>
         <% end %>
       </div>
-    </div>
-    """
-  end
-
-  attr :submit_label, :string, required: true
-  attr :disable_with, :string, required: true
-  attr :cancel_path, :string, required: true
-
-  def form_footer(assigns) do
-    ~H"""
-    <div class="form-foot is-flush">
-      <.button variant={:primary} type="submit" phx-disable-with={@disable_with}>
-        {@submit_label}
-      </.button>
-      <.button variant={:secondary} navigate={@cancel_path}>Cancel</.button>
     </div>
     """
   end

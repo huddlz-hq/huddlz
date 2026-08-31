@@ -288,11 +288,14 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
         <.capacity_panel form={@form} is_public={@huddl.group.is_public} />
 
-        <.form_footer
-          submit_label="Save changes"
-          disable_with="Saving…"
-          cancel_path={~p"/groups/#{@group_slug}/huddlz/#{@huddl.id}"}
-        />
+        <div class="form-foot is-flush">
+          <.button variant={:primary} type="submit" phx-disable-with="Saving…">
+            Save changes
+          </.button>
+          <.button variant={:secondary} navigate={~p"/groups/#{@group_slug}/huddlz/#{@huddl.id}"}>
+            Cancel
+          </.button>
+        </div>
       </.form>
 
       <.location_modal

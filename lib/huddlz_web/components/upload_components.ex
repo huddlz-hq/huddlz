@@ -16,10 +16,14 @@ defmodule HuddlzWeb.Components.UploadComponents do
   attr :upload, :any, required: true
   attr :image_error, :string, default: nil
   attr :optional, :boolean, default: false
-  attr :show_upload_zone, :boolean, default: true
-  slot :preview
+
+  slot :preview do
+    attr :hide_upload_zone, :boolean
+  end
 
   def cover_image_panel(assigns) do
+    assigns = assign(assigns, :show_upload_zone, show_upload_zone?(assigns.preview))
+
     ~H"""
     <div class="panel">
       <div class="panel-head">
@@ -83,5 +87,9 @@ defmodule HuddlzWeb.Components.UploadComponents do
       </p>
     </div>
     """
+  end
+
+  defp show_upload_zone?(preview) do
+    Enum.all?(preview, &(not Map.get(&1, :hide_upload_zone, false)))
   end
 end

@@ -168,9 +168,8 @@ defmodule HuddlzWeb.HuddlLive.New do
           upload={@uploads.huddl_image}
           image_error={@image_error}
           optional
-          show_upload_zone={is_nil(@pending_preview_url)}
         >
-          <:preview :if={@pending_preview_url}>
+          <:preview :if={@pending_preview_url} hide_upload_zone>
             <div class="image-preview" phx-drop-target={@uploads.huddl_image.ref}>
               <div class="card-cover" style={"background-image: url('#{@pending_preview_url}')"}>
               </div>
