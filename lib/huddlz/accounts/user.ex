@@ -191,6 +191,14 @@ defmodule Huddlz.Accounts.User do
       accept [:home_location, :home_latitude, :home_longitude]
     end
 
+    update :update_display_time_zone do
+      description "Persist Automatic or Fixed Display time zone presentation"
+      require_atomic? false
+      accept [:display_time_zone_mode, :fixed_display_time_zone]
+
+      validate Huddlz.Accounts.User.Validations.DisplayTimeZone
+    end
+
     update :update_role do
       description "Update a user's role"
       require_atomic? false
@@ -624,6 +632,11 @@ defmodule Huddlz.Accounts.User do
       authorize_if expr(id == ^actor(:id))
     end
 
+    policy action(:update_display_time_zone) do
+      description "Users can update their own Display time zone preference"
+      authorize_if expr(id == ^actor(:id))
+    end
+
     policy action(:change_password) do
       description "Users can change their own password"
       authorize_if expr(id == ^actor(:id))
@@ -697,6 +710,19 @@ defmodule Huddlz.Accounts.User do
     attribute :home_longitude, :float do
       allow_nil? true
       constraints min: -180, max: 180
+    end
+
+    attribute :display_time_zone_mode, Huddlz.Accounts.DisplayTimeZoneMode do
+      description "Whether schedule presentation follows the browser or a saved IANA zone"
+      allow_nil? false
+      default :automatic
+      public? true
+    end
+
+    attribute :fixed_display_time_zone, :string do
+      description "IANA identifier retained for Fixed Display time zone mode"
+      allow_nil? true
+      public? true
     end
 
     attribute :notification_preferences, :map do

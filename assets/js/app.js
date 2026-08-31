@@ -34,7 +34,7 @@ const browserTimeZone = () => {
   }
 }
 
-const calendarTimeZone = () => browserTimeZone() || "Etc/UTC"
+const calendarTimeZone = () => browserTimeZone() || "America/New_York"
 
 const millisecondsUntilNextCalendarDay = (timezone) => {
   const now = new Date()

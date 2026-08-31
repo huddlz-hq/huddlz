@@ -1893,6 +1893,22 @@ body .cal-toolbar {
   margin-bottom: 14px;
 }
 
+body #calendar-time-zone {
+  display: flex;
+  justify-content: flex-end;
+  margin: -4px 0 12px;
+}
+
+body #calendar-display-time-zone-form {
+  width: min(100%, 300px);
+}
+
+body #calendar-display-time-zone-form .form-select {
+  padding-block: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
 body .cal-period-title {
   display: flex;
   align-items: baseline;

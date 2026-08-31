@@ -39,13 +39,16 @@ defmodule HuddlzWeb.CalendarLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    time_zone = device_time_zone(socket)
+    browser_time_zone = browser_time_zone(socket)
+    time_zone = TimeZone.display(socket.assigns.current_user, browser_time_zone)
     today = today_in(time_zone)
 
     {:ok,
      socket
      |> assign(:page_title, "Calendar")
+     |> assign(:browser_time_zone, browser_time_zone)
      |> assign(:time_zone, time_zone)
+     |> assign(:time_zone_options, TimeZone.options())
      |> assign(:today, today)
      |> stream_configure(:day_entries, dom_id: &"calendar-huddl-#{&1.huddl.id}")
      |> stream_configure(:week_entries, dom_id: &"calendar-huddl-#{&1.huddl.id}")
@@ -63,17 +66,40 @@ defmodule HuddlzWeb.CalendarLive do
 
   @impl true
   def handle_event("calendar:set-time-zone", %{"timezone" => time_zone}, socket) do
-    {:noreply, refresh_time_zone(socket, time_zone)}
+    {:noreply, refresh_time_zone(socket, browser_time_zone: time_zone)}
   end
 
   def handle_event("calendar:set-time-zone", _params, socket) do
-    {:noreply, refresh_time_zone(socket, "Etc/UTC")}
+    {:noreply, refresh_time_zone(socket, browser_time_zone: nil)}
   end
 
-  defp refresh_time_zone(socket, time_zone) do
-    time_zone = TimeZone.valid_or_utc(time_zone)
+  def handle_event(
+        "update_display_time_zone",
+        %{"display_time_zone" => selection},
+        socket
+      ) do
+    user = socket.assigns.current_user
+
+    case TimeZone.update_preference(user, selection) do
+      {:ok, current_user} ->
+        {:noreply,
+         socket
+         |> assign(:current_user, current_user)
+         |> refresh_time_zone()}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, TimeZone.preference_error_message(reason))}
+    end
+  end
+
+  defp refresh_time_zone(socket, opts \\ []) do
+    browser_time_zone =
+      Keyword.get(opts, :browser_time_zone, socket.assigns.browser_time_zone)
+
+    time_zone = TimeZone.display(socket.assigns.current_user, browser_time_zone)
 
     socket
+    |> assign(:browser_time_zone, browser_time_zone)
     |> assign(:time_zone, time_zone)
     |> assign(:today, today_in(time_zone))
     |> assign_calendar(socket.assigns.calendar_params)
@@ -240,11 +266,10 @@ defmodule HuddlzWeb.CalendarLive do
   defp load_coming_up_entries(_user, _implicit_current_day?, _entries, _today, _time_zone),
     do: []
 
-  defp device_time_zone(socket) do
+  defp browser_time_zone(socket) do
     socket
     |> get_connect_params()
     |> TimeZone.from_connect_params()
-    |> TimeZone.valid_or_utc()
   end
 
   defp today_in(time_zone) do
@@ -570,7 +595,21 @@ defmodule HuddlzWeb.CalendarLive do
         </div>
       </div>
 
-      <div id="calendar-time-zone" phx-hook="CalendarTimeZone"></div>
+      <div
+        id="calendar-time-zone"
+        phx-hook="CalendarTimeZone"
+        data-time-zone={@time_zone}
+      >
+        <form id="calendar-display-time-zone-form" phx-change="update_display_time_zone">
+          <.select
+            id="calendar-display-time-zone"
+            name="display_time_zone"
+            label="Display time zone"
+            value={TimeZone.preference_selection(@current_user)}
+            options={@time_zone_options}
+          />
+        </form>
+      </div>
 
       <div class="cal-toolbar">
         <div class="cal-nav">

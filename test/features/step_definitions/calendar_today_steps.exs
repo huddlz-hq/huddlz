@@ -85,8 +85,8 @@ defmodule CalendarTodaySteps do
     context
   end
 
-  step "I visit Calendar", %{session: session} = context do
-    session = visit(session, "/calendar")
+  step "I visit Calendar", context do
+    session = visit(context[:session] || context.conn, "/calendar")
 
     case context[:device_time_zone] do
       nil ->

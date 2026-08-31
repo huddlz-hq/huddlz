@@ -6,6 +6,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   alias Huddlz.Communities
   alias Huddlz.Storage.HuddlImages
+  alias Huddlz.TimeZone
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
@@ -26,8 +27,17 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   @impl true
   def mount(_params, _session, socket) do
+    browser_time_zone =
+      socket
+      |> get_connect_params()
+      |> TimeZone.from_connect_params()
+
     {:ok,
      socket
+     |> assign(
+       :display_time_zone,
+       TimeZone.display(socket.assigns.current_user, browser_time_zone)
+     )
      |> assign(:confirming_delete?, false)
      |> assign(:confirming_cancel?, false)
      |> assign(:cancel_form, to_form(%{"cancellation_reason" => ""}, as: :cancel))}
@@ -112,7 +122,10 @@ defmodule HuddlzWeb.HuddlLive.Show do
           </span>
           <h1>{@huddl.title}</h1>
           <div class="meta">
-            <span :for={{segment, idx} <- Enum.with_index(hero_meta_segments(@huddl))}>
+            <span :for={
+              {segment, idx} <-
+                Enum.with_index(hero_meta_segments(@huddl, @display_time_zone))
+            }>
               <%= if idx > 0 do %>
                 <span class="meta-sep">·</span>
               <% end %>
@@ -149,7 +162,9 @@ defmodule HuddlzWeb.HuddlLive.Show do
               </svg>
               <div>
                 <div class="label">When</div>
-                <div class="value">{format_fact_when(@huddl)}</div>
+                <div class="value" data-display-time-zone={@display_time_zone}>
+                  {format_fact_when(@huddl, @display_time_zone)}
+                </div>
               </div>
             </li>
 
@@ -794,33 +809,33 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp event_type_label(:hybrid), do: "Hybrid huddl"
   defp event_type_label(_), do: "Huddl"
 
-  defp hero_meta_segments(huddl) do
+  defp hero_meta_segments(huddl, display_time_zone) do
     [
       huddl.group.name,
-      hero_when_segment(huddl),
+      hero_when_segment(huddl, display_time_zone),
       hero_location_segment(huddl)
     ]
     |> Enum.reject(&is_nil/1)
   end
 
-  defp hero_when_segment(%{status: :in_progress} = huddl) do
+  defp hero_when_segment(%{status: :in_progress} = huddl, display_time_zone) do
     if huddl.ends_at do
-      "Started #{format_time_only(huddl.starts_at)} · ends #{format_time_only(huddl.ends_at)}"
+      "Started #{format_time_only(huddl.starts_at, display_time_zone)} · ends #{format_time_only(huddl.ends_at, display_time_zone)}"
     else
-      "Started #{format_time_only(huddl.starts_at)}"
+      "Started #{format_time_only(huddl.starts_at, display_time_zone)}"
     end
   end
 
-  defp hero_when_segment(%{status: :cancelled} = huddl) do
-    "Was scheduled for #{format_short_date(huddl.starts_at)}"
+  defp hero_when_segment(%{status: :cancelled} = huddl, display_time_zone) do
+    "Was scheduled for #{format_short_date(huddl.starts_at, display_time_zone)}"
   end
 
-  defp hero_when_segment(%{status: :completed} = huddl) do
-    "#{format_short_date(huddl.starts_at)} · #{huddl.rsvp_count} attended"
+  defp hero_when_segment(%{status: :completed} = huddl, display_time_zone) do
+    "#{format_short_date(huddl.starts_at, display_time_zone)} · #{huddl.rsvp_count} attended"
   end
 
-  defp hero_when_segment(huddl) do
-    "#{format_short_date(huddl.starts_at)} · #{format_time_only(huddl.starts_at)}"
+  defp hero_when_segment(huddl, display_time_zone) do
+    "#{format_short_date(huddl.starts_at, display_time_zone)} · #{format_time_only(huddl.starts_at, display_time_zone)}"
   end
 
   defp hero_location_segment(%{event_type: :hybrid, physical_location: loc}) when is_binary(loc),
@@ -833,16 +848,20 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp hero_location_segment(%{event_type: :virtual}), do: "Online"
   defp hero_location_segment(_), do: nil
 
-  defp format_fact_when(huddl) do
-    cond do
-      huddl.ends_at && same_day?(huddl.starts_at, huddl.ends_at) ->
-        "#{format_short_date(huddl.starts_at)} · #{format_time_only(huddl.starts_at)} – #{format_time_only(huddl.ends_at)} UTC"
+  defp format_fact_when(huddl, display_time_zone) do
+    starts_at = shift_zone!(huddl.starts_at, display_time_zone)
+    ends_at = huddl.ends_at && shift_zone!(huddl.ends_at, display_time_zone)
+    abbreviation = Calendar.strftime(starts_at, "%Z")
 
-      huddl.ends_at ->
-        "#{format_short_date(huddl.starts_at)} #{format_time_only(huddl.starts_at)} → #{format_short_date(huddl.ends_at)} #{format_time_only(huddl.ends_at)} UTC"
+    cond do
+      ends_at && same_day?(starts_at, ends_at) ->
+        "#{format_short_date(starts_at)} · #{format_time_only(starts_at)} – #{format_time_only(ends_at)} #{abbreviation}"
+
+      ends_at ->
+        "#{format_short_date(starts_at)} #{format_time_only(starts_at)} → #{format_short_date(ends_at)} #{format_time_only(ends_at)} #{abbreviation}"
 
       true ->
-        "#{format_short_date(huddl.starts_at)} · #{format_time_only(huddl.starts_at)} UTC"
+        "#{format_short_date(starts_at)} · #{format_time_only(starts_at)} #{abbreviation}"
     end
   end
 
@@ -903,11 +922,25 @@ defmodule HuddlzWeb.HuddlLive.Show do
     |> Enum.reject(&(&1 == ""))
   end
 
+  defp format_short_date(datetime, time_zone) do
+    datetime
+    |> shift_zone!(time_zone)
+    |> format_short_date()
+  end
+
   defp format_short_date(datetime) do
     Calendar.strftime(datetime, "%a, %b %-d")
+  end
+
+  defp format_time_only(datetime, time_zone) do
+    datetime
+    |> shift_zone!(time_zone)
+    |> format_time_only()
   end
 
   defp format_time_only(datetime) do
     Calendar.strftime(datetime, "%-I:%M %p")
   end
+
+  defp shift_zone!(datetime, time_zone), do: DateTime.shift_zone!(datetime, time_zone)
 end

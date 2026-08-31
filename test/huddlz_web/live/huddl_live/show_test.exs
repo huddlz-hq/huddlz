@@ -125,6 +125,40 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has("#share-huddl-modal-url[value='#{huddl_url}']")
     end
 
+    test "signed-out schedule presentation uses the browser IANA zone", %{
+      conn: conn,
+      group: group,
+      huddl: huddl
+    } do
+      local_start = DateTime.shift_zone!(huddl.starts_at, "America/Los_Angeles")
+      expected_time = Calendar.strftime(local_start, "%-I:%M %p")
+
+      conn
+      |> Phoenix.LiveViewTest.put_connect_params(%{"timezone" => "America/Los_Angeles"})
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+      |> assert_has(
+        ".facts .value[data-display-time-zone='America/Los_Angeles']",
+        text: expected_time
+      )
+    end
+
+    test "signed-out schedule presentation falls back to New York", %{
+      conn: conn,
+      group: group,
+      huddl: huddl
+    } do
+      local_start = DateTime.shift_zone!(huddl.starts_at, "America/New_York")
+      expected_time = Calendar.strftime(local_start, "%-I:%M %p")
+
+      conn
+      |> Phoenix.LiveViewTest.put_connect_params(%{"timezone" => "invalid/browser-zone"})
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+      |> assert_has(
+        ".facts .value[data-display-time-zone='America/New_York']",
+        text: expected_time
+      )
+    end
+
     test "renders image fallback behavior across huddl surfaces", %{
       conn: conn,
       member: member,

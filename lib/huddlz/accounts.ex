@@ -17,6 +17,10 @@ defmodule Huddlz.Accounts do
       define :get_by_email, action: :get_by_email, args: [:email]
       define :update_display_name, action: :update_display_name, args: [:display_name]
 
+      define :update_display_time_zone,
+        action: :update_display_time_zone,
+        args: [:display_time_zone_mode, :fixed_display_time_zone]
+
       define :update_home_location,
         action: :update_home_location,
         args: [:home_location, :home_latitude, :home_longitude]

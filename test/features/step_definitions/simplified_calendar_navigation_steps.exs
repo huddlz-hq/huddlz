@@ -4,6 +4,8 @@ defmodule SimplifiedCalendarNavigationSteps do
   import Huddlz.Generator
   import PhoenixTest
 
+  alias Huddlz.Test.Helpers.Authentication
+
   step "I organize a group named {string}",
        %{args: [name], current_user: user} = context do
     generate(group(name: name, owner_id: user.id, is_public: true, actor: user))
@@ -18,8 +20,21 @@ defmodule SimplifiedCalendarNavigationSteps do
     Map.put(context, :session, visit(session, "/my-huddlz"))
   end
 
-  step "I am viewing Calendar", %{session: session} = context do
-    Map.put(context, :session, visit(session, "/calendar"))
+  step "I am viewing Calendar", context do
+    case context do
+      %{session: session} ->
+        Map.put(context, :session, visit(session, "/calendar"))
+
+      %{conn: conn} ->
+        user = generate(user(role: :user))
+
+        session =
+          conn
+          |> Authentication.login(user)
+          |> visit("/calendar")
+
+        Map.merge(context, %{current_user: user, session: session})
+    end
   end
 
   step "I use the global Discover search", %{session: session} = context do

@@ -7,6 +7,7 @@ defmodule HuddlzWeb.ProfileLive do
   require Logger
 
   alias Huddlz.Storage.ProfilePictures
+  alias Huddlz.TimeZone
   alias HuddlzWeb.AuthFormErrors
   alias HuddlzWeb.Avatar
   alias HuddlzWeb.Layouts
@@ -57,6 +58,7 @@ defmodule HuddlzWeb.ProfileLive do
      |> assign(:form, form)
      |> assign(:email_form, email_form)
      |> assign(:password_form, password_form)
+     |> assign(:time_zone_options, TimeZone.options())
      |> assign(:password_input_reset_generation, 0)
      |> assign(:current_user, user_with_avatar)
      |> assign(:avatar_error, nil)
@@ -228,6 +230,27 @@ defmodule HuddlzWeb.ProfileLive do
             placeholder="e.g. Austin, TX"
           />
           <p :if={@location_error} class="form-error">{@location_error}</p>
+        </form>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Display time zone</h2>
+            <div class="panel-sub">
+              Automatic follows this browser. Choose a fixed zone to keep schedule times stable
+              across devices.
+            </div>
+          </div>
+        </div>
+        <form id="account-display-time-zone-form" phx-change="update_display_time_zone">
+          <.select
+            id="account-display-time-zone"
+            name="display_time_zone"
+            label="Display time zone"
+            value={TimeZone.preference_selection(@current_user)}
+            options={@time_zone_options}
+          />
         </form>
       </div>
 
@@ -415,6 +438,26 @@ defmodule HuddlzWeb.ProfileLive do
          socket
          |> put_flash(:error, "Failed to update display name. Please check the errors below.")
          |> assign(:form, form |> to_form())}
+    end
+  end
+
+  @impl true
+  def handle_event(
+        "update_display_time_zone",
+        %{"display_time_zone" => selection},
+        socket
+      ) do
+    user = socket.assigns.current_user
+
+    case TimeZone.update_preference(user, selection) do
+      {:ok, current_user} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Display time zone updated")
+         |> assign(:current_user, current_user)}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, TimeZone.preference_error_message(reason))}
     end
   end
 
