@@ -6,6 +6,8 @@ defmodule CalendarTodaySteps do
   import Huddlz.Test.Helpers.Authentication
   import PhoenixTest
 
+  alias Huddlz.Calendar.Clock
+
   step "I am signed in", %{conn: conn} = context do
     attendee = generate(user(role: :user))
     session = conn |> login(attendee) |> visit("/")
@@ -104,7 +106,17 @@ defmodule CalendarTodaySteps do
   end
 
   step "Today is selected", %{session: session} = context do
-    assert_has(session, "#calendar-view-today[aria-current='page']")
+    today =
+      Clock.utc_now()
+      |> DateTime.shift_zone!(context[:device_time_zone] || "Etc/UTC")
+      |> DateTime.to_date()
+
+    if PhoenixTest.Driver.current_path(session) =~ "view=month" do
+      assert_has(session, "#calendar-month-day-#{Date.to_iso8601(today)}[aria-current='date']")
+    else
+      assert_has(session, "#calendar-view-today[aria-current='page']")
+    end
+
     context
   end
 

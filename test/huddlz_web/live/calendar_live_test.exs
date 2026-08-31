@@ -92,11 +92,11 @@ defmodule HuddlzWeb.CalendarLiveTest do
         |> visit("/calendar?view=month")
 
       for day <- ~w(Sun Mon Tue Wed Thu Fri Sat) do
-        assert_has(session, "#month-calendar th[scope='col']", text: day)
+        assert_has(session, "#calendar-month-grid [role='columnheader']", text: day)
       end
     end
 
-    test "month grid exposes native table semantics and full date labels", %{
+    test "month grid exposes grid semantics and full date labels", %{
       conn: conn,
       attendee: attendee
     } do
@@ -106,10 +106,11 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn
       |> login(attendee)
       |> visit("/calendar?view=month")
-      |> assert_has("#month-calendar caption", text: current_month_name())
-      |> assert_has("#month-calendar thead")
-      |> assert_has("#month-calendar tbody tr", count: 6)
-      |> assert_has(~s(#month-calendar td[aria-label="#{today_label}"][aria-current="date"]))
+      |> assert_has(~s(#calendar-month-grid[role="grid"][aria-label*="#{current_month_name()}"]))
+      |> assert_has("#calendar-month-grid [role='row']", count: 7)
+      |> assert_has(
+        ~s(#calendar-month-grid [role="gridcell"][aria-label="#{today_label}"][aria-current="date"])
+      )
     end
 
     test "overflow days name their month in text and accessibility metadata", %{
@@ -126,11 +127,10 @@ defmodule HuddlzWeb.CalendarLiveTest do
         |> Phoenix.LiveViewTest.render()
         |> LazyHTML.from_fragment()
 
-      overflow = LazyHTML.query(document, "#month-calendar td.out-of-month")
+      overflow = LazyHTML.query(document, "#calendar-month-grid .is-outside-month")
 
       assert [label | _] = LazyHTML.attribute(overflow, "aria-label")
       assert String.ends_with?(label, "outside the selected month")
-      assert overflow |> LazyHTML.query(".cal-day-context") |> Enum.any?()
     end
 
     test "only the selected calendar view is marked current", %{
@@ -151,8 +151,8 @@ defmodule HuddlzWeb.CalendarLiveTest do
     end
   end
 
-  describe "month view — RSVP'd huddlz appear as cal-pills" do
-    test "attending future huddl appears as a cal-pill (Going)", %{
+  describe "month view — selected-day shared cards" do
+    test "attending future huddl appears as a shared card marked Going", %{
       conn: conn,
       attendee: attendee,
       host: host,
@@ -160,21 +160,15 @@ defmodule HuddlzWeb.CalendarLiveTest do
     } do
       huddl = create_huddl(host, public_group, title: "Going Show", date: tomorrow())
       rsvp!(huddl, attendee, :rsvp)
-      time = Calendar.strftime(huddl.starts_at, "%-I:%M %p")
-      tooltip_id = "calendar-entry-tooltip-#{huddl.id}"
 
       conn
       |> login(attendee)
       |> visit(calendar_path_for(tomorrow()))
+      |> assert_has("#calendar-huddl-#{huddl.id}", text: "Going Show")
       |> assert_has(
-        "#calendar-entry-#{huddl.id}.cal-pill.going[data-status=going][aria-describedby=#{tooltip_id}]"
+        "#calendar-huddl-#{huddl.id} [data-testid='calendar-relationship']",
+        text: "Going"
       )
-      |> assert_has("#calendar-entry-#{huddl.id} .cal-pill-time", text: time)
-      |> assert_has("#calendar-entry-#{huddl.id} .cal-pill-title", text: "Going Show")
-      |> assert_has("#calendar-entry-#{huddl.id} .cal-pill-status", text: "Going")
-      |> assert_has("##{tooltip_id}[role=tooltip]", text: "#{time} · Going Show · Going")
-      |> assert_has("#calendar-touch-entry-#{huddl.id}", text: "Going Show")
-      |> assert_has("#calendar-touch-entry-#{huddl.id}", text: "Going")
       |> assert_has("#calendar-legend [data-status=going]", text: "Going")
     end
 
@@ -191,8 +185,11 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn
       |> login(attendee)
       |> visit(calendar_path_for(tomorrow()))
-      |> assert_has("#calendar-entry-#{huddl.id}[data-status=cancelled]")
-      |> assert_has("#calendar-entry-#{huddl.id} .cal-pill-status", text: "Cancelled")
+      |> assert_has("#calendar-huddl-#{huddl.id}", text: "Cancelled Show")
+      |> assert_has(
+        "#calendar-huddl-#{huddl.id} [data-testid='calendar-relationship']",
+        text: "Cancelled"
+      )
       |> assert_has("#calendar-legend [data-status=cancelled]", text: "Cancelled")
     end
 
@@ -216,7 +213,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> login(attendee)
       |> visit(calendar_path_for(tomorrow()))
       |> assert_has(
-        "#calendar-entry-#{huddl.id}.cal-pill.waitlisted[data-status=waitlist]",
+        "#calendar-huddl-#{huddl.id} [data-testid='calendar-relationship']",
         text: "Waitlisted"
       )
       |> assert_has("#calendar-legend [data-status=waitlist]", text: "Waitlisted")
@@ -235,7 +232,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> login(attendee)
       |> visit(calendar_path_for(Date.add(Date.utc_today(), -2)))
       |> assert_has(
-        "#calendar-entry-#{past.id}.cal-pill.past[data-status=past-attended]",
+        "#calendar-huddl-#{past.id} [data-testid='calendar-relationship']",
         text: "Attended · Past"
       )
       |> assert_has(
@@ -250,14 +247,13 @@ defmodule HuddlzWeb.CalendarLiveTest do
       public_group: public_group
     } do
       past = create_past_huddl(host, public_group, title: "Hosted Retrospective")
-      when_label = Calendar.strftime(past.starts_at, "%A, %B %-d, %Y at %-I:%M %p")
 
       session =
         conn
         |> login(host)
         |> visit(calendar_path_for(DateTime.to_date(past.starts_at)))
         |> assert_has(
-          ~s(#calendar-entry-#{past.id}.cal-pill[data-status=past-hosting][aria-label="Hosted Retrospective, Hosted, past, #{when_label}"]),
+          "#calendar-huddl-#{past.id} [data-testid='calendar-relationship']",
           text: "Hosting · Past"
         )
         |> assert_has(
@@ -285,7 +281,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> login(host)
       |> visit(calendar_path_for(tomorrow()))
       |> assert_has(
-        "#calendar-entry-#{huddl.id}.cal-pill.hosting[data-status=hosting]",
+        "#calendar-huddl-#{huddl.id} [data-testid='calendar-relationship']",
         text: "Hosting"
       )
       |> assert_has("#calendar-legend [data-status=hosting]", text: "Hosting")
@@ -305,14 +301,14 @@ defmodule HuddlzWeb.CalendarLiveTest do
         |> visit(calendar_path_for(tomorrow()))
         |> assert_has(".cal-period-count", text: "1 huddl")
         |> assert_has(
-          "#calendar-entry-#{huddl.id}[data-status=hosting]",
+          "#calendar-huddl-#{huddl.id} [data-testid='calendar-relationship']",
           text: "Hosting"
         )
 
       assert session.view
              |> Phoenix.LiveViewTest.render()
              |> LazyHTML.from_fragment()
-             |> LazyHTML.query(".cal-pill")
+             |> LazyHTML.query("#calendar-month-day-huddlz > #calendar-huddl-#{huddl.id}")
              |> Enum.count() == 1
     end
 
@@ -329,10 +325,10 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn
       |> login(attendee)
       |> visit(calendar_path_for(tomorrow()))
-      |> refute_has(".cal-pill", text: "Stranger Show")
+      |> refute_has("#calendar-month-day-huddlz", text: "Stranger Show")
     end
 
-    test "month count reflects huddlz in the focus month", %{
+    test "month count reflects huddlz on the selected day", %{
       conn: conn,
       attendee: attendee,
       host: host,
@@ -345,45 +341,43 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar?month=#{next_month_param(Date.utc_today())}")
+      |> visit(calendar_path_for(target_date))
       |> assert_has(".cal-period-count", text: "1 huddl")
     end
 
-    test "month legend includes statuses on visible adjacent-month huddlz", %{
+    test "selecting an adjacent-month day moves to that month", %{
       conn: conn,
       attendee: attendee,
       host: host,
       public_group: public_group
     } do
-      focus_date = tomorrow()
-      in_month = create_huddl(host, public_group, title: "In Month", date: focus_date)
-      rsvp!(in_month, attendee, :rsvp)
-
-      outside_date = calendar_grid_end(focus_date)
+      focus_date = %{Date.utc_today() | day: 1}
+      outside_date = Date.add(focus_date, -1)
+      starts_at = DateTime.new!(outside_date, ~T[14:00:00], "Etc/UTC")
 
       outside =
-        create_huddl(host, public_group,
-          title: "Outside Month",
-          max_attendees: 1,
-          date: outside_date
+        create_past_huddl(host, public_group,
+          title: "Adjacent Month",
+          starts_at: starts_at,
+          ends_at: DateTime.add(starts_at, 60, :minute)
         )
 
-      outside = Ash.reload!(outside)
-      rsvp!(outside, attendee, :join_waitlist)
+      rsvp!(outside, attendee, :rsvp)
 
-      conn
-      |> login(attendee)
-      |> visit(calendar_path_for(focus_date))
-      |> assert_has("#calendar-entry-#{outside.id}.out-of-month-pill[data-status=waitlist]")
-      |> assert_has(
-        "#calendar-touch-entry-#{outside.id}[data-status=waitlist]",
-        text: "Outside Month"
-      )
-      |> assert_has("#calendar-legend [data-status=going]", text: "Going")
-      |> assert_has("#calendar-legend [data-status=waitlist]", text: "Waitlisted")
+      session =
+        conn
+        |> login(attendee)
+        |> visit(calendar_path_for(focus_date))
+        |> click_link(
+          "#calendar-month-day-#{Date.to_iso8601(outside_date)}",
+          to_string(outside_date.day)
+        )
+
+      assert PhoenixTest.Driver.current_path(session) == calendar_path_for(outside_date)
+      assert_has(session, "#calendar-huddl-#{outside.id}", text: "Adjacent Month")
     end
 
-    test "cal-pill links to the huddl detail page", %{
+    test "shared card links to the huddl detail page", %{
       conn: conn,
       attendee: attendee,
       host: host,
@@ -395,7 +389,9 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn
       |> login(attendee)
       |> visit(calendar_path_for(tomorrow()))
-      |> assert_has(~s(.cal-pill[href="/groups/#{public_group.slug}/huddlz/#{huddl.id}"]))
+      |> assert_has(
+        ~s(#calendar-huddl-#{huddl.id}[href="/groups/#{public_group.slug}/huddlz/#{huddl.id}"])
+      )
     end
 
     test "huddl links have date, time, title, and attendance context", %{
@@ -409,31 +405,35 @@ defmodule HuddlzWeb.CalendarLiveTest do
       second = create_huddl(host, public_group, title: "Evening Pairing", date: date)
       rsvp!(first, attendee, :rsvp)
       rsvp!(second, attendee, :rsvp)
-      full_date = Calendar.strftime(date, "%A, %B %-d, %Y")
 
       conn
       |> login(attendee)
       |> visit(calendar_path_for(date))
       |> assert_has(
-        ~s(#month-calendar td[aria-label^="#{full_date}"] .cal-pill[aria-label^="Morning Pairing, Going, #{full_date} at "])
+        "#calendar-huddl-#{first.id} [data-testid='calendar-relationship']",
+        text: "Going"
       )
       |> assert_has(
-        ~s(#month-calendar td[aria-label^="#{full_date}"] .cal-pill[aria-label^="Evening Pairing, Going, #{full_date} at "])
+        "#calendar-huddl-#{second.id} [data-testid='calendar-relationship']",
+        text: "Going"
       )
     end
   end
 
   describe "month navigation" do
-    test "next-month link patches the URL with ?month=YYYY-MM", %{
+    test "next-month link identifies the month and selected day", %{
       conn: conn,
       attendee: attendee
     } do
       next = next_month_param(Date.utc_today())
+      next_date = shift(Date.utc_today(), 1)
 
       conn
       |> login(attendee)
-      |> visit("/calendar")
-      |> assert_has(~s(a.cal-nav-btn[href="/calendar?month=#{next}"]))
+      |> visit("/calendar?view=month")
+      |> assert_has(
+        ~s(a.cal-nav-btn[href="/calendar?view=month&month=#{next}&date=#{Date.to_iso8601(next_date)}"])
+      )
     end
 
     test "Today link returns to current month from a navigated state", %{
@@ -444,8 +444,10 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar?month=#{next}")
-      |> assert_has(~s(a.cal-nav-today[href="/calendar?view=month"]))
+      |> visit("/calendar?view=month&month=#{next}")
+      |> assert_has(
+        ~s(a.cal-nav-today[href="/calendar?view=month&month=#{Calendar.strftime(Date.utc_today(), "%Y-%m")}&date=#{Date.to_iso8601(Date.utc_today())}"])
+      )
     end
 
     test "invalid ?month= falls back to current month", %{conn: conn, attendee: attendee} do
@@ -576,25 +578,15 @@ defmodule HuddlzWeb.CalendarLiveTest do
   # filtering and for past dates that may slip outside the default grid).
   defp calendar_path_for(date, opts \\ []) do
     month = "#{date.year}-#{String.pad_leading(to_string(date.month), 2, "0")}"
-    view = Keyword.get(opts, :view)
+    view = Keyword.get(opts, :view, "month")
 
-    params =
-      if view, do: "?month=#{month}&view=#{view}", else: "?month=#{month}"
+    params = "?view=#{view}&month=#{month}&date=#{Date.to_iso8601(date)}"
 
     "/calendar" <> params
   end
 
   defp current_month_name do
     Date.utc_today() |> Calendar.strftime("%B %Y")
-  end
-
-  defp calendar_grid_end(date) do
-    month_first = %{date | day: 1}
-    offset = rem(Date.day_of_week(month_first), 7)
-
-    month_first
-    |> Date.add(-offset)
-    |> Date.add(41)
   end
 
   defp next_month_param(date) do

@@ -34,19 +34,25 @@ defmodule CalendarAccessibilitySteps do
        %{conn: conn, calendar_huddl: huddl} = context do
     date = DateTime.to_date(huddl.starts_at)
     month = :io_lib.format("~4..0B-~2..0B", [date.year, date.month]) |> IO.iodata_to_binary()
-    session = visit(conn, "/calendar?month=#{month}")
+
+    session =
+      visit(
+        conn,
+        "/calendar?view=month&month=#{month}&date=#{Date.to_iso8601(date)}"
+      )
 
     Map.merge(context, %{conn: session, session: session})
   end
 
   step "the {string} calendar link should identify it as attended and past",
        %{args: [title], session: session, calendar_huddl: huddl} = context do
-    when_label = Calendar.strftime(huddl.starts_at, "%A, %B %-d, %Y at %-I:%M %p")
-
     assert_has(
       session,
-      ~s(#month-calendar .cal-pill[aria-label="#{title}, Attended, past, #{when_label}"])
+      "#calendar-huddl-#{huddl.id} [data-testid='calendar-relationship']",
+      text: "Attended · Past"
     )
+
+    assert_has(session, "#calendar-huddl-#{huddl.id}", text: title)
 
     context
   end
