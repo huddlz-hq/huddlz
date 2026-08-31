@@ -19,18 +19,17 @@ defmodule CalendarTodaySteps do
        %{current_user: attendee} = context do
     host = generate(user(role: :user))
     group = generate(group(owner_id: host.id, is_public: true, actor: host))
+    starts_at = DateTime.new!(Date.utc_today(), ~T[00:00:00], "Etc/UTC")
 
     huddl =
       generate(
-        huddl(
+        past_huddl(
           group_id: group.id,
           creator_id: host.id,
           title: "Today Pairing",
-          date: Date.utc_today(),
-          start_time: ~T[10:00:00],
-          duration_minutes: 60,
-          is_private: false,
-          actor: host
+          starts_at: starts_at,
+          ends_at: DateTime.add(starts_at, 60, :minute),
+          is_private: false
         )
       )
 
@@ -68,7 +67,7 @@ defmodule CalendarTodaySteps do
         %{group_location_id: location.id, physical_location: address},
         actor: host
       )
-      |> Ash.update!()
+      |> Ash.update!(authorize?: false)
 
     context
     |> Map.put(:calendar_huddl, updated_huddl)
