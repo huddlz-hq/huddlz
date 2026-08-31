@@ -65,12 +65,12 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn
       |> login(attendee)
       |> visit("/calendar")
-      |> assert_has("h1", text: "My calendar")
+      |> assert_has("h1", text: "Calendar")
       |> assert_has("aside.sidebar")
       |> assert_has(".sb-item.active", text: "My calendar")
       |> assert_has(".cal-toolbar")
       |> assert_has(".cal-nav-today", text: "Today")
-      |> assert_has(".cal-view-tabs .scope-tab.is-active", text: "Month")
+      |> assert_has("#calendar-view-today.scope-tab.is-active[aria-current='page']")
       |> refute_has("#calendar-legend")
     end
 
@@ -89,7 +89,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       session =
         conn
         |> login(attendee)
-        |> visit("/calendar")
+        |> visit("/calendar?view=month")
 
       for day <- ~w(Sun Mon Tue Wed Thu Fri Sat) do
         assert_has(session, "#month-calendar th[scope='col']", text: day)
@@ -105,7 +105,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar")
+      |> visit("/calendar?view=month")
       |> assert_has("#month-calendar caption", text: current_month_name())
       |> assert_has("#month-calendar thead")
       |> assert_has("#month-calendar tbody tr", count: 6)
@@ -119,7 +119,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       session =
         conn
         |> login(attendee)
-        |> visit("/calendar")
+        |> visit("/calendar?view=month")
 
       document =
         session.view
@@ -140,8 +140,11 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn
       |> login(attendee)
       |> visit("/calendar")
+      |> assert_has(".cal-view-tabs a[aria-current='page']", text: "Today")
+      |> refute_has(".cal-view-tabs a[aria-current]", text: "Month")
+      |> visit("/calendar?view=month")
       |> assert_has(".cal-view-tabs a[aria-current='page']", text: "Month")
-      |> refute_has(".cal-view-tabs a[aria-current]", text: "Agenda")
+      |> refute_has(".cal-view-tabs a[aria-current]", text: "Today")
       |> visit("/calendar?view=agenda")
       |> assert_has(".cal-view-tabs a[aria-current='page']", text: "Agenda")
       |> refute_has(".cal-view-tabs a[aria-current]", text: "Month")
@@ -442,7 +445,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn
       |> login(attendee)
       |> visit("/calendar?month=#{next}")
-      |> assert_has(~s(a.cal-nav-today[href="/calendar"]))
+      |> assert_has(~s(a.cal-nav-today[href="/calendar?view=month"]))
     end
 
     test "invalid ?month= falls back to current month", %{conn: conn, attendee: attendee} do

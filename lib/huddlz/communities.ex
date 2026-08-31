@@ -29,6 +29,11 @@ defmodule Huddlz.Communities do
       define :get_past_group_huddlz, action: :past_by_group, args: [:group_id]
       define :list_upcoming_huddlz, action: :upcoming, get?: false
 
+      define :list_calendar_huddlz,
+        action: :calendar,
+        args: [:range_start, :range_end],
+        get?: false
+
       define :huddlz_for_organizer,
         action: :huddlz_for_organizer,
         args: [{:optional, :state}],

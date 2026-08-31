@@ -10,7 +10,6 @@ defmodule HuddlzWeb.MyHuddlzLive do
   """
   use HuddlzWeb, :live_view
 
-  import HuddlzWeb.Live.Helpers.HuddlCardHelpers
   import HuddlzWeb.Live.Helpers.ParamHelpers
 
   alias Huddlz.Communities
@@ -23,7 +22,8 @@ defmodule HuddlzWeb.MyHuddlzLive do
     :rsvp_count,
     :visible_virtual_link,
     :display_image_url,
-    :group
+    :group,
+    :group_location
   ]
   @page_size 20
   @valid_filters ~w(upcoming waitlisted past)
@@ -199,40 +199,15 @@ defmodule HuddlzWeb.MyHuddlzLive do
 
   defp my_huddl_card(assigns) do
     ~H"""
-    <.card
-      navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}"}
+    <.shared_huddl_card
+      id={"my-huddl-card-#{@huddl.id}"}
+      cover_id={"my-huddl-card-cover-#{@huddl.id}"}
+      huddl={@huddl}
       gradient={@gradient}
-    >
-      <:cover>
-        <.huddl_cover_image
-          :if={@huddl.display_image_url}
-          id={"my-huddl-card-cover-#{@huddl.id}"}
-          class="card-cover-img"
-          image_url={@huddl.display_image_url}
-        />
-        <.date_stamp month={huddl_month(@huddl)} day={huddl_day(@huddl)} />
-        <.card_tag variant={tag_variant(@huddl.event_type)}>
-          {tag_label(@huddl.event_type)}
-        </.card_tag>
-      </:cover>
-      <:body>
-        <span :if={@huddl.group} class="card-group">{@huddl.group.name}</span>
-        <h3 class="card-title">{@huddl.title}</h3>
-        <div class="card-meta">
-          <span>{format_meta_when(@huddl.starts_at)}</span>
-          <%= if @huddl.rsvp_count > 0 || @huddl.max_attendees do %>
-            <span class="dot"></span>
-            <span>{rsvp_label(@huddl)}</span>
-          <% end %>
-        </div>
-      </:body>
-      <:foot>
-        <.pill variant={pill_variant(@huddl, @filter)}>
-          {pill_label(@huddl, @filter)}
-        </.pill>
-        <span class="muted" style="font-size:12px">{relative_time(@huddl.starts_at)}</span>
-      </:foot>
-    </.card>
+      relationship_label={pill_label(@huddl, @filter)}
+      relationship_variant={pill_variant(@huddl, @filter)}
+      secondary_label={relative_time(@huddl.starts_at)}
+    />
     """
   end
 

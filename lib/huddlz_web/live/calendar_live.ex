@@ -1,9 +1,8 @@
 defmodule HuddlzWeb.CalendarLive do
   @moduledoc """
-  LiveView at `/calendar`. Personal calendar of huddlz the signed-in user
-  is hosting, attending, or watching from the waitlist. Month grid by
-  default with an agenda toggle; `?month=YYYY-MM` and `?view=month|agenda`
-  drive state.
+  LiveView at `/calendar`. Calendar opens on Today and presents confirmed
+  RSVP huddlz in chronological order. Legacy month and agenda views remain
+  available while the unified Calendar is delivered incrementally.
   """
   use HuddlzWeb, :live_view
 
@@ -19,7 +18,7 @@ defmodule HuddlzWeb.CalendarLive do
     defstruct [:key, :label, :variant, :rank]
   end
 
-  @card_loads [:status, :group]
+  @card_loads [:status, :group, :group_location, :rsvp_count, :display_image_url]
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -28,19 +27,20 @@ defmodule HuddlzWeb.CalendarLive do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:page_title, "My calendar")
+     |> assign(:page_title, "Calendar")
      |> assign(:today, Date.utc_today())
+     |> stream_configure(:today_entries, dom_id: &"calendar-huddl-#{&1.huddl.id}")
      |> stream_configure(:legend_items, dom_id: &"calendar-legend-item-#{&1.key}")}
   end
 
   @impl true
   def handle_params(params, _uri, socket) do
     focus_month = parse_month(params["month"], socket.assigns.today)
-    view_mode = parse_view(params["view"])
+    view_mode = parse_view(params)
     {grid_start, grid_end} = month_grid_window(focus_month)
     user = socket.assigns.current_user
 
-    entries = load_entries(user, grid_start, grid_end)
+    entries = load_entries(user, view_mode, grid_start, grid_end, socket.assigns.today)
     entries_by_day = group_by_day(entries)
     in_month_count = Enum.count(entries, &in_focus_month?(&1.huddl, focus_month))
     legend_items = legend_items(entries, focus_month, view_mode, socket.assigns.today)
@@ -54,7 +54,9 @@ defmodule HuddlzWeb.CalendarLive do
      |> assign(:entries, entries)
      |> assign(:entries_by_day, entries_by_day)
      |> assign(:in_month_count, in_month_count)
+     |> assign(:today_empty?, entries == [])
      |> assign(:legend_empty?, legend_items == [])
+     |> stream(:today_entries, entries, reset: true)
      |> stream(:legend_items, legend_items, reset: true)}
   end
 
@@ -78,8 +80,10 @@ defmodule HuddlzWeb.CalendarLive do
 
   defp parse_month(_, today), do: first_of_month(today)
 
-  defp parse_view("agenda"), do: :agenda
-  defp parse_view(_), do: :month
+  defp parse_view(%{"view" => "agenda"}), do: :agenda
+  defp parse_view(%{"view" => "month"}), do: :month
+  defp parse_view(%{"month" => month}) when is_binary(month), do: :month
+  defp parse_view(_), do: :today
 
   defp first_of_month(date), do: %{date | day: 1}
 
@@ -92,7 +96,16 @@ defmodule HuddlzWeb.CalendarLive do
     {grid_start, grid_end}
   end
 
-  defp load_entries(user, grid_start, grid_end) do
+  defp load_entries(user, :today, _grid_start, _grid_end, today) do
+    range_start = DateTime.new!(today, ~T[00:00:00], "Etc/UTC")
+    range_end = DateTime.new!(today, ~T[23:59:59], "Etc/UTC")
+
+    user
+    |> confirmed_rsvp_huddlz(range_start, range_end)
+    |> Enum.map(&%{huddl: &1, roles: MapSet.new([:attending])})
+  end
+
+  defp load_entries(user, _view_mode, grid_start, grid_end, _today) do
     grid_start_dt = DateTime.new!(grid_start, ~T[00:00:00], "Etc/UTC")
     grid_end_dt = DateTime.new!(grid_end, ~T[23:59:59], "Etc/UTC")
 
@@ -105,6 +118,20 @@ defmodule HuddlzWeb.CalendarLive do
         DateTime.compare(h.starts_at, grid_end_dt) != :gt
     end)
     |> Enum.sort_by(& &1.huddl.starts_at, DateTime)
+  end
+
+  defp confirmed_rsvp_huddlz(user, range_start, range_end) do
+    case Communities.list_calendar_huddlz(range_start, range_end,
+           actor: user,
+           load: @card_loads
+         ) do
+      {:ok, huddlz} ->
+        huddlz
+
+      {:error, reason} ->
+        Logger.warning("CalendarLive Calendar read failed: #{inspect(reason)}")
+        []
+    end
   end
 
   defp fetch(user, role) do
@@ -156,7 +183,7 @@ defmodule HuddlzWeb.CalendarLive do
 
   defp month_path(month, view) do
     base = month_param(month)
-    view_str = if view == :agenda, do: "agenda"
+    view_str = if view in [:month, :agenda], do: Atom.to_string(view)
 
     cond do
       base && view_str -> ~p"/calendar?#{[month: base, view: view_str]}"
@@ -360,6 +387,7 @@ defmodule HuddlzWeb.CalendarLive do
 
   defp visible_entries(entries, _focus_month, :month), do: entries
   defp visible_entries(entries, focus_month, :agenda), do: agenda_entries(entries, focus_month)
+  defp visible_entries(entries, _focus_month, :today), do: entries
 
   defp legend_swatch_class(%{variant: variant}), do: ["cal-legend-swatch", variant]
 
@@ -379,9 +407,9 @@ defmodule HuddlzWeb.CalendarLive do
     >
       <div class="page-head">
         <div>
-          <h1>My calendar</h1>
+          <h1>Calendar</h1>
           <p>
-            Huddlz you're hosting, attending, or watching from the waitlist — laid out across the month.
+            Your huddlz for today, in chronological order.
           </p>
         </div>
       </div>
@@ -436,6 +464,15 @@ defmodule HuddlzWeb.CalendarLive do
 
         <div class="cal-view-tabs">
           <.link
+            id="calendar-view-today"
+            patch={~p"/calendar"}
+            class={["scope-tab", @view_mode == :today && "is-active"]}
+            aria-current={if @view_mode == :today, do: "page"}
+          >
+            Today
+          </.link>
+          <.link
+            id="calendar-view-month"
             patch={month_path(@focus_month, :month)}
             class={["scope-tab", @view_mode == :month && "is-active"]}
             aria-current={if @view_mode == :month, do: "page"}
@@ -443,6 +480,7 @@ defmodule HuddlzWeb.CalendarLive do
             Month
           </.link>
           <.link
+            id="calendar-view-agenda"
             patch={month_path(@focus_month, :agenda)}
             class={["scope-tab", @view_mode == :agenda && "is-active"]}
             aria-current={if @view_mode == :agenda, do: "page"}
@@ -452,16 +490,19 @@ defmodule HuddlzWeb.CalendarLive do
         </div>
       </div>
 
-      <%= if @view_mode == :month do %>
-        <.month_grid
-          entries={@entries}
-          focus_month={@focus_month}
-          grid_start={@grid_start}
-          entries_by_day={@entries_by_day}
-          today={@today}
-        />
-      <% else %>
-        <.agenda_view entries={@entries} focus_month={@focus_month} today={@today} />
+      <%= case @view_mode do %>
+        <% :today -> %>
+          <.today_view today_empty?={@today_empty?} entries={@streams.today_entries} />
+        <% :month -> %>
+          <.month_grid
+            entries={@entries}
+            focus_month={@focus_month}
+            grid_start={@grid_start}
+            entries_by_day={@entries_by_day}
+            today={@today}
+          />
+        <% :agenda -> %>
+          <.agenda_view entries={@entries} focus_month={@focus_month} today={@today} />
       <% end %>
 
       <div
@@ -482,6 +523,29 @@ defmodule HuddlzWeb.CalendarLive do
         </span>
       </div>
     </Layouts.app>
+    """
+  end
+
+  attr :today_empty?, :boolean, required: true
+  attr :entries, :any, required: true
+
+  defp today_view(assigns) do
+    ~H"""
+    <section id="calendar-today" aria-labelledby="calendar-today-title">
+      <h2 id="calendar-today-title" class="sr-only">Today</h2>
+      <div id="calendar-today-list" class="grid" phx-update="stream">
+        <p :if={@today_empty?} id="calendar-today-empty" class="empty-state muted">
+          Nothing on your calendar today.
+        </p>
+        <.shared_huddl_card
+          :for={{id, entry} <- @entries}
+          id={id}
+          huddl={entry.huddl}
+          relationship_label="Going"
+          relationship_testid="calendar-relationship"
+        />
+      </div>
+    </section>
     """
   end
 

@@ -303,6 +303,28 @@ defmodule Huddlz.Communities.Huddl do
       prepare build(sort: [starts_at: :asc])
     end
 
+    read :calendar do
+      description "Confirmed Personal huddlz within a Calendar range"
+
+      argument :range_start, :utc_datetime do
+        allow_nil? false
+      end
+
+      argument :range_end, :utc_datetime do
+        allow_nil? false
+      end
+
+      prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
+
+      filter expr(
+               lifecycle_state == :published and starts_at >= ^arg(:range_start) and
+                 starts_at <= ^arg(:range_end) and
+                 exists(attendees, user_id == ^actor(:id) and is_nil(waitlisted_at))
+             )
+
+      prepare build(sort: [starts_at: :asc])
+    end
+
     read :past do
       filter expr(
                lifecycle_state == :completed or
