@@ -304,7 +304,7 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     read :calendar do
-      description "Confirmed Personal huddlz within a Calendar range"
+      description "Personal huddlz and accepted Group opportunities within a Calendar range"
 
       argument :range_start, :utc_datetime do
         allow_nil? false
@@ -319,7 +319,8 @@ defmodule Huddlz.Communities.Huddl do
       filter expr(
                lifecycle_state == :published and starts_at >= ^arg(:range_start) and
                  starts_at <= ^arg(:range_end) and
-                 exists(attendees, user_id == ^actor(:id) and is_nil(waitlisted_at))
+                 (exists(attendees, user_id == ^actor(:id) and is_nil(waitlisted_at)) or
+                    exists(group.group_members, user_id == ^actor(:id)))
              )
 
       prepare build(sort: [starts_at: :asc])
@@ -877,6 +878,12 @@ defmodule Huddlz.Communities.Huddl do
                       nil
                     end
                   )
+    end
+
+    calculate :confirmed_rsvp_for_actor, :boolean do
+      description "Whether the current actor has a confirmed RSVP for the huddl"
+
+      calculation expr(exists(attendees, user_id == ^actor(:id) and is_nil(waitlisted_at)))
     end
 
     calculate :is_publicly_visible, :boolean do

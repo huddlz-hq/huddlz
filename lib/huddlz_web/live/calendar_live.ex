@@ -18,7 +18,14 @@ defmodule HuddlzWeb.CalendarLive do
     defstruct [:key, :label, :variant, :rank]
   end
 
-  @card_loads [:status, :group, :group_location, :rsvp_count, :display_image_url]
+  @card_loads [
+    :status,
+    :group,
+    :group_location,
+    :rsvp_count,
+    :display_image_url,
+    :confirmed_rsvp_for_actor
+  ]
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -101,8 +108,8 @@ defmodule HuddlzWeb.CalendarLive do
     range_end = DateTime.new!(today, ~T[23:59:59], "Etc/UTC")
 
     user
-    |> confirmed_rsvp_huddlz(range_start, range_end)
-    |> Enum.map(&%{huddl: &1, roles: MapSet.new([:attending])})
+    |> calendar_huddlz(range_start, range_end)
+    |> Enum.map(&today_entry/1)
   end
 
   defp load_entries(user, _view_mode, grid_start, grid_end, _today) do
@@ -120,7 +127,7 @@ defmodule HuddlzWeb.CalendarLive do
     |> Enum.sort_by(& &1.huddl.starts_at, DateTime)
   end
 
-  defp confirmed_rsvp_huddlz(user, range_start, range_end) do
+  defp calendar_huddlz(user, range_start, range_end) do
     case Communities.list_calendar_huddlz(range_start, range_end,
            actor: user,
            load: @card_loads
@@ -132,6 +139,15 @@ defmodule HuddlzWeb.CalendarLive do
         Logger.warning("CalendarLive Calendar read failed: #{inspect(reason)}")
         []
     end
+  end
+
+  defp today_entry(%{confirmed_rsvp_for_actor: true} = huddl),
+    do: %{huddl: huddl, roles: MapSet.new([:attending])}
+
+  defp today_entry(huddl), do: %{huddl: huddl, roles: MapSet.new()}
+
+  defp today_relationship_label(%{roles: roles}) do
+    if MapSet.member?(roles, :attending), do: "Going"
   end
 
   defp fetch(user, role) do
@@ -320,6 +336,9 @@ defmodule HuddlzWeb.CalendarLive do
 
       attending? ->
         %EntryStatus{key: "going", label: "Going", variant: :cyan, rank: 2}
+
+      true ->
+        nil
     end
   end
 
@@ -360,6 +379,9 @@ defmodule HuddlzWeb.CalendarLive do
           variant: :muted,
           rank: 6
         }
+
+      true ->
+        nil
     end
   end
 
@@ -381,6 +403,7 @@ defmodule HuddlzWeb.CalendarLive do
     entries
     |> visible_entries(focus_month, view_mode)
     |> Enum.map(&entry_status(&1, today))
+    |> Enum.reject(&is_nil/1)
     |> Enum.uniq_by(& &1.key)
     |> Enum.sort_by(& &1.rank)
   end
@@ -541,7 +564,7 @@ defmodule HuddlzWeb.CalendarLive do
           :for={{id, entry} <- @entries}
           id={id}
           huddl={entry.huddl}
-          relationship_label="Going"
+          relationship_label={today_relationship_label(entry)}
           relationship_testid="calendar-relationship"
         />
       </div>
