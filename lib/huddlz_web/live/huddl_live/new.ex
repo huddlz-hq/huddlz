@@ -338,10 +338,12 @@ defmodule HuddlzWeb.HuddlLive.New do
       |> Map.put("group_id", socket.assigns.group.id)
       |> Map.put("lifecycle_state", lifecycle_state)
       |> inject_saved_location_params(socket.assigns[:selected_location])
-      |> inject_provided_coordinates(socket.assigns[:selected_location])
       |> mark_location_used(socket.assigns.form)
 
-    case AshPhoenix.Form.submit(socket.assigns.form,
+    form =
+      put_provided_coordinates(socket.assigns.form.source, socket.assigns[:selected_location])
+
+    case AshPhoenix.Form.submit(form,
            params: params,
            actor: socket.assigns.current_user,
            before_submit: prepare_source_for_submit(socket.assigns[:pending_image_id])

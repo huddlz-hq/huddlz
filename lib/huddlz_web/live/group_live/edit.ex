@@ -9,7 +9,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
   import HuddlzWeb.HuddlLive.FormHelpers,
     only: [
       inject_group_location_param: 2,
-      inject_provided_coordinates: 2,
+      put_provided_coordinates: 2,
       apply_group_location_to_form: 2,
       apply_time_zone_to_form: 3
     ]
@@ -524,9 +524,14 @@ defmodule HuddlzWeb.GroupLive.Edit do
     params =
       params
       |> inject_group_location_param(socket.assigns.selected_location_data)
-      |> inject_provided_coordinates(socket.assigns.selected_location_data)
 
-    case AshPhoenix.Form.submit(socket.assigns.form.source,
+    form =
+      put_provided_coordinates(
+        socket.assigns.form.source,
+        socket.assigns.selected_location_data
+      )
+
+    case AshPhoenix.Form.submit(form,
            params: params,
            actor: socket.assigns.current_user
          ) do

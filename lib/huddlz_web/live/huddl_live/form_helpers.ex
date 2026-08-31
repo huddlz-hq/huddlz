@@ -127,31 +127,42 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
   end
 
   @doc """
-  Injects `provided_latitude`/`provided_longitude` params from an
-  already-geocoded location (a group's `selected_location_data`, or a
-  huddl's saved `GroupLocation`), so `Huddlz.Geocoding.ApplyProvidedCoordinates`
-  applies them as a normal change *before* `GeocodeChange` and
-  `SetTimeZoneFromLocation`/`ResolveTimeZone` run.
+  Threads `provided_latitude`/`provided_longitude` for an already-geocoded
+  location (a group's `selected_location_data`, or a huddl's saved
+  `GroupLocation`) onto an `AshPhoenix.Form` as `:private_arguments`, so
+  `AshPhoenix.Form.submit/2` forwards them to `Ash.Changeset.for_create/4`
+  and `Huddlz.Geocoding.ApplyProvidedCoordinates` applies them as a normal
+  change *before* `GeocodeChange` and `ResolveTimeZone`/
+  `SetTimeZoneFromLocation` run.
 
-  Both of those coordinate arguments exist specifically so a caller who
-  already has real coordinates (from `Huddlz.Places`, e.g. the location
-  picker) can skip `GeocodeChange`'s redundant *text* geocode of the
-  `location`/`physical_location` attribute (a second, independent lookup
-  via `Huddlz.Geocoding` — normally Google's Geocoding API, which has no
-  dev-mode fallback the way `Huddlz.Places.Development` does, and which can
-  resolve a slightly different point than the one actually selected). Skip
-  entirely when coordinates aren't known yet, leaving that text-geocode
-  fallback in place for a location typed without ever being selected from a
-  suggestion.
+  Both coordinate arguments are `public?: false` and so cannot ride in the
+  params map: Ash 3.29.3 (CVE-2026-55736) scrubs private arguments out of
+  user-supplied params. `:private_arguments` is the supported channel for a
+  caller who already holds real coordinates (from `Huddlz.Places`, e.g. the
+  location picker) and wants to skip `GeocodeChange`'s redundant *text*
+  geocode of the `location`/`physical_location` attribute (a second,
+  independent lookup via `Huddlz.Geocoding` — normally Google's Geocoding
+  API, which has no dev-mode fallback the way `Huddlz.Places.Development`
+  does, and which can resolve a slightly different point than the one
+  actually selected).
+
+  Returns the form untouched when coordinates aren't known yet, leaving that
+  text-geocode fallback in place for a location typed without ever being
+  selected from a suggestion.
   """
-  def inject_provided_coordinates(params, %{latitude: lat, longitude: lng})
+  def put_provided_coordinates(%AshPhoenix.Form{} = form, %{latitude: lat, longitude: lng})
       when is_number(lat) and is_number(lng) do
-    params
-    |> Map.put("provided_latitude", lat)
-    |> Map.put("provided_longitude", lng)
+    %{
+      form
+      | opts:
+          Keyword.put(form.opts, :private_arguments, %{
+            provided_latitude: lat,
+            provided_longitude: lng
+          })
+    }
   end
 
-  def inject_provided_coordinates(params, _location), do: params
+  def put_provided_coordinates(%AshPhoenix.Form{} = form, _location), do: form
 
   @doc """
   Injects the location text into form params for group forms.

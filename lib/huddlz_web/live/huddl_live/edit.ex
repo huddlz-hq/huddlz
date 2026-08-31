@@ -458,10 +458,12 @@ defmodule HuddlzWeb.HuddlLive.Edit do
       params
       |> Map.put("browser_time_zone", socket.assigns.browser_time_zone)
       |> inject_saved_location_params(socket.assigns[:selected_location])
-      |> inject_provided_coordinates(socket.assigns[:selected_location])
       |> mark_location_used(socket.assigns.form)
 
-    case AshPhoenix.Form.submit(socket.assigns.form,
+    form =
+      put_provided_coordinates(socket.assigns.form.source, socket.assigns[:selected_location])
+
+    case AshPhoenix.Form.submit(form,
            params: params,
            actor: socket.assigns.current_user
          ) do
