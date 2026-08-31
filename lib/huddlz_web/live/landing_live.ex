@@ -1,11 +1,11 @@
 defmodule HuddlzWeb.LandingLive do
   @moduledoc """
   Public landing page at `/`. Anonymous visitors see the v3 hero + value tiles
-  + sign-up CTAs. Authenticated users are redirected to their dashboard.
+  + sign-up CTAs. Authenticated users are redirected to Calendar Today.
   """
   use HuddlzWeb, :live_view
 
-  on_mount {HuddlzWeb.LiveUserAuth, :redirect_to_me_if_authenticated}
+  on_mount {HuddlzWeb.LiveUserAuth, :redirect_to_calendar_if_authenticated}
 
   @impl true
   def mount(_params, _session, socket) do

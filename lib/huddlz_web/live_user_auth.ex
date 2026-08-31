@@ -43,9 +43,9 @@ defmodule HuddlzWeb.LiveUserAuth do
     end
   end
 
-  def on_mount(:redirect_to_me_if_authenticated, _params, _session, socket) do
+  def on_mount(:redirect_to_calendar_if_authenticated, _params, _session, socket) do
     if socket.assigns[:current_user] do
-      {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/my-huddlz")}
+      {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/calendar")}
     else
       {:cont, assign(socket, :current_user, nil)}
     end
