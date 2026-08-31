@@ -92,7 +92,7 @@ jobs:
 
     # Step: Download TzWorld polygon data for timezone lookups
     - name: Download TzWorld data
-      run: mix tz_world.update
+      run: mix tz_world_data
 
     # Step: Compile the project treating any warnings as errors.
     # Customize this step if a different behavior is desired.
@@ -182,7 +182,7 @@ jobs:
       run: mix deps.get
 
     - name: Download TzWorld data
-      run: mix tz_world.update
+      run: mix tz_world_data
 
     - name: Create, migrate, and seed the database
       run: mix ecto.setup

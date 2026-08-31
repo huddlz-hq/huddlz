@@ -155,7 +155,7 @@ defmodule Huddlz.MixProject do
         "cmd cp -n .test.env.example .test.env 2>/dev/null || true",
         "deps.get",
         "ash.setup",
-        "tz_world.update",
+        "tz_world_data",
         "assets.setup",
         "assets.build",
         "run priv/repo/seeds.exs",
