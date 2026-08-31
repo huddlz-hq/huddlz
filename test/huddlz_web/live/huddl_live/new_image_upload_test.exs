@@ -93,6 +93,7 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
       # Should show "Image uploaded" confirmation
       html = render(view)
       assert html =~ "Image uploaded"
+      refute has_element?(view, ".upload-zone")
 
       # Should have created a pending image record
       pending_count =
