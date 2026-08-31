@@ -217,9 +217,9 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> visit(calendar_path_for(tomorrow()))
       |> assert_has(
         "#calendar-entry-#{huddl.id}.cal-pill.waitlisted[data-status=waitlist]",
-        text: "Waitlist"
+        text: "Waitlisted"
       )
-      |> assert_has("#calendar-legend [data-status=waitlist]", text: "Waitlist")
+      |> assert_has("#calendar-legend [data-status=waitlist]", text: "Waitlisted")
     end
 
     test "past attended huddl renders the past variant", %{
@@ -305,8 +305,8 @@ defmodule HuddlzWeb.CalendarLiveTest do
         |> visit(calendar_path_for(tomorrow()))
         |> assert_has(".cal-month-count", text: "1 huddl")
         |> assert_has(
-          "#calendar-entry-#{huddl.id}[data-status=hosting-going]",
-          text: "Hosting + Going"
+          "#calendar-entry-#{huddl.id}[data-status=hosting]",
+          text: "Hosting"
         )
 
       assert session.view
@@ -380,7 +380,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
         text: "Outside Month"
       )
       |> assert_has("#calendar-legend [data-status=going]", text: "Going")
-      |> assert_has("#calendar-legend [data-status=waitlist]", text: "Waitlist")
+      |> assert_has("#calendar-legend [data-status=waitlist]", text: "Waitlisted")
     end
 
     test "cal-pill links to the huddl detail page", %{
@@ -484,7 +484,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       )
     end
 
-    test "agenda uses the same combined Hosting + Going status without duplication", %{
+    test "agenda gives Hosting precedence without duplication", %{
       conn: conn,
       host: host,
       public_group: public_group
@@ -496,8 +496,8 @@ defmodule HuddlzWeb.CalendarLiveTest do
         |> login(host)
         |> visit(calendar_path_for(tomorrow(), view: "agenda"))
         |> assert_has(
-          "#calendar-entry-#{huddl.id} .cal-entry-status[data-status=hosting-going]",
-          text: "Hosting + Going"
+          "#calendar-entry-#{huddl.id} .cal-entry-status[data-status=hosting]",
+          text: "Hosting"
         )
 
       assert session.view
@@ -546,7 +546,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> visit(calendar_path_for(tomorrow(), view: "agenda"))
       |> assert_has(
         "#calendar-entry-#{waitlisted.id} .cal-entry-status[data-status=waitlist]",
-        text: "Waitlist"
+        text: "Waitlisted"
       )
 
       past = create_past_huddl(host, public_group, title: "Agenda Past")

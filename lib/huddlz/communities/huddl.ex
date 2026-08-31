@@ -317,9 +317,9 @@ defmodule Huddlz.Communities.Huddl do
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
 
       filter expr(
-               lifecycle_state in [:published, :completed] and starts_at < ^arg(:range_end) and
-                 ends_at > ^arg(:range_start) and
-                 (exists(attendees, user_id == ^actor(:id) and is_nil(waitlisted_at)) or
+               lifecycle_state in [:published, :completed, :cancelled] and
+                 starts_at < ^arg(:range_end) and ends_at > ^arg(:range_start) and
+                 (creator_id == ^actor(:id) or exists(attendees, user_id == ^actor(:id)) or
                     exists(group.group_members, user_id == ^actor(:id)))
              )
 
@@ -884,6 +884,12 @@ defmodule Huddlz.Communities.Huddl do
       description "Whether the current actor has a confirmed RSVP for the huddl"
 
       calculation expr(exists(attendees, user_id == ^actor(:id) and is_nil(waitlisted_at)))
+    end
+
+    calculate :waitlisted_rsvp_for_actor, :boolean do
+      description "Whether the current actor has a waitlisted RSVP for the huddl"
+
+      calculation expr(exists(attendees, user_id == ^actor(:id) and not is_nil(waitlisted_at)))
     end
 
     calculate :is_publicly_visible, :boolean do

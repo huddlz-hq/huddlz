@@ -25,7 +25,8 @@ defmodule HuddlzWeb.CalendarLive do
     :group_location,
     :rsvp_count,
     :display_image_url,
-    :confirmed_rsvp_for_actor
+    :confirmed_rsvp_for_actor,
+    :waitlisted_rsvp_for_actor
   ]
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
@@ -144,7 +145,7 @@ defmodule HuddlzWeb.CalendarLive do
 
     user
     |> calendar_huddlz(range_start, range_end)
-    |> Enum.map(&today_entry/1)
+    |> Enum.map(&today_entry(&1, user))
   end
 
   defp load_entries(user, _view_mode, grid_start, grid_end, _today, _time_zone) do
@@ -217,11 +218,18 @@ defmodule HuddlzWeb.CalendarLive do
     end
   end
 
-  defp today_entry(%{confirmed_rsvp_for_actor: true} = huddl) do
-    build_today_entry(huddl, MapSet.new([:attending]))
+  defp today_entry(huddl, user) do
+    roles =
+      MapSet.new()
+      |> maybe_add_role(huddl.creator_id == user.id, :hosting)
+      |> maybe_add_role(huddl.waitlisted_rsvp_for_actor, :waitlisted)
+      |> maybe_add_role(huddl.confirmed_rsvp_for_actor, :attending)
+
+    build_today_entry(huddl, roles)
   end
 
-  defp today_entry(huddl), do: build_today_entry(huddl, MapSet.new())
+  defp maybe_add_role(roles, true, role), do: MapSet.put(roles, role)
+  defp maybe_add_role(roles, false, _role), do: roles
 
   defp build_today_entry(huddl, roles) do
     entry = %{huddl: huddl, roles: roles}
@@ -234,8 +242,24 @@ defmodule HuddlzWeb.CalendarLive do
   defp today_relationship_variant(%{card_status: nil}), do: :default
   defp today_relationship_variant(%{card_status: status}), do: status.variant
 
-  defp today_card_status(%{huddl: %{status: :completed}} = entry), do: past_status(entry)
-  defp today_card_status(entry), do: relationship_status(entry)
+  defp today_card_status(%{huddl: %{status: status}} = entry) do
+    case HuddlStatus.contextual_override(status) do
+      nil -> today_relationship_status(entry, status)
+      presentation -> struct!(EntryStatus, presentation)
+    end
+  end
+
+  defp today_relationship_status(entry, :completed), do: past_status(entry)
+  defp today_relationship_status(entry, _status), do: relationship_status(entry)
+
+  defp primary_relationship(roles) do
+    cond do
+      MapSet.member?(roles, :hosting) -> :hosting
+      MapSet.member?(roles, :waitlisted) -> :waitlisted
+      MapSet.member?(roles, :attending) -> :attending
+      true -> nil
+    end
+  end
 
   defp fetch(user, role) do
     case Communities.search_huddlz(
@@ -402,64 +426,40 @@ defmodule HuddlzWeb.CalendarLive do
   end
 
   defp relationship_status(%{roles: roles}) do
-    hosting? = MapSet.member?(roles, :hosting)
-    attending? = MapSet.member?(roles, :attending)
-    waitlisted? = MapSet.member?(roles, :waitlisted)
-
-    cond do
-      hosting? and attending? ->
-        %EntryStatus{
-          key: "hosting-going",
-          label: "Hosting + Going",
-          variant: :magenta,
-          rank: 0
-        }
-
-      hosting? ->
+    case primary_relationship(roles) do
+      :hosting ->
         %EntryStatus{key: "hosting", label: "Hosting", variant: :magenta, rank: 1}
 
-      waitlisted? ->
-        %EntryStatus{key: "waitlist", label: "Waitlist", variant: :warn, rank: 3}
+      :waitlisted ->
+        %EntryStatus{key: "waitlist", label: "Waitlisted", variant: :warn, rank: 2}
 
-      attending? ->
-        %EntryStatus{key: "going", label: "Going", variant: :cyan, rank: 2}
+      :attending ->
+        %EntryStatus{key: "going", label: "Going", variant: :cyan, rank: 3}
 
-      true ->
+      nil ->
         nil
     end
   end
 
   defp past_status(%{roles: roles}) do
-    hosting? = MapSet.member?(roles, :hosting)
-    attending? = MapSet.member?(roles, :attending)
-    waitlisted? = MapSet.member?(roles, :waitlisted)
-
-    cond do
-      hosting? and attending? ->
-        %EntryStatus{
-          key: "past-hosting-attended",
-          label: "Hosting + Attended · Past",
-          variant: :muted,
-          rank: 4
-        }
-
-      hosting? ->
+    case primary_relationship(roles) do
+      :hosting ->
         %EntryStatus{
           key: "past-hosting",
           label: "Hosting · Past",
           variant: :muted,
-          rank: 5
+          rank: 4
         }
 
-      waitlisted? ->
+      :waitlisted ->
         %EntryStatus{
           key: "past-waitlisted",
           label: "Waitlisted · Past",
           variant: :muted,
-          rank: 7
+          rank: 5
         }
 
-      attending? ->
+      :attending ->
         %EntryStatus{
           key: "past-attended",
           label: "Attended · Past",
@@ -467,22 +467,17 @@ defmodule HuddlzWeb.CalendarLive do
           rank: 6
         }
 
-      true ->
+      nil ->
         nil
     end
   end
 
   defp past_relationship_label(%{roles: roles}) do
-    hosting? = MapSet.member?(roles, :hosting)
-    attending? = MapSet.member?(roles, :attending)
-    waitlisted? = MapSet.member?(roles, :waitlisted)
-
-    cond do
-      hosting? and attending? -> "Hosted and attended, past"
-      hosting? and waitlisted? -> "Hosted and waitlisted, past"
-      hosting? -> "Hosted, past"
-      waitlisted? -> "Waitlisted, past"
-      attending? -> "Attended, past"
+    case primary_relationship(roles) do
+      :hosting -> "Hosted, past"
+      :waitlisted -> "Waitlisted, past"
+      :attending -> "Attended, past"
+      nil -> nil
     end
   end
 
