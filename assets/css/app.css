@@ -1987,7 +1987,6 @@ body .cal-nav-today:hover { color: var(--cyan); border-color: var(--cyan); }
 body .cal-month-grid {
   display: block;
   width: 100%;
-  max-width: 680px;
   overflow: clip;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
@@ -2013,10 +2012,14 @@ body .cal-month-weekday {
 }
 
 body .cal-month-day {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
   min-width: 0;
-  min-height: 46px;
-  place-items: center;
+  min-height: 88px;
+  padding: 10px 4px 8px;
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   color: var(--soft);
@@ -2060,13 +2063,48 @@ body .cal-month-day.is-selected {
 }
 
 body .cal-month-selection {
-  max-width: 680px;
   margin-top: 20px;
 }
 
 body .cal-month-selection h2 {
   margin: 0 0 12px;
   font-size: 17px;
+}
+
+body .cal-month-indicators {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+}
+
+body .cal-month-indicator {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--soft);
+}
+
+body .cal-month-indicator.cyan { background: var(--cyan); }
+body .cal-month-indicator.magenta { background: var(--magenta); }
+body .cal-month-indicator.amber { background: var(--warn); }
+body .cal-month-indicator.neutral { background: var(--soft); }
+
+body .cal-month-indicator.is-cancelled {
+  border-radius: 1px;
+  background: var(--muted);
+  transform: rotate(-35deg);
+}
+
+body .cal-month-overflow {
+  color: var(--soft);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 @media (max-width: 520px) {
@@ -2076,7 +2114,15 @@ body .cal-month-selection h2 {
     letter-spacing: 0.02em;
   }
 
-  body .cal-month-day { min-height: 40px; }
+  body .cal-month-day {
+    min-height: 52px;
+    gap: 5px;
+    padding: 7px 1px 5px;
+  }
+
+  body .cal-month-indicators { gap: 2px; }
+  body .cal-month-indicator { width: 6px; height: 6px; }
+  body .cal-month-overflow { font-size: 8px; }
 }
 
 body .cal-legend {
@@ -2105,7 +2151,10 @@ body .cal-legend-swatch {
 body .cal-legend-swatch.cyan { background: var(--cyan); }
 body .cal-legend-swatch.magenta { background: var(--magenta); }
 body .cal-legend-swatch.warn { background: var(--warn); }
+body .cal-legend-swatch.amber { background: var(--warn); }
 body .cal-legend-swatch.muted { background: var(--muted); }
+body .cal-legend-swatch.neutral { background: var(--soft); }
+body .cal-legend-swatch.overflow { background: transparent; }
 
 body .cal-legend-note { margin-left: auto; font-size: 12px; }
 

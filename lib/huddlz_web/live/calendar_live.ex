@@ -22,6 +22,12 @@ defmodule HuddlzWeb.CalendarLive do
     defstruct [:key, :label, :variant, :rank]
   end
 
+  defmodule MonthDaySummary do
+    @moduledoc false
+
+    defstruct active: [], cancelled_count: 0, overflow_count: 0, accessible_text: nil
+  end
+
   @card_loads [
     :status,
     :group,
@@ -33,6 +39,18 @@ defmodule HuddlzWeb.CalendarLive do
   ]
   @coming_up_limit 3
   @calendar_horizon ~U[9999-12-31 23:59:59Z]
+  @month_relationship_presentations %{
+    hosting: %{key: "hosting", label: "Hosting", variant: :magenta, rank: 1},
+    attending: %{key: "going", label: "Going", variant: :cyan, rank: 2},
+    waitlisted: %{key: "waitlisted", label: "Waitlisted", variant: :amber, rank: 3},
+    group_opportunity: %{
+      key: "group-opportunity",
+      label: "Group opportunity",
+      variant: :neutral,
+      rank: 4
+    }
+  }
+  @month_relationship_order [:hosting, :attending, :waitlisted, :group_opportunity]
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -56,7 +74,10 @@ defmodule HuddlzWeb.CalendarLive do
      |> stream_configure(:coming_up_entries,
        dom_id: &"calendar-coming-up-huddl-#{&1.huddl.id}"
      )
-     |> stream_configure(:legend_items, dom_id: &"calendar-legend-item-#{&1.key}")}
+     |> stream_configure(:legend_items, dom_id: &"calendar-legend-item-#{&1.key}")
+     |> stream_configure(:month_legend_items,
+       dom_id: &"calendar-month-legend-item-#{&1.key}"
+     )}
   end
 
   @impl true
@@ -129,8 +150,31 @@ defmodule HuddlzWeb.CalendarLive do
         socket.assigns.time_zone
       )
 
-    in_month_count = Enum.count(entries, &in_focus_month?(&1.huddl, focus_month))
+    month_overview_entries =
+      load_month_overview_entries(
+        user,
+        view_mode,
+        grid_start,
+        grid_end,
+        socket.assigns.time_zone
+      )
+
+    month_day_summaries =
+      build_month_day_summaries(
+        month_overview_entries,
+        grid_start,
+        grid_end,
+        socket.assigns.time_zone
+      )
+
+    in_month_count =
+      Enum.count(
+        month_overview_entries,
+        &in_focus_month?(&1.huddl, focus_month, socket.assigns.time_zone)
+      )
+
     legend_items = legend_items(entries, focus_month, view_mode, socket.assigns.today)
+    month_legend_items = month_legend_items(view_mode)
 
     coming_up_entries =
       load_coming_up_entries(
@@ -152,17 +196,20 @@ defmodule HuddlzWeb.CalendarLive do
     |> assign(:grid_start, grid_start)
     |> assign(:grid_end, grid_end)
     |> assign(:entries, entries)
+    |> assign(:month_day_summaries, month_day_summaries)
     |> assign(:in_month_count, in_month_count)
     |> assign(:day_empty?, entries == [])
     |> assign(:week_empty?, entries == [])
     |> assign(:month_empty?, entries == [])
     |> assign(:coming_up_empty?, coming_up_entries == [])
     |> assign(:legend_empty?, legend_items == [])
+    |> assign(:month_legend_empty?, month_legend_items == [])
     |> stream(:day_entries, entries, reset: true)
     |> stream(:week_entries, entries, reset: true)
     |> stream(:month_entries, entries, reset: true)
     |> stream(:coming_up_entries, coming_up_entries, reset: true)
     |> stream(:legend_items, legend_items, reset: true)
+    |> stream(:month_legend_items, month_legend_items, reset: true)
   end
 
   defp parse_month(nil, today), do: first_of_month(today)
@@ -245,6 +292,18 @@ defmodule HuddlzWeb.CalendarLive do
     |> calendar_huddlz(range_start, range_end)
     |> Enum.map(&day_entry(&1, user))
   end
+
+  defp load_month_overview_entries(user, :month, grid_start, grid_end, time_zone) do
+    range_start = local_midnight_in_utc(grid_start, time_zone)
+    range_end = grid_end |> Date.add(1) |> local_midnight_in_utc(time_zone)
+
+    user
+    |> calendar_huddlz(range_start, range_end)
+    |> Enum.map(&day_entry(&1, user))
+  end
+
+  defp load_month_overview_entries(_user, _view_mode, _grid_start, _grid_end, _time_zone),
+    do: []
 
   defp load_coming_up_entries(user, true, [], today, time_zone) do
     {_range_start, range_end} = local_day_window(today, time_zone)
@@ -365,12 +424,16 @@ defmodule HuddlzWeb.CalendarLive do
     end
   end
 
-  defp in_focus_month?(%{starts_at: %DateTime{} = dt}, %Date{year: y, month: m}) do
-    date = DateTime.to_date(dt)
-    date.year == y && date.month == m
+  defp in_focus_month?(
+         %{starts_at: %DateTime{} = starts_at},
+         %Date{year: year, month: month},
+         time_zone
+       ) do
+    date = starts_at |> DateTime.shift_zone!(time_zone) |> DateTime.to_date()
+    date.year == year && date.month == month
   end
 
-  defp in_focus_month?(_, _), do: false
+  defp in_focus_month?(_, _, _), do: false
 
   defp same_month?(%Date{year: year, month: month}, %Date{year: year, month: month}), do: true
   defp same_month?(_left, _right), do: false
@@ -438,6 +501,7 @@ defmodule HuddlzWeb.CalendarLive do
   defp period_title(_view_mode, focus_month, _week_start, _week_end, _selected_date),
     do: format_month(focus_month)
 
+  defp period_count(:month, _entries, in_month_count), do: in_month_count
   defp period_count(_view_mode, entries, _in_month_count), do: length(entries)
 
   defp day_tab_path(:day, selected_date, today) when selected_date == today, do: ~p"/calendar"
@@ -502,6 +566,95 @@ defmodule HuddlzWeb.CalendarLive do
     |> Enum.join(", ")
   end
 
+  defp month_day_accessible_label(day, focus_month, today, summaries) do
+    case Map.get(summaries, day) do
+      nil ->
+        day_accessible_label(day, focus_month, today)
+
+      %MonthDaySummary{accessible_text: accessible_text} ->
+        day_accessible_label(day, focus_month, today) <> ", " <> accessible_text
+    end
+  end
+
+  defp build_month_day_summaries(entries, grid_start, grid_end, time_zone) do
+    entries
+    |> Enum.reduce(%{}, fn entry, summaries ->
+      Enum.reduce(
+        month_dates_for(entry.huddl, grid_start, grid_end, time_zone),
+        summaries,
+        fn day, acc -> Map.update(acc, day, [entry], &[entry | &1]) end
+      )
+    end)
+    |> Map.new(fn {day, day_entries} ->
+      {day, summarize_month_day(Enum.reverse(day_entries))}
+    end)
+  end
+
+  defp month_dates_for(%{starts_at: starts_at, ends_at: ends_at}, grid_start, grid_end, time_zone) do
+    first_day = starts_at |> DateTime.shift_zone!(time_zone) |> DateTime.to_date()
+
+    last_day =
+      ends_at
+      |> DateTime.add(-1, :microsecond)
+      |> DateTime.shift_zone!(time_zone)
+      |> DateTime.to_date()
+
+    first_day = if Date.before?(first_day, grid_start), do: grid_start, else: first_day
+    last_day = if Date.after?(last_day, grid_end), do: grid_end, else: last_day
+
+    if Date.after?(first_day, last_day), do: [], else: Date.range(first_day, last_day)
+  end
+
+  defp summarize_month_day(entries) do
+    {cancelled, active} = Enum.split_with(entries, &cancelled_month_entry?/1)
+    visible_active = Enum.take(active, 3)
+    overflow_count = max(length(active) - length(visible_active), 0)
+
+    %MonthDaySummary{
+      active: Enum.map(visible_active, &month_indicator/1),
+      cancelled_count: length(cancelled),
+      overflow_count: overflow_count,
+      accessible_text: month_day_summary_text(active, cancelled, overflow_count)
+    }
+  end
+
+  defp cancelled_month_entry?(%{huddl: %{status: :cancelled}}), do: true
+  defp cancelled_month_entry?(_entry), do: false
+
+  defp month_indicator(entry) do
+    %{status: month_relationship_status(entry), title: entry.huddl.title}
+  end
+
+  defp month_relationship_status(%{roles: roles}) do
+    relationship = primary_relationship(roles) || :group_opportunity
+
+    @month_relationship_presentations
+    |> Map.fetch!(relationship)
+    |> then(&struct!(EntryStatus, &1))
+  end
+
+  defp month_day_summary_text(active, cancelled, overflow_count) do
+    visible_relationships =
+      active
+      |> Enum.take(3)
+      |> Enum.map(fn entry ->
+        status = month_relationship_status(entry)
+        "#{status.label}: #{entry.huddl.title}"
+      end)
+
+    overflow = if overflow_count > 0, do: ["#{overflow_count} additional huddlz"], else: []
+
+    cancelled_text =
+      case length(cancelled) do
+        0 -> []
+        1 -> ["1 cancelled Personal huddl"]
+        count -> ["#{count} cancelled Personal huddlz"]
+      end
+
+    (visible_relationships ++ overflow ++ cancelled_text)
+    |> Enum.join(", ")
+  end
+
   defp entry_status(%{huddl: %{status: status}} = entry, %Date{} = today) do
     case HuddlStatus.contextual_override(status) do
       nil -> timed_entry_status(entry, today)
@@ -563,6 +716,28 @@ defmodule HuddlzWeb.CalendarLive do
     end
   end
 
+  defp month_legend_items(:month) do
+    relationship_items =
+      Enum.map(@month_relationship_order, fn relationship ->
+        @month_relationship_presentations
+        |> Map.fetch!(relationship)
+        |> then(&struct!(EntryStatus, &1))
+      end)
+
+    relationship_items ++
+      [
+        %EntryStatus{key: "cancelled", label: "Cancelled", variant: :muted, rank: 5},
+        %EntryStatus{
+          key: "overflow",
+          label: "+N additional huddlz",
+          variant: :overflow,
+          rank: 6
+        }
+      ]
+  end
+
+  defp month_legend_items(_view_mode), do: []
+
   defp legend_items(entries, focus_month, view_mode, today) do
     entries
     |> visible_entries(focus_month, view_mode)
@@ -572,9 +747,9 @@ defmodule HuddlzWeb.CalendarLive do
     |> Enum.sort_by(& &1.rank)
   end
 
-  defp visible_entries(entries, _focus_month, :month), do: entries
   defp visible_entries(entries, _focus_month, :day), do: entries
   defp visible_entries(entries, _focus_month, :week), do: entries
+  defp visible_entries(entries, _focus_month, :month), do: entries
 
   defp legend_swatch_class(%{variant: variant}), do: ["cal-legend-swatch", variant]
 
@@ -746,6 +921,7 @@ defmodule HuddlzWeb.CalendarLive do
           />
         <% :month -> %>
           <.month_grid
+            day_summaries={@month_day_summaries}
             entries={@streams.month_entries}
             focus_month={@focus_month}
             grid_start={@grid_start}
@@ -757,10 +933,29 @@ defmodule HuddlzWeb.CalendarLive do
       <% end %>
 
       <div
+        :if={!@month_legend_empty?}
+        id="calendar-month-legend"
+        class="cal-legend"
+        aria-label="Month indicator legend"
+        phx-update="stream"
+      >
+        <span
+          :for={{id, item} <- @streams.month_legend_items}
+          id={id}
+          class="cal-legend-item"
+          data-status={item.key}
+          data-variant={item.variant}
+        >
+          <span class={legend_swatch_class(item)} aria-hidden="true"></span>
+          {item.label}
+        </span>
+      </div>
+
+      <div
         :if={!@legend_empty?}
         id="calendar-legend"
         class="cal-legend"
-        aria-label="Calendar statuses"
+        aria-label={if @view_mode == :month, do: "Selected Day statuses", else: "Calendar statuses"}
         phx-update="stream"
       >
         <span
@@ -768,6 +963,7 @@ defmodule HuddlzWeb.CalendarLive do
           id={id}
           class="cal-legend-item"
           data-status={item.key}
+          data-variant={item.variant}
         >
           <span class={legend_swatch_class(item)} aria-hidden="true"></span>
           {item.label}
@@ -873,6 +1069,7 @@ defmodule HuddlzWeb.CalendarLive do
   attr :focus_month, Date, required: true
   attr :grid_start, Date, required: true
   attr :entries, :any, required: true
+  attr :day_summaries, :map, required: true
   attr :month_empty?, :boolean, required: true
   attr :selected_date, Date, required: true
   attr :today, Date, required: true
@@ -901,14 +1098,16 @@ defmodule HuddlzWeb.CalendarLive do
           <.link
             :for={day <- week}
             id={"calendar-month-day-#{Date.to_iso8601(day)}"}
-            patch={month_day_path(first_of_month(day), day)}
+            patch={month_day_selection_path(first_of_month(day), day)}
+            phx-click={JS.focus(to: "#calendar-month-selection")}
             role="gridcell"
             class={month_day_class(day, @focus_month, @selected_date, @today)}
-            aria-label={day_accessible_label(day, @focus_month, @today)}
+            aria-label={month_day_accessible_label(day, @focus_month, @today, @day_summaries)}
             aria-current={if Date.compare(day, @selected_date) == :eq, do: "date"}
           >
             <time datetime={Date.to_iso8601(day)}>{day.day}</time>
             <span :if={Date.compare(day, @today) == :eq} class="sr-only">Today</span>
+            <.month_day_indicators summary={Map.get(@day_summaries, day)} />
           </.link>
         </div>
       </div>
@@ -917,6 +1116,7 @@ defmodule HuddlzWeb.CalendarLive do
         id="calendar-month-selection"
         class="cal-month-selection"
         aria-labelledby="calendar-month-selection-title"
+        tabindex="-1"
       >
         <h2 id="calendar-month-selection-title">{format_full_date(@selected_date)}</h2>
         <div id="calendar-month-day-huddlz" class="grid" phx-update="stream">
@@ -932,6 +1132,43 @@ defmodule HuddlzWeb.CalendarLive do
         </div>
       </section>
     </div>
+    """
+  end
+
+  defp month_day_selection_path(month, selected_date) do
+    month_day_path(month, selected_date) <> "#calendar-month-selection"
+  end
+
+  attr :summary, :any, default: nil
+
+  defp month_day_indicators(%{summary: nil} = assigns), do: ~H""
+
+  defp month_day_indicators(assigns) do
+    ~H"""
+    <span class="cal-month-indicators" aria-hidden="true">
+      <span
+        :for={indicator <- @summary.active}
+        class={["cal-month-indicator", indicator.status.variant]}
+        data-month-indicator="active"
+        data-status={indicator.status.key}
+        data-variant={indicator.status.variant}
+        title={"#{indicator.status.label}: #{indicator.title}"}
+      ></span>
+      <span
+        :if={@summary.overflow_count > 0}
+        class="cal-month-overflow"
+        data-month-overflow
+      >
+        +{@summary.overflow_count}
+      </span>
+      <span
+        :if={@summary.cancelled_count > 0}
+        class="cal-month-indicator muted is-cancelled"
+        data-month-indicator="cancelled"
+        data-variant="muted"
+        title={"#{@summary.cancelled_count} cancelled Personal huddlz"}
+      ></span>
+    </span>
     """
   end
 

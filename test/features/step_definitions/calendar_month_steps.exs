@@ -124,11 +124,37 @@ defmodule CalendarMonthSteps do
   end
 
   step "I am using a narrow viewport", context do
-    Map.put(context, :viewport, :narrow)
+    date = %{current_display_date() | day: 10}
+    {host, group} = create_host_and_group()
+
+    for index <- 0..3 do
+      create_personal_huddl!(
+        context.current_user,
+        host,
+        group,
+        "Narrow Month huddl #{index + 1}",
+        DateTime.new!(date, Time.add(~T[09:00:00], index * 3600), "Etc/UTC")
+      )
+    end
+
+    Map.merge(context, %{
+      viewport: :narrow,
+      month_date: date,
+      accessibility_month_date: date
+    })
   end
 
   step "I open Calendar Month", context do
-    Map.put(context, :session, visit(context.session, "/calendar?view=month"))
+    path =
+      case context[:month_date] do
+        %Date{} = date ->
+          "/calendar?view=month&month=#{Calendar.strftime(date, "%Y-%m")}&date=#{Date.to_iso8601(date)}"
+
+        nil ->
+          "/calendar?view=month"
+      end
+
+    Map.put(context, :session, visit(context.session, path))
   end
 
   step "the month grid fits without horizontal page scrolling", context do
@@ -150,6 +176,12 @@ defmodule CalendarMonthSteps do
 
   defp current_date do
     Clock.utc_now()
+    |> DateTime.to_date()
+  end
+
+  defp current_display_date do
+    Clock.utc_now()
+    |> DateTime.shift_zone!("America/New_York")
     |> DateTime.to_date()
   end
 
