@@ -32,6 +32,7 @@ defmodule HuddlzWeb.ApiCase do
 
     Mox.stub_with(Huddlz.MockGeocoding, Huddlz.GeocodingStub)
     Mox.stub_with(Huddlz.MockPlaces, Huddlz.PlacesStub)
+    Mox.stub_with(Huddlz.MockLocationTimeZone, Huddlz.LocationTimeZoneStub)
 
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end

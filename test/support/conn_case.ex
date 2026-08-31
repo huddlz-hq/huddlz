@@ -40,6 +40,7 @@ defmodule HuddlzWeb.ConnCase do
 
     Mox.stub_with(Huddlz.MockGeocoding, Huddlz.GeocodingStub)
     Mox.stub_with(Huddlz.MockPlaces, Huddlz.PlacesStub)
+    Mox.stub_with(Huddlz.MockLocationTimeZone, Huddlz.LocationTimeZoneStub)
     Mox.stub_with(Huddlz.MockCalendarClock, Huddlz.Calendar.SystemClock)
 
     {:ok, conn: Phoenix.ConnTest.build_conn()}

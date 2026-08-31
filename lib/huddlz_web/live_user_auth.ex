@@ -101,6 +101,7 @@ defmodule HuddlzWeb.LiveUserAuth do
              :home_location,
              :home_latitude,
              :home_longitude,
+             :home_time_zone,
              :is_admin
            ],
            actor: user

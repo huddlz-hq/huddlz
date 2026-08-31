@@ -188,7 +188,19 @@ defmodule Huddlz.Accounts.User do
 
     update :update_home_location do
       description "Update a user's home location for search pre-fill"
+      require_atomic? false
+      accept [:home_location, :home_latitude, :home_longitude, :home_time_zone]
+
+      validate Huddlz.Accounts.User.Validations.HomeLocationTimeZone
+    end
+
+    update :resolve_home_location do
+      description "Resolve and persist the time zone for a selected home Location"
+      require_atomic? false
       accept [:home_location, :home_latitude, :home_longitude]
+
+      change Huddlz.Accounts.User.Changes.ResolveHomeLocationTimeZone
+      validate Huddlz.Accounts.User.Validations.HomeLocationTimeZone
     end
 
     update :update_display_time_zone do
@@ -632,6 +644,11 @@ defmodule Huddlz.Accounts.User do
       authorize_if expr(id == ^actor(:id))
     end
 
+    policy action(:resolve_home_location) do
+      description "Users can resolve and update their own home location"
+      authorize_if expr(id == ^actor(:id))
+    end
+
     policy action(:update_display_time_zone) do
       description "Users can update their own Display time zone preference"
       authorize_if expr(id == ^actor(:id))
@@ -710,6 +727,12 @@ defmodule Huddlz.Accounts.User do
     attribute :home_longitude, :float do
       allow_nil? true
       constraints min: -180, max: 180
+    end
+
+    attribute :home_time_zone, :string do
+      description "Canonical IANA time zone resolved from the selected home Location"
+      allow_nil? true
+      public? true
     end
 
     attribute :display_time_zone_mode, Huddlz.Accounts.DisplayTimeZoneMode do

@@ -479,7 +479,12 @@ defmodule HuddlzWeb.HuddlLiveTest do
       user
       |> Ash.Changeset.for_update(
         :update_home_location,
-        %{home_location: "Austin, TX", home_latitude: 30.2672, home_longitude: -97.7431},
+        %{
+          home_location: "Austin, TX",
+          home_latitude: 30.2672,
+          home_longitude: -97.7431,
+          home_time_zone: "America/Chicago"
+        },
         actor: user
       )
       |> Ash.update!()

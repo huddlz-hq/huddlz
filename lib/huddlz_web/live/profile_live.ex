@@ -64,6 +64,11 @@ defmodule HuddlzWeb.ProfileLive do
      |> assign(:avatar_error, nil)
      |> assign(:remove_avatar_dialog_open, false)
      |> assign(:location_error, nil)
+     |> assign(:pending_home_location, nil)
+     |> assign(
+       :home_location_time_zone_form,
+       to_form(%{"time_zone" => ""}, as: :home_location_time_zone)
+     )
      |> UploadHelpers.allow_image_upload(:avatar, &handle_upload_progress/3)}
   end
 
@@ -231,6 +236,26 @@ defmodule HuddlzWeb.ProfileLive do
           />
           <p :if={@location_error} class="form-error">{@location_error}</p>
         </form>
+        <.form
+          :if={@pending_home_location}
+          for={@home_location_time_zone_form}
+          id="home-location-time-zone-form"
+          phx-submit="save_home_location_time_zone"
+        >
+          <p id="home-location-time-zone-error" class="form-error">
+            Choose a valid time zone for this home location.
+          </p>
+          <.select
+            field={@home_location_time_zone_form[:time_zone]}
+            id="home-location-time-zone"
+            label="Home location time zone"
+            prompt="Choose a time zone"
+            options={Tzdata.canonical_zone_list()}
+          />
+          <.button id="save-home-location-time-zone" variant={:primary} type="submit">
+            Save home location
+          </.button>
+        </.form>
       </div>
 
       <div class="panel">
@@ -595,6 +620,23 @@ defmodule HuddlzWeb.ProfileLive do
   def handle_event("remove_avatar", _params, socket), do: {:noreply, socket}
 
   @impl true
+  def handle_event(
+        "save_home_location_time_zone",
+        %{"home_location_time_zone" => %{"time_zone" => time_zone}},
+        %{assigns: %{pending_home_location: pending, current_user: user}} = socket
+      )
+      when not is_nil(pending) do
+    save_home_location(
+      socket,
+      user,
+      pending.text,
+      pending.latitude,
+      pending.longitude,
+      time_zone
+    )
+  end
+
+  @impl true
   def handle_info(
         {:location_selected, "profile-location",
          %{display_text: text, latitude: lat, longitude: lng}},
@@ -602,33 +644,40 @@ defmodule HuddlzWeb.ProfileLive do
       ) do
     user = socket.assigns.current_user
 
-    case Huddlz.Accounts.update_home_location(user, text, lat, lng, actor: user) do
+    case Huddlz.Accounts.resolve_home_location(user, text, lat, lng,
+           load: [:home_location, :home_latitude, :home_longitude, :home_time_zone],
+           actor: user
+         ) do
       {:ok, updated_user} ->
-        {:ok, updated_user} =
-          Ash.load(updated_user, [:home_location, :home_latitude, :home_longitude], actor: user)
+        {:noreply, home_location_saved(socket, updated_user)}
 
+      {:error, _reason} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Home location updated")
-         |> assign(:current_user, updated_user)
-         |> assign(:location_error, nil)}
-
-      {:error, _} ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "Failed to update location")}
+         |> assign(:pending_home_location, %{text: text, latitude: lat, longitude: lng})
+         |> assign(:location_error, "Choose a valid time zone for this home location")}
     end
   end
 
   def handle_info({:location_cleared, "profile-location"}, socket) do
     user = socket.assigns.current_user
 
-    case Huddlz.Accounts.update_home_location(user, nil, nil, nil, actor: user) do
+    case Huddlz.Accounts.update_home_location(
+           user,
+           nil,
+           nil,
+           nil,
+           %{home_time_zone: nil},
+           load: [:home_location, :home_latitude, :home_longitude, :home_time_zone],
+           actor: user
+         ) do
       {:ok, updated_user} ->
         {:noreply,
          socket
          |> put_flash(:info, "Home location cleared")
-         |> assign(:current_user, updated_user)}
+         |> assign(:current_user, updated_user)
+         |> assign(:pending_home_location, nil)
+         |> assign(:location_error, nil)}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to clear location")}
@@ -639,6 +688,32 @@ defmodule HuddlzWeb.ProfileLive do
     do: assign(socket, :avatar_error, nil)
 
   defp clear_avatar_error_for_new_entry(socket, []), do: socket
+
+  defp save_home_location(socket, user, text, latitude, longitude, time_zone) do
+    case Huddlz.Accounts.update_home_location(
+           user,
+           text,
+           latitude,
+           longitude,
+           %{home_time_zone: time_zone},
+           load: [:home_location, :home_latitude, :home_longitude, :home_time_zone],
+           actor: user
+         ) do
+      {:ok, updated_user} ->
+        {:noreply, home_location_saved(socket, updated_user)}
+
+      {:error, _reason} ->
+        {:noreply, assign(socket, :location_error, "Choose a valid time zone")}
+    end
+  end
+
+  defp home_location_saved(socket, updated_user) do
+    socket
+    |> put_flash(:info, "Home location updated")
+    |> assign(:current_user, updated_user)
+    |> assign(:pending_home_location, nil)
+    |> assign(:location_error, nil)
+  end
 
   defp soft_delete_all_profile_pictures(user) do
     case Huddlz.Accounts.list_profile_pictures(user.id, actor: user) do

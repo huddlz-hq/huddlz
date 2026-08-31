@@ -39,12 +39,14 @@ config :swoosh, :api_client, false
 config :huddlz, :storage, adapter: Huddlz.Storage.Local
 config :huddlz, :geocoding, adapter: Huddlz.MockGeocoding
 config :huddlz, :places, adapter: Huddlz.MockPlaces
+config :huddlz, :location_time_zone, adapter: Huddlz.MockLocationTimeZone
 config :huddlz, :calendar, clock: Huddlz.MockCalendarClock
 config :huddlz, geocoding_req_plug: {Req.Test, Huddlz.Geocoding.Google}
 config :huddlz, places_req_plug: {Req.Test, Huddlz.Places.Google}
-# Real Google adapters read this key for request headers; the configured
-# MockGeocoding/MockPlaces adapters mean live code never sends it, but the
-# *_req_plug-backed adapter tests need a non-nil value.
+config :huddlz, location_time_zone_req_plug: {Req.Test, Huddlz.LocationTimeZone.Google}
+# Real Google adapters read this key for requests; the configured mocks mean
+# live code never sends it, but the *_req_plug-backed adapter tests need a
+# non-nil value.
 config :huddlz, :google_maps, api_key: "test-google-maps-key"
 config :huddlz, Huddlz.Repo, pool: Ecto.Adapters.SQL.Sandbox
 config :huddlz, :sql_sandbox?, true

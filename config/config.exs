@@ -104,6 +104,9 @@ config :huddlz, :geocoding, adapter: Huddlz.Geocoding.Google
 # Places autocomplete adapter (compile-time)
 config :huddlz, :places, adapter: Huddlz.Places.Google
 
+# Location time-zone adapter (compile-time)
+config :huddlz, :location_time_zone, adapter: Huddlz.LocationTimeZone.Google
+
 # Configures the endpoint
 config :huddlz, HuddlzWeb.Endpoint,
   url: [host: "localhost"],
