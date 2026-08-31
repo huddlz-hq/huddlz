@@ -119,7 +119,7 @@ defmodule HuddlzWeb.LiveUserAuth do
       {:halt,
        socket
        |> Phoenix.LiveView.put_flash(:error, "You don't have access to the admin area.")
-       |> Phoenix.LiveView.redirect(to: ~p"/my-huddlz")}
+       |> Phoenix.LiveView.redirect(to: ~p"/calendar")}
     end
   end
 

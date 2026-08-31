@@ -1,6 +1,6 @@
 defmodule HuddlzWeb.Live.Helpers.HuddlCardHelpers do
   @moduledoc """
-  Shared formatting helpers for huddl card listings (discover, my huddlz,
+  Shared formatting helpers for huddl card listings (Discover, Calendar,
   group show): date block, `event_type` tag, and RSVP count labels.
   """
 

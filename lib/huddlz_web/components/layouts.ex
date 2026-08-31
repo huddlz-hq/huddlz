@@ -27,7 +27,7 @@ defmodule HuddlzWeb.Layouts do
 
   attr :active, :string,
     default: nil,
-    doc: "active surface key for nav highlighting (e.g. \"discover\", \"my-huddlz\")"
+    doc: "active surface key for nav highlighting (e.g. \"discover\", \"calendar\")"
 
   attr :active_group_slug, :string,
     default: nil,
@@ -58,25 +58,28 @@ defmodule HuddlzWeb.Layouts do
           <div class="brand-text">huddlz</div>
         </a>
 
-        <nav class="sb-nav">
-          <a class={["sb-item", @active == "discover" && "active"]} href="/discover">
-            <.nav_icon name="search" />
-            <span class="label">Discover</span>
-          </a>
-          <a class={["sb-item", @active == "my-huddlz" && "active"]} href="/my-huddlz">
-            <.nav_icon name="ticket" />
-            <span class="label">My huddlz</span>
-          </a>
-          <a class={["sb-item", @active == "my-groups" && "active"]} href="/my-groups">
-            <.nav_icon name="users" />
-            <span class="label">My groups</span>
-          </a>
-          <a class={["sb-item", @active == "calendar" && "active"]} href="/calendar">
-            <.nav_icon name="calendar" />
-            <span class="label">My calendar</span>
-          </a>
+        <div class="sb-nav">
+          <nav id="primary-navigation" aria-label="Primary navigation">
+            <a class={["sb-item", @active == "discover" && "active"]} href="/discover">
+              <.nav_icon name="search" />
+              <span class="label">Discover</span>
+            </a>
+            <a class={["sb-item", @active == "calendar" && "active"]} href="/calendar">
+              <.nav_icon name="calendar" />
+              <span class="label">Calendar</span>
+            </a>
+            <a class={["sb-item", @active == "my-groups" && "active"]} href="/my-groups">
+              <.nav_icon name="users" />
+              <span class="label">Groups</span>
+            </a>
+          </nav>
 
-          <div class="sb-orgs">
+          <section
+            id="organize-navigation"
+            class="sb-orgs"
+            aria-labelledby="organize-navigation-label"
+          >
+            <h2 id="organize-navigation-label" class="sb-section-label">Organize</h2>
             <%= for {group, idx} <- Enum.with_index(@sidebar_owned_groups) do %>
               <a
                 class={[
@@ -115,8 +118,8 @@ defmodule HuddlzWeb.Layouts do
               <div class="plus-mark">+</div>
               <span class="name">New group</span>
             </a>
-          </div>
-        </nav>
+          </section>
+        </div>
 
         <div class="sb-account">
           <a class={["sb-item", @active == "profile" && "active"]} href="/profile">
@@ -174,9 +177,22 @@ defmodule HuddlzWeb.Layouts do
             <div class="brand-text">huddlz</div>
           </a>
         <% end %>
-        <form class="topbar-search" action="/discover" method="get" role="search">
+        <form
+          id="global-discover-search"
+          class="topbar-search"
+          action="/discover"
+          method="get"
+          role="search"
+        >
           <span class="lead-key" aria-hidden="true">/</span>
-          <input type="search" name="q" placeholder="Search huddlz" value={@query} />
+          <label for="global-discover-search-input" class="sr-only">Search huddlz</label>
+          <.input
+            id="global-discover-search-input"
+            type="search"
+            name="q"
+            placeholder="Search huddlz"
+            value={@query}
+          />
         </form>
         <div class="content-actions">
           <%= if @signed_in do %>

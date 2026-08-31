@@ -67,7 +67,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> visit("/calendar")
       |> assert_has("h1", text: "Calendar")
       |> assert_has("aside.sidebar")
-      |> assert_has(".sb-item.active", text: "My calendar")
+      |> assert_has(".sb-item.active", text: "Calendar")
       |> assert_has(".cal-toolbar")
       |> assert_has(".cal-nav-today", text: "Today")
       |> assert_has("#calendar-view-today.scope-tab.is-active[aria-current='page']")

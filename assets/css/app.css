@@ -740,6 +740,17 @@ body .sb-orgs {
   border-top: 1px solid var(--line);
 }
 
+body .sb-section-label {
+  margin: 0 12px 8px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
 body .sb-account {
   flex: 0 0 auto;
   padding: 8px 12px;
@@ -921,6 +932,7 @@ body .topbar-search {
 }
 
 body .topbar-search:focus-within { border-color: var(--cyan); box-shadow: 0 0 0 3px var(--cyan-soft); }
+body .topbar-search .form-row { flex: 1 1 auto; min-width: 0; }
 body .topbar-search input {
   flex: 1 1 auto;
   min-width: 0;

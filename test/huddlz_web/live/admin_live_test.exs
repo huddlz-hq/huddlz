@@ -52,7 +52,7 @@ defmodule HuddlzWeb.AdminLiveTest do
       assert {:error,
               {:redirect,
                %{
-                 to: "/my-huddlz",
+                 to: "/calendar",
                  flash: %{"error" => "You don't have access to the admin area."}
                }}} = live(conn, ~p"/admin")
 
@@ -64,7 +64,7 @@ defmodule HuddlzWeb.AdminLiveTest do
       conn
       |> login(verified_user)
       |> visit(~p"/admin")
-      |> assert_path(~p"/my-huddlz")
+      |> assert_path(~p"/calendar")
       |> assert_has("div[role='alert']", text: "You don't have access to the admin area.")
     end
 

@@ -31,8 +31,8 @@ defmodule HuddlzWeb.ErrorHTMLTest do
       html =
         render_to_string(HuddlzWeb.ErrorHTML, "404", "html", current_user: %{id: "person-id"})
 
-      assert html =~ ~s(href="/my-huddlz")
-      assert html =~ "Back to My huddlz"
+      assert html =~ ~s(href="/calendar")
+      assert html =~ "Back to Calendar"
       refute html =~ "huddlz home"
     end
   end
@@ -90,7 +90,7 @@ defmodule HuddlzWeb.ErrorHTMLTest do
         |> login(user)
         |> get("/another-route-that-does-not-exist")
 
-      assert html_response(conn, 404) =~ "Back to My huddlz"
+      assert html_response(conn, 404) =~ "Back to Calendar"
       refute response(conn, 404) =~ "huddlz home"
     end
 
@@ -114,7 +114,7 @@ defmodule HuddlzWeb.ErrorHTMLTest do
                  |> get(~p"/groups/missing-group/huddlz/#{Ash.UUID.generate()}")
                end)
 
-      assert body =~ "Back to My huddlz"
+      assert body =~ "Back to Calendar"
       refute body =~ "huddlz home"
     end
 
@@ -142,7 +142,7 @@ defmodule HuddlzWeb.ErrorHTMLTest do
                  |> get("/__test__/errors/500")
                end)
 
-      assert body =~ "Back to My huddlz"
+      assert body =~ "Back to Calendar"
       refute body =~ "huddlz home"
     end
   end

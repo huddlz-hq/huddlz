@@ -16,13 +16,13 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
   end
 
   describe "page chrome" do
-    test "renders v3 sidebar with My groups active", %{conn: conn, member: member} do
+    test "renders v3 sidebar with Groups active", %{conn: conn, member: member} do
       conn
       |> login(member)
       |> visit("/my-groups")
       |> assert_has("h1", text: "My groups")
       |> assert_has("aside.sidebar")
-      |> assert_has(".sb-item.active", text: "My groups")
+      |> assert_has(".sb-item.active", text: "Groups")
     end
 
     test "shows three filter chips with counts", %{conn: conn, member: member} do
