@@ -50,10 +50,10 @@ defmodule DifferingHuddlTimeZonesSteps do
     context
   end
 
-  step "the huddl is placed on the correct day in my device time zone", context do
+  step "the huddl is placed on the correct day in my browser time zone", context do
     assert_has(
       context.session,
-      "#calendar-today-list #calendar-huddl-#{context.calendar_huddl.id}",
+      "#calendar-day-list #calendar-huddl-#{context.calendar_huddl.id}",
       text: context.calendar_huddl.title
     )
 

@@ -1,9 +1,9 @@
 defmodule HuddlzWeb.CalendarLive do
   @moduledoc """
-  LiveView at `/calendar`. Calendar opens on Today and presents relevant
-  huddlz in chronological order. Week follows device-local Sunday-through-
-  Saturday boundaries. Month selects a device-local day from a compact grid
-  and presents that day's huddlz with the same shared cards.
+  LiveView at `/calendar`. Calendar opens on Day and presents relevant huddlz
+  in chronological order. Week follows Sunday-through-Saturday boundaries in
+  the Display time zone. Month presents a full calendar overview and reveals
+  the selected Day's huddlz with the same shared cards.
   """
   use HuddlzWeb, :live_view
 
@@ -47,7 +47,7 @@ defmodule HuddlzWeb.CalendarLive do
      |> assign(:page_title, "Calendar")
      |> assign(:time_zone, time_zone)
      |> assign(:today, today)
-     |> stream_configure(:today_entries, dom_id: &"calendar-huddl-#{&1.huddl.id}")
+     |> stream_configure(:day_entries, dom_id: &"calendar-huddl-#{&1.huddl.id}")
      |> stream_configure(:week_entries, dom_id: &"calendar-huddl-#{&1.huddl.id}")
      |> stream_configure(:month_entries, dom_id: &"calendar-huddl-#{&1.huddl.id}")
      |> stream_configure(:coming_up_entries,
@@ -88,7 +88,8 @@ defmodule HuddlzWeb.CalendarLive do
 
     week_start = week_start(selected_date)
     week_end = Date.add(week_start, 6)
-    range_date = if view_mode in [:week, :month], do: selected_date, else: socket.assigns.today
+    range_date = selected_date
+    implicit_current_day? = view_mode == :day and is_nil(params["date"])
     {grid_start, grid_end} = month_grid_window(focus_month)
     user = socket.assigns.current_user
 
@@ -108,7 +109,7 @@ defmodule HuddlzWeb.CalendarLive do
     coming_up_entries =
       load_coming_up_entries(
         user,
-        view_mode,
+        implicit_current_day?,
         entries,
         socket.assigns.today,
         socket.assigns.time_zone
@@ -120,17 +121,18 @@ defmodule HuddlzWeb.CalendarLive do
     |> assign(:week_start, week_start)
     |> assign(:week_end, week_end)
     |> assign(:selected_date, selected_date)
+    |> assign(:current_day?, Date.compare(selected_date, socket.assigns.today) == :eq)
     |> assign(:view_mode, view_mode)
     |> assign(:grid_start, grid_start)
     |> assign(:grid_end, grid_end)
     |> assign(:entries, entries)
     |> assign(:in_month_count, in_month_count)
-    |> assign(:today_empty?, entries == [])
+    |> assign(:day_empty?, entries == [])
     |> assign(:week_empty?, entries == [])
     |> assign(:month_empty?, entries == [])
     |> assign(:coming_up_empty?, coming_up_entries == [])
     |> assign(:legend_empty?, legend_items == [])
-    |> stream(:today_entries, entries, reset: true)
+    |> stream(:day_entries, entries, reset: true)
     |> stream(:week_entries, entries, reset: true)
     |> stream(:month_entries, entries, reset: true)
     |> stream(:coming_up_entries, coming_up_entries, reset: true)
@@ -180,11 +182,11 @@ defmodule HuddlzWeb.CalendarLive do
 
   defp selected_date(_view_mode, _focus_month, value, today), do: parse_date(value, today)
 
-  defp parse_view(%{"view" => "agenda"}), do: :agenda
+  defp parse_view(%{"view" => "day"}), do: :day
   defp parse_view(%{"view" => "week"}), do: :week
   defp parse_view(%{"view" => "month"}), do: :month
   defp parse_view(%{"month" => month}) when is_binary(month), do: :month
-  defp parse_view(_), do: :today
+  defp parse_view(_), do: :day
 
   defp first_of_month(date), do: %{date | day: 1}
 
@@ -200,12 +202,12 @@ defmodule HuddlzWeb.CalendarLive do
   end
 
   defp load_entries(user, view_mode, _grid_start, _grid_end, selected_date, time_zone)
-       when view_mode in [:today, :month] do
+       when view_mode in [:day, :month] do
     {range_start, range_end} = local_day_window(selected_date, time_zone)
 
     user
     |> calendar_huddlz(range_start, range_end)
-    |> Enum.map(&today_entry(&1, user))
+    |> Enum.map(&day_entry(&1, user))
   end
 
   defp load_entries(user, :week, _grid_start, _grid_end, selected_date, time_zone) do
@@ -215,25 +217,10 @@ defmodule HuddlzWeb.CalendarLive do
 
     user
     |> calendar_huddlz(range_start, range_end)
-    |> Enum.map(&today_entry(&1, user))
+    |> Enum.map(&day_entry(&1, user))
   end
 
-  defp load_entries(user, :agenda, grid_start, grid_end, _today, _time_zone) do
-    grid_start_dt = DateTime.new!(grid_start, ~T[00:00:00], "Etc/UTC")
-    grid_end_dt = DateTime.new!(grid_end, ~T[23:59:59], "Etc/UTC")
-
-    [:hosting, :attending, :waitlisted]
-    |> Enum.flat_map(fn role -> fetch(user, role) end)
-    |> merge_entry_roles()
-    |> Enum.filter(fn %{huddl: h} ->
-      h.starts_at &&
-        DateTime.compare(h.starts_at, grid_start_dt) != :lt &&
-        DateTime.compare(h.starts_at, grid_end_dt) != :gt
-    end)
-    |> Enum.sort_by(& &1.huddl.starts_at, DateTime)
-  end
-
-  defp load_coming_up_entries(user, :today, [], today, time_zone) do
+  defp load_coming_up_entries(user, true, [], today, time_zone) do
     {_range_start, range_end} = local_day_window(today, time_zone)
 
     case Communities.list_calendar_huddlz(range_end, @calendar_horizon,
@@ -242,7 +229,7 @@ defmodule HuddlzWeb.CalendarLive do
            query: Ash.Query.limit(Huddl, @coming_up_limit)
          ) do
       {:ok, huddlz} ->
-        Enum.map(huddlz, &today_entry(&1, user))
+        Enum.map(huddlz, &day_entry(&1, user))
 
       {:error, reason} ->
         Logger.warning("CalendarLive Coming up read failed: #{inspect(reason)}")
@@ -250,7 +237,8 @@ defmodule HuddlzWeb.CalendarLive do
     end
   end
 
-  defp load_coming_up_entries(_user, _view_mode, _entries, _today, _time_zone), do: []
+  defp load_coming_up_entries(_user, _implicit_current_day?, _entries, _today, _time_zone),
+    do: []
 
   defp device_time_zone(socket) do
     socket
@@ -296,31 +284,31 @@ defmodule HuddlzWeb.CalendarLive do
     end
   end
 
-  defp today_entry(huddl, user) do
+  defp day_entry(huddl, user) do
     roles =
       MapSet.new()
       |> maybe_add_role(huddl.creator_id == user.id, :hosting)
       |> maybe_add_role(huddl.waitlisted_rsvp_for_actor, :waitlisted)
       |> maybe_add_role(huddl.confirmed_rsvp_for_actor, :attending)
 
-    build_today_entry(huddl, roles)
+    build_day_entry(huddl, roles)
   end
 
   defp maybe_add_role(roles, true, role), do: MapSet.put(roles, role)
   defp maybe_add_role(roles, false, _role), do: roles
 
-  defp build_today_entry(huddl, roles) do
+  defp build_day_entry(huddl, roles) do
     entry = %{huddl: huddl, roles: roles}
-    Map.put(entry, :card_status, today_card_status(entry))
+    Map.put(entry, :card_status, day_card_status(entry))
   end
 
-  defp today_relationship_label(%{card_status: nil}), do: nil
-  defp today_relationship_label(%{card_status: status}), do: status.label
+  defp day_relationship_label(%{card_status: nil}), do: nil
+  defp day_relationship_label(%{card_status: status}), do: status.label
 
-  defp today_relationship_variant(%{card_status: nil}), do: :default
-  defp today_relationship_variant(%{card_status: status}), do: status.variant
+  defp day_relationship_variant(%{card_status: nil}), do: :default
+  defp day_relationship_variant(%{card_status: status}), do: status.variant
 
-  defp today_when_label(%{starts_at: starts_at, time_zone: time_zone}, device_time_zone)
+  defp day_when_label(%{starts_at: starts_at, time_zone: time_zone}, device_time_zone)
        when is_binary(time_zone) and time_zone != device_time_zone do
     case DateTime.shift_zone(starts_at, time_zone) do
       {:ok, local_starts_at} ->
@@ -331,17 +319,17 @@ defmodule HuddlzWeb.CalendarLive do
     end
   end
 
-  defp today_when_label(_huddl, _device_time_zone), do: nil
+  defp day_when_label(_huddl, _device_time_zone), do: nil
 
-  defp today_card_status(%{huddl: %{status: status}} = entry) do
+  defp day_card_status(%{huddl: %{status: status}} = entry) do
     case HuddlStatus.contextual_override(status) do
-      nil -> today_relationship_status(entry, status)
+      nil -> day_relationship_status(entry, status)
       presentation -> struct!(EntryStatus, presentation)
     end
   end
 
-  defp today_relationship_status(entry, :completed), do: past_status(entry)
-  defp today_relationship_status(entry, _status), do: relationship_status(entry)
+  defp day_relationship_status(entry, :completed), do: past_status(entry)
+  defp day_relationship_status(entry, _status), do: relationship_status(entry)
 
   defp primary_relationship(roles) do
     cond do
@@ -350,37 +338,6 @@ defmodule HuddlzWeb.CalendarLive do
       MapSet.member?(roles, :attending) -> :attending
       true -> nil
     end
-  end
-
-  defp fetch(user, role) do
-    case Communities.search_huddlz(
-           nil,
-           :all,
-           nil,
-           nil,
-           nil,
-           nil,
-           role,
-           :soonest,
-           actor: user,
-           page: false,
-           load: @card_loads
-         ) do
-      {:ok, huddls} when is_list(huddls) ->
-        Enum.map(huddls, &%{huddl: &1, role: role})
-
-      {:error, reason} ->
-        Logger.warning("CalendarLive search failed (#{role}): #{inspect(reason)}")
-        []
-    end
-  end
-
-  defp merge_entry_roles(entries) do
-    entries
-    |> Enum.group_by(& &1.huddl.id)
-    |> Enum.map(fn {_id, [%{huddl: huddl} | _] = matches} ->
-      %{huddl: huddl, roles: MapSet.new(matches, & &1.role)}
-    end)
   end
 
   defp in_focus_month?(%{starts_at: %DateTime{} = dt}, %Date{year: y, month: m}) do
@@ -398,84 +355,80 @@ defmodule HuddlzWeb.CalendarLive do
     Date.new!(Integer.floor_div(total, 12), Integer.mod(total, 12) + 1, 1)
   end
 
-  defp month_path(month, view) do
-    base = month_param(month)
-    view_str = if view in [:month, :agenda], do: Atom.to_string(view)
-
-    cond do
-      base && view_str -> ~p"/calendar?#{[month: base, view: view_str]}"
-      base -> ~p"/calendar?#{[month: base]}"
-      view_str -> ~p"/calendar?#{[view: view_str]}"
-      true -> ~p"/calendar"
-    end
-  end
-
   defp week_path(week_start) do
     ~p"/calendar?#{[view: "week", date: Date.to_iso8601(week_start)]}"
+  end
+
+  defp day_path(date) do
+    ~p"/calendar?#{[view: "day", date: Date.to_iso8601(date)]}"
   end
 
   defp month_day_path(month, selected_date) do
     ~p"/calendar?#{[view: "month", month: format_month_param(month), date: Date.to_iso8601(selected_date)]}"
   end
 
-  defp previous_period_path(:week, _focus_month, week_start, _selected_date),
-    do: week_path(Date.add(week_start, -7))
+  defp previous_period_path(:week, _focus_month, _week_start, selected_date),
+    do: week_path(Date.add(selected_date, -7))
+
+  defp previous_period_path(:day, _focus_month, _week_start, selected_date),
+    do: day_path(Date.add(selected_date, -1))
 
   defp previous_period_path(:month, focus_month, _week_start, today) do
     month = shift_month(focus_month, -1)
     month_day_path(month, default_month_date(month, today))
   end
 
-  defp previous_period_path(view_mode, focus_month, _week_start, _selected_date),
-    do: month_path(shift_month(focus_month, -1), view_mode)
+  defp next_period_path(:week, _focus_month, _week_start, selected_date),
+    do: week_path(Date.add(selected_date, 7))
 
-  defp next_period_path(:week, _focus_month, week_start, _selected_date),
-    do: week_path(Date.add(week_start, 7))
+  defp next_period_path(:day, _focus_month, _week_start, selected_date),
+    do: day_path(Date.add(selected_date, 1))
 
   defp next_period_path(:month, focus_month, _week_start, today) do
     month = shift_month(focus_month, 1)
     month_day_path(month, default_month_date(month, today))
   end
 
-  defp next_period_path(view_mode, focus_month, _week_start, _selected_date),
-    do: month_path(shift_month(focus_month, 1), view_mode)
-
-  defp current_period_path(:week, today), do: week_path(week_start(today))
-  defp current_period_path(:today, _today), do: ~p"/calendar"
+  defp current_period_path(:week, today), do: week_path(today)
+  defp current_period_path(:day, _today), do: ~p"/calendar"
   defp current_period_path(:month, today), do: month_day_path(first_of_month(today), today)
 
-  defp current_period_path(view_mode, today),
-    do: month_path(first_of_month(today), view_mode)
+  defp current_period_label(:week), do: "This week"
+  defp current_period_label(:month), do: "This month"
+  defp current_period_label(:day), do: "Today"
 
+  defp period_navigation_anchor(:month, _selected_date, today), do: today
+  defp period_navigation_anchor(_view_mode, selected_date, _today), do: selected_date
+
+  defp period_navigation_label(:day, direction), do: "#{direction} day"
   defp period_navigation_label(:week, direction), do: "#{direction} week"
   defp period_navigation_label(_view_mode, direction), do: "#{direction} month"
 
-  defp period_title(:week, _focus_month, week_start, week_end),
+  defp period_title(:week, _focus_month, week_start, week_end, _selected_date),
     do: format_week(week_start, week_end)
 
-  defp period_title(_view_mode, focus_month, _week_start, _week_end),
+  defp period_title(:day, _focus_month, _week_start, _week_end, selected_date),
+    do: format_full_date(selected_date)
+
+  defp period_title(_view_mode, focus_month, _week_start, _week_end, _selected_date),
     do: format_month(focus_month)
 
-  defp period_count(:week, entries, _in_month_count), do: length(entries)
-  defp period_count(:month, entries, _in_month_count), do: length(entries)
-  defp period_count(_view_mode, _entries, in_month_count), do: in_month_count
+  defp period_count(_view_mode, entries, _in_month_count), do: length(entries)
 
-  defp week_tab_path(:week, week_start, _today), do: week_path(week_start)
-  defp week_tab_path(_view_mode, _week_start, today), do: week_path(week_start(today))
+  defp day_tab_path(:day, selected_date, today) when selected_date == today, do: ~p"/calendar"
+
+  defp day_tab_path(_view_mode, selected_date, _today), do: day_path(selected_date)
+
+  defp week_tab_path(selected_date), do: week_path(selected_date)
 
   defp month_tab_path(:month, focus_month, selected_date, _today),
     do: month_day_path(focus_month, selected_date)
 
-  defp month_tab_path(_view_mode, _focus_month, _selected_date, today),
-    do: month_day_path(first_of_month(today), today)
+  defp month_tab_path(_view_mode, _focus_month, selected_date, _today),
+    do: month_day_path(first_of_month(selected_date), selected_date)
 
   defp default_month_date(month, today) do
     if same_month?(month, today), do: today, else: month
-  end
-
-  defp month_param(month) do
-    today_first = first_of_month(Date.utc_today())
-    if Date.compare(month, today_first) == :eq, do: nil, else: format_month_param(month)
   end
 
   defp format_month_param(%Date{year: y, month: m}) do
@@ -522,15 +475,6 @@ defmodule HuddlzWeb.CalendarLive do
     ]
     |> Enum.reject(&(&1 in [nil, false]))
     |> Enum.join(", ")
-  end
-
-  defp huddl_path(%{huddl: %{id: id, group: %{slug: slug}}}),
-    do: ~p"/groups/#{slug}/huddlz/#{id}"
-
-  defp agenda_entries(entries, focus_month) do
-    entries
-    |> Enum.filter(fn %{huddl: h} -> in_focus_month?(h, focus_month) end)
-    |> Enum.sort_by(fn %{huddl: %{starts_at: dt}} -> dt end, DateTime)
   end
 
   defp entry_status(%{huddl: %{status: status}} = entry, %Date{} = today) do
@@ -604,15 +548,10 @@ defmodule HuddlzWeb.CalendarLive do
   end
 
   defp visible_entries(entries, _focus_month, :month), do: entries
-  defp visible_entries(entries, focus_month, :agenda), do: agenda_entries(entries, focus_month)
-  defp visible_entries(entries, _focus_month, :today), do: entries
+  defp visible_entries(entries, _focus_month, :day), do: entries
   defp visible_entries(entries, _focus_month, :week), do: entries
 
   defp legend_swatch_class(%{variant: variant}), do: ["cal-legend-swatch", variant]
-
-  defp format_agenda_when(%DateTime{} = dt) do
-    Calendar.strftime(dt, "%a %b %-d · %-I:%M %p")
-  end
 
   @impl true
   def render(assigns) do
@@ -636,7 +575,15 @@ defmodule HuddlzWeb.CalendarLive do
       <div class="cal-toolbar">
         <div class="cal-nav">
           <.link
-            patch={previous_period_path(@view_mode, @focus_month, @week_start, @today)}
+            id="calendar-previous-period"
+            patch={
+              previous_period_path(
+                @view_mode,
+                @focus_month,
+                @week_start,
+                period_navigation_anchor(@view_mode, @selected_date, @today)
+              )
+            }
             class="cal-nav-btn"
             aria-label={period_navigation_label(@view_mode, "Previous")}
           >
@@ -652,12 +599,25 @@ defmodule HuddlzWeb.CalendarLive do
             >
               <path d="m15 18-6-6 6-6" />
             </svg>
-          </.link>
-          <.link patch={current_period_path(@view_mode, @today)} class="cal-nav-today">
-            Today
+            <span class="sr-only">{period_navigation_label(@view_mode, "Previous")}</span>
           </.link>
           <.link
-            patch={next_period_path(@view_mode, @focus_month, @week_start, @today)}
+            id="calendar-current-period"
+            patch={current_period_path(@view_mode, @today)}
+            class="cal-nav-today"
+          >
+            {current_period_label(@view_mode)}
+          </.link>
+          <.link
+            id="calendar-next-period"
+            patch={
+              next_period_path(
+                @view_mode,
+                @focus_month,
+                @week_start,
+                period_navigation_anchor(@view_mode, @selected_date, @today)
+              )
+            }
             class="cal-nav-btn"
             aria-label={period_navigation_label(@view_mode, "Next")}
           >
@@ -673,30 +633,43 @@ defmodule HuddlzWeb.CalendarLive do
             >
               <path d="m9 6 6 6-6 6" />
             </svg>
+            <span class="sr-only">{period_navigation_label(@view_mode, "Next")}</span>
           </.link>
         </div>
 
-        <div class="cal-period-title">
-          <span class="cal-period-name">
-            {period_title(@view_mode, @focus_month, @week_start, @week_end)}
+        <.link
+          id="calendar-control"
+          patch={month_tab_path(@view_mode, @focus_month, @selected_date, @today)}
+          class="cal-period-title"
+          aria-label="Open Month for selected date"
+        >
+          <span class="sr-only">Open Month for selected date</span>
+          <span id={"calendar-#{@view_mode}-heading"} class="cal-period-name">
+            {period_title(
+              @view_mode,
+              @focus_month,
+              @week_start,
+              @week_end,
+              @selected_date
+            )}
           </span>
-          <span class="cal-period-count">
+          <span id={"calendar-#{@view_mode}-count"} class="cal-period-count">
             ({format_count(period_count(@view_mode, @entries, @in_month_count))})
           </span>
-        </div>
+        </.link>
 
-        <div class="cal-view-tabs">
+        <div id="calendar-range-tabs" class="cal-view-tabs">
           <.link
-            id="calendar-view-today"
-            patch={~p"/calendar"}
-            class={["scope-tab", @view_mode == :today && "is-active"]}
-            aria-current={if @view_mode == :today, do: "page"}
+            id="calendar-view-day"
+            patch={day_tab_path(@view_mode, @selected_date, @today)}
+            class={["scope-tab", @view_mode == :day && "is-active"]}
+            aria-current={if @view_mode == :day, do: "page"}
           >
-            Today
+            Day
           </.link>
           <.link
             id="calendar-view-week"
-            patch={week_tab_path(@view_mode, @week_start, @today)}
+            patch={week_tab_path(@selected_date)}
             class={["scope-tab", @view_mode == :week && "is-active"]}
             aria-current={if @view_mode == :week, do: "page"}
           >
@@ -710,25 +683,19 @@ defmodule HuddlzWeb.CalendarLive do
           >
             Month
           </.link>
-          <.link
-            id="calendar-view-agenda"
-            patch={month_path(@focus_month, :agenda)}
-            class={["scope-tab", @view_mode == :agenda && "is-active"]}
-            aria-current={if @view_mode == :agenda, do: "page"}
-          >
-            Agenda
-          </.link>
         </div>
       </div>
 
       <%= case @view_mode do %>
-        <% :today -> %>
-          <.today_view
-            today_empty?={@today_empty?}
+        <% :day -> %>
+          <.day_view
+            day_empty?={@day_empty?}
             coming_up_empty?={@coming_up_empty?}
-            entries={@streams.today_entries}
+            entries={@streams.day_entries}
             coming_up_entries={@streams.coming_up_entries}
             time_zone={@time_zone}
+            selected_date={@selected_date}
+            current_day?={@current_day?}
           />
         <% :week -> %>
           <.week_view
@@ -748,8 +715,6 @@ defmodule HuddlzWeb.CalendarLive do
             today={@today}
             time_zone={@time_zone}
           />
-        <% :agenda -> %>
-          <.agenda_view entries={@entries} focus_month={@focus_month} today={@today} />
       <% end %>
 
       <div
@@ -805,19 +770,21 @@ defmodule HuddlzWeb.CalendarLive do
     """
   end
 
-  attr :today_empty?, :boolean, required: true
+  attr :day_empty?, :boolean, required: true
   attr :coming_up_empty?, :boolean, required: true
   attr :entries, :any, required: true
   attr :coming_up_entries, :any, required: true
   attr :time_zone, :string, required: true
+  attr :selected_date, Date, required: true
+  attr :current_day?, :boolean, required: true
 
-  defp today_view(assigns) do
+  defp day_view(assigns) do
     ~H"""
-    <section id="calendar-today" aria-labelledby="calendar-today-title">
-      <h2 id="calendar-today-title" class="sr-only">Today</h2>
-      <div id="calendar-today-list" class="grid" phx-update="stream">
-        <p :if={@today_empty?} id="calendar-today-empty" class="empty-state muted">
-          Nothing on your calendar today.
+    <section id="calendar-day" aria-labelledby="calendar-day-title">
+      <h2 id="calendar-day-title" class="sr-only">{format_full_date(@selected_date)}</h2>
+      <div id="calendar-day-list" class="grid" phx-update="stream">
+        <p :if={@day_empty?} id="calendar-day-empty" class="empty-state muted">
+          {empty_day_message(@current_day?)}
           <.link id="calendar-discover-link" navigate={~p"/discover"}>Discover huddlz</.link>
         </p>
         <.calendar_huddl_card
@@ -829,7 +796,7 @@ defmodule HuddlzWeb.CalendarLive do
       </div>
 
       <section
-        :if={@today_empty? && !@coming_up_empty?}
+        :if={@day_empty? && !@coming_up_empty?}
         id="calendar-coming-up"
         aria-labelledby="calendar-coming-up-title"
       >
@@ -856,10 +823,10 @@ defmodule HuddlzWeb.CalendarLive do
     <.shared_huddl_card
       id={@id}
       huddl={@entry.huddl}
-      relationship_label={today_relationship_label(@entry)}
-      relationship_variant={today_relationship_variant(@entry)}
+      relationship_label={day_relationship_label(@entry)}
+      relationship_variant={day_relationship_variant(@entry)}
       relationship_testid="calendar-relationship"
-      when_label={today_when_label(@entry.huddl, @time_zone)}
+      when_label={day_when_label(@entry.huddl, @time_zone)}
     />
     """
   end
@@ -950,40 +917,6 @@ defmodule HuddlzWeb.CalendarLive do
     ]
   end
 
-  attr :entries, :list, required: true
-  attr :focus_month, Date, required: true
-  attr :today, Date, required: true
-
-  defp agenda_view(assigns) do
-    sorted = agenda_entries(assigns.entries, assigns.focus_month)
-    assigns = assign(assigns, :sorted, sorted)
-
-    ~H"""
-    <%= if @sorted == [] do %>
-      <p class="muted">Nothing on the calendar this month.</p>
-    <% else %>
-      <div class="panel" style="padding:0">
-        <div class="row-list" style="padding:6px 20px">
-          <.link
-            :for={entry <- @sorted}
-            id={"calendar-entry-#{entry.huddl.id}"}
-            navigate={huddl_path(entry)}
-            class="row"
-            style="grid-template-columns: 200px 1fr auto; text-decoration: none"
-          >
-            <span class="meta">{format_agenda_when(entry.huddl.starts_at)}</span>
-            <span class="row-title">{entry.huddl.title}</span>
-            <.pill
-              variant={entry_status(entry, @today).variant}
-              class="cal-entry-status"
-              data-status={entry_status(entry, @today).key}
-            >
-              {entry_status(entry, @today).label}
-            </.pill>
-          </.link>
-        </div>
-      </div>
-    <% end %>
-    """
-  end
+  defp empty_day_message(true), do: "Nothing on your calendar today."
+  defp empty_day_message(false), do: "Nothing on your calendar this day."
 end

@@ -1,16 +1,16 @@
 @calendar_week @async @database @conn
 Feature: Calendar Week view
 
-  Scenario: Week spans Sunday through Saturday in the device time zone
-    Given my device time zone is "America/New_York"
+  Scenario: Week spans Sunday through Saturday in the browser-derived Display time zone
+    Given my browser time zone is "America/New_York"
     And I am signed in
     And I have Calendar huddlz on the Sunday and Saturday of the current week
     When I select Week in Calendar
-    Then the displayed week begins Sunday and ends Saturday in my device time zone
+    Then the displayed week begins Sunday and ends Saturday in my browser time zone
     And I see both huddlz in chronological order
 
   Scenario: A huddl spanning a week boundary appears in the overlapping week
-    Given my device time zone is "America/New_York"
+    Given my browser time zone is "America/New_York"
     And I am signed in
     And I have a Calendar huddl that starts before the current week and ends during the current week
     When I select Week in Calendar

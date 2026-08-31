@@ -85,7 +85,7 @@ defmodule GroupOpportunitiesInTodaySteps do
     context
   end
 
-  step "I see the huddl in Today", context do
+  step "I see the huddl in Day", context do
     assert_huddl_visible(context, context.calendar_huddl)
     context
   end
@@ -99,7 +99,7 @@ defmodule GroupOpportunitiesInTodaySteps do
     context
   end
 
-  step "I do not see the huddl in Today", context do
+  step "I do not see the huddl in Day", context do
     refute_huddl_visible(context, context.calendar_huddl)
     context
   end
@@ -135,12 +135,12 @@ defmodule GroupOpportunitiesInTodaySteps do
   defp assert_huddl_visible(context, huddl) do
     assert_has(
       context.session,
-      "#calendar-today-list #calendar-huddl-#{huddl.id}",
+      "#calendar-day-list #calendar-huddl-#{huddl.id}",
       text: huddl.title
     )
   end
 
   defp refute_huddl_visible(context, huddl) do
-    refute_has(context.session, "#calendar-today-list #calendar-huddl-#{huddl.id}")
+    refute_has(context.session, "#calendar-day-list #calendar-huddl-#{huddl.id}")
   end
 end

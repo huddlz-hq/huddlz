@@ -39,8 +39,8 @@ defmodule EmptyTodayGuidanceSteps do
     context
   end
 
-  step "I see the shared empty Today message", %{session: session} = context do
-    assert_has(session, "#calendar-today-empty", text: "Nothing on your calendar today.")
+  step "I see the shared empty current Day message", %{session: session} = context do
+    assert_has(session, "#calendar-day-empty", text: "Nothing on your calendar today.")
     context
   end
 

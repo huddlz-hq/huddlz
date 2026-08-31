@@ -1,12 +1,12 @@
 @async @database @conn
-Feature: Confirmed Personal huddlz in Today
+Feature: Confirmed Personal huddlz in Day
 
-  Scenario: A confirmed Personal huddl appears in Today
+  Scenario: A confirmed Personal huddl appears in the current Day
     Given I am signed in
     And I have a confirmed RSVP for a published huddl scheduled today
     And I am not a member of the group hosting the huddl
     When I visit Calendar
-    Then Today is selected
+    Then the current date is selected
     And I see the huddl in chronological order
     And the huddl is marked "Going"
     When I select the huddl card

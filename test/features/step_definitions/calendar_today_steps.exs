@@ -105,7 +105,7 @@ defmodule CalendarTodaySteps do
     end
   end
 
-  step "Today is selected", %{session: session} = context do
+  step "the current date is selected", %{session: session} = context do
     today =
       Clock.utc_now()
       |> DateTime.shift_zone!(context[:device_time_zone] || "Etc/UTC")
@@ -114,7 +114,7 @@ defmodule CalendarTodaySteps do
     if PhoenixTest.Driver.current_path(session) =~ "view=month" do
       assert_has(session, "#calendar-month-day-#{Date.to_iso8601(today)}[aria-current='date']")
     else
-      assert_has(session, "#calendar-view-today[aria-current='page']")
+      assert_has(session, "#calendar-view-day[aria-current='page']")
     end
 
     context
@@ -122,7 +122,7 @@ defmodule CalendarTodaySteps do
 
   step "I see the huddl in chronological order",
        %{session: session, calendar_huddl: huddl} = context do
-    assert_has(session, "#calendar-today-list #calendar-huddl-#{huddl.id}", text: huddl.title)
+    assert_has(session, "#calendar-day-list #calendar-huddl-#{huddl.id}", text: huddl.title)
     context
   end
 

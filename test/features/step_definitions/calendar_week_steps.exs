@@ -45,7 +45,7 @@ defmodule CalendarWeekSteps do
     Map.put(context, :session, session)
   end
 
-  step "the displayed week begins Sunday and ends Saturday in my device time zone", context do
+  step "the displayed week begins Sunday and ends Saturday in my browser time zone", context do
     assert Date.day_of_week(context.expected_week_start) == 7
     assert Date.day_of_week(context.expected_week_end) == 6
 

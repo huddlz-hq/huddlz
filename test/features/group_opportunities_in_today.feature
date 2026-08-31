@@ -1,12 +1,12 @@
 @async @database @conn
-Feature: Group opportunities in Today
+Feature: Group opportunities in Day
 
   Scenario: A group member sees a published opportunity without an RSVP
     Given I am an accepted member of a group
     And the group has a published huddl scheduled today
     And I have not responded to the huddl
     When I visit Calendar
-    Then I see the huddl in Today
+    Then I see the huddl in Day
     And the huddl has no Personal relationship marker
 
   Scenario: A private group member sees its published huddl
@@ -14,13 +14,13 @@ Feature: Group opportunities in Today
     And the group has a published huddl scheduled today
     And I have not responded to the huddl
     When I visit Calendar
-    Then I see the huddl in Today
+    Then I see the huddl in Day
 
   Scenario: A pending group invitation does not reveal a huddl
     Given I have a pending invitation to a group
     And the group has a published huddl scheduled today
     When I visit Calendar
-    Then I do not see the huddl in Today
+    Then I do not see the huddl in Day
 
   Scenario: Draft and unrelated public huddlz are absent
     Given I am an accepted member of a group with a draft huddl scheduled today

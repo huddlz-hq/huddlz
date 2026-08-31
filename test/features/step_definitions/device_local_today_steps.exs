@@ -6,7 +6,7 @@ defmodule DeviceLocalTodaySteps do
   import Phoenix.LiveViewTest, only: [put_connect_params: 2]
   import PhoenixTest
 
-  step "my device time zone is {string}", %{args: [time_zone], conn: conn} = context do
+  step "my browser time zone is {string}", %{args: [time_zone], conn: conn} = context do
     context
     |> Map.put(:device_time_zone, time_zone)
     |> Map.put(:conn, put_connect_params(conn, %{"timezone" => time_zone}))
@@ -33,7 +33,7 @@ defmodule DeviceLocalTodaySteps do
     context
   end
 
-  step "I am going to a huddl that starts at 11:00 PM today and ends at 1:00 AM tomorrow in my device time zone",
+  step "I am going to a huddl that starts at 11:00 PM today and ends at 1:00 AM tomorrow in my browser time zone",
        %{current_user: attendee, device_time_zone: time_zone} = context do
     local_day = ~D[2030-01-15]
     starts_at = local_datetime!(local_day, ~T[23:00:00], time_zone)
@@ -47,15 +47,15 @@ defmodule DeviceLocalTodaySteps do
     |> Map.put(:after_midnight, local_datetime!(Date.add(local_day, 1), ~T[00:30:00], time_zone))
   end
 
-  step "I view Today before local midnight", context do
+  step "I view Day before local midnight", context do
     refresh_today_at(context, context.before_midnight)
   end
 
-  step "I view Today after local midnight", context do
+  step "I view Day after local midnight", context do
     refresh_today_at(context, context.after_midnight)
   end
 
-  step "I went to a huddl that ended earlier today in my device time zone",
+  step "I went to a huddl that ended earlier today in my browser time zone",
        %{current_user: attendee, device_time_zone: time_zone} = context do
     now = DateTime.utc_now()
     local_day = now |> DateTime.shift_zone!(time_zone) |> DateTime.to_date()
@@ -84,7 +84,7 @@ defmodule DeviceLocalTodaySteps do
   step "I see the huddl", context do
     assert_has(
       context.session,
-      "#calendar-today-list #calendar-huddl-#{context.calendar_huddl.id}",
+      "#calendar-day-list #calendar-huddl-#{context.calendar_huddl.id}",
       text: context.calendar_huddl.title
     )
 

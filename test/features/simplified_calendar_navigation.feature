@@ -14,7 +14,7 @@ Feature: Simplified Calendar navigation
     Given I am signed in
     When I visit the legacy My huddlz URL
     Then I am taken to Calendar
-    And Today is selected
+    And the current date is selected
 
   Scenario: The global Discover search keeps its existing behavior
     Given I am signed in

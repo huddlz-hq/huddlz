@@ -1,12 +1,12 @@
 @calendar_month @async @database @conn
 Feature: Calendar Month view
 
-  Scenario: The current month selects Today and reveals its huddlz
+  Scenario: The current month selects the current date and reveals its huddlz
     Given I am signed in
     And I have a Calendar huddl today
     When I select Month in Calendar
     Then I see a Sunday-first grid for the current month
-    And Today is selected
+    And the current date is selected
     And I see today's huddl card below the grid
 
   Scenario: Selecting another day reveals that day's shared cards
