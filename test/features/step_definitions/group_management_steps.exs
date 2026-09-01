@@ -128,10 +128,10 @@ defmodule GroupManagementSteps do
     context
   end
 
-  step "I should see an error on the {string} field", %{args: [_field]} = context do
-    # Look for error message
+  step "I should see an error on the {string} field", %{args: [field]} = context do
     session = context[:session] || context[:conn]
-    assert_has(session, "*", text: "is required")
+    field_id = if field == "Group name", do: "name", else: String.downcase(field)
+    assert_has(session, "#form_#{field_id}-error-0", text: "is required")
     context
   end
 

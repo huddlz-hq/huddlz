@@ -42,7 +42,6 @@ defmodule Huddlz.Notifications.ICSTest do
     test "ics carries the huddl identity and timing", ctx do
       date = Date.add(Date.utc_today(), 30)
       start_time = ~T[14:00:00]
-      ymd = Calendar.strftime(date, "%Y%m%d")
 
       huddl =
         build_huddl(ctx,
@@ -57,12 +56,12 @@ defmodule Huddlz.Notifications.ICSTest do
 
       assert ics =~ "UID:huddl-#{huddl.id}@huddlz.com"
       assert ics =~ "SUMMARY:Coffee meetup"
-      assert ics =~ "DTSTART:#{ymd}T140000Z"
-      assert ics =~ "DTEND:#{ymd}T153000Z"
+      assert ics =~ "DTSTART:#{Calendar.strftime(huddl.starts_at, "%Y%m%dT%H%M%SZ")}"
+      assert ics =~ "DTEND:#{Calendar.strftime(huddl.ends_at, "%Y%m%dT%H%M%SZ")}"
       assert ics =~ "Casual chat"
     end
 
-    test "carries the authoritative zone and instant across a daylight-saving boundary", ctx do
+    test "carries the authoritative instant as UTC across a daylight-saving boundary", ctx do
       huddl =
         build_huddl(ctx,
           title: "Spring Forward Coffee",
@@ -76,13 +75,10 @@ defmodule Huddlz.Notifications.ICSTest do
 
       {_filename, ics} = ICS.event_for(huddl)
 
-      assert ics =~ "TZID:America/Los_Angeles"
-      assert ics =~ "BEGIN:DAYLIGHT"
-      assert ics =~ "DTSTART:20270314T020000"
-      assert ics =~ "TZOFFSETFROM:-0800"
-      assert ics =~ "TZOFFSETTO:-0700"
-      assert ics =~ "DTSTART;TZID=America/Los_Angeles:20270314T013000"
-      assert ics =~ "DTEND;TZID=America/Los_Angeles:20270314T043000"
+      assert ics =~ "DTSTART:20270314T093000Z"
+      assert ics =~ "DTEND:20270314T113000Z"
+      refute ics =~ "DTSTART;TZID="
+      refute ics =~ "DTEND;TZID="
 
       assert [calendar_entry] = ICal.from_ics(ics).events
       assert DateTime.compare(calendar_entry.dtstart, huddl.starts_at) == :eq
@@ -90,7 +86,23 @@ defmodule Huddlz.Notifications.ICSTest do
     end
 
     test "physical location surfaces as LOCATION", ctx do
-      huddl = build_huddl(ctx, event_type: :in_person, physical_location: "Roastery, 123 Main St")
+      venue =
+        generate(
+          group_location(
+            group_id: ctx.group.id,
+            actor: ctx.owner,
+            name: "Roastery",
+            address: "Roastery, 123 Main St"
+          )
+        )
+
+      huddl =
+        build_huddl(ctx,
+          event_type: :in_person,
+          physical_location: venue.address,
+          group_location_id: venue.id
+        )
+
       {_filename, ics} = ICS.event_for(huddl)
       assert ics =~ "Roastery"
     end

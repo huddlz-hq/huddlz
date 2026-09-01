@@ -107,8 +107,8 @@ defmodule HuddlzWeb.GraphqlTest do
       variables = %{
         input: %{
           title: "Authorized Huddl",
-          eventType: "in_person",
-          physicalLocation: "456 Oak Ave",
+          eventType: "virtual",
+          virtualLink: "https://meet.example.com/authorized",
           groupId: group.id,
           startsAt: starts_at,
           endsAt: ends_at,

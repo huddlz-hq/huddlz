@@ -14,7 +14,7 @@ defmodule HuddlzWeb.Live.Helpers.ModalLocationHelpers do
 
   import Phoenix.Component, only: [assign: 2]
 
-  @time_zone_error "Choose a valid huddl time zone"
+  @time_zone_error "Choose an address whose time zone can be resolved"
 
   @doc "Initialize all modal location assigns to their empty values."
   def init(socket) do
@@ -55,21 +55,9 @@ defmodule HuddlzWeb.Live.Helpers.ModalLocationHelpers do
     resolve_time_zone(socket, latitude, longitude)
   end
 
-  def update_time_zone(socket, time_zone) do
-    assign(socket,
-      modal_location_time_zone: time_zone,
-      modal_location_time_zone_error:
-        if(Huddlz.TimeZone.canonical?(time_zone),
-          do: nil,
-          else: @time_zone_error
-        )
-    )
-  end
-
   def apply_form_changes(socket, params) do
     socket
     |> maybe_assign_name(params)
-    |> maybe_assign_time_zone(params)
   end
 
   def require_time_zone_choice(socket) do
@@ -80,11 +68,6 @@ defmodule HuddlzWeb.Live.Helpers.ModalLocationHelpers do
     do: assign(socket, modal_location_name: name)
 
   defp maybe_assign_name(socket, _params), do: socket
-
-  defp maybe_assign_time_zone(socket, %{"location_time_zone" => time_zone}),
-    do: update_time_zone(socket, time_zone)
-
-  defp maybe_assign_time_zone(socket, _params), do: socket
 
   defp resolve_time_zone(socket, latitude, longitude) do
     case Huddlz.LocationTimeZone.resolve(latitude, longitude) do

@@ -9,25 +9,34 @@ defmodule Huddlz.Communities.Huddl.Changes.DeriveTimeZoneFromVenue do
 
   use Ash.Resource.Change
 
+  alias Huddlz.Communities.GroupLocation
   alias Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
 
   @physical_types [:in_person, :hybrid]
 
   @impl true
-  def change(changeset, _opts, context) do
+  def change(changeset, _opts, _context) do
     event_type = Ash.Changeset.get_attribute(changeset, :event_type)
     location_id = Ash.Changeset.get_attribute(changeset, :group_location_id)
 
-    derive_from_location(changeset, event_type, location_id, context)
+    derive_from_location(changeset, event_type, location_id)
   end
 
-  defp derive_from_location(changeset, event_type, location_id, context)
+  defp derive_from_location(changeset, event_type, location_id)
        when event_type in @physical_types and not is_nil(location_id) do
-    case Huddlz.Communities.get_group_location(location_id, scope: context) do
-      {:ok, location} when not is_nil(location) ->
+    group_id = Ash.Changeset.get_attribute(changeset, :group_id)
+
+    case Ash.get(GroupLocation, location_id, authorize?: false) do
+      {:ok, %{group_id: ^group_id} = location} ->
         changeset
         |> preserve_wall_clock_on_venue_move(location.time_zone)
         |> Ash.Changeset.force_change_attribute(:time_zone, location.time_zone)
+        |> Ash.Changeset.force_change_attribute(:physical_location, location.address)
+        |> Ash.Changeset.force_change_attribute(:latitude, location.latitude)
+        |> Ash.Changeset.force_change_attribute(:longitude, location.longitude)
+
+      {:ok, %{}} ->
+        venue_from_other_group(changeset)
 
       {:error, _reason} ->
         venue_not_available(changeset)
@@ -37,7 +46,7 @@ defmodule Huddlz.Communities.Huddl.Changes.DeriveTimeZoneFromVenue do
     end
   end
 
-  defp derive_from_location(changeset, _event_type, _location_id, _context), do: changeset
+  defp derive_from_location(changeset, _event_type, _location_id), do: changeset
 
   defp preserve_wall_clock_on_venue_move(changeset, new_time_zone) do
     old_time_zone = Map.get(changeset.data, :time_zone)
@@ -98,6 +107,13 @@ defmodule Huddlz.Communities.Huddl.Changes.DeriveTimeZoneFromVenue do
     Ash.Changeset.add_error(changeset,
       field: :group_location_id,
       message: "selected venue is not available"
+    )
+  end
+
+  defp venue_from_other_group(changeset) do
+    Ash.Changeset.add_error(changeset,
+      field: :group_location_id,
+      message: "saved venue must belong to the huddl's group"
     )
   end
 end

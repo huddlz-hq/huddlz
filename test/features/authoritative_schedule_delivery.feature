@@ -8,9 +8,9 @@ Feature: Authoritative schedule delivery
     Then the email identifies 9:00 AM with the Pacific abbreviation
     And it contains one schedule time
 
-  Scenario: Calendar export carries the authoritative time zone
-    Given a huddl is scheduled in "America/Los_Angeles" for calendar export
+  Scenario: A physical venue schedule exports as the correct UTC instant
+    Given a physical huddl is scheduled for 9:00 AM at a venue resolved to "America/Los_Angeles"
     When I receive its calendar attachment
-    Then the attachment uses the Huddl TZID
-    And it includes a matching VTIMEZONE
+    Then the physical huddl keeps the venue time zone and correct UTC instant
+    And the attachment carries that schedule as UTC timestamps
     And its schedule resolves to the authoritative Huddl instant

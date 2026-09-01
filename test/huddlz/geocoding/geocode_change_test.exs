@@ -4,6 +4,7 @@ defmodule Huddlz.Geocoding.GeocodeChangeTest do
   import Mox
   import Huddlz.Generator
 
+  alias Huddlz.Communities.Group
   alias Huddlz.Communities.Huddl
   alias Huddlz.Geocoding.Change, as: GeocodingChange
 
@@ -17,21 +18,10 @@ defmodule Huddlz.Geocoding.GeocodeChangeTest do
       end)
 
       owner = generate(user(role: :user))
-      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      group = generate(group(location: "Austin, TX", actor: owner))
 
-      huddl =
-        generate(
-          huddl(
-            event_type: :in_person,
-            physical_location: "Austin, TX",
-            group_id: group.id,
-            creator_id: owner.id,
-            actor: owner
-          )
-        )
-
-      assert huddl.latitude == 30.2672
-      assert huddl.longitude == -97.7431
+      assert group.latitude == 30.2672
+      assert group.longitude == -97.7431
     end
 
     test "geocoding failure sets lat/lng to nil and stays quiet in test env" do
@@ -40,23 +30,13 @@ defmodule Huddlz.Geocoding.GeocodeChangeTest do
       end)
 
       owner = generate(user(role: :user))
-      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
 
       log =
         ExUnit.CaptureLog.capture_log(fn ->
-          huddl =
-            generate(
-              huddl(
-                event_type: :in_person,
-                physical_location: "Nonexistent Place XYZ",
-                group_id: group.id,
-                creator_id: owner.id,
-                actor: owner
-              )
-            )
+          group = generate(group(location: "Nonexistent Place XYZ", actor: owner))
 
-          assert is_nil(huddl.latitude)
-          assert is_nil(huddl.longitude)
+          assert is_nil(group.latitude)
+          assert is_nil(group.longitude)
         end)
 
       refute log =~ "Geocoding failed for"
@@ -95,67 +75,46 @@ defmodule Huddlz.Geocoding.GeocodeChangeTest do
       end)
 
       owner = generate(user(role: :user))
-      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      group = generate(group(location: "Austin, TX", actor: owner))
 
-      huddl =
-        generate(
-          huddl(
-            event_type: :in_person,
-            physical_location: "Austin, TX",
-            group_id: group.id,
-            creator_id: owner.id,
-            actor: owner
-          )
-        )
-
-      assert huddl.latitude == 30.2672
+      assert group.latitude == 30.2672
 
       # Update the location — geocoding must run for the new address,
       # NOT be skipped because latitude/longitude already have values
-      updated_huddl =
-        huddl
-        |> Ash.Changeset.for_update(:update, %{physical_location: "Dallas, TX"}, actor: owner)
+      updated_group =
+        group
+        |> Ash.Changeset.for_update(:update_details, %{location: "Dallas, TX"}, actor: owner)
         |> Ash.update!()
 
-      assert updated_huddl.latitude == 32.7767
-      assert updated_huddl.longitude == -96.7970
+      assert updated_group.latitude == 32.7767
+      assert updated_group.longitude == -96.7970
     end
 
     test "provided_latitude/longitude arguments bypass geocoding" do
       owner = generate(user(role: :user))
-      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
-
-      # Set expectation AFTER group creation (which triggers its own geocoding).
-      # Geocoding should NOT be called for the huddl when coordinates are provided.
+      # Geocoding should not run when coordinates are provided.
       expect(Huddlz.MockGeocoding, :geocode, 0, fn _address ->
         {:ok, %{latitude: 0.0, longitude: 0.0}}
       end)
 
-      future_date = Date.add(Date.utc_today(), 7)
-
-      # Set private arguments BEFORE for_create (Ash requires this ordering)
-      huddl =
-        Huddl
+      group =
+        Group
         |> Ash.Changeset.new()
         |> Ash.Changeset.set_argument(:provided_latitude, 40.7128)
         |> Ash.Changeset.set_argument(:provided_longitude, -74.0060)
         |> Ash.Changeset.for_create(
-          :create,
+          :create_group,
           %{
-            title: "Test Huddl",
-            event_type: :in_person,
-            physical_location: "Some Address",
-            date: future_date,
-            start_time: ~T[14:00:00],
-            duration_minutes: 60,
-            group_id: group.id
+            name: "New York Group",
+            location: "Some Address",
+            is_public: true
           },
           actor: owner
         )
         |> Ash.create!()
 
-      assert huddl.latitude == 40.7128
-      assert huddl.longitude == -74.0060
+      assert group.latitude == 40.7128
+      assert group.longitude == -74.0060
     end
 
     test "geocode_if_changed geocodes when lat/lng attributes exist but provided arguments do not" do

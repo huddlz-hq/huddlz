@@ -2,8 +2,8 @@ defmodule Huddlz.Communities.GroupLocation.Changes.ResolveTimeZone do
   @moduledoc """
   Resolves a saved venue's canonical Location time zone from its coordinates.
 
-  A canonical organizer choice is retained only when the coordinate provider
-  cannot resolve the venue. A successful provider result is authoritative.
+  Resolution is authoritative. An address whose coordinates do not resolve
+  cannot be saved with a manually supplied replacement zone.
   """
 
   use Ash.Resource.Change
@@ -18,17 +18,10 @@ defmodule Huddlz.Communities.GroupLocation.Changes.ResolveTimeZone do
         Ash.Changeset.force_change_attribute(changeset, :time_zone, time_zone)
 
       {:error, _reason} ->
-        retain_manual_time_zone(changeset)
-    end
-  end
-
-  defp retain_manual_time_zone(changeset) do
-    case Ash.Changeset.get_argument(changeset, :time_zone) do
-      time_zone when is_binary(time_zone) ->
-        Ash.Changeset.force_change_attribute(changeset, :time_zone, time_zone)
-
-      _other ->
-        changeset
+        Ash.Changeset.add_error(changeset,
+          field: :address,
+          message: "time zone could not be resolved for this address"
+        )
     end
   end
 end

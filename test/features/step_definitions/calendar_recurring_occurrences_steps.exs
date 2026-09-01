@@ -141,7 +141,7 @@ defmodule CalendarRecurringOccurrencesSteps do
     assert_has(
       session,
       "#calendar-week-list #calendar-huddl-#{expected_occurrence.id}" <>
-        "[data-starts-at^='#{Date.to_iso8601(tuesday)}T09:00:00']"
+        "[data-starts-at='#{DateTime.to_iso8601(expected_occurrence.starts_at)}']"
     )
 
     refute_has(session, "#calendar-week-list #calendar-huddl-#{other_occurrence.id}")

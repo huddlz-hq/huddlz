@@ -79,6 +79,14 @@ defmodule HuddlzWeb.HuddlLive.NewLocationTest do
 
       # Save button should no longer be disabled
       refute has_element?(view, "button[disabled]", "Save address")
+
+      assert has_element?(
+               view,
+               "#venue-time-zone-derived",
+               "Chicago (America/Chicago)"
+             )
+
+      refute has_element?(view, "#venue-time-zone")
     end
 
     test "saving creates location and returns to huddl form", %{

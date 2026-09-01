@@ -399,6 +399,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
           title: "Hybrid Series",
           event_type: :hybrid,
           physical_location: location.address,
+          group_location_id: location.id,
           virtual_link: "https://meet.example.com/hybrid-series"
         )
 
@@ -442,6 +443,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
           title: "In-person Series",
           event_type: :in_person,
           physical_location: location.address,
+          group_location_id: location.id,
           virtual_link: nil
         )
 

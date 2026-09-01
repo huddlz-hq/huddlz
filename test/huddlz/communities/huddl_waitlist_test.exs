@@ -403,7 +403,12 @@ defmodule Huddlz.Communities.HuddlWaitlistTest do
       Group
       |> Ash.Changeset.for_create(
         :create_group,
-        %{name: "Test Group", description: "A test group", is_public: true},
+        %{
+          name: "Test Group",
+          description: "A test group",
+          is_public: true,
+          location: "Test Location"
+        },
         actor: owner
       )
       |> Ash.create!()

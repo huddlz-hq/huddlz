@@ -20,6 +20,8 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
         Generator.huddl(
           creator_id: owner.id,
           group_id: group.id,
+          event_type: :virtual,
+          virtual_link: "https://meet.example.com/recurrence",
           actor: owner
         )
       )

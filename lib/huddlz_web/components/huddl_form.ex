@@ -194,19 +194,14 @@ defmodule HuddlzWeb.Components.HuddlForm do
 
   attr :time_zone, :string, default: nil
   attr :error, :string, default: nil
-  attr :options, :list, required: true
 
   def venue_time_zone_field(assigns) do
     ~H"""
     <%= if @error do %>
-      <HuddlzWeb.Components.Input.searchable_select
-        id="venue-time-zone"
-        name="location_time_zone"
-        label="huddl time zone"
-        value={@time_zone}
-        options={@options}
-        errors={[@error]}
-      />
+      <div class="form-row">
+        <span class="form-label">huddl time zone</span>
+        <p id="venue-time-zone-resolution-error" class="form-error" role="alert">{@error}</p>
+      </div>
     <% else %>
       <div class="form-row">
         <span class="form-label">huddl time zone</span>

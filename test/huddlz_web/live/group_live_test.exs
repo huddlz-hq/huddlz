@@ -75,6 +75,8 @@ defmodule HuddlzWeb.GroupLiveTest do
 
       session
       |> select_location(display_text: "Test City, TX, USA", main_text: "Test City")
+      |> assert_has("#group-time-zone-derived[data-time-zone='America/Chicago']")
+      |> refute_has("#group-time-zone input")
       |> click_button("Create group")
 
       group =
@@ -88,7 +90,7 @@ defmodule HuddlzWeb.GroupLiveTest do
     end
 
     @tag issue403: true
-    test "requires an explicit valid zone when city resolution fails", %{
+    test "requires a city whose time zone resolves without offering a manual override", %{
       conn: conn,
       verified: verified
     } do
@@ -97,7 +99,7 @@ defmodule HuddlzWeb.GroupLiveTest do
         |> login(verified)
         |> visit(~p"/groups/new")
 
-      Mox.expect(Huddlz.MockLocationTimeZone, :resolve, fn latitude, longitude ->
+      Mox.stub(Huddlz.MockLocationTimeZone, :resolve, fn latitude, longitude ->
         assert latitude == 0.0
         assert longitude == 0.0
         {:error, :not_found}
@@ -105,24 +107,21 @@ defmodule HuddlzWeb.GroupLiveTest do
 
       Mox.allow(Huddlz.MockLocationTimeZone, self(), session.view.pid)
 
-      session =
-        session
-        |> select_location(display_text: "Unknown city", latitude: 0.0, longitude: 0.0)
-        |> assert_has("#group-time-zone-resolution-error", text: "Choose a valid time zone")
-        |> fill_in("Group name", with: "Unresolved City Group")
-        |> click_button("Create group")
-        |> assert_path(~p"/groups/new")
-        |> assert_has("#group-time-zone-resolution-error", text: "Choose a valid time zone")
+      session
+      |> select_location(display_text: "Unknown city", latitude: 0.0, longitude: 0.0)
+      |> assert_has(
+        "#group-time-zone-resolution-error",
+        text: "Choose a city whose time zone can be resolved"
+      )
+      |> refute_has("#group-time-zone")
+      |> fill_in("Group name", with: "Unresolved City Group")
+      |> click_button("Create group")
+      |> assert_path(~p"/groups/new")
+      |> assert_has("#group-time-zone-resolution-error", text: "time zone can be resolved")
 
       refute Group
              |> Ash.Query.filter(name == "Unresolved City Group")
              |> Ash.exists?()
-
-      session
-      |> fill_in("Group time zone", with: "America/New_York")
-      |> refute_has("#group-time-zone-resolution-error")
-      |> click_button("Create group")
-      |> assert_has("div[role='alert']", text: "Group created successfully")
     end
 
     test "shows errors with invalid data", %{conn: conn, verified: verified} do

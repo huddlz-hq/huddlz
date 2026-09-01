@@ -283,8 +283,10 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> fill_in("Start time", with: time)
         |> select("Duration", option: "2 hours")
 
-      # Set physical location through autocomplete component
-      select_physical_location(session.view, "123 Main St")
+      session =
+        session
+        |> choose("Virtual")
+        |> fill_in("Online link", with: "https://meet.example.com/test")
 
       session = click_button(session, "Schedule huddl")
 
@@ -298,8 +300,8 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> Ash.read_one!(actor: owner)
 
       assert huddl.description == "A test huddl description"
-      assert huddl.physical_location == "123 Main St"
-      assert huddl.event_type == :in_person
+      assert huddl.virtual_link == "https://meet.example.com/test"
+      assert huddl.event_type == :virtual
       assert huddl.is_private == false
 
       # Verify the calculated times
@@ -327,7 +329,11 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> fill_in("Start time", with: "14:30")
         |> select("Duration", option: "2 hours")
 
-      select_physical_location(session.view, "123 Main St")
+      session =
+        session
+        |> choose("Virtual")
+        |> fill_in("Online link", with: "https://meet.example.com/draft")
+
       session = click_button(session, "Save as draft")
 
       draft =
@@ -358,7 +364,10 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> select("Duration", option: "2 hours")
         |> fill_in("Max attendees", with: "5")
 
-      select_physical_location(session.view, "123 Main St")
+      session =
+        session
+        |> choose("Virtual")
+        |> fill_in("Online link", with: "https://meet.example.com/capped")
 
       session
       |> click_button("Schedule huddl")
@@ -397,7 +406,10 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> select("Frequency", option: "Every two weeks")
         |> fill_in("Repeat until", with: Date.to_iso8601(repeat_until))
 
-      select_physical_location(session.view, "123 Main St")
+      session =
+        session
+        |> choose("Virtual")
+        |> fill_in("Online link", with: "https://meet.example.com/recurring")
 
       session
       |> click_button("Schedule huddl")
@@ -514,7 +526,10 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> fill_in("Start time", with: "14:00")
         |> select("Duration", option: "1 hour")
 
-      select_physical_location(session.view, "123 Main St")
+      session =
+        session
+        |> choose("Virtual")
+        |> fill_in("Online link", with: "https://meet.example.com/unlimited")
 
       session
       |> click_button("Schedule huddl")
@@ -547,7 +562,10 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> fill_in("Start time", with: "14:00")
         |> select("Duration", option: "1 hour")
 
-      select_physical_location(session.view, "123 Main St")
+      session =
+        session
+        |> choose("Virtual")
+        |> fill_in("Online link", with: "https://meet.example.com/manual-time")
 
       session
       |> click_button("Schedule huddl")
@@ -722,7 +740,10 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> fill_in("Start time", with: "14:30")
         |> select("Duration", option: "1 hour")
 
-      select_physical_location(session.view, "123 Main St")
+      session =
+        session
+        |> choose("Virtual")
+        |> fill_in("Online link", with: "https://meet.example.com/duration")
 
       session = click_button(session, "Schedule huddl")
 
@@ -756,7 +777,10 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> fill_in("Start time", with: "09:47")
         |> select("Duration", option: "1 hour")
 
-      select_physical_location(session.view, "123 Main St")
+      session =
+        session
+        |> choose("Virtual")
+        |> fill_in("Online link", with: "https://meet.example.com/day-boundary")
 
       session = click_button(session, "Schedule huddl")
 
@@ -786,7 +810,10 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> fill_in("Start time", with: "15:00")
         |> select("Duration", option: "1.5 hours")
 
-      select_physical_location(session.view, "123 Main St")
+      session =
+        session
+        |> choose("Virtual")
+        |> fill_in("Online link", with: "https://meet.example.com/duration")
 
       # Check that end time is displayed on the form
       assert session.conn.resp_body =~ "Ends at:"
@@ -824,7 +851,10 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> fill_in("Start time", with: "23:00")
         |> select("Duration", option: "6 hours")
 
-      select_physical_location(session.view, "123 Main St")
+      session =
+        session
+        |> choose("Virtual")
+        |> fill_in("Online link", with: "https://meet.example.com/day-boundary")
 
       session = click_button(session, "Schedule huddl")
 
@@ -906,18 +936,5 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       refute session.conn.resp_body =~ "Create Huddl"
       refute_has(session, "a[href='/groups/#{group.slug}/huddlz/new']")
     end
-  end
-
-  # Helper to simulate selecting a physical location via SavedLocationPicker
-  defp select_physical_location(view, text) do
-    location = %Huddlz.Communities.GroupLocation{
-      name: text,
-      address: text,
-      latitude: 30.27,
-      longitude: -97.74,
-      time_zone: "America/Chicago"
-    }
-
-    select_saved_location(view, location)
   end
 end

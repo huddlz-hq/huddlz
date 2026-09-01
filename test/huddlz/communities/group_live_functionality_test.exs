@@ -4,6 +4,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
   import Huddlz.Generator
 
   alias Huddlz.Communities.Group
+  alias Huddlz.Repo
   require Ash.Query
 
   describe "group visibility and access" do
@@ -76,6 +77,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
                Group
                |> Ash.Changeset.for_create(:create_group, %{
                  description: "Missing name",
+                 location: "Test Location",
                  is_public: true
                })
                |> Ash.create(actor: actor)
@@ -85,12 +87,72 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
              end)
     end
 
+    test "requires a location", %{actor: actor} do
+      assert {:error, %Ash.Error.Invalid{errors: errors}} =
+               Group
+               |> Ash.Changeset.for_create(:create_group, %{
+                 name: "Missing Location",
+                 is_public: true
+               })
+               |> Ash.create(actor: actor)
+
+      assert Enum.any?(errors, fn error ->
+               error.field == :location && error.message == "is required"
+             end)
+    end
+
+    test "derives the time zone from selected coordinates and rejects submitted overrides", %{
+      actor: actor
+    } do
+      changeset =
+        Group
+        |> Ash.Changeset.new()
+        |> Ash.Changeset.set_argument(:provided_latitude, 30.27)
+        |> Ash.Changeset.set_argument(:provided_longitude, -97.74)
+
+      assert {:ok, group} =
+               changeset
+               |> Ash.Changeset.for_create(:create_group, %{
+                 name: "Resolved Zone Group",
+                 location: "Austin, TX",
+                 is_public: true
+               })
+               |> Ash.create(actor: actor)
+
+      assert group.time_zone == "America/Chicago"
+
+      assert {:error, error} =
+               changeset
+               |> Ash.Changeset.for_create(:create_group, %{
+                 name: "Submitted Zone Group",
+                 location: "Austin, TX",
+                 time_zone: "America/Los_Angeles",
+                 is_public: true
+               })
+               |> Ash.create(actor: actor)
+
+      assert Exception.message(error) =~ "time_zone"
+    end
+
+    test "the database enforces locations for new groups without validating legacy rows" do
+      assert %{rows: [[false, definition]]} =
+               Repo.query!("""
+               SELECT convalidated, pg_get_constraintdef(oid)
+               FROM pg_constraint
+               WHERE conname = 'groups_location_required_for_new_records'
+               """)
+
+      assert definition =~ "location IS NOT NULL"
+      assert definition =~ "btrim(location) <> ''"
+    end
+
     test "enforces minimum name length", %{actor: actor} do
       assert {:error, %Ash.Error.Invalid{errors: errors}} =
                Group
                |> Ash.Changeset.for_create(:create_group, %{
                  # Too short
                  name: "AB",
+                 location: "Test Location",
                  is_public: true
                })
                |> Ash.create(actor: actor)
@@ -108,6 +170,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
                Group
                |> Ash.Changeset.for_create(:create_group, %{
                  name: long_name,
+                 location: "Test Location",
                  is_public: true
                })
                |> Ash.create(actor: actor)
@@ -124,6 +187,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
         Group
         |> Ash.Changeset.for_create(:create_group, %{
           name: "Unique Name Test",
+          location: "Test Location",
           is_public: true
         })
         |> Ash.create(actor: actor)
@@ -133,6 +197,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
                Group
                |> Ash.Changeset.for_create(:create_group, %{
                  name: "Unique Name Test",
+                 location: "Test Location",
                  is_public: true
                })
                |> Ash.create(actor: actor)
@@ -142,7 +207,8 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
       {:ok, group} =
         Group
         |> Ash.Changeset.for_create(:create_group, %{
-          name: "Default Public Test"
+          name: "Default Public Test",
+          location: "Test Location"
         })
         |> Ash.create(actor: actor)
 

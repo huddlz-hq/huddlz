@@ -13,8 +13,8 @@ Feature: Physical venue huddl time zones
       | physical |
       | hybrid   |
 
-  Scenario: An unresolved venue requires a time-zone choice
+  Scenario: An unresolved venue cannot be repaired with a manual time zone
     Given I select a venue whose time zone cannot be resolved
     When I try to save the huddl
-    Then I am asked to choose a valid huddl time zone
-    And the huddl is not saved without one
+    Then I am asked to choose a resolvable saved venue
+    And the huddl is not saved

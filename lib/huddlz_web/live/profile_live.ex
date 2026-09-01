@@ -52,13 +52,20 @@ defmodule HuddlzWeb.ProfileLive do
         actor: user
       )
 
+    browser_time_zone =
+      socket
+      |> get_connect_params()
+      |> TimeZone.from_connect_params()
+
+    automatic_time_zone = TimeZone.automatic_display(user_with_avatar, browser_time_zone)
+
     {:ok,
      socket
      |> assign(:page_title, "Profile")
      |> assign(:form, form)
      |> assign(:email_form, email_form)
      |> assign(:password_form, password_form)
-     |> assign(:time_zone_options, TimeZone.options())
+     |> assign(:time_zone_options, TimeZone.options(automatic_time_zone))
      |> assign(:password_input_reset_generation, 0)
      |> assign(:current_user, user_with_avatar)
      |> assign(:avatar_error, nil)
@@ -262,9 +269,9 @@ defmodule HuddlzWeb.ProfileLive do
         <div class="panel-head">
           <div>
             <h2>Display time zone</h2>
-            <div class="panel-sub">
-              Automatic follows this browser. Choose a fixed zone to keep schedule times stable
-              across devices.
+            <div id="display-time-zone-description" class="panel-sub">
+              Automatic uses this browser’s time zone when available, then your home location.
+              Choose a fixed zone to use the same time zone across devices.
             </div>
           </div>
         </div>

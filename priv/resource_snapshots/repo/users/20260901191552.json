@@ -109,6 +109,18 @@
       "type": "float"
     },
     {
+      "allow_nil?": true,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "home_time_zone",
+      "type": "text"
+    },
+    {
       "allow_nil?": false,
       "default": "\"automatic\"",
       "generated?": false,
@@ -197,7 +209,7 @@
   ],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "E44CDBA619AFC3AD78669A16C4B585C60DC53ED29A218D80173FED0502B913C3",
+  "hash": "77135B3A58F45A31282266B7107CFD4D180B3A55530CC626D110658012AFD34A",
   "identities": [
     {
       "all_tenants?": false,

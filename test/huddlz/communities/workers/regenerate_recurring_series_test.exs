@@ -219,7 +219,7 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
 
     for occurrence <- [first, second] do
       assert occurrence.event_type == :hybrid
-      assert occurrence.physical_location == "456 Congress Ave"
+      assert occurrence.physical_location == huddl.physical_location
       assert occurrence.virtual_link == "https://meet.example.com/hybrid"
     end
   end
@@ -268,15 +268,18 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
     owner = generate(user(role: :user))
     group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
 
-    # provided_latitude/longitude are private args, set via set_argument rather
-    # than the params map. With coordinates supplied the parent skips geocoding;
-    # the default stub returns :not_found, so an instance that re-geocoded would
-    # come back with nil coordinates instead of the parent's — proving the copy.
+    venue =
+      Communities.create_group_location!(
+        "Austin Venue",
+        "123 Main St",
+        30.27,
+        -97.74,
+        group.id,
+        actor: owner
+      )
+
     parent =
       Huddl
-      |> Ash.Changeset.new()
-      |> Ash.Changeset.set_argument(:provided_latitude, 30.27)
-      |> Ash.Changeset.set_argument(:provided_longitude, -97.74)
       |> Ash.Changeset.for_create(
         :create,
         %{
@@ -287,6 +290,7 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
           duration_minutes: 60,
           event_type: :in_person,
           physical_location: "123 Main St",
+          group_location_id: venue.id,
           group_id: group.id,
           is_recurring: true,
           frequency: "weekly",

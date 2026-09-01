@@ -351,6 +351,14 @@ defmodule HuddlzWeb.GroupLive.LocationsTest do
       # Save button should now be enabled and name pre-populated
       assert has_element?(view, "input#location-name-input[value='123 Main St']")
 
+      assert has_element?(
+               view,
+               "#venue-time-zone-derived",
+               "Chicago (America/Chicago)"
+             )
+
+      refute has_element?(view, "#venue-time-zone")
+
       # Submit the form
       view
       |> element("form[phx-submit='save_new_location']")
@@ -365,6 +373,42 @@ defmodule HuddlzWeb.GroupLive.LocationsTest do
 
       assert length(locations) == 1
       assert hd(locations).name == "123 Main St"
+    end
+
+    test "an unresolved address has no manual time-zone override and cannot be saved", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      {:ok, view, _html} =
+        conn
+        |> login(owner)
+        |> live(~p"/groups/#{group.slug}/locations/new")
+
+      Mox.stub(Huddlz.MockLocationTimeZone, :resolve, fn latitude, longitude ->
+        assert latitude == 0.0
+        assert longitude == 0.0
+        {:error, :not_found}
+      end)
+
+      Mox.allow(Huddlz.MockLocationTimeZone, self(), view.pid)
+
+      select_location(view,
+        id: "modal-address-autocomplete",
+        display_text: "Unknown address",
+        main_text: "Unknown",
+        latitude: 0.0,
+        longitude: 0.0
+      )
+
+      assert has_element?(
+               view,
+               "#venue-time-zone-resolution-error",
+               "Choose an address whose time zone can be resolved"
+             )
+
+      refute has_element?(view, "#venue-time-zone")
+      assert has_element?(view, "button[disabled]", "Save Address")
     end
   end
 end

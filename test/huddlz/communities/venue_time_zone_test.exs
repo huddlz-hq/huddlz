@@ -4,6 +4,7 @@ defmodule Huddlz.Communities.VenueTimeZoneTest do
   @moduletag :issue404
 
   alias Huddlz.Communities
+  alias Huddlz.Communities.Huddl
 
   describe "saved venue time zones" do
     test "coordinates resolve through the location time-zone boundary" do
@@ -27,11 +28,11 @@ defmodule Huddlz.Communities.VenueTimeZoneTest do
       assert location.time_zone == "America/Denver"
     end
 
-    test "an unresolved venue requires a canonical manual time zone" do
+    test "an unresolved venue cannot be saved with a manual time zone" do
       owner = generate(user(role: :user))
       group = generate(group(actor: owner))
 
-      Mox.expect(Huddlz.MockLocationTimeZone, :resolve, 3, fn latitude, longitude ->
+      Mox.expect(Huddlz.MockLocationTimeZone, :resolve, 2, fn latitude, longitude ->
         assert latitude == 0.0
         assert longitude == 0.0
         {:error, :not_found}
@@ -47,7 +48,7 @@ defmodule Huddlz.Communities.VenueTimeZoneTest do
                  actor: owner
                )
 
-      assert Exception.message(missing_error) =~ "must be a valid IANA time zone"
+      assert Exception.message(missing_error) =~ "time zone could not be resolved"
 
       assert {:error, invalid_error} =
                Communities.create_group_location(
@@ -60,30 +61,16 @@ defmodule Huddlz.Communities.VenueTimeZoneTest do
                  actor: owner
                )
 
-      assert Exception.message(invalid_error) =~ "must be a valid IANA time zone"
-
-      assert {:ok, location} =
-               Communities.create_group_location(
-                 "Unknown Venue",
-                 "Unknown",
-                 0.0,
-                 0.0,
-                 group.id,
-                 %{time_zone: "America/New_York"},
-                 actor: owner
-               )
-
-      assert location.time_zone == "America/New_York"
+      assert Exception.message(invalid_error) =~ "time_zone"
     end
 
     test "existing saved venues are backfilled and the column is required" do
-      migration =
-        File.read!(
-          Path.expand(
-            "../../../priv/repo/migrations/20260901152555_add_group_location_time_zone.exs",
-            __DIR__
-          )
+      [migration_path] =
+        Path.wildcard(
+          Path.expand("../../../priv/repo/migrations/*_calendar_time_zones.exs", __DIR__)
         )
+
+      migration = File.read!(migration_path)
 
       assert migration =~ "SET time_zone = 'America/New_York'"
 
@@ -131,7 +118,7 @@ defmodule Huddlz.Communities.VenueTimeZoneTest do
       end
     end
 
-    test "missing and invalid huddl zones are rejected without a resolved venue" do
+    test "physical and hybrid huddlz require a saved venue" do
       owner = generate(user(role: :user))
       group = generate(group(actor: owner))
 
@@ -145,15 +132,65 @@ defmodule Huddlz.Communities.VenueTimeZoneTest do
         duration_minutes: 60
       }
 
-      assert {:error, missing_error} =
-               Communities.create_huddl(Map.put(attrs, :time_zone, nil), actor: owner)
+      for event_type <- [:in_person, :hybrid] do
+        attrs =
+          attrs
+          |> Map.put(:event_type, event_type)
+          |> Map.put(:virtual_link, event_type == :hybrid && "https://meet.example.com/venue")
 
-      assert Exception.message(missing_error) =~ "must be a valid IANA time zone"
+        assert {:error, error} = Communities.create_huddl(attrs, actor: owner)
+        assert Exception.message(error) =~ "saved venue is required"
+      end
+    end
 
-      assert {:error, invalid_error} =
-               Communities.create_huddl(Map.put(attrs, :time_zone, "EST"), actor: owner)
+    test "legacy physical huddlz without saved venues still accept RSVPs" do
+      owner = generate(user(role: :user))
+      attendee = generate(user(role: :user))
+      group = generate(group(actor: owner))
+      now = DateTime.utc_now()
 
-      assert Exception.message(invalid_error) =~ "must be a valid IANA time zone"
+      legacy_huddl =
+        Ash.Seed.seed!(Huddl, %{
+          title: "Legacy physical huddl",
+          starts_at: DateTime.add(now, 1, :day),
+          ends_at: DateTime.add(now, 2, :day),
+          time_zone: "America/New_York",
+          event_type: :in_person,
+          physical_location: "Legacy Venue",
+          group_id: group.id,
+          creator_id: owner.id,
+          lifecycle_state: :published,
+          published_at: now,
+          published_by_id: owner.id
+        })
+
+      assert {:ok, _huddl} = Communities.rsvp_huddl(legacy_huddl, %{}, actor: attendee)
+    end
+
+    test "a saved venue must belong to the huddl's group" do
+      owner = generate(user(role: :user))
+      other_owner = generate(user(role: :user))
+      group = generate(group(actor: owner))
+      other_group = generate(group(actor: other_owner))
+      other_location = generate(group_location(group_id: other_group.id, actor: other_owner))
+
+      assert {:error, error} =
+               Communities.create_huddl(
+                 %{
+                   title: "Wrong group venue",
+                   group_id: group.id,
+                   group_location_id: other_location.id,
+                   physical_location: other_location.address,
+                   event_type: :in_person,
+                   date: Date.add(Date.utc_today(), 10),
+                   start_time: ~T[09:00:00],
+                   duration_minutes: 60,
+                   time_zone: "America/New_York"
+                 },
+                 actor: owner
+               )
+
+      assert Exception.message(error) =~ "saved venue must belong to the huddl's group"
     end
 
     test "a selected venue that cannot be loaded rejects the huddl" do

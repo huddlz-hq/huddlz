@@ -71,8 +71,8 @@ defmodule HuddlzWeb.Api.EndToEndTest do
           start_time: ~T[14:00:00],
           duration_minutes: 60,
           group_id: group_id,
-          event_type: :in_person,
-          physical_location: "123 Test St",
+          event_type: :virtual,
+          virtual_link: "https://meet.example.com/happy-path",
           is_private: false
         },
         actor: %Huddlz.Accounts.User{id: user_id, role: :user}

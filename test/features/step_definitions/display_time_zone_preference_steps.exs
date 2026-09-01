@@ -27,6 +27,43 @@ defmodule DisplayTimeZonePreferenceSteps do
     context
   end
 
+  step "Automatic shows {string}", %{args: [time_zone], session: session} = context do
+    assert_has(
+      session,
+      "#calendar-display-time-zone option[value='automatic']",
+      text: "Automatic (#{time_zone})"
+    )
+
+    context
+  end
+
+  step "Profile shows Automatic {string}", %{args: [time_zone]} = context do
+    session =
+      Phoenix.ConnTest.build_conn()
+      |> put_connect_params(%{"timezone" => time_zone})
+      |> login(context.current_user)
+      |> visit("/profile")
+
+    assert_has(
+      session,
+      "#account-display-time-zone option[value='automatic']",
+      text: "Automatic (#{time_zone})"
+    )
+
+    Map.put(context, :session, session)
+  end
+
+  step "Profile explains Automatic resolution", %{session: session} = context do
+    assert_has(
+      session,
+      "#display-time-zone-description",
+      text:
+        "Automatic uses this browser’s time zone when available, then your home location. Choose a fixed zone to use the same time zone across devices."
+    )
+
+    context
+  end
+
   step "Account shows Fixed {string}", %{args: [time_zone], session: session} = context do
     session = visit(session, "/profile")
 

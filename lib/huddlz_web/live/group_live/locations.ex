@@ -42,7 +42,6 @@ defmodule HuddlzWeb.GroupLive.Locations do
             |> assign(:page_title, "#{group.name} — Locations")
             |> assign(:group, group)
             |> assign(:locations, locations)
-            |> assign(:time_zone_options, Huddlz.TimeZone.iana_options())
             |> ModalLocationHelpers.init()
             |> assign(:editing_location_id, nil)
             |> assign(:deleting_location, nil)
@@ -252,7 +251,6 @@ defmodule HuddlzWeb.GroupLive.Locations do
             :if={@modal_location_address}
             time_zone={@modal_location_time_zone}
             error={@modal_location_time_zone_error}
-            options={@time_zone_options}
           />
 
           <div class="form-row">
@@ -269,7 +267,14 @@ defmodule HuddlzWeb.GroupLive.Locations do
           </div>
 
           <div class="form-foot is-flush">
-            <.button variant={:primary} type="submit" disabled={is_nil(@modal_location_address)}>
+            <.button
+              variant={:primary}
+              type="submit"
+              disabled={
+                is_nil(@modal_location_address) or
+                  not Huddlz.TimeZone.canonical?(@modal_location_time_zone)
+              }
+            >
               Save Address
             </.button>
             <.button variant={:secondary} patch={~p"/groups/#{@group.slug}/locations"}>
@@ -295,7 +300,6 @@ defmodule HuddlzWeb.GroupLive.Locations do
            socket.assigns.modal_location_lat,
            socket.assigns.modal_location_lng,
            socket.assigns.group.id,
-           %{time_zone: socket.assigns.modal_location_time_zone},
            actor: user
          ) do
       {:ok, _location} ->

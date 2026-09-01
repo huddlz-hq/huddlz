@@ -37,13 +37,12 @@ defmodule Huddlz.Communities.TimeZoneRequirementsTest do
 
   @tag issue403: true
   test "the migration leaves Group and huddl time zones required and fully backfilled" do
-    migration =
-      File.read!(
-        Path.expand(
-          "../../../priv/repo/migrations/20260901013226_require_group_and_huddl_time_zones.exs",
-          __DIR__
-        )
+    [migration_path] =
+      Path.wildcard(
+        Path.expand("../../../priv/repo/migrations/*_calendar_time_zones.exs", __DIR__)
       )
+
+    migration = File.read!(migration_path)
 
     assert migration =~
              "UPDATE groups SET time_zone = 'America/New_York' WHERE time_zone IS NULL"

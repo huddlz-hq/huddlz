@@ -5,6 +5,7 @@ defmodule AuthoritativeScheduleDeliverySteps do
   import Huddlz.Generator
 
   alias Huddlz.Accounts
+  alias Huddlz.Communities
   alias Huddlz.Notifications
 
   @date ~D[2027-05-04]
@@ -44,13 +45,50 @@ defmodule AuthoritativeScheduleDeliverySteps do
     context
   end
 
-  step "a huddl is scheduled in {string} for calendar export",
+  step "a physical huddl is scheduled for 9:00 AM at a venue resolved to {string}",
        %{args: [time_zone]} = context do
+    owner = generate(user(role: :user))
     recipient = generate(user(role: :user))
+    group = generate(group(actor: owner, time_zone: "America/New_York"))
 
-    context
-    |> Map.put(:recipient, recipient)
-    |> setup_huddl(time_zone)
+    Mox.expect(Huddlz.MockLocationTimeZone, :resolve, fn 37.77, -122.42 ->
+      {:ok, time_zone}
+    end)
+
+    location =
+      Communities.create_group_location!(
+        "Pacific Coffee",
+        "1 Market St, San Francisco, CA",
+        37.77,
+        -122.42,
+        group.id,
+        actor: owner
+      )
+
+    huddl =
+      Communities.create_huddl!(
+        %{
+          title: "Pacific Morning Coffee",
+          group_id: group.id,
+          group_location_id: location.id,
+          physical_location: location.address,
+          event_type: :in_person,
+          date: @date,
+          start_time: ~T[09:00:00],
+          duration_minutes: 90,
+          time_zone: "America/New_York"
+        },
+        actor: owner
+      )
+
+    Map.merge(context, %{
+      owner: owner,
+      recipient: recipient,
+      group: group,
+      location: location,
+      huddl: huddl,
+      expected_time_zone: time_zone
+    })
   end
 
   step "I receive its calendar attachment", context do
@@ -67,16 +105,19 @@ defmodule AuthoritativeScheduleDeliverySteps do
     |> Map.put(:attachment, attachment.data)
   end
 
-  step "the attachment uses the Huddl TZID", context do
-    assert context.attachment =~ "DTSTART;TZID=#{context.huddl.time_zone}:20270504T090000"
-    assert context.attachment =~ "DTEND;TZID=#{context.huddl.time_zone}:20270504T103000"
+  step "the physical huddl keeps the venue time zone and correct UTC instant", context do
+    assert context.location.time_zone == context.expected_time_zone
+    assert context.huddl.time_zone == context.expected_time_zone
+    assert context.huddl.starts_at == ~U[2027-05-04 16:00:00Z]
+    assert context.huddl.ends_at == ~U[2027-05-04 17:30:00Z]
     context
   end
 
-  step "it includes a matching VTIMEZONE", context do
-    assert context.attachment =~ "BEGIN:VTIMEZONE"
-    assert context.attachment =~ "TZID:#{context.huddl.time_zone}"
-    assert context.attachment =~ "END:VTIMEZONE"
+  step "the attachment carries that schedule as UTC timestamps", context do
+    assert context.attachment =~ "DTSTART:20270504T160000Z"
+    assert context.attachment =~ "DTEND:20270504T173000Z"
+    refute context.attachment =~ "DTSTART;TZID="
+    refute context.attachment =~ "DTEND;TZID="
     context
   end
 

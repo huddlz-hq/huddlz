@@ -5,6 +5,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
   use HuddlzWeb.ConnCase, async: true
 
   import Huddlz.Generator
+  import Huddlz.Test.Helpers.LocationSelection
   import Phoenix.LiveViewTest
 
   alias Huddlz.Communities
@@ -38,6 +39,8 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         conn
         |> login(owner)
         |> live(~p"/groups/new")
+
+      select_location(view, display_text: "Austin, TX")
 
       view
       |> form("#group-form", %{
@@ -96,6 +99,8 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         conn
         |> login(owner)
         |> live(~p"/groups/new")
+
+      select_location(view, display_text: "Austin, TX")
 
       # Fill in form
       view

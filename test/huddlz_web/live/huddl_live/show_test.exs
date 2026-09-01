@@ -26,7 +26,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
           %{
             name: "Test Group",
             description: "A test group for huddl show",
-            is_public: true
+            is_public: true,
+            location: "Test Location"
           },
           actor: owner
         )
@@ -250,8 +251,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             date: Date.add(Date.utc_today(), 2),
             start_time: ~T[14:00:00],
             duration_minutes: 120,
-            event_type: :in_person,
-            physical_location: "123 Main St",
+            event_type: :virtual,
+            virtual_link: "https://meet.example.com/description-free",
             is_private: false,
             group_id: group.id
           },
@@ -440,6 +441,16 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       non_member: non_member,
       group: group
     } do
+      in_person_venue =
+        generate(
+          group_location(
+            group_id: group.id,
+            actor: owner,
+            name: "Coffee Shop",
+            address: "123 Main St, City"
+          )
+        )
+
       # Create in-person huddl
       in_person_huddl =
         Huddl
@@ -453,6 +464,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             duration_minutes: 120,
             event_type: :in_person,
             physical_location: "123 Main St, City",
+            group_location_id: in_person_venue.id,
             is_private: false,
             group_id: group.id
           },
@@ -467,6 +479,16 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> refute_has(".facts .label", text: "Virtual access")
 
       # Create hybrid huddl
+      hybrid_venue =
+        generate(
+          group_location(
+            group_id: group.id,
+            actor: owner,
+            name: "Conference Room A",
+            address: "Conference Room A"
+          )
+        )
+
       hybrid_huddl =
         Huddl
         |> Ash.Changeset.for_create(
@@ -479,6 +501,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             duration_minutes: 120,
             event_type: :hybrid,
             physical_location: "Conference Room A",
+            group_location_id: hybrid_venue.id,
             virtual_link: "https://meet.example.com/hybrid",
             is_private: false,
             group_id: group.id
@@ -511,7 +534,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
           %{
             name: "Private Group",
             description: "Members only",
-            is_public: false
+            is_public: false,
+            location: "Test Location"
           },
           actor: owner
         )
@@ -528,8 +552,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             date: Date.add(Date.utc_today(), 3),
             start_time: ~T[16:00:00],
             duration_minutes: 120,
-            event_type: :in_person,
-            physical_location: "Secret Location",
+            event_type: :virtual,
+            virtual_link: "https://meet.example.com/private",
             is_private: true,
             group_id: private_group.id
           },

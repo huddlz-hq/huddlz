@@ -109,7 +109,7 @@ defmodule RecurringHuddlGenerationSteps do
 
   step "every occurrence should retain both hybrid locations", context do
     for occurrence <- future_occurrences(context.huddl) do
-      assert occurrence.physical_location == "456 Congress Ave"
+      assert occurrence.physical_location == context.huddl.physical_location
       assert occurrence.virtual_link == "https://meet.example.com/hybrid"
     end
 

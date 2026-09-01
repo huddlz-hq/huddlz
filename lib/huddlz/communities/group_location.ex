@@ -60,8 +60,6 @@ defmodule Huddlz.Communities.GroupLocation do
       primary? true
       accept [:name, :address, :latitude, :longitude, :group_id]
 
-      argument :time_zone, :string, allow_nil?: true
-
       change Huddlz.Communities.GroupLocation.Changes.ResolveTimeZone
     end
 

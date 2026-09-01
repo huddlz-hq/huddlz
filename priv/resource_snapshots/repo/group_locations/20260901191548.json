@@ -13,7 +13,7 @@
       "type": "uuid"
     },
     {
-      "allow_nil?": false,
+      "allow_nil?": true,
       "default": "nil",
       "generated?": false,
       "precision": null,
@@ -22,31 +22,43 @@
       "scale": null,
       "size": null,
       "source": "name",
-      "type": "citext"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "description",
-      "type": "citext"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "location",
       "type": "text"
+    },
+    {
+      "allow_nil?": false,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "address",
+      "type": "text"
+    },
+    {
+      "allow_nil?": false,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "latitude",
+      "type": "float"
+    },
+    {
+      "allow_nil?": false,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "longitude",
+      "type": "float"
     },
     {
       "allow_nil?": false,
@@ -62,54 +74,6 @@
     },
     {
       "allow_nil?": false,
-      "default": "true",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "is_public",
-      "type": "boolean"
-    },
-    {
-      "allow_nil?": false,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "slug",
-      "type": "text"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "latitude",
-      "type": "float"
-    },
-    {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "longitude",
-      "type": "float"
-    },
-    {
-      "allow_nil?": false,
       "default": "fragment(\"(now() AT TIME ZONE 'utc')\")",
       "generated?": false,
       "precision": null,
@@ -117,7 +81,7 @@
       "references": null,
       "scale": null,
       "size": null,
-      "source": "created_at",
+      "source": "inserted_at",
       "type": "utc_datetime_usec"
     },
     {
@@ -153,98 +117,43 @@
           "global": null,
           "strategy": null
         },
-        "name": "groups_owner_id_fkey",
-        "on_delete": null,
+        "name": "group_locations_group_id_fkey",
+        "on_delete": "delete",
         "on_update": null,
         "primary_key?": true,
         "schema": "public",
-        "table": "users"
+        "table": "groups"
       },
       "scale": null,
       "size": null,
-      "source": "owner_id",
+      "source": "group_id",
       "type": "uuid"
     }
   ],
   "base_filter": null,
   "check_constraints": [],
   "create_table_options": null,
-  "custom_indexes": [
-    {
-      "all_tenants?": false,
-      "concurrently": false,
-      "error_fields": [
-        "owner_id"
-      ],
-      "fields": [
-        {
-          "type": "atom",
-          "value": "owner_id"
-        }
-      ],
-      "include": null,
-      "include_base_filter?": true,
-      "message": null,
-      "name": null,
-      "nulls_distinct": true,
-      "prefix": null,
-      "table": null,
-      "unique": false,
-      "using": null,
-      "where": null
-    },
-    {
-      "all_tenants?": false,
-      "concurrently": false,
-      "error_fields": [],
-      "fields": [
-        {
-          "type": "string",
-          "value": "ST_MakePoint(longitude, latitude)"
-        }
-      ],
-      "include": null,
-      "include_base_filter?": true,
-      "message": null,
-      "name": "groups_location_gist_index",
-      "nulls_distinct": true,
-      "prefix": null,
-      "table": null,
-      "unique": false,
-      "using": "GIST",
-      "where": "latitude IS NOT NULL AND longitude IS NOT NULL"
-    }
-  ],
+  "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "3CFB79A8C29D9493C217E76AD70862CF9EAD3D1FA95B47CDE2570B8264001317",
+  "hash": "E0D7F98201D5A230E53BBEE33185CCA138A783951D9378B8DA2014383FEC2D08",
   "identities": [
     {
       "all_tenants?": false,
       "base_filter": null,
-      "index_name": "groups_unique_name_index",
+      "index_name": "group_locations_unique_name_per_group_index",
       "keys": [
+        {
+          "type": "atom",
+          "value": "group_id"
+        },
         {
           "type": "atom",
           "value": "name"
         }
       ],
-      "name": "unique_name",
-      "nils_distinct?": true,
-      "where": null
-    },
-    {
-      "all_tenants?": false,
-      "base_filter": null,
-      "index_name": "groups_unique_slug_index",
-      "keys": [
-        {
-          "type": "atom",
-          "value": "slug"
-        }
-      ],
-      "name": "unique_slug",
-      "nils_distinct?": true,
+      "name": "unique_name_per_group",
+      "nils_distinct?": false,
       "where": null
     }
   ],
@@ -255,5 +164,5 @@
   },
   "repo": "Elixir.Huddlz.Repo",
   "schema": null,
-  "table": "groups"
+  "table": "group_locations"
 }

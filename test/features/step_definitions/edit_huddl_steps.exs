@@ -45,16 +45,27 @@ defmodule EditHuddlSteps do
     group = lookup_group(group_name)
     owner = Enum.find(context.users, &(&1.id == group.owner_id))
 
-    huddl =
-      generate(
-        huddl(
-          group_id: group.id,
-          creator_id: owner.id,
-          title: title,
-          physical_location: address,
-          actor: owner
-        )
-      )
+    group_location_id =
+      context
+      |> Map.get(:group_locations, [])
+      |> Enum.find_value(fn location ->
+        if location.group_id == group.id and location.address == address, do: location.id
+      end)
+
+    huddl_opts = [
+      group_id: group.id,
+      creator_id: owner.id,
+      title: title,
+      physical_location: address,
+      actor: owner
+    ]
+
+    huddl_opts =
+      if group_location_id,
+        do: Keyword.put(huddl_opts, :group_location_id, group_location_id),
+        else: huddl_opts
+
+    huddl = generate(huddl(huddl_opts))
 
     Map.put(context, :current_huddl, huddl)
   end

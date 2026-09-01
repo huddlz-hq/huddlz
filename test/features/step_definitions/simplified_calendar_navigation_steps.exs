@@ -55,13 +55,37 @@ defmodule SimplifiedCalendarNavigationSteps do
     context
   end
 
-  step "the primary navigation contains {string}, {string}, and {string}",
-       %{args: [first, second, third], session: session} = context do
+  step "the primary navigation contains {string}, {string}, {string}, and {string}",
+       %{args: [first, second, third, fourth], session: session} = context do
     session
     |> assert_has("#primary-navigation .sb-item", text: first)
     |> assert_has("#primary-navigation .sb-item", text: second)
     |> assert_has("#primary-navigation .sb-item", text: third)
+    |> assert_has("#primary-navigation .sb-item", text: fourth)
 
+    context
+  end
+
+  step "I choose Today from the primary navigation", %{session: session} = context do
+    Map.put(context, :session, click_link(session, "#primary-nav-today", "Today"))
+  end
+
+  step "Today is the active primary destination", %{session: session} = context do
+    assert_has(session, "#primary-navigation .sb-item.active", text: "Today")
+    context
+  end
+
+  step "I choose Calendar from the primary navigation", %{session: session} = context do
+    Map.put(context, :session, click_link(session, "#primary-nav-calendar", "Calendar"))
+  end
+
+  step "Month is the active Calendar range", %{session: session} = context do
+    assert_has(session, "#calendar-view-month[aria-current='page']", text: "Month")
+    context
+  end
+
+  step "Calendar is the active primary destination", %{session: session} = context do
+    assert_has(session, "#primary-navigation .sb-item.active", text: "Calendar")
     context
   end
 
@@ -75,7 +99,7 @@ defmodule SimplifiedCalendarNavigationSteps do
   end
 
   step "Calendar has no count badge", %{session: session} = context do
-    refute_has(session, "#primary-navigation a[href='/calendar'] .badge")
+    refute_has(session, "#primary-nav-calendar .badge")
     context
   end
 

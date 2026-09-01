@@ -157,6 +157,9 @@ defmodule Huddlz.Generator do
             Ash.get!(Huddlz.Accounts.User, owner_id, authorize?: false)
         end
 
+    requested_time_zone = opts[:time_zone] || "Etc/UTC"
+    {latitude, longitude} = coordinates_for_time_zone(requested_time_zone)
+
     changeset_generator(
       Group,
       :create_group,
@@ -164,7 +167,8 @@ defmodule Huddlz.Generator do
         name: StreamData.repeatedly(fn -> Faker.Company.name() end),
         description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
         location: "Test Location",
-        time_zone: "Etc/UTC",
+        provided_latitude: latitude,
+        provided_longitude: longitude,
         is_public: true,
         # Pin to nil so GenerateSlug derives the slug from the name. Otherwise
         # the public `:slug` argument on :create_group falls into Ash's optional
@@ -173,7 +177,7 @@ defmodule Huddlz.Generator do
         # assertions.
         slug: nil
       ],
-      overrides: Keyword.drop(opts, [:owner_id, :actor, :actor_role]),
+      overrides: Keyword.drop(opts, [:owner_id, :actor, :actor_role, :time_zone]),
       actor: actor
     )
   end
@@ -205,10 +209,9 @@ defmodule Huddlz.Generator do
           end),
         latitude: 30.27,
         longitude: -97.74,
-        time_zone: "America/New_York",
         group_id: group_id
       ],
-      overrides: opts,
+      overrides: Keyword.drop(opts, [:time_zone]),
       actor: actor
     )
   end
@@ -242,9 +245,9 @@ defmodule Huddlz.Generator do
         starts_at: default_starts_at,
         ends_at: default_ends_at,
         time_zone: "Etc/UTC",
-        event_type: :in_person,
-        physical_location: StreamData.repeatedly(fn -> Faker.Address.street_address() end),
-        virtual_link: nil,
+        event_type: :virtual,
+        physical_location: nil,
+        virtual_link: "https://meet.example.com/past-huddl",
         is_private: false,
         thumbnail_url:
           StreamData.repeatedly(fn ->
@@ -261,24 +264,16 @@ defmodule Huddlz.Generator do
   Create a huddl with random data.
   """
   def huddl(opts \\ []) do
-    creator_id =
-      opts[:creator_id] ||
-        once(:default_creator_id, fn ->
-          generate(user(role: :user)).id
-        end)
+    creator_id = huddl_creator_id(opts)
 
     # creator_id is no longer an accepted input — the :create action derives
     # the creator from the actor. Author the huddl as the requested creator by
     # using them as the actor (unless an explicit actor is given).
-    actor =
-      opts[:actor] || Ash.get!(User, creator_id, authorize?: false)
+    actor = opts[:actor] || Ash.get!(User, creator_id, authorize?: false)
+    group_id = huddl_group_id(opts)
 
-    group_id =
-      opts[:group_id] ||
-        once(:default_group_id, fn ->
-          owner = generate(user(role: :user))
-          generate(group(owner_id: owner.id, is_public: true, actor: owner)).id
-        end)
+    event_type = opts[:event_type] || :in_person
+    group_location_id = huddl_group_location_id(opts, event_type, group_id)
 
     # Generate random dates in the future using the new virtual argument pattern
     days_ahead = :rand.uniform(30)
@@ -306,9 +301,11 @@ defmodule Huddlz.Generator do
         time_zone: "Etc/UTC",
         thumbnail_url: thumbnail_url,
         group_id: group_id,
-        event_type: :in_person,
-        physical_location: "123 Main St, Anytown, USA",
-        group_location_id: nil,
+        event_type: event_type,
+        physical_location:
+          if(event_type in [:in_person, :hybrid], do: "123 Main St, Anytown, USA"),
+        virtual_link: "https://meet.example.com/huddl",
+        group_location_id: group_location_id,
         is_private: false,
         lifecycle_state: :published,
         huddl_template_id: nil,
@@ -319,6 +316,49 @@ defmodule Huddlz.Generator do
       actor: actor
     )
   end
+
+  defp huddl_creator_id(opts) do
+    opts[:creator_id] ||
+      once(:default_creator_id, fn ->
+        generate(user(role: :user)).id
+      end)
+  end
+
+  defp huddl_group_id(opts) do
+    opts[:group_id] ||
+      once(:default_group_id, fn ->
+        owner = generate(user(role: :user))
+        generate(group(owner_id: owner.id, is_public: true, actor: owner)).id
+      end)
+  end
+
+  defp huddl_group_location_id(opts, event_type, group_id) do
+    case Access.fetch(opts, :group_location_id) do
+      {:ok, group_location_id} -> group_location_id
+      :error -> default_huddl_group_location_id(opts, event_type, group_id)
+    end
+  end
+
+  defp default_huddl_group_location_id(opts, event_type, group_id)
+       when event_type in [:in_person, :hybrid] do
+    group = Ash.get!(Group, group_id, authorize?: false)
+    location_actor = Ash.get!(User, group.owner_id, authorize?: false)
+    time_zone = opts[:time_zone] || group.time_zone
+    {latitude, longitude} = coordinates_for_time_zone(time_zone)
+
+    generate(
+      group_location(
+        name: "Generated Venue #{System.unique_integer([:positive])}",
+        group_id: group_id,
+        actor: location_actor,
+        time_zone: time_zone,
+        latitude: latitude,
+        longitude: longitude
+      )
+    ).id
+  end
+
+  defp default_huddl_group_location_id(_opts, _event_type, _group_id), do: nil
 
   @doc """
   Generate a host and multiple huddlz.
@@ -367,6 +407,26 @@ defmodule Huddlz.Generator do
           generate(user(role: :user)).id
         end)
 
+    group_location_id =
+      opts[:group_location_id] ||
+        (fn ->
+           group = Ash.get!(Group, group_id, authorize?: false)
+           location_actor = Ash.get!(User, group.owner_id, authorize?: false)
+           time_zone = opts[:time_zone] || group.time_zone
+           {latitude, longitude} = coordinates_for_time_zone(time_zone)
+
+           generate(
+             group_location(
+               name: "Generated Venue #{System.unique_integer([:positive])}",
+               group_id: group_id,
+               actor: location_actor,
+               time_zone: time_zone,
+               latitude: latitude,
+               longitude: longitude
+             )
+           ).id
+         end).()
+
     days_ahead = :rand.uniform(30)
     default_starts_at = DateTime.add(DateTime.utc_now(), days_ahead, :day)
     default_ends_at = DateTime.add(default_starts_at, 2, :hour)
@@ -380,6 +440,7 @@ defmodule Huddlz.Generator do
         time_zone: "Etc/UTC",
         event_type: :in_person,
         physical_location: "123 Main St, Anytown, USA",
+        group_location_id: group_location_id,
         is_private: false,
         group_id: group_id,
         creator_id: creator_id
@@ -393,4 +454,9 @@ defmodule Huddlz.Generator do
     ["3D8BFD", "6610F2", "6F42C1", "D63384", "DC3545", "FD7E14", "FFC107", "198754"]
     |> Enum.random()
   end
+
+  defp coordinates_for_time_zone("America/New_York"), do: {29.89, -81.31}
+  defp coordinates_for_time_zone("America/Los_Angeles"), do: {37.77, -122.42}
+  defp coordinates_for_time_zone("America/Chicago"), do: {30.27, -97.74}
+  defp coordinates_for_time_zone(_time_zone), do: {0.0, 0.0}
 end

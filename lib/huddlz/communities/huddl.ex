@@ -192,8 +192,6 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Communities.Huddl.Changes.AssignPendingImage
       change Huddlz.Communities.Huddl.Changes.AddHuddlTemplate
       change Huddlz.Communities.Huddl.Changes.ClearUnusedLocationFields
-      change Huddlz.Geocoding.ApplyProvidedCoordinates
-      change {Huddlz.Geocoding.GeocodeChange, field: :physical_location}
       change Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup
       change Huddlz.Communities.Huddl.Changes.SetInitialLifecycleTimestamps
       change Huddlz.Communities.Huddl.Changes.NotifyNewInGroup
@@ -295,8 +293,6 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.ClearUnusedLocationFields
       change Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz
-      change Huddlz.Geocoding.ApplyProvidedCoordinates
-      change {Huddlz.Geocoding.GeocodeChange, field: :physical_location}
       change Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup
       change Huddlz.Communities.Huddl.Changes.EnforceCapacityFloor
       change Huddlz.Communities.Huddl.Changes.ResetReminderStamps
@@ -688,6 +684,11 @@ defmodule Huddlz.Communities.Huddl do
       message "is required for in-person huddlz"
     end
 
+    validate present([:group_location_id]) do
+      where [action_is([:create, :update]), attribute_equals(:event_type, :in_person)]
+      message "saved venue is required"
+    end
+
     validate present([:virtual_link]) do
       where attribute_equals(:event_type, :virtual)
       message "is required for virtual huddlz"
@@ -699,6 +700,11 @@ defmodule Huddlz.Communities.Huddl do
     validate present([:physical_location]) do
       where attribute_equals(:event_type, :hybrid)
       message "is required for hybrid huddlz"
+    end
+
+    validate present([:group_location_id]) do
+      where [action_is([:create, :update]), attribute_equals(:event_type, :hybrid)]
+      message "saved venue is required"
     end
 
     validate present([:virtual_link]) do

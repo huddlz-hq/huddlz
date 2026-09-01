@@ -256,17 +256,17 @@ defmodule HuddlzWeb.HuddlLive.New do
               </p>
             </div>
 
-            <.searchable_select
+            <p
               :if={
                 @selected_location && @show_physical_location &&
                   !Huddlz.TimeZone.canonical?(@selected_location.time_zone)
               }
-              field={@form[:time_zone]}
-              id="huddl-time-zone"
-              label="huddl time zone"
-              options={@time_zone_options}
-              help="We could not resolve this venue. Choose its authoritative local time zone."
-            />
+              id="huddl-time-zone-resolution-error"
+              class="form-error"
+              role="alert"
+            >
+              Choose a saved venue whose time zone can be resolved.
+            </p>
 
             <div class="form-row">
               <.toggle field={@form[:is_recurring]} label="Recurring huddl" />
@@ -502,7 +502,6 @@ defmodule HuddlzWeb.HuddlLive.New do
             :if={@modal_location_address}
             time_zone={@modal_location_time_zone}
             error={@modal_location_time_zone_error}
-            options={@time_zone_options}
           />
 
           <div class="form-row">
@@ -521,7 +520,14 @@ defmodule HuddlzWeb.HuddlLive.New do
           </div>
 
           <div class="form-foot is-flush">
-            <.button variant={:primary} type="submit" disabled={is_nil(@modal_location_address)}>
+            <.button
+              variant={:primary}
+              type="submit"
+              disabled={
+                is_nil(@modal_location_address) or
+                  not Huddlz.TimeZone.canonical?(@modal_location_time_zone)
+              }
+            >
               Save address
             </.button>
             <.button variant={:secondary} patch={~p"/groups/#{@group.slug}/huddlz/new"}>
@@ -626,7 +632,6 @@ defmodule HuddlzWeb.HuddlLive.New do
            socket.assigns.modal_location_lat,
            socket.assigns.modal_location_lng,
            socket.assigns.group.id,
-           %{time_zone: socket.assigns.modal_location_time_zone},
            actor: user
          ) do
       {:ok, location} ->

@@ -61,6 +61,12 @@ defmodule Huddlz.Communities.Group do
         using: "GIST",
         where: "latitude IS NOT NULL AND longitude IS NOT NULL"
     end
+
+    check_constraints do
+      check_constraint :location,
+                       "groups_location_required_for_new_records",
+                       message: "is required"
+    end
   end
 
   actions do
@@ -74,17 +80,22 @@ defmodule Huddlz.Communities.Group do
 
     create :create_group do
       description "Create a new group; the owner is always the current actor."
-      accept [:name, :description, :location, :time_zone, :is_public]
+      accept [:name, :description, :location, :is_public]
 
       argument :slug, :string, allow_nil?: true
       argument :provided_latitude, :float, allow_nil?: true, public?: false
       argument :provided_longitude, :float, allow_nil?: true, public?: false
+
+      validate present(:location) do
+        message "is required"
+      end
 
       change Huddlz.Communities.Group.Changes.SetOwnerToActor
       change Huddlz.Communities.Group.Changes.AddOwnerAsMember
       change Huddlz.Communities.Group.Changes.GenerateSlug
       change Huddlz.Geocoding.ApplyProvidedCoordinates
       change {Huddlz.Geocoding.GeocodeChange, field: :location}
+      change Huddlz.Communities.Group.Changes.ResolveTimeZone
     end
 
     action :resolve_location_time_zone, :string do

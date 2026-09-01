@@ -55,7 +55,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Test Group",
             description: "A test group",
-            is_public: true
+            is_public: true,
+            location: "Test Location"
           },
           actor: owner
         )
@@ -417,7 +418,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Private Group",
             description: "A private group",
-            is_public: false
+            is_public: false,
+            location: "Test Location"
           },
           actor: owner
         )
@@ -433,8 +435,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
             description: "A private huddl",
             starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
             ends_at: DateTime.add(DateTime.utc_now(), 2, :day),
-            event_type: :in_person,
-            physical_location: "Secret Location",
+            event_type: :virtual,
+            virtual_link: "https://meet.example.com/private",
             is_private: true,
             group_id: private_group.id
           },
@@ -466,7 +468,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Test Group",
             description: "A test group",
-            is_public: true
+            is_public: true,
+            location: "Test Location"
           },
           actor: owner
         )
@@ -659,7 +662,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Test Group",
             description: "A test group",
-            is_public: true
+            is_public: true,
+            location: "Test Location"
           },
           actor: owner
         )

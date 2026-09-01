@@ -46,7 +46,6 @@ defmodule HuddlzWeb.Api.Json.GroupLocationTest do
               "address" => "456 API Ave",
               "latitude" => 32.78,
               "longitude" => -96.80,
-              "time_zone" => "America/Chicago",
               "group_id" => g.id
             }
           }
@@ -69,9 +68,8 @@ defmodule HuddlzWeb.Api.Json.GroupLocationTest do
           %{
             name: "Original",
             address: "1 Place",
-            latitude: 1.0,
-            longitude: 1.0,
-            time_zone: "America/New_York",
+            latitude: 29.89,
+            longitude: -81.31,
             group_id: g.id
           },
           actor: owner
@@ -105,9 +103,8 @@ defmodule HuddlzWeb.Api.Json.GroupLocationTest do
           %{
             name: "Doomed",
             address: "1 Place",
-            latitude: 1.0,
-            longitude: 1.0,
-            time_zone: "America/New_York",
+            latitude: 29.89,
+            longitude: -81.31,
             group_id: g.id
           },
           actor: owner

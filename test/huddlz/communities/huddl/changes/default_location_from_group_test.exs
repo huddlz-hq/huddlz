@@ -40,7 +40,7 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroupTest do
       assert virtual_huddl.longitude == -97.7431
     end
 
-    test "in-person huddl uses its own geocoded location" do
+    test "in-person huddl uses its saved venue location" do
       stub(Huddlz.MockGeocoding, :geocode, fn
         "Austin, TX" -> {:ok, %{latitude: 30.2672, longitude: -97.7431}}
         "Houston, TX" -> {:ok, %{latitude: 29.7604, longitude: -95.3698}}
@@ -52,11 +52,23 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroupTest do
       group =
         generate(group(owner_id: owner.id, is_public: true, location: "Austin, TX", actor: owner))
 
+      venue =
+        generate(
+          group_location(
+            group_id: group.id,
+            actor: owner,
+            address: "Houston, TX",
+            latitude: 29.7604,
+            longitude: -95.3698
+          )
+        )
+
       in_person_huddl =
         generate(
           huddl(
             event_type: :in_person,
             physical_location: "Houston, TX",
+            group_location_id: venue.id,
             group_id: group.id,
             creator_id: owner.id,
             actor: owner
@@ -98,7 +110,7 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroupTest do
       assert is_nil(virtual_huddl.longitude)
     end
 
-    test "hybrid huddl does not inherit group location" do
+    test "hybrid huddl uses its saved venue rather than the group location" do
       stub(Huddlz.MockGeocoding, :geocode, fn
         "Austin, TX" -> {:ok, %{latitude: 30.2672, longitude: -97.7431}}
         _ -> {:error, :not_found}
@@ -111,6 +123,17 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroupTest do
 
       assert group.latitude == 30.2672
 
+      venue =
+        generate(
+          group_location(
+            group_id: group.id,
+            actor: owner,
+            address: "Unknown Place",
+            latitude: 0.0,
+            longitude: 0.0
+          )
+        )
+
       # Hybrid huddl with no physical_location — geocoding will fail,
       # but DefaultLocationFromGroup should NOT kick in (only for virtual)
       hybrid_huddl =
@@ -119,17 +142,15 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroupTest do
             event_type: :hybrid,
             virtual_link: "https://zoom.us/test",
             physical_location: "Unknown Place",
+            group_location_id: venue.id,
             group_id: group.id,
             creator_id: owner.id,
             actor: owner
           )
         )
 
-      # Geocoding failed for "Unknown Place", so lat/lng should be nil
-      # (not inherited from group because event_type is :hybrid)
-      assert is_nil(hybrid_huddl.latitude)
-
-      assert is_nil(hybrid_huddl.longitude)
+      assert hybrid_huddl.latitude == venue.latitude
+      assert hybrid_huddl.longitude == venue.longitude
     end
   end
 end

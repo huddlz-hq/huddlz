@@ -44,7 +44,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         socket
         |> assign_edit_form(huddl, group_slug, user)
         |> assign(:group_locations, group_locations)
-        |> assign(:time_zone_options, Huddlz.TimeZone.iana_options())
         |> assign(:selected_location, find_matching_location(huddl, group_locations))
         |> ModalLocationHelpers.init()
         |> assign(:image_error, nil)
@@ -491,7 +490,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
             :if={@modal_location_address}
             time_zone={@modal_location_time_zone}
             error={@modal_location_time_zone_error}
-            options={@time_zone_options}
           />
 
           <div class="form-row">
@@ -510,7 +508,14 @@ defmodule HuddlzWeb.HuddlLive.Edit do
           </div>
 
           <div class="form-foot is-flush">
-            <.button variant={:primary} type="submit" disabled={is_nil(@modal_location_address)}>
+            <.button
+              variant={:primary}
+              type="submit"
+              disabled={
+                is_nil(@modal_location_address) or
+                  not Huddlz.TimeZone.canonical?(@modal_location_time_zone)
+              }
+            >
               Save address
             </.button>
             <.button
@@ -698,7 +703,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
            socket.assigns.modal_location_lat,
            socket.assigns.modal_location_lng,
            socket.assigns.huddl.group.id,
-           %{time_zone: socket.assigns.modal_location_time_zone},
            actor: user
          ) do
       {:ok, location} ->

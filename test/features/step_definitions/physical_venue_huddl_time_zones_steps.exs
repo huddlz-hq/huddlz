@@ -108,15 +108,15 @@ defmodule PhysicalVenueHuddlTimeZonesSteps do
     Map.put(context, :session, click_button(context.session, "Schedule huddl"))
   end
 
-  step "I am asked to choose a valid huddl time zone", context do
+  step "I am asked to choose a resolvable saved venue", context do
     context.session
-    |> assert_has("#huddl-time-zone[type='search']")
-    |> assert_has("#huddl-time-zone-error-0", text: "must be a valid IANA time zone")
+    |> refute_has("#huddl-time-zone[type='search']")
+    |> assert_has("#huddl-time-zone-resolution-error", text: "time zone can be resolved")
 
     context
   end
 
-  step "the huddl is not saved without one", context do
+  step "the huddl is not saved", context do
     assert [] ==
              Huddlz.Communities.get_group_huddlz!(context.group.id,
                actor: context.current_user

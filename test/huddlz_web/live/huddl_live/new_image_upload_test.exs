@@ -5,7 +5,6 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
   use HuddlzWeb.ConnCase, async: true
 
   import Huddlz.Generator
-  import Huddlz.Test.Helpers.LocationSelection
   import Phoenix.LiveViewTest
 
   alias Huddlz.Communities.Huddl
@@ -41,8 +40,9 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
         |> login(owner)
         |> live(~p"/groups/#{group.slug}/huddlz/new")
 
-      # Set physical location through autocomplete component
-      select_physical_location(view, "Test Location")
+      view
+      |> form("#huddl-form", %{"form" => %{"event_type" => "virtual"}})
+      |> render_change()
 
       view
       |> form("#huddl-form", %{
@@ -52,7 +52,8 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
           "date" => Date.to_iso8601(tomorrow),
           "start_time" => "14:00",
           "duration_minutes" => "60",
-          "event_type" => "in_person"
+          "event_type" => "virtual",
+          "virtual_link" => "https://meet.example.com/no-image"
         }
       })
       |> render_submit()
@@ -115,6 +116,10 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
         |> login(owner)
         |> live(~p"/groups/#{group.slug}/huddlz/new")
 
+      view
+      |> form("#huddl-form", %{"form" => %{"event_type" => "virtual"}})
+      |> render_change()
+
       # Upload a file first
       file_input(view, "#huddl-form", :huddl_image, [
         %{
@@ -128,9 +133,6 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
       # Should show uploaded confirmation
       assert render(view) =~ "Image uploaded"
 
-      # Set physical location through autocomplete component
-      select_physical_location(view, "Test Location")
-
       # Submit form with required fields
       view
       |> form("#huddl-form", %{
@@ -140,7 +142,8 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
           "date" => Date.to_iso8601(tomorrow),
           "start_time" => "14:00",
           "duration_minutes" => "60",
-          "event_type" => "in_person"
+          "event_type" => "virtual",
+          "virtual_link" => "https://meet.example.com/image-upload"
         }
       })
       |> render_submit()
@@ -183,18 +186,5 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
       # Should no longer show uploaded
       refute render(view) =~ "Image uploaded"
     end
-  end
-
-  # Helper to simulate selecting a physical location via SavedLocationPicker
-  defp select_physical_location(view, text) do
-    location = %Huddlz.Communities.GroupLocation{
-      name: text,
-      address: text,
-      latitude: 30.27,
-      longitude: -97.74,
-      time_zone: "America/Chicago"
-    }
-
-    select_saved_location(view, location)
   end
 end

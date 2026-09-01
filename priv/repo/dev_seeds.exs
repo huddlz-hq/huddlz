@@ -28,6 +28,7 @@ if Mix.env() == :test do
 end
 
 alias Huddlz.Accounts.User
+alias Huddlz.Communities
 alias Huddlz.Communities.{Group, GroupMember, Huddl}
 
 # Check if data already exists
@@ -70,13 +71,20 @@ if Enum.empty?(existing_groups) do
   users = [alice, bob, carol, dave, eve]
   IO.puts("Created #{length(users)} sample users")
 
+  create_group = fn attrs, actor, latitude, longitude ->
+    Group
+    |> Ash.Changeset.new()
+    |> Ash.Changeset.set_argument(:provided_latitude, latitude)
+    |> Ash.Changeset.set_argument(:provided_longitude, longitude)
+    |> Ash.Changeset.for_create(:create_group, attrs, actor: actor)
+    |> Ash.create!()
+  end
+
   # Create some groups with meaningful names
   # Using Ash changesets directly to ensure slug generation works properly
   groups =
     [
-      Group
-      |> Ash.Changeset.for_create(
-        :create_group,
+      create_group.(
         %{
           name: "Phoenix Elixir Meetup",
           description:
@@ -84,49 +92,46 @@ if Enum.empty?(existing_groups) do
           location: "Phoenix, AZ",
           is_public: true
         },
-        actor: alice
-      )
-      |> Ash.create(),
-      Group
-      |> Ash.Changeset.for_create(
-        :create_group,
+        alice,
+        33.4484,
+        -112.074
+      ),
+      create_group.(
         %{
           name: "Book Club Central",
           description:
             "Join us for our weekly book discussions. We read everything from fiction to technical books.",
-          location: "Online",
+          location: "St. Augustine, FL",
           is_public: true
         },
-        actor: bob
-      )
-      |> Ash.create(),
-      Group
-      |> Ash.Changeset.for_create(
-        :create_group,
+        bob,
+        29.9012,
+        -81.3124
+      ),
+      create_group.(
         %{
           name: "Hiking Adventures",
           description:
             "Weekend hiking trips for all skill levels. Safety first, adventure always!",
-          location: "Various Trails",
+          location: "Phoenix, AZ",
           is_public: true
         },
-        actor: carol
-      )
-      |> Ash.create(),
-      Group
-      |> Ash.Changeset.for_create(
-        :create_group,
+        carol,
+        33.4484,
+        -112.074
+      ),
+      create_group.(
         %{
           name: "Private Tech Talks",
           description: "Exclusive tech talks for members only.",
-          location: "Tech Hub",
+          location: "Phoenix, AZ",
           is_public: false
         },
-        actor: admin
+        admin,
+        33.4484,
+        -112.074
       )
-      |> Ash.create()
     ]
-    |> Enum.map(fn {:ok, group} -> group end)
 
   IO.puts("Created #{length(groups)} groups")
 
@@ -208,10 +213,48 @@ if Enum.empty?(existing_groups) do
   hiking_group = Enum.at(groups, 2)
   private_group = Enum.at(groups, 3)
 
+  phoenix_venue =
+    Communities.create_group_location!(
+      "TechHub Phoenix",
+      "TechHub Phoenix, 123 Main St, Phoenix, AZ",
+      33.4484,
+      -112.074,
+      phoenix_group.id,
+      actor: alice
+    )
+
+  book_venue =
+    Communities.create_group_location!(
+      "Central Library",
+      "Central Library, St. Augustine, FL",
+      29.9012,
+      -81.3124,
+      book_group.id,
+      actor: bob
+    )
+
+  hiking_venue =
+    Communities.create_group_location!(
+      "Phoenix Trailhead",
+      "Phoenix Trailhead, Phoenix, AZ",
+      33.4484,
+      -112.074,
+      hiking_group.id,
+      actor: carol
+    )
+
+  private_venue =
+    Communities.create_group_location!(
+      "Tech Hub Conference Room",
+      "Tech Hub Conference Room, Phoenix, AZ",
+      33.4484,
+      -112.074,
+      private_group.id,
+      actor: admin
+    )
+
   # Generate more huddlz to test pagination
   # Create a mix of upcoming, past, and in-progress events
-  huddlz = []
-
   # Phoenix Elixir Meetup huddlz (many events)
   phoenix_huddlz =
     Enum.map(1..15, fn i ->
@@ -246,6 +289,8 @@ if Enum.empty?(existing_groups) do
               DateTime.add(DateTime.utc_now(), days_offset * 24 * 3600 + 2 * 3600, :second)
               |> DateTime.truncate(:second),
             physical_location: physical_location,
+            group_location_id:
+              if(event_type in [:in_person, :hybrid], do: phoenix_venue.id),
             virtual_link: virtual_link,
             group_id: phoenix_group.id
           },
@@ -291,6 +336,7 @@ if Enum.empty?(existing_groups) do
               DateTime.add(DateTime.utc_now(), -days_ago * 24 * 3600 + 2 * 3600, :second)
               |> DateTime.truncate(:second),
             physical_location: "Central Library, Meeting Room #{Enum.random(["A", "B", "C"])}",
+            group_location_id: book_venue.id,
             group_id: book_group.id
           },
           actor: bob
@@ -337,6 +383,7 @@ if Enum.empty?(existing_groups) do
               |> DateTime.truncate(:second),
             physical_location:
               "#{Enum.at(["North", "South", "East", "West"], rem(i - 1, 4))} Trailhead Parking",
+            group_location_id: hiking_venue.id,
             group_id: hiking_group.id
           },
           actor: carol
@@ -405,6 +452,7 @@ if Enum.empty?(existing_groups) do
               DateTime.add(DateTime.utc_now(), i * 5 * 24 * 3600 + 3600, :second)
               |> DateTime.truncate(:second),
             physical_location: "Tech Hub Conference Room",
+            group_location_id: private_venue.id,
             virtual_link: "https://privatemeeting.example.com/#{i}",
             group_id: private_group.id,
             is_private: true

@@ -41,7 +41,13 @@ defmodule Huddlz.TimeZone do
 
   def display(nil, browser_time_zone), do: valid_or_display_fallback(browser_time_zone)
 
-  def display(user, browser_time_zone) do
+  def display(user, browser_time_zone), do: automatic_display(user, browser_time_zone)
+
+  @doc """
+  Resolves the Display time zone that Automatic mode would use, regardless of
+  the person's current preference mode.
+  """
+  def automatic_display(user, browser_time_zone) do
     [browser_time_zone, Map.get(user, :home_time_zone), eastern_fallback()]
     |> Enum.find(&valid?/1)
   end
@@ -89,6 +95,10 @@ defmodule Huddlz.TimeZone do
 
   def options do
     [{"Automatic (browser time zone)", "automatic"} | Tzdata.canonical_zone_list()]
+  end
+
+  def options(display_time_zone) do
+    [{"Automatic (#{display_time_zone})", "automatic"} | Tzdata.canonical_zone_list()]
   end
 
   def friendly_label(time_zone) when is_binary(time_zone) do

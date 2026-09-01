@@ -31,6 +31,7 @@ Feature: Group Management
     When I fill in the following:
       | Group name  | Secret Society |
       | Description | Private group  |
+      | Location    | New York, NY   |
     And I uncheck "Public group"
     And I click "Create group"
     Then I should see "Group created successfully"
@@ -122,5 +123,21 @@ Feature: Group Management
   Scenario: Group name is required
     Given I am signed in as "verified@example.com"
     When I visit "/groups/new"
+    And I fill in the following:
+      | Location | San Francisco, CA |
     And I click "Create group"
     Then I should see an error on the "Group name" field
+
+  @group_location_required
+  Scenario: Group location is required
+    Given I am signed in as "verified@example.com"
+    When I visit "/groups/new"
+    And I fill in the following:
+      | Group name | Location Required Group |
+    And I click "Create group"
+    Then I should see an error on the "Location" field
+    When I fill in the following:
+      | Location | San Francisco, CA |
+    And I click "Create group"
+    Then I should see "Group created successfully"
+    And I should see "Location Required Group"

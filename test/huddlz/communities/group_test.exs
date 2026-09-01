@@ -12,7 +12,12 @@ defmodule Huddlz.Communities.GroupTest do
         Group
         |> Ash.Changeset.for_create(
           :create_group,
-          %{name: "Slug From Name Test", description: "x", is_public: true}
+          %{
+            name: "Slug From Name Test",
+            description: "x",
+            location: "Test Location",
+            is_public: true
+          }
         )
         |> Ash.create(actor: actor)
 
@@ -29,6 +34,7 @@ defmodule Huddlz.Communities.GroupTest do
           %{
             name: "Custom Slug Test",
             description: "x",
+            location: "Test Location",
             is_public: true,
             slug: "i-picked-this"
           }
@@ -45,7 +51,13 @@ defmodule Huddlz.Communities.GroupTest do
         Group
         |> Ash.Changeset.for_create(
           :create_group,
-          %{name: "Blank Slug Test", description: "x", is_public: true, slug: ""}
+          %{
+            name: "Blank Slug Test",
+            description: "x",
+            location: "Test Location",
+            is_public: true,
+            slug: ""
+          }
         )
         |> Ash.create(actor: actor)
 
@@ -63,6 +75,7 @@ defmodule Huddlz.Communities.GroupTest do
         |> Ash.Changeset.for_create(:create_group, %{
           name: "Admin Created Group",
           description: "A test group created by an admin",
+          location: "Test Location",
           is_public: true
         })
         |> Ash.create(actor: admin_user)
@@ -80,6 +93,7 @@ defmodule Huddlz.Communities.GroupTest do
         |> Ash.Changeset.for_create(:create_group, %{
           name: "Verified Created Group",
           description: "A test group created by a user",
+          location: "Test Location",
           is_public: true
         })
         |> Ash.create(actor: verified_user)
@@ -97,6 +111,7 @@ defmodule Huddlz.Communities.GroupTest do
                |> Ash.Changeset.for_create(:create_group, %{
                  name: "Regular Created Group",
                  description: "A test group created by a user",
+                 location: "Test Location",
                  is_public: true
                })
                |> Ash.create(actor: regular_user)
@@ -159,6 +174,7 @@ defmodule Huddlz.Communities.GroupTest do
                |> Ash.Changeset.for_create(:create_group, %{
                  name: "User Owned Group",
                  description: "A group owned by a regular user",
+                 location: "Test Location",
                  is_public: true
                })
                |> Ash.create(actor: regular_user)
@@ -538,6 +554,7 @@ defmodule Huddlz.Communities.GroupTest do
                |> Ash.Changeset.for_create(:create_group, %{
                  name: "Test Group",
                  description: long_desc,
+                 location: "Test Location",
                  is_public: true
                })
                |> Ash.create(actor: owner)
@@ -699,6 +716,7 @@ defmodule Huddlz.Communities.GroupTest do
         |> Ash.Changeset.for_create(:create_group, %{
           name: "Alpha Search Group",
           description: "This is the first test group for search",
+          location: "Test Location",
           is_public: true
         })
         |> Ash.create(actor: owner)
@@ -708,6 +726,7 @@ defmodule Huddlz.Communities.GroupTest do
         |> Ash.Changeset.for_create(:create_group, %{
           name: "Beta Group",
           description: "This is a search test group with beta in the name",
+          location: "Test Location",
           is_public: true
         })
         |> Ash.create(actor: owner)
@@ -717,6 +736,7 @@ defmodule Huddlz.Communities.GroupTest do
         |> Ash.Changeset.for_create(:create_group, %{
           name: "Gamma Group",
           description: "This group contains alpha in the description",
+          location: "Test Location",
           is_public: true
         })
         |> Ash.create(actor: owner)

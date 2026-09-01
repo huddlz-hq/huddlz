@@ -42,8 +42,8 @@ defmodule HuddlzWeb.JsonApiTest do
           type: "huddl",
           attributes: %{
             title: "Unauthorized Huddl",
-            event_type: "in_person",
-            physical_location: "123 Main St",
+            event_type: "virtual",
+            virtual_link: "https://meet.example.com/unauthorized",
             starts_at: starts_at,
             ends_at: ends_at,
             time_zone: "Etc/UTC",
@@ -80,8 +80,8 @@ defmodule HuddlzWeb.JsonApiTest do
           type: "huddl",
           attributes: %{
             title: "Authorized Huddl",
-            event_type: "in_person",
-            physical_location: "456 Oak Ave",
+            event_type: "virtual",
+            virtual_link: "https://meet.example.com/authorized",
             starts_at: starts_at,
             ends_at: ends_at,
             time_zone: "Etc/UTC",

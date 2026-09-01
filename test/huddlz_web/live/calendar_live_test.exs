@@ -59,7 +59,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
   end
 
   describe "page chrome" do
-    test "renders v3 sidebar with Calendar active and v3 toolbar", %{
+    test "renders v3 sidebar with Today active and v3 toolbar", %{
       conn: conn,
       attendee: attendee
     } do
@@ -68,7 +68,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> visit("/calendar")
       |> assert_has("h1", text: "Calendar")
       |> assert_has("aside.sidebar")
-      |> assert_has(".sb-item.active", text: "Calendar")
+      |> assert_has("#primary-nav-today.sb-item.active", text: "Today")
       |> assert_has(".cal-toolbar")
       |> assert_has(".cal-nav-today", text: "Today")
       |> assert_has("#calendar-view-day.scope-tab.is-active[aria-current='page']", text: "Day")

@@ -44,8 +44,8 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                    description: "Test huddl by owner",
                    starts_at: DateTime.utc_now() |> DateTime.add(1, :day),
                    ends_at: DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.add(2, :hour),
-                   event_type: :in_person,
-                   physical_location: "123 Main St",
+                   event_type: :virtual,
+                   virtual_link: "https://meet.example.com/test",
                    group_id: group.id
                  },
                  actor: owner
@@ -88,8 +88,8 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                    description: "Test huddl by member",
                    starts_at: DateTime.utc_now() |> DateTime.add(1, :day),
                    ends_at: DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.add(2, :hour),
-                   event_type: :in_person,
-                   physical_location: "123 Main St",
+                   event_type: :virtual,
+                   virtual_link: "https://meet.example.com/test",
                    group_id: group.id
                  },
                  actor: member
@@ -107,8 +107,8 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                    description: "Test huddl by non-member",
                    starts_at: DateTime.utc_now() |> DateTime.add(1, :day),
                    ends_at: DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.add(2, :hour),
-                   event_type: :in_person,
-                   physical_location: "123 Main St",
+                   event_type: :virtual,
+                   virtual_link: "https://meet.example.com/test",
                    group_id: group.id
                  },
                  actor: non_member
@@ -126,8 +126,8 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                    description: "Test huddl by admin",
                    starts_at: DateTime.utc_now() |> DateTime.add(1, :day),
                    ends_at: DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.add(2, :hour),
-                   event_type: :in_person,
-                   physical_location: "123 Main St",
+                   event_type: :virtual,
+                   virtual_link: "https://meet.example.com/test",
                    group_id: group.id
                  },
                  actor: admin
@@ -152,8 +152,8 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                    description: "Test huddl",
                    starts_at: DateTime.utc_now() |> DateTime.add(1, :day),
                    ends_at: DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.add(2, :hour),
-                   event_type: :in_person,
-                   physical_location: "123 Main St",
+                   event_type: :virtual,
+                   virtual_link: "https://meet.example.com/test",
                    # Explicitly set to false
                    is_private: false,
                    group_id: private_group.id
@@ -180,8 +180,8 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                    description: "Test huddl",
                    starts_at: DateTime.utc_now() |> DateTime.add(1, :day),
                    ends_at: DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.add(2, :hour),
-                   event_type: :in_person,
-                   physical_location: "123 Main St",
+                   event_type: :virtual,
+                   virtual_link: "https://meet.example.com/test",
                    is_private: false,
                    group_id: public_group.id
                  },
@@ -201,8 +201,8 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                    description: "Test huddl",
                    starts_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day) |> DateTime.add(2, :hour),
-                   event_type: :in_person,
-                   physical_location: "123 Main St",
+                   event_type: :virtual,
+                   virtual_link: "https://meet.example.com/test",
                    is_private: true,
                    group_id: public_group.id
                  },

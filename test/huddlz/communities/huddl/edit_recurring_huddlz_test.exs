@@ -48,8 +48,9 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
       |> Ash.Changeset.for_create(:create, %{
         frequency: :weekly,
         repeat_until: repeat_until,
-        starts_at_local: DateTime.to_naive(starts_at),
-        ends_at_local: DateTime.to_naive(ends_at),
+        starts_at_local:
+          starts_at |> DateTime.shift_zone!(source.time_zone) |> DateTime.to_naive(),
+        ends_at_local: ends_at |> DateTime.shift_zone!(source.time_zone) |> DateTime.to_naive(),
         time_zone: source.time_zone
       })
       |> Ash.create!(authorize?: false)

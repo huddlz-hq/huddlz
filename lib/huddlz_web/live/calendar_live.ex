@@ -59,6 +59,10 @@ defmodule HuddlzWeb.CalendarLive do
   def mount(_params, _session, socket) do
     browser_time_zone = browser_time_zone(socket)
     time_zone = TimeZone.display(socket.assigns.current_user, browser_time_zone)
+
+    automatic_time_zone =
+      TimeZone.automatic_display(socket.assigns.current_user, browser_time_zone)
+
     today = today_in(time_zone)
 
     {:ok,
@@ -66,7 +70,7 @@ defmodule HuddlzWeb.CalendarLive do
      |> assign(:page_title, "Calendar")
      |> assign(:browser_time_zone, browser_time_zone)
      |> assign(:time_zone, time_zone)
-     |> assign(:time_zone_options, TimeZone.options())
+     |> assign(:time_zone_options, TimeZone.options(automatic_time_zone))
      |> assign(:today, today)
      |> stream_configure(:day_entries, dom_id: &"calendar-huddl-#{&1.huddl.id}")
      |> stream_configure(:week_entries, dom_id: &"calendar-huddl-#{&1.huddl.id}")
@@ -119,9 +123,13 @@ defmodule HuddlzWeb.CalendarLive do
 
     time_zone = TimeZone.display(socket.assigns.current_user, browser_time_zone)
 
+    automatic_time_zone =
+      TimeZone.automatic_display(socket.assigns.current_user, browser_time_zone)
+
     socket
     |> assign(:browser_time_zone, browser_time_zone)
     |> assign(:time_zone, time_zone)
+    |> assign(:time_zone_options, TimeZone.options(automatic_time_zone))
     |> assign(:today, today_in(time_zone))
     |> assign_calendar(socket.assigns.calendar_params)
   end
@@ -748,7 +756,7 @@ defmodule HuddlzWeb.CalendarLive do
       current_user={@current_user}
       unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
-      active="calendar"
+      active={calendar_sidebar_destination(@view_mode, @current_day?)}
     >
       <div class="page-head">
         <div>
@@ -959,6 +967,9 @@ defmodule HuddlzWeb.CalendarLive do
     </Layouts.app>
     """
   end
+
+  defp calendar_sidebar_destination(:day, true), do: "today"
+  defp calendar_sidebar_destination(_view_mode, _current_day?), do: "calendar"
 
   attr :week_start, Date, required: true
   attr :week_end, Date, required: true
