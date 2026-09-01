@@ -278,6 +278,7 @@ defmodule Huddlz.Communities.Huddl do
         message "is required when editing the whole series"
       end
 
+      change Huddlz.Communities.Huddl.Changes.DeriveTimeZoneFromVenue
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.ClearUnusedLocationFields

@@ -39,7 +39,8 @@ defmodule Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs do
     end
   end
 
-  defp build_datetime(date, time, time_zone) do
+  @doc false
+  def build_datetime(date, time, time_zone) do
     case DateTime.new(date, time, time_zone) do
       {:ok, local_starts_at} ->
         DateTime.shift_zone(local_starts_at, "Etc/UTC")
