@@ -134,6 +134,64 @@ defmodule HuddlzWeb.Components.HuddlForm do
 
   def duration_options, do: @duration_options
 
+  attr :resolution, :any, default: nil
+  attr :occurrence_field, Phoenix.HTML.FormField, required: true
+
+  def daylight_saving_resolution(%{resolution: %{kind: :gap}} = assigns) do
+    assigns =
+      assigns
+      |> assign(:requested_time, Calendar.strftime(assigns.resolution.requested, "%-I:%M %p"))
+      |> assign(:resolved_time, schedule_label(assigns.resolution.selected))
+      |> assign(:city, time_zone_city(assigns.resolution.time_zone))
+
+    ~H"""
+    <div id="daylight-saving-resolution" data-resolution="gap" class="form-help" role="status">
+      {@requested_time} does not exist in {@city}. It will be scheduled at {@resolved_time}.
+    </div>
+    """
+  end
+
+  def daylight_saving_resolution(%{resolution: %{kind: :ambiguous}} = assigns) do
+    ~H"""
+    <fieldset id="daylight-saving-resolution" data-resolution="ambiguous" class="form-row">
+      <legend class="form-label">Choose which local time you mean</legend>
+      <div class="form-grid">
+        <label for="ambiguous-time-earlier">
+          <input
+            id="ambiguous-time-earlier"
+            type="radio"
+            name={@occurrence_field.name}
+            value="earlier"
+            checked={to_string(@occurrence_field.value) != "later"}
+          />
+          {schedule_label(@resolution.earlier)} (earlier)
+        </label>
+        <label for="ambiguous-time-later">
+          <input
+            id="ambiguous-time-later"
+            type="radio"
+            name={@occurrence_field.name}
+            value="later"
+            checked={to_string(@occurrence_field.value) == "later"}
+          />
+          {schedule_label(@resolution.later)} (later)
+        </label>
+      </div>
+    </fieldset>
+    """
+  end
+
+  def daylight_saving_resolution(assigns), do: ~H""
+
+  defp schedule_label(datetime), do: Calendar.strftime(datetime, "%-I:%M %p %Z")
+
+  defp time_zone_city(time_zone) do
+    time_zone
+    |> String.split("/")
+    |> List.last()
+    |> String.replace("_", " ")
+  end
+
   attr :time_zone, :string, default: nil
   attr :error, :string, default: nil
   attr :options, :list, required: true

@@ -156,6 +156,12 @@ defmodule Huddlz.Communities.Huddl do
         constraints min: 15, max: 1440
       end
 
+      argument :ambiguous_time_occurrence, :atom do
+        allow_nil? true
+        default :earlier
+        constraints one_of: [:earlier, :later]
+      end
+
       argument :is_recurring, :boolean, default: false
       argument :repeat_until, :date, allow_nil?: true
       argument :frequency, :string, allow_nil?: true
@@ -247,6 +253,12 @@ defmodule Huddlz.Communities.Huddl do
       argument :duration_minutes, :integer do
         allow_nil? true
         constraints min: 15, max: 1440
+      end
+
+      argument :ambiguous_time_occurrence, :atom do
+        allow_nil? true
+        default :earlier
+        constraints one_of: [:earlier, :later]
       end
 
       argument :repeat_until, :date

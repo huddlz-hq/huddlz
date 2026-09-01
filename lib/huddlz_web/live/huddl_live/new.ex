@@ -88,6 +88,7 @@ defmodule HuddlzWeb.HuddlLive.New do
     |> assign(:show_virtual_link, false)
     |> assign(:show_physical_location, true)
     |> assign(:show_huddl_time_zone, false)
+    |> assign(:daylight_saving_resolution, nil)
     |> assign(:calculated_end_time, calculate_end_time(tomorrow, default_time, 60))
   end
 
@@ -225,6 +226,11 @@ defmodule HuddlzWeb.HuddlLive.New do
             <p :if={@calculated_end_time} class="form-help">
               Ends at: <strong>{@calculated_end_time}</strong>
             </p>
+
+            <.daylight_saving_resolution
+              resolution={@daylight_saving_resolution}
+              occurrence_field={@form[:ambiguous_time_occurrence]}
+            />
 
             <.searchable_select
               :if={@show_huddl_time_zone}
@@ -554,6 +560,7 @@ defmodule HuddlzWeb.HuddlLive.New do
       socket
       |> update_event_type_visibility(params)
       |> update_calculated_end_time(params)
+      |> update_daylight_saving_resolution(params)
 
     form = AshPhoenix.Form.validate(socket.assigns.form, params)
     {:noreply, assign(socket, :form, to_form(form))}

@@ -117,6 +117,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     |> assign(:schedule_time_zone, huddl.time_zone)
     |> assign(:show_physical_location, huddl.event_type in [:in_person, :hybrid])
     |> assign(:show_virtual_link, huddl.event_type in [:virtual, :hybrid])
+    |> assign(:daylight_saving_resolution, nil)
     |> assign(:calculated_end_time, calculate_end_time(date, start_time, duration_minutes))
     |> assign(:form, to_form(form))
   end
@@ -357,6 +358,11 @@ defmodule HuddlzWeb.HuddlLive.Edit do
             <p :if={@calculated_end_time} class="form-help">
               Ends at: <strong>{@calculated_end_time}</strong>
             </p>
+
+            <.daylight_saving_resolution
+              resolution={@daylight_saving_resolution}
+              occurrence_field={@form[:ambiguous_time_occurrence]}
+            />
 
             <%= if @huddl.huddl_template_id && edit_type_value(@form) == "all" do %>
               <div class="form-row form-row-inline">
@@ -645,6 +651,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
       socket
       |> update_event_type_visibility(params)
       |> update_calculated_end_time(params)
+      |> update_daylight_saving_resolution(params)
 
     form = AshPhoenix.Form.validate(socket.assigns.form, params)
     {:noreply, assign(socket, :form, to_form(form))}

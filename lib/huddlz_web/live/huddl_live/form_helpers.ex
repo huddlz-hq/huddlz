@@ -5,6 +5,8 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
   """
   import Phoenix.Component, only: [assign: 3]
 
+  alias Huddlz.Scheduling.LocalDateTime
+
   def device_time_zone(socket) do
     socket
     |> Phoenix.LiveView.get_connect_params()
@@ -33,6 +35,21 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
       _ ->
         socket
     end
+  end
+
+  def update_daylight_saving_resolution(socket, params) do
+    resolution =
+      with {:ok, date} <- Date.from_iso8601(params["date"] || ""),
+           {:ok, time} <- parse_time(params["start_time"] || ""),
+           time_zone when is_binary(time_zone) and time_zone != "" <- params["time_zone"],
+           occurrence <- occurrence(params["ambiguous_time_occurrence"]),
+           {:ok, resolution} <- LocalDateTime.resolve(date, time, time_zone, occurrence) do
+        resolution
+      else
+        _ -> nil
+      end
+
+    assign(socket, :daylight_saving_resolution, resolution)
   end
 
   def update_event_type_visibility(socket, params) do
@@ -170,4 +187,7 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
         :error
     end
   end
+
+  defp occurrence("later"), do: :later
+  defp occurrence(_occurrence), do: :earlier
 end
