@@ -4,6 +4,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
   """
   use HuddlzWeb, :live_view
 
+  import HuddlzWeb.Components.HuddlForm, only: [venue_time_zone_field: 1]
   import HuddlzWeb.HuddlLive.FormHelpers, only: [load_group_locations: 2]
 
   alias Huddlz.Communities
@@ -41,6 +42,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
             |> assign(:page_title, "#{group.name} — Locations")
             |> assign(:group, group)
             |> assign(:locations, locations)
+            |> assign(:time_zone_options, Huddlz.TimeZone.iana_options())
             |> ModalLocationHelpers.init()
             |> assign(:editing_location_id, nil)
             |> assign(:deleting_location, nil)
@@ -225,7 +227,12 @@ defmodule HuddlzWeb.GroupLive.Locations do
           Saved venues show up in the venue picker for everyone in your group.
         </p>
 
-        <form phx-submit="save_new_location" phx-change="modal_form_changed" class="form-grid">
+        <form
+          id="group-location-form"
+          phx-submit="save_new_location"
+          phx-change="modal_form_changed"
+          class="form-grid"
+        >
           <div class="form-row">
             <label class="form-label" for="modal-address-autocomplete-input">
               Search for an address
@@ -240,6 +247,13 @@ defmodule HuddlzWeb.GroupLive.Locations do
               show_clear={true}
             />
           </div>
+
+          <.venue_time_zone_field
+            :if={@modal_location_address}
+            time_zone={@modal_location_time_zone}
+            error={@modal_location_time_zone_error}
+            options={@time_zone_options}
+          />
 
           <div class="form-row">
             <label class="form-label" for="location-name-input">Location name (optional)</label>
@@ -281,6 +295,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
            socket.assigns.modal_location_lat,
            socket.assigns.modal_location_lng,
            socket.assigns.group.id,
+           %{time_zone: socket.assigns.modal_location_time_zone},
            actor: user
          ) do
       {:ok, _location} ->
@@ -293,18 +308,13 @@ defmodule HuddlzWeb.GroupLive.Locations do
          |> push_patch(to: ~p"/groups/#{socket.assigns.group.slug}/locations")}
 
       {:error, _error} ->
-        {:noreply, put_flash(socket, :error, "Failed to save location")}
+        {:noreply, ModalLocationHelpers.require_time_zone_choice(socket)}
     end
   end
 
   @impl true
-  def handle_event("modal_form_changed", %{"location_name" => name}, socket) do
-    {:noreply, assign(socket, :modal_location_name, name)}
-  end
-
-  @impl true
-  def handle_event("modal_form_changed", _params, socket) do
-    {:noreply, socket}
+  def handle_event("modal_form_changed", params, socket) do
+    {:noreply, ModalLocationHelpers.apply_form_changes(socket, params)}
   end
 
   @impl true

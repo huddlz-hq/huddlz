@@ -235,6 +235,33 @@ defmodule HuddlzWeb.HuddlLive.New do
               help="The authoritative local time for this virtual huddl. Search by city or IANA name."
             />
 
+            <div
+              :if={
+                @selected_location && @show_physical_location &&
+                  Huddlz.TimeZone.canonical?(@selected_location.time_zone)
+              }
+              id="huddl-time-zone-derived"
+              data-time-zone={@selected_location.time_zone}
+              class="form-row"
+            >
+              <span class="form-label">huddl time zone</span>
+              <p class="form-help">
+                {Huddlz.TimeZone.friendly_label(@selected_location.time_zone)}
+              </p>
+            </div>
+
+            <.searchable_select
+              :if={
+                @selected_location && @show_physical_location &&
+                  !Huddlz.TimeZone.canonical?(@selected_location.time_zone)
+              }
+              field={@form[:time_zone]}
+              id="huddl-time-zone"
+              label="huddl time zone"
+              options={@time_zone_options}
+              help="We could not resolve this venue. Choose its authoritative local time zone."
+            />
+
             <div class="form-row">
               <.toggle field={@form[:is_recurring]} label="Recurring huddl" />
               <p class="form-help">Repeats on a schedule until you stop it.</p>
@@ -444,7 +471,12 @@ defmodule HuddlzWeb.HuddlLive.New do
       >
         <h2 class="font-display text-xl tracking-tight text-glow mb-6">Add New Address</h2>
 
-        <form phx-submit="save_location" phx-change="modal_form_changed" class="form-grid">
+        <form
+          id="new-huddl-location-form"
+          phx-submit="save_location"
+          phx-change="modal_form_changed"
+          class="form-grid"
+        >
           <div class="form-row">
             <label class="form-label" for="modal-address-autocomplete-input">
               Search for an address
@@ -459,6 +491,13 @@ defmodule HuddlzWeb.HuddlLive.New do
               show_clear={true}
             />
           </div>
+
+          <.venue_time_zone_field
+            :if={@modal_location_address}
+            time_zone={@modal_location_time_zone}
+            error={@modal_location_time_zone_error}
+            options={@time_zone_options}
+          />
 
           <div class="form-row">
             <label class="form-label" for="location-name-input">
@@ -503,8 +542,12 @@ defmodule HuddlzWeb.HuddlLive.New do
   def handle_event("validate", %{"form" => params}, socket) do
     params =
       params
-      |> default_huddl_time_zone(socket.assigns.group.time_zone)
+      |> default_huddl_time_zone(
+        socket.assigns.group.time_zone,
+        socket.assigns[:selected_location]
+      )
       |> inject_saved_location_params(socket.assigns[:selected_location])
+      |> put_venue_time_zone(socket.assigns[:selected_location])
       |> mark_location_used_after_submit(socket.assigns.form)
 
     socket =
@@ -525,8 +568,12 @@ defmodule HuddlzWeb.HuddlLive.New do
       params
       |> Map.put("group_id", socket.assigns.group.id)
       |> Map.put("lifecycle_state", lifecycle_state)
-      |> default_huddl_time_zone(socket.assigns.group.time_zone)
+      |> default_huddl_time_zone(
+        socket.assigns.group.time_zone,
+        socket.assigns[:selected_location]
+      )
       |> inject_saved_location_params(socket.assigns[:selected_location])
+      |> put_venue_time_zone(socket.assigns[:selected_location])
       |> mark_location_used(socket.assigns.form)
 
     case AshPhoenix.Form.submit(socket.assigns.form,
@@ -572,6 +619,7 @@ defmodule HuddlzWeb.HuddlLive.New do
            socket.assigns.modal_location_lat,
            socket.assigns.modal_location_lng,
            socket.assigns.group.id,
+           %{time_zone: socket.assigns.modal_location_time_zone},
            actor: user
          ) do
       {:ok, location} ->
@@ -584,23 +632,21 @@ defmodule HuddlzWeb.HuddlLive.New do
          |> push_patch(to: new_huddl_path(socket))}
 
       {:error, _error} ->
-        {:noreply, put_flash(socket, :error, "Failed to save location")}
+        {:noreply, ModalLocationHelpers.require_time_zone_choice(socket)}
     end
   end
 
   @impl true
-  def handle_event("modal_form_changed", %{"location_name" => name}, socket) do
-    {:noreply, assign(socket, :modal_location_name, name)}
-  end
-
-  @impl true
-  def handle_event("modal_form_changed", _params, socket) do
-    {:noreply, socket}
+  def handle_event("modal_form_changed", params, socket) do
+    {:noreply, ModalLocationHelpers.apply_form_changes(socket, params)}
   end
 
   @impl true
   def handle_info({:saved_location_selected, "saved-location-picker", location}, socket) do
-    {:noreply, apply_saved_location_to_form(socket, location)}
+    {:noreply,
+     socket
+     |> apply_saved_location_to_form(location)
+     |> apply_venue_time_zone_to_form(location)}
   end
 
   @impl true
@@ -645,10 +691,41 @@ defmodule HuddlzWeb.HuddlLive.New do
     ~p"/groups/#{socket.assigns.group.slug}/huddlz/new"
   end
 
-  defp default_huddl_time_zone(params, group_time_zone) do
+  defp default_huddl_time_zone(params, _group_time_zone, %{time_zone: time_zone})
+       when time_zone in [nil, ""],
+       do: params
+
+  defp default_huddl_time_zone(params, group_time_zone, _selected_location) do
     case Map.get(params, "time_zone") do
       time_zone when is_binary(time_zone) and time_zone != "" -> params
       _ -> Map.put(params, "time_zone", group_time_zone)
     end
   end
+
+  defp put_venue_time_zone(params, nil), do: params
+
+  defp put_venue_time_zone(params, location) do
+    case venue_time_zone_value(location) do
+      "" -> params
+      time_zone -> Map.put(params, "time_zone", time_zone)
+    end
+  end
+
+  defp apply_venue_time_zone_to_form(socket, location) do
+    current_params = socket.assigns.form.source.params || %{}
+    time_zone = venue_time_zone_value(location)
+
+    form =
+      socket.assigns.form.source
+      |> AshPhoenix.Form.validate(Map.put(current_params, "time_zone", time_zone))
+      |> to_form()
+
+    assign(socket, :form, form)
+  end
+
+  defp venue_time_zone_value(%{time_zone: time_zone})
+       when is_binary(time_zone) and time_zone != "",
+       do: time_zone
+
+  defp venue_time_zone_value(_location), do: ""
 end

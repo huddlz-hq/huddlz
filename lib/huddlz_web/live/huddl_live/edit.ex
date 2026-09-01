@@ -44,6 +44,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         socket
         |> assign_edit_form(huddl, group_slug, user)
         |> assign(:group_locations, group_locations)
+        |> assign(:time_zone_options, Huddlz.TimeZone.iana_options())
         |> assign(:selected_location, find_matching_location(huddl, group_locations))
         |> ModalLocationHelpers.init()
         |> assign(:image_error, nil)
@@ -459,7 +460,12 @@ defmodule HuddlzWeb.HuddlLive.Edit do
       >
         <h2 class="font-display text-xl tracking-tight text-glow mb-6">Add New Address</h2>
 
-        <form phx-submit="save_location" phx-change="modal_form_changed" class="form-grid">
+        <form
+          id="edit-huddl-location-form"
+          phx-submit="save_location"
+          phx-change="modal_form_changed"
+          class="form-grid"
+        >
           <div class="form-row">
             <label class="form-label" for="modal-address-autocomplete-input">
               Search for an address
@@ -474,6 +480,13 @@ defmodule HuddlzWeb.HuddlLive.Edit do
               show_clear={true}
             />
           </div>
+
+          <.venue_time_zone_field
+            :if={@modal_location_address}
+            time_zone={@modal_location_time_zone}
+            error={@modal_location_time_zone_error}
+            options={@time_zone_options}
+          />
 
           <div class="form-row">
             <label class="form-label" for="location-name-input">
@@ -678,6 +691,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
            socket.assigns.modal_location_lat,
            socket.assigns.modal_location_lng,
            socket.assigns.huddl.group.id,
+           %{time_zone: socket.assigns.modal_location_time_zone},
            actor: user
          ) do
       {:ok, location} ->
@@ -692,18 +706,13 @@ defmodule HuddlzWeb.HuddlLive.Edit do
          )}
 
       {:error, _error} ->
-        {:noreply, put_flash(socket, :error, "Failed to save location")}
+        {:noreply, ModalLocationHelpers.require_time_zone_choice(socket)}
     end
   end
 
   @impl true
-  def handle_event("modal_form_changed", %{"location_name" => name}, socket) do
-    {:noreply, assign(socket, :modal_location_name, name)}
-  end
-
-  @impl true
-  def handle_event("modal_form_changed", _params, socket) do
-    {:noreply, socket}
+  def handle_event("modal_form_changed", params, socket) do
+    {:noreply, ModalLocationHelpers.apply_form_changes(socket, params)}
   end
 
   @impl true

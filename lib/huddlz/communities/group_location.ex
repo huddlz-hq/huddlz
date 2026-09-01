@@ -59,6 +59,10 @@ defmodule Huddlz.Communities.GroupLocation do
     create :create do
       primary? true
       accept [:name, :address, :latitude, :longitude, :group_id]
+
+      argument :time_zone, :string, allow_nil?: true
+
+      change Huddlz.Communities.GroupLocation.Changes.ResolveTimeZone
     end
 
     update :update do
@@ -107,6 +111,10 @@ defmodule Huddlz.Communities.GroupLocation do
     end
   end
 
+  validations do
+    validate Huddlz.TimeZone.Validation
+  end
+
   attributes do
     uuid_primary_key :id
 
@@ -134,6 +142,12 @@ defmodule Huddlz.Communities.GroupLocation do
       allow_nil? false
       public? true
       constraints min: -180, max: 180
+    end
+
+    attribute :time_zone, :string do
+      allow_nil? false
+      public? true
+      description "Canonical IANA time zone resolved from this venue's coordinates"
     end
 
     create_timestamp :inserted_at

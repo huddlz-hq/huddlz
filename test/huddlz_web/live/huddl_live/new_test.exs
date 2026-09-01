@@ -838,7 +838,9 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> Ash.read_one!(actor: owner)
 
       # Verify end time is on the next day
-      assert Date.diff(DateTime.to_date(huddl.ends_at), DateTime.to_date(huddl.starts_at)) == 1
+      local_start = DateTime.shift_zone!(huddl.starts_at, huddl.time_zone)
+      local_end = DateTime.shift_zone!(huddl.ends_at, huddl.time_zone)
+      assert Date.diff(DateTime.to_date(local_end), DateTime.to_date(local_start)) == 1
       # Verify duration is 6 hours
       duration_minutes = DateTime.diff(huddl.ends_at, huddl.starts_at, :minute)
       assert duration_minutes == 360
@@ -912,7 +914,8 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       name: text,
       address: text,
       latitude: 30.27,
-      longitude: -97.74
+      longitude: -97.74,
+      time_zone: "America/Chicago"
     }
 
     select_saved_location(view, location)

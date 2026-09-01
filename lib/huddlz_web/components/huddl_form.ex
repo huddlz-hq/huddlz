@@ -133,4 +133,30 @@ defmodule HuddlzWeb.Components.HuddlForm do
   end
 
   def duration_options, do: @duration_options
+
+  attr :time_zone, :string, default: nil
+  attr :error, :string, default: nil
+  attr :options, :list, required: true
+
+  def venue_time_zone_field(assigns) do
+    ~H"""
+    <%= if @error do %>
+      <HuddlzWeb.Components.Input.searchable_select
+        id="venue-time-zone"
+        name="location_time_zone"
+        label="huddl time zone"
+        value={@time_zone}
+        options={@options}
+        errors={[@error]}
+      />
+    <% else %>
+      <div class="form-row">
+        <span class="form-label">huddl time zone</span>
+        <p id="venue-time-zone-derived" class="form-help">
+          {Huddlz.TimeZone.friendly_label(@time_zone)}
+        </p>
+      </div>
+    <% end %>
+    """
+  end
 end

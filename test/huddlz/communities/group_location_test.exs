@@ -48,6 +48,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
                  address: "200 Park Ave, Austin, TX",
                  latitude: 30.28,
                  longitude: -97.75,
+                 time_zone: "America/Chicago",
                  group_id: group.id
                })
                |> Ash.create(actor: organizer)
@@ -167,6 +168,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
                  address: "200 Other St, Austin, TX",
                  latitude: 30.28,
                  longitude: -97.75,
+                 time_zone: "America/Chicago",
                  group_id: group2.id
                })
                |> Ash.create(actor: owner)

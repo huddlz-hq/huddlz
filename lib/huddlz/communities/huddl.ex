@@ -180,6 +180,7 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Communities.Huddl.Changes.SetCreatorToActor
       change Huddlz.Communities.Huddl.Changes.AddCreatorAsAttendee
       change Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup
+      change Huddlz.Communities.Huddl.Changes.DeriveTimeZoneFromVenue
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.AssignPendingImage

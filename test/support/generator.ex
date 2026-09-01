@@ -205,6 +205,7 @@ defmodule Huddlz.Generator do
           end),
         latitude: 30.27,
         longitude: -97.74,
+        time_zone: "America/New_York",
         group_id: group_id
       ],
       overrides: opts,

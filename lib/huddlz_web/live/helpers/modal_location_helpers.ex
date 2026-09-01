@@ -3,14 +3,18 @@ defmodule HuddlzWeb.Live.Helpers.ModalLocationHelpers do
   Shared state handling for the "Select a location" modal used in the
   huddl and group new/edit/locations LiveViews.
 
-  The modal owns four socket assigns:
+  The modal owns location and time-zone assigns:
 
     * `:modal_location_address` — full display text (nil when empty)
     * `:modal_location_lat` / `:modal_location_lng` — geocoded coordinates
     * `:modal_location_name` — short name (bound to the name input)
+    * `:modal_location_time_zone` — resolved or manually selected IANA zone
+    * `:modal_location_time_zone_error` — repair guidance after resolution failure
   """
 
   import Phoenix.Component, only: [assign: 2]
+
+  @time_zone_error "Choose a valid huddl time zone"
 
   @doc "Initialize all modal location assigns to their empty values."
   def init(socket) do
@@ -18,7 +22,9 @@ defmodule HuddlzWeb.Live.Helpers.ModalLocationHelpers do
       modal_location_address: nil,
       modal_location_lat: nil,
       modal_location_lng: nil,
-      modal_location_name: ""
+      modal_location_name: "",
+      modal_location_time_zone: nil,
+      modal_location_time_zone_error: nil
     )
   end
 
@@ -35,11 +41,63 @@ defmodule HuddlzWeb.Live.Helpers.ModalLocationHelpers do
     * `:latitude` / `:longitude`
   """
   def apply_selected(socket, %{} = payload) do
+    latitude = Map.get(payload, :latitude)
+    longitude = Map.get(payload, :longitude)
+
+    socket =
+      assign(socket,
+        modal_location_address: Map.get(payload, :display_text),
+        modal_location_lat: latitude,
+        modal_location_lng: longitude,
+        modal_location_name: Map.get(payload, :main_text) || ""
+      )
+
+    resolve_time_zone(socket, latitude, longitude)
+  end
+
+  def update_time_zone(socket, time_zone) do
     assign(socket,
-      modal_location_address: Map.get(payload, :display_text),
-      modal_location_lat: Map.get(payload, :latitude),
-      modal_location_lng: Map.get(payload, :longitude),
-      modal_location_name: Map.get(payload, :main_text) || ""
+      modal_location_time_zone: time_zone,
+      modal_location_time_zone_error:
+        if(Huddlz.TimeZone.canonical?(time_zone),
+          do: nil,
+          else: @time_zone_error
+        )
     )
+  end
+
+  def apply_form_changes(socket, params) do
+    socket
+    |> maybe_assign_name(params)
+    |> maybe_assign_time_zone(params)
+  end
+
+  def require_time_zone_choice(socket) do
+    assign(socket, modal_location_time_zone_error: @time_zone_error)
+  end
+
+  defp maybe_assign_name(socket, %{"location_name" => name}),
+    do: assign(socket, modal_location_name: name)
+
+  defp maybe_assign_name(socket, _params), do: socket
+
+  defp maybe_assign_time_zone(socket, %{"location_time_zone" => time_zone}),
+    do: update_time_zone(socket, time_zone)
+
+  defp maybe_assign_time_zone(socket, _params), do: socket
+
+  defp resolve_time_zone(socket, latitude, longitude) do
+    case Huddlz.LocationTimeZone.resolve(latitude, longitude) do
+      {:ok, time_zone} ->
+        assign(socket,
+          modal_location_time_zone: time_zone,
+          modal_location_time_zone_error: nil
+        )
+
+      {:error, _reason} ->
+        socket
+        |> assign(modal_location_time_zone: "")
+        |> require_time_zone_choice()
+    end
   end
 end

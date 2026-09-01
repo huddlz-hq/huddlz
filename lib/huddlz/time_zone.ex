@@ -91,10 +91,14 @@ defmodule Huddlz.TimeZone do
     [{"Automatic (browser time zone)", "automatic"} | Tzdata.canonical_zone_list()]
   end
 
+  def friendly_label(time_zone) when is_binary(time_zone) do
+    city = time_zone |> String.split("/") |> List.last() |> String.replace("_", " ")
+    "#{city} (#{time_zone})"
+  end
+
   def iana_options do
     Enum.map(Tzdata.canonical_zone_list(), fn time_zone ->
-      city = time_zone |> String.split("/") |> List.last() |> String.replace("_", " ")
-      {"#{city} (#{time_zone})", time_zone}
+      {friendly_label(time_zone), time_zone}
     end)
   end
 

@@ -191,7 +191,8 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
       name: text,
       address: text,
       latitude: 30.27,
-      longitude: -97.74
+      longitude: -97.74,
+      time_zone: "America/Chicago"
     }
 
     select_saved_location(view, location)
