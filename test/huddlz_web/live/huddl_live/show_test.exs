@@ -838,7 +838,10 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
         HuddlTemplate
         |> Ash.Changeset.for_create(:create, %{
           frequency: :weekly,
-          repeat_until: DateTime.add(DateTime.utc_now(), 30, :day)
+          repeat_until: DateTime.add(DateTime.utc_now(), 30, :day),
+          starts_at_local: Date.utc_today() |> Date.add(2) |> NaiveDateTime.new!(~T[14:00:00]),
+          ends_at_local: Date.utc_today() |> Date.add(2) |> NaiveDateTime.new!(~T[15:00:00]),
+          time_zone: "Etc/UTC"
         })
         |> Ash.create!(authorize?: false)
 

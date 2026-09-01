@@ -145,7 +145,12 @@ defmodule Huddlz.Communities.HuddlLifecycleTest do
       HuddlTemplate
       |> Ash.Changeset.for_create(:create, %{
         frequency: :weekly,
-        repeat_until: Date.add(Date.utc_today(), 30)
+        repeat_until: Date.add(Date.utc_today(), 30),
+        starts_at_local:
+          Date.utc_today() |> Date.add(2) |> DateTime.new!(~T[14:00:00]) |> DateTime.to_naive(),
+        ends_at_local:
+          Date.utc_today() |> Date.add(2) |> DateTime.new!(~T[15:00:00]) |> DateTime.to_naive(),
+        time_zone: "Etc/UTC"
       })
       |> Ash.create!(authorize?: false)
 

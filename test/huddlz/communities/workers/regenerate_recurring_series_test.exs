@@ -79,6 +79,17 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
     # Template linked on the same insert — no re-entrant update needed.
     refute is_nil(huddl.huddl_template_id)
 
+    huddl = Ash.load!(huddl, :huddl_template, authorize?: false)
+
+    local_starts_at =
+      huddl.starts_at |> DateTime.shift_zone!(huddl.time_zone) |> DateTime.to_naive()
+
+    local_ends_at = huddl.ends_at |> DateTime.shift_zone!(huddl.time_zone) |> DateTime.to_naive()
+
+    assert huddl.huddl_template.starts_at_local == local_starts_at
+    assert huddl.huddl_template.ends_at_local == local_ends_at
+    assert huddl.huddl_template.time_zone == huddl.time_zone
+
     # Fan-out is deferred: nothing generated until the queue runs.
     assert future_instances(huddl) == []
     assert_enqueued(worker: RegenerateRecurringSeries, args: %{huddl_id: huddl.id})

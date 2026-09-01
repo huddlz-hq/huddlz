@@ -50,10 +50,13 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz do
 
         {:ok, huddl_template} =
           huddl_template
-          |> Ash.Changeset.for_update(:update, %{
-            repeat_until: repeat_until,
-            frequency: frequency
-          })
+          |> Ash.Changeset.for_update(
+            :update,
+            Map.merge(HuddlTemplate.wall_clock_schedule(huddl), %{
+              repeat_until: repeat_until,
+              frequency: frequency
+            })
+          )
           |> Ash.update(authorize?: false)
 
         # Synchronous: "edit all" is a rare organizer action, bounded at the

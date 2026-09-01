@@ -16,6 +16,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.HuddlImage
+  alias Huddlz.Scheduling.LocalDateTime
   alias Huddlz.Storage.HuddlImages
 
   @max_instances 104
@@ -62,7 +63,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   update emails for instances they're attending.
   """
   def reconcile_future_instances(source, template, actor) do
-    desired = desired_occurrences(source, template)
+    desired = desired_occurrences(template)
 
     existing =
       source
@@ -136,10 +137,15 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
 
   def generate_huddlz_from_template(template, source, count) do
     interval_days = interval_days(template)
-    starts_at = DateTime.add(source.starts_at, interval_days, :day)
-    ends_at = DateTime.add(source.ends_at, interval_days, :day)
+    starts_at_local = NaiveDateTime.add(template.starts_at_local, count * interval_days, :day)
+    ends_at_local = NaiveDateTime.add(template.ends_at_local, count * interval_days, :day)
+    next_starts_at_local = NaiveDateTime.add(starts_at_local, interval_days, :day)
+    next_ends_at_local = NaiveDateTime.add(ends_at_local, interval_days, :day)
 
-    if Date.before?(DateTime.to_date(starts_at), template.repeat_until) do
+    if Date.before?(NaiveDateTime.to_date(next_starts_at_local), repeat_until_date(template)) do
+      {starts_at, ends_at} =
+        resolve_occurrence!(next_starts_at_local, next_ends_at_local, template.time_zone)
+
       new_huddl = create_instance!(source, template, starts_at, ends_at)
       generate_huddlz_from_template(template, new_huddl, count + 1)
     else
@@ -162,16 +168,19 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   # The start/end times the series should have, from the source forward, capped
   # at @max_instances. Times shift with the source, so editing the time moves
   # every future occurrence.
-  defp desired_occurrences(source, template) do
+  defp desired_occurrences(template) do
     interval_days = interval_days(template)
-    duration = DateTime.diff(source.ends_at, source.starts_at, :second)
 
     1..@max_instances
     |> Enum.reduce_while([], fn k, acc ->
-      starts_at = DateTime.add(source.starts_at, k * interval_days, :day)
+      starts_at_local = NaiveDateTime.add(template.starts_at_local, k * interval_days, :day)
+      ends_at_local = NaiveDateTime.add(template.ends_at_local, k * interval_days, :day)
 
-      if Date.before?(DateTime.to_date(starts_at), template.repeat_until) do
-        {:cont, [{starts_at, DateTime.add(starts_at, duration, :second)} | acc]}
+      if Date.before?(NaiveDateTime.to_date(starts_at_local), repeat_until_date(template)) do
+        {starts_at, ends_at} =
+          resolve_occurrence!(starts_at_local, ends_at_local, template.time_zone)
+
+        {:cont, [{starts_at, ends_at} | acc]}
       else
         {:halt, acc}
       end
@@ -285,6 +294,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
       |> Map.put(:group_id, source.group_id)
       |> Map.put(:huddl_template_id, template.id)
       |> Map.put(:lifecycle_state, source.lifecycle_state)
+      |> Map.put(:time_zone, template.time_zone)
     else
       base
     end
@@ -292,4 +302,32 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
 
   defp interval_days(%{interval: interval, unit: :week}), do: interval * 7
   defp interval_days(%{interval: interval, unit: :month}), do: interval * 30
+
+  defp repeat_until_date(%{repeat_until: %Date{} = date}), do: date
+  defp repeat_until_date(%{repeat_until: datetime}), do: DateTime.to_date(datetime)
+
+  defp resolve_occurrence!(starts_at_local, ends_at_local, time_zone) do
+    {:ok, start_resolution} = resolve_local(starts_at_local, time_zone)
+
+    gap_adjustment =
+      start_resolution.selected
+      |> DateTime.to_naive()
+      |> NaiveDateTime.diff(start_resolution.requested, :second)
+
+    adjusted_ends_at_local = NaiveDateTime.add(ends_at_local, gap_adjustment, :second)
+    {:ok, end_resolution} = resolve_local(adjusted_ends_at_local, time_zone)
+
+    {
+      DateTime.shift_zone!(start_resolution.selected, "Etc/UTC"),
+      DateTime.shift_zone!(end_resolution.selected, "Etc/UTC")
+    }
+  end
+
+  defp resolve_local(local_naive, time_zone) do
+    LocalDateTime.resolve(
+      NaiveDateTime.to_date(local_naive),
+      NaiveDateTime.to_time(local_naive),
+      time_zone
+    )
+  end
 end

@@ -22,12 +22,26 @@ defmodule Huddlz.Communities.Huddl.Changes.AddHuddlTemplate do
   # and set the id directly. This avoids the re-entrant :update that previously
   # ran inside the :create transaction to backfill huddl_template_id.
   defp create_and_link_template(changeset) do
+    starts_at = Ash.Changeset.get_attribute(changeset, :starts_at)
+    ends_at = Ash.Changeset.get_attribute(changeset, :ends_at)
+    time_zone = Ash.Changeset.get_attribute(changeset, :time_zone)
+
+    schedule =
+      HuddlTemplate.wall_clock_schedule(%{
+        starts_at: starts_at,
+        ends_at: ends_at,
+        time_zone: time_zone
+      })
+
     template =
       HuddlTemplate
-      |> Ash.Changeset.for_create(:create, %{
-        repeat_until: Ash.Changeset.get_argument(changeset, :repeat_until),
-        frequency: Ash.Changeset.get_argument(changeset, :frequency)
-      })
+      |> Ash.Changeset.for_create(
+        :create,
+        Map.merge(schedule, %{
+          repeat_until: Ash.Changeset.get_argument(changeset, :repeat_until),
+          frequency: Ash.Changeset.get_argument(changeset, :frequency)
+        })
+      )
       |> Ash.create!(authorize?: false)
 
     Ash.Changeset.force_change_attribute(changeset, :huddl_template_id, template.id)

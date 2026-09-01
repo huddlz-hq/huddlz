@@ -45,7 +45,13 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
 
     template =
       HuddlTemplate
-      |> Ash.Changeset.for_create(:create, %{frequency: :weekly, repeat_until: repeat_until})
+      |> Ash.Changeset.for_create(:create, %{
+        frequency: :weekly,
+        repeat_until: repeat_until,
+        starts_at_local: DateTime.to_naive(starts_at),
+        ends_at_local: DateTime.to_naive(ends_at),
+        time_zone: source.time_zone
+      })
       |> Ash.create!(authorize?: false)
 
     source =

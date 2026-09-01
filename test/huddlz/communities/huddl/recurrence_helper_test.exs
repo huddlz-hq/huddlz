@@ -34,13 +34,126 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
   end
 
   describe "generate_huddlz_from_template/2 weekly" do
-    test "generates weekly recurring huddlz up to repeat_until", ctx do
-      repeat_until = Date.add(Date.utc_today(), 22)
+    test "keeps New York wall-clock time through spring-forward", ctx do
+      source =
+        ctx.huddl
+        |> Ash.Changeset.for_update(:update, %{
+          starts_at: ~U[2027-03-07 14:00:00Z],
+          ends_at: ~U[2027-03-07 15:00:00Z],
+          time_zone: "America/New_York"
+        })
+        |> Ash.update!(authorize?: false)
 
       template =
         HuddlTemplate
-        |> Ash.Changeset.for_create(:create, %{frequency: :weekly, repeat_until: repeat_until})
+        |> Ash.Changeset.for_create(:create, %{
+          frequency: :weekly,
+          repeat_until: ~D[2027-03-22],
+          starts_at_local: ~N[2027-03-07 09:00:00],
+          ends_at_local: ~N[2027-03-07 10:00:00],
+          time_zone: "America/New_York"
+        })
         |> Ash.create!(authorize?: false)
+
+      RecurrenceHelper.generate_huddlz_from_template(template, source)
+
+      assert [first, second] = generated_huddlz(template)
+      assert first.starts_at == ~U[2027-03-14 13:00:00Z]
+      assert second.starts_at == ~U[2027-03-21 13:00:00Z]
+      assert DateTime.shift_zone!(first.starts_at, first.time_zone).hour == 9
+      assert DateTime.shift_zone!(second.starts_at, second.time_zone).hour == 9
+    end
+
+    test "keeps New York wall-clock time through fall-back", ctx do
+      source =
+        ctx.huddl
+        |> Ash.Changeset.for_update(:update, %{
+          starts_at: ~U[2027-10-31 13:00:00Z],
+          ends_at: ~U[2027-10-31 14:00:00Z],
+          time_zone: "America/New_York"
+        })
+        |> Ash.update!(authorize?: false)
+
+      template =
+        HuddlTemplate
+        |> Ash.Changeset.for_create(:create, %{
+          frequency: :weekly,
+          repeat_until: ~D[2027-11-15],
+          starts_at_local: ~N[2027-10-31 09:00:00],
+          ends_at_local: ~N[2027-10-31 10:00:00],
+          time_zone: "America/New_York"
+        })
+        |> Ash.create!(authorize?: false)
+
+      RecurrenceHelper.generate_huddlz_from_template(template, source)
+
+      assert [first, second] = generated_huddlz(template)
+      assert first.starts_at == ~U[2027-11-07 14:00:00Z]
+      assert second.starts_at == ~U[2027-11-14 14:00:00Z]
+      assert DateTime.shift_zone!(first.starts_at, first.time_zone).hour == 9
+      assert DateTime.shift_zone!(second.starts_at, second.time_zone).hour == 9
+    end
+
+    test "advances a generated spring-forward gap without collapsing its local span", ctx do
+      template =
+        create_template(ctx.huddl,
+          frequency: :weekly,
+          repeat_until: ~D[2027-03-15],
+          starts_at_local: ~N[2027-03-07 02:30:00],
+          ends_at_local: ~N[2027-03-07 03:30:00],
+          time_zone: "America/New_York"
+        )
+
+      RecurrenceHelper.generate_huddlz_from_template(template, ctx.huddl)
+
+      assert [occurrence] = generated_huddlz(template)
+      assert occurrence.starts_at == ~U[2027-03-14 07:30:00Z]
+      assert occurrence.ends_at == ~U[2027-03-14 08:30:00Z]
+    end
+
+    test "uses the earlier occurrence of a generated fall-back overlap", ctx do
+      template =
+        create_template(ctx.huddl,
+          frequency: :weekly,
+          repeat_until: ~D[2027-11-08],
+          starts_at_local: ~N[2027-10-31 01:30:00],
+          ends_at_local: ~N[2027-10-31 02:30:00],
+          time_zone: "America/New_York"
+        )
+
+      RecurrenceHelper.generate_huddlz_from_template(template, ctx.huddl)
+
+      assert [occurrence] = generated_huddlz(template)
+      assert occurrence.starts_at == ~U[2027-11-07 05:30:00Z]
+      assert occurrence.ends_at == ~U[2027-11-07 07:30:00Z]
+    end
+
+    test "persists the template zone when the source has diverged", ctx do
+      source =
+        ctx.huddl
+        |> Ash.Changeset.for_update(:update, %{time_zone: "America/Denver"})
+        |> Ash.update!(authorize?: false)
+
+      template =
+        create_template(source,
+          frequency: :weekly,
+          repeat_until: ~D[2027-03-15],
+          starts_at_local: ~N[2027-03-07 09:00:00],
+          ends_at_local: ~N[2027-03-07 10:00:00],
+          time_zone: "America/New_York"
+        )
+
+      RecurrenceHelper.generate_huddlz_from_template(template, source)
+
+      assert [occurrence] = generated_huddlz(template)
+      assert occurrence.starts_at == ~U[2027-03-14 13:00:00Z]
+      assert occurrence.time_zone == "America/New_York"
+    end
+
+    test "generates weekly recurring huddlz up to repeat_until", ctx do
+      repeat_until = Date.add(Date.utc_today(), 22)
+
+      template = create_template(ctx.huddl, frequency: :weekly, repeat_until: repeat_until)
 
       RecurrenceHelper.generate_huddlz_from_template(template, ctx.huddl)
 
@@ -64,10 +177,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
     test "generates no huddlz when repeat_until is before next occurrence", ctx do
       repeat_until = Date.add(Date.utc_today(), 1)
 
-      template =
-        HuddlTemplate
-        |> Ash.Changeset.for_create(:create, %{frequency: :weekly, repeat_until: repeat_until})
-        |> Ash.create!(authorize?: false)
+      template = create_template(ctx.huddl, frequency: :weekly, repeat_until: repeat_until)
 
       RecurrenceHelper.generate_huddlz_from_template(template, ctx.huddl)
 
@@ -85,13 +195,11 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
       repeat_until = Date.add(DateTime.to_date(ctx.starts_at), 43)
 
       template =
-        HuddlTemplate
-        |> Ash.Changeset.for_create(:create, %{
+        create_template(ctx.huddl,
           interval: 2,
           unit: :week,
           repeat_until: repeat_until
-        })
-        |> Ash.create!(authorize?: false)
+        )
 
       RecurrenceHelper.generate_huddlz_from_template(template, ctx.huddl)
 
@@ -118,10 +226,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
     test "generates monthly recurring huddlz up to repeat_until", ctx do
       repeat_until = Date.add(Date.utc_today(), 65)
 
-      template =
-        HuddlTemplate
-        |> Ash.Changeset.for_create(:create, %{frequency: :monthly, repeat_until: repeat_until})
-        |> Ash.create!(authorize?: false)
+      template = create_template(ctx.huddl, frequency: :monthly, repeat_until: repeat_until)
 
       RecurrenceHelper.generate_huddlz_from_template(template, ctx.huddl)
 
@@ -140,10 +245,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
       # 5 years of weekly = ~260 instances, but should cap at 104
       repeat_until = Date.add(Date.utc_today(), 365 * 5)
 
-      template =
-        HuddlTemplate
-        |> Ash.Changeset.for_create(:create, %{frequency: :weekly, repeat_until: repeat_until})
-        |> Ash.create!(authorize?: false)
+      template = create_template(ctx.huddl, frequency: :weekly, repeat_until: repeat_until)
 
       RecurrenceHelper.generate_huddlz_from_template(template, ctx.huddl)
 
@@ -160,10 +262,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
     test "new huddlz inherit title, description, and other fields from source", ctx do
       repeat_until = Date.add(Date.utc_today(), 10)
 
-      template =
-        HuddlTemplate
-        |> Ash.Changeset.for_create(:create, %{frequency: :weekly, repeat_until: repeat_until})
-        |> Ash.create!(authorize?: false)
+      template = create_template(ctx.huddl, frequency: :weekly, repeat_until: repeat_until)
 
       RecurrenceHelper.generate_huddlz_from_template(template, ctx.huddl)
 
@@ -180,5 +279,34 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
       assert new_huddl.group_id == ctx.huddl.group_id
       assert new_huddl.creator_id == ctx.huddl.creator_id
     end
+  end
+
+  defp generated_huddlz(template) do
+    Huddl
+    |> Ash.Query.filter(huddl_template_id == ^template.id)
+    |> Ash.Query.sort(starts_at: :asc)
+    |> Ash.read!(authorize?: false)
+  end
+
+  defp create_template(source, attrs) do
+    local_starts_at =
+      source.starts_at |> DateTime.shift_zone!(source.time_zone) |> DateTime.to_naive()
+
+    local_ends_at =
+      source.ends_at |> DateTime.shift_zone!(source.time_zone) |> DateTime.to_naive()
+
+    attrs =
+      Map.merge(
+        %{
+          starts_at_local: local_starts_at,
+          ends_at_local: local_ends_at,
+          time_zone: source.time_zone
+        },
+        Map.new(attrs)
+      )
+
+    HuddlTemplate
+    |> Ash.Changeset.for_create(:create, attrs)
+    |> Ash.create!(authorize?: false)
   end
 end

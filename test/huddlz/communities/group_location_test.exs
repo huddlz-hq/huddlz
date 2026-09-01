@@ -520,7 +520,14 @@ defmodule Huddlz.Communities.GroupLocationTest do
         |> Ash.Changeset.for_create(:create, %{
           interval: 1,
           unit: :week,
-          repeat_until: DateTime.add(DateTime.utc_now(), 10, :day)
+          repeat_until: DateTime.add(DateTime.utc_now(), 10, :day),
+          starts_at_local: DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.to_naive(),
+          ends_at_local:
+            DateTime.utc_now()
+            |> DateTime.add(1, :day)
+            |> DateTime.add(1, :hour)
+            |> DateTime.to_naive(),
+          time_zone: "Etc/UTC"
         })
         |> Ash.create!(authorize?: false)
 
