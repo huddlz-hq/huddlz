@@ -64,7 +64,7 @@ defmodule Huddlz.Communities.Group do
   end
 
   actions do
-    defaults [:create, :read, :update]
+    defaults [:create, :read]
 
     destroy :destroy do
       primary? true
@@ -74,7 +74,7 @@ defmodule Huddlz.Communities.Group do
 
     create :create_group do
       description "Create a new group; the owner is always the current actor."
-      accept [:name, :description, :location, :is_public]
+      accept [:name, :description, :location, :time_zone, :is_public]
 
       argument :slug, :string, allow_nil?: true
       argument :provided_latitude, :float, allow_nil?: true, public?: false
@@ -85,6 +85,15 @@ defmodule Huddlz.Communities.Group do
       change Huddlz.Communities.Group.Changes.GenerateSlug
       change Huddlz.Geocoding.ApplyProvidedCoordinates
       change {Huddlz.Geocoding.GeocodeChange, field: :location}
+    end
+
+    action :resolve_location_time_zone, :string do
+      description "Resolve a canonical Group time zone for selected city coordinates."
+
+      argument :latitude, :float, allow_nil?: false
+      argument :longitude, :float, allow_nil?: false
+
+      run Huddlz.Communities.Group.Actions.ResolveLocationTimeZone
     end
 
     read :search do
@@ -197,7 +206,7 @@ defmodule Huddlz.Communities.Group do
 
     update :update_details do
       description "Update group details"
-      accept [:name, :description, :location, :is_public, :slug]
+      accept [:name, :description, :location, :time_zone, :is_public, :slug]
       require_atomic? false
 
       argument :provided_latitude, :float, allow_nil?: true, public?: false
@@ -231,6 +240,10 @@ defmodule Huddlz.Communities.Group do
     # All logged-in users can create groups
     policy action(:create_group) do
       authorize_if actor_attribute_equals(:role, :user)
+    end
+
+    policy action(:resolve_location_time_zone) do
+      authorize_if actor_present()
     end
 
     # Only the owner can update group details
@@ -267,6 +280,8 @@ defmodule Huddlz.Communities.Group do
   end
 
   validations do
+    validate Huddlz.TimeZone.Validation
+
     validate string_length(:name, min: @name_length.first, max: @name_length.last) do
       message "Must be between 3 and 100 characters"
     end
@@ -300,6 +315,13 @@ defmodule Huddlz.Communities.Group do
       allow_nil? true
       public? true
       constraints max_length: 500
+    end
+
+    attribute :time_zone, :string do
+      allow_nil? false
+      public? true
+      default "America/New_York"
+      description "Organizer-maintained IANA time zone associated with the group's city."
     end
 
     attribute :is_public, :boolean do

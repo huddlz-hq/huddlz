@@ -35,7 +35,7 @@ defmodule CalendarRangeNavigationSteps do
   end
 
   step "I have a Calendar huddl tomorrow", %{current_user: user} = context do
-    tomorrow = Date.add(Date.utc_today(), 1)
+    tomorrow = Date.add(display_today(), 1)
     group = generate(group(owner_id: user.id, is_public: true, actor: user))
 
     huddl =
@@ -80,7 +80,7 @@ defmodule CalendarRangeNavigationSteps do
 
   step "I return to the current date", %{session: session} = context do
     assert PhoenixTest.Driver.current_path(session) == "/calendar"
-    assert_has(session, "#calendar-day-heading", text: format_full_date(Date.utc_today()))
+    assert_has(session, "#calendar-day-heading", text: format_full_date(display_today()))
     context
   end
 
@@ -172,7 +172,7 @@ defmodule CalendarRangeNavigationSteps do
             group_id: group.id,
             creator_id: user.id,
             title: "Future huddl #{offset}",
-            date: Date.add(Date.utc_today(), offset),
+            date: Date.add(display_today(), offset),
             is_private: false,
             actor: user
           )
@@ -203,7 +203,7 @@ defmodule CalendarRangeNavigationSteps do
   end
 
   step "I explicitly select another empty date", %{session: session} = context do
-    empty_date = Date.add(Date.utc_today(), 10)
+    empty_date = Date.add(display_today(), 10)
     Map.put(context, :session, visit(session, day_path(empty_date)))
   end
 
@@ -218,6 +218,10 @@ defmodule CalendarRangeNavigationSteps do
   end
 
   defp day_path(date), do: "/calendar?view=day&date=#{Date.to_iso8601(date)}"
+
+  defp display_today do
+    DateTime.now!("America/New_York") |> DateTime.to_date()
+  end
 
   defp month_path(date) do
     month = Calendar.strftime(date, "%Y-%m")

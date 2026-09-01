@@ -1,6 +1,7 @@
 defmodule HuddlzWeb.CalendarLiveTest do
   use HuddlzWeb.ConnCase, async: true
 
+  alias Huddlz.Calendar.Clock
   alias Huddlz.Communities
 
   setup do
@@ -81,7 +82,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn
       |> login(attendee)
       |> visit("/calendar")
-      |> assert_has("#calendar-day-heading", text: format_full_date(Date.utc_today()))
+      |> assert_has("#calendar-day-heading", text: format_full_date(display_today()))
       |> assert_has(".cal-period-count", text: "0 huddlz")
     end
 
@@ -100,7 +101,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn: conn,
       attendee: attendee
     } do
-      today = Date.utc_today()
+      today = display_today()
       today_label = Calendar.strftime(today, "%A, %B %-d, %Y") <> ", today"
 
       conn
@@ -227,7 +228,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit(calendar_path_for(Date.add(Date.utc_today(), -2)))
+      |> visit(calendar_path_for(huddl_date(past)))
       |> assert_has(
         "#calendar-huddl-#{past.id} [data-testid='calendar-relationship']",
         text: "Attended · Past"
@@ -247,7 +248,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(host)
-      |> visit(calendar_path_for(DateTime.to_date(past.starts_at)))
+      |> visit(calendar_path_for(huddl_date(past)))
       |> assert_has(
         "#calendar-huddl-#{past.id} [data-testid='calendar-relationship']",
         text: "Hosting · Past"
@@ -323,7 +324,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       host: host,
       public_group: public_group
     } do
-      next = shift(Date.utc_today(), 1)
+      next = shift(display_today(), 1)
       target_date = %{next | day: 15}
       huddl = create_huddl(host, public_group, title: "Counted", date: target_date)
       rsvp!(huddl, attendee, :rsvp)
@@ -340,7 +341,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       host: host,
       public_group: public_group
     } do
-      focus_date = %{Date.utc_today() | day: 1}
+      focus_date = %{display_today() | day: 1}
       outside_date = Date.add(focus_date, -1)
       starts_at = DateTime.new!(outside_date, ~T[14:00:00], "Etc/UTC")
 
@@ -414,8 +415,8 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn: conn,
       attendee: attendee
     } do
-      next = next_month_param(Date.utc_today())
-      next_date = shift(Date.utc_today(), 1)
+      next = next_month_param(display_today())
+      next_date = shift(display_today(), 1)
 
       conn
       |> login(attendee)
@@ -429,13 +430,14 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn: conn,
       attendee: attendee
     } do
-      next = next_month_param(Date.utc_today())
+      next = next_month_param(display_today())
+      today = display_today()
 
       conn
       |> login(attendee)
       |> visit("/calendar?view=month&month=#{next}")
       |> assert_has(
-        ~s(a.cal-nav-today[href="/calendar?view=month&month=#{Calendar.strftime(Date.utc_today(), "%Y-%m")}&date=#{Date.to_iso8601(Date.utc_today())}"])
+        ~s(a.cal-nav-today[href="/calendar?view=month&month=#{Calendar.strftime(today, "%Y-%m")}&date=#{Date.to_iso8601(today)}"])
       )
     end
 
@@ -447,7 +449,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
     end
   end
 
-  defp tomorrow, do: Date.add(Date.utc_today(), 1)
+  defp tomorrow, do: Date.add(display_today(), 1)
 
   # Build a /calendar URL pinned to the month containing `date`, so the focus
   # month always matches where the huddl actually lives, including past dates
@@ -462,7 +464,19 @@ defmodule HuddlzWeb.CalendarLiveTest do
   end
 
   defp current_month_name do
-    Date.utc_today() |> Calendar.strftime("%B %Y")
+    display_today() |> Calendar.strftime("%B %Y")
+  end
+
+  defp display_today do
+    Clock.utc_now()
+    |> DateTime.shift_zone!("America/New_York")
+    |> DateTime.to_date()
+  end
+
+  defp huddl_date(huddl) do
+    huddl.starts_at
+    |> DateTime.shift_zone!("America/New_York")
+    |> DateTime.to_date()
   end
 
   defp format_full_date(date), do: Calendar.strftime(date, "%A, %B %-d, %Y")

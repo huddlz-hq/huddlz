@@ -176,6 +176,7 @@ defmodule CalendarMonthSteps do
 
   defp current_date do
     Clock.utc_now()
+    |> DateTime.shift_zone!("America/New_York")
     |> DateTime.to_date()
   end
 

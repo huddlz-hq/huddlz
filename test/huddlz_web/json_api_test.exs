@@ -46,6 +46,7 @@ defmodule HuddlzWeb.JsonApiTest do
             physical_location: "123 Main St",
             starts_at: starts_at,
             ends_at: ends_at,
+            time_zone: "Etc/UTC",
             group_id: group.id
           }
         }
@@ -83,6 +84,7 @@ defmodule HuddlzWeb.JsonApiTest do
             physical_location: "456 Oak Ave",
             starts_at: starts_at,
             ends_at: ends_at,
+            time_zone: "Etc/UTC",
             group_id: group.id
           }
         }

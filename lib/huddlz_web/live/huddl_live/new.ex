@@ -43,11 +43,11 @@ defmodule HuddlzWeb.HuddlLive.New do
   end
 
   defp init_create_form_socket(socket, group, user) do
-    time_zone = device_time_zone(socket)
+    time_zone = group.time_zone
 
     socket
     |> assign_create_form(group, user, time_zone)
-    |> assign(:schedule_time_zone, time_zone)
+    |> assign(:time_zone_options, Huddlz.TimeZone.iana_options())
     |> assign(:group_locations, load_group_locations(group.id, user))
     |> assign(:selected_location, nil)
     |> ModalLocationHelpers.init()
@@ -87,6 +87,7 @@ defmodule HuddlzWeb.HuddlLive.New do
     |> assign(:form, to_form(form))
     |> assign(:show_virtual_link, false)
     |> assign(:show_physical_location, true)
+    |> assign(:show_huddl_time_zone, false)
     |> assign(:calculated_end_time, calculate_end_time(tomorrow, default_time, 60))
   end
 
@@ -224,6 +225,15 @@ defmodule HuddlzWeb.HuddlLive.New do
             <p :if={@calculated_end_time} class="form-help">
               Ends at: <strong>{@calculated_end_time}</strong>
             </p>
+
+            <.searchable_select
+              :if={@show_huddl_time_zone}
+              field={@form[:time_zone]}
+              id="huddl-time-zone"
+              label="huddl time zone"
+              options={@time_zone_options}
+              help="The authoritative local time for this virtual huddl. Search by city or IANA name."
+            />
 
             <div class="form-row">
               <.toggle field={@form[:is_recurring]} label="Recurring huddl" />
@@ -493,7 +503,7 @@ defmodule HuddlzWeb.HuddlLive.New do
   def handle_event("validate", %{"form" => params}, socket) do
     params =
       params
-      |> put_schedule_time_zone(socket.assigns.schedule_time_zone)
+      |> default_huddl_time_zone(socket.assigns.group.time_zone)
       |> inject_saved_location_params(socket.assigns[:selected_location])
       |> mark_location_used_after_submit(socket.assigns.form)
 
@@ -515,7 +525,7 @@ defmodule HuddlzWeb.HuddlLive.New do
       params
       |> Map.put("group_id", socket.assigns.group.id)
       |> Map.put("lifecycle_state", lifecycle_state)
-      |> put_schedule_time_zone(socket.assigns.schedule_time_zone)
+      |> default_huddl_time_zone(socket.assigns.group.time_zone)
       |> inject_saved_location_params(socket.assigns[:selected_location])
       |> mark_location_used(socket.assigns.form)
 
@@ -633,5 +643,12 @@ defmodule HuddlzWeb.HuddlLive.New do
 
   defp new_huddl_path(socket) do
     ~p"/groups/#{socket.assigns.group.slug}/huddlz/new"
+  end
+
+  defp default_huddl_time_zone(params, group_time_zone) do
+    case Map.get(params, "time_zone") do
+      time_zone when is_binary(time_zone) and time_zone != "" -> params
+      _ -> Map.put(params, "time_zone", group_time_zone)
+    end
   end
 end

@@ -37,7 +37,11 @@ defmodule HistoricalPersonalHuddlParitySteps do
   end
 
   step "I navigate Calendar to the huddl's past date", context do
-    date = DateTime.to_date(context.calendar_huddl.starts_at)
+    date =
+      context.calendar_huddl.starts_at
+      |> DateTime.shift_zone!("America/New_York")
+      |> DateTime.to_date()
+
     month = Calendar.strftime(date, "%Y-%m")
 
     session =

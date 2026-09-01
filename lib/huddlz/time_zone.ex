@@ -4,7 +4,7 @@ defmodule Huddlz.TimeZone do
   """
 
   @reference_datetime ~U[2000-01-01 00:00:00Z]
-  @display_fallback "America/New_York"
+  @eastern_fallback "America/New_York"
 
   alias Huddlz.Accounts
 
@@ -42,12 +42,12 @@ defmodule Huddlz.TimeZone do
   def display(nil, browser_time_zone), do: valid_or_display_fallback(browser_time_zone)
 
   def display(user, browser_time_zone) do
-    [browser_time_zone, Map.get(user, :home_time_zone), @display_fallback]
+    [browser_time_zone, Map.get(user, :home_time_zone), eastern_fallback()]
     |> Enum.find(&valid?/1)
   end
 
   def valid_or_display_fallback(time_zone) do
-    if valid?(time_zone), do: time_zone, else: @display_fallback
+    if valid?(time_zone), do: time_zone, else: eastern_fallback()
   end
 
   def preference_selection(%{
@@ -90,6 +90,15 @@ defmodule Huddlz.TimeZone do
   def options do
     [{"Automatic (browser time zone)", "automatic"} | Tzdata.canonical_zone_list()]
   end
+
+  def iana_options do
+    Enum.map(Tzdata.canonical_zone_list(), fn time_zone ->
+      city = time_zone |> String.split("/") |> List.last() |> String.replace("_", " ")
+      {"#{city} (#{time_zone})", time_zone}
+    end)
+  end
+
+  def eastern_fallback, do: @eastern_fallback
 
   def valid_or_utc(time_zone) do
     if valid?(time_zone), do: time_zone, else: "Etc/UTC"

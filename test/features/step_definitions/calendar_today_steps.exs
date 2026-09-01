@@ -21,7 +21,9 @@ defmodule CalendarTodaySteps do
        %{current_user: attendee} = context do
     host = generate(user(role: :user))
     group = generate(group(owner_id: host.id, is_public: true, actor: host))
-    starts_at = DateTime.new!(Date.utc_today(), ~T[00:00:00], "Etc/UTC")
+    time_zone = "America/New_York"
+    today = Clock.utc_now() |> DateTime.shift_zone!(time_zone) |> DateTime.to_date()
+    starts_at = DateTime.new!(today, ~T[00:00:00], time_zone) |> DateTime.shift_zone!("Etc/UTC")
 
     huddl =
       generate(
@@ -31,6 +33,7 @@ defmodule CalendarTodaySteps do
           title: "Today Pairing",
           starts_at: starts_at,
           ends_at: DateTime.add(starts_at, 1, :day),
+          time_zone: time_zone,
           is_private: false
         )
       )
@@ -108,7 +111,7 @@ defmodule CalendarTodaySteps do
   step "the current date is selected", %{session: session} = context do
     today =
       Clock.utc_now()
-      |> DateTime.shift_zone!(context[:device_time_zone] || "Etc/UTC")
+      |> DateTime.shift_zone!(context[:device_time_zone] || "America/New_York")
       |> DateTime.to_date()
 
     if PhoenixTest.Driver.current_path(session) =~ "view=month" do

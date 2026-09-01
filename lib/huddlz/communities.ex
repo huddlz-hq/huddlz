@@ -10,6 +10,7 @@ defmodule Huddlz.Communities do
   resources do
     resource Huddlz.Communities.Huddl do
       define :get_huddl, action: :read, get_by: [:id]
+      define :create_huddl, action: :create
 
       define :search_huddlz,
         action: :search,
@@ -50,9 +51,15 @@ defmodule Huddlz.Communities do
     end
 
     resource Huddlz.Communities.Group do
+      define :get_group, action: :read, get_by: [:id]
+
       define :create_group,
         action: :create_group,
         args: [:name, :description, :location, :is_public]
+
+      define :resolve_group_time_zone,
+        action: :resolve_location_time_zone,
+        args: [:latitude, :longitude]
 
       define :search_groups, action: :search, args: [{:optional, :search}]
       define :get_by_owner, action: :get_by_owner

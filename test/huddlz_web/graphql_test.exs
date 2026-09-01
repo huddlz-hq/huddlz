@@ -57,7 +57,8 @@ defmodule HuddlzWeb.GraphqlTest do
           physicalLocation: "123 Main St",
           groupId: group.id,
           startsAt: starts_at,
-          endsAt: ends_at
+          endsAt: ends_at,
+          timeZone: "Etc/UTC"
         }
       }
 
@@ -110,7 +111,8 @@ defmodule HuddlzWeb.GraphqlTest do
           physicalLocation: "456 Oak Ave",
           groupId: group.id,
           startsAt: starts_at,
-          endsAt: ends_at
+          endsAt: ends_at,
+          timeZone: "Etc/UTC"
         }
       }
 

@@ -18,12 +18,15 @@ defmodule Huddlz.Test.Helpers.Calendar do
   end
 
   def create_today_huddl(group, creator, title, opts \\ []) do
-    starts_at = DateTime.new!(Date.utc_today(), ~T[12:00:00], "Etc/UTC")
+    time_zone = "America/New_York"
+    today = DateTime.now!(time_zone) |> DateTime.to_date()
+    starts_at = DateTime.new!(today, ~T[12:00:00], time_zone) |> DateTime.shift_zone!("Etc/UTC")
 
     defaults = [
       group_id: group.id,
       creator_id: creator.id,
       title: title,
+      time_zone: time_zone,
       starts_at: starts_at,
       ends_at: DateTime.add(starts_at, 60, :minute),
       lifecycle_state: :published,

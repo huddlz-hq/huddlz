@@ -32,7 +32,7 @@ defmodule CalendarAccessibilitySteps do
 
   step "I open the calendar month containing that huddl",
        %{conn: conn, calendar_huddl: huddl} = context do
-    date = DateTime.to_date(huddl.starts_at)
+    date = huddl.starts_at |> DateTime.shift_zone!("America/New_York") |> DateTime.to_date()
     month = :io_lib.format("~4..0B-~2..0B", [date.year, date.month]) |> IO.iodata_to_binary()
 
     session =

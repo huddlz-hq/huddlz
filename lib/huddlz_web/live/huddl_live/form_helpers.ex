@@ -41,6 +41,7 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
     socket
     |> assign(:show_physical_location, event_type in ["in_person", "hybrid"])
     |> assign(:show_virtual_link, event_type in ["virtual", "hybrid"])
+    |> assign(:show_huddl_time_zone, event_type == "virtual")
   end
 
   def calculate_end_time(date, time, duration_minutes) do
@@ -142,26 +143,6 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
       |> Ash.Changeset.force_change_attribute(:latitude, location.latitude)
       |> Ash.Changeset.force_change_attribute(:longitude, location.longitude)
     end
-  end
-
-  @doc """
-  Injects the location text into form params for group forms.
-  Accepts a map with `:display_text` (from the autocomplete component).
-  """
-  def inject_group_location_param(params, nil), do: params
-
-  def inject_group_location_param(params, %{display_text: text}) do
-    Map.put(params, "location", text)
-  end
-
-  @doc """
-  Updates the group form's location field with the given text.
-  """
-  def apply_group_location_to_form(socket, text) do
-    current_params = socket.assigns.form.source.params || %{}
-    updated_params = Map.put(current_params, "location", text)
-    form = AshPhoenix.Form.validate(socket.assigns.form.source, updated_params)
-    assign(socket, :form, Phoenix.Component.to_form(form))
   end
 
   def load_group_locations(group_id, user) do

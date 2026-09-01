@@ -164,6 +164,7 @@ defmodule Huddlz.Generator do
         name: StreamData.repeatedly(fn -> Faker.Company.name() end),
         description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
         location: "Test Location",
+        time_zone: "Etc/UTC",
         is_public: true,
         # Pin to nil so GenerateSlug derives the slug from the name. Otherwise
         # the public `:slug` argument on :create_group falls into Ash's optional
@@ -239,6 +240,7 @@ defmodule Huddlz.Generator do
         description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
         starts_at: default_starts_at,
         ends_at: default_ends_at,
+        time_zone: "Etc/UTC",
         event_type: :in_person,
         physical_location: StreamData.repeatedly(fn -> Faker.Address.street_address() end),
         virtual_link: nil,
@@ -300,7 +302,7 @@ defmodule Huddlz.Generator do
         date: future_date,
         start_time: start_time,
         duration_minutes: duration_minutes,
-        time_zone: nil,
+        time_zone: "Etc/UTC",
         thumbnail_url: thumbnail_url,
         group_id: group_id,
         event_type: :in_person,
@@ -374,6 +376,7 @@ defmodule Huddlz.Generator do
         description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
         starts_at: default_starts_at,
         ends_at: default_ends_at,
+        time_zone: "Etc/UTC",
         event_type: :in_person,
         physical_location: "123 Main St, Anytown, USA",
         is_private: false,

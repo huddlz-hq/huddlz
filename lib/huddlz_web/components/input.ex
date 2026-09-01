@@ -221,6 +221,61 @@ defmodule HuddlzWeb.Components.Input do
     """
   end
 
+  attr :id, :any, default: nil
+  attr :name, :any
+  attr :label, :string, default: nil
+  attr :value, :any
+  attr :help, :string, default: nil
+  attr :errors, :list, default: []
+  attr :field, FormField, doc: "a Phoenix.HTML.FormField struct"
+  attr :class, :any, default: nil
+  attr :options, :list, required: true, doc: "list of {label, value} tuples"
+
+  def searchable_select(%{field: %FormField{} = field} = assigns) do
+    assigns
+    |> assign(field: nil, id: assigns.id || field.id)
+    |> assign(:errors, visible_errors(field))
+    |> assign_new(:name, fn -> field.name end)
+    |> assign_new(:value, fn -> field.value end)
+    |> searchable_select()
+  end
+
+  def searchable_select(assigns) do
+    assigns =
+      assigns
+      |> prepare_accessibility()
+      |> assign(:options_id, "#{assigns.id}-options")
+
+    ~H"""
+    <div class="form-row">
+      <label :if={@label} for={@id} class="form-label">{@label}</label>
+      <input
+        type="search"
+        id={@id}
+        name={@name}
+        value={@value}
+        list={@options_id}
+        autocomplete="off"
+        class={["form-input", @class]}
+        aria-invalid={@invalid? && "true"}
+        aria-describedby={@describedby}
+      />
+      <datalist id={@options_id}>
+        <option :for={{label, value} <- @options} value={value} label={label}></option>
+      </datalist>
+      <p :if={@help} id={help_id(@id)} class="form-help">{@help}</p>
+      <p
+        :for={{msg, index} <- Enum.with_index(@errors)}
+        id={error_id(@id, index)}
+        class="form-error"
+        role="alert"
+      >
+        {msg}
+      </p>
+    </div>
+    """
+  end
+
   attr :field, FormField, required: true, doc: "form field whose errors to render"
   attr :id, :any, default: nil
 

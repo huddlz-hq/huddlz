@@ -179,6 +179,7 @@ defmodule Huddlz.Communities.Huddl do
 
       change Huddlz.Communities.Huddl.Changes.SetCreatorToActor
       change Huddlz.Communities.Huddl.Changes.AddCreatorAsAttendee
+      change Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.AssignPendingImage
@@ -662,7 +663,7 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     validate {Huddlz.Communities.Huddl.Validations.WebUrlValidation, attribute: :virtual_link}
-    validate Huddlz.Communities.Huddl.Validations.TimeZoneValidation
+    validate Huddlz.TimeZone.Validation
 
     validate compare(:ends_at, greater_than: :starts_at) do
       message "must be after the start time"
@@ -717,7 +718,7 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     attribute :time_zone, :string do
-      allow_nil? true
+      allow_nil? false
       public? true
       description "Authoritative IANA time zone for the huddl's local schedule."
     end

@@ -1,7 +1,5 @@
-defmodule Huddlz.Communities.Huddl.Validations.TimeZoneValidation do
-  @moduledoc """
-  Ensures a persisted huddl time zone is a recognized IANA name.
-  """
+defmodule Huddlz.TimeZone.Validation do
+  @moduledoc false
 
   use Ash.Resource.Validation
 
@@ -17,7 +15,7 @@ defmodule Huddlz.Communities.Huddl.Validations.TimeZoneValidation do
   def validate(changeset, _opts, _context) do
     time_zone = Ash.Changeset.get_attribute(changeset, :time_zone)
 
-    if is_nil(time_zone) or Huddlz.TimeZone.valid?(time_zone) do
+    if Huddlz.TimeZone.canonical?(time_zone) do
       :ok
     else
       {:error,

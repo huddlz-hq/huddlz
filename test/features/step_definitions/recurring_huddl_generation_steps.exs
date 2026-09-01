@@ -94,6 +94,7 @@ defmodule RecurringHuddlGenerationSteps do
       assert occurrence.is_private
       assert occurrence.creator_id == context.owner.id
       assert occurrence.group_id == context.group.id
+      assert occurrence.time_zone == context.huddl.time_zone
 
       assert {:ok, image} =
                Communities.get_current_huddl_image(occurrence.id, authorize?: false)

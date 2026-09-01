@@ -22,6 +22,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
 
   # Fields copied from the source huddl onto every generated/reconciled instance.
   @copied_attrs [
+    :time_zone,
     :event_type,
     :title,
     :description,

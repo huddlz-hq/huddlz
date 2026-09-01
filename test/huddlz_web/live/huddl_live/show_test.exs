@@ -780,6 +780,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
           description: "Waiting for scheduled completion",
           starts_at: DateTime.add(now, -2, :hour),
           ends_at: DateTime.add(now, -1, :hour),
+          time_zone: "Etc/UTC",
           event_type: :virtual,
           virtual_link: "https://example.com/ended",
           is_private: false,
