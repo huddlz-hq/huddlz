@@ -20,6 +20,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyNewInGroup do
   require Ash.Query
 
   alias Huddlz.Communities.GroupMember
+  alias Huddlz.Communities.Huddl.Changes.NotificationPayload
   alias Huddlz.Communities.Huddl.Changes.RecipientHelpers
 
   @impl true
@@ -54,13 +55,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyNewInGroup do
       |> Enum.uniq()
       |> Enum.reject(&(&1 == actor_id))
 
-    payload = %{
-      "huddl_id" => huddl.id,
-      "huddl_title" => to_string(huddl.title),
-      "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at),
-      "group_name" => to_string(huddl.group.name),
-      "group_slug" => to_string(huddl.group.slug)
-    }
+    payload = NotificationPayload.schedule(huddl, huddl.group)
 
     case RecipientHelpers.deliver_each(user_ids, :huddl_new, payload) do
       :ok -> {:ok, huddl}

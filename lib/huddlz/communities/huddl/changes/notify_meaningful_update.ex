@@ -14,6 +14,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate do
 
   use Ash.Resource.Change
 
+  alias Huddlz.Communities.Huddl.Changes.NotificationPayload
   alias Huddlz.Communities.Huddl.Changes.RecipientHelpers
 
   @attendee_affecting_attrs [
@@ -50,14 +51,9 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate do
   @doc false
   @spec payload(struct(), struct(), [atom()]) :: map()
   def payload(huddl, group, changed_fields) do
-    %{
-      "huddl_id" => huddl.id,
-      "huddl_title" => to_string(huddl.title),
-      "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at),
-      "group_name" => to_string(group.name),
-      "group_slug" => to_string(group.slug),
-      "changed_fields" => Enum.map(changed_fields, &Atom.to_string/1)
-    }
+    huddl
+    |> NotificationPayload.schedule(group)
+    |> Map.put("changed_fields", Enum.map(changed_fields, &Atom.to_string/1))
     |> use_accessible_target(huddl)
   end
 

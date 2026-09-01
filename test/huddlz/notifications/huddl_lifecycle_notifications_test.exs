@@ -73,6 +73,10 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
             title: "Saturday Soccer",
             group_id: group.id,
             creator_id: owner.id,
+            time_zone: "America/Los_Angeles",
+            date: ~D[2030-05-04],
+            start_time: ~T[09:00:00],
+            duration_minutes: 60,
             actor: owner
           )
         )
@@ -84,7 +88,8 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
       for recipient <- [member_a, member_b] do
         assert Enum.any?(emails, fn email ->
                  email.subject == "New huddl in Pickup Sports: Saturday Soccer" and
-                   email.to == [{"", to_string(recipient.email)}]
+                   email.to == [{"", to_string(recipient.email)}] and
+                   email.html_body =~ "9:00 AM PDT"
                end)
       end
     end
@@ -128,6 +133,7 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
           group(
             name: "Pickup Sports",
             slug: "pickup-sports",
+            time_zone: "America/Los_Angeles",
             is_public: true,
             owner_id: owner.id,
             actor: owner
@@ -140,6 +146,7 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
             title: "Saturday Soccer",
             group_id: group.id,
             creator_id: owner.id,
+            time_zone: "America/Los_Angeles",
             actor: owner
           )
         )
@@ -149,7 +156,7 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
       Oban.drain_queue(queue: :notifications)
       flush_mailbox()
 
-      new_date = Date.add(Date.utc_today(), 14)
+      new_date = ~D[2030-05-04]
 
       huddl
       |> Ash.Changeset.for_update(
@@ -164,7 +171,8 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
       assert_email_sent(fn email ->
         email.subject == "Updated: Saturday Soccer" and
           email.to == [{"", to_string(attendee.email)}] and
-          email.html_body =~ "the start time"
+          email.html_body =~ "the start time" and
+          email.html_body =~ "3:00 PM PDT"
       end)
     end
 
@@ -690,6 +698,10 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
             title: "Saturday Soccer",
             group_id: group.id,
             creator_id: owner.id,
+            time_zone: "America/Los_Angeles",
+            date: ~D[2030-05-04],
+            start_time: ~T[09:00:00],
+            duration_minutes: 60,
             actor: owner
           )
         )
@@ -715,7 +727,8 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
                  email.subject == "Cancelled: Saturday Soccer" and
                    email.to == [{"", to_string(recipient.email)}] and
                    email.html_body =~ "Pickup Sports" and
-                   email.html_body =~ "/groups/pickup-sports"
+                   email.html_body =~ "/groups/pickup-sports" and
+                   email.html_body =~ "9:00 AM PDT"
                end)
       end
     end
@@ -787,6 +800,7 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
           group(
             name: "Pickup Sports",
             slug: "pickup-sports",
+            time_zone: "America/Los_Angeles",
             is_public: true,
             owner_id: owner.id,
             actor: owner
@@ -799,6 +813,10 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
             title: "Saturday Soccer",
             group_id: group.id,
             creator_id: owner.id,
+            time_zone: "America/Los_Angeles",
+            date: ~D[2030-05-04],
+            start_time: ~T[09:00:00],
+            duration_minutes: 60,
             actor: owner
           )
         )
@@ -826,6 +844,7 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
         assert Enum.any?(emails, fn email ->
                  email.subject == "Tomorrow: Saturday Soccer" and
                    email.to == [{"", to_string(recipient.email)}] and
+                   email.html_body =~ "9:00 AM PDT" and
                    Enum.any?(email.attachments, &(&1.content_type == "text/calendar"))
                end)
       end

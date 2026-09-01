@@ -11,6 +11,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyRsvpConfirmation do
 
   use Ash.Resource.Change
 
+  alias Huddlz.Communities.Huddl.Changes.NotificationPayload
   alias Huddlz.Notifications
 
   @impl true
@@ -23,13 +24,11 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyRsvpConfirmation do
          %{id: _} = actor <- cs.context[:private][:actor] do
       huddl = Ash.load!(huddl, [:group], authorize?: false)
 
-      Notifications.deliver(actor, :rsvp_confirmation, %{
-        "huddl_id" => huddl.id,
-        "huddl_title" => to_string(huddl.title),
-        "group_name" => to_string(huddl.group.name),
-        "group_slug" => to_string(huddl.group.slug),
-        "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at)
-      })
+      Notifications.deliver(
+        actor,
+        :rsvp_confirmation,
+        NotificationPayload.schedule(huddl, huddl.group)
+      )
 
       {:ok, huddl}
     else

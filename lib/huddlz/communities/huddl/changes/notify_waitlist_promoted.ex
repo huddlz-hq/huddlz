@@ -9,6 +9,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyWaitlistPromoted do
   use Ash.Resource.Change
 
   alias Huddlz.Accounts.User
+  alias Huddlz.Communities.Huddl.Changes.NotificationPayload
   alias Huddlz.Notifications
 
   @impl true
@@ -26,13 +27,11 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyWaitlistPromoted do
           {:ok, user} ->
             huddl = Ash.load!(huddl, [:group], authorize?: false)
 
-            Notifications.deliver(user, :waitlist_promoted, %{
-              "huddl_id" => huddl.id,
-              "huddl_title" => to_string(huddl.title),
-              "group_name" => to_string(huddl.group.name),
-              "group_slug" => to_string(huddl.group.slug),
-              "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at)
-            })
+            Notifications.deliver(
+              user,
+              :waitlist_promoted,
+              NotificationPayload.schedule(huddl, huddl.group)
+            )
 
           _ ->
             :noop

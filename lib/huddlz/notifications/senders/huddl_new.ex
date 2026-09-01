@@ -12,6 +12,7 @@ defmodule Huddlz.Notifications.Senders.HuddlNew do
     * `"huddl_id"` — UUID, used to link to the huddl page.
     * `"huddl_title"` — display title.
     * `"starts_at_iso"` — ISO-8601 string of when it starts.
+    * `"time_zone"` — authoritative IANA Huddl time zone.
     * `"group_name"` — host group's display name.
     * `"group_slug"` — host group's slug, used to build the huddl URL.
   """

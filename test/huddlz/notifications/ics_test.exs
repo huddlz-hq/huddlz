@@ -62,6 +62,33 @@ defmodule Huddlz.Notifications.ICSTest do
       assert ics =~ "Casual chat"
     end
 
+    test "carries the authoritative zone and instant across a daylight-saving boundary", ctx do
+      huddl =
+        build_huddl(ctx,
+          title: "Spring Forward Coffee",
+          event_type: :virtual,
+          virtual_link: "https://meet.example.com/spring-forward",
+          time_zone: "America/Los_Angeles",
+          date: ~D[2027-03-14],
+          start_time: ~T[01:30:00],
+          duration_minutes: 120
+        )
+
+      {_filename, ics} = ICS.event_for(huddl)
+
+      assert ics =~ "TZID:America/Los_Angeles"
+      assert ics =~ "BEGIN:DAYLIGHT"
+      assert ics =~ "DTSTART:20270314T020000"
+      assert ics =~ "TZOFFSETFROM:-0800"
+      assert ics =~ "TZOFFSETTO:-0700"
+      assert ics =~ "DTSTART;TZID=America/Los_Angeles:20270314T013000"
+      assert ics =~ "DTEND;TZID=America/Los_Angeles:20270314T043000"
+
+      assert [calendar_entry] = ICal.from_ics(ics).events
+      assert DateTime.compare(calendar_entry.dtstart, huddl.starts_at) == :eq
+      assert DateTime.compare(calendar_entry.dtend, huddl.ends_at) == :eq
+    end
+
     test "physical location surfaces as LOCATION", ctx do
       huddl = build_huddl(ctx, event_type: :in_person, physical_location: "Roastery, 123 Main St")
       {_filename, ics} = ICS.event_for(huddl)

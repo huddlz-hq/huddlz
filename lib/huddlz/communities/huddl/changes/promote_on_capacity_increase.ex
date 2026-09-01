@@ -11,6 +11,7 @@ defmodule Huddlz.Communities.Huddl.Changes.PromoteOnCapacityIncrease do
 
   use Ash.Resource.Change
 
+  alias Huddlz.Communities.Huddl.Changes.NotificationPayload
   alias Huddlz.Communities.HuddlAttendee
   alias Huddlz.Notifications
 
@@ -37,12 +38,7 @@ defmodule Huddlz.Communities.Huddl.Changes.PromoteOnCapacityIncrease do
       end
 
     Enum.each(promoted_ids, fn user_id ->
-      payload = %{
-        "huddl_id" => huddl.id,
-        "huddl_title" => to_string(huddl.title),
-        "group_name" => to_string(huddl.group.name),
-        "group_slug" => to_string(huddl.group.slug)
-      }
+      payload = NotificationPayload.schedule(huddl, huddl.group)
 
       case Ash.get(Huddlz.Accounts.User, user_id, authorize?: false) do
         {:ok, user} -> Notifications.deliver(user, :waitlist_promoted, payload)

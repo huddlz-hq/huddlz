@@ -24,6 +24,10 @@ defmodule Huddlz.Notifications.Senders.HuddlReminder24hTest do
           title: attrs[:title] || "Saturday Soccer",
           group_id: group.id,
           creator_id: owner.id,
+          time_zone: attrs[:time_zone] || "Etc/UTC",
+          date: attrs[:date] || Date.add(Date.utc_today(), 1),
+          start_time: attrs[:start_time] || ~T[14:00:00],
+          duration_minutes: attrs[:duration_minutes] || 60,
           actor: owner
         )
       )
@@ -88,6 +92,26 @@ defmodule Huddlz.Notifications.Senders.HuddlReminder24hTest do
       assert attachment.filename == "huddl.ics"
       assert attachment.content_type == "text/calendar"
       assert attachment.data =~ "BEGIN:VCALENDAR"
+    end
+
+    test "formats the schedule in the authoritative huddl time zone" do
+      user = generate(user())
+
+      huddl =
+        setup_huddl(%{
+          time_zone: "America/Los_Angeles",
+          date: ~D[2030-05-04],
+          start_time: ~T[09:00:00]
+        })
+
+      email =
+        HuddlReminder24h.build(user, %{
+          "huddl_id" => huddl.id,
+          "time_zone" => "America/New_York"
+        })
+
+      assert email.html_body =~ "May 4, 2030 at 9:00 AM PDT"
+      refute email.html_body =~ "EDT"
     end
 
     test "includes the unsubscribe footer (activity)" do

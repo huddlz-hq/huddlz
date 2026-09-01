@@ -10,6 +10,7 @@ defmodule Huddlz.Notifications.Senders.HuddlCancelled do
 
     * `"huddl_title"` — title of the huddl at time of cancellation.
     * `"starts_at_iso"` — ISO-8601 string of when it was supposed to start.
+    * `"time_zone"` — authoritative IANA Huddl time zone.
     * `"group_name"` — the host group's display name.
     * `"group_slug"` — the host group's slug, used to link back so the
       recipient can find replacement huddlz.

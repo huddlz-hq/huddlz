@@ -66,6 +66,18 @@ defmodule Huddlz.Notifications.Senders.HuddlCancelledTest do
       assert email.text_body =~ "May 4, 2030"
     end
 
+    test "formats the schedule in the payload's authoritative huddl time zone" do
+      user = generate(user())
+
+      email =
+        HuddlCancelled.build(
+          user,
+          default_payload(%{"time_zone" => "America/Los_Angeles"})
+        )
+
+      assert email.html_body =~ "May 4, 2030 at 10:00 AM PDT"
+    end
+
     test "no unsubscribe footer (transactional)" do
       user = generate(user())
       email = HuddlCancelled.build(user, default_payload())

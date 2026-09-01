@@ -11,6 +11,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyCancelled do
 
   use Ash.Resource.Change
 
+  alias Huddlz.Communities.Huddl.Changes.NotificationPayload
   alias Huddlz.Communities.Huddl.Changes.RecipientHelpers
 
   @impl true
@@ -34,15 +35,13 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyCancelled do
     recipients =
       RecipientHelpers.rsvp_user_ids(huddl.id, exclude: RecipientHelpers.actor_id(cs))
 
-    payload = %{
-      "huddl_id" => huddl.id,
-      "huddl_title" => to_string(huddl.title),
-      "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at),
-      "group_name" => to_string(huddl.group.name),
-      "group_slug" => to_string(huddl.group.slug),
-      "cancellation_reason" =>
+    payload =
+      huddl
+      |> NotificationPayload.schedule(huddl.group)
+      |> Map.put(
+        "cancellation_reason",
         Ash.Changeset.get_argument(cs, :cancellation_reason) || huddl.cancellation_reason
-    }
+      )
 
     cs
     |> Ash.Changeset.put_context(:huddl_cancelled_recipients, recipients)

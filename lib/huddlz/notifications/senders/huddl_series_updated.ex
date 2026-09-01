@@ -9,7 +9,7 @@ defmodule Huddlz.Notifications.Senders.HuddlSeriesUpdated do
   category — preferences and the unsubscribe footer apply.
 
   Required payload keys are the same as C2 (`huddl_id`,
-  `huddl_title`, `starts_at_iso`, `group_name`, `group_slug`,
+  `huddl_title`, `starts_at_iso`, `time_zone`, `group_name`, `group_slug`,
   `changed_fields`), but the values describe the next-instance row
   rather than the row that triggered the edit.
   """

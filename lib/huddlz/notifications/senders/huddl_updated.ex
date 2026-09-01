@@ -9,7 +9,7 @@ defmodule Huddlz.Notifications.Senders.HuddlUpdated do
 
   Required payload keys:
 
-    * `"huddl_id"`, `"huddl_title"`, `"starts_at_iso"`,
+    * `"huddl_id"`, `"huddl_title"`, `"starts_at_iso"`, `"time_zone"`,
       `"group_name"`, `"group_slug"` — same as C1.
     * `"changed_fields"` — list of attribute strings that were
       modified, used to render a "what changed" line in the body.
