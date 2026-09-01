@@ -10,6 +10,7 @@ defmodule HuddlzWeb.Components.HuddlCard do
   alias HuddlzWeb.Components.Card
   alias HuddlzWeb.Components.HuddlCoverImage
   alias HuddlzWeb.Components.Pill
+  alias HuddlzWeb.SchedulePresentation
 
   attr :huddl, :map, required: true
   attr :id, :string, required: true
@@ -19,9 +20,16 @@ defmodule HuddlzWeb.Components.HuddlCard do
   attr :relationship_variant, :atom, default: :default
   attr :relationship_testid, :string, default: "huddl-relationship"
   attr :secondary_label, :string, default: nil
-  attr :when_label, :string, default: nil
+  attr :display_time_zone, :string, required: true
 
   def shared_huddl_card(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :schedule,
+        SchedulePresentation.card(assigns.huddl, assigns.display_time_zone)
+      )
+
     ~H"""
     <Card.card
       id={@id}
@@ -36,7 +44,7 @@ defmodule HuddlzWeb.Components.HuddlCard do
           class="card-cover-img"
           image_url={@huddl.display_image_url}
         />
-        <Card.date_stamp month={huddl_month(@huddl)} day={huddl_day(@huddl)} />
+        <Card.date_stamp month={@schedule.month} day={@schedule.day} />
         <Card.card_tag variant={tag_variant(@huddl.event_type)}>
           {tag_label(@huddl.event_type)}
         </Card.card_tag>
@@ -45,7 +53,11 @@ defmodule HuddlzWeb.Components.HuddlCard do
         <span :if={@huddl.group} class="card-group">{@huddl.group.name}</span>
         <h3 class="card-title">{@huddl.title}</h3>
         <div class="card-meta">
-          <span data-testid="huddl-when">{@when_label || format_meta_when(@huddl.starts_at)}</span>
+          <span data-testid="huddl-when">{@schedule.primary}</span>
+          <span :if={@schedule.secondary} class="dot"></span>
+          <span :if={@schedule.secondary} data-testid="huddl-local-when">
+            {@schedule.secondary}
+          </span>
           <%= if location_label(@huddl) do %>
             <span class="dot"></span>
             <span class="card-location">{location_label(@huddl)}</span>

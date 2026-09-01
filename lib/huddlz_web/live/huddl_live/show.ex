@@ -10,6 +10,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
+  alias HuddlzWeb.SchedulePresentation
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -55,6 +56,10 @@ defmodule HuddlzWeb.HuddlLive.Show do
          |> assign(:page_title, huddl.title)
          |> assign(:meta, huddl_meta(huddl))
          |> assign(:huddl, huddl)
+         |> assign(
+           :schedule_presentation,
+           SchedulePresentation.detail(huddl, socket.assigns.display_time_zone)
+         )
          |> assign(:attendance, attendance)
          |> assign(:waitlist_position, waitlist_position)
          |> assign(
@@ -162,8 +167,19 @@ defmodule HuddlzWeb.HuddlLive.Show do
               </svg>
               <div>
                 <div class="label">When</div>
-                <div class="value" data-display-time-zone={@display_time_zone}>
-                  {format_fact_when(@huddl, @display_time_zone)}
+                <div
+                  class="value"
+                  data-testid="huddl-display-when"
+                  data-display-time-zone={@display_time_zone}
+                >
+                  {@schedule_presentation.primary}
+                </div>
+                <div
+                  :if={@schedule_presentation.secondary}
+                  class={["muted", "text-sm"]}
+                  data-testid="huddl-local-when"
+                >
+                  {@schedule_presentation.secondary}
                 </div>
               </div>
             </li>
@@ -847,26 +863,6 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   defp hero_location_segment(%{event_type: :virtual}), do: "Online"
   defp hero_location_segment(_), do: nil
-
-  defp format_fact_when(huddl, display_time_zone) do
-    starts_at = shift_zone!(huddl.starts_at, display_time_zone)
-    ends_at = huddl.ends_at && shift_zone!(huddl.ends_at, display_time_zone)
-    abbreviation = Calendar.strftime(starts_at, "%Z")
-
-    cond do
-      ends_at && same_day?(starts_at, ends_at) ->
-        "#{format_short_date(starts_at)} · #{format_time_only(starts_at)} – #{format_time_only(ends_at)} #{abbreviation}"
-
-      ends_at ->
-        "#{format_short_date(starts_at)} #{format_time_only(starts_at)} → #{format_short_date(ends_at)} #{format_time_only(ends_at)} #{abbreviation}"
-
-      true ->
-        "#{format_short_date(starts_at)} · #{format_time_only(starts_at)} #{abbreviation}"
-    end
-  end
-
-  defp same_day?(%DateTime{} = a, %DateTime{} = b),
-    do: DateTime.to_date(a) == DateTime.to_date(b)
 
   defp capacity_fact_label(%{status: :completed}), do: "Attended"
   defp capacity_fact_label(_), do: "Capacity"

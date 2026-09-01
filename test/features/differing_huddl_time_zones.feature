@@ -1,10 +1,23 @@
-@async @database @conn
-Feature: Differing huddl-local time zones
+@async @database @conn @issue406
+Feature: Display and Huddl time presentation
 
-  Scenario: A traveler can identify the huddl's local time zone
-    Given my browser time zone is "America/New_York"
-    And I am signed in
-    And I am going to a huddl scheduled for 9:00 AM in "America/Los_Angeles"
+  Scenario: A huddl is placed and presented in my Display time zone
+    Given my Display time zone is "America/New_York"
+    And I am going to a huddl at 9:00 PM in "America/Los_Angeles"
+    And that instant falls on a different date in New York
     When I view the huddl in Calendar
-    Then the huddl is placed on the correct day in my browser time zone
-    And the card identifies the huddl's local time as "9:00 AM PDT"
+    Then it appears on its New York date
+    And the card's primary date and time use "America/New_York"
+    And the card identifies 9:00 PM at the huddl
+    And the detailed view presents the same two times
+
+  Scenario: Matching time zones use one schedule time
+    Given my Display and Huddl time zones are both "America/New_York"
+    When I view the huddl
+    Then I see one schedule time
+
+  Scenario: Changing Display time preserves deliberate Calendar navigation
+    Given I explicitly selected a future date and month
+    When I change my Display time zone
+    Then the selected date and month remain selected
+    But an implicit current Day follows today in the new time zone

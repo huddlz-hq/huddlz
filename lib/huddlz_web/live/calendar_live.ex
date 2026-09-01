@@ -392,19 +392,6 @@ defmodule HuddlzWeb.CalendarLive do
   defp day_relationship_variant(%{card_status: nil}), do: :default
   defp day_relationship_variant(%{card_status: status}), do: status.variant
 
-  defp day_when_label(%{starts_at: starts_at, time_zone: time_zone}, device_time_zone)
-       when is_binary(time_zone) and time_zone != device_time_zone do
-    case DateTime.shift_zone(starts_at, time_zone) do
-      {:ok, local_starts_at} ->
-        Calendar.strftime(local_starts_at, "%a · %-I:%M %p %Z")
-
-      {:error, _reason} ->
-        nil
-    end
-  end
-
-  defp day_when_label(_huddl, _device_time_zone), do: nil
-
   defp day_card_status(%{huddl: %{status: status}} = entry) do
     case HuddlStatus.contextual_override(status) do
       nil -> day_relationship_status(entry, status)
@@ -1061,7 +1048,7 @@ defmodule HuddlzWeb.CalendarLive do
       relationship_label={day_relationship_label(@entry)}
       relationship_variant={day_relationship_variant(@entry)}
       relationship_testid="calendar-relationship"
-      when_label={day_when_label(@entry.huddl, @time_zone)}
+      display_time_zone={@time_zone}
     />
     """
   end
