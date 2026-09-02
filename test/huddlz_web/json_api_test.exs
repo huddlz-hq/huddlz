@@ -46,6 +46,7 @@ defmodule HuddlzWeb.JsonApiTest do
             physical_location: "123 Main St",
             starts_at: starts_at,
             ends_at: ends_at,
+            time_zone: "America/New_York",
             group_id: group.id
           }
         }
@@ -80,9 +81,10 @@ defmodule HuddlzWeb.JsonApiTest do
           attributes: %{
             title: "Authorized Huddl",
             event_type: "in_person",
-            physical_location: "456 Oak Ave",
+            physical_location: "456 Oak Ave, Denver, CO",
             starts_at: starts_at,
             ends_at: ends_at,
+            time_zone: "America/Denver",
             group_id: group.id
           }
         }
@@ -95,6 +97,9 @@ defmodule HuddlzWeb.JsonApiTest do
         |> post("/api/json/huddlz", Jason.encode!(payload))
 
       assert conn.status == 201
+
+      assert get_in(Jason.decode!(conn.resp_body), ["data", "attributes", "time_zone"]) ==
+               "America/Denver"
     end
 
     test "unauthenticated GET succeeds", %{conn: conn} do

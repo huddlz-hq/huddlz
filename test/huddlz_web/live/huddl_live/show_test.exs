@@ -26,6 +26,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
           %{
             name: "Test Group",
             description: "A test group for huddl show",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
             is_public: true
           },
           actor: owner
@@ -218,6 +220,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             duration_minutes: 120,
             event_type: :in_person,
             physical_location: "123 Main St",
+            time_zone: "America/New_York",
             is_private: false,
             group_id: group.id
           },
@@ -419,6 +422,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             duration_minutes: 120,
             event_type: :in_person,
             physical_location: "123 Main St, City",
+            time_zone: "America/New_York",
             is_private: false,
             group_id: group.id
           },
@@ -445,6 +449,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             duration_minutes: 120,
             event_type: :hybrid,
             physical_location: "Conference Room A",
+            time_zone: "America/New_York",
             virtual_link: "https://meet.example.com/hybrid",
             is_private: false,
             group_id: group.id
@@ -477,6 +482,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
           %{
             name: "Private Group",
             description: "Members only",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
             is_public: false
           },
           actor: owner
@@ -496,6 +503,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             duration_minutes: 120,
             event_type: :in_person,
             physical_location: "Secret Location",
+            time_zone: "America/New_York",
             is_private: true,
             group_id: private_group.id
           },
@@ -746,6 +754,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
           description: "Waiting for scheduled completion",
           starts_at: DateTime.add(now, -2, :hour),
           ends_at: DateTime.add(now, -1, :hour),
+          time_zone: "America/New_York",
           event_type: :virtual,
           virtual_link: "https://example.com/ended",
           is_private: false,
@@ -803,7 +812,10 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
         HuddlTemplate
         |> Ash.Changeset.for_create(:create, %{
           frequency: :weekly,
-          repeat_until: DateTime.add(DateTime.utc_now(), 30, :day)
+          repeat_until: DateTime.add(DateTime.utc_now(), 30, :day),
+          starts_at_local: NaiveDateTime.new!(Date.add(Date.utc_today(), 2), ~T[14:00:00]),
+          ends_at_local: NaiveDateTime.new!(Date.add(Date.utc_today(), 2), ~T[15:00:00]),
+          time_zone: "America/New_York"
         })
         |> Ash.create!(authorize?: false)
 

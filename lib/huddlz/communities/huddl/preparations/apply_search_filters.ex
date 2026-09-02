@@ -5,6 +5,8 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
   use Ash.Resource.Preparation
   require Ash.Query
 
+  alias Huddlz.TimeZone
+
   @meters_per_mile 1609.344
 
   def prepare(query, _opts, context) do
@@ -46,30 +48,60 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
 
   defp apply_date_filter(query) do
     date_filter = Ash.Query.get_argument(query, :date_filter)
-    now = DateTime.utc_now()
+    now = Ash.Query.get_argument(query, :now) || DateTime.utc_now()
+    time_zone = Ash.Query.get_argument(query, :search_time_zone)
 
-    case date_filter do
-      :upcoming ->
-        # Include in-progress huddlz
-        Ash.Query.filter(query, ends_at > ^now)
-
-      :this_week ->
-        week_end = DateTime.add(now, 7 * 24 * 60 * 60, :second)
-        Ash.Query.filter(query, ends_at > ^now and starts_at <= ^week_end)
-
-      :this_month ->
-        month_end = DateTime.add(now, 30 * 24 * 60 * 60, :second)
-        Ash.Query.filter(query, ends_at > ^now and starts_at <= ^month_end)
-
-      :past ->
-        Ash.Query.filter(query, ends_at < ^now)
-
-      :all ->
-        query
-
-      _ ->
-        query
+    if date_filter in [:this_week, :this_month] and not TimeZone.canonical?(time_zone) do
+      Ash.Query.add_error(
+        query,
+        [:search_time_zone],
+        "search time zone must be resolved for calendar-period filters"
+      )
+    else
+      filter_by_date(query, date_filter, now, time_zone)
     end
+  end
+
+  # Include in-progress huddlz.
+  defp filter_by_date(query, :upcoming, now, _time_zone),
+    do: Ash.Query.filter(query, ends_at > ^now)
+
+  defp filter_by_date(query, :this_week, now, time_zone) do
+    {_week_start, week_end} = week_boundaries(now, time_zone)
+    Ash.Query.filter(query, ends_at > ^now and starts_at <= ^week_end)
+  end
+
+  defp filter_by_date(query, :this_month, now, time_zone) do
+    {_month_start, month_end} = month_boundaries(now, time_zone)
+    Ash.Query.filter(query, ends_at > ^now and starts_at <= ^month_end)
+  end
+
+  defp filter_by_date(query, :past, now, _time_zone),
+    do: Ash.Query.filter(query, ends_at < ^now)
+
+  defp filter_by_date(query, _date_filter, _now, _time_zone), do: query
+
+  defp week_boundaries(now, time_zone) do
+    today = local_date(now, time_zone)
+    sunday = Date.add(today, -rem(Date.day_of_week(today), 7))
+
+    {utc_boundary(sunday, ~T[00:00:00], time_zone),
+     utc_boundary(Date.add(sunday, 6), ~T[23:59:59], time_zone)}
+  end
+
+  defp month_boundaries(now, time_zone) do
+    today = local_date(now, time_zone)
+    first = Date.new!(today.year, today.month, 1)
+    last = Date.end_of_month(first)
+    {utc_boundary(first, ~T[00:00:00], time_zone), utc_boundary(last, ~T[23:59:59], time_zone)}
+  end
+
+  defp local_date(now, time_zone) do
+    now |> DateTime.shift_zone!(time_zone) |> DateTime.to_date()
+  end
+
+  defp utc_boundary(date, time, time_zone) do
+    date |> DateTime.new!(time, time_zone) |> DateTime.shift_zone!("Etc/UTC")
   end
 
   defp apply_event_type_filter(query) do

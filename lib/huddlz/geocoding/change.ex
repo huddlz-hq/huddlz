@@ -22,10 +22,21 @@ defmodule Huddlz.Geocoding.Change do
   end
 
   defp provided_coordinates?(changeset) do
-    lat = Ash.Changeset.get_argument(changeset, :provided_latitude)
-    lng = Ash.Changeset.get_argument(changeset, :provided_longitude)
+    lat =
+      Ash.Changeset.get_argument(changeset, :provided_latitude) ||
+        changed_coordinate(changeset, :latitude)
+
+    lng =
+      Ash.Changeset.get_argument(changeset, :provided_longitude) ||
+        changed_coordinate(changeset, :longitude)
 
     is_number(lat) and is_number(lng)
+  end
+
+  defp changed_coordinate(changeset, attribute) do
+    if Ash.Changeset.changing_attribute?(changeset, attribute) do
+      Ash.Changeset.get_attribute(changeset, attribute)
+    end
   end
 
   defp geocode_and_apply(nil, changeset), do: set_coordinates(changeset, nil, nil)

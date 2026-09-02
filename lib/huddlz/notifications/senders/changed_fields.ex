@@ -15,6 +15,7 @@ defmodule Huddlz.Notifications.Senders.ChangedFields do
   defp humanize("starts_at"), do: "the start time"
   defp humanize("ends_at"), do: "the end time"
   defp humanize("physical_location"), do: "the location"
+  defp humanize("time_zone"), do: "the time zone"
   defp humanize("virtual_link"), do: "the virtual link"
   defp humanize("max_attendees"), do: "the capacity"
   defp humanize("is_private"), do: "the privacy"

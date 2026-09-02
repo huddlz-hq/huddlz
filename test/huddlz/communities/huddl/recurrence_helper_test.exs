@@ -34,12 +34,33 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
   end
 
   describe "generate_huddlz_from_template/2 weekly" do
+    test "returns an error instead of raising for a spring-forward gap", ctx do
+      template =
+        HuddlTemplate
+        |> Ash.Changeset.for_create(:create, %{
+          frequency: :weekly,
+          repeat_until: ~D[2030-03-17],
+          starts_at_local: ~N[2030-03-03 02:30:00],
+          ends_at_local: ~N[2030-03-03 03:30:00],
+          time_zone: "America/New_York"
+        })
+        |> Ash.create!(authorize?: false)
+
+      assert {:error, message} =
+               RecurrenceHelper.generate_huddlz_from_template(template, ctx.huddl)
+
+      assert message =~ "does not exist in America/New_York"
+    end
+
     test "generates weekly recurring huddlz up to repeat_until", ctx do
       repeat_until = Date.add(Date.utc_today(), 22)
 
       template =
         HuddlTemplate
-        |> Ash.Changeset.for_create(:create, %{frequency: :weekly, repeat_until: repeat_until})
+        |> Ash.Changeset.for_create(
+          :create,
+          template_attrs(ctx.huddl, %{frequency: :weekly, repeat_until: repeat_until})
+        )
         |> Ash.create!(authorize?: false)
 
       RecurrenceHelper.generate_huddlz_from_template(template, ctx.huddl)
@@ -66,7 +87,10 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
 
       template =
         HuddlTemplate
-        |> Ash.Changeset.for_create(:create, %{frequency: :weekly, repeat_until: repeat_until})
+        |> Ash.Changeset.for_create(
+          :create,
+          template_attrs(ctx.huddl, %{frequency: :weekly, repeat_until: repeat_until})
+        )
         |> Ash.create!(authorize?: false)
 
       RecurrenceHelper.generate_huddlz_from_template(template, ctx.huddl)
@@ -86,11 +110,14 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
 
       template =
         HuddlTemplate
-        |> Ash.Changeset.for_create(:create, %{
-          interval: 2,
-          unit: :week,
-          repeat_until: repeat_until
-        })
+        |> Ash.Changeset.for_create(
+          :create,
+          template_attrs(ctx.huddl, %{
+            interval: 2,
+            unit: :week,
+            repeat_until: repeat_until
+          })
+        )
         |> Ash.create!(authorize?: false)
 
       RecurrenceHelper.generate_huddlz_from_template(template, ctx.huddl)
@@ -120,7 +147,10 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
 
       template =
         HuddlTemplate
-        |> Ash.Changeset.for_create(:create, %{frequency: :monthly, repeat_until: repeat_until})
+        |> Ash.Changeset.for_create(
+          :create,
+          template_attrs(ctx.huddl, %{frequency: :monthly, repeat_until: repeat_until})
+        )
         |> Ash.create!(authorize?: false)
 
       RecurrenceHelper.generate_huddlz_from_template(template, ctx.huddl)
@@ -142,7 +172,10 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
 
       template =
         HuddlTemplate
-        |> Ash.Changeset.for_create(:create, %{frequency: :weekly, repeat_until: repeat_until})
+        |> Ash.Changeset.for_create(
+          :create,
+          template_attrs(ctx.huddl, %{frequency: :weekly, repeat_until: repeat_until})
+        )
         |> Ash.create!(authorize?: false)
 
       RecurrenceHelper.generate_huddlz_from_template(template, ctx.huddl)
@@ -162,7 +195,10 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
 
       template =
         HuddlTemplate
-        |> Ash.Changeset.for_create(:create, %{frequency: :weekly, repeat_until: repeat_until})
+        |> Ash.Changeset.for_create(
+          :create,
+          template_attrs(ctx.huddl, %{frequency: :weekly, repeat_until: repeat_until})
+        )
         |> Ash.create!(authorize?: false)
 
       RecurrenceHelper.generate_huddlz_from_template(template, ctx.huddl)
@@ -180,5 +216,10 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
       assert new_huddl.group_id == ctx.huddl.group_id
       assert new_huddl.creator_id == ctx.huddl.creator_id
     end
+  end
+
+  defp template_attrs(huddl, attrs) do
+    HuddlTemplate.wall_clock_schedule(huddl)
+    |> Map.merge(attrs)
   end
 end

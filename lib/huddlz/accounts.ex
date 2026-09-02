@@ -19,7 +19,7 @@ defmodule Huddlz.Accounts do
 
       define :update_home_location,
         action: :update_home_location,
-        args: [:home_location, :home_latitude, :home_longitude]
+        args: [:home_location, :home_latitude, :home_longitude, :home_time_zone]
 
       define :change_email, action: :change_email, args: [:email, :current_password]
     end

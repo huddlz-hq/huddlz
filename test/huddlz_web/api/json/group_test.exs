@@ -140,6 +140,9 @@ defmodule HuddlzWeb.Api.Json.GroupTest do
               "name" => "API Created Group",
               "description" => "Created via JSON:API",
               "location" => "Tucson",
+              "latitude" => 32.2226,
+              "longitude" => -110.9747,
+              "time_zone" => "America/Phoenix",
               "is_public" => true
             }
           }
@@ -164,6 +167,9 @@ defmodule HuddlzWeb.Api.Json.GroupTest do
               "name" => "Slug Customizer",
               "description" => "uses a custom slug",
               "location" => "Tucson",
+              "latitude" => 32.2226,
+              "longitude" => -110.9747,
+              "time_zone" => "America/Phoenix",
               "is_public" => true,
               "slug" => "my-custom-slug"
             }

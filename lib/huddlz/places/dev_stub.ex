@@ -15,7 +15,8 @@ defmodule Huddlz.Places.DevStub do
       main_text: "San Francisco",
       secondary_text: "CA, USA",
       latitude: 37.7749,
-      longitude: -122.4194
+      longitude: -122.4194,
+      time_zone: "America/Los_Angeles"
     },
     %{
       place_id: "dev_stub_brooklyn",
@@ -23,7 +24,8 @@ defmodule Huddlz.Places.DevStub do
       main_text: "Brooklyn",
       secondary_text: "New York, NY, USA",
       latitude: 40.6782,
-      longitude: -74.0060
+      longitude: -74.0060,
+      time_zone: "America/New_York"
     },
     %{
       place_id: "dev_stub_austin",
@@ -31,7 +33,8 @@ defmodule Huddlz.Places.DevStub do
       main_text: "Austin",
       secondary_text: "TX, USA",
       latitude: 30.2672,
-      longitude: -97.7431
+      longitude: -97.7431,
+      time_zone: "America/Chicago"
     },
     %{
       place_id: "dev_stub_chicago",
@@ -39,7 +42,8 @@ defmodule Huddlz.Places.DevStub do
       main_text: "Chicago",
       secondary_text: "IL, USA",
       latitude: 41.8781,
-      longitude: -87.6298
+      longitude: -87.6298,
+      time_zone: "America/Chicago"
     },
     %{
       place_id: "dev_stub_portland",
@@ -47,7 +51,8 @@ defmodule Huddlz.Places.DevStub do
       main_text: "Portland",
       secondary_text: "OR, USA",
       latitude: 45.5051,
-      longitude: -122.6750
+      longitude: -122.6750,
+      time_zone: "America/Los_Angeles"
     },
     %{
       place_id: "dev_stub_denver",
@@ -55,7 +60,8 @@ defmodule Huddlz.Places.DevStub do
       main_text: "Denver",
       secondary_text: "CO, USA",
       latitude: 39.7392,
-      longitude: -104.9903
+      longitude: -104.9903,
+      time_zone: "America/Denver"
     },
     %{
       place_id: "dev_stub_nashville",
@@ -63,7 +69,8 @@ defmodule Huddlz.Places.DevStub do
       main_text: "Nashville",
       secondary_text: "TN, USA",
       latitude: 36.1627,
-      longitude: -86.7816
+      longitude: -86.7816,
+      time_zone: "America/Chicago"
     }
   ]
 
@@ -72,15 +79,19 @@ defmodule Huddlz.Places.DevStub do
                  &Map.take(&1, [:place_id, :display_text, :main_text, :secondary_text])
                )
 
-  @coordinates Map.new(@places, &{&1.place_id, %{latitude: &1.latitude, longitude: &1.longitude}})
+  @details Map.new(
+             @places,
+             &{&1.place_id,
+              %{latitude: &1.latitude, longitude: &1.longitude, time_zone: &1.time_zone}}
+           )
 
   @impl true
   def autocomplete(_query, _session_token, _opts), do: {:ok, @suggestions}
 
   @impl true
   def place_details(place_id, _session_token) do
-    case Map.fetch(@coordinates, place_id) do
-      {:ok, coords} -> {:ok, coords}
+    case Map.fetch(@details, place_id) do
+      {:ok, details} -> {:ok, details}
       :error -> {:error, :not_found}
     end
   end

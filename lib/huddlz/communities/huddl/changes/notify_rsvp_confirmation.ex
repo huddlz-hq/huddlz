@@ -28,7 +28,8 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyRsvpConfirmation do
         "huddl_title" => to_string(huddl.title),
         "group_name" => to_string(huddl.group.name),
         "group_slug" => to_string(huddl.group.slug),
-        "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at)
+        "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at),
+        "time_zone" => huddl.time_zone
       })
 
       {:ok, huddl}

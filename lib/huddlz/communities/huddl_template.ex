@@ -25,7 +25,10 @@ defmodule Huddlz.Communities.HuddlTemplate do
       accept [
         :repeat_until,
         :interval,
-        :unit
+        :unit,
+        :starts_at_local,
+        :ends_at_local,
+        :time_zone
       ]
 
       argument :frequency, :atom do
@@ -42,7 +45,10 @@ defmodule Huddlz.Communities.HuddlTemplate do
       accept [
         :repeat_until,
         :interval,
-        :unit
+        :unit,
+        :starts_at_local,
+        :ends_at_local,
+        :time_zone
       ]
 
       argument :frequency, :atom do
@@ -70,6 +76,10 @@ defmodule Huddlz.Communities.HuddlTemplate do
     end
   end
 
+  validations do
+    validate Huddlz.TimeZone.Validation
+  end
+
   attributes do
     uuid_primary_key :id
 
@@ -88,6 +98,19 @@ defmodule Huddlz.Communities.HuddlTemplate do
       constraints one_of: [:week, :month]
       default :week
     end
+
+    attribute :starts_at_local, :naive_datetime do
+      allow_nil? false
+    end
+
+    attribute :ends_at_local, :naive_datetime do
+      allow_nil? false
+    end
+
+    attribute :time_zone, :string do
+      allow_nil? false
+      constraints min_length: 1, max_length: 100
+    end
   end
 
   @doc """
@@ -96,4 +119,18 @@ defmodule Huddlz.Communities.HuddlTemplate do
   def cadence(%__MODULE__{interval: 1, unit: :week}), do: :weekly
   def cadence(%__MODULE__{interval: 2, unit: :week}), do: :every_two_weeks
   def cadence(%__MODULE__{interval: 1, unit: :month}), do: :monthly
+
+  def wall_clock_schedule(%{starts_at: starts_at, ends_at: ends_at, time_zone: time_zone}) do
+    %{
+      starts_at_local: local_naive(starts_at, time_zone),
+      ends_at_local: local_naive(ends_at, time_zone),
+      time_zone: time_zone
+    }
+  end
+
+  defp local_naive(datetime, time_zone) do
+    datetime
+    |> DateTime.shift_zone!(time_zone)
+    |> DateTime.to_naive()
+  end
 end

@@ -27,6 +27,8 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         |> login(owner)
         |> live(~p"/groups/new")
 
+      select_group_location(view)
+
       assert has_element?(view, ".panel-head h2", "Cover image")
       assert has_element?(view, ".upload-zone")
       assert has_element?(view, "*", "Drop a 16:9 image")
@@ -38,6 +40,8 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         conn
         |> login(owner)
         |> live(~p"/groups/new")
+
+      select_group_location(view)
 
       view
       |> form("#group-form", %{
@@ -96,6 +100,8 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         conn
         |> login(owner)
         |> live(~p"/groups/new")
+
+      select_group_location(view)
 
       # Fill in form
       view
@@ -243,6 +249,21 @@ defmodule HuddlzWeb.GroupLiveImageTest do
       assert html =~ "is required"
       assert html =~ "Image uploaded"
     end
+  end
+
+  defp select_group_location(view) do
+    send(view.pid, {
+      :location_selected,
+      "group-location",
+      %{
+        display_text: "Saint Augustine, FL, USA",
+        latitude: 29.9012,
+        longitude: -81.3124,
+        time_zone: "America/New_York"
+      }
+    })
+
+    render(view)
   end
 
   describe "GroupLive.Edit - image upload" do

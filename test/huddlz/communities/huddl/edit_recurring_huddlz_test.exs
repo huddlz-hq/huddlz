@@ -45,7 +45,11 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
 
     template =
       HuddlTemplate
-      |> Ash.Changeset.for_create(:create, %{frequency: :weekly, repeat_until: repeat_until})
+      |> Ash.Changeset.for_create(
+        :create,
+        HuddlTemplate.wall_clock_schedule(source)
+        |> Map.merge(%{frequency: :weekly, repeat_until: repeat_until})
+      )
       |> Ash.create!(authorize?: false)
 
     source =

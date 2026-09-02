@@ -15,7 +15,8 @@ defmodule Huddlz.Test.Helpers.LocationSelection do
     display_text: "Austin, TX, USA",
     main_text: "Austin",
     latitude: 30.27,
-    longitude: -97.74
+    longitude: -97.74,
+    time_zone: "America/Chicago"
   }
 
   @doc """

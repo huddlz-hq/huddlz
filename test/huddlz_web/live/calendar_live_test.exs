@@ -157,7 +157,12 @@ defmodule HuddlzWeb.CalendarLiveTest do
     } do
       huddl = create_huddl(host, public_group, title: "Going Show", date: tomorrow())
       rsvp!(huddl, attendee, :rsvp)
-      time = Calendar.strftime(huddl.starts_at, "%-I:%M %p")
+
+      time =
+        huddl.starts_at
+        |> DateTime.shift_zone!(huddl.time_zone)
+        |> Calendar.strftime("%-I:%M %p %Z")
+
       tooltip_id = "calendar-entry-tooltip-#{huddl.id}"
 
       conn
@@ -247,12 +252,13 @@ defmodule HuddlzWeb.CalendarLiveTest do
       public_group: public_group
     } do
       past = create_past_huddl(host, public_group, title: "Hosted Retrospective")
-      when_label = Calendar.strftime(past.starts_at, "%A, %B %-d, %Y at %-I:%M %p")
+      local_starts_at = DateTime.shift_zone!(past.starts_at, past.time_zone)
+      when_label = Calendar.strftime(local_starts_at, "%A, %B %-d, %Y at %-I:%M %p %Z")
 
       session =
         conn
         |> login(host)
-        |> visit(calendar_path_for(DateTime.to_date(past.starts_at)))
+        |> visit(calendar_path_for(DateTime.to_date(local_starts_at)))
         |> assert_has(
           ~s(#calendar-entry-#{past.id}.cal-pill[data-status=past-hosting][aria-label="Hosted Retrospective, Hosted, past, #{when_label}"]),
           text: "Hosting · Past"
@@ -263,7 +269,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
         )
 
       session
-      |> visit(calendar_path_for(DateTime.to_date(past.starts_at), view: "agenda"))
+      |> visit(calendar_path_for(DateTime.to_date(local_starts_at), view: "agenda"))
       |> assert_has(
         "#calendar-entry-#{past.id} .cal-entry-status[data-status=past-hosting]",
         text: "Hosting · Past"

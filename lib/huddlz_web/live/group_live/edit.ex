@@ -307,7 +307,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
               />
               <.field_errors field={@form[:location]} />
               <p class="form-help">
-                Optional. Helps people find your group when they search nearby.
+                Required. This city sets the group time zone and helps people find it nearby.
               </p>
             </div>
           </div>
@@ -541,13 +541,14 @@ defmodule HuddlzWeb.GroupLive.Edit do
     location_data = %{
       display_text: payload.display_text,
       latitude: payload.latitude,
-      longitude: payload.longitude
+      longitude: payload.longitude,
+      time_zone: payload.time_zone
     }
 
     {:noreply,
      socket
      |> assign(:selected_location_data, location_data)
-     |> apply_group_location_to_form(location_data.display_text)}
+     |> apply_group_location_to_form(location_data)}
   end
 
   @impl true
@@ -555,7 +556,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
     {:noreply,
      socket
      |> assign(:selected_location_data, nil)
-     |> apply_group_location_to_form("")}
+     |> apply_group_location_to_form(nil)}
   end
 
   defp assign_pending_image_to_group(socket, group) do
@@ -593,7 +594,8 @@ defmodule HuddlzWeb.GroupLive.Edit do
       %{
         display_text: to_string(group.location),
         latitude: group.latitude,
-        longitude: group.longitude
+        longitude: group.longitude,
+        time_zone: group.time_zone
       }
     else
       nil

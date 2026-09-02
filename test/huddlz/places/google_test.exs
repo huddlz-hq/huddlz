@@ -45,12 +45,15 @@ defmodule Huddlz.Places.GoogleTest do
   end
 
   describe "place_details/2" do
-    test "returns coordinates" do
+    test "returns coordinates and time zone" do
       Req.Test.stub(Google, fn conn ->
-        Req.Test.json(conn, %{"location" => %{"latitude" => 30.2672, "longitude" => -97.7431}})
+        Req.Test.json(conn, %{
+          "location" => %{"latitude" => 30.2672, "longitude" => -97.7431},
+          "timeZone" => %{"id" => "America/Chicago"}
+        })
       end)
 
-      assert {:ok, %{latitude: 30.2672, longitude: -97.7431}} =
+      assert {:ok, %{latitude: 30.2672, longitude: -97.7431, time_zone: "America/Chicago"}} =
                Google.place_details("place-123", "session-token")
     end
 

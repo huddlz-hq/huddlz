@@ -1,7 +1,7 @@
 defmodule Huddlz.Notifications.Senders.HuddlUpdated do
   @moduledoc """
   Sender for C2: a meaningful field on a huddl was changed (`title`,
-  `starts_at`, `ends_at`, `physical_location`, `virtual_link`,
+  `starts_at`, `ends_at`, `time_zone`, `physical_location`, `virtual_link`,
   `max_attendees`, or `is_private`).
 
   Sent to every user who has currently RSVP'd, excluding the actor.
@@ -9,8 +9,8 @@ defmodule Huddlz.Notifications.Senders.HuddlUpdated do
 
   Required payload keys:
 
-    * `"huddl_id"`, `"huddl_title"`, `"starts_at_iso"`,
-      `"group_name"`, `"group_slug"` — same as C1.
+    * `"huddl_id"`, `"huddl_title"`, `"starts_at_iso"`, `"ends_at_iso"`,
+      `"time_zone"`, `"group_name"`, `"group_slug"` — schedule and routing data.
     * `"changed_fields"` — list of attribute strings that were
       modified, used to render a "what changed" line in the body.
   """
@@ -22,6 +22,7 @@ defmodule Huddlz.Notifications.Senders.HuddlUpdated do
   alias Huddlz.Mailer
   alias Huddlz.Notifications.DateTimeFormatter
   alias Huddlz.Notifications.Footer
+  alias Huddlz.Notifications.ICS
   alias Huddlz.Notifications.Senders.ChangedFields
   alias Huddlz.Notifications.Senders.HeaderSafe
   alias Huddlz.Notifications.Senders.HtmlEscape
@@ -73,7 +74,31 @@ defmodule Huddlz.Notifications.Senders.HuddlUpdated do
     #{huddl_url}.
     #{footer_text}
     """)
+    |> maybe_attach_calendar(payload)
   end
+
+  defp maybe_attach_calendar(
+         email,
+         %{
+           "huddl_id" => id,
+           "huddl_title" => title,
+           "starts_at_iso" => starts_at,
+           "ends_at_iso" => ends_at
+         } = payload
+       )
+       when is_binary(id) and is_binary(title) and is_binary(starts_at) and is_binary(ends_at) do
+    {ics_filename, ics_content} = ICS.updated_huddl(payload)
+
+    attachment(
+      email,
+      Swoosh.Attachment.new({:data, ics_content},
+        filename: ics_filename,
+        content_type: "text/calendar"
+      )
+    )
+  end
+
+  defp maybe_attach_calendar(email, _payload), do: email
 
   defp huddl_title(%{"huddl_title" => title}) when is_binary(title), do: title
   defp huddl_title(_), do: "a huddl"

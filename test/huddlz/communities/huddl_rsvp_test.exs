@@ -55,6 +55,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Test Group",
             description: "A test group",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
             is_public: true
           },
           actor: owner
@@ -417,6 +419,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Private Group",
             description: "A private group",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
             is_public: false
           },
           actor: owner
@@ -435,6 +439,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
             ends_at: DateTime.add(DateTime.utc_now(), 2, :day),
             event_type: :in_person,
             physical_location: "Secret Location",
+            time_zone: "America/New_York",
             is_private: true,
             group_id: private_group.id
           },
@@ -466,6 +471,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Test Group",
             description: "A test group",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
             is_public: true
           },
           actor: owner
@@ -659,6 +666,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Test Group",
             description: "A test group",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
             is_public: true
           },
           actor: owner

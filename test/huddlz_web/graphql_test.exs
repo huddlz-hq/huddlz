@@ -42,6 +42,8 @@ defmodule HuddlzWeb.GraphqlTest do
         createHuddl(input: $input) {
           result {
             id
+            startsAt
+            timeZone
           }
           errors {
             message
@@ -57,7 +59,8 @@ defmodule HuddlzWeb.GraphqlTest do
           physicalLocation: "123 Main St",
           groupId: group.id,
           startsAt: starts_at,
-          endsAt: ends_at
+          endsAt: ends_at,
+          timeZone: "America/New_York"
         }
       }
 
@@ -95,6 +98,8 @@ defmodule HuddlzWeb.GraphqlTest do
         createHuddl(input: $input) {
           result {
             id
+            startsAt
+            timeZone
           }
           errors {
             message
@@ -107,10 +112,11 @@ defmodule HuddlzWeb.GraphqlTest do
         input: %{
           title: "Authorized Huddl",
           eventType: "in_person",
-          physicalLocation: "456 Oak Ave",
+          physicalLocation: "456 Oak Ave, Denver, CO",
           groupId: group.id,
           startsAt: starts_at,
-          endsAt: ends_at
+          endsAt: ends_at,
+          timeZone: "America/Denver"
         }
       }
 
@@ -122,7 +128,16 @@ defmodule HuddlzWeb.GraphqlTest do
 
       body = json_response(conn, 200)
 
-      assert body["data"]["createHuddl"]["result"]["id"] != nil
+      result = body["data"]["createHuddl"]["result"]
+      assert result["id"] != nil
+
+      assert {:ok, returned_starts_at, _offset} = DateTime.from_iso8601(result["startsAt"])
+      assert {:ok, expected_starts_at, _offset} = DateTime.from_iso8601(starts_at)
+
+      assert DateTime.compare(returned_starts_at, DateTime.truncate(expected_starts_at, :second)) ==
+               :eq
+
+      assert result["timeZone"] == "America/Denver"
       assert body["data"]["createHuddl"]["errors"] == []
     end
 

@@ -201,6 +201,8 @@ defmodule HuddlzWeb.Components.HuddlForm do
   attr :form, :map, required: true
   attr :calculated_end_time, :string, default: nil
   attr :duration_prompt, :string, default: nil
+  attr :schedule_time_zone, :string, default: nil
+  attr :ambiguous_time_label, :string, default: nil
   slot :recurring_controls
 
   def when_panel(assigns) do
@@ -210,6 +212,13 @@ defmodule HuddlzWeb.Components.HuddlForm do
         <h2>When</h2>
       </div>
       <div class="form-grid">
+        <p :if={@schedule_time_zone} class="form-help" id="huddl-time-zone">
+          Times use <strong>{@schedule_time_zone}</strong>.
+          <span :if={@ambiguous_time_label}>
+            The earlier occurrence will be used: <strong>{@ambiguous_time_label}</strong>.
+          </span>
+        </p>
+
         <div class="form-row form-row-inline">
           <div class="form-col-md">
             <.input field={@form[:date]} type="date" label="Date" />

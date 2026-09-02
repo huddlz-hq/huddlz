@@ -25,6 +25,21 @@ defmodule Huddlz.Communities do
         ],
         get?: false
 
+      define :search_huddlz_in_time_zone,
+        action: :search,
+        args: [
+          :query,
+          {:optional, :date_filter},
+          {:optional, :event_type},
+          {:optional, :search_latitude},
+          {:optional, :search_longitude},
+          {:optional, :distance_miles},
+          {:optional, :relationship},
+          {:optional, :sort},
+          :search_time_zone
+        ],
+        get?: false
+
       define :get_group_huddlz, action: :by_group, args: [:group_id]
       define :get_past_group_huddlz, action: :past_by_group, args: [:group_id]
       define :list_upcoming_huddlz, action: :upcoming, get?: false
@@ -47,7 +62,7 @@ defmodule Huddlz.Communities do
     resource Huddlz.Communities.Group do
       define :create_group,
         action: :create_group,
-        args: [:name, :description, :location, :is_public]
+        args: [:name, :description, :location, :time_zone, :is_public]
 
       define :search_groups, action: :search, args: [{:optional, :search}]
       define :get_by_owner, action: :get_by_owner
@@ -59,7 +74,7 @@ defmodule Huddlz.Communities do
 
       define :update_details,
         action: :update_details,
-        args: [:name, :description, :location, :is_public, :slug]
+        args: [:name, :description, :location, :time_zone, :is_public, :slug]
 
       define :transfer_group_ownership,
         action: :transfer_ownership,
@@ -140,7 +155,7 @@ defmodule Huddlz.Communities do
     resource Huddlz.Communities.GroupLocation do
       define :create_group_location,
         action: :create,
-        args: [:name, :address, :latitude, :longitude, :group_id]
+        args: [:name, :address, :latitude, :longitude, :time_zone, :group_id]
 
       define :list_group_locations, action: :by_group, args: [:group_id]
       define :get_group_location, action: :read, get_by: [:id]

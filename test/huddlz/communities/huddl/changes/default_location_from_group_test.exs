@@ -16,7 +16,16 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroupTest do
       owner = generate(user(role: :user))
 
       group =
-        generate(group(owner_id: owner.id, is_public: true, location: "Austin, TX", actor: owner))
+        generate(
+          group(
+            owner_id: owner.id,
+            is_public: true,
+            location: "Austin, TX",
+            latitude: nil,
+            longitude: nil,
+            actor: owner
+          )
+        )
 
       # Verify group got geocoded
       assert group.latitude == 30.2672
@@ -50,7 +59,16 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroupTest do
       owner = generate(user(role: :user))
 
       group =
-        generate(group(owner_id: owner.id, is_public: true, location: "Austin, TX", actor: owner))
+        generate(
+          group(
+            owner_id: owner.id,
+            is_public: true,
+            location: "Austin, TX",
+            latitude: nil,
+            longitude: nil,
+            actor: owner
+          )
+        )
 
       in_person_huddl =
         generate(
@@ -68,34 +86,29 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroupTest do
       assert in_person_huddl.longitude == -95.3698
     end
 
-    test "virtual huddl with group that has no coordinates stays nil" do
-      # Group geocoding fails so group has no coordinates
+    test "a group whose coordinates cannot be resolved is rejected" do
       stub(Huddlz.MockGeocoding, :geocode, fn _address ->
         {:error, :not_found}
       end)
 
       owner = generate(user(role: :user))
 
-      group =
-        generate(group(owner_id: owner.id, is_public: true, location: "Nowhere", actor: owner))
+      assert {:error, error} =
+               Huddlz.Communities.Group
+               |> Ash.Changeset.for_create(
+                 :create_group,
+                 %{
+                   name: "Unresolved Group",
+                   location: "Nowhere",
+                   time_zone: "America/New_York",
+                   is_public: true
+                 },
+                 actor: owner
+               )
+               |> Ash.create()
 
-      assert is_nil(group.latitude)
-      assert is_nil(group.longitude)
-
-      virtual_huddl =
-        generate(
-          huddl(
-            event_type: :virtual,
-            virtual_link: "https://zoom.us/test",
-            physical_location: nil,
-            group_id: group.id,
-            creator_id: owner.id,
-            actor: owner
-          )
-        )
-
-      assert is_nil(virtual_huddl.latitude)
-      assert is_nil(virtual_huddl.longitude)
+      assert Exception.message(error) =~ "attribute latitude is required"
+      assert Exception.message(error) =~ "attribute longitude is required"
     end
 
     test "hybrid huddl does not inherit group location" do
@@ -107,7 +120,16 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroupTest do
       owner = generate(user(role: :user))
 
       group =
-        generate(group(owner_id: owner.id, is_public: true, location: "Austin, TX", actor: owner))
+        generate(
+          group(
+            owner_id: owner.id,
+            is_public: true,
+            location: "Austin, TX",
+            latitude: nil,
+            longitude: nil,
+            actor: owner
+          )
+        )
 
       assert group.latitude == 30.2672
 

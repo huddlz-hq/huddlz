@@ -251,7 +251,14 @@ defmodule HuddlzWeb.HuddlLiveTest do
       public_group: public_group
     } do
       stub_places_autocomplete(%{"aus" => [:austin]})
-      stub_place_details(%{"p1" => %{latitude: 30.2672, longitude: -97.7431}})
+
+      stub_place_details(%{
+        "p1" => %{
+          latitude: 30.2672,
+          longitude: -97.7431,
+          time_zone: "America/Chicago"
+        }
+      })
 
       generate(
         huddl(
@@ -284,7 +291,9 @@ defmodule HuddlzWeb.HuddlLiveTest do
     test "discover URL with q + lat/lng renders search and location as active", %{conn: conn} do
       session =
         conn
-        |> visit("/discover?q=elixir&location=Austin%2C+TX&lat=30.2672&lng=-97.7431&distance=25")
+        |> visit(
+          "/discover?q=elixir&location=Austin%2C+TX&lat=30.2672&lng=-97.7431&time_zone=America%2FChicago&distance=25"
+        )
 
       session
       |> assert_has("h1", text: "Results for")
@@ -479,7 +488,12 @@ defmodule HuddlzWeb.HuddlLiveTest do
       user
       |> Ash.Changeset.for_update(
         :update_home_location,
-        %{home_location: "Austin, TX", home_latitude: 30.2672, home_longitude: -97.7431},
+        %{
+          home_location: "Austin, TX",
+          home_latitude: 30.2672,
+          home_longitude: -97.7431,
+          home_time_zone: "America/Chicago"
+        },
         actor: user
       )
       |> Ash.update!()

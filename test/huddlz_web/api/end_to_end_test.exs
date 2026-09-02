@@ -48,6 +48,9 @@ defmodule HuddlzWeb.Api.EndToEndTest do
             "name" => "Happy Path Group",
             "description" => "End-to-end test",
             "location" => "Tucson",
+            "latitude" => 32.2226,
+            "longitude" => -110.9747,
+            "time_zone" => "America/Phoenix",
             "is_public" => true,
             "slug" => "happy-path-group"
           }
@@ -73,6 +76,7 @@ defmodule HuddlzWeb.Api.EndToEndTest do
           group_id: group_id,
           event_type: :in_person,
           physical_location: "123 Test St",
+          time_zone: "America/New_York",
           is_private: false
         },
         actor: %Huddlz.Accounts.User{id: user_id, role: :user}

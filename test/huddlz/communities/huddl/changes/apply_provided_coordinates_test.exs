@@ -37,6 +37,7 @@ defmodule Huddlz.Communities.Huddl.Changes.ApplyProvidedCoordinatesTest do
                  duration_minutes: 60,
                  event_type: :in_person,
                  physical_location: "100 Main St, Austin, TX",
+                 time_zone: "America/Chicago",
                  group_id: group.id
                })
                |> Ash.create(actor: owner)
@@ -61,6 +62,7 @@ defmodule Huddlz.Communities.Huddl.Changes.ApplyProvidedCoordinatesTest do
                  duration_minutes: 60,
                  event_type: :in_person,
                  physical_location: "456 Oak Ave, Dallas, TX",
+                 time_zone: "America/Chicago",
                  group_id: group.id
                })
                |> Ash.create(actor: owner)
@@ -87,6 +89,7 @@ defmodule Huddlz.Communities.Huddl.Changes.ApplyProvidedCoordinatesTest do
                  duration_minutes: 60,
                  event_type: :in_person,
                  physical_location: "789 Elm St, Houston, TX",
+                 time_zone: "America/Chicago",
                  group_id: group.id
                })
                |> Ash.create(actor: owner)

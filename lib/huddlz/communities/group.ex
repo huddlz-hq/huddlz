@@ -64,7 +64,7 @@ defmodule Huddlz.Communities.Group do
   end
 
   actions do
-    defaults [:create, :read, :update]
+    defaults [:create, :read]
 
     destroy :destroy do
       primary? true
@@ -74,7 +74,7 @@ defmodule Huddlz.Communities.Group do
 
     create :create_group do
       description "Create a new group; the owner is always the current actor."
-      accept [:name, :description, :location, :is_public]
+      accept [:name, :description, :location, :latitude, :longitude, :time_zone, :is_public]
 
       argument :slug, :string, allow_nil?: true
       argument :provided_latitude, :float, allow_nil?: true, public?: false
@@ -197,7 +197,18 @@ defmodule Huddlz.Communities.Group do
 
     update :update_details do
       description "Update group details"
-      accept [:name, :description, :location, :is_public, :slug]
+
+      accept [
+        :name,
+        :description,
+        :location,
+        :latitude,
+        :longitude,
+        :time_zone,
+        :is_public,
+        :slug
+      ]
+
       require_atomic? false
 
       argument :provided_latitude, :float, allow_nil?: true, public?: false
@@ -275,6 +286,10 @@ defmodule Huddlz.Communities.Group do
       where action_is(:update_details)
       message "Use only lowercase letters, numbers, and hyphens"
     end
+
+    validate Huddlz.TimeZone.Validation do
+      where action_is([:create_group, :update_details])
+    end
   end
 
   @doc false
@@ -297,9 +312,15 @@ defmodule Huddlz.Communities.Group do
     end
 
     attribute :location, :string do
-      allow_nil? true
+      allow_nil? false
       public? true
-      constraints max_length: 500
+      constraints min_length: 1, max_length: 500
+    end
+
+    attribute :time_zone, :string do
+      allow_nil? false
+      public? true
+      constraints min_length: 1, max_length: 100
     end
 
     attribute :is_public, :boolean do
@@ -314,13 +335,15 @@ defmodule Huddlz.Communities.Group do
     end
 
     attribute :latitude, :float do
-      allow_nil? true
+      allow_nil? false
+      public? true
       description "Geocoded latitude of group location"
       constraints min: -90, max: 90
     end
 
     attribute :longitude, :float do
-      allow_nil? true
+      allow_nil? false
+      public? true
       description "Geocoded longitude of group location"
       constraints min: -180, max: 180
     end

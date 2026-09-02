@@ -10,6 +10,8 @@ defmodule Huddlz.Notifications.Senders.HuddlUpdatedTest do
         "huddl_id" => Ash.UUID.generate(),
         "huddl_title" => "Saturday Soccer",
         "starts_at_iso" => "2030-05-04T17:00:00Z",
+        "ends_at_iso" => "2030-05-04T18:00:00Z",
+        "time_zone" => "America/New_York",
         "group_name" => "Pickup Sports",
         "group_slug" => "pickup-sports",
         "changed_fields" => ["starts_at"]

@@ -2,7 +2,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate do
   @moduledoc """
   Enqueues notifications when a huddl is edited in a way that affects an
   attendee's plans — i.e. one of `:title`, `:starts_at`, `:ends_at`,
-  `:physical_location`, `:virtual_link`, `:max_attendees`, or `:is_private` is
+  `:physical_location`, `:time_zone`, `:virtual_link`, `:max_attendees`, or `:is_private` is
   in the changeset. Cosmetic edits (description, thumbnail, etc.) do not
   trigger a notification.
 
@@ -21,6 +21,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate do
     :starts_at,
     :ends_at,
     :physical_location,
+    :time_zone,
     :virtual_link,
     :max_attendees,
     :is_private
@@ -54,6 +55,11 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate do
       "huddl_id" => huddl.id,
       "huddl_title" => to_string(huddl.title),
       "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at),
+      "ends_at_iso" => DateTime.to_iso8601(huddl.ends_at),
+      "time_zone" => huddl.time_zone,
+      "description" => huddl.description,
+      "physical_location" => huddl.physical_location,
+      "virtual_link" => huddl.virtual_link,
       "group_name" => to_string(group.name),
       "group_slug" => to_string(group.slug),
       "changed_fields" => Enum.map(changed_fields, &Atom.to_string/1)

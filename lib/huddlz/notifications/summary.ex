@@ -110,11 +110,9 @@ defmodule Huddlz.Notifications.Summary do
   # Use absolute dates rather than relative phrasing. Leave nil when a
   # description would just restate the title.
 
-  defp description(:rsvp_confirmation, %{"starts_at_iso" => iso}),
-    do: maybe_absolute_date("Starts ", iso)
-
-  defp description(:huddl_new, %{"starts_at_iso" => iso}),
-    do: maybe_absolute_date("Starts ", iso)
+  defp description(trigger, %{"starts_at_iso" => _iso} = payload)
+       when trigger in [:rsvp_confirmation, :huddl_new, :huddl_reminder_24h, :huddl_reminder_1h],
+       do: maybe_absolute_date("Starts ", payload)
 
   defp description(:huddl_updated, payload),
     do: changed_description(payload, "Scheduled for ")
@@ -126,22 +124,17 @@ defmodule Huddlz.Notifications.Summary do
        when is_binary(reason) and reason != "",
        do: reason
 
-  defp description(:huddl_reminder_24h, %{"starts_at_iso" => iso}),
-    do: maybe_absolute_date("Starts ", iso)
-
-  defp description(:huddl_reminder_1h, %{"starts_at_iso" => iso}),
-    do: maybe_absolute_date("Starts ", iso)
-
   defp description(_, _), do: nil
 
-  defp maybe_absolute_date(prefix, iso) when is_binary(iso) do
-    case DateTime.from_iso8601(iso) do
-      {:ok, dt, _} -> prefix <> Calendar.strftime(dt, "%b %d, %Y")
-      _ -> nil
+  defp maybe_absolute_date(prefix, payload) do
+    case DateTimeFormatter.format_date_iso(
+           payload["starts_at_iso"],
+           DateTimeFormatter.time_zone_from_payload(payload)
+         ) do
+      nil -> nil
+      date -> prefix <> date
     end
   end
-
-  defp maybe_absolute_date(_prefix, _), do: nil
 
   defp changed_description(payload, schedule_prefix) do
     changed = "Changed: #{ChangedFields.summary(payload)}."

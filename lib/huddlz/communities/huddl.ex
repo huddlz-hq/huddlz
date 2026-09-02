@@ -134,6 +134,7 @@ defmodule Huddlz.Communities.Huddl do
         :description,
         :starts_at,
         :ends_at,
+        :time_zone,
         :event_type,
         :physical_location,
         :virtual_link,
@@ -178,6 +179,8 @@ defmodule Huddlz.Communities.Huddl do
 
       change Huddlz.Communities.Huddl.Changes.SetCreatorToActor
       change Huddlz.Communities.Huddl.Changes.AddCreatorAsAttendee
+      change Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup
+      change Huddlz.Communities.Huddl.Changes.ApplySavedLocation
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.AssignPendingImage
@@ -226,6 +229,7 @@ defmodule Huddlz.Communities.Huddl do
         :description,
         :starts_at,
         :ends_at,
+        :time_zone,
         :event_type,
         :physical_location,
         :virtual_link,
@@ -274,6 +278,8 @@ defmodule Huddlz.Communities.Huddl do
         message "is required when editing the whole series"
       end
 
+      change Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup
+      change Huddlz.Communities.Huddl.Changes.ApplySavedLocation
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.ClearUnusedLocationFields
@@ -354,6 +360,17 @@ defmodule Huddlz.Communities.Huddl do
         allow_nil? true
         default :soonest
         constraints one_of: [:soonest, :newest]
+      end
+
+      argument :search_time_zone, :string do
+        description "IANA time zone used for relative calendar date filters"
+        allow_nil? true
+        constraints min_length: 1, max_length: 100
+      end
+
+      argument :now, :utc_datetime do
+        allow_nil? true
+        public? false
       end
 
       pagination keyset?: true,
@@ -628,6 +645,10 @@ defmodule Huddlz.Communities.Huddl do
   # changes section removed - validation is handled by FutureDateValidation module
 
   validations do
+    validate Huddlz.TimeZone.Validation do
+      where action_is([:create, :update])
+    end
+
     validate string_length(:title, min: 3, max: 200) do
       message "Must be between 3 and 200 characters"
     end
@@ -688,6 +709,12 @@ defmodule Huddlz.Communities.Huddl do
     attribute :ends_at, :utc_datetime do
       allow_nil? false
       public? true
+    end
+
+    attribute :time_zone, :string do
+      allow_nil? false
+      public? true
+      constraints min_length: 1, max_length: 100
     end
 
     attribute :event_type, :atom do

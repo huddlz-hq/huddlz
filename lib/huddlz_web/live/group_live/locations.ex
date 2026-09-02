@@ -280,6 +280,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
            address,
            socket.assigns.modal_location_lat,
            socket.assigns.modal_location_lng,
+           socket.assigns.modal_location_time_zone,
            socket.assigns.group.id,
            actor: user
          ) do

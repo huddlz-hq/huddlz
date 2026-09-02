@@ -145,6 +145,13 @@ defmodule HuddlzWeb.HuddlLive.New do
 
   @impl true
   def render(assigns) do
+    time_zone = schedule_time_zone(assigns.form, assigns.selected_location, assigns.group)
+
+    assigns =
+      assigns
+      |> assign(:schedule_time_zone, time_zone)
+      |> assign(:ambiguous_time_label, ambiguous_time_label(assigns.form, time_zone))
+
     ~H"""
     <Layouts.app
       flash={@flash}
@@ -199,6 +206,8 @@ defmodule HuddlzWeb.HuddlLive.New do
           form={@form}
           calculated_end_time={@calculated_end_time}
           duration_prompt="Select duration…"
+          schedule_time_zone={@schedule_time_zone}
+          ambiguous_time_label={@ambiguous_time_label}
         >
           <:recurring_controls>
             <div class="form-row">
@@ -357,6 +366,7 @@ defmodule HuddlzWeb.HuddlLive.New do
            address,
            socket.assigns.modal_location_lat,
            socket.assigns.modal_location_lng,
+           socket.assigns.modal_location_time_zone,
            socket.assigns.group.id,
            actor: user
          ) do

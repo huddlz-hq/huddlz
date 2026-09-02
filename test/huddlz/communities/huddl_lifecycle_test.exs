@@ -124,6 +124,7 @@ defmodule Huddlz.Communities.HuddlLifecycleTest do
         description: "Waiting for scheduled completion",
         starts_at: DateTime.add(now, -2, :hour),
         ends_at: DateTime.add(now, -1, :hour),
+        time_zone: "America/New_York",
         event_type: :virtual,
         virtual_link: "https://example.com/ended",
         is_private: false,
@@ -144,7 +145,10 @@ defmodule Huddlz.Communities.HuddlLifecycleTest do
       HuddlTemplate
       |> Ash.Changeset.for_create(:create, %{
         frequency: :weekly,
-        repeat_until: Date.add(Date.utc_today(), 30)
+        repeat_until: Date.add(Date.utc_today(), 30),
+        starts_at_local: NaiveDateTime.new!(Date.add(Date.utc_today(), 2), ~T[14:00:00]),
+        ends_at_local: NaiveDateTime.new!(Date.add(Date.utc_today(), 2), ~T[15:00:00]),
+        time_zone: "America/New_York"
       })
       |> Ash.create!(authorize?: false)
 
@@ -201,6 +205,7 @@ defmodule Huddlz.Communities.HuddlLifecycleTest do
         description: "Ready for lifecycle completion",
         starts_at: DateTime.add(now, -2, :hour),
         ends_at: DateTime.add(now, -1, :hour),
+        time_zone: "America/New_York",
         event_type: :virtual,
         virtual_link: "https://example.com/ended",
         is_private: false,

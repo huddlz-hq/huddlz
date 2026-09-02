@@ -55,6 +55,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :in_person,
                    physical_location: "123 Main St",
+                   time_zone: "America/New_York",
                    group_id: group.id
                  },
                  actor: user
@@ -95,6 +96,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :in_person,
                    physical_location: "123 Main St",
+                   time_zone: "America/New_York",
                    group_id: group.id
                  },
                  actor: user
@@ -164,6 +166,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :in_person,
                    physical_location: "Secret Place",
+                   time_zone: "America/New_York",
                    group_id: group.id
                  },
                  actor: owner
@@ -182,6 +185,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :in_person,
                    physical_location: "Secret Place",
+                   time_zone: "America/New_York",
                    group_id: group.id
                  },
                  actor: organizer
@@ -200,6 +204,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :in_person,
                    physical_location: "Secret Place",
+                   time_zone: "America/New_York",
                    group_id: group.id
                  },
                  actor: member
@@ -218,6 +223,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :in_person,
                    physical_location: "Secret Place",
+                   time_zone: "America/New_York",
                    group_id: group.id
                  },
                  actor: outsider
@@ -239,6 +245,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
             ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
             event_type: :in_person,
             physical_location: "123 Main St",
+            time_zone: "America/New_York",
             group_id: group.id
           },
           actor: owner
@@ -265,6 +272,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
             ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
             event_type: :in_person,
             physical_location: "123 Main St",
+            time_zone: "America/New_York",
             group_id: group.id
           },
           actor: owner
@@ -295,6 +303,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :hybrid,
                    physical_location: "123 Main St",
+                   time_zone: "America/New_York",
                    group_id: group.id
                  },
                  actor: user

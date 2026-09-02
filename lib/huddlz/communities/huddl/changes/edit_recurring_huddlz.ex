@@ -48,22 +48,30 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz do
             changed_fields
           end
 
+        schedule = HuddlTemplate.wall_clock_schedule(huddl)
+
         {:ok, huddl_template} =
           huddl_template
-          |> Ash.Changeset.for_update(:update, %{
-            repeat_until: repeat_until,
-            frequency: frequency
-          })
+          |> Ash.Changeset.for_update(
+            :update,
+            Map.merge(schedule, %{
+              repeat_until: repeat_until,
+              frequency: frequency
+            })
+          )
           |> Ash.update(authorize?: false)
 
         # Synchronous: "edit all" is a rare organizer action, bounded at the
         # series cap, and immediate consistency is preferable here. The create
         # path defers its fan-out to RegenerateRecurringSeries instead.
-        RecurrenceHelper.reconcile_future_instances(huddl, huddl_template, actor)
+        case RecurrenceHelper.reconcile_future_instances(huddl, huddl_template, actor) do
+          :ok ->
+            notify_series(huddl, actor, changed_fields)
+            {:ok, huddl}
 
-        notify_series(huddl, actor, changed_fields)
-
-        {:ok, huddl}
+          {:error, reason} ->
+            {:error, reason}
+        end
     end
   end
 

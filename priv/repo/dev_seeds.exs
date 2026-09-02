@@ -82,6 +82,9 @@ if Enum.empty?(existing_groups) do
           description:
             "A group for Elixir enthusiasts in the Phoenix area. We meet monthly to discuss Elixir, Phoenix, LiveView, and more!",
           location: "Phoenix, AZ",
+          latitude: 33.4484,
+          longitude: -112.0740,
+          time_zone: "America/Phoenix",
           is_public: true
         },
         actor: alice
@@ -94,7 +97,10 @@ if Enum.empty?(existing_groups) do
           name: "Book Club Central",
           description:
             "Join us for our weekly book discussions. We read everything from fiction to technical books.",
-          location: "Online",
+          location: "Saint Augustine, FL",
+          latitude: 29.9012,
+          longitude: -81.3124,
+          time_zone: "America/New_York",
           is_public: true
         },
         actor: bob
@@ -107,7 +113,10 @@ if Enum.empty?(existing_groups) do
           name: "Hiking Adventures",
           description:
             "Weekend hiking trips for all skill levels. Safety first, adventure always!",
-          location: "Various Trails",
+          location: "Phoenix, AZ",
+          latitude: 33.4484,
+          longitude: -112.0740,
+          time_zone: "America/Phoenix",
           is_public: true
         },
         actor: carol
@@ -119,7 +128,10 @@ if Enum.empty?(existing_groups) do
         %{
           name: "Private Tech Talks",
           description: "Exclusive tech talks for members only.",
-          location: "Tech Hub",
+          location: "Phoenix, AZ",
+          latitude: 33.4484,
+          longitude: -112.0740,
+          time_zone: "America/Phoenix",
           is_public: false
         },
         actor: admin
@@ -247,6 +259,7 @@ if Enum.empty?(existing_groups) do
               |> DateTime.truncate(:second),
             physical_location: physical_location,
             virtual_link: virtual_link,
+            time_zone: phoenix_group.time_zone,
             group_id: phoenix_group.id
           },
           actor: alice
@@ -291,6 +304,7 @@ if Enum.empty?(existing_groups) do
               DateTime.add(DateTime.utc_now(), -days_ago * 24 * 3600 + 2 * 3600, :second)
               |> DateTime.truncate(:second),
             physical_location: "Central Library, Meeting Room #{Enum.random(["A", "B", "C"])}",
+            time_zone: book_group.time_zone,
             group_id: book_group.id
           },
           actor: bob
@@ -337,6 +351,7 @@ if Enum.empty?(existing_groups) do
               |> DateTime.truncate(:second),
             physical_location:
               "#{Enum.at(["North", "South", "East", "West"], rem(i - 1, 4))} Trailhead Parking",
+            time_zone: hiking_group.time_zone,
             group_id: hiking_group.id
           },
           actor: carol
@@ -406,6 +421,7 @@ if Enum.empty?(existing_groups) do
               |> DateTime.truncate(:second),
             physical_location: "Tech Hub Conference Room",
             virtual_link: "https://privatemeeting.example.com/#{i}",
+            time_zone: private_group.time_zone,
             group_id: private_group.id,
             is_private: true
           },

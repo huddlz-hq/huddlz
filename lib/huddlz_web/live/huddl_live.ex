@@ -15,7 +15,9 @@ defmodule HuddlzWeb.HuddlLive do
 
   alias Huddlz.Communities
   alias Huddlz.Storage.GroupImages
+  alias Huddlz.TimeZone
   alias HuddlzWeb.Layouts
+  alias HuddlzWeb.Live.Helpers.BrowserTimeZone
   require Logger
 
   @huddl_card_loads [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group]
@@ -27,12 +29,15 @@ defmodule HuddlzWeb.HuddlLive do
   @impl true
   def mount(_params, _session, socket) do
     user = socket.assigns[:current_user]
+    browser_time_zone = BrowserTimeZone.for_socket(socket)
 
     {:ok,
      socket
+     |> assign(:browser_time_zone, browser_time_zone)
      |> assign(:default_location_text, user && user.home_location)
      |> assign(:default_location_lat, user && user.home_latitude)
      |> assign(:default_location_lng, user && user.home_longitude)
+     |> assign(:default_location_time_zone, user && user.home_time_zone)
      |> assign_search_defaults()}
   end
 
@@ -45,6 +50,7 @@ defmodule HuddlzWeb.HuddlLive do
       location_text: socket.assigns.default_location_text,
       location_lat: socket.assigns.default_location_lat,
       location_lng: socket.assigns.default_location_lng,
+      location_time_zone: socket.assigns.default_location_time_zone,
       location_active:
         not is_nil(socket.assigns.default_location_lat) and
           not is_nil(socket.assigns.default_location_lng),
@@ -97,7 +103,7 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   defp assign_filters_from_params(socket, params) do
-    {location_text, location_lat, location_lng, location_active} =
+    {location_text, location_lat, location_lng, location_time_zone, location_active} =
       parse_location_params(params, socket)
 
     socket
@@ -109,6 +115,7 @@ defmodule HuddlzWeb.HuddlLive do
     |> assign(:location_text, location_text)
     |> assign(:location_lat, location_lat)
     |> assign(:location_lng, location_lng)
+    |> assign(:location_time_zone, location_time_zone)
     |> assign(:location_active, location_active)
   end
 
@@ -119,10 +126,11 @@ defmodule HuddlzWeb.HuddlLive do
     case {params["lat"], params["lng"]} do
       {lat_str, lng_str} when is_binary(lat_str) and is_binary(lng_str) ->
         with {lat, ""} <- Float.parse(lat_str),
-             {lng, ""} <- Float.parse(lng_str) do
-          {params["location"], lat, lng, true}
+             {lng, ""} <- Float.parse(lng_str),
+             time_zone when is_binary(time_zone) <- search_link_time_zone(params["time_zone"]) do
+          {params["location"], lat, lng, time_zone, true}
         else
-          _ -> {nil, nil, nil, false}
+          _ -> {nil, nil, nil, nil, false}
         end
 
       _ ->
@@ -131,11 +139,12 @@ defmodule HuddlzWeb.HuddlLive do
         if params["lat"] == nil and params["lng"] == nil and
              not Map.has_key?(params, "cleared") do
           {socket.assigns.default_location_text, socket.assigns.default_location_lat,
-           socket.assigns.default_location_lng,
+           socket.assigns.default_location_lng, socket.assigns.default_location_time_zone,
            not is_nil(socket.assigns.default_location_lat) and
-             not is_nil(socket.assigns.default_location_lng)}
+             not is_nil(socket.assigns.default_location_lng) and
+             not is_nil(socket.assigns.default_location_time_zone)}
         else
-          {nil, nil, nil, false}
+          {nil, nil, nil, nil, false}
         end
     end
   end
@@ -234,7 +243,7 @@ defmodule HuddlzWeb.HuddlLive do
   @impl true
   def handle_info(
         {:location_selected, "location-autocomplete",
-         %{display_text: text, latitude: lat, longitude: lng}},
+         %{display_text: text, latitude: lat, longitude: lng, time_zone: time_zone}},
         socket
       ) do
     merged =
@@ -243,7 +252,8 @@ defmodule HuddlzWeb.HuddlLive do
       |> Map.merge(%{
         "location" => text,
         "lat" => Float.to_string(lat),
-        "lng" => Float.to_string(lng)
+        "lng" => Float.to_string(lng),
+        "time_zone" => time_zone
       })
 
     {:noreply,
@@ -311,6 +321,7 @@ defmodule HuddlzWeb.HuddlLive do
         {"location", form_params["location"] || ""},
         {"lat", form_params["lat"]},
         {"lng", form_params["lng"]},
+        {"time_zone", form_params["time_zone"]},
         {"distance", form_params["distance_miles"]}
       ]
     else
@@ -399,6 +410,11 @@ defmodule HuddlzWeb.HuddlLive do
       search_latitude: search_lat,
       search_longitude: search_lng,
       distance_miles: distance,
+      search_time_zone:
+        if(socket.assigns.location_active and socket.assigns.location_time_zone,
+          do: socket.assigns.location_time_zone,
+          else: socket.assigns.browser_time_zone
+        ),
       sort: socket.assigns.sort
     }
   end
@@ -408,7 +424,7 @@ defmodule HuddlzWeb.HuddlLive do
   defp yours_to_relationship(:all), do: nil
 
   defp run_search(args, actor, opts) do
-    Communities.search_huddlz(
+    Communities.search_huddlz_in_time_zone(
       args.query,
       args.date_filter,
       args.event_type,
@@ -417,6 +433,7 @@ defmodule HuddlzWeb.HuddlLive do
       args.distance_miles,
       Keyword.get(opts, :relationship),
       args.sort,
+      args.search_time_zone,
       actor: actor,
       page: Keyword.get(opts, :page, []),
       load: @huddl_card_loads
@@ -730,7 +747,7 @@ defmodule HuddlzWeb.HuddlLive do
         </span>
         <h3 class="card-title">{@huddl.title}</h3>
         <div class="card-meta">
-          <span>{format_meta_when(@huddl.starts_at)}</span>
+          <span>{format_meta_when(@huddl)}</span>
           <%= if @distance do %>
             <span class="dot"></span>
             <span>{format_distance(@distance)}</span>
@@ -876,6 +893,7 @@ defmodule HuddlzWeb.HuddlLive do
         "location" => assigns.location_text,
         "lat" => Float.to_string(assigns.location_lat),
         "lng" => Float.to_string(assigns.location_lng),
+        "time_zone" => assigns.location_time_zone,
         "distance_miles" => Integer.to_string(assigns.distance_miles)
       })
     else
@@ -901,4 +919,14 @@ defmodule HuddlzWeb.HuddlLive do
       "No upcoming huddlz right now."
     end
   end
+
+  defp valid_time_zone(time_zone) do
+    if TimeZone.canonical?(time_zone), do: time_zone
+  end
+
+  # Search URLs created before location time zones were introduced are all
+  # from the initial Florida-only rollout. Keep their geographic filter active
+  # without falling back to the viewer's browser zone.
+  defp search_link_time_zone(nil), do: TimeZone.eastern()
+  defp search_link_time_zone(time_zone), do: valid_time_zone(time_zone)
 end

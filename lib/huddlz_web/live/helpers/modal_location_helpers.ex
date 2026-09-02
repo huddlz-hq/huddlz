@@ -3,10 +3,11 @@ defmodule HuddlzWeb.Live.Helpers.ModalLocationHelpers do
   Shared state handling for the "Select a location" modal used in the
   huddl and group new/edit/locations LiveViews.
 
-  The modal owns four socket assigns:
+  The modal owns five socket assigns:
 
     * `:modal_location_address` — full display text (nil when empty)
     * `:modal_location_lat` / `:modal_location_lng` — geocoded coordinates
+    * `:modal_location_time_zone` — canonical IANA time zone
     * `:modal_location_name` — short name (bound to the name input)
   """
 
@@ -18,6 +19,7 @@ defmodule HuddlzWeb.Live.Helpers.ModalLocationHelpers do
       modal_location_address: nil,
       modal_location_lat: nil,
       modal_location_lng: nil,
+      modal_location_time_zone: nil,
       modal_location_name: ""
     )
   end
@@ -33,12 +35,14 @@ defmodule HuddlzWeb.Live.Helpers.ModalLocationHelpers do
     * `:display_text` — full address
     * `:main_text` — primary name (e.g. "Coffee Shop")
     * `:latitude` / `:longitude`
+    * `:time_zone` — canonical IANA time zone
   """
   def apply_selected(socket, %{} = payload) do
     assign(socket,
       modal_location_address: Map.get(payload, :display_text),
       modal_location_lat: Map.get(payload, :latitude),
       modal_location_lng: Map.get(payload, :longitude),
+      modal_location_time_zone: Map.get(payload, :time_zone),
       modal_location_name: Map.get(payload, :main_text) || ""
     )
   end

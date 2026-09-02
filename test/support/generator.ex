@@ -164,6 +164,9 @@ defmodule Huddlz.Generator do
         name: StreamData.repeatedly(fn -> Faker.Company.name() end),
         description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
         location: "Test Location",
+        time_zone: "America/New_York",
+        latitude: 29.9012,
+        longitude: -81.3124,
         is_public: true,
         # Pin to nil so GenerateSlug derives the slug from the name. Otherwise
         # the public `:slug` argument on :create_group falls into Ash's optional
@@ -204,6 +207,7 @@ defmodule Huddlz.Generator do
           end),
         latitude: 30.27,
         longitude: -97.74,
+        time_zone: "America/Chicago",
         group_id: group_id
       ],
       overrides: opts,
@@ -239,6 +243,7 @@ defmodule Huddlz.Generator do
         description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
         starts_at: default_starts_at,
         ends_at: default_ends_at,
+        time_zone: "America/New_York",
         event_type: :in_person,
         physical_location: StreamData.repeatedly(fn -> Faker.Address.street_address() end),
         virtual_link: nil,
@@ -277,6 +282,8 @@ defmodule Huddlz.Generator do
           generate(group(owner_id: owner.id, is_public: true, actor: owner)).id
         end)
 
+    group_time_zone = Ash.get!(Group, group_id, authorize?: false).time_zone
+
     # Generate random dates in the future using the new virtual argument pattern
     days_ahead = :rand.uniform(30)
     hours_duration = :rand.uniform(4)
@@ -302,6 +309,7 @@ defmodule Huddlz.Generator do
         duration_minutes: duration_minutes,
         thumbnail_url: thumbnail_url,
         group_id: group_id,
+        time_zone: group_time_zone,
         event_type: :in_person,
         physical_location: "123 Main St, Anytown, USA",
         group_location_id: nil,
@@ -373,6 +381,7 @@ defmodule Huddlz.Generator do
         description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
         starts_at: default_starts_at,
         ends_at: default_ends_at,
+        time_zone: "America/New_York",
         event_type: :in_person,
         physical_location: "123 Main St, Anytown, USA",
         is_private: false,

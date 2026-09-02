@@ -276,6 +276,7 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
           duration_minutes: 60,
           event_type: :in_person,
           physical_location: "123 Main St",
+          time_zone: "America/New_York",
           group_id: group.id,
           is_recurring: true,
           frequency: "weekly",

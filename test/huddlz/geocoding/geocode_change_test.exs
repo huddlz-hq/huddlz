@@ -145,6 +145,7 @@ defmodule Huddlz.Geocoding.GeocodeChangeTest do
             title: "Test Huddl",
             event_type: :in_person,
             physical_location: "Some Address",
+            time_zone: "America/New_York",
             date: future_date,
             start_time: ~T[14:00:00],
             duration_minutes: 60,
@@ -158,18 +159,14 @@ defmodule Huddlz.Geocoding.GeocodeChangeTest do
       assert huddl.longitude == -74.0060
     end
 
-    test "geocode_if_changed geocodes when lat/lng attributes exist but provided arguments do not" do
-      # This tests the exact bug: if geocode_if_changed checks changeset.attributes
-      # for lat/lng instead of the provided_* arguments, it would skip geocoding
-      # when a prior change in the pipeline (or pre-existing data) set lat/lng.
+    test "selected latitude and longitude attributes bypass geocoding" do
       stub(Huddlz.MockGeocoding, :geocode, fn
         "New Location" -> {:ok, %{latitude: 40.0, longitude: -74.0}}
         _ -> {:error, :not_found}
       end)
 
-      # Build a changeset that already has lat/lng in attributes (simulating
-      # a prior change in the pipeline having set them) AND is changing
-      # physical_location — geocoding MUST still run.
+      # A location picker has already resolved these coordinates, so the
+      # fallback geocoder must not replace them.
       changeset =
         Huddl
         |> Ash.Changeset.new()
@@ -179,8 +176,8 @@ defmodule Huddlz.Geocoding.GeocodeChangeTest do
 
       result = GeocodingChange.geocode_if_changed(changeset, :physical_location)
 
-      assert Ash.Changeset.get_attribute(result, :latitude) == 40.0
-      assert Ash.Changeset.get_attribute(result, :longitude) == -74.0
+      assert Ash.Changeset.get_attribute(result, :latitude) == 30.0
+      assert Ash.Changeset.get_attribute(result, :longitude) == -97.0
     end
   end
 end
