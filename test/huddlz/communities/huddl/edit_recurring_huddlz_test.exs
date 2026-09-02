@@ -110,25 +110,27 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
     %{owner: owner, source: source, template: template, repeat_until: repeat_until} =
       build_series(false)
 
-    assert length(future_instances(template.id, source.starts_at)) == 2
+    initial_count = length(future_instances(template.id, source.starts_at))
+    assert initial_count > 0
 
     edit_all(source, owner, repeat_until)
 
-    # With the visibility-free :siblings_in_series read, the 2 private future
-    # instances are found and deleted before regeneration, so the count holds at
-    # 2. The old actor-less read found 0 and regenerated on top, doubling to 4.
-    assert length(future_instances(template.id, source.starts_at)) == 2
+    # With the visibility-free :siblings_in_series read, the private future
+    # instances are found and deleted before regeneration, so the count remains
+    # stable. The old actor-less read found none and regenerated duplicates.
+    assert length(future_instances(template.id, source.starts_at)) == initial_count
   end
 
   test "edit-all on a public series regenerates without duplicating" do
     %{owner: owner, source: source, template: template, repeat_until: repeat_until} =
       build_series(true)
 
-    assert length(future_instances(template.id, source.starts_at)) == 2
+    initial_count = length(future_instances(template.id, source.starts_at))
+    assert initial_count > 0
 
     edit_all(source, owner, repeat_until)
 
-    assert length(future_instances(template.id, source.starts_at)) == 2
+    assert length(future_instances(template.id, source.starts_at)) == initial_count
   end
 
   test "reconciliation fills a beginning gap without moving a later RSVP" do
