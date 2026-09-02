@@ -89,7 +89,6 @@ defmodule Huddlz.MixProject do
       {:ash_phoenix, "~> 2.0"},
       {:sourceror, "~> 1.8", only: [:dev, :test]},
       {:ash, "~> 3.0"},
-      {:tidewave, "~> 0.8", only: [:dev]},
       {:igniter, "~> 0.5", only: [:dev, :test]},
       {:faker_fork, "~> 0.19", only: [:dev, :test]},
       {:phoenix, "~> 1.8"},
