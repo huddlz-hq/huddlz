@@ -6,18 +6,17 @@ defmodule CalendarMonthOverviewSteps do
   import Huddlz.Test.Helpers.Calendar
   import PhoenixTest
 
-  alias Huddlz.Calendar.Clock
   alias Huddlz.Communities
   alias Huddlz.Communities.HuddlAttendee
 
   step "I have Hosting, Going, Waitlisted, and Group opportunity huddlz on one date",
        context do
-    date = current_display_date() |> shift_month(1) |> Map.put(:day, 15)
+    date = current_calendar_date() |> shift_month(1) |> Map.put(:day, 15)
     starts_at = local_time_in_utc(date, ~T[10:00:00])
     user = context.current_user
 
     hosted_group = generate(group(owner_id: user.id, is_public: true, actor: user))
-    hosted = create_huddl!(hosted_group, user, "Hosting indicator", starts_at)
+    hosted = create_calendar_huddl(hosted_group, user, "Hosting indicator", starts_at)
     Communities.rsvp_huddl!(hosted, actor: user)
 
     attendee_host = generate(user(role: :user))
@@ -26,7 +25,7 @@ defmodule CalendarMonthOverviewSteps do
       generate(group(owner_id: attendee_host.id, is_public: true, actor: attendee_host))
 
     going =
-      create_huddl!(
+      create_calendar_huddl(
         attendee_group,
         attendee_host,
         "Going indicator",
@@ -41,7 +40,7 @@ defmodule CalendarMonthOverviewSteps do
       generate(group(owner_id: waitlist_host.id, is_public: true, actor: waitlist_host))
 
     waitlisted =
-      create_huddl!(
+      create_calendar_huddl(
         waitlist_group,
         waitlist_host,
         "Waitlisted indicator",
@@ -60,7 +59,7 @@ defmodule CalendarMonthOverviewSteps do
       create_calendar_member_group(member: user, group: [is_public: true])
 
     opportunity =
-      create_huddl!(
+      create_calendar_huddl(
         opportunity_group,
         opportunity_host,
         "Group opportunity indicator",
@@ -77,7 +76,7 @@ defmodule CalendarMonthOverviewSteps do
     host = generate(user(role: :user))
     group = generate(group(owner_id: host.id, is_public: true, actor: host))
     starts_at = local_time_in_utc(context.month_date, ~T[15:00:00])
-    huddl = create_huddl!(group, host, "Cancelled Personal indicator", starts_at)
+    huddl = create_calendar_huddl(group, host, "Cancelled Personal indicator", starts_at)
     Communities.rsvp_huddl!(huddl, actor: context.current_user)
     cancelled = Communities.cancel_huddl!(huddl, nil, actor: host)
 
@@ -145,7 +144,7 @@ defmodule CalendarMonthOverviewSteps do
   end
 
   step "I navigated three months into the future", context do
-    date = current_display_date() |> shift_month(3) |> Map.put(:day, 12)
+    date = current_calendar_date() |> shift_month(3) |> Map.put(:day, 12)
     month = Calendar.strftime(date, "%Y-%m")
 
     session =
@@ -162,7 +161,7 @@ defmodule CalendarMonthOverviewSteps do
     group = generate(group(owner_id: host.id, is_public: true, actor: host))
 
     morning =
-      create_huddl!(
+      create_calendar_huddl(
         group,
         host,
         "Future morning huddl",
@@ -170,7 +169,7 @@ defmodule CalendarMonthOverviewSteps do
       )
 
     afternoon =
-      create_huddl!(
+      create_calendar_huddl(
         group,
         host,
         "Future afternoon huddl",
@@ -238,13 +237,6 @@ defmodule CalendarMonthOverviewSteps do
     context
   end
 
-  step "the full month fits without horizontal page scrolling", context do
-    assert context.viewport == :narrow
-    assert_has(context.session, "#calendar-month-grid[role='grid'] > [role='row']", count: 7)
-    assert_has(context.session, "#calendar-month-grid [role='gridcell']", count: 42)
-    context
-  end
-
   step "each date is keyboard operable", context do
     assert_has(context.session, "#calendar-month-grid a[role='gridcell'][href]", count: 42)
     context
@@ -255,7 +247,7 @@ defmodule CalendarMonthOverviewSteps do
 
     assert_has(
       context.session,
-      "#{date_selector}[aria-label*='Going: Narrow Month huddl'][aria-label*='1 additional huddl']"
+      "#{date_selector}[aria-label*='Going: Month huddl'][aria-label*='1 additional huddl']"
     )
 
     assert_has(context.session, "#{date_selector} [data-month-indicator='active']", count: 3)
@@ -270,7 +262,7 @@ defmodule CalendarMonthOverviewSteps do
   end
 
   step "selecting an empty date reveals the normal empty Day state", context do
-    empty_date = current_display_date() |> Map.put(:day, 1)
+    empty_date = current_calendar_date() |> Map.put(:day, 1)
 
     session =
       click_link(
@@ -281,26 +273,6 @@ defmodule CalendarMonthOverviewSteps do
 
     assert_has(session, "#calendar-month-day-empty", text: "Nothing on your calendar this day.")
     Map.put(context, :session, session)
-  end
-
-  defp create_huddl!(group, creator, title, starts_at) do
-    generate(
-      past_huddl(
-        group_id: group.id,
-        creator_id: creator.id,
-        title: title,
-        starts_at: starts_at,
-        ends_at: DateTime.add(starts_at, 45, :minute),
-        lifecycle_state: :published,
-        is_private: false
-      )
-    )
-  end
-
-  defp current_display_date do
-    Clock.utc_now()
-    |> DateTime.shift_zone!("America/New_York")
-    |> DateTime.to_date()
   end
 
   defp local_time_in_utc(date, time) do

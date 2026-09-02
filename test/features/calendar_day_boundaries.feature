@@ -1,4 +1,4 @@
-@async @database @conn
+@calendar_day_boundaries @async @database @conn
 Feature: Browser-derived Calendar time-zone Day boundaries
 
   Scenario: The browser time zone determines the current Day in Automatic mode

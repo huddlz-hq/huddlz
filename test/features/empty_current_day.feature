@@ -20,3 +20,12 @@ Feature: Empty current Day guidance
     Then I see the shared empty current Day message
     And I do not see a "Coming up" section
     And I can navigate to Discover
+
+  Scenario: An explicitly selected empty Day omits Coming up
+    Given I am signed in
+    And I have no Calendar huddlz today
+    And I have four future Calendar huddlz
+    When I visit Calendar
+    And I explicitly select another empty date
+    Then I see the normal empty Day state
+    And Coming up is not shown

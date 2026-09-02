@@ -1,4 +1,4 @@
-@async @database @conn
+@personal_huddlz_in_day @async @database @conn
 Feature: Confirmed Personal huddlz in Day
 
   Scenario: A confirmed Personal huddl appears in the current Day

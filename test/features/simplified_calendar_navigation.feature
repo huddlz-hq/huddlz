@@ -21,9 +21,3 @@ Feature: Simplified Calendar navigation
     When I visit the legacy My huddlz URL
     Then I am taken to Calendar
     And the current date is selected
-
-  Scenario: The global Discover search keeps its existing behavior
-    Given I am signed in
-    And I am viewing Calendar
-    When I use the global Discover search
-    Then I am taken to Discover search results using the existing search behavior

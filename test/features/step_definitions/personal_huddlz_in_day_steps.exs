@@ -4,9 +4,8 @@ defmodule PersonalHuddlzInDaySteps do
   import ExUnit.Assertions
   import Huddlz.Generator
   import Huddlz.Test.Helpers.Authentication
+  import Huddlz.Test.Helpers.Calendar
   import PhoenixTest
-
-  alias Huddlz.Calendar.Clock
 
   step "I am signed in", %{conn: conn} = context do
     attendee = generate(user(role: :user))
@@ -22,7 +21,7 @@ defmodule PersonalHuddlzInDaySteps do
     host = generate(user(role: :user))
     group = generate(group(owner_id: host.id, is_public: true, actor: host))
     time_zone = "America/New_York"
-    today = Clock.utc_now() |> DateTime.shift_zone!(time_zone) |> DateTime.to_date()
+    today = current_calendar_date(time_zone)
     starts_at = DateTime.new!(today, ~T[00:00:00], time_zone) |> DateTime.shift_zone!("Etc/UTC")
 
     huddl =
@@ -109,10 +108,7 @@ defmodule PersonalHuddlzInDaySteps do
   end
 
   step "the current date is selected", %{session: session} = context do
-    today =
-      Clock.utc_now()
-      |> DateTime.shift_zone!(context[:device_time_zone] || "America/New_York")
-      |> DateTime.to_date()
+    today = current_calendar_date(context[:device_time_zone] || "America/New_York")
 
     if PhoenixTest.Driver.current_path(session) =~ "view=month" do
       assert_has(session, "#calendar-month-day-#{Date.to_iso8601(today)}[aria-current='date']")

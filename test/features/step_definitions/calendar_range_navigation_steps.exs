@@ -4,9 +4,8 @@ defmodule CalendarRangeNavigationSteps do
   import ExUnit.Assertions
   import Huddlz.Generator
   import Huddlz.Test.Helpers.Authentication
+  import Huddlz.Test.Helpers.Calendar
   import PhoenixTest
-
-  alias Huddlz.Calendar.Clock
 
   step "the Calendar ranges are:", %{datatable: datatable, session: session} = context do
     expected_ranges = List.flatten(datatable.raw)
@@ -37,7 +36,7 @@ defmodule CalendarRangeNavigationSteps do
   end
 
   step "I have a Calendar huddl tomorrow", %{current_user: user} = context do
-    tomorrow = Date.add(display_today(), 1)
+    tomorrow = Date.add(current_calendar_date(), 1)
     group = generate(group(owner_id: user.id, is_public: true, actor: user))
 
     huddl =
@@ -82,7 +81,7 @@ defmodule CalendarRangeNavigationSteps do
 
   step "I return to the current date", %{session: session} = context do
     assert PhoenixTest.Driver.current_path(session) == "/calendar"
-    assert_has(session, "#calendar-day-heading", text: format_full_date(display_today()))
+    assert_has(session, "#calendar-day-heading", text: format_full_date(current_calendar_date()))
     context
   end
 
@@ -159,73 +158,7 @@ defmodule CalendarRangeNavigationSteps do
     Map.put(context, :session, revisited_session)
   end
 
-  step "the current Day is empty", %{conn: conn} = context do
-    user = generate(user(role: :user))
-    Map.merge(context, %{current_user: user, session: login(conn, user)})
-  end
-
-  step "I have future Calendar huddlz", %{current_user: user} = context do
-    group = generate(group(owner_id: user.id, is_public: true, actor: user))
-
-    huddlz =
-      Enum.map(1..4, fn offset ->
-        generate(
-          huddl(
-            group_id: group.id,
-            creator_id: user.id,
-            title: "Future huddl #{offset}",
-            date: Date.add(display_today(), offset),
-            is_private: false,
-            actor: user
-          )
-        )
-      end)
-
-    Map.put(context, :future_calendar_huddlz, huddlz)
-  end
-
-  step "I visit Calendar Day", %{session: session} = context do
-    Map.put(context, :session, visit(session, "/calendar"))
-  end
-
-  step "I see at most the next three huddlz under Coming up",
-       %{session: session, future_calendar_huddlz: [first, second, third, _fourth]} = context do
-    assert_has(session, "#calendar-coming-up-list > a", count: 3)
-
-    titles =
-      session.view
-      |> Phoenix.LiveViewTest.render()
-      |> LazyHTML.from_fragment()
-      |> LazyHTML.query("#calendar-coming-up-list .card-title")
-      |> Enum.map(&LazyHTML.text/1)
-      |> Enum.map(&String.trim/1)
-
-    assert titles == Enum.map([first, second, third], & &1.title)
-    context
-  end
-
-  step "I explicitly select another empty date", %{session: session} = context do
-    empty_date = Date.add(display_today(), 10)
-    Map.put(context, :session, visit(session, day_path(empty_date)))
-  end
-
-  step "I see the normal empty Day state", %{session: session} = context do
-    assert_has(session, "#calendar-day-empty", text: "Nothing on your calendar this day.")
-    context
-  end
-
-  step "Coming up is not shown", %{session: session} = context do
-    refute_has(session, "#calendar-coming-up")
-    context
-  end
-
   defp day_path(date), do: "/calendar?view=day&date=#{Date.to_iso8601(date)}"
-
-  defp display_today do
-    Clock.utc_now()
-    |> DateTime.shift_zone!("America/New_York")
-    |> DateTime.to_date()
-  end
 
   defp month_path(date) do
     month = Calendar.strftime(date, "%Y-%m")

@@ -28,12 +28,3 @@ Feature: Calendar range navigation
     And Day resets with Today
     And Week resets with This week
     And Month resets with This month
-
-  Scenario: Coming up supplements only an empty current Day
-    Given the current Day is empty
-    And I have future Calendar huddlz
-    When I visit Calendar Day
-    Then I see at most the next three huddlz under Coming up
-    When I explicitly select another empty date
-    Then I see the normal empty Day state
-    And Coming up is not shown

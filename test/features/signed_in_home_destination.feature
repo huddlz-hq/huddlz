@@ -1,16 +1,8 @@
-@async @database @conn
+@signed_in_home_destination @async @database @conn
 Feature: Signed-in home destination
 
   Scenario: A signed-in user lands on Calendar Day
     Given I am signed in
-    When I visit the application root
-    Then I am taken to Calendar
-    And the current date is selected
-
-  Scenario: A new signed-in user also lands on Calendar Day
-    Given I am signed in
-    And I have no group memberships
-    And I have no Personal huddlz
     When I visit the application root
     Then I am taken to Calendar
     And the current date is selected

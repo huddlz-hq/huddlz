@@ -3,6 +3,7 @@ defmodule CalendarDayBoundariesSteps do
 
   import ExUnit.Assertions
   import Huddlz.Generator
+  import Huddlz.Test.Helpers.Calendar
   import Phoenix.LiveViewTest, only: [put_connect_params: 2]
   import PhoenixTest
 
@@ -94,9 +95,7 @@ defmodule CalendarDayBoundariesSteps do
   end
 
   defp local_today(time_zone) do
-    Clock.utc_now()
-    |> DateTime.shift_zone!(time_zone)
-    |> DateTime.to_date()
+    current_calendar_date(time_zone)
   end
 
   defp local_datetime!(date, time, time_zone) do

@@ -1,4 +1,4 @@
-@async @database @conn
+@global_header @async @database @conn
 Feature: Global Header
   As a visitor to the site
   I want a global header that pairs the brand with search and an organize entry point
@@ -8,7 +8,8 @@ Feature: Global Header
     When I visit "/discover"
     Then the v3 topbar should expose a search form posting q to /discover
 
-  Scenario: Header search posts the query to /discover
-    Given there are upcoming huddlz in the system
-    When I visit "/discover?q=Elixir"
-    Then I should see huddlz matching "Elixir"
+  Scenario: Header search submits the query to Discover from an application page
+    Given I am signed in
+    And I am viewing Calendar
+    When I use the global Discover search
+    Then I am taken to Discover search results using the existing search behavior

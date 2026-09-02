@@ -1,4 +1,4 @@
-@async @database @conn
+@calendar_accessibility @async @database @conn
 Feature: Accessible personal calendar
   As a person using assistive technology
   I want calendar huddl links to describe my relationship to each huddl

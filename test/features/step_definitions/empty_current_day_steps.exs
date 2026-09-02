@@ -3,9 +3,8 @@ defmodule EmptyCurrentDaySteps do
 
   import ExUnit.Assertions
   import Huddlz.Generator
+  import Huddlz.Test.Helpers.Calendar
   import PhoenixTest
-
-  alias Huddlz.Calendar.Clock
 
   step "I have no Calendar huddlz today", context do
     context
@@ -75,6 +74,22 @@ defmodule EmptyCurrentDaySteps do
     context
   end
 
+  step "I explicitly select another empty date", %{session: session} = context do
+    empty_date = Date.add(current_calendar_date(), 10)
+    path = "/calendar?view=day&date=#{Date.to_iso8601(empty_date)}"
+    Map.put(context, :session, visit(session, path))
+  end
+
+  step "I see the normal empty Day state", %{session: session} = context do
+    assert_has(session, "#calendar-day-empty", text: "Nothing on your calendar this day.")
+    context
+  end
+
+  step "Coming up is not shown", %{session: session} = context do
+    refute_has(session, "#calendar-coming-up")
+    context
+  end
+
   step "I can navigate to Discover", %{session: session} = context do
     assert_has(session, "#calendar-discover-link[href='/discover']")
     session = click_link(session, "Discover huddlz")
@@ -96,11 +111,5 @@ defmodule EmptyCurrentDaySteps do
         is_private: false
       )
     )
-  end
-
-  defp current_calendar_date do
-    Clock.utc_now()
-    |> DateTime.shift_zone!("America/New_York")
-    |> DateTime.to_date()
   end
 end

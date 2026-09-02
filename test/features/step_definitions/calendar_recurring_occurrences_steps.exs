@@ -3,9 +3,9 @@ defmodule CalendarRecurringOccurrencesSteps do
 
   import ExUnit.Assertions
   import Huddlz.Generator
+  import Huddlz.Test.Helpers.Calendar
   import PhoenixTest
 
-  alias Huddlz.Calendar.Clock
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.Workers.RegenerateRecurringSeries
@@ -125,12 +125,6 @@ defmodule CalendarRecurringOccurrencesSteps do
       0 -> Date.add(today, 7)
       days_until_tuesday -> Date.add(today, days_until_tuesday)
     end
-  end
-
-  defp current_calendar_date do
-    Clock.utc_now()
-    |> DateTime.shift_zone!("America/New_York")
-    |> DateTime.to_date()
   end
 
   defp week_path(date), do: "/calendar?view=week&date=#{Date.to_iso8601(date)}"

@@ -3,9 +3,9 @@ defmodule CalendarWeekSteps do
 
   import ExUnit.Assertions
   import Huddlz.Generator
+  import Huddlz.Test.Helpers.Calendar
   import PhoenixTest
 
-  alias Huddlz.Calendar.Clock
   alias Huddlz.Communities
 
   step "I have Calendar huddlz on the Sunday and Saturday of the current week", context do
@@ -143,10 +143,7 @@ defmodule CalendarWeekSteps do
   end
 
   defp current_week_start(time_zone) do
-    today =
-      Clock.utc_now()
-      |> DateTime.shift_zone!(time_zone)
-      |> DateTime.to_date()
+    today = current_calendar_date(time_zone)
 
     Date.add(today, -rem(Date.day_of_week(today), 7))
   end
