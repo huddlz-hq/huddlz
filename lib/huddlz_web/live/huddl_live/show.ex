@@ -6,7 +6,6 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   alias Huddlz.Communities
   alias Huddlz.Storage.HuddlImages
-  alias Huddlz.TimeZone
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
@@ -28,17 +27,8 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   @impl true
   def mount(_params, _session, socket) do
-    browser_time_zone =
-      socket
-      |> get_connect_params()
-      |> TimeZone.from_connect_params()
-
     {:ok,
      socket
-     |> assign(
-       :display_time_zone,
-       TimeZone.display(socket.assigns.current_user, browser_time_zone)
-     )
      |> assign(:confirming_delete?, false)
      |> assign(:confirming_cancel?, false)
      |> assign(:cancel_form, to_form(%{"cancellation_reason" => ""}, as: :cancel))}
@@ -56,10 +46,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
          |> assign(:page_title, huddl.title)
          |> assign(:meta, huddl_meta(huddl))
          |> assign(:huddl, huddl)
-         |> assign(
-           :schedule_presentation,
-           SchedulePresentation.detail(huddl, socket.assigns.display_time_zone)
-         )
+         |> assign(:schedule_presentation, SchedulePresentation.detail(huddl))
          |> assign(:attendance, attendance)
          |> assign(:waitlist_position, waitlist_position)
          |> assign(
@@ -129,7 +116,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
           <div class="meta">
             <span :for={
               {segment, idx} <-
-                Enum.with_index(hero_meta_segments(@huddl, @display_time_zone))
+                Enum.with_index(hero_meta_segments(@huddl))
             }>
               <%= if idx > 0 do %>
                 <span class="meta-sep">·</span>
@@ -169,17 +156,10 @@ defmodule HuddlzWeb.HuddlLive.Show do
                 <div class="label">When</div>
                 <div
                   class="value"
-                  data-testid="huddl-display-when"
-                  data-display-time-zone={@display_time_zone}
+                  data-testid="huddl-authoritative-when"
+                  data-time-zone={@huddl.time_zone}
                 >
                   {@schedule_presentation.primary}
-                </div>
-                <div
-                  :if={@schedule_presentation.secondary}
-                  class={["muted", "text-sm"]}
-                  data-testid="huddl-local-when"
-                >
-                  {@schedule_presentation.secondary}
                 </div>
               </div>
             </li>
@@ -825,33 +805,33 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp event_type_label(:hybrid), do: "Hybrid huddl"
   defp event_type_label(_), do: "Huddl"
 
-  defp hero_meta_segments(huddl, display_time_zone) do
+  defp hero_meta_segments(huddl) do
     [
       huddl.group.name,
-      hero_when_segment(huddl, display_time_zone),
+      hero_when_segment(huddl),
       hero_location_segment(huddl)
     ]
     |> Enum.reject(&is_nil/1)
   end
 
-  defp hero_when_segment(%{status: :in_progress} = huddl, display_time_zone) do
+  defp hero_when_segment(%{status: :in_progress} = huddl) do
     if huddl.ends_at do
-      "Started #{format_time_only(huddl.starts_at, display_time_zone)} · ends #{format_time_only(huddl.ends_at, display_time_zone)}"
+      "Started #{format_time_only(huddl.starts_at, huddl.time_zone)} · ends #{format_time_only(huddl.ends_at, huddl.time_zone)}"
     else
-      "Started #{format_time_only(huddl.starts_at, display_time_zone)}"
+      "Started #{format_time_only(huddl.starts_at, huddl.time_zone)}"
     end
   end
 
-  defp hero_when_segment(%{status: :cancelled} = huddl, display_time_zone) do
-    "Was scheduled for #{format_short_date(huddl.starts_at, display_time_zone)}"
+  defp hero_when_segment(%{status: :cancelled} = huddl) do
+    "Was scheduled for #{format_short_date(huddl.starts_at, huddl.time_zone)}"
   end
 
-  defp hero_when_segment(%{status: :completed} = huddl, display_time_zone) do
-    "#{format_short_date(huddl.starts_at, display_time_zone)} · #{huddl.rsvp_count} attended"
+  defp hero_when_segment(%{status: :completed} = huddl) do
+    "#{format_short_date(huddl.starts_at, huddl.time_zone)} · #{huddl.rsvp_count} attended"
   end
 
-  defp hero_when_segment(huddl, display_time_zone) do
-    "#{format_short_date(huddl.starts_at, display_time_zone)} · #{format_time_only(huddl.starts_at, display_time_zone)}"
+  defp hero_when_segment(huddl) do
+    "#{format_short_date(huddl.starts_at, huddl.time_zone)} · #{format_time_only(huddl.starts_at, huddl.time_zone)}"
   end
 
   defp hero_location_segment(%{event_type: :hybrid, physical_location: loc}) when is_binary(loc),

@@ -9,7 +9,7 @@ Feature: Calendar and Huddl time presentation
     Then it appears on its New York date
     And the card's primary date and time use "America/New_York"
     And the card identifies 9:00 PM at the huddl
-    And the detailed view presents the same two times
+    And the detailed view presents only the authoritative huddl time
 
   Scenario: Matching time zones use one schedule time
     Given my Calendar and Huddl time zones are both "America/New_York"

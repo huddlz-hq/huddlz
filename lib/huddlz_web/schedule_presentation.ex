@@ -1,6 +1,6 @@
 defmodule HuddlzWeb.SchedulePresentation do
   @moduledoc """
-  Builds consistent Calendar-local and huddl-local schedule labels for UI surfaces.
+  Builds Calendar-local card labels and authoritative huddl-detail labels.
   """
 
   defstruct [:month, :day, :primary, :secondary]
@@ -17,19 +17,12 @@ defmodule HuddlzWeb.SchedulePresentation do
     }
   end
 
-  def detail(huddl, display_time_zone) do
-    {display_starts_at, display_ends_at} = local_schedule(huddl, display_time_zone)
+  def detail(huddl) do
     {huddl_starts_at, huddl_ends_at} = local_schedule(huddl, huddl.time_zone)
 
     %__MODULE__{
-      primary: detail_label(display_starts_at, display_ends_at),
-      secondary:
-        detail_huddl_local(
-          huddl_starts_at,
-          huddl_ends_at,
-          huddl.time_zone,
-          display_time_zone
-        )
+      primary: detail_label(huddl_starts_at, huddl_ends_at),
+      secondary: nil
     }
   end
 
@@ -37,12 +30,6 @@ defmodule HuddlzWeb.SchedulePresentation do
 
   defp card_huddl_local(starts_at, _huddl_time_zone, _display_time_zone) do
     Calendar.strftime(starts_at, "%-I:%M %p %Z at the huddl")
-  end
-
-  defp detail_huddl_local(_starts_at, _ends_at, time_zone, time_zone), do: nil
-
-  defp detail_huddl_local(starts_at, ends_at, _huddl_time_zone, _display_time_zone) do
-    detail_label(starts_at, ends_at) <> " at the huddl"
   end
 
   defp detail_label(starts_at, ends_at) do

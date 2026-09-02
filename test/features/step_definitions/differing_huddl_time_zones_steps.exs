@@ -109,7 +109,7 @@ defmodule DifferingHuddlTimeZonesSteps do
     context
   end
 
-  step "the detailed view presents the same two times", context do
+  step "the detailed view presents only the authoritative huddl time", context do
     session =
       click_link(
         context.session,
@@ -118,11 +118,13 @@ defmodule DifferingHuddlTimeZonesSteps do
       )
 
     session
-    |> assert_has("[data-testid='huddl-display-when']", text: "Tue, Jul 16 · 12:00 AM")
     |> assert_has(
-      "[data-testid='huddl-local-when']",
-      text: "Mon, Jul 15 · 9:00 PM – 10:30 PM PDT at the huddl"
+      "[data-testid='huddl-authoritative-when'][data-time-zone='America/Los_Angeles']",
+      text: "Mon, Jul 15 · 9:00 PM – 10:30 PM PDT"
     )
+    |> assert_has(".huddl-hero .meta", text: "Mon, Jul 15 · 9:00 PM")
+    |> refute_has("[data-testid='huddl-local-when']")
+    |> refute_has(".huddl-hero .meta", text: "Tue, Jul 16 · 12:00 AM")
 
     Map.put(context, :session, session)
   end
@@ -164,7 +166,7 @@ defmodule DifferingHuddlTimeZonesSteps do
 
   step "I see one schedule time", context do
     context.session
-    |> assert_has("[data-testid='huddl-display-when']", text: "9:00 AM – 10:00 AM EDT")
+    |> assert_has("[data-testid='huddl-authoritative-when']", text: "9:00 AM – 10:00 AM EDT")
     |> refute_has("[data-testid='huddl-local-when']")
 
     context
