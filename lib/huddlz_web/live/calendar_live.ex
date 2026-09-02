@@ -181,7 +181,7 @@ defmodule HuddlzWeb.CalendarLive do
         &in_focus_month?(&1.huddl, focus_month, socket.assigns.time_zone)
       )
 
-    legend_items = legend_items(entries, focus_month, view_mode, socket.assigns.today)
+    legend_items = legend_items(entries, socket.assigns.today, socket.assigns.time_zone)
     month_legend_items = month_legend_items(view_mode)
 
     coming_up_entries =
@@ -650,15 +650,21 @@ defmodule HuddlzWeb.CalendarLive do
     |> Enum.join(", ")
   end
 
-  defp entry_status(%{huddl: %{status: status}} = entry, %Date{} = today) do
+  defp entry_status(
+         %{huddl: %{status: status}} = entry,
+         %Date{} = today,
+         time_zone
+       ) do
     case HuddlStatus.contextual_override(status) do
-      nil -> timed_entry_status(entry, today)
+      nil -> timed_entry_status(entry, today, time_zone)
       presentation -> struct!(EntryStatus, presentation)
     end
   end
 
-  defp timed_entry_status(%{huddl: %{starts_at: starts_at}} = entry, today) do
-    case Date.compare(DateTime.to_date(starts_at), today) do
+  defp timed_entry_status(%{huddl: %{starts_at: starts_at}} = entry, today, time_zone) do
+    starts_on = starts_at |> DateTime.shift_zone!(time_zone) |> DateTime.to_date()
+
+    case Date.compare(starts_on, today) do
       :lt -> past_status(entry)
       _ -> relationship_status(entry)
     end
@@ -733,18 +739,13 @@ defmodule HuddlzWeb.CalendarLive do
 
   defp month_legend_items(_view_mode), do: []
 
-  defp legend_items(entries, focus_month, view_mode, today) do
+  defp legend_items(entries, today, time_zone) do
     entries
-    |> visible_entries(focus_month, view_mode)
-    |> Enum.map(&entry_status(&1, today))
+    |> Enum.map(&entry_status(&1, today, time_zone))
     |> Enum.reject(&is_nil/1)
     |> Enum.uniq_by(& &1.key)
     |> Enum.sort_by(& &1.rank)
   end
-
-  defp visible_entries(entries, _focus_month, :day), do: entries
-  defp visible_entries(entries, _focus_month, :week), do: entries
-  defp visible_entries(entries, _focus_month, :month), do: entries
 
   defp legend_swatch_class(%{variant: variant}), do: ["cal-legend-swatch", variant]
 

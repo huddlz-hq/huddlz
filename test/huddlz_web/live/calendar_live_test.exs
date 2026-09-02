@@ -1,6 +1,7 @@
 defmodule HuddlzWeb.CalendarLiveTest do
   use HuddlzWeb.ConnCase, async: true
 
+  alias Huddlz.Accounts
   alias Huddlz.Calendar.Clock
   alias Huddlz.Communities
 
@@ -151,6 +152,50 @@ defmodule HuddlzWeb.CalendarLiveTest do
   end
 
   describe "month view — selected-day shared cards" do
+    test "an upcoming huddl stays Going when its UTC date is yesterday in the Display time zone",
+         %{
+           conn: conn,
+           attendee: attendee,
+           host: host,
+           public_group: public_group
+         } do
+      calendar_now = ~U[2030-07-15 16:00:00Z]
+
+      attendee =
+        Accounts.update_display_time_zone!(attendee, :fixed, "Asia/Tokyo", actor: attendee)
+
+      starts_at = ~U[2030-07-15 16:30:00Z]
+
+      huddl =
+        create_past_huddl(host, public_group,
+          title: "Tokyo Pairing",
+          starts_at: starts_at,
+          ends_at: DateTime.add(starts_at, 60, :minute),
+          time_zone: "Asia/Tokyo"
+        )
+
+      assert huddl.starts_at == ~U[2030-07-15 16:30:00Z]
+      rsvp!(huddl, attendee, :rsvp)
+      Mox.stub(Huddlz.MockCalendarClock, :utc_now, fn -> calendar_now end)
+
+      session = conn |> login(attendee) |> visit("/calendar")
+      Mox.allow(Huddlz.MockCalendarClock, self(), session.view.pid)
+
+      Phoenix.LiveViewTest.render_hook(
+        session.view,
+        "calendar:set-time-zone",
+        %{"timezone" => "Asia/Tokyo"}
+      )
+
+      session
+      |> assert_has(
+        "#calendar-huddl-#{huddl.id} [data-testid='calendar-relationship']",
+        text: "Going"
+      )
+      |> assert_has("#calendar-legend [data-status=going]", text: "Going")
+      |> refute_has("#calendar-legend [data-status=past-attended]")
+    end
+
     test "attending future huddl appears as a shared card marked Going", %{
       conn: conn,
       attendee: attendee,
