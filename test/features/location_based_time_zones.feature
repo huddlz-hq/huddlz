@@ -66,11 +66,11 @@ Feature: Location-based time zones
     Then I should be told that the saved location is unavailable
     And the huddl "Missing Location Huddl" should not exist
 
-  Scenario: A typed address without a resolved time zone cannot be used for a huddl
+  Scenario: A physical huddl must use an address book location
     Given my group "Saint Augustine Neighbors" is based in "America/New_York"
-    When I try to schedule a physical huddl using only a typed address
-    Then I should be told to select a resolved saved location
-    And the huddl "Typed Address Huddl" should not exist
+    When I try to schedule a physical huddl without choosing an address book location
+    Then I should be told that an address book location is required
+    And the huddl "No Location Huddl" should not exist
 
   Scenario: Moving a group affects new virtual huddlz, not existing ones
     Given my group has a virtual huddl at 9:00 AM in "America/New_York"
@@ -157,7 +157,3 @@ Feature: Location-based time zones
     Given my saved home search is Saint Augustine in "America/New_York"
     When I filter Discover to this month from a browser in "America/Denver"
     Then the search should still use "America/New_York"
-
-  Scenario: An older shared search link still searches its location
-    When I open an older 25-mile Saint Augustine search link
-    Then Discover should still search near "Saint Augustine, FL"

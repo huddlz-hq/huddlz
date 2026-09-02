@@ -438,8 +438,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
             starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
             ends_at: DateTime.add(DateTime.utc_now(), 2, :day),
             event_type: :in_person,
-            physical_location: "Secret Location",
-            time_zone: "America/New_York",
+            group_location_id: address_book_location_id(private_group.id),
             is_private: true,
             group_id: private_group.id
           },

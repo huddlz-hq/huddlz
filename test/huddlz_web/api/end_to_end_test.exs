@@ -75,8 +75,7 @@ defmodule HuddlzWeb.Api.EndToEndTest do
           duration_minutes: 60,
           group_id: group_id,
           event_type: :in_person,
-          physical_location: "123 Test St",
-          time_zone: "America/New_York",
+          group_location_id: address_book_location_id(group_id),
           is_private: false
         },
         actor: %Huddlz.Accounts.User{id: user_id, role: :user}

@@ -146,6 +146,16 @@ if Enum.empty?(existing_groups) do
   # Add users to Phoenix Elixir Meetup
   phoenix_group = Enum.at(groups, 0)
 
+  phoenix_location =
+    Ash.Seed.seed!(Huddlz.Communities.GroupLocation, %{
+      name: "TechHub Phoenix, 123 Main St",
+      address: "TechHub Phoenix, 123 Main St",
+      latitude: phoenix_group.latitude,
+      longitude: phoenix_group.longitude,
+      time_zone: phoenix_group.time_zone,
+      group_id: phoenix_group.id
+    })
+
   {:ok, _} =
     GroupMember
     |> Ash.Changeset.for_create(
@@ -188,6 +198,16 @@ if Enum.empty?(existing_groups) do
   # Add users to Book Club
   book_group = Enum.at(groups, 1)
 
+  book_location =
+    Ash.Seed.seed!(Huddlz.Communities.GroupLocation, %{
+      name: "Central Library",
+      address: "Central Library",
+      latitude: book_group.latitude,
+      longitude: book_group.longitude,
+      time_zone: book_group.time_zone,
+      group_id: book_group.id
+    })
+
   {:ok, _} =
     GroupMember
     |> Ash.Changeset.for_create(
@@ -218,7 +238,28 @@ if Enum.empty?(existing_groups) do
 
   # Create some huddlz with meaningful titles
   hiking_group = Enum.at(groups, 2)
+
+  hiking_location =
+    Ash.Seed.seed!(Huddlz.Communities.GroupLocation, %{
+      name: "Trailhead Parking",
+      address: "Trailhead Parking",
+      latitude: hiking_group.latitude,
+      longitude: hiking_group.longitude,
+      time_zone: hiking_group.time_zone,
+      group_id: hiking_group.id
+    })
+
   private_group = Enum.at(groups, 3)
+
+  private_location =
+    Ash.Seed.seed!(Huddlz.Communities.GroupLocation, %{
+      name: "Tech Hub Conference Room",
+      address: "Tech Hub Conference Room",
+      latitude: private_group.latitude,
+      longitude: private_group.longitude,
+      time_zone: private_group.time_zone,
+      group_id: private_group.id
+    })
 
   # Generate more huddlz to test pagination
   # Create a mix of upcoming, past, and in-progress events
@@ -230,18 +271,10 @@ if Enum.empty?(existing_groups) do
       days_offset = i * 3
       event_type = Enum.random([:in_person, :virtual, :hybrid])
 
-      # Set location fields based on event type
-      {physical_location, virtual_link} =
-        case event_type do
-          :in_person ->
-            {"TechHub Phoenix, 123 Main St", nil}
-
-          :virtual ->
-            {nil, "https://zoom.us/j/#{:rand.uniform(999_999_999)}"}
-
-          :hybrid ->
-            {"TechHub Phoenix, 123 Main St", "https://zoom.us/j/#{:rand.uniform(999_999_999)}"}
-        end
+      virtual_link =
+        if event_type == :in_person,
+          do: nil,
+          else: "https://zoom.us/j/#{:rand.uniform(999_999_999)}"
 
       {:ok, huddl} =
         Huddl
@@ -257,9 +290,8 @@ if Enum.empty?(existing_groups) do
             ends_at:
               DateTime.add(DateTime.utc_now(), days_offset * 24 * 3600 + 2 * 3600, :second)
               |> DateTime.truncate(:second),
-            physical_location: physical_location,
             virtual_link: virtual_link,
-            time_zone: phoenix_group.time_zone,
+            group_location_id: phoenix_location.id,
             group_id: phoenix_group.id
           },
           actor: alice
@@ -303,8 +335,7 @@ if Enum.empty?(existing_groups) do
             ends_at:
               DateTime.add(DateTime.utc_now(), -days_ago * 24 * 3600 + 2 * 3600, :second)
               |> DateTime.truncate(:second),
-            physical_location: "Central Library, Meeting Room #{Enum.random(["A", "B", "C"])}",
-            time_zone: book_group.time_zone,
+            group_location_id: book_location.id,
             group_id: book_group.id
           },
           actor: bob
@@ -349,9 +380,7 @@ if Enum.empty?(existing_groups) do
             ends_at:
               DateTime.add(DateTime.utc_now(), days_offset * 24 * 3600 + 4 * 3600, :second)
               |> DateTime.truncate(:second),
-            physical_location:
-              "#{Enum.at(["North", "South", "East", "West"], rem(i - 1, 4))} Trailhead Parking",
-            time_zone: hiking_group.time_zone,
+            group_location_id: hiking_location.id,
             group_id: hiking_group.id
           },
           actor: carol
@@ -419,9 +448,8 @@ if Enum.empty?(existing_groups) do
             ends_at:
               DateTime.add(DateTime.utc_now(), i * 5 * 24 * 3600 + 3600, :second)
               |> DateTime.truncate(:second),
-            physical_location: "Tech Hub Conference Room",
             virtual_link: "https://privatemeeting.example.com/#{i}",
-            time_zone: private_group.time_zone,
+            group_location_id: private_location.id,
             group_id: private_group.id,
             is_private: true
           },

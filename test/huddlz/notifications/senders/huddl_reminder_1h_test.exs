@@ -23,7 +23,6 @@ defmodule Huddlz.Notifications.Senders.HuddlReminder1hTest do
       group_id: group.id,
       creator_id: owner.id,
       event_type: :in_person,
-      physical_location: "123 Main St, Anytown, USA",
       virtual_link: nil,
       actor: owner
     ]

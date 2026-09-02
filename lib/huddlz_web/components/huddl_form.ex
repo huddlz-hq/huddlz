@@ -267,7 +267,7 @@ defmodule HuddlzWeb.Components.HuddlForm do
             group_locations={@group_locations}
             selected_location={@selected_location}
             new_location_path={@new_location_path}
-            field={@form[:physical_location]}
+            field={@form[:group_location_id]}
           />
         <% end %>
 

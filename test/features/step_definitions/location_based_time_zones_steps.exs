@@ -159,7 +159,8 @@ defmodule LocationBasedTimeZonesSteps do
     context
   end
 
-  step "I try to schedule a physical huddl using only a typed address", context do
+  step "I try to schedule a physical huddl without choosing an address book location",
+       context do
     group = List.first(context.groups)
 
     result =
@@ -167,10 +168,9 @@ defmodule LocationBasedTimeZonesSteps do
       |> Ash.Changeset.for_create(
         :create,
         %{
-          title: "Typed Address Huddl",
-          description: "This address has no resolved time zone",
+          title: "No Location Huddl",
+          description: "No address book location was chosen",
           event_type: :in_person,
-          physical_location: "1000 Broadway, Denver, CO",
           date: ~D[2030-07-15],
           start_time: ~T[09:00:00],
           duration_minutes: 60,
@@ -180,12 +180,12 @@ defmodule LocationBasedTimeZonesSteps do
       )
       |> Ash.create()
 
-    Map.put(context, :typed_address_result, result)
+    Map.put(context, :no_location_result, result)
   end
 
-  step "I should be told to select a resolved saved location", context do
-    assert {:error, error} = context.typed_address_result
-    assert Exception.message(error) =~ "select a saved location with a resolved time zone"
+  step "I should be told that an address book location is required", context do
+    assert {:error, error} = context.no_location_result
+    assert Exception.message(error) =~ "is required for in-person and hybrid huddlz"
     context
   end
 
@@ -203,7 +203,6 @@ defmodule LocationBasedTimeZonesSteps do
           start_time: ~T[09:00:00],
           duration_minutes: 60,
           event_type: :virtual,
-          physical_location: nil,
           virtual_link: "https://example.com/existing",
           group_id: group.id,
           creator_id: owner.id,
@@ -252,7 +251,6 @@ defmodule LocationBasedTimeZonesSteps do
           start_time: ~T[09:00:00],
           duration_minutes: 60,
           event_type: :virtual,
-          physical_location: nil,
           virtual_link: "https://example.com/new",
           group_id: group.id,
           creator_id: owner.id,
@@ -275,8 +273,7 @@ defmodule LocationBasedTimeZonesSteps do
     huddl =
       context.physical_huddl
       |> Ash.Changeset.for_update(:update, %{
-        group_location_id: context.mountain_location.id,
-        physical_location: context.mountain_location.address
+        group_location_id: context.mountain_location.id
       })
       |> Ash.update!(actor: context.current_user)
 
@@ -307,8 +304,7 @@ defmodule LocationBasedTimeZonesSteps do
     huddl =
       context.physical_huddl
       |> Ash.Changeset.for_update(:update, %{
-        group_location_id: context.mountain_location.id,
-        physical_location: context.mountain_location.address
+        group_location_id: context.mountain_location.id
       })
       |> Ash.update!(actor: context.current_user)
 
@@ -375,7 +371,6 @@ defmodule LocationBasedTimeZonesSteps do
           start_time: ~T[09:00:00],
           duration_minutes: 60,
           event_type: :virtual,
-          physical_location: nil,
           virtual_link: "https://example.com/weekly",
           is_recurring: true,
           frequency: "weekly",
@@ -529,7 +524,6 @@ defmodule LocationBasedTimeZonesSteps do
           start_time: ~T[23:30:00],
           duration_minutes: 60,
           group_location_id: venue.id,
-          physical_location: venue.address,
           group_id: group.id,
           creator_id: host.id,
           actor: host
@@ -663,7 +657,6 @@ defmodule LocationBasedTimeZonesSteps do
           start_time: ~T[09:00:00],
           duration_minutes: 60,
           group_location_id: venue.id,
-          physical_location: venue.address,
           group_id: group.id,
           creator_id: host.id,
           actor: host
@@ -745,21 +738,6 @@ defmodule LocationBasedTimeZonesSteps do
 
   step "the search should still use {string}", %{args: [time_zone]} = context do
     PhoenixTest.assert_path(context.session, "/discover", query: %{"time_zone" => time_zone})
-    context
-  end
-
-  step "I open an older 25-mile Saint Augustine search link", context do
-    session =
-      context.conn
-      |> PhoenixTest.visit(
-        "/discover?location=Saint+Augustine%2C+FL&lat=29.9012&lng=-81.3124&distance=25"
-      )
-
-    Map.merge(context, %{session: session, conn: session})
-  end
-
-  step "Discover should still search near {string}", %{args: [location]} = context do
-    assert_has(context.session, ".page-head p", text: "near #{location}")
     context
   end
 
@@ -847,7 +825,6 @@ defmodule LocationBasedTimeZonesSteps do
           start_time: ~T[09:00:00],
           duration_minutes: 60,
           group_location_id: eastern_location.id,
-          physical_location: eastern_location.address,
           group_id: group.id,
           creator_id: owner.id,
           actor: owner

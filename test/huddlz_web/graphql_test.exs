@@ -25,7 +25,11 @@ defmodule HuddlzWeb.GraphqlTest do
       %{owner: owner, group: group, huddl: huddl}
     end
 
-    test "unauthenticated create mutation returns error", %{conn: conn, group: group} do
+    test "unauthenticated create mutation returns error", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
       starts_at =
         DateTime.utc_now()
         |> DateTime.add(7, :day)
@@ -56,11 +60,10 @@ defmodule HuddlzWeb.GraphqlTest do
         input: %{
           title: "Unauthorized Huddl",
           eventType: "in_person",
-          physicalLocation: "123 Main St",
+          groupLocationId: generate(group_location(group_id: group.id, actor: owner)).id,
           groupId: group.id,
           startsAt: starts_at,
-          endsAt: ends_at,
-          timeZone: "America/New_York"
+          endsAt: ends_at
         }
       }
 
@@ -112,11 +115,13 @@ defmodule HuddlzWeb.GraphqlTest do
         input: %{
           title: "Authorized Huddl",
           eventType: "in_person",
-          physicalLocation: "456 Oak Ave, Denver, CO",
+          groupLocationId:
+            generate(
+              group_location(group_id: group.id, actor: owner, time_zone: "America/Denver")
+            ).id,
           groupId: group.id,
           startsAt: starts_at,
-          endsAt: ends_at,
-          timeZone: "America/Denver"
+          endsAt: ends_at
         }
       }
 

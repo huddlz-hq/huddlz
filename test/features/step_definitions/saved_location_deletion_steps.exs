@@ -19,7 +19,6 @@ defmodule SavedLocationDeletionSteps do
         group_id: location.group_id,
         creator_id: owner.id,
         group_location_id: location.id,
-        physical_location: location.address,
         latitude: location.latitude,
         longitude: location.longitude,
         starts_at: starts_at,

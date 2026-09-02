@@ -26,9 +26,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     :event_type,
     :title,
     :description,
-    :physical_location,
     :group_location_id,
-    :time_zone,
     :virtual_link,
     :is_private,
     :thumbnail_url,
@@ -210,11 +208,6 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     instance =
       Huddl
       |> Ash.Changeset.new()
-      # Reuse the source's already-resolved coordinates so the instance skips
-      # geocoding (ApplyProvidedCoordinates short-circuits GeocodeChange). Private
-      # args, so set before for_create; nil is ignored, so virtual huddlz work.
-      |> Ash.Changeset.set_argument(:provided_latitude, source.latitude)
-      |> Ash.Changeset.set_argument(:provided_longitude, source.longitude)
       |> Ash.Changeset.for_create(:create, instance_attrs(source, starts_at, ends_at, template))
       # creator_id is not an accepted input — the :create action derives it from
       # the actor. This actorless generation sets it directly so each instance
@@ -291,8 +284,6 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   defp update_instance!(instance, source, starts_at, ends_at, actor) do
     instance
     |> Ash.Changeset.new()
-    |> Ash.Changeset.set_argument(:provided_latitude, source.latitude)
-    |> Ash.Changeset.set_argument(:provided_longitude, source.longitude)
     |> Ash.Changeset.set_argument(:suppress_update_notification, true)
     |> Ash.Changeset.for_update(
       :update,

@@ -266,7 +266,6 @@ defmodule HuddlzWeb.HuddlLiveTest do
           creator_id: host.id,
           is_private: false,
           title: "Austin Meetup",
-          physical_location: "123 Main St, Austin, TX",
           actor: host
         )
       )

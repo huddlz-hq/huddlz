@@ -53,7 +53,6 @@ defmodule HuddlzWeb.HuddlSearchTest do
           title: "Hybrid Workshop",
           description: "Learn programming basics",
           event_type: :hybrid,
-          physical_location: "123 Tech St",
           virtual_link: "https://zoom.us/meeting/456",
           date: Date.add(Date.utc_today(), 10),
           start_time: ~T[14:00:00],

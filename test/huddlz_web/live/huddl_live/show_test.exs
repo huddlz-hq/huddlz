@@ -219,8 +219,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             start_time: ~T[14:00:00],
             duration_minutes: 120,
             event_type: :in_person,
-            physical_location: "123 Main St",
-            time_zone: "America/New_York",
+            group_location_id: address_book_location_id(group.id),
             is_private: false,
             group_id: group.id
           },
@@ -421,8 +420,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             start_time: ~T[14:00:00],
             duration_minutes: 120,
             event_type: :in_person,
-            physical_location: "123 Main St, City",
-            time_zone: "America/New_York",
+            group_location_id: address_book_location_id(group.id),
             is_private: false,
             group_id: group.id
           },
@@ -433,7 +431,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       conn
       |> login(non_member)
       |> visit(~p"/groups/#{group.slug}/huddlz/#{in_person_huddl.id}")
-      |> assert_has(".facts .value", text: "123 Main St, City")
+      |> assert_has(".facts .value", text: "123 Main St, Anytown, USA")
       |> refute_has(".facts .label", text: "Virtual access")
 
       # Create hybrid huddl
@@ -448,8 +446,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             start_time: ~T[15:00:00],
             duration_minutes: 120,
             event_type: :hybrid,
-            physical_location: "Conference Room A",
-            time_zone: "America/New_York",
+            group_location_id: address_book_location_id(group.id),
             virtual_link: "https://meet.example.com/hybrid",
             is_private: false,
             group_id: group.id
@@ -461,7 +458,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       conn
       |> login(non_member)
       |> visit(~p"/groups/#{group.slug}/huddlz/#{hybrid_huddl.id}")
-      |> assert_has(".facts .value", text: "Conference Room A")
+      |> assert_has(".facts .value", text: "123 Main St, Anytown, USA")
       |> assert_has(".facts .label", text: "Virtual access")
       |> assert_has(".facts .value .muted", text: "Virtual link available after RSVP")
       # RSVP to see virtual link
@@ -502,8 +499,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             start_time: ~T[16:00:00],
             duration_minutes: 120,
             event_type: :in_person,
-            physical_location: "Secret Location",
-            time_zone: "America/New_York",
+            group_location_id: address_book_location_id(private_group.id),
             is_private: true,
             group_id: private_group.id
           },
@@ -664,7 +660,6 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             starts_at: DateTime.add(DateTime.utc_now(), -1, :hour),
             ends_at: DateTime.add(DateTime.utc_now(), 1, :hour),
             event_type: :in_person,
-            physical_location: "123 Main St, City",
             is_private: false,
             group_id: group.id,
             creator_id: owner.id
@@ -750,11 +745,11 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       ended =
         Ash.Seed.seed!(Huddl, %{
+          time_zone: "America/New_York",
           title: "Already Ended",
           description: "Waiting for scheduled completion",
           starts_at: DateTime.add(now, -2, :hour),
           ends_at: DateTime.add(now, -1, :hour),
-          time_zone: "America/New_York",
           event_type: :virtual,
           virtual_link: "https://example.com/ended",
           is_private: false,

@@ -231,7 +231,7 @@ defmodule HuddlzWeb.Components.Input do
 
   For fields with no client-side input at all (custom pickers), ensure the
   param key is present once errors should show — see
-  `HuddlzWeb.HuddlLive.FormHelpers.mark_location_used/2`. LiveView's form
+  `HuddlzWeb.HuddlLive.FormHelpers.inject_saved_location_params/2`. LiveView's form
   change tracking only re-renders this component when the field's value,
   errors, or used state change, so visibility must be derived from field
   state, not external flags.

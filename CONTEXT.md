@@ -11,17 +11,21 @@ A community that organizes huddlz and has a home location.
 The canonical city or region that geographically anchors a group. It is distinct from the specific places where the group's huddlz meet.
 _Avoid_: Group venue, default venue
 
-**Saved location**:
-A reusable physical meeting place belonging to a group, optionally given a friendly name. Its local scheduling context is retained when it is selected for a huddl.
-_Avoid_: Group home location
+**Address book**:
+A group's managed collection of reusable physical meeting places.
+_Avoid_: Saved locations, group locations, venues
+
+**Address book location**:
+One physical meeting place in a group's address book, optionally given a friendly name. It carries its own local scheduling context, which a huddl takes on when the location is chosen for it.
+_Avoid_: Saved location, group location, venue, group home location
 
 **Huddl**:
 A single gathering organized by a group. A huddl may be in-person, virtual, or hybrid.
 _Avoid_: Event, huddle, meeting
 
 **Huddl location**:
-The physical meeting place of an in-person or hybrid huddl. A virtual huddl has no huddl location.
-_Avoid_: Group home location
+The physical meeting place of an in-person or hybrid huddl, always chosen from the group's address book. A virtual huddl has no huddl location.
+_Avoid_: Group home location, typed address
 
 ## Scheduling and discovery
 
@@ -36,6 +40,10 @@ The huddl's date and wall-clock time in its time zone. A recurring huddl retains
 
 **Search location**:
 The place that anchors a geographic huddl search, including its distance radius and local date boundaries. Without a search location, the viewer's browser time zone supplies those boundaries.
+
+**Home search location**:
+A member's saved place that serves as their default search location. It is a resolved place with its own local scheduling context, not a personal time-zone preference.
+_Avoid_: User time zone, home time zone
 
 **Calendar time zone**:
 The viewer's browser-reported time zone, used to arrange and display the personal calendar. The calendar identifies this time zone to the viewer.

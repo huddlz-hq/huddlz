@@ -62,9 +62,9 @@ defmodule Huddlz.Notifications.ICSTest do
     end
 
     test "physical location surfaces as LOCATION", ctx do
-      huddl = build_huddl(ctx, event_type: :in_person, physical_location: "Roastery, 123 Main St")
+      huddl = build_huddl(ctx, event_type: :in_person)
       {_filename, ics} = ICS.event_for(huddl)
-      assert ics =~ "Roastery"
+      assert ics =~ "123 Main St"
     end
 
     test "virtual_link surfaces as URL and is mentioned in the description", ctx do

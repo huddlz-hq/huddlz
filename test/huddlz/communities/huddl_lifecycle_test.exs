@@ -120,11 +120,11 @@ defmodule Huddlz.Communities.HuddlLifecycleTest do
 
     ended =
       Ash.Seed.seed!(Huddl, %{
+        time_zone: "America/New_York",
         title: "Already Ended",
         description: "Waiting for scheduled completion",
         starts_at: DateTime.add(now, -2, :hour),
         ends_at: DateTime.add(now, -1, :hour),
-        time_zone: "America/New_York",
         event_type: :virtual,
         virtual_link: "https://example.com/ended",
         is_private: false,
@@ -201,11 +201,11 @@ defmodule Huddlz.Communities.HuddlLifecycleTest do
 
     ended =
       Ash.Seed.seed!(Huddl, %{
+        time_zone: "America/New_York",
         title: "Already Ended",
         description: "Ready for lifecycle completion",
         starts_at: DateTime.add(now, -2, :hour),
         ends_at: DateTime.add(now, -1, :hour),
-        time_zone: "America/New_York",
         event_type: :virtual,
         virtual_link: "https://example.com/ended",
         is_private: false,

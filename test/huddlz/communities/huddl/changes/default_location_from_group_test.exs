@@ -49,10 +49,9 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroupTest do
       assert virtual_huddl.longitude == -97.7431
     end
 
-    test "in-person huddl uses its own geocoded location" do
+    test "in-person huddl uses its address book location" do
       stub(Huddlz.MockGeocoding, :geocode, fn
         "Austin, TX" -> {:ok, %{latitude: 30.2672, longitude: -97.7431}}
-        "Houston, TX" -> {:ok, %{latitude: 29.7604, longitude: -95.3698}}
         _ -> {:error, :not_found}
       end)
 
@@ -74,16 +73,15 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroupTest do
         generate(
           huddl(
             event_type: :in_person,
-            physical_location: "Houston, TX",
             group_id: group.id,
             creator_id: owner.id,
             actor: owner
           )
         )
 
-      # Should have Houston coordinates, not Austin
-      assert in_person_huddl.latitude == 29.7604
-      assert in_person_huddl.longitude == -95.3698
+      # Should have the address book location's coordinates, not Austin
+      assert in_person_huddl.latitude == 29.9012
+      assert in_person_huddl.longitude == -81.3124
     end
 
     test "a group whose coordinates cannot be resolved is rejected" do
@@ -133,25 +131,21 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroupTest do
 
       assert group.latitude == 30.2672
 
-      # Hybrid huddl with no physical_location — geocoding will fail,
-      # but DefaultLocationFromGroup should NOT kick in (only for virtual)
+      # A hybrid huddl meets at an address book location, so DefaultLocationFromGroup
+      # must not overwrite those coordinates with the group's
       hybrid_huddl =
         generate(
           huddl(
             event_type: :hybrid,
             virtual_link: "https://zoom.us/test",
-            physical_location: "Unknown Place",
             group_id: group.id,
             creator_id: owner.id,
             actor: owner
           )
         )
 
-      # Geocoding failed for "Unknown Place", so lat/lng should be nil
-      # (not inherited from group because event_type is :hybrid)
-      assert is_nil(hybrid_huddl.latitude)
-
-      assert is_nil(hybrid_huddl.longitude)
+      assert hybrid_huddl.latitude == 29.9012
+      assert hybrid_huddl.longitude == -81.3124
     end
   end
 end

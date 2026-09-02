@@ -282,7 +282,13 @@ defmodule Huddlz.Generator do
           generate(group(owner_id: owner.id, is_public: true, actor: owner)).id
         end)
 
-    group_time_zone = Ash.get!(Group, group_id, authorize?: false).time_zone
+    # Physical huddlz take their address and time zone from an address book
+    # location, so give in-person and hybrid huddlz one unless told otherwise.
+    group_location_id =
+      case opts[:event_type] || :in_person do
+        :virtual -> nil
+        _physical -> opts[:group_location_id] || address_book_location_id(group_id)
+      end
 
     # Generate random dates in the future using the new virtual argument pattern
     days_ahead = :rand.uniform(30)
@@ -309,10 +315,8 @@ defmodule Huddlz.Generator do
         duration_minutes: duration_minutes,
         thumbnail_url: thumbnail_url,
         group_id: group_id,
-        time_zone: group_time_zone,
         event_type: :in_person,
-        physical_location: "123 Main St, Anytown, USA",
-        group_location_id: nil,
+        group_location_id: group_location_id,
         is_private: false,
         lifecycle_state: :published,
         huddl_template_id: nil,
@@ -322,6 +326,30 @@ defmodule Huddlz.Generator do
       overrides: opts,
       actor: actor
     )
+  end
+
+  @doc """
+  Returns the id of a seeded "123 Main St" address book location for the
+  group, creating it on first use. Seeded, so no organizer actor is needed.
+  """
+  def address_book_location_id(group_id) do
+    alias Huddlz.Communities.GroupLocation
+    group = Ash.get!(Group, group_id, authorize?: false)
+
+    case Ash.get(GroupLocation, [group_id: group_id, name: "Main Street"], authorize?: false) do
+      {:ok, location} ->
+        location.id
+
+      _missing ->
+        Ash.Seed.seed!(GroupLocation, %{
+          name: "Main Street",
+          address: "123 Main St, Anytown, USA",
+          latitude: 29.9012,
+          longitude: -81.3124,
+          time_zone: group.time_zone,
+          group_id: group_id
+        }).id
+    end
   end
 
   @doc """

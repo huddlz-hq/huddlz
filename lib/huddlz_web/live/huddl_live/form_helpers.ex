@@ -67,11 +67,7 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
   def apply_saved_location_to_form(socket, location) do
     current_params = socket.assigns.form.source.params || %{}
 
-    updated_params =
-      current_params
-      |> Map.put("physical_location", location.address)
-      |> Map.put("group_location_id", location.id)
-
+    updated_params = Map.put(current_params, "group_location_id", location.id)
     form = AshPhoenix.Form.validate(socket.assigns.form, updated_params)
 
     socket
@@ -82,11 +78,7 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
   def clear_saved_location(socket) do
     current_params = socket.assigns.form.source.params || %{}
 
-    updated_params =
-      current_params
-      |> Map.put("physical_location", "")
-      |> Map.put("group_location_id", nil)
-
+    updated_params = Map.put(current_params, "group_location_id", nil)
     form = AshPhoenix.Form.validate(socket.assigns.form, updated_params)
 
     socket
@@ -94,67 +86,24 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
     |> assign(:form, Phoenix.Component.to_form(form))
   end
 
-  def inject_saved_location_params(params, nil), do: Map.put(params, "group_location_id", nil)
-
-  def inject_saved_location_params(params, location) do
-    params
-    |> Map.put("physical_location", location.address)
-    |> Map.put("group_location_id", location.id)
-  end
-
   @doc """
-  Ensures the "physical_location" key is present in the params so
-  `Phoenix.Component.used_input?/1` treats the picker-backed field as used
-  and its validation errors display. The saved-location picker renders no
-  client-side input, so the browser never sends this key on its own. Falls
-  back to the form's current value to avoid clearing an existing location
-  on update.
-
-  Call on every submit. On validate, use `mark_location_used_after_submit/2`
-  so errors stay hidden while the user is still filling in the form but
-  remain visible while fixing a failed submit.
+  Puts the chosen address book location into the params. The picker renders no
+  input of its own, so the key is added by hand: on save it is always present,
+  and on validate only once a submit has failed, so the field counts as used
+  (`Phoenix.Component.used_input?/1`) and its errors display at the right time.
   """
-  def mark_location_used(params, form) do
-    Map.put_new(params, "physical_location", current_location_value(form))
-  end
+  def inject_saved_location_params(params, location, form, mode \\ :validate)
 
-  def mark_location_used_after_submit(params, form) do
-    if form.source.submitted_once? do
-      mark_location_used(params, form)
+  def inject_saved_location_params(params, %{id: id}, _form, _mode),
+    do: Map.put(params, "group_location_id", id)
+
+  def inject_saved_location_params(params, nil, form, mode) do
+    if mode == :save or form.source.submitted_once? do
+      Map.put(params, "group_location_id", nil)
     else
       params
     end
   end
-
-  defp current_location_value(form) do
-    case Phoenix.HTML.Form.input_value(form, :physical_location) do
-      nil -> ""
-      value -> to_string(value)
-    end
-  end
-
-  @doc """
-  Returns a `before_submit` function that applies pre-existing coordinates
-  directly to the changeset. Used with `AshPhoenix.Form.submit/2`'s
-  `:before_submit` option, which runs after `for_create`/`for_update`
-  (i.e., after Ash resource changes have already executed).
-  """
-  def prepare_source_with_coordinates(nil), do: & &1
-
-  def prepare_source_with_coordinates(location) when is_map(location) do
-    fn changeset ->
-      changeset
-      |> Ash.Changeset.force_change_attribute(:latitude, location.latitude)
-      |> Ash.Changeset.force_change_attribute(:longitude, location.longitude)
-      |> maybe_set_time_zone(location)
-    end
-  end
-
-  defp maybe_set_time_zone(changeset, %{time_zone: time_zone}) when is_binary(time_zone) do
-    Ash.Changeset.force_change_attribute(changeset, :time_zone, time_zone)
-  end
-
-  defp maybe_set_time_zone(changeset, _location), do: changeset
 
   @doc """
   Injects the location text into form params for group forms.

@@ -1,7 +1,7 @@
 defmodule Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup do
   @moduledoc """
-  Uses the group's authoritative time zone when a huddl does not have a
-  physical-location time zone yet. Virtual huddlz always use this value.
+  Gives a virtual huddl its group's time zone, or its recurring template's.
+  An existing virtual huddl keeps its zone when the group moves.
   """
 
   use Ash.Resource.Change
@@ -17,15 +17,9 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup do
     end
   end
 
-  defp derive_time_zone?(%{action_type: :create} = changeset) do
+  defp derive_time_zone?(changeset) do
     Ash.Changeset.get_attribute(changeset, :event_type) == :virtual
   end
-
-  defp derive_time_zone?(%{action_type: :update} = changeset) do
-    Ash.Changeset.get_attribute(changeset, :event_type) == :virtual
-  end
-
-  defp derive_time_zone?(_changeset), do: false
 
   defp put_authoritative_time_zone(changeset) do
     cond do

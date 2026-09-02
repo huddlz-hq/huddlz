@@ -570,20 +570,22 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       |> fill_in("Start time", with: "14:00")
       |> select("Duration", option: "1 hour")
       # Editing other fields must not surface the untouched location's error
-      |> refute_has("p.form-error", text: "is required for in-person huddlz")
+      |> refute_has("p.form-error", text: "is required for in-person and hybrid huddlz")
       # Leave event type as in-person (default), no location selected
       |> click_button("Schedule huddl")
       |> assert_path(~p"/groups/#{group.slug}/huddlz/new")
       |> assert_has(
-        "#saved-location-picker-input[aria-invalid='true'][aria-describedby='form_physical_location-error-0']"
+        "#saved-location-picker-input[aria-invalid='true'][aria-describedby='form_group_location_id-error-0']"
       )
       |> assert_has(
-        "#form_physical_location-error-0[role='alert']",
-        text: "is required for in-person huddlz"
+        "#form_group_location_id-error-0[role='alert']",
+        text: "is required for in-person and hybrid huddlz"
       )
       # The error persists through later edits once the submit has failed
       |> fill_in("Title", with: "Test Huddl Again")
-      |> assert_has("#form_physical_location-error-0", text: "is required for in-person huddlz")
+      |> assert_has("#form_group_location_id-error-0",
+        text: "is required for in-person and hybrid huddlz"
+      )
     end
 
     test "hybrid huddl error shows under the missing virtual link, not the chosen location", %{

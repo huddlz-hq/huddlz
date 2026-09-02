@@ -45,7 +45,10 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         socket
         |> assign_edit_form(huddl, group_slug, user)
         |> assign(:group_locations, group_locations)
-        |> assign(:selected_location, find_matching_location(huddl, group_locations))
+        |> assign(
+          :selected_location,
+          Enum.find(group_locations, &(&1.id == huddl.group_location_id))
+        )
         |> ModalLocationHelpers.init()
         |> assign(:image_error, nil)
         |> assign(:pending_image_id, nil)
@@ -440,9 +443,11 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
     params =
-      params
-      |> inject_saved_location_params(socket.assigns[:selected_location])
-      |> mark_location_used_after_submit(socket.assigns.form)
+      inject_saved_location_params(
+        params,
+        socket.assigns[:selected_location],
+        socket.assigns.form
+      )
 
     socket =
       socket
@@ -457,13 +462,15 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   def handle_event("save", %{"form" => params}, socket) do
     params =
       params
-      |> inject_saved_location_params(socket.assigns[:selected_location])
-      |> mark_location_used(socket.assigns.form)
+      |> inject_saved_location_params(
+        socket.assigns[:selected_location],
+        socket.assigns.form,
+        :save
+      )
 
     case AshPhoenix.Form.submit(socket.assigns.form,
            params: params,
-           actor: socket.assigns.current_user,
-           before_submit: prepare_source_with_coordinates(socket.assigns[:selected_location])
+           actor: socket.assigns.current_user
          ) do
       {:ok, huddl} ->
         assign_pending_image_to_huddl(socket, huddl)
@@ -590,18 +597,4 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         {:error, :not_found}
     end
   end
-
-  defp find_matching_location(huddl, group_locations) do
-    Enum.find(group_locations, &(&1.id == huddl.group_location_id)) ||
-      find_legacy_matching_location(huddl, group_locations)
-  end
-
-  defp find_legacy_matching_location(
-         %{group_location_id: nil, physical_location: address},
-         locations
-       )
-       when not is_nil(address),
-       do: Enum.find(locations, &(&1.address == address))
-
-  defp find_legacy_matching_location(_huddl, _locations), do: nil
 end

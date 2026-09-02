@@ -1,6 +1,7 @@
 defmodule Huddlz.Communities.Huddl.Changes.ApplySavedLocation do
   @moduledoc """
-  Copies a saved physical location onto an in-person or hybrid huddl.
+  Copies the chosen address book location onto an in-person or hybrid huddl:
+  its address, coordinates, and time zone.
 
   When an existing huddl moves, its wall-clock schedule is preserved in the
   saved location's time zone.
@@ -29,17 +30,7 @@ defmodule Huddlz.Communities.Huddl.Changes.ApplySavedLocation do
     apply_saved_location(changeset, group_location_id, group_id)
   end
 
-  defp apply_saved_location(changeset, nil, _group_id) do
-    if changeset.action_type == :create and
-         is_nil(Ash.Changeset.get_attribute(changeset, :time_zone)) do
-      Ash.Changeset.add_error(changeset,
-        field: :group_location_id,
-        message: "select a saved location with a resolved time zone"
-      )
-    else
-      changeset
-    end
-  end
+  defp apply_saved_location(changeset, nil, _group_id), do: changeset
 
   defp apply_saved_location(changeset, group_location_id, group_id) do
     case Ash.get(GroupLocation, group_location_id, authorize?: false) do
@@ -51,8 +42,6 @@ defmodule Huddlz.Communities.Huddl.Changes.ApplySavedLocation do
         |> Ash.Changeset.force_change_attribute(:physical_location, location.address)
         |> Ash.Changeset.force_change_attribute(:latitude, location.latitude)
         |> Ash.Changeset.force_change_attribute(:longitude, location.longitude)
-        |> Ash.Changeset.set_argument(:provided_latitude, location.latitude)
-        |> Ash.Changeset.set_argument(:provided_longitude, location.longitude)
 
       {:ok, %GroupLocation{}} ->
         Ash.Changeset.add_error(changeset,

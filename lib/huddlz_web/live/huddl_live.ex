@@ -127,7 +127,7 @@ defmodule HuddlzWeb.HuddlLive do
       {lat_str, lng_str} when is_binary(lat_str) and is_binary(lng_str) ->
         with {lat, ""} <- Float.parse(lat_str),
              {lng, ""} <- Float.parse(lng_str),
-             time_zone when is_binary(time_zone) <- search_link_time_zone(params["time_zone"]) do
+             time_zone when is_binary(time_zone) <- valid_time_zone(params["time_zone"]) do
           {params["location"], lat, lng, time_zone, true}
         else
           _ -> {nil, nil, nil, nil, false}
@@ -923,10 +923,4 @@ defmodule HuddlzWeb.HuddlLive do
   defp valid_time_zone(time_zone) do
     if TimeZone.canonical?(time_zone), do: time_zone
   end
-
-  # Search URLs created before location time zones were introduced are all
-  # from the initial Florida-only rollout. Keep their geographic filter active
-  # without falling back to the viewer's browser zone.
-  defp search_link_time_zone(nil), do: TimeZone.eastern()
-  defp search_link_time_zone(time_zone), do: valid_time_zone(time_zone)
 end
