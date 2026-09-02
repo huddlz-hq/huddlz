@@ -16,7 +16,15 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroupTest do
       owner = generate(user(role: :user))
 
       group =
-        generate(group(owner_id: owner.id, is_public: true, location: "Austin, TX", actor: owner))
+        generate(
+          group(
+            owner_id: owner.id,
+            is_public: true,
+            location: "Austin, TX",
+            actor: owner,
+            geocode?: true
+          )
+        )
 
       # Verify group got geocoded
       assert group.latitude == 30.2672
@@ -50,7 +58,15 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroupTest do
       owner = generate(user(role: :user))
 
       group =
-        generate(group(owner_id: owner.id, is_public: true, location: "Austin, TX", actor: owner))
+        generate(
+          group(
+            owner_id: owner.id,
+            is_public: true,
+            location: "Austin, TX",
+            actor: owner,
+            geocode?: true
+          )
+        )
 
       venue =
         generate(
@@ -81,15 +97,16 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroupTest do
     end
 
     test "virtual huddl with group that has no coordinates stays nil" do
-      # Group geocoding fails so group has no coordinates
-      stub(Huddlz.MockGeocoding, :geocode, fn _address ->
-        {:error, :not_found}
-      end)
-
       owner = generate(user(role: :user))
 
       group =
-        generate(group(owner_id: owner.id, is_public: true, location: "Nowhere", actor: owner))
+        generate(
+          group(owner_id: owner.id, is_public: true, location: "Legacy Place", actor: owner)
+        )
+        |> Ash.Changeset.for_update(:update_details, %{}, actor: owner)
+        |> Ash.Changeset.force_change_attribute(:latitude, nil)
+        |> Ash.Changeset.force_change_attribute(:longitude, nil)
+        |> Ash.update!()
 
       assert is_nil(group.latitude)
       assert is_nil(group.longitude)
@@ -119,7 +136,15 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroupTest do
       owner = generate(user(role: :user))
 
       group =
-        generate(group(owner_id: owner.id, is_public: true, location: "Austin, TX", actor: owner))
+        generate(
+          group(
+            owner_id: owner.id,
+            is_public: true,
+            location: "Austin, TX",
+            actor: owner,
+            geocode?: true
+          )
+        )
 
       assert group.latitude == 30.2672
 

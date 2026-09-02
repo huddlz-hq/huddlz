@@ -23,7 +23,10 @@ defmodule DifferingHuddlTimeZonesSteps do
   step "I am going to a huddl at 9:00 PM in {string}",
        %{args: [huddl_time_zone], current_user: attendee} = context do
     host = generate(user(role: :user))
-    group = generate(group(owner_id: host.id, is_public: true, actor: host))
+
+    group =
+      generate(group(owner_id: host.id, is_public: true, actor: host, time_zone: huddl_time_zone))
+
     huddl_local_date = ~D[2030-07-15]
 
     huddl =
@@ -36,7 +39,6 @@ defmodule DifferingHuddlTimeZonesSteps do
           date: huddl_local_date,
           start_time: ~T[21:00:00],
           duration_minutes: 90,
-          time_zone: huddl_time_zone,
           lifecycle_state: :published,
           is_private: false
         )
@@ -134,7 +136,7 @@ defmodule DifferingHuddlTimeZonesSteps do
     attendee = generate(user(role: :user))
     attendee = Accounts.update_display_time_zone!(attendee, :fixed, time_zone, actor: attendee)
     host = generate(user(role: :user))
-    group = generate(group(owner_id: host.id, is_public: true, actor: host))
+    group = generate(group(owner_id: host.id, is_public: true, actor: host, time_zone: time_zone))
 
     huddl =
       generate(
@@ -146,7 +148,6 @@ defmodule DifferingHuddlTimeZonesSteps do
           date: ~D[2030-07-16],
           start_time: ~T[09:00:00],
           duration_minutes: 60,
-          time_zone: time_zone,
           lifecycle_state: :published,
           is_private: false
         )

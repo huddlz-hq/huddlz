@@ -10,7 +10,11 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
 
   setup do
     owner = Generator.generate(Generator.user())
-    group = Generator.generate(Generator.group(owner_id: owner.id, actor: owner))
+
+    group =
+      Generator.generate(
+        Generator.group(owner_id: owner.id, actor: owner, time_zone: "America/New_York")
+      )
 
     starts_at = DateTime.add(DateTime.utc_now(), 1, :day)
     ends_at = DateTime.add(starts_at, 1, :hour)
@@ -41,8 +45,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
         ctx.huddl
         |> Ash.Changeset.for_update(:update, %{
           starts_at: ~U[2027-03-07 14:00:00Z],
-          ends_at: ~U[2027-03-07 15:00:00Z],
-          time_zone: "America/New_York"
+          ends_at: ~U[2027-03-07 15:00:00Z]
         })
         |> Ash.update!(authorize?: false)
 
@@ -71,8 +74,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
         ctx.huddl
         |> Ash.Changeset.for_update(:update, %{
           starts_at: ~U[2027-10-31 13:00:00Z],
-          ends_at: ~U[2027-10-31 14:00:00Z],
-          time_zone: "America/New_York"
+          ends_at: ~U[2027-10-31 14:00:00Z]
         })
         |> Ash.update!(authorize?: false)
 
@@ -133,7 +135,8 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
     test "persists the template zone when the source has diverged", ctx do
       source =
         ctx.huddl
-        |> Ash.Changeset.for_update(:update, %{time_zone: "America/Denver"})
+        |> Ash.Changeset.for_update(:update, %{})
+        |> Ash.Changeset.force_change_attribute(:time_zone, "America/Denver")
         |> Ash.update!(authorize?: false)
 
       template =
@@ -153,7 +156,12 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
     end
 
     test "generates weekly recurring huddlz up to repeat_until", ctx do
-      repeat_until = Date.add(Date.utc_today(), 22)
+      source_date =
+        ctx.huddl.starts_at
+        |> DateTime.shift_zone!(ctx.huddl.time_zone)
+        |> DateTime.to_date()
+
+      repeat_until = Date.add(source_date, 21)
 
       template = create_template(ctx.huddl, frequency: :weekly, repeat_until: repeat_until)
 
@@ -164,8 +172,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
         |> Ash.Query.filter(huddl_template_id == ^template.id)
         |> Ash.read!(authorize?: false)
 
-      # With 22 days ahead: day 8 (week 1), day 15 (week 2) should be generated
-      # day 22 is NOT before repeat_until (it equals it), so only 2
+      # The third weekly occurrence equals repeat_until and is excluded.
       assert length(generated) == 2
 
       dates = generated |> Enum.map(&DateTime.to_date(&1.starts_at)) |> Enum.sort()

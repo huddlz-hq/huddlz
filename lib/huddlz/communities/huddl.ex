@@ -134,7 +134,6 @@ defmodule Huddlz.Communities.Huddl do
         :description,
         :starts_at,
         :ends_at,
-        :time_zone,
         :event_type,
         :physical_location,
         :virtual_link,
@@ -233,7 +232,6 @@ defmodule Huddlz.Communities.Huddl do
         :description,
         :starts_at,
         :ends_at,
-        :time_zone,
         :event_type,
         :physical_location,
         :virtual_link,
@@ -288,6 +286,7 @@ defmodule Huddlz.Communities.Huddl do
         message "is required when editing the whole series"
       end
 
+      change Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup
       change Huddlz.Communities.Huddl.Changes.DeriveTimeZoneFromVenue
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups

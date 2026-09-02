@@ -16,7 +16,6 @@ defmodule Huddlz.Notifications.Senders.WaitlistPromotedTest do
           group_id: group.id,
           creator_id: owner.id,
           actor: owner,
-          time_zone: "America/Los_Angeles",
           date: ~D[2030-05-04],
           start_time: ~T[09:00:00],
           duration_minutes: 60

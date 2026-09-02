@@ -12,6 +12,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   alias HuddlzWeb.Avatar
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
+  alias HuddlzWeb.SchedulePresentation
   alias Phoenix.LiveView.JS
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
@@ -431,6 +432,13 @@ defmodule HuddlzWeb.GroupLive.Show do
   attr :empty_message, :string, required: true
 
   defp huddl_grid(assigns) do
+    huddlz =
+      Enum.map(assigns.huddlz, fn huddl ->
+        {huddl, SchedulePresentation.authoritative_card(huddl)}
+      end)
+
+    assigns = assign(assigns, :huddlz_with_schedules, huddlz)
+
     ~H"""
     <%= if @huddlz == [] do %>
       <p class="empty-state muted">
@@ -439,7 +447,7 @@ defmodule HuddlzWeb.GroupLive.Show do
     <% else %>
       <div class="grid two">
         <.card
-          :for={{huddl, idx} <- Enum.with_index(@huddlz)}
+          :for={{{huddl, schedule}, idx} <- Enum.with_index(@huddlz_with_schedules)}
           navigate={~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"}
           gradient={Integer.mod(idx, 6) + 1}
         >
@@ -450,7 +458,7 @@ defmodule HuddlzWeb.GroupLive.Show do
               class="card-cover-img"
               image_url={huddl.display_image_url}
             />
-            <.date_stamp month={huddl_month(huddl)} day={huddl_day(huddl)} />
+            <.date_stamp month={schedule.month} day={schedule.day} />
             <.card_tag variant={tag_variant(huddl.event_type)}>
               {tag_label(huddl.event_type)}
             </.card_tag>
@@ -459,7 +467,7 @@ defmodule HuddlzWeb.GroupLive.Show do
             <span class="card-group">{huddl_kind_label(huddl)}</span>
             <h3 class="card-title">{huddl.title}</h3>
             <div class="card-meta">
-              <span>{format_meta_when(huddl.starts_at)}</span>
+              <span>{schedule.primary}</span>
               <%= if huddl.rsvp_count > 0 || huddl.max_attendees do %>
                 <span class="dot"></span>
                 <span>{rsvp_label(huddl)}</span>

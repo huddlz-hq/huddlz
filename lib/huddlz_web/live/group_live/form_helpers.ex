@@ -42,52 +42,16 @@ defmodule HuddlzWeb.GroupLive.FormHelpers do
            actor: socket.assigns.current_user
          ) do
       {:ok, time_zone} ->
-        socket =
-          assign(socket,
-            resolved_group_time_zone: time_zone,
-            group_time_zone_error: nil
-          )
-
-        maybe_apply_edit_time_zone(socket, time_zone)
+        assign(socket,
+          resolved_group_time_zone: time_zone,
+          group_time_zone_error: nil
+        )
 
       {:error, _reason} ->
-        socket
-        |> assign(
+        assign(socket,
           resolved_group_time_zone: nil,
           group_time_zone_error: "Choose a city whose time zone can be resolved"
         )
-        |> maybe_apply_edit_time_zone("")
     end
-  end
-
-  # Group editing still allows an organizer-maintained correction. New-group
-  # creation does not call this helper.
-  def clear_group_time_zone_error(socket, %{"time_zone" => time_zone}) do
-    if Huddlz.TimeZone.canonical?(time_zone) do
-      assign(socket, :group_time_zone_error, nil)
-    else
-      socket
-    end
-  end
-
-  def clear_group_time_zone_error(socket, _params), do: socket
-
-  defp maybe_apply_edit_time_zone(socket, time_zone) do
-    if socket.assigns.form.source.action == :update_details do
-      apply_group_time_zone_to_form(socket, time_zone)
-    else
-      socket
-    end
-  end
-
-  defp apply_group_time_zone_to_form(socket, time_zone) do
-    current_params = socket.assigns.form.source.params || %{}
-
-    form =
-      socket.assigns.form.source
-      |> AshPhoenix.Form.validate(Map.put(current_params, "time_zone", time_zone))
-      |> Phoenix.Component.to_form()
-
-    assign(socket, :form, form)
   end
 end

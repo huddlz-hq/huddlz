@@ -13,8 +13,6 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
     |> Huddlz.TimeZone.from_connect_params()
   end
 
-  def put_schedule_time_zone(params, time_zone), do: Map.put(params, "time_zone", time_zone)
-
   def schedule_datetime(datetime, nil), do: datetime
 
   def schedule_datetime(datetime, time_zone) do

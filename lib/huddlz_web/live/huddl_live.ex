@@ -15,6 +15,7 @@ defmodule HuddlzWeb.HuddlLive do
   alias Huddlz.Communities
   alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Layouts
+  alias HuddlzWeb.SchedulePresentation
   require Logger
 
   @huddl_card_loads [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group]
@@ -706,6 +707,8 @@ defmodule HuddlzWeb.HuddlLive do
   attr :gradient, :integer, default: 1
 
   defp huddl_card(assigns) do
+    assigns = assign(assigns, :schedule, SchedulePresentation.authoritative_card(assigns.huddl))
+
     ~H"""
     <.card
       navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}"}
@@ -718,7 +721,7 @@ defmodule HuddlzWeb.HuddlLive do
           class="card-cover-img"
           image_url={@huddl.display_image_url}
         />
-        <.date_stamp month={huddl_month(@huddl)} day={huddl_day(@huddl)} />
+        <.date_stamp month={@schedule.month} day={@schedule.day} />
         <.card_tag variant={tag_variant(@huddl.event_type)}>
           {tag_label(@huddl.event_type)}
         </.card_tag>
@@ -729,7 +732,7 @@ defmodule HuddlzWeb.HuddlLive do
         </span>
         <h3 class="card-title">{@huddl.title}</h3>
         <div class="card-meta">
-          <span>{format_meta_when(@huddl.starts_at)}</span>
+          <span>{@schedule.primary}</span>
           <%= if @distance do %>
             <span class="dot"></span>
             <span>{format_distance(@distance)}</span>

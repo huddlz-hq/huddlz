@@ -53,6 +53,51 @@ defmodule HuddlzWeb.HuddlLiveTest do
       |> assert_has(".grid .card .card-cover")
     end
 
+    @tag issue403: true
+    test "non-Calendar cards use the huddl's authoritative time zone", %{
+      conn: conn,
+      host: host
+    } do
+      group =
+        generate(
+          group(
+            is_public: true,
+            owner_id: host.id,
+            actor: host,
+            time_zone: "America/Los_Angeles"
+          )
+        )
+
+      huddl =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: host.id,
+            actor: host,
+            event_type: :virtual,
+            title: "Pacific Coffee",
+            date: Date.add(Date.utc_today(), 10),
+            start_time: ~T[09:00:00]
+          )
+        )
+
+      assert group.time_zone == "America/Los_Angeles"
+      assert huddl.time_zone == "America/Los_Angeles"
+
+      abbreviation =
+        huddl.starts_at
+        |> DateTime.shift_zone!(huddl.time_zone)
+        |> Calendar.strftime("%Z")
+
+      expected_time = "9:00 AM #{abbreviation}"
+
+      conn
+      |> visit("/discover?q=Pacific+Coffee")
+      |> assert_has(".card-meta", text: expected_time)
+      |> visit("/groups/#{group.slug}")
+      |> assert_has(".card-meta", text: expected_time)
+    end
+
     test "searches huddlz by title", %{conn: conn, host: host, public_group: public_group} do
       _elixir_huddl =
         generate(

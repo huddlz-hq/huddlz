@@ -23,7 +23,6 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
 
   # Fields copied from the source huddl onto every generated/reconciled instance.
   @copied_attrs [
-    :time_zone,
     :event_type,
     :title,
     :description,
@@ -294,7 +293,6 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
       |> Map.put(:group_id, source.group_id)
       |> Map.put(:huddl_template_id, template.id)
       |> Map.put(:lifecycle_state, source.lifecycle_state)
-      |> Map.put(:time_zone, template.time_zone)
     else
       base
     end

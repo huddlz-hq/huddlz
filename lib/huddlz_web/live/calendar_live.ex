@@ -436,24 +436,24 @@ defmodule HuddlzWeb.CalendarLive do
     ~p"/calendar?#{[view: "month", month: format_month_param(month), date: Date.to_iso8601(selected_date)]}"
   end
 
-  defp previous_period_path(:week, _focus_month, _week_start, selected_date),
+  defp previous_period_path(:week, _focus_month, selected_date),
     do: week_path(Date.add(selected_date, -7))
 
-  defp previous_period_path(:day, _focus_month, _week_start, selected_date),
+  defp previous_period_path(:day, _focus_month, selected_date),
     do: day_path(Date.add(selected_date, -1))
 
-  defp previous_period_path(:month, focus_month, _week_start, today) do
+  defp previous_period_path(:month, focus_month, today) do
     month = shift_month(focus_month, -1)
     month_day_path(month, default_month_date(month, today))
   end
 
-  defp next_period_path(:week, _focus_month, _week_start, selected_date),
+  defp next_period_path(:week, _focus_month, selected_date),
     do: week_path(Date.add(selected_date, 7))
 
-  defp next_period_path(:day, _focus_month, _week_start, selected_date),
+  defp next_period_path(:day, _focus_month, selected_date),
     do: day_path(Date.add(selected_date, 1))
 
-  defp next_period_path(:month, focus_month, _week_start, today) do
+  defp next_period_path(:month, focus_month, today) do
     month = shift_month(focus_month, 1)
     month_day_path(month, default_month_date(month, today))
   end
@@ -491,10 +491,10 @@ defmodule HuddlzWeb.CalendarLive do
 
   defp week_tab_path(selected_date), do: week_path(selected_date)
 
-  defp month_tab_path(:month, focus_month, selected_date, _today),
+  defp month_tab_path(:month, focus_month, selected_date),
     do: month_day_path(focus_month, selected_date)
 
-  defp month_tab_path(_view_mode, _focus_month, selected_date, _today),
+  defp month_tab_path(_view_mode, _focus_month, selected_date),
     do: month_day_path(first_of_month(selected_date), selected_date)
 
   defp default_month_date(month, today) do
@@ -776,7 +776,6 @@ defmodule HuddlzWeb.CalendarLive do
               previous_period_path(
                 @view_mode,
                 @focus_month,
-                @week_start,
                 period_navigation_anchor(@view_mode, @selected_date, @today)
               )
             }
@@ -810,7 +809,6 @@ defmodule HuddlzWeb.CalendarLive do
               next_period_path(
                 @view_mode,
                 @focus_month,
-                @week_start,
                 period_navigation_anchor(@view_mode, @selected_date, @today)
               )
             }
@@ -835,7 +833,7 @@ defmodule HuddlzWeb.CalendarLive do
 
         <.link
           id="calendar-control"
-          patch={month_tab_path(@view_mode, @focus_month, @selected_date, @today)}
+          patch={month_tab_path(@view_mode, @focus_month, @selected_date)}
           class="cal-period-title"
           aria-label="Open Month for selected date"
         >
@@ -873,7 +871,7 @@ defmodule HuddlzWeb.CalendarLive do
           </.link>
           <.link
             id="calendar-view-month"
-            patch={month_tab_path(@view_mode, @focus_month, @selected_date, @today)}
+            patch={month_tab_path(@view_mode, @focus_month, @selected_date)}
             class={["scope-tab", @view_mode == :month && "is-active"]}
             aria-current={if @view_mode == :month, do: "page"}
           >

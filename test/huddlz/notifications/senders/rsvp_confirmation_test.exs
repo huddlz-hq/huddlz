@@ -12,6 +12,7 @@ defmodule Huddlz.Notifications.Senders.RsvpConfirmationTest do
         group(
           name: attrs[:group_name] || "Pickup Sports",
           slug: attrs[:group_slug] || "pickup-sports",
+          time_zone: attrs[:time_zone] || "America/New_York",
           is_public: true,
           owner_id: owner.id,
           actor: owner
@@ -25,7 +26,6 @@ defmodule Huddlz.Notifications.Senders.RsvpConfirmationTest do
         creator_id: owner.id,
         actor: owner
       ]
-      |> maybe_put_time_zone(attrs)
       |> put_datetime_attrs(attrs)
 
     generate(huddl(huddl_attrs))
@@ -42,11 +42,6 @@ defmodule Huddlz.Notifications.Senders.RsvpConfirmationTest do
   end
 
   defp put_datetime_attrs(huddl_attrs, _attrs), do: huddl_attrs
-
-  defp maybe_put_time_zone(huddl_attrs, %{time_zone: time_zone}),
-    do: Keyword.put(huddl_attrs, :time_zone, time_zone)
-
-  defp maybe_put_time_zone(huddl_attrs, _attrs), do: huddl_attrs
 
   describe "build/2" do
     test "addresses the user with their display name" do

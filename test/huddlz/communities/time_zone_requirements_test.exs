@@ -4,7 +4,7 @@ defmodule Huddlz.Communities.TimeZoneRequirementsTest do
   alias Huddlz.Communities
 
   @tag issue403: true
-  test "the public huddl resource interface defaults omitted zones and rejects invalid zones" do
+  test "virtual huddlz derive the Group zone and reject caller-supplied zones" do
     owner = generate(user(role: :user))
     group = generate(group(actor: owner))
 
@@ -24,15 +24,12 @@ defmodule Huddlz.Communities.TimeZoneRequirementsTest do
 
     assert defaulted_huddl.time_zone == group.time_zone
 
-    assert {:error, missing_error} =
-             Communities.create_huddl(Map.put(attrs, :time_zone, nil), actor: owner)
+    for submitted <- [nil, "US/Eastern", "America/Los_Angeles"] do
+      assert {:error, error} =
+               Communities.create_huddl(Map.put(attrs, :time_zone, submitted), actor: owner)
 
-    assert Exception.message(missing_error) =~ "time_zone"
-
-    assert {:error, invalid_error} =
-             Communities.create_huddl(Map.put(attrs, :time_zone, "US/Eastern"), actor: owner)
-
-    assert Exception.message(invalid_error) =~ "must be a valid IANA time zone"
+      assert Exception.message(error) =~ "time_zone"
+    end
   end
 
   @tag issue403: true

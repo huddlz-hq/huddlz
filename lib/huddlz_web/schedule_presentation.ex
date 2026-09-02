@@ -17,6 +17,13 @@ defmodule HuddlzWeb.SchedulePresentation do
     }
   end
 
+  def authoritative_card(huddl), do: card(huddl, huddl.time_zone)
+
+  def authoritative_date(huddl) do
+    {starts_at, _ends_at} = local_schedule(huddl, huddl.time_zone)
+    Calendar.strftime(starts_at, "%a, %b %-d")
+  end
+
   def detail(huddl) do
     {huddl_starts_at, huddl_ends_at} = local_schedule(huddl, huddl.time_zone)
 

@@ -1,24 +1,51 @@
 defmodule Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup do
   @moduledoc """
-  Uses the Group time zone when a caller does not provide a huddl time zone.
+  Uses the Group time zone as the authoritative zone for new virtual huddlz.
 
-  Venue-aware scheduling can replace this default before persistence; virtual
-  huddlz retain it unless the organizer chooses another canonical zone.
+  Venue-aware scheduling replaces this value for physical and hybrid huddlz.
+  Generated recurring instances retain their template's authoritative zone,
+  and changing an existing huddl to virtual adopts the current Group zone.
+  Caller input is never authoritative.
   """
 
   use Ash.Resource.Change
 
   @impl true
   def change(changeset, _opts, context) do
-    cond do
-      explicit_time_zone?(changeset) -> changeset
-      is_binary(Ash.Changeset.get_attribute(changeset, :time_zone)) -> changeset
-      true -> default_from_group(changeset, context)
+    if derive_time_zone?(changeset) do
+      default_time_zone(changeset, context)
+    else
+      changeset
     end
   end
 
-  defp explicit_time_zone?(changeset) do
-    Map.has_key?(changeset.params, :time_zone) or Map.has_key?(changeset.params, "time_zone")
+  defp derive_time_zone?(%{action_type: :create}), do: true
+
+  defp derive_time_zone?(%{action_type: :update} = changeset) do
+    Ash.Changeset.changing_attribute?(changeset, :event_type) and
+      Ash.Changeset.get_attribute(changeset, :event_type) == :virtual
+  end
+
+  defp derive_time_zone?(_changeset), do: false
+
+  defp default_time_zone(changeset, context) do
+    case Ash.Changeset.get_attribute(changeset, :huddl_template_id) do
+      nil -> default_from_group(changeset, context)
+      template_id -> default_from_template(template_id, changeset)
+    end
+  end
+
+  defp default_from_template(template_id, changeset) do
+    case Ash.get(Huddlz.Communities.HuddlTemplate, template_id, authorize?: false) do
+      {:ok, %Huddlz.Communities.HuddlTemplate{} = template} ->
+        Ash.Changeset.force_change_attribute(changeset, :time_zone, template.time_zone)
+
+      _error ->
+        Ash.Changeset.add_error(changeset,
+          field: :huddl_template_id,
+          message: "Recurring schedule time zone could not be loaded"
+        )
+    end
   end
 
   defp default_from_group(changeset, context) do
@@ -29,18 +56,15 @@ defmodule Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup do
 
   defp default_from_group(nil, changeset, _context), do: changeset
 
-  defp default_from_group(group_id, changeset, context) do
-    case Huddlz.Communities.get_group(group_id, scope: context) do
-      {:ok, group} ->
+  defp default_from_group(group_id, changeset, _context) do
+    case Ash.get(Huddlz.Communities.Group, group_id, authorize?: false) do
+      {:ok, %Huddlz.Communities.Group{} = group} ->
         Ash.Changeset.force_change_attribute(changeset, :time_zone, group.time_zone)
 
-      {:error, _reason} ->
-        # Keep an inaccessible Group from turning an authorization failure into
-        # an unrelated validation error. The create policy remains authoritative.
-        Ash.Changeset.force_change_attribute(
-          changeset,
-          :time_zone,
-          Huddlz.TimeZone.eastern_fallback()
+      _error ->
+        Ash.Changeset.add_error(changeset,
+          field: :group_id,
+          message: "Group time zone could not be loaded"
         )
     end
   end

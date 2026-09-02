@@ -75,8 +75,7 @@ defmodule AuthoritativeScheduleDeliverySteps do
           event_type: :in_person,
           date: @date,
           start_time: ~T[09:00:00],
-          duration_minutes: 90,
-          time_zone: "America/New_York"
+          duration_minutes: 90
         },
         actor: owner
       )
@@ -142,7 +141,6 @@ defmodule AuthoritativeScheduleDeliverySteps do
           title: "Pacific Morning Coffee",
           event_type: :virtual,
           virtual_link: "https://meet.example.com/pacific-coffee",
-          time_zone: time_zone,
           date: @date,
           start_time: ~T[09:00:00],
           duration_minutes: 90

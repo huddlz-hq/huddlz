@@ -184,47 +184,43 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
     test "enforces unique group names", %{actor: actor} do
       # Create first group
       {:ok, _group1} =
-        Group
-        |> Ash.Changeset.for_create(:create_group, %{
+        create_group_changeset(actor, %{
           name: "Unique Name Test",
           location: "Test Location",
           is_public: true
         })
-        |> Ash.create(actor: actor)
+        |> Ash.create()
 
       # Try to create second group with same name
       assert {:error, %Ash.Error.Invalid{}} =
-               Group
-               |> Ash.Changeset.for_create(:create_group, %{
+               create_group_changeset(actor, %{
                  name: "Unique Name Test",
                  location: "Test Location",
                  is_public: true
                })
-               |> Ash.create(actor: actor)
+               |> Ash.create()
     end
 
     test "defaults is_public to true", %{actor: actor} do
       {:ok, group} =
-        Group
-        |> Ash.Changeset.for_create(:create_group, %{
+        create_group_changeset(actor, %{
           name: "Default Public Test",
           location: "Test Location"
         })
-        |> Ash.create(actor: actor)
+        |> Ash.create()
 
       assert group.is_public == true
     end
 
     test "allows optional fields", %{actor: actor} do
       {:ok, group} =
-        Group
-        |> Ash.Changeset.for_create(:create_group, %{
+        create_group_changeset(actor, %{
           name: "Full Details Group",
           description: "A group with all details",
           location: "San Francisco, CA",
           is_public: false
         })
-        |> Ash.create(actor: actor)
+        |> Ash.create()
 
       assert to_string(group.description) == "A group with all details"
       assert group.location == "San Francisco, CA"
@@ -304,14 +300,62 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
         group
         |> Ash.Changeset.for_update(:update_details, %{
           name: "Updated Name",
-          description: "Updated description",
-          location: "New Location"
+          description: "Updated description"
         })
         |> Ash.update(actor: owner)
 
       assert to_string(updated.name) == "Updated Name"
       assert to_string(updated.description) == "Updated description"
-      assert updated.location == "New Location"
+      assert updated.location == group.location
+    end
+
+    test "derives a changed Group time zone from the new location", %{
+      owner: owner,
+      group: group
+    } do
+      changeset =
+        group
+        |> Ash.Changeset.new()
+        |> Ash.Changeset.set_argument(:provided_latitude, 39.74)
+        |> Ash.Changeset.set_argument(:provided_longitude, -104.99)
+
+      assert {:ok, updated} =
+               changeset
+               |> Ash.Changeset.for_update(:update_details, %{
+                 location: "Denver, CO"
+               })
+               |> Ash.update(actor: owner)
+
+      assert updated.location == "Denver, CO"
+      assert updated.time_zone == "America/Denver"
+
+      assert {:error, error} =
+               updated
+               |> Ash.Changeset.for_update(:update_details, %{
+                 time_zone: "America/Los_Angeles"
+               })
+               |> Ash.update(actor: owner)
+
+      assert Exception.message(error) =~ "time_zone"
+    end
+
+    test "rejects a changed location whose time zone cannot be resolved", %{
+      owner: owner,
+      group: group
+    } do
+      Mox.stub(Huddlz.MockGeocoding, :geocode, fn _location -> {:error, :not_found} end)
+
+      assert {:error, error} =
+               group
+               |> Ash.Changeset.for_update(:update_details, %{location: "Unresolvable Place"})
+               |> Ash.update(actor: owner)
+
+      assert Exception.message(error) =~
+               "time zone could not be resolved for this location"
+
+      unchanged = Ash.get!(Group, group.id, authorize?: false)
+      assert unchanged.location == group.location
+      assert unchanged.time_zone == group.time_zone
     end
 
     test "maintains required validations on update", %{owner: owner, group: group} do
@@ -324,5 +368,13 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
                error.field == :name
              end)
     end
+  end
+
+  defp create_group_changeset(actor, attrs) do
+    Group
+    |> Ash.Changeset.new()
+    |> Ash.Changeset.set_argument(:provided_latitude, 29.89)
+    |> Ash.Changeset.set_argument(:provided_longitude, -81.31)
+    |> Ash.Changeset.for_create(:create_group, attrs, actor: actor)
   end
 end

@@ -18,13 +18,13 @@ defmodule Huddlz.Geocoding.GeocodeChangeTest do
       end)
 
       owner = generate(user(role: :user))
-      group = generate(group(location: "Austin, TX", actor: owner))
+      group = generate(group(location: "Austin, TX", actor: owner, geocode?: true))
 
       assert group.latitude == 30.2672
       assert group.longitude == -97.7431
     end
 
-    test "geocoding failure sets lat/lng to nil and stays quiet in test env" do
+    test "geocoding failure rejects a new Group and stays quiet in test env" do
       stub(Huddlz.MockGeocoding, :geocode, fn _address ->
         {:error, :not_found}
       end)
@@ -33,10 +33,21 @@ defmodule Huddlz.Geocoding.GeocodeChangeTest do
 
       log =
         ExUnit.CaptureLog.capture_log(fn ->
-          group = generate(group(location: "Nonexistent Place XYZ", actor: owner))
+          assert {:error, error} =
+                   Group
+                   |> Ash.Changeset.for_create(
+                     :create_group,
+                     %{
+                       name: "Unresolvable Group",
+                       location: "Nonexistent Place XYZ",
+                       is_public: true
+                     },
+                     actor: owner
+                   )
+                   |> Ash.create()
 
-          assert is_nil(group.latitude)
-          assert is_nil(group.longitude)
+          assert Exception.message(error) =~
+                   "time zone could not be resolved for this location"
         end)
 
       refute log =~ "Geocoding failed for"
@@ -75,7 +86,7 @@ defmodule Huddlz.Geocoding.GeocodeChangeTest do
       end)
 
       owner = generate(user(role: :user))
-      group = generate(group(location: "Austin, TX", actor: owner))
+      group = generate(group(location: "Austin, TX", actor: owner, geocode?: true))
 
       assert group.latitude == 30.2672
 

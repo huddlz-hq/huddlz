@@ -89,28 +89,34 @@ defmodule Huddlz.Communities.VenueTimeZoneTest do
   end
 
   describe "physical and hybrid huddl time zones" do
-    test "the selected venue overrides an unrelated submitted zone" do
+    test "the selected venue is the only accepted source of time zone" do
       owner = generate(user(role: :user))
       group = generate(group(actor: owner, time_zone: "America/New_York"))
       location = generate(group_location(group_id: group.id, actor: owner))
 
       for event_type <- [:in_person, :hybrid] do
+        attrs = %{
+          title: "Denver #{event_type}",
+          group_id: group.id,
+          group_location_id: location.id,
+          physical_location: location.address,
+          virtual_link: event_type == :hybrid && "https://meet.example.com/denver",
+          event_type: event_type,
+          date: Date.add(Date.utc_today(), 10),
+          start_time: ~T[09:00:00],
+          duration_minutes: 60
+        }
+
+        assert {:error, error} =
+                 Communities.create_huddl(
+                   Map.put(attrs, :time_zone, "America/Los_Angeles"),
+                   actor: owner
+                 )
+
+        assert Exception.message(error) =~ "time_zone"
+
         huddl =
-          Communities.create_huddl!(
-            %{
-              title: "Denver #{event_type}",
-              group_id: group.id,
-              group_location_id: location.id,
-              physical_location: location.address,
-              virtual_link: event_type == :hybrid && "https://meet.example.com/denver",
-              event_type: event_type,
-              date: Date.add(Date.utc_today(), 10),
-              start_time: ~T[09:00:00],
-              duration_minutes: 60,
-              time_zone: "America/Los_Angeles"
-            },
-            actor: owner
-          )
+          Communities.create_huddl!(attrs, actor: owner)
 
         assert huddl.time_zone == location.time_zone
         assert DateTime.shift_zone!(huddl.starts_at, location.time_zone).hour == 9

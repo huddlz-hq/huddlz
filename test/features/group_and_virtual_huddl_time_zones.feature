@@ -6,15 +6,10 @@ Feature: Group and virtual huddl time zones
     Given my group's city uses "America/New_York"
     When I schedule a virtual huddl for 9:00 AM
     Then "America/New_York" is shown as its huddl time zone
+    And no independent virtual huddl time zone can be chosen
     And the huddl is saved for 9:00 AM in that zone
 
   @slice2
-  Scenario: I can choose another time zone for a virtual huddl
-    Given my group's time zone is "America/New_York"
-    When I schedule a virtual huddl in "America/Los_Angeles"
-    Then its authoritative time is saved in "America/Los_Angeles"
-
-  @slice3
   Scenario: Changing a group city does not reschedule existing huddlz
     Given my group has a virtual huddl at 9:00 AM in "America/New_York"
     When I change the group's city and Group time zone

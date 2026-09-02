@@ -16,6 +16,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
   alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
+  alias HuddlzWeb.SchedulePresentation
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -99,7 +100,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
       "date" => Date.to_iso8601(date),
       "start_time" => Calendar.strftime(start_time, "%H:%M"),
       "duration_minutes" => to_string(duration_minutes),
-      "time_zone" => huddl.time_zone,
       "max_attendees" => if(huddl.max_attendees, do: to_string(huddl.max_attendees), else: ""),
       "event_type" => to_string(huddl.event_type),
       "physical_location" => huddl.physical_location || "",
@@ -209,7 +209,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
                 <% _ -> %>
                   <span class="eyebrow">Editing one date</span>
                   <p>
-                    This is a recurring huddl. Changes apply only to <strong>{Calendar.strftime(@huddl.starts_at, "%a, %b %-d")}</strong>.
+                    This is a recurring huddl. Changes apply only to <strong>{SchedulePresentation.authoritative_date(@huddl)}</strong>.
                   </p>
               <% end %>
               <input
@@ -392,10 +392,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   def handle_event("set_edit_type", %{"type" => type}, socket) when type in ["instance", "all"] do
     current_params = socket.assigns.form.source.params || %{}
 
-    updated_params =
-      current_params
-      |> Map.put("edit_type", type)
-      |> put_schedule_time_zone(socket.assigns.schedule_time_zone)
+    updated_params = Map.put(current_params, "edit_type", type)
 
     socket =
       socket
@@ -438,15 +435,16 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   def handle_event("validate", %{"form" => params}, socket) do
     params =
       params
-      |> put_schedule_time_zone(socket.assigns.schedule_time_zone)
       |> inject_saved_location_params(socket.assigns[:selected_location])
       |> mark_location_used_after_submit(socket.assigns.form)
+
+    schedule_params = Map.put(params, "time_zone", schedule_time_zone(socket))
 
     socket =
       socket
       |> update_event_type_visibility(params)
       |> update_calculated_end_time(params)
-      |> update_daylight_saving_resolution(params)
+      |> update_daylight_saving_resolution(schedule_params)
 
     form = AshPhoenix.Form.validate(socket.assigns.form, params)
     {:noreply, assign(socket, :form, to_form(form))}
@@ -456,7 +454,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   def handle_event("save", %{"form" => params}, socket) do
     params =
       params
-      |> put_schedule_time_zone(socket.assigns.schedule_time_zone)
       |> inject_saved_location_params(socket.assigns[:selected_location])
       |> mark_location_used(socket.assigns.form)
 
@@ -535,6 +532,12 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   def handle_info({:location_cleared, "modal-address-autocomplete"}, socket) do
     {:noreply, ModalLocationHelpers.clear(socket)}
   end
+
+  defp schedule_time_zone(%{assigns: %{selected_location: %{time_zone: time_zone}}})
+       when is_binary(time_zone) and time_zone != "",
+       do: time_zone
+
+  defp schedule_time_zone(socket), do: socket.assigns.schedule_time_zone
 
   defp assign_pending_image_to_huddl(socket, huddl) do
     case socket.assigns[:pending_image_id] do

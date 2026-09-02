@@ -28,13 +28,13 @@ defmodule GroupAndVirtualHuddlTimeZonesSteps do
 
   step "{string} is shown as its huddl time zone", %{args: [time_zone]} = context do
     context.session
-    |> assert_has(
-      "#huddl-time-zone[type='search'][list='huddl-time-zone-options'][value='#{time_zone}']"
-    )
-    |> assert_has(
-      "#huddl-time-zone-options option[value='#{time_zone}'][label='New York (#{time_zone})']"
-    )
+    |> assert_has("#huddl-time-zone-derived[data-time-zone='#{time_zone}']")
 
+    context
+  end
+
+  step "no independent virtual huddl time zone can be chosen", context do
+    refute_has(context.session, "#huddl-time-zone input")
     context
   end
 
@@ -48,29 +48,6 @@ defmodule GroupAndVirtualHuddlTimeZonesSteps do
     assert DateTime.shift_zone!(huddl.starts_at, huddl.time_zone).hour == 9
 
     Map.put(context, :session, session)
-  end
-
-  step "I schedule a virtual huddl in {string}", %{args: [time_zone]} = context do
-    session =
-      context.session
-      |> choose("Virtual")
-      |> fill_in("Title", with: "West Coast Virtual Coffee")
-      |> fill_in("Start time", with: "09:00")
-      |> fill_in("Online link", with: "https://meet.example.com/west")
-      |> fill_in("huddl time zone", with: time_zone)
-      |> click_button("Schedule huddl")
-
-    Map.merge(context, %{session: session, selected_huddl_time_zone: time_zone})
-  end
-
-  step "its authoritative time is saved in {string}", %{args: [time_zone]} = context do
-    [huddl | _] =
-      Huddlz.Communities.get_group_huddlz!(context.group.id, actor: context.current_user)
-
-    assert huddl.time_zone == time_zone
-    assert DateTime.shift_zone!(huddl.starts_at, time_zone).hour == 9
-
-    context
   end
 
   step "my group has a virtual huddl at 9:00 AM in {string}",
@@ -90,8 +67,7 @@ defmodule GroupAndVirtualHuddlTimeZonesSteps do
           virtual_link: "https://meet.example.com/existing",
           date: Date.add(Date.utc_today(), 7),
           start_time: ~T[09:00:00],
-          duration_minutes: 60,
-          time_zone: time_zone
+          duration_minutes: 60
         )
       )
 
@@ -106,7 +82,7 @@ defmodule GroupAndVirtualHuddlTimeZonesSteps do
   end
 
   step "I change the group's city and Group time zone", context do
-    Mox.expect(Huddlz.MockLocationTimeZone, :resolve, fn 39.74, -104.99 ->
+    Mox.expect(Huddlz.MockLocationTimeZone, :resolve, 2, fn 39.74, -104.99 ->
       {:ok, "America/Denver"}
     end)
 
@@ -142,10 +118,7 @@ defmodule GroupAndVirtualHuddlTimeZonesSteps do
       |> visit("/groups/#{context.group.slug}/huddlz/new")
       |> choose("Virtual")
 
-    assert_has(
-      session,
-      "#huddl-time-zone[value='#{context.group.time_zone}']"
-    )
+    assert_has(session, "#huddl-time-zone-derived[data-time-zone='#{context.group.time_zone}']")
 
     assert context.group.time_zone == "America/Denver"
 

@@ -30,8 +30,7 @@ defmodule Huddlz.Communities.VenueMoveTimeZoneTest do
           event_type: :hybrid,
           date: date,
           start_time: ~T[09:00:00],
-          duration_minutes: 90,
-          time_zone: miami.time_zone
+          duration_minutes: 90
         },
         actor: owner
       )
@@ -76,8 +75,7 @@ defmodule Huddlz.Communities.VenueMoveTimeZoneTest do
           event_type: :in_person,
           date: date,
           start_time: ~T[09:00:00],
-          duration_minutes: 90,
-          time_zone: miami.time_zone
+          duration_minutes: 90
         },
         actor: owner
       )
@@ -112,8 +110,7 @@ defmodule Huddlz.Communities.VenueMoveTimeZoneTest do
           event_type: :in_person,
           date: date,
           start_time: ~T[09:00:00],
-          duration_minutes: 60,
-          time_zone: miami.time_zone
+          duration_minutes: 60
         },
         actor: owner
       )

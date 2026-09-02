@@ -46,7 +46,6 @@ defmodule HuddlzWeb.JsonApiTest do
             virtual_link: "https://meet.example.com/unauthorized",
             starts_at: starts_at,
             ends_at: ends_at,
-            time_zone: "Etc/UTC",
             group_id: group.id
           }
         }
@@ -84,7 +83,6 @@ defmodule HuddlzWeb.JsonApiTest do
             virtual_link: "https://meet.example.com/authorized",
             starts_at: starts_at,
             ends_at: ends_at,
-            time_zone: "Etc/UTC",
             group_id: group.id
           }
         }

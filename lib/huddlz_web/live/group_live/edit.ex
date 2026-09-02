@@ -10,8 +10,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
     only: [
       inject_group_location_param: 2,
       apply_group_location_to_form: 2,
-      resolve_group_location_time_zone: 2,
-      clear_group_time_zone_error: 2
+      resolve_group_location_time_zone: 2
     ]
 
   import HuddlzWeb.HuddlLive.FormHelpers, only: [prepare_source_with_coordinates: 1]
@@ -70,8 +69,8 @@ defmodule HuddlzWeb.GroupLive.Edit do
     |> assign(:pending_image_id, nil)
     |> assign(:pending_preview_url, nil)
     |> assign(:selected_location_data, build_initial_location_data(group))
+    |> assign(:resolved_group_time_zone, group.time_zone)
     |> assign(:group_time_zone_error, nil)
-    |> assign(:time_zone_options, Huddlz.TimeZone.iana_options())
     |> assign(:upload_processing, false)
     |> allow_image_upload(:group_image, &handle_upload_progress/3)
   end
@@ -317,16 +316,19 @@ defmodule HuddlzWeb.GroupLive.Edit do
               />
               <.field_errors field={@form[:location]} />
               <p class="form-help">
-                Optional. Helps people find your group when they search nearby.
+                Required. Helps people find your group when they search nearby and sets the time zone for virtual huddlz.
               </p>
             </div>
-            <.searchable_select
-              field={@form[:time_zone]}
-              id="group-time-zone"
-              label="Group time zone"
-              options={@time_zone_options}
-              help="Used as the default for virtual huddlz. Search by city or IANA name."
-            />
+            <div :if={@resolved_group_time_zone} class="form-row">
+              <span class="form-label">Group time zone</span>
+              <p
+                id="group-time-zone-derived"
+                class="form-help"
+                data-time-zone={@resolved_group_time_zone}
+              >
+                {Huddlz.TimeZone.friendly_label(@resolved_group_time_zone)}
+              </p>
+            </div>
             <p :if={@group_time_zone_error} id="group-time-zone-resolution-error" class="form-error">
               {@group_time_zone_error}
             </p>
@@ -478,7 +480,6 @@ defmodule HuddlzWeb.GroupLive.Edit do
     {:noreply,
      socket
      |> assign(:form, form)
-     |> clear_group_time_zone_error(params)
      |> assign(:slug_changed, slug_changed)
      |> assign(:image_error, nil)}
   end

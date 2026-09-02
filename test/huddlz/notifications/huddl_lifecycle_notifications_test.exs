@@ -54,6 +54,7 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
           group(
             name: "Pickup Sports",
             slug: "pickup-sports",
+            time_zone: "America/Los_Angeles",
             is_public: true,
             owner_id: owner.id,
             actor: owner
@@ -73,7 +74,6 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
             title: "Saturday Soccer",
             group_id: group.id,
             creator_id: owner.id,
-            time_zone: "America/Los_Angeles",
             date: ~D[2030-05-04],
             start_time: ~T[09:00:00],
             duration_minutes: 60,
@@ -146,7 +146,6 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
             title: "Saturday Soccer",
             group_id: group.id,
             creator_id: owner.id,
-            time_zone: "America/Los_Angeles",
             actor: owner
           )
         )
@@ -322,6 +321,7 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
           group(
             name: "Pickup Sports",
             slug: "pickup-sports",
+            time_zone: "America/Los_Angeles",
             is_public: true,
             owner_id: owner.id,
             actor: owner
@@ -686,6 +686,7 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
           group(
             name: "Pickup Sports",
             slug: "pickup-sports",
+            time_zone: "America/Los_Angeles",
             is_public: true,
             owner_id: owner.id,
             actor: owner
@@ -698,7 +699,6 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
             title: "Saturday Soccer",
             group_id: group.id,
             creator_id: owner.id,
-            time_zone: "America/Los_Angeles",
             date: ~D[2030-05-04],
             start_time: ~T[09:00:00],
             duration_minutes: 60,
@@ -813,7 +813,6 @@ defmodule Huddlz.Notifications.HuddlLifecycleNotificationsTest do
             title: "Saturday Soccer",
             group_id: group.id,
             creator_id: owner.id,
-            time_zone: "America/Los_Angeles",
             date: ~D[2030-05-04],
             start_time: ~T[09:00:00],
             duration_minutes: 60,

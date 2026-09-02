@@ -48,8 +48,7 @@ defmodule MovingHuddlBetweenVenueTimeZonesSteps do
           event_type: :in_person,
           date: Date.add(Date.utc_today(), 10),
           start_time: ~T[09:00:00],
-          duration_minutes: 90,
-          time_zone: miami.time_zone
+          duration_minutes: 90
         },
         actor: owner
       )

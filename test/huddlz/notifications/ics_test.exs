@@ -62,12 +62,21 @@ defmodule Huddlz.Notifications.ICSTest do
     end
 
     test "carries the authoritative instant as UTC across a daylight-saving boundary", ctx do
+      group =
+        generate(
+          group(
+            owner_id: ctx.owner.id,
+            is_public: true,
+            actor: ctx.owner,
+            time_zone: "America/Los_Angeles"
+          )
+        )
+
       huddl =
-        build_huddl(ctx,
+        build_huddl(%{ctx | group: group},
           title: "Spring Forward Coffee",
           event_type: :virtual,
           virtual_link: "https://meet.example.com/spring-forward",
-          time_zone: "America/Los_Angeles",
           date: ~D[2027-03-14],
           start_time: ~T[01:30:00],
           duration_minutes: 120

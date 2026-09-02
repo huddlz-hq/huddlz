@@ -12,4 +12,4 @@ Feature: Global Header
     Given I am signed in
     And I am viewing Calendar
     When I use the global Discover search
-    Then I am taken to Discover search results using the existing search behavior
+    Then Discover shows the submitted "coffee" query

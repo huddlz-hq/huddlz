@@ -12,6 +12,7 @@ defmodule Huddlz.Notifications.Senders.HuddlReminder24hTest do
         group(
           name: attrs[:group_name] || "Pickup Sports",
           slug: attrs[:group_slug] || "pickup-sports",
+          time_zone: attrs[:time_zone] || "Etc/UTC",
           is_public: true,
           owner_id: owner.id,
           actor: owner
@@ -24,7 +25,6 @@ defmodule Huddlz.Notifications.Senders.HuddlReminder24hTest do
           title: attrs[:title] || "Saturday Soccer",
           group_id: group.id,
           creator_id: owner.id,
-          time_zone: attrs[:time_zone] || "Etc/UTC",
           date: attrs[:date] || Date.add(Date.utc_today(), 1),
           start_time: attrs[:start_time] || ~T[14:00:00],
           duration_minutes: attrs[:duration_minutes] || 60,

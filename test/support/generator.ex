@@ -141,6 +141,10 @@ defmodule Huddlz.Generator do
 
   @doc """
   Create a group with given attributes.
+
+  Pass `geocode?: true` when a test needs to exercise geocoding. Otherwise
+  deterministic coordinates are supplied privately so unrelated fixtures do
+  not depend on an external location lookup.
   """
   def group(opts \\ []) do
     # The action infers owner from actor; if a test passes owner_id, treat it
@@ -157,18 +161,14 @@ defmodule Huddlz.Generator do
             Ash.get!(Huddlz.Accounts.User, owner_id, authorize?: false)
         end
 
-    requested_time_zone = opts[:time_zone] || "Etc/UTC"
+    requested_time_zone = opts[:time_zone] || "America/New_York"
     {latitude, longitude} = coordinates_for_time_zone(requested_time_zone)
 
-    changeset_generator(
-      Group,
-      :create_group,
+    generator_opts = [
       defaults: [
         name: StreamData.repeatedly(fn -> Faker.Company.name() end),
         description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
         location: "Test Location",
-        provided_latitude: latitude,
-        provided_longitude: longitude,
         is_public: true,
         # Pin to nil so GenerateSlug derives the slug from the name. Otherwise
         # the public `:slug` argument on :create_group falls into Ash's optional
@@ -177,9 +177,21 @@ defmodule Huddlz.Generator do
         # assertions.
         slug: nil
       ],
-      overrides: Keyword.drop(opts, [:owner_id, :actor, :actor_role, :time_zone]),
+      overrides: Keyword.drop(opts, [:owner_id, :actor, :actor_role, :time_zone, :geocode?]),
       actor: actor
-    )
+    ]
+
+    generator_opts =
+      if opts[:geocode?] do
+        generator_opts
+      else
+        Keyword.put(generator_opts, :private_arguments, %{
+          provided_latitude: latitude,
+          provided_longitude: longitude
+        })
+      end
+
+    changeset_generator(Group, :create_group, generator_opts)
   end
 
   @doc """
@@ -211,7 +223,7 @@ defmodule Huddlz.Generator do
         longitude: -97.74,
         group_id: group_id
       ],
-      overrides: Keyword.drop(opts, [:time_zone]),
+      overrides: drop_option(opts, :time_zone),
       actor: actor
     )
   end
@@ -264,6 +276,8 @@ defmodule Huddlz.Generator do
   Create a huddl with random data.
   """
   def huddl(opts \\ []) do
+    reject_deprecated_huddl_time_zone!(opts)
+
     creator_id = huddl_creator_id(opts)
 
     # creator_id is no longer an accepted input — the :create action derives
@@ -298,7 +312,6 @@ defmodule Huddlz.Generator do
         date: future_date,
         start_time: start_time,
         duration_minutes: duration_minutes,
-        time_zone: "Etc/UTC",
         thumbnail_url: thumbnail_url,
         group_id: group_id,
         event_type: event_type,
@@ -322,6 +335,16 @@ defmodule Huddlz.Generator do
       once(:default_creator_id, fn ->
         generate(user(role: :user)).id
       end)
+  end
+
+  defp drop_option(opts, key) when is_list(opts), do: Keyword.drop(opts, [key])
+  defp drop_option(opts, key) when is_map(opts), do: Map.delete(opts, key)
+
+  defp reject_deprecated_huddl_time_zone!(opts) do
+    if Access.fetch(opts, :time_zone) != :error do
+      raise ArgumentError,
+            "huddl/1 no longer accepts :time_zone; set the Group or venue time zone instead"
+    end
   end
 
   defp huddl_group_id(opts) do

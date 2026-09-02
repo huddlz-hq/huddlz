@@ -46,11 +46,11 @@ defmodule SimplifiedCalendarNavigationSteps do
     Map.put(context, :session, session)
   end
 
-  step "I am taken to Discover search results using the existing search behavior",
-       %{session: session} = context do
+  step "Discover shows the submitted {string} query",
+       %{args: [query], session: session} = context do
     session
-    |> assert_path("/discover", query_params: %{"q" => "coffee"})
-    |> assert_has(".topbar-search input[name='q'][value='coffee']")
+    |> assert_path("/discover", query_params: %{"q" => query})
+    |> assert_has(".topbar-search input[name='q'][value='#{query}']")
 
     context
   end

@@ -2,9 +2,10 @@ defmodule Huddlz.Communities.Huddl.Changes.DeriveTimeZoneFromVenue do
   @moduledoc """
   Uses the selected saved venue's Location time zone for physical and hybrid huddlz.
 
-  Virtual huddlz retain their organizer-selected Huddl time zone. On updates,
-  this change runs before schedule inputs are converted to UTC so venue moves
-  preserve the organizer-entered wall-clock start and end.
+  Virtual huddlz retain the authoritative zone copied from their Group when
+  they were created. On updates, this change runs before schedule inputs are
+  converted to UTC so venue moves preserve the organizer-entered wall-clock
+  start and end.
   """
 
   use Ash.Resource.Change

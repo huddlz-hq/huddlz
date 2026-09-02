@@ -57,8 +57,7 @@ defmodule HuddlzWeb.GraphqlTest do
           physicalLocation: "123 Main St",
           groupId: group.id,
           startsAt: starts_at,
-          endsAt: ends_at,
-          timeZone: "Etc/UTC"
+          endsAt: ends_at
         }
       }
 
@@ -111,8 +110,7 @@ defmodule HuddlzWeb.GraphqlTest do
           virtualLink: "https://meet.example.com/authorized",
           groupId: group.id,
           startsAt: starts_at,
-          endsAt: ends_at,
-          timeZone: "Etc/UTC"
+          endsAt: ends_at
         }
       }
 

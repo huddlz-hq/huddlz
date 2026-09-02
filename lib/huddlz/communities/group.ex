@@ -70,7 +70,7 @@ defmodule Huddlz.Communities.Group do
   end
 
   actions do
-    defaults [:create, :read]
+    defaults [:read]
 
     destroy :destroy do
       primary? true
@@ -217,14 +217,19 @@ defmodule Huddlz.Communities.Group do
 
     update :update_details do
       description "Update group details"
-      accept [:name, :description, :location, :time_zone, :is_public, :slug]
+      accept [:name, :description, :location, :is_public, :slug]
       require_atomic? false
 
       argument :provided_latitude, :float, allow_nil?: true, public?: false
       argument :provided_longitude, :float, allow_nil?: true, public?: false
 
+      validate present(:location) do
+        message "is required"
+      end
+
       change Huddlz.Geocoding.ApplyProvidedCoordinates
       change {Huddlz.Geocoding.GeocodeChange, field: :location}
+      change Huddlz.Communities.Group.Changes.ResolveTimeZone
     end
 
     update :transfer_ownership do
@@ -332,7 +337,7 @@ defmodule Huddlz.Communities.Group do
       allow_nil? false
       public? true
       default "America/New_York"
-      description "Organizer-maintained IANA time zone associated with the group's city."
+      description "Canonical IANA time zone derived from the Group location."
     end
 
     attribute :is_public, :boolean do
