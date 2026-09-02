@@ -756,7 +756,7 @@ defmodule HuddlzWeb.CalendarLive do
       current_user={@current_user}
       unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
-      active={calendar_sidebar_destination(@view_mode, @current_day?)}
+      active="calendar"
     >
       <div class="page-head">
         <div>
@@ -967,9 +967,6 @@ defmodule HuddlzWeb.CalendarLive do
     </Layouts.app>
     """
   end
-
-  defp calendar_sidebar_destination(:day, true), do: "today"
-  defp calendar_sidebar_destination(_view_mode, _current_day?), do: "calendar"
 
   attr :week_start, Date, required: true
   attr :week_end, Date, required: true

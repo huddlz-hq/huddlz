@@ -65,17 +65,9 @@ defmodule HuddlzWeb.Layouts do
               <span class="label">Discover</span>
             </a>
             <a
-              id="primary-nav-today"
-              class={["sb-item", @active == "today" && "active"]}
-              href="/calendar"
-            >
-              <.nav_icon name="today" />
-              <span class="label">Today</span>
-            </a>
-            <a
               id="primary-nav-calendar"
               class={["sb-item", @active == "calendar" && "active"]}
-              href="/calendar?view=month"
+              href="/calendar"
             >
               <.nav_icon name="calendar" />
               <span class="label">Calendar</span>
@@ -378,21 +370,6 @@ defmodule HuddlzWeb.Layouts do
       stroke-linejoin="round"
     >
       <rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 11h18" />
-    </svg>
-    """
-  end
-
-  defp nav_icon(%{name: "today"} = assigns) do
-    ~H"""
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.8"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
     </svg>
     """
   end

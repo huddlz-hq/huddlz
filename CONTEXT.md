@@ -9,7 +9,7 @@ The signed-in home and chronological view of a person's personal huddlz and the 
 _Avoid_: My huddlz, My calendar
 
 **Today**:
-The primary navigation destination that opens the current Day in Calendar. It is a shortcut into Calendar, not a separate schedule or collection of huddlz.
+The Calendar control that returns Day to the person's current date. It is not a separate schedule, range, or primary navigation destination.
 _Avoid_: Today view, Today feed
 
 **Day**:
