@@ -61,7 +61,7 @@
       "type": "float"
     },
     {
-      "allow_nil?": true,
+      "allow_nil?": false,
       "default": "nil",
       "generated?": false,
       "precision": null,
@@ -136,7 +136,7 @@
   "custom_indexes": [],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "614E462477FB6CBBC78CE032A4C4FB1E1FCBA62B0124372110BEEA6D430EA358",
+  "hash": "5B4D0E90B084E5844998EF700FA0B545753401B6F0F880AEB4E113B11129DB76",
   "identities": [
     {
       "all_tenants?": false,
