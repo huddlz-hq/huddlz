@@ -6,6 +6,7 @@ defmodule CalendarMonthOverviewSteps do
   import Huddlz.Test.Helpers.Calendar
   import PhoenixTest
 
+  alias Huddlz.Calendar.Clock
   alias Huddlz.Communities
   alias Huddlz.Communities.HuddlAttendee
 
@@ -297,7 +298,7 @@ defmodule CalendarMonthOverviewSteps do
   end
 
   defp current_display_date do
-    DateTime.utc_now()
+    Clock.utc_now()
     |> DateTime.shift_zone!("America/New_York")
     |> DateTime.to_date()
   end

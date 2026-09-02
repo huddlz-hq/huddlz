@@ -1,10 +1,12 @@
-defmodule DeviceLocalTodaySteps do
+defmodule CalendarDayBoundariesSteps do
   use Cucumber.StepDefinition
 
   import ExUnit.Assertions
   import Huddlz.Generator
   import Phoenix.LiveViewTest, only: [put_connect_params: 2]
   import PhoenixTest
+
+  alias Huddlz.Calendar.Clock
 
   step "my browser time zone is {string}", %{args: [time_zone], conn: conn} = context do
     context
@@ -57,7 +59,7 @@ defmodule DeviceLocalTodaySteps do
 
   step "I went to a huddl that ended earlier today in my browser time zone",
        %{current_user: attendee, device_time_zone: time_zone} = context do
-    now = DateTime.utc_now()
+    now = Clock.utc_now()
     local_day = now |> DateTime.shift_zone!(time_zone) |> DateTime.to_date()
     starts_at = local_datetime!(local_day, ~T[00:00:00], time_zone)
     duration_seconds = max(DateTime.diff(now, starts_at, :second) - 1, 1)
@@ -92,7 +94,7 @@ defmodule DeviceLocalTodaySteps do
   end
 
   defp local_today(time_zone) do
-    DateTime.utc_now()
+    Clock.utc_now()
     |> DateTime.shift_zone!(time_zone)
     |> DateTime.to_date()
   end

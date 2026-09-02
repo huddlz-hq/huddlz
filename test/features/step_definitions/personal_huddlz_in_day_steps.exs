@@ -1,4 +1,4 @@
-defmodule CalendarTodaySteps do
+defmodule PersonalHuddlzInDaySteps do
   use Cucumber.StepDefinition
 
   import ExUnit.Assertions

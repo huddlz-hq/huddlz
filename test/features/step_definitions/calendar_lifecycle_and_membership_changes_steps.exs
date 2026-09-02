@@ -7,6 +7,7 @@ defmodule CalendarLifecycleAndMembershipChangesSteps do
   import Huddlz.Test.Helpers.Authentication
   import PhoenixTest
 
+  alias Huddlz.Calendar.Clock
   alias Huddlz.Communities
   alias Huddlz.Communities.GroupMember
 
@@ -164,7 +165,16 @@ defmodule CalendarLifecycleAndMembershipChangesSteps do
   end
 
   defp full_today_range do
-    starts_at = DateTime.new!(Date.utc_today(), ~T[00:00:00], "Etc/UTC")
+    date =
+      Clock.utc_now()
+      |> DateTime.shift_zone!("America/New_York")
+      |> DateTime.to_date()
+
+    starts_at =
+      date
+      |> DateTime.new!(~T[00:00:00], "America/New_York")
+      |> DateTime.shift_zone!("Etc/UTC")
+
     [starts_at: starts_at, ends_at: DateTime.add(starts_at, 1, :day)]
   end
 

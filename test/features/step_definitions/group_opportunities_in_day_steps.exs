@@ -1,4 +1,4 @@
-defmodule GroupOpportunitiesInTodaySteps do
+defmodule GroupOpportunitiesInDaySteps do
   use Cucumber.StepDefinition
 
   import ExUnit.Assertions

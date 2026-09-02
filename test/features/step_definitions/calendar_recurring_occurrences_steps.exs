@@ -5,13 +5,14 @@ defmodule CalendarRecurringOccurrencesSteps do
   import Huddlz.Generator
   import PhoenixTest
 
+  alias Huddlz.Calendar.Clock
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.Workers.RegenerateRecurringSeries
 
   step "the group has a published recurring huddl with occurrences this Tuesday and next Tuesday",
        context do
-    this_tuesday = next_tuesday(Date.utc_today())
+    this_tuesday = next_tuesday(current_calendar_date())
     next_tuesday = Date.add(this_tuesday, 7)
 
     first_occurrence =
@@ -124,6 +125,12 @@ defmodule CalendarRecurringOccurrencesSteps do
       0 -> Date.add(today, 7)
       days_until_tuesday -> Date.add(today, days_until_tuesday)
     end
+  end
+
+  defp current_calendar_date do
+    Clock.utc_now()
+    |> DateTime.shift_zone!("America/New_York")
+    |> DateTime.to_date()
   end
 
   defp week_path(date), do: "/calendar?view=week&date=#{Date.to_iso8601(date)}"

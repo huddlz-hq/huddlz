@@ -1,4 +1,4 @@
-@async @database @conn @empty_today_guidance
+@async @database @conn @empty_current_day
 Feature: Empty current Day guidance
 
   Scenario: Empty current Day shows the next three Calendar entries

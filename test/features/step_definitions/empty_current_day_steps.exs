@@ -1,9 +1,11 @@
-defmodule EmptyTodayGuidanceSteps do
+defmodule EmptyCurrentDaySteps do
   use Cucumber.StepDefinition
 
   import ExUnit.Assertions
   import Huddlz.Generator
   import PhoenixTest
+
+  alias Huddlz.Calendar.Clock
 
   step "I have no Calendar huddlz today", context do
     context
@@ -11,7 +13,7 @@ defmodule EmptyTodayGuidanceSteps do
 
   step "I have four future Calendar huddlz", %{current_user: user} = context do
     group = generate(group(owner_id: user.id, is_public: true, actor: user))
-    tomorrow = Date.add(Date.utc_today(), 1)
+    tomorrow = Date.add(current_calendar_date(), 1)
 
     future_huddlz = [
       create_future_huddl(user, group, "Second future huddl", tomorrow, ~T[15:00:00]),
@@ -94,5 +96,11 @@ defmodule EmptyTodayGuidanceSteps do
         is_private: false
       )
     )
+  end
+
+  defp current_calendar_date do
+    Clock.utc_now()
+    |> DateTime.shift_zone!("America/New_York")
+    |> DateTime.to_date()
   end
 end

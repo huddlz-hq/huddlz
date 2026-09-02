@@ -6,6 +6,8 @@ defmodule CalendarRangeNavigationSteps do
   import Huddlz.Test.Helpers.Authentication
   import PhoenixTest
 
+  alias Huddlz.Calendar.Clock
+
   step "the Calendar ranges are:", %{datatable: datatable, session: session} = context do
     expected_ranges = List.flatten(datatable.raw)
 
@@ -220,7 +222,9 @@ defmodule CalendarRangeNavigationSteps do
   defp day_path(date), do: "/calendar?view=day&date=#{Date.to_iso8601(date)}"
 
   defp display_today do
-    DateTime.now!("America/New_York") |> DateTime.to_date()
+    Clock.utc_now()
+    |> DateTime.shift_zone!("America/New_York")
+    |> DateTime.to_date()
   end
 
   defp month_path(date) do

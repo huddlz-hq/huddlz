@@ -4,11 +4,13 @@ defmodule CalendarAccessibilitySteps do
   import Huddlz.Generator
   import PhoenixTest
 
+  alias Huddlz.Calendar.Clock
+
   step "I attended a past huddl named {string}",
        %{args: [title], current_user: attendee} = context do
     host = generate(user(role: :user))
     group = generate(group(owner_id: host.id, is_public: true, actor: host))
-    starts_at = DateTime.utc_now() |> DateTime.add(-2, :day) |> DateTime.truncate(:second)
+    starts_at = Clock.utc_now() |> DateTime.add(-2, :day) |> DateTime.truncate(:second)
 
     huddl =
       generate(
