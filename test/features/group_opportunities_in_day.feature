@@ -1,4 +1,4 @@
-@async @database @conn
+@group_opportunities_in_day @async @database @conn
 Feature: Group opportunities in Day
 
   Scenario: A group member sees a published opportunity without an RSVP

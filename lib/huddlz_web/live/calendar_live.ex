@@ -72,9 +72,7 @@ defmodule HuddlzWeb.CalendarLive do
      |> assign(:time_zone, time_zone)
      |> assign(:time_zone_options, TimeZone.options(automatic_time_zone))
      |> assign(:today, today)
-     |> stream_configure(:day_entries, dom_id: &"calendar-huddl-#{&1.huddl.id}")
-     |> stream_configure(:week_entries, dom_id: &"calendar-huddl-#{&1.huddl.id}")
-     |> stream_configure(:month_entries, dom_id: &"calendar-huddl-#{&1.huddl.id}")
+     |> stream_configure(:entries, dom_id: &"calendar-huddl-#{&1.huddl.id}")
      |> stream_configure(:coming_up_entries,
        dom_id: &"calendar-coming-up-huddl-#{&1.huddl.id}"
      )
@@ -143,20 +141,12 @@ defmodule HuddlzWeb.CalendarLive do
 
     week_start = week_start(selected_date)
     week_end = Date.add(week_start, 6)
-    range_date = selected_date
     implicit_current_day? = view_mode == :day and is_nil(params["date"])
     {grid_start, grid_end} = month_grid_window(focus_month)
     user = socket.assigns.current_user
 
     entries =
-      load_entries(
-        user,
-        view_mode,
-        grid_start,
-        grid_end,
-        range_date,
-        socket.assigns.time_zone
-      )
+      load_entries(user, view_mode, selected_date, socket.assigns.time_zone)
 
     month_overview_entries =
       load_month_overview_entries(
@@ -206,15 +196,11 @@ defmodule HuddlzWeb.CalendarLive do
     |> assign(:entries, entries)
     |> assign(:month_day_summaries, month_day_summaries)
     |> assign(:in_month_count, in_month_count)
-    |> assign(:day_empty?, entries == [])
-    |> assign(:week_empty?, entries == [])
-    |> assign(:month_empty?, entries == [])
+    |> assign(:entries_empty?, entries == [])
     |> assign(:coming_up_empty?, coming_up_entries == [])
     |> assign(:legend_empty?, legend_items == [])
     |> assign(:month_legend_empty?, month_legend_items == [])
-    |> stream(:day_entries, entries, reset: true)
-    |> stream(:week_entries, entries, reset: true)
-    |> stream(:month_entries, entries, reset: true)
+    |> stream(:entries, entries, reset: true)
     |> stream(:coming_up_entries, coming_up_entries, reset: true)
     |> stream(:legend_items, legend_items, reset: true)
     |> stream(:month_legend_items, month_legend_items, reset: true)
@@ -282,7 +268,7 @@ defmodule HuddlzWeb.CalendarLive do
     {grid_start, grid_end}
   end
 
-  defp load_entries(user, view_mode, _grid_start, _grid_end, selected_date, time_zone)
+  defp load_entries(user, view_mode, selected_date, time_zone)
        when view_mode in [:day, :month] do
     {range_start, range_end} = local_day_window(selected_date, time_zone)
 
@@ -291,7 +277,7 @@ defmodule HuddlzWeb.CalendarLive do
     |> Enum.map(&day_entry(&1, user))
   end
 
-  defp load_entries(user, :week, _grid_start, _grid_end, selected_date, time_zone) do
+  defp load_entries(user, :week, selected_date, time_zone) do
     range_start_date = week_start(selected_date)
     range_start = local_midnight_in_utc(range_start_date, time_zone)
     range_end = range_start_date |> Date.add(7) |> local_midnight_in_utc(time_zone)
@@ -899,9 +885,9 @@ defmodule HuddlzWeb.CalendarLive do
       <%= case @view_mode do %>
         <% :day -> %>
           <.day_view
-            day_empty?={@day_empty?}
+            entries_empty?={@entries_empty?}
             coming_up_empty?={@coming_up_empty?}
-            entries={@streams.day_entries}
+            entries={@streams.entries}
             coming_up_entries={@streams.coming_up_entries}
             time_zone={@time_zone}
             selected_date={@selected_date}
@@ -911,17 +897,17 @@ defmodule HuddlzWeb.CalendarLive do
           <.week_view
             week_start={@week_start}
             week_end={@week_end}
-            week_empty?={@week_empty?}
-            entries={@streams.week_entries}
+            entries_empty?={@entries_empty?}
+            entries={@streams.entries}
             time_zone={@time_zone}
           />
         <% :month -> %>
           <.month_grid
             day_summaries={@month_day_summaries}
-            entries={@streams.month_entries}
+            entries={@streams.entries}
             focus_month={@focus_month}
             grid_start={@grid_start}
-            month_empty?={@month_empty?}
+            entries_empty?={@entries_empty?}
             selected_date={@selected_date}
             today={@today}
             time_zone={@time_zone}
@@ -971,7 +957,7 @@ defmodule HuddlzWeb.CalendarLive do
 
   attr :week_start, Date, required: true
   attr :week_end, Date, required: true
-  attr :week_empty?, :boolean, required: true
+  attr :entries_empty?, :boolean, required: true
   attr :entries, :any, required: true
   attr :time_zone, :string, required: true
 
@@ -987,7 +973,7 @@ defmodule HuddlzWeb.CalendarLive do
         Week from {format_full_date(@week_start)} through {format_full_date(@week_end)}
       </p>
       <div id="calendar-week-list" class="grid" phx-update="stream">
-        <p :if={@week_empty?} id="calendar-week-empty" class="empty-state muted">
+        <p :if={@entries_empty?} id="calendar-week-empty" class="empty-state muted">
           Nothing on your calendar this week.
         </p>
         <.calendar_huddl_card
@@ -1001,7 +987,7 @@ defmodule HuddlzWeb.CalendarLive do
     """
   end
 
-  attr :day_empty?, :boolean, required: true
+  attr :entries_empty?, :boolean, required: true
   attr :coming_up_empty?, :boolean, required: true
   attr :entries, :any, required: true
   attr :coming_up_entries, :any, required: true
@@ -1014,7 +1000,7 @@ defmodule HuddlzWeb.CalendarLive do
     <section id="calendar-day" aria-labelledby="calendar-day-title">
       <h2 id="calendar-day-title" class="sr-only">{format_full_date(@selected_date)}</h2>
       <div id="calendar-day-list" class="grid" phx-update="stream">
-        <p :if={@day_empty?} id="calendar-day-empty" class="empty-state muted">
+        <p :if={@entries_empty?} id="calendar-day-empty" class="empty-state muted">
           {empty_day_message(@current_day?)}
           <.link id="calendar-discover-link" navigate={~p"/discover"}>Discover huddlz</.link>
         </p>
@@ -1027,7 +1013,7 @@ defmodule HuddlzWeb.CalendarLive do
       </div>
 
       <section
-        :if={@day_empty? && !@coming_up_empty?}
+        :if={@entries_empty? && !@coming_up_empty?}
         id="calendar-coming-up"
         aria-labelledby="calendar-coming-up-title"
       >
@@ -1066,7 +1052,7 @@ defmodule HuddlzWeb.CalendarLive do
   attr :grid_start, Date, required: true
   attr :entries, :any, required: true
   attr :day_summaries, :map, required: true
-  attr :month_empty?, :boolean, required: true
+  attr :entries_empty?, :boolean, required: true
   attr :selected_date, Date, required: true
   attr :today, Date, required: true
   attr :time_zone, :string, required: true
@@ -1116,7 +1102,7 @@ defmodule HuddlzWeb.CalendarLive do
       >
         <h2 id="calendar-month-selection-title">{format_full_date(@selected_date)}</h2>
         <div id="calendar-month-day-huddlz" class="grid" phx-update="stream">
-          <p :if={@month_empty?} id="calendar-month-day-empty" class="empty-state muted">
+          <p :if={@entries_empty?} id="calendar-month-day-empty" class="empty-state muted">
             Nothing on your calendar this day.
           </p>
           <.calendar_huddl_card

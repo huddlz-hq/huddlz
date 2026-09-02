@@ -1,4 +1,4 @@
-@database @conn
+@calendar_relationship_markers @database @conn
 Feature: Calendar relationship markers
 
   Scenario: A confirmed RSVP is marked Going
