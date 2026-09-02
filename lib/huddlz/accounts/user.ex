@@ -204,7 +204,7 @@ defmodule Huddlz.Accounts.User do
     end
 
     update :update_display_time_zone do
-      description "Persist Automatic or Fixed Display time zone presentation"
+      description "Persist Automatic or Fixed Calendar time-zone presentation"
       require_atomic? false
       accept [:display_time_zone_mode, :fixed_display_time_zone]
 
@@ -650,7 +650,7 @@ defmodule Huddlz.Accounts.User do
     end
 
     policy action(:update_display_time_zone) do
-      description "Users can update their own Display time zone preference"
+      description "Users can update their own Calendar time-zone preference"
       authorize_if expr(id == ^actor(:id))
     end
 
@@ -743,7 +743,7 @@ defmodule Huddlz.Accounts.User do
     end
 
     attribute :fixed_display_time_zone, :string do
-      description "IANA identifier retained for Fixed Display time zone mode"
+      description "IANA identifier retained for Fixed Calendar time-zone mode"
       allow_nil? true
       public? true
     end

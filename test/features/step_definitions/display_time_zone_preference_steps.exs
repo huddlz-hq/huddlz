@@ -1,4 +1,4 @@
-defmodule DisplayTimeZonePreferenceSteps do
+defmodule CalendarTimeZonePreferenceSteps do
   use Cucumber.StepDefinition
 
   import Huddlz.Generator
@@ -8,7 +8,7 @@ defmodule DisplayTimeZonePreferenceSteps do
 
   alias Huddlz.Accounts
 
-  step "my Display time-zone mode is Automatic", %{conn: conn} = context do
+  step "my Calendar time-zone mode is Automatic", %{conn: conn} = context do
     user = generate(user(role: :user))
     user = Accounts.update_display_time_zone!(user, :automatic, nil, actor: user)
 
@@ -18,7 +18,7 @@ defmodule DisplayTimeZonePreferenceSteps do
   end
 
   step "I select Fixed {string}", %{args: [time_zone], session: session} = context do
-    session = select(session, "Display time zone", option: time_zone)
+    session = select(session, "Calendar time zone", option: time_zone)
     Map.put(context, :session, session)
   end
 
@@ -35,44 +35,6 @@ defmodule DisplayTimeZonePreferenceSteps do
     )
 
     context
-  end
-
-  step "Profile shows Automatic {string}", %{args: [time_zone]} = context do
-    session =
-      Phoenix.ConnTest.build_conn()
-      |> put_connect_params(%{"timezone" => time_zone})
-      |> login(context.current_user)
-      |> visit("/profile")
-
-    assert_has(
-      session,
-      "#account-display-time-zone option[value='automatic']",
-      text: "Automatic (#{time_zone})"
-    )
-
-    Map.put(context, :session, session)
-  end
-
-  step "Profile explains Automatic resolution", %{session: session} = context do
-    assert_has(
-      session,
-      "#display-time-zone-description",
-      text:
-        "Automatic uses this browser’s time zone when available, then your home location. Choose a fixed zone to use the same time zone across devices."
-    )
-
-    context
-  end
-
-  step "Account shows Fixed {string}", %{args: [time_zone], session: session} = context do
-    session = visit(session, "/profile")
-
-    assert_has(
-      session,
-      "#account-display-time-zone option[value='#{time_zone}'][selected]"
-    )
-
-    Map.put(context, :session, session)
   end
 
   step "the choice remains after I sign in on another device", context do

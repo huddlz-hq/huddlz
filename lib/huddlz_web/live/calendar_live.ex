@@ -2,7 +2,7 @@ defmodule HuddlzWeb.CalendarLive do
   @moduledoc """
   LiveView at `/calendar`. Calendar opens on Day and presents relevant huddlz
   in chronological order. Week follows Sunday-through-Saturday boundaries in
-  the Display time zone. Month presents a full calendar overview and reveals
+  the Calendar time zone. Month presents a full calendar overview and reveals
   the selected Day's huddlz with the same shared cards.
   """
   use HuddlzWeb, :live_view
@@ -775,7 +775,7 @@ defmodule HuddlzWeb.CalendarLive do
           <.select
             id="calendar-display-time-zone"
             name="display_time_zone"
-            label="Display time zone"
+            label="Calendar time zone"
             value={TimeZone.preference_selection(@current_user)}
             options={@time_zone_options}
           />

@@ -1,9 +1,0 @@
----
-status: superseded by ADR-0002
----
-
-# Model display, location, group, and huddl time zones separately
-
-huddlz distinguishes four IANA time-zone concepts because they answer different questions: an account's **Display time zone** controls how schedule information is presented; a saved **Location time zone** is resolved when a location is selected; a **Group time zone** follows the group's city and provides the default for new virtual huddlz; and every **Huddl time zone** is the authoritative local time at which that huddl occurs. Physical and hybrid huddlz use their venue's time zone, while organizers may override the group default for virtual huddlz. Display time may be Automatic (browser, then home location, then `America/New_York`) or a persisted fixed choice; existing records without time zones are migrated to `America/New_York` rather than guessed from address text.
-
-UTC instants remain the database representation used for ordering and comparison, but recurring schedules are calculated from local wall-clock time plus the authoritative Huddl time zone so they retain their intended local time across daylight-saving transitions. Nonexistent local times move forward by the DST gap with a warning, ambiguous times default to the earlier occurrence while allowing the organizer to choose the later one, and calendar exports use `TZID` with a matching `VTIMEZONE` rather than floating times. Changing a venue across time zones preserves the organizer-entered wall-clock time and recomputes the UTC instant; changing a group's city does not silently reschedule existing huddlz.

@@ -8,7 +8,7 @@ defmodule DifferingHuddlTimeZonesSteps do
 
   alias Huddlz.Accounts
 
-  step "my Display time zone is {string}", %{args: [display_time_zone], conn: conn} = context do
+  step "my Calendar time zone is {string}", %{args: [display_time_zone], conn: conn} = context do
     attendee = generate(user(role: :user))
 
     attendee =
@@ -127,7 +127,7 @@ defmodule DifferingHuddlTimeZonesSteps do
     Map.put(context, :session, session)
   end
 
-  step "my Display and Huddl time zones are both {string}",
+  step "my Calendar and Huddl time zones are both {string}",
        %{args: [time_zone], conn: conn} = context do
     attendee = generate(user(role: :user))
     attendee = Accounts.update_display_time_zone!(attendee, :fixed, time_zone, actor: attendee)
@@ -209,15 +209,15 @@ defmodule DifferingHuddlTimeZonesSteps do
     |> Map.put(:implicit_day_session, implicit_day_session)
   end
 
-  step "I change my Display time zone", context do
+  step "I change my Calendar time zone", context do
     Mox.allow(Huddlz.MockCalendarClock, self(), context.month_session.view.pid)
     Mox.allow(Huddlz.MockCalendarClock, self(), context.implicit_day_session.view.pid)
 
     month_session =
-      select(context.month_session, "Display time zone", option: "America/Los_Angeles")
+      select(context.month_session, "Calendar time zone", option: "America/Los_Angeles")
 
     implicit_day_session =
-      select(context.implicit_day_session, "Display time zone", option: "America/Los_Angeles")
+      select(context.implicit_day_session, "Calendar time zone", option: "America/Los_Angeles")
 
     explicit_user = Accounts.get_by_email!(context.explicit_user.email)
     implicit_user = Accounts.get_by_email!(context.implicit_user.email)

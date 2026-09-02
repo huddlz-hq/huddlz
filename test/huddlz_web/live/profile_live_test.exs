@@ -135,6 +135,16 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> assert_has("*", text: to_string(user.email))
     end
 
+    test "does not expose Calendar time zone as a Profile setting", %{conn: conn, user: user} do
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> refute_has("#account-display-time-zone-form")
+      |> refute_has("#account-display-time-zone")
+      |> refute_has("h2", text: "Calendar time zone")
+      |> refute_has("h2", text: "Display time zone")
+    end
+
     test "shows the profile form", %{conn: conn, user: user} do
       conn
       |> login(user)

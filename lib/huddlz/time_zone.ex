@@ -27,7 +27,7 @@ defmodule Huddlz.TimeZone do
   def from_connect_params(_params), do: nil
 
   @doc """
-  Resolves a signed-in person's effective Display time zone.
+  Resolves a signed-in person's effective Calendar time zone.
 
   Fixed mode uses the persisted IANA identifier. Automatic mode uses the
   browser, then the saved home Location zone when that field is available,
@@ -44,7 +44,7 @@ defmodule Huddlz.TimeZone do
   def display(user, browser_time_zone), do: automatic_display(user, browser_time_zone)
 
   @doc """
-  Resolves the Display time zone that Automatic mode would use, regardless of
+  Resolves the Calendar time zone that Automatic mode would use, regardless of
   the person's current preference mode.
   """
   def automatic_display(user, browser_time_zone) do
@@ -83,7 +83,7 @@ defmodule Huddlz.TimeZone do
   end
 
   def preference_error_message(:invalid_time_zone), do: "Choose a valid IANA time zone"
-  def preference_error_message(:update_failed), do: "Display time zone could not be updated"
+  def preference_error_message(:update_failed), do: "Calendar time zone could not be updated"
 
   defp retain_loaded_preference(current_user, updated_user) do
     %{

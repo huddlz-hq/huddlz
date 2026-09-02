@@ -1,7 +1,7 @@
 @calendar_week @async @database @conn
 Feature: Calendar Week view
 
-  Scenario: Week spans Sunday through Saturday in the browser-derived Display time zone
+  Scenario: Week spans Sunday through Saturday in the browser-derived Calendar time zone
     Given my browser time zone is "America/New_York"
     And I am signed in
     And I have Calendar huddlz on the Sunday and Saturday of the current week

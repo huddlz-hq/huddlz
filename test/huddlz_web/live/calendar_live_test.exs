@@ -152,7 +152,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
   end
 
   describe "month view — selected-day shared cards" do
-    test "an upcoming huddl stays Going when its UTC date is yesterday in the Display time zone",
+    test "an upcoming huddl stays Going when its UTC date is yesterday in the Calendar time zone",
          %{
            conn: conn,
            attendee: attendee,

@@ -6,7 +6,7 @@ defmodule Huddlz.TimeZoneTest do
   alias Huddlz.Accounts
   alias Huddlz.TimeZone
 
-  describe "Display time zone preference" do
+  describe "Calendar time-zone preference" do
     test "an invalid browser identifier falls back without being persisted" do
       user = generate(user(role: :user))
 

@@ -1,7 +1,7 @@
 @home_location_time_zone @async @database @conn
 Feature: Home Location time zone
 
-  Scenario: Automatic Display time falls back to my home location
+  Scenario: Automatic Calendar time falls back to my home location
     Given my browser does not provide a valid time zone
     And my saved home location resolves to "America/Chicago"
     When I visit Calendar in Automatic mode

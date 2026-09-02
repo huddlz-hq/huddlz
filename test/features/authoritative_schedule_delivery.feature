@@ -1,8 +1,8 @@
 @async @database @issue408
 Feature: Authoritative schedule delivery
 
-  Scenario: Schedule email uses only the Huddl-local time
-    Given my Display time zone is "America/New_York" for schedule delivery
+  Scenario: Schedule email uses only the authoritative huddl time
+    Given my Calendar time zone is "America/New_York" for schedule delivery
     And a huddl is scheduled for 9:00 AM in "America/Los_Angeles" for schedule delivery
     When I receive its schedule email
     Then the email identifies 9:00 AM with the Pacific abbreviation

@@ -1,5 +1,5 @@
 @async @database @conn
-Feature: Browser-derived Display time zone Day boundaries
+Feature: Browser-derived Calendar time-zone Day boundaries
 
   Scenario: The browser time zone determines the current Day in Automatic mode
     Given my browser time zone is "America/Los_Angeles"

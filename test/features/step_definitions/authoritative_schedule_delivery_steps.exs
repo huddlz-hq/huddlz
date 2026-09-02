@@ -10,7 +10,7 @@ defmodule AuthoritativeScheduleDeliverySteps do
 
   @date ~D[2027-05-04]
 
-  step "my Display time zone is {string} for schedule delivery",
+  step "my Calendar time zone is {string} for schedule delivery",
        %{args: [time_zone]} = context do
     recipient = generate(user(role: :user))
     recipient = Accounts.update_display_time_zone!(recipient, :fixed, time_zone, actor: recipient)

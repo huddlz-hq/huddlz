@@ -1,6 +1,6 @@
 defmodule HuddlzWeb.SchedulePresentation do
   @moduledoc """
-  Builds consistent Display-local and Huddl-local schedule labels for UI surfaces.
+  Builds consistent Calendar-local and huddl-local schedule labels for UI surfaces.
   """
 
   defstruct [:month, :day, :primary, :secondary]

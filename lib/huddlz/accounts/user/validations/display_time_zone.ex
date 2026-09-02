@@ -1,6 +1,6 @@
 defmodule Huddlz.Accounts.User.Validations.DisplayTimeZone do
   @moduledoc """
-  Requires Fixed Display time to use a recognized IANA identifier.
+  Requires a Fixed Calendar time zone to use a recognized IANA identifier.
   """
 
   use Ash.Resource.Validation
