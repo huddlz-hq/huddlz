@@ -1,4 +1,4 @@
-defmodule Huddlz.Communities.HuddlImage.Checks.IsHuddlGroupOwnerOrOrganizer do
+defmodule Huddlz.Communities.HuddlCoverImage.Checks.IsHuddlGroupOwnerOrOrganizer do
   @moduledoc """
   Check that verifies the actor is the owner or organizer of the group
   that the huddl belongs to.

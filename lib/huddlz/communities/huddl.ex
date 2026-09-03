@@ -833,7 +833,7 @@ defmodule Huddlz.Communities.Huddl do
       destination_attribute :huddl_id
     end
 
-    has_many :huddl_images, Huddlz.Communities.HuddlImage do
+    has_many :huddl_cover_images, Huddlz.Communities.HuddlCoverImage do
       destination_attribute :huddl_id
     end
   end
@@ -890,7 +890,7 @@ defmodule Huddlz.Communities.Huddl do
       filter expr(not is_nil(waitlisted_at))
     end
 
-    first :current_image_url, :huddl_images, :thumbnail_path do
+    first :current_image_url, :huddl_cover_images, :thumbnail_path do
       description "Returns the thumbnail path of the huddl's current image"
       sort inserted_at: :desc
       filter expr(is_nil(deleted_at))

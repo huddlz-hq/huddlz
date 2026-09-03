@@ -94,16 +94,23 @@ defmodule Huddlz.Communities do
       define :soft_delete_group_image, action: :soft_delete
     end
 
-    resource Huddlz.Communities.HuddlImage do
-      define :create_huddl_image, action: :create
-      define :create_pending_huddl_image, action: :create_pending, args: [:group_id]
-      define :assign_huddl_image_to_huddl, action: :assign_to_huddl, args: [:huddl_id]
-      define :get_huddl_image_by_id, action: :read, get_by: [:id]
-      define :get_current_huddl_image, action: :get_current_for_huddl, args: [:huddl_id]
-      define :list_huddl_images, action: :list_for_huddl, args: [:huddl_id]
-      define :get_orphaned_pending_huddl_images, action: :orphaned_pending
-      define :delete_huddl_image, action: :destroy
-      define :soft_delete_huddl_image, action: :soft_delete
+    resource Huddlz.Communities.HuddlCoverImage do
+      define :create_huddl_cover_image, action: :create
+      define :create_pending_huddl_cover_image, action: :create_pending, args: [:group_id]
+      define :assign_huddl_cover_image_to_huddl, action: :assign_to_huddl, args: [:huddl_id]
+      define :get_huddl_cover_image_by_id, action: :read, get_by: [:id]
+      define :get_current_huddl_cover_image, action: :get_current_for_huddl, args: [:huddl_id]
+      define :list_huddl_cover_images, action: :list_for_huddl, args: [:huddl_id]
+      define :get_orphaned_pending_huddl_cover_images, action: :orphaned_pending
+      define :delete_huddl_cover_image, action: :destroy
+      define :soft_delete_huddl_cover_image, action: :soft_delete
+    end
+
+    resource Huddlz.Communities.HuddlPhoto do
+      define :create_huddl_photo, action: :create
+      define :get_huddl_photo_by_id, action: :read, get_by: [:id]
+      define :list_huddl_photos, action: :list_for_huddl, args: [:huddl_id]
+      define :destroy_huddl_photo, action: :destroy
     end
 
     resource Huddlz.Communities.GroupMember do

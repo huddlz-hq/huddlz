@@ -9,7 +9,7 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
   import Phoenix.LiveViewTest
 
   alias Huddlz.Communities.Huddl
-  alias Huddlz.Communities.HuddlImage
+  alias Huddlz.Communities.HuddlCoverImage
 
   require Ash.Query
 
@@ -81,7 +81,7 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
         |> live(~p"/groups/#{group.slug}/huddlz/new")
 
       # Upload a file - this is the critical test that should fail with the bug
-      file_input(view, "#huddl-form", :huddl_image, [
+      file_input(view, "#huddl-form", :huddl_cover_image, [
         %{
           name: "test_banner.jpg",
           content: File.read!(@test_image_path),
@@ -97,7 +97,7 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
 
       # Should have created a pending image record
       pending_count =
-        HuddlImage
+        HuddlCoverImage
         |> Ash.Query.filter(is_nil(huddl_id) and is_nil(deleted_at))
         |> Ash.count!(authorize?: false)
 
@@ -117,7 +117,7 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
         |> live(~p"/groups/#{group.slug}/huddlz/new")
 
       # Upload a file first
-      file_input(view, "#huddl-form", :huddl_image, [
+      file_input(view, "#huddl-form", :huddl_cover_image, [
         %{
           name: "banner.jpg",
           content: File.read!(@test_image_path),
@@ -166,7 +166,7 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
         |> live(~p"/groups/#{group.slug}/huddlz/new")
 
       # Upload a file
-      file_input(view, "#huddl-form", :huddl_image, [
+      file_input(view, "#huddl-form", :huddl_cover_image, [
         %{
           name: "to_cancel.jpg",
           content: File.read!(@test_image_path),

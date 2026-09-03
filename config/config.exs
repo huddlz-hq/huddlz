@@ -31,7 +31,7 @@ config :huddlz, Oban,
     notifications: 10,
     profile_picture_cleanup: 5,
     group_image_cleanup: 5,
-    huddl_image_cleanup: 5
+    huddl_cover_image_cleanup: 5
   ],
   repo: Huddlz.Repo,
   plugins: [{Oban.Plugins.Cron, []}]

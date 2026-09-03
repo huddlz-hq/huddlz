@@ -1,9 +1,9 @@
-defmodule Huddlz.Communities.HuddlImageTest do
+defmodule Huddlz.Communities.HuddlCoverImageTest do
   use Huddlz.DataCase, async: true
   use Oban.Testing, repo: Huddlz.Repo
 
   alias Huddlz.Communities
-  alias Huddlz.Communities.HuddlImage
+  alias Huddlz.Communities.HuddlCoverImage
 
   describe "create huddl image" do
     test "group owner can create a huddl image" do
@@ -15,16 +15,16 @@ defmodule Huddlz.Communities.HuddlImageTest do
         filename: "huddl-banner.jpg",
         content_type: "image/jpeg",
         size_bytes: 50_000,
-        storage_path: "/uploads/huddl_images/#{huddl.id}/banner.jpg",
-        thumbnail_path: "/uploads/huddl_images/#{huddl.id}/banner_thumb.jpg",
+        storage_path: "/uploads/huddl_cover_images/#{huddl.id}/banner.jpg",
+        thumbnail_path: "/uploads/huddl_cover_images/#{huddl.id}/banner_thumb.jpg",
         huddl_id: huddl.id
       }
 
-      assert {:ok, huddl_image} = Communities.create_huddl_image(attrs, actor: owner)
-      assert huddl_image.filename == "huddl-banner.jpg"
-      assert huddl_image.content_type == "image/jpeg"
-      assert huddl_image.size_bytes == 50_000
-      assert huddl_image.huddl_id == huddl.id
+      assert {:ok, huddl_cover_image} = Communities.create_huddl_cover_image(attrs, actor: owner)
+      assert huddl_cover_image.filename == "huddl-banner.jpg"
+      assert huddl_cover_image.content_type == "image/jpeg"
+      assert huddl_cover_image.size_bytes == 50_000
+      assert huddl_cover_image.huddl_id == huddl.id
     end
 
     test "organizer can create huddl image" do
@@ -51,12 +51,14 @@ defmodule Huddlz.Communities.HuddlImageTest do
         filename: "organizer.jpg",
         content_type: "image/jpeg",
         size_bytes: 1000,
-        storage_path: "/uploads/huddl_images/#{huddl.id}/organizer.jpg",
+        storage_path: "/uploads/huddl_cover_images/#{huddl.id}/organizer.jpg",
         huddl_id: huddl.id
       }
 
-      assert {:ok, huddl_image} = Communities.create_huddl_image(attrs, actor: organizer)
-      assert huddl_image.huddl_id == huddl.id
+      assert {:ok, huddl_cover_image} =
+               Communities.create_huddl_cover_image(attrs, actor: organizer)
+
+      assert huddl_cover_image.huddl_id == huddl.id
     end
 
     test "regular member cannot create huddl image" do
@@ -71,12 +73,12 @@ defmodule Huddlz.Communities.HuddlImageTest do
         filename: "member.jpg",
         content_type: "image/jpeg",
         size_bytes: 1000,
-        storage_path: "/uploads/huddl_images/#{huddl.id}/member.jpg",
+        storage_path: "/uploads/huddl_cover_images/#{huddl.id}/member.jpg",
         huddl_id: huddl.id
       }
 
       assert_raise Ash.Error.Forbidden, fn ->
-        Communities.create_huddl_image!(attrs, actor: member)
+        Communities.create_huddl_cover_image!(attrs, actor: member)
       end
     end
 
@@ -90,12 +92,12 @@ defmodule Huddlz.Communities.HuddlImageTest do
         filename: "admin-banner.jpg",
         content_type: "image/jpeg",
         size_bytes: 50_000,
-        storage_path: "/uploads/huddl_images/#{huddl.id}/admin-banner.jpg",
+        storage_path: "/uploads/huddl_cover_images/#{huddl.id}/admin-banner.jpg",
         huddl_id: huddl.id
       }
 
-      assert {:ok, huddl_image} = Communities.create_huddl_image(attrs, actor: admin)
-      assert huddl_image.huddl_id == huddl.id
+      assert {:ok, huddl_cover_image} = Communities.create_huddl_cover_image(attrs, actor: admin)
+      assert huddl_cover_image.huddl_id == huddl.id
     end
   end
 
@@ -107,12 +109,12 @@ defmodule Huddlz.Communities.HuddlImageTest do
 
       # Create first image
       {:ok, _img1} =
-        Communities.create_huddl_image(
+        Communities.create_huddl_cover_image(
           %{
             filename: "first.jpg",
             content_type: "image/jpeg",
             size_bytes: 1000,
-            storage_path: "/uploads/huddl_images/#{huddl.id}/first.jpg",
+            storage_path: "/uploads/huddl_cover_images/#{huddl.id}/first.jpg",
             huddl_id: huddl.id
           },
           actor: owner
@@ -120,18 +122,18 @@ defmodule Huddlz.Communities.HuddlImageTest do
 
       # Create second image (most recent)
       {:ok, img2} =
-        Communities.create_huddl_image(
+        Communities.create_huddl_cover_image(
           %{
             filename: "second.jpg",
             content_type: "image/jpeg",
             size_bytes: 2000,
-            storage_path: "/uploads/huddl_images/#{huddl.id}/second.jpg",
+            storage_path: "/uploads/huddl_cover_images/#{huddl.id}/second.jpg",
             huddl_id: huddl.id
           },
           actor: owner
         )
 
-      assert {:ok, current} = Communities.get_current_huddl_image(huddl.id, actor: owner)
+      assert {:ok, current} = Communities.get_current_huddl_cover_image(huddl.id, actor: owner)
       assert current.id == img2.id
       assert current.filename == "second.jpg"
     end
@@ -142,7 +144,7 @@ defmodule Huddlz.Communities.HuddlImageTest do
       huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       assert {:error, %Ash.Error.Invalid{}} =
-               Communities.get_current_huddl_image(huddl.id, actor: owner)
+               Communities.get_current_huddl_cover_image(huddl.id, actor: owner)
     end
   end
 
@@ -153,12 +155,12 @@ defmodule Huddlz.Communities.HuddlImageTest do
       huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       {:ok, image} =
-        Communities.create_huddl_image(
+        Communities.create_huddl_cover_image(
           %{
             filename: "to-soft-delete.jpg",
             content_type: "image/jpeg",
             size_bytes: 1000,
-            storage_path: "/uploads/huddl_images/#{huddl.id}/to-soft-delete.jpg",
+            storage_path: "/uploads/huddl_cover_images/#{huddl.id}/to-soft-delete.jpg",
             huddl_id: huddl.id
           },
           actor: owner
@@ -166,7 +168,7 @@ defmodule Huddlz.Communities.HuddlImageTest do
 
       assert is_nil(image.deleted_at)
 
-      {:ok, soft_deleted} = Communities.soft_delete_huddl_image(image, actor: owner)
+      {:ok, soft_deleted} = Communities.soft_delete_huddl_cover_image(image, actor: owner)
 
       assert not is_nil(soft_deleted.deleted_at)
     end
@@ -177,22 +179,22 @@ defmodule Huddlz.Communities.HuddlImageTest do
       huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       {:ok, image} =
-        Communities.create_huddl_image(
+        Communities.create_huddl_cover_image(
           %{
             filename: "oban-test.jpg",
             content_type: "image/jpeg",
             size_bytes: 1000,
-            storage_path: "/uploads/huddl_images/#{huddl.id}/oban-test.jpg",
+            storage_path: "/uploads/huddl_cover_images/#{huddl.id}/oban-test.jpg",
             huddl_id: huddl.id
           },
           actor: owner
         )
 
-      {:ok, _} = Communities.soft_delete_huddl_image(image, actor: owner)
+      {:ok, _} = Communities.soft_delete_huddl_cover_image(image, actor: owner)
 
       assert_enqueued(
-        worker: Huddlz.Workers.HuddlImageCleanup,
-        queue: :huddl_image_cleanup
+        worker: Huddlz.Workers.HuddlCoverImageCleanup,
+        queue: :huddl_cover_image_cleanup
       )
     end
   end
@@ -203,15 +205,15 @@ defmodule Huddlz.Communities.HuddlImageTest do
       group = generate(group(owner_id: owner.id, actor: owner))
       huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
-      thumbnail_path = "/uploads/huddl_images/#{huddl.id}/latest_thumb.jpg"
+      thumbnail_path = "/uploads/huddl_cover_images/#{huddl.id}/latest_thumb.jpg"
 
       {:ok, _image} =
-        Communities.create_huddl_image(
+        Communities.create_huddl_cover_image(
           %{
             filename: "latest.jpg",
             content_type: "image/jpeg",
             size_bytes: 1000,
-            storage_path: "/uploads/huddl_images/#{huddl.id}/latest.jpg",
+            storage_path: "/uploads/huddl_cover_images/#{huddl.id}/latest.jpg",
             thumbnail_path: thumbnail_path,
             huddl_id: huddl.id
           },
@@ -252,15 +254,15 @@ defmodule Huddlz.Communities.HuddlImageTest do
 
       huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
-      huddl_thumb = "/uploads/huddl_images/#{huddl.id}/huddl_thumb.jpg"
+      huddl_thumb = "/uploads/huddl_cover_images/#{huddl.id}/huddl_thumb.jpg"
 
       {:ok, _} =
-        Communities.create_huddl_image(
+        Communities.create_huddl_cover_image(
           %{
             filename: "huddl.jpg",
             content_type: "image/jpeg",
             size_bytes: 1000,
-            storage_path: "/uploads/huddl_images/#{huddl.id}/huddl.jpg",
+            storage_path: "/uploads/huddl_cover_images/#{huddl.id}/huddl.jpg",
             thumbnail_path: huddl_thumb,
             huddl_id: huddl.id
           },
@@ -316,12 +318,12 @@ defmodule Huddlz.Communities.HuddlImageTest do
         filename: "pending.jpg",
         content_type: "image/jpeg",
         size_bytes: 50_000,
-        storage_path: "/uploads/huddl_images/pending/test-uuid.jpg",
-        thumbnail_path: "/uploads/huddl_images/pending/test-uuid_thumb.jpg"
+        storage_path: "/uploads/huddl_cover_images/pending/test-uuid.jpg",
+        thumbnail_path: "/uploads/huddl_cover_images/pending/test-uuid_thumb.jpg"
       }
 
       assert {:ok, pending_image} =
-               Communities.create_pending_huddl_image(group.id, attrs, actor: member)
+               Communities.create_pending_huddl_cover_image(group.id, attrs, actor: member)
 
       assert pending_image.filename == "pending.jpg"
       assert pending_image.huddl_id == nil
@@ -336,11 +338,11 @@ defmodule Huddlz.Communities.HuddlImageTest do
         filename: "blocked.jpg",
         content_type: "image/jpeg",
         size_bytes: 1000,
-        storage_path: "/uploads/huddl_images/pending/blocked.jpg"
+        storage_path: "/uploads/huddl_cover_images/pending/blocked.jpg"
       }
 
       assert_raise Ash.Error.Forbidden, fn ->
-        Communities.create_pending_huddl_image!(group.id, attrs, actor: non_member)
+        Communities.create_pending_huddl_cover_image!(group.id, attrs, actor: non_member)
       end
     end
 
@@ -349,13 +351,13 @@ defmodule Huddlz.Communities.HuddlImageTest do
       group = generate(group(owner_id: owner.id, actor: owner))
 
       {:ok, pending_image} =
-        Communities.create_pending_huddl_image(
+        Communities.create_pending_huddl_cover_image(
           group.id,
           %{
             filename: "no-huddl.jpg",
             content_type: "image/jpeg",
             size_bytes: 1000,
-            storage_path: "/uploads/huddl_images/pending/no-huddl.jpg"
+            storage_path: "/uploads/huddl_cover_images/pending/no-huddl.jpg"
           },
           actor: owner
         )
@@ -371,13 +373,13 @@ defmodule Huddlz.Communities.HuddlImageTest do
       huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       {:ok, pending_image} =
-        Communities.create_pending_huddl_image(
+        Communities.create_pending_huddl_cover_image(
           group.id,
           %{
             filename: "to-assign.jpg",
             content_type: "image/jpeg",
             size_bytes: 1000,
-            storage_path: "/uploads/huddl_images/pending/to-assign.jpg"
+            storage_path: "/uploads/huddl_cover_images/pending/to-assign.jpg"
           },
           actor: owner
         )
@@ -385,7 +387,7 @@ defmodule Huddlz.Communities.HuddlImageTest do
       assert is_nil(pending_image.huddl_id)
 
       {:ok, assigned_image} =
-        Communities.assign_huddl_image_to_huddl(pending_image, huddl.id, actor: owner)
+        Communities.assign_huddl_cover_image_to_huddl(pending_image, huddl.id, actor: owner)
 
       assert assigned_image.huddl_id == huddl.id
     end
@@ -398,19 +400,19 @@ defmodule Huddlz.Communities.HuddlImageTest do
       huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       {:ok, pending_image} =
-        Communities.create_pending_huddl_image(
+        Communities.create_pending_huddl_cover_image(
           group.id,
           %{
             filename: "blocked.jpg",
             content_type: "image/jpeg",
             size_bytes: 1000,
-            storage_path: "/uploads/huddl_images/pending/blocked.jpg"
+            storage_path: "/uploads/huddl_cover_images/pending/blocked.jpg"
           },
           actor: member
         )
 
       assert_raise Ash.Error.Forbidden, fn ->
-        Communities.assign_huddl_image_to_huddl!(pending_image, huddl.id, actor: member)
+        Communities.assign_huddl_cover_image_to_huddl!(pending_image, huddl.id, actor: member)
       end
     end
 
@@ -421,24 +423,26 @@ defmodule Huddlz.Communities.HuddlImageTest do
       huddl2 = generate(past_huddl(group_id: group.id, creator_id: owner.id))
 
       {:ok, pending_image} =
-        Communities.create_pending_huddl_image(
+        Communities.create_pending_huddl_cover_image(
           group.id,
           %{
             filename: "double.jpg",
             content_type: "image/jpeg",
             size_bytes: 1000,
-            storage_path: "/uploads/huddl_images/pending/double.jpg"
+            storage_path: "/uploads/huddl_cover_images/pending/double.jpg"
           },
           actor: owner
         )
 
       # First assignment succeeds
       {:ok, assigned_image} =
-        Communities.assign_huddl_image_to_huddl(pending_image, huddl1.id, actor: owner)
+        Communities.assign_huddl_cover_image_to_huddl(pending_image, huddl1.id, actor: owner)
 
       # Second assignment fails
       assert {:error, %Ash.Error.Invalid{}} =
-               Communities.assign_huddl_image_to_huddl(assigned_image, huddl2.id, actor: owner)
+               Communities.assign_huddl_cover_image_to_huddl(assigned_image, huddl2.id,
+                 actor: owner
+               )
     end
   end
 
@@ -448,13 +452,14 @@ defmodule Huddlz.Communities.HuddlImageTest do
       group = generate(group(owner_id: owner.id, actor: owner))
 
       {:ok, pending_image} =
-        Communities.create_pending_huddl_image(
+        Communities.create_pending_huddl_cover_image(
           group.id,
           %{
             filename: "orphaned.jpg",
             content_type: "image/jpeg",
             size_bytes: 1000,
-            storage_path: "/uploads/huddl_images/pending/orphaned-#{System.unique_integer()}.jpg"
+            storage_path:
+              "/uploads/huddl_cover_images/pending/orphaned-#{System.unique_integer()}.jpg"
           },
           actor: owner
         )
@@ -464,13 +469,13 @@ defmodule Huddlz.Communities.HuddlImageTest do
       {:ok, uuid_binary} = Ecto.UUID.dump(pending_image.id)
 
       Huddlz.Repo.query!(
-        "UPDATE huddl_images SET inserted_at = $1 WHERE id = $2",
+        "UPDATE huddl_cover_images SET inserted_at = $1 WHERE id = $2",
         [old_time, uuid_binary]
       )
 
       # Query for orphaned images
       orphaned =
-        HuddlImage
+        HuddlCoverImage
         |> Ash.Query.for_read(:orphaned_pending)
         |> Ash.read!(page: [limit: 100])
 
@@ -482,19 +487,20 @@ defmodule Huddlz.Communities.HuddlImageTest do
       group = generate(group(owner_id: owner.id, actor: owner))
 
       {:ok, pending_image} =
-        Communities.create_pending_huddl_image(
+        Communities.create_pending_huddl_cover_image(
           group.id,
           %{
             filename: "recent.jpg",
             content_type: "image/jpeg",
             size_bytes: 1000,
-            storage_path: "/uploads/huddl_images/pending/recent-#{System.unique_integer()}.jpg"
+            storage_path:
+              "/uploads/huddl_cover_images/pending/recent-#{System.unique_integer()}.jpg"
           },
           actor: owner
         )
 
       orphaned =
-        HuddlImage
+        HuddlCoverImage
         |> Ash.Query.for_read(:orphaned_pending)
         |> Ash.read!(page: [limit: 100])
 
