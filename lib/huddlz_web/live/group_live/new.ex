@@ -9,7 +9,6 @@ defmodule HuddlzWeb.GroupLive.New do
   import HuddlzWeb.HuddlLive.FormHelpers,
     only: [
       inject_group_location_param: 2,
-      prepare_source_with_coordinates: 1,
       apply_group_location_to_form: 2
     ]
 
@@ -128,8 +127,7 @@ defmodule HuddlzWeb.GroupLive.New do
          |> AshPhoenix.Form.validate(params_with_owner)
          |> AshPhoenix.Form.submit(
            params: params_with_owner,
-           actor: socket.assigns.current_user,
-           before_submit: prepare_source_with_coordinates(socket.assigns.selected_location_data)
+           actor: socket.assigns.current_user
          ) do
       {:ok, group} ->
         assign_pending_image_to_group(socket, group)
@@ -149,13 +147,14 @@ defmodule HuddlzWeb.GroupLive.New do
     location_data = %{
       display_text: payload.display_text,
       latitude: payload.latitude,
-      longitude: payload.longitude
+      longitude: payload.longitude,
+      time_zone: payload.time_zone
     }
 
     {:noreply,
      socket
      |> assign(:selected_location_data, location_data)
-     |> apply_group_location_to_form(location_data.display_text)}
+     |> apply_group_location_to_form(location_data)}
   end
 
   @impl true
@@ -163,7 +162,7 @@ defmodule HuddlzWeb.GroupLive.New do
     {:noreply,
      socket
      |> assign(:selected_location_data, nil)
-     |> apply_group_location_to_form("")}
+     |> apply_group_location_to_form(nil)}
   end
 
   defp assign_pending_image_to_group(socket, group) do
@@ -240,7 +239,7 @@ defmodule HuddlzWeb.GroupLive.New do
               />
               <.field_errors field={@form[:location]} />
               <p class="form-help">
-                Optional. Helps people find your group when they search nearby.
+                Required. This city sets the group time zone and helps people find it nearby.
               </p>
             </div>
           </div>

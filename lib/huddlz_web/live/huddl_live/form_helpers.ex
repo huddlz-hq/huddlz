@@ -45,14 +45,29 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
     end
   end
 
+  def schedule_time_zone(form, selected_location, group) do
+    case to_string(Phoenix.HTML.Form.input_value(form, :event_type) || "in_person") do
+      "virtual" -> group.time_zone
+      _physical_or_hybrid -> selected_location && selected_location.time_zone
+    end
+  end
+
+  def ambiguous_time_label(_form, nil), do: nil
+
+  def ambiguous_time_label(form, time_zone) do
+    with {:ok, date} <- parse_date(Phoenix.HTML.Form.input_value(form, :date)),
+         {:ok, time} <- parse_schedule_time(Phoenix.HTML.Form.input_value(form, :start_time)),
+         {:ambiguous, earlier, _later} <- DateTime.new(date, time, time_zone) do
+      "#{earlier.zone_abbr} (UTC#{format_offset(earlier.utc_offset + earlier.std_offset)})"
+    else
+      _not_ambiguous -> nil
+    end
+  end
+
   def apply_saved_location_to_form(socket, location) do
     current_params = socket.assigns.form.source.params || %{}
 
-    updated_params =
-      current_params
-      |> Map.put("physical_location", location.address)
-      |> Map.put("group_location_id", location.id)
-
+    updated_params = Map.put(current_params, "group_location_id", location.id)
     form = AshPhoenix.Form.validate(socket.assigns.form, updated_params)
 
     socket
@@ -63,11 +78,7 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
   def clear_saved_location(socket) do
     current_params = socket.assigns.form.source.params || %{}
 
-    updated_params =
-      current_params
-      |> Map.put("physical_location", "")
-      |> Map.put("group_location_id", nil)
-
+    updated_params = Map.put(current_params, "group_location_id", nil)
     form = AshPhoenix.Form.validate(socket.assigns.form, updated_params)
 
     socket
@@ -75,58 +86,22 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
     |> assign(:form, Phoenix.Component.to_form(form))
   end
 
-  def inject_saved_location_params(params, nil), do: Map.put(params, "group_location_id", nil)
-
-  def inject_saved_location_params(params, location) do
-    params
-    |> Map.put("physical_location", location.address)
-    |> Map.put("group_location_id", location.id)
-  end
-
   @doc """
-  Ensures the "physical_location" key is present in the params so
-  `Phoenix.Component.used_input?/1` treats the picker-backed field as used
-  and its validation errors display. The saved-location picker renders no
-  client-side input, so the browser never sends this key on its own. Falls
-  back to the form's current value to avoid clearing an existing location
-  on update.
-
-  Call on every submit. On validate, use `mark_location_used_after_submit/2`
-  so errors stay hidden while the user is still filling in the form but
-  remain visible while fixing a failed submit.
+  Puts the chosen address book location into the params. The picker renders no
+  input of its own, so the key is added by hand: on save it is always present,
+  and on validate only once a submit has failed, so the field counts as used
+  (`Phoenix.Component.used_input?/1`) and its errors display at the right time.
   """
-  def mark_location_used(params, form) do
-    Map.put_new(params, "physical_location", current_location_value(form))
-  end
+  def inject_saved_location_params(params, location, form, mode \\ :validate)
 
-  def mark_location_used_after_submit(params, form) do
-    if form.source.submitted_once? do
-      mark_location_used(params, form)
+  def inject_saved_location_params(params, %{id: id}, _form, _mode),
+    do: Map.put(params, "group_location_id", id)
+
+  def inject_saved_location_params(params, nil, form, mode) do
+    if mode == :save or form.source.submitted_once? do
+      Map.put(params, "group_location_id", nil)
     else
       params
-    end
-  end
-
-  defp current_location_value(form) do
-    case Phoenix.HTML.Form.input_value(form, :physical_location) do
-      nil -> ""
-      value -> to_string(value)
-    end
-  end
-
-  @doc """
-  Returns a `before_submit` function that applies pre-existing coordinates
-  directly to the changeset. Used with `AshPhoenix.Form.submit/2`'s
-  `:before_submit` option, which runs after `for_create`/`for_update`
-  (i.e., after Ash resource changes have already executed).
-  """
-  def prepare_source_with_coordinates(nil), do: & &1
-
-  def prepare_source_with_coordinates(location) when is_map(location) do
-    fn changeset ->
-      changeset
-      |> Ash.Changeset.force_change_attribute(:latitude, location.latitude)
-      |> Ash.Changeset.force_change_attribute(:longitude, location.longitude)
     end
   end
 
@@ -136,17 +111,38 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
   """
   def inject_group_location_param(params, nil), do: params
 
-  def inject_group_location_param(params, %{display_text: text}) do
-    Map.put(params, "location", text)
+  def inject_group_location_param(params, %{
+        display_text: text,
+        latitude: latitude,
+        longitude: longitude,
+        time_zone: time_zone
+      }) do
+    params
+    |> Map.put("location", text)
+    |> Map.put("latitude", latitude)
+    |> Map.put("longitude", longitude)
+    |> Map.put("time_zone", time_zone)
   end
 
   @doc """
-  Updates the group form's location field with the given text.
+  Updates the group form with a resolved home location.
   """
-  def apply_group_location_to_form(socket, text) do
+  def apply_group_location_to_form(socket, location) when is_map(location) do
     current_params = socket.assigns.form.source.params || %{}
-    updated_params = Map.put(current_params, "location", text)
+    updated_params = inject_group_location_param(current_params, location)
     form = AshPhoenix.Form.validate(socket.assigns.form.source, updated_params)
+    assign(socket, :form, Phoenix.Component.to_form(form))
+  end
+
+  def apply_group_location_to_form(socket, nil) do
+    current_params = socket.assigns.form.source.params || %{}
+
+    form =
+      AshPhoenix.Form.validate(
+        socket.assigns.form.source,
+        Map.put(current_params, "location", "")
+      )
+
     assign(socket, :form, Phoenix.Component.to_form(form))
   end
 
@@ -174,5 +170,24 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
       _ ->
         :error
     end
+  end
+
+  defp parse_date(%Date{} = date), do: {:ok, date}
+  defp parse_date(value) when is_binary(value), do: Date.from_iso8601(value)
+  defp parse_date(_value), do: :error
+
+  defp parse_schedule_time(%Time{} = time), do: {:ok, time}
+  defp parse_schedule_time(value) when is_binary(value), do: parse_time(value)
+  defp parse_schedule_time(_value), do: :error
+
+  defp format_offset(seconds) do
+    sign = if seconds < 0, do: "-", else: "+"
+    seconds = abs(seconds)
+    hours = div(seconds, 3600)
+    minutes = seconds |> rem(3600) |> div(60)
+
+    sign <>
+      String.pad_leading(to_string(hours), 2, "0") <>
+      ":" <> String.pad_leading(to_string(minutes), 2, "0")
   end
 end

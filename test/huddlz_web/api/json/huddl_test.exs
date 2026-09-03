@@ -204,8 +204,7 @@ defmodule HuddlzWeb.Api.Json.HuddlTest do
             starts_at: DateTime.add(DateTime.utc_now(), -2, :day),
             ends_at: DateTime.add(DateTime.utc_now(), -2, :day) |> DateTime.add(1, :hour),
             is_private: false,
-            event_type: :in_person,
-            physical_location: "456 Past St"
+            event_type: :in_person
           )
         )
 

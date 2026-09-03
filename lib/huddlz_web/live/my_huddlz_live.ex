@@ -219,7 +219,7 @@ defmodule HuddlzWeb.MyHuddlzLive do
         <span :if={@huddl.group} class="card-group">{@huddl.group.name}</span>
         <h3 class="card-title">{@huddl.title}</h3>
         <div class="card-meta">
-          <span>{format_meta_when(@huddl.starts_at)}</span>
+          <span>{format_meta_when(@huddl)}</span>
           <%= if @huddl.rsvp_count > 0 || @huddl.max_attendees do %>
             <span class="dot"></span>
             <span>{rsvp_label(@huddl)}</span>

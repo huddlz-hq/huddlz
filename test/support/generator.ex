@@ -164,6 +164,9 @@ defmodule Huddlz.Generator do
         name: StreamData.repeatedly(fn -> Faker.Company.name() end),
         description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
         location: "Test Location",
+        time_zone: "America/New_York",
+        latitude: 29.9012,
+        longitude: -81.3124,
         is_public: true,
         # Pin to nil so GenerateSlug derives the slug from the name. Otherwise
         # the public `:slug` argument on :create_group falls into Ash's optional
@@ -204,6 +207,7 @@ defmodule Huddlz.Generator do
           end),
         latitude: 30.27,
         longitude: -97.74,
+        time_zone: "America/Chicago",
         group_id: group_id
       ],
       overrides: opts,
@@ -239,6 +243,7 @@ defmodule Huddlz.Generator do
         description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
         starts_at: default_starts_at,
         ends_at: default_ends_at,
+        time_zone: "America/New_York",
         event_type: :in_person,
         physical_location: StreamData.repeatedly(fn -> Faker.Address.street_address() end),
         virtual_link: nil,
@@ -277,6 +282,14 @@ defmodule Huddlz.Generator do
           generate(group(owner_id: owner.id, is_public: true, actor: owner)).id
         end)
 
+    # Physical huddlz take their address and time zone from an address book
+    # location, so give in-person and hybrid huddlz one unless told otherwise.
+    group_location_id =
+      case opts[:event_type] || :in_person do
+        :virtual -> nil
+        _physical -> opts[:group_location_id] || address_book_location_id(group_id)
+      end
+
     # Generate random dates in the future using the new virtual argument pattern
     days_ahead = :rand.uniform(30)
     hours_duration = :rand.uniform(4)
@@ -303,8 +316,7 @@ defmodule Huddlz.Generator do
         thumbnail_url: thumbnail_url,
         group_id: group_id,
         event_type: :in_person,
-        physical_location: "123 Main St, Anytown, USA",
-        group_location_id: nil,
+        group_location_id: group_location_id,
         is_private: false,
         lifecycle_state: :published,
         huddl_template_id: nil,
@@ -314,6 +326,37 @@ defmodule Huddlz.Generator do
       overrides: opts,
       actor: actor
     )
+  end
+
+  @doc """
+  Today's date in Eastern time, the zone every generated group and huddl uses.
+  Tests that build schedules relative to today must use this rather than
+  `Date.utc_today/0`, which is a day ahead for four hours each evening.
+  """
+  def eastern_today, do: DateTime.now!("America/New_York") |> DateTime.to_date()
+
+  @doc """
+  Returns the id of a seeded "123 Main St" address book location for the
+  group, creating it on first use. Seeded, so no organizer actor is needed.
+  """
+  def address_book_location_id(group_id) do
+    alias Huddlz.Communities.GroupLocation
+    group = Ash.get!(Group, group_id, authorize?: false)
+
+    case Ash.get(GroupLocation, [group_id: group_id, name: "Main Street"], authorize?: false) do
+      {:ok, location} ->
+        location.id
+
+      _missing ->
+        Ash.Seed.seed!(GroupLocation, %{
+          name: "Main Street",
+          address: "123 Main St, Anytown, USA",
+          latitude: 29.9012,
+          longitude: -81.3124,
+          time_zone: group.time_zone,
+          group_id: group_id
+        }).id
+    end
   end
 
   @doc """
@@ -373,6 +416,7 @@ defmodule Huddlz.Generator do
         description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
         starts_at: default_starts_at,
         ends_at: default_ends_at,
+        time_zone: "America/New_York",
         event_type: :in_person,
         physical_location: "123 Main St, Anytown, USA",
         is_private: false,

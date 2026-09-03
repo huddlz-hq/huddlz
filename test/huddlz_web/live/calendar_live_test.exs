@@ -100,7 +100,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn: conn,
       attendee: attendee
     } do
-      today = Date.utc_today()
+      today = Huddlz.Generator.eastern_today()
       today_label = Calendar.strftime(today, "%A, %B %-d, %Y") <> ", today"
 
       conn
@@ -157,7 +157,12 @@ defmodule HuddlzWeb.CalendarLiveTest do
     } do
       huddl = create_huddl(host, public_group, title: "Going Show", date: tomorrow())
       rsvp!(huddl, attendee, :rsvp)
-      time = Calendar.strftime(huddl.starts_at, "%-I:%M %p")
+
+      time =
+        huddl.starts_at
+        |> DateTime.shift_zone!(huddl.time_zone)
+        |> Calendar.strftime("%-I:%M %p %Z")
+
       tooltip_id = "calendar-entry-tooltip-#{huddl.id}"
 
       conn
@@ -230,7 +235,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit(calendar_path_for(Date.add(Date.utc_today(), -2)))
+      |> visit(calendar_path_for(Date.add(Huddlz.Generator.eastern_today(), -2)))
       |> assert_has(
         "#calendar-entry-#{past.id}.cal-pill.past[data-status=past-attended]",
         text: "Attended · Past"
@@ -247,12 +252,13 @@ defmodule HuddlzWeb.CalendarLiveTest do
       public_group: public_group
     } do
       past = create_past_huddl(host, public_group, title: "Hosted Retrospective")
-      when_label = Calendar.strftime(past.starts_at, "%A, %B %-d, %Y at %-I:%M %p")
+      local_starts_at = DateTime.shift_zone!(past.starts_at, past.time_zone)
+      when_label = Calendar.strftime(local_starts_at, "%A, %B %-d, %Y at %-I:%M %p %Z")
 
       session =
         conn
         |> login(host)
-        |> visit(calendar_path_for(DateTime.to_date(past.starts_at)))
+        |> visit(calendar_path_for(DateTime.to_date(local_starts_at)))
         |> assert_has(
           ~s(#calendar-entry-#{past.id}.cal-pill[data-status=past-hosting][aria-label="Hosted Retrospective, Hosted, past, #{when_label}"]),
           text: "Hosting · Past"
@@ -263,7 +269,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
         )
 
       session
-      |> visit(calendar_path_for(DateTime.to_date(past.starts_at), view: "agenda"))
+      |> visit(calendar_path_for(DateTime.to_date(local_starts_at), view: "agenda"))
       |> assert_has(
         "#calendar-entry-#{past.id} .cal-entry-status[data-status=past-hosting]",
         text: "Hosting · Past"
@@ -335,14 +341,14 @@ defmodule HuddlzWeb.CalendarLiveTest do
       host: host,
       public_group: public_group
     } do
-      next = shift(Date.utc_today(), 1)
+      next = shift(Huddlz.Generator.eastern_today(), 1)
       target_date = %{next | day: 15}
       huddl = create_huddl(host, public_group, title: "Counted", date: target_date)
       rsvp!(huddl, attendee, :rsvp)
 
       conn
       |> login(attendee)
-      |> visit("/calendar?month=#{next_month_param(Date.utc_today())}")
+      |> visit("/calendar?month=#{next_month_param(Huddlz.Generator.eastern_today())}")
       |> assert_has(".cal-month-count", text: "1 huddl")
     end
 
@@ -425,7 +431,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn: conn,
       attendee: attendee
     } do
-      next = next_month_param(Date.utc_today())
+      next = next_month_param(Huddlz.Generator.eastern_today())
 
       conn
       |> login(attendee)
@@ -437,7 +443,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn: conn,
       attendee: attendee
     } do
-      next = next_month_param(Date.utc_today())
+      next = next_month_param(Huddlz.Generator.eastern_today())
 
       conn
       |> login(attendee)
@@ -551,7 +557,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit(calendar_path_for(Date.add(Date.utc_today(), -2), view: "agenda"))
+      |> visit(calendar_path_for(Date.add(Huddlz.Generator.eastern_today(), -2), view: "agenda"))
       |> assert_has(
         "#calendar-entry-#{past.id} .cal-entry-status[data-status=past-attended]",
         text: "Attended · Past"
@@ -566,7 +572,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
     end
   end
 
-  defp tomorrow, do: Date.add(Date.utc_today(), 1)
+  defp tomorrow, do: Date.add(Huddlz.Generator.eastern_today(), 1)
 
   # Build a /calendar URL pinned to the month containing `date`, so the focus
   # month always matches where the huddl actually lives (matters for agenda
@@ -582,7 +588,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
   end
 
   defp current_month_name do
-    Date.utc_today() |> Calendar.strftime("%B %Y")
+    Huddlz.Generator.eastern_today() |> Calendar.strftime("%B %Y")
   end
 
   defp calendar_grid_end(date) do

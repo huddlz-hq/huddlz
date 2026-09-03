@@ -135,7 +135,6 @@ defmodule Huddlz.Communities.Huddl do
         :starts_at,
         :ends_at,
         :event_type,
-        :physical_location,
         :virtual_link,
         :is_private,
         :thumbnail_url,
@@ -159,8 +158,6 @@ defmodule Huddlz.Communities.Huddl do
       argument :repeat_until, :date, allow_nil?: true
       argument :frequency, :string, allow_nil?: true
 
-      argument :provided_latitude, :float, allow_nil?: true, public?: false
-      argument :provided_longitude, :float, allow_nil?: true, public?: false
       argument :pending_image_id, :uuid, allow_nil?: true, public?: false
 
       validate one_of(:lifecycle_state, [:draft, :published])
@@ -178,13 +175,13 @@ defmodule Huddlz.Communities.Huddl do
 
       change Huddlz.Communities.Huddl.Changes.SetCreatorToActor
       change Huddlz.Communities.Huddl.Changes.AddCreatorAsAttendee
+      change Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup
+      change Huddlz.Communities.Huddl.Changes.ApplySavedLocation
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.AssignPendingImage
       change Huddlz.Communities.Huddl.Changes.AddHuddlTemplate
       change Huddlz.Communities.Huddl.Changes.ClearUnusedLocationFields
-      change Huddlz.Geocoding.ApplyProvidedCoordinates
-      change {Huddlz.Geocoding.GeocodeChange, field: :physical_location}
       change Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup
       change Huddlz.Communities.Huddl.Changes.SetInitialLifecycleTimestamps
       change Huddlz.Communities.Huddl.Changes.NotifyNewInGroup
@@ -227,7 +224,6 @@ defmodule Huddlz.Communities.Huddl do
         :starts_at,
         :ends_at,
         :event_type,
-        :physical_location,
         :virtual_link,
         :is_private,
         :thumbnail_url,
@@ -259,9 +255,6 @@ defmodule Huddlz.Communities.Huddl do
         public? false
       end
 
-      argument :provided_latitude, :float, allow_nil?: true, public?: false
-      argument :provided_longitude, :float, allow_nil?: true, public?: false
-
       require_atomic? false
 
       validate present(:frequency) do
@@ -274,12 +267,12 @@ defmodule Huddlz.Communities.Huddl do
         message "is required when editing the whole series"
       end
 
+      change Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup
+      change Huddlz.Communities.Huddl.Changes.ApplySavedLocation
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.ClearUnusedLocationFields
       change Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz
-      change Huddlz.Geocoding.ApplyProvidedCoordinates
-      change {Huddlz.Geocoding.GeocodeChange, field: :physical_location}
       change Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup
       change Huddlz.Communities.Huddl.Changes.EnforceCapacityFloor
       change Huddlz.Communities.Huddl.Changes.ResetReminderStamps
@@ -354,6 +347,17 @@ defmodule Huddlz.Communities.Huddl do
         allow_nil? true
         default :soonest
         constraints one_of: [:soonest, :newest]
+      end
+
+      argument :search_time_zone, :string do
+        description "IANA time zone used for relative calendar date filters"
+        allow_nil? true
+        constraints min_length: 1, max_length: 100
+      end
+
+      argument :now, :utc_datetime do
+        allow_nil? true
+        public? false
       end
 
       pagination keyset?: true,
@@ -628,6 +632,10 @@ defmodule Huddlz.Communities.Huddl do
   # changes section removed - validation is handled by FutureDateValidation module
 
   validations do
+    validate Huddlz.TimeZone.Validation do
+      where action_is([:create, :update])
+    end
+
     validate string_length(:title, min: 3, max: 200) do
       message "Must be between 3 and 200 characters"
     end
@@ -642,22 +650,16 @@ defmodule Huddlz.Communities.Huddl do
       message "must be after the start time"
     end
 
-    validate present([:physical_location]) do
-      where attribute_equals(:event_type, :in_person)
-      message "is required for in-person huddlz"
+    # Scoped to the primary actions so RSVPs and lifecycle transitions on
+    # legacy huddlz that predate the address book keep working.
+    validate present(:group_location_id) do
+      where [action_is([:create, :update]), one_of(:event_type, [:in_person, :hybrid])]
+      message "is required for in-person and hybrid huddlz"
     end
 
     validate present([:virtual_link]) do
       where attribute_equals(:event_type, :virtual)
       message "is required for virtual huddlz"
-    end
-
-    # Split per field so each error attaches only to the attribute that is
-    # actually missing; a combined present/2 fans its error out to both
-    # fields, flagging the one the user already filled in.
-    validate present([:physical_location]) do
-      where attribute_equals(:event_type, :hybrid)
-      message "is required for hybrid huddlz"
     end
 
     validate present([:virtual_link]) do
@@ -688,6 +690,12 @@ defmodule Huddlz.Communities.Huddl do
     attribute :ends_at, :utc_datetime do
       allow_nil? false
       public? true
+    end
+
+    attribute :time_zone, :string do
+      allow_nil? false
+      public? true
+      constraints min_length: 1, max_length: 100
     end
 
     attribute :event_type, :atom do

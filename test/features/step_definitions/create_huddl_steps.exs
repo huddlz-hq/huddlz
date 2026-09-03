@@ -290,16 +290,26 @@ defmodule CreateHuddlSteps do
             group = context[:current_group]
             current_user = context[:current_user]
 
-            {:ok, location} =
+            location =
               Huddlz.Communities.GroupLocation
-              |> Ash.Changeset.for_create(:create, %{
-                name: value,
-                address: value,
-                latitude: 30.27,
-                longitude: -97.74,
-                group_id: group.id
-              })
-              |> Ash.create(actor: current_user)
+              |> Ash.Query.filter(group_id == ^group.id and (name == ^value or address == ^value))
+              |> Ash.read_one!(authorize?: false)
+              |> case do
+                nil ->
+                  Huddlz.Communities.GroupLocation
+                  |> Ash.Changeset.for_create(:create, %{
+                    name: value,
+                    address: value,
+                    latitude: 30.27,
+                    longitude: -97.74,
+                    time_zone: "America/Chicago",
+                    group_id: group.id
+                  })
+                  |> Ash.create!(actor: current_user)
+
+                location ->
+                  location
+              end
 
             # Simulate the SavedLocationPicker selecting this location
             select_saved_location(session, location)

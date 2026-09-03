@@ -716,7 +716,13 @@ defmodule HuddlzWeb.ProfileLiveTest do
         "saint" => [%{known_places().saint_augustine | place_id: "p1"}]
       })
 
-      stub_place_details(%{"p1" => %{latitude: 29.89, longitude: -81.31}})
+      stub_place_details(%{
+        "p1" => %{
+          latitude: 29.89,
+          longitude: -81.31,
+          time_zone: "America/New_York"
+        }
+      })
 
       session = conn |> login(user) |> visit("/profile")
       view = session.view

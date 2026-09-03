@@ -188,7 +188,9 @@ defmodule Huddlz.Accounts.User do
 
     update :update_home_location do
       description "Update a user's home location for search pre-fill"
-      accept [:home_location, :home_latitude, :home_longitude]
+      accept [:home_location, :home_latitude, :home_longitude, :home_time_zone]
+      require_atomic? false
+      validate {Huddlz.TimeZone.Validation, attribute: :home_time_zone, allow_nil?: true}
     end
 
     update :update_role do
@@ -697,6 +699,12 @@ defmodule Huddlz.Accounts.User do
     attribute :home_longitude, :float do
       allow_nil? true
       constraints min: -180, max: 180
+    end
+
+    attribute :home_time_zone, :string do
+      description "IANA time zone for the user's saved home search location"
+      allow_nil? true
+      constraints min_length: 1, max_length: 100
     end
 
     attribute :notification_preferences, :map do

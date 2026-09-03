@@ -63,14 +63,21 @@ defmodule Huddlz.Places.Google do
         redirect: false,
         headers: [
           {"X-Goog-Api-Key", api_key()},
-          {"X-Goog-FieldMask", "location"}
+          {"X-Goog-FieldMask", "location,timeZone"}
         ],
         params: [sessionToken: session_token]
       ] ++ @req_options ++ req_test_options()
 
     case Req.get(url, opts) do
-      {:ok, %{status: 200, body: %{"location" => %{"latitude" => lat, "longitude" => lng}}}} ->
-        {:ok, %{latitude: lat, longitude: lng}}
+      {:ok,
+       %{
+         status: 200,
+         body: %{
+           "location" => %{"latitude" => lat, "longitude" => lng},
+           "timeZone" => %{"id" => time_zone}
+         }
+       }} ->
+        {:ok, %{latitude: lat, longitude: lng, time_zone: time_zone}}
 
       {:ok, %{status: 200, body: _}} ->
         {:error, :not_found}

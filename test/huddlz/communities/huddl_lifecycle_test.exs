@@ -120,6 +120,7 @@ defmodule Huddlz.Communities.HuddlLifecycleTest do
 
     ended =
       Ash.Seed.seed!(Huddl, %{
+        time_zone: "America/New_York",
         title: "Already Ended",
         description: "Waiting for scheduled completion",
         starts_at: DateTime.add(now, -2, :hour),
@@ -144,7 +145,10 @@ defmodule Huddlz.Communities.HuddlLifecycleTest do
       HuddlTemplate
       |> Ash.Changeset.for_create(:create, %{
         frequency: :weekly,
-        repeat_until: Date.add(Date.utc_today(), 30)
+        repeat_until: Date.add(Date.utc_today(), 30),
+        starts_at_local: NaiveDateTime.new!(Date.add(Date.utc_today(), 2), ~T[14:00:00]),
+        ends_at_local: NaiveDateTime.new!(Date.add(Date.utc_today(), 2), ~T[15:00:00]),
+        time_zone: "America/New_York"
       })
       |> Ash.create!(authorize?: false)
 
@@ -197,6 +201,7 @@ defmodule Huddlz.Communities.HuddlLifecycleTest do
 
     ended =
       Ash.Seed.seed!(Huddl, %{
+        time_zone: "America/New_York",
         title: "Already Ended",
         description: "Ready for lifecycle completion",
         starts_at: DateTime.add(now, -2, :hour),

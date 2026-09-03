@@ -145,6 +145,13 @@ defmodule HuddlzWeb.HuddlLive.New do
 
   @impl true
   def render(assigns) do
+    time_zone = schedule_time_zone(assigns.form, assigns.selected_location, assigns.group)
+
+    assigns =
+      assigns
+      |> assign(:schedule_time_zone, time_zone)
+      |> assign(:ambiguous_time_label, ambiguous_time_label(assigns.form, time_zone))
+
     ~H"""
     <Layouts.app
       flash={@flash}
@@ -199,6 +206,8 @@ defmodule HuddlzWeb.HuddlLive.New do
           form={@form}
           calculated_end_time={@calculated_end_time}
           duration_prompt="Select duration…"
+          schedule_time_zone={@schedule_time_zone}
+          ambiguous_time_label={@ambiguous_time_label}
         >
           <:recurring_controls>
             <div class="form-row">
@@ -290,9 +299,11 @@ defmodule HuddlzWeb.HuddlLive.New do
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
     params =
-      params
-      |> inject_saved_location_params(socket.assigns[:selected_location])
-      |> mark_location_used_after_submit(socket.assigns.form)
+      inject_saved_location_params(
+        params,
+        socket.assigns[:selected_location],
+        socket.assigns.form
+      )
 
     socket =
       socket
@@ -312,17 +323,16 @@ defmodule HuddlzWeb.HuddlLive.New do
       params
       |> Map.put("group_id", socket.assigns.group.id)
       |> Map.put("lifecycle_state", lifecycle_state)
-      |> inject_saved_location_params(socket.assigns[:selected_location])
-      |> mark_location_used(socket.assigns.form)
+      |> inject_saved_location_params(
+        socket.assigns[:selected_location],
+        socket.assigns.form,
+        :save
+      )
 
     case AshPhoenix.Form.submit(socket.assigns.form,
            params: params,
            actor: socket.assigns.current_user,
-           before_submit:
-             prepare_source_for_submit(
-               socket.assigns[:selected_location],
-               socket.assigns[:pending_image_id]
-             )
+           before_submit: &maybe_set_pending_image(&1, socket.assigns[:pending_image_id])
          ) do
       {:ok, huddl} ->
         {message, path} =
@@ -357,6 +367,7 @@ defmodule HuddlzWeb.HuddlLive.New do
            address,
            socket.assigns.modal_location_lat,
            socket.assigns.modal_location_lng,
+           socket.assigns.modal_location_time_zone,
            socket.assigns.group.id,
            actor: user
          ) do
@@ -402,16 +413,6 @@ defmodule HuddlzWeb.HuddlLive.New do
   @impl true
   def handle_info({:location_cleared, "modal-address-autocomplete"}, socket) do
     {:noreply, ModalLocationHelpers.clear(socket)}
-  end
-
-  defp prepare_source_for_submit(location, pending_image_id) do
-    coordinate_preparer = prepare_source_with_coordinates(location)
-
-    fn changeset ->
-      changeset
-      |> coordinate_preparer.()
-      |> maybe_set_pending_image(pending_image_id)
-    end
   end
 
   defp maybe_set_pending_image(changeset, nil), do: changeset

@@ -41,7 +41,10 @@ defmodule CalendarAccessibilitySteps do
 
   step "the {string} calendar link should identify it as attended and past",
        %{args: [title], session: session, calendar_huddl: huddl} = context do
-    when_label = Calendar.strftime(huddl.starts_at, "%A, %B %-d, %Y at %-I:%M %p")
+    when_label =
+      huddl.starts_at
+      |> DateTime.shift_zone!(huddl.time_zone)
+      |> Calendar.strftime("%A, %B %-d, %Y at %-I:%M %p %Z")
 
     assert_has(
       session,

@@ -42,7 +42,6 @@ defmodule Huddlz.Notifications.ICSTest do
     test "ics carries the huddl identity and timing", ctx do
       date = Date.add(Date.utc_today(), 30)
       start_time = ~T[14:00:00]
-      ymd = Calendar.strftime(date, "%Y%m%d")
 
       huddl =
         build_huddl(ctx,
@@ -57,15 +56,15 @@ defmodule Huddlz.Notifications.ICSTest do
 
       assert ics =~ "UID:huddl-#{huddl.id}@huddlz.com"
       assert ics =~ "SUMMARY:Coffee meetup"
-      assert ics =~ "DTSTART:#{ymd}T140000Z"
-      assert ics =~ "DTEND:#{ymd}T153000Z"
+      assert ics =~ "DTSTART:#{Calendar.strftime(huddl.starts_at, "%Y%m%dT%H%M%SZ")}"
+      assert ics =~ "DTEND:#{Calendar.strftime(huddl.ends_at, "%Y%m%dT%H%M%SZ")}"
       assert ics =~ "Casual chat"
     end
 
     test "physical location surfaces as LOCATION", ctx do
-      huddl = build_huddl(ctx, event_type: :in_person, physical_location: "Roastery, 123 Main St")
+      huddl = build_huddl(ctx, event_type: :in_person)
       {_filename, ics} = ICS.event_for(huddl)
-      assert ics =~ "Roastery"
+      assert ics =~ "123 Main St"
     end
 
     test "virtual_link surfaces as URL and is mentioned in the description", ctx do

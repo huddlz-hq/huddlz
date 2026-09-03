@@ -18,7 +18,7 @@ Feature: Group Management
     When I fill in the following:
       | Group name  | Tech Enthusiasts           |
       | Description | A group for tech lovers    |
-      | Location    | San Francisco, CA          |
+    And I select "San Francisco, CA, USA" as the group city in "America/Los_Angeles"
     And I check "Public group"
     And I click "Create group"
     Then I should see "Group created successfully"
@@ -31,6 +31,7 @@ Feature: Group Management
     When I fill in the following:
       | Group name  | Secret Society |
       | Description | Private group  |
+    And I select "Saint Augustine, FL, USA" as the group city in "America/New_York"
     And I uncheck "Public group"
     And I click "Create group"
     Then I should see "Group created successfully"
@@ -63,7 +64,7 @@ Feature: Group Management
     When I fill in the following:
       | Group Name  | Updated Book Club       |
       | Description | Updated description     |
-      | Location    | Austin, TX              |
+    And I select "Austin, TX, USA" as the group city in "America/Chicago"
     And I click "Save Changes"
     Then I should see "Group updated successfully"
     And I should see "Updated Book Club"

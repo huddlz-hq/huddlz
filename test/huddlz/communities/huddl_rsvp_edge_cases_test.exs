@@ -19,6 +19,8 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
           %{
             name: "Test Group",
             description: "A test group",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
             is_public: true
           },
           actor: owner

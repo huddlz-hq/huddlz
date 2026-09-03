@@ -45,7 +45,10 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         socket
         |> assign_edit_form(huddl, group_slug, user)
         |> assign(:group_locations, group_locations)
-        |> assign(:selected_location, find_matching_location(huddl, group_locations))
+        |> assign(
+          :selected_location,
+          Enum.find(group_locations, &(&1.id == huddl.group_location_id))
+        )
         |> ModalLocationHelpers.init()
         |> assign(:image_error, nil)
         |> assign(:pending_image_id, nil)
@@ -81,8 +84,9 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
   defp assign_edit_form(socket, huddl, group_slug, user) do
     # Extract date/time/duration from existing starts_at/ends_at
-    date = DateTime.to_date(huddl.starts_at)
-    start_time = DateTime.to_time(huddl.starts_at)
+    local_starts_at = DateTime.shift_zone!(huddl.starts_at, huddl.time_zone)
+    date = DateTime.to_date(local_starts_at)
+    start_time = DateTime.to_time(local_starts_at)
     duration_minutes = DateTime.diff(huddl.ends_at, huddl.starts_at, :minute)
 
     form =
@@ -175,6 +179,14 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
   @impl true
   def render(assigns) do
+    time_zone =
+      schedule_time_zone(assigns.form, assigns.selected_location, assigns.huddl.group)
+
+    assigns =
+      assigns
+      |> assign(:schedule_time_zone, time_zone)
+      |> assign(:ambiguous_time_label, ambiguous_time_label(assigns.form, time_zone))
+
     ~H"""
     <Layouts.app
       flash={@flash}
@@ -205,7 +217,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
                 <% _ -> %>
                   <span class="eyebrow">Editing one date</span>
                   <p>
-                    This is a recurring huddl. Changes apply only to <strong>{Calendar.strftime(@huddl.starts_at, "%a, %b %-d")}</strong>.
+                    This is a recurring huddl. Changes apply only to <strong>{format_huddl_date(@huddl)}</strong>.
                   </p>
               <% end %>
               <input
@@ -250,7 +262,12 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
         <.format_panel form={@form} />
 
-        <.when_panel form={@form} calculated_end_time={@calculated_end_time}>
+        <.when_panel
+          form={@form}
+          calculated_end_time={@calculated_end_time}
+          schedule_time_zone={@schedule_time_zone}
+          ambiguous_time_label={@ambiguous_time_label}
+        >
           <:recurring_controls>
             <%= if @huddl.huddl_template_id && edit_type_value(@form) == "all" do %>
               <div class="form-row form-row-inline">
@@ -375,6 +392,12 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     end
   end
 
+  defp format_huddl_date(huddl) do
+    huddl.starts_at
+    |> DateTime.shift_zone!(huddl.time_zone)
+    |> Calendar.strftime("%a, %b %-d")
+  end
+
   @impl true
   def handle_event("set_edit_type", %{"type" => type}, socket) when type in ["instance", "all"] do
     current_params = socket.assigns.form.source.params || %{}
@@ -420,9 +443,11 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
     params =
-      params
-      |> inject_saved_location_params(socket.assigns[:selected_location])
-      |> mark_location_used_after_submit(socket.assigns.form)
+      inject_saved_location_params(
+        params,
+        socket.assigns[:selected_location],
+        socket.assigns.form
+      )
 
     socket =
       socket
@@ -437,13 +462,15 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   def handle_event("save", %{"form" => params}, socket) do
     params =
       params
-      |> inject_saved_location_params(socket.assigns[:selected_location])
-      |> mark_location_used(socket.assigns.form)
+      |> inject_saved_location_params(
+        socket.assigns[:selected_location],
+        socket.assigns.form,
+        :save
+      )
 
     case AshPhoenix.Form.submit(socket.assigns.form,
            params: params,
-           actor: socket.assigns.current_user,
-           before_submit: prepare_source_with_coordinates(socket.assigns[:selected_location])
+           actor: socket.assigns.current_user
          ) do
       {:ok, huddl} ->
         assign_pending_image_to_huddl(socket, huddl)
@@ -472,6 +499,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
            address,
            socket.assigns.modal_location_lat,
            socket.assigns.modal_location_lng,
+           socket.assigns.modal_location_time_zone,
            socket.assigns.huddl.group.id,
            actor: user
          ) do
@@ -569,18 +597,4 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         {:error, :not_found}
     end
   end
-
-  defp find_matching_location(huddl, group_locations) do
-    Enum.find(group_locations, &(&1.id == huddl.group_location_id)) ||
-      find_legacy_matching_location(huddl, group_locations)
-  end
-
-  defp find_legacy_matching_location(
-         %{group_location_id: nil, physical_location: address},
-         locations
-       )
-       when not is_nil(address),
-       do: Enum.find(locations, &(&1.address == address))
-
-  defp find_legacy_matching_location(_huddl, _locations), do: nil
 end

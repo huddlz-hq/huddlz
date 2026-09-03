@@ -58,7 +58,7 @@ defmodule Huddlz.Communities.GroupLocation do
 
     create :create do
       primary? true
-      accept [:name, :address, :latitude, :longitude, :group_id]
+      accept [:name, :address, :latitude, :longitude, :time_zone, :group_id]
     end
 
     update :update do
@@ -107,6 +107,12 @@ defmodule Huddlz.Communities.GroupLocation do
     end
   end
 
+  validations do
+    validate Huddlz.TimeZone.Validation do
+      where action_is(:create)
+    end
+  end
+
   attributes do
     uuid_primary_key :id
 
@@ -134,6 +140,12 @@ defmodule Huddlz.Communities.GroupLocation do
       allow_nil? false
       public? true
       constraints min: -180, max: 180
+    end
+
+    attribute :time_zone, :string do
+      allow_nil? false
+      public? true
+      constraints min_length: 1, max_length: 100
     end
 
     create_timestamp :inserted_at

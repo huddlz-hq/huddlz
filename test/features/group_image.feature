@@ -25,6 +25,7 @@ Feature: Group Image Management
     When I visit "/groups/new"
     And I fill in "Group name" with "No Image Group"
     And I fill in "Description" with "A group without an image"
+    And I select "Saint Augustine, FL, USA" as the group city in "America/New_York"
     And I check "Public group"
     And I click "Create group"
     Then I should see "Group created successfully"
@@ -35,6 +36,7 @@ Feature: Group Image Management
     When I visit "/groups/new"
     And I fill in "Group name" with "Image Test Group"
     And I fill in "Description" with "A group with an image"
+    And I select "Saint Augustine, FL, USA" as the group city in "America/New_York"
     And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "Image uploaded"
     When I click "Create group"
@@ -46,6 +48,7 @@ Feature: Group Image Management
     Given I am signed in as "owner@example.com"
     When I visit "/groups/new"
     And I fill in "Group name" with "Cancel Image Group"
+    And I select "Saint Augustine, FL, USA" as the group city in "America/New_York"
     And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "Image uploaded"
     When I cancel the pending image

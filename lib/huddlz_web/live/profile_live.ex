@@ -47,7 +47,13 @@ defmodule HuddlzWeb.ProfileLive do
     {:ok, user_with_avatar} =
       Ash.load(
         user,
-        [:current_profile_picture_url, :home_location, :home_latitude, :home_longitude],
+        [
+          :current_profile_picture_url,
+          :home_location,
+          :home_latitude,
+          :home_longitude,
+          :home_time_zone
+        ],
         actor: user
       )
 
@@ -435,7 +441,13 @@ defmodule HuddlzWeb.ProfileLive do
         updated_user =
           Ash.load!(
             updated_user,
-            [:current_profile_picture_url, :home_location, :home_latitude, :home_longitude],
+            [
+              :current_profile_picture_url,
+              :home_location,
+              :home_latitude,
+              :home_longitude,
+              :home_time_zone
+            ],
             actor: updated_user
           )
 
@@ -554,15 +566,19 @@ defmodule HuddlzWeb.ProfileLive do
   @impl true
   def handle_info(
         {:location_selected, "profile-location",
-         %{display_text: text, latitude: lat, longitude: lng}},
+         %{display_text: text, latitude: lat, longitude: lng, time_zone: time_zone}},
         socket
       ) do
     user = socket.assigns.current_user
 
-    case Huddlz.Accounts.update_home_location(user, text, lat, lng, actor: user) do
+    case Huddlz.Accounts.update_home_location(user, text, lat, lng, time_zone, actor: user) do
       {:ok, updated_user} ->
         {:ok, updated_user} =
-          Ash.load(updated_user, [:home_location, :home_latitude, :home_longitude], actor: user)
+          Ash.load(
+            updated_user,
+            [:home_location, :home_latitude, :home_longitude, :home_time_zone],
+            actor: user
+          )
 
         {:noreply,
          socket
@@ -580,7 +596,7 @@ defmodule HuddlzWeb.ProfileLive do
   def handle_info({:location_cleared, "profile-location"}, socket) do
     user = socket.assigns.current_user
 
-    case Huddlz.Accounts.update_home_location(user, nil, nil, nil, actor: user) do
+    case Huddlz.Accounts.update_home_location(user, nil, nil, nil, nil, actor: user) do
       {:ok, updated_user} ->
         {:noreply,
          socket

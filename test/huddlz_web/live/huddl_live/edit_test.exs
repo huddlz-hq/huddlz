@@ -31,8 +31,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
             title: "Test Huddl",
             group_id: group.id,
             creator_id: owner.id,
-            actor: owner,
-            physical_location: "123 Main St, City"
+            actor: owner
           )
         )
 
@@ -106,8 +105,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
             title: "Test Huddl",
             group_id: group.id,
             creator_id: owner.id,
-            actor: owner,
-            physical_location: "123 Main St, City"
+            actor: owner
           )
         )
 
@@ -169,7 +167,6 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
             group_id: group.id,
             creator_id: owner.id,
             actor: owner,
-            physical_location: "456 Oak Ave",
             is_recurring: true,
             frequency: :weekly,
             repeat_until: Date.utc_today() |> Date.add(60)
@@ -261,7 +258,6 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
             group_id: group.id,
             creator_id: owner.id,
             actor: owner,
-            physical_location: "456 Oak Ave",
             is_recurring: true,
             frequency: :weekly,
             repeat_until: Date.utc_today() |> Date.add(60)
@@ -398,7 +394,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
         create_recurring_huddl(owner, group,
           title: "Hybrid Series",
           event_type: :hybrid,
-          physical_location: location.address,
+          group_location_id: location.id,
           virtual_link: "https://meet.example.com/hybrid-series"
         )
 
@@ -441,7 +437,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
         create_recurring_huddl(owner, group,
           title: "In-person Series",
           event_type: :in_person,
-          physical_location: location.address,
+          group_location_id: location.id,
           virtual_link: nil
         )
 
@@ -480,7 +476,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
         create_recurring_huddl(owner, group,
           title: "Changing Format Series",
           event_type: :hybrid,
-          physical_location: location.address,
+          group_location_id: location.id,
           virtual_link: "https://meet.example.com/changed-series"
         )
 
@@ -528,8 +524,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
             description: "Original description",
             group_id: group.id,
             creator_id: owner.id,
-            actor: owner,
-            physical_location: "123 Main St"
+            actor: owner
           )
         )
 
@@ -598,7 +593,6 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
             group_id: group.id,
             creator_id: owner.id,
             actor: owner,
-            physical_location: "123 Main St",
             # Start unlimited; the generator otherwise randomly fills this with
             # a large integer half the time, breaking the post-validation assert.
             max_attendees: nil
@@ -721,8 +715,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
             title: "Test Huddl",
             group_id: group.id,
             creator_id: owner.id,
-            actor: owner,
-            physical_location: "123 Main St"
+            actor: owner
           )
         )
 
@@ -765,10 +758,10 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
       |> choose("In person")
       # Revealing the picker must not immediately flag the missing location
-      |> refute_has("p.form-error", text: "is required for in-person huddlz")
+      |> refute_has("p.form-error", text: "is required for in-person and hybrid huddlz")
       |> click_button("Save changes")
       |> assert_path(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
-      |> assert_has("p.form-error", text: "is required for in-person huddlz")
+      |> assert_has("p.form-error", text: "is required for in-person and hybrid huddlz")
     end
 
     test "selecting a saved location preserves other form fields", %{

@@ -3,7 +3,7 @@ defmodule Huddlz.Test.MoxHelpers do
   Thin helpers for stubbing `Huddlz.MockPlaces` and `Huddlz.MockGeocoding`
   from tests. Each helper takes data (a map) and wires the corresponding
   `Mox.stub/3`; unknown keys fall through to the existing `PlacesStub` /
-  `GeocodingStub` defaults (empty list or `{:error, :not_found}`).
+  `GeocodingStub` / `PlacesStub` defaults.
 
   Canonical Places fixtures (see `known_places/0`) keep the literal place
   shape in one spot so changes to the `Huddlz.Places` contract only need
@@ -28,8 +28,8 @@ defmodule Huddlz.Test.MoxHelpers do
   }
 
   @known_coords %{
-    "p1" => %{latitude: 30.27, longitude: -97.74},
-    "p2" => %{latitude: 29.89, longitude: -81.31}
+    "p1" => %{latitude: 30.27, longitude: -97.74, time_zone: "America/Chicago"},
+    "p2" => %{latitude: 29.89, longitude: -81.31, time_zone: "America/New_York"}
   }
 
   @doc """

@@ -49,7 +49,7 @@ Each trigger has an ID (e.g. C3) used throughout the doc and the GitHub issues.
 | ID | Trigger | Recipient | Category | Notes |
 |---|---|---|---|---|
 | C1 | New huddl created in a group | All group members | Activity | Default ON. Body links to settings page. |
-| C2 | Huddl details meaningfully changed | All current RSVPs | Activity | "Meaningful" = `starts_at`, `ends_at`, `location`, `virtual_link`, `title`, `capacity`, or `privacy`. Skip cosmetic and no-op edits. |
+| C2 | Huddl details meaningfully changed | All current RSVPs | Activity | "Meaningful" = `starts_at`, `ends_at`, `time_zone`, `physical_location`, `virtual_link`, `title`, `capacity`, or `privacy`. Includes an updated `.ics` attachment. Skip cosmetic and no-op edits. |
 | C3 | Huddl cancelled / deleted | All current RSVPs | Transactional | Highest priority. People may have travel plans. |
 | C4 | Recurring series modified | Deduplicated RSVPs across retained upcoming instances | Activity | One summary per person, linked to their next retained RSVP. Subsequent instances are covered by their own reminders (D1/D2). |
 
@@ -107,7 +107,7 @@ Locked for v1, no re-litigation:
 1. C1 audience = every group member. Mitigated by the settings page.
 2. E1/E2 volume = per-RSVP, no cap. Daily digest is a v2 idea.
 3. C4 = one email per affected person about their next retained RSVP. Later instances rely on D1/D2.
-4. `.ics` attachments ship in v1 on E3, D1, D2.
+4. `.ics` attachments ship in v1 on C2, E3, D1, D2.
 5. Defaults: Activity ON, Digest OFF, Transactional always on.
 
 ## Settings page
@@ -134,10 +134,11 @@ Unsubscribe links in email footers deep-link to a confirmation page, then a POST
 
 - **`User.notification_preferences`** — JSONB map keyed by trigger code. Defaults applied at read time, so adding a new key doesn't need a backfill.
 - **Sender modules** — one per email under `lib/huddlz/notifications/senders/` (or colocated under `lib/huddlz/accounts/user/senders/` to match AshAuthentication). Each sender: build email, check preferences, deliver.
+- **Huddl schedule payloads** — payloads that include `starts_at_iso` also include the huddl's canonical `time_zone`, so email and in-app summaries render in the huddl's local time. C2 additionally requires `ends_at_iso` and `changed_fields` to build the updated calendar attachment and change summary.
 - **Ash notifiers** — most action-driven emails (B1, B3, C1, C3, E1, E2, E3) attach as `Ash.Notifier` modules on the resource. Avoids scattering side-effects across LiveViews.
 - **Reminder scheduling (D1, D2)** — when a huddl is created, schedule two Oban jobs (`scheduled_at: starts_at - 24h` and `starts_at - 1h`). On huddl update, cancel + reschedule. On RSVP create/destroy, do *not* touch the huddl-level job — the job resolves recipients at run time.
 - **Unsubscribe** — `Phoenix.Token` signed payload `{user_id, category}`, route at `/unsubscribe/:token`. GET shows confirmation; POST flips the preference and redirects to the settings page.
-- **`.ics` generation** — one shared helper module, used by E3, D1, D2.
+- **`.ics` generation** — one shared helper module, used by C2, E3, D1, D2.
 
 ### Existing infrastructure to build on
 

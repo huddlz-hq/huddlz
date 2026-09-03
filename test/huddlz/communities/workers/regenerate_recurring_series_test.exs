@@ -26,7 +26,6 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
               group_id: group.id,
               creator_id: owner.id,
               actor: owner,
-              physical_location: "123 Main St",
               date: Date.add(Date.utc_today(), 1),
               is_recurring: true,
               frequency: "weekly",
@@ -198,7 +197,6 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
     %{huddl: huddl} =
       create_recurring(
         event_type: :hybrid,
-        physical_location: "456 Congress Ave",
         virtual_link: "https://meet.example.com/hybrid"
       )
 
@@ -208,7 +206,7 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
 
     for occurrence <- [first, second] do
       assert occurrence.event_type == :hybrid
-      assert occurrence.physical_location == "456 Congress Ave"
+      assert occurrence.physical_location == "123 Main St, Anytown, USA"
       assert occurrence.virtual_link == "https://meet.example.com/hybrid"
     end
   end
@@ -264,8 +262,6 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
     parent =
       Huddl
       |> Ash.Changeset.new()
-      |> Ash.Changeset.set_argument(:provided_latitude, 30.27)
-      |> Ash.Changeset.set_argument(:provided_longitude, -97.74)
       |> Ash.Changeset.for_create(
         :create,
         %{
@@ -275,7 +271,7 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
           start_time: ~T[14:00:00],
           duration_minutes: 60,
           event_type: :in_person,
-          physical_location: "123 Main St",
+          group_location_id: address_book_location_id(group.id),
           group_id: group.id,
           is_recurring: true,
           frequency: "weekly",
@@ -285,12 +281,12 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
       )
       |> Ash.create!()
 
-    assert parent.latitude == 30.27
+    assert parent.latitude == 29.9012
     assert %{success: 1} = Oban.drain_queue(queue: :default)
 
     instances = future_instances(parent)
     assert length(instances) == 2
-    assert Enum.all?(instances, &(&1.latitude == 30.27 and &1.longitude == -97.74))
+    assert Enum.all?(instances, &(&1.latitude == 29.9012 and &1.longitude == -81.3124))
   end
 
   test "no-ops when the huddl was deleted before the job runs" do

@@ -22,6 +22,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
                  address: "100 Main St, Austin, TX",
                  latitude: 30.27,
                  longitude: -97.74,
+                 time_zone: "America/Chicago",
                  group_id: group.id
                })
                |> Ash.create(actor: owner)
@@ -48,6 +49,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
                  address: "200 Park Ave, Austin, TX",
                  latitude: 30.28,
                  longitude: -97.75,
+                 time_zone: "America/Chicago",
                  group_id: group.id
                })
                |> Ash.create(actor: organizer)
@@ -66,6 +68,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
                  address: "999 No Way, Austin, TX",
                  latitude: 30.27,
                  longitude: -97.74,
+                 time_zone: "America/Chicago",
                  group_id: group.id
                })
                |> Ash.create(actor: member)
@@ -81,6 +84,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
                  name: "No Address",
                  latitude: 30.27,
                  longitude: -97.74,
+                 time_zone: "America/Chicago",
                  group_id: group.id
                })
                |> Ash.create(actor: owner)
@@ -95,6 +99,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
                |> Ash.Changeset.for_create(:create, %{
                  name: "No Coords",
                  address: "100 Main St, Austin, TX",
+                 time_zone: "America/Chicago",
                  group_id: group.id
                })
                |> Ash.create(actor: owner)
@@ -110,6 +115,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
                  address: "100 Main St, Austin, TX",
                  latitude: 30.27,
                  longitude: -97.74,
+                 time_zone: "America/Chicago",
                  group_id: group.id
                })
                |> Ash.create(actor: owner)
@@ -128,6 +134,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
           address: "100 Main St, Austin, TX",
           latitude: 30.27,
           longitude: -97.74,
+          time_zone: "America/Chicago",
           group_id: group.id
         })
         |> Ash.create(actor: owner)
@@ -139,6 +146,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
                  address: "200 Other St, Austin, TX",
                  latitude: 30.28,
                  longitude: -97.75,
+                 time_zone: "America/Chicago",
                  group_id: group.id
                })
                |> Ash.create(actor: owner)
@@ -156,6 +164,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
           address: "100 Main St, Austin, TX",
           latitude: 30.27,
           longitude: -97.74,
+          time_zone: "America/Chicago",
           group_id: group1.id
         })
         |> Ash.create(actor: owner)
@@ -167,6 +176,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
                  address: "200 Other St, Austin, TX",
                  latitude: 30.28,
                  longitude: -97.75,
+                 time_zone: "America/Chicago",
                  group_id: group2.id
                })
                |> Ash.create(actor: owner)
@@ -513,16 +523,19 @@ defmodule Huddlz.Communities.GroupLocationTest do
           )
         )
 
+      starts_at = DateTime.add(DateTime.utc_now(), 1, :day)
+
       template =
         HuddlTemplate
         |> Ash.Changeset.for_create(:create, %{
           interval: 1,
           unit: :week,
-          repeat_until: DateTime.add(DateTime.utc_now(), 10, :day)
+          repeat_until: DateTime.add(DateTime.utc_now(), 10, :day),
+          starts_at_local: DateTime.to_naive(starts_at),
+          ends_at_local: starts_at |> DateTime.add(1, :hour) |> DateTime.to_naive(),
+          time_zone: "America/New_York"
         })
         |> Ash.create!(authorize?: false)
-
-      starts_at = DateTime.add(DateTime.utc_now(), 1, :day)
 
       source =
         generate(
@@ -627,6 +640,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
                  address: "100 Main St, Austin, TX",
                  latitude: 30.27,
                  longitude: -97.74,
+                 time_zone: "America/Chicago",
                  group_id: group.id
                })
                |> Ash.create(actor: owner)
@@ -644,6 +658,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
                  address: long_address,
                  latitude: 30.27,
                  longitude: -97.74,
+                 time_zone: "America/Chicago",
                  group_id: group.id
                })
                |> Ash.create(actor: owner)
@@ -659,6 +674,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
                  address: "100 Main St, Austin, TX",
                  latitude: 91.0,
                  longitude: -97.74,
+                 time_zone: "America/Chicago",
                  group_id: group.id
                })
                |> Ash.create(actor: owner)
@@ -674,6 +690,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
                  address: "100 Main St, Austin, TX",
                  latitude: 30.27,
                  longitude: -181.0,
+                 time_zone: "America/Chicago",
                  group_id: group.id
                })
                |> Ash.create(actor: owner)

@@ -38,6 +38,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyCancelled do
       "huddl_id" => huddl.id,
       "huddl_title" => to_string(huddl.title),
       "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at),
+      "time_zone" => huddl.time_zone,
       "group_name" => to_string(huddl.group.name),
       "group_slug" => to_string(huddl.group.slug),
       "cancellation_reason" =>

@@ -412,7 +412,7 @@ defmodule HuddlzWeb.OrganizeLive do
                   {huddl.title}
                 </.link>
               </div>
-              <div class="meta">{format_starts_at(huddl.starts_at)}</div>
+              <div class="meta">{format_starts_at(huddl)}</div>
             </div>
             <span class="pill">{rsvp_label(huddl.rsvp_count)}</span>
           </div>
@@ -498,7 +498,7 @@ defmodule HuddlzWeb.OrganizeLive do
                   {huddl.title}
                 </.link>
               </div>
-              <div class="meta">{format_starts_at(huddl.starts_at)}</div>
+              <div class="meta">{format_starts_at(huddl)}</div>
             </div>
             <span class="pill">{rsvp_label(huddl.rsvp_count)}</span>
             <span class={["pill", HuddlStatus.pill_class(huddl.status)]}>
@@ -1201,7 +1201,12 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp format_date_short(%DateTime{} = at), do: Calendar.strftime(at, "%b %d, %Y")
 
-  defp format_starts_at(%DateTime{} = dt), do: Calendar.strftime(dt, "%b %d, %Y · %I:%M %p")
+  defp format_starts_at(%{starts_at: %DateTime{} = starts_at, time_zone: time_zone}) do
+    starts_at
+    |> DateTime.shift_zone!(time_zone)
+    |> Calendar.strftime("%b %d, %Y · %I:%M %p %Z")
+  end
+
   defp format_starts_at(_), do: ""
 
   defp visibility_label(true), do: "Public"

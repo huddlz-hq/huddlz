@@ -9,6 +9,8 @@ defmodule HuddlzWeb.HuddlSearchTest do
   setup do
     user = generate(user(role: :user))
     group = generate(group(owner_id: user.id, is_public: true, actor: user))
+    today = Date.utc_today()
+    saturday = Date.add(today, 6 - rem(Date.day_of_week(today), 7))
 
     huddl1 =
       generate(
@@ -35,8 +37,8 @@ defmodule HuddlzWeb.HuddlSearchTest do
           description: "Discuss latest tech books",
           event_type: :virtual,
           virtual_link: "https://zoom.us/meeting/123",
-          date: Date.add(Date.utc_today(), 5),
-          start_time: ~T[19:00:00],
+          date: saturday,
+          start_time: ~T[23:59:00],
           duration_minutes: 60,
           is_private: false,
           actor: user
@@ -51,7 +53,6 @@ defmodule HuddlzWeb.HuddlSearchTest do
           title: "Hybrid Workshop",
           description: "Learn programming basics",
           event_type: :hybrid,
-          physical_location: "123 Tech St",
           virtual_link: "https://zoom.us/meeting/456",
           date: Date.add(Date.utc_today(), 10),
           start_time: ~T[14:00:00],
@@ -177,7 +178,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       conn
       |> visit("/discover")
       |> click_link(".chip-group a.chip", "This week")
-      # Only events within 7 days should show
+      # Only huddlz in the current calendar week should show
       |> assert_has("h3", text: "Morning Yoga Session")
       |> assert_has("h3", text: "Virtual Book Club")
       |> refute_has("h3", text: "Hybrid Workshop")
@@ -188,7 +189,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
       conn
       |> visit("/discover")
       |> click_link(".chip-group a.chip", "This month")
-      # All future events within 30 days should show
+      # All future huddlz in the current calendar month should show
       |> assert_has("h3", text: "Morning Yoga Session")
       |> assert_has("h3", text: "Virtual Book Club")
       |> assert_has("h3", text: "Hybrid Workshop")
@@ -291,7 +292,10 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
     test "distance slider patches URL with new distance", %{conn: conn} do
       {:ok, view, _html} =
-        live(conn, "/discover?location=Austin%2C+TX&lat=30.2672&lng=-97.7431&distance=25")
+        live(
+          conn,
+          "/discover?location=Austin%2C+TX&lat=30.2672&lng=-97.7431&time_zone=America%2FChicago&distance=25"
+        )
 
       view
       |> form("form[phx-change='distance_change']", %{"distance_miles" => "50"})
@@ -299,7 +303,7 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
       assert_patched(
         view,
-        "/discover?location=Austin%2C+TX&lat=30.2672&lng=-97.7431&distance=50"
+        "/discover?location=Austin%2C+TX&lat=30.2672&lng=-97.7431&time_zone=America%2FChicago&distance=50"
       )
     end
   end

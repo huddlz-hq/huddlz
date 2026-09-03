@@ -10,6 +10,8 @@ defmodule HuddlzWeb.CalendarLive do
   alias Huddlz.Communities
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
+  alias HuddlzWeb.Live.Helpers.BrowserTimeZone
+  alias HuddlzWeb.Live.Helpers.HuddlCardHelpers
   require Logger
 
   defmodule EntryStatus do
@@ -26,10 +28,14 @@ defmodule HuddlzWeb.CalendarLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    time_zone = BrowserTimeZone.for_socket(socket)
+    today = DateTime.now!(time_zone) |> DateTime.to_date()
+
     {:ok,
      socket
      |> assign(:page_title, "My calendar")
-     |> assign(:today, Date.utc_today())
+     |> assign(:time_zone, time_zone)
+     |> assign(:today, today)
      |> stream_configure(:legend_items, dom_id: &"calendar-legend-item-#{&1.key}")}
   end
 
@@ -40,9 +46,13 @@ defmodule HuddlzWeb.CalendarLive do
     {grid_start, grid_end} = month_grid_window(focus_month)
     user = socket.assigns.current_user
 
-    entries = load_entries(user, grid_start, grid_end)
+    entries =
+      user
+      |> load_entries(grid_start, grid_end, socket.assigns.time_zone)
+      |> Enum.map(&put_calendar_time(&1, socket.assigns.time_zone))
+
     entries_by_day = group_by_day(entries)
-    in_month_count = Enum.count(entries, &in_focus_month?(&1.huddl, focus_month))
+    in_month_count = Enum.count(entries, &in_focus_month?(&1, focus_month))
     legend_items = legend_items(entries, focus_month, view_mode, socket.assigns.today)
 
     {:noreply,
@@ -92,9 +102,9 @@ defmodule HuddlzWeb.CalendarLive do
     {grid_start, grid_end}
   end
 
-  defp load_entries(user, grid_start, grid_end) do
-    grid_start_dt = DateTime.new!(grid_start, ~T[00:00:00], "Etc/UTC")
-    grid_end_dt = DateTime.new!(grid_end, ~T[23:59:59], "Etc/UTC")
+  defp load_entries(user, grid_start, grid_end, time_zone) do
+    grid_start_dt = utc_boundary(grid_start, ~T[00:00:00], time_zone)
+    grid_end_dt = utc_boundary(grid_end, ~T[23:59:59], time_zone)
 
     [:hosting, :attending, :waitlisted]
     |> Enum.flat_map(fn role -> fetch(user, role) end)
@@ -138,24 +148,34 @@ defmodule HuddlzWeb.CalendarLive do
     end)
   end
 
-  defp group_by_day(entries) do
-    Enum.group_by(entries, fn %{huddl: %{starts_at: dt}} -> DateTime.to_date(dt) end)
+  defp put_calendar_time(entry, time_zone) do
+    datetime = DateTime.shift_zone!(entry.huddl.starts_at, time_zone)
+    Map.merge(entry, %{calendar_starts_at: datetime, calendar_date: DateTime.to_date(datetime)})
   end
 
-  defp in_focus_month?(%{starts_at: %DateTime{} = dt}, %Date{year: y, month: m}) do
-    date = DateTime.to_date(dt)
+  defp group_by_day(entries) do
+    Enum.group_by(entries, & &1.calendar_date)
+  end
+
+  defp in_focus_month?(%{calendar_date: date}, %Date{year: y, month: m}) do
     date.year == y && date.month == m
   end
 
   defp in_focus_month?(_, _), do: false
+
+  defp utc_boundary(date, time, time_zone) do
+    date
+    |> DateTime.new!(time, time_zone)
+    |> DateTime.shift_zone!("Etc/UTC")
+  end
 
   defp shift_month(date, delta) do
     total = date.year * 12 + (date.month - 1) + delta
     Date.new!(Integer.floor_div(total, 12), Integer.mod(total, 12) + 1, 1)
   end
 
-  defp month_path(month, view) do
-    base = month_param(month)
+  defp month_path(month, view, today) do
+    base = month_param(month, today)
     view_str = if view == :agenda, do: "agenda"
 
     cond do
@@ -166,8 +186,8 @@ defmodule HuddlzWeb.CalendarLive do
     end
   end
 
-  defp month_param(month) do
-    today_first = first_of_month(Date.utc_today())
+  defp month_param(month, today) do
+    today_first = first_of_month(today)
     if Date.compare(month, today_first) == :eq, do: nil, else: format_month_param(month)
   end
 
@@ -223,25 +243,28 @@ defmodule HuddlzWeb.CalendarLive do
     end
   end
 
-  defp format_pill_time(%{huddl: %{starts_at: starts_at}}),
-    do: Calendar.strftime(starts_at, "%-I:%M %p")
+  defp format_pill_time(%{huddl: huddl}) do
+    local = HuddlCardHelpers.local_starts_at(huddl)
+    Calendar.strftime(local, "%-I:%M %p") <> " " <> local.zone_abbr
+  end
 
   defp format_pill_tooltip(%{huddl: %{title: title}} = entry, today) do
     "#{format_pill_time(entry)} · #{title} · #{entry_status(entry, today).label}"
   end
 
   defp format_calendar_link_label(entry, today) do
-    date_and_time = Calendar.strftime(entry.huddl.starts_at, "%A, %B %-d, %Y at %-I:%M %p")
+    local = HuddlCardHelpers.local_starts_at(entry.huddl)
+    date_and_time = Calendar.strftime(local, "%A, %B %-d, %Y at %-I:%M %p %Z")
     "#{entry.huddl.title}, #{calendar_status_label(entry, today)}, #{date_and_time}"
   end
 
-  defp calendar_status_label(%{huddl: %{starts_at: starts_at, status: status}} = entry, today) do
+  defp calendar_status_label(%{huddl: %{status: status}} = entry, today) do
     case HuddlStatus.contextual_override(status) do
       %{label: label} ->
         label
 
       nil ->
-        case Date.compare(DateTime.to_date(starts_at), today) do
+        case Date.compare(entry.calendar_date, today) do
           :lt -> past_relationship_label(entry)
           _ -> relationship_status(entry).label
         end
@@ -253,7 +276,7 @@ defmodule HuddlzWeb.CalendarLive do
 
   defp agenda_entries(entries, focus_month) do
     entries
-    |> Enum.filter(fn %{huddl: h} -> in_focus_month?(h, focus_month) end)
+    |> Enum.filter(&in_focus_month?(&1, focus_month))
     |> Enum.sort_by(fn %{huddl: %{starts_at: dt}} -> dt end, DateTime)
   end
 
@@ -264,8 +287,8 @@ defmodule HuddlzWeb.CalendarLive do
     end
   end
 
-  defp timed_entry_status(%{huddl: %{starts_at: starts_at}} = entry, today) do
-    case Date.compare(DateTime.to_date(starts_at), today) do
+  defp timed_entry_status(entry, today) do
+    case Date.compare(entry.calendar_date, today) do
       :lt -> past_status(entry)
       _ -> relationship_status(entry)
     end
@@ -363,8 +386,9 @@ defmodule HuddlzWeb.CalendarLive do
 
   defp legend_swatch_class(%{variant: variant}), do: ["cal-legend-swatch", variant]
 
-  defp format_agenda_when(%DateTime{} = dt) do
-    Calendar.strftime(dt, "%a %b %-d · %-I:%M %p")
+  defp format_agenda_when(%{starts_at: %DateTime{}} = huddl) do
+    local = HuddlCardHelpers.local_starts_at(huddl)
+    Calendar.strftime(local, "%a %b %-d · %-I:%M %p %Z")
   end
 
   @impl true
@@ -381,7 +405,7 @@ defmodule HuddlzWeb.CalendarLive do
         <div>
           <h1>My calendar</h1>
           <p>
-            Huddlz you're hosting, attending, or watching from the waitlist — laid out across the month.
+            huddlz you're hosting, attending, or watching from the waitlist. Calendar dates use <strong id="calendar-time-zone">{@time_zone}</strong>.
           </p>
         </div>
       </div>
@@ -389,7 +413,7 @@ defmodule HuddlzWeb.CalendarLive do
       <div class="cal-toolbar">
         <div class="cal-nav">
           <.link
-            patch={month_path(shift_month(@focus_month, -1), @view_mode)}
+            patch={month_path(shift_month(@focus_month, -1), @view_mode, @today)}
             class="cal-nav-btn"
             aria-label="Previous month"
           >
@@ -406,11 +430,14 @@ defmodule HuddlzWeb.CalendarLive do
               <path d="m15 18-6-6 6-6" />
             </svg>
           </.link>
-          <.link patch={month_path(first_of_month(@today), @view_mode)} class="cal-nav-today">
+          <.link
+            patch={month_path(first_of_month(@today), @view_mode, @today)}
+            class="cal-nav-today"
+          >
             Today
           </.link>
           <.link
-            patch={month_path(shift_month(@focus_month, 1), @view_mode)}
+            patch={month_path(shift_month(@focus_month, 1), @view_mode, @today)}
             class="cal-nav-btn"
             aria-label="Next month"
           >
@@ -436,14 +463,16 @@ defmodule HuddlzWeb.CalendarLive do
 
         <div class="cal-view-tabs">
           <.link
-            patch={month_path(@focus_month, :month)}
+            id="calendar-view-month"
+            patch={month_path(@focus_month, :month, @today)}
             class={["scope-tab", @view_mode == :month && "is-active"]}
             aria-current={if @view_mode == :month, do: "page"}
           >
             Month
           </.link>
           <.link
-            patch={month_path(@focus_month, :agenda)}
+            id="calendar-view-agenda"
+            patch={month_path(@focus_month, :agenda, @today)}
             class={["scope-tab", @view_mode == :agenda && "is-active"]}
             aria-current={if @view_mode == :agenda, do: "page"}
           >
@@ -582,7 +611,7 @@ defmodule HuddlzWeb.CalendarLive do
             data-status={entry_status(entry, @today).key}
           >
             <time datetime={DateTime.to_iso8601(entry.huddl.starts_at)}>
-              {format_agenda_when(entry.huddl.starts_at)}
+              {format_agenda_when(entry.huddl)}
             </time>
             <span class="cal-touch-entry-title">{entry.huddl.title}</span>
             <span class="cal-touch-entry-status">{entry_status(entry, @today).label}</span>
@@ -634,7 +663,7 @@ defmodule HuddlzWeb.CalendarLive do
             class="row"
             style="grid-template-columns: 200px 1fr auto; text-decoration: none"
           >
-            <span class="meta">{format_agenda_when(entry.huddl.starts_at)}</span>
+            <span class="meta">{format_agenda_when(entry.huddl)}</span>
             <span class="row-title">{entry.huddl.title}</span>
             <.pill
               variant={entry_status(entry, @today).variant}
