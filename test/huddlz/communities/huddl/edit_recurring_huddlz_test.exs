@@ -41,7 +41,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
       )
       |> Ash.update!()
 
-    repeat_until = opts[:repeat_until] || Date.add(Date.utc_today(), 22)
+    repeat_until = opts[:repeat_until] || Date.add(Huddlz.Generator.eastern_today(), 22)
 
     template =
       HuddlTemplate
@@ -129,7 +129,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
   end
 
   test "reconciliation fills a beginning gap without moving a later RSVP" do
-    repeat_until = Date.add(Date.utc_today(), 36)
+    repeat_until = Date.add(Huddlz.Generator.eastern_today(), 36)
 
     %{owner: owner, source: source, template: template} =
       build_series(true, repeat_until: repeat_until)
@@ -160,7 +160,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
   end
 
   test "reconciliation fills a middle gap without moving RSVPs or waitlist entries" do
-    repeat_until = Date.add(Date.utc_today(), 36)
+    repeat_until = Date.add(Huddlz.Generator.eastern_today(), 36)
 
     %{owner: owner, source: source, template: template} =
       build_series(true, repeat_until: repeat_until, max_attendees: 2)
@@ -206,7 +206,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
   end
 
   test "extending a shortened series creates a new active occurrence for a cancelled date" do
-    original_repeat_until = Date.add(Date.utc_today(), 36)
+    original_repeat_until = Date.add(Huddlz.Generator.eastern_today(), 36)
 
     %{owner: owner, source: source, template: template} =
       build_series(true, repeat_until: original_repeat_until)
@@ -216,7 +216,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
       |> future_instances(source.starts_at)
       |> Enum.max_by(& &1.starts_at, DateTime)
 
-    shortened_source = edit_all(source, owner, Date.add(Date.utc_today(), 16))
+    shortened_source = edit_all(source, owner, Date.add(Huddlz.Generator.eastern_today(), 16))
 
     assert %{lifecycle_state: :cancelled} =
              Communities.get_huddl!(dropped.id, actor: owner)

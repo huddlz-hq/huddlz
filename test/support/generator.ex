@@ -329,6 +329,13 @@ defmodule Huddlz.Generator do
   end
 
   @doc """
+  Today's date in Eastern time, the zone every generated group and huddl uses.
+  Tests that build schedules relative to today must use this rather than
+  `Date.utc_today/0`, which is a day ahead for four hours each evening.
+  """
+  def eastern_today, do: DateTime.now!("America/New_York") |> DateTime.to_date()
+
+  @doc """
   Returns the id of a seeded "123 Main St" address book location for the
   group, creating it on first use. Seeded, so no organizer actor is needed.
   """

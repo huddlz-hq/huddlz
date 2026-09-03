@@ -53,7 +53,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
     end
 
     test "generates weekly recurring huddlz up to repeat_until", ctx do
-      repeat_until = Date.add(Date.utc_today(), 22)
+      repeat_until = Date.add(Huddlz.Generator.eastern_today(), 22)
 
       template =
         HuddlTemplate
@@ -83,7 +83,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
     end
 
     test "generates no huddlz when repeat_until is before next occurrence", ctx do
-      repeat_until = Date.add(Date.utc_today(), 1)
+      repeat_until = Date.add(Huddlz.Generator.eastern_today(), 1)
 
       template =
         HuddlTemplate
@@ -143,7 +143,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
 
   describe "generate_huddlz_from_template/2 monthly" do
     test "generates monthly recurring huddlz up to repeat_until", ctx do
-      repeat_until = Date.add(Date.utc_today(), 65)
+      repeat_until = Date.add(Huddlz.Generator.eastern_today(), 65)
 
       template =
         HuddlTemplate
@@ -168,7 +168,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
   describe "generate_huddlz_from_template/3 max instances" do
     test "caps generation at max_instances even when repeat_until is far in the future", ctx do
       # 5 years of weekly = ~260 instances, but should cap at 104
-      repeat_until = Date.add(Date.utc_today(), 365 * 5)
+      repeat_until = Date.add(Huddlz.Generator.eastern_today(), 365 * 5)
 
       template =
         HuddlTemplate
@@ -191,7 +191,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
 
   describe "generate_huddlz_from_template/2 copies huddl properties" do
     test "new huddlz inherit title, description, and other fields from source", ctx do
-      repeat_until = Date.add(Date.utc_today(), 10)
+      repeat_until = Date.add(Huddlz.Generator.eastern_today(), 10)
 
       template =
         HuddlTemplate
