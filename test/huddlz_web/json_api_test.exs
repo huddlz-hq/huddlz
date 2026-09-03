@@ -103,6 +103,45 @@ defmodule HuddlzWeb.JsonApiTest do
                "America/Denver"
     end
 
+    test "physical huddl without an address book location is rejected", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      {:ok, token, _claims} = AshAuthentication.Jwt.token_for_user(owner)
+      starts_at = DateTime.utc_now() |> DateTime.add(7, :day) |> DateTime.to_iso8601()
+
+      ends_at =
+        DateTime.utc_now()
+        |> DateTime.add(7, :day)
+        |> DateTime.add(1, :hour)
+        |> DateTime.to_iso8601()
+
+      payload = %{
+        data: %{
+          type: "huddl",
+          attributes: %{
+            title: "Nowhere Huddl",
+            event_type: "in_person",
+            starts_at: starts_at,
+            ends_at: ends_at,
+            group_id: group.id
+          }
+        }
+      }
+
+      conn =
+        conn
+        |> put_req_header("content-type", "application/vnd.api+json")
+        |> put_req_header("authorization", "Bearer #{token}")
+        |> post("/api/json/huddlz", Jason.encode!(payload))
+
+      assert conn.status == 400
+
+      assert %{"errors" => errors} = Jason.decode!(conn.resp_body)
+      assert Enum.any?(errors, &(&1["source"]["pointer"] == "/data/attributes/group_location_id"))
+    end
+
     test "unauthenticated GET succeeds", %{conn: conn} do
       conn =
         conn

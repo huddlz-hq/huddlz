@@ -17,7 +17,7 @@ defmodule Huddlz.Geocoding.Change do
       true ->
         changeset
         |> Ash.Changeset.get_attribute(location_attribute)
-        |> geocode_and_apply(changeset)
+        |> geocode_and_apply(changeset, location_attribute)
     end
   end
 
@@ -39,16 +39,22 @@ defmodule Huddlz.Geocoding.Change do
     end
   end
 
-  defp geocode_and_apply(nil, changeset), do: set_coordinates(changeset, nil, nil)
+  defp geocode_and_apply(nil, changeset, _attribute), do: set_coordinates(changeset, nil, nil)
 
-  defp geocode_and_apply(location, changeset) do
+  # A failed lookup is reported on the location field the person can see,
+  # rather than on the coordinate attributes the form never renders.
+  defp geocode_and_apply(location, changeset, location_attribute) do
     case Huddlz.Geocoding.geocode(location) do
       {:ok, %{latitude: lat, longitude: lng}} ->
         set_coordinates(changeset, lat, lng)
 
       {:error, reason} ->
         log_geocoding_failure(location, reason)
-        set_coordinates(changeset, nil, nil)
+
+        Ash.Changeset.add_error(changeset,
+          field: location_attribute,
+          message: "could not be resolved to a place"
+        )
     end
   end
 

@@ -81,8 +81,12 @@ defmodule LocationBasedTimeZonesSteps do
 
   step "I should be told that the group location must be resolved", context do
     assert {:error, error} = context.unresolved_group_result
-    assert Exception.message(error) =~ "attribute latitude is required"
-    assert Exception.message(error) =~ "attribute longitude is required"
+
+    assert Enum.any?(
+             error.errors,
+             &(&1.field == :location and &1.message =~ "could not be resolved")
+           )
+
     context
   end
 
