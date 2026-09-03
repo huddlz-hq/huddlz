@@ -40,10 +40,9 @@ defmodule HuddlzWeb.DevDesignHTML do
             type="button"
             class="nav-scrim"
             data-mobile-nav-scrim
-            aria-label="Close navigation"
+            aria-hidden="true"
             tabindex="-1"
-          >
-          </button>
+          ></button>
           <aside
             id="mobile-navigation-drawer"
             class="sidebar"

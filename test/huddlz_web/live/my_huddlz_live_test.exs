@@ -70,6 +70,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
         "aside#mobile-navigation-drawer[aria-label='Primary navigation'][data-mobile-nav-state='closed']"
       )
       |> assert_has("button#mobile-nav-close[aria-label='Close navigation']")
+      |> assert_has("button.nav-scrim[aria-hidden='true'][tabindex='-1']")
       |> assert_has(".sb-item.active[aria-current='page']", text: "My huddlz")
       |> refute_has("input.nav-toggle")
     end
