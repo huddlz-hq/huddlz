@@ -302,7 +302,9 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
         repeat_until: ~D[2028-06-01],
         starts_at: ~U[2028-04-12 06:30:00Z],
         ends_at: ~U[2028-04-12 07:30:00Z]
-      }, actor: owner)
+      },
+      actor: owner
+    )
 
     [may] = future_instances(template.id, april.starts_at)
     assert may.starts_at == ~U[2028-05-12 06:30:00Z]
