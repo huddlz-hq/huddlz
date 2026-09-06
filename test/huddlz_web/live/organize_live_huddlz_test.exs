@@ -10,6 +10,22 @@ defmodule HuddlzWeb.OrganizeLiveHuddlzTest do
     %{group: group, owner: owner}
   end
 
+  test "current filter follows organizer view changes", %{conn: conn, group: group, owner: owner} do
+    session =
+      conn
+      |> login(owner)
+      |> visit(~p"/organize/#{group.slug}/huddlz")
+      |> assert_has("#organize-huddlz-filters .is-active[aria-current='page']", text: "Published")
+      |> refute_has("#organize-huddlz-filters .chip:not(.is-active)[aria-current]")
+
+    Enum.reduce(["Draft", "Cancelled", "Past", "Published"], session, fn label, session ->
+      session
+      |> click_link("#organize-huddlz-filters a", label)
+      |> assert_has("#organize-huddlz-filters .is-active[aria-current='page']", text: label)
+      |> refute_has("#organize-huddlz-filters .chip:not(.is-active)[aria-current]")
+    end)
+  end
+
   test "cancelled huddlz link directly to their detail page", %{
     conn: conn,
     group: group,

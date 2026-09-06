@@ -52,11 +52,19 @@ defmodule HuddlzWeb.ComponentsTest do
       active = rendered_to_string(~H|<.chip href="/discover" active>Discover</.chip>|)
       inactive = rendered_to_string(~H|<.chip href="/discover">Discover</.chip>|)
 
-      assert active =~ "<a"
-      assert active =~ ~s(href="/discover")
-      assert active =~ "chip"
-      assert active =~ ~s(aria-current="page")
-      refute inactive =~ "aria-current"
+      active_document = LazyHTML.from_fragment(active)
+      inactive_document = LazyHTML.from_fragment(inactive)
+
+      assert [_] =
+               Enum.to_list(
+                 LazyHTML.query(
+                   active_document,
+                   "a.chip.is-active[href='/discover'][aria-current='page']"
+                 )
+               )
+
+      assert [_] = Enum.to_list(LazyHTML.query(inactive_document, "a.chip[href='/discover']"))
+      assert Enum.empty?(LazyHTML.query(inactive_document, "a[aria-current]"))
     end
   end
 
