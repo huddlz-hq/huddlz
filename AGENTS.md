@@ -1,5 +1,13 @@
 This is a web application written using the Phoenix web framework.
 
+### Agent workflow
+
+- Before working with GitHub issues or fetching a review spec, read
+  `docs/agents/issue-tracker.md` for the `gh` workflow.
+- Before triaging issues, read `docs/agents/triage-labels.md` for label meanings.
+- Before exploring the codebase or proposing domain changes, read
+  `docs/agents/domain.md` for glossary and ADR guidance.
+
 ### Commit Messages
 
 - Use Conventional Commits
