@@ -22,7 +22,7 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
       |> refute_has("#group-detail-cover-#{group.id} img")
     end
 
-    test "makes cover images decorative and restores the fallback on load errors", %{
+    test "renders a decorative cover with a fallback", %{
       conn: conn,
       owner: owner,
       group: group
@@ -42,7 +42,7 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
 
       conn
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("#group-detail-cover-#{group.id}-image[phx-hook='ImageFallback'][alt='']")
+      |> assert_has("#group-detail-cover-#{group.id}-image[data-image-fallback][alt='']")
       |> assert_has("#group-detail-cover-#{group.id} .group-cover-fallback")
     end
   end

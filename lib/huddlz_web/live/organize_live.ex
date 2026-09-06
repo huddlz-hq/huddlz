@@ -66,10 +66,12 @@ defmodule HuddlzWeb.OrganizeLive do
     {:noreply, socket}
   end
 
-  defp load_action(socket, :index, _params, _user) do
+  defp load_action(socket, :index, _params, user) do
+    groups = Ash.load!(socket.assigns.sidebar_owned_groups, :current_image_url, actor: user)
+
     socket
     |> assign(:group, nil)
-    |> assign(:owned_groups, socket.assigns.sidebar_owned_groups)
+    |> assign(:owned_groups, groups)
   end
 
   defp load_action(socket, action, %{"group_slug" => slug}, user) do

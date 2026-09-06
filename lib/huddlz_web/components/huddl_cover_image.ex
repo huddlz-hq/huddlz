@@ -2,7 +2,7 @@ defmodule HuddlzWeb.Components.HuddlCoverImage do
   @moduledoc """
   Renders decorative huddl cover media with the shared browser fallback contract.
 
-  Failed images are hidden by the delegated handlers in `assets/js/app.js`, which
+  Failed images are hidden by the delegated handlers in `assets/js/image_fallback.mjs`, which
   reveals the gradient supplied by the surrounding hero or card.
   """
   use Phoenix.Component

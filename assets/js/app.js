@@ -24,52 +24,11 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 import {mountMobileNavigation} from "./mobile_navigation.mjs"
+import {mountImageFallbacks, preserveImageFallback} from "./image_fallback.mjs"
 
 const Hooks = {}
 
-Hooks.ImageFallback = {
-  mounted() {
-    this.handleError = () => this.el.classList.add("is-unavailable")
-    this.el.addEventListener("error", this.handleError)
-
-    if (this.el.complete && this.el.naturalWidth === 0) {
-      this.handleError()
-    }
-  },
-
-  updated() {
-    if (this.el.complete && this.el.naturalWidth === 0) {
-      this.handleError()
-    } else {
-      this.el.classList.remove("is-unavailable")
-    }
-  },
-
-  destroyed() {
-    this.el.removeEventListener("error", this.handleError)
-  }
-}
-
-const imageFallbackSelector = "img[data-image-fallback]"
-
-const imageFallbackTarget = (event) => {
-  const image = event.target
-  return image.matches && image.matches(imageFallbackSelector) ? image : null
-}
-
-window.addEventListener("error", (event) => {
-  const image = imageFallbackTarget(event)
-  if (image) image.hidden = true
-}, true)
-
-window.addEventListener("load", (event) => {
-  const image = imageFallbackTarget(event)
-  if (image) image.hidden = false
-}, true)
-
-document.querySelectorAll(imageFallbackSelector).forEach((image) => {
-  image.hidden = image.complete && image.naturalWidth === 0
-})
+mountImageFallbacks()
 
 Hooks.LocationAutocomplete = {
   mounted() {
@@ -175,11 +134,7 @@ const liveSocket = new LiveSocket("/live", Socket, {
   }),
   hooks: Hooks,
   dom: {
-    onBeforeElUpdated(fromEl, toEl) {
-      if (fromEl.matches(imageFallbackSelector) && fromEl.hidden) {
-        toEl.hidden = true
-      }
-    }
+    onBeforeElUpdated: preserveImageFallback
   }
 })
 

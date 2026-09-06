@@ -80,7 +80,7 @@ defmodule HuddlzWeb.Components.Card do
         class="group-cover-image"
         src={GroupImages.url(@group.current_image_url)}
         alt=""
-        phx-hook="ImageFallback"
+        data-image-fallback
       />
     </div>
     """
