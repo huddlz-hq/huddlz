@@ -5,6 +5,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
   import Huddlz.Generator
 
   alias Huddlz.Accounts.User
+  alias Huddlz.Communities
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Communities.Huddl
@@ -25,6 +26,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
           %{
             name: "Test Group",
             description: "A test group for huddl show",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
             is_public: true
           },
           actor: owner
@@ -94,6 +97,72 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has(".facts .value", text: "1 person attending")
     end
 
+    test "sidebar share section offers a mailto email link and a QR code modal", %{
+      conn: conn,
+      member: member,
+      group: group,
+      huddl: huddl
+    } do
+      huddl_url = HuddlzWeb.Endpoint.url() <> ~p"/groups/#{group.slug}/huddlz/#{huddl.id}"
+
+      conn
+      |> login(member)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+      |> assert_has("aside.huddl-side h3", text: "Share")
+      |> assert_has("#share-huddl-modal-email[href^='mailto:?subject=Virtual%20Meeting']")
+      |> assert_has("#share-huddl-modal-open[phx-click*='share-huddl-modal']")
+      |> assert_has("#share-huddl-modal-url[value='#{huddl_url}']")
+      |> assert_has(
+        "#share-huddl-modal-copy[data-copy-target='#share-huddl-modal-url'] #share-huddl-modal-copy-label[phx-hook='ClipboardCopy'][phx-update='ignore']"
+      )
+      |> assert_has("#share-huddl-modal .qr-frame svg")
+    end
+
+    test "share link works for signed-out visitors", %{conn: conn, group: group, huddl: huddl} do
+      huddl_url = HuddlzWeb.Endpoint.url() <> ~p"/groups/#{group.slug}/huddlz/#{huddl.id}"
+
+      conn
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+      |> assert_has("#share-huddl-modal-email[href^='mailto:?subject=Virtual%20Meeting']")
+      |> assert_has("#share-huddl-modal-url[value='#{huddl_url}']")
+    end
+
+    test "renders image fallback behavior across huddl surfaces", %{
+      conn: conn,
+      member: member,
+      group: group,
+      huddl: huddl
+    } do
+      HuddlImage
+      |> Ash.Changeset.for_create(:create, %{
+        filename: "cover.jpg",
+        content_type: "image/jpeg",
+        size_bytes: 123,
+        storage_path: "/uploads/huddl_images/#{huddl.id}/cover.jpg",
+        thumbnail_path: "/uploads/huddl_images/#{huddl.id}/cover_thumb.jpg",
+        huddl_id: huddl.id
+      })
+      |> Ash.create!(authorize?: false)
+
+      Communities.rsvp_huddl!(huddl, actor: member)
+
+      image_fallback_attributes = ".cover-image[aria-hidden='true'][style]"
+
+      session =
+        conn
+        |> login(member)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+        |> assert_has("#huddl-cover-#{huddl.id}#{image_fallback_attributes}")
+
+      session
+      |> visit(~p"/discover")
+      |> assert_has("#huddl-card-cover-#{huddl.id}#{image_fallback_attributes}")
+      |> visit(~p"/groups/#{group.slug}")
+      |> assert_has("#group-huddl-card-cover-#{huddl.id}#{image_fallback_attributes}")
+      |> visit(~p"/my-huddlz")
+      |> assert_has("#my-huddl-card-cover-#{huddl.id}#{image_fallback_attributes}")
+    end
+
     test "renders rich link preview metadata", %{conn: conn, group: group, huddl: huddl} do
       html =
         conn
@@ -150,7 +219,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             start_time: ~T[14:00:00],
             duration_minutes: 120,
             event_type: :in_person,
-            physical_location: "123 Main St",
+            group_location_id: address_book_location_id(group.id),
             is_private: false,
             group_id: group.id
           },
@@ -387,7 +456,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             start_time: ~T[14:00:00],
             duration_minutes: 120,
             event_type: :in_person,
-            physical_location: "123 Main St, City",
+            group_location_id: address_book_location_id(group.id),
             is_private: false,
             group_id: group.id
           },
@@ -398,7 +467,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       conn
       |> login(non_member)
       |> visit(~p"/groups/#{group.slug}/huddlz/#{in_person_huddl.id}")
-      |> assert_has(".facts .value", text: "123 Main St, City")
+      |> assert_has(".facts .value", text: "123 Main St, Anytown, USA")
       |> refute_has(".facts .label", text: "Virtual access")
 
       # Create hybrid huddl
@@ -413,7 +482,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             start_time: ~T[15:00:00],
             duration_minutes: 120,
             event_type: :hybrid,
-            physical_location: "Conference Room A",
+            group_location_id: address_book_location_id(group.id),
             virtual_link: "https://meet.example.com/hybrid",
             is_private: false,
             group_id: group.id
@@ -425,7 +494,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       conn
       |> login(non_member)
       |> visit(~p"/groups/#{group.slug}/huddlz/#{hybrid_huddl.id}")
-      |> assert_has(".facts .value", text: "Conference Room A")
+      |> assert_has(".facts .value", text: "123 Main St, Anytown, USA")
       |> assert_has(".facts .label", text: "Virtual access")
       |> assert_has(".facts .value .muted", text: "Virtual link available after RSVP")
       # RSVP to see virtual link
@@ -433,7 +502,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has("a.virtual-link-text", text: "Join virtually")
     end
 
-    test "cannot access private huddl without membership", %{
+    test "private huddl is indistinguishable from a missing huddl", %{
       conn: conn,
       non_member: non_member,
       owner: owner
@@ -446,6 +515,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
           %{
             name: "Private Group",
             description: "Members only",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
             is_public: false
           },
           actor: owner
@@ -464,7 +535,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             start_time: ~T[16:00:00],
             duration_minutes: 120,
             event_type: :in_person,
-            physical_location: "Secret Location",
+            group_location_id: address_book_location_id(private_group.id),
             is_private: true,
             group_id: private_group.id
           },
@@ -472,14 +543,15 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
         )
         |> Ash.create!()
 
-      # Non-member should be redirected
-      session =
-        conn
-        |> login(non_member)
-        |> visit(~p"/groups/#{private_group.slug}/huddlz/#{private_huddl.id}")
+      assert {404, _headers, body} =
+               assert_error_sent(404, fn ->
+                 conn
+                 |> login(non_member)
+                 |> get(~p"/groups/#{private_group.slug}/huddlz/#{private_huddl.id}")
+               end)
 
-      # Should redirect to the groups scope of /discover when huddl is not found (due to authorization)
-      assert_path(session, ~p"/discover", query_params: %{"scope" => "groups"})
+      assert body =~ "This path doesn’t lead to a huddl."
+      refute body =~ to_string(private_huddl.title)
     end
 
     test "shows Cancel RSVP button when user has RSVPed", %{
@@ -624,7 +696,6 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             starts_at: DateTime.add(DateTime.utc_now(), -1, :hour),
             ends_at: DateTime.add(DateTime.utc_now(), 1, :hour),
             event_type: :in_person,
-            physical_location: "123 Main St, City",
             is_private: false,
             group_id: group.id,
             creator_id: owner.id
@@ -681,10 +752,11 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> login(member)
       |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
       |> refute_has("a", text: "Edit huddl")
+      |> refute_has("button", text: "Cancel huddl")
       |> refute_has("button", text: "Delete huddl")
     end
 
-    test "shows Organize section with edit and delete for owner", %{
+    test "shows Organize section with edit and cancel for owner", %{
       conn: conn,
       owner: owner,
       group: group,
@@ -695,10 +767,45 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
       |> assert_has(".huddl-side-section h3", text: "Organize")
       |> assert_has("a", text: "Edit huddl")
-      |> assert_has("button", text: "Delete huddl")
+      |> assert_has("button", text: "Cancel huddl")
+      |> refute_has("button", text: "Publish huddl")
+      |> refute_has("button", text: "Delete huddl")
     end
 
-    test "opens and cancels the styled delete confirmation", %{
+    test "hides lifecycle actions after the huddl ends", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      now = DateTime.utc_now()
+
+      ended =
+        Ash.Seed.seed!(Huddl, %{
+          time_zone: "America/New_York",
+          title: "Already Ended",
+          description: "Waiting for scheduled completion",
+          starts_at: DateTime.add(now, -2, :hour),
+          ends_at: DateTime.add(now, -1, :hour),
+          event_type: :virtual,
+          virtual_link: "https://example.com/ended",
+          is_private: false,
+          group_id: group.id,
+          creator_id: owner.id,
+          lifecycle_state: :published,
+          published_at: DateTime.add(now, -3, :hour),
+          published_by_id: owner.id
+        })
+
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{ended.id}")
+      |> assert_has(".eyebrow", text: "Completed")
+      |> refute_has("button", text: "Publish huddl")
+      |> refute_has("button", text: "Cancel huddl")
+      |> refute_has("a", text: "Edit huddl")
+    end
+
+    test "opens and dismisses the styled cancellation confirmation", %{
       conn: conn,
       owner: owner,
       group: group,
@@ -707,23 +814,21 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       conn
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
-      |> refute_has("#delete-huddl-modal")
-      |> click_button("Delete huddl")
-      |> assert_has("#delete-huddl-modal [role='dialog']")
-      |> assert_has("#delete-huddl-modal-title", text: "Delete this huddl?")
-      |> assert_has("#delete-huddl-modal", text: huddl.title)
-      |> assert_has("#delete-huddl-modal", text: "All RSVPs will be canceled")
-      |> assert_has("#delete-huddl-modal", text: "everyone who RSVP'd will be notified")
-      |> assert_has("#delete-huddl-modal [role='dialog'][aria-modal='true'][tabindex='0']")
+      |> refute_has("#cancel-huddl-modal")
+      |> click_button("Cancel huddl")
+      |> assert_has("#cancel-huddl-modal [role='dialog']")
+      |> assert_has("#cancel-huddl-modal-title", text: "Cancel this huddl?")
+      |> assert_has("#cancel-huddl-modal", text: huddl.title)
+      |> assert_has("#cancel-huddl-modal", text: "remain in calendars and RSVP history")
+      |> assert_has("#cancel-huddl-modal [role='dialog'][aria-modal='true'][tabindex='0']")
       |> assert_has(
-        "#delete-huddl-modal-container[phx-key='escape'][phx-window-keydown][phx-click-away]"
+        "#cancel-huddl-modal-container[phx-key='escape'][phx-window-keydown][phx-click-away]"
       )
-      |> refute_has("#open-delete-huddl-modal[data-confirm]")
-      |> assert_has("#open-delete-huddl-modal[phx-click*='push_focus']")
-      |> within("#delete-huddl-modal", fn session ->
+      |> assert_has("#open-cancel-huddl-modal[phx-click*='push_focus']")
+      |> within("#cancel-huddl-modal", fn session ->
         click_button(session, "Keep huddl")
       end)
-      |> refute_has("#delete-huddl-modal")
+      |> refute_has("#cancel-huddl-modal")
       |> assert_path(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
 
       assert huddl_still_exists?(huddl.id)
@@ -738,7 +843,10 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
         HuddlTemplate
         |> Ash.Changeset.for_create(:create, %{
           frequency: :weekly,
-          repeat_until: DateTime.add(DateTime.utc_now(), 30, :day)
+          repeat_until: DateTime.add(DateTime.utc_now(), 30, :day),
+          starts_at_local: NaiveDateTime.new!(Date.add(Date.utc_today(), 2), ~T[14:00:00]),
+          ends_at_local: NaiveDateTime.new!(Date.add(Date.utc_today(), 2), ~T[15:00:00]),
+          time_zone: "America/New_York"
         })
         |> Ash.create!(authorize?: false)
 
@@ -756,7 +864,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
             virtual_link: "https://example.com/weekly-workshop",
             is_private: false,
             group_id: group.id,
-            huddl_template_id: template.id
+            huddl_template_id: template.id,
+            lifecycle_state: :draft
           },
           actor: owner
         )
@@ -780,11 +889,20 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       conn: conn,
       owner: owner,
       group: group,
-      huddl: huddl
+      huddl: _huddl
     } do
+      draft =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            lifecycle_state: :draft
+          )
+        )
+
       conn
       |> login(owner)
-      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{draft.id}")
       |> click_button("Delete huddl")
       |> within("#delete-huddl-modal", fn session ->
         click_button(session, "Delete huddl")
@@ -793,10 +911,51 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       deleted =
         Huddl
-        |> Ash.Query.for_read(:get_for_recurrence, %{id: huddl.id})
+        |> Ash.Query.for_read(:get_for_recurrence, %{id: draft.id})
         |> Ash.read_one!(authorize?: false)
 
       assert is_nil(deleted)
+    end
+
+    @tag :huddl_lifecycle
+    test "cancels without deleting RSVP history and shows the explanation", %{
+      conn: conn,
+      owner: owner,
+      member: member,
+      group: group,
+      huddl: huddl
+    } do
+      Communities.rsvp_huddl!(huddl, actor: member)
+
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+        |> click_button("Cancel huddl")
+        |> within("#cancel-huddl-modal", fn modal ->
+          modal
+          |> fill_in("Explanation (optional)", with: "The venue lost power.")
+          |> click_button("Cancel huddl")
+        end)
+
+      assert_path(session, ~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+      assert_has(session, ".hero .eyebrow", text: "Cancelled")
+
+      assert_has(session, "#cancellation-reason:has(+ .huddl-hero)")
+
+      within(session, "#cancellation-reason", fn update ->
+        update
+        |> assert_has("h2", text: "Important update from the organizer")
+        |> assert_has("p", text: "The venue lost power.")
+      end)
+
+      refute_has(session, "button", text: "Publish huddl")
+      refute_has(session, "button", text: "Cancel huddl")
+      refute_has(session, "a", text: "Edit huddl")
+
+      reloaded = Communities.get_huddl!(huddl.id, actor: member)
+      assert reloaded.lifecycle_state == :cancelled
+      assert length(Communities.list_huddl_attendees!(huddl.id, actor: owner)) == 2
     end
   end
 

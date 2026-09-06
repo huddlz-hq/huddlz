@@ -32,6 +32,21 @@ defmodule Huddlz.StorageTest do
       assert File.read!(full_path) == "test content"
     end
 
+    test "put/3 returns an error when the destination directory cannot be created", %{
+      test_id: test_id
+    } do
+      temp_path = Path.join(System.tmp_dir!(), "test_file_#{test_id}.txt")
+      File.write!(temp_path, "test content")
+      on_exit(fn -> File.rm(temp_path) end)
+
+      blocked_directory = "priv/static/uploads/test_#{test_id}"
+      File.mkdir_p!(Path.dirname(blocked_directory))
+      File.write!(blocked_directory, "not a directory")
+
+      assert {:error, _reason} =
+               Local.put(temp_path, "/uploads/test_#{test_id}/stored_file.txt", "text/plain")
+    end
+
     test "delete/1 removes a file", %{test_id: test_id} do
       # Create a file to delete
       storage_path = "/uploads/test_#{test_id}/to_delete.txt"
@@ -155,6 +170,18 @@ defmodule Huddlz.StorageTest do
 
       assert {:error, "Invalid file type. Allowed: JPG, PNG, WebP"} =
                ProfilePictures.store(temp_path, "avatar.png", "text/html", user_id)
+    end
+
+    test "store/4 rejects corrupt content with an image filename and content type", %{
+      test_id: test_id,
+      user_id: user_id
+    } do
+      temp_path = Path.join(System.tmp_dir!(), "upload_#{test_id}.jpg")
+      File.write!(temp_path, "not really an image")
+      on_exit(fn -> File.rm(temp_path) end)
+
+      assert {:error, :invalid_image} =
+               ProfilePictures.store(temp_path, "avatar.jpg", "image/jpeg", user_id)
     end
 
     test "store/4 rejects files that are too large", %{test_id: test_id, user_id: user_id} do

@@ -52,6 +52,12 @@ defmodule Huddlz.Notifications.Triggers do
       default: true,
       label: "I was added to a group"
     },
+    group_invitation: %{
+      category: :activity,
+      sender: Senders.GroupInvitation,
+      default: true,
+      label: "I was invited to a group"
+    },
     group_member_removed: %{
       category: :transactional,
       sender: Senders.GroupMemberRemoved,

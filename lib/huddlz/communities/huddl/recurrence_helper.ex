@@ -9,14 +9,15 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
       subscribers to lose.
     * `reconcile_future_instances/3` — used by "edit all". Updates the existing
       future instances *in place* (preserving every RSVP/waitlist spot and
-      notifying their subscribers), creates any newly-added dates, and only
-      destroys dates that fall off the schedule.
+      notifying their subscribers), creates any newly-added dates, and removes
+      dates that fall off the schedule according to their lifecycle state.
   """
 
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.HuddlImage
   alias Huddlz.Storage.HuddlImages
+  alias Huddlz.TimeZone
 
   @max_instances 104
 
@@ -25,7 +26,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     :event_type,
     :title,
     :description,
-    :physical_location,
+    :group_location_id,
     :virtual_link,
     :is_private,
     :thumbnail_url,
@@ -39,9 +40,10 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   cascade-deletes RSVPs. "Edit all" uses `reconcile_future_instances/3` instead.
   """
   def regenerate_series(source, template) do
-    source |> future_instances() |> Enum.each(&destroy_instance!(&1))
-    generate_huddlz_from_template(template, source)
-    :ok
+    with {:ok, _occurrences} <- desired_occurrences(template) do
+      source |> future_instances() |> Enum.each(&destroy_instance!(&1))
+      generate_huddlz_from_template(template, source)
+    end
   end
 
   @doc """
@@ -49,37 +51,79 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   preserving subscribers:
 
     * existing future instances are **updated in place** to the source's fields
-      and recomputed times (RSVPs untouched; each meaningful change emails that
-      instance's subscribers via the per-instance update notification)
+      and recomputed times (RSVPs untouched; the series change sends one summary
+      per affected person)
     * dates added by extending the series are **created**
-    * dates dropped by shortening the series / changing frequency are
-      **destroyed** (a real cancellation — their subscribers get the cancel notice)
+    * published dates dropped by shortening the series / changing frequency are
+      **cancelled** (their subscribers get the cancel notice and RSVP history remains)
+    * unpublished dates dropped from the series are **destroyed**
 
   `actor` is the editor; it is threaded through so they are excluded from the
   update emails for instances they're attending.
   """
   def reconcile_future_instances(source, template, actor) do
-    desired = desired_occurrences(source, template)
-    existing_by_date = Map.new(future_instances(source), &{occurrence_date(&1.starts_at), &1})
+    with {:ok, desired} <- desired_occurrences(template) do
+      reconcile_desired_instances(source, template, actor, desired)
+    end
+  end
 
-    unmatched_existing =
-      Enum.reduce(desired, existing_by_date, fn {starts_at, ends_at}, remaining ->
-        case Map.pop(remaining, occurrence_date(starts_at)) do
+  defp reconcile_desired_instances(source, template, actor, desired) do
+    existing =
+      source
+      |> future_instances()
+      |> Enum.filter(&(&1.lifecycle_state in [:draft, :published]))
+      |> Enum.sort_by(& &1.starts_at, DateTime)
+
+    {retained, new_desired, obsolete_existing} = match_occurrences(existing, desired)
+
+    Enum.each(retained, fn {instance, {starts_at, ends_at}} ->
+      update_instance!(instance, source, starts_at, ends_at, actor)
+    end)
+
+    Enum.each(new_desired, fn {starts_at, ends_at} ->
+      create_instance!(source, template, starts_at, ends_at)
+    end)
+
+    Enum.each(obsolete_existing, &remove_instance!(&1, actor))
+
+    :ok
+  end
+
+  defp match_occurrences(existing, desired) do
+    # Preserve exact calendar-date matches first so repairing a missing
+    # occurrence never shifts a later RSVP onto the gap.
+    existing_by_date = Map.new(existing, &{DateTime.to_date(&1.starts_at), &1})
+
+    {exact_matches, unmatched_desired, remaining_by_date} =
+      Enum.reduce(desired, {[], [], existing_by_date}, fn desired_occurrence,
+                                                          {matches, unmatched, remaining} ->
+        {starts_at, _ends_at} = desired_occurrence
+
+        case Map.pop(remaining, DateTime.to_date(starts_at)) do
           {nil, remaining} ->
-            create_instance!(source, template, starts_at, ends_at)
-            remaining
+            {matches, [desired_occurrence | unmatched], remaining}
 
           {instance, remaining} ->
-            update_instance!(instance, source, starts_at, ends_at, actor)
-            remaining
+            {[{instance, desired_occurrence} | matches], unmatched, remaining}
         end
       end)
 
-    unmatched_existing
-    |> Map.values()
-    |> Enum.each(&destroy_instance!(&1, actor))
+    unmatched_desired = Enum.reverse(unmatched_desired)
 
-    :ok
+    unmatched_existing =
+      remaining_by_date |> Map.values() |> Enum.sort_by(& &1.starts_at, DateTime)
+
+    # Pair anything left in chronological order. This preserves row identity
+    # when an edit shifts the whole schedule to dates with no exact matches.
+    {paired_existing, obsolete_existing} =
+      Enum.split(unmatched_existing, length(unmatched_desired))
+
+    {paired_desired, new_desired} =
+      Enum.split(unmatched_desired, length(paired_existing))
+
+    retained = Enum.reverse(exact_matches) ++ Enum.zip(paired_existing, paired_desired)
+
+    {retained, new_desired, obsolete_existing}
   end
 
   @doc """
@@ -96,20 +140,29 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
 
   def generate_huddlz_from_template(template, source, count) do
     interval_days = interval_days(template)
-    starts_at = DateTime.add(source.starts_at, interval_days, :day)
-    ends_at = DateTime.add(source.ends_at, interval_days, :day)
+    starts_at_local = NaiveDateTime.add(template.starts_at_local, count * interval_days, :day)
+    ends_at_local = NaiveDateTime.add(template.ends_at_local, count * interval_days, :day)
+    next_starts_at_local = NaiveDateTime.add(starts_at_local, interval_days, :day)
+    next_ends_at_local = NaiveDateTime.add(ends_at_local, interval_days, :day)
 
-    if Date.before?(DateTime.to_date(starts_at), template.repeat_until) do
-      new_huddl = create_instance!(source, template, starts_at, ends_at)
-      generate_huddlz_from_template(template, new_huddl, count + 1)
+    if Date.before?(NaiveDateTime.to_date(next_starts_at_local), repeat_until_date(template)) do
+      case resolve_occurrence(next_starts_at_local, next_ends_at_local, template.time_zone) do
+        {:ok, {starts_at, ends_at}} ->
+          new_huddl = create_instance!(source, template, starts_at, ends_at)
+          generate_huddlz_from_template(template, new_huddl, count + 1)
+
+        {:error, _reason} = error ->
+          error
+      end
     else
       :ok
     end
   end
 
+  @doc false
   # Later instances in the series, read through the dedicated visibility-free
   # action so a private series is reached in full regardless of actor.
-  defp future_instances(source) do
+  def future_instances(source) do
     Huddl
     |> Ash.Query.for_read(:siblings_in_series, %{
       huddl_template_id: source.huddl_template_id,
@@ -121,34 +174,40 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   # The start/end times the series should have, from the source forward, capped
   # at @max_instances. Times shift with the source, so editing the time moves
   # every future occurrence.
-  defp desired_occurrences(source, template) do
+  defp desired_occurrences(template) do
     interval_days = interval_days(template)
-    duration = DateTime.diff(source.ends_at, source.starts_at, :second)
 
     1..@max_instances
     |> Enum.reduce_while([], fn k, acc ->
-      starts_at = DateTime.add(source.starts_at, k * interval_days, :day)
-
-      if Date.before?(DateTime.to_date(starts_at), template.repeat_until) do
-        {:cont, [{starts_at, DateTime.add(starts_at, duration, :second)} | acc]}
-      else
-        {:halt, acc}
+      case desired_occurrence(template, k, interval_days) do
+        {:ok, occurrence} -> {:cont, [occurrence | acc]}
+        {:error, reason} -> {:halt, {:error, reason}}
+        :done -> {:halt, {:ok, Enum.reverse(acc)}}
       end
     end)
-    |> Enum.reverse()
+    |> case do
+      occurrences when is_list(occurrences) -> {:ok, Enum.reverse(occurrences)}
+      result -> result
+    end
   end
 
-  defp occurrence_date(datetime), do: DateTime.to_date(datetime)
+  defp desired_occurrence(template, index, interval_days) do
+    starts_at_local =
+      NaiveDateTime.add(template.starts_at_local, index * interval_days, :day)
+
+    ends_at_local = NaiveDateTime.add(template.ends_at_local, index * interval_days, :day)
+
+    if Date.before?(NaiveDateTime.to_date(starts_at_local), repeat_until_date(template)) do
+      resolve_occurrence(starts_at_local, ends_at_local, template.time_zone)
+    else
+      :done
+    end
+  end
 
   defp create_instance!(source, template, starts_at, ends_at) do
     instance =
       Huddl
       |> Ash.Changeset.new()
-      # Reuse the source's already-resolved coordinates so the instance skips
-      # geocoding (ApplyProvidedCoordinates short-circuits GeocodeChange). Private
-      # args, so set before for_create; nil is ignored, so virtual huddlz work.
-      |> Ash.Changeset.set_argument(:provided_latitude, source.latitude)
-      |> Ash.Changeset.set_argument(:provided_longitude, source.longitude)
       |> Ash.Changeset.for_create(:create, instance_attrs(source, starts_at, ends_at, template))
       # creator_id is not an accepted input — the :create action derives it from
       # the actor. This actorless generation sets it directly so each instance
@@ -207,14 +266,25 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     Ash.destroy!(instance, actor: actor, authorize?: false)
   end
 
+  defp remove_instance!(%{lifecycle_state: :draft} = instance, actor) do
+    destroy_instance!(instance, actor)
+  end
+
+  defp remove_instance!(%{lifecycle_state: :published} = instance, actor) do
+    Communities.cancel_huddl!(instance, nil, actor: actor, authorize?: false)
+  end
+
+  defp remove_instance!(%{lifecycle_state: state}, _actor)
+       when state in [:cancelled, :completed],
+       do: :ok
+
   # Updates a kept instance in place via the :update action with
   # edit_type "instance", so the per-instance update notification emails this
   # occurrence's subscribers without re-triggering series reconciliation.
   defp update_instance!(instance, source, starts_at, ends_at, actor) do
     instance
     |> Ash.Changeset.new()
-    |> Ash.Changeset.set_argument(:provided_latitude, source.latitude)
-    |> Ash.Changeset.set_argument(:provided_longitude, source.longitude)
+    |> Ash.Changeset.set_argument(:suppress_update_notification, true)
     |> Ash.Changeset.for_update(
       :update,
       instance_attrs(source, starts_at, ends_at) |> Map.put(:edit_type, "instance")
@@ -232,6 +302,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
       base
       |> Map.put(:group_id, source.group_id)
       |> Map.put(:huddl_template_id, template.id)
+      |> Map.put(:lifecycle_state, source.lifecycle_state)
     else
       base
     end
@@ -239,4 +310,31 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
 
   defp interval_days(%{interval: interval, unit: :week}), do: interval * 7
   defp interval_days(%{interval: interval, unit: :month}), do: interval * 30
+
+  defp repeat_until_date(%{repeat_until: %Date{} = date}), do: date
+  defp repeat_until_date(%{repeat_until: datetime}), do: DateTime.to_date(datetime)
+
+  defp resolve_occurrence(starts_at_local, ends_at_local, time_zone) do
+    with {:ok, starts_at} <- resolve_local(starts_at_local, time_zone),
+         {:ok, ends_at} <- resolve_local(ends_at_local, time_zone) do
+      {:ok,
+       {
+         DateTime.shift_zone!(starts_at, "Etc/UTC"),
+         DateTime.shift_zone!(ends_at, "Etc/UTC")
+       }}
+    end
+  end
+
+  defp resolve_local(local, time_zone) do
+    case TimeZone.resolve_local(local, time_zone) do
+      {:ok, datetime} ->
+        {:ok, datetime}
+
+      {:error, :daylight_saving_gap} ->
+        {:error, "recurring huddl time #{local} does not exist in #{time_zone}"}
+
+      {:error, reason} ->
+        {:error, "could not resolve recurring huddl time in #{time_zone}: #{inspect(reason)}"}
+    end
+  end
 end

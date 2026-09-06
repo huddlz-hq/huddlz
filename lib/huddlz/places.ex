@@ -11,15 +11,19 @@ defmodule Huddlz.Places do
           secondary_text: String.t()
         }
 
-  @type coordinates :: %{latitude: float(), longitude: float()}
+  @type place_details :: %{
+          latitude: float(),
+          longitude: float(),
+          time_zone: String.t()
+        }
 
   @doc "Autocomplete a location query, returning matching place suggestions."
   @callback autocomplete(query :: String.t(), session_token :: String.t(), opts :: keyword()) ::
               {:ok, [suggestion()]} | {:error, term()}
 
-  @doc "Get coordinates for a place by its place_id."
+  @doc "Get coordinates and the canonical IANA time zone for a place."
   @callback place_details(place_id :: String.t(), session_token :: String.t()) ::
-              {:ok, coordinates()} | {:error, term()}
+              {:ok, place_details()} | {:error, term()}
 
   @adapter Application.compile_env(:huddlz, [:places, :adapter], Huddlz.Places.Google)
 

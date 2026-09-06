@@ -21,6 +21,8 @@ config :ash_json_api,
 
 config :ash_oban, pro?: false
 
+config :huddlz, :notification_queue, Huddlz.Notifications.ObanQueue
+
 config :huddlz, Oban,
   engine: Oban.Engines.Basic,
   notifier: Oban.Notifiers.PG,

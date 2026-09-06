@@ -1,6 +1,7 @@
 defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
   use Huddlz.DataCase, async: true
 
+  alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.Huddl.RecurrenceHelper
   alias Huddlz.Communities.HuddlAttendee
@@ -40,11 +41,15 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
       )
       |> Ash.update!()
 
-    repeat_until = opts[:repeat_until] || Date.add(Date.utc_today(), 22)
+    repeat_until = opts[:repeat_until] || Date.add(Huddlz.Generator.eastern_today(), 22)
 
     template =
       HuddlTemplate
-      |> Ash.Changeset.for_create(:create, %{frequency: :weekly, repeat_until: repeat_until})
+      |> Ash.Changeset.for_create(
+        :create,
+        HuddlTemplate.wall_clock_schedule(source)
+        |> Map.merge(%{frequency: :weekly, repeat_until: repeat_until})
+      )
       |> Ash.create!(authorize?: false)
 
     source =
@@ -70,9 +75,8 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
   end
 
   defp edit_all(source, owner, repeat_until) do
-    source
-    |> Ash.Changeset.for_update(
-      :update,
+    Communities.update_huddl!(
+      source,
       %{
         title: "Renamed series",
         edit_type: "all",
@@ -81,7 +85,6 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
       },
       actor: owner
     )
-    |> Ash.update!()
   end
 
   defp attendee_entries(huddl) do
@@ -126,7 +129,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
   end
 
   test "reconciliation fills a beginning gap without moving a later RSVP" do
-    repeat_until = Date.add(Date.utc_today(), 36)
+    repeat_until = Date.add(Huddlz.Generator.eastern_today(), 36)
 
     %{owner: owner, source: source, template: template} =
       build_series(true, repeat_until: repeat_until)
@@ -157,7 +160,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
   end
 
   test "reconciliation fills a middle gap without moving RSVPs or waitlist entries" do
-    repeat_until = Date.add(Date.utc_today(), 36)
+    repeat_until = Date.add(Huddlz.Generator.eastern_today(), 36)
 
     %{owner: owner, source: source, template: template} =
       build_series(true, repeat_until: repeat_until, max_attendees: 2)
@@ -200,5 +203,34 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
              waitlist_entries(occurrence),
              &(&1.user_id == waitlister.id and not is_nil(&1.waitlisted_at))
            )
+  end
+
+  test "extending a shortened series creates a new active occurrence for a cancelled date" do
+    original_repeat_until = Date.add(Huddlz.Generator.eastern_today(), 36)
+
+    %{owner: owner, source: source, template: template} =
+      build_series(true, repeat_until: original_repeat_until)
+
+    dropped =
+      template.id
+      |> future_instances(source.starts_at)
+      |> Enum.max_by(& &1.starts_at, DateTime)
+
+    shortened_source = edit_all(source, owner, Date.add(Huddlz.Generator.eastern_today(), 16))
+
+    assert %{lifecycle_state: :cancelled} =
+             Communities.get_huddl!(dropped.id, actor: owner)
+
+    edit_all(shortened_source, owner, original_repeat_until)
+
+    restored_date = DateTime.to_date(dropped.starts_at)
+
+    restored =
+      template.id
+      |> future_instances(source.starts_at)
+      |> Enum.filter(&(DateTime.to_date(&1.starts_at) == restored_date))
+
+    assert Enum.any?(restored, &(&1.id == dropped.id and &1.lifecycle_state == :cancelled))
+    assert Enum.any?(restored, &(&1.id != dropped.id and &1.lifecycle_state == :published))
   end
 end

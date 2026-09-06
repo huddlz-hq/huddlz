@@ -19,13 +19,14 @@ defmodule Huddlz.Accounts do
 
       define :update_home_location,
         action: :update_home_location,
-        args: [:home_location, :home_latitude, :home_longitude]
+        args: [:home_location, :home_latitude, :home_longitude, :home_time_zone]
 
       define :change_email, action: :change_email, args: [:email, :current_password]
     end
 
     resource Huddlz.Accounts.ProfilePicture do
       define :create_profile_picture, action: :create
+      define :replace_profile_picture, action: :replace
       define :get_current_profile_picture, action: :get_current_for_user, args: [:user_id]
       define :list_profile_pictures, action: :list_for_user, args: [:user_id]
       define :delete_profile_picture, action: :destroy

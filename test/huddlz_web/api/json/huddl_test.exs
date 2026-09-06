@@ -2,10 +2,19 @@ defmodule HuddlzWeb.Api.Json.HuddlTest do
   use HuddlzWeb.ApiCase, async: true
 
   describe "DELETE /api/json/huddlz/:id" do
-    test "owner can delete the huddl", %{conn: conn} do
+    test "owner can delete a draft huddl", %{conn: conn} do
       owner = generate(user())
       group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
-      h = generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
+
+      h =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            lifecycle_state: :draft
+          )
+        )
 
       conn =
         conn
@@ -50,6 +59,82 @@ defmodule HuddlzWeb.Api.Json.HuddlTest do
 
       assert %{"data" => data} = json_response(conn, 200)
       assert data["id"] == h.id
+    end
+  end
+
+  describe "PATCH /api/json/huddlz/:id/publish" do
+    test "owner can publish a draft idempotently", %{conn: conn} do
+      owner = generate(user())
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+
+      draft =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            lifecycle_state: :draft
+          )
+        )
+
+      conn = lifecycle_patch(conn, owner, draft, "publish", %{})
+      assert %{"data" => data} = json_response(conn, 200)
+      assert data["attributes"]["lifecycle_state"] == "published"
+
+      conn = lifecycle_patch(build_conn(), owner, draft, "publish", %{})
+      assert %{"data" => repeated} = json_response(conn, 200)
+      assert repeated["attributes"]["lifecycle_state"] == "published"
+    end
+
+    test "regular user cannot publish a draft", %{conn: conn} do
+      owner = generate(user())
+      stranger = generate(user())
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+
+      draft =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            lifecycle_state: :draft
+          )
+        )
+
+      conn = lifecycle_patch(conn, stranger, draft, "publish", %{})
+      assert conn.status in [403, 404]
+    end
+  end
+
+  describe "PATCH /api/json/huddlz/:id/cancel" do
+    test "owner can cancel a published huddl idempotently with an explanation", %{conn: conn} do
+      owner = generate(user())
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      published = generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
+
+      conn =
+        lifecycle_patch(conn, owner, published, "cancel", %{
+          "cancellation_reason" => "Venue unavailable"
+        })
+
+      assert %{"data" => data} = json_response(conn, 200)
+      assert data["attributes"]["lifecycle_state"] == "cancelled"
+      assert data["attributes"]["cancellation_reason"] == "Venue unavailable"
+
+      conn = lifecycle_patch(build_conn(), owner, published, "cancel", %{})
+      assert %{"data" => repeated} = json_response(conn, 200)
+      assert repeated["attributes"]["lifecycle_state"] == "cancelled"
+      assert repeated["attributes"]["cancellation_reason"] == "Venue unavailable"
+    end
+
+    test "regular user cannot cancel a published huddl", %{conn: conn} do
+      owner = generate(user())
+      stranger = generate(user())
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+      published = generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
+
+      conn = lifecycle_patch(conn, stranger, published, "cancel", %{})
+      assert conn.status in [403, 404]
     end
   end
 
@@ -150,8 +235,7 @@ defmodule HuddlzWeb.Api.Json.HuddlTest do
             starts_at: DateTime.add(DateTime.utc_now(), -2, :day),
             ends_at: DateTime.add(DateTime.utc_now(), -2, :day) |> DateTime.add(1, :hour),
             is_private: false,
-            event_type: :in_person,
-            physical_location: "456 Past St"
+            event_type: :in_person
           )
         )
 
@@ -175,5 +259,14 @@ defmodule HuddlzWeb.Api.Json.HuddlTest do
     |> Enum.find(&(&1["id"] == huddl_id))
     |> Map.fetch!("attributes")
     |> Map.fetch!("visible_virtual_link")
+  end
+
+  defp lifecycle_patch(conn, user, huddl, action, attributes) do
+    conn
+    |> authenticated_conn(user)
+    |> put_req_header("content-type", "application/vnd.api+json")
+    |> patch("/api/json/huddlz/#{huddl.id}/#{action}", %{
+      "data" => %{"type" => "huddl", "attributes" => attributes}
+    })
   end
 end

@@ -3,6 +3,7 @@ defmodule HuddlzWeb.GroupLiveTest do
 
   import Huddlz.Generator
   import Huddlz.Test.Helpers.LocationSelection
+  import Phoenix.LiveViewTest
 
   alias Huddlz.Communities.Group
 
@@ -29,7 +30,31 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> assert_has("label.form-label", text: "Group name")
       |> assert_has("label.form-label", text: "Description")
       |> assert_has("label.form-label", text: "Location")
-      |> assert_has("label.row-title", text: "Public group")
+      |> assert_has(".row-title", text: "Public group")
+    end
+
+    test "exposes group visibility as a labeled keyboard-operable switch", %{
+      conn: conn,
+      verified: verified
+    } do
+      {:ok, view, _html} =
+        conn
+        |> login(verified)
+        |> live(~p"/groups/new")
+
+      assert has_element?(
+               view,
+               ".toggle input[name='form[is_public]'][type='checkbox'][role='switch'][aria-checked='true'][checked]"
+             )
+
+      view
+      |> form("#group-form", %{"form" => %{"is_public" => "false"}})
+      |> render_change()
+
+      assert has_element?(
+               view,
+               ".toggle input[name='form[is_public]'][role='switch'][aria-checked='false']:not([checked])"
+             )
     end
 
     test "allows all users to create groups", %{conn: conn, regular: regular} do
@@ -90,7 +115,28 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> assert_has(
         "input[name='form[name]'][aria-invalid='true'][aria-describedby='form_name-help form_name-error-0']"
       )
-      |> assert_has("#form_name-error-0", text: "length must be greater than or equal to")
+      |> assert_has("#form_name-error-0", text: "Must be between 3 and 100 characters")
+    end
+
+    test "validates both group name boundaries in the LiveView", %{
+      conn: conn,
+      verified: verified
+    } do
+      session =
+        conn
+        |> login(verified)
+        |> visit(~p"/groups/new")
+        |> fill_in("Group name", with: "abc")
+        |> refute_has("#form_name-error-0")
+        |> fill_in("Group name", with: String.duplicate("a", 100))
+        |> refute_has("#form_name-error-0")
+        |> fill_in("Group name", with: String.duplicate("a", 101))
+
+      assert_has(
+        session,
+        "#form_name-error-0",
+        text: "Must be between 3 and 100 characters"
+      )
     end
 
     test "associates help text without marking valid fields invalid", %{
@@ -188,6 +234,27 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> assert_has(".facts .label", text: "Members")
     end
 
+    test "does not list draft huddlz on the group page", %{
+      conn: conn,
+      owner: owner,
+      public_group: group
+    } do
+      generate(
+        huddl(
+          title: "Private Draft",
+          group_id: group.id,
+          creator_id: owner.id,
+          lifecycle_state: :draft,
+          actor: owner
+        )
+      )
+
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}")
+      |> refute_has("h3", text: "Private Draft")
+    end
+
     test "displays owner badge for group owner", %{
       conn: conn,
       owner: owner,
@@ -199,20 +266,20 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> assert_has(".role-pill .pill", text: "Owner")
     end
 
-    test "redirects non-members from private groups", %{
+    test "private groups are indistinguishable from missing groups", %{
       conn: conn,
       non_member: non_member,
       private_group: group
     } do
-      session =
-        conn
-        |> login(non_member)
-        |> visit(~p"/groups/#{group.slug}")
+      assert {404, _headers, body} =
+               assert_error_sent(404, fn ->
+                 conn
+                 |> login(non_member)
+                 |> get(~p"/groups/#{group.slug}")
+               end)
 
-      assert_path(session, ~p"/discover", query_params: %{"scope" => "groups"})
-
-      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~
-               "Group not found"
+      assert body =~ "This path doesn’t lead to a huddl."
+      refute body =~ to_string(group.name)
     end
 
     test "allows owner to view private group", %{
@@ -229,10 +296,12 @@ defmodule HuddlzWeb.GroupLiveTest do
     end
 
     test "handles non-existent group", %{conn: conn} do
-      session = conn |> visit(~p"/groups/#{Ash.UUID.generate()}")
+      assert {404, _headers, body} =
+               assert_error_sent(404, fn ->
+                 get(conn, ~p"/groups/#{Ash.UUID.generate()}")
+               end)
 
-      assert_path(session, ~p"/discover", query_params: %{"scope" => "groups"})
-      assert Phoenix.Flash.get(session.conn.assigns.flash, :error) =~ "Group not found"
+      assert body =~ "This path doesn’t lead to a huddl."
     end
   end
 end

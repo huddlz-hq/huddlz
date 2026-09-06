@@ -37,7 +37,7 @@ defmodule Huddlz.Notifications.Senders.WaitlistPromoted do
     when_text =
       DateTimeFormatter.format_starts_at(
         huddl.starts_at,
-        DateTimeFormatter.time_zone_from_payload(payload)
+        huddl.time_zone
       )
 
     safe_when = HtmlEscape.escape(when_text)
