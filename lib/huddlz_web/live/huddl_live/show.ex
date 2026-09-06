@@ -99,7 +99,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
       <div class={["hero", "huddl-hero", HuddlStatus.hero_class(@huddl.status)]}>
         <div class="hero-media">
-          <.huddl_cover_image
+          <.cover_image
             :if={@huddl.display_image_url}
             id={"huddl-cover-#{@huddl.id}"}
             class="hero-img"

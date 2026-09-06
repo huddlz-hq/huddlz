@@ -19,7 +19,7 @@ defmodule HuddlzWeb.OrganizeLive do
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
 
-  @group_loads [:member_count]
+  @group_loads [:current_image_url, :member_count]
   @huddl_loads [:rsvp_count, :status, :group]
   @upcoming_loads [:rsvp_count, :group]
   @upcoming_preview_limit 5
@@ -66,10 +66,12 @@ defmodule HuddlzWeb.OrganizeLive do
     {:noreply, socket}
   end
 
-  defp load_action(socket, :index, _params, _user) do
+  defp load_action(socket, :index, _params, user) do
+    groups = Ash.load!(socket.assigns.sidebar_owned_groups, :current_image_url, actor: user)
+
     socket
     |> assign(:group, nil)
-    |> assign(:owned_groups, socket.assigns.sidebar_owned_groups)
+    |> assign(:owned_groups, groups)
   end
 
   defp load_action(socket, action, %{"group_slug" => slug}, user) do
@@ -318,10 +320,15 @@ defmodule HuddlzWeb.OrganizeLive do
         <div class="row-list">
           <a
             :for={group <- @groups}
-            class="row row-split"
+            class="row row-split organizer-group-row"
             href={~p"/organize/#{group.slug}"}
           >
-            <div>
+            <.group_cover
+              id={"organizer-group-cover-#{group.id}"}
+              group={group}
+              variant={:thumb}
+            />
+            <div class="organizer-group-copy">
               <div class="row-title">{group.name}</div>
               <div class="meta">
                 {member_label(group.member_count)} · {visibility_label(group.is_public)}

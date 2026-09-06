@@ -146,7 +146,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
       Communities.rsvp_huddl!(huddl, actor: member)
 
-      image_fallback_attributes = "[data-image-fallback][alt='']"
+      image_fallback_attributes = ".cover-image[aria-hidden='true'][style]"
 
       session =
         conn

@@ -14,7 +14,6 @@ defmodule HuddlzWeb.HuddlLive do
   import HuddlzWeb.Live.Helpers.ParamHelpers
 
   alias Huddlz.Communities
-  alias Huddlz.Storage.GroupImages
   alias Huddlz.TimeZone
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.BrowserTimeZone
@@ -730,7 +729,7 @@ defmodule HuddlzWeb.HuddlLive do
       gradient={@gradient}
     >
       <:cover>
-        <.huddl_cover_image
+        <.cover_image
           :if={@huddl.display_image_url}
           id={"huddl-card-cover-#{@huddl.id}"}
           class="card-cover-img"
@@ -769,11 +768,10 @@ defmodule HuddlzWeb.HuddlLive do
     ~H"""
     <.card navigate={~p"/groups/#{@group.slug}"} gradient={@gradient}>
       <:cover>
-        <img
-          :if={@group.current_image_url}
-          class="card-cover-img"
-          src={GroupImages.url(@group.current_image_url)}
-          alt={@group.name}
+        <.group_cover
+          id={"discover-group-cover-#{@group.id}"}
+          group={@group}
+          gradient={@gradient}
         />
       </:cover>
       <:body>

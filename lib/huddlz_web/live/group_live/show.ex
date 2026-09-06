@@ -134,12 +134,11 @@ defmodule HuddlzWeb.GroupLive.Show do
       sidebar_owned_groups={@sidebar_owned_groups}
       active="discover"
     >
-      <div class="hero">
-        <img
-          :if={@group.current_image_url}
-          class="hero-img"
-          src={GroupImages.url(@group.current_image_url)}
-          alt={@group.name}
+      <div id="group-detail-hero" class="hero group-hero">
+        <.group_cover
+          id={"group-detail-cover-#{@group.id}"}
+          group={@group}
+          variant={:hero}
         />
         <div class="hero-content">
           <span class="eyebrow">
@@ -151,9 +150,14 @@ defmodule HuddlzWeb.GroupLive.Show do
             <% end %>
           </span>
           <h1>{@group.name}</h1>
-          <div class="meta">
-            <span :if={@group.location}>📍 {@group.location}</span>
-            <span :if={@group.location && @member_count && @member_count > 0}>·</span>
+          <div class="meta group-hero-meta">
+            <span :if={@group.location} class="group-hero-location">📍 {@group.location}</span>
+            <span
+              :if={@group.location && @member_count && @member_count > 0}
+              class="group-hero-separator"
+            >
+              ·
+            </span>
             <span :if={@member_count && @member_count > 0}>
               {member_count_label(@member_count)}
             </span>
@@ -444,7 +448,7 @@ defmodule HuddlzWeb.GroupLive.Show do
           gradient={Integer.mod(idx, 6) + 1}
         >
           <:cover>
-            <.huddl_cover_image
+            <.cover_image
               :if={huddl.display_image_url}
               id={"group-huddl-card-cover-#{huddl.id}"}
               class="card-cover-img"
