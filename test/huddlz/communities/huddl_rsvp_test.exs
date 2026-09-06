@@ -1,6 +1,7 @@
 defmodule Huddlz.Communities.HuddlRsvpTest do
   use Huddlz.DataCase, async: true
 
+  alias Huddlz.Communities
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Communities.Huddl
@@ -483,15 +484,13 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
       huddl: huddl
     } do
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
-      |> Ash.update!()
+      |> Communities.rsvp_huddl!(actor: member)
 
       assert rsvp_count(huddl, member) == 2
 
       huddl
       |> Ash.reload!(actor: member)
-      |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: member)
-      |> Ash.update!()
+      |> Communities.cancel_rsvp_huddl!(actor: member)
 
       assert rsvp_count(huddl, member) == 1
     end
@@ -503,12 +502,10 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
     } do
       capped =
         huddl
-        |> Ash.Changeset.for_update(:update, %{max_attendees: 2}, actor: owner)
-        |> Ash.update!()
+        |> Communities.update_huddl!(%{max_attendees: 2}, actor: owner)
 
       capped
-      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
-      |> Ash.update!()
+      |> Communities.rsvp_huddl!(actor: member)
 
       assert rsvp_count(capped, member) == 2
     end
@@ -519,23 +516,20 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
       huddl: huddl
     } do
       huddl
-      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
-      |> Ash.update!()
+      |> Communities.rsvp_huddl!(actor: member)
 
       assert_raise Ash.Error.Invalid,
                    ~r/cannot be less than the current RSVP count/,
                    fn ->
                      huddl
                      |> Ash.reload!(actor: owner)
-                     |> Ash.Changeset.for_update(:update, %{max_attendees: 1}, actor: owner)
-                     |> Ash.update!()
+                     |> Communities.update_huddl!(%{max_attendees: 1}, actor: owner)
                    end
 
       updated =
         huddl
         |> Ash.reload!(actor: owner)
-        |> Ash.Changeset.for_update(:update, %{max_attendees: 3}, actor: owner)
-        |> Ash.update!()
+        |> Communities.update_huddl!(%{max_attendees: 3}, actor: owner)
 
       assert updated.max_attendees == 3
     end
@@ -543,8 +537,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
     test "non-member cannot RSVP", %{owner: owner, non_member: non_member, huddl: huddl} do
       assert_raise Ash.Error.Forbidden, fn ->
         huddl
-        |> Ash.Changeset.for_update(:rsvp, %{}, actor: non_member)
-        |> Ash.update!()
+        |> Communities.rsvp_huddl!(actor: non_member)
       end
 
       assert rsvp_count(huddl, owner) == 1
@@ -555,12 +548,11 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
       huddl: huddl
     } do
       # Simulate a stale record independently of the draft-only deletion policy.
-      Ash.destroy!(huddl, authorize?: false)
+      Communities.destroy_huddl!(huddl, authorize?: false)
 
       assert {:error, error} =
                huddl
-               |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
-               |> Ash.update(authorize?: false)
+               |> Communities.rsvp_huddl(actor: member, authorize?: false)
 
       assert Exception.message(error) =~ "This huddl is no longer available"
     end

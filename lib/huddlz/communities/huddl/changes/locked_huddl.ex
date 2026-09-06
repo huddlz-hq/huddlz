@@ -11,11 +11,16 @@ defmodule Huddlz.Communities.Huddl.Changes.LockedHuddl do
   @spec fetch(Ecto.UUID.t(), term()) ::
           {:ok, Huddl.t() | nil} | {:error, Ash.Error.t()}
   def fetch(huddl_id, load \\ []) do
-    Huddl
-    |> Ash.Query.for_read(:get_for_mutation, %{id: huddl_id})
-    |> Ash.Query.lock("FOR UPDATE")
-    |> Ash.Query.load(load)
-    |> Ash.read_one(authorize?: false)
+    query =
+      Huddl
+      |> Ash.Query.for_read(:get_for_mutation, %{id: huddl_id})
+      |> Ash.Query.lock("FOR UPDATE")
+
+    with {:ok, %Huddl{} = huddl} <- Ash.read_one(query, authorize?: false) do
+      # A count in the locking query can use a snapshot taken before waiting
+      # for another RSVP to commit. Load it only after acquiring the row lock.
+      Ash.load(huddl, load, authorize?: false)
+    end
   end
 
   @spec add_read_error(Ash.Changeset.t(), {:ok, nil} | {:error, Ash.Error.t()}) ::
