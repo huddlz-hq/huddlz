@@ -17,15 +17,46 @@ defmodule Huddlz.Notifications.ICS do
   """
   @spec event_for(Huddl.t()) :: {String.t(), String.t()}
   def event_for(%Huddl{} = huddl) do
+    attachment_for(%{
+      id: huddl.id,
+      starts_at: huddl.starts_at,
+      ends_at: huddl.ends_at,
+      title: huddl.title,
+      description: huddl.description,
+      physical_location: huddl.physical_location,
+      virtual_link: huddl.virtual_link
+    })
+  end
+
+  @doc """
+  Build an updated calendar attachment from a notification payload.
+
+  The UID uses the same huddl identity as `event_for/1`, so calendar clients
+  can recognize the attachment as an update to the existing entry.
+  """
+  @spec updated_huddl(map()) :: {String.t(), String.t()}
+  def updated_huddl(payload) do
+    attachment_for(%{
+      id: Map.fetch!(payload, "huddl_id"),
+      starts_at: parse_datetime!(payload, "starts_at_iso"),
+      ends_at: parse_datetime!(payload, "ends_at_iso"),
+      title: Map.fetch!(payload, "huddl_title"),
+      description: payload["description"],
+      physical_location: payload["physical_location"],
+      virtual_link: payload["virtual_link"]
+    })
+  end
+
+  defp attachment_for(fields) do
     event = %ICal.Event{
-      uid: "huddl-#{huddl.id}@huddlz.com",
+      uid: "huddl-#{fields.id}@huddlz.com",
       dtstamp: DateTime.utc_now() |> DateTime.truncate(:second),
-      dtstart: DateTime.truncate(huddl.starts_at, :second),
-      dtend: DateTime.truncate(huddl.ends_at, :second),
-      summary: huddl.title,
-      description: build_description(huddl),
-      location: build_location(huddl),
-      url: huddl.virtual_link
+      dtstart: DateTime.truncate(fields.starts_at, :second),
+      dtend: DateTime.truncate(fields.ends_at, :second),
+      summary: fields.title,
+      description: build_description(fields.description, fields.virtual_link),
+      location: build_location(fields.physical_location, fields.virtual_link),
+      url: fields.virtual_link
     }
 
     calendar =
@@ -36,16 +67,24 @@ defmodule Huddlz.Notifications.ICS do
     {"huddl.ics", content}
   end
 
-  defp build_description(%Huddl{description: nil, virtual_link: nil}), do: ""
-  defp build_description(%Huddl{description: nil, virtual_link: link}), do: "Join: #{link}"
-  defp build_description(%Huddl{description: desc, virtual_link: nil}), do: desc
+  defp parse_datetime!(payload, key) do
+    with value when is_binary(value) <- payload[key],
+         {:ok, datetime, _offset} <- DateTime.from_iso8601(value) do
+      datetime
+    else
+      _ -> raise ArgumentError, "calendar payload requires #{inspect(key)} as an ISO 8601 time"
+    end
+  end
 
-  defp build_description(%Huddl{description: desc, virtual_link: link}) do
+  defp build_description(nil, nil), do: ""
+  defp build_description(nil, link), do: "Join: #{link}"
+  defp build_description(desc, nil), do: desc
+
+  defp build_description(desc, link) do
     "#{desc}\n\nJoin: #{link}"
   end
 
-  defp build_location(%Huddl{physical_location: nil, virtual_link: link}) when is_binary(link),
-    do: link
+  defp build_location(nil, link) when is_binary(link), do: link
 
-  defp build_location(%Huddl{physical_location: place}), do: place
+  defp build_location(place, _link), do: place
 end

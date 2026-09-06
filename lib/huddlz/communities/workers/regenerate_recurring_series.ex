@@ -22,17 +22,25 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeries do
       |> Ash.Query.load(:huddl_template)
       |> Ash.read_one!(authorize?: false)
 
-    case huddl do
-      %Huddl{huddl_template: %HuddlTemplate{} = template} ->
-        RecurrenceHelper.regenerate_series(huddl, template)
+    result =
+      case huddl do
+        %Huddl{huddl_template: %HuddlTemplate{} = template} ->
+          RecurrenceHelper.regenerate_series(huddl, template)
 
-      _ ->
-        # The huddl was deleted before the job ran, or it isn't part of a
-        # series — nothing to generate.
+        _ ->
+          # The huddl was deleted before the job ran, or it isn't part of a
+          # series — nothing to generate.
+          :ok
+      end
+
+    case result do
+      :ok ->
         :ok
-    end
 
-    :ok
+      {:error, reason} ->
+        notify_organizer_after_final_failure(%{job | attempt: job.max_attempts}, huddl_id)
+        {:cancel, reason}
+    end
   rescue
     exception ->
       notify_organizer_after_final_failure(job, huddl_id)

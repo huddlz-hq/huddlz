@@ -6,6 +6,11 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
   alias Huddlz.Communities.Group
   require Ash.Query
 
+  setup do
+    stub_geocode(%{latitude: 29.9012, longitude: -81.3124})
+    :ok
+  end
+
   describe "group visibility and access" do
     setup do
       owner = generate(user(role: :user))
@@ -76,6 +81,8 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
                Group
                |> Ash.Changeset.for_create(:create_group, %{
                  description: "Missing name",
+                 location: "Saint Augustine, FL",
+                 time_zone: "America/New_York",
                  is_public: true
                })
                |> Ash.create(actor: actor)
@@ -91,13 +98,15 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
                |> Ash.Changeset.for_create(:create_group, %{
                  # Too short
                  name: "AB",
+                 location: "Saint Augustine, FL",
+                 time_zone: "America/New_York",
                  is_public: true
                })
                |> Ash.create(actor: actor)
 
       assert Enum.any?(errors, fn error ->
                error.field == :name &&
-                 (error.message =~ "greater than or equal" || to_string(error) =~ "at least 3")
+                 error.message == "Must be between 3 and 100 characters"
              end)
     end
 
@@ -108,13 +117,15 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
                Group
                |> Ash.Changeset.for_create(:create_group, %{
                  name: long_name,
+                 location: "Saint Augustine, FL",
+                 time_zone: "America/New_York",
                  is_public: true
                })
                |> Ash.create(actor: actor)
 
       assert Enum.any?(errors, fn error ->
                error.field == :name &&
-                 (error.message =~ "less than or equal" || to_string(error) =~ "at most 100")
+                 error.message == "Must be between 3 and 100 characters"
              end)
     end
 
@@ -124,6 +135,10 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
         Group
         |> Ash.Changeset.for_create(:create_group, %{
           name: "Unique Name Test",
+          location: "Saint Augustine, FL",
+          latitude: 29.9012,
+          longitude: -81.3124,
+          time_zone: "America/New_York",
           is_public: true
         })
         |> Ash.create(actor: actor)
@@ -133,6 +148,10 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
                Group
                |> Ash.Changeset.for_create(:create_group, %{
                  name: "Unique Name Test",
+                 location: "Saint Augustine, FL",
+                 latitude: 29.9012,
+                 longitude: -81.3124,
+                 time_zone: "America/New_York",
                  is_public: true
                })
                |> Ash.create(actor: actor)
@@ -142,7 +161,11 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
       {:ok, group} =
         Group
         |> Ash.Changeset.for_create(:create_group, %{
-          name: "Default Public Test"
+          name: "Default Public Test",
+          location: "Saint Augustine, FL",
+          latitude: 29.9012,
+          longitude: -81.3124,
+          time_zone: "America/New_York"
         })
         |> Ash.create(actor: actor)
 
@@ -156,6 +179,9 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
           name: "Full Details Group",
           description: "A group with all details",
           location: "San Francisco, CA",
+          latitude: 37.7749,
+          longitude: -122.4194,
+          time_zone: "America/Los_Angeles",
           is_public: false
         })
         |> Ash.create(actor: actor)
@@ -239,7 +265,10 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
         |> Ash.Changeset.for_update(:update_details, %{
           name: "Updated Name",
           description: "Updated description",
-          location: "New Location"
+          location: "New Location",
+          latitude: 30.2672,
+          longitude: -97.7431,
+          time_zone: "America/Chicago"
         })
         |> Ash.update(actor: owner)
 

@@ -18,7 +18,7 @@ Feature: Group Management
     When I fill in the following:
       | Group name  | Tech Enthusiasts           |
       | Description | A group for tech lovers    |
-      | Location    | San Francisco, CA          |
+    And I select "San Francisco, CA, USA" as the group city in "America/Los_Angeles"
     And I check "Public group"
     And I click "Create group"
     Then I should see "Group created successfully"
@@ -31,6 +31,7 @@ Feature: Group Management
     When I fill in the following:
       | Group name  | Secret Society |
       | Description | Private group  |
+    And I select "Saint Augustine, FL, USA" as the group city in "America/New_York"
     And I uncheck "Public group"
     And I click "Create group"
     Then I should see "Group created successfully"
@@ -51,9 +52,8 @@ Feature: Group Management
   Scenario: Cannot view private group as non-member
     Given a private group "VIP Club" exists with owner "admin@example.com"
     And I am signed in as "regular@example.com"
-    When I visit the group page for "VIP Club"
-    Then I should be redirected to "/discover?scope=groups"
-    And I should see "Group not found"
+    When I try to visit the group page for "VIP Club"
+    Then I should see the branded not found recovery page
 
   Scenario: Owner can edit group details
     Given a public group "Book Club" exists with owner "verified@example.com"
@@ -64,10 +64,37 @@ Feature: Group Management
     When I fill in the following:
       | Group Name  | Updated Book Club       |
       | Description | Updated description     |
-      | Location    | Austin, TX              |
+    And I select "Austin, TX, USA" as the group city in "America/Chicago"
     And I click "Save Changes"
     Then I should see "Group updated successfully"
     And I should see "Updated Book Club"
+
+  Scenario: Owner understands making a public group private
+    Given a public group "Book Club" exists with owner "verified@example.com"
+    And I am signed in as "verified@example.com"
+    When I visit the edit page for "Book Club"
+    Then I should see "Current visibility"
+    And I should see "Public"
+    When I uncheck "Public group"
+    Then I should see "Private group"
+    And I should see "Access is limited to current members and platform admins"
+    And I should see "all existing huddlz will leave public discovery"
+    And I should see "Current members keep their memberships"
+    When I click "Save Changes"
+    Then I should see "Visibility is now private"
+
+  Scenario: Owner understands making a private group public
+    Given a private group "Book Club" exists with owner "verified@example.com"
+    And I am signed in as "verified@example.com"
+    When I visit the edit page for "Book Club"
+    Then I should see "Current visibility"
+    And I should see "Private"
+    When I check "Public group"
+    Then I should see "Public group"
+    And I should see "Anyone can find and join this group"
+    And I should see "otherwise-public huddlz will become discoverable again"
+    When I click "Save Changes"
+    Then I should see "Visibility is now public"
 
   Scenario: Non-owner cannot edit group
     Given a public group "Book Club" exists with owner "verified@example.com"

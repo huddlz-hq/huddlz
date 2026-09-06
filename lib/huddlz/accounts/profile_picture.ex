@@ -67,6 +67,13 @@ defmodule Huddlz.Accounts.ProfilePicture do
       accept [:filename, :content_type, :size_bytes, :storage_path, :thumbnail_path, :user_id]
     end
 
+    create :replace do
+      description "Create a profile picture and retire the user's previous pictures"
+      accept [:filename, :content_type, :size_bytes, :storage_path, :thumbnail_path, :user_id]
+
+      change Huddlz.Accounts.ProfilePicture.Changes.SoftDeletePrevious
+    end
+
     create :upload do
       description "Upload a profile picture for the current actor from multipart bytes"
       accept []
@@ -148,7 +155,7 @@ defmodule Huddlz.Accounts.ProfilePicture do
     end
 
     # Users can upload pictures for themselves
-    policy action(:create) do
+    policy action([:create, :replace]) do
       description "Users can only upload profile pictures for themselves"
       authorize_if Huddlz.Accounts.ProfilePicture.Checks.IsOwnPicture
     end

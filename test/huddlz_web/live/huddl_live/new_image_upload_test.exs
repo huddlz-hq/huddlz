@@ -42,7 +42,7 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
         |> live(~p"/groups/#{group.slug}/huddlz/new")
 
       # Set physical location through autocomplete component
-      select_physical_location(view, "Test Location")
+      select_physical_location(view, group, owner, "Test Location")
 
       view
       |> form("#huddl-form", %{
@@ -93,6 +93,7 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
       # Should show "Image uploaded" confirmation
       html = render(view)
       assert html =~ "Image uploaded"
+      refute has_element?(view, ".upload-zone")
 
       # Should have created a pending image record
       pending_count =
@@ -129,7 +130,7 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
       assert render(view) =~ "Image uploaded"
 
       # Set physical location through autocomplete component
-      select_physical_location(view, "Test Location")
+      select_physical_location(view, group, owner, "Test Location")
 
       # Submit form with required fields
       view
@@ -186,14 +187,16 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
   end
 
   # Helper to simulate selecting a physical location via SavedLocationPicker
-  defp select_physical_location(view, text) do
-    location = %Huddlz.Communities.GroupLocation{
-      id: Ash.UUID.generate(),
-      name: text,
-      address: text,
-      latitude: 30.27,
-      longitude: -97.74
-    }
+  defp select_physical_location(view, group, owner, text) do
+    location =
+      generate(
+        group_location(
+          name: text,
+          address: text,
+          group_id: group.id,
+          actor: owner
+        )
+      )
 
     select_saved_location(view, location)
   end

@@ -23,6 +23,7 @@ import "phoenix_html"
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
+import {mountMobileNavigation} from "./mobile_navigation.mjs"
 
 const Hooks = {}
 
@@ -48,6 +49,27 @@ Hooks.ImageFallback = {
     this.el.removeEventListener("error", this.handleError)
   }
 }
+
+const imageFallbackSelector = "img[data-image-fallback]"
+
+const imageFallbackTarget = (event) => {
+  const image = event.target
+  return image.matches && image.matches(imageFallbackSelector) ? image : null
+}
+
+window.addEventListener("error", (event) => {
+  const image = imageFallbackTarget(event)
+  if (image) image.hidden = true
+}, true)
+
+window.addEventListener("load", (event) => {
+  const image = imageFallbackTarget(event)
+  if (image) image.hidden = false
+}, true)
+
+document.querySelectorAll(imageFallbackSelector).forEach((image) => {
+  image.hidden = image.complete && image.naturalWidth === 0
+})
 
 Hooks.LocationAutocomplete = {
   mounted() {
@@ -87,11 +109,78 @@ Hooks.LocationAutocomplete = {
   }
 }
 
+Hooks.ClipboardCopy = {
+  mounted() {
+    this.button = this.el.closest("button")
+    if (!this.button) return
+
+    this.handleClick = () => this.copy()
+    this.button.addEventListener("click", this.handleClick)
+  },
+
+  destroyed() {
+    this.button?.removeEventListener("click", this.handleClick)
+    clearTimeout(this.resetTimer)
+  },
+
+  async copy() {
+    const value = this.button?.dataset.value
+    if (!value) return
+
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(value)
+        this.flashStatus("Copied!")
+        return
+      } catch (_error) {
+        // Fall back to selecting the visible link and using the browser copy command.
+      }
+    }
+
+    if (this.copySelectedLink()) {
+      this.flashStatus("Copied!")
+    } else {
+      this.flashStatus("Copy manually", 2500)
+    }
+  },
+
+  copySelectedLink() {
+    const input = document.querySelector(this.button.dataset.copyTarget)
+    if (!input) return false
+
+    input.focus()
+    input.select()
+    input.setSelectionRange(0, input.value.length)
+
+    try {
+      return document.execCommand("copy")
+    } catch (_error) {
+      return false
+    }
+  },
+
+  flashStatus(message, duration = 1500) {
+    clearTimeout(this.resetTimer)
+    this.el.textContent = message
+    this.resetTimer = setTimeout(() => { this.el.textContent = "Copy link" }, duration)
+  }
+}
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
-  params: {_csrf_token: csrfToken},
-  hooks: Hooks
+  params: () => ({
+    _csrf_token: csrfToken,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  }),
+  hooks: Hooks,
+  dom: {
+    onBeforeElUpdated(fromEl, toEl) {
+      if (fromEl.matches(imageFallbackSelector) && fromEl.hidden) {
+        toEl.hidden = true
+      }
+    }
+  }
 })
 
 // Show progress bar on live navigation and form submits
@@ -101,6 +190,8 @@ window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
 // connect if there are any LiveViews on the page
 liveSocket.connect()
+
+mountMobileNavigation()
 
 // "/" focuses the chrome search box, GitHub-style. Skipped while the user
 // is already typing in an editable field, or when modifier keys are held.

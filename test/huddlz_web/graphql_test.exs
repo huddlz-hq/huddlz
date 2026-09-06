@@ -25,7 +25,11 @@ defmodule HuddlzWeb.GraphqlTest do
       %{owner: owner, group: group, huddl: huddl}
     end
 
-    test "unauthenticated create mutation returns error", %{conn: conn, group: group} do
+    test "unauthenticated create mutation returns error", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
       starts_at =
         DateTime.utc_now()
         |> DateTime.add(7, :day)
@@ -42,6 +46,8 @@ defmodule HuddlzWeb.GraphqlTest do
         createHuddl(input: $input) {
           result {
             id
+            startsAt
+            timeZone
           }
           errors {
             message
@@ -54,7 +60,7 @@ defmodule HuddlzWeb.GraphqlTest do
         input: %{
           title: "Unauthorized Huddl",
           eventType: "in_person",
-          physicalLocation: "123 Main St",
+          groupLocationId: generate(group_location(group_id: group.id, actor: owner)).id,
           groupId: group.id,
           startsAt: starts_at,
           endsAt: ends_at
@@ -95,6 +101,8 @@ defmodule HuddlzWeb.GraphqlTest do
         createHuddl(input: $input) {
           result {
             id
+            startsAt
+            timeZone
           }
           errors {
             message
@@ -107,7 +115,10 @@ defmodule HuddlzWeb.GraphqlTest do
         input: %{
           title: "Authorized Huddl",
           eventType: "in_person",
-          physicalLocation: "456 Oak Ave",
+          groupLocationId:
+            generate(
+              group_location(group_id: group.id, actor: owner, time_zone: "America/Denver")
+            ).id,
           groupId: group.id,
           startsAt: starts_at,
           endsAt: ends_at
@@ -122,7 +133,16 @@ defmodule HuddlzWeb.GraphqlTest do
 
       body = json_response(conn, 200)
 
-      assert body["data"]["createHuddl"]["result"]["id"] != nil
+      result = body["data"]["createHuddl"]["result"]
+      assert result["id"] != nil
+
+      assert {:ok, returned_starts_at, _offset} = DateTime.from_iso8601(result["startsAt"])
+      assert {:ok, expected_starts_at, _offset} = DateTime.from_iso8601(starts_at)
+
+      assert DateTime.compare(returned_starts_at, DateTime.truncate(expected_starts_at, :second)) ==
+               :eq
+
+      assert result["timeZone"] == "America/Denver"
       assert body["data"]["createHuddl"]["errors"] == []
     end
 
