@@ -18,6 +18,7 @@ documentation for contributors and readers.
   verification, and access rules.
 - [Email notifications](docs/notifications.md) specifies notification
   categories, triggers, and delivery rules.
+- [Discovery API](docs/api-discovery.md) documents discovery ordering.
 - [API follow-ups](docs/api-followups.md) records deferred work for the
   JSON:API and GraphQL surfaces.
 

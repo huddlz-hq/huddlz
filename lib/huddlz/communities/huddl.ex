@@ -41,7 +41,8 @@ defmodule Huddlz.Communities.Huddl do
       base "/huddlz"
 
       get :read
-      index :search
+      # Discovery uses the action's named ordering instead of JSON:API field sorting.
+      index :search, derive_sort?: false
       index :upcoming, route: "/upcoming"
       index :past, route: "/past"
       index :by_group, route: "/by_group"
@@ -356,7 +357,7 @@ defmodule Huddlz.Communities.Huddl do
       end
 
       argument :sort, :atom do
-        description "Result ordering. :soonest sorts upcoming huddlz first; :newest sorts by recently created."
+        description "Result ordering: soonest sorts by start time ascending (default); newest sorts by creation time descending."
         allow_nil? true
         default :soonest
         constraints one_of: [:soonest, :newest]
