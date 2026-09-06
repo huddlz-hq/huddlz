@@ -41,6 +41,14 @@ mix phx.server
 `mix setup` creates local environment files from the checked-in examples when
 needed. Run the test suite with `mix test`.
 
+## Working with coding agents
+
+We use [Matt Pocock's skills](https://github.com/mattpocock/skills) in huddlz.
+If you work with a coding agent, follow his
+[installation guide](https://github.com/mattpocock/skills#installation-30-second-setup)
+to install the skills for your agent. The skills aren't bundled in this repo;
+our project-specific guidance lives in [AGENTS.md](AGENTS.md).
+
 ## License
 
 The source is licensed under the [Business Source License 1.1](LICENSE.md).
