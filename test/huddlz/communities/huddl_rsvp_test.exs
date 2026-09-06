@@ -302,10 +302,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
       assert_raise Ash.Error.Invalid,
                    ~r/cannot be less than the current RSVP count/,
                    fn ->
-                     huddl
-                     |> Ash.reload!()
-                     |> Ash.Changeset.for_update(:update, %{max_attendees: 1}, actor: owner)
-                     |> Ash.update!()
+                     Huddlz.Communities.get_huddl!(huddl.id, actor: owner)
+                     |> Huddlz.Communities.update_huddl!(%{max_attendees: 1}, actor: owner)
                    end
     end
 
@@ -328,10 +326,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
       end
 
       uncapped =
-        capped
-        |> Ash.reload!()
-        |> Ash.Changeset.for_update(:update, %{max_attendees: nil}, actor: owner)
-        |> Ash.update!()
+        Huddlz.Communities.get_huddl!(capped.id, actor: owner)
+        |> Huddlz.Communities.update_huddl!(%{max_attendees: nil}, actor: owner)
 
       assert uncapped.max_attendees == nil
       assert rsvp_count(uncapped) == 2

@@ -25,7 +25,9 @@ defmodule HuddlzWeb.HuddlLive.Show do
   ]
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(%{"id" => id}, _session, socket) do
+    if connected?(socket), do: Phoenix.PubSub.subscribe(Huddlz.PubSub, "huddl:#{id}")
+
     {:ok,
      socket
      |> assign(:confirming_delete?, false)
@@ -37,32 +39,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   def handle_params(%{"group_slug" => group_slug, "id" => id}, _, socket) do
     case get_huddl(id, group_slug, socket.assigns.current_user) do
       {:ok, huddl} ->
-        user = socket.assigns.current_user
-        {attendance, waitlist_position} = attendance_info(huddl, user)
-
-        {:noreply,
-         socket
-         |> assign(:page_title, huddl.title)
-         |> assign(:meta, huddl_meta(huddl))
-         |> assign(:huddl, huddl)
-         |> assign(:attendance, attendance)
-         |> assign(:waitlist_position, waitlist_position)
-         |> assign(
-           :can_edit_huddl,
-           editable_lifecycle?(huddl) && Communities.can_update_huddl?(user, huddl)
-         )
-         |> assign(
-           :can_publish_huddl,
-           huddl.lifecycle_state == :draft && Communities.can_publish_huddl?(user, huddl)
-         )
-         |> assign(
-           :can_cancel_huddl,
-           cancellable_lifecycle?(huddl) && Communities.can_cancel_huddl?(user, huddl)
-         )
-         |> assign(
-           :can_delete_huddl,
-           Communities.can_destroy_huddl?(user, huddl)
-         )}
+        {:noreply, assign_huddl(socket, huddl)}
 
       {:error, :not_found} ->
         not_found!()
@@ -704,6 +681,11 @@ defmodule HuddlzWeb.HuddlLive.Show do
     end
   end
 
+  @impl true
+  def handle_info({:huddl_changed, id}, %{assigns: %{huddl: %{id: id} = huddl}} = socket) do
+    {:noreply, refresh_attendance(socket, huddl, socket.assigns.current_user)}
+  end
+
   defp get_huddl(id, group_slug, user) do
     case Communities.get_huddl(id, load: @huddl_loads, actor: user) do
       {:ok, huddl} ->
@@ -728,18 +710,41 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp refresh_attendance(socket, huddl, user) do
     case reload_huddl(huddl, user) do
       {:ok, reloaded} ->
-        {attendance, waitlist_position} = attendance_info(reloaded, user)
-
-        socket
-        |> assign(:huddl, reloaded)
-        |> assign(:attendance, attendance)
-        |> assign(:waitlist_position, waitlist_position)
+        assign_huddl(socket, reloaded)
 
       {:error, _} ->
         socket
         |> put_flash(:error, "This huddl is no longer available.")
         |> push_navigate(to: ~p"/groups/#{huddl.group.slug}")
     end
+  end
+
+  defp assign_huddl(socket, huddl) do
+    user = socket.assigns.current_user
+    {attendance, waitlist_position} = attendance_info(huddl, user)
+
+    socket
+    |> assign(:page_title, huddl.title)
+    |> assign(:meta, huddl_meta(huddl))
+    |> assign(:huddl, huddl)
+    |> assign(:attendance, attendance)
+    |> assign(:waitlist_position, waitlist_position)
+    |> assign(
+      :can_edit_huddl,
+      editable_lifecycle?(huddl) && Communities.can_update_huddl?(user, huddl)
+    )
+    |> assign(
+      :can_publish_huddl,
+      huddl.lifecycle_state == :draft && Communities.can_publish_huddl?(user, huddl)
+    )
+    |> assign(
+      :can_cancel_huddl,
+      cancellable_lifecycle?(huddl) && Communities.can_cancel_huddl?(user, huddl)
+    )
+    |> assign(
+      :can_delete_huddl,
+      Communities.can_destroy_huddl?(user, huddl)
+    )
   end
 
   defp huddl_meta(huddl) do

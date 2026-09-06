@@ -8,6 +8,7 @@ defmodule Huddlz.Communities.Huddl do
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
+    notifiers: [Ash.Notifier.PubSub],
     extensions: [AshOban, AshJsonApi.Resource, AshGraphql.Resource],
     primary_read_warning?: false
 
@@ -54,34 +55,15 @@ defmodule Huddlz.Communities.Huddl do
     end
   end
 
-  oban do
-    triggers do
-      trigger :send_24h_reminder do
-        action :send_24h_reminder
-        read_action :due_for_24h_reminder
-        scheduler_cron "*/2 * * * *"
-        queue :notifications
-        worker_module_name Huddlz.Notifications.Workers.HuddlReminder24h
-        scheduler_module_name Huddlz.Notifications.Workers.HuddlReminder24hScheduler
-      end
+  field_policies do
+    private_fields :include
 
-      trigger :send_1h_reminder do
-        action :send_1h_reminder
-        read_action :due_for_1h_reminder
-        scheduler_cron "*/2 * * * *"
-        queue :notifications
-        worker_module_name Huddlz.Notifications.Workers.HuddlReminder1h
-        scheduler_module_name Huddlz.Notifications.Workers.HuddlReminder1hScheduler
-      end
+    field_policy :virtual_link do
+      authorize_if expr(can_read_virtual_link)
+    end
 
-      trigger :complete_huddl do
-        action :complete
-        read_action :due_for_completion
-        scheduler_cron "*/2 * * * *"
-        queue :default
-        worker_module_name Huddlz.Communities.Workers.CompleteHuddl
-        scheduler_module_name Huddlz.Communities.Workers.CompleteHuddlScheduler
-      end
+    field_policy :* do
+      authorize_if always()
     end
   end
 
@@ -112,6 +94,37 @@ defmodule Huddlz.Communities.Huddl do
                        check:
                          "lifecycle_state IN ('draft', 'published', 'cancelled', 'completed')",
                        message: "must be draft, published, cancelled, or completed"
+    end
+  end
+
+  oban do
+    triggers do
+      trigger :send_24h_reminder do
+        action :send_24h_reminder
+        read_action :due_for_24h_reminder
+        scheduler_cron "*/2 * * * *"
+        queue :notifications
+        worker_module_name Huddlz.Notifications.Workers.HuddlReminder24h
+        scheduler_module_name Huddlz.Notifications.Workers.HuddlReminder24hScheduler
+      end
+
+      trigger :send_1h_reminder do
+        action :send_1h_reminder
+        read_action :due_for_1h_reminder
+        scheduler_cron "*/2 * * * *"
+        queue :notifications
+        worker_module_name Huddlz.Notifications.Workers.HuddlReminder1h
+        scheduler_module_name Huddlz.Notifications.Workers.HuddlReminder1hScheduler
+      end
+
+      trigger :complete_huddl do
+        action :complete
+        read_action :due_for_completion
+        scheduler_cron "*/2 * * * *"
+        queue :default
+        worker_module_name Huddlz.Communities.Workers.CompleteHuddl
+        scheduler_module_name Huddlz.Communities.Workers.CompleteHuddlScheduler
+      end
     end
   end
 
@@ -629,6 +642,23 @@ defmodule Huddlz.Communities.Huddl do
     end
   end
 
+  pub_sub do
+    module Phoenix.PubSub
+    name Huddlz.PubSub
+    prefix "huddl"
+
+    # Subscribers reload with their own actor; never broadcast private access details.
+    transform fn notification -> {:huddl_changed, notification.data.id} end
+
+    publish :rsvp, [:id]
+    publish :join_waitlist, [:id]
+    publish :cancel_rsvp, [:id]
+    publish :update, [:id]
+    publish :publish, [:id]
+    publish :cancel, [:id]
+    publish :complete, [:id]
+  end
+
   # changes section removed - validation is handled by FutureDateValidation module
 
   validations do
@@ -644,7 +674,9 @@ defmodule Huddlz.Communities.Huddl do
       message "Must be at least 1"
     end
 
-    validate {Huddlz.Communities.Huddl.Validations.WebUrlValidation, attribute: :virtual_link}
+    validate {Huddlz.Communities.Huddl.Validations.WebUrlValidation, attribute: :virtual_link} do
+      where action_is([:create, :update])
+    end
 
     validate compare(:ends_at, greater_than: :starts_at) do
       message "must be after the start time"
@@ -658,12 +690,12 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     validate present([:virtual_link]) do
-      where attribute_equals(:event_type, :virtual)
+      where [action_is([:create, :update]), attribute_equals(:event_type, :virtual)]
       message "is required for virtual huddlz"
     end
 
     validate present([:virtual_link]) do
-      where attribute_equals(:event_type, :hybrid)
+      where [action_is([:create, :update]), attribute_equals(:event_type, :hybrid)]
       message "is required for hybrid huddlz"
     end
   end
@@ -852,6 +884,17 @@ defmodule Huddlz.Communities.Huddl do
                   )
     end
 
+    calculate :can_read_virtual_link, :boolean do
+      description "Whether the actor may read the stored link, including organizer editing access"
+
+      calculation expr(
+                    group.owner_id == ^actor(:id) or
+                      exists(group.group_members, user_id == ^actor(:id) and role == :organizer) or
+                      (lifecycle_state == :published and
+                         exists(attendees, user_id == ^actor(:id) and is_nil(waitlisted_at)))
+                  )
+    end
+
     calculate :visible_virtual_link, :string do
       description """
       Returns the virtual link for published huddlz only to group organizers or
@@ -861,16 +904,7 @@ defmodule Huddlz.Communities.Huddl do
       public? true
 
       calculation expr(
-                    if lifecycle_state == :published and
-                         (group.owner_id == ^actor(:id) or
-                            exists(
-                              group.group_members,
-                              user_id == ^actor(:id) and role == :organizer
-                            ) or
-                            exists(
-                              attendees,
-                              user_id == ^actor(:id) and is_nil(waitlisted_at)
-                            )) do
+                    if lifecycle_state == :published and can_read_virtual_link do
                       virtual_link
                     else
                       nil

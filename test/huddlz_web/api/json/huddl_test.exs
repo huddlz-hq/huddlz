@@ -189,15 +189,11 @@ defmodule HuddlzWeb.Api.Json.HuddlTest do
           )
         )
 
-      huddl
-      |> Ash.Changeset.for_update(:join_waitlist, %{}, actor: waitlisted)
-      |> Ash.update!()
+      Huddlz.Communities.join_waitlist_huddl!(huddl, actor: waitlisted)
 
       assert json_virtual_link(conn, waitlisted, huddl.id) == nil
 
-      huddl
-      |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: owner)
-      |> Ash.update!()
+      Huddlz.Communities.cancel_rsvp_huddl!(huddl, actor: owner)
 
       assert json_virtual_link(conn, waitlisted, huddl.id) ==
                "https://meet.example.com/private"

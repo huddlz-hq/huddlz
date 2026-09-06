@@ -127,17 +127,13 @@ defmodule HuddlzWeb.Api.Graphql.HuddlTest do
           )
         )
 
-      huddl
-      |> Ash.Changeset.for_update(:join_waitlist, %{}, actor: waitlisted)
-      |> Ash.update!()
+      Huddlz.Communities.join_waitlist_huddl!(huddl, actor: waitlisted)
 
       query = "{ upcomingHuddlz { id visibleVirtualLink } }"
 
       assert graphql_virtual_link(conn, waitlisted, query, huddl.id) == nil
 
-      huddl
-      |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: owner)
-      |> Ash.update!()
+      Huddlz.Communities.cancel_rsvp_huddl!(huddl, actor: owner)
 
       assert graphql_virtual_link(conn, waitlisted, query, huddl.id) ==
                "https://meet.example.com/private"

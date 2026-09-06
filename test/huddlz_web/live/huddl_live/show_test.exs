@@ -281,9 +281,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       group: group,
       huddl: huddl
     } do
-      huddl
-      |> Ash.Changeset.for_update(:update, %{max_attendees: 1}, actor: owner)
-      |> Ash.update!()
+      Communities.update_huddl!(huddl, %{max_attendees: 1}, actor: owner)
 
       session =
         conn
@@ -297,17 +295,45 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
         )
         |> refute_has("a.virtual-link-text", text: "Join virtually")
 
-      huddl
-      |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: owner)
-      |> Ash.update!()
+      Communities.cancel_rsvp_huddl!(huddl, actor: owner)
 
       session
-      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
       |> assert_has(".rsvp-banner.cyan", text: "You're attending")
       |> assert_has("a.virtual-link-text", text: "Join virtually")
       |> click_button("Cancel RSVP")
       |> assert_has(".facts .value .muted", text: "Virtual link available after RSVP")
       |> refute_has("a.virtual-link-text", text: "Join virtually")
+    end
+
+    test "capacity promotion and huddl cancellation update an open attendee page", %{
+      conn: conn,
+      member: member,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      Communities.update_huddl!(huddl, %{max_attendees: 1}, actor: owner)
+      Communities.join_waitlist_huddl!(huddl, actor: member)
+
+      session =
+        conn
+        |> login(member)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+        |> assert_has(".rsvp-banner.warn", text: "On waitlist")
+        |> refute_has("a.virtual-link-text")
+
+      Communities.update_huddl!(huddl, %{max_attendees: 2}, actor: owner)
+
+      session =
+        session
+        |> assert_has(".rsvp-banner.cyan", text: "You're attending")
+        |> assert_has("a.virtual-link-text")
+
+      Communities.cancel_huddl!(huddl, "Cancelled", actor: owner)
+
+      session
+      |> assert_has(".hero .eyebrow", text: "Cancelled")
+      |> refute_has("a.virtual-link-text")
     end
 
     test "prevents duplicate RSVPs", %{conn: conn, member: member, group: group, huddl: huddl} do

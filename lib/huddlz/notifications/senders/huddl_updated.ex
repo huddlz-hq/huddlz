@@ -22,6 +22,7 @@ defmodule Huddlz.Notifications.Senders.HuddlUpdated do
   alias Huddlz.Mailer
   alias Huddlz.Notifications.DateTimeFormatter
   alias Huddlz.Notifications.Footer
+  alias Huddlz.Notifications.HuddlAccess
   alias Huddlz.Notifications.ICS
   alias Huddlz.Notifications.Senders.ChangedFields
   alias Huddlz.Notifications.Senders.HeaderSafe
@@ -30,6 +31,13 @@ defmodule Huddlz.Notifications.Senders.HuddlUpdated do
 
   @impl true
   def build(user, payload) do
+    payload =
+      Map.put(
+        payload,
+        "virtual_link",
+        HuddlAccess.virtual_link(payload["huddl_id"], user)
+      )
+
     safe_name = HtmlEscape.escape(user.display_name)
     safe_title = HtmlEscape.escape(huddl_title(payload))
     safe_group = HtmlEscape.escape(group_name(payload))
