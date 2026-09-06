@@ -8,8 +8,10 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
   require Ash.Query
 
   alias Huddlz.Accounts.User
+  alias Huddlz.Communities
   alias Huddlz.Communities.GroupMember
-  alias Huddlz.Communities.HuddlAttendee
+  alias Huddlz.Communities.Huddl
+  alias Huddlz.Communities.Huddl.RecurrenceHelper
   alias Huddlz.Notifications
 
   @doc """
@@ -22,13 +24,40 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
   def rsvp_user_ids(huddl_id, opts \\ []) do
     actor_id = Keyword.get(opts, :exclude)
 
-    HuddlAttendee
-    |> Ash.Query.filter(huddl_id == ^huddl_id)
-    |> Ash.Query.select([:user_id])
-    |> Ash.read!(authorize?: false)
+    [huddl_id]
+    |> Communities.list_huddl_notification_recipients!(authorize?: false)
     |> Enum.map(& &1.user_id)
     |> Enum.uniq()
     |> Enum.reject(&(&1 == actor_id))
+  end
+
+  @doc """
+  Returns one next-upcoming huddl per person who has an RSVP on the source
+  occurrence or any later occurrence in its recurring series.
+
+  Choosing a target per recipient keeps a whole-series summary useful for
+  people who attend different dates and ensures the link points to a huddl
+  they can still access after reconciliation.
+  """
+  @spec series_rsvp_targets(Huddl.t(), keyword()) :: [{Ecto.UUID.t(), Huddl.t()}]
+  def series_rsvp_targets(%Huddl{} = source, opts \\ []) do
+    actor_id = Keyword.get(opts, :exclude)
+    huddlz = [source | RecurrenceHelper.future_instances(source)]
+    huddlz_by_id = Map.new(huddlz, &{&1.id, &1})
+    huddl_ids = Map.keys(huddlz_by_id)
+
+    huddl_ids
+    |> Communities.list_huddl_notification_recipients!(authorize?: false)
+    |> Enum.reject(&(&1.user_id == actor_id))
+    |> Enum.group_by(& &1.user_id)
+    |> Enum.map(fn {user_id, attendances} ->
+      next_huddl =
+        attendances
+        |> Enum.map(&Map.fetch!(huddlz_by_id, &1.huddl_id))
+        |> Enum.min_by(& &1.starts_at, DateTime)
+
+      {user_id, next_huddl}
+    end)
   end
 
   @doc """
@@ -75,15 +104,18 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
   with `authorize?: false` and skipping any that no longer exist
   (e.g. raced deletion). Used by the C/E-series fanout notifiers.
   """
-  @spec deliver_each([Ecto.UUID.t()], atom(), map()) :: :ok
+  @spec deliver_each([Ecto.UUID.t()], atom(), map()) :: :ok | {:error, term()}
   def deliver_each([], _trigger, _payload), do: :ok
 
   def deliver_each(user_ids, trigger, payload) do
     User
     |> Ash.Query.filter(id in ^user_ids)
     |> Ash.read!(authorize?: false)
-    |> Enum.each(&Notifications.deliver(&1, trigger, payload))
-
-    :ok
+    |> Enum.reduce_while(:ok, fn user, :ok ->
+      case Notifications.deliver(user, trigger, payload) do
+        {:ok, _job} -> {:cont, :ok}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
   end
 end

@@ -55,6 +55,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Test Group",
             description: "A test group",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
             is_public: true
           },
           actor: owner
@@ -300,10 +302,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
       assert_raise Ash.Error.Invalid,
                    ~r/cannot be less than the current RSVP count/,
                    fn ->
-                     huddl
-                     |> Ash.reload!()
-                     |> Ash.Changeset.for_update(:update, %{max_attendees: 1}, actor: owner)
-                     |> Ash.update!()
+                     Huddlz.Communities.get_huddl!(huddl.id, actor: owner)
+                     |> Huddlz.Communities.update_huddl!(%{max_attendees: 1}, actor: owner)
                    end
     end
 
@@ -326,10 +326,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
       end
 
       uncapped =
-        capped
-        |> Ash.reload!()
-        |> Ash.Changeset.for_update(:update, %{max_attendees: nil}, actor: owner)
-        |> Ash.update!()
+        Huddlz.Communities.get_huddl!(capped.id, actor: owner)
+        |> Huddlz.Communities.update_huddl!(%{max_attendees: nil}, actor: owner)
 
       assert uncapped.max_attendees == nil
       assert rsvp_count(uncapped) == 2
@@ -417,6 +415,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Private Group",
             description: "A private group",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
             is_public: false
           },
           actor: owner
@@ -434,7 +434,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
             starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
             ends_at: DateTime.add(DateTime.utc_now(), 2, :day),
             event_type: :in_person,
-            physical_location: "Secret Location",
+            group_location_id: address_book_location_id(private_group.id),
             is_private: true,
             group_id: private_group.id
           },
@@ -551,11 +551,11 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
     end
 
     test "a missing locked huddl returns an Ash error", %{
-      owner: owner,
       member: member,
       huddl: huddl
     } do
-      Ash.destroy!(huddl, actor: owner)
+      # Simulate a stale record independently of the draft-only deletion policy.
+      Ash.destroy!(huddl, authorize?: false)
 
       assert {:error, error} =
                huddl
@@ -580,6 +580,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Test Group",
             description: "A test group",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
             is_public: true
           },
           actor: owner
@@ -773,6 +775,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Test Group",
             description: "A test group",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
             is_public: true
           },
           actor: owner

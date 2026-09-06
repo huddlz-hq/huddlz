@@ -187,6 +187,8 @@ defmodule Huddlz.Communities.GroupMembershipTest do
           %{
             name: "Test Group",
             description: "Test",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
             is_public: true
           },
           actor: admin

@@ -23,7 +23,6 @@ defmodule Huddlz.Notifications.Senders.HuddlReminder1hTest do
       group_id: group.id,
       creator_id: owner.id,
       event_type: :in_person,
-      physical_location: "123 Main St, Anytown, USA",
       virtual_link: nil,
       actor: owner
     ]
@@ -64,6 +63,7 @@ defmodule Huddlz.Notifications.Senders.HuddlReminder1hTest do
     test "leads with the virtual link prominently when one is set" do
       user = generate(user())
       huddl = setup_huddl(%{virtual_link: "https://meet.example.com/abc-xyz"})
+      Huddlz.Communities.rsvp_huddl!(huddl, actor: user)
 
       email = HuddlReminder1h.build(user, %{"huddl_id" => huddl.id})
 

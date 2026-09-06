@@ -3,6 +3,8 @@ defmodule Huddlz.Communities.Group do
   A group is a community container that can organize huddlz and manage members.
   """
 
+  @name_length 3..100
+
   use Ash.Resource,
     otp_app: :huddlz,
     domain: Huddlz.Communities,
@@ -62,7 +64,7 @@ defmodule Huddlz.Communities.Group do
   end
 
   actions do
-    defaults [:create, :read, :update]
+    defaults [:create, :read]
 
     destroy :destroy do
       primary? true
@@ -72,7 +74,7 @@ defmodule Huddlz.Communities.Group do
 
     create :create_group do
       description "Create a new group; the owner is always the current actor."
-      accept [:name, :description, :location, :is_public]
+      accept [:name, :description, :location, :latitude, :longitude, :time_zone, :is_public]
 
       argument :slug, :string, allow_nil?: true
       argument :provided_latitude, :float, allow_nil?: true, public?: false
@@ -195,7 +197,18 @@ defmodule Huddlz.Communities.Group do
 
     update :update_details do
       description "Update group details"
-      accept [:name, :description, :location, :is_public, :slug]
+
+      accept [
+        :name,
+        :description,
+        :location,
+        :latitude,
+        :longitude,
+        :time_zone,
+        :is_public,
+        :slug
+      ]
+
       require_atomic? false
 
       argument :provided_latitude, :float, allow_nil?: true, public?: false
@@ -214,20 +227,7 @@ defmodule Huddlz.Communities.Group do
         allow_nil? false
       end
 
-      validate fn changeset, _ctx ->
-        new_owner_id = Ash.Changeset.get_argument(changeset, :new_owner_id)
-
-        cond do
-          is_nil(new_owner_id) ->
-            {:error, field: :new_owner_id, message: "is required"}
-
-          new_owner_id == changeset.data.owner_id ->
-            {:error, field: :new_owner_id, message: "is already the group owner"}
-
-          true ->
-            :ok
-        end
-      end
+      validate Huddlz.Communities.Group.Validations.NewOwnerIsExistingMember
 
       change Huddlz.Communities.Group.Changes.TransferOwnership
     end
@@ -277,13 +277,32 @@ defmodule Huddlz.Communities.Group do
     end
   end
 
+  validations do
+    validate string_length(:name, min: @name_length.first, max: @name_length.last) do
+      message "Must be between 3 and 100 characters"
+    end
+
+    validate match(:slug, ~r/^[a-z0-9-]+$/) do
+      where action_is(:update_details)
+      message "Use only lowercase letters, numbers, and hyphens"
+    end
+
+    validate Huddlz.TimeZone.Validation do
+      where action_is([:create_group, :update_details])
+    end
+  end
+
+  @doc false
+  def valid_name_length?(name) do
+    String.length(to_string(name)) in @name_length
+  end
+
   attributes do
     uuid_primary_key :id
 
     attribute :name, :ci_string do
       allow_nil? false
       public? true
-      constraints min_length: 3, max_length: 100
     end
 
     attribute :description, :ci_string do
@@ -293,9 +312,15 @@ defmodule Huddlz.Communities.Group do
     end
 
     attribute :location, :string do
-      allow_nil? true
+      allow_nil? false
       public? true
-      constraints max_length: 500
+      constraints min_length: 1, max_length: 500
+    end
+
+    attribute :time_zone, :string do
+      allow_nil? false
+      public? true
+      constraints min_length: 1, max_length: 100
     end
 
     attribute :is_public, :boolean do
@@ -310,13 +335,15 @@ defmodule Huddlz.Communities.Group do
     end
 
     attribute :latitude, :float do
-      allow_nil? true
+      allow_nil? false
+      public? true
       description "Geocoded latitude of group location"
       constraints min: -90, max: 90
     end
 
     attribute :longitude, :float do
-      allow_nil? true
+      allow_nil? false
+      public? true
       description "Geocoded longitude of group location"
       constraints min: -180, max: 180
     end
@@ -333,6 +360,10 @@ defmodule Huddlz.Communities.Group do
     end
 
     has_many :group_members, Huddlz.Communities.GroupMember do
+      destination_attribute :group_id
+    end
+
+    has_many :group_invitations, Huddlz.Communities.GroupInvitation do
       destination_attribute :group_id
     end
 

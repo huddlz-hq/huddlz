@@ -31,8 +31,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
             title: "Test Huddl",
             group_id: group.id,
             creator_id: owner.id,
-            actor: owner,
-            physical_location: "123 Main St, City"
+            actor: owner
           )
         )
 
@@ -106,8 +105,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
             title: "Test Huddl",
             group_id: group.id,
             creator_id: owner.id,
-            actor: owner,
-            physical_location: "123 Main St, City"
+            actor: owner
           )
         )
 
@@ -169,7 +167,6 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
             group_id: group.id,
             creator_id: owner.id,
             actor: owner,
-            physical_location: "456 Oak Ave",
             is_recurring: true,
             frequency: :weekly,
             repeat_until: Date.utc_today() |> Date.add(60)
@@ -211,6 +208,27 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       assert_has(session, "input[name='form[title]']")
       assert_has(session, "textarea[name='form[description]']")
       assert_has(session, "input[name='form[event_type]'][type='radio']")
+      assert_has(session, "fieldset.huddl-format-fieldset legend", text: "Huddl format")
+
+      assert_has(
+        session,
+        ".toggle input[name='form[is_private]'][type='checkbox'][role='switch'][aria-checked='false']"
+      )
+    end
+
+    test "explains the same attendee-affecting changes as the domain", %{
+      conn: conn,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+      |> assert_has(
+        "#attendee-notification-explanation",
+        text: "title, time, location, capacity, or privacy"
+      )
     end
 
     test "shows calculated end time", %{
@@ -240,7 +258,6 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
             group_id: group.id,
             creator_id: owner.id,
             actor: owner,
-            physical_location: "456 Oak Ave",
             is_recurring: true,
             frequency: :weekly,
             repeat_until: Date.utc_today() |> Date.add(60)
@@ -377,7 +394,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
         create_recurring_huddl(owner, group,
           title: "Hybrid Series",
           event_type: :hybrid,
-          physical_location: location.address,
+          group_location_id: location.id,
           virtual_link: "https://meet.example.com/hybrid-series"
         )
 
@@ -396,7 +413,8 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       assert Enum.all?(load_series_huddlz(hybrid_huddl, owner), fn huddl ->
                huddl.event_type == :hybrid and
                  huddl.virtual_link == "https://meet.example.com/hybrid-series" and
-                 huddl.physical_location == location.address
+                 huddl.physical_location == location.address and
+                 huddl.group_location_id == location.id
              end)
     end
 
@@ -419,7 +437,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
         create_recurring_huddl(owner, group,
           title: "In-person Series",
           event_type: :in_person,
-          physical_location: location.address,
+          group_location_id: location.id,
           virtual_link: nil
         )
 
@@ -434,6 +452,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       assert Enum.all?(load_series_huddlz(in_person_huddl, owner), fn huddl ->
                huddl.event_type == :in_person and
                  huddl.physical_location == location.address and
+                 huddl.group_location_id == location.id and
                  is_nil(huddl.virtual_link)
              end)
     end
@@ -457,7 +476,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
         create_recurring_huddl(owner, group,
           title: "Changing Format Series",
           event_type: :hybrid,
-          physical_location: location.address,
+          group_location_id: location.id,
           virtual_link: "https://meet.example.com/changed-series"
         )
 
@@ -505,8 +524,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
             description: "Original description",
             group_id: group.id,
             creator_id: owner.id,
-            actor: owner,
-            physical_location: "123 Main St"
+            actor: owner
           )
         )
 
@@ -575,7 +593,6 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
             group_id: group.id,
             creator_id: owner.id,
             actor: owner,
-            physical_location: "123 Main St",
             # Start unlimited; the generator otherwise randomly fills this with
             # a large integer half the time, breaking the post-validation assert.
             max_attendees: nil
@@ -615,6 +632,76 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
 
       assert reloaded.max_attendees == nil
     end
+
+    test "clearing an invalid capacity restores unlimited capacity", %{
+      conn: conn,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+        |> fill_in("Max attendees", with: "0")
+        |> assert_has("#form_max_attendees-error-0", text: "Must be at least 1")
+        |> fill_in("Max attendees", with: "")
+        |> refute_has("input[name='form[max_attendees]'][value='0']")
+        |> refute_has("#form_max_attendees-error-0")
+        |> click_button("Save changes")
+
+      assert_has(session, "*", text: "Huddl updated successfully!")
+
+      reloaded =
+        Huddl
+        |> Ash.Query.filter(id == ^huddl.id)
+        |> Ash.read_one!(actor: owner)
+
+      assert is_nil(reloaded.max_attendees)
+    end
+  end
+
+  describe "virtual link validation" do
+    setup do
+      owner = generate(user(role: :user))
+      group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+
+      huddl =
+        generate(
+          huddl(
+            title: "Virtual Huddl",
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            event_type: :virtual,
+            virtual_link: "https://meet.example.com/original"
+          )
+        )
+
+      %{owner: owner, group: group, huddl: huddl}
+    end
+
+    test "shows a friendly inline error for a malformed link", %{
+      conn: conn,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+      |> assert_has("input[name='form[virtual_link]'][type='text'][inputmode='url']")
+      |> fill_in("Online link", with: "javascript:alert(1)")
+      |> click_button("Save changes")
+      |> assert_path(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
+      |> assert_has(
+        "input[name='form[virtual_link]'][aria-invalid='true'][aria-describedby='form_virtual_link-help form_virtual_link-error-0']"
+      )
+      |> assert_has(
+        "#form_virtual_link-error-0",
+        text: "Must be a valid web address starting with http:// or https://"
+      )
+    end
   end
 
   describe "saved location picker" do
@@ -628,8 +715,7 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
             title: "Test Huddl",
             group_id: group.id,
             creator_id: owner.id,
-            actor: owner,
-            physical_location: "123 Main St"
+            actor: owner
           )
         )
 
@@ -672,10 +758,10 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
       |> choose("In person")
       # Revealing the picker must not immediately flag the missing location
-      |> refute_has("p.form-error", text: "is required for in-person huddlz")
+      |> refute_has("p.form-error", text: "is required for in-person and hybrid huddlz")
       |> click_button("Save changes")
       |> assert_path(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit")
-      |> assert_has("p.form-error", text: "is required for in-person huddlz")
+      |> assert_has("p.form-error", text: "is required for in-person and hybrid huddlz")
     end
 
     test "selecting a saved location preserves other form fields", %{
@@ -715,6 +801,17 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       # Other form fields must be preserved
       assert has_element?(view, "input[name='form[title]'][value='My Updated Title']")
       assert has_element?(view, "input[name='form[date]'][value='#{expected_date}']")
+
+      view
+      |> element("#huddl-form")
+      |> render_submit()
+
+      assert %Huddl{group_location_id: group_location_id} =
+               Huddl
+               |> Ash.Query.filter(id == ^huddl.id)
+               |> Ash.read_one!(authorize?: false)
+
+      assert group_location_id == location.id
     end
   end
 
