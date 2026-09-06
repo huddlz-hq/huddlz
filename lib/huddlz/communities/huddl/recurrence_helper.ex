@@ -62,7 +62,10 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   update emails for instances they're attending.
   """
   def reconcile_future_instances(source, template, actor) do
-    with {:ok, desired} <- desired_occurrences(template) do
+    starting_after =
+      source.starts_at |> DateTime.shift_zone!(template.time_zone) |> DateTime.to_naive()
+
+    with {:ok, desired} <- desired_occurrences(template, starting_after) do
       reconcile_desired_instances(source, template, actor, desired)
     end
   end
@@ -170,11 +173,12 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   # The start/end times the series should have, from the source forward, capped
   # at @max_instances. Times shift with the source, so editing the time moves
   # every future occurrence.
-  defp desired_occurrences(template) do
+  defp desired_occurrences(template, starting_after \\ nil) do
     1..@max_instances
     |> Enum.reduce_while([], fn k, acc ->
-      case desired_occurrence(template, k) do
+      case desired_occurrence(template, k, starting_after) do
         {:ok, occurrence} -> {:cont, [occurrence | acc]}
+        :skip -> {:cont, acc}
         {:error, reason} -> {:halt, {:error, reason}}
         :done -> {:halt, {:ok, Enum.reverse(acc)}}
       end
@@ -185,15 +189,20 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     end
   end
 
-  defp desired_occurrence(template, index) do
+  defp desired_occurrence(template, index, starting_after \\ nil) do
     starts_at_local = occurrence_datetime(template.starts_at_local, template, index)
     duration = NaiveDateTime.diff(template.ends_at_local, template.starts_at_local, :second)
     ends_at_local = NaiveDateTime.add(starts_at_local, duration, :second)
 
-    if Date.before?(NaiveDateTime.to_date(starts_at_local), repeat_until_date(template)) do
-      resolve_occurrence(starts_at_local, ends_at_local, template.time_zone)
-    else
-      :done
+    cond do
+      not Date.before?(NaiveDateTime.to_date(starts_at_local), repeat_until_date(template)) ->
+        :done
+
+      starting_after && not NaiveDateTime.after?(starts_at_local, starting_after) ->
+        :skip
+
+      true ->
+        resolve_occurrence(starts_at_local, ends_at_local, template.time_zone)
     end
   end
 

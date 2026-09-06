@@ -48,7 +48,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz do
             changed_fields
           end
 
-        schedule = HuddlTemplate.wall_clock_schedule(huddl)
+        schedule = series_schedule(huddl_template, changeset.data, huddl, frequency)
 
         {:ok, huddl_template} =
           huddl_template
@@ -73,6 +73,35 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz do
             {:error, reason}
         end
     end
+  end
+
+  defp series_schedule(%{unit: :month} = template, original, huddl, frequency)
+       when frequency in [nil, :monthly, "monthly"] do
+    previous = HuddlTemplate.wall_clock_schedule(original)
+    schedule = HuddlTemplate.wall_clock_schedule(huddl)
+
+    if NaiveDateTime.to_date(previous.starts_at_local) ==
+         NaiveDateTime.to_date(schedule.starts_at_local) do
+      # A clamped February occurrence does not replace the selected monthly day.
+      # Keep the anchor date while accepting edits to the local time and duration.
+      days =
+        Date.diff(
+          NaiveDateTime.to_date(template.starts_at_local),
+          NaiveDateTime.to_date(schedule.starts_at_local)
+        )
+
+      %{
+        schedule
+        | starts_at_local: NaiveDateTime.add(schedule.starts_at_local, days, :day),
+          ends_at_local: NaiveDateTime.add(schedule.ends_at_local, days, :day)
+      }
+    else
+      schedule
+    end
+  end
+
+  defp series_schedule(_template, _original, huddl, _frequency) do
+    HuddlTemplate.wall_clock_schedule(huddl)
   end
 
   defp schedule_changed?(template, repeat_until, frequency) do
