@@ -18,7 +18,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
     group =
       Generator.generate(Generator.group(owner_id: owner.id, is_public: is_public, actor: owner))
 
-    starts_at = DateTime.add(DateTime.utc_now(), 1, :day)
+    starts_at = opts[:starts_at] || DateTime.add(DateTime.utc_now(), 1, :day)
     ends_at = DateTime.add(starts_at, 1, :hour)
 
     source =
@@ -48,7 +48,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
       |> Ash.Changeset.for_create(
         :create,
         HuddlTemplate.wall_clock_schedule(source)
-        |> Map.merge(%{frequency: :weekly, repeat_until: repeat_until})
+        |> Map.merge(%{frequency: opts[:frequency] || :weekly, repeat_until: repeat_until})
       )
       |> Ash.create!(authorize?: false)
 
@@ -74,14 +74,14 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
     |> Ash.read!(authorize?: false)
   end
 
-  defp edit_all(source, owner, repeat_until) do
+  defp edit_all(source, owner, repeat_until, frequency \\ "weekly") do
     Communities.update_huddl!(
       source,
       %{
         title: "Renamed series",
         edit_type: "all",
         repeat_until: repeat_until,
-        frequency: "weekly"
+        frequency: frequency
       },
       actor: owner
     )
@@ -203,6 +203,139 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
              waitlist_entries(occurrence),
              &(&1.user_id == waitlister.id and not is_nil(&1.waitlisted_at))
            )
+  end
+
+  test "edit-all preserves monthly cadence and RSVPs across short months" do
+    repeat_until = ~D[2028-05-01]
+
+    %{owner: owner, source: source, template: template} =
+      build_series(true,
+        starts_at: ~U[2028-01-31 18:30:00Z],
+        repeat_until: repeat_until,
+        frequency: :monthly
+      )
+
+    instances =
+      future_instances(template.id, source.starts_at)
+      |> Enum.sort_by(& &1.starts_at, DateTime)
+
+    assert Enum.map(instances, &DateTime.to_date(&1.starts_at)) == [
+             ~D[2028-02-29],
+             ~D[2028-03-31],
+             ~D[2028-04-30]
+           ]
+
+    march = instance_on(instances, ~D[2028-03-31])
+    attendee = Generator.generate(Generator.user())
+
+    march
+    |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
+    |> Ash.update!()
+
+    edit_all(source, owner, repeat_until, "monthly")
+
+    reconciled =
+      future_instances(template.id, source.starts_at)
+      |> Enum.sort_by(& &1.starts_at, DateTime)
+
+    assert Enum.map(reconciled, &DateTime.to_date(&1.starts_at)) == [
+             ~D[2028-02-29],
+             ~D[2028-03-31],
+             ~D[2028-04-30]
+           ]
+
+    reconciled_march = instance_on(reconciled, ~D[2028-03-31])
+    assert reconciled_march.id == march.id
+    assert Enum.any?(attendee_entries(reconciled_march), &(&1.user_id == attendee.id))
+  end
+
+  test "editing the time from February retains month ends and occurrence identity" do
+    %{owner: owner, source: source, template: template} =
+      build_series(true,
+        starts_at: ~U[2028-01-31 18:30:00Z],
+        repeat_until: ~D[2028-05-01],
+        frequency: :monthly
+      )
+
+    instances = future_instances(template.id, source.starts_at)
+    february = instance_on(instances, ~D[2028-02-29])
+
+    Communities.update_huddl!(
+      february,
+      %{
+        edit_type: "all",
+        frequency: "monthly",
+        repeat_until: ~D[2028-05-01],
+        starts_at: ~U[2028-02-29 20:30:00Z],
+        ends_at: ~U[2028-02-29 22:30:00Z]
+      },
+      actor: owner
+    )
+
+    reconciled = future_instances(template.id, source.starts_at)
+    assert Enum.sort(Enum.map(reconciled, & &1.id)) == Enum.sort(Enum.map(instances, & &1.id))
+
+    assert Enum.sort(Enum.map(reconciled, & &1.starts_at), DateTime) == [
+             ~U[2028-02-29 20:30:00Z],
+             ~U[2028-03-31 19:30:00Z],
+             ~U[2028-04-30 19:30:00Z]
+           ]
+
+    assert Enum.all?(reconciled, &(DateTime.diff(&1.ends_at, &1.starts_at) == 7200))
+  end
+
+  test "a later monthly time edit does not validate earlier daylight-saving gaps" do
+    %{owner: owner, source: source, template: template} =
+      build_series(true,
+        starts_at: ~U[2028-01-12 18:30:00Z],
+        repeat_until: ~D[2028-06-01],
+        frequency: :monthly
+      )
+
+    april = instance_on(future_instances(template.id, source.starts_at), ~D[2028-04-12])
+
+    Communities.update_huddl!(
+      april,
+      %{
+        edit_type: "all",
+        frequency: "monthly",
+        repeat_until: ~D[2028-06-01],
+        starts_at: ~U[2028-04-12 06:30:00Z],
+        ends_at: ~U[2028-04-12 07:30:00Z]
+      },
+      actor: owner
+    )
+
+    [may] = future_instances(template.id, april.starts_at)
+    assert may.starts_at == ~U[2028-05-12 06:30:00Z]
+  end
+
+  test "explicitly moving February to a new date selects a new monthly day" do
+    %{owner: owner, source: source, template: template} =
+      build_series(true,
+        starts_at: ~U[2028-01-31 18:30:00Z],
+        repeat_until: ~D[2028-05-01],
+        frequency: :monthly
+      )
+
+    february = instance_on(future_instances(template.id, source.starts_at), ~D[2028-02-29])
+
+    Communities.update_huddl!(
+      february,
+      %{
+        edit_type: "all",
+        frequency: "monthly",
+        repeat_until: ~D[2028-05-01],
+        starts_at: ~U[2028-02-20 18:30:00Z],
+        ends_at: ~U[2028-02-20 19:30:00Z]
+      },
+      actor: owner
+    )
+
+    assert template.id
+           |> future_instances(source.starts_at)
+           |> Enum.map(&DateTime.to_date(&1.starts_at))
+           |> Enum.sort(Date) == [~D[2028-02-20], ~D[2028-03-20], ~D[2028-04-20]]
   end
 
   test "extending a shortened series creates a new active occurrence for a cancelled date" do

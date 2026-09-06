@@ -62,7 +62,10 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   update emails for instances they're attending.
   """
   def reconcile_future_instances(source, template, actor) do
-    with {:ok, desired} <- desired_occurrences(template) do
+    starting_after =
+      source.starts_at |> DateTime.shift_zone!(template.time_zone) |> DateTime.to_naive()
+
+    with {:ok, desired} <- desired_occurrences(template, starting_after) do
       reconcile_desired_instances(source, template, actor, desired)
     end
   end
@@ -131,6 +134,9 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   repeat_until date. Each new huddl copies the source huddl's properties and
   advances the start/end times by the appropriate interval.
 
+  Monthly huddlz retain the selected local calendar day. Short months use their
+  final day; later months restore the selected day when it exists again.
+
   Stops after `@max_instances` (#{@max_instances}) to prevent unbounded generation.
   """
   def generate_huddlz_from_template(template, source, count \\ 0)
@@ -139,23 +145,16 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     do: :ok
 
   def generate_huddlz_from_template(template, source, count) do
-    interval_days = interval_days(template)
-    starts_at_local = NaiveDateTime.add(template.starts_at_local, count * interval_days, :day)
-    ends_at_local = NaiveDateTime.add(template.ends_at_local, count * interval_days, :day)
-    next_starts_at_local = NaiveDateTime.add(starts_at_local, interval_days, :day)
-    next_ends_at_local = NaiveDateTime.add(ends_at_local, interval_days, :day)
+    case desired_occurrence(template, count + 1) do
+      {:ok, {starts_at, ends_at}} ->
+        create_instance!(source, template, starts_at, ends_at)
+        generate_huddlz_from_template(template, source, count + 1)
 
-    if Date.before?(NaiveDateTime.to_date(next_starts_at_local), repeat_until_date(template)) do
-      case resolve_occurrence(next_starts_at_local, next_ends_at_local, template.time_zone) do
-        {:ok, {starts_at, ends_at}} ->
-          new_huddl = create_instance!(source, template, starts_at, ends_at)
-          generate_huddlz_from_template(template, new_huddl, count + 1)
+      {:error, _reason} = error ->
+        error
 
-        {:error, _reason} = error ->
-          error
-      end
-    else
-      :ok
+      :done ->
+        :ok
     end
   end
 
@@ -174,13 +173,12 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   # The start/end times the series should have, from the source forward, capped
   # at @max_instances. Times shift with the source, so editing the time moves
   # every future occurrence.
-  defp desired_occurrences(template) do
-    interval_days = interval_days(template)
-
+  defp desired_occurrences(template, starting_after \\ nil) do
     1..@max_instances
     |> Enum.reduce_while([], fn k, acc ->
-      case desired_occurrence(template, k, interval_days) do
+      case desired_occurrence(template, k, starting_after) do
         {:ok, occurrence} -> {:cont, [occurrence | acc]}
+        :skip -> {:cont, acc}
         {:error, reason} -> {:halt, {:error, reason}}
         :done -> {:halt, {:ok, Enum.reverse(acc)}}
       end
@@ -191,16 +189,20 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     end
   end
 
-  defp desired_occurrence(template, index, interval_days) do
-    starts_at_local =
-      NaiveDateTime.add(template.starts_at_local, index * interval_days, :day)
+  defp desired_occurrence(template, index, starting_after \\ nil) do
+    starts_at_local = occurrence_datetime(template.starts_at_local, template, index)
+    duration = NaiveDateTime.diff(template.ends_at_local, template.starts_at_local, :second)
+    ends_at_local = NaiveDateTime.add(starts_at_local, duration, :second)
 
-    ends_at_local = NaiveDateTime.add(template.ends_at_local, index * interval_days, :day)
+    cond do
+      not Date.before?(NaiveDateTime.to_date(starts_at_local), repeat_until_date(template)) ->
+        :done
 
-    if Date.before?(NaiveDateTime.to_date(starts_at_local), repeat_until_date(template)) do
-      resolve_occurrence(starts_at_local, ends_at_local, template.time_zone)
-    else
-      :done
+      starting_after && not NaiveDateTime.after?(starts_at_local, starting_after) ->
+        :skip
+
+      true ->
+        resolve_occurrence(starts_at_local, ends_at_local, template.time_zone)
     end
   end
 
@@ -308,8 +310,14 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     end
   end
 
-  defp interval_days(%{interval: interval, unit: :week}), do: interval * 7
-  defp interval_days(%{interval: interval, unit: :month}), do: interval * 30
+  defp occurrence_datetime(datetime, %{interval: interval, unit: :week}, index) do
+    NaiveDateTime.shift(datetime, week: interval * index)
+  end
+
+  # Anchor each shift to the selected day, so Jan 31 becomes Feb 28/29 then Mar 31.
+  defp occurrence_datetime(datetime, %{interval: interval, unit: :month}, index) do
+    NaiveDateTime.shift(datetime, month: interval * index)
+  end
 
   defp repeat_until_date(%{repeat_until: %Date{} = date}), do: date
   defp repeat_until_date(%{repeat_until: datetime}), do: DateTime.to_date(datetime)
