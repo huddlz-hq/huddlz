@@ -59,7 +59,6 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate do
       "time_zone" => huddl.time_zone,
       "description" => huddl.description,
       "physical_location" => huddl.physical_location,
-      "virtual_link" => huddl.virtual_link,
       "group_name" => to_string(group.name),
       "group_slug" => to_string(group.slug),
       "changed_fields" => Enum.map(changed_fields, &Atom.to_string/1)

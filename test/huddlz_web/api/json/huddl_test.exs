@@ -171,6 +171,33 @@ defmodule HuddlzWeb.Api.Json.HuddlTest do
       ids = Enum.map(data, & &1["id"])
       assert h.id in ids
     end
+
+    test "exposes virtual access only to confirmed attendees", %{conn: conn} do
+      owner = generate(user())
+      waitlisted = generate(user())
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+
+      huddl =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            event_type: :virtual,
+            virtual_link: "https://meet.example.com/private",
+            max_attendees: 1
+          )
+        )
+
+      Huddlz.Communities.join_waitlist_huddl!(huddl, actor: waitlisted)
+
+      assert json_virtual_link(conn, waitlisted, huddl.id) == nil
+
+      Huddlz.Communities.cancel_rsvp_huddl!(huddl, actor: owner)
+
+      assert json_virtual_link(conn, waitlisted, huddl.id) ==
+               "https://meet.example.com/private"
+    end
   end
 
   describe "GET /api/json/huddlz/by_group" do
@@ -214,6 +241,20 @@ defmodule HuddlzWeb.Api.Json.HuddlTest do
       ids = Enum.map(data, & &1["id"])
       assert h.id in ids
     end
+  end
+
+  defp json_virtual_link(conn, actor, huddl_id) do
+    response =
+      conn
+      |> authenticated_conn(actor)
+      |> get("/api/json/huddlz/upcoming?fields[huddl]=visible_virtual_link")
+      |> json_response(200)
+
+    response
+    |> Map.fetch!("data")
+    |> Enum.find(&(&1["id"] == huddl_id))
+    |> Map.fetch!("attributes")
+    |> Map.fetch!("visible_virtual_link")
   end
 
   defp lifecycle_patch(conn, user, huddl, action, attributes) do
