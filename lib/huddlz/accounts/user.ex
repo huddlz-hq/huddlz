@@ -7,6 +7,8 @@ defmodule Huddlz.Accounts.User do
 
   alias Huddlz.RateLimit.Keys
 
+  @email_pattern ~r/^[^\s]+@[^\s]+$/
+
   use Ash.Resource,
     otp_app: :huddlz,
     domain: Huddlz.Accounts,
@@ -180,13 +182,15 @@ defmodule Huddlz.Accounts.User do
       description "Update a user's display_name"
       accept [:display_name]
 
-      validate attribute_does_not_equal(:display_name, "")
+      validate present(:display_name), message: "is required"
       validate string_length(:display_name, min: 1, max: 70)
     end
 
     update :update_home_location do
       description "Update a user's home location for search pre-fill"
-      accept [:home_location, :home_latitude, :home_longitude]
+      accept [:home_location, :home_latitude, :home_longitude, :home_time_zone]
+      require_atomic? false
+      validate {Huddlz.TimeZone.Validation, attribute: :home_time_zone, allow_nil?: true}
     end
 
     update :update_role do
@@ -366,13 +370,21 @@ defmodule Huddlz.Accounts.User do
 
       argument :email, :ci_string do
         description "The email to use for retrieving the user."
-        allow_nil? false
+        allow_nil? true
       end
 
       argument :password, :string do
         description "The password to check for the matching user."
         allow_nil? false
         sensitive? true
+      end
+
+      validate present(:email) do
+        message "Email is required."
+      end
+
+      validate match(:email, @email_pattern) do
+        message "Enter a valid email address."
       end
 
       # validates the provided email and password and generates a token
@@ -434,6 +446,10 @@ defmodule Huddlz.Accounts.User do
         sensitive? true
       end
 
+      validate match(:email, @email_pattern) do
+        message "Enter a valid email address."
+      end
+
       # Hashes the provided password
       change AshAuthentication.Strategy.Password.HashPasswordChange
 
@@ -474,6 +490,10 @@ defmodule Huddlz.Accounts.User do
 
       argument :email, :ci_string do
         allow_nil? false
+      end
+
+      validate match(:email, @email_pattern) do
+        message "Enter a valid email address."
       end
 
       # creates a reset token and invokes the relevant senders
@@ -627,13 +647,19 @@ defmodule Huddlz.Accounts.User do
     end
   end
 
+  validations do
+    validate match(:email, @email_pattern) do
+      where changing(:email)
+      message "Enter a valid email address."
+    end
+  end
+
   attributes do
     uuid_primary_key :id
 
     attribute :email, :ci_string do
       allow_nil? false
       public? true
-      constraints match: ~S/^[^\s]+@[^\s]+$/
     end
 
     attribute :display_name, :string do
@@ -675,6 +701,12 @@ defmodule Huddlz.Accounts.User do
       constraints min: -180, max: 180
     end
 
+    attribute :home_time_zone, :string do
+      description "IANA time zone for the user's saved home search location"
+      allow_nil? true
+      constraints min_length: 1, max_length: 100
+    end
+
     attribute :notification_preferences, :map do
       description "Per-trigger email opt-in/out. Missing keys fall back to the trigger's default."
       allow_nil? false
@@ -702,6 +734,10 @@ defmodule Huddlz.Accounts.User do
 
     has_many :profile_pictures, Huddlz.Accounts.ProfilePicture do
       destination_attribute :user_id
+    end
+
+    has_many :group_invitations, Huddlz.Communities.GroupInvitation do
+      destination_attribute :invitee_id
     end
 
     has_many :valid_api_keys, Huddlz.Accounts.ApiKey do

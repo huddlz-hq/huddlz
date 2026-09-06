@@ -1,6 +1,7 @@
 defmodule Huddlz.Communities.HuddlRsvpTest do
   use Huddlz.DataCase, async: true
 
+  alias Huddlz.Communities
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Communities.Huddl
@@ -55,6 +56,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Test Group",
             description: "A test group",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
             is_public: true
           },
           actor: owner
@@ -300,10 +303,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
       assert_raise Ash.Error.Invalid,
                    ~r/cannot be less than the current RSVP count/,
                    fn ->
-                     huddl
-                     |> Ash.reload!()
-                     |> Ash.Changeset.for_update(:update, %{max_attendees: 1}, actor: owner)
-                     |> Ash.update!()
+                     Huddlz.Communities.get_huddl!(huddl.id, actor: owner)
+                     |> Huddlz.Communities.update_huddl!(%{max_attendees: 1}, actor: owner)
                    end
     end
 
@@ -326,10 +327,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
       end
 
       uncapped =
-        capped
-        |> Ash.reload!()
-        |> Ash.Changeset.for_update(:update, %{max_attendees: nil}, actor: owner)
-        |> Ash.update!()
+        Huddlz.Communities.get_huddl!(capped.id, actor: owner)
+        |> Huddlz.Communities.update_huddl!(%{max_attendees: nil}, actor: owner)
 
       assert uncapped.max_attendees == nil
       assert rsvp_count(uncapped) == 2
@@ -417,6 +416,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Private Group",
             description: "A private group",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
             is_public: false
           },
           actor: owner
@@ -434,7 +435,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
             starts_at: DateTime.add(DateTime.utc_now(), 1, :day),
             ends_at: DateTime.add(DateTime.utc_now(), 2, :day),
             event_type: :in_person,
-            physical_location: "Secret Location",
+            group_location_id: address_book_location_id(private_group.id),
             is_private: true,
             group_id: private_group.id
           },
@@ -452,6 +453,111 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
     end
   end
 
+  describe "members-only huddl mutations" do
+    setup do
+      owner = generate(user(role: :user))
+      member = generate(user(role: :user))
+      non_member = generate(user(role: :user))
+
+      {group, _members} =
+        generate_group_with_members(
+          owner: owner,
+          members: [%{user: member, role: :member}]
+        )
+
+      huddl =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            is_private: true,
+            max_attendees: nil
+          )
+        )
+
+      %{owner: owner, member: member, non_member: non_member, huddl: huddl}
+    end
+
+    test "member can RSVP with unlimited capacity and cancel", %{
+      member: member,
+      huddl: huddl
+    } do
+      huddl
+      |> Communities.rsvp_huddl!(actor: member)
+
+      assert rsvp_count(huddl, member) == 2
+
+      huddl
+      |> Ash.reload!(actor: member)
+      |> Communities.cancel_rsvp_huddl!(actor: member)
+
+      assert rsvp_count(huddl, member) == 1
+    end
+
+    test "member can RSVP with finite capacity", %{
+      owner: owner,
+      member: member,
+      huddl: huddl
+    } do
+      capped =
+        huddl
+        |> Communities.update_huddl!(%{max_attendees: 2}, actor: owner)
+
+      capped
+      |> Communities.rsvp_huddl!(actor: member)
+
+      assert rsvp_count(capped, member) == 2
+    end
+
+    test "organizer capacity changes use the current members-only RSVP count", %{
+      owner: owner,
+      member: member,
+      huddl: huddl
+    } do
+      huddl
+      |> Communities.rsvp_huddl!(actor: member)
+
+      assert_raise Ash.Error.Invalid,
+                   ~r/cannot be less than the current RSVP count/,
+                   fn ->
+                     huddl
+                     |> Ash.reload!(actor: owner)
+                     |> Communities.update_huddl!(%{max_attendees: 1}, actor: owner)
+                   end
+
+      updated =
+        huddl
+        |> Ash.reload!(actor: owner)
+        |> Communities.update_huddl!(%{max_attendees: 3}, actor: owner)
+
+      assert updated.max_attendees == 3
+    end
+
+    test "non-member cannot RSVP", %{owner: owner, non_member: non_member, huddl: huddl} do
+      assert_raise Ash.Error.Forbidden, fn ->
+        huddl
+        |> Communities.rsvp_huddl!(actor: non_member)
+      end
+
+      assert rsvp_count(huddl, owner) == 1
+    end
+
+    test "a missing locked huddl returns an Ash error", %{
+      member: member,
+      huddl: huddl
+    } do
+      # Simulate a stale record independently of the draft-only deletion policy.
+      Communities.destroy_huddl!(huddl, authorize?: false)
+
+      assert {:error, error} =
+               huddl
+               |> Communities.rsvp_huddl(actor: member, authorize?: false)
+
+      assert Exception.message(error) =~ "This huddl is no longer available"
+    end
+  end
+
   describe "RSVP cancellation functionality" do
     setup do
       owner = generate(user(role: :user))
@@ -466,6 +572,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Test Group",
             description: "A test group",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
             is_public: true
           },
           actor: owner
@@ -659,6 +767,8 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
           %{
             name: "Test Group",
             description: "A test group",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
             is_public: true
           },
           actor: owner
@@ -817,5 +927,12 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
   # Helper to load the rsvp_count aggregate from the database
   defp rsvp_count(huddl) do
     huddl |> Ash.reload!() |> Ash.load!(:rsvp_count, authorize?: false) |> Map.get(:rsvp_count)
+  end
+
+  defp rsvp_count(huddl, actor) do
+    huddl
+    |> Ash.reload!(actor: actor)
+    |> Ash.load!(:rsvp_count, actor: actor)
+    |> Map.get(:rsvp_count)
   end
 end

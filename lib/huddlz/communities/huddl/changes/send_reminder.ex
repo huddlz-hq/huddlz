@@ -36,7 +36,8 @@ defmodule Huddlz.Communities.Huddl.Changes.SendReminder do
       "huddl_title" => to_string(huddl.title),
       "group_name" => to_string(huddl.group.name),
       "group_slug" => to_string(huddl.group.slug),
-      "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at)
+      "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at),
+      "time_zone" => huddl.time_zone
     }
 
     RecipientHelpers.deliver_each(user_ids, trigger, payload)

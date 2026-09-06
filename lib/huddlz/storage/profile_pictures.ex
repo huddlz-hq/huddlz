@@ -28,7 +28,7 @@ defmodule Huddlz.Storage.ProfilePictures do
          {:ok, %{size: size}} <- File.stat(source_path),
          :ok <- validate_file_size(size),
          {:ok, image_binary} <- File.read(source_path),
-         {:ok, thumbnail_binary} <- ImageProcessing.create_thumbnail(image_binary),
+         {:ok, thumbnail_binary} <- create_thumbnail(image_binary),
          storage_path = generate_path(user_id, original_filename),
          thumbnail_path = generate_thumbnail_path(storage_path),
          {:ok, _} <- Storage.put(source_path, storage_path, content_type),
@@ -39,6 +39,13 @@ defmodule Huddlz.Storage.ProfilePictures do
          thumbnail_path: thumbnail_path,
          size_bytes: size
        }}
+    end
+  end
+
+  defp create_thumbnail(image_binary) do
+    case ImageProcessing.create_thumbnail(image_binary) do
+      {:ok, thumbnail_binary} -> {:ok, thumbnail_binary}
+      {:error, _reason} -> {:error, :invalid_image}
     end
   end
 

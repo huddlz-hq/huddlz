@@ -5,6 +5,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   use HuddlzWeb, :live_view
 
   import HuddlzWeb.Components.HuddlForm
+  import HuddlzWeb.Components.UploadComponents
   import HuddlzWeb.HuddlLive.FormHelpers
   import HuddlzWeb.Live.Helpers.UploadHelpers
 
@@ -44,7 +45,10 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         socket
         |> assign_edit_form(huddl, group_slug, user)
         |> assign(:group_locations, group_locations)
-        |> assign(:selected_location, find_matching_location(huddl, group_locations))
+        |> assign(
+          :selected_location,
+          Enum.find(group_locations, &(&1.id == huddl.group_location_id))
+        )
         |> ModalLocationHelpers.init()
         |> assign(:image_error, nil)
         |> assign(:pending_image_id, nil)
@@ -80,8 +84,9 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
   defp assign_edit_form(socket, huddl, group_slug, user) do
     # Extract date/time/duration from existing starts_at/ends_at
-    date = DateTime.to_date(huddl.starts_at)
-    start_time = DateTime.to_time(huddl.starts_at)
+    local_starts_at = DateTime.shift_zone!(huddl.starts_at, huddl.time_zone)
+    date = DateTime.to_date(local_starts_at)
+    start_time = DateTime.to_time(local_starts_at)
     duration_minutes = DateTime.diff(huddl.ends_at, huddl.starts_at, :minute)
 
     form =
@@ -174,18 +179,27 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
   @impl true
   def render(assigns) do
+    time_zone =
+      schedule_time_zone(assigns.form, assigns.selected_location, assigns.huddl.group)
+
+    assigns =
+      assigns
+      |> assign(:schedule_time_zone, time_zone)
+      |> assign(:ambiguous_time_label, ambiguous_time_label(assigns.form, time_zone))
+
     ~H"""
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="my-groups"
     >
       <div class="page-head">
         <div>
           <h1>Editing {@huddl.title}</h1>
-          <p>
-            Updates to time, location, capacity, or privacy will email everyone who's RSVP'd.
+          <p id="attendee-notification-explanation">
+            Updates to the title, time, location, capacity, or privacy will notify affected people who've RSVP'd.
           </p>
         </div>
       </div>
@@ -203,7 +217,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
                 <% _ -> %>
                   <span class="eyebrow">Editing one date</span>
                   <p>
-                    This is a recurring huddl. Changes apply only to <strong>{Calendar.strftime(@huddl.starts_at, "%a, %b %-d")}</strong>.
+                    This is a recurring huddl. Changes apply only to <strong>{format_huddl_date(@huddl)}</strong>.
                   </p>
               <% end %>
               <input
@@ -234,125 +248,27 @@ defmodule HuddlzWeb.HuddlLive.Edit do
           </div>
         <% end %>
 
-        <div class="panel">
-          <div class="panel-head">
-            <h2>Cover image</h2>
-          </div>
-
-          <label for={@uploads.huddl_image.ref} class="sr-only">Cover image</label>
-          <.live_file_input upload={@uploads.huddl_image} class="hidden" />
-
-          <.image_preview
-            pending_preview_url={@pending_preview_url}
-            huddl={@huddl}
-            upload_ref={@uploads.huddl_image.ref}
-          />
-
-          <div class="upload-zone" phx-drop-target={@uploads.huddl_image.ref}>
-            <div class="upload-icon">
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.6"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-5-5L5 21" />
-              </svg>
-            </div>
-            <label for={@uploads.huddl_image.ref} class="upload-prompt">
-              Drop a 16:9 image, or <span class="upload-link">browse</span>
-            </label>
-            <div class="upload-meta muted">JPG, PNG, WebP · 5 MB max</div>
-          </div>
-
-          <%= for entry <- @uploads.huddl_image.entries do %>
-            <div class="image-preview" style="margin-top:12px">
-              <div class="card-cover">
-                <.live_img_preview entry={entry} class="card-cover-img" />
-              </div>
-              <div class="image-preview-foot">
-                <span>{entry.client_name} · {entry.progress}%</span>
-                <.button
-                  variant={:muted}
-                  type="button"
-                  phx-click="cancel_image_upload"
-                  phx-value-ref={entry.ref}
-                >
-                  Cancel
-                </.button>
-              </div>
-            </div>
-
-            <%= for err <- upload_errors(@uploads.huddl_image, entry) do %>
-              <p class="form-error">{upload_error_to_string(err)}</p>
-            <% end %>
-          <% end %>
-
-          <p :if={@image_error} class="form-error">{@image_error}</p>
-
-          <%= for err <- upload_errors(@uploads.huddl_image) do %>
-            <p class="form-error">{upload_error_to_string(err)}</p>
-          <% end %>
-        </div>
-
-        <div class="panel">
-          <div class="panel-head">
-            <h2>The basics</h2>
-          </div>
-          <div class="form-grid">
-            <.input
-              field={@form[:title]}
-              label="Title"
-              placeholder="e.g. Ash Framework workshop"
-              autocomplete="off"
+        <.cover_image_panel upload={@uploads.huddl_image} image_error={@image_error}>
+          <:preview>
+            <.image_preview
+              pending_preview_url={@pending_preview_url}
+              huddl={@huddl}
+              upload_ref={@uploads.huddl_image.ref}
             />
-            <.textarea
-              field={@form[:description]}
-              label="Description"
-              rows="4"
-              placeholder="What you'll do, what to bring, who it's for."
-            />
-          </div>
-        </div>
+          </:preview>
+        </.cover_image_panel>
 
-        <div class="panel">
-          <div class="panel-head">
-            <h2>Format</h2>
-          </div>
-          <.event_type_grid field={@form[:event_type]} />
-          <.field_errors field={@form[:event_type]} />
-        </div>
+        <.basics_panel form={@form} />
 
-        <div class="panel">
-          <div class="panel-head">
-            <h2>When</h2>
-          </div>
-          <div class="form-grid">
-            <div class="form-row form-row-inline">
-              <div class="form-col-md">
-                <.input field={@form[:date]} type="date" label="Date" />
-              </div>
-              <div class="form-col-sm">
-                <.input field={@form[:start_time]} type="time" label="Start time" />
-              </div>
-              <div class="form-col-sm">
-                <.select
-                  field={@form[:duration_minutes]}
-                  label="Duration"
-                  options={duration_options()}
-                />
-              </div>
-            </div>
+        <.format_panel form={@form} />
 
-            <p :if={@calculated_end_time} class="form-help">
-              Ends at: <strong>{@calculated_end_time}</strong>
-            </p>
-
+        <.when_panel
+          form={@form}
+          calculated_end_time={@calculated_end_time}
+          schedule_time_zone={@schedule_time_zone}
+          ambiguous_time_label={@ambiguous_time_label}
+        >
+          <:recurring_controls>
             <%= if @huddl.huddl_template_id && edit_type_value(@form) == "all" do %>
               <div class="form-row form-row-inline">
                 <div class="form-col-md">
@@ -375,81 +291,19 @@ defmodule HuddlzWeb.HuddlLive.Edit do
                 </div>
               </div>
             <% end %>
-          </div>
-        </div>
+          </:recurring_controls>
+        </.when_panel>
 
-        <div class="panel">
-          <div class="panel-head">
-            <h2>Where</h2>
-          </div>
-          <div class="form-grid">
-            <%= if @show_physical_location do %>
-              <div class="form-row">
-                <.live_component
-                  module={HuddlzWeb.Live.SavedLocationPicker}
-                  id="saved-location-picker"
-                  group_locations={@group_locations}
-                  selected_location={@selected_location}
-                  new_location_path={
-                    ~p"/groups/#{@group_slug}/huddlz/#{@huddl.id}/edit/locations/new"
-                  }
-                />
-                <.field_errors field={@form[:physical_location]} />
-              </div>
-            <% end %>
+        <.where_panel
+          form={@form}
+          show_physical_location={@show_physical_location}
+          show_virtual_link={@show_virtual_link}
+          group_locations={@group_locations}
+          selected_location={@selected_location}
+          new_location_path={~p"/groups/#{@group_slug}/huddlz/#{@huddl.id}/edit/locations/new"}
+        />
 
-            <%= if @show_virtual_link do %>
-              <.input
-                field={@form[:virtual_link]}
-                type="url"
-                label="Online link"
-                placeholder="https://meet.example.com/..."
-                help="Only attendees see this link."
-              />
-            <% end %>
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-head">
-            <h2>Capacity &amp; visibility</h2>
-          </div>
-          <div class="form-grid">
-            <.input
-              field={@form[:max_attendees]}
-              type="number"
-              label="Max attendees"
-              min="1"
-              placeholder="No limit"
-              help="Leave blank for unlimited. When full, new RSVPs go to a waitlist."
-            />
-
-            <%= if @huddl.group.is_public do %>
-              <div class="form-row">
-                <label class="toggle">
-                  <input type="hidden" name={@form[:is_private].name} value="false" />
-                  <input
-                    id={@form[:is_private].id}
-                    type="checkbox"
-                    name={@form[:is_private].name}
-                    value="true"
-                    checked={Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_private].value)}
-                  />
-                  <span class="track"></span>
-                  <span class="toggle-text">Members only</span>
-                </label>
-                <p class="form-help">
-                  Only group members can RSVP. Useful for private workshops or socials.
-                </p>
-              </div>
-            <% else %>
-              <p class="form-help">
-                <.icon name="hero-lock-closed" class="h-4 w-4 inline" />
-                This will be a private huddl (private groups can only create private huddlz).
-              </p>
-            <% end %>
-          </div>
-        </div>
+        <.capacity_panel form={@form} is_public={@huddl.group.is_public} />
 
         <div class="form-foot is-flush">
           <.button variant={:primary} type="submit" phx-disable-with="Saving…">
@@ -461,58 +315,12 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         </div>
       </.form>
 
-      <.modal
-        :if={@live_action == :new_location}
-        id="new-location-modal"
-        show
-        on_cancel={JS.patch(~p"/groups/#{@group_slug}/huddlz/#{@huddl.id}/edit")}
-      >
-        <h2 class="font-display text-xl tracking-tight text-glow mb-6">Add New Address</h2>
-
-        <form phx-submit="save_location" phx-change="modal_form_changed" class="form-grid">
-          <div class="form-row">
-            <label class="form-label" for="modal-address-autocomplete-input">
-              Search for an address
-            </label>
-            <.live_component
-              module={HuddlzWeb.Live.LocationAutocomplete}
-              id="modal-address-autocomplete"
-              variant={:form}
-              placeholder="Search for an address or venue..."
-              types={[]}
-              fetch_coordinates={true}
-              show_clear={true}
-            />
-          </div>
-
-          <div class="form-row">
-            <label class="form-label" for="location-name-input">
-              Location name (optional)
-            </label>
-            <input
-              type="text"
-              id="location-name-input"
-              name="location_name"
-              value={@modal_location_name}
-              phx-debounce="100"
-              placeholder="e.g., Community Center"
-              class="form-input"
-            />
-          </div>
-
-          <div class="form-foot is-flush">
-            <.button variant={:primary} type="submit" disabled={is_nil(@modal_location_address)}>
-              Save address
-            </.button>
-            <.button
-              variant={:secondary}
-              patch={~p"/groups/#{@group_slug}/huddlz/#{@huddl.id}/edit"}
-            >
-              Cancel
-            </.button>
-          </div>
-        </form>
-      </.modal>
+      <.location_modal
+        live_action={@live_action}
+        cancel_path={~p"/groups/#{@group_slug}/huddlz/#{@huddl.id}/edit"}
+        modal_location_address={@modal_location_address}
+        modal_location_name={@modal_location_name}
+      />
     </Layouts.app>
     """
   end
@@ -584,6 +392,12 @@ defmodule HuddlzWeb.HuddlLive.Edit do
     end
   end
 
+  defp format_huddl_date(huddl) do
+    huddl.starts_at
+    |> DateTime.shift_zone!(huddl.time_zone)
+    |> Calendar.strftime("%a, %b %-d")
+  end
+
   @impl true
   def handle_event("set_edit_type", %{"type" => type}, socket) when type in ["instance", "all"] do
     current_params = socket.assigns.form.source.params || %{}
@@ -629,9 +443,11 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
     params =
-      params
-      |> inject_saved_location_params(socket.assigns[:selected_location])
-      |> mark_location_used_after_submit(socket.assigns.form)
+      inject_saved_location_params(
+        params,
+        socket.assigns[:selected_location],
+        socket.assigns.form
+      )
 
     socket =
       socket
@@ -646,13 +462,15 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   def handle_event("save", %{"form" => params}, socket) do
     params =
       params
-      |> inject_saved_location_params(socket.assigns[:selected_location])
-      |> mark_location_used(socket.assigns.form)
+      |> inject_saved_location_params(
+        socket.assigns[:selected_location],
+        socket.assigns.form,
+        :save
+      )
 
     case AshPhoenix.Form.submit(socket.assigns.form,
            params: params,
-           actor: socket.assigns.current_user,
-           before_submit: prepare_source_with_coordinates(socket.assigns[:selected_location])
+           actor: socket.assigns.current_user
          ) do
       {:ok, huddl} ->
         assign_pending_image_to_huddl(socket, huddl)
@@ -681,6 +499,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
            address,
            socket.assigns.modal_location_lat,
            socket.assigns.modal_location_lng,
+           socket.assigns.modal_location_time_zone,
            socket.assigns.huddl.group.id,
            actor: user
          ) do
@@ -776,12 +595,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
       {:error, _} ->
         {:error, :not_found}
-    end
-  end
-
-  defp find_matching_location(huddl, group_locations) do
-    if huddl.physical_location do
-      Enum.find(group_locations, fn loc -> loc.address == huddl.physical_location end)
     end
   end
 end

@@ -54,7 +54,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    starts_at: DateTime.utc_now() |> DateTime.add(1, :day),
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :in_person,
-                   physical_location: "123 Main St",
+                   group_location_id: address_book_location_id(group.id),
                    group_id: group.id
                  },
                  actor: user
@@ -94,7 +94,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    starts_at: DateTime.utc_now() |> DateTime.add(1, :day),
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :in_person,
-                   physical_location: "123 Main St",
+                   group_location_id: address_book_location_id(group.id),
                    group_id: group.id
                  },
                  actor: user
@@ -163,7 +163,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    starts_at: DateTime.utc_now() |> DateTime.add(1, :day),
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :in_person,
-                   physical_location: "Secret Place",
+                   group_location_id: address_book_location_id(group.id),
                    group_id: group.id
                  },
                  actor: owner
@@ -181,7 +181,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    starts_at: DateTime.utc_now() |> DateTime.add(1, :day),
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :in_person,
-                   physical_location: "Secret Place",
+                   group_location_id: address_book_location_id(group.id),
                    group_id: group.id
                  },
                  actor: organizer
@@ -199,7 +199,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    starts_at: DateTime.utc_now() |> DateTime.add(1, :day),
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :in_person,
-                   physical_location: "Secret Place",
+                   group_location_id: address_book_location_id(group.id),
                    group_id: group.id
                  },
                  actor: member
@@ -217,7 +217,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    starts_at: DateTime.utc_now() |> DateTime.add(1, :day),
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :in_person,
-                   physical_location: "Secret Place",
+                   group_location_id: address_book_location_id(group.id),
                    group_id: group.id
                  },
                  actor: outsider
@@ -238,7 +238,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
             starts_at: DateTime.utc_now() |> DateTime.add(1, :day),
             ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
             event_type: :in_person,
-            physical_location: "123 Main St",
+            group_location_id: address_book_location_id(group.id),
             group_id: group.id
           },
           actor: owner
@@ -264,7 +264,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
             starts_at: DateTime.utc_now() |> DateTime.add(1, :day),
             ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
             event_type: :in_person,
-            physical_location: "123 Main St",
+            group_location_id: address_book_location_id(group.id),
             group_id: group.id
           },
           actor: owner
@@ -294,7 +294,7 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
                    starts_at: DateTime.utc_now() |> DateTime.add(1, :day),
                    ends_at: DateTime.utc_now() |> DateTime.add(2, :day),
                    event_type: :hybrid,
-                   physical_location: "123 Main St",
+                   group_location_id: address_book_location_id(group.id),
                    group_id: group.id
                  },
                  actor: user

@@ -15,7 +15,9 @@ defmodule Huddlz.Communities.Huddl.Changes.PromoteFromWaitlist do
 
   use Ash.Resource.Change
 
-  alias Huddlz.Communities.{Huddl, HuddlAttendee}
+  alias Huddlz.Communities.Huddl
+  alias Huddlz.Communities.Huddl.Changes.LockedHuddl
+  alias Huddlz.Communities.HuddlAttendee
 
   require Ash.Query
 
@@ -35,8 +37,13 @@ defmodule Huddlz.Communities.Huddl.Changes.PromoteFromWaitlist do
     # Re-affirm the FOR UPDATE lock CancelRsvp already holds and read the
     # current count so we never promote past capacity (defensive — the cancel
     # that triggered this freed exactly one seat).
-    huddl = lock_huddl!(cs.data.id)
+    case LockedHuddl.fetch(cs.data.id, :at_capacity) do
+      {:ok, %Huddl{} = huddl} -> maybe_promote_oldest(cs, huddl)
+      error -> LockedHuddl.add_read_error(cs, error)
+    end
+  end
 
+  defp maybe_promote_oldest(cs, huddl) do
     if huddl.at_capacity do
       cs
     else
@@ -52,14 +59,6 @@ defmodule Huddlz.Communities.Huddl.Changes.PromoteFromWaitlist do
           Ash.Changeset.put_context(cs, :promoted_user_id, attendee.user_id)
       end
     end
-  end
-
-  defp lock_huddl!(huddl_id) do
-    Huddl
-    |> Ash.Query.filter(id == ^huddl_id)
-    |> Ash.Query.lock("FOR UPDATE")
-    |> Ash.Query.load(:at_capacity)
-    |> Ash.read_one!(authorize?: false)
   end
 
   defp fetch_oldest_waitlist_entry(huddl_id) do

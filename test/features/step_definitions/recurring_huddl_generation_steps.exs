@@ -16,7 +16,6 @@ defmodule RecurringHuddlGenerationSteps do
     context
     |> create_recurring_huddl(
       event_type: :virtual,
-      physical_location: nil,
       virtual_link: "https://meet.example.com/weekly",
       is_private: true,
       max_attendees: 24
@@ -27,7 +26,6 @@ defmodule RecurringHuddlGenerationSteps do
   step "a weekly recurring hybrid huddl", context do
     create_recurring_huddl(context,
       event_type: :hybrid,
-      physical_location: "456 Congress Ave",
       virtual_link: "https://meet.example.com/hybrid"
     )
   end
@@ -45,7 +43,6 @@ defmodule RecurringHuddlGenerationSteps do
     context =
       create_recurring_huddl(context,
         event_type: :virtual,
-        physical_location: nil,
         virtual_link: "https://meet.example.com/failure"
       )
 
@@ -108,7 +105,7 @@ defmodule RecurringHuddlGenerationSteps do
 
   step "every occurrence should retain both hybrid locations", context do
     for occurrence <- future_occurrences(context.huddl) do
-      assert occurrence.physical_location == "456 Congress Ave"
+      assert occurrence.physical_location == "123 Main St, Anytown, USA"
       assert occurrence.virtual_link == "https://meet.example.com/hybrid"
     end
 
@@ -133,6 +130,67 @@ defmodule RecurringHuddlGenerationSteps do
     context
   end
 
+  step "a monthly huddl on January 31 in {int}", %{args: [year]} = context do
+    create_recurring_huddl(context,
+      date: Date.new!(year, 1, 31),
+      start_time: ~T[18:30:00],
+      frequency: "monthly",
+      repeat_until: Date.new!(year, 5, 1)
+    )
+  end
+
+  step "its next monthly dates should be {string}", %{args: [dates]} = context do
+    actual =
+      context.huddl
+      |> future_occurrences()
+      |> Enum.map(fn occurrence ->
+        occurrence.starts_at
+        |> DateTime.shift_zone!(occurrence.time_zone)
+        |> DateTime.to_date()
+        |> Date.to_iso8601()
+      end)
+      |> Enum.sort()
+
+    assert actual == String.split(dates, ", ")
+    context
+  end
+
+  step "an attendee RSVPs to the March occurrence", context do
+    march = monthly_occurrence(context.huddl, 3)
+    attendee = generate(user())
+    Communities.rsvp_huddl!(march, actor: attendee)
+    Map.merge(context, %{march: march, attendee: attendee})
+  end
+
+  step "the organizer renames the whole series from the February occurrence", context do
+    Communities.update_huddl!(
+      monthly_occurrence(context.huddl, 2),
+      %{
+        title: "Renamed monthly series",
+        edit_type: "all",
+        frequency: "monthly",
+        repeat_until: Date.new!(context.huddl.starts_at.year, 5, 1)
+      },
+      actor: context.owner
+    )
+
+    context
+  end
+
+  step "the attendee should retain their RSVP to the same March occurrence", context do
+    march = monthly_occurrence(context.huddl, 3)
+    assert march.id == context.march.id
+    attendees = Communities.list_huddl_attendees!(march.id, actor: context.owner)
+    assert Enum.any?(attendees, &(&1.user_id == context.attendee.id))
+    context
+  end
+
+  defp monthly_occurrence(huddl, month) do
+    huddl
+    |> future_occurrences()
+    |> Enum.find(&(DateTime.shift_zone!(&1.starts_at, &1.time_zone).month == month))
+  end
+
   defp create_recurring_huddl(context, opts \\ []) do
     owner = generate(user(role: :user))
     group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
@@ -146,7 +204,7 @@ defmodule RecurringHuddlGenerationSteps do
               group_id: group.id,
               creator_id: owner.id,
               actor: owner,
-              physical_location: "123 Main St",
+              group_location_id: address_book_location_id(group.id),
               date: Date.add(Date.utc_today(), 1),
               is_recurring: true,
               frequency: "weekly",

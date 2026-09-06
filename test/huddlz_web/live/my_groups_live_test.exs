@@ -179,6 +179,23 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
   end
 
   describe "card content" do
+    test "renders the shared cover fallback when no image is available", %{
+      conn: conn,
+      member: member
+    } do
+      group =
+        generate(
+          group(name: "Fallback Crew", is_public: true, owner_id: member.id, actor: member)
+        )
+
+      conn
+      |> login(member)
+      |> visit("/my-groups")
+      |> assert_has("#my-group-cover-#{group.id}[data-testid='group-cover']")
+      |> assert_has("#my-group-cover-#{group.id} .group-cover-label", text: "huddlz group")
+      |> refute_has("#my-group-cover-#{group.id} img")
+    end
+
     test "renders the complete member count", %{conn: conn, member: member} do
       group =
         generate(group(name: "Crowded Crew", is_public: true, owner_id: member.id, actor: member))

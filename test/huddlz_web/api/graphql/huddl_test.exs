@@ -109,6 +109,35 @@ defmodule HuddlzWeb.Api.Graphql.HuddlTest do
       assert record["eventType"] in ["in_person", "virtual", "hybrid"]
       assert is_binary(record["startsAt"])
     end
+
+    test "exposes virtual access only after a waitlisted actor is promoted", %{conn: conn} do
+      owner = generate(user())
+      waitlisted = generate(user())
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+
+      huddl =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            event_type: :virtual,
+            virtual_link: "https://meet.example.com/private",
+            max_attendees: 1
+          )
+        )
+
+      Huddlz.Communities.join_waitlist_huddl!(huddl, actor: waitlisted)
+
+      query = "{ upcomingHuddlz { id visibleVirtualLink } }"
+
+      assert graphql_virtual_link(conn, waitlisted, query, huddl.id) == nil
+
+      Huddlz.Communities.cancel_rsvp_huddl!(huddl, actor: owner)
+
+      assert graphql_virtual_link(conn, waitlisted, query, huddl.id) ==
+               "https://meet.example.com/private"
+    end
   end
 
   describe "huddlzInGroup query" do
@@ -141,8 +170,7 @@ defmodule HuddlzWeb.Api.Graphql.HuddlTest do
             starts_at: DateTime.add(DateTime.utc_now(), -2, :day),
             ends_at: DateTime.add(DateTime.utc_now(), -2, :day) |> DateTime.add(1, :hour),
             is_private: false,
-            event_type: :in_person,
-            physical_location: "456 Past St"
+            event_type: :in_person
           )
         )
 
@@ -227,5 +255,19 @@ defmodule HuddlzWeb.Api.Graphql.HuddlTest do
 
       assert %{"data" => %{"searchHuddlz" => %{"results" => []}}} = json_response(conn, 200)
     end
+  end
+
+  defp graphql_virtual_link(conn, actor, query, huddl_id) do
+    response =
+      conn
+      |> authenticated_conn(actor)
+      |> gql_post(query)
+      |> json_response(200)
+
+    assert %{"data" => %{"upcomingHuddlz" => records}} = response
+
+    records
+    |> Enum.find(&(&1["id"] == huddl_id))
+    |> Map.fetch!("visibleVirtualLink")
   end
 end

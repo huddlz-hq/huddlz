@@ -30,3 +30,17 @@ Feature: Reliable recurring huddl generation
     Given a weekly recurring virtual huddl that cannot generate future occurrences
     When its final recurring generation attempt runs
     Then the organizer should receive a recurring generation failure notification
+
+  Scenario Outline: Monthly huddlz keep the selected day after editing a short month
+    Given a monthly huddl on January 31 in <year>
+    When its recurring occurrences are generated
+    Then its next monthly dates should be "<february>, <march>, <april>"
+    When an attendee RSVPs to the March occurrence
+    And the organizer renames the whole series from the February occurrence
+    Then its next monthly dates should be "<february>, <march>, <april>"
+    And the attendee should retain their RSVP to the same March occurrence
+
+    Examples:
+      | year | february   | march      | april      |
+      | 2028 | 2028-02-29 | 2028-03-31 | 2028-04-30 |
+      | 2027 | 2027-02-28 | 2027-03-31 | 2027-04-30 |

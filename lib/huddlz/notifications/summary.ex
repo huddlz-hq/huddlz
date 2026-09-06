@@ -12,7 +12,11 @@ defmodule Huddlz.Notifications.Summary do
   time-relative words ("tomorrow", "in 5 minutes", "now").
   """
 
+  alias Huddlz.Notifications.DateTimeFormatter
+  alias Huddlz.Notifications.Senders.ChangedFields
   alias Huddlz.Notifications.Triggers
+
+  @schedule_fields ["starts_at", "ends_at", "schedule"]
 
   @type result :: %{
           title: String.t(),
@@ -42,6 +46,7 @@ defmodule Huddlz.Notifications.Summary do
     do: "#{name} joined #{group}"
 
   defp title(:group_member_added, %{"group_name" => group}), do: "Added to #{group}"
+  defp title(:group_invitation, %{"group_name" => group}), do: "Invitation to #{group}"
   defp title(:group_member_removed, %{"group_name" => group}), do: "Removed from #{group}"
   defp title(:group_role_changed, %{"group_name" => group}), do: "Role changed in #{group}"
   defp title(:group_archived, %{"group_name" => group}), do: "Archived: #{group}"
@@ -105,33 +110,58 @@ defmodule Huddlz.Notifications.Summary do
   # Use absolute dates rather than relative phrasing. Leave nil when a
   # description would just restate the title.
 
-  defp description(:rsvp_confirmation, %{"starts_at_iso" => iso}),
-    do: maybe_absolute_date("Starts ", iso)
+  defp description(trigger, %{"starts_at_iso" => _iso} = payload)
+       when trigger in [:rsvp_confirmation, :huddl_new, :huddl_reminder_24h, :huddl_reminder_1h],
+       do: maybe_absolute_date("Starts ", payload)
 
-  defp description(:huddl_new, %{"starts_at_iso" => iso}),
-    do: maybe_absolute_date("Starts ", iso)
+  defp description(:huddl_updated, payload),
+    do: changed_description(payload, "Scheduled for ")
 
-  defp description(:huddl_updated, %{"starts_at_iso" => iso}),
-    do: maybe_absolute_date("Now starts ", iso)
+  defp description(:huddl_series_updated, payload),
+    do: changed_description(payload, "Next huddl: ")
 
-  defp description(:huddl_reminder_24h, %{"starts_at_iso" => iso}),
-    do: maybe_absolute_date("Starts ", iso)
-
-  defp description(:huddl_reminder_1h, %{"starts_at_iso" => iso}),
-    do: maybe_absolute_date("Starts ", iso)
+  defp description(:huddl_cancelled, %{"cancellation_reason" => reason})
+       when is_binary(reason) and reason != "",
+       do: reason
 
   defp description(_, _), do: nil
 
-  defp maybe_absolute_date(prefix, iso) when is_binary(iso) do
-    case DateTime.from_iso8601(iso) do
-      {:ok, dt, _} -> prefix <> Calendar.strftime(dt, "%b %d, %Y")
-      _ -> nil
+  defp maybe_absolute_date(prefix, payload) do
+    case DateTimeFormatter.format_date_iso(
+           payload["starts_at_iso"],
+           DateTimeFormatter.time_zone_from_payload(payload)
+         ) do
+      nil -> nil
+      date -> prefix <> date
     end
   end
 
-  defp maybe_absolute_date(_prefix, _), do: nil
+  defp changed_description(payload, schedule_prefix) do
+    changed = "Changed: #{ChangedFields.summary(payload)}."
+
+    if schedule_changed?(payload) do
+      changed <> " " <> schedule_prefix <> formatted_start(payload) <> "."
+    else
+      changed
+    end
+  end
+
+  defp schedule_changed?(%{"changed_fields" => fields}) when is_list(fields),
+    do: Enum.any?(fields, &(&1 in @schedule_fields))
+
+  defp schedule_changed?(_payload), do: false
+
+  defp formatted_start(payload) do
+    DateTimeFormatter.format_starts_at_iso(
+      payload["starts_at_iso"],
+      DateTimeFormatter.time_zone_from_payload(payload),
+      "the scheduled time"
+    )
+  end
 
   # ─── Source URLs ───────────────────────────────────────────────────────
+
+  defp source_url(_trigger, %{"target_path" => "/notifications"}), do: "/notifications"
 
   defp source_url(_trigger, %{"group_slug" => slug, "huddl_id" => huddl_id})
        when is_binary(slug) and is_binary(huddl_id),
@@ -139,6 +169,9 @@ defmodule Huddlz.Notifications.Summary do
 
   defp source_url(_trigger, %{"group_slug" => slug}) when is_binary(slug),
     do: "/groups/#{slug}"
+
+  defp source_url(:group_invitation, %{"invitation_id" => id}) when is_binary(id),
+    do: "/invitations/#{id}"
 
   defp source_url(:password_changed, _), do: "/profile"
   defp source_url(:email_changed, _), do: "/profile"

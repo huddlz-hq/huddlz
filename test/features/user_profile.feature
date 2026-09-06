@@ -71,6 +71,13 @@ Feature: User Profile Management
     Then I should see "Failed to update display name. Please check the errors below."
     And I should not see "Display name updated successfully"
 
+  Scenario: Clearing an invalid display name leaves it empty
+    Given I am on my profile page
+    When I fill in "Display name" with "Corrected Name"
+    And I fill in "Display name" with ""
+    Then I should see "is required"
+    And the display name field should contain ""
+
   Scenario: Display name validation - too long
     Given I am on my profile page
     When I fill in "Display name" with "This is a very long display name that definitely exceeds the seventy character maximum length allowed"

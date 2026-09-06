@@ -23,6 +23,7 @@ defmodule HuddlzWeb.Layouts do
   """
   attr :flash, :map, required: true
   attr :current_user, :map, default: nil
+  attr :unread_notification_count, :integer, default: 0
 
   attr :active, :string,
     default: nil,
@@ -49,13 +50,34 @@ defmodule HuddlzWeb.Layouts do
 
     ~H"""
     <%= if @signed_in do %>
-      <input type="checkbox" id="nav-toggle" class="nav-toggle" />
-      <label for="nav-toggle" class="nav-scrim" aria-hidden="true"></label>
-      <aside class="sidebar">
-        <a class="sidebar-brand" href="/">
-          <div class="brand-glyph">h</div>
-          <div class="brand-text">huddlz</div>
-        </a>
+      <button
+        type="button"
+        class="nav-scrim"
+        data-mobile-nav-scrim
+        aria-hidden="true"
+        tabindex="-1"
+      ></button>
+      <aside
+        id="mobile-navigation-drawer"
+        class="sidebar"
+        data-mobile-nav-state="closed"
+        aria-label="Primary navigation"
+      >
+        <div class="sidebar-brand">
+          <a href="/" aria-label="huddlz home">
+            <div class="brand-glyph">h</div>
+            <div class="brand-text">huddlz</div>
+          </a>
+          <button
+            type="button"
+            id="mobile-nav-close"
+            class="nav-close"
+            data-mobile-nav-close
+            aria-label="Close navigation"
+          >
+            <.icon name="hero-x-mark" class="size-5" />
+          </button>
+        </div>
 
         <nav class="sb-nav">
           <a
@@ -99,7 +121,9 @@ defmodule HuddlzWeb.Layouts do
                   @active_group_slug == group.slug && "active"
                 ]}
                 href={"/organize/#{group.slug}"}
-                aria-current={@active_group_slug == group.slug && "page"}
+                aria-current={
+                  @active_group_slug == group.slug && is_nil(@active_organize_section) && "page"
+                }
               >
                 <div class={["group-mark", group_mark_variant(idx)]}>
                   {group_initials(group.name)}
@@ -184,7 +208,7 @@ defmodule HuddlzWeb.Layouts do
           <% end %>
         </div>
 
-        <a class="sb-user" href="/profile" aria-label="View profile">
+        <a id="sidebar-user" class="sb-user" href="/profile" aria-label="View profile">
           <.sb_user_avatar user={@current_user} />
           <div class="who">
             <div class="name">{display_name(@current_user)}</div>
@@ -194,12 +218,20 @@ defmodule HuddlzWeb.Layouts do
       </aside>
     <% end %>
 
-    <main class="main">
+    <main class="main" data-mobile-nav-background>
       <header class="content-topbar">
         <%= if @signed_in do %>
-          <label for="nav-toggle" class="nav-trigger" aria-label="Open navigation">
+          <button
+            type="button"
+            id="mobile-nav-trigger"
+            class="nav-trigger"
+            data-mobile-nav-trigger
+            aria-label="Open navigation"
+            aria-controls="mobile-navigation-drawer"
+            aria-expanded="false"
+          >
             <.nav_icon name="bars" />
-          </label>
+          </button>
         <% else %>
           <a class="topbar-brand" href="/" aria-label="huddlz home">
             <div class="brand-glyph">h</div>
@@ -213,12 +245,21 @@ defmodule HuddlzWeb.Layouts do
         <div class="content-actions">
           <%= if @signed_in do %>
             <a
+              id="notification-nav-link"
               class={["icon-pill", @active == "notifications" && "active"]}
               href="/notifications"
-              aria-label="Notifications"
+              aria-label={notification_label(@unread_notification_count)}
               aria-current={@active == "notifications" && "page"}
             >
               <.nav_icon name="bell" />
+              <span
+                :if={@unread_notification_count > 0}
+                id="notification-nav-badge"
+                class="notification-badge"
+                aria-hidden="true"
+              >
+                {compact_notification_count(@unread_notification_count)}
+              </span>
             </a>
           <% else %>
             <a class="btn-secondary" href="/sign-in">Sign in</a>
@@ -234,6 +275,14 @@ defmodule HuddlzWeb.Layouts do
     </main>
     """
   end
+
+  defp notification_label(0), do: "Notifications"
+
+  defp notification_label(count),
+    do: "Notifications, #{count} unread"
+
+  defp compact_notification_count(count) when count > 99, do: "99+"
+  defp compact_notification_count(count), do: count
 
   @doc """
   V3 auth shell — chromeless wrapper used by `/sign-in`, `/register`, `/reset`,

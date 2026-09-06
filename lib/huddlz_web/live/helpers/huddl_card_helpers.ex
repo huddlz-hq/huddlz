@@ -12,14 +12,21 @@ defmodule HuddlzWeb.Live.Helpers.HuddlCardHelpers do
   def tag_label(:virtual), do: "Online"
   def tag_label(:hybrid), do: "Hybrid"
 
-  def huddl_month(%{starts_at: %DateTime{} = dt}),
-    do: Calendar.strftime(dt, "%b") |> String.upcase()
+  def huddl_month(%{starts_at: %DateTime{}} = huddl),
+    do: huddl |> local_starts_at() |> Calendar.strftime("%b") |> String.upcase()
 
-  def huddl_day(%{starts_at: %DateTime{} = dt}), do: Calendar.strftime(dt, "%-d")
+  def huddl_day(%{starts_at: %DateTime{}} = huddl),
+    do: huddl |> local_starts_at() |> Calendar.strftime("%-d")
 
-  def format_meta_when(%DateTime{} = dt) do
-    "#{Calendar.strftime(dt, "%a")} · #{Calendar.strftime(dt, "%-I:%M %p")}"
+  def format_meta_when(%{starts_at: %DateTime{}} = huddl) do
+    datetime = local_starts_at(huddl)
+
+    "#{Calendar.strftime(datetime, "%a")} · " <>
+      "#{Calendar.strftime(datetime, "%-I:%M %p")} #{datetime.zone_abbr}"
   end
+
+  def local_starts_at(%{starts_at: datetime, time_zone: time_zone}),
+    do: DateTime.shift_zone!(datetime, time_zone)
 
   def rsvp_label(%{rsvp_count: count, max_attendees: max}) when is_integer(max) and max > 0,
     do: "#{count} / #{max} RSVPs"

@@ -48,17 +48,27 @@ defmodule Huddlz.Communities.GroupLocation do
   end
 
   actions do
-    defaults [:read, :destroy]
+    defaults [:read]
+
+    destroy :destroy do
+      primary? true
+      require_atomic? false
+      change Huddlz.Communities.GroupLocation.Changes.PreventScheduledDeletion
+    end
 
     create :create do
       primary? true
-      accept [:name, :address, :latitude, :longitude, :group_id]
+      accept [:name, :address, :latitude, :longitude, :time_zone, :group_id]
     end
 
     update :update do
       primary? true
       accept [:name]
       require_atomic? false
+
+      validate present(:name) do
+        message "Name is required"
+      end
     end
 
     read :by_group do
@@ -97,6 +107,12 @@ defmodule Huddlz.Communities.GroupLocation do
     end
   end
 
+  validations do
+    validate Huddlz.TimeZone.Validation do
+      where action_is(:create)
+    end
+  end
+
   attributes do
     uuid_primary_key :id
 
@@ -126,6 +142,12 @@ defmodule Huddlz.Communities.GroupLocation do
       constraints min: -180, max: 180
     end
 
+    attribute :time_zone, :string do
+      allow_nil? false
+      public? true
+      constraints min_length: 1, max_length: 100
+    end
+
     create_timestamp :inserted_at
     update_timestamp :updated_at
   end
@@ -134,6 +156,10 @@ defmodule Huddlz.Communities.GroupLocation do
     belongs_to :group, Huddlz.Communities.Group do
       attribute_type :uuid
       allow_nil? false
+    end
+
+    has_many :huddlz, Huddlz.Communities.Huddl do
+      destination_attribute :group_location_id
     end
   end
 

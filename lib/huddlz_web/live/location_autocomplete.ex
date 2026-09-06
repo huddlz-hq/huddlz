@@ -259,7 +259,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
       phx-hook="LocationAutocomplete"
       data-has-highlight={to_string(@suggestion_index >= 0)}
     >
-      <div class="filter-location">
+      <form class="filter-location">
         <svg
           width="14"
           height="14"
@@ -331,7 +331,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
             ×
           </button>
         <% end %>
-      </div>
+      </form>
 
       <%!-- Suggestion dropdown --%>
       <div
@@ -591,13 +591,18 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
     {:noreply, assign(socket, loading: false)}
   end
 
-  def handle_async(:place_details, {:ok, {:ok, %{latitude: lat, longitude: lng}}}, socket) do
+  def handle_async(
+        :place_details,
+        {:ok, {:ok, %{latitude: lat, longitude: lng, time_zone: time_zone}}},
+        socket
+      ) do
     notify_parent(socket, :selected, %{
       place_id: socket.assigns.selected_place_id,
       display_text: socket.assigns.selected_text,
       main_text: socket.assigns.selected_main_text,
       latitude: lat,
-      longitude: lng
+      longitude: lng,
+      time_zone: time_zone
     })
 
     {:noreply,
@@ -613,6 +618,14 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
     {:noreply,
      assign(socket,
        error: Huddlz.Places.error_message(reason),
+       loading: false
+     )}
+  end
+
+  def handle_async(:place_details, {:ok, {:ok, _details}}, socket) do
+    {:noreply,
+     assign(socket,
+       error: "That location did not include a time zone. Please choose another result.",
        loading: false
      )}
   end

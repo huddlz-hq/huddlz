@@ -40,8 +40,8 @@ jobs:
       # Specify the OTP and Elixir versions to use when building
       # and running the workflow steps.
       matrix:
-        otp: ['29.0.1']       # Define the OTP version [required]
-        elixir: ['1.20.0']    # Define the elixir version [required]
+        otp: ['29.0.3']       # Define the OTP version [required]
+        elixir: ['1.20.2']    # Define the elixir version [required]
     steps:
     # Step: Setup Elixir + Erlang image as the base.
     - name: Set up Elixir
@@ -53,6 +53,14 @@ jobs:
     # Step: Check out the code.
     - name: Checkout code
       uses: actions/checkout@v3
+
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Test JavaScript components
+      run: npm test --prefix assets
 
     # Step: Copy test environment file
     - name: Setup test environment
@@ -134,8 +142,8 @@ jobs:
       MIX_ENV: dev
     strategy:
       matrix:
-        otp: ['29.0.1']
-        elixir: ['1.20.0']
+        otp: ['29.0.3']
+        elixir: ['1.20.2']
     steps:
     - name: Set up Elixir
       uses: erlef/setup-beam@v1

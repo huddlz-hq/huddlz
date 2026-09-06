@@ -9,6 +9,7 @@ defmodule HuddlzWeb.AuthLive.Register do
   alias Huddlz.Accounts.DisplayNameGenerator
   alias Huddlz.Accounts.User
   alias Huddlz.Legal
+  alias HuddlzWeb.AuthFormErrors
   alias HuddlzWeb.AuthReturnTo
 
   @impl true
@@ -31,7 +32,8 @@ defmodule HuddlzWeb.AuthLive.Register do
       User
       |> Form.for_create(:register_with_password,
         as: "user",
-        context: context
+        context: context,
+        post_process_errors: &AuthFormErrors.post_process/3
       )
 
     {:ok,
@@ -55,6 +57,7 @@ defmodule HuddlzWeb.AuthLive.Register do
         id="registration-form"
         phx-change="validate"
         phx-submit="register"
+        novalidate
         class="auth-card"
       >
         <div class="form-grid">
