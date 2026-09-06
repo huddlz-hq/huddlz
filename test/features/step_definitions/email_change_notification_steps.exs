@@ -28,9 +28,9 @@ defmodule EmailChangeNotificationSteps do
        %{args: [old_email, new_email, password]} = context do
     user = find_user!(context.users, old_email)
 
-    # Same-email scenarios succeed as a no-op (the unique-email identity
-    # excludes the row being updated). The after_action's
-    # `previous_email != new_email` guard is what skips the notification.
+    # Same-email requests are rejected by the action. This step intentionally
+    # ignores the result because the scenario verifies that no notification
+    # side effect occurs.
     user
     |> Ash.Changeset.for_update(
       :change_email,

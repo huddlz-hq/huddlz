@@ -29,8 +29,7 @@ Feature: View Past Huddlz on Group Pages
     Given I am signed in as "nonmember@example.com"
     And there is a private group with past huddlz I'm not a member of
     When I try to visit that private group page
-    Then I should be redirected to the groups index
-    And I should see an error message
+    Then I should see the branded not found recovery page
 
   Scenario: Anonymous users can see past public huddlz
     When I visit a public group page

@@ -43,7 +43,7 @@ defmodule Huddlz.Notifications.Senders.HuddlSeriesUpdatedTest do
       assert email.subject == "Recurring series updated: Saturday Soccer"
     end
 
-    test "names the next upcoming instance and notes future instances cover themselves" do
+    test "names the next upcoming instance and notes normal reminders still apply" do
       user = generate(user())
 
       email =
@@ -55,8 +55,7 @@ defmodule Huddlz.Notifications.Senders.HuddlSeriesUpdatedTest do
       assert email.html_body =~ "next upcoming instance"
       assert email.html_body =~ "Saturday Soccer"
       assert email.html_body =~ "Pickup Sports"
-      assert email.html_body =~ "Future instances"
-      assert email.html_body =~ "24-hour and 1-hour reminders"
+      assert email.html_body =~ "usual reminders"
     end
 
     test "humanizes the changed fields list" do
@@ -65,11 +64,15 @@ defmodule Huddlz.Notifications.Senders.HuddlSeriesUpdatedTest do
       email =
         HuddlSeriesUpdated.build(
           user,
-          default_payload(%{"changed_fields" => ["starts_at", "physical_location"]})
+          default_payload(%{
+            "changed_fields" => ["starts_at", "physical_location", "max_attendees", "is_private"]
+          })
         )
 
       assert email.html_body =~ "the start time"
       assert email.html_body =~ "the location"
+      assert email.html_body =~ "the capacity"
+      assert email.html_body =~ "the privacy"
     end
 
     test "includes the unsubscribe footer (activity)" do

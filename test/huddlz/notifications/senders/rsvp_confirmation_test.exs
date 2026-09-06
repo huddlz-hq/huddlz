@@ -105,8 +105,13 @@ defmodule Huddlz.Notifications.Senders.RsvpConfirmationTest do
     test "formats the start time in the payload time zone" do
       user = generate(user())
 
-      starts_at = ~U[2030-05-04 17:00:00Z]
-      huddl = setup_huddl(%{starts_at: starts_at, ends_at: DateTime.add(starts_at, 2, :hour)})
+      wall_clock_input = ~U[2030-05-04 13:00:00Z]
+
+      huddl =
+        setup_huddl(%{
+          starts_at: wall_clock_input,
+          ends_at: DateTime.add(wall_clock_input, 2, :hour)
+        })
 
       email =
         RsvpConfirmation.build(user, %{

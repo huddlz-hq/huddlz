@@ -16,7 +16,6 @@ defmodule RecurringHuddlGenerationSteps do
     context
     |> create_recurring_huddl(
       event_type: :virtual,
-      physical_location: nil,
       virtual_link: "https://meet.example.com/weekly",
       is_private: true,
       max_attendees: 24
@@ -27,7 +26,6 @@ defmodule RecurringHuddlGenerationSteps do
   step "a weekly recurring hybrid huddl", context do
     create_recurring_huddl(context,
       event_type: :hybrid,
-      physical_location: "456 Congress Ave",
       virtual_link: "https://meet.example.com/hybrid"
     )
   end
@@ -45,7 +43,6 @@ defmodule RecurringHuddlGenerationSteps do
     context =
       create_recurring_huddl(context,
         event_type: :virtual,
-        physical_location: nil,
         virtual_link: "https://meet.example.com/failure"
       )
 
@@ -108,7 +105,7 @@ defmodule RecurringHuddlGenerationSteps do
 
   step "every occurrence should retain both hybrid locations", context do
     for occurrence <- future_occurrences(context.huddl) do
-      assert occurrence.physical_location == "456 Congress Ave"
+      assert occurrence.physical_location == "123 Main St, Anytown, USA"
       assert occurrence.virtual_link == "https://meet.example.com/hybrid"
     end
 
@@ -146,7 +143,7 @@ defmodule RecurringHuddlGenerationSteps do
               group_id: group.id,
               creator_id: owner.id,
               actor: owner,
-              physical_location: "123 Main St",
+              group_location_id: address_book_location_id(group.id),
               date: Date.add(Date.utc_today(), 1),
               is_recurring: true,
               frequency: "weekly",

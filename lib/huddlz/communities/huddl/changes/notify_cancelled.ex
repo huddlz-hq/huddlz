@@ -1,12 +1,11 @@
 defmodule Huddlz.Communities.Huddl.Changes.NotifyCancelled do
   @moduledoc """
-  Enqueues C3 (huddl_cancelled) notifications when a huddl is destroyed.
+  Enqueues C3 (huddl_cancelled) notifications when a published huddl is
+  cancelled.
 
   Captures attendee user_ids and the huddl's display fields in
-  `before_action` because the HuddlAttendee rows cascade-delete with
-  the huddl and the row itself disappears. The actor (the user
-  destroying the huddl, typically an organizer) is excluded from the
-  recipients. Fans out emails in `after_action` once the destroy
+  `before_action`. The actor cancelling the huddl is excluded from the
+  recipients. Fans out emails in `after_action` once the cancellation
   commits.
   """
 
@@ -22,16 +21,28 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyCancelled do
   end
 
   defp capture_recipients_and_payload(cs) do
+    if notification_due?(cs) do
+      capture_notification(cs)
+    else
+      cs
+    end
+  end
+
+  defp capture_notification(cs) do
     huddl = Ash.load!(cs.data, [:group], authorize?: false)
 
     recipients =
       RecipientHelpers.rsvp_user_ids(huddl.id, exclude: RecipientHelpers.actor_id(cs))
 
     payload = %{
+      "huddl_id" => huddl.id,
       "huddl_title" => to_string(huddl.title),
       "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at),
+      "time_zone" => huddl.time_zone,
       "group_name" => to_string(huddl.group.name),
-      "group_slug" => to_string(huddl.group.slug)
+      "group_slug" => to_string(huddl.group.slug),
+      "cancellation_reason" =>
+        Ash.Changeset.get_argument(cs, :cancellation_reason) || huddl.cancellation_reason
     }
 
     cs
@@ -40,11 +51,18 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyCancelled do
   end
 
   defp notify(cs, huddl) do
-    recipients = cs.context[:huddl_cancelled_recipients] || []
-    payload = cs.context[:huddl_cancelled_payload] || %{}
+    if notification_due?(cs) do
+      recipients = cs.context[:huddl_cancelled_recipients] || []
+      payload = cs.context[:huddl_cancelled_payload] || %{}
 
-    RecipientHelpers.deliver_each(recipients, :huddl_cancelled, payload)
-
-    {:ok, huddl}
+      case RecipientHelpers.deliver_each(recipients, :huddl_cancelled, payload) do
+        :ok -> {:ok, huddl}
+        {:error, reason} -> {:error, reason}
+      end
+    else
+      {:ok, huddl}
+    end
   end
+
+  defp notification_due?(cs), do: cs.context[:lifecycle_transition] == :cancelled
 end

@@ -262,10 +262,8 @@ defmodule Huddlz.Communities.HuddlWaitlistTest do
       assert rsvp_count(huddl) == 1
       assert waitlist_count(huddl) == 2
 
-      huddl
-      |> Ash.reload!()
-      |> Ash.Changeset.for_update(:update, %{max_attendees: 3}, actor: owner)
-      |> Ash.update!()
+      Huddlz.Communities.get_huddl!(huddl.id, actor: owner)
+      |> Huddlz.Communities.update_huddl!(%{max_attendees: 3}, actor: owner)
 
       assert rsvp_count(huddl) == 3
       assert waitlist_count(huddl) == 0
@@ -289,10 +287,8 @@ defmodule Huddlz.Communities.HuddlWaitlistTest do
         |> Ash.update!()
       end)
 
-      huddl
-      |> Ash.reload!()
-      |> Ash.Changeset.for_update(:update, %{max_attendees: nil}, actor: owner)
-      |> Ash.update!()
+      Huddlz.Communities.get_huddl!(huddl.id, actor: owner)
+      |> Huddlz.Communities.update_huddl!(%{max_attendees: nil}, actor: owner)
 
       assert rsvp_count(huddl) == 3
       assert waitlist_count(huddl) == 0
@@ -321,10 +317,8 @@ defmodule Huddlz.Communities.HuddlWaitlistTest do
       |> Ash.Changeset.for_update(:join_waitlist, %{}, actor: second_waitlister)
       |> Ash.update!()
 
-      huddl
-      |> Ash.reload!()
-      |> Ash.Changeset.for_update(:update, %{max_attendees: 2}, actor: owner)
-      |> Ash.update!()
+      Huddlz.Communities.get_huddl!(huddl.id, actor: owner)
+      |> Huddlz.Communities.update_huddl!(%{max_attendees: 2}, actor: owner)
 
       assert rsvp_count(huddl) == 2
       assert waitlist_count(huddl) == 1
@@ -403,7 +397,13 @@ defmodule Huddlz.Communities.HuddlWaitlistTest do
       Group
       |> Ash.Changeset.for_create(
         :create_group,
-        %{name: "Test Group", description: "A test group", is_public: true},
+        %{
+          name: "Test Group",
+          description: "A test group",
+          location: "Saint Augustine, FL",
+          time_zone: "America/New_York",
+          is_public: true
+        },
         actor: owner
       )
       |> Ash.create!()

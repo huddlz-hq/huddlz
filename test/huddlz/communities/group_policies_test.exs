@@ -95,6 +95,7 @@ defmodule Huddlz.Communities.GroupPoliciesTest do
                  name: "New Group",
                  description: "Test group",
                  location: "Test Location",
+                 time_zone: "America/New_York",
                  is_public: true
                })
                |> Ash.create(actor: user)
@@ -112,6 +113,7 @@ defmodule Huddlz.Communities.GroupPoliciesTest do
                  name: "Admin Group",
                  description: "Test group",
                  location: "Test Location",
+                 time_zone: "America/New_York",
                  is_public: true
                })
                |> Ash.create(actor: admin)
@@ -126,6 +128,7 @@ defmodule Huddlz.Communities.GroupPoliciesTest do
                  name: "New Group",
                  description: "Test group",
                  location: "Test Location",
+                 time_zone: "America/New_York",
                  is_public: true
                })
                |> Ash.create(actor: user)
