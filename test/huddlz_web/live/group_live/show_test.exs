@@ -19,7 +19,7 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
       |> assert_has("#group-detail-hero.group-hero")
       |> assert_has("#group-detail-cover-#{group.id} [aria-hidden='true']")
       |> assert_has("#group-detail-cover-#{group.id} .group-cover-label", text: "huddlz group")
-      |> refute_has("#group-detail-cover-#{group.id} img")
+      |> refute_has("#group-detail-cover-#{group.id} .cover-image")
     end
 
     test "renders a decorative cover with a fallback", %{
@@ -42,7 +42,7 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
 
       conn
       |> visit(~p"/groups/#{group.slug}")
-      |> assert_has("#group-detail-cover-#{group.id}-image[data-image-fallback][alt='']")
+      |> assert_has("#group-detail-cover-#{group.id}-image[aria-hidden='true'][style]")
       |> assert_has("#group-detail-cover-#{group.id} .group-cover-fallback")
     end
   end

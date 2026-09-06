@@ -1,15 +1,16 @@
-# Browser regression checks
+# Cover visual regression checks
 
-Build the production assets with `mix assets.build`, then serve the repository
+Build the application assets with `mix assets.build`, then serve the repository
 root with `python3 -m http.server 4013 --bind 127.0.0.1`.
 
-Open `http://localhost:4013/test/browser/image_fallback.html`. Every check should
-report `PASS`, and `#results` should have `data-status="passed"`.
+Open `http://localhost:4013/test/browser/image_fallback.html` at 320px and a
+desktop width. The fixture contains no JavaScript:
 
-These checks use real browser image loads, the shared production fallback module,
-and the built application CSS. They cover cached failures, images inserted after
-initialization, LiveView patch preservation, failed and successful replacements,
-all cover image classes, and
-images outside the fallback contract. Long group metadata is also checked against
-the hero frame, including locations without spaces. Run at 320px and a desktop
-viewport to exercise both layouts. No database or external images are required.
+- Valid covers show the image; missing and failed covers show the fallback.
+- Group covers crop to their frame; huddl detail covers contain the full image.
+- Long group metadata stays within the hero and wraps without horizontal overflow.
+
+Also inspect Discover, My groups, organizer, and detail views in the running app.
+Changing a cover through LiveView should update the background without any
+client-side image state. This fixture uses the application CSS and requires no
+database or external images.

@@ -202,6 +202,7 @@ defmodule HuddlzWeb.LiveUserAuth do
   defp refresh_organizer_access(_message, socket), do: {:cont, socket}
 
   defp maybe_assign_picker_groups(%{assigns: %{owned_groups: _}} = socket, groups) do
+    groups = Ash.load!(groups, :current_image_url, actor: socket.assigns.current_user)
     assign(socket, :owned_groups, groups)
   end
 

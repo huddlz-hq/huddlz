@@ -11,7 +11,7 @@ defmodule HuddlzWeb.OrganizeLiveTest do
     |> assert_has(".organizer-group-row[href='/organize/#{group.slug}']")
     |> assert_has("#organizer-group-cover-#{group.id}[data-testid='group-cover']")
     |> assert_has("#organizer-group-cover-#{group.id} .group-cover-signal", text: "OC")
-    |> refute_has("#organizer-group-cover-#{group.id} img")
+    |> refute_has("#organizer-group-cover-#{group.id} .cover-image")
   end
 
   test "organizer picker displays the group's current cover", %{conn: conn} do
@@ -34,6 +34,6 @@ defmodule HuddlzWeb.OrganizeLiveTest do
     conn
     |> login(owner)
     |> visit(~p"/organize")
-    |> assert_has("#organizer-group-cover-#{group.id} img[src='#{path}']")
+    |> assert_has("#organizer-group-cover-#{group.id} .cover-image[style*='#{path}']")
   end
 end

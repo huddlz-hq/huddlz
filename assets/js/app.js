@@ -24,11 +24,8 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 import {mountMobileNavigation} from "./mobile_navigation.mjs"
-import {mountImageFallbacks, preserveImageFallback} from "./image_fallback.mjs"
 
 const Hooks = {}
-
-mountImageFallbacks()
 
 Hooks.LocationAutocomplete = {
   mounted() {
@@ -132,10 +129,7 @@ const liveSocket = new LiveSocket("/live", Socket, {
     _csrf_token: csrfToken,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
   }),
-  hooks: Hooks,
-  dom: {
-    onBeforeElUpdated: preserveImageFallback
-  }
+  hooks: Hooks
 })
 
 // Show progress bar on live navigation and form submits

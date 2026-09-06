@@ -204,7 +204,7 @@ defmodule HuddlzWeb.MyHuddlzLive do
       gradient={@gradient}
     >
       <:cover>
-        <.huddl_cover_image
+        <.cover_image
           :if={@huddl.display_image_url}
           id={"my-huddl-card-cover-#{@huddl.id}"}
           class="card-cover-img"

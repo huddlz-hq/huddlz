@@ -8,7 +8,7 @@ defmodule HuddlzWeb.Components.Card do
   """
   use Phoenix.Component
 
-  alias Huddlz.Storage.GroupImages
+  import HuddlzWeb.Components.CoverImage
 
   attr :href, :string, default: nil
   attr :navigate, :string, default: nil
@@ -74,13 +74,11 @@ defmodule HuddlzWeb.Components.Card do
         <span class="group-cover-signal">{@initials}</span>
         <span :if={@variant != :thumb} class="group-cover-label">huddlz group</span>
       </div>
-      <img
+      <.cover_image
         :if={@group.current_image_url}
         id={"#{@id}-image"}
         class="group-cover-image"
-        src={GroupImages.url(@group.current_image_url)}
-        alt=""
-        data-image-fallback
+        image_url={@group.current_image_url}
       />
     </div>
     """

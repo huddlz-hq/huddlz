@@ -448,7 +448,7 @@ defmodule HuddlzWeb.GroupLive.Show do
           gradient={Integer.mod(idx, 6) + 1}
         >
           <:cover>
-            <.huddl_cover_image
+            <.cover_image
               :if={huddl.display_image_url}
               id={"group-huddl-card-cover-#{huddl.id}"}
               class="card-cover-img"

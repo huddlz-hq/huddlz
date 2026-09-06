@@ -1,15 +1,39 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Cover image fallback regression checks</title>
-    <link rel="stylesheet" href="../../priv/static/assets/css/app.css">
-  </head>
-  <body>
-    <h1>Cover image fallback regression checks</h1>
-    <pre id="results" aria-live="polite">Running…</pre>
-    <div id="fixtures"></div>
-    <script type="module" src="./image_fallback.mjs"></script>
-  </body>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CSS cover fallback checks</title>
+  <link rel="stylesheet" href="../../priv/static/assets/css/app.css">
+</head>
+<body style="display: block; padding: 12px">
+  <h1>CSS cover fallback checks</h1>
+  <p>No JavaScript: valid covers show an image; absent and failed covers show the fallback.</p>
+<h2>Valid group cover</h2><div style="position: relative; width: min(100%, 480px); aspect-ratio: 16 / 9">
+<div class="group-cover gradient-1"><div class="group-cover-fallback" aria-hidden="true"><span class="group-cover-signal">HC</span><span class="group-cover-label">huddlz group</span></div>
+<div class="cover-image group-cover-image" style="background-image: url('../../priv/static/images/logo.svg')" aria-hidden="true"></div>
+</div></div>
+<h2>Valid huddl cover</h2><div class="hero huddl-hero" style="width: min(100%, 480px)"><div class="hero-media">
+<div class="cover-image hero-img" style="background-image: url('../../priv/static/images/logo.svg')" aria-hidden="true"></div>
+</div></div>
+<h2>Absent group cover</h2><div style="position: relative; width: min(100%, 480px); aspect-ratio: 16 / 9">
+<div class="group-cover gradient-1"><div class="group-cover-fallback" aria-hidden="true"><span class="group-cover-signal">HC</span><span class="group-cover-label">huddlz group</span></div>
+</div></div>
+<h2>Absent huddl cover</h2><div class="hero huddl-hero" style="width: min(100%, 480px)"><div class="hero-media">
+</div></div>
+<h2>Failed group cover</h2><div style="position: relative; width: min(100%, 480px); aspect-ratio: 16 / 9">
+<div class="group-cover gradient-1"><div class="group-cover-fallback" aria-hidden="true"><span class="group-cover-signal">HC</span><span class="group-cover-label">huddlz group</span></div>
+<div class="cover-image group-cover-image" style="background-image: url('./missing-cover.png')" aria-hidden="true"></div>
+</div></div>
+<h2>Failed huddl cover</h2><div class="hero huddl-hero" style="width: min(100%, 480px)"><div class="hero-media">
+<div class="cover-image hero-img" style="background-image: url('./missing-cover.png')" aria-hidden="true"></div>
+</div></div>
+<h2>Long group metadata</h2>
+<div class="hero group-hero" style="width: min(100%, 480px)">
+<div class="group-cover group-cover--hero gradient-1"></div>
+<div class="hero-content"><span class="eyebrow">Group · Public</span>
+<h1>Community Community Community Community Community Community Community Community Community Community</h1>
+<div class="meta group-hero-meta"><span class="group-hero-location">LongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocationLongLocation</span></div>
+</div></div>
+</body>
 </html>
