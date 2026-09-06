@@ -73,6 +73,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       |> assert_has("button.nav-scrim[aria-hidden='true'][tabindex='-1']")
       |> assert_has(".sb-item.active[aria-current='page']", text: "My huddlz")
       |> refute_has("input.nav-toggle")
+      |> refute_has(".sb-item:not(.active)[aria-current]")
     end
 
     test "shows three filter chips with counts", %{conn: conn, attendee: attendee} do
@@ -88,7 +89,8 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       conn
       |> login(attendee)
       |> visit("/my-huddlz")
-      |> assert_has(".filters .chip.is-active", text: "Upcoming")
+      |> assert_has(".filters .chip.is-active[aria-current='page']", text: "Upcoming")
+      |> refute_has(".filters .chip:not(.is-active)[aria-current]")
     end
   end
 

@@ -249,6 +249,7 @@ defmodule HuddlzWeb.Layouts do
               class={["icon-pill", @active == "notifications" && "active"]}
               href="/notifications"
               aria-label={notification_label(@unread_notification_count)}
+              aria-current={@active == "notifications" && "page"}
             >
               <.nav_icon name="bell" />
               <span

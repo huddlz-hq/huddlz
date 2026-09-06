@@ -18,7 +18,11 @@ defmodule HuddlzWeb.Components.Chip do
   def chip(%{rest: rest} = assigns) do
     if rest[:href] || rest[:navigate] || rest[:patch] do
       ~H"""
-      <.link class={["chip", @active && "is-active", @class]} {@rest}>
+      <.link
+        class={["chip", @active && "is-active", @class]}
+        aria-current={@active && "page"}
+        {@rest}
+      >
         {render_slot(@inner_block)}
       </.link>
       """

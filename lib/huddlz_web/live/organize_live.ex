@@ -448,28 +448,19 @@ defmodule HuddlzWeb.OrganizeLive do
       </div>
     </div>
 
-    <div class="filters">
-      <.link
-        patch={huddlz_filter_path(@group, :draft)}
-        class={filter_chip_class(@filter == :draft)}
-      >
+    <div class="filters" id="organize-huddlz-filters">
+      <.chip patch={huddlz_filter_path(@group, :draft)} active={@filter == :draft}>
         Draft
-      </.link>
-      <.link
-        patch={huddlz_filter_path(@group, :published)}
-        class={filter_chip_class(@filter == :published)}
-      >
+      </.chip>
+      <.chip patch={huddlz_filter_path(@group, :published)} active={@filter == :published}>
         Published
-      </.link>
-      <.link
-        patch={huddlz_filter_path(@group, :cancelled)}
-        class={filter_chip_class(@filter == :cancelled)}
-      >
+      </.chip>
+      <.chip patch={huddlz_filter_path(@group, :cancelled)} active={@filter == :cancelled}>
         Cancelled
-      </.link>
-      <.link patch={huddlz_filter_path(@group, :past)} class={filter_chip_class(@filter == :past)}>
+      </.chip>
+      <.chip patch={huddlz_filter_path(@group, :past)} active={@filter == :past}>
         Past
-      </.link>
+      </.chip>
     </div>
 
     <%= if @huddlz == [] do %>
@@ -529,9 +520,6 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp organizer_huddl_path(group, huddl),
     do: ~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit"
-
-  defp filter_chip_class(true), do: "chip is-active"
-  defp filter_chip_class(false), do: "chip"
 
   defp filter_heading(:draft), do: "Draft huddlz"
   defp filter_heading(:cancelled), do: "Cancelled huddlz"
