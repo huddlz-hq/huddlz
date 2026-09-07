@@ -225,7 +225,12 @@ defmodule HuddlzWeb.GroupLive.Locations do
           Saved venues show up in the venue picker for everyone in your group.
         </p>
 
-        <form phx-submit="save_new_location" phx-change="modal_form_changed" class="form-grid">
+        <form
+          id="new-location-form"
+          phx-submit="save_new_location"
+          phx-change="modal_form_changed"
+          class="form-grid"
+        >
           <div class="form-row">
             <label class="form-label" for="modal-address-autocomplete-input">
               Search for an address

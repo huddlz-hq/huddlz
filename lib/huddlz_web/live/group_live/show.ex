@@ -138,6 +138,7 @@ defmodule HuddlzWeb.GroupLive.Show do
       sidebar_owned_groups={@sidebar_owned_groups}
       active="discover"
     >
+      <HuddlzWeb.StructuredData.group group={@group} url={@canonical_url} />
       <div id="group-detail-hero" class="hero group-hero">
         <.group_cover
           id={"group-detail-cover-#{@group.id}"}
