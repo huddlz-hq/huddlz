@@ -297,7 +297,8 @@ defmodule HuddlzWeb.HuddlLiveTest do
       session
       |> assert_has("h1", text: "Results for")
       |> assert_has("input[name='q'][value='elixir']")
-      |> assert_has(".filter-distance input[type='range'][value='25']")
+      |> assert_has("form#distance-filter-form[phx-change='distance_change']", count: 1)
+      |> assert_has("#distance-filter-form input[type='range'][value='25']")
       |> assert_has(".filter-distance-value", text: "25 mi")
     end
   end

@@ -600,6 +600,7 @@ defmodule HuddlzWeb.HuddlLive do
                 it doesn't perturb the .filter-distance flex layout. --%>
           <form
             :if={@location_active}
+            id="distance-filter-form"
             class="filter-distance"
             phx-change="distance_change"
             style="display:contents"
