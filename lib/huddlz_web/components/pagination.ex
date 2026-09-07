@@ -4,8 +4,8 @@ defmodule HuddlzWeb.Components.Pagination do
   flanking an `<ol class="page-numbers">`. Page-number entries collapse to an
   ellipsis when the total exceeds 7.
 
-  Pages are emitted as `<button>` elements that fire a `phx-click` event with
-  `phx-value-page=N`; the host LiveView pushes the corresponding patch URL.
+  Supply `page_path` for crawlable LiveView patch links, or `event_name` for
+  pagination managed entirely by the host LiveView.
   """
   use Phoenix.Component
 
@@ -13,21 +13,25 @@ defmodule HuddlzWeb.Components.Pagination do
   attr :total_pages, :integer, required: true
 
   attr :event_name, :string,
-    required: true,
+    default: nil,
     doc: "phx-click event name dispatched to the LiveView"
 
+  attr :page_path, :any, default: nil, doc: "Function mapping a page number to a URL"
+
+  attr :id, :string, default: "pagination"
   attr :class, :any, default: nil
 
   def pagination(assigns) do
     ~H"""
-    <nav class={["pagination", @class]} aria-label="Pagination">
-      <button
-        type="button"
+    <nav id={@id} class={["pagination", @class]} aria-label="Pagination">
+      <.page_control
         class="page-nav"
         disabled={@current_page <= 1}
+        id={@id <> "-previous"}
         aria-label="Previous page"
-        phx-click={@event_name}
-        phx-value-page={@current_page - 1}
+        event_name={@event_name}
+        page_path={@page_path}
+        page={@current_page - 1}
       >
         <svg
           width="14"
@@ -42,33 +46,35 @@ defmodule HuddlzWeb.Components.Pagination do
           <path d="m15 18-6-6 6-6" />
         </svg>
         <span>Prev</span>
-      </button>
+      </.page_control>
       <ol class="page-numbers">
         <%= for entry <- pagination_range(@current_page, @total_pages) do %>
           <%= if entry == :ellipsis do %>
             <li class="page-ellipsis" aria-hidden="true">…</li>
           <% else %>
             <li>
-              <button
-                type="button"
+              <.page_control
                 class={["page-num", entry == @current_page && "is-active"]}
+                id={@id <> "-page-#{entry}"}
                 aria-current={entry == @current_page && "page"}
-                phx-click={@event_name}
-                phx-value-page={entry}
+                event_name={@event_name}
+                page_path={@page_path}
+                page={entry}
               >
                 {entry}
-              </button>
+              </.page_control>
             </li>
           <% end %>
         <% end %>
       </ol>
-      <button
-        type="button"
+      <.page_control
         class="page-nav"
         disabled={@current_page >= @total_pages}
+        id={@id <> "-next"}
         aria-label="Next page"
-        phx-click={@event_name}
-        phx-value-page={@current_page + 1}
+        event_name={@event_name}
+        page_path={@page_path}
+        page={@current_page + 1}
       >
         <span>Next</span>
         <svg
@@ -83,8 +89,33 @@ defmodule HuddlzWeb.Components.Pagination do
         >
           <path d="m9 6 6 6-6 6" />
         </svg>
-      </button>
+      </.page_control>
     </nav>
+    """
+  end
+
+  attr :page_path, :any, default: nil
+  attr :event_name, :string, default: nil
+  attr :page, :integer, required: true
+  attr :disabled, :boolean, default: false
+  attr :rest, :global, include: ~w(aria-label aria-current)
+  slot :inner_block, required: true
+
+  defp page_control(assigns) do
+    ~H"""
+    <%= if @page_path && !@disabled do %>
+      <.link patch={@page_path.(@page)} {@rest}>{render_slot(@inner_block)}</.link>
+    <% else %>
+      <button
+        type="button"
+        disabled={@disabled}
+        phx-click={@event_name}
+        phx-value-page={@page}
+        {@rest}
+      >
+        {render_slot(@inner_block)}
+      </button>
+    <% end %>
     """
   end
 
