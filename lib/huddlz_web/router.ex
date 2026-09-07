@@ -40,6 +40,9 @@ defmodule HuddlzWeb.Router do
 
   scope "/", HuddlzWeb do
     get "/healthz", HealthController, :show
+    get "/robots.txt", SitemapController, :robots
+    get "/sitemap.xml", SitemapController, :index
+    get "/sitemap-:file", SitemapController, :child
   end
 
   scope "/gql" do
