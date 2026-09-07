@@ -3,43 +3,37 @@ defmodule BrowserLocationKeyboardSteps do
 
   import ExUnit.Assertions
   import Huddlz.Generator
+  import Huddlz.Test.BrowserHelpers
   import Huddlz.Test.MoxHelpers
   import PhoenixTest
-  import PhoenixTest.Playwright, only: [add_session_cookie: 3, type: 3, press: 3, evaluate: 3]
+  import PhoenixTest.Playwright, only: [type: 3, press: 3, evaluate: 3]
 
   step "I have opened my profile in a browser", context do
     member = generate(user(role: :user))
-
-    {:ok, token, _claims} =
-      AshAuthentication.Jwt.token_for_user(member, %{}, domain: Huddlz.Accounts)
 
     stub_places_autocomplete(%{"saint" => [:saint_augustine]})
     stub_place_details(:defaults)
 
     conn =
       context.conn
-      |> add_session_cookie(
-        [
-          value: %{
-            user_token: token,
-            live_socket_id: "users_sessions:#{Base.url_encode64(token)}"
-          }
-        ],
-        HuddlzWeb.Endpoint.session_options()
-      )
+      |> sign_in(member)
       |> visit("/profile")
       |> assert_has(".phx-connected")
       |> assert_has("h1", text: "Profile")
       |> evaluate(
         """
         (() => {
-          window.prototypeSubmissions = 0;
-          document.addEventListener('submit', () => window.prototypeSubmissions++, true);
+          window.observedSubmissions = 0;
+          document.addEventListener('submit', () => window.observedSubmissions++, true);
           return true;
         })()
         """,
         fn installed -> assert installed end
       )
+
+    ExUnit.Callbacks.on_exit(fn ->
+      File.rm_rf!("priv/static/uploads/profile_pictures/#{member.id}")
+    end)
 
     Map.put(context, :conn, conn)
   end
@@ -71,7 +65,7 @@ defmodule BrowserLocationKeyboardSteps do
   end
 
   step "Enter did not submit a form", context do
-    evaluate(context.conn, "window.prototypeSubmissions", fn count -> assert count == 0 end)
+    evaluate(context.conn, "window.observedSubmissions", fn count -> assert count == 0 end)
     context
   end
 end
