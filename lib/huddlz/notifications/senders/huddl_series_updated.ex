@@ -11,7 +11,10 @@ defmodule Huddlz.Notifications.Senders.HuddlSeriesUpdated do
   Required payload keys are the same as C2 (`huddl_id`,
   `huddl_title`, `starts_at_iso`, `group_name`, `group_slug`,
   `changed_fields`), but the values describe the next-instance row
-  rather than the row that triggered the edit.
+  rather than the row that triggered the edit. `calendar_huddlz` contains
+  schedule payloads for that recipient's active, future RSVPs. Each gets its
+  own attachment with the same UID as its confirmation; waitlisted and cancelled
+  huddlz are excluded. Older queued payloads without this key remain valid.
   """
 
   @behaviour Huddlz.Notifications.Sender
@@ -21,6 +24,7 @@ defmodule Huddlz.Notifications.Senders.HuddlSeriesUpdated do
   alias Huddlz.Mailer
   alias Huddlz.Notifications.DateTimeFormatter
   alias Huddlz.Notifications.Footer
+  alias Huddlz.Notifications.ICS
   alias Huddlz.Notifications.Senders.ChangedFields
   alias Huddlz.Notifications.Senders.HeaderSafe
   alias Huddlz.Notifications.Senders.HtmlEscape
@@ -41,6 +45,13 @@ defmodule Huddlz.Notifications.Senders.HuddlSeriesUpdated do
 
     safe_when = HtmlEscape.escape(when_text)
     safe_changed = HtmlEscape.escape(ChangedFields.summary(payload))
+
+    calendar_note =
+      if Map.get(payload, "calendar_huddlz", []) == [],
+        do: "",
+        else:
+          "Updated calendar entries for your upcoming RSVPs are attached. Open each attachment to update that date in your calendar."
+
     huddl_url = Urls.huddl_url(payload)
 
     {footer_html, footer_text} = Footer.build(user, :huddl_series_updated)
@@ -61,6 +72,8 @@ defmodule Huddlz.Notifications.Senders.HuddlSeriesUpdated do
     is now scheduled for #{safe_when}. See it at
     <a href="#{huddl_url}">#{huddl_url}</a>.</p>
 
+    <p>#{calendar_note}</p>
+
     <p>You will still receive the usual reminders for each huddl you are attending.</p>
     #{footer_html}
     """)
@@ -74,9 +87,26 @@ defmodule Huddlz.Notifications.Senders.HuddlSeriesUpdated do
     Your next upcoming instance, "#{huddl_title(payload)}", is now scheduled for
     #{when_text}. See it at #{huddl_url}.
 
+    #{calendar_note}
+
     You will still receive the usual reminders for each huddl you are attending.
     #{footer_text}
     """)
+    |> attach_calendars(payload)
+  end
+
+  defp attach_calendars(email, payload) do
+    Enum.reduce(Map.get(payload, "calendar_huddlz", []), email, fn huddl, email ->
+      {_filename, content} = ICS.updated_huddl(huddl)
+
+      attachment(
+        email,
+        Swoosh.Attachment.new({:data, content},
+          filename: "huddl-#{huddl["huddl_id"]}.ics",
+          content_type: "text/calendar"
+        )
+      )
+    end)
   end
 
   defp huddl_title(%{"huddl_title" => title}) when is_binary(title), do: title

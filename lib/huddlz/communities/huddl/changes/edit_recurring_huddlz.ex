@@ -11,6 +11,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz do
 
   alias Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate
   alias Huddlz.Communities.Huddl.Changes.RecipientHelpers
+  alias Huddlz.Communities.Huddl.Changes.SeriesRsvpTarget
   alias Huddlz.Communities.Huddl.RecurrenceHelper
   alias Huddlz.Communities.HuddlTemplate
 
@@ -128,8 +129,19 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz do
 
     huddl
     |> RecipientHelpers.series_rsvp_targets(exclude: actor_id)
-    |> Enum.each(fn {user_id, target} ->
-      payload = NotifyMeaningfulUpdate.payload(target, huddl.group, changed_fields)
+    |> Enum.each(fn %SeriesRsvpTarget{
+                      user_id: user_id,
+                      next_huddl: target,
+                      calendar_huddlz: targets
+                    } ->
+      calendar_huddlz =
+        targets
+        |> Enum.map(&NotifyMeaningfulUpdate.payload(&1, huddl.group, changed_fields))
+
+      payload =
+        target
+        |> NotifyMeaningfulUpdate.payload(huddl.group, changed_fields)
+        |> Map.put("calendar_huddlz", calendar_huddlz)
 
       RecipientHelpers.deliver_each([user_id], :huddl_series_updated, payload)
     end)
