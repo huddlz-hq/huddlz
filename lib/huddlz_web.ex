@@ -50,7 +50,7 @@ defmodule HuddlzWeb do
 
   def live_view do
     quote do
-      use Phoenix.LiveView, layout: {HuddlzWeb.Layouts, :live}
+      use Phoenix.LiveView
 
       # LiveView-specific helpers for error handling
       import HuddlzWeb.Live.ErrorHelpers

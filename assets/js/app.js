@@ -24,9 +24,8 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 import {mountMobileNavigation} from "./mobile_navigation.mjs"
-import {PageURLMetadata} from "./page_url_metadata.mjs"
 
-const Hooks = {PageURLMetadata}
+const Hooks = {}
 
 Hooks.LocationAutocomplete = {
   mounted() {
