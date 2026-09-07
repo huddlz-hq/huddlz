@@ -25,7 +25,15 @@ snapshot, with unique `(kind, id)` ordering and no shifting pagination offsets.
 Concurrent mutations enter the next refresh. The database may sort/spill the
 projected rows; application memory holds one child document and a bounded index.
 
-Children default to 5,000 URLs, keeping per-document memory and responses small.
+URLs are partitioned by page kind and the first two hexadecimal digits of their
+immutable UUID, giving 256 fixed buckets per kind. A group insertion cannot
+shift huddl buckets, and a huddl insertion or removal cannot shift other UUID
+buckets. Slug and content edits retain bucket membership. Empty buckets emit
+no document. Each bucket streams independently into children of at most 5,000
+URLs, keeping per-document memory and responses small. Oversized buckets split
+at the count or byte ceiling; repacking is confined to that bucket, so changes
+never ripple through the full catalog. Content-derived filenames preserve
+unchanged children, including every child of an unaffected bucket.
 Both the serializer and index enforce the protocol ceilings of 50,000 entries
 and 52,428,800 uncompressed bytes, including XML envelopes. Oversized entries
 or indexes fail generation rather than publishing a partial feed. If the index
@@ -41,6 +49,26 @@ unchanged for unchanged XML. Previous child files remain for at least 48 hours
 Successful refreshes collect expired historical children. This window exceeds
 the index's five-minute HTTP cache lifetime; indefinitely saved old indexes
 are not guaranteed to resolve forever.
+
+## Resource-read exception and visibility contract
+
+The sitemap SQL projection in `Huddlz.Sitemaps` is an explicit, narrow exception
+to the normal `Ash.Query` resource-read guidance. It reads only public URL keys
+and database-maintained content timestamps through one cursor statement. This
+preserves a single snapshot across both kinds of page, including their artwork
+timestamps, without loading full resources or related content. It does not
+provide a general resource-query interface or bypass authorization on page reads.
+
+The copied visibility predicates must remain aligned with the anonymous group
+and huddl read policies and the canonical-page rules in
+[canonical-urls.md](canonical-urls.md): public groups only; published/completed,
+non-private huddlz in public groups only. Any change to those policies or to
+public canonical eligibility must update this projection and the sitemap HTTP
+parity tests in `test/huddlz_web/controllers/sitemap_controller_test.exs` together.
+Those tests fetch listed pages anonymously, compare canonical URLs, and verify
+that private groups, private huddlz, drafts, cancellations and deleted records
+are excluded. The Cucumber sitemap scenario also checks that the current index
+preserves an unrelated child's URL and body after publication and deletion.
 
 ## Freshness, privacy and modification times
 
