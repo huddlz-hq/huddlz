@@ -31,6 +31,7 @@ The command builds the actual app assets, starts the test endpoint and Chromium,
 | Home location | ArrowDown/Enter select a suggestion without a native form submission |
 | Calendar | Actual `Intl` time-zone detection moves a late Denver huddl to the next New York calendar day |
 | Organizer | Native Tab, arrow keys, Space, visible focus, and switch state survive LiveView patches |
+| Huddl photos | Mixed-batch rejection, corrupt-image feedback, keyboard upload and carousel, focus restoration, and mobile gallery placement |
 | Profile picture | Real file upload and image decode; dialog Tab containment, Escape, and focus restoration |
 | Mobile navigation | 320px drawer, native focus wrapping, inert background, dismissal and navigation |
 | Group cover | Valid, missing, and failed images; long details fit at 320px and on desktop |

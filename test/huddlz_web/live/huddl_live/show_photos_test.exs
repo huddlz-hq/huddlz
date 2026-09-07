@@ -250,7 +250,7 @@ defmodule HuddlzWeb.HuddlLive.ShowPhotosTest do
       |> element("#huddl-photo-upload-form")
       |> render_submit()
 
-      assert render(view) =~ "Failed to upload photos. Please try again."
+      assert render(view) =~ "No photos uploaded. Check the details below."
       assert {:ok, []} = Communities.list_huddl_photos(huddl.id, actor: owner)
 
       upload_dir = Path.join(["priv/static/uploads/huddl_photos", huddl.id])
@@ -291,7 +291,7 @@ defmodule HuddlzWeb.HuddlLive.ShowPhotosTest do
         |> live(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
 
       view
-      |> element("button[phx-click='confirm_delete_photo'][phx-value-id='#{photo.id}']")
+      |> element("button.photo-delete[phx-value-id='#{photo.id}']")
       |> render_click()
 
       assert has_element?(view, "#delete-photo-modal")
@@ -302,7 +302,7 @@ defmodule HuddlzWeb.HuddlLive.ShowPhotosTest do
       assert {:ok, [_photo]} = Communities.list_huddl_photos(huddl.id, actor: owner)
 
       view
-      |> element("button[phx-click='confirm_delete_photo'][phx-value-id='#{photo.id}']")
+      |> element("button.photo-delete[phx-value-id='#{photo.id}']")
       |> render_click()
 
       view |> element("#confirm-delete-photo") |> render_click()
@@ -327,7 +327,7 @@ defmodule HuddlzWeb.HuddlLive.ShowPhotosTest do
 
       refute has_element?(
                view,
-               "button[phx-click='confirm_delete_photo'][phx-value-id='#{photo.id}']"
+               "button.photo-delete[phx-value-id='#{photo.id}']"
              )
     end
   end
@@ -358,7 +358,7 @@ defmodule HuddlzWeb.HuddlLive.ShowPhotosTest do
         |> login(owner)
         |> live(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
 
-      view |> element(".photo-tile button[phx-click='view_photo']") |> render_click()
+      view |> element(".photo-tile button.photo-open") |> render_click()
 
       assert has_element?(view, "#photo-lightbox img.lightbox-image")
 
@@ -555,7 +555,7 @@ defmodule HuddlzWeb.HuddlLive.ShowPhotosTest do
         |> login(owner)
         |> live(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
 
-      view |> element(".photo-tile button[phx-click='view_photo']") |> render_click()
+      view |> element(".photo-tile button.photo-open") |> render_click()
 
       assert has_element?(view, "#photo-lightbox img.lightbox-image")
       refute has_element?(view, "#photo-lightbox button[phx-click='next_photo']")
@@ -622,7 +622,7 @@ defmodule HuddlzWeb.HuddlLive.ShowPhotosTest do
       |> render_click()
 
       view
-      |> element("button[phx-click='confirm_delete_photo'][phx-value-id='#{second.id}']")
+      |> element("button.photo-delete[phx-value-id='#{second.id}']")
       |> render_click()
 
       view |> element("#confirm-delete-photo") |> render_click()

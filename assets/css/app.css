@@ -4399,138 +4399,53 @@ body .page-nav:disabled {
   body .huddl-hero .hero-content .meta .meta-sep { display: none; }
 }
 
-/* Post-huddl shared photo gallery */
-body .huddl-photos {
-  margin-top: 32px;
-  padding-top: 28px;
-  border-top: 1px solid var(--line);
-}
-
-body .huddl-photos h2 {
-  margin: 0 0 16px;
-  font-family: var(--mono);
-  font-size: 20px;
-  letter-spacing: -0.01em;
-}
-
-body .huddl-photos-empty {
-  color: var(--muted);
-  font-size: 14px;
-  padding: 12px 0;
-}
-
-body .photos-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 12px;
-  margin-top: 20px;
-}
-
-body .photo-tile {
-  position: relative;
-  aspect-ratio: 1 / 1;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  border: 1px solid var(--line);
-}
-
-body .photo-tile img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-body .photo-delete {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(2, 4, 4, 0.65);
-  color: var(--text);
-  cursor: pointer;
-}
-
-body .photo-delete:hover {
-  background: var(--magenta);
-}
-
-body .photo-upload-entry {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 10px 0;
-}
-
-body .photo-upload-entry figure {
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  margin: 0;
-}
-
+/* Shared memories sit alongside the completed huddl details. */
+body .huddl-main { grid-area: intro; min-width: 0; }
+body .huddl-frame-photos { grid-template-areas: "intro side"; }
+body .huddl-photos { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--line); }
+body .photo-heading h2 { margin: 0; font-family: var(--mono); font-size: 22px; letter-spacing: -0.02em; }
+body .photo-count { margin-left: 8px; color: var(--muted); font-size: 15px; }
+body .photo-heading p, body .huddl-photos-empty { color: var(--muted); font-size: 14px; line-height: 1.6; }
+body .photo-heading p { margin: 8px 0 20px; }
+body .huddl-photos .upload-zone { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; padding: 20px; }
+body .huddl-photos .upload-meta { flex-basis: 100%; font-size: 12px; text-align: center; }
+body .photos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 14px; margin-top: 24px; }
+body .photo-tile { position: relative; min-width: 0; }
+body .photo-open { display: block; width: 100%; aspect-ratio: 1; padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--panel-2); cursor: pointer; }
+body .photo-tile img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 150ms ease; }
+body .photo-open:hover img { transform: scale(1.025); }
+body .photo-credit { display: block; color: var(--muted); font-size: 12px; padding: 8px 2px; overflow-wrap: anywhere; }
+body .photo-delete, body .photo-upload-remove, body .lightbox-nav { display: grid; place-items: center; min-width: 44px; min-height: 44px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: rgba(2, 4, 4, 0.85); color: var(--text); cursor: pointer; transition: background 150ms ease; }
+body .photo-delete { position: absolute; top: 6px; right: 6px; }
+body .photo-delete:hover, body .photo-upload-remove:hover { background: var(--magenta); }
+body .photo-open:focus-visible, body .photo-delete:focus-visible, body .photo-upload-remove:focus-visible, body .lightbox-nav:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+body .photo-upload-entry { display: flex; align-items: center; gap: 12px; margin-top: 12px; padding: 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+body .photo-upload-entry figure { flex: 0 0 48px; height: 48px; border-radius: 6px; overflow: hidden; margin: 0; }
 body .photo-upload-entry img { width: 100%; height: 100%; object-fit: cover; }
-
-body .upload-error {
-  color: var(--warn);
-  font-size: 13px;
-  margin: 4px 0;
+body .photo-upload-info { display: grid; gap: 5px; flex: 1; min-width: 0; font-size: 12px; }
+body .photo-filename { overflow-wrap: anywhere; font-size: 13px; }
+body .photo-upload-info progress { width: 100%; height: 5px; border: 0; border-radius: 3px; overflow: hidden; accent-color: var(--cyan); }
+body .photo-upload-info progress::-webkit-progress-bar { background: var(--line); }
+body .photo-upload-info progress::-webkit-progress-value { background: var(--cyan); }
+body .photo-upload-info progress::-moz-progress-bar { background: var(--cyan); }
+body .upload-error { color: var(--warn); font-size: 13px; line-height: 1.5; margin: 10px 0; overflow-wrap: anywhere; }
+body #huddl-photo-upload-form > button { margin-top: 16px; }
+body .photo-lightbox-content { position: relative; }
+body .lightbox-image { max-width: 100%; max-height: 65dvh; display: block; margin: 0 auto; border-radius: var(--radius-sm); }
+body .lightbox-actions { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 18px; }
+body .lightbox-caption { display: grid; gap: 4px; font-size: 13px; overflow-wrap: anywhere; }
+body .lightbox-caption span:last-child { color: var(--muted); }
+body .lightbox-nav { position: absolute; top: 50%; transform: translateY(-50%); }
+body .lightbox-nav:hover { background: var(--cyan-dim); }
+body .lightbox-nav-prev { left: 4px; }
+body .lightbox-nav-next { right: 4px; }
+body .photo-delete-preview { display: flex; align-items: center; gap: 16px; margin: 20px 0; color: var(--muted); font-size: 14px; }
+body .photo-delete-preview img { width: 96px; height: 96px; object-fit: cover; border-radius: var(--radius-sm); }
+body .photo-delete-preview figcaption { overflow-wrap: anywhere; }
+@media (max-width: 1100px) {
+  body .huddl-frame-photos { grid-template-areas: "intro" "side"; }
 }
-
-body .photo-tile button[phx-click="view_photo"] {
-  display: block;
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-}
-
-body .lightbox-image {
-  max-width: 100%;
-  max-height: 80vh;
-  display: block;
-  margin: 0 auto;
-  border-radius: var(--radius-sm);
-}
-
-body .lightbox-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 14px;
-}
-
-body .lightbox-nav {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(2, 4, 4, 0.65);
-  color: var(--text);
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-body .lightbox-nav:hover {
-  background: var(--magenta);
-}
-
-body .lightbox-nav-prev {
-  left: 8px;
-}
-
-body .lightbox-nav-next {
-  right: 8px;
+@media (prefers-reduced-motion: reduce) {
+  body .photo-tile img { transition: none; }
+  body .photo-open:hover img { transform: none; }
 }

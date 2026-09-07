@@ -10,6 +10,7 @@ defmodule Huddlz.Communities.HuddlPhoto do
     otp_app: :huddlz,
     domain: Huddlz.Communities,
     authorizers: [Ash.Policy.Authorizer],
+    notifiers: [Ash.Notifier.PubSub],
     data_layer: AshPostgres.DataLayer
 
   postgres do
@@ -45,7 +46,7 @@ defmodule Huddlz.Communities.HuddlPhoto do
       end
 
       filter expr(huddl_id == ^arg(:huddl_id))
-      prepare build(sort: [inserted_at: :desc])
+      prepare build(sort: [inserted_at: :desc, id: :desc], load: [:uploader])
     end
 
     destroy :destroy do
@@ -57,16 +58,16 @@ defmodule Huddlz.Communities.HuddlPhoto do
         Ash.Changeset.before_action(changeset, fn changeset ->
           record = changeset.data
 
-          case HuddlPhotos.delete(record.storage_path) do
-            :ok -> :ok
-            {:error, reason} -> raise "Storage delete failed: #{inspect(reason)}"
+          with :ok <- HuddlPhotos.delete(record.storage_path),
+               :ok <- HuddlPhotos.delete(record.thumbnail_path) do
+            changeset
+          else
+            {:error, _reason} ->
+              Ash.Changeset.add_error(
+                changeset,
+                "Photo storage is unavailable. Please try again."
+              )
           end
-
-          if record.thumbnail_path do
-            HuddlPhotos.delete(record.thumbnail_path)
-          end
-
-          changeset
         end)
       end
     end
@@ -118,6 +119,15 @@ defmodule Huddlz.Communities.HuddlPhoto do
       authorize_if expr(uploader_id == ^actor(:id))
       authorize_if expr(huddl.creator_id == ^actor(:id))
     end
+  end
+
+  pub_sub do
+    module Phoenix.PubSub
+    name Huddlz.PubSub
+    prefix "huddl"
+    transform fn notification -> {:huddl_changed, notification.data.huddl_id} end
+    publish :create, [:huddl_id]
+    publish :destroy, [:huddl_id]
   end
 
   attributes do
