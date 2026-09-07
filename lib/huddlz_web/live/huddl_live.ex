@@ -211,19 +211,6 @@ defmodule HuddlzWeb.HuddlLive do
      )}
   end
 
-  def handle_event("change_page", %{"page" => page_str}, socket) do
-    page = parse_page(page_str)
-    cleared? = location_explicitly_cleared?(socket.assigns)
-
-    path =
-      scoped_path(socket.assigns.scope, socket.assigns.yours, form_params_from_assigns(socket),
-        override_location_with_cleared: cleared?,
-        page: page
-      )
-
-    {:noreply, push_patch(socket, to: path)}
-  end
-
   def handle_event("distance_change", %{"distance_miles" => raw}, socket) do
     new_distance = parse_distance(raw)
 
@@ -520,6 +507,13 @@ defmodule HuddlzWeb.HuddlLive do
     }
   end
 
+  defp pagination_path(page, assigns) do
+    scoped_path(assigns.scope, assigns.yours, form_params_from_assigns(assigns),
+      override_location_with_cleared: location_explicitly_cleared?(assigns),
+      page: page
+    )
+  end
+
   defp filter_url(overrides, assigns) do
     params = Map.merge(form_params_from_assigns(assigns), overrides)
     scoped_path(assigns.scope, assigns.yours, params)
@@ -701,9 +695,10 @@ defmodule HuddlzWeb.HuddlLive do
           </div>
           <.pagination
             :if={@page_info.total_pages > 1}
+            id="discovery-pagination"
             current_page={@page_info.current_page}
             total_pages={@page_info.total_pages}
-            event_name="change_page"
+            page_path={&pagination_path(&1, assigns)}
           />
         <% end %>
       <% else %>
@@ -717,9 +712,10 @@ defmodule HuddlzWeb.HuddlLive do
           </div>
           <.pagination
             :if={@page_info.total_pages > 1}
+            id="discovery-pagination"
             current_page={@page_info.current_page}
             total_pages={@page_info.total_pages}
-            event_name="change_page"
+            page_path={&pagination_path(&1, assigns)}
           />
         <% end %>
       <% end %>
