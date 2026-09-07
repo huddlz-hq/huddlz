@@ -193,8 +193,8 @@ defmodule Huddlz.Communities.HuddlCoverImageTest do
       {:ok, _} = Communities.soft_delete_huddl_cover_image(image, actor: owner)
 
       assert_enqueued(
-        worker: Huddlz.Workers.HuddlCoverImageCleanup,
-        queue: :huddl_cover_image_cleanup
+        worker: Huddlz.Workers.HuddlImageCleanup,
+        queue: :huddl_image_cleanup
       )
     end
   end
