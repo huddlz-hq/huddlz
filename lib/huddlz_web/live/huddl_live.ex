@@ -74,12 +74,15 @@ defmodule HuddlzWeb.HuddlLive do
        |> push_navigate(to: ~p"/sign-in")}
     else
       page = parse_page(params["page"])
+      canonical_url = url(~p"/discover?#{params}")
 
       socket =
         socket
         |> assign(:scope, scope)
         |> assign(:yours, yours)
         |> assign(:page_title, page_title(scope, yours))
+        |> assign(:canonical_url, canonical_url)
+        |> assign(:meta, %{url: canonical_url})
         |> assign_filters_from_params(params)
         |> perform_search(offset: (page - 1) * @page_size)
 

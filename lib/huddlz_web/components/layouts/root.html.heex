@@ -13,6 +13,7 @@
     <meta property="og:type" content={meta[:type] || "website"} />
     <meta property="og:title" content={meta_title} />
     <meta property="og:description" content={meta_description} />
+    <link :if={assigns[:canonical_url]} rel="canonical" href={@canonical_url} />
     <%= if meta[:url] do %>
       <meta property="og:url" content={meta[:url]} />
     <% end %>
