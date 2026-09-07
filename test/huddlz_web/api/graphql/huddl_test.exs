@@ -1,6 +1,30 @@
 defmodule HuddlzWeb.Api.Graphql.HuddlTest do
   use HuddlzWeb.ApiCase, async: true
 
+  test "anonymous search accepts native creation-time sorting", %{conn: conn} do
+    owner = generate(user())
+    group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+    older = generate(huddl(group_id: group.id, actor: owner, date: Date.add(Date.utc_today(), 1)))
+    newer = generate(huddl(group_id: group.id, actor: owner, date: Date.add(Date.utc_today(), 7)))
+    Ash.Seed.update!(older, %{inserted_at: DateTime.add(DateTime.utc_now(), -1, :day)})
+
+    response =
+      conn
+      |> gql_post("""
+      { searchHuddlz(dateFilter: "upcoming", sort: [{field: INSERTED_AT, order: DESC}]) {
+        results { id }
+      } }
+      """)
+      |> json_response(200)
+
+    refute Map.has_key?(response, "errors")
+
+    assert Enum.map(response["data"]["searchHuddlz"]["results"], & &1["id"]) == [
+             newer.id,
+             older.id
+           ]
+  end
+
   describe "me query" do
     test "returns the current actor when authenticated", %{conn: conn} do
       target = generate(user(display_name: "Me"))
@@ -108,6 +132,35 @@ defmodule HuddlzWeb.Api.Graphql.HuddlTest do
       assert is_binary(record["title"])
       assert record["eventType"] in ["in_person", "virtual", "hybrid"]
       assert is_binary(record["startsAt"])
+    end
+
+    test "exposes virtual access only after a waitlisted actor is promoted", %{conn: conn} do
+      owner = generate(user())
+      waitlisted = generate(user())
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+
+      huddl =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            event_type: :virtual,
+            virtual_link: "https://meet.example.com/private",
+            max_attendees: 1
+          )
+        )
+
+      Huddlz.Communities.join_waitlist_huddl!(huddl, actor: waitlisted)
+
+      query = "{ upcomingHuddlz { id visibleVirtualLink } }"
+
+      assert graphql_virtual_link(conn, waitlisted, query, huddl.id) == nil
+
+      Huddlz.Communities.cancel_rsvp_huddl!(huddl, actor: owner)
+
+      assert graphql_virtual_link(conn, waitlisted, query, huddl.id) ==
+               "https://meet.example.com/private"
     end
   end
 
@@ -226,5 +279,19 @@ defmodule HuddlzWeb.Api.Graphql.HuddlTest do
 
       assert %{"data" => %{"searchHuddlz" => %{"results" => []}}} = json_response(conn, 200)
     end
+  end
+
+  defp graphql_virtual_link(conn, actor, query, huddl_id) do
+    response =
+      conn
+      |> authenticated_conn(actor)
+      |> gql_post(query)
+      |> json_response(200)
+
+    assert %{"data" => %{"upcomingHuddlz" => records}} = response
+
+    records
+    |> Enum.find(&(&1["id"] == huddl_id))
+    |> Map.fetch!("visibleVirtualLink")
   end
 end

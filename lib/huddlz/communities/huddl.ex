@@ -8,6 +8,7 @@ defmodule Huddlz.Communities.Huddl do
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
+    notifiers: [Ash.Notifier.PubSub],
     extensions: [AshOban, AshJsonApi.Resource, AshGraphql.Resource],
     primary_read_warning?: false
 
@@ -36,6 +37,27 @@ defmodule Huddlz.Communities.Huddl do
   json_api do
     type "huddl"
 
+    default_fields [
+      :id,
+      :title,
+      :description,
+      :starts_at,
+      :ends_at,
+      :time_zone,
+      :event_type,
+      :physical_location,
+      :is_private,
+      :thumbnail_url,
+      :max_attendees,
+      :lifecycle_state,
+      :published_at,
+      :cancelled_at,
+      :completed_at,
+      :cancellation_reason,
+      :inserted_at,
+      :image_url
+    ]
+
     routes do
       base "/huddlz"
 
@@ -51,6 +73,48 @@ defmodule Huddlz.Communities.Huddl do
       patch :rsvp, route: "/:id/rsvp"
       patch :cancel_rsvp, route: "/:id/cancel_rsvp"
       delete :destroy
+    end
+  end
+
+  field_policies do
+    private_fields :include
+
+    field_policy :virtual_link do
+      authorize_if expr(can_read_virtual_link)
+    end
+
+    field_policy :* do
+      authorize_if always()
+    end
+  end
+
+  postgres do
+    table "huddlz"
+    repo Huddlz.Repo
+
+    references do
+      reference :group, on_delete: :delete
+      reference :group_location, on_delete: :nilify
+      reference :published_by, on_delete: :nilify
+      reference :cancelled_by, on_delete: :nilify
+    end
+
+    custom_indexes do
+      index [:lifecycle_state, :ends_at],
+        name: "huddlz_lifecycle_state_ends_at_index"
+
+      index "ST_MakePoint(longitude, latitude)",
+        name: "huddlz_location_gist_index",
+        using: "GIST",
+        where: "latitude IS NOT NULL AND longitude IS NOT NULL"
+    end
+
+    check_constraints do
+      check_constraint :lifecycle_state,
+                       "huddlz_valid_lifecycle_state",
+                       check:
+                         "lifecycle_state IN ('draft', 'published', 'cancelled', 'completed')",
+                       message: "must be draft, published, cancelled, or completed"
     end
   end
 
@@ -82,36 +146,6 @@ defmodule Huddlz.Communities.Huddl do
         worker_module_name Huddlz.Communities.Workers.CompleteHuddl
         scheduler_module_name Huddlz.Communities.Workers.CompleteHuddlScheduler
       end
-    end
-  end
-
-  postgres do
-    table "huddlz"
-    repo Huddlz.Repo
-
-    references do
-      reference :group, on_delete: :delete
-      reference :group_location, on_delete: :nilify
-      reference :published_by, on_delete: :nilify
-      reference :cancelled_by, on_delete: :nilify
-    end
-
-    custom_indexes do
-      index [:lifecycle_state, :ends_at],
-        name: "huddlz_lifecycle_state_ends_at_index"
-
-      index "ST_MakePoint(longitude, latitude)",
-        name: "huddlz_location_gist_index",
-        using: "GIST",
-        where: "latitude IS NOT NULL AND longitude IS NOT NULL"
-    end
-
-    check_constraints do
-      check_constraint :lifecycle_state,
-                       "huddlz_valid_lifecycle_state",
-                       check:
-                         "lifecycle_state IN ('draft', 'published', 'cancelled', 'completed')",
-                       message: "must be draft, published, cancelled, or completed"
     end
   end
 
@@ -178,6 +212,12 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup
       change Huddlz.Communities.Huddl.Changes.ApplySavedLocation
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
+
+      validate Huddlz.Communities.Huddl.Validations.RecurrenceBoundary do
+        where argument_equals(:is_recurring, true)
+        only_when_valid? true
+      end
+
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.AssignPendingImage
       change Huddlz.Communities.Huddl.Changes.AddHuddlTemplate
@@ -270,6 +310,12 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup
       change Huddlz.Communities.Huddl.Changes.ApplySavedLocation
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
+
+      validate Huddlz.Communities.Huddl.Validations.RecurrenceBoundary do
+        where argument_equals(:edit_type, "all")
+        only_when_valid? true
+      end
+
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.ClearUnusedLocationFields
       change Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz
@@ -307,6 +353,8 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     read :search do
+      description "Discover huddlz matching the supplied filters. Defaults to start time ascending unless an explicit field sort is supplied."
+
       argument :query, :ci_string do
         allow_nil? true
       end
@@ -340,13 +388,6 @@ defmodule Huddlz.Communities.Huddl do
 
         allow_nil? true
         constraints one_of: [:hosting, :attending, :waitlisted]
-      end
-
-      argument :sort, :atom do
-        description "Result ordering. :soonest sorts upcoming huddlz first; :newest sorts by recently created."
-        allow_nil? true
-        default :soonest
-        constraints one_of: [:soonest, :newest]
       end
 
       argument :search_time_zone, :string do
@@ -435,6 +476,19 @@ defmodule Huddlz.Communities.Huddl do
       recurring-series worker, which runs with no actor. Skips
       FilterByVisibility so a private series can still be regenerated. Invoke
       only with `authorize?: false`.
+      """
+
+      get? true
+      argument :id, :uuid, allow_nil?: false
+      filter expr(id == ^arg(:id))
+    end
+
+    read :get_for_mutation do
+      description """
+      Internal, visibility-free fetch of a single huddl by id for trusted
+      attendance and capacity changes that must lock the current database row.
+      Deliberately omits FilterByVisibility; invoke only with
+      `authorize?: false`.
       """
 
       get? true
@@ -629,6 +683,23 @@ defmodule Huddlz.Communities.Huddl do
     end
   end
 
+  pub_sub do
+    module Phoenix.PubSub
+    name Huddlz.PubSub
+    prefix "huddl"
+
+    # Subscribers reload with their own actor; never broadcast private access details.
+    transform fn notification -> {:huddl_changed, notification.data.id} end
+
+    publish :rsvp, [:id]
+    publish :join_waitlist, [:id]
+    publish :cancel_rsvp, [:id]
+    publish :update, [:id]
+    publish :publish, [:id]
+    publish :cancel, [:id]
+    publish :complete, [:id]
+  end
+
   # changes section removed - validation is handled by FutureDateValidation module
 
   validations do
@@ -644,7 +715,9 @@ defmodule Huddlz.Communities.Huddl do
       message "Must be at least 1"
     end
 
-    validate {Huddlz.Communities.Huddl.Validations.WebUrlValidation, attribute: :virtual_link}
+    validate {Huddlz.Communities.Huddl.Validations.WebUrlValidation, attribute: :virtual_link} do
+      where action_is([:create, :update])
+    end
 
     validate compare(:ends_at, greater_than: :starts_at) do
       message "must be after the start time"
@@ -658,12 +731,12 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     validate present([:virtual_link]) do
-      where attribute_equals(:event_type, :virtual)
+      where [action_is([:create, :update]), attribute_equals(:event_type, :virtual)]
       message "is required for virtual huddlz"
     end
 
     validate present([:virtual_link]) do
-      where attribute_equals(:event_type, :hybrid)
+      where [action_is([:create, :update]), attribute_equals(:event_type, :hybrid)]
       message "is required for hybrid huddlz"
     end
   end
@@ -788,7 +861,7 @@ defmodule Huddlz.Communities.Huddl do
       description "Stamped when the 1-hour reminder has been sent for this huddl. Reset to nil when starts_at changes."
     end
 
-    create_timestamp :inserted_at
+    create_timestamp :inserted_at, public?: true
     update_timestamp :updated_at
   end
 
@@ -852,12 +925,27 @@ defmodule Huddlz.Communities.Huddl do
                   )
     end
 
-    calculate :visible_virtual_link, :string do
-      description "Returns the virtual link only if the actor has RSVPed to the huddl"
+    calculate :can_read_virtual_link, :boolean do
+      description "Whether the actor may read the stored link, including organizer editing access"
 
       calculation expr(
-                    if lifecycle_state == :published and
-                         exists(attendees, user_id == ^actor(:id)) do
+                    group.owner_id == ^actor(:id) or
+                      exists(group.group_members, user_id == ^actor(:id) and role == :organizer) or
+                      (lifecycle_state == :published and
+                         exists(attendees, user_id == ^actor(:id) and is_nil(waitlisted_at)))
+                  )
+    end
+
+    calculate :visible_virtual_link, :string do
+      description """
+      Returns the virtual link for published huddlz only to group organizers or
+      actors with a confirmed RSVP. Waitlisted attendance rows do not grant access.
+      """
+
+      public? true
+
+      calculation expr(
+                    if lifecycle_state == :published and can_read_virtual_link do
                       virtual_link
                     else
                       nil
@@ -878,6 +966,14 @@ defmodule Huddlz.Communities.Huddl do
     calculate :display_image_url, :string do
       description "Returns huddl's image, falling back to group image if none"
       calculation Huddlz.Communities.Huddl.Calculations.DisplayImageUrl
+    end
+
+    calculate :image_url, :string do
+      public? true
+
+      description "Absolute artwork URL using the huddl image, then group image; null without artwork"
+
+      calculation Huddlz.Communities.Huddl.Calculations.ImageUrl
     end
   end
 

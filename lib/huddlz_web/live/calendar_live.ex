@@ -126,7 +126,6 @@ defmodule HuddlzWeb.CalendarLive do
            nil,
            nil,
            role,
-           :soonest,
            actor: user,
            page: false,
            load: @card_loads

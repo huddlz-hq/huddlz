@@ -16,6 +16,26 @@ Feature: Password Authentication
     Then I should be signed in
     And I should see "huddlz"
 
+  Scenario: Registration explains a short and mismatched password
+    Given I am on the registration page
+    When I fill in the password registration form with:
+      | email                 | friendly-password@example.com |
+      | display_name          | Password Test                 |
+      | password              | abc                           |
+      | password_confirmation | xyz                           |
+    And I click "Create account"
+    Then I should see "Password must be at least 8 characters."
+    And I should see "Passwords do not match."
+    And I should not be signed in
+
+  Scenario: Sign-in explains a blank password
+    Given I am on the sign-in page
+    When I fill in the password sign-in form with:
+      | email | blank-password@example.com |
+    And I submit the password sign-in form
+    Then I should see "Password is required."
+    And I should not be signed in
+
   Scenario: User signs in with password
     Given a user exists with email "existing@example.com" and password "Password123!"
     And I am on the sign-in page
@@ -81,6 +101,16 @@ Feature: Password Authentication
       | password_confirmation | NewPassword123! |
     And I click "Update password"
     Then I should see "Password updated successfully"
+
+  Scenario: Password changes explain a blank current password
+    Given I am signed in as "blank-current@example.com" with password "OldPassword123!"
+    When I go to my profile page
+    And I fill in the password form with:
+      | password              | NewPassword123! |
+      | password_confirmation | NewPassword123! |
+    And I submit the password form
+    Then I should see "Current password is required."
+    And the password fields should be empty
 
   Scenario: Failed password change clears sensitive values
     Given I am signed in as "failed-password@example.com" with password "OldPassword123!"

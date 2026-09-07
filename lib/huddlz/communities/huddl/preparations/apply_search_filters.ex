@@ -17,7 +17,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
     |> apply_event_type_filter()
     |> apply_location_filter()
     |> apply_relationship_filter(context)
-    |> apply_sort()
+    |> Ash.Query.default_sort(starts_at: :asc)
   end
 
   defp apply_lifecycle_filter(query) do
@@ -167,13 +167,6 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
 
       _ ->
         query
-    end
-  end
-
-  defp apply_sort(query) do
-    case Ash.Query.get_argument(query, :sort) do
-      :newest -> Ash.Query.sort(query, inserted_at: :desc)
-      _ -> Ash.Query.sort(query, starts_at: :asc)
     end
   end
 end

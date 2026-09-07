@@ -140,23 +140,21 @@ defmodule HuddlCoverImageSteps do
 
   step "I should see the group fallback image", context do
     session = context[:session] || context[:conn]
-    # Look for an image tag with src containing group_images path (fallback)
-    assert_has(session, "img[src*='group_images']")
+    assert_has(session, ".cover-image[style*='group_images']")
     context
   end
 
   step "I should see the huddl image", context do
     session = context[:session] || context[:conn]
-    # Look for an image tag with src containing huddl_cover_images path
-    assert_has(session, "img[src*='huddl_cover_images']")
+    assert_has(session, ".cover-image[style*='huddl_cover_images']")
     context
   end
 
   step "I should not see an image on the huddl page", context do
     session = context[:session] || context[:conn]
     # Should not see any storage image paths
-    refute_has(session, "img[src*='group_images']")
-    refute_has(session, "img[src*='huddl_cover_images']")
+    refute_has(session, ".cover-image[style*='group_images']")
+    refute_has(session, ".cover-image[style*='huddl_cover_images']")
     context
   end
 

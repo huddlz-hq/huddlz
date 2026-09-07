@@ -399,6 +399,11 @@ defmodule Huddlz.Communities.Group do
   end
 
   aggregates do
+    first :viewer_role, :group_members, :role do
+      description "The current actor's persisted membership role in this group"
+      filter expr(user_id == ^actor(:id))
+    end
+
     first :current_image_url, :group_images, :thumbnail_path do
       description "Returns the thumbnail path of the group's current image"
       sort inserted_at: :desc

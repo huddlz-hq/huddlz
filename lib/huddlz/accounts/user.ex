@@ -130,6 +130,17 @@ defmodule Huddlz.Accounts.User do
   actions do
     defaults [:read]
 
+    update :confirm do
+      accept [:email]
+      require_atomic? false
+      argument :confirm, :string, allow_nil?: false, sensitive?: true
+      metadata :token, :string, allow_nil?: false
+
+      change AshAuthentication.AddOn.Confirmation.ConfirmChange
+      change AshAuthentication.GenerateTokenChange
+      change Huddlz.Accounts.User.Changes.QueueConfirmedInvitations
+    end
+
     read :public_profile do
       description "Slim, public-facing profile shape used on relationships exposed via the API."
       prepare build(select: [:id, :display_name], load: [:current_profile_picture_url])
@@ -257,18 +268,21 @@ defmodule Huddlz.Accounts.User do
 
       argument :preferences, :map, allow_nil?: false
 
-      validate present(:preferences)
+      validate Huddlz.Accounts.User.Validations.NotificationPreferences do
+        only_when_valid? true
+      end
 
       change fn changeset, _ctx ->
-        existing = changeset.data.notification_preferences || %{}
-        incoming = Ash.Changeset.get_argument(changeset, :preferences)
+               existing = changeset.data.notification_preferences || %{}
+               incoming = Ash.Changeset.get_argument(changeset, :preferences)
 
-        Ash.Changeset.change_attribute(
-          changeset,
-          :notification_preferences,
-          Map.merge(existing, incoming)
-        )
-      end
+               Ash.Changeset.change_attribute(
+                 changeset,
+                 :notification_preferences,
+                 Map.merge(existing, incoming)
+               )
+             end,
+             only_when_valid?: true
     end
 
     update :change_email do
@@ -279,8 +293,14 @@ defmodule Huddlz.Accounts.User do
 
       argument :current_password, :string, sensitive?: true, allow_nil?: false
 
+      validate present(:current_password) do
+        message "Current password is required."
+      end
+
       validate {AshAuthentication.Strategy.Password.PasswordValidation,
-                strategy_name: :password, password_argument: :current_password}
+                strategy_name: :password, password_argument: :current_password} do
+        where present(:current_password)
+      end
 
       validate fn changeset, _context ->
         current_email = to_string(changeset.data.email)
@@ -326,8 +346,14 @@ defmodule Huddlz.Accounts.User do
 
       validate confirm(:password, :password_confirmation)
 
+      validate present(:current_password) do
+        message "Current password is required."
+      end
+
       validate {AshAuthentication.Strategy.Password.PasswordValidation,
-                strategy_name: :password, password_argument: :current_password}
+                strategy_name: :password, password_argument: :current_password} do
+        where present(:current_password)
+      end
 
       change {AshAuthentication.Strategy.Password.HashPasswordChange, strategy_name: :password}
 
@@ -375,8 +401,12 @@ defmodule Huddlz.Accounts.User do
 
       argument :password, :string do
         description "The password to check for the matching user."
-        allow_nil? false
+        allow_nil? true
         sensitive? true
+      end
+
+      validate present(:password) do
+        message "Password is required."
       end
 
       validate present(:email) do

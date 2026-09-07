@@ -11,12 +11,15 @@ defmodule Huddlz.Communities.GroupInvitation.Changes.ExpirePrevious do
   @impl true
   def change(changeset, _opts, _context) do
     group_id = Ash.Changeset.get_argument(changeset, :group_id)
-    invitee_id = Ash.Changeset.get_argument(changeset, :invitee_id)
+    invitee_ids = List.wrap(Ash.Changeset.get_attribute(changeset, :invitee_id))
+
+    email = Ash.Changeset.get_attribute(changeset, :email)
 
     Ash.Changeset.before_action(changeset, fn changeset ->
       GroupInvitation
       |> Ash.Query.filter(
-        group_id == ^group_id and invitee_id == ^invitee_id and status == :pending and
+        group_id == ^group_id and (email == ^email or invitee_id in ^invitee_ids) and
+          status == :pending and
           expires_at <= now()
       )
       |> Ash.read!(authorize?: false)

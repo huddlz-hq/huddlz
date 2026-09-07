@@ -6,22 +6,22 @@ Feature: Group Image Management
 
   Background:
     Given the following users exist:
-      | email                | role     | display_name    |
-      | owner@example.com    | user     | Group Owner     |
-      | member@example.com   | user     | Group Member    |
-      | other@example.com    | user     | Other User      |
+      | email                          | role | display_name |
+      | group-image-owner@example.com  | user | Group Owner  |
+      | group-image-member@example.com | user | Group Member |
+      | group-image-other@example.com  | user | Other User   |
 
   # ===== Group Creation with Image =====
 
   Scenario: Owner can see image upload area when creating a group
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "group-image-owner@example.com"
     When I visit "/groups/new"
     Then I should see "Cover image"
     And I should see "Drop a 16:9 image"
     And I should see "JPG, PNG, WebP · 5 MB max"
 
   Scenario: Creating a group without an image
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "group-image-owner@example.com"
     When I visit "/groups/new"
     And I fill in "Group name" with "No Image Group"
     And I fill in "Description" with "A group without an image"
@@ -32,7 +32,7 @@ Feature: Group Image Management
     And I should see "No Image Group"
 
   Scenario: Creating a group with an image upload
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "group-image-owner@example.com"
     When I visit "/groups/new"
     And I fill in "Group name" with "Image Test Group"
     And I fill in "Description" with "A group with an image"
@@ -45,7 +45,7 @@ Feature: Group Image Management
     And the group "Image Test Group" should have an image
 
   Scenario: Canceling a pending image before saving group
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "group-image-owner@example.com"
     When I visit "/groups/new"
     And I fill in "Group name" with "Cancel Image Group"
     And I select "Saint Augustine, FL, USA" as the group city in "America/New_York"
@@ -58,7 +58,7 @@ Feature: Group Image Management
     And the group "Cancel Image Group" should not have an image
 
   Scenario: Re-uploading replaces the pending image
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "group-image-owner@example.com"
     When I visit "/groups/new"
     And I fill in "Group name" with "Replace Image Group"
     And I upload "test/fixtures/test_image.jpg" to "Cover image"
@@ -70,14 +70,14 @@ Feature: Group Image Management
   # ===== Group Editing with Image =====
 
   Scenario: Owner can see image upload area when editing a group
-    Given a public group "Edit Test Group" exists with owner "owner@example.com"
-    And I am signed in as "owner@example.com"
+    Given a public group "Edit Test Group" exists with owner "group-image-owner@example.com"
+    And I am signed in as "group-image-owner@example.com"
     When I visit the edit page for group "Edit Test Group"
     Then I should see "Cover image"
 
   Scenario: Owner can upload a new image for existing group
-    Given a public group "Add Image Group" exists with owner "owner@example.com"
-    And I am signed in as "owner@example.com"
+    Given a public group "Add Image Group" exists with owner "group-image-owner@example.com"
+    And I am signed in as "group-image-owner@example.com"
     When I visit the edit page for group "Add Image Group"
     And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "New image uploaded. Save to apply."
@@ -86,9 +86,9 @@ Feature: Group Image Management
     And the group "Add Image Group" should have an image
 
   Scenario: Owner can replace existing group image
-    Given a public group "Replace Image Group" exists with owner "owner@example.com"
+    Given a public group "Replace Image Group" exists with owner "group-image-owner@example.com"
     And the group "Replace Image Group" has an image
-    And I am signed in as "owner@example.com"
+    And I am signed in as "group-image-owner@example.com"
     When I visit the edit page for group "Replace Image Group"
     Then I should see "Current image"
     When I upload "test/fixtures/test_image.jpg" to "Cover image"
@@ -98,10 +98,10 @@ Feature: Group Image Management
     And the group "Replace Image Group" should have an image
 
   Scenario: Owner can remove existing group image
-    Given a public group "Remove Image Group" exists with owner "owner@example.com"
+    Given a public group "Remove Image Group" exists with owner "group-image-owner@example.com"
     And the group "Remove Image Group" has an image
-    And a huddl "Group Image Huddl" exists in "Remove Image Group" created by "owner@example.com"
-    And I am signed in as "owner@example.com"
+    And a huddl "Group Image Huddl" exists in "Remove Image Group" created by "group-image-owner@example.com"
+    And I am signed in as "group-image-owner@example.com"
     When I visit the edit page for group "Remove Image Group"
     Then I should see "Current image"
     When I click the "Remove" button
@@ -121,9 +121,9 @@ Feature: Group Image Management
     Then I should see "Drop a 16:9 image"
 
   Scenario: Canceling group image removal preserves the image
-    Given a public group "Keep Image Group" exists with owner "owner@example.com"
+    Given a public group "Keep Image Group" exists with owner "group-image-owner@example.com"
     And the group "Keep Image Group" has an image
-    And I am signed in as "owner@example.com"
+    And I am signed in as "group-image-owner@example.com"
     When I visit the edit page for group "Keep Image Group"
     And I click the "Remove" button
     Then I should see "Remove this group cover image?"
@@ -132,9 +132,9 @@ Feature: Group Image Management
     And the group "Keep Image Group" should have an image
 
   Scenario: Canceling a pending image shows current image again
-    Given a public group "Cancel Replace Group" exists with owner "owner@example.com"
+    Given a public group "Cancel Replace Group" exists with owner "group-image-owner@example.com"
     And the group "Cancel Replace Group" has an image
-    And I am signed in as "owner@example.com"
+    And I am signed in as "group-image-owner@example.com"
     When I visit the edit page for group "Cancel Replace Group"
     And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "New image uploaded. Save to apply."
@@ -145,13 +145,13 @@ Feature: Group Image Management
   # ===== Group Image Display =====
 
   Scenario: Group image is displayed on group page
-    Given a public group "Display Image Group" exists with owner "owner@example.com"
+    Given a public group "Display Image Group" exists with owner "group-image-owner@example.com"
     And the group "Display Image Group" has an image
     When I visit the group page for "Display Image Group"
     Then I should see the group image
 
   Scenario: Group without image shows placeholder with group name
-    Given a public group "No Image Display Group" exists with owner "owner@example.com"
+    Given a public group "No Image Display Group" exists with owner "group-image-owner@example.com"
     When I visit the group page for "No Image Display Group"
     Then I should not see the group image
     And I should see the group name "No Image Display Group" in the placeholder
@@ -159,22 +159,22 @@ Feature: Group Image Management
   # ===== Permissions =====
 
   Scenario: Non-owner cannot upload images for group
-    Given a public group "Other Owner Group" exists with owner "owner@example.com"
-    And I am signed in as "other@example.com"
+    Given a public group "Other Owner Group" exists with owner "group-image-owner@example.com"
+    And I am signed in as "group-image-other@example.com"
     When I visit the edit page for group "Other Owner Group"
     Then I should be redirected to the group page
 
   Scenario: Member cannot upload images for group
-    Given a public group "Member Test Group" exists with owner "owner@example.com"
-    And "member@example.com" is a member of "Member Test Group"
-    And I am signed in as "member@example.com"
+    Given a public group "Member Test Group" exists with owner "group-image-owner@example.com"
+    And "group-image-member@example.com" is a member of "Member Test Group"
+    And I am signed in as "group-image-member@example.com"
     When I visit the edit page for group "Member Test Group"
     Then I should be redirected to the group page
 
   # ===== Edge Cases =====
 
   Scenario: Form validation errors preserve pending image
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "group-image-owner@example.com"
     When I visit "/groups/new"
     And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "Image uploaded"
@@ -183,7 +183,7 @@ Feature: Group Image Management
     And I should see "Image uploaded"
 
   Scenario: Navigating away leaves orphaned pending image for cleanup
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "group-image-owner@example.com"
     When I visit "/groups/new"
     And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "Image uploaded"

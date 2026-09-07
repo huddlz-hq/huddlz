@@ -80,7 +80,6 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
           -97.7431,
           50,
           nil,
-          :soonest,
           actor: owner,
           page: [limit: 20, offset: 0, count: true]
         )
@@ -103,7 +102,6 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
           -97.7431,
           10,
           nil,
-          :soonest,
           actor: owner,
           page: [limit: 20, offset: 0, count: true]
         )
@@ -125,7 +123,6 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
           -97.7431,
           100,
           nil,
-          :soonest,
           actor: owner,
           page: [limit: 20, offset: 0, count: true]
         )
@@ -150,7 +147,6 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
           nil,
           nil,
           nil,
-          :soonest,
           actor: owner,
           page: [limit: 20, offset: 0, count: true]
         )
@@ -172,7 +168,6 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
           -97.7431,
           10,
           nil,
-          :soonest,
           actor: owner,
           page: [limit: 20, offset: 0, count: true]
         )
@@ -186,7 +181,6 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
           -97.7431,
           100,
           nil,
-          :soonest,
           actor: owner,
           page: [limit: 20, offset: 0, count: true]
         )
@@ -307,10 +301,10 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
     end
   end
 
-  describe "sort argument" do
+  describe "query sorting" do
     setup %{owner: owner, group: group} do
       # Three huddlz with distinct (starts_at, inserted_at) orderings so
-      # :soonest and :newest must produce different sequences.
+      # start time and creation time sorting must produce different sequences.
       now = DateTime.utc_now()
 
       first_inserted =
@@ -359,7 +353,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
       }
     end
 
-    test "defaults to :soonest (starts_at ascending)", %{
+    test "defaults to starts_at ascending", %{
       owner: owner,
       first_inserted: latest_start,
       middle_inserted: earliest_start
@@ -368,7 +362,6 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
         Huddlz.Communities.search_huddlz(
           nil,
           :all,
-          nil,
           nil,
           nil,
           nil,
@@ -384,7 +377,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
                Enum.find_index(ids, &(&1 == latest_start.id))
     end
 
-    test ":newest sorts by inserted_at descending", %{
+    test "explicit inserted_at descending overrides the default", %{
       owner: owner,
       first_inserted: oldest_insert,
       last_inserted: newest_insert
@@ -398,7 +391,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
           nil,
           nil,
           nil,
-          :newest,
+          query: [sort: [inserted_at: :desc]],
           actor: owner,
           page: [limit: 50, count: true]
         )
@@ -409,7 +402,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
                Enum.find_index(ids, &(&1 == oldest_insert.id))
     end
 
-    test ":soonest sorts by starts_at ascending", %{
+    test "explicit starts_at ascending sorts chronologically", %{
       owner: owner,
       first_inserted: latest_start,
       middle_inserted: earliest_start,
@@ -424,8 +417,8 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
           nil,
           nil,
           nil,
-          :soonest,
           actor: owner,
+          query: [sort: [starts_at: :asc]],
           page: [limit: 50, count: true]
         )
 

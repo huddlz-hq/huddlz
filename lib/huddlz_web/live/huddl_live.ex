@@ -14,7 +14,6 @@ defmodule HuddlzWeb.HuddlLive do
   import HuddlzWeb.Live.Helpers.ParamHelpers
 
   alias Huddlz.Communities
-  alias Huddlz.Storage.GroupImages
   alias Huddlz.TimeZone
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.BrowserTimeZone
@@ -75,12 +74,15 @@ defmodule HuddlzWeb.HuddlLive do
        |> push_navigate(to: ~p"/sign-in")}
     else
       page = parse_page(params["page"])
+      canonical_url = url(~p"/discover?#{params}")
 
       socket =
         socket
         |> assign(:scope, scope)
         |> assign(:yours, yours)
         |> assign(:page_title, page_title(scope, yours))
+        |> assign(:canonical_url, canonical_url)
+        |> assign(:meta, %{url: canonical_url})
         |> assign_filters_from_params(params)
         |> perform_search(offset: (page - 1) * @page_size)
 
@@ -207,19 +209,6 @@ defmodule HuddlzWeb.HuddlLive do
            override_location_with_cleared: true
          )
      )}
-  end
-
-  def handle_event("change_page", %{"page" => page_str}, socket) do
-    page = parse_page(page_str)
-    cleared? = location_explicitly_cleared?(socket.assigns)
-
-    path =
-      scoped_path(socket.assigns.scope, socket.assigns.yours, form_params_from_assigns(socket),
-        override_location_with_cleared: cleared?,
-        page: page
-      )
-
-    {:noreply, push_patch(socket, to: path)}
   end
 
   def handle_event("distance_change", %{"distance_miles" => raw}, socket) do
@@ -432,13 +421,16 @@ defmodule HuddlzWeb.HuddlLive do
       args.search_longitude,
       args.distance_miles,
       Keyword.get(opts, :relationship),
-      args.sort,
       args.search_time_zone,
       actor: actor,
+      query: [sort: sort_fields(args.sort)],
       page: Keyword.get(opts, :page, []),
       load: @huddl_card_loads
     )
   end
+
+  defp sort_fields(:newest), do: [inserted_at: :desc]
+  defp sort_fields(:soonest), do: [starts_at: :asc]
 
   defp list_groups(query, page, actor) do
     case Communities.search_groups(query,
@@ -515,6 +507,13 @@ defmodule HuddlzWeb.HuddlLive do
     }
   end
 
+  defp pagination_path(page, assigns) do
+    scoped_path(assigns.scope, assigns.yours, form_params_from_assigns(assigns),
+      override_location_with_cleared: location_explicitly_cleared?(assigns),
+      page: page
+    )
+  end
+
   defp filter_url(overrides, assigns) do
     params = Map.merge(form_params_from_assigns(assigns), overrides)
     scoped_path(assigns.scope, assigns.yours, params)
@@ -565,12 +564,14 @@ defmodule HuddlzWeb.HuddlLive do
         <.link
           patch={chip_path(:huddlz, assigns)}
           class={["scope-tab", @scope == :huddlz && "is-active"]}
+          aria-current={@scope == :huddlz && "page"}
         >
           Huddlz
         </.link>
         <.link
           patch={chip_path(:groups, assigns)}
           class={["scope-tab", @scope == :groups && "is-active"]}
+          aria-current={@scope == :groups && "page"}
         >
           Groups
         </.link>
@@ -593,6 +594,7 @@ defmodule HuddlzWeb.HuddlLive do
                 it doesn't perturb the .filter-distance flex layout. --%>
           <form
             :if={@location_active}
+            id="distance-filter-form"
             class="filter-distance"
             phx-change="distance_change"
             style="display:contents"
@@ -693,9 +695,10 @@ defmodule HuddlzWeb.HuddlLive do
           </div>
           <.pagination
             :if={@page_info.total_pages > 1}
+            id="discovery-pagination"
             current_page={@page_info.current_page}
             total_pages={@page_info.total_pages}
-            event_name="change_page"
+            page_path={&pagination_path(&1, assigns)}
           />
         <% end %>
       <% else %>
@@ -709,9 +712,10 @@ defmodule HuddlzWeb.HuddlLive do
           </div>
           <.pagination
             :if={@page_info.total_pages > 1}
+            id="discovery-pagination"
             current_page={@page_info.current_page}
             total_pages={@page_info.total_pages}
-            event_name="change_page"
+            page_path={&pagination_path(&1, assigns)}
           />
         <% end %>
       <% end %>
@@ -730,7 +734,7 @@ defmodule HuddlzWeb.HuddlLive do
       gradient={@gradient}
     >
       <:cover>
-        <.huddl_cover_image
+        <.cover_image
           :if={@huddl.display_image_url}
           id={"huddl-card-cover-#{@huddl.id}"}
           class="card-cover-img"
@@ -769,11 +773,10 @@ defmodule HuddlzWeb.HuddlLive do
     ~H"""
     <.card navigate={~p"/groups/#{@group.slug}"} gradient={@gradient}>
       <:cover>
-        <img
-          :if={@group.current_image_url}
-          class="card-cover-img"
-          src={GroupImages.url(@group.current_image_url)}
-          alt={@group.name}
+        <.group_cover
+          id={"discover-group-cover-#{@group.id}"}
+          group={@group}
+          gradient={@gradient}
         />
       </:cover>
       <:body>

@@ -18,6 +18,7 @@ documentation for contributors and readers.
   verification, and access rules.
 - [Email notifications](docs/notifications.md) specifies notification
   categories, triggers, and delivery rules.
+- [Discovery API](docs/api-discovery.md) documents discovery ordering.
 - [API follow-ups](docs/api-followups.md) records deferred work for the
   JSON:API and GraphQL surfaces.
 
@@ -40,6 +41,14 @@ mix phx.server
 
 `mix setup` creates local environment files from the checked-in examples when
 needed. Run the test suite with `mix test`.
+
+## Working with coding agents
+
+We use [Matt Pocock's skills](https://github.com/mattpocock/skills) in huddlz.
+If you work with a coding agent, follow his
+[installation guide](https://github.com/mattpocock/skills#installation-30-second-setup)
+to install the skills for your agent. The skills aren't bundled in this repo;
+our project-specific guidance lives in [AGENTS.md](AGENTS.md).
 
 ## License
 

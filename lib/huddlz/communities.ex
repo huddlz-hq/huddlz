@@ -20,8 +20,7 @@ defmodule Huddlz.Communities do
           {:optional, :search_latitude},
           {:optional, :search_longitude},
           {:optional, :distance_miles},
-          {:optional, :relationship},
-          {:optional, :sort}
+          {:optional, :relationship}
         ],
         get?: false
 
@@ -35,7 +34,6 @@ defmodule Huddlz.Communities do
           {:optional, :search_longitude},
           {:optional, :distance_miles},
           {:optional, :relationship},
-          {:optional, :sort},
           :search_time_zone
         ],
         get?: false
@@ -134,6 +132,11 @@ defmodule Huddlz.Communities do
         action: :invite,
         args: [:group_id, :invitee_id, {:optional, :role}]
 
+      define :invite_to_group_by_email,
+        action: :invite,
+        args: [:group_id, :email, {:optional, :role}]
+
+      define :open_email_group_invitation, action: :open_email_invitation, args: [:token]
       define :list_my_group_invitations, action: :mine
       define :get_group_invitation, action: :read, get_by: [:id]
       define :get_my_group_invitation, action: :get_mine, args: [:id], get?: true

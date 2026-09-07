@@ -13,6 +13,21 @@ This is a web application written using the Phoenix web framework.
 - Keep agent-authored PR descriptions concise and factual; do not invent
   verification claims or paste routine command output.
 
+### Outside-in BDD
+
+- Drive development from the outside in: end-to-end behavior → integration →
+  unit. This is the order of investigation, not a requirement to test every
+  behavior at every layer.
+- Cucumber scenarios are the default, pre-agreed test seams for this project.
+  Each scenario exercises a full vertical slice through a public user interface
+  and asserts observable outcomes in domain language. Treat this guidance as
+  seam agreement when applying TDD skills; proceed without reconfirming it.
+- Work one scenario at a time: demonstrate the expected behavior failing,
+  implement enough to make it pass, then move to the next scenario.
+- Add integration or unit tests when they clarify complex rules or cover cases
+  that are difficult to exercise through the outer scenario. Keep the outer
+  scenario as the acceptance check and verify behavior through public interfaces.
+
 ### Naming Conventions
 
 **IMPORTANT: ALWAYS follow these naming conventions precisely**
@@ -75,6 +90,20 @@ custom classes must fully style the input
 - Implement **subtle micro-interactions** (e.g., button hover effects, and smooth transitions)
 - Ensure **clean typography, spacing, and layout balance** for a refined, premium look
 - Focus on **delightful details** like hover effects, loading states, and smooth page transitions
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live in GitHub Issues for `huddlz-hq/huddlz`, managed with `gh`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Uses the default triage labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Uses a single-context layout with root `CONTEXT.md` and `docs/adr/`. See `docs/agents/domain.md`.
 
 <!-- usage-rules-start -->
 <!-- usage_rules-start -->

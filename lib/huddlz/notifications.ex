@@ -75,6 +75,7 @@ defmodule Huddlz.Notifications do
           {:ok, Oban.Job.t()} | {:error, term()}
   def deliver(%User{id: user_id}, trigger, payload \\ %{}) when is_atom(trigger) do
     _ = Triggers.fetch!(trigger)
+    payload = Map.delete(payload, "virtual_link")
 
     %{user_id: user_id, trigger: Atom.to_string(trigger), payload: payload}
     |> notification_queue().enqueue()

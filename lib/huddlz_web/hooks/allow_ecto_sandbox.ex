@@ -1,6 +1,6 @@
 defmodule HuddlzWeb.Hooks.AllowEctoSandbox do
   @moduledoc """
-  Allows LiveView processes to access the Ecto sandbox for testing with Wallaby.
+  Allows browser-test LiveView processes to access the Ecto sandbox.
   """
   import Phoenix.LiveView
   import Phoenix.Component
@@ -18,6 +18,6 @@ defmodule HuddlzWeb.Hooks.AllowEctoSandbox do
         if connected?(socket), do: get_connect_info(socket, :user_agent)
       end)
 
-    Sandbox.allow(metadata, Application.get_env(:huddlz, :sandbox))
+    Sandbox.allow(metadata, Ecto.Adapters.SQL.Sandbox)
   end
 end

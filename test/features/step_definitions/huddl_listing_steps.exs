@@ -63,17 +63,24 @@ defmodule HuddlListingSteps do
     Map.put(context, :conn, conn)
   end
 
-  # Search for a term — discovery search now lives in the global chrome.
-  # Driving via URL keeps the test focused on the search → results contract
-  # without coupling to whichever chrome form (desktop/mobile) is matched.
   step "I search for {string}", %{args: [term]} = context do
-    conn = context.conn |> visit("/discover?q=" <> URI.encode_www_form(term))
+    conn =
+      context.conn
+      |> within(".content-topbar", fn session ->
+        session |> fill_in("Search huddlz", with: term) |> submit()
+      end)
+
     Map.merge(context, %{conn: conn, search_term: term})
   end
 
   # Clear search
   step "I clear the search form", context do
-    conn = context.conn |> visit("/discover")
+    conn =
+      context.conn
+      |> within(".content-topbar", fn session ->
+        session |> fill_in("Search huddlz", with: "") |> submit()
+      end)
+
     Map.put(context, :conn, conn)
   end
 
@@ -141,12 +148,10 @@ defmodule HuddlListingSteps do
   end
 
   step "I should see all upcoming huddlz again", context do
-    # In the real implementation, we'd see all original huddlz again
-    # For the test, we'll verify we're still on a page with the chrome search.
     conn =
-      context.conn
-      |> assert_has("input[placeholder='Search huddlz']")
-      |> refute_has("p", text: "No huddlz found")
+      Enum.reduce(context.huddlz, context.conn, fn huddl, session ->
+        assert_has(session, "h3", text: huddl.title, exact: true)
+      end)
 
     Map.put(context, :conn, conn)
   end

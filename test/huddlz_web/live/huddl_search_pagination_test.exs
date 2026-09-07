@@ -85,7 +85,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
       |> visit("/discover")
       |> assert_has(".page-num", text: "1")
       |> assert_has(".page-num", text: "2")
-      |> assert_has("button[phx-click=change_page]")
+      |> assert_has("a.page-num")
     end
 
     test "shows 20 results on first page", %{conn: conn} do
@@ -103,7 +103,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
     test "navigates to page 2", %{conn: conn} do
       conn
       |> visit("/discover")
-      |> click_button(".page-num", "2")
+      |> click_link(".page-num", "2")
       |> assert_has(".discover-meta", text: "22 huddlz")
       # Should see huddl 21-22
       |> assert_has("h3", text: "Test Huddl 21")
@@ -116,15 +116,15 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
     test "shows previous button on page 2", %{conn: conn} do
       conn
       |> visit("/discover")
-      |> click_button(".page-num", "2")
-      |> assert_has("button[phx-click=change_page][phx-value-page='1']")
+      |> click_link(".page-num", "2")
+      |> assert_has("a[aria-label='Previous page']")
     end
 
     test "navigates back to page 1", %{conn: conn} do
       conn
       |> visit("/discover")
-      |> click_button(".page-num", "2")
-      |> click_button(".page-num", "1")
+      |> click_link(".page-num", "2")
+      |> click_link(".page-num", "1")
       |> assert_has(".discover-meta", text: "22 huddlz")
       |> assert_has("h3", text: "Test Huddl 1")
     end
@@ -135,7 +135,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
       # Filter to reduce results
       |> click_link(".chip-group a.chip", "Virtual")
       # Should have fewer than 20 results
-      |> refute_has("button[phx-click=change_page]")
+      |> refute_has("a.page-num")
     end
 
     test "pagination persists with filters", %{conn: conn} do
@@ -165,7 +165,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
       |> click_link(".chip-group a.chip", "Virtual")
       # Should still have pagination
       |> assert_has(".page-num", text: "2")
-      |> click_button(".page-num", "2")
+      |> click_link(".page-num", "2")
       # Filter chip should persist as active on page 2
       |> assert_has(".chip-group a.chip.is-active", text: "Virtual")
     end
@@ -183,7 +183,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
       conn
       |> visit("/discover")
       |> assert_has(".discover-meta", text: "22 huddlz")
-      |> click_button(".page-num", "2")
+      |> click_link(".page-num", "2")
       |> assert_has(".discover-meta", text: "22 huddlz")
     end
   end
@@ -195,7 +195,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
       |> assert_has("p", text: "No huddlz match this search")
       # No pagination should be shown
       |> refute_has(".page-num")
-      |> refute_has("button[phx-click=change_page]")
+      |> refute_has("a.page-num")
     end
 
     test "handles exactly 20 results", %{conn: conn} do
@@ -226,7 +226,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
       |> assert_has(".discover-meta", text: "20 huddlz")
       # No pagination should be shown for exactly 20 results
       |> refute_has(".page-num", text: "2")
-      |> refute_has("button[phx-click=change_page]")
+      |> refute_has("a.page-num")
     end
   end
 
@@ -240,11 +240,11 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
       |> refute_has("h3", text: "Test Huddl 20")
     end
 
-    test "clicking a page button updates the URL via push_patch", %{conn: conn} do
+    test "clicking a page link updates the URL via push_patch", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/discover")
 
       view
-      |> element("button.page-num[phx-value-page='2']")
+      |> element("#discovery-pagination-page-2")
       |> render_click()
 
       assert_patch(view, "/discover?page=2")
@@ -254,7 +254,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
       {:ok, view, _html} = live(conn, "/discover?page=2")
 
       view
-      |> element("button.page-num[phx-value-page='1']")
+      |> element("#discovery-pagination-page-1")
       |> render_click()
 
       assert_patch(view, "/discover")
@@ -296,7 +296,7 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
       {:ok, view, _html} = live(conn, "/discover?q=Test")
 
       view
-      |> element("button.page-num[phx-value-page='2']")
+      |> element("#discovery-pagination-page-2")
       |> render_click()
 
       assert_patch(view, "/discover?q=Test&page=2")

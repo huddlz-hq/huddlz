@@ -19,9 +19,9 @@ defmodule Huddlz.Communities.Huddl.Changes.CancelRsvp do
   """
   use Ash.Resource.Change
 
-  alias Huddlz.Communities.{Huddl, HuddlAttendee}
-
-  require Ash.Query
+  alias Huddlz.Communities.Huddl
+  alias Huddlz.Communities.Huddl.Changes.LockedHuddl
+  alias Huddlz.Communities.HuddlAttendee
 
   def change(changeset, _opts, %{actor: %{id: user_id}}) when not is_nil(user_id) do
     Ash.Changeset.before_action(changeset, &cancel(&1, user_id))
@@ -34,8 +34,13 @@ defmodule Huddlz.Communities.Huddl.Changes.CancelRsvp do
   defp cancel(cs, user_id) do
     # Lock the huddl row up front so the freed seat and any waitlist
     # promotion serialize against concurrent RSVP/waitlist transactions.
-    lock_huddl!(cs.data.id)
+    case LockedHuddl.fetch(cs.data.id) do
+      {:ok, %Huddl{}} -> cancel_locked(cs, user_id)
+      error -> LockedHuddl.add_read_error(cs, error)
+    end
+  end
 
+  defp cancel_locked(cs, user_id) do
     case fetch_existing(cs.data.id, user_id) do
       {:ok, nil} ->
         cs
@@ -54,13 +59,6 @@ defmodule Huddlz.Communities.Huddl.Changes.CancelRsvp do
       {:error, error} ->
         Ash.Changeset.add_error(cs, error)
     end
-  end
-
-  defp lock_huddl!(huddl_id) do
-    Huddl
-    |> Ash.Query.filter(id == ^huddl_id)
-    |> Ash.Query.lock("FOR UPDATE")
-    |> Ash.read_one!(authorize?: false)
   end
 
   defp fetch_existing(huddl_id, user_id) do

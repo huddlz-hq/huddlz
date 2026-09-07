@@ -47,7 +47,6 @@ defmodule Huddlz.Communities.HuddlLifecycleTest do
                nil,
                nil,
                nil,
-               :soonest,
                actor: context.owner,
                page: false
              )

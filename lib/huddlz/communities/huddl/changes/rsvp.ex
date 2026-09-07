@@ -8,9 +8,9 @@ defmodule Huddlz.Communities.Huddl.Changes.Rsvp do
   """
   use Ash.Resource.Change
 
-  alias Huddlz.Communities.{Huddl, HuddlAttendee}
-
-  require Ash.Query
+  alias Huddlz.Communities.Huddl
+  alias Huddlz.Communities.Huddl.Changes.LockedHuddl
+  alias Huddlz.Communities.HuddlAttendee
 
   def change(changeset, _opts, %{actor: %{id: user_id}}) when not is_nil(user_id) do
     Ash.Changeset.before_action(changeset, &reserve_spot(&1, user_id))
@@ -21,8 +21,16 @@ defmodule Huddlz.Communities.Huddl.Changes.Rsvp do
   end
 
   defp reserve_spot(cs, user_id) do
-    huddl = lock_huddl!(cs.data.id)
+    case LockedHuddl.fetch(cs.data.id, :at_capacity) do
+      {:ok, %Huddl{} = huddl} ->
+        reserve_spot(cs, huddl, user_id)
 
+      error ->
+        LockedHuddl.add_read_error(cs, error)
+    end
+  end
+
+  defp reserve_spot(cs, huddl, user_id) do
     case fetch_existing_rsvp(huddl.id, user_id) do
       {:ok, nil} -> claim_or_reject(cs, huddl, user_id)
       {:ok, _attendee} -> cs
@@ -39,14 +47,6 @@ defmodule Huddlz.Communities.Huddl.Changes.Rsvp do
       # so duplicate RSVPs do not enqueue spurious emails.
       Ash.Changeset.put_context(cs, :rsvp_created, true)
     end
-  end
-
-  defp lock_huddl!(huddl_id) do
-    Huddl
-    |> Ash.Query.filter(id == ^huddl_id)
-    |> Ash.Query.lock("FOR UPDATE")
-    |> Ash.Query.load(:at_capacity)
-    |> Ash.read_one!(authorize?: false)
   end
 
   defp fetch_existing_rsvp(huddl_id, user_id) do

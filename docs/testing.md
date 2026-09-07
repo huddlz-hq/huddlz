@@ -31,6 +31,13 @@ the appropriate public application boundary instead. The scenario must remain
 business-readable and verify an observable outcome regardless of the seam it
 drives.
 
+For the few behaviors that need browser JavaScript or rendering, keep separate
+Cucumber scenarios in `test/browser/features/`: keyboard defaults and focus,
+time-zone detection, image loading, and responsive layout. Run these with
+`mix test.browser`; ordinary `mix test` stays browser-free. See the
+[browser suite guide](../test/browser/README.md) for setup, coverage, and failure
+diagnostics. CI runs both suites as separate jobs on every PR targeting `main`.
+
 ### 2. Integration tests
 
 Elixir integration tests exercise collaborations through public boundaries.
@@ -98,4 +105,5 @@ mix precommit
 `mix precommit` runs compilation with warnings as errors, formatting,
 dependency cleanup, the test suite, and Credo. Do not run all of those commands
 separately by default; rerun an individual command when diagnosing or fixing a
-specific validation failure.
+specific validation failure. Run `mix test.browser` as well when changing
+browser behavior or its scenarios; it is intentionally outside `mix precommit`.

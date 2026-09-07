@@ -27,34 +27,51 @@ defmodule HuddlzWeb.GroupLive.Show do
      |> assign(:subscribed_group_id, nil)
      |> assign(:members_visible?, false)
      |> assign(:member_grid_extras, 0)
-     |> stream(:member_grid, [])}
+     |> stream(:member_grid, [])
+     |> stream(:huddlz, [])}
   end
 
   @impl true
-  def handle_params(%{"slug" => slug}, _, socket) do
+  def handle_params(%{"slug" => slug} = params, _, socket) do
     user = socket.assigns.current_user
 
     case get_group_by_slug(slug, user) do
       {:ok, group} ->
+        tab = if params["tab"] == "past", do: "past", else: "upcoming"
+        page = if tab == "past", do: parse_page(params["page"]), else: 1
+
+        meta =
+          Map.put(
+            group_meta(group),
+            :url,
+            unverified_url(HuddlzWeb.Endpoint, group_page_path(group, tab, page))
+          )
+
         membership = current_user_membership(group, user)
         members = get_members(group, user, !is_nil(membership))
-        upcoming_huddlz = get_upcoming_group_huddlz(group, user, limit: 10)
 
-        {:noreply,
-         socket
-         |> subscribe_to_membership_changes(group)
-         |> assign(:page_title, group.name)
-         |> assign(:meta, group_meta(group))
-         |> assign(:group, group)
-         |> assign_member_grid(members)
-         |> assign(:member_count, group.member_count)
-         |> assign(:is_member, !is_nil(membership))
-         |> assign_action_permissions(group, user, membership)
-         |> assign(:active_tab, "upcoming")
-         |> assign(:upcoming_huddlz, upcoming_huddlz)
-         |> assign(:past_huddlz, [])
-         |> assign(:past_page, 1)
-         |> assign(:past_total_pages, 0)}
+        socket =
+          socket
+          |> subscribe_to_membership_changes(group)
+          |> assign(:page_title, group.name)
+          |> assign(:meta, meta)
+          |> assign(:canonical_url, if(group.is_public, do: meta.url))
+          |> assign(:group, group)
+          |> assign_member_grid(members)
+          |> assign(:member_count, group.member_count)
+          |> assign(:is_member, !is_nil(membership))
+          |> assign_action_permissions(group, user, membership)
+          |> assign(:active_tab, tab)
+          |> assign(:past_page, page)
+          |> assign(:past_total_pages, 1)
+          |> refresh_huddlz()
+
+        if tab == "past" and page > socket.assigns.past_total_pages do
+          {:noreply,
+           push_patch(socket, to: group_page_path(group, tab, socket.assigns.past_total_pages))}
+        else
+          {:noreply, socket}
+        end
 
       {:error, _reason} ->
         not_found!()
@@ -93,6 +110,8 @@ defmodule HuddlzWeb.GroupLive.Show do
         |> assign(:member_count, group.member_count)
         |> assign(:is_member, !is_nil(membership))
         |> assign_action_permissions(group, user, membership)
+        |> refresh_huddlz()
+        |> assign(:leave_dialog_open, false)
 
       {:error, _reason} ->
         handle_error(socket, :not_found,
@@ -134,12 +153,12 @@ defmodule HuddlzWeb.GroupLive.Show do
       sidebar_owned_groups={@sidebar_owned_groups}
       active="discover"
     >
-      <div class="hero">
-        <img
-          :if={@group.current_image_url}
-          class="hero-img"
-          src={GroupImages.url(@group.current_image_url)}
-          alt={@group.name}
+      <HuddlzWeb.StructuredData.group group={@group} url={@canonical_url} />
+      <div id="group-detail-hero" class="hero group-hero">
+        <.group_cover
+          id={"group-detail-cover-#{@group.id}"}
+          group={@group}
+          variant={:hero}
         />
         <div class="hero-content">
           <span class="eyebrow">
@@ -151,9 +170,14 @@ defmodule HuddlzWeb.GroupLive.Show do
             <% end %>
           </span>
           <h1>{@group.name}</h1>
-          <div class="meta">
-            <span :if={@group.location}>📍 {@group.location}</span>
-            <span :if={@group.location && @member_count && @member_count > 0}>·</span>
+          <div class="meta group-hero-meta">
+            <span :if={@group.location} class="group-hero-location">📍 {@group.location}</span>
+            <span
+              :if={@group.location && @member_count && @member_count > 0}
+              class="group-hero-separator"
+            >
+              ·
+            </span>
             <span :if={@member_count && @member_count > 0}>
               {member_count_label(@member_count)}
             </span>
@@ -332,40 +356,40 @@ defmodule HuddlzWeb.GroupLive.Show do
             <h2>Huddlz</h2>
           </div>
 
-          <div class="filters" role="tablist" aria-label="Huddl timeframe">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={@active_tab == "upcoming"}
+          <nav class="filters" aria-label="Huddl timeframe">
+            <.link
+              id="group-huddlz-upcoming"
+              patch={group_page_path(@group, "upcoming", 1)}
+              aria-current={@active_tab == "upcoming" && "page"}
               class={["chip", @active_tab == "upcoming" && "is-active"]}
-              phx-click="switch_tab"
-              phx-value-tab="upcoming"
             >
               Upcoming
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={@active_tab == "past"}
+            </.link>
+            <.link
+              id="group-huddlz-past"
+              patch={group_page_path(@group, "past", 1)}
+              aria-current={@active_tab == "past" && "page"}
               class={["chip", @active_tab == "past" && "is-active"]}
-              phx-click="switch_tab"
-              phx-value-tab="past"
             >
               Past
-            </button>
-          </div>
+            </.link>
+          </nav>
 
-          <%= if @active_tab == "upcoming" do %>
-            <.huddl_grid huddlz={@upcoming_huddlz} empty_message="No upcoming huddlz scheduled." />
-          <% else %>
-            <.huddl_grid huddlz={@past_huddlz} empty_message="No past huddlz found." />
-            <.pagination
-              :if={@past_total_pages > 1}
-              current_page={@past_page}
-              total_pages={@past_total_pages}
-              event_name="change_past_page"
-            />
-          <% end %>
+          <.huddl_grid
+            huddlz={@streams.huddlz}
+            empty_message={
+              if @active_tab == "upcoming",
+                do: "No upcoming huddlz scheduled.",
+                else: "No past huddlz found."
+            }
+          />
+          <.pagination
+            :if={@active_tab == "past" && @past_total_pages > 1}
+            current_page={@past_page}
+            total_pages={@past_total_pages}
+            id="group-archive-pagination"
+            page_path={&group_page_path(@group, "past", &1)}
+          />
         </div>
       </div>
 
@@ -407,6 +431,7 @@ defmodule HuddlzWeb.GroupLive.Show do
         </ul>
 
         <p class="mt-4 text-sm text-base-content/60">
+          Leaving does not cancel your existing RSVPs.
           You can rejoin later if the group is public or you receive another invitation.
         </p>
 
@@ -427,99 +452,95 @@ defmodule HuddlzWeb.GroupLive.Show do
     """
   end
 
-  attr :huddlz, :list, required: true
+  attr :huddlz, Phoenix.LiveView.LiveStream, required: true
   attr :empty_message, :string, required: true
 
   defp huddl_grid(assigns) do
     ~H"""
-    <%= if @huddlz == [] do %>
-      <p class="empty-state muted">
+    <div id="group-huddl-grid" class="grid two" phx-update="stream">
+      <p id="group-huddl-grid-empty" class="empty-state muted hidden only:block col-span-full">
         {@empty_message}
       </p>
-    <% else %>
-      <div class="grid two">
-        <.card
-          :for={{huddl, idx} <- Enum.with_index(@huddlz)}
-          navigate={~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"}
-          gradient={Integer.mod(idx, 6) + 1}
-        >
-          <:cover>
-            <.huddl_cover_image
-              :if={huddl.display_image_url}
-              id={"group-huddl-card-cover-#{huddl.id}"}
-              class="card-cover-img"
-              image_url={huddl.display_image_url}
-            />
-            <.date_stamp month={huddl_month(huddl)} day={huddl_day(huddl)} />
-            <.card_tag variant={tag_variant(huddl.event_type)}>
-              {tag_label(huddl.event_type)}
-            </.card_tag>
-          </:cover>
-          <:body>
-            <span class="card-group">{huddl_kind_label(huddl)}</span>
-            <h3 class="card-title">{huddl.title}</h3>
-            <div class="card-meta">
-              <span>{format_meta_when(huddl)}</span>
-              <%= if huddl.rsvp_count > 0 || huddl.max_attendees do %>
-                <span class="dot"></span>
-                <span>{rsvp_label(huddl)}</span>
-              <% end %>
-            </div>
-          </:body>
-        </.card>
-      </div>
-    <% end %>
+      <.card
+        :for={{id, %{huddl: huddl, gradient: gradient}} <- @huddlz}
+        id={id}
+        navigate={~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"}
+        gradient={gradient}
+      >
+        <:cover>
+          <.cover_image
+            :if={huddl.display_image_url}
+            id={"group-huddl-card-cover-#{huddl.id}"}
+            class="card-cover-img"
+            image_url={huddl.display_image_url}
+          />
+          <.date_stamp month={huddl_month(huddl)} day={huddl_day(huddl)} />
+          <.card_tag variant={tag_variant(huddl.event_type)}>
+            {tag_label(huddl.event_type)}
+          </.card_tag>
+        </:cover>
+        <:body>
+          <span class="card-group">{huddl_kind_label(huddl)}</span>
+          <h3 class="card-title">{huddl.title}</h3>
+          <div class="card-meta">
+            <span>{format_meta_when(huddl)}</span>
+            <%= if huddl.rsvp_count > 0 || huddl.max_attendees do %>
+              <span class="dot"></span>
+              <span>{rsvp_label(huddl)}</span>
+            <% end %>
+          </div>
+        </:body>
+      </.card>
+    </div>
     """
   end
 
-  @impl true
-  def handle_event("switch_tab", %{"tab" => tab}, socket) do
-    socket =
-      case tab do
-        "upcoming" ->
-          socket
-          |> assign(:active_tab, "upcoming")
+  defp stream_huddlz(socket, huddlz) do
+    entries =
+      huddlz
+      |> Enum.with_index()
+      |> Enum.map(fn {huddl, index} ->
+        %{id: huddl.id, huddl: huddl, gradient: Integer.mod(index, 6) + 1}
+      end)
 
-        "past" ->
-          {past_huddlz, total_pages} =
-            get_past_group_huddlz_paginated(
-              socket.assigns.group,
-              socket.assigns.current_user,
-              page: 1,
-              per_page: 10
-            )
-
-          socket
-          |> assign(:active_tab, "past")
-          |> assign(:past_huddlz, past_huddlz)
-          |> assign(:past_page, 1)
-          |> assign(:past_total_pages, total_pages)
-
-        _ ->
-          socket
-      end
-
-    {:noreply, socket}
+    stream(socket, :huddlz, entries, reset: true)
   end
 
-  def handle_event("change_past_page", %{"page" => page_str}, socket) do
-    page = parse_page(page_str)
-
-    {past_huddlz, total_pages} =
-      get_past_group_huddlz_paginated(
-        socket.assigns.group,
-        socket.assigns.current_user,
-        page: page,
+  defp refresh_huddlz(%{assigns: %{active_tab: "past"}} = socket) do
+    {huddlz, total_pages} =
+      get_past_group_huddlz_paginated(socket.assigns.group, socket.assigns.current_user,
+        page: socket.assigns.past_page,
         per_page: 10
       )
 
-    socket =
-      socket
-      |> assign(:past_huddlz, past_huddlz)
-      |> assign(:past_page, page)
-      |> assign(:past_total_pages, total_pages)
+    socket
+    |> stream_huddlz(huddlz)
+    |> assign(:past_total_pages, total_pages)
+  end
 
-    {:noreply, socket}
+  defp refresh_huddlz(socket) do
+    stream_huddlz(
+      socket,
+      get_upcoming_group_huddlz(socket.assigns.group, socket.assigns.current_user, limit: 10)
+    )
+  end
+
+  defp group_page_path(group, "past", page) when page > 1,
+    do: ~p"/groups/#{group.slug}?#{[tab: "past", page: page]}"
+
+  defp group_page_path(group, "past", _page), do: ~p"/groups/#{group.slug}?#{[tab: "past"]}"
+  defp group_page_path(group, _tab, _page), do: ~p"/groups/#{group.slug}"
+
+  @impl true
+  def handle_event("switch_tab", %{"tab" => tab}, socket) do
+    {:noreply, push_patch(socket, to: group_page_path(socket.assigns.group, tab, 1))}
+  end
+
+  def handle_event("change_past_page", %{"page" => page_str}, socket) do
+    {:noreply,
+     push_patch(socket,
+       to: group_page_path(socket.assigns.group, "past", parse_page(page_str))
+     )}
   end
 
   def handle_event("join_group", _, socket) do
@@ -527,18 +548,10 @@ defmodule HuddlzWeb.GroupLive.Show do
 
     case join_group(socket.assigns.group, user) do
       {:ok, _} ->
-        group = reload_group(socket.assigns.group, user)
-        membership = current_user_membership(group, user)
-        members = get_members(group, user, true)
-
         {:noreply,
          socket
          |> put_flash(:info, "Successfully joined the group!")
-         |> assign(:group, group)
-         |> assign(:is_member, true)
-         |> assign_member_grid(members)
-         |> assign(:member_count, group.member_count)
-         |> assign_action_permissions(group, user, membership)}
+         |> refresh_membership_state()}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to join group")}
@@ -560,17 +573,10 @@ defmodule HuddlzWeb.GroupLive.Show do
 
     case leave_group(socket.assigns.group, user) do
       :ok ->
-        group = reload_group(socket.assigns.group, user)
-
         {:noreply,
          socket
          |> put_flash(:info, "Successfully left the group")
-         |> assign(:leave_dialog_open, false)
-         |> assign(:group, group)
-         |> assign(:is_member, false)
-         |> assign_member_grid(nil)
-         |> assign(:member_count, group.member_count)
-         |> assign_action_permissions(group, user, nil)}
+         |> refresh_membership_state()}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to leave group")}
@@ -579,7 +585,12 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   def handle_event("leave_group", _, socket), do: {:noreply, socket}
 
-  @group_loads [:current_image_url, :member_count, owner: [:current_profile_picture_url]]
+  @group_loads [
+    :current_image_url,
+    :member_count,
+    :viewer_role,
+    owner: [:current_profile_picture_url]
+  ]
 
   defp get_group_by_slug(slug, actor) do
     case Communities.get_by_slug(slug, actor: actor, load: @group_loads) do
@@ -588,10 +599,6 @@ defmodule HuddlzWeb.GroupLive.Show do
       {:error, %Ash.Error.Query.NotFound{}} -> {:error, :not_found}
       {:error, _} -> {:error, :not_found}
     end
-  end
-
-  defp reload_group(%{slug: slug}, actor) do
-    Communities.get_by_slug!(slug, actor: actor, load: @group_loads)
   end
 
   defp group_meta(group) do
@@ -659,6 +666,7 @@ defmodule HuddlzWeb.GroupLive.Show do
     page_result =
       Communities.get_past_group_huddlz!(group.id,
         actor: user,
+        query: [sort: [starts_at: :desc, id: :desc]],
         page: [limit: per_page, offset: offset, count: true],
         load: [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group]
       )
@@ -688,9 +696,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   defp parse_page(val) when is_integer(val) and val >= 1, do: val
   defp parse_page(_), do: 1
 
-  defp role_pill(%{can_edit_group: true}), do: "Owner"
-  defp role_pill(%{is_member: true}), do: "Joined"
-  defp role_pill(_assigns), do: nil
+  defp role_pill(%{group: group}), do: HuddlzWeb.GroupRole.label(group.viewer_role)
 
   defp assign_member_grid(socket, nil) do
     socket

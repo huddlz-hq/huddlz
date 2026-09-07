@@ -297,7 +297,8 @@ defmodule HuddlzWeb.HuddlLiveTest do
       session
       |> assert_has("h1", text: "Results for")
       |> assert_has("input[name='q'][value='elixir']")
-      |> assert_has(".filter-distance input[type='range'][value='25']")
+      |> assert_has("form#distance-filter-form[phx-change='distance_change']", count: 1)
+      |> assert_has("#distance-filter-form input[type='range'][value='25']")
       |> assert_has(".filter-distance-value", text: "25 mi")
     end
   end
@@ -322,6 +323,22 @@ defmodule HuddlzWeb.HuddlLiveTest do
       |> assert_has("h1", text: "Browse groups")
       |> assert_has("h2", text: "Elixir Club")
       |> assert_has(".grid .card .card-meta", text: "3 members")
+    end
+
+    test "renders the shared cover fallback for groups without an image", %{
+      conn: conn,
+      host: host
+    } do
+      group =
+        generate(group(is_public: true, owner_id: host.id, actor: host, name: "Fallback Club"))
+
+      conn
+      |> visit("/discover?scope=groups")
+      |> assert_has("#discover-group-cover-#{group.id}[data-testid='group-cover']")
+      |> assert_has(
+        "#discover-group-cover-#{group.id} .group-cover-label",
+        text: "huddlz group"
+      )
     end
 
     test "hides huddlz when scope=groups", %{conn: conn, host: host} do
@@ -370,8 +387,15 @@ defmodule HuddlzWeb.HuddlLiveTest do
     test "scope chips render with Huddlz active by default", %{conn: conn} do
       conn
       |> visit("/discover")
-      |> assert_has(".scope-tab.is-active", text: "Huddlz")
-      |> assert_has(".scope-tab", text: "Groups")
+      |> assert_has(".scope-tab.is-active[aria-current='page']", text: "Huddlz")
+      |> refute_has(".scope-tab:not(.is-active)[aria-current]")
+    end
+
+    test "scope=groups exposes Groups as the current view", %{conn: conn} do
+      conn
+      |> visit("/discover?scope=groups")
+      |> assert_has(".scope-tab.is-active[aria-current='page']", text: "Groups")
+      |> refute_has(".scope-tab:not(.is-active)[aria-current]")
     end
 
     test "scope=groups empty state when no public groups", %{conn: conn} do

@@ -11,6 +11,7 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
   alias Huddlz.Communities
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Communities.Huddl
+  alias Huddlz.Communities.Huddl.Changes.SeriesRsvpTarget
   alias Huddlz.Communities.Huddl.RecurrenceHelper
   alias Huddlz.Notifications
 
@@ -32,14 +33,15 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
   end
 
   @doc """
-  Returns one next-upcoming huddl per person who has an RSVP on the source
+  Returns the next summary target and upcoming calendar huddlz for each person
+  with an RSVP or waitlist entry on the source
   occurrence or any later occurrence in its recurring series.
 
-  Choosing a target per recipient keeps a whole-series summary useful for
+  Choosing targets per recipient keeps a whole-series summary useful for
   people who attend different dates and ensures the link points to a huddl
   they can still access after reconciliation.
   """
-  @spec series_rsvp_targets(Huddl.t(), keyword()) :: [{Ecto.UUID.t(), Huddl.t()}]
+  @spec series_rsvp_targets(Huddl.t(), keyword()) :: [SeriesRsvpTarget.t()]
   def series_rsvp_targets(%Huddl{} = source, opts \\ []) do
     actor_id = Keyword.get(opts, :exclude)
     huddlz = [source | RecurrenceHelper.future_instances(source)]
@@ -51,12 +53,27 @@ defmodule Huddlz.Communities.Huddl.Changes.RecipientHelpers do
     |> Enum.reject(&(&1.user_id == actor_id))
     |> Enum.group_by(& &1.user_id)
     |> Enum.map(fn {user_id, attendances} ->
-      next_huddl =
+      targets =
         attendances
         |> Enum.map(&Map.fetch!(huddlz_by_id, &1.huddl_id))
-        |> Enum.min_by(& &1.starts_at, DateTime)
+        |> Enum.sort_by(& &1.starts_at, DateTime)
 
-      {user_id, next_huddl}
+      now = DateTime.utc_now()
+
+      calendar_huddlz =
+        attendances
+        |> Enum.filter(&is_nil(&1.waitlisted_at))
+        |> Enum.map(&Map.fetch!(huddlz_by_id, &1.huddl_id))
+        |> Enum.filter(
+          &(&1.lifecycle_state == :published and DateTime.compare(&1.starts_at, now) == :gt)
+        )
+        |> Enum.sort_by(& &1.starts_at, DateTime)
+
+      %SeriesRsvpTarget{
+        user_id: user_id,
+        next_huddl: hd(targets),
+        calendar_huddlz: calendar_huddlz
+      }
     end)
   end
 

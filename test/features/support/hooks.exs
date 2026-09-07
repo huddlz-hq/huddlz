@@ -5,10 +5,10 @@ defmodule CucumberHooks do
 
   # Hook for @database tag - sets up database sandbox
   before_scenario "@database", context do
-    case Sandbox.checkout(Huddlz.Repo) do
-      :ok -> :ok
-      {:already, :owner} -> :ok
-    end
+    # LiveViews can outlive the scenario process while handling queued messages.
+    # Keep their connection alive until ExUnit has stopped supervised children.
+    owner = Sandbox.start_owner!(Huddlz.Repo)
+    ExUnit.Callbacks.on_exit(fn -> Sandbox.stop_owner(owner) end)
 
     Mox.stub_with(Huddlz.MockGeocoding, Huddlz.GeocodingStub)
     Mox.stub_with(Huddlz.MockPlaces, Huddlz.PlacesStub)

@@ -137,14 +137,13 @@ defmodule GroupImageSteps do
 
   step "I should see the group image", context do
     session = context[:session] || context[:conn]
-    # Look for an image tag with src containing group_images path
-    assert_has(session, "img[src*='group_images']")
+    assert_has(session, ".cover-image[style*='group_images']")
     context
   end
 
   step "I should not see the group image", context do
     session = context[:session] || context[:conn]
-    refute_has(session, "img[src*='group_images']")
+    refute_has(session, ".cover-image[style*='group_images']")
     context
   end
 
@@ -154,7 +153,7 @@ defmodule GroupImageSteps do
 
     # With no cover image, the hero renders the group name as its title.
     assert_has(session, ".hero .hero-content h1", text: group_name)
-    refute_has(session, ".hero img.hero-img")
+    refute_has(session, ".hero .cover-image")
     context
   end
 

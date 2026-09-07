@@ -78,9 +78,9 @@ defmodule Huddlz.NotificationsTest do
     end
 
     test "transactional ignores the user's preferences" do
-      user = generate_user_with_prefs(%{"anything" => false})
+      user = generate_user_with_prefs(%{"password_changed" => false})
       entry = transactional()
-      assert Notifications.should_deliver?(user, :anything, entry)
+      assert Notifications.should_deliver?(user, :password_changed, entry)
     end
 
     test "activity with default true and no preference sends" do
@@ -114,7 +114,8 @@ defmodule Huddlz.NotificationsTest do
     end
 
     test "garbage value in the preferences map falls back to the default" do
-      user = generate_user_with_prefs(%{"rsvp_received" => "yes"})
+      # Model legacy data directly: the update action now rejects this value.
+      user = %{generate(user()) | notification_preferences: %{"rsvp_received" => "yes"}}
       entry = activity(default: true)
       assert Notifications.should_deliver?(user, :rsvp_received, entry)
     end
@@ -153,7 +154,8 @@ defmodule Huddlz.NotificationsTest do
     end
 
     test "falls back to the default when the stored value is non-boolean" do
-      user = generate_user_with_prefs(%{"rsvp_received" => "yes"})
+      # Model legacy data directly: the update action now rejects this value.
+      user = %{generate(user()) | notification_preferences: %{"rsvp_received" => "yes"}}
       assert Notifications.preference_for(user, :rsvp_received) == true
     end
   end

@@ -34,7 +34,10 @@ config :huddlz, Oban,
     huddl_cover_image_cleanup: 5
   ],
   repo: Huddlz.Repo,
-  plugins: [{Oban.Plugins.Cron, []}]
+  plugins: [
+    {Oban.Plugins.Cron,
+     crontab: [{"@reboot", Huddlz.Sitemaps.Refresh}, {"*/15 * * * *", Huddlz.Sitemaps.Refresh}]}
+  ]
 
 # Per-email rate limits on the authentication actions, enforced at the Ash action
 # layer (see `Huddlz.Accounts.User` and `Huddlz.RateLimit`).

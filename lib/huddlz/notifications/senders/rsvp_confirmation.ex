@@ -19,17 +19,17 @@ defmodule Huddlz.Notifications.Senders.RsvpConfirmation do
   use HuddlzWeb, :verified_routes
   import Swoosh.Email
 
-  alias Huddlz.Communities.Huddl
   alias Huddlz.Mailer
   alias Huddlz.Notifications.DateTimeFormatter
   alias Huddlz.Notifications.Footer
+  alias Huddlz.Notifications.HuddlAccess
   alias Huddlz.Notifications.ICS
   alias Huddlz.Notifications.Senders.HeaderSafe
   alias Huddlz.Notifications.Senders.HtmlEscape
 
   @impl true
   def build(user, payload) do
-    huddl = fetch_huddl!(payload)
+    huddl = fetch_huddl!(payload, user)
 
     safe_name = HtmlEscape.escape(user.display_name)
     safe_title = HtmlEscape.escape(huddl.title)
@@ -77,11 +77,11 @@ defmodule Huddlz.Notifications.Senders.RsvpConfirmation do
     )
   end
 
-  defp fetch_huddl!(%{"huddl_id" => id}) when is_binary(id) do
-    Ash.get!(Huddl, id, authorize?: false, load: [:group])
+  defp fetch_huddl!(%{"huddl_id" => id}, user) when is_binary(id) do
+    HuddlAccess.for_recipient!(id, user)
   end
 
-  defp fetch_huddl!(_) do
+  defp fetch_huddl!(_, _user) do
     raise ArgumentError, "RsvpConfirmation requires payload key \"huddl_id\" with a binary UUID"
   end
 end

@@ -114,9 +114,9 @@ defmodule HuddlzWeb.MyHuddlzLive do
     end
   end
 
-  defp filter_query(:upcoming), do: {:attending, :upcoming, :soonest}
-  defp filter_query(:waitlisted), do: {:waitlisted, :upcoming, :soonest}
-  defp filter_query(:past), do: {:attending, :past, :newest}
+  defp filter_query(:upcoming), do: {:attending, :upcoming, [starts_at: :asc]}
+  defp filter_query(:waitlisted), do: {:waitlisted, :upcoming, [starts_at: :asc]}
+  defp filter_query(:past), do: {:attending, :past, [inserted_at: :desc]}
 
   defp run_search(user, relationship, date_filter, opts) do
     Communities.search_huddlz(
@@ -127,8 +127,8 @@ defmodule HuddlzWeb.MyHuddlzLive do
       nil,
       nil,
       relationship,
-      Keyword.get(opts, :sort, :soonest),
       actor: user,
+      query: [sort: Keyword.get(opts, :sort, [])],
       page: Keyword.get(opts, :page, []),
       load: @card_loads
     )
@@ -204,7 +204,7 @@ defmodule HuddlzWeb.MyHuddlzLive do
       gradient={@gradient}
     >
       <:cover>
-        <.huddl_cover_image
+        <.cover_image
           :if={@huddl.display_image_url}
           id={"my-huddl-card-cover-#{@huddl.id}"}
           class="card-cover-img"

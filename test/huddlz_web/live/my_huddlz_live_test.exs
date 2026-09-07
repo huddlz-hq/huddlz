@@ -63,8 +63,17 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       |> login(attendee)
       |> visit("/my-huddlz")
       |> assert_has("h1", text: "My huddlz")
-      |> assert_has("aside.sidebar")
-      |> assert_has(".sb-item.active", text: "My huddlz")
+      |> assert_has(
+        "button#mobile-nav-trigger[aria-controls='mobile-navigation-drawer'][aria-expanded='false']"
+      )
+      |> assert_has(
+        "aside#mobile-navigation-drawer[aria-label='Primary navigation'][data-mobile-nav-state='closed']"
+      )
+      |> assert_has("button#mobile-nav-close[aria-label='Close navigation']")
+      |> assert_has("button.nav-scrim[aria-hidden='true'][tabindex='-1']")
+      |> assert_has(".sb-item.active[aria-current='page']", text: "My huddlz")
+      |> refute_has("input.nav-toggle")
+      |> refute_has(".sb-item:not(.active)[aria-current]")
     end
 
     test "shows three filter chips with counts", %{conn: conn, attendee: attendee} do
@@ -80,7 +89,8 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       conn
       |> login(attendee)
       |> visit("/my-huddlz")
-      |> assert_has(".filters .chip.is-active", text: "Upcoming")
+      |> assert_has(".filters .chip.is-active[aria-current='page']", text: "Upcoming")
+      |> refute_has(".filters .chip:not(.is-active)[aria-current]")
     end
   end
 

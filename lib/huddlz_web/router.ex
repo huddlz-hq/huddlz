@@ -40,6 +40,9 @@ defmodule HuddlzWeb.Router do
 
   scope "/", HuddlzWeb do
     get "/healthz", HealthController, :show
+    get "/robots.txt", SitemapController, :robots
+    get "/sitemap.xml", SitemapController, :index
+    get "/sitemap-:file", SitemapController, :child
   end
 
   scope "/gql" do
@@ -88,6 +91,11 @@ defmodule HuddlzWeb.Router do
     post "/unsubscribe/:token", UnsubscribeController, :update
 
     ash_authentication_live_session :authenticated_routes,
+      on_mount_prepend:
+        if(Application.compile_env(:huddlz, :sql_sandbox?, false),
+          do: [HuddlzWeb.Hooks.AllowEctoSandbox],
+          else: []
+        ),
       on_mount: {HuddlzWeb.LiveUserAuth, :load_user_details} do
       # in each liveview, add one of the following at the top of the module:
       #
@@ -110,6 +118,7 @@ defmodule HuddlzWeb.Router do
       live "/calendar", CalendarLive, :index
       live "/notifications", NotificationsLive, :index
       live "/notifications/:id/open", NotificationsLive, :open
+      live "/invitations/email/:token", GroupInvitationLive, :email
       live "/invitations/:id", GroupInvitationLive, :show
       live "/admin", AdminLive, :index
       live "/profile", ProfileLive, :index

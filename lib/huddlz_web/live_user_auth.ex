@@ -126,7 +126,7 @@ defmodule HuddlzWeb.LiveUserAuth do
   defp load_sidebar_owned_groups(%{assigns: %{current_user: user}}) when not is_nil(user) do
     Huddlz.Communities.get_organizable_groups!(
       actor: user,
-      load: [:member_count],
+      load: [:member_count, :viewer_role],
       query: [sort: [name: :asc]]
     )
   end
@@ -196,12 +196,16 @@ defmodule HuddlzWeb.LiveUserAuth do
       |> assign(:sidebar_owned_groups, groups)
       |> maybe_assign_picker_groups(groups)
 
-    {:halt, socket}
+    organizer_access_result(socket)
   end
 
   defp refresh_organizer_access(_message, socket), do: {:cont, socket}
 
+  defp organizer_access_result(%{view: HuddlzWeb.MyGroupsLive} = socket), do: {:cont, socket}
+  defp organizer_access_result(socket), do: {:halt, socket}
+
   defp maybe_assign_picker_groups(%{assigns: %{owned_groups: _}} = socket, groups) do
+    groups = Ash.load!(groups, :current_image_url, actor: socket.assigns.current_user)
     assign(socket, :owned_groups, groups)
   end
 

@@ -4,7 +4,6 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
   import Huddlz.Generator
 
   alias Huddlz.Communities.Huddl
-  require Ash.Query
 
   describe "create authorization" do
     setup do
@@ -337,16 +336,13 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
       member: member,
       virtual_huddl: virtual_huddl
     } do
-      # First, member needs to RSVP
-      virtual_huddl
-      |> Ash.Changeset.for_update(:rsvp, %{}, actor: member)
-      |> Ash.update!()
+      Huddlz.Communities.rsvp_huddl!(virtual_huddl, actor: member)
 
       result =
-        Huddl
-        |> Ash.Query.filter(id == ^virtual_huddl.id)
-        |> Ash.Query.load(:visible_virtual_link)
-        |> Ash.read_one!(actor: member)
+        Huddlz.Communities.get_huddl!(virtual_huddl.id,
+          actor: member,
+          load: :visible_virtual_link
+        )
 
       assert result.visible_virtual_link == "https://zoom.us/j/secret123"
       assert result.virtual_link == "https://zoom.us/j/secret123"
@@ -357,13 +353,138 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
       virtual_huddl: virtual_huddl
     } do
       result =
-        Huddl
-        |> Ash.Query.filter(id == ^virtual_huddl.id)
-        |> Ash.Query.load(:visible_virtual_link)
-        |> Ash.read_one!(actor: member)
+        Huddlz.Communities.get_huddl!(virtual_huddl.id,
+          actor: member,
+          load: :visible_virtual_link
+        )
 
       assert result.visible_virtual_link == nil
-      assert result.virtual_link == "https://zoom.us/j/secret123"
+      assert %Ash.ForbiddenField{} = result.virtual_link
+    end
+
+    test "waitlisted members cannot see virtual links until they are promoted", %{
+      owner: owner,
+      member: member,
+      virtual_huddl: virtual_huddl
+    } do
+      Huddlz.Communities.update_huddl!(virtual_huddl, %{max_attendees: 1}, actor: owner)
+
+      Huddlz.Communities.join_waitlist_huddl!(virtual_huddl, actor: member)
+
+      assert visible_virtual_link(virtual_huddl, member) == nil
+
+      assert %Ash.ForbiddenField{} =
+               Huddlz.Communities.get_huddl!(virtual_huddl.id, actor: member).virtual_link
+
+      Huddlz.Communities.cancel_rsvp_huddl!(virtual_huddl, actor: owner)
+
+      assert visible_virtual_link(virtual_huddl, member) == "https://zoom.us/j/secret123"
+
+      Huddlz.Communities.cancel_rsvp_huddl!(virtual_huddl, actor: member)
+
+      assert visible_virtual_link(virtual_huddl, member) == nil
+
+      assert %Ash.ForbiddenField{} =
+               Huddlz.Communities.get_huddl!(virtual_huddl.id, actor: member).virtual_link
+    end
+
+    test "group organizers can see virtual links without an RSVP", %{
+      owner: owner,
+      non_member: organizer,
+      group: group,
+      virtual_huddl: virtual_huddl
+    } do
+      generate(
+        group_member(
+          group_id: group.id,
+          user_id: organizer.id,
+          role: :organizer,
+          actor: owner
+        )
+      )
+
+      assert Huddlz.Communities.get_huddl!(virtual_huddl.id, actor: organizer).virtual_link ==
+               "https://zoom.us/j/secret123"
+
+      assert visible_virtual_link(virtual_huddl, organizer) ==
+               "https://zoom.us/j/secret123"
+    end
+
+    test "cancelling a huddl hides links from confirmed attendees and organizers", %{
+      owner: owner,
+      member: member,
+      virtual_huddl: virtual_huddl
+    } do
+      Huddlz.Communities.rsvp_huddl!(virtual_huddl, actor: member)
+
+      assert visible_virtual_link(virtual_huddl, member) == "https://zoom.us/j/secret123"
+      assert visible_virtual_link(virtual_huddl, owner) == "https://zoom.us/j/secret123"
+
+      cancelled = Huddlz.Communities.cancel_huddl!(virtual_huddl, "Cancelled", actor: owner)
+
+      assert %Ash.ForbiddenField{} =
+               Huddlz.Communities.get_huddl!(cancelled.id, actor: member).virtual_link
+
+      assert visible_virtual_link(cancelled, member) == nil
+      assert visible_virtual_link(cancelled, owner) == nil
+    end
+
+    test "organizers can read and edit a draft link without exposing attendee access", %{
+      owner: owner,
+      group: group
+    } do
+      draft =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            lifecycle_state: :draft,
+            event_type: :virtual,
+            virtual_link: "https://example.com/draft"
+          )
+        )
+
+      draft = Huddlz.Communities.get_huddl!(draft.id, actor: owner, load: :visible_virtual_link)
+      assert draft.virtual_link == "https://example.com/draft"
+      assert draft.visible_virtual_link == nil
+
+      updated =
+        Huddlz.Communities.update_huddl!(draft, %{virtual_link: "https://example.com/edited"},
+          actor: owner
+        )
+
+      assert updated.virtual_link == "https://example.com/edited"
+    end
+
+    test "hybrid access is hidden on direct reads until waitlist promotion", %{
+      owner: owner,
+      member: member,
+      group: group
+    } do
+      hybrid =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            event_type: :hybrid,
+            virtual_link: "https://example.com/hybrid",
+            max_attendees: 1
+          )
+        )
+
+      Huddlz.Communities.join_waitlist_huddl!(hybrid, actor: member)
+
+      assert %Ash.ForbiddenField{} =
+               Huddlz.Communities.get_huddl!(hybrid.id, actor: member).virtual_link
+
+      Huddlz.Communities.cancel_rsvp_huddl!(hybrid, actor: owner)
+
+      assert Huddlz.Communities.get_huddl!(hybrid.id, actor: member).virtual_link ==
+               "https://example.com/hybrid"
+
+      assert visible_virtual_link(hybrid, member) == "https://example.com/hybrid"
     end
 
     test "non-members cannot see virtual links", %{
@@ -371,24 +492,27 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
       virtual_huddl: virtual_huddl
     } do
       result =
-        Huddl
-        |> Ash.Query.filter(id == ^virtual_huddl.id)
-        |> Ash.Query.load(:visible_virtual_link)
-        |> Ash.read_one!(actor: non_member)
+        Huddlz.Communities.get_huddl!(virtual_huddl.id,
+          actor: non_member,
+          load: :visible_virtual_link
+        )
 
       assert result.visible_virtual_link == nil
-      # The actual virtual_link field is marked sensitive, so it shouldn't be exposed
+      assert %Ash.ForbiddenField{} = result.virtual_link
     end
 
     test "unauthenticated users cannot see virtual links", %{virtual_huddl: virtual_huddl} do
       result =
-        Huddl
-        |> Ash.Query.filter(id == ^virtual_huddl.id)
-        |> Ash.Query.load(:visible_virtual_link)
-        |> Ash.read_one!()
+        Huddlz.Communities.get_huddl!(virtual_huddl.id, load: :visible_virtual_link)
 
       assert result.visible_virtual_link == nil
+      assert %Ash.ForbiddenField{} = result.virtual_link
     end
+  end
+
+  defp visible_virtual_link(huddl, actor) do
+    Huddlz.Communities.get_huddl!(huddl.id, actor: actor, load: :visible_virtual_link)
+    |> Map.fetch!(:visible_virtual_link)
   end
 
   describe "update and destroy authorization" do

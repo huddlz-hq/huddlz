@@ -13,13 +13,12 @@ defmodule HuddlzWeb.OrganizeLive do
   """
   use HuddlzWeb, :live_view
 
-  alias Huddlz.Accounts
   alias Huddlz.Communities
   alias Huddlz.Communities.MembershipEvents
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
 
-  @group_loads [:member_count]
+  @group_loads [:current_image_url, :member_count]
   @huddl_loads [:rsvp_count, :status, :group]
   @upcoming_loads [:rsvp_count, :group]
   @upcoming_preview_limit 5
@@ -66,10 +65,12 @@ defmodule HuddlzWeb.OrganizeLive do
     {:noreply, socket}
   end
 
-  defp load_action(socket, :index, _params, _user) do
+  defp load_action(socket, :index, _params, user) do
+    groups = Ash.load!(socket.assigns.sidebar_owned_groups, :current_image_url, actor: user)
+
     socket
     |> assign(:group, nil)
-    |> assign(:owned_groups, socket.assigns.sidebar_owned_groups)
+    |> assign(:owned_groups, groups)
   end
 
   defp load_action(socket, action, %{"group_slug" => slug}, user) do
@@ -78,6 +79,7 @@ defmodule HuddlzWeb.OrganizeLive do
         socket
         |> subscribe_to_membership_changes(group)
         |> assign(:group, group)
+        |> assign(:can_edit_group, Ash.can?({group, :update_details}, user))
         |> assign(:page_title, "#{group.name} · Organizer")
         |> load_section(action, group, user)
 
@@ -156,8 +158,8 @@ defmodule HuddlzWeb.OrganizeLive do
     |> Enum.map(&normalize_invitation_expiration(&1, user))
   end
 
-  defp create_invitation(socket, group, user, invitee, role, email, params) do
-    case Communities.invite_to_group(group.id, invitee.id, role, actor: user) do
+  defp create_invitation(socket, group, user, role, email, params) do
+    case Communities.invite_to_group_by_email(group.id, email, role, actor: user) do
       {:ok, _invitation} ->
         {:noreply,
          socket
@@ -240,6 +242,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <% :overview -> %>
           <.overview_view
             group={@group}
+            can_edit_group={@can_edit_group}
             upcoming_huddlz={@upcoming_huddlz}
             open_rsvps={@open_rsvps}
           />
@@ -248,6 +251,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <% :members -> %>
           <.members_view
             group={@group}
+            can_edit_group={@can_edit_group}
             owner_members={@streams.owner_members}
             organizer_members={@streams.organizer_members}
             regular_members={@streams.regular_members}
@@ -318,10 +322,15 @@ defmodule HuddlzWeb.OrganizeLive do
         <div class="row-list">
           <a
             :for={group <- @groups}
-            class="row row-split"
+            class="row row-split organizer-group-row"
             href={~p"/organize/#{group.slug}"}
           >
-            <div>
+            <.group_cover
+              id={"organizer-group-cover-#{group.id}"}
+              group={group}
+              variant={:thumb}
+            />
+            <div class="organizer-group-copy">
               <div class="row-title">{group.name}</div>
               <div class="meta">
                 {member_label(group.member_count)} · {visibility_label(group.is_public)}
@@ -340,6 +349,8 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :upcoming_huddlz, :list, required: true
   attr :open_rsvps, :integer, required: true
 
+  attr :can_edit_group, :boolean, required: true
+
   defp overview_view(assigns) do
     assigns =
       assigns
@@ -353,7 +364,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <p>A scannable summary of this group's huddlz and members.</p>
       </div>
       <div class="actions">
-        <a class="btn-secondary" href={~p"/groups/#{@group.slug}/edit"}>Edit group</a>
+        <a :if={@can_edit_group} class="btn-secondary" href={~p"/groups/#{@group.slug}/edit"}>Edit group</a>
         <a class="btn-primary" href={~p"/groups/#{@group.slug}/huddlz/new"}>
           + Create huddl
         </a>
@@ -441,28 +452,19 @@ defmodule HuddlzWeb.OrganizeLive do
       </div>
     </div>
 
-    <div class="filters">
-      <.link
-        patch={huddlz_filter_path(@group, :draft)}
-        class={filter_chip_class(@filter == :draft)}
-      >
+    <div class="filters" id="organize-huddlz-filters">
+      <.chip patch={huddlz_filter_path(@group, :draft)} active={@filter == :draft}>
         Draft
-      </.link>
-      <.link
-        patch={huddlz_filter_path(@group, :published)}
-        class={filter_chip_class(@filter == :published)}
-      >
+      </.chip>
+      <.chip patch={huddlz_filter_path(@group, :published)} active={@filter == :published}>
         Published
-      </.link>
-      <.link
-        patch={huddlz_filter_path(@group, :cancelled)}
-        class={filter_chip_class(@filter == :cancelled)}
-      >
+      </.chip>
+      <.chip patch={huddlz_filter_path(@group, :cancelled)} active={@filter == :cancelled}>
         Cancelled
-      </.link>
-      <.link patch={huddlz_filter_path(@group, :past)} class={filter_chip_class(@filter == :past)}>
+      </.chip>
+      <.chip patch={huddlz_filter_path(@group, :past)} active={@filter == :past}>
         Past
-      </.link>
+      </.chip>
     </div>
 
     <%= if @huddlz == [] do %>
@@ -523,9 +525,6 @@ defmodule HuddlzWeb.OrganizeLive do
   defp organizer_huddl_path(group, huddl),
     do: ~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit"
 
-  defp filter_chip_class(true), do: "chip is-active"
-  defp filter_chip_class(false), do: "chip"
-
   defp filter_heading(:draft), do: "Draft huddlz"
   defp filter_heading(:cancelled), do: "Cancelled huddlz"
   defp filter_heading(:past), do: "Past huddlz"
@@ -558,6 +557,8 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :transfer_target_form, Phoenix.HTML.Form, required: true
   attr :current_user, :map, required: true
 
+  attr :can_edit_group, :boolean, required: true
+
   defp members_view(assigns) do
     grouped = [
       {:owner, assigns.owner_members, assigns.role_counts.owner},
@@ -584,7 +585,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <p>Who's part of {@group.name}.</p>
       </div>
       <div class="actions">
-        <a class="btn-secondary" href={~p"/groups/#{@group.slug}/edit"}>Edit group</a>
+        <a :if={@can_edit_group} class="btn-secondary" href={~p"/groups/#{@group.slug}/edit"}>Edit group</a>
       </div>
     </div>
 
@@ -683,7 +684,9 @@ defmodule HuddlzWeb.OrganizeLive do
       <div class="panel-head">
         <div>
           <h2>Invite someone</h2>
-          <div class="panel-sub">Invitations expire after 7 days.</div>
+          <div class="panel-sub">
+            Invite by email, even if they don’t have an account yet. Invitations expire after 7 days.
+          </div>
         </div>
       </div>
 
@@ -691,12 +694,13 @@ defmodule HuddlzWeb.OrganizeLive do
         for={@invitation_form}
         id="group-invitation-form"
         phx-submit="invite"
+        novalidate
         class="grid gap-4 md:grid-cols-[minmax(0,1fr)_12rem_auto] md:items-end"
       >
         <.input
           field={@invitation_form[:email]}
           type="email"
-          label="Registered email"
+          label="Email"
           placeholder="person@example.com"
         />
         <.select
@@ -720,13 +724,13 @@ defmodule HuddlzWeb.OrganizeLive do
           </p>
           <div :for={{id, invitation} <- @invitations} id={id} class="row row-split">
             <div>
-              <div class="row-title">{member_name(%{user: invitation.invitee})}</div>
+              <div class="row-title">{invitation_recipient(invitation)}</div>
               <div class="meta">
                 {role_label(invitation.role)} · {invitation_status_label(invitation.status)}
               </div>
             </div>
             <button
-              :if={invitation.status == :pending}
+              :if={invitation.status == :pending && Ash.can?({invitation, :revoke}, @current_user)}
               id={"revoke-invitation-#{invitation.id}"}
               type="button"
               class="pill"
@@ -744,6 +748,9 @@ defmodule HuddlzWeb.OrganizeLive do
     </div>
     """
   end
+
+  defp invitation_recipient(%{invitee: nil, email: email}), do: to_string(email)
+  defp invitation_recipient(invitation), do: member_name(%{user: invitation.invitee})
 
   defp invitation_role_options(group, user) when group.owner_id == user.id,
     do: [{"Member", "member"}, {"Organizer", "organizer"}]
@@ -876,16 +883,7 @@ defmodule HuddlzWeb.OrganizeLive do
     email = String.trim(params["email"] || "")
     role = parse_invitation_role(params["role"])
 
-    case Accounts.get_by_email(email, actor: user) do
-      {:ok, invitee} ->
-        create_invitation(socket, group, user, invitee, role, email, params)
-
-      {:error, _reason} ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "No registered person has that email address.")
-         |> assign(:invitation_form, invitation_form(params))}
-    end
+    create_invitation(socket, group, user, role, email, params)
   end
 
   def handle_event("revoke_invitation", %{"id" => id}, socket) do
@@ -1043,7 +1041,9 @@ defmodule HuddlzWeb.OrganizeLive do
       {:ok, reloaded_group} ->
         socket
         |> assign(:group, reloaded_group)
+        |> assign(:can_edit_group, Ash.can?({reloaded_group, :update_details}, user))
         |> refresh_members_if_visible(reloaded_group, user)
+        |> refresh_pending_member_action()
 
       :error ->
         socket
@@ -1053,10 +1053,31 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   defp refresh_members_if_visible(%{assigns: %{live_action: :members}} = socket, group, user) do
-    assign_members(socket, list_group_members(group, user))
+    load_section(socket, :members, group, user)
   end
 
   defp refresh_members_if_visible(socket, _group, _user), do: socket
+
+  defp refresh_pending_member_action(%{assigns: %{pending_member_action: nil}} = socket),
+    do: socket
+
+  defp refresh_pending_member_action(socket) do
+    action = socket.assigns.pending_member_action
+    member = Map.get(socket.assigns.member_lookup, action.member.id)
+
+    if member_action_allowed?(
+         action.type,
+         member,
+         socket.assigns.group,
+         socket.assigns.current_user
+       ) do
+      assign(socket, :pending_member_action, %{action | member: member})
+    else
+      socket
+      |> assign(:pending_member_action, nil)
+      |> assign(:member_action_form, member_action_form())
+    end
+  end
 
   defp assign_members(socket, members) do
     by_role = Enum.group_by(members, & &1.role)
