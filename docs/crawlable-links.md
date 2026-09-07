@@ -21,11 +21,14 @@ structured data (#162).
   the complete paginated path to upcoming and in-progress public huddlz, so this
   group preview does not need to become a second upcoming pagination system.
 - Past/completed public detail pages are indexable and included in sitemaps.
-  `/discover?date_filter=past` serves a paginated archive through anonymous
-  HTTP, but currently has no public navigation link. Group Past tabs and their
-  pagination remain socket-only state; query parameters do not select them.
-  Exposing public archive navigation is pending the product decision for #260.
-  **The issue is therefore only partially addressed by discovery pagination.**
+  Previously the group Past tab and its pagination were socket-only state.
+  They now expose `/groups/:slug?tab=past` and `&page=N` through ordinary
+  links. Upcoming stays the default, and switching back omits archive params.
+  Archive pages have distinct canonical and Open Graph URLs, while huddl
+  detail URLs remain unchanged. Past huddlz sort newest first, with an ID
+  tie-breaker for matching dates. Out-of-range pages redirect to the last page.
+  The complete on-site archive path runs through public group discovery;
+  no extra combinations of discovery filters need to be generated.
 - A huddl detail page has no group backlink. This does not orphan either page:
   public groups have their own discovery listing, and huddlz have discovery
   links. No additional backlink is required to meet this issue.
@@ -47,19 +50,22 @@ huddl content. There is no new robots/noindex policy in this change.
 Existing filter links remain usable; pagination retains their search, format,
 date, sort and location context. No arbitrary search terms, locations or new
 filter combinations are generated to expand the crawl surface. A sitemap is an
-additional discovery mechanism and does not fix the missing on-site archive
-path described above.
+additional discovery mechanism; the archive is also reachable entirely through
+on-site anchors, starting at home.
 
 ## Verification
 
 The Cucumber scenario starts with anonymous home HTML, follows the actual
 Browse href, follows pagination hrefs, and requests every linked huddl detail
-with 21 public fixtures. Additional HTTP tests cover paginated group listings,
-past-filter pagination, filter context and exclusion of restricted/deleted
+with 21 public fixtures. A second scenario follows group discovery and the Past
+link through multiple archive pages and published/completed detail pages.
+Additional HTTP tests cover paginated group listings,
+past-filter pagination, filter context, invalid archive parameters and exclusion of restricted/deleted
 records. These checks use initial responses, not a DOM after JavaScript runs.
 
 An isolated local browser server with 21 upcoming huddlz verifies next-page
-navigation, detail navigation and browser Back retaining page two. Local tests
+navigation, detail navigation and browser Back retaining page two. Archive
+browser checks cover Past, next/previous, direct reload and returning to Upcoming. Local tests
 prove response contents and navigation, not search-engine indexing. Production
 host configuration, deployment and search-engine acceptance remain rollout
 checks; no deployment or Search Console operation is included here.

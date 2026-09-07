@@ -109,6 +109,48 @@ defmodule HuddlzWeb.CrawlableLinksTest do
            )
   end
 
+  test "the public group archive excludes restricted past huddlz", %{conn: conn} do
+    owner = generate(user())
+    group = generate(group(actor: owner))
+    public = generate(past_huddl(group_id: group.id, creator_id: owner.id))
+
+    hidden =
+      for attrs <- [[is_private: true], [lifecycle_state: :draft], [lifecycle_state: :cancelled]] do
+        generate(past_huddl([group_id: group.id, creator_id: owner.id] ++ attrs))
+      end
+
+    archive = document(conn, "/groups/#{group.slug}?tab=past")
+    links = Floki.attribute(archive, "a[href*='/huddlz/']", "href")
+    assert links == ["/groups/#{group.slug}/huddlz/#{public.id}"]
+
+    for huddl <- hidden do
+      refute Floki.text(archive) =~ huddl.title
+    end
+  end
+
+  test "archive page parameters normalize safely and cannot create endless pagination", %{
+    conn: conn
+  } do
+    owner = generate(user())
+    group = generate(group(actor: owner))
+    generate(past_huddl(group_id: group.id, creator_id: owner.id, title: "Archived huddl"))
+    path = "/groups/#{group.slug}?tab=past"
+
+    for page <- ["0", "-1", "abc", "1"] do
+      doc = document(conn, path <> "&page=" <> page)
+      assert Floki.text(doc) =~ "Archived huddl"
+
+      assert Floki.attribute(doc, "head link[rel=canonical]", "href") == [
+               HuddlzWeb.Endpoint.url() <> path
+             ]
+    end
+
+    response = get(conn, path <> "&page=999")
+    assert redirected_to(response) == path
+    assert Floki.text(document(conn, redirected_to(response))) =~ "Archived huddl"
+    assert Floki.attribute(document(conn, path), "a[aria-label='Next page']", "href") == []
+  end
+
   defp document(conn, path),
     do: conn |> get(path) |> html_response(200) |> Floki.parse_document!()
 end
