@@ -248,7 +248,13 @@ defmodule HuddlzWeb.Layouts do
         <% end %>
         <form class="topbar-search" action="/discover" method="get" role="search">
           <span class="lead-key" aria-hidden="true">/</span>
-          <input type="search" name="q" placeholder="Search huddlz" value={@query} />
+          <input
+            type="search"
+            name="q"
+            aria-label="Search huddlz"
+            placeholder="Search huddlz"
+            value={@query}
+          />
         </form>
         <div class="content-actions">
           <%= if @signed_in do %>
