@@ -3,9 +3,43 @@ defmodule Huddlz.Sitemaps.XMLTest do
   alias Huddlz.Sitemaps.XML
   @moduletag :sitemap
 
+  test "insertions and removals preserve other buckets even when each bucket spans children" do
+    changing =
+      for n <- 1..4,
+          do:
+            {{"huddl", "10"}, "https://huddlz.test/groups/changing-#{n}",
+             ~U[2026-08-01 10:30:00Z]}
+
+    stable =
+      for n <- 1..4,
+          do:
+            {{"huddl", "20"}, "https://huddlz.test/groups/stable-#{n}", ~U[2026-08-01 10:30:00Z]}
+
+    original = Enum.to_list(XML.urlsets(changing ++ stable, max_urls: 2))
+    unchanged_children = Enum.filter(original, &String.contains?(&1, "/stable-"))
+    assert length(unchanged_children) == 2
+
+    inserted =
+      {{"huddl", "10"}, "https://huddlz.test/groups/changing-0", ~U[2026-08-01 10:30:00Z]}
+
+    for changed <- [[inserted | changing], tl(changing), []] do
+      documents = Enum.to_list(XML.urlsets(changed ++ stable, max_urls: 2))
+      assert Enum.all?(unchanged_children, &(&1 in documents))
+      assert Enum.all?(documents, &(length(Regex.scan(~r/<url>/, &1)) <= 2))
+
+      refute Enum.any?(
+               documents,
+               &(String.contains?(&1, "/changing-") and String.contains?(&1, "/stable-"))
+             )
+    end
+  end
+
   test "the 50,000 URL protocol limit cannot be raised by configuration" do
     pages =
-      Stream.map(1..50_001, &{"https://huddlz.test/groups/group-#{&1}", ~U[2026-08-01 10:30:00Z]})
+      Stream.map(
+        1..50_001,
+        &{:bucket, "https://huddlz.test/groups/group-#{&1}", ~U[2026-08-01 10:30:00Z]}
+      )
 
     [first, second] = Enum.to_list(XML.urlsets(pages, max_urls: 100_000))
     assert length(Regex.scan(~r/<url>/, first)) == 50_000
@@ -16,7 +50,7 @@ defmodule Huddlz.Sitemaps.XMLTest do
 
   test "the 50 MB uncompressed limit wins before the URL count limit" do
     loc = "https://huddlz.test/groups/" <> String.duplicate("a", 1_950)
-    pages = Stream.map(1..30_000, fn _ -> {loc, ~U[2026-08-01 10:30:00Z]} end)
+    pages = Stream.map(1..30_000, fn _ -> {:bucket, loc, ~U[2026-08-01 10:30:00Z]} end)
     documents = Enum.to_list(XML.urlsets(pages, max_urls: 50_000, max_bytes: 100_000_000))
     assert length(documents) == 2
     assert Enum.all?(documents, &(byte_size(&1) <= 52_428_800))
@@ -26,7 +60,9 @@ defmodule Huddlz.Sitemaps.XMLTest do
   test "XML escapes URL data and preserves real modification times" do
     [xml] =
       Enum.to_list(
-        XML.urlsets([{"https://huddlz.test/groups/a?one=1&two=2", ~U[2026-08-01 10:30:00Z]}])
+        XML.urlsets([
+          {:bucket, "https://huddlz.test/groups/a?one=1&two=2", ~U[2026-08-01 10:30:00Z]}
+        ])
       )
 
     {doc, []} = :xmerl_scan.string(String.to_charlist(xml), quiet: true)

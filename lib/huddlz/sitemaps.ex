@@ -32,8 +32,10 @@ defmodule Huddlz.Sitemaps do
       set: [active: false, retained_at: now]
     )
 
+    # The SQL projection is a documented exception to Ash resource reads; see
+    # docs/sitemaps.md for its visibility contract and HTTP parity checks.
     # One cursor statement has a consistent MVCC snapshot, including both kinds
-    # of page. The unique kind/id ordering never relies on shifting offsets.
+    # of page. The unique kind/id ordering keeps each UUID-prefix bucket together.
     sql = """
     SELECT 'group' AS kind, g.id::text AS id, g.slug, greatest(g.updated_at, g.sitemap_modified_at) AS modified_at
     FROM groups g WHERE g.is_public = true
@@ -73,7 +75,7 @@ defmodule Huddlz.Sitemaps do
         "huddl" -> url(~p"/groups/#{slug}/huddlz/#{id}")
       end
 
-    {loc, DateTime.from_naive!(modified, "Etc/UTC")}
+    {{kind, String.slice(id, 0, 2)}, loc, DateTime.from_naive!(modified, "Etc/UTC")}
   end
 
   defp store(name, body, now) do

@@ -1,5 +1,9 @@
 defmodule Huddlz.Sitemaps.XML do
-  @moduledoc "Streams bounded sitemap XML documents from canonical URL/content-time pairs."
+  @moduledoc """
+  Streams bounded sitemap XML from `{bucket, canonical_url, content_time}` entries.
+  Entries must be ordered by bucket, then by a stable record key within each bucket.
+  Bucket boundaries prevent mutations from repacking unrelated sitemap documents.
+  """
   @namespace "http://www.sitemaps.org/schemas/sitemap/0.9"
   @max_count 50_000
   @max_bytes 52_428_800
@@ -10,26 +14,28 @@ defmodule Huddlz.Sitemaps.XML do
     envelope = byte_size(document("urlset", []))
 
     pages
-    |> Stream.map(fn {loc, lastmod} ->
-      "<url><loc>#{location!(loc)}</loc><lastmod>#{DateTime.to_iso8601(lastmod)}</lastmod></url>"
+    |> Stream.map(fn {bucket, loc, lastmod} ->
+      {bucket,
+       "<url><loc>#{location!(loc)}</loc><lastmod>#{DateTime.to_iso8601(lastmod)}</lastmod></url>"}
     end)
     |> Stream.chunk_while(
-      {[], 0, envelope},
-      fn entry, {entries, total, size} ->
+      {nil, [], 0, envelope},
+      fn {bucket, entry}, {current_bucket, entries, total, size} ->
         cond do
           byte_size(entry) + envelope > bytes ->
             raise ArgumentError, "Sitemap entry exceeds byte limit"
 
-          total > 0 and (total >= count or size + byte_size(entry) > bytes) ->
-            {:cont, Enum.reverse(entries), {[entry], 1, envelope + byte_size(entry)}}
+          total > 0 and
+              (bucket != current_bucket or total >= count or size + byte_size(entry) > bytes) ->
+            {:cont, Enum.reverse(entries), {bucket, [entry], 1, envelope + byte_size(entry)}}
 
           true ->
-            {:cont, {[entry | entries], total + 1, size + byte_size(entry)}}
+            {:cont, {bucket, [entry | entries], total + 1, size + byte_size(entry)}}
         end
       end,
       fn
-        {[], _, _} -> {:cont, []}
-        {entries, _, _} -> {:cont, Enum.reverse(entries), []}
+        {_, [], _, _} -> {:cont, []}
+        {_, entries, _, _} -> {:cont, Enum.reverse(entries), []}
       end
     )
     |> Stream.map(&document("urlset", &1))
