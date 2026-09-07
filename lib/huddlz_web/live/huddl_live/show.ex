@@ -59,6 +59,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
       sidebar_owned_groups={@sidebar_owned_groups}
       active="discover"
     >
+      <HuddlzWeb.StructuredData.huddl huddl={@huddl} url={@canonical_url} />
       <section
         :if={@huddl.status == :cancelled && @huddl.cancellation_reason}
         id="cancellation-reason"
