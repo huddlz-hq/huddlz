@@ -72,3 +72,24 @@ Feature: Actual group role labels
     Then the group edit action should be hidden
     When I visit the edit page for "Role Labels"
     Then I should see "You don't have permission to edit this group"
+
+  Scenario: Accepting an invitation adds a mounted My groups card
+    Given a private group "Invitation Roles" exists with owner "owner315@example.com"
+    And "visitor315@example.com" has an organizer invitation to "Invitation Roles"
+    And I am signed in as "visitor315@example.com"
+    When I visit "/my-groups"
+    Then I should not see "Invitation Roles"
+    When I accept my invitation to "Invitation Roles" in another session
+    Then my card role for "Invitation Roles" should be "Organizer"
+    And my navigation role for "Invitation Roles" should be "Organizer"
+
+  Scenario: An invitation promotion updates a mounted group page
+    Given a private group "Invitation Roles" exists with owner "owner315@example.com"
+    And "member315@example.com" has an organizer invitation to "Invitation Roles"
+    And "member315@example.com" is a member of "Invitation Roles"
+    And I am signed in as "member315@example.com"
+    When I visit the group page for "Invitation Roles"
+    Then my group role should be "Member"
+    When I accept my invitation to "Invitation Roles" in another session
+    Then my group role should be "Organizer"
+    And my navigation role for "Invitation Roles" should be "Organizer"

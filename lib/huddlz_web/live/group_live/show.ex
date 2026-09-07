@@ -27,7 +27,8 @@ defmodule HuddlzWeb.GroupLive.Show do
      |> assign(:subscribed_group_id, nil)
      |> assign(:members_visible?, false)
      |> assign(:member_grid_extras, 0)
-     |> stream(:member_grid, [])}
+     |> stream(:member_grid, [])
+     |> stream(:huddlz, [])}
   end
 
   @impl true
@@ -51,8 +52,7 @@ defmodule HuddlzWeb.GroupLive.Show do
          |> assign(:is_member, !is_nil(membership))
          |> assign_action_permissions(group, user, membership)
          |> assign(:active_tab, "upcoming")
-         |> assign(:upcoming_huddlz, upcoming_huddlz)
-         |> assign(:past_huddlz, [])
+         |> stream_huddlz(upcoming_huddlz)
          |> assign(:past_page, 1)
          |> assign(:past_total_pages, 0)}
 
@@ -87,19 +87,13 @@ defmodule HuddlzWeb.GroupLive.Show do
       {:ok, group} ->
         membership = current_user_membership(group, user)
 
-        {past_huddlz, past_total_pages} =
-          get_past_group_huddlz_paginated(group, user, page: 1, per_page: 10)
-
         socket
         |> assign(:group, group)
         |> assign_member_grid(get_members(group, user, !is_nil(membership)))
         |> assign(:member_count, group.member_count)
         |> assign(:is_member, !is_nil(membership))
         |> assign_action_permissions(group, user, membership)
-        |> assign(:upcoming_huddlz, get_upcoming_group_huddlz(group, user, limit: 10))
-        |> assign(:past_huddlz, past_huddlz)
-        |> assign(:past_page, 1)
-        |> assign(:past_total_pages, past_total_pages)
+        |> refresh_huddlz()
         |> assign(:leave_dialog_open, false)
 
       {:error, _reason} ->
@@ -367,17 +361,20 @@ defmodule HuddlzWeb.GroupLive.Show do
             </button>
           </div>
 
-          <%= if @active_tab == "upcoming" do %>
-            <.huddl_grid huddlz={@upcoming_huddlz} empty_message="No upcoming huddlz scheduled." />
-          <% else %>
-            <.huddl_grid huddlz={@past_huddlz} empty_message="No past huddlz found." />
-            <.pagination
-              :if={@past_total_pages > 1}
-              current_page={@past_page}
-              total_pages={@past_total_pages}
-              event_name="change_past_page"
-            />
-          <% end %>
+          <.huddl_grid
+            huddlz={@streams.huddlz}
+            empty_message={
+              if @active_tab == "upcoming",
+                do: "No upcoming huddlz scheduled.",
+                else: "No past huddlz found."
+            }
+          />
+          <.pagination
+            :if={@active_tab == "past" && @past_total_pages > 1}
+            current_page={@past_page}
+            total_pages={@past_total_pages}
+            event_name="change_past_page"
+          />
         </div>
       </div>
 
@@ -440,76 +437,87 @@ defmodule HuddlzWeb.GroupLive.Show do
     """
   end
 
-  attr :huddlz, :list, required: true
+  attr :huddlz, Phoenix.LiveView.LiveStream, required: true
   attr :empty_message, :string, required: true
 
   defp huddl_grid(assigns) do
     ~H"""
-    <%= if @huddlz == [] do %>
-      <p class="empty-state muted">
+    <div id="group-huddl-grid" class="grid two" phx-update="stream">
+      <p id="group-huddl-grid-empty" class="empty-state muted hidden only:block col-span-full">
         {@empty_message}
       </p>
-    <% else %>
-      <div class="grid two">
-        <.card
-          :for={{huddl, idx} <- Enum.with_index(@huddlz)}
-          navigate={~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"}
-          gradient={Integer.mod(idx, 6) + 1}
-        >
-          <:cover>
-            <.cover_image
-              :if={huddl.display_image_url}
-              id={"group-huddl-card-cover-#{huddl.id}"}
-              class="card-cover-img"
-              image_url={huddl.display_image_url}
-            />
-            <.date_stamp month={huddl_month(huddl)} day={huddl_day(huddl)} />
-            <.card_tag variant={tag_variant(huddl.event_type)}>
-              {tag_label(huddl.event_type)}
-            </.card_tag>
-          </:cover>
-          <:body>
-            <span class="card-group">{huddl_kind_label(huddl)}</span>
-            <h3 class="card-title">{huddl.title}</h3>
-            <div class="card-meta">
-              <span>{format_meta_when(huddl)}</span>
-              <%= if huddl.rsvp_count > 0 || huddl.max_attendees do %>
-                <span class="dot"></span>
-                <span>{rsvp_label(huddl)}</span>
-              <% end %>
-            </div>
-          </:body>
-        </.card>
-      </div>
-    <% end %>
+      <.card
+        :for={{id, %{huddl: huddl, gradient: gradient}} <- @huddlz}
+        id={id}
+        navigate={~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"}
+        gradient={gradient}
+      >
+        <:cover>
+          <.cover_image
+            :if={huddl.display_image_url}
+            id={"group-huddl-card-cover-#{huddl.id}"}
+            class="card-cover-img"
+            image_url={huddl.display_image_url}
+          />
+          <.date_stamp month={huddl_month(huddl)} day={huddl_day(huddl)} />
+          <.card_tag variant={tag_variant(huddl.event_type)}>
+            {tag_label(huddl.event_type)}
+          </.card_tag>
+        </:cover>
+        <:body>
+          <span class="card-group">{huddl_kind_label(huddl)}</span>
+          <h3 class="card-title">{huddl.title}</h3>
+          <div class="card-meta">
+            <span>{format_meta_when(huddl)}</span>
+            <%= if huddl.rsvp_count > 0 || huddl.max_attendees do %>
+              <span class="dot"></span>
+              <span>{rsvp_label(huddl)}</span>
+            <% end %>
+          </div>
+        </:body>
+      </.card>
+    </div>
     """
+  end
+
+  defp stream_huddlz(socket, huddlz) do
+    entries =
+      huddlz
+      |> Enum.with_index()
+      |> Enum.map(fn {huddl, index} ->
+        %{id: huddl.id, huddl: huddl, gradient: Integer.mod(index, 6) + 1}
+      end)
+
+    stream(socket, :huddlz, entries, reset: true)
+  end
+
+  defp refresh_huddlz(%{assigns: %{active_tab: "past"}} = socket) do
+    {huddlz, total_pages} =
+      get_past_group_huddlz_paginated(socket.assigns.group, socket.assigns.current_user,
+        page: 1,
+        per_page: 10
+      )
+
+    socket
+    |> stream_huddlz(huddlz)
+    |> assign(:past_page, 1)
+    |> assign(:past_total_pages, total_pages)
+  end
+
+  defp refresh_huddlz(socket) do
+    stream_huddlz(
+      socket,
+      get_upcoming_group_huddlz(socket.assigns.group, socket.assigns.current_user, limit: 10)
+    )
   end
 
   @impl true
   def handle_event("switch_tab", %{"tab" => tab}, socket) do
     socket =
-      case tab do
-        "upcoming" ->
-          socket
-          |> assign(:active_tab, "upcoming")
-
-        "past" ->
-          {past_huddlz, total_pages} =
-            get_past_group_huddlz_paginated(
-              socket.assigns.group,
-              socket.assigns.current_user,
-              page: 1,
-              per_page: 10
-            )
-
-          socket
-          |> assign(:active_tab, "past")
-          |> assign(:past_huddlz, past_huddlz)
-          |> assign(:past_page, 1)
-          |> assign(:past_total_pages, total_pages)
-
-        _ ->
-          socket
+      if tab in ["upcoming", "past"] do
+        socket |> assign(:active_tab, tab) |> refresh_huddlz()
+      else
+        socket
       end
 
     {:noreply, socket}
@@ -528,7 +536,7 @@ defmodule HuddlzWeb.GroupLive.Show do
 
     socket =
       socket
-      |> assign(:past_huddlz, past_huddlz)
+      |> stream_huddlz(past_huddlz)
       |> assign(:past_page, page)
       |> assign(:past_total_pages, total_pages)
 

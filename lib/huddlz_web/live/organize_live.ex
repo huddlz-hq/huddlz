@@ -1047,6 +1047,7 @@ defmodule HuddlzWeb.OrganizeLive do
         |> assign(:group, reloaded_group)
         |> assign(:can_edit_group, Ash.can?({reloaded_group, :update_details}, user))
         |> refresh_members_if_visible(reloaded_group, user)
+        |> refresh_pending_member_action()
 
       :error ->
         socket
@@ -1060,6 +1061,27 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   defp refresh_members_if_visible(socket, _group, _user), do: socket
+
+  defp refresh_pending_member_action(%{assigns: %{pending_member_action: nil}} = socket),
+    do: socket
+
+  defp refresh_pending_member_action(socket) do
+    action = socket.assigns.pending_member_action
+    member = Map.get(socket.assigns.member_lookup, action.member.id)
+
+    if member_action_allowed?(
+         action.type,
+         member,
+         socket.assigns.group,
+         socket.assigns.current_user
+       ) do
+      assign(socket, :pending_member_action, %{action | member: member})
+    else
+      socket
+      |> assign(:pending_member_action, nil)
+      |> assign(:member_action_form, member_action_form())
+    end
+  end
 
   defp assign_members(socket, members) do
     by_role = Enum.group_by(members, & &1.role)

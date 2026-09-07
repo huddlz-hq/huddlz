@@ -60,3 +60,12 @@ Feature: Organizer action permissions
     When I open the organizer roster for "Private Permissions"
     Then I should see "Awaiting response"
     And the "Revoke" button should not be visible
+
+  Scenario: Ownership loss closes an unauthorized pending confirmation
+    Given "member314@example.com" is a member of "Organizer Permissions"
+    And I am signed in as "owner314@example.com"
+    When I open the organizer roster for "Organizer Permissions"
+    And I open the promotion confirmation for "Member Maya"
+    And I transfer "Organizer Permissions" to "helper314@example.com" in another session
+    Then the membership action confirmation should be closed
+    And the group edit action should be hidden
