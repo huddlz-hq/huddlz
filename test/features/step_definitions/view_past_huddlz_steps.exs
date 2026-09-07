@@ -190,8 +190,8 @@ defmodule ViewPastHuddlzSteps do
 
   # Click on the Past Events tab
   step "I click on the {string} tab", %{args: [tab_name], conn: conn} do
-    # Click the tab button
-    conn = conn |> click_button(tab_name)
+    # Follow the timeframe link
+    conn = conn |> click_link(tab_name)
     {:ok, %{conn: conn}}
   end
 
@@ -286,7 +286,7 @@ defmodule ViewPastHuddlzSteps do
 
   step "I should see pagination controls", %{conn: conn} do
     # Check for pagination controls
-    assert_has(conn, "button[phx-click=change_past_page]")
+    assert_has(conn, "#group-archive-pagination a.page-num")
     :ok
   end
 

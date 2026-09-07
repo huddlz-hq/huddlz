@@ -45,7 +45,7 @@ Feature: Group membership visibility
     And a past members-only huddl "Private retrospective" exists in "Membership Visibility"
     And I am signed in as "member311@example.com"
     When I visit the group page for "Membership Visibility"
-    And I click the "Past" button
+    And I click link "Past"
     Then I should see the huddl card "Private retrospective"
     When I click the "Leave Group" button
     And the owner removes me from "Membership Visibility" in another session

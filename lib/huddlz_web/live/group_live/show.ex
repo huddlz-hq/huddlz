@@ -32,31 +32,46 @@ defmodule HuddlzWeb.GroupLive.Show do
   end
 
   @impl true
-  def handle_params(%{"slug" => slug}, _, socket) do
+  def handle_params(%{"slug" => slug} = params, _, socket) do
     user = socket.assigns.current_user
 
     case get_group_by_slug(slug, user) do
       {:ok, group} ->
-        meta = group_meta(group)
+        tab = if params["tab"] == "past", do: "past", else: "upcoming"
+        page = if tab == "past", do: parse_page(params["page"]), else: 1
+
+        meta =
+          Map.put(
+            group_meta(group),
+            :url,
+            unverified_url(HuddlzWeb.Endpoint, group_page_path(group, tab, page))
+          )
+
         membership = current_user_membership(group, user)
         members = get_members(group, user, !is_nil(membership))
-        upcoming_huddlz = get_upcoming_group_huddlz(group, user, limit: 10)
 
-        {:noreply,
-         socket
-         |> subscribe_to_membership_changes(group)
-         |> assign(:page_title, group.name)
-         |> assign(:meta, meta)
-         |> assign(:canonical_url, if(group.is_public, do: meta.url))
-         |> assign(:group, group)
-         |> assign_member_grid(members)
-         |> assign(:member_count, group.member_count)
-         |> assign(:is_member, !is_nil(membership))
-         |> assign_action_permissions(group, user, membership)
-         |> assign(:active_tab, "upcoming")
-         |> stream_huddlz(upcoming_huddlz)
-         |> assign(:past_page, 1)
-         |> assign(:past_total_pages, 0)}
+        socket =
+          socket
+          |> subscribe_to_membership_changes(group)
+          |> assign(:page_title, group.name)
+          |> assign(:meta, meta)
+          |> assign(:canonical_url, if(group.is_public, do: meta.url))
+          |> assign(:group, group)
+          |> assign_member_grid(members)
+          |> assign(:member_count, group.member_count)
+          |> assign(:is_member, !is_nil(membership))
+          |> assign_action_permissions(group, user, membership)
+          |> assign(:active_tab, tab)
+          |> assign(:past_page, page)
+          |> assign(:past_total_pages, 1)
+          |> refresh_huddlz()
+
+        if tab == "past" and page > socket.assigns.past_total_pages do
+          {:noreply,
+           push_patch(socket, to: group_page_path(group, tab, socket.assigns.past_total_pages))}
+        else
+          {:noreply, socket}
+        end
 
       {:error, _reason} ->
         not_found!()
@@ -341,28 +356,24 @@ defmodule HuddlzWeb.GroupLive.Show do
             <h2>Huddlz</h2>
           </div>
 
-          <div class="filters" role="tablist" aria-label="Huddl timeframe">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={@active_tab == "upcoming"}
+          <nav class="filters" aria-label="Huddl timeframe">
+            <.link
+              id="group-huddlz-upcoming"
+              patch={group_page_path(@group, "upcoming", 1)}
+              aria-current={@active_tab == "upcoming" && "page"}
               class={["chip", @active_tab == "upcoming" && "is-active"]}
-              phx-click="switch_tab"
-              phx-value-tab="upcoming"
             >
               Upcoming
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={@active_tab == "past"}
+            </.link>
+            <.link
+              id="group-huddlz-past"
+              patch={group_page_path(@group, "past", 1)}
+              aria-current={@active_tab == "past" && "page"}
               class={["chip", @active_tab == "past" && "is-active"]}
-              phx-click="switch_tab"
-              phx-value-tab="past"
             >
               Past
-            </button>
-          </div>
+            </.link>
+          </nav>
 
           <.huddl_grid
             huddlz={@streams.huddlz}
@@ -376,7 +387,8 @@ defmodule HuddlzWeb.GroupLive.Show do
             :if={@active_tab == "past" && @past_total_pages > 1}
             current_page={@past_page}
             total_pages={@past_total_pages}
-            event_name="change_past_page"
+            id="group-archive-pagination"
+            page_path={&group_page_path(@group, "past", &1)}
           />
         </div>
       </div>
@@ -497,13 +509,12 @@ defmodule HuddlzWeb.GroupLive.Show do
   defp refresh_huddlz(%{assigns: %{active_tab: "past"}} = socket) do
     {huddlz, total_pages} =
       get_past_group_huddlz_paginated(socket.assigns.group, socket.assigns.current_user,
-        page: 1,
+        page: socket.assigns.past_page,
         per_page: 10
       )
 
     socket
     |> stream_huddlz(huddlz)
-    |> assign(:past_page, 1)
     |> assign(:past_total_pages, total_pages)
   end
 
@@ -514,36 +525,22 @@ defmodule HuddlzWeb.GroupLive.Show do
     )
   end
 
+  defp group_page_path(group, "past", page) when page > 1,
+    do: ~p"/groups/#{group.slug}?#{[tab: "past", page: page]}"
+
+  defp group_page_path(group, "past", _page), do: ~p"/groups/#{group.slug}?#{[tab: "past"]}"
+  defp group_page_path(group, _tab, _page), do: ~p"/groups/#{group.slug}"
+
   @impl true
   def handle_event("switch_tab", %{"tab" => tab}, socket) do
-    socket =
-      if tab in ["upcoming", "past"] do
-        socket |> assign(:active_tab, tab) |> refresh_huddlz()
-      else
-        socket
-      end
-
-    {:noreply, socket}
+    {:noreply, push_patch(socket, to: group_page_path(socket.assigns.group, tab, 1))}
   end
 
   def handle_event("change_past_page", %{"page" => page_str}, socket) do
-    page = parse_page(page_str)
-
-    {past_huddlz, total_pages} =
-      get_past_group_huddlz_paginated(
-        socket.assigns.group,
-        socket.assigns.current_user,
-        page: page,
-        per_page: 10
-      )
-
-    socket =
-      socket
-      |> stream_huddlz(past_huddlz)
-      |> assign(:past_page, page)
-      |> assign(:past_total_pages, total_pages)
-
-    {:noreply, socket}
+    {:noreply,
+     push_patch(socket,
+       to: group_page_path(socket.assigns.group, "past", parse_page(page_str))
+     )}
   end
 
   def handle_event("join_group", _, socket) do
@@ -669,6 +666,7 @@ defmodule HuddlzWeb.GroupLive.Show do
     page_result =
       Communities.get_past_group_huddlz!(group.id,
         actor: user,
+        query: [sort: [starts_at: :desc, id: :desc]],
         page: [limit: per_page, offset: offset, count: true],
         load: [:status, :rsvp_count, :visible_virtual_link, :display_image_url, :group]
       )

@@ -3,9 +3,12 @@
 Public group pages use `/groups/:slug`; anonymously visible huddl pages use
 `/groups/:group_slug/huddlz/:id`. Their canonical links and Open Graph URLs use
 Phoenix's configured endpoint URL (`PHX_SCHEME`, `PHX_HOST`, and the configured
-URL port), never the request host. Query parameters do not affect these detail
-handlers, so their canonical URLs omit them. Group Upcoming/Past tabs are local
-LiveView state, with no separate URL.
+URL port), never the request host. Huddl detail parameters do not affect content and are omitted from canonicals.
+Group Upcoming is the base URL. The public group archive uses `?tab=past`,
+with `&page=N` for pages after the first. These archive URLs have matching
+self-referencing canonical and Open Graph URLs; unrelated parameters are
+omitted. Invalid page values use page one, and out-of-range pages redirect to
+the last page. Archive navigation is available in initial anonymous HTML.
 
 Discovery uses a self-referencing `/discover` URL retaining every query
 parameter, including scope, search, location, date, sort, and pagination. This
@@ -29,9 +32,9 @@ serves the launch SEO requirement while preserving live navigation. See the
 There are no legacy HTML detail aliases or slug-history redirects in the
 current router. An incorrect group slug does not resolve a huddl. Future slug
 migrations and redirects belong with the actual URL migration, not speculative
-routes. There is currently no sitemap; #258 should use the same verified detail
-paths and endpoint configuration. Crawlable-link and structured-data work stay
-in #260 and #162.
+routes. Sitemaps use the same verified detail paths and endpoint configuration; see
+[sitemaps.md](sitemaps.md). Listing and archive pages provide on-site discovery
+and do not need sitemap entries. Structured data remains separate in #162.
 
 Deployment configuration is unchanged: runtime defaults are `https` and
 `huddlz.com`, while the checked-in `fly.toml` sets `PHX_HOST=huddlz.fly.dev`.
