@@ -1,4 +1,4 @@
-defmodule HuddlImageSteps do
+defmodule HuddlCoverImageSteps do
   @moduledoc """
   Cucumber step definitions for huddl image management features.
   """
@@ -30,13 +30,13 @@ defmodule HuddlImageSteps do
       end)
 
     {:ok, _image} =
-      Communities.create_huddl_image(
+      Communities.create_huddl_cover_image(
         %{
           filename: "huddl_banner.jpg",
           content_type: "image/jpeg",
           size_bytes: 10_000,
-          storage_path: "/uploads/huddl_images/#{huddl.id}/huddl_banner.jpg",
-          thumbnail_path: "/uploads/huddl_images/#{huddl.id}/huddl_banner_thumb.jpg",
+          storage_path: "/uploads/huddl_cover_images/#{huddl.id}/huddl_banner.jpg",
+          thumbnail_path: "/uploads/huddl_cover_images/#{huddl.id}/huddl_banner_thumb.jpg",
           huddl_id: huddl.id
         },
         actor: owner
@@ -146,7 +146,7 @@ defmodule HuddlImageSteps do
 
   step "I should see the huddl image", context do
     session = context[:session] || context[:conn]
-    assert_has(session, ".cover-image[style*='huddl_images']")
+    assert_has(session, ".cover-image[style*='huddl_cover_images']")
     context
   end
 
@@ -154,7 +154,7 @@ defmodule HuddlImageSteps do
     session = context[:session] || context[:conn]
     # Should not see any storage image paths
     refute_has(session, ".cover-image[style*='group_images']")
-    refute_has(session, ".cover-image[style*='huddl_images']")
+    refute_has(session, ".cover-image[style*='huddl_cover_images']")
     context
   end
 

@@ -1,4 +1,4 @@
-defmodule Huddlz.Communities.HuddlImage do
+defmodule Huddlz.Communities.HuddlCoverImage do
   @moduledoc """
   Huddl image resource for storing huddl banners/cover images.
 
@@ -7,7 +7,7 @@ defmodule Huddlz.Communities.HuddlImage do
   up by a background job.
   """
 
-  alias Huddlz.Storage.HuddlImages
+  alias Huddlz.Storage.HuddlCoverImages
 
   use Ash.Resource,
     otp_app: :huddlz,
@@ -16,6 +16,7 @@ defmodule Huddlz.Communities.HuddlImage do
     data_layer: AshPostgres.DataLayer,
     extensions: [AshOban, AshJsonApi.Resource, AshGraphql.Resource]
 
+  # Public API and persisted job identities remain stable across the internal rename.
   graphql do
     type :huddl_image
 
@@ -60,7 +61,7 @@ defmodule Huddlz.Communities.HuddlImage do
   end
 
   postgres do
-    table "huddl_images"
+    table "huddl_cover_images"
     repo Huddlz.Repo
 
     references do
@@ -90,7 +91,7 @@ defmodule Huddlz.Communities.HuddlImage do
       end
 
       change {Huddlz.Storage.Changes.PersistUpload,
-              storage_module: HuddlImages, parent_arg: :huddl_id}
+              storage_module: HuddlCoverImages, parent_arg: :huddl_id}
     end
 
     create :create_pending do
@@ -162,14 +163,14 @@ defmodule Huddlz.Communities.HuddlImage do
           record = changeset.data
 
           # Delete original
-          case HuddlImages.delete(record.storage_path) do
+          case HuddlCoverImages.delete(record.storage_path) do
             :ok -> :ok
             {:error, reason} -> raise "Storage delete failed: #{inspect(reason)}"
           end
 
           # Delete thumbnail if exists
           if record.thumbnail_path do
-            HuddlImages.delete(record.thumbnail_path)
+            HuddlCoverImages.delete(record.thumbnail_path)
           end
 
           changeset
@@ -186,14 +187,14 @@ defmodule Huddlz.Communities.HuddlImage do
           record = changeset.data
 
           # Delete original
-          case HuddlImages.delete(record.storage_path) do
+          case HuddlCoverImages.delete(record.storage_path) do
             :ok -> :ok
             {:error, reason} -> raise "Storage delete failed: #{inspect(reason)}"
           end
 
           # Delete thumbnail (if exists) - ignore errors for orphaned thumbnails
           if record.thumbnail_path do
-            HuddlImages.delete(record.thumbnail_path)
+            HuddlCoverImages.delete(record.thumbnail_path)
           end
 
           changeset
@@ -210,24 +211,24 @@ defmodule Huddlz.Communities.HuddlImage do
     # Group owners/organizers can upload images for huddlz in their groups
     policy action(:create) do
       description "Only group owners/organizers can upload images for huddlz"
-      authorize_if Huddlz.Communities.HuddlImage.Checks.IsHuddlGroupOwnerOrOrganizer
+      authorize_if Huddlz.Communities.HuddlCoverImage.Checks.IsHuddlGroupOwnerOrOrganizer
     end
 
     policy action(:upload) do
       description "Only group owners/organizers can upload images for huddlz"
-      authorize_if Huddlz.Communities.HuddlImage.Checks.IsHuddlGroupOwnerOrOrganizer
+      authorize_if Huddlz.Communities.HuddlCoverImage.Checks.IsHuddlGroupOwnerOrOrganizer
     end
 
     # Group members can create pending images (for huddlz they're creating)
     policy action(:create_pending) do
       description "Group members can create pending images"
-      authorize_if Huddlz.Communities.HuddlImage.Checks.IsGroupMember
+      authorize_if Huddlz.Communities.HuddlCoverImage.Checks.IsGroupMember
     end
 
     # Group owners/organizers can assign pending images to huddlz
     policy action(:assign_to_huddl) do
       description "Only group owners/organizers can assign images to huddlz"
-      authorize_if Huddlz.Communities.HuddlImage.Checks.IsHuddlGroupOwnerOrOrganizer
+      authorize_if Huddlz.Communities.HuddlCoverImage.Checks.IsHuddlGroupOwnerOrOrganizer
     end
 
     # Cleanup runs without actor (Oban job)
@@ -250,7 +251,7 @@ defmodule Huddlz.Communities.HuddlImage do
     # Group owners/organizers can destroy their huddl's images
     policy action(:destroy) do
       description "Only group owners/organizers can delete huddl images"
-      authorize_if Huddlz.Communities.HuddlImage.Checks.IsHuddlGroupOwnerOrOrganizer
+      authorize_if Huddlz.Communities.HuddlCoverImage.Checks.IsHuddlGroupOwnerOrOrganizer
     end
 
     # Group owners/organizers can soft-delete their huddl's images
@@ -260,7 +261,7 @@ defmodule Huddlz.Communities.HuddlImage do
       # Allow if the image has no huddl (pending) and actor is present
       authorize_if expr(is_nil(huddl_id) and not is_nil(^actor(:id)))
       # Allow if the actor is owner/organizer of the huddl's group
-      authorize_if Huddlz.Communities.HuddlImage.Checks.IsHuddlGroupOwnerOrOrganizer
+      authorize_if Huddlz.Communities.HuddlCoverImage.Checks.IsHuddlGroupOwnerOrOrganizer
     end
 
     # Hard delete is only called by Oban workers (no actor)

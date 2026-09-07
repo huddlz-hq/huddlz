@@ -85,19 +85,7 @@
       "type": "utc_datetime_usec"
     },
     {
-      "allow_nil?": true,
-      "default": "nil",
-      "generated?": false,
-      "precision": null,
-      "primary_key?": false,
-      "references": null,
-      "scale": null,
-      "size": null,
-      "source": "deleted_at",
-      "type": "utc_datetime_usec"
-    },
-    {
-      "allow_nil?": true,
+      "allow_nil?": false,
       "default": "nil",
       "generated?": false,
       "precision": null,
@@ -115,7 +103,7 @@
           "global": null,
           "strategy": null
         },
-        "name": "huddl_images_huddl_id_fkey",
+        "name": "huddl_photos_huddl_id_fkey",
         "on_delete": "delete",
         "on_update": null,
         "primary_key?": true,
@@ -125,6 +113,37 @@
       "scale": null,
       "size": null,
       "source": "huddl_id",
+      "type": "uuid"
+    },
+    {
+      "allow_nil?": false,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": {
+        "deferrable": false,
+        "destination_attribute": "id",
+        "destination_attribute_default": null,
+        "destination_attribute_generated": null,
+        "index?": false,
+        "match_type": null,
+        "match_with": null,
+        "multitenancy": {
+          "attribute": null,
+          "global": null,
+          "strategy": null
+        },
+        "name": "huddl_photos_uploader_id_fkey",
+        "on_delete": "delete",
+        "on_update": null,
+        "primary_key?": true,
+        "schema": "public",
+        "table": "users"
+      },
+      "scale": null,
+      "size": null,
+      "source": "uploader_id",
       "type": "uuid"
     }
   ],
@@ -162,12 +181,12 @@
   ],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "FAC570466DB0602AF68AF06DE651B5DAF91F269AB87D0C9BEA76DEAFD210421E",
+  "hash": "4A89468B5D9C0F1A2C711020B489FF9BFC5C8D54A18FF0D388D28752185197AF",
   "identities": [
     {
       "all_tenants?": false,
       "base_filter": null,
-      "index_name": "huddl_images_unique_storage_path_index",
+      "index_name": "huddl_photos_unique_storage_path_index",
       "keys": [
         {
           "type": "atom",
@@ -186,5 +205,5 @@
   },
   "repo": "Elixir.Huddlz.Repo",
   "schema": null,
-  "table": "huddl_images"
+  "table": "huddl_photos"
 }

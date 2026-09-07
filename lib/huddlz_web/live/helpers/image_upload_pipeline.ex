@@ -12,7 +12,7 @@ defmodule HuddlzWeb.Live.Helpers.ImageUploadPipeline do
   Call sites pass a config map:
 
       %{
-        upload_name: :group_image | :huddl_image,
+        upload_name: :group_image | :huddl_cover_image,
         storage: Huddlz.Storage.GroupImages,   # needs store_pending/3 + url/1
         create_pending: fn socket, entry, metadata -> {:ok, image} | {:error, reason} end,
         cleanup: fn socket, image_id -> :ok end

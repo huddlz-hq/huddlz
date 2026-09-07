@@ -3,7 +3,7 @@ defmodule HuddlzWeb.Components.UploadComponents do
   Shared cover-image upload panel used by the huddl create and edit forms.
 
   ```
-  <.cover_image_panel upload={@uploads.huddl_image} image_error={@image_error}>
+  <.cover_image_panel upload={@uploads.huddl_cover_image} image_error={@image_error}>
     <:preview>...</:preview>
   </.cover_image_panel>
   ```

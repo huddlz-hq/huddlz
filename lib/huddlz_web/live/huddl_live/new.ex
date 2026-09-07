@@ -11,7 +11,7 @@ defmodule HuddlzWeb.HuddlLive.New do
 
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
-  alias Huddlz.Storage.HuddlImages
+  alias Huddlz.Storage.HuddlCoverImages
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
   alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
@@ -56,10 +56,11 @@ defmodule HuddlzWeb.HuddlLive.New do
     |> maybe_allow_image_upload()
   end
 
-  defp maybe_allow_image_upload(%{assigns: %{uploads: %{huddl_image: _}}} = socket), do: socket
+  defp maybe_allow_image_upload(%{assigns: %{uploads: %{huddl_cover_image: _}}} = socket),
+    do: socket
 
   defp maybe_allow_image_upload(socket) do
-    allow_image_upload(socket, :huddl_image, &handle_upload_progress/3)
+    allow_image_upload(socket, :huddl_cover_image, &handle_upload_progress/3)
   end
 
   defp assign_create_form(socket, group, user) do
@@ -99,7 +100,7 @@ defmodule HuddlzWeb.HuddlLive.New do
     {:noreply, socket}
   end
 
-  defp handle_upload_progress(:huddl_image, entry, socket) do
+  defp handle_upload_progress(:huddl_cover_image, entry, socket) do
     if entry.done? do
       {:noreply, process_eager_upload(socket)}
     else
@@ -115,15 +116,15 @@ defmodule HuddlzWeb.HuddlLive.New do
 
   defp upload_config do
     %{
-      upload_name: :huddl_image,
-      storage: HuddlImages,
-      create_pending: &create_pending_huddl_image/3,
-      cleanup: &soft_delete_pending_huddl_image/2
+      upload_name: :huddl_cover_image,
+      storage: HuddlCoverImages,
+      create_pending: &create_pending_huddl_cover_image/3,
+      cleanup: &soft_delete_pending_huddl_cover_image/2
     }
   end
 
-  defp create_pending_huddl_image(socket, entry, metadata) do
-    Communities.create_pending_huddl_image(
+  defp create_pending_huddl_cover_image(socket, entry, metadata) do
+    Communities.create_pending_huddl_cover_image(
       socket.assigns.group.id,
       %{
         filename: entry.client_name,
@@ -136,10 +137,10 @@ defmodule HuddlzWeb.HuddlLive.New do
     )
   end
 
-  defp soft_delete_pending_huddl_image(socket, image_id) do
-    with {:ok, image} <- Communities.get_huddl_image_by_id(image_id),
+  defp soft_delete_pending_huddl_cover_image(socket, image_id) do
+    with {:ok, image} <- Communities.get_huddl_cover_image_by_id(image_id),
          true <- is_nil(image.huddl_id) do
-      Communities.soft_delete_huddl_image(image, actor: socket.assigns.current_user)
+      Communities.soft_delete_huddl_cover_image(image, actor: socket.assigns.current_user)
     end
   end
 
@@ -172,12 +173,12 @@ defmodule HuddlzWeb.HuddlLive.New do
 
       <.form for={@form} id="huddl-form" phx-change="validate" phx-submit="save">
         <.cover_image_panel
-          upload={@uploads.huddl_image}
+          upload={@uploads.huddl_cover_image}
           image_error={@image_error}
           optional
         >
           <:preview :if={@pending_preview_url} hide_upload_zone>
-            <div class="image-preview" phx-drop-target={@uploads.huddl_image.ref}>
+            <div class="image-preview" phx-drop-target={@uploads.huddl_cover_image.ref}>
               <div class="card-cover" style={"background-image: url('#{@pending_preview_url}')"}>
               </div>
               <div
@@ -186,7 +187,11 @@ defmodule HuddlzWeb.HuddlLive.New do
               >
                 <span>Image uploaded · ready to publish.</span>
                 <div style="display:flex; gap:8px">
-                  <label for={@uploads.huddl_image.ref} class="btn-secondary" style="cursor:pointer">
+                  <label
+                    for={@uploads.huddl_cover_image.ref}
+                    class="btn-secondary"
+                    style="cursor:pointer"
+                  >
                     Replace
                   </label>
                   <.button variant={:muted} type="button" phx-click="cancel_pending_image">
@@ -288,7 +293,7 @@ defmodule HuddlzWeb.HuddlLive.New do
 
   @impl true
   def handle_event("cancel_image_upload", %{"ref" => ref}, socket) do
-    {:noreply, cancel_upload(socket, :huddl_image, ref)}
+    {:noreply, cancel_upload(socket, :huddl_cover_image, ref)}
   end
 
   @impl true

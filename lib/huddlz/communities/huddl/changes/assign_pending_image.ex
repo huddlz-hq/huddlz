@@ -9,7 +9,7 @@ defmodule Huddlz.Communities.Huddl.Changes.AssignPendingImage do
   use Ash.Resource.Change
 
   alias Huddlz.Communities
-  alias Huddlz.Communities.HuddlImage
+  alias Huddlz.Communities.HuddlCoverImage
 
   @impl true
   def change(changeset, _opts, _context) do
@@ -22,10 +22,10 @@ defmodule Huddlz.Communities.Huddl.Changes.AssignPendingImage do
         {:ok, huddl}
 
       image_id ->
-        with {:ok, %HuddlImage{} = image} <-
-               Communities.get_huddl_image_by_id(image_id, authorize?: false),
+        with {:ok, %HuddlCoverImage{} = image} <-
+               Communities.get_huddl_cover_image_by_id(image_id, authorize?: false),
              {:ok, _image} <-
-               Communities.assign_huddl_image_to_huddl(
+               Communities.assign_huddl_cover_image_to_huddl(
                  image,
                  huddl.id,
                  authorize?: false

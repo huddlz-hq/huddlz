@@ -5,7 +5,7 @@ defmodule HuddlzWeb.StructuredData do
   """
   use HuddlzWeb, :html
 
-  alias Huddlz.Storage.{GroupImages, HuddlImages}
+  alias Huddlz.Storage.{GroupImages, HuddlCoverImages}
   alias HuddlzWeb.MetaHelpers
 
   attr :huddl, :any, required: true
@@ -67,7 +67,7 @@ defmodule HuddlzWeb.StructuredData do
         "url" => url(~p"/groups/#{huddl.group.slug}"),
         "name" => huddl.group.name
       },
-      "image" => MetaHelpers.image_url(huddl.display_image_url, HuddlImages)
+      "image" => MetaHelpers.image_url(huddl.display_image_url, HuddlCoverImages)
     }
     |> Map.reject(fn {_key, value} -> is_nil(value) end)
   end

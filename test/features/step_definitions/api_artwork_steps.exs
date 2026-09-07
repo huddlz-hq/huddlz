@@ -13,7 +13,7 @@ defmodule ApiArtworkSteps do
     empty = generate(huddl(group_id: empty_group.id, actor: owner, thumbnail_url: nil))
 
     group_image = upload(Huddlz.Communities.GroupImage, :group_id, group.id, owner)
-    huddl_image = upload(Huddlz.Communities.HuddlImage, :huddl_id, direct.id, owner)
+    huddl_image = upload(Huddlz.Communities.HuddlCoverImage, :huddl_id, direct.id, owner)
 
     Map.put(context, :artwork, %{
       direct.id => HuddlzWeb.Endpoint.url() <> huddl_image.thumbnail_path,

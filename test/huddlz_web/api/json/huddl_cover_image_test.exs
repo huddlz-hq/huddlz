@@ -1,7 +1,7 @@
-defmodule HuddlzWeb.Api.Json.HuddlImageTest do
+defmodule HuddlzWeb.Api.Json.HuddlCoverImageTest do
   use HuddlzWeb.ApiCase, async: true
 
-  alias Huddlz.Communities.HuddlImage
+  alias Huddlz.Communities.HuddlCoverImage
 
   @fixture Path.expand("../../../fixtures/test_image.jpg", __DIR__)
 
@@ -18,7 +18,7 @@ defmodule HuddlzWeb.Api.Json.HuddlImageTest do
       }
 
       assert {:ok, image} =
-               HuddlImage
+               HuddlCoverImage
                |> Ash.Changeset.for_create(
                  :upload,
                  %{file: upload, huddl_id: huddl.id},
@@ -98,7 +98,7 @@ defmodule HuddlzWeb.Api.Json.HuddlImageTest do
         }
 
         assert {:error, %Ash.Error.Invalid{errors: errors}} =
-                 HuddlImage
+                 HuddlCoverImage
                  |> Ash.Changeset.for_create(
                    :upload,
                    %{file: upload, huddl_id: huddl.id},
@@ -127,7 +127,7 @@ defmodule HuddlzWeb.Api.Json.HuddlImageTest do
       # Bypass policies so the failure is unambiguously the missing parent_id,
       # not the huddl-ownership check that would otherwise deny first.
       assert {:error, %Ash.Error.Invalid{errors: errors}} =
-               HuddlImage
+               HuddlCoverImage
                |> Ash.Changeset.for_create(:upload, %{file: upload}, actor: owner)
                |> Ash.create(authorize?: false)
 
@@ -150,7 +150,7 @@ defmodule HuddlzWeb.Api.Json.HuddlImageTest do
       }
 
       assert {:error, _} =
-               HuddlImage
+               HuddlCoverImage
                |> Ash.Changeset.for_create(
                  :upload,
                  %{file: upload, huddl_id: huddl.id},

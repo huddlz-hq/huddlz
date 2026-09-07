@@ -130,7 +130,7 @@ defmodule HuddlzWeb.StructuredDataTest do
                Floki.attribute(document, "meta[property='og:image']", "content")
     end
 
-    Huddlz.Communities.HuddlImage
+    Huddlz.Communities.HuddlCoverImage
     |> Ash.Changeset.for_create(:create, %{
       filename: "cover.jpg",
       content_type: "image/jpeg",

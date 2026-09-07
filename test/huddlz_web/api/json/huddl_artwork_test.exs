@@ -9,7 +9,7 @@ defmodule HuddlzWeb.Api.Json.HuddlArtworkTest do
 
     assert_artwork(conn, huddl, group_image.thumbnail_path)
 
-    huddl_image = create_image(Huddlz.Communities.HuddlImage, :huddl_id, huddl.id, owner)
+    huddl_image = create_image(Huddlz.Communities.HuddlCoverImage, :huddl_id, huddl.id, owner)
     assert_artwork(conn, huddl, huddl_image.thumbnail_path)
 
     huddl_image |> Ash.Changeset.for_update(:soft_delete, %{}, actor: owner) |> Ash.update!()
@@ -67,7 +67,7 @@ defmodule HuddlzWeb.Api.Json.HuddlArtworkTest do
 
       huddl = Ash.Seed.update!(huddl, %{lifecycle_state: opts[:lifecycle_state] || :published})
 
-      Ash.Seed.seed!(Huddlz.Communities.HuddlImage, %{
+      Ash.Seed.seed!(Huddlz.Communities.HuddlCoverImage, %{
         huddl_id: huddl.id,
         filename: "private.jpg",
         content_type: "image/jpeg",

@@ -33,7 +33,7 @@ defmodule Huddlz.Repo.Migrations.TrackSitemapArtworkChanges do
     """
 
     execute """
-    CREATE TRIGGER huddl_sitemap_artwork AFTER INSERT OR UPDATE OR DELETE ON huddl_images
+    CREATE TRIGGER huddl_sitemap_artwork AFTER INSERT OR UPDATE OR DELETE ON huddl_cover_images
     FOR EACH ROW EXECUTE FUNCTION track_sitemap_artwork('huddlz', 'huddl_id')
     """
 
@@ -45,14 +45,14 @@ defmodule Huddlz.Repo.Migrations.TrackSitemapArtworkChanges do
 
     execute """
     UPDATE huddlz h SET sitemap_modified_at = greatest(h.sitemap_modified_at, (
-      SELECT max(greatest(i.inserted_at, i.deleted_at)) FROM huddl_images i WHERE i.huddl_id = h.id
+      SELECT max(greatest(i.inserted_at, i.deleted_at)) FROM huddl_cover_images i WHERE i.huddl_id = h.id
     ))
     """
   end
 
   def down do
     execute "DROP TRIGGER group_sitemap_artwork ON group_images"
-    execute "DROP TRIGGER huddl_sitemap_artwork ON huddl_images"
+    execute "DROP TRIGGER huddl_sitemap_artwork ON huddl_cover_images"
     execute "DROP FUNCTION track_sitemap_artwork()"
 
     alter table(:groups) do

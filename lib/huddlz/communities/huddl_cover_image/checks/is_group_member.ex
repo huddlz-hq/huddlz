@@ -1,4 +1,4 @@
-defmodule Huddlz.Communities.HuddlImage.Checks.IsGroupMember do
+defmodule Huddlz.Communities.HuddlCoverImage.Checks.IsGroupMember do
   @moduledoc """
   Check that verifies the actor is a member of the group (or the group owner).
   Used for create_pending action on huddl images where the group_id is passed as an argument.

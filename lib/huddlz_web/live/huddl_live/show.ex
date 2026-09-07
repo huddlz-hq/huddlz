@@ -5,7 +5,8 @@ defmodule HuddlzWeb.HuddlLive.Show do
   use HuddlzWeb, :live_view
 
   alias Huddlz.Communities
-  alias Huddlz.Storage.HuddlImages
+  alias Huddlz.Storage.HuddlCoverImages
+  alias Huddlz.Storage.HuddlPhotos
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
@@ -32,7 +33,16 @@ defmodule HuddlzWeb.HuddlLive.Show do
      socket
      |> assign(:confirming_delete?, false)
      |> assign(:confirming_cancel?, false)
-     |> assign(:cancel_form, to_form(%{"cancellation_reason" => ""}, as: :cancel))}
+     |> assign(:confirming_delete_photo_id, nil)
+     |> assign(:confirming_delete_photo, nil)
+     |> assign(:photo_upload_errors, [])
+     |> assign(:selected_photo_url, nil)
+     |> assign(:cancel_form, to_form(%{"cancellation_reason" => ""}, as: :cancel))
+     |> allow_upload(:huddl_photos,
+       accept: HuddlPhotos.allowed_extensions(),
+       max_entries: 10,
+       max_file_size: HuddlPhotos.max_file_size()
+     )}
   end
 
   @impl true
@@ -100,13 +110,119 @@ defmodule HuddlzWeb.HuddlLive.Show do
         </div>
       </div>
 
-      <div class="huddl-frame">
-        <div class="huddl-intro prose">
-          <%= if @huddl.description do %>
-            <p :for={paragraph <- description_paragraphs(@huddl.description)}>{paragraph}</p>
-          <% else %>
-            <p>No description provided.</p>
-          <% end %>
+      <div class={["huddl-frame", @can_view_photos && "huddl-frame-photos"]}>
+        <div class="huddl-main">
+          <div class="huddl-intro prose">
+            <%= if @huddl.description do %>
+              <p :for={paragraph <- description_paragraphs(@huddl.description)}>{paragraph}</p>
+            <% else %>
+              <p>No description provided.</p>
+            <% end %>
+          </div>
+
+          <section :if={@can_view_photos} class="huddl-photos">
+            <div class="photo-heading">
+              <h2>Photos <span class="photo-count">{@photo_count}</span></h2>
+              <p>Shared by the people who were here.</p>
+            </div>
+
+            <p :if={@photo_count == 0} class="huddl-photos-empty">
+              No photos yet — be the first to share one!
+            </p>
+
+            <form
+              id="huddl-photo-upload-form"
+              phx-submit="upload_photos"
+              phx-change="validate_photos"
+            >
+              <label for={@uploads.huddl_photos.ref} class="sr-only">Photos</label>
+              <.live_file_input upload={@uploads.huddl_photos} class="hidden" />
+
+              <div class="upload-zone" phx-drop-target={@uploads.huddl_photos.ref}>
+                <.icon name="hero-photo" class="size-6 text-[var(--cyan)]" />
+                <span class="upload-prompt">Drop photos here</span>
+                <.button
+                  type="button"
+                  id="browse-photos"
+                  variant={:secondary}
+                  phx-click={JS.dispatch("click", to: "##{@uploads.huddl_photos.ref}")}
+                >Browse photos</.button>
+                <div class="upload-meta muted">JPG, PNG, WebP · 5 MB max · up to 10 photos</div>
+              </div>
+
+              <div :for={entry <- @uploads.huddl_photos.entries} class="photo-upload-entry">
+                <figure>
+                  <.live_img_preview entry={entry} />
+                </figure>
+                <div class="photo-upload-info">
+                  <span class="photo-filename">{entry.client_name}</span>
+                  <span class="muted">{if entry.progress == 0,
+                    do: "Ready to upload",
+                    else: "#{entry.progress}% uploaded"}</span>
+                  <progress
+                    aria-label={"Upload progress for #{entry.client_name}"}
+                    value={entry.progress}
+                    max="100"
+                  >{entry.progress}%</progress>
+                </div>
+                <button
+                  type="button"
+                  class="photo-upload-remove"
+                  aria-label={"Remove #{entry.client_name}"}
+                  phx-click="cancel_photo_upload"
+                  phx-value-ref={entry.ref}
+                >
+                  <.icon name="hero-x-mark" class="size-4" />
+                </button>
+                <p :for={err <- upload_errors(@uploads.huddl_photos, entry)} class="upload-error">
+                  {photo_upload_error_to_string(err)}
+                </p>
+              </div>
+
+              <p :for={message <- @photo_upload_errors} class="upload-error" role="alert">
+                {message}
+              </p>
+              <p :for={err <- upload_errors(@uploads.huddl_photos)} class="upload-error">
+                {photo_upload_error_to_string(err)}
+              </p>
+
+              <.button
+                :if={@uploads.huddl_photos.entries != []}
+                type="submit"
+                variant={:primary}
+                phx-disable-with="Uploading…"
+              >
+                Upload photos
+              </.button>
+            </form>
+
+            <div id="huddl-photos-grid" phx-update="stream" class="photos-grid">
+              <div :for={{dom_id, photo} <- @streams.huddl_photos} id={dom_id} class="photo-tile">
+                <button
+                  type="button"
+                  id={"view-photo-#{photo.id}"}
+                  class="photo-open"
+                  phx-click={JS.push_focus() |> JS.push("view_photo")}
+                  phx-value-url={HuddlPhotos.url(photo.storage_path)}
+                  aria-label="View photo"
+                >
+                  <img src={HuddlPhotos.url(photo.thumbnail_path)} alt="" loading="lazy" />
+                </button>
+                <span class="photo-credit">{photo.uploader.display_name || "Member"}</span>
+                <button
+                  :if={photo.uploader_id == @current_user.id || @huddl.creator_id == @current_user.id}
+                  type="button"
+                  id={"delete-photo-#{photo.id}"}
+                  class="photo-delete"
+                  phx-click={JS.push_focus() |> JS.push("confirm_delete_photo")}
+                  phx-value-id={photo.id}
+                  aria-label="Delete photo"
+                >
+                  <.icon name="hero-trash" class="size-4" />
+                </button>
+              </div>
+            </div>
+          </section>
         </div>
 
         <aside class="huddl-side">
@@ -369,6 +485,90 @@ defmodule HuddlzWeb.HuddlLive.Show do
           </div>
         </.form>
       </.modal>
+
+      <.modal
+        :if={@confirming_delete_photo_id}
+        id="delete-photo-modal"
+        return_focus={"#delete-photo-#{@confirming_delete_photo.id}"}
+        show
+        on_cancel={JS.push("cancel_delete_photo")}
+      >
+        <div class="delete-confirm">
+          <div class="delete-confirm-icon" aria-hidden="true">
+            <.icon name="hero-exclamation-triangle" class="h-6 w-6" />
+          </div>
+
+          <div class="delete-confirm-copy">
+            <span class="eyebrow eyebrow-magenta">Permanent action</span>
+            <h2 id="delete-photo-modal-title">Delete this photo?</h2>
+            <p>This photo will be permanently deleted.</p>
+          </div>
+        </div>
+
+        <figure :if={@confirming_delete_photo} class="photo-delete-preview">
+          <img src={@confirming_delete_photo.thumbnail_url} alt={@confirming_delete_photo.filename} />
+          <figcaption>Shared by {@confirming_delete_photo.uploader_name}</figcaption>
+        </figure>
+
+        <div class="delete-confirm-actions">
+          <.button variant={:muted} id="cancel-delete-photo" phx-click="cancel_delete_photo">
+            Keep photo
+          </.button>
+          <.button
+            variant={:destructive}
+            class="delete-confirm-submit"
+            id="confirm-delete-photo"
+            phx-click="delete_photo"
+            phx-disable-with="Deleting…"
+          >
+            Delete photo
+          </.button>
+        </div>
+      </.modal>
+
+      <.modal
+        :if={@selected_photo_url}
+        id="photo-lightbox"
+        show
+        on_cancel={JS.push("close_photo")}
+        class="w-full max-w-4xl"
+      >
+        <h2 id="photo-lightbox-title" class="sr-only">Photo</h2>
+        <div class="photo-lightbox-content" phx-window-keydown="navigate_photo">
+          <img
+            src={@selected_photo_url}
+            alt={@photo_details[@selected_photo_url].filename}
+            class="lightbox-image"
+          />
+          <button
+            :if={length(@photo_urls) > 1}
+            type="button"
+            class="lightbox-nav lightbox-nav-prev"
+            phx-click="prev_photo"
+            aria-label="Previous photo"
+          >
+            <.icon name="hero-chevron-left" class="size-5" />
+          </button>
+          <button
+            :if={length(@photo_urls) > 1}
+            type="button"
+            class="lightbox-nav lightbox-nav-next"
+            phx-click="next_photo"
+            aria-label="Next photo"
+          >
+            <.icon name="hero-chevron-right" class="size-5" />
+          </button>
+        </div>
+        <div class="lightbox-actions">
+          <div class="lightbox-caption" aria-live="polite" aria-atomic="true">
+            <span id="photo-position">{photo_position(@photo_urls, @selected_photo_url)} of {@photo_count}</span>
+            <span>Shared by {@photo_details[@selected_photo_url].uploader_name}</span>
+          </div>
+          <.button variant={:muted} phx-click="close_photo">
+            Close
+          </.button>
+        </div>
+      </.modal>
     </Layouts.app>
     """
   end
@@ -554,6 +754,71 @@ defmodule HuddlzWeb.HuddlLive.Show do
     "/sign-in?" <> URI.encode_query(return_to: return_to)
   end
 
+  defp upload_one_photo(path, entry, huddl_id, user) do
+    case HuddlPhotos.store(path, entry.client_name, entry.client_type, huddl_id) do
+      {:ok, metadata} -> create_huddl_photo_record(metadata, entry, huddl_id, user)
+      {:error, reason} -> {:ok, {:error, {entry.client_name, reason}}}
+    end
+  end
+
+  defp create_huddl_photo_record(metadata, entry, huddl_id, user) do
+    attrs = %{
+      filename: entry.client_name,
+      content_type: entry.client_type,
+      size_bytes: metadata.size_bytes,
+      storage_path: metadata.storage_path,
+      thumbnail_path: metadata.thumbnail_path,
+      huddl_id: huddl_id
+    }
+
+    case Communities.create_huddl_photo(attrs, actor: user) do
+      {:ok, photo} ->
+        {:ok, {:ok, photo}}
+
+      {:error, reason} ->
+        # store/4 already wrote the original + thumbnail to storage; since the
+        # database record was never created, clean those orphaned files up.
+        # Best-effort: if delete itself fails, we still report the original
+        # create error to the user rather than masking it.
+        HuddlPhotos.delete(metadata.storage_path)
+        HuddlPhotos.delete(metadata.thumbnail_path)
+        {:ok, {:error, {entry.client_name, reason}}}
+    end
+  end
+
+  defp maybe_put_upload_result_flash(socket, _successes, 0), do: socket
+
+  defp maybe_put_upload_result_flash(socket, successes, total),
+    do: put_upload_result_flash(socket, successes, total)
+
+  defp put_upload_result_flash(socket, total, total),
+    do: put_flash(socket, :info, "Photos uploaded.")
+
+  defp put_upload_result_flash(socket, 0, _total),
+    do: put_flash(socket, :error, "No photos uploaded. Check the details below.")
+
+  defp put_upload_result_flash(socket, successes, total) do
+    put_flash(
+      socket,
+      :error,
+      "#{successes} of #{total} photos uploaded. Check the details below."
+    )
+  end
+
+  defp photo_upload_error_to_string(:too_large), do: "Each photo must be 5 MB or smaller."
+
+  defp photo_upload_error_to_string(reason)
+       when reason in [
+              :not_accepted,
+              :invalid_extension,
+              :invalid_image,
+              "Invalid file type. Allowed: JPG, PNG, WebP"
+            ],
+       do: "Choose a JPG, PNG, or WebP image."
+
+  defp photo_upload_error_to_string(:too_many_files), do: "Choose up to 10 photos at a time."
+  defp photo_upload_error_to_string(_), do: "Could not save this photo. Please try again."
+
   @impl true
   def handle_event("rsvp", _, socket) do
     huddl = socket.assigns.huddl
@@ -586,6 +851,132 @@ defmodule HuddlzWeb.HuddlLive.Show do
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Couldn't join the waitlist. Please try again.")}
     end
+  end
+
+  @impl true
+  def handle_event("validate_photos", _params, socket) do
+    upload = socket.assigns.uploads.huddl_photos
+
+    {socket, errors, _accepted} =
+      Enum.reduce(upload.entries, {socket, [], 0}, fn entry, {socket, errors, accepted} ->
+        reasons = upload_errors(upload, entry)
+
+        reasons =
+          if accepted >= upload.max_entries, do: [:too_many_files | reasons], else: reasons
+
+        if reasons == [] do
+          {socket, errors, accepted + 1}
+        else
+          messages =
+            Enum.map(reasons, &(entry.client_name <> ": " <> photo_upload_error_to_string(&1)))
+
+          {cancel_upload(socket, :huddl_photos, entry.ref), errors ++ messages, accepted}
+        end
+      end)
+
+    {:noreply, assign(socket, :photo_upload_errors, errors)}
+  end
+
+  @impl true
+  def handle_event("cancel_photo_upload", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :huddl_photos, ref)}
+  end
+
+  @impl true
+  def handle_event("upload_photos", _params, %{assigns: %{can_view_photos: false}} = socket) do
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("upload_photos", _params, socket) do
+    huddl = socket.assigns.huddl
+    user = socket.assigns.current_user
+
+    results =
+      consume_uploaded_entries(socket, :huddl_photos, fn %{path: path}, entry ->
+        upload_one_photo(path, entry, huddl.id, user)
+      end)
+
+    {successes, failures} = Enum.split_with(results, &match?({:ok, _photo}, &1))
+
+    socket = load_photos(socket, huddl, user, socket.assigns.can_view_photos)
+
+    errors =
+      Enum.map(failures, fn {:error, {name, reason}} ->
+        name <> ": " <> photo_upload_error_to_string(reason)
+      end)
+
+    socket = update(socket, :photo_upload_errors, &(&1 ++ errors))
+    {:noreply, maybe_put_upload_result_flash(socket, length(successes), length(results))}
+  end
+
+  @impl true
+  def handle_event("confirm_delete_photo", %{"id" => id}, socket) do
+    photo = socket.assigns.photo_details |> Map.values() |> Enum.find(&(&1.id == id))
+
+    {:noreply,
+     socket
+     |> assign(:confirming_delete_photo, photo)
+     |> assign(:confirming_delete_photo_id, if(photo, do: id))}
+  end
+
+  @impl true
+  def handle_event("cancel_delete_photo", _params, socket) do
+    {:noreply, assign(socket, :confirming_delete_photo_id, nil)}
+  end
+
+  @impl true
+  def handle_event("delete_photo", _params, socket) do
+    user = socket.assigns.current_user
+    photo_id = socket.assigns.confirming_delete_photo_id
+
+    with {:ok, photo} <- Communities.get_huddl_photo_by_id(photo_id, actor: user),
+         :ok <- Communities.destroy_huddl_photo(photo, actor: user) do
+      {:noreply,
+       socket
+       |> assign(:confirming_delete_photo_id, nil)
+       |> assign(:confirming_delete_photo, nil)
+       |> load_photos(socket.assigns.huddl, user, socket.assigns.can_view_photos)}
+    else
+      _ ->
+        {:noreply,
+         socket
+         |> assign(:confirming_delete_photo_id, nil)
+         |> put_flash(:error, "Failed to delete photo.")}
+    end
+  end
+
+  @impl true
+  def handle_event("view_photo", %{"url" => url}, socket) do
+    if url in socket.assigns.photo_urls do
+      {:noreply, assign(socket, :selected_photo_url, url)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("close_photo", _params, socket) do
+    {:noreply, assign(socket, :selected_photo_url, nil)}
+  end
+
+  @impl true
+  def handle_event("navigate_photo", %{"key" => "ArrowRight"}, socket),
+    do: {:noreply, shift_selected_photo(socket, 1)}
+
+  def handle_event("navigate_photo", %{"key" => "ArrowLeft"}, socket),
+    do: {:noreply, shift_selected_photo(socket, -1)}
+
+  def handle_event("navigate_photo", _params, socket), do: {:noreply, socket}
+
+  @impl true
+  def handle_event("next_photo", _params, socket) do
+    {:noreply, shift_selected_photo(socket, 1)}
+  end
+
+  @impl true
+  def handle_event("prev_photo", _params, socket) do
+    {:noreply, shift_selected_photo(socket, -1)}
   end
 
   @impl true
@@ -724,11 +1115,14 @@ defmodule HuddlzWeb.HuddlLive.Show do
     user = socket.assigns.current_user
     {attendance, waitlist_position} = attendance_info(huddl, user)
 
+    can_view_photos = can_view_photos?(huddl, user, attendance)
+
     socket
     |> assign(:page_title, huddl.title)
     |> assign(:meta, huddl_meta(huddl))
     |> assign(:canonical_url, public_url(huddl))
     |> assign(:huddl, huddl)
+    |> assign(:can_view_photos, can_view_photos)
     |> assign(:attendance, attendance)
     |> assign(:waitlist_position, waitlist_position)
     |> assign(
@@ -747,6 +1141,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
       :can_delete_huddl,
       Communities.can_destroy_huddl?(user, huddl)
     )
+    |> load_photos(huddl, user, can_view_photos)
   end
 
   defp huddl_meta(huddl) do
@@ -755,7 +1150,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
       description: MetaHelpers.description(huddl, "Find and join this huddl on huddlz."),
       type: "event",
       url: url(~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"),
-      image: MetaHelpers.image_url(huddl.display_image_url, HuddlImages)
+      image: MetaHelpers.image_url(huddl.display_image_url, HuddlCoverImages)
     }
   end
 
@@ -800,6 +1195,66 @@ defmodule HuddlzWeb.HuddlLive.Show do
     do: DateTime.after?(ends_at, DateTime.utc_now())
 
   defp editable_lifecycle?(_huddl), do: false
+
+  defp can_view_photos?(%{status: :completed} = huddl, %{id: user_id}, attendance) do
+    attendance == :attending || huddl.creator_id == user_id
+  end
+
+  defp can_view_photos?(_huddl, _user, _attendance), do: false
+
+  defp load_photos(socket, huddl, user, true) do
+    {:ok, photos} = Communities.list_huddl_photos(huddl.id, actor: user)
+
+    urls = Enum.map(photos, &HuddlPhotos.url(&1.storage_path))
+
+    socket
+    |> assign(
+      :selected_photo_url,
+      if(socket.assigns.selected_photo_url in urls, do: socket.assigns.selected_photo_url)
+    )
+    |> assign(
+      :photo_details,
+      Map.new(photos, fn photo ->
+        {HuddlPhotos.url(photo.storage_path),
+         %{
+           id: photo.id,
+           filename: photo.filename,
+           thumbnail_url: HuddlPhotos.url(photo.thumbnail_path),
+           uploader_name: photo.uploader.display_name || "Member"
+         }}
+      end)
+    )
+    |> assign(:photo_count, length(photos))
+    |> assign(:photo_urls, Enum.map(photos, &HuddlPhotos.url(&1.storage_path)))
+    |> stream(:huddl_photos, photos, reset: true)
+  end
+
+  defp load_photos(socket, _huddl, _user, false) do
+    socket
+    |> assign(:photo_details, %{})
+    |> assign(:selected_photo_url, nil)
+    |> assign(:confirming_delete_photo_id, nil)
+    |> assign(:confirming_delete_photo, nil)
+    |> assign(:photo_count, 0)
+    |> assign(:photo_urls, [])
+    |> stream(:huddl_photos, [], reset: true)
+  end
+
+  defp photo_position(urls, url), do: (Enum.find_index(urls, &(&1 == url)) || 0) + 1
+
+  defp shift_selected_photo(socket, offset) do
+    urls = socket.assigns.photo_urls
+    count = length(urls)
+
+    case Enum.find_index(urls, &(&1 == socket.assigns.selected_photo_url)) do
+      nil ->
+        socket
+
+      index ->
+        next_url = Enum.at(urls, rem(index + offset + count, count))
+        assign(socket, :selected_photo_url, next_url)
+    end
+  end
 
   defp cancellable_lifecycle?(%{lifecycle_state: :published, ends_at: ends_at}),
     do: DateTime.after?(ends_at, DateTime.utc_now())
