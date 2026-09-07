@@ -24,6 +24,10 @@ defmodule BrowserCoverSteps do
         )
       )
 
+    ExUnit.Callbacks.on_exit(fn ->
+      File.rm_rf!("priv/static/uploads/group_images/#{group.id}")
+    end)
+
     path = "/uploads/group_images/#{group.id}/browser-cover.jpg"
 
     if state == "valid",
@@ -42,10 +46,6 @@ defmodule BrowserCoverSteps do
         actor: owner
       )
     end
-
-    ExUnit.Callbacks.on_exit(fn ->
-      File.rm_rf!("priv/static/uploads/group_images/#{group.id}")
-    end)
 
     Map.merge(context, %{group: group, cover_state: state})
   end
@@ -120,7 +120,27 @@ defmodule BrowserCoverSteps do
       fn decoded -> assert decoded == (state == "valid") end
     )
 
-    if state == "failed", do: assert_fallback(conn), else: conn
+    if state == "failed", do: assert_fallback(conn), else: assert_painted_cover(conn)
+  end
+
+  defp assert_painted_cover(conn) do
+    assert_browser(conn, """
+    (() => {
+      const cover = document.querySelector('#group-detail-hero .group-cover');
+      const layer = cover.querySelector('.cover-image');
+      const fallback = cover.querySelector('.group-cover-fallback');
+      const style = getComputedStyle(layer);
+      const bounds = cover.getBoundingClientRect();
+      const imageBounds = layer.getBoundingClientRect();
+      const layerOrder = Number(style.zIndex) || 0;
+      const fallbackOrder = Number(getComputedStyle(fallback).zIndex) || 0;
+      const aboveFallback = layerOrder > fallbackOrder ||
+        (layerOrder === fallbackOrder && (fallback.compareDocumentPosition(layer) & Node.DOCUMENT_POSITION_FOLLOWING));
+      return style.opacity === '1' && getComputedStyle(cover).opacity === '1' &&
+        style.visibility === 'visible' && aboveFallback && imageBounds.width > 0 &&
+        imageBounds.width >= bounds.width - 1 && imageBounds.height >= bounds.height - 1;
+    })()
+    """)
   end
 
   defp assert_fallback(conn) do
