@@ -91,6 +91,11 @@ defmodule HuddlzWeb.Router do
     post "/unsubscribe/:token", UnsubscribeController, :update
 
     ash_authentication_live_session :authenticated_routes,
+      on_mount_prepend:
+        if(Application.compile_env(:huddlz, :sql_sandbox?, false),
+          do: [HuddlzWeb.Hooks.AllowEctoSandbox],
+          else: []
+        ),
       on_mount: {HuddlzWeb.LiveUserAuth, :load_user_details} do
       # in each liveview, add one of the following at the top of the module:
       #

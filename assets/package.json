@@ -2,5 +2,8 @@
   "private": true,
   "scripts": {
     "test": "node --test js/*_test.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.0"
   }
 }

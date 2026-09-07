@@ -2,6 +2,8 @@ defmodule Huddlz.MixProject do
   use Mix.Project
 
   def project do
+    browser_tests? = System.get_env("HUDDLZ_BROWSER_TEST") == "1"
+
     [
       app: :huddlz,
       version: "0.1.0",
@@ -10,12 +12,17 @@ defmodule Huddlz.MixProject do
       start_permanent: Mix.env() == :prod,
       consolidate_protocols: Mix.env() != :dev,
       aliases: aliases(),
+      test_paths: if(browser_tests?, do: ["test/browser"], else: ["test"]),
+      test_load_filters:
+        if(browser_tests?, do: [~r/_test\.exs$/], else: [~r/^test\/(?!browser\/).*_test\.exs$/]),
       deps: deps(),
       listeners: [Phoenix.CodeReloader],
-      test_ignore_filters: [
-        ~r/features\/step_definitions/,
-        ~r/features\/support/
-      ],
+      test_ignore_filters:
+        [
+          ~r/features\/step_definitions/,
+          ~r/features\/support/,
+          ~r/browser\/(steps|support)/
+        ] ++ if(browser_tests?, do: [], else: [~r/browser/]),
       usage_rules: usage_rules()
     ]
   end
@@ -24,7 +31,8 @@ defmodule Huddlz.MixProject do
     [
       preferred_envs: [
         "test.watch": :test,
-        precommit: :test
+        precommit: :test,
+        "test.browser": :test
       ]
     ]
   end
@@ -128,6 +136,7 @@ defmodule Huddlz.MixProject do
       {:mox, "~> 1.0", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:phoenix_test, "~> 0.12", only: :test},
+      {:phoenix_test_playwright, "~> 0.16.0", only: :test, runtime: false},
       {:slugify, "~> 1.3"},
       {:remote_ip, "~> 1.1"},
       {:envious, "~> 1.0"}
@@ -160,6 +169,10 @@ defmodule Huddlz.MixProject do
       ],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ash.setup --quiet", "test"],
+      "test.browser": [
+        "assets.build",
+        "cmd env HUDDLZ_BROWSER_TEST=1 MIX_ENV=test mix test"
+      ],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["tailwind huddlz", "esbuild huddlz"],
       "assets.deploy": [
