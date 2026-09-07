@@ -66,6 +66,26 @@ Feature: Organizer action permissions
     And I am signed in as "owner314@example.com"
     When I open the organizer roster for "Organizer Permissions"
     And I open the promotion confirmation for "Member Maya"
-    And I transfer "Organizer Permissions" to "helper314@example.com" in another session
+    And the owner transfers "Organizer Permissions" to "helper314@example.com" in another session
     Then the membership action confirmation should be closed
     And the group edit action should be hidden
+
+  Scenario: Ownership loss removes organizer invitation controls from an open roster
+    Given a private group "Invitation Transfer" exists with owner "owner314@example.com"
+    And "helper314@example.com" is an organizer of "Invitation Transfer"
+    And "member314@example.com" has an organizer invitation to "Invitation Transfer"
+    And I am signed in as "owner314@example.com"
+    When I open the organizer roster for "Invitation Transfer"
+    Then the "Revoke" button should be visible
+    When the owner transfers "Invitation Transfer" to "helper314@example.com" in another session
+    Then the "Revoke" button should not be visible
+
+  Scenario: Ownership gain reveals organizer invitation controls in an open roster
+    Given a private group "Invitation Transfer" exists with owner "owner314@example.com"
+    And "helper314@example.com" is an organizer of "Invitation Transfer"
+    And "member314@example.com" has an organizer invitation to "Invitation Transfer"
+    And I am signed in as "helper314@example.com"
+    When I open the organizer roster for "Invitation Transfer"
+    Then the "Revoke" button should not be visible
+    When the owner transfers "Invitation Transfer" to "helper314@example.com" in another session
+    Then the "Revoke" button should be visible

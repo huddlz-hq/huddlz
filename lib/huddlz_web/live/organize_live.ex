@@ -1057,7 +1057,7 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   defp refresh_members_if_visible(%{assigns: %{live_action: :members}} = socket, group, user) do
-    assign_members(socket, list_group_members(group, user))
+    load_section(socket, :members, group, user)
   end
 
   defp refresh_members_if_visible(socket, _group, _user), do: socket

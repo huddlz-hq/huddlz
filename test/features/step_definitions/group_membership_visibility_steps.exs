@@ -43,12 +43,14 @@ defmodule GroupMembershipVisibilitySteps do
     context
   end
 
-  step "I transfer {string} to {string} in another session", %{args: [name, email]} = context do
+  step "the owner transfers {string} to {string} in another session",
+       %{args: [name, email]} = context do
     group = Enum.find(context.groups, &(to_string(&1.name) == name))
+    owner = Enum.find(context.users, &(&1.id == group.owner_id))
     target = Enum.find(context.users, &(to_string(&1.email) == email))
 
     Phoenix.ConnTest.build_conn()
-    |> login(context.current_user)
+    |> login(owner)
     |> visit("/organize/#{group.slug}/members")
     |> select("New owner", option: target.display_name)
     |> click_button("Transfer group ownership")
