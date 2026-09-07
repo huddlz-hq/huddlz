@@ -212,6 +212,12 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup
       change Huddlz.Communities.Huddl.Changes.ApplySavedLocation
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
+
+      validate Huddlz.Communities.Huddl.Validations.RecurrenceBoundary do
+        where argument_equals(:is_recurring, true)
+        only_when_valid? true
+      end
+
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.AssignPendingImage
       change Huddlz.Communities.Huddl.Changes.AddHuddlTemplate
@@ -304,6 +310,12 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup
       change Huddlz.Communities.Huddl.Changes.ApplySavedLocation
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
+
+      validate Huddlz.Communities.Huddl.Validations.RecurrenceBoundary do
+        where argument_equals(:edit_type, "all")
+        only_when_valid? true
+      end
+
       change Huddlz.Communities.Huddl.Changes.ForcePrivateForPrivateGroups
       change Huddlz.Communities.Huddl.Changes.ClearUnusedLocationFields
       change Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz
