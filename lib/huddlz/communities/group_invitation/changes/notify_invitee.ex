@@ -8,6 +8,9 @@ defmodule Huddlz.Communities.GroupInvitation.Changes.NotifyInvitee do
   @impl true
   def change(changeset, _opts, _context) do
     Ash.Changeset.after_transaction(changeset, fn
+      _changeset, {:ok, %{invitee_id: nil} = invitation} ->
+        {:ok, invitation}
+
       _changeset, {:ok, invitation} ->
         invitation = Ash.load!(invitation, [:group, :invitee, :inviter], authorize?: false)
 

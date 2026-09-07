@@ -1,6 +1,6 @@
 defmodule Huddlz.Communities.GroupInvitation do
   @moduledoc """
-  An invitation for a registered person to join a private group.
+  An invitation for a person to join a private group.
 
   Invitations deliberately remain separate from `GroupMember`: membership is
   only created after the invited person accepts.
@@ -42,6 +42,13 @@ defmodule Huddlz.Communities.GroupInvitation do
         message: "already has a pending invitation to this group",
         error_fields: [:invitee_id]
 
+      index [:group_id, :email],
+        unique: true,
+        where: "status = 'pending'",
+        name: "group_invitations_unique_pending_email_index",
+        message: "already has a pending invitation to this group",
+        error_fields: [:email]
+
       index [:invitee_id, :status, :inserted_at]
       index [:group_id, :status, :inserted_at]
     end
@@ -51,10 +58,18 @@ defmodule Huddlz.Communities.GroupInvitation do
     defaults [:read]
 
     create :invite do
-      description "Invite a registered person to a private group."
+      description "Invite a person by account or email to a private group."
 
       argument :group_id, :uuid, allow_nil?: false
-      argument :invitee_id, :uuid, allow_nil?: false
+      argument :invitee_id, :uuid
+      argument :email, :ci_string
+
+      validate present([:invitee_id, :email], exactly: 1)
+
+      validate match(:email, ~r/^[^\s]+@[^\s]+$/) do
+        where present(:email)
+        message "Enter a valid email address."
+      end
 
       argument :role, :atom do
         allow_nil? false
@@ -62,14 +77,32 @@ defmodule Huddlz.Communities.GroupInvitation do
         constraints one_of: [:member, :organizer]
       end
 
+      change Huddlz.Communities.GroupInvitation.Changes.ResolveRecipient
       change ExpirePrevious
       change manage_relationship(:group_id, :group, type: :append)
-      change manage_relationship(:invitee_id, :invitee, type: :append)
       change relate_actor(:inviter)
       change set_attribute(:role, arg(:role))
       change SetExpiration
       validate GroupIsPrivate
       validate InviteeIsNotMember
+      change Huddlz.Communities.GroupInvitation.Changes.QueueEmail
+      change NotifyInvitee
+    end
+
+    action :open_email_invitation, :struct do
+      constraints instance_of: __MODULE__
+      argument :token, :string, allow_nil?: false, sensitive?: true
+      run Huddlz.Communities.GroupInvitation.OpenEmailInvitation
+    end
+
+    update :claim do
+      description "Bind an email invitation to its recipient before they respond."
+      accept []
+      require_atomic? false
+      argument :token, :string, allow_nil?: false, sensitive?: true
+      validate PendingAndCurrent
+      change {LockPending, expiration: :future}
+      change Huddlz.Communities.GroupInvitation.Changes.Claim
       change NotifyInvitee
     end
 
@@ -180,6 +213,14 @@ defmodule Huddlz.Communities.GroupInvitation do
       authorize_if always()
     end
 
+    policy action(:open_email_invitation) do
+      authorize_if actor_present()
+    end
+
+    policy action(:claim) do
+      authorize_if Huddlz.Communities.GroupInvitation.Checks.EmailRecipient
+    end
+
     policy action(:invite) do
       authorize_if GroupOwner
       forbid_if expr(^arg(:role) == :organizer)
@@ -245,6 +286,11 @@ defmodule Huddlz.Communities.GroupInvitation do
   attributes do
     uuid_primary_key :id
 
+    attribute :email, :ci_string do
+      allow_nil? false
+      sensitive? true
+    end
+
     attribute :role, :atom do
       allow_nil? false
       public? true
@@ -281,7 +327,6 @@ defmodule Huddlz.Communities.GroupInvitation do
 
     belongs_to :invitee, Huddlz.Accounts.User do
       attribute_type :uuid
-      allow_nil? false
     end
 
     belongs_to :inviter, Huddlz.Accounts.User do
