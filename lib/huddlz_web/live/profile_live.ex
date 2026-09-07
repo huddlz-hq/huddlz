@@ -449,15 +449,14 @@ defmodule HuddlzWeb.ProfileLive do
          |> assign(:email_form, email_form(updated_user))}
 
       {:error, form} ->
+        form = AshPhoenix.Form.clear_value(form, :current_password)
+        # Clear the secret while keeping feedback visible for the submitted field.
+        form = %{form | params: Map.put(form.params, "current_password", "")}
+
         {:noreply,
          socket
          |> put_flash(:error, "Email could not be updated. Please check the errors below.")
-         |> assign(
-           :email_form,
-           form
-           |> AshPhoenix.Form.clear_value(:current_password)
-           |> to_form()
-         )}
+         |> assign(:email_form, to_form(form))}
     end
   end
 
