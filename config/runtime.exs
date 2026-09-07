@@ -14,6 +14,10 @@ if optional("PHX_SERVER") do
   config :huddlz, HuddlzWeb.Endpoint, server: true
 end
 
+if config_env() == :test and System.get_env("HUDDLZ_BROWSER_TEST") == "1" do
+  config :huddlz, HuddlzWeb.Endpoint, server: true
+end
+
 # =============================================================================
 # Database Configuration (all environments)
 # =============================================================================

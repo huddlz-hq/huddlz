@@ -187,3 +187,63 @@ jobs:
 
     - name: Create, migrate, and seed the database
       run: mix ecto.setup
+
+  browser:
+    name: Browser scenarios (Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      db:
+        image: postgis/postgis:17-3.5
+        ports: ['5432:5432']
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+    - uses: actions/checkout@v4
+    - uses: erlef/setup-beam@v1
+      with:
+        otp-version: '29.0.3'
+        elixir-version: '1.20.2'
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: npm
+        cache-dependency-path: assets/package-lock.json
+    - name: Cache browser job dependencies and compilation
+      uses: actions/cache@v4
+      with:
+        path: |
+          deps
+          _build/test
+        key: ${{ runner.os }}-browser-otp29-elixir1.20-${{ hashFiles('mix.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-browser-otp29-elixir1.20-
+    - name: Setup test environment
+      run: cp .test.env.example .test.env
+    - name: Install dependencies and asset tools
+      run: |
+        mix deps.get
+        mix assets.setup
+        npm ci --prefix assets
+    - name: Install Chromium and system dependencies
+      env:
+        PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/_build/browser/browsers
+      run: assets/node_modules/.bin/playwright install --with-deps chromium --only-shell
+    - name: Run browser scenarios
+      timeout-minutes: 2
+      run: mix test.browser
+    - name: Preserve first-attempt failure diagnostics
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: browser-failure-diagnostics
+        path: |
+          _build/browser/screenshots
+          _build/browser/traces
+        if-no-files-found: ignore
+        retention-days: 7

@@ -2,6 +2,10 @@ defmodule HuddlzWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :huddlz
   use Absinthe.Phoenix.Endpoint
 
+  if Application.compile_env(:huddlz, :sql_sandbox?, false) do
+    plug Phoenix.Ecto.SQL.Sandbox
+  end
+
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
   # Set :encryption_salt if you would also like to encrypt it.
@@ -17,9 +21,16 @@ defmodule HuddlzWeb.Endpoint do
     secure: Application.compile_env(:huddlz, [:session, :secure], false)
   ]
 
+  @live_connect_info if(Application.compile_env(:huddlz, :sql_sandbox?, false),
+                       do: [:user_agent, session: @session_options],
+                       else: [session: @session_options]
+                     )
+
   socket "/live", Phoenix.LiveView.Socket,
-    websocket: [connect_info: [session: @session_options]],
-    longpoll: [connect_info: [session: @session_options]]
+    websocket: [connect_info: @live_connect_info],
+    longpoll: [connect_info: @live_connect_info]
+
+  def session_options, do: @session_options
 
   socket "/ws/gql", HuddlzWeb.GraphqlSocket, websocket: true, longpoll: true
 
