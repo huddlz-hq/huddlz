@@ -31,7 +31,7 @@ The command builds the actual app assets, starts the test endpoint and Chromium,
 | Home location | ArrowDown/Enter select a suggestion without a native form submission |
 | Calendar | Actual `Intl` time-zone detection moves a late Denver huddl to the next New York calendar day |
 | Organizer | Native Tab, arrow keys, Space, visible focus, and switch state survive LiveView patches |
-| Huddl photos | Mixed-batch rejection, corrupt-image feedback, keyboard upload and carousel, focus restoration, and mobile gallery placement |
+| Huddl photos | Mixed-batch rejection, corrupt-image feedback, native Tab access to upload, keyboard carousel, dialog focus wrapping and restoration, and mobile gallery placement |
 | Profile picture | Real file upload and image decode; dialog Tab containment, Escape, and focus restoration |
 | Mobile navigation | 320px drawer, native focus wrapping, inert background, dismissal and navigation |
 | Group cover | Valid, missing, and failed images; long details fit at 320px and on desktop |
@@ -44,7 +44,7 @@ Browser setup uses the adapter's public `Case.do_setup_all/1` and `Case.do_setup
 
 ## CI and diagnostics
 
-The **Browser scenarios (Chromium)** job runs separately on every PR targeting `main` and every push to `main`, alongside the fast tests. It installs the pinned Playwright version from `assets/package-lock.json`, Chromium headless shell, and Linux libraries. It uses one worker, a two-minute test-step timeout, and no automatic retries. Dependency compilation is cached; browser binaries and diagnostics are not part of that cache.
+The **Browser scenarios (Chromium)** job runs separately on every PR, including stacked PRs, and every push to `main`, alongside the fast tests. It installs the pinned Playwright version from `assets/package-lock.json`, Chromium headless shell, and Linux libraries. It uses one worker, a two-minute test-step timeout, and no automatic retries. Dependency compilation is cached; browser binaries and diagnostics are not part of that cache.
 
 Screenshots and traces are captured for every attempt under `_build/browser/screenshots` and `_build/browser/traces`. Failed CI runs upload these directories as `browser-failure-diagnostics` for seven days. Inspect the original failure before rerunning:
 

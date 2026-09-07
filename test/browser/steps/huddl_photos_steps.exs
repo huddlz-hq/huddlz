@@ -76,7 +76,11 @@ defmodule BrowserPhotoSteps do
   end
 
   step "I choose two photos using the keyboard upload control", context do
-    conn = context.conn |> assert_has("#browse-photos") |> press("#browse-photos", "Enter")
+    conn =
+      context.conn
+      |> press("#notification-nav-link", "Tab")
+      |> assert_has("#browse-photos:focus")
+      |> press(":focus", "Enter")
 
     assert {:ok, _} =
              PlaywrightEx.Frame.set_input_files(conn.frame_id,
@@ -103,6 +107,24 @@ defmodule BrowserPhotoSteps do
   step "I share the selected photos and open the first one", context do
     conn = context.conn |> click_button("Upload photos") |> assert_has(".photo-tile", count: 2)
     conn = press(conn, ".photo-tile:first-child .photo-open", "Enter")
+    Map.put(context, :conn, conn)
+  end
+
+  step "Tab and Shift+Tab stay inside the photo viewer", context do
+    conn =
+      context.conn
+      |> assert_has("#photo-lightbox button[aria-label='Previous photo']:focus")
+      |> press(":focus", "Tab")
+      |> assert_has("#photo-lightbox button[aria-label='Next photo']:focus")
+      |> press(":focus", "Tab")
+      |> assert_has("#photo-lightbox .lightbox-actions button:focus", text: "Close")
+      |> press(":focus", "Tab")
+      |> assert_has("#photo-lightbox button[aria-label='close']:focus")
+      |> press(":focus", "Tab")
+      |> assert_has("#photo-lightbox button[aria-label='Previous photo']:focus")
+      |> press(":focus", "Shift+Tab")
+      |> assert_has("#photo-lightbox button[aria-label='close']:focus")
+
     Map.put(context, :conn, conn)
   end
 
@@ -147,12 +169,30 @@ defmodule BrowserPhotoSteps do
     Map.put(context, :conn, press(context.conn, ".photo-tile:first-child .photo-delete", "Enter"))
   end
 
+  step "Tab and Shift+Tab stay inside the photo deletion dialog", context do
+    conn =
+      context.conn
+      |> assert_has("#cancel-delete-photo:focus")
+      |> press(":focus", "Tab")
+      |> assert_has("#confirm-delete-photo:focus")
+      |> press(":focus", "Tab")
+      |> assert_has("#delete-photo-modal button[aria-label='close']:focus")
+      |> press(":focus", "Tab")
+      |> assert_has("#cancel-delete-photo:focus")
+      |> press(":focus", "Shift+Tab")
+      |> assert_has("#delete-photo-modal button[aria-label='close']:focus")
+      |> press(":focus", "Tab")
+      |> assert_has("#cancel-delete-photo:focus")
+
+    Map.put(context, :conn, conn)
+  end
+
   step "I see which photo will be deleted and can keep it", context do
     conn =
       context.conn
       |> assert_has("#delete-photo-modal img")
       |> assert_has("#delete-photo-modal", text: "Sam Rivera")
-      |> click_button("Keep photo")
+      |> press(":focus", "Enter")
       |> refute_has("#delete-photo-modal")
       |> assert_has(".photo-tile", count: 2)
 

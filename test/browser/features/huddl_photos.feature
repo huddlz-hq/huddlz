@@ -16,8 +16,10 @@ Feature: Sharing photos in the browser
     When I choose two photos using the keyboard upload control
     Then the upload queue names each photo and its remove control
     When I share the selected photos and open the first one
-    Then I can navigate with arrow keys and see the contributor and photo position
+    Then Tab and Shift+Tab stay inside the photo viewer
+    And I can navigate with arrow keys and see the contributor and photo position
     And Escape returns focus to the photo I opened
     And the gallery fits above the huddl details on mobile
     When I consider deleting the first photo
-    Then I see which photo will be deleted and can keep it
+    Then Tab and Shift+Tab stay inside the photo deletion dialog
+    And I see which photo will be deleted and can keep it
