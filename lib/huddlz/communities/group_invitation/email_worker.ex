@@ -8,7 +8,6 @@ defmodule Huddlz.Communities.GroupInvitation.EmailWorker do
   alias Huddlz.Communities.GroupInvitation
   alias Huddlz.Communities.GroupInvitation.EmailToken
   alias Huddlz.Mailer
-  alias Huddlz.Notifications
   alias Huddlz.Notifications.Senders.HeaderSafe
   alias Huddlz.Notifications.Senders.HtmlEscape
   alias HuddlzWeb.Endpoint
@@ -34,22 +33,17 @@ defmodule Huddlz.Communities.GroupInvitation.EmailWorker do
   end
 
   defp deliver_if_allowed(invitation) do
-    # The account may have been created while this email waited in the queue.
-    # Its preferences apply immediately, even before the invitation is claimed.
+    # Registration may happen while this email waits. Confirmation makes the
+    # invitation available in-app and queues the normal registered-user email,
+    # which applies confirmation, preferences, and the activity footer.
     User
     |> Ash.Query.for_read(:get_by_email, %{email: invitation.email})
     |> Ash.read_one(authorize?: false)
     |> case do
       {:ok, nil} -> deliver(invitation)
-      {:ok, user} -> deliver_for_user(invitation, user)
+      {:ok, %User{}} -> :ok
       {:error, reason} -> {:error, reason}
     end
-  end
-
-  defp deliver_for_user(invitation, user) do
-    if Notifications.preference_for(user, :group_invitation),
-      do: deliver(invitation),
-      else: :ok
   end
 
   defp deliver(invitation) do

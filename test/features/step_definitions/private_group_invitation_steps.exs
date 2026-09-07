@@ -58,8 +58,35 @@ defmodule PrivateGroupInvitationSteps do
     Map.merge(context, %{session: session, conn: session, invitation_path: path})
   end
 
+  step "that invitation email includes notification preferences and unsubscribe links", context do
+    assert context.invitation_email_body =~ "/profile/notifications"
+    assert context.invitation_email_body =~ "/unsubscribe/"
+    context
+  end
+
   step "I reopen the invitation email", context do
     session = visit(context.session, context.invitation_path)
+    Map.merge(context, %{session: session, conn: session})
+  end
+
+  step "I confirm the registration email sent to {string}", %{args: [email]} = context do
+    body =
+      receive do
+        {:email,
+         %Swoosh.Email{
+           subject: "Confirm your email address",
+           to: [{"", ^email}],
+           html_body: body
+         }} ->
+          body
+      after
+        100 -> flunk("No confirmation email received for #{email}")
+      end
+
+    [url] = body |> Floki.parse_fragment!() |> Floki.attribute("a", "href")
+    session = context.session |> visit(URI.parse(url).path) |> click_button("Confirm your email")
+    result = Oban.drain_queue(queue: :notifications)
+    assert result.failure == 0, inspect(result)
     Map.merge(context, %{session: session, conn: session})
   end
 
