@@ -171,11 +171,8 @@ defmodule HuddlzWeb.OrganizeLiveMembersTest do
     assert {:ok, _membership} =
              Communities.change_member_role(member_membership, :organizer, actor: owner)
 
-    assert has_element?(view, "#member-action-dialog")
-
-    view
-    |> element("#member-action-form")
-    |> render_submit()
+    refute has_element?(view, "#member-action-dialog")
+    render_submit(view, "confirm_member_action", %{})
 
     assert Ash.get!(GroupMember, member_membership.id, authorize?: false).role == :organizer
   end

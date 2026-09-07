@@ -4,6 +4,37 @@ defmodule GroupMembershipVisibilitySteps do
   import PhoenixTest
   import Huddlz.Test.Helpers.Authentication
 
+  step "I accept my invitation to {string} in another session", %{args: [name]} = context do
+    group = Enum.find(context.groups, &(to_string(&1.name) == name))
+
+    invitation =
+      Huddlz.Communities.list_my_group_invitations!(actor: context.current_user)
+      |> Enum.find(&(&1.group_id == group.id))
+
+    Phoenix.ConnTest.build_conn()
+    |> login(context.current_user)
+    |> visit("/invitations/#{invitation.id}")
+    |> click_button("Accept invitation")
+    |> assert_has("main", text: "You accepted this invitation.")
+
+    context
+  end
+
+  step "I open the promotion confirmation for {string}", %{args: [name]} = context do
+    session =
+      within(context.session, "[aria-label='Manage #{name}']", fn session ->
+        click_button(session, "Promote")
+      end)
+
+    assert_has(session, "#member-action-dialog")
+    Map.merge(context, %{session: session, conn: session})
+  end
+
+  step "the membership action confirmation should be closed", context do
+    refute_has(context.session, "#member-action-dialog")
+    context
+  end
+
   step "the leave confirmation should explain that RSVPs are preserved", context do
     assert_has(context.session, "#leave-group-dialog",
       text: "Leaving does not cancel your existing RSVPs."

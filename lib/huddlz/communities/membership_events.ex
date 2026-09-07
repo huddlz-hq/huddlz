@@ -15,7 +15,7 @@ defmodule Huddlz.Communities.MembershipEvents do
 
   @impl true
   def notify(%Ash.Notifier.Notification{action: %{name: name}, data: member})
-      when name in [:join_group, :leave_group, :add_member] do
+      when name in [:join_group, :leave_group, :add_member, :accept_invitation, :set_role] do
     broadcast(member.group_id, member.user_id)
   end
 
