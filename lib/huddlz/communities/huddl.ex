@@ -37,6 +37,27 @@ defmodule Huddlz.Communities.Huddl do
   json_api do
     type "huddl"
 
+    default_fields [
+      :id,
+      :title,
+      :description,
+      :starts_at,
+      :ends_at,
+      :time_zone,
+      :event_type,
+      :physical_location,
+      :is_private,
+      :thumbnail_url,
+      :max_attendees,
+      :lifecycle_state,
+      :published_at,
+      :cancelled_at,
+      :completed_at,
+      :cancellation_reason,
+      :inserted_at,
+      :image_url
+    ]
+
     routes do
       base "/huddlz"
 
@@ -933,6 +954,14 @@ defmodule Huddlz.Communities.Huddl do
     calculate :display_image_url, :string do
       description "Returns huddl's image, falling back to group image if none"
       calculation Huddlz.Communities.Huddl.Calculations.DisplayImageUrl
+    end
+
+    calculate :image_url, :string do
+      public? true
+
+      description "Absolute artwork URL using the huddl image, then group image; null without artwork"
+
+      calculation Huddlz.Communities.Huddl.Calculations.ImageUrl
     end
   end
 
