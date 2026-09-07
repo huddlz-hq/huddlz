@@ -161,7 +161,10 @@ defmodule Huddlz.Generator do
       Group,
       :create_group,
       defaults: [
-        name: StreamData.repeatedly(fn -> Faker.Company.name() end),
+        name:
+          StreamData.repeatedly(fn ->
+            "#{Faker.Company.name()} #{System.unique_integer([:positive])}"
+          end),
         description: StreamData.repeatedly(fn -> Faker.Lorem.paragraph(2..3) end),
         location: "Test Location",
         time_zone: "America/New_York",
