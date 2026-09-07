@@ -9,6 +9,51 @@ defmodule Huddlz.Accounts.User.NotificationPreferencesTest do
   end
 
   describe "update_notification_preferences action" do
+    test "rejects unknown keys without saving any of the partial update" do
+      user = generate(user())
+
+      assert {:error, %Ash.Error.Invalid{}} =
+               user
+               |> Ash.Changeset.for_update(
+                 :update_notification_preferences,
+                 %{preferences: %{"rsvp_received" => false, "unknown" => true}},
+                 actor: user
+               )
+               |> Ash.update()
+
+      assert Ash.get!(Huddlz.Accounts.User, user.id, actor: user).notification_preferences == %{}
+    end
+
+    test "rejects non-boolean values instead of silently falling back to defaults" do
+      user = generate(user())
+
+      for value <- ["false", "true", 0, 1, nil, [], %{}] do
+        assert {:error, %Ash.Error.Invalid{}} =
+                 user
+                 |> Ash.Changeset.for_update(
+                   :update_notification_preferences,
+                   %{preferences: %{"rsvp_received" => value}},
+                   actor: user
+                 )
+                 |> Ash.update()
+      end
+    end
+
+    test "accepts an empty partial update and rejects missing or invalid maps" do
+      user = generate(user())
+
+      changeset = fn params ->
+        Ash.Changeset.for_update(user, :update_notification_preferences, params, actor: user)
+      end
+
+      assert {:ok, unchanged} = changeset.(%{preferences: %{}}) |> Ash.update()
+      assert unchanged.notification_preferences == %{}
+
+      for params <- [%{}, %{preferences: nil}, %{preferences: "invalid"}] do
+        assert {:error, %Ash.Error.Invalid{}} = changeset.(params) |> Ash.update()
+      end
+    end
+
     test "self can merge a partial map onto existing preferences" do
       user = generate(user())
 
