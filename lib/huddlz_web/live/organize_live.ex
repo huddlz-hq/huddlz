@@ -13,7 +13,6 @@ defmodule HuddlzWeb.OrganizeLive do
   """
   use HuddlzWeb, :live_view
 
-  alias Huddlz.Accounts
   alias Huddlz.Communities
   alias Huddlz.Communities.MembershipEvents
   alias HuddlzWeb.HuddlStatus
@@ -158,8 +157,8 @@ defmodule HuddlzWeb.OrganizeLive do
     |> Enum.map(&normalize_invitation_expiration(&1, user))
   end
 
-  defp create_invitation(socket, group, user, invitee, role, email, params) do
-    case Communities.invite_to_group(group.id, invitee.id, role, actor: user) do
+  defp create_invitation(socket, group, user, role, email, params) do
+    case Communities.invite_to_group_by_email(group.id, email, role, actor: user) do
       {:ok, _invitation} ->
         {:noreply,
          socket
@@ -678,7 +677,9 @@ defmodule HuddlzWeb.OrganizeLive do
       <div class="panel-head">
         <div>
           <h2>Invite someone</h2>
-          <div class="panel-sub">Invitations expire after 7 days.</div>
+          <div class="panel-sub">
+            Invite by email, even if they don’t have an account yet. Invitations expire after 7 days.
+          </div>
         </div>
       </div>
 
@@ -686,12 +687,13 @@ defmodule HuddlzWeb.OrganizeLive do
         for={@invitation_form}
         id="group-invitation-form"
         phx-submit="invite"
+        novalidate
         class="grid gap-4 md:grid-cols-[minmax(0,1fr)_12rem_auto] md:items-end"
       >
         <.input
           field={@invitation_form[:email]}
           type="email"
-          label="Registered email"
+          label="Email"
           placeholder="person@example.com"
         />
         <.select
@@ -715,7 +717,7 @@ defmodule HuddlzWeb.OrganizeLive do
           </p>
           <div :for={{id, invitation} <- @invitations} id={id} class="row row-split">
             <div>
-              <div class="row-title">{member_name(%{user: invitation.invitee})}</div>
+              <div class="row-title">{invitation_recipient(invitation)}</div>
               <div class="meta">
                 {role_label(invitation.role)} · {invitation_status_label(invitation.status)}
               </div>
@@ -739,6 +741,9 @@ defmodule HuddlzWeb.OrganizeLive do
     </div>
     """
   end
+
+  defp invitation_recipient(%{invitee: nil, email: email}), do: to_string(email)
+  defp invitation_recipient(invitation), do: member_name(%{user: invitation.invitee})
 
   defp invitation_role_options(group, user) when group.owner_id == user.id,
     do: [{"Member", "member"}, {"Organizer", "organizer"}]
@@ -871,16 +876,7 @@ defmodule HuddlzWeb.OrganizeLive do
     email = String.trim(params["email"] || "")
     role = parse_invitation_role(params["role"])
 
-    case Accounts.get_by_email(email, actor: user) do
-      {:ok, invitee} ->
-        create_invitation(socket, group, user, invitee, role, email, params)
-
-      {:error, _reason} ->
-        {:noreply,
-         socket
-         |> put_flash(:error, "No registered person has that email address.")
-         |> assign(:invitation_form, invitation_form(params))}
-    end
+    create_invitation(socket, group, user, role, email, params)
   end
 
   def handle_event("revoke_invitation", %{"id" => id}, socket) do

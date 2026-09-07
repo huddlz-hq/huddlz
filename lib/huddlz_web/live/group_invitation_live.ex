@@ -9,14 +9,19 @@ defmodule HuddlzWeb.GroupInvitationLive do
   alias Huddlz.Communities.GroupInvitation
   alias HuddlzWeb.Layouts
 
-  on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
+  on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(params, _session, %{assigns: %{current_user: nil}} = socket) do
+    return_to = invitation_path(params)
+    {:ok, redirect(socket, to: ~p"/sign-in?#{[return_to: return_to]}")}
+  end
+
+  def mount(params, _session, socket) do
     user = socket.assigns.current_user
 
-    case load_invitation(id, user) do
+    case open_invitation(params, user) do
       {:ok, invitation} ->
         invitation = normalize_expiration(invitation, user)
 
@@ -28,7 +33,7 @@ defmodule HuddlzWeb.GroupInvitationLive do
       _ ->
         {:ok,
          socket
-         |> put_flash(:error, "That invitation isn't available.")
+         |> put_flash(:error, unavailable_invitation_message(params))
          |> push_navigate(to: ~p"/notifications?filter=invites")}
     end
   end
@@ -116,6 +121,24 @@ defmodule HuddlzWeb.GroupInvitationLive do
          |> push_navigate(to: ~p"/notifications?filter=invites")}
     end
   end
+
+  defp unavailable_invitation_message(%{"token" => _token}) do
+    "That invitation isn't available. Sign in with the email address that received it, or ask the organizer for a new invitation."
+  end
+
+  defp unavailable_invitation_message(_params), do: "That invitation isn't available."
+
+  defp invitation_path(%{"token" => token}), do: ~p"/invitations/email/#{token}"
+  defp invitation_path(%{"id" => id}), do: ~p"/invitations/#{id}"
+
+  defp open_invitation(%{"token" => token}, user) do
+    with {:ok, %GroupInvitation{} = invitation} <-
+           Communities.open_email_group_invitation(token, actor: user) do
+      {:ok, Communities.load_group_invitation_details!(invitation)}
+    end
+  end
+
+  defp open_invitation(%{"id" => id}, user), do: load_invitation(id, user)
 
   defp load_invitation(id, user) do
     with {:ok, %GroupInvitation{} = invitation} <-
