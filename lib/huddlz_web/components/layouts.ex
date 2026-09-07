@@ -128,7 +128,15 @@ defmodule HuddlzWeb.Layouts do
                 <div class={["group-mark", group_mark_variant(idx)]}>
                   {group_initials(group.name)}
                 </div>
-                <span class="name">{group.name}</span>
+                <span class="name">
+                  <span class="block truncate">{group.name}</span>
+                  <span
+                    :if={role = HuddlzWeb.GroupRole.label(group.viewer_role)}
+                    class="block text-xs font-normal text-base-content/70"
+                  >
+                    {role}
+                  </span>
+                </span>
               </a>
               <div :if={@active_group_slug == group.slug} class="sb-sub">
                 <a

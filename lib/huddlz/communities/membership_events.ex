@@ -8,6 +8,19 @@ defmodule Huddlz.Communities.MembershipEvents do
 
   @pubsub Huddlz.PubSub
 
+  @behaviour Ash.Notifier
+
+  @impl true
+  def requires_original_data?(_resource, _action), do: false
+
+  @impl true
+  def notify(%Ash.Notifier.Notification{action: %{name: name}, data: member})
+      when name in [:join_group, :leave_group, :add_member] do
+    broadcast(member.group_id, member.user_id)
+  end
+
+  def notify(_notification), do: :ok
+
   def subscribe(group_id) when is_binary(group_id) do
     Phoenix.PubSub.subscribe(@pubsub, topic(group_id))
   end

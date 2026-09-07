@@ -16,7 +16,7 @@ defmodule HuddlzWeb.MyGroupsLive do
   alias HuddlzWeb.Layouts
   require Logger
 
-  @group_loads [:current_image_url, :member_count]
+  @group_loads [:current_image_url, :member_count, :viewer_role]
   @page_size 20
   @valid_filters ~w(all hosting joined)
 
@@ -52,6 +52,21 @@ defmodule HuddlzWeb.MyGroupsLive do
     else
       {:noreply, socket}
     end
+  end
+
+  @impl true
+  def handle_info(
+        {:organizer_access_changed, user_id},
+        %{assigns: %{current_user: %{id: user_id}}} = socket
+      ) do
+    user = socket.assigns.current_user
+    filter = socket.assigns.filter
+
+    {:noreply,
+     socket
+     |> assign(:counts, load_counts(user))
+     |> load_results(filter, 1, user)
+     |> push_patch(to: filter_path(filter, 1))}
   end
 
   @impl true
@@ -117,10 +132,6 @@ defmodule HuddlzWeb.MyGroupsLive do
 
   defp filter_path(filter, _page), do: ~p"/my-groups?#{[filter: filter]}"
 
-  defp role_for(group, user) do
-    if group.owner_id == user.id, do: :hosting, else: :joined
-  end
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -160,7 +171,7 @@ defmodule HuddlzWeb.MyGroupsLive do
           <%= for {group, idx} <- Enum.with_index(@groups) do %>
             <.my_group_card
               group={group}
-              role={role_for(group, @current_user)}
+              role={group.viewer_role}
               gradient={Integer.mod(idx, 6) + 1}
             />
           <% end %>
@@ -189,7 +200,7 @@ defmodule HuddlzWeb.MyGroupsLive do
           group={@group}
           gradient={@gradient}
         />
-        <span class={["card-tag", role_class(@role)]}>{role_label(@role)}</span>
+        <span class={["card-tag", role_class(@role)]}>{HuddlzWeb.GroupRole.label(@role)}</span>
       </:cover>
       <:body>
         <span :if={@group.location} class="card-group">{@group.location}</span>
@@ -212,11 +223,9 @@ defmodule HuddlzWeb.MyGroupsLive do
   defp empty_message(:hosting), do: "You haven't created a group yet."
   defp empty_message(:joined), do: "You haven't joined any groups yet."
 
-  defp role_class(:hosting), do: "hybrid"
-  defp role_class(:joined), do: "in-person"
-
-  defp role_label(:hosting), do: "Hosting"
-  defp role_label(:joined), do: "Joined"
+  defp role_class(:owner), do: "hybrid"
+  defp role_class(:organizer), do: "virtual"
+  defp role_class(_), do: "in-person"
 
   defp member_count_label(group) do
     case Map.get(group, :member_count) do

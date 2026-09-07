@@ -87,12 +87,20 @@ defmodule HuddlzWeb.GroupLive.Show do
       {:ok, group} ->
         membership = current_user_membership(group, user)
 
+        {past_huddlz, past_total_pages} =
+          get_past_group_huddlz_paginated(group, user, page: 1, per_page: 10)
+
         socket
         |> assign(:group, group)
         |> assign_member_grid(get_members(group, user, !is_nil(membership)))
         |> assign(:member_count, group.member_count)
         |> assign(:is_member, !is_nil(membership))
         |> assign_action_permissions(group, user, membership)
+        |> assign(:upcoming_huddlz, get_upcoming_group_huddlz(group, user, limit: 10))
+        |> assign(:past_huddlz, past_huddlz)
+        |> assign(:past_page, 1)
+        |> assign(:past_total_pages, past_total_pages)
+        |> assign(:leave_dialog_open, false)
 
       {:error, _reason} ->
         handle_error(socket, :not_found,
@@ -411,6 +419,7 @@ defmodule HuddlzWeb.GroupLive.Show do
         </ul>
 
         <p class="mt-4 text-sm text-base-content/60">
+          Leaving does not cancel your existing RSVPs.
           You can rejoin later if the group is public or you receive another invitation.
         </p>
 
@@ -531,18 +540,10 @@ defmodule HuddlzWeb.GroupLive.Show do
 
     case join_group(socket.assigns.group, user) do
       {:ok, _} ->
-        group = reload_group(socket.assigns.group, user)
-        membership = current_user_membership(group, user)
-        members = get_members(group, user, true)
-
         {:noreply,
          socket
          |> put_flash(:info, "Successfully joined the group!")
-         |> assign(:group, group)
-         |> assign(:is_member, true)
-         |> assign_member_grid(members)
-         |> assign(:member_count, group.member_count)
-         |> assign_action_permissions(group, user, membership)}
+         |> refresh_membership_state()}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to join group")}
@@ -564,17 +565,10 @@ defmodule HuddlzWeb.GroupLive.Show do
 
     case leave_group(socket.assigns.group, user) do
       :ok ->
-        group = reload_group(socket.assigns.group, user)
-
         {:noreply,
          socket
          |> put_flash(:info, "Successfully left the group")
-         |> assign(:leave_dialog_open, false)
-         |> assign(:group, group)
-         |> assign(:is_member, false)
-         |> assign_member_grid(nil)
-         |> assign(:member_count, group.member_count)
-         |> assign_action_permissions(group, user, nil)}
+         |> refresh_membership_state()}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to leave group")}
@@ -583,7 +577,12 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   def handle_event("leave_group", _, socket), do: {:noreply, socket}
 
-  @group_loads [:current_image_url, :member_count, owner: [:current_profile_picture_url]]
+  @group_loads [
+    :current_image_url,
+    :member_count,
+    :viewer_role,
+    owner: [:current_profile_picture_url]
+  ]
 
   defp get_group_by_slug(slug, actor) do
     case Communities.get_by_slug(slug, actor: actor, load: @group_loads) do
@@ -592,10 +591,6 @@ defmodule HuddlzWeb.GroupLive.Show do
       {:error, %Ash.Error.Query.NotFound{}} -> {:error, :not_found}
       {:error, _} -> {:error, :not_found}
     end
-  end
-
-  defp reload_group(%{slug: slug}, actor) do
-    Communities.get_by_slug!(slug, actor: actor, load: @group_loads)
   end
 
   defp group_meta(group) do
@@ -692,9 +687,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   defp parse_page(val) when is_integer(val) and val >= 1, do: val
   defp parse_page(_), do: 1
 
-  defp role_pill(%{can_edit_group: true}), do: "Owner"
-  defp role_pill(%{is_member: true}), do: "Joined"
-  defp role_pill(_assigns), do: nil
+  defp role_pill(%{group: group}), do: HuddlzWeb.GroupRole.label(group.viewer_role)
 
   defp assign_member_grid(socket, nil) do
     socket

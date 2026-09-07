@@ -80,6 +80,7 @@ defmodule HuddlzWeb.OrganizeLive do
         socket
         |> subscribe_to_membership_changes(group)
         |> assign(:group, group)
+        |> assign(:can_edit_group, Ash.can?({group, :update_details}, user))
         |> assign(:page_title, "#{group.name} · Organizer")
         |> load_section(action, group, user)
 
@@ -242,6 +243,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <% :overview -> %>
           <.overview_view
             group={@group}
+            can_edit_group={@can_edit_group}
             upcoming_huddlz={@upcoming_huddlz}
             open_rsvps={@open_rsvps}
           />
@@ -250,6 +252,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <% :members -> %>
           <.members_view
             group={@group}
+            can_edit_group={@can_edit_group}
             owner_members={@streams.owner_members}
             organizer_members={@streams.organizer_members}
             regular_members={@streams.regular_members}
@@ -347,6 +350,8 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :upcoming_huddlz, :list, required: true
   attr :open_rsvps, :integer, required: true
 
+  attr :can_edit_group, :boolean, required: true
+
   defp overview_view(assigns) do
     assigns =
       assigns
@@ -360,7 +365,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <p>A scannable summary of this group's huddlz and members.</p>
       </div>
       <div class="actions">
-        <a class="btn-secondary" href={~p"/groups/#{@group.slug}/edit"}>Edit group</a>
+        <a :if={@can_edit_group} class="btn-secondary" href={~p"/groups/#{@group.slug}/edit"}>Edit group</a>
         <a class="btn-primary" href={~p"/groups/#{@group.slug}/huddlz/new"}>
           + Create huddl
         </a>
@@ -553,6 +558,8 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :transfer_target_form, Phoenix.HTML.Form, required: true
   attr :current_user, :map, required: true
 
+  attr :can_edit_group, :boolean, required: true
+
   defp members_view(assigns) do
     grouped = [
       {:owner, assigns.owner_members, assigns.role_counts.owner},
@@ -579,7 +586,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <p>Who's part of {@group.name}.</p>
       </div>
       <div class="actions">
-        <a class="btn-secondary" href={~p"/groups/#{@group.slug}/edit"}>Edit group</a>
+        <a :if={@can_edit_group} class="btn-secondary" href={~p"/groups/#{@group.slug}/edit"}>Edit group</a>
       </div>
     </div>
 
@@ -721,7 +728,7 @@ defmodule HuddlzWeb.OrganizeLive do
               </div>
             </div>
             <button
-              :if={invitation.status == :pending}
+              :if={invitation.status == :pending && Ash.can?({invitation, :revoke}, @current_user)}
               id={"revoke-invitation-#{invitation.id}"}
               type="button"
               class="pill"
@@ -1038,6 +1045,7 @@ defmodule HuddlzWeb.OrganizeLive do
       {:ok, reloaded_group} ->
         socket
         |> assign(:group, reloaded_group)
+        |> assign(:can_edit_group, Ash.can?({reloaded_group, :update_details}, user))
         |> refresh_members_if_visible(reloaded_group, user)
 
       :error ->
