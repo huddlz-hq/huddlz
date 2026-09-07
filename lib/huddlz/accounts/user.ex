@@ -130,6 +130,17 @@ defmodule Huddlz.Accounts.User do
   actions do
     defaults [:read]
 
+    update :confirm do
+      accept [:email]
+      require_atomic? false
+      argument :confirm, :string, allow_nil?: false, sensitive?: true
+      metadata :token, :string, allow_nil?: false
+
+      change AshAuthentication.AddOn.Confirmation.ConfirmChange
+      change AshAuthentication.GenerateTokenChange
+      change Huddlz.Accounts.User.Changes.QueueConfirmedInvitations
+    end
+
     read :public_profile do
       description "Slim, public-facing profile shape used on relationships exposed via the API."
       prepare build(select: [:id, :display_name], load: [:current_profile_picture_url])

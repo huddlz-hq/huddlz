@@ -168,3 +168,26 @@ Feature: Private group invitations
     And I click "Save preferences"
     Then I should see "Notification preferences saved"
     And no invitation email should be sent to "new-maker@example.com"
+
+    When I confirm the registration email sent to "new-maker@example.com"
+    And I visit "/notifications?filter=invites"
+    Then I should see "Invitation to Quiet Makers"
+    When I click "Open"
+    And I click "Accept invitation"
+    Then I should see "Welcome to Quiet Makers."
+    And no invitation email should be sent to "new-maker@example.com"
+
+  Scenario: Independently registered recipients confirm their email before invitation delivery
+    Given I am signed in as "owner@example.com"
+    When I open the member workspace for "Quiet Makers"
+    And I submit a member invitation for "new-maker@example.com"
+    And I start registration without an invitation link
+    And I complete registration as "new-maker@example.com"
+    Then no invitation email should be sent to "new-maker@example.com"
+    When I visit "/notifications?filter=invites"
+    Then I should see "No pending invitations."
+    When I confirm the registration email sent to "new-maker@example.com"
+    Then an invitation email should be sent to "new-maker@example.com" for "Quiet Makers"
+    And that invitation email includes notification preferences and unsubscribe links
+    When I visit "/notifications?filter=invites"
+    Then I should see "Invitation to Quiet Makers"
