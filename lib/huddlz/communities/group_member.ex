@@ -8,6 +8,7 @@ defmodule Huddlz.Communities.GroupMember do
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
+    notifiers: [Huddlz.Communities.MembershipEvents],
     extensions: [AshJsonApi.Resource, AshGraphql.Resource]
 
   graphql do
