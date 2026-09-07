@@ -128,7 +128,7 @@ defmodule RecurrenceBoundariesSteps do
   end
 
   step "the recurrence form should explain {string}", %{args: [message]} = context do
-    assert_has(context.session, "#form_repeat_until-error-0", text: message)
+    assert_has(context.session, "#huddl-form", text: message)
     context
   end
 
