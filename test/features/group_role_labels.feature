@@ -65,7 +65,7 @@ Feature: Actual group role labels
     Given I am signed in as "owner315@example.com"
     When I visit the group page for "Role Labels"
     Then my group role should be "Owner"
-    When I transfer "Role Labels" to "helper315@example.com" in another session
+    When the owner transfers "Role Labels" to "helper315@example.com" in another session
     Then my group role should be "Organizer"
     And my navigation role for "Role Labels" should be "Organizer"
     When I open the organizer roster for "Role Labels"
