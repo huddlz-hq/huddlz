@@ -338,7 +338,12 @@ defmodule HuddlzWeb.Components.HuddlForm do
     >
       <h2 class="font-display text-xl tracking-tight text-glow mb-6">Add New Address</h2>
 
-      <form phx-submit="save_location" phx-change="modal_form_changed" class="form-grid">
+      <form
+        id="new-location-form"
+        phx-submit="save_location"
+        phx-change="modal_form_changed"
+        class="form-grid"
+      >
         <div class="form-row">
           <label class="form-label" for="modal-address-autocomplete-input">
             Search for an address

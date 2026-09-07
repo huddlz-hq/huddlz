@@ -35,10 +35,10 @@ defmodule HuddlzWeb.HuddlLive.NewLocationTest do
         |> login(owner)
         |> live(~p"/groups/#{group.slug}/huddlz/new/locations/new")
 
-      # The autocomplete input must be inside a form — this is what was broken
-      html = render(view)
-      assert html =~ ~s(data-testid="location-input")
-      assert html =~ ~s(phx-submit="save_location")
+      assert has_element?(
+               view,
+               "form#new-location-form[phx-submit='save_location'][phx-change] [data-testid='location-input']"
+             )
     end
 
     test "save button is disabled until a location is selected", %{
