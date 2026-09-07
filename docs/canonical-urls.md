@@ -19,9 +19,12 @@ public canonical links, even when an authorized viewer can access them.
 Authorization still controls anonymous HTTP responses. Canonical links are not
 an access-control mechanism.
 
-The initial HTTP document contains the canonical in its head. During LiveView
-navigation, the live layout synchronizes the canonical and `og:url` with the
-new view, removing absent values so previous-page URLs cannot linger.
+Each initial HTTP document contains its canonical and `og:url` in the head.
+LiveView navigation retains the original root head, following native LiveView
+behavior; no custom JavaScript synchronizes these tags. Direct requests to the
+destination URL receive that page's metadata. This server-rendered approach
+serves the launch SEO requirement while preserving live navigation. See the
+[research notes](research/liveview-head-metadata.md) for the rationale.
 
 There are no legacy HTML detail aliases or slug-history redirects in the
 current router. An incorrect group slug does not resolve a huddl. Future slug
