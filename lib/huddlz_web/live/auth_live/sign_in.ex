@@ -150,11 +150,11 @@ defmodule HuddlzWeb.AuthLive.SignIn do
   end
 
   defp assign_password_form(socket, form) do
-    assign(
-      socket,
-      :password_form,
-      to_form(Form.clear_value(form, :password))
-    )
+    form = Form.clear_value(form, :password)
+    # Keep the submitted field visible to LiveView's used-input tracking.
+    form = %{form | params: Map.put(form.params, "password", "")}
+
+    assign(socket, :password_form, to_form(form))
   end
 
   defp sign_in_path(nil), do: "/auth/user/password/sign_in"
