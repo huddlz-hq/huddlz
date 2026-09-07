@@ -16,19 +16,20 @@ defmodule Huddlz.Communities.HuddlCoverImage do
     data_layer: AshPostgres.DataLayer,
     extensions: [AshOban, AshJsonApi.Resource, AshGraphql.Resource]
 
+  # Public API and persisted job identities remain stable across the internal rename.
   graphql do
-    type :huddl_cover_image
+    type :huddl_image
 
     mutations do
-      create :upload_huddl_cover_image, :upload
+      create :upload_huddl_image, :upload
     end
   end
 
   json_api do
-    type "huddl_cover_image"
+    type "huddl_image"
 
     routes do
-      base "/huddl_cover_images"
+      base "/huddl_images"
 
       post :upload, route: "/upload"
     end
@@ -40,21 +41,21 @@ defmodule Huddlz.Communities.HuddlCoverImage do
         action :hard_delete
         # No scheduler - triggered immediately via run_oban_trigger
         scheduler_cron false
-        queue :huddl_cover_image_cleanup
+        queue :huddl_image_cleanup
         # Retry with exponential backoff (max_attempts defaults to 20)
         backoff :exponential
         log_final_error? true
-        worker_module_name Huddlz.Workers.HuddlCoverImageCleanup
+        worker_module_name Huddlz.Workers.HuddlImageCleanup
       end
 
       trigger :cleanup_orphaned_images do
         action :cleanup_orphaned
         # Run every hour to clean up pending images older than 24 hours
         scheduler_cron "0 * * * *"
-        queue :huddl_cover_image_cleanup
+        queue :huddl_image_cleanup
         read_action :orphaned_pending
-        worker_module_name Huddlz.Workers.HuddlCoverImageOrphanedCleanup
-        scheduler_module_name Huddlz.Workers.HuddlCoverImageOrphanedCleanupScheduler
+        worker_module_name Huddlz.Workers.HuddlImageOrphanedCleanup
+        scheduler_module_name Huddlz.Workers.HuddlImageOrphanedCleanupScheduler
       end
     end
   end

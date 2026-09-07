@@ -34,16 +34,16 @@ defmodule HuddlzWeb.Api.Json.HuddlCoverImageTest do
       assert is_binary(image.thumbnail_path)
     end
 
-    test "POST /api/json/huddl_cover_images/upload route is registered", %{conn: conn} do
+    test "POST /api/json/huddl_images/upload route is registered", %{conn: conn} do
       owner = generate(user())
 
       conn =
         conn
         |> authenticated_conn(owner)
         |> put_req_header("content-type", "application/vnd.api+json")
-        |> post("/api/json/huddl_cover_images/upload", %{
+        |> post("/api/json/huddl_images/upload", %{
           "data" => %{
-            "type" => "huddl_cover_image",
+            "type" => "huddl_image",
             "attributes" => %{"huddl_id" => Ash.UUID.generate()}
           }
         })
@@ -63,9 +63,9 @@ defmodule HuddlzWeb.Api.Json.HuddlCoverImageTest do
         conn
         |> authenticated_conn(owner)
         |> multipart_post(
-          "/api/json/huddl_cover_images/upload",
+          "/api/json/huddl_images/upload",
           %{"huddl_id" => huddl.id, "file" => "the_file"},
-          type: "huddl_cover_image",
+          type: "huddl_image",
           file: %{
             part_name: "the_file",
             path: @fixture,
