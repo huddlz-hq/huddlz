@@ -80,6 +80,38 @@ defmodule HuddlzWeb.Api.Graphql.NotificationPreferencesTest do
       assert reloaded.notification_preferences["rsvp_received"] == false
     end
 
+    test "rejects unknown keys and non-boolean values without saving", %{conn: conn} do
+      target = generate(user())
+
+      query = """
+      mutation Toggle($prefs: JsonString!) {
+        updateNotificationPreferences(id: "#{target.id}", input: {preferences: $prefs}) {
+          result { id }
+          errors { message fields }
+        }
+      }
+      """
+
+      for preferences <- [%{"unknown" => true}, %{"rsvp_received" => "false"}] do
+        response =
+          conn
+          |> authenticated_conn(target)
+          |> gql_post(query, %{"prefs" => Jason.encode!(preferences)})
+          |> json_response(200)
+
+        assert %{"result" => nil, "errors" => [%{"fields" => ["preferences"]}]} =
+                 response["data"]["updateNotificationPreferences"]
+      end
+
+      response =
+        conn
+        |> authenticated_conn(target)
+        |> gql_post("query { me { notificationPreferences } }", %{})
+        |> json_response(200)
+
+      assert Jason.decode!(response["data"]["me"]["notificationPreferences"]) == %{}
+    end
+
     test "rejects unauthenticated callers", %{conn: conn} do
       target = generate(user())
 

@@ -257,18 +257,21 @@ defmodule Huddlz.Accounts.User do
 
       argument :preferences, :map, allow_nil?: false
 
-      validate present(:preferences)
+      validate Huddlz.Accounts.User.Validations.NotificationPreferences do
+        only_when_valid? true
+      end
 
       change fn changeset, _ctx ->
-        existing = changeset.data.notification_preferences || %{}
-        incoming = Ash.Changeset.get_argument(changeset, :preferences)
+               existing = changeset.data.notification_preferences || %{}
+               incoming = Ash.Changeset.get_argument(changeset, :preferences)
 
-        Ash.Changeset.change_attribute(
-          changeset,
-          :notification_preferences,
-          Map.merge(existing, incoming)
-        )
-      end
+               Ash.Changeset.change_attribute(
+                 changeset,
+                 :notification_preferences,
+                 Map.merge(existing, incoming)
+               )
+             end,
+             only_when_valid?: true
     end
 
     update :change_email do

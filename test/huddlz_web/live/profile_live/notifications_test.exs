@@ -48,11 +48,19 @@ defmodule HuddlzWeb.ProfileLive.NotificationsTest do
       |> login(user)
       |> visit("/profile/notifications")
       |> uncheck("Confirmation when I RSVP to a huddl")
+      |> check("Weekly digest of upcoming huddlz")
       |> click_button("Save preferences")
       |> assert_has("*", text: "Notification preferences saved")
 
       reloaded = Ash.get!(Huddlz.Accounts.User, user.id, actor: user)
       assert reloaded.notification_preferences["rsvp_confirmation"] == false
+      assert reloaded.notification_preferences["weekly_digest"] == true
+
+      conn
+      |> login(user)
+      |> visit("/profile/notifications")
+      |> assert_has("#prefs-rsvp_confirmation:not([checked])")
+      |> assert_has("#prefs-weekly_digest[checked]")
     end
   end
 end
