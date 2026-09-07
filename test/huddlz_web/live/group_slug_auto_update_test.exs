@@ -18,16 +18,32 @@ defmodule HuddlzWeb.GroupSlugAutoUpdateTest do
 
       # Type "A" - too short, slug not generated yet
       render_change(view, "validate", %{"form" => %{"name" => "A"}})
-      assert has_element?(view, "#group-slug-preview", "URL: http://localhost:4002/groups/...")
+
+      assert has_element?(
+               view,
+               "#group-slug-preview",
+               "URL: #{HuddlzWeb.Endpoint.url()}/groups/..."
+             )
+
       assert has_element?(view, "#form_name-error-0", "Must be between 3 and 100 characters")
 
       # Type "As" - still too short
       render_change(view, "validate", %{"form" => %{"name" => "As"}})
-      assert has_element?(view, "#group-slug-preview", "URL: http://localhost:4002/groups/...")
+
+      assert has_element?(
+               view,
+               "#group-slug-preview",
+               "URL: #{HuddlzWeb.Endpoint.url()}/groups/..."
+             )
 
       # Type "Ash" - now valid, slug should be generated
       render_change(view, "validate", %{"form" => %{"name" => "Ash"}})
-      assert has_element?(view, "#group-slug-preview", "URL: http://localhost:4002/groups/ash")
+
+      assert has_element?(
+               view,
+               "#group-slug-preview",
+               "URL: #{HuddlzWeb.Endpoint.url()}/groups/ash"
+             )
 
       # Add space and more text
       render_change(view, "validate", %{"form" => %{"name" => "Ash Framework"}})
@@ -35,7 +51,7 @@ defmodule HuddlzWeb.GroupSlugAutoUpdateTest do
       assert has_element?(
                view,
                "#group-slug-preview",
-               "URL: http://localhost:4002/groups/ash-framework"
+               "URL: #{HuddlzWeb.Endpoint.url()}/groups/ash-framework"
              )
     end
 
