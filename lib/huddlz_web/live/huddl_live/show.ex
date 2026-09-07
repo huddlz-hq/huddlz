@@ -726,6 +726,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
     socket
     |> assign(:page_title, huddl.title)
     |> assign(:meta, huddl_meta(huddl))
+    |> assign(:canonical_url, public_url(huddl))
     |> assign(:huddl, huddl)
     |> assign(:attendance, attendance)
     |> assign(:waitlist_position, waitlist_position)
@@ -756,6 +757,12 @@ defmodule HuddlzWeb.HuddlLive.Show do
       image: MetaHelpers.image_url(huddl.display_image_url, HuddlImages)
     }
   end
+
+  defp public_url(%{is_private: false, group: %{is_public: true}, lifecycle_state: state} = huddl)
+       when state in [:published, :completed],
+       do: huddl_meta(huddl).url
+
+  defp public_url(_huddl), do: nil
 
   defp attendance_info(_huddl, nil), do: {:none, nil}
 

@@ -37,6 +37,7 @@ defmodule HuddlzWeb.GroupLive.Show do
 
     case get_group_by_slug(slug, user) do
       {:ok, group} ->
+        meta = group_meta(group)
         membership = current_user_membership(group, user)
         members = get_members(group, user, !is_nil(membership))
         upcoming_huddlz = get_upcoming_group_huddlz(group, user, limit: 10)
@@ -45,7 +46,8 @@ defmodule HuddlzWeb.GroupLive.Show do
          socket
          |> subscribe_to_membership_changes(group)
          |> assign(:page_title, group.name)
-         |> assign(:meta, group_meta(group))
+         |> assign(:meta, meta)
+         |> assign(:canonical_url, if(group.is_public, do: meta.url))
          |> assign(:group, group)
          |> assign_member_grid(members)
          |> assign(:member_count, group.member_count)
