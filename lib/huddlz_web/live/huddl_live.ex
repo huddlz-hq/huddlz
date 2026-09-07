@@ -431,13 +431,16 @@ defmodule HuddlzWeb.HuddlLive do
       args.search_longitude,
       args.distance_miles,
       Keyword.get(opts, :relationship),
-      args.sort,
       args.search_time_zone,
       actor: actor,
+      query: [sort: sort_fields(args.sort)],
       page: Keyword.get(opts, :page, []),
       load: @huddl_card_loads
     )
   end
+
+  defp sort_fields(:newest), do: [inserted_at: :desc]
+  defp sort_fields(:soonest), do: [starts_at: :asc]
 
   defp list_groups(query, page, actor) do
     case Communities.search_groups(query,

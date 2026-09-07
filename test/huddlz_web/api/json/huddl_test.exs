@@ -1,6 +1,135 @@
 defmodule HuddlzWeb.Api.Json.HuddlTest do
   use HuddlzWeb.ApiCase, async: true
 
+  describe "GET /api/json/huddlz discovery ordering" do
+    setup do
+      owner = generate(user())
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+
+      later =
+        generate(huddl(group_id: group.id, actor: owner, date: Date.add(Date.utc_today(), 7)))
+
+      sooner =
+        generate(huddl(group_id: group.id, actor: owner, date: Date.add(Date.utc_today(), 1)))
+
+      middle =
+        generate(huddl(group_id: group.id, actor: owner, date: Date.add(Date.utc_today(), 4)))
+
+      now = DateTime.utc_now()
+      Ash.Seed.update!(later, %{inserted_at: DateTime.add(now, -3, :day)})
+      Ash.Seed.update!(sooner, %{inserted_at: DateTime.add(now, -2, :day)})
+      Ash.Seed.update!(middle, %{inserted_at: DateTime.add(now, -1, :day)})
+
+      %{later: later, sooner: sooner, middle: middle}
+    end
+
+    test "anonymous discovery accepts start-time field sorting", %{
+      conn: conn,
+      later: later,
+      sooner: sooner,
+      middle: middle
+    } do
+      response =
+        conn
+        |> get("/api/json/huddlz", %{"date_filter" => "upcoming", "sort" => "starts_at"})
+        |> json_response(200)
+
+      assert Enum.map(response["data"], & &1["id"]) == [sooner.id, middle.id, later.id]
+    end
+
+    test "anonymous discovery accepts creation-time field sorting", %{
+      conn: conn,
+      later: later,
+      sooner: sooner,
+      middle: middle
+    } do
+      response =
+        conn
+        |> get("/api/json/huddlz", %{"date_filter" => "upcoming", "sort" => "-inserted_at"})
+        |> json_response(200)
+
+      assert Enum.map(response["data"], & &1["id"]) == [middle.id, sooner.id, later.id]
+    end
+
+    test "explicit descending start time overrides the default", %{
+      conn: conn,
+      later: later,
+      sooner: sooner,
+      middle: middle
+    } do
+      response =
+        conn
+        |> get("/api/json/huddlz", %{"date_filter" => "upcoming", "sort" => "-starts_at"})
+        |> json_response(200)
+
+      assert Enum.map(response["data"], & &1["id"]) == [later.id, middle.id, sooner.id]
+    end
+
+    test "multiple sort fields break start-time ties before pagination", %{
+      conn: conn,
+      sooner: sooner,
+      middle: middle
+    } do
+      Ash.Seed.update!(middle, %{starts_at: sooner.starts_at, ends_at: sooner.ends_at})
+
+      response =
+        conn
+        |> get("/api/json/huddlz", %{
+          "date_filter" => "upcoming",
+          "sort" => "starts_at,-inserted_at",
+          "page" => %{"limit" => "1"}
+        })
+        |> json_response(200)
+
+      assert Enum.map(response["data"], & &1["id"]) == [middle.id]
+    end
+
+    test "UI ordering names are rejected as unknown API fields", %{conn: conn} do
+      for sort <- ["soonest", "newest"] do
+        response =
+          conn
+          |> get("/api/json/huddlz", %{"date_filter" => "upcoming", "sort" => sort})
+          |> json_response(400)
+
+        assert Enum.any?(response["errors"], &(&1["code"] == "invalid_sort"))
+      end
+    end
+
+    test "anonymous discovery defaults to soonest", %{
+      conn: conn,
+      later: later,
+      sooner: sooner,
+      middle: middle
+    } do
+      response =
+        conn |> get("/api/json/huddlz", %{"date_filter" => "upcoming"}) |> json_response(200)
+
+      assert Enum.map(response["data"], & &1["id"]) == [sooner.id, middle.id, later.id]
+    end
+  end
+
+  test "OpenAPI documents one field-based discovery sort and no duplicate parameters", %{
+    conn: conn
+  } do
+    schema = conn |> get("/api/json/open_api") |> response(200) |> Jason.decode!()
+
+    for {_path, item} <- schema["paths"],
+        {method, operation} <- item,
+        method in ~w(get post patch put delete options head) do
+      parameters = Enum.map(operation["parameters"] || [], &{&1["name"], &1["in"]})
+      assert parameters == Enum.uniq(parameters)
+    end
+
+    parameters = get_in(schema, ["paths", "/api/json/huddlz", "get", "parameters"])
+    assert [sort] = Enum.filter(parameters, &(&1["name"] == "sort" and &1["in"] == "query"))
+    refute Map.has_key?(sort["schema"], "enum")
+    pattern = Regex.compile!(sort["schema"]["pattern"])
+    assert Regex.match?(pattern, "starts_at")
+    assert Regex.match?(pattern, "-inserted_at")
+    refute Regex.match?(pattern, "soonest")
+    refute Regex.match?(pattern, "newest")
+  end
+
   describe "DELETE /api/json/huddlz/:id" do
     test "owner can delete a draft huddl", %{conn: conn} do
       owner = generate(user())
