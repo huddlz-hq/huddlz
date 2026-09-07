@@ -49,11 +49,22 @@ defmodule HuddlzWeb.ComponentsTest do
 
     test "renders a link when href is given" do
       assigns = %{}
-      html = rendered_to_string(~H|<.chip href="/discover">Discover</.chip>|)
+      active = rendered_to_string(~H|<.chip href="/discover" active>Discover</.chip>|)
+      inactive = rendered_to_string(~H|<.chip href="/discover">Discover</.chip>|)
 
-      assert html =~ "<a"
-      assert html =~ ~s(href="/discover")
-      assert html =~ "chip"
+      active_document = LazyHTML.from_fragment(active)
+      inactive_document = LazyHTML.from_fragment(inactive)
+
+      assert [_] =
+               Enum.to_list(
+                 LazyHTML.query(
+                   active_document,
+                   "a.chip.is-active[href='/discover'][aria-current='page']"
+                 )
+               )
+
+      assert [_] = Enum.to_list(LazyHTML.query(inactive_document, "a.chip[href='/discover']"))
+      assert Enum.empty?(LazyHTML.query(inactive_document, "a[aria-current]"))
     end
   end
 
@@ -93,6 +104,25 @@ defmodule HuddlzWeb.ComponentsTest do
       assert submit =~ ~s(type="submit")
       refute submit =~ ~s(type="button")
       assert default =~ ~s(type="button")
+    end
+  end
+
+  describe "toggle/1" do
+    test "renders a labeled native checkbox with switch state" do
+      form = to_form(%{"enabled" => "true"}, as: :settings)
+      assigns = %{field: form[:enabled]}
+
+      html =
+        rendered_to_string(~H"""
+        <.toggle field={@field} label="Email notifications" />
+        """)
+
+      assert html =~ ~s(type="checkbox")
+      assert html =~ ~s(role="switch")
+      assert html =~ ~s(aria-checked="true")
+      assert html =~ ~s(checked)
+      assert html =~ "Email notifications"
+      refute html =~ ~s(display: none)
     end
   end
 

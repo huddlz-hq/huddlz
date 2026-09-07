@@ -1,10 +1,13 @@
 defmodule Huddlz.Communities.GroupTest do
   use Huddlz.DataCase, async: true
 
-  require Ash.Query
-
   alias Huddlz.Communities
   alias Huddlz.Communities.Group
+
+  setup do
+    stub_geocode(%{latitude: 29.9012, longitude: -81.3124})
+    :ok
+  end
 
   describe "group creation slug" do
     test "auto-generates slug from name when slug arg is omitted" do
@@ -14,7 +17,13 @@ defmodule Huddlz.Communities.GroupTest do
         Group
         |> Ash.Changeset.for_create(
           :create_group,
-          %{name: "Slug From Name Test", description: "x", is_public: true}
+          %{
+            name: "Slug From Name Test",
+            description: "x",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
+            is_public: true
+          }
         )
         |> Ash.create(actor: actor)
 
@@ -31,6 +40,8 @@ defmodule Huddlz.Communities.GroupTest do
           %{
             name: "Custom Slug Test",
             description: "x",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
             is_public: true,
             slug: "i-picked-this"
           }
@@ -47,7 +58,14 @@ defmodule Huddlz.Communities.GroupTest do
         Group
         |> Ash.Changeset.for_create(
           :create_group,
-          %{name: "Blank Slug Test", description: "x", is_public: true, slug: ""}
+          %{
+            name: "Blank Slug Test",
+            description: "x",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
+            is_public: true,
+            slug: ""
+          }
         )
         |> Ash.create(actor: actor)
 
@@ -65,6 +83,8 @@ defmodule Huddlz.Communities.GroupTest do
         |> Ash.Changeset.for_create(:create_group, %{
           name: "Admin Created Group",
           description: "A test group created by an admin",
+          location: "Saint Augustine, FL",
+          time_zone: "America/New_York",
           is_public: true
         })
         |> Ash.create(actor: admin_user)
@@ -82,6 +102,8 @@ defmodule Huddlz.Communities.GroupTest do
         |> Ash.Changeset.for_create(:create_group, %{
           name: "Verified Created Group",
           description: "A test group created by a user",
+          location: "Saint Augustine, FL",
+          time_zone: "America/New_York",
           is_public: true
         })
         |> Ash.create(actor: verified_user)
@@ -99,6 +121,8 @@ defmodule Huddlz.Communities.GroupTest do
                |> Ash.Changeset.for_create(:create_group, %{
                  name: "Regular Created Group",
                  description: "A test group created by a user",
+                 location: "Saint Augustine, FL",
+                 time_zone: "America/New_York",
                  is_public: true
                })
                |> Ash.create(actor: regular_user)
@@ -161,6 +185,8 @@ defmodule Huddlz.Communities.GroupTest do
                |> Ash.Changeset.for_create(:create_group, %{
                  name: "User Owned Group",
                  description: "A group owned by a regular user",
+                 location: "Saint Augustine, FL",
+                 time_zone: "America/New_York",
                  is_public: true
                })
                |> Ash.create(actor: regular_user)
@@ -540,6 +566,8 @@ defmodule Huddlz.Communities.GroupTest do
                |> Ash.Changeset.for_create(:create_group, %{
                  name: "Test Group",
                  description: long_desc,
+                 location: "Saint Augustine, FL",
+                 time_zone: "America/New_York",
                  is_public: true
                })
                |> Ash.create(actor: owner)
@@ -554,6 +582,7 @@ defmodule Huddlz.Communities.GroupTest do
                |> Ash.Changeset.for_create(:create_group, %{
                  name: "Test Group",
                  location: long_loc,
+                 time_zone: "America/New_York",
                  is_public: true
                })
                |> Ash.create(actor: owner)
@@ -627,30 +656,33 @@ defmodule Huddlz.Communities.GroupTest do
       assert Enum.any?(memberships, &(&1.user_id == owner.id and &1.role == :organizer))
     end
 
-    test "owner can transfer ownership to a non-member (auto-adds them)", %{
+    test "owner cannot transfer ownership to a non-member", %{
       owner: owner,
       group: group
     } do
       new_owner = generate(user(role: :user))
 
-      assert {:ok, transferred} =
+      assert {:error, %Ash.Error.Invalid{}} =
                group
                |> Ash.Changeset.for_update(:transfer_ownership, %{new_owner_id: new_owner.id})
                |> Ash.update(actor: owner)
 
-      assert transferred.owner_id == new_owner.id
-
-      new_owner_membership =
-        Huddlz.Communities.GroupMember
-        |> Ash.Query.filter(group_id: group.id, user_id: new_owner.id)
-        |> Ash.read_one!(authorize?: false)
-
-      assert new_owner_membership.role == :owner
+      assert Ash.get!(Group, group.id, authorize?: false).owner_id == owner.id
     end
 
     test "non-owner cannot transfer ownership", %{group: group} do
+      owner = Ash.get!(Huddlz.Accounts.User, group.owner_id, authorize?: false)
       stranger = generate(user(role: :user))
       target = generate(user(role: :user))
+
+      generate(
+        group_member(
+          group_id: group.id,
+          user_id: target.id,
+          role: :member,
+          actor: owner
+        )
+      )
 
       assert {:error, %Ash.Error.Forbidden{}} =
                group
@@ -698,6 +730,8 @@ defmodule Huddlz.Communities.GroupTest do
         |> Ash.Changeset.for_create(:create_group, %{
           name: "Alpha Search Group",
           description: "This is the first test group for search",
+          location: "Saint Augustine, FL",
+          time_zone: "America/New_York",
           is_public: true
         })
         |> Ash.create(actor: owner)
@@ -707,6 +741,8 @@ defmodule Huddlz.Communities.GroupTest do
         |> Ash.Changeset.for_create(:create_group, %{
           name: "Beta Group",
           description: "This is a search test group with beta in the name",
+          location: "Saint Augustine, FL",
+          time_zone: "America/New_York",
           is_public: true
         })
         |> Ash.create(actor: owner)
@@ -716,6 +752,8 @@ defmodule Huddlz.Communities.GroupTest do
         |> Ash.Changeset.for_create(:create_group, %{
           name: "Gamma Group",
           description: "This group contains alpha in the description",
+          location: "Saint Augustine, FL",
+          time_zone: "America/New_York",
           is_public: true
         })
         |> Ash.create(actor: owner)

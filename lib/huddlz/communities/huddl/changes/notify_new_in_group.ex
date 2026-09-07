@@ -7,9 +7,9 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyNewInGroup do
   Skipped when the create runs without an actor — that path is
   reserved for system-driven creations (e.g. `RecurrenceHelper`
   generating subsequent instances of a recurring series). Group
-  members shouldn't get a "new huddl" email for every weekly
-  occurrence of the same series; the first instance covers it, and
-  D1/D2 reminders cover each occurrence individually.
+  members shouldn't get a notification for a draft or for
+  system-generated recurring instances until an organizer explicitly
+  publishes that huddl.
 
   Recipient resolution happens in `after_action` once the huddl row
   exists, so the new huddl's group is reachable.
@@ -28,10 +28,18 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyNewInGroup do
   end
 
   defp notify(cs, huddl) do
-    case RecipientHelpers.actor_id(cs) do
-      nil -> {:ok, huddl}
-      actor_id -> notify_with_actor(cs, huddl, actor_id)
+    with true <- notification_due?(cs, huddl),
+         actor_id when not is_nil(actor_id) <- RecipientHelpers.actor_id(cs) do
+      notify_with_actor(cs, huddl, actor_id)
+    else
+      _ -> {:ok, huddl}
     end
+  end
+
+  defp notification_due?(%{action_type: :create}, %{lifecycle_state: :published}), do: true
+
+  defp notification_due?(cs, _huddl) do
+    cs.context[:lifecycle_transition] == :published
   end
 
   defp notify_with_actor(_cs, huddl, actor_id) do
@@ -50,12 +58,14 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyNewInGroup do
       "huddl_id" => huddl.id,
       "huddl_title" => to_string(huddl.title),
       "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at),
+      "time_zone" => huddl.time_zone,
       "group_name" => to_string(huddl.group.name),
       "group_slug" => to_string(huddl.group.slug)
     }
 
-    RecipientHelpers.deliver_each(user_ids, :huddl_new, payload)
-
-    {:ok, huddl}
+    case RecipientHelpers.deliver_each(user_ids, :huddl_new, payload) do
+      :ok -> {:ok, huddl}
+      {:error, reason} -> {:error, reason}
+    end
   end
 end

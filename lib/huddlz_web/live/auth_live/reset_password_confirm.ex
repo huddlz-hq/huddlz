@@ -27,7 +27,7 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
           as: "user",
           id: "user-password-reset-password-with-token",
           context: %{strategy: strategy, private: %{ash_authentication?: true}},
-          post_process_errors: &HuddlzWeb.PasswordFormErrors.post_process/3
+          post_process_errors: &HuddlzWeb.AuthFormErrors.post_process/3
         )
 
       {:ok,

@@ -7,8 +7,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EnforceCapacityFloor do
   use Ash.Resource.Change
 
   alias Huddlz.Communities.Huddl
-
-  require Ash.Query
+  alias Huddlz.Communities.Huddl.Changes.LockedHuddl
 
   def change(changeset, _opts, _context) do
     Ash.Changeset.before_action(changeset, fn cs ->
@@ -23,20 +22,22 @@ defmodule Huddlz.Communities.Huddl.Changes.EnforceCapacityFloor do
   end
 
   defp check_floor(cs, new_max) do
-    huddl =
-      Huddl
-      |> Ash.Query.filter(id == ^cs.data.id)
-      |> Ash.Query.lock("FOR UPDATE")
-      |> Ash.Query.load(:rsvp_count)
-      |> Ash.read_one!(authorize?: false)
+    case LockedHuddl.fetch(cs.data.id, :rsvp_count) do
+      {:ok, %Huddl{} = huddl} when new_max < huddl.rsvp_count ->
+        add_capacity_error(cs)
 
-    if new_max < huddl.rsvp_count do
-      Ash.Changeset.add_error(cs,
-        field: :max_attendees,
-        message: "cannot be less than the current RSVP count"
-      )
-    else
-      cs
+      {:ok, %Huddl{}} ->
+        cs
+
+      error ->
+        LockedHuddl.add_read_error(cs, error)
     end
+  end
+
+  defp add_capacity_error(cs) do
+    Ash.Changeset.add_error(cs,
+      field: :max_attendees,
+      message: "cannot be less than the current RSVP count"
+    )
   end
 end

@@ -21,8 +21,8 @@ defmodule Huddlz.Notifications do
   resources do
     resource Huddlz.Notifications.Notification do
       define :create_notification, action: :create
+      define :get_notification, action: :read, get_by: [:id]
       define :list_for_user, action: :for_user
-      define :list_invites_for_user, action: :invites_for_user
       define :mark_read, action: :mark_read
       define :mark_unread, action: :mark_unread
     end
@@ -33,7 +33,6 @@ defmodule Huddlz.Notifications do
 
   alias Huddlz.Accounts.User
   alias Huddlz.Mailer
-  alias Huddlz.Notifications.DeliverWorker
   alias Huddlz.Notifications.Notification
   alias Huddlz.Notifications.Summary
   alias Huddlz.Notifications.Triggers
@@ -51,8 +50,13 @@ defmodule Huddlz.Notifications do
             ]}
 
   @unsubscribe_salt "notifications:unsubscribe"
+  @pubsub Huddlz.PubSub
+  @topic_prefix "notifications:unread:"
   # 30 days — long enough for an email to sit in an inbox over a vacation.
   @unsubscribe_max_age 60 * 60 * 24 * 30
+  # Update notifications describe current state, so identical rapid retries
+  # should share both the email job and the canonical in-app row.
+  @deduplicated_in_app_triggers [:huddl_updated, :huddl_series_updated]
 
   @type deliver_result :: :sent | :skipped | {:error, term()}
 
@@ -71,23 +75,32 @@ defmodule Huddlz.Notifications do
           {:ok, Oban.Job.t()} | {:error, term()}
   def deliver(%User{id: user_id}, trigger, payload \\ %{}) when is_atom(trigger) do
     _ = Triggers.fetch!(trigger)
-
-    persist_in_app_notification(user_id, trigger, payload)
+    payload = Map.delete(payload, "virtual_link")
 
     %{user_id: user_id, trigger: Atom.to_string(trigger), payload: payload}
-    |> DeliverWorker.new()
-    |> Oban.insert()
+    |> notification_queue().enqueue()
     |> case do
+      {:ok, %Oban.Job{conflict?: true} = job}
+      when trigger in @deduplicated_in_app_triggers ->
+        {:ok, job}
+
       {:ok, job} ->
+        persist_in_app_notification(user_id, trigger, payload)
         {:ok, job}
 
       {:error, reason} = err ->
+        persist_in_app_notification(user_id, trigger, payload)
+
         Logger.warning(
           "Failed to enqueue #{inspect(trigger)} notification for user #{user_id}: #{inspect(reason)}"
         )
 
         err
     end
+  end
+
+  defp notification_queue do
+    Application.fetch_env!(:huddlz, :notification_queue)
   end
 
   # In-app feed persistence runs alongside the email enqueue. A failure here
@@ -111,6 +124,7 @@ defmodule Huddlz.Notifications do
     |> Ash.create()
     |> case do
       {:ok, _notification} ->
+        broadcast_unread_count_changed(user_id)
         :ok
 
       {:error, reason} ->
@@ -177,10 +191,59 @@ defmodule Huddlz.Notifications do
       return_errors?: true
     )
     |> case do
-      %Ash.BulkResult{status: :success} -> :ok
-      %Ash.BulkResult{errors: errors} -> {:error, errors}
+      %Ash.BulkResult{status: :success} ->
+        broadcast_unread_count_changed(user.id)
+        :ok
+
+      %Ash.BulkResult{errors: errors} ->
+        {:error, errors}
     end
   end
+
+  @doc """
+  Mark one notification as read and refresh the actor's live unread count.
+  """
+  @spec mark_read_and_notify(Notification.t(), User.t()) ::
+          {:ok, Notification.t()} | {:error, term()}
+  def mark_read_and_notify(%Notification{} = notification, %User{} = user) do
+    case mark_read(notification, actor: user) do
+      {:ok, _updated} = result ->
+        broadcast_unread_count_changed(user.id)
+        result
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
+  @doc """
+  Return the actor's unread in-app notification count.
+  """
+  @spec unread_count(User.t()) :: {:ok, non_neg_integer()} | {:error, term()}
+  def unread_count(%User{} = user) do
+    Notification
+    |> Ash.Query.for_read(:for_user, %{}, actor: user)
+    |> Ash.Query.filter(is_nil(read_at))
+    |> Ash.count()
+  end
+
+  @doc """
+  Subscribe the current process to unread-count changes for one person.
+  """
+  @spec subscribe_to_unread_count(User.t()) :: :ok | {:error, term()}
+  def subscribe_to_unread_count(%User{id: user_id}) do
+    Phoenix.PubSub.subscribe(@pubsub, unread_count_topic(user_id))
+  end
+
+  defp broadcast_unread_count_changed(user_id) do
+    Phoenix.PubSub.broadcast(
+      @pubsub,
+      unread_count_topic(user_id),
+      {:notification_unread_count_changed, user_id}
+    )
+  end
+
+  defp unread_count_topic(user_id), do: @topic_prefix <> to_string(user_id)
 
   @doc """
   Pure decision function: should this email be sent?

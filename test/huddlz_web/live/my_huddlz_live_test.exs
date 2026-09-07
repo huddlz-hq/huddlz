@@ -1,6 +1,8 @@
 defmodule HuddlzWeb.MyHuddlzLiveTest do
   use HuddlzWeb.ConnCase, async: true
 
+  alias Huddlz.Communities
+
   setup do
     host = generate(user(role: :user))
     attendee = generate(user(role: :user))
@@ -61,8 +63,17 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       |> login(attendee)
       |> visit("/my-huddlz")
       |> assert_has("h1", text: "My huddlz")
-      |> assert_has("aside.sidebar")
-      |> assert_has(".sb-item.active", text: "My huddlz")
+      |> assert_has(
+        "button#mobile-nav-trigger[aria-controls='mobile-navigation-drawer'][aria-expanded='false']"
+      )
+      |> assert_has(
+        "aside#mobile-navigation-drawer[aria-label='Primary navigation'][data-mobile-nav-state='closed']"
+      )
+      |> assert_has("button#mobile-nav-close[aria-label='Close navigation']")
+      |> assert_has("button.nav-scrim[aria-hidden='true'][tabindex='-1']")
+      |> assert_has(".sb-item.active[aria-current='page']", text: "My huddlz")
+      |> refute_has("input.nav-toggle")
+      |> refute_has(".sb-item:not(.active)[aria-current]")
     end
 
     test "shows three filter chips with counts", %{conn: conn, attendee: attendee} do
@@ -78,7 +89,8 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       conn
       |> login(attendee)
       |> visit("/my-huddlz")
-      |> assert_has(".filters .chip.is-active", text: "Upcoming")
+      |> assert_has(".filters .chip.is-active[aria-current='page']", text: "Upcoming")
+      |> refute_has(".filters .chip:not(.is-active)[aria-current]")
     end
   end
 
@@ -100,6 +112,23 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       |> assert_has("h3.card-title", text: "Going Show")
       |> refute_has("h3.card-title", text: "Skipped Show")
       |> assert_has(".pill", text: "Going")
+    end
+
+    test "cancelled huddl remains visible with a cancelled status", %{
+      conn: conn,
+      attendee: attendee,
+      host: host,
+      public_group: public_group
+    } do
+      huddl = create_huddl(host, public_group, title: "Cancelled Workshop")
+      Communities.rsvp_huddl!(huddl, actor: attendee)
+      Communities.cancel_huddl!(huddl, "Venue unavailable", actor: host)
+
+      conn
+      |> login(attendee)
+      |> visit("/my-huddlz")
+      |> assert_has("h3.card-title", text: "Cancelled Workshop")
+      |> assert_has(".pill", text: "Cancelled")
     end
 
     test "empty state shows helpful copy", %{conn: conn, attendee: attendee} do

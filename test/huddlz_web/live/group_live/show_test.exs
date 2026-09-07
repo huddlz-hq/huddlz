@@ -3,6 +3,50 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
 
   import Huddlz.Test.Helpers.Authentication
 
+  alias Huddlz.Communities
+
+  describe "responsive group cover" do
+    setup do
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+
+      %{owner: owner, group: group}
+    end
+
+    test "renders a branded fallback when no cover is available", %{conn: conn, group: group} do
+      conn
+      |> visit(~p"/groups/#{group.slug}")
+      |> assert_has("#group-detail-hero.group-hero")
+      |> assert_has("#group-detail-cover-#{group.id} [aria-hidden='true']")
+      |> assert_has("#group-detail-cover-#{group.id} .group-cover-label", text: "huddlz group")
+      |> refute_has("#group-detail-cover-#{group.id} .cover-image")
+    end
+
+    test "renders a decorative cover with a fallback", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      {:ok, _image} =
+        Communities.create_group_image(
+          %{
+            filename: "cover.jpg",
+            content_type: "image/jpeg",
+            size_bytes: 1000,
+            storage_path: "/uploads/group_images/#{group.id}/cover.jpg",
+            thumbnail_path: "/uploads/group_images/#{group.id}/cover_thumb.jpg",
+            group_id: group.id
+          },
+          actor: owner
+        )
+
+      conn
+      |> visit(~p"/groups/#{group.slug}")
+      |> assert_has("#group-detail-cover-#{group.id}-image[aria-hidden='true'][style]")
+      |> assert_has("#group-detail-cover-#{group.id} .group-cover-fallback")
+    end
+  end
+
   describe "membership action buttons" do
     setup do
       owner = generate(user(role: :user))
@@ -122,6 +166,37 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
       |> visit(~p"/groups/#{group.slug}")
       |> refute_has("button", text: "Leave Group")
       |> refute_has("#leave-group-dialog")
+    end
+  end
+
+  describe "share links" do
+    test "sidebar share section offers a mailto email link and a QR code modal", %{
+      conn: conn
+    } do
+      owner = generate(user(role: :user))
+
+      group =
+        generate(
+          group(
+            owner_id: owner.id,
+            is_public: true,
+            name: "Share Test Group",
+            actor: owner
+          )
+        )
+
+      group_url = HuddlzWeb.Endpoint.url() <> ~p"/groups/#{group.slug}"
+
+      conn
+      |> visit(~p"/groups/#{group.slug}")
+      |> assert_has("aside.huddl-side h3", text: "Share")
+      |> assert_has("#share-group-modal-email[href^='mailto:?subject=Share%20Test%20Group']")
+      |> assert_has("#share-group-modal-open[phx-click*='share-group-modal']")
+      |> assert_has("#share-group-modal-url[value='#{group_url}']")
+      |> assert_has(
+        "#share-group-modal-copy[data-copy-target='#share-group-modal-url'] #share-group-modal-copy-label[phx-hook='ClipboardCopy'][phx-update='ignore']"
+      )
+      |> assert_has("#share-group-modal .qr-frame svg")
     end
   end
 end

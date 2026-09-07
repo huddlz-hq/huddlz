@@ -25,6 +25,7 @@ Feature: Group Image Management
     When I visit "/groups/new"
     And I fill in "Group name" with "No Image Group"
     And I fill in "Description" with "A group without an image"
+    And I select "Saint Augustine, FL, USA" as the group city in "America/New_York"
     And I check "Public group"
     And I click "Create group"
     Then I should see "Group created successfully"
@@ -35,6 +36,7 @@ Feature: Group Image Management
     When I visit "/groups/new"
     And I fill in "Group name" with "Image Test Group"
     And I fill in "Description" with "A group with an image"
+    And I select "Saint Augustine, FL, USA" as the group city in "America/New_York"
     And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "Image uploaded"
     When I click "Create group"
@@ -46,6 +48,7 @@ Feature: Group Image Management
     Given I am signed in as "owner@example.com"
     When I visit "/groups/new"
     And I fill in "Group name" with "Cancel Image Group"
+    And I select "Saint Augustine, FL, USA" as the group city in "America/New_York"
     And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "Image uploaded"
     When I cancel the pending image
@@ -97,12 +100,36 @@ Feature: Group Image Management
   Scenario: Owner can remove existing group image
     Given a public group "Remove Image Group" exists with owner "owner@example.com"
     And the group "Remove Image Group" has an image
+    And a huddl "Group Image Huddl" exists in "Remove Image Group" created by "owner@example.com"
     And I am signed in as "owner@example.com"
     When I visit the edit page for group "Remove Image Group"
     Then I should see "Current image"
     When I click the "Remove" button
+    Then I should see "Remove this group cover image?"
+    And I should see "branded group fallback"
+    When I click the "Remove image" button
     Then I should see "Image removed"
     And the group "Remove Image Group" should not have an image
+    When I visit the group page for "Remove Image Group"
+    Then I should not see the group image
+    And I should see the group name "Remove Image Group" in the placeholder
+    When I visit "/my-groups"
+    Then I should not see the group image
+    When I visit the huddl "Group Image Huddl" page
+    Then I should not see an image on the huddl page
+    When I visit the edit page for group "Remove Image Group"
+    Then I should see "Drop a 16:9 image"
+
+  Scenario: Canceling group image removal preserves the image
+    Given a public group "Keep Image Group" exists with owner "owner@example.com"
+    And the group "Keep Image Group" has an image
+    And I am signed in as "owner@example.com"
+    When I visit the edit page for group "Keep Image Group"
+    And I click the "Remove" button
+    Then I should see "Remove this group cover image?"
+    When I click the "Keep image" button
+    Then I should not see "Remove this group cover image?"
+    And the group "Keep Image Group" should have an image
 
   Scenario: Canceling a pending image shows current image again
     Given a public group "Cancel Replace Group" exists with owner "owner@example.com"

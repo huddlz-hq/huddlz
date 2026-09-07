@@ -25,6 +25,7 @@ defmodule Huddlz.Communities.GroupUnicodeTest do
               name: name,
               description: "Test group with unicode name",
               location: "Test Location",
+              time_zone: "America/New_York",
               is_public: true
             },
             actor: user
@@ -51,6 +52,7 @@ defmodule Huddlz.Communities.GroupUnicodeTest do
             slug: "beijing-users",
             description: "Beijing user group",
             location: "Beijing",
+            time_zone: "Asia/Shanghai",
             is_public: true
           },
           actor: user
@@ -73,6 +75,7 @@ defmodule Huddlz.Communities.GroupUnicodeTest do
                    name: "🔥🔥🔥",
                    description: "Test group",
                    location: "Test",
+                   time_zone: "America/New_York",
                    is_public: true
                  },
                  actor: user

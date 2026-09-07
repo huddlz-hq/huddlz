@@ -14,7 +14,7 @@ defmodule HuddlzWeb.MyHuddlzLive do
   import HuddlzWeb.Live.Helpers.ParamHelpers
 
   alias Huddlz.Communities
-  alias Huddlz.Storage.HuddlImages
+  alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
   require Logger
 
@@ -148,6 +148,7 @@ defmodule HuddlzWeb.MyHuddlzLive do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="my-huddlz"
     >
@@ -203,11 +204,11 @@ defmodule HuddlzWeb.MyHuddlzLive do
       gradient={@gradient}
     >
       <:cover>
-        <img
+        <.cover_image
           :if={@huddl.display_image_url}
+          id={"my-huddl-card-cover-#{@huddl.id}"}
           class="card-cover-img"
-          src={HuddlImages.url(@huddl.display_image_url)}
-          alt={@huddl.title}
+          image_url={@huddl.display_image_url}
         />
         <.date_stamp month={huddl_month(@huddl)} day={huddl_day(@huddl)} />
         <.card_tag variant={tag_variant(@huddl.event_type)}>
@@ -218,7 +219,7 @@ defmodule HuddlzWeb.MyHuddlzLive do
         <span :if={@huddl.group} class="card-group">{@huddl.group.name}</span>
         <h3 class="card-title">{@huddl.title}</h3>
         <div class="card-meta">
-          <span>{format_meta_when(@huddl.starts_at)}</span>
+          <span>{format_meta_when(@huddl)}</span>
           <%= if @huddl.rsvp_count > 0 || @huddl.max_attendees do %>
             <span class="dot"></span>
             <span>{rsvp_label(@huddl)}</span>
@@ -226,7 +227,9 @@ defmodule HuddlzWeb.MyHuddlzLive do
         </div>
       </:body>
       <:foot>
-        <.pill variant={pill_variant(@filter)}>{pill_label(@filter)}</.pill>
+        <.pill variant={pill_variant(@huddl, @filter)}>
+          {pill_label(@huddl, @filter)}
+        </.pill>
         <span class="muted" style="font-size:12px">{relative_time(@huddl.starts_at)}</span>
       </:foot>
     </.card>
@@ -251,13 +254,27 @@ defmodule HuddlzWeb.MyHuddlzLive do
   defp empty_message(:past),
     do: "No past attendance yet."
 
-  defp pill_variant(:upcoming), do: :default
-  defp pill_variant(:waitlisted), do: :warn
-  defp pill_variant(:past), do: :muted
+  defp pill_variant(%{status: status}, filter) do
+    case HuddlStatus.contextual_override(status) do
+      %{variant: variant} -> variant
+      nil -> filter_pill_variant(filter)
+    end
+  end
 
-  defp pill_label(:upcoming), do: "Going"
-  defp pill_label(:waitlisted), do: "Waitlist"
-  defp pill_label(:past), do: "Attended"
+  defp filter_pill_variant(:upcoming), do: :default
+  defp filter_pill_variant(:waitlisted), do: :warn
+  defp filter_pill_variant(:past), do: :muted
+
+  defp pill_label(%{status: status}, filter) do
+    case HuddlStatus.contextual_override(status) do
+      %{label: label} -> label
+      nil -> filter_pill_label(filter)
+    end
+  end
+
+  defp filter_pill_label(:upcoming), do: "Going"
+  defp filter_pill_label(:waitlisted), do: "Waitlist"
+  defp filter_pill_label(:past), do: "Attended"
 
   defp relative_time(%DateTime{} = dt) do
     diff_seconds = DateTime.diff(dt, DateTime.utc_now(), :second)

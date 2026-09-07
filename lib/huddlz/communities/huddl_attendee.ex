@@ -58,8 +58,8 @@ defmodule Huddlz.Communities.HuddlAttendee do
         allow_nil? false
       end
 
-      change manage_relationship(:huddl_id, :huddl, type: :append)
-      change manage_relationship(:user_id, :user, type: :append)
+      change set_attribute(:huddl_id, arg(:huddl_id))
+      change set_attribute(:user_id, arg(:user_id))
     end
 
     create :join_waitlist do
@@ -73,8 +73,8 @@ defmodule Huddlz.Communities.HuddlAttendee do
         allow_nil? false
       end
 
-      change manage_relationship(:huddl_id, :huddl, type: :append)
-      change manage_relationship(:user_id, :user, type: :append)
+      change set_attribute(:huddl_id, arg(:huddl_id))
+      change set_attribute(:user_id, arg(:user_id))
       change set_attribute(:waitlisted_at, &DateTime.utc_now/0)
     end
 
@@ -122,6 +122,17 @@ defmodule Huddlz.Communities.HuddlAttendee do
       end
 
       filter expr(huddl_id == ^arg(:huddl_id) and user_id == ^actor(:id))
+    end
+
+    read :notification_recipients do
+      description "Resolve RSVP and waitlist recipients for system-driven huddl notifications"
+
+      argument :huddl_ids, {:array, :uuid} do
+        allow_nil? false
+        constraints min_length: 1
+      end
+
+      filter expr(huddl_id in ^arg(:huddl_ids))
     end
   end
 

@@ -1,6 +1,6 @@
 defmodule Huddlz.Notifications.Senders.HuddlCancelled do
   @moduledoc """
-  Sender for C3: a huddl has been cancelled (destroyed).
+  Sender for C3: a huddl has been cancelled.
 
   Sent to every user who had RSVP'd at the moment of cancellation.
   Transactional — preferences do not apply, no unsubscribe footer.
@@ -40,6 +40,8 @@ defmodule Huddlz.Notifications.Senders.HuddlCancelled do
 
     safe_when = HtmlEscape.escape(when_text)
     group_url = Urls.group_url(payload)
+    reason_html = reason_html(payload)
+    reason_text = reason_text(payload)
 
     new()
     |> from(Mailer.from())
@@ -51,6 +53,8 @@ defmodule Huddlz.Notifications.Senders.HuddlCancelled do
     <p>The huddl <strong>#{safe_title}</strong> in
     <strong>#{safe_group}</strong>, scheduled for #{safe_when}, has
     been cancelled.</p>
+
+    #{reason_html}
 
     <p>If you'd made plans around this, you'll want to know. Sorry for
     the disruption.</p>
@@ -64,6 +68,8 @@ defmodule Huddlz.Notifications.Senders.HuddlCancelled do
     The huddl "#{huddl_title(payload)}" in "#{group_name(payload)}", scheduled for
     #{when_text}, has been cancelled.
 
+    #{reason_text}
+
     If you'd made plans around this, you'll want to know. Sorry for the disruption.
 
     You can browse other upcoming huddlz at #{group_url}.
@@ -75,4 +81,16 @@ defmodule Huddlz.Notifications.Senders.HuddlCancelled do
 
   defp group_name(%{"group_name" => name}) when is_binary(name), do: name
   defp group_name(_), do: "a group"
+
+  defp reason_html(%{"cancellation_reason" => reason}) when is_binary(reason) and reason != "" do
+    "<p>The organizer shared: <strong>#{HtmlEscape.escape(reason)}</strong></p>"
+  end
+
+  defp reason_html(_payload), do: ""
+
+  defp reason_text(%{"cancellation_reason" => reason}) when is_binary(reason) and reason != "" do
+    "The organizer shared: #{reason}"
+  end
+
+  defp reason_text(_payload), do: ""
 end

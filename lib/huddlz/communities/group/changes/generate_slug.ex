@@ -14,6 +14,8 @@ defmodule Huddlz.Communities.Group.Changes.GenerateSlug do
   """
   use Ash.Resource.Change
 
+  alias Huddlz.Communities.Group
+
   @impl true
   def change(changeset, _opts, _context) do
     if changeset.action_type == :create do
@@ -34,8 +36,16 @@ defmodule Huddlz.Communities.Group.Changes.GenerateSlug do
       _ ->
         case Ash.Changeset.get_attribute(changeset, :name) do
           nil -> nil
-          name -> name |> to_string() |> Slug.slugify()
+          name -> slugify_valid_name(name)
         end
+    end
+  end
+
+  defp slugify_valid_name(name) do
+    if Group.valid_name_length?(name) do
+      name
+      |> to_string()
+      |> Slug.slugify()
     end
   end
 end

@@ -20,6 +20,7 @@ defmodule HuddlzWeb.Components do
       import HuddlzWeb.Components.Card
       import HuddlzWeb.Components.Chip
       import HuddlzWeb.Components.Flash
+      import HuddlzWeb.Components.CoverImage
       import HuddlzWeb.Components.Icon
       import HuddlzWeb.Components.Input
       import HuddlzWeb.Components.ListRow
@@ -27,6 +28,7 @@ defmodule HuddlzWeb.Components do
       import HuddlzWeb.Components.Pagination
       import HuddlzWeb.Components.Panel
       import HuddlzWeb.Components.Pill
+      import HuddlzWeb.Components.ShareModal
     end
   end
 end

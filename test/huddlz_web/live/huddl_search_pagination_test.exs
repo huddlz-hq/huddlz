@@ -51,7 +51,6 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
           creator_id: user.id,
           title: "Past Event #{i}",
           event_type: :in_person,
-          physical_location: "456 Past St",
           starts_at: DateTime.add(DateTime.utc_now(), -i, :day),
           ends_at: DateTime.add(DateTime.utc_now(), -i, :day) |> DateTime.add(1, :hour),
           is_private: false
@@ -69,7 +68,6 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
           creator_id: user.id,
           title: "Private Event #{i}",
           event_type: :in_person,
-          physical_location: "789 Private St",
           starts_at: DateTime.add(DateTime.utc_now(), i * 24 * 60 * 60, :second),
           ends_at: DateTime.add(DateTime.utc_now(), i * 24 * 60 * 60 + 3600, :second),
           is_private: false,
@@ -215,7 +213,6 @@ defmodule HuddlzWeb.HuddlSearchPaginationTest do
             creator_id: user.id,
             title: "#{unique_term} Event #{i}",
             event_type: :in_person,
-            physical_location: "100 Main St",
             starts_at: DateTime.add(DateTime.utc_now(), i * 24 * 60 * 60, :second),
             ends_at: DateTime.add(DateTime.utc_now(), i * 24 * 60 * 60 + 3600, :second),
             is_private: false,

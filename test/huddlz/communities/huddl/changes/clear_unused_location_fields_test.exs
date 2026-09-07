@@ -20,8 +20,7 @@ defmodule Huddlz.Communities.Huddl.Changes.ClearUnusedLocationFieldsTest do
             group_id: group.id,
             actor: owner,
             event_type: :virtual,
-            virtual_link: "https://example.com/meet",
-            physical_location: "123 Main St"
+            virtual_link: "https://example.com/meet"
           )
         )
 
@@ -35,7 +34,6 @@ defmodule Huddlz.Communities.Huddl.Changes.ClearUnusedLocationFieldsTest do
             group_id: group.id,
             actor: owner,
             event_type: :in_person,
-            physical_location: "123 Main St",
             virtual_link: "https://example.com/meet"
           )
         )
@@ -80,8 +78,7 @@ defmodule Huddlz.Communities.Huddl.Changes.ClearUnusedLocationFieldsTest do
           huddl(
             group_id: group.id,
             actor: owner,
-            event_type: :in_person,
-            physical_location: "123 Main St"
+            event_type: :in_person
           )
         )
 

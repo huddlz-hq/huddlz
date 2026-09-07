@@ -97,13 +97,13 @@ defmodule HuddlzWeb.PasswordValidationTest do
 
     assert has_element?(
              view,
-             "#form_password-error-0[role='alert']",
+             "#password-1-password-error-0[role='alert']",
              "Password must be at least 8 characters."
            )
 
     assert has_element?(
              view,
-             "#form_password_confirmation-error-0[role='alert']",
+             "#password-1-password-confirmation-error-0[role='alert']",
              "Passwords do not match."
            )
   end

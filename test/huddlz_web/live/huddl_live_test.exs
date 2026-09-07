@@ -251,7 +251,14 @@ defmodule HuddlzWeb.HuddlLiveTest do
       public_group: public_group
     } do
       stub_places_autocomplete(%{"aus" => [:austin]})
-      stub_place_details(%{"p1" => %{latitude: 30.2672, longitude: -97.7431}})
+
+      stub_place_details(%{
+        "p1" => %{
+          latitude: 30.2672,
+          longitude: -97.7431,
+          time_zone: "America/Chicago"
+        }
+      })
 
       generate(
         huddl(
@@ -259,7 +266,6 @@ defmodule HuddlzWeb.HuddlLiveTest do
           creator_id: host.id,
           is_private: false,
           title: "Austin Meetup",
-          physical_location: "123 Main St, Austin, TX",
           actor: host
         )
       )
@@ -284,7 +290,9 @@ defmodule HuddlzWeb.HuddlLiveTest do
     test "discover URL with q + lat/lng renders search and location as active", %{conn: conn} do
       session =
         conn
-        |> visit("/discover?q=elixir&location=Austin%2C+TX&lat=30.2672&lng=-97.7431&distance=25")
+        |> visit(
+          "/discover?q=elixir&location=Austin%2C+TX&lat=30.2672&lng=-97.7431&time_zone=America%2FChicago&distance=25"
+        )
 
       session
       |> assert_has("h1", text: "Results for")
@@ -314,6 +322,22 @@ defmodule HuddlzWeb.HuddlLiveTest do
       |> assert_has("h1", text: "Browse groups")
       |> assert_has("h2", text: "Elixir Club")
       |> assert_has(".grid .card .card-meta", text: "3 members")
+    end
+
+    test "renders the shared cover fallback for groups without an image", %{
+      conn: conn,
+      host: host
+    } do
+      group =
+        generate(group(is_public: true, owner_id: host.id, actor: host, name: "Fallback Club"))
+
+      conn
+      |> visit("/discover?scope=groups")
+      |> assert_has("#discover-group-cover-#{group.id}[data-testid='group-cover']")
+      |> assert_has(
+        "#discover-group-cover-#{group.id} .group-cover-label",
+        text: "huddlz group"
+      )
     end
 
     test "hides huddlz when scope=groups", %{conn: conn, host: host} do
@@ -362,8 +386,15 @@ defmodule HuddlzWeb.HuddlLiveTest do
     test "scope chips render with Huddlz active by default", %{conn: conn} do
       conn
       |> visit("/discover")
-      |> assert_has(".scope-tab.is-active", text: "Huddlz")
-      |> assert_has(".scope-tab", text: "Groups")
+      |> assert_has(".scope-tab.is-active[aria-current='page']", text: "Huddlz")
+      |> refute_has(".scope-tab:not(.is-active)[aria-current]")
+    end
+
+    test "scope=groups exposes Groups as the current view", %{conn: conn} do
+      conn
+      |> visit("/discover?scope=groups")
+      |> assert_has(".scope-tab.is-active[aria-current='page']", text: "Groups")
+      |> refute_has(".scope-tab:not(.is-active)[aria-current]")
     end
 
     test "scope=groups empty state when no public groups", %{conn: conn} do
@@ -479,7 +510,12 @@ defmodule HuddlzWeb.HuddlLiveTest do
       user
       |> Ash.Changeset.for_update(
         :update_home_location,
-        %{home_location: "Austin, TX", home_latitude: 30.2672, home_longitude: -97.7431},
+        %{
+          home_location: "Austin, TX",
+          home_latitude: 30.2672,
+          home_longitude: -97.7431,
+          home_time_zone: "America/Chicago"
+        },
         actor: user
       )
       |> Ash.update!()

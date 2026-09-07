@@ -9,7 +9,6 @@ defmodule HuddlzWeb.GroupLive.New do
   import HuddlzWeb.HuddlLive.FormHelpers,
     only: [
       inject_group_location_param: 2,
-      prepare_source_with_coordinates: 1,
       apply_group_location_to_form: 2
     ]
 
@@ -128,8 +127,7 @@ defmodule HuddlzWeb.GroupLive.New do
          |> AshPhoenix.Form.validate(params_with_owner)
          |> AshPhoenix.Form.submit(
            params: params_with_owner,
-           actor: socket.assigns.current_user,
-           before_submit: prepare_source_with_coordinates(socket.assigns.selected_location_data)
+           actor: socket.assigns.current_user
          ) do
       {:ok, group} ->
         assign_pending_image_to_group(socket, group)
@@ -149,13 +147,14 @@ defmodule HuddlzWeb.GroupLive.New do
     location_data = %{
       display_text: payload.display_text,
       latitude: payload.latitude,
-      longitude: payload.longitude
+      longitude: payload.longitude,
+      time_zone: payload.time_zone
     }
 
     {:noreply,
      socket
      |> assign(:selected_location_data, location_data)
-     |> apply_group_location_to_form(location_data.display_text)}
+     |> apply_group_location_to_form(location_data)}
   end
 
   @impl true
@@ -163,7 +162,7 @@ defmodule HuddlzWeb.GroupLive.New do
     {:noreply,
      socket
      |> assign(:selected_location_data, nil)
-     |> apply_group_location_to_form("")}
+     |> apply_group_location_to_form(nil)}
   end
 
   defp assign_pending_image_to_group(socket, group) do
@@ -186,6 +185,7 @@ defmodule HuddlzWeb.GroupLive.New do
     <Layouts.app
       flash={@flash}
       current_user={@current_user}
+      unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
       active="my-groups"
     >
@@ -211,7 +211,7 @@ defmodule HuddlzWeb.GroupLive.New do
               autocomplete="off"
               help="3–100 characters."
             />
-            <div class="form-row">
+            <div id="group-slug-preview" class="form-row">
               <div class="form-help">
                 URL: {url(~p"/groups/#{@form[:slug].value || "..."}")}
               </div>
@@ -239,7 +239,7 @@ defmodule HuddlzWeb.GroupLive.New do
               />
               <.field_errors field={@form[:location]} />
               <p class="form-help">
-                Optional. Helps people find your group when they search nearby.
+                Required. This city sets the group time zone and helps people find it nearby.
               </p>
             </div>
           </div>
@@ -344,27 +344,17 @@ defmodule HuddlzWeb.GroupLive.New do
           <div class="settings-list row-list pref-list">
             <div class="row">
               <div>
-                <label class="row-title" for="group-is-public">Public group</label>
+                <label class="row-title" for={@form[:is_public].id}>Public group</label>
                 <div class="row-desc">
                   Anyone can find and join this group. Huddlz are visible without signing in.
                 </div>
               </div>
-              <label class="toggle">
-                <input type="hidden" name={@form[:is_public].name} value="false" />
-                <input
-                  id="group-is-public"
-                  type="checkbox"
-                  name={@form[:is_public].name}
-                  value="true"
-                  checked={Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_public].value)}
-                />
-                <span class="track"></span>
-                <span class="toggle-text">
-                  {if Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_public].value),
-                    do: "On",
-                    else: "Off"}
-                </span>
-              </label>
+              <.toggle
+                field={@form[:is_public]}
+                label="Public group"
+                show_state_text
+                labelled_externally
+              />
             </div>
           </div>
         </div>

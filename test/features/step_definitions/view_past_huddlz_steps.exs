@@ -1,6 +1,7 @@
 defmodule ViewPastHuddlzSteps do
   use Cucumber.StepDefinition
   import PhoenixTest
+  import Phoenix.ConnTest, only: [assert_error_sent: 2, dispatch: 4]
   import Huddlz.Generator
   import ExUnit.Assertions
 
@@ -172,10 +173,19 @@ defmodule ViewPastHuddlzSteps do
     {:ok, %{conn: conn}}
   end
 
-  # Try to visit a private group page (expecting redirect)
+  # Try to visit a private group page (expecting a neutral 404)
   step "I try to visit that private group page", %{conn: conn, non_member_group: non_member_group} do
-    conn = conn |> visit("/groups/#{non_member_group.slug}")
-    {:ok, %{conn: conn}}
+    {404, _headers, body} =
+      assert_error_sent 404, fn ->
+        dispatch(
+          conn.conn,
+          HuddlzWeb.Endpoint,
+          :get,
+          "/groups/#{non_member_group.slug}"
+        )
+      end
+
+    {:ok, %{error_body: body}}
   end
 
   # Click on the Past Events tab
