@@ -20,9 +20,9 @@ Feature: Discovery ordering for API callers
       | <third>  |
 
     Examples:
-      | ordering | first          | second         | third        |
-      | soonest  | Morning Coffee | Board Games    | Weekend Walk |
-      | newest   | Board Games    | Morning Coffee | Weekend Walk |
+      | ordering     | first          | second         | third        |
+      | starts_at    | Morning Coffee | Board Games    | Weekend Walk |
+      | -inserted_at | Board Games    | Morning Coffee | Weekend Walk |
 
   Scenario: Discovery defaults to huddlz starting soonest
     When I discover upcoming huddlz through the API without choosing an ordering or signing in

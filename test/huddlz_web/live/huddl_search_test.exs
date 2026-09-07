@@ -79,6 +79,36 @@ defmodule HuddlzWeb.HuddlSearchTest do
   end
 
   describe "search functionality" do
+    test "Soonest and Newest controls reorder huddlz", %{
+      conn: conn,
+      huddl1: first,
+      huddl2: second,
+      huddl3: third
+    } do
+      now = DateTime.utc_now()
+      Ash.Seed.update!(first, %{inserted_at: DateTime.add(now, -3, :day)})
+
+      Ash.Seed.update!(second, %{
+        starts_at: DateTime.add(now, 5, :day),
+        ends_at: DateTime.add(now, 5, :day) |> DateTime.add(1, :hour),
+        inserted_at: DateTime.add(now, -2, :day)
+      })
+
+      Ash.Seed.update!(third, %{inserted_at: DateTime.add(now, -1, :day)})
+
+      {:ok, view, html} = live(conn, "/discover")
+
+      titles = fn html ->
+        html |> Floki.parse_document!() |> Floki.find("h3.card-title") |> Enum.map(&Floki.text/1)
+      end
+
+      assert titles.(html) == [first.title, second.title, third.title]
+      html = view |> element(".chip-group a.chip", "Newest") |> render_click()
+      assert titles.(html) == [third.title, second.title, first.title]
+      html = view |> element(".chip-group a.chip", "Soonest") |> render_click()
+      assert titles.(html) == [first.title, second.title, third.title]
+    end
+
     test "displays all upcoming huddlz by default", %{conn: conn} do
       conn
       |> visit("/discover")

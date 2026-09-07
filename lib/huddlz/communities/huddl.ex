@@ -41,8 +41,7 @@ defmodule Huddlz.Communities.Huddl do
       base "/huddlz"
 
       get :read
-      # Discovery uses the action's named ordering instead of JSON:API field sorting.
-      index :search, derive_sort?: false
+      index :search
       index :upcoming, route: "/upcoming"
       index :past, route: "/past"
       index :by_group, route: "/by_group"
@@ -321,6 +320,8 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     read :search do
+      description "Discover huddlz matching the supplied filters. Defaults to start time ascending unless an explicit field sort is supplied."
+
       argument :query, :ci_string do
         allow_nil? true
       end
@@ -354,13 +355,6 @@ defmodule Huddlz.Communities.Huddl do
 
         allow_nil? true
         constraints one_of: [:hosting, :attending, :waitlisted]
-      end
-
-      argument :sort, :atom do
-        description "Result ordering: soonest sorts by start time ascending (default); newest sorts by creation time descending."
-        allow_nil? true
-        default :soonest
-        constraints one_of: [:soonest, :newest]
       end
 
       argument :search_time_zone, :string do
@@ -821,7 +815,7 @@ defmodule Huddlz.Communities.Huddl do
       description "Stamped when the 1-hour reminder has been sent for this huddl. Reset to nil when starts_at changes."
     end
 
-    create_timestamp :inserted_at
+    create_timestamp :inserted_at, public?: true
     update_timestamp :updated_at
   end
 

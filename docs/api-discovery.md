@@ -2,22 +2,34 @@
 
 Anonymous clients can discover public huddlz with `GET /api/json/huddlz`.
 
-The `sort` query parameter accepts named discovery orderings:
+The `sort` query parameter uses standard JSON:API field sorting. Fields sort
+ascending unless prefixed with `-`; comma-separated fields are applied in order.
 
-| Value | Ordering |
-| --- | --- |
-| `soonest` (default) | Start time ascending |
-| `newest` | Creation time descending |
+| UI label | API value | Ordering |
+| --- | --- | --- |
+| Soonest | `starts_at` | Start time ascending |
+| Newest | `-inserted_at` | Creation time descending |
 
-For example: `/api/json/huddlz?date_filter=upcoming&sort=soonest&page[limit]=20`.
-Omitting `sort` keeps the same soonest-first ordering. The date filter controls
-which huddlz are included; ordering only controls their sequence.
+For example: `/api/json/huddlz?date_filter=upcoming&sort=-inserted_at&page[limit]=20`.
+The creation timestamp is named `inserted_at`, not `created_at`, and is a public,
+read-only field.
 
-This discovery route uses named orderings rather than generic JSON:API field
-sorting such as `sort=starts_at` or `sort=-inserted_at`. Other collection routes
-retain their documented field sorting. See `/api/json/open_api` or
-`/api/json/swaggerui` for the generated contract.
+Omitting `sort` defaults to start time ascending. Explicit sorts replace that
+default. For example, `sort=-starts_at` puts the latest start first, and
+`sort=starts_at,-inserted_at` orders matching start times by creation time
+descending. Ordering is applied before pagination.
 
-Clients that omitted `sort` to work around issue #422 can continue doing so.
-Explicit `sort=soonest` and `sort=newest` now use the same search ordering as
-the web discovery UI; no parameter rename is needed.
+The date filter controls which huddlz are included; sorting only controls their
+sequence. See `/api/json/open_api` or `/api/json/swaggerui` for supported fields.
+
+## Migrating from the previously advertised contract
+
+The `soonest` and `newest` API values advertised before issue #422 are removed.
+Use `sort=starts_at` and `sort=-inserted_at`, respectively. Clients that omitted
+`sort` as a workaround can continue doing so without changes. The web discovery
+UI retains its Soonest/Newest labels and URLs.
+
+The shared search action also uses native field sorting in GraphQL, for example
+`searchHuddlz(sort: [{field: INSERTED_AT, order: DESC}])`; the former named sort
+argument is removed there too. Elixir callers supply `query: [sort: ...]` instead
+of the former positional ordering argument.

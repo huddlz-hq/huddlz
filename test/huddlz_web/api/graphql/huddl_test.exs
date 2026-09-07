@@ -1,6 +1,30 @@
 defmodule HuddlzWeb.Api.Graphql.HuddlTest do
   use HuddlzWeb.ApiCase, async: true
 
+  test "anonymous search accepts native creation-time sorting", %{conn: conn} do
+    owner = generate(user())
+    group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
+    older = generate(huddl(group_id: group.id, actor: owner, date: Date.add(Date.utc_today(), 1)))
+    newer = generate(huddl(group_id: group.id, actor: owner, date: Date.add(Date.utc_today(), 7)))
+    Ash.Seed.update!(older, %{inserted_at: DateTime.add(DateTime.utc_now(), -1, :day)})
+
+    response =
+      conn
+      |> gql_post("""
+      { searchHuddlz(dateFilter: "upcoming", sort: [{field: INSERTED_AT, order: DESC}]) {
+        results { id }
+      } }
+      """)
+      |> json_response(200)
+
+    refute Map.has_key?(response, "errors")
+
+    assert Enum.map(response["data"]["searchHuddlz"]["results"], & &1["id"]) == [
+             newer.id,
+             older.id
+           ]
+  end
+
   describe "me query" do
     test "returns the current actor when authenticated", %{conn: conn} do
       target = generate(user(display_name: "Me"))
