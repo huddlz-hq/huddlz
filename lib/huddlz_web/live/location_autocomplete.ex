@@ -18,15 +18,14 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   attr :latitude, :float, default: nil
   attr :longitude, :float, default: nil
   attr :label, :string, default: nil
-  attr :label_class, :string, default: "form-label"
   attr :placeholder, :string, default: "Search for a city..."
   attr :types, :list, default: ["locality"]
   attr :show_clear, :boolean, default: true
   attr :fetch_coordinates, :boolean, default: true
 
   attr :variant, :atom,
-    values: [:default, :filter_pill, :form],
-    default: :default,
+    values: [:filter_pill, :form],
+    default: :form,
     doc:
       "render style — `:filter_pill` mounts inside the v3 `.filter-location` chrome; " <>
         "`:form` renders the panel-style `.location-display` block used on `/profile`"
@@ -37,12 +36,11 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
        # Configuration defaults (overridden by parent via update/2)
        field_name: nil,
        label: nil,
-       label_class: "form-label",
        placeholder: "Search for a city...",
        types: ["locality"],
        show_clear: true,
        fetch_coordinates: true,
-       variant: :default,
+       variant: :form,
        # Internal state
        search_text: "",
        suggestions: [],
@@ -112,140 +110,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
 
   def render(%{variant: :filter_pill} = assigns), do: render_filter_pill(assigns)
   def render(%{variant: :form} = assigns), do: render_form(assigns)
-  def render(assigns), do: render_default(assigns)
-
-  defp render_default(assigns) do
-    ~H"""
-    <div
-      id={@id}
-      class="relative"
-      phx-click-away="dismiss"
-      phx-target={@myself}
-      phx-hook="LocationAutocomplete"
-      data-has-highlight={to_string(@suggestion_index >= 0)}
-    >
-      <label :if={@label} for={"#{@id}-input"} class={@label_class}>
-        {@label}
-      </label>
-
-      <%!-- SELECTED STATE --%>
-      <div :if={@selected} class="relative" data-testid="location-selected">
-        <input :if={@field_name} type="hidden" name={@field_name} value={@selected_text} />
-        <div class="flex items-center h-10 pl-6 pr-6 border-0 border-b border-primary/50 bg-transparent group">
-          <.icon
-            name="hero-map-pin"
-            class="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-primary"
-          />
-          <div
-            :if={!@loading}
-            phx-click="edit"
-            phx-target={@myself}
-            class="flex items-center flex-1 min-w-0 cursor-pointer"
-            role="button"
-            aria-label="Edit location"
-          >
-            <span class="text-sm text-base-content truncate flex-1" data-testid="location-display">
-              {@selected_text}
-            </span>
-            <.icon
-              name="hero-pencil"
-              class="w-3.5 h-3.5 ml-2 text-transparent group-hover:text-primary/50 transition-colors"
-            />
-          </div>
-          <span :if={@loading} class="text-sm text-base-content truncate flex-1">
-            {@selected_text}
-          </span>
-          <.icon
-            :if={@loading}
-            name="hero-arrow-path"
-            class="w-4 h-4 text-base-content/40 animate-spin ml-2"
-          />
-          <button
-            :if={@show_clear && !@loading}
-            type="button"
-            phx-click="clear"
-            phx-target={@myself}
-            class="ml-2 text-base-content/40 hover:text-error transition-colors cursor-pointer"
-            aria-label="Clear location"
-          >
-            <.icon name="hero-x-mark" class="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      <%!-- SEARCHING STATE --%>
-      <div :if={!@selected} class="relative">
-        <input :if={@field_name} type="hidden" name={@field_name} value={@search_text} />
-        <.icon
-          name="hero-map-pin"
-          class="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40"
-        />
-        <input
-          type="text"
-          id={"#{@id}-input"}
-          value={@search_text}
-          placeholder={@placeholder}
-          phx-change="search_input"
-          phx-target={@myself}
-          phx-debounce="300"
-          phx-keydown="keydown"
-          name={"#{@id}_search"}
-          autocomplete="off"
-          autocorrect="off"
-          autocapitalize="off"
-          spellcheck="false"
-          data-testid="location-input"
-          role="combobox"
-          aria-expanded={to_string(@show_suggestions && @suggestions != [])}
-          aria-autocomplete="list"
-          aria-controls={"#{@id}-listbox"}
-          class="w-full h-10 pl-6 pr-6 border-0 border-b border-base-300 bg-transparent focus:border-primary focus:ring-0 focus:outline-none text-base-content text-sm"
-        />
-        <.icon
-          :if={@loading}
-          name="hero-arrow-path"
-          class="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40 animate-spin"
-        />
-
-        <div
-          :if={@show_suggestions && @suggestions != []}
-          id={"#{@id}-listbox"}
-          role="listbox"
-          class="absolute z-50 w-full mt-1 border border-base-300 bg-base-200 max-h-60 overflow-y-auto shadow-[0_4px_20px_oklch(75%_0.18_195/0.15)]"
-        >
-          <button
-            :for={{s, idx} <- Enum.with_index(@suggestions)}
-            type="button"
-            id={"#{@id}-option-#{idx}"}
-            role="option"
-            phx-click="select"
-            phx-value-place-id={s.place_id}
-            phx-value-display-text={s.display_text}
-            phx-value-main-text={s.main_text}
-            phx-target={@myself}
-            class={[
-              "w-full text-left px-4 py-3 border-b border-base-300 last:border-b-0 cursor-pointer",
-              "border-l-2 border-l-transparent hover:bg-primary/20 hover:border-l-primary",
-              idx == @suggestion_index && "bg-primary/20 border-l-primary"
-            ]}
-          >
-            <span class="font-medium text-base-content">{s.main_text}</span>
-            <span class="text-sm text-base-content/50 ml-1">{s.secondary_text}</span>
-          </button>
-        </div>
-
-        <p
-          :if={@show_suggestions && @suggestions == [] && !@loading}
-          class="absolute z-50 w-full mt-1 px-4 py-3 border border-base-300 bg-base-200 text-sm text-base-content/50 shadow-[0_4px_20px_oklch(75%_0.18_195/0.15)]"
-        >
-          No locations found
-        </p>
-      </div>
-
-      <p :if={@error} class="mt-1 text-sm text-error">{@error}</p>
-    </div>
-    """
-  end
+  def render(assigns), do: render_form(assigns)
 
   # V3 filter-pill variant — renders inside the `.filter-location` pill chrome
   # used by `/discover`. Same events and parent notifications as the default.

@@ -22,6 +22,8 @@ defmodule HuddlzWeb.HuddlLive.NewLocationTest do
         |> live(~p"/groups/#{group.slug}/huddlz/new/locations/new")
 
       assert has_element?(view, "#new-location-modal")
+      assert has_element?(view, "#new-location-modal .modal-backdrop")
+      assert has_element?(view, "#new-location-modal .modal-panel button.modal-close")
       assert has_element?(view, "h2", "Add New Address")
     end
 

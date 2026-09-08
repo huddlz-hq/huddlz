@@ -34,30 +34,30 @@ defmodule HuddlzWeb.Components.Modal do
     >
       <div
         id={"#{@id}-bg"}
-        class="bg-base-100/80 fixed inset-0 backdrop-blur-sm transition-opacity"
+        class="modal-backdrop transition-opacity"
         aria-hidden="true"
       />
       <div
-        class="fixed inset-0 overflow-y-auto"
+        class="modal-layer"
         aria-labelledby={"#{@id}-title"}
         role="dialog"
         aria-modal="true"
         tabindex="0"
       >
-        <div class="flex min-h-full items-center justify-center p-4">
+        <div class="modal-center">
           <div class={@class}>
             <.focus_wrap
               id={"#{@id}-container"}
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="relative border border-base-300 bg-base-200 rounded-hz-modal shadow-pop p-6"
+              class="modal-panel"
             >
               {render_slot(@inner_block)}
               <button
                 phx-click={JS.exec("data-cancel", to: "##{@id}")}
                 type="button"
-                class="absolute top-4 right-4 text-base-content/40 hover:text-base-content transition-colors"
+                class="modal-close"
                 aria-label={gettext("close")}
               >
                 <Icon.icon name="hero-x-mark" class="h-5 w-5" />

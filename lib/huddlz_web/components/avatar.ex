@@ -47,11 +47,11 @@ defmodule HuddlzWeb.Components.Avatar do
         <% @avatar_url -> %>
           <img src={@avatar_url} alt={get_display_name(@user)} class="w-full h-full object-cover" />
         <% @initials -> %>
-          <div class="w-full h-full flex items-center justify-center bg-primary text-primary-content font-semibold">
+          <div class="avatar-initials w-full h-full flex items-center justify-center font-semibold">
             {@initials}
           </div>
         <% true -> %>
-          <div class="w-full h-full flex items-center justify-center bg-base-300 text-base-content/50">
+          <div class="avatar-placeholder w-full h-full flex items-center justify-center">
             <Icon.icon name="hero-user" class={@icon_size} />
           </div>
       <% end %>

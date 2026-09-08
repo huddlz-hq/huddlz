@@ -11,105 +11,6 @@
    The heroicons installation itself is managed by your mix.exs */
 @plugin "../vendor/heroicons";
 
-/* daisyUI Tailwind Plugin. You can update this file by fetching the latest version with:
-   curl -sLO https://github.com/saadeghi/daisyui/releases/latest/download/daisyui.js
-   Make sure to look at the daisyUI changelog: https://daisyui.com/docs/changelog/ */
-@plugin "../vendor/daisyui" {
-  themes: false;
-}
-
-/* ===== daisyUI THEMES =====
-   Only a few legacy surfaces still read daisyUI's --color-* variables.
-   Light is the default theme and dark applies when the device prefers it,
-   so a user on "System" gets the right one; an explicit data-theme on
-   <html> (set from the user's appearance setting) wins over both. */
-@plugin "../vendor/daisyui-theme" {
-  name: "light";
-  default: true;
-  prefersdark: false;
-  color-scheme: "light";
-
-  --color-base-100: oklch(98% 0.004 200);
-  --color-base-200: oklch(100% 0 0);
-  --color-base-300: oklch(91% 0.008 200);
-  --color-base-content: oklch(18% 0.01 200);
-
-  --color-primary: oklch(52% 0.11 195);
-  --color-primary-content: oklch(100% 0 0);
-  --color-secondary: oklch(52% 0.11 195);
-  --color-secondary-content: oklch(100% 0 0);
-  --color-accent: oklch(52% 0.11 195);
-  --color-accent-content: oklch(100% 0 0);
-
-  --color-neutral: oklch(94% 0.006 200);
-  --color-neutral-content: oklch(30% 0.01 200);
-
-  --color-info: oklch(52% 0.12 220);
-  --color-info-content: oklch(100% 0 0);
-  --color-success: oklch(48% 0.16 155);
-  --color-success-content: oklch(100% 0 0);
-  --color-warning: oklch(52% 0.14 60);
-  --color-warning-content: oklch(100% 0 0);
-  --color-error: oklch(48% 0.19 28);
-  --color-error-content: oklch(100% 0 0);
-
-  --radius-selector: 0.5rem;
-  --radius-field: 0.5rem;
-  --radius-box: 0.75rem;
-  --size-selector: 0.25rem;
-  --size-field: 0.25rem;
-  --border: 1px;
-  --depth: 0;
-  --noise: 0;
-}
-
-@plugin "../vendor/daisyui-theme" {
-  name: "dark";
-  default: false;
-  prefersdark: true;
-  color-scheme: "dark";
-
-  --color-base-100: oklch(14% 0.006 210);
-  --color-base-200: oklch(18% 0.008 210);
-  --color-base-300: oklch(24% 0.01 210);
-  --color-base-content: oklch(96% 0.005 200);
-
-  --color-primary: oklch(78% 0.13 195);
-  --color-primary-content: oklch(13% 0.01 200);
-  --color-secondary: oklch(70% 0.10 195);
-  --color-secondary-content: oklch(13% 0.01 200);
-  --color-accent: oklch(78% 0.13 195);
-  --color-accent-content: oklch(13% 0.01 200);
-
-  --color-neutral: oklch(20% 0.01 200);
-  --color-neutral-content: oklch(85% 0.005 200);
-
-  --color-info: oklch(72% 0.12 220);
-  --color-info-content: oklch(13% 0.01 200);
-  --color-success: oklch(72% 0.18 155);
-  --color-success-content: oklch(13% 0.01 200);
-  --color-warning: oklch(78% 0.16 80);
-  --color-warning-content: oklch(13% 0.01 200);
-  --color-error: oklch(72% 0.18 25);
-  --color-error-content: oklch(13% 0.01 200);
-
-  --radius-selector: 0.5rem;
-  --radius-field: 0.5rem;
-  --radius-box: 0.75rem;
-  --size-selector: 0.25rem;
-  --size-field: 0.25rem;
-  --border: 1px;
-  --depth: 0;
-  --noise: 0;
-}
-
-@theme {
-  --radius-hz-tight: 0.25rem;    /* 4px — tiny indicators and checkboxes */
-  --radius-hz-control: 0.5rem;   /* 8px — buttons, fields, tabs, badges */
-  --radius-hz-surface: 0.75rem;  /* 12px — panels, cards, dropdowns */
-  --radius-hz-modal: 0.75rem;    /* 12px — dialogs and overlays */
-}
-
 /* Add variants based on LiveView classes */
 @custom-variant phx-click-loading (.phx-click-loading&, .phx-click-loading &);
 @custom-variant phx-submit-loading (.phx-submit-loading&, .phx-submit-loading &);
@@ -133,60 +34,6 @@ html {
   font-feature-settings: "ss01", "cv11";
 }
 
-/* ===== Soft elevation =====
-   Use --shadow-pop on modals and floating panels. */
-@utility shadow-pop {
-  box-shadow: 0 28px 80px oklch(0% 0 0 / 0.56);
-}
-
-/* Sticky form-actions backdrop. */
-@utility blur-bg {
-  background: oklch(13% 0.01 200 / 0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-/* Sharp-edged checkbox. */
-@utility checkbox-cyber {
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  border: 1px solid var(--line-strong);
-  background-color: var(--bg);
-  cursor: pointer;
-  position: relative;
-  border-radius: 5px;
-  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-
-  &:hover {
-    border-color: var(--accent);
-  }
-
-  &:focus-visible {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-soft);
-  }
-
-  &:checked {
-    background-color: var(--accent);
-    border-color: var(--accent);
-  }
-
-  &:checked::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-color: var(--on-accent);
-    mask: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='3.5,8.5 6.5,11.5 12.5,5'/%3E%3C/svg%3E") center / 0.8rem 0.8rem no-repeat;
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-}
 /* ===========================================================
    V3 DESIGN — the live UI.
    Variant body classes (.is-landing, .is-auth, .is-signed-out) flip
@@ -592,7 +439,7 @@ body.is-signed-out .main { min-height: 100vh; }
   }
 }
 
-/* `<.modal>` centers via `fixed inset-0`, which spans the full viewport
+/* `<.modal>` centers via fixed, viewport-filling layers, which span the full viewport
    including the persistent v3 sidebar rail. When rendered on a signed-in
    page with chrome, shift the modal backdrop + dialog right of the rail
    so the modal visually centers within the main content area and the
@@ -601,7 +448,9 @@ body.is-signed-out .main { min-height: 100vh; }
    accidentally apply to other `fixed inset-0` patterns. */
 @media (min-width: 761px) {
   body:not(.is-landing):not(.is-auth):not(.is-signed-out)
-    [data-cc-modal] > .fixed.inset-0 {
+    [data-cc-modal] > .modal-backdrop,
+  body:not(.is-landing):not(.is-auth):not(.is-signed-out)
+    [data-cc-modal] > .modal-layer {
     left: var(--rail-w);
   }
 }
@@ -2107,6 +1956,64 @@ body .delete-confirm-icon {
 }
 
 body .delete-confirm-copy h2,
+/* Modal dialog chrome (`HuddlzWeb.Components.Modal`). The open/close
+   transitions add Tailwind opacity/translate classes from `Flash.show/hide`. */
+body .modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+body .modal-layer {
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+}
+
+body .modal-center {
+  display: flex;
+  min-height: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+body .modal-panel {
+  position: relative;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+body .modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+body .modal-close:hover { color: var(--text); background: var(--panel-2); }
+body .modal-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* `<.avatar>` fallbacks (initials / silhouette) */
+body .avatar-initials { background: var(--accent); color: var(--on-accent); }
+body .avatar-placeholder { background: var(--panel-2); color: var(--muted); }
+
 body .share-modal-copy h2 {
   margin: 6px 0 8px;
   color: var(--text);
@@ -2971,6 +2878,8 @@ body .member-mark.m5 { background: linear-gradient(135deg, #4a90ff, #1a3a80); co
 /* ────────────────────────────────────────────  GROUP / HUDDL  ─── */
 body .hero {
   position: relative;
+  display: block;
+  width: 100%;
   height: 280px;
   border-radius: var(--radius);
   overflow: hidden;
