@@ -15,6 +15,9 @@ defmodule Huddlz.Communities.Huddl do
   graphql do
     type :huddl
 
+    # A viewer may retain access to a cancelled huddl after leaving its private group.
+    nullable_fields [:group]
+
     queries do
       get :get_huddl, :read
       list :search_huddlz, :search
@@ -36,6 +39,7 @@ defmodule Huddlz.Communities.Huddl do
 
   json_api do
     type "huddl"
+    includes [:group]
 
     default_fields [
       :id,
@@ -886,8 +890,10 @@ defmodule Huddlz.Communities.Huddl do
 
     belongs_to :group, Huddlz.Communities.Group do
       attribute_type :uuid
+      attribute_public? false
       allow_nil? false
       primary_key? false
+      public? true
     end
 
     belongs_to :group_location, Huddlz.Communities.GroupLocation do
