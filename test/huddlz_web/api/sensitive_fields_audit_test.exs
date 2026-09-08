@@ -10,6 +10,8 @@ defmodule HuddlzWeb.Api.SensitiveFieldsAuditTest do
 
   use HuddlzWeb.ApiCase, async: true
 
+  @moduletag :sensitive_fields_audit
+
   @forbidden_huddl_fields ~w(virtualLink virtual_link)
   # `User` is reachable via `me` query only, where the actor sees their own
   # record. `Author` / `UserPublicProfile` are cross-user shapes — they
@@ -18,6 +20,17 @@ defmodule HuddlzWeb.Api.SensitiveFieldsAuditTest do
   @forbidden_others_fields ~w(email role hashedPassword hashed_password homeLatitude homeLongitude)
 
   describe "Huddl GraphQL type" do
+    test "exposes the hosting group without exposing raw account or group identifiers", %{
+      conn: conn
+    } do
+      fields = type_field_names(conn, "Huddl")
+      assert "group" in fields
+
+      for field <- ~w(groupId creator creatorId publishedBy cancelledBy) do
+        refute field in fields, "Huddl type unexpectedly exposes #{field}"
+      end
+    end
+
     test "does not expose virtual_link directly", %{conn: conn} do
       fields = type_field_names(conn, "Huddl")
       refute Enum.empty?(fields), "Huddl type should be present in the schema"
@@ -26,6 +39,54 @@ defmodule HuddlzWeb.Api.SensitiveFieldsAuditTest do
       for f <- @forbidden_huddl_fields do
         refute f in fields, "Huddl type unexpectedly exposes #{f}"
       end
+    end
+  end
+
+  describe "Group GraphQL type" do
+    test "does not expose accounts or memberships through the hosting group", %{conn: conn} do
+      fields = type_field_names(conn, "Group")
+      assert "name" in fields
+
+      for field <- ~w(owner ownerId members groupMembers groupInvitations) do
+        refute field in fields, "Group type unexpectedly exposes #{field}"
+      end
+    end
+  end
+
+  describe "JSON:API hosting group" do
+    test "including all public group fields does not expose accounts or memberships", %{
+      conn: conn
+    } do
+      owner = generate(user())
+      group = generate(group(actor: owner))
+      huddl = generate(huddl(group_id: group.id, actor: owner))
+
+      response =
+        conn
+        |> get("/api/json/huddlz/#{huddl.id}", %{"include" => "group"})
+        |> json_response(200)
+
+      assert [included] = response["included"]
+      assert included["attributes"]["name"] == to_string(group.name)
+      assert included["relationships"] == %{}
+      refute Map.has_key?(included["attributes"], "owner_id")
+      refute Map.has_key?(response["data"]["attributes"], "group_id")
+      refute Jason.encode!(response) =~ owner.id
+      refute Jason.encode!(response) =~ to_string(owner.email)
+    end
+
+    test "a sparse field request cannot expose the raw group identifier", %{conn: conn} do
+      owner = generate(user())
+      group = generate(group(actor: owner))
+      huddl = generate(huddl(group_id: group.id, actor: owner))
+
+      response =
+        conn
+        |> get("/api/json/huddlz/#{huddl.id}", %{"fields" => %{"huddl" => "group_id"}})
+        |> json_response(400)
+
+      assert [_ | _] = response["errors"]
+      refute Jason.encode!(response) =~ group.id
     end
   end
 

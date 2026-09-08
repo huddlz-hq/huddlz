@@ -5,12 +5,9 @@ defmodule HuddlzWeb.Router do
 
   import AshAuthentication.Plug.Helpers
 
-  # Bound total GraphQL query cost. Resource relationships aren't exposed as
-  # GraphQL fields, so deep nesting isn't possible — this caps query *breadth*,
-  # chiefly alias amplification (N aliased list queries -> N DB queries) from an
-  # anonymous client. A list query costs ~3 and legitimate requests are shallow
-  # (a handful of fields), so 100 leaves ample headroom while blocking alias
-  # floods. Tune as the schema grows.
+  # Bound total GraphQL query cost, including alias amplification and the
+  # hosting group relationship. Group exposes no further relationships, so
+  # legitimate requests remain shallow. Tune as the schema grows.
   @graphql_max_complexity 100
 
   pipeline :graphql do
