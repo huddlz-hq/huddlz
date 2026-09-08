@@ -47,6 +47,7 @@ config :huddlz, :auth_rate_limits,
   password_reset: [limit: 3, per: :timer.hours(1)]
 
 config :ash,
+  default_string_length_count: :codepoints,
   allow_forbidden_field_for_relationships_by_default?: true,
   include_embedded_source_by_default?: false,
   show_keysets_for_all_actions?: false,
@@ -134,7 +135,7 @@ config :huddlz, :email,
 
 # Configure esbuild (the version is required)
 config :esbuild,
-  version: "0.17.11",
+  version: "0.28.2",
   huddlz: [
     args:
       ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/*),
@@ -144,7 +145,7 @@ config :esbuild,
 
 # Configure tailwind (the version is required)
 config :tailwind,
-  version: "4.0.9",
+  version: "4.3.3",
   huddlz: [
     args: ~w(
       --input=assets/css/app.css
