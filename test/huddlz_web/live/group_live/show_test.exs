@@ -18,7 +18,7 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("#group-detail-hero.group-hero")
       |> assert_has("#group-detail-cover-#{group.id} [aria-hidden='true']")
-      |> assert_has("#group-detail-cover-#{group.id} .group-cover-label", text: "huddlz group")
+      |> assert_has("#group-detail-cover-#{group.id} .group-cover-signal")
       |> refute_has("#group-detail-cover-#{group.id} .cover-image")
     end
 

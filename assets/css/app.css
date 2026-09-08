@@ -1661,46 +1661,30 @@ body .group-cover {
   inset: 0;
   isolation: isolate;
   overflow: hidden;
-  background: linear-gradient(135deg, #06424a 0%, #0c1c20 50%, #1a0c30 100%);
+  background: var(--panel-2);
 }
-
-body .group-cover.gradient-1 { background: linear-gradient(135deg, #06424a 0%, #0c1c20 50%, #1a0c30 100%); }
-body .group-cover.gradient-2 { background: linear-gradient(160deg, #2c0a36 0%, #050810 60%, #0a3a44 100%); }
-body .group-cover.gradient-3 { background: linear-gradient(135deg, #1a3633 0%, #050810 60%, #2a1010 100%); }
-body .group-cover.gradient-4 { background: linear-gradient(135deg, #14232a 0%, #060a14 60%, #2a0e2a 100%); }
-body .group-cover.gradient-5 { background: linear-gradient(120deg, #082a2a 0%, #050a14 70%, #1a0c2a 100%); }
-body .group-cover.gradient-6 { background: linear-gradient(160deg, #181818 0%, #051820 50%, #1a3340 100%); }
 
 body .group-cover-fallback {
   position: absolute;
   inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: 6px;
+  display: grid;
+  place-items: center;
   padding: 16px;
-  background-image:
-    linear-gradient(color-mix(in srgb, var(--accent) 6%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--accent) 6%, transparent) 1px, transparent 1px);
-  background-size: 28px 28px;
 }
 
 body .group-cover-signal {
-  color: rgba(244, 251, 251, 0.84);
-  font-family: var(--mono);
-  font-size: clamp(30px, 5vw, 54px);
-  font-weight: 800;
-  letter-spacing: -0.08em;
-  line-height: 0.9;
-}
-
-body .group-cover-label {
-  color: rgba(244, 251, 251, 0.58);
-  font-family: var(--mono);
-  font-size: 9px;
+  width: 64px;
+  height: 64px;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  background: var(--panel);
+  color: var(--accent-ink);
+  display: grid;
+  place-items: center;
+  font-size: 22px;
   font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1;
 }
 
 body .cover-image {
@@ -1756,6 +1740,18 @@ body .card-tag {
   color: var(--soft);
   font-size: 11px;
   font-weight: 600;
+}
+
+body .card-tag.owner {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
+body .card-tag.organizer {
+  border-color: color-mix(in srgb, var(--warn) 50%, transparent);
+  background: var(--warn-soft);
+  color: var(--warn);
 }
 
 
@@ -1993,16 +1989,15 @@ body .organizer-group-row .group-cover--thumb {
   border-radius: var(--radius-sm);
 }
 
-body .group-cover--thumb .group-cover-fallback {
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  background-size: 12px 12px;
-}
+body .group-cover--thumb .group-cover-fallback { padding: 0; }
 
 body .group-cover--thumb .group-cover-signal {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   font-size: 13px;
-  letter-spacing: -0.04em;
 }
 
 body .organizer-group-copy { min-width: 0; }
@@ -3094,14 +3089,13 @@ body .group-cover--hero::after {
   pointer-events: none;
 }
 
-body .group-cover--hero .group-cover-fallback {
-  justify-content: center;
-  padding: 32px;
-}
+body .group-cover--hero .group-cover-fallback { place-items: start center; padding: 32px; }
 
 body .group-cover--hero .group-cover-signal {
-  font-size: clamp(64px, 12vw, 132px);
-  opacity: 0.42;
+  width: 96px;
+  height: 96px;
+  border-radius: 24px;
+  font-size: 32px;
 }
 
 body .hero-content {

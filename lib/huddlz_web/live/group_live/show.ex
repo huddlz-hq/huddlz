@@ -462,10 +462,9 @@ defmodule HuddlzWeb.GroupLive.Show do
         {@empty_message}
       </p>
       <.card
-        :for={{id, %{huddl: huddl, gradient: gradient}} <- @huddlz}
+        :for={{id, %{huddl: huddl}} <- @huddlz}
         id={id}
         navigate={~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"}
-        gradient={gradient}
       >
         <:cover>
           <.cover_image
@@ -496,12 +495,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   end
 
   defp stream_huddlz(socket, huddlz) do
-    entries =
-      huddlz
-      |> Enum.with_index()
-      |> Enum.map(fn {huddl, index} ->
-        %{id: huddl.id, huddl: huddl, gradient: Integer.mod(index, 6) + 1}
-      end)
+    entries = Enum.map(huddlz, &%{id: &1.id, huddl: &1})
 
     stream(socket, :huddlz, entries, reset: true)
   end

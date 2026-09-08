@@ -145,13 +145,13 @@ defmodule BrowserCoverSteps do
 
   defp assert_fallback(conn) do
     conn
-    |> assert_has("#group-detail-hero .group-cover-label", text: "huddlz group")
+    |> assert_has("#group-detail-hero .group-cover-signal")
     |> assert_browser("""
     (() => {
       const cover = document.querySelector('#group-detail-hero .group-cover');
       const fallback = cover.querySelector('.group-cover-fallback');
       const image = cover.querySelector('.cover-image');
-      return getComputedStyle(cover).backgroundImage.includes('gradient') &&
+      return getComputedStyle(cover).backgroundColor !== 'rgba(0, 0, 0, 0)' &&
         fallback.getBoundingClientRect().height > 0 && getComputedStyle(fallback).visibility === 'visible' &&
         (!image || getComputedStyle(image).backgroundColor === 'rgba(0, 0, 0, 0)');
     })()

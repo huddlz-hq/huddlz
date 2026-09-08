@@ -175,7 +175,7 @@ defmodule HuddlzWeb.ComponentsTest do
 
       html =
         rendered_to_string(~H"""
-        <.card href="/groups/foo" gradient={3}>
+        <.card href="/groups/foo">
           <:cover>
             <.date_stamp month="MAY" day={22} />
             <.card_tag variant={:hybrid}>Hybrid</.card_tag>
@@ -193,7 +193,7 @@ defmodule HuddlzWeb.ComponentsTest do
       assert html =~ "<a"
       assert html =~ ~s(href="/groups/foo")
       assert html =~ ~s(class="card)
-      assert html =~ "card-cover gradient-3"
+      assert html =~ ~s(class="card-cover")
       assert html =~ "date-stamp"
       assert html =~ ~s(class="card-tag hybrid")
       assert html =~ "Hybrid"

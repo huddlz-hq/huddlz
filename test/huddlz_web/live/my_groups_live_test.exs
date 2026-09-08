@@ -64,18 +64,20 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
       |> visit("/my-groups")
       |> assert_has(".grid .card .card-title", text: "Hosted Crew")
       |> assert_has(".grid .card .card-title", text: "Joined Crew")
-      |> assert_has(".filters .chip", text: "All · 2")
-      |> assert_has(".filters .chip", text: "Hosting · 1")
-      |> assert_has(".filters .chip", text: "Joined · 1")
+      |> assert_has(".filters .chip", text: "All 2")
+      |> assert_has(".filters .chip", text: "Hosting 1")
+      |> assert_has(".filters .chip", text: "Joined 1")
     end
 
     test "empty state copy", %{conn: conn, member: member} do
       conn
       |> login(member)
       |> visit("/my-groups")
-      |> assert_has("p",
+      |> assert_has(".empty-state h3", text: "No groups yet")
+      |> assert_has(".empty-state p",
         text: "You haven't organized or joined any groups yet. Start one or browse Discover."
       )
+      |> assert_has(".empty-state a[href='/discover?scope=groups']", text: "Browse groups")
     end
   end
 
@@ -98,14 +100,15 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
       |> assert_has(".filters .chip.is-active", text: "Hosting")
       |> assert_has(".grid .card .card-title", text: "Owned One")
       |> refute_has(".grid .card .card-title", text: "Joined One")
-      |> assert_has(".grid .card .card-tag", text: "Owner")
+      |> assert_has(".grid .card .card-tag.owner", text: "Owner")
     end
 
     test "empty state copy", %{conn: conn, member: member} do
       conn
       |> login(member)
       |> visit("/my-groups?filter=hosting")
-      |> assert_has("p", text: "You haven't created a group yet.")
+      |> assert_has(".empty-state p", text: "You haven't created a group yet.")
+      |> refute_has(".empty-state a")
     end
   end
 
@@ -129,14 +132,15 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
       |> assert_has(".filters .chip.is-active", text: "Joined")
       |> assert_has(".grid .card .card-title", text: "Joined One")
       |> refute_has(".grid .card .card-title", text: "Owned One")
-      |> assert_has(".grid .card .card-tag", text: "Member")
+      |> assert_has(".grid .card .card-tag:not(.owner):not(.organizer)", text: "Member")
     end
 
     test "empty state copy", %{conn: conn, member: member} do
       conn
       |> login(member)
       |> visit("/my-groups?filter=joined")
-      |> assert_has("p", text: "You haven't joined any groups yet.")
+      |> assert_has(".empty-state p", text: "You haven't joined any groups yet.")
+      |> assert_has(".empty-state a[href='/discover?scope=groups']", text: "Browse groups")
     end
   end
 
@@ -162,7 +166,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
       |> login(member)
       |> visit("/my-groups")
       |> refute_has(".grid .card .card-title", text: "Strangers Only")
-      |> assert_has(".filters .chip", text: "All · 0")
+      |> assert_has(".filters .chip", text: "All 0")
     end
   end
 
@@ -192,7 +196,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
       |> login(member)
       |> visit("/my-groups")
       |> assert_has("#my-group-cover-#{group.id}[data-testid='group-cover']")
-      |> assert_has("#my-group-cover-#{group.id} .group-cover-label", text: "huddlz group")
+      |> assert_has("#my-group-cover-#{group.id} .group-cover-signal", text: "FC", exact: true)
       |> refute_has("#my-group-cover-#{group.id} img")
     end
 
