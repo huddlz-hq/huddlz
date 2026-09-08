@@ -19,11 +19,11 @@ Feature: Private group invitations
     When I try to visit the group page for "Quiet Makers"
     Then I should see the branded not found recovery page
     When I visit "/notifications"
-    Then I should see "Inbox · 1 unread"
-    And I should see "Invites · 1"
+    Then I should see "Inbox 1 unread"
+    And I should see "Invites 1"
     When I click "Mark all as read"
-    Then I should see "Inbox · 0 unread"
-    And I should see "Invites · 1"
+    Then I should see "Inbox 0 unread"
+    And I should see "Invites 1"
     When I visit "/notifications?filter=invites"
     Then I should see "Invitation to Quiet Makers"
     When I click "Open"
@@ -32,8 +32,8 @@ Feature: Private group invitations
     Then I should see "Welcome to Quiet Makers."
     And I should see "You accepted this invitation."
     When I click "Back to invitations"
-    Then I should see "Invites · 0"
-    And I should see "No pending invitations."
+    Then I should see "Invites 0"
+    And I should see "No pending invitations"
     When I visit "/my-groups"
     Then I should see "Quiet Makers"
 
@@ -108,8 +108,8 @@ Feature: Private group invitations
     When I reopen the invitation email
     Then I should see "You declined this invitation."
     When I visit "/notifications"
-    Then I should see "Inbox · 1 unread"
-    And I should see "Invites · 0"
+    Then I should see "Inbox 1 unread"
+    And I should see "Invites 0"
     When I try to visit the group page for "Quiet Makers"
     Then I should see the branded not found recovery page
 
@@ -185,7 +185,7 @@ Feature: Private group invitations
     And I complete registration as "new-maker@example.com"
     Then no invitation email should be sent to "new-maker@example.com"
     When I visit "/notifications?filter=invites"
-    Then I should see "No pending invitations."
+    Then I should see "No pending invitations"
     When I confirm the registration email sent to "new-maker@example.com"
     Then an invitation email should be sent to "new-maker@example.com" for "Quiet Makers"
     And that invitation email includes notification preferences and unsubscribe links
