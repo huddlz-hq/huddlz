@@ -3873,6 +3873,8 @@ body .form-control.read-only {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-height: 40px;
+  box-sizing: border-box;
   padding: 9px 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -3881,6 +3883,8 @@ body .form-control.read-only {
   font-size: 14px;
   line-height: 20px;
 }
+
+body .form-control.read-only > span:first-child { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 
 body .form-foot {
   margin-top: 20px;
@@ -3919,25 +3923,25 @@ body .location-control {
 body .location-display {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 body .location-current {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--panel-2) 50%, transparent);
-  color: var(--text);
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
   font-size: 14px;
   font-weight: 600;
 }
 
-body .location-current svg { color: var(--cyan); flex: 0 0 auto; }
+body .location-current .size-4 { flex: 0 0 auto; }
 
 body .location-actions { display: inline-flex; gap: 8px; flex-wrap: wrap; }
 
@@ -3986,6 +3990,21 @@ body .profile-photo-actions {
   gap: 8px;
   align-items: flex-start;
 }
+
+body .profile-photo-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+body .profile-photo-buttons > label { cursor: pointer; }
+
+/* Stacked settings panels (profile, settings, notification preferences):
+   one column of full-width panels capped at a readable width. */
+body .settings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 760px;
+}
+
+body .settings-stack .panel { margin-bottom: 0; }
+body .settings-stack .form-grid { max-width: none; }
 
 /* Inline form row (multiple fields side by side) */
 body .form-row-inline {
@@ -4613,6 +4632,8 @@ body .page-nav:disabled {
     justify-self: start;
   }
   body .panel { padding: 14px 14px; }
+  body .panel-head { margin: -14px -14px 14px; padding: 14px; }
+  body .panel > .form-foot { margin: 14px -14px -14px; padding: 14px; }
   body .panel.split { gap: 18px; }
   body .visibility-panel-head { flex-direction: column; align-items: flex-start; gap: 10px; }
   body .visibility-selection { grid-template-columns: 1fr; }

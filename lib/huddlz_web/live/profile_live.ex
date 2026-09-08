@@ -74,261 +74,265 @@ defmodule HuddlzWeb.ProfileLive do
       <div class="page-head">
         <div>
           <h1>Profile</h1>
-          <p>How you show up in huddlz — your name, photo, and how to reach you.</p>
+          <p>How you show up in huddlz: your name, photo, and how to reach you.</p>
         </div>
       </div>
 
-      <div class="panel">
-        <div class="panel-head">
-          <h2>Profile picture</h2>
-        </div>
-        <div class="profile-photo-row">
-          <.big_avatar user={@current_user} />
-          <div class="profile-photo-actions">
-            <label for={@uploads.avatar.ref} class="btn-secondary" style="cursor:pointer">
-              Upload a photo…
-            </label>
-            <%= if @current_user.current_profile_picture_url do %>
-              <button
-                id="open-remove-avatar-dialog"
-                type="button"
-                class="btn-secondary muted-btn"
-                phx-click={JS.push_focus() |> JS.push("open_remove_avatar_dialog")}
-              >
-                Remove
-              </button>
-            <% end %>
-            <div class="muted" style="font-size:12px; margin-top:6px">
-              <span id="avatar-upload-help">JPG, PNG, or WebP · 5 MB max</span>
-            </div>
-            <div id="avatar-upload-status" aria-live="polite">
-              <%= for entry <- @uploads.avatar.entries,
-                      upload_errors(@uploads.avatar, entry) == [] and entry.progress < 100 do %>
-                <p class="muted" role="status">
-                  Uploading {entry.client_name}: {entry.progress}%
-                </p>
-              <% end %>
-            </div>
-            <div
-              :if={avatar_upload_error_messages(@uploads.avatar, @avatar_error) != []}
-              id="avatar-upload-error"
-              class="form-error"
-              role="alert"
-              aria-live="assertive"
-            >
-              <p :for={message <- avatar_upload_error_messages(@uploads.avatar, @avatar_error)}>
-                {message}
-              </p>
-            </div>
-          </div>
-        </div>
-        <form id="avatar-form" phx-change="validate_avatar" class="hidden">
-          <.live_file_input
-            upload={@uploads.avatar}
-            aria-describedby="avatar-upload-help avatar-upload-error"
-            aria-invalid={
-              avatar_upload_error_messages(@uploads.avatar, @avatar_error) != [] && "true"
-            }
-          />
-        </form>
-      </div>
-
-      <.form for={@form} id="profile-form" phx-submit="save" phx-change="validate">
+      <div class="settings-stack">
         <div class="panel">
           <div class="panel-head">
-            <h2>Account information</h2>
+            <h2>Profile picture</h2>
           </div>
-          <div class="form-grid">
-            <div class="form-row">
-              <label class="form-label">Email</label>
-              <div class="form-control read-only">
-                <span>{@current_user.email}</span>
-                <span class={["pill", role_pill_color(@current_user.role)]}>
-                  {role_label(@current_user.role)}
-                </span>
-              </div>
-              <p class="form-help">This is the email you use to sign in.</p>
-            </div>
-            <.input
-              field={@form[:display_name]}
-              value={form_value(@form, :display_name)}
-              label="Display name"
-              placeholder="Enter your display name"
-              help="Names aren't unique on huddlz — pick anything you like."
-            />
-          </div>
-          <div class="form-foot">
-            <.button variant={:primary} type="submit">Save changes</.button>
-          </div>
-        </div>
-      </.form>
-
-      <.form
-        for={@email_form}
-        id="email-change-form"
-        phx-submit="change_email"
-        phx-change="validate_email"
-      >
-        <div class="panel">
-          <div class="panel-head">
-            <div>
-              <h2>Change email</h2>
-              <div class="panel-sub">
-                Update your sign-in email after confirming your current password.
-              </div>
-            </div>
-          </div>
-          <div class="form-grid">
-            <.input
-              field={@email_form[:email]}
-              type="text"
-              label="New email"
-              placeholder="Enter your new email"
-              autocomplete="email"
-              inputmode="email"
-            />
-            <.input
-              field={@email_form[:current_password]}
-              type="password"
-              label="Confirm current password"
-              placeholder="Enter your current password"
-              autocomplete="current-password"
-            />
-          </div>
-          <div class="form-foot">
-            <.button id="change-email-button" variant={:primary} type="submit">
-              Change email
-            </.button>
-          </div>
-        </div>
-      </.form>
-
-      <div class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>Home location</h2>
-            <div class="panel-sub">
-              Used to pre-fill the distance filter when you search huddlz nearby.
-            </div>
-          </div>
-        </div>
-        <form class="form-row">
-          <.live_component
-            module={HuddlzWeb.Live.LocationAutocomplete}
-            id="profile-location"
-            variant={:form}
-            field_name="home_location"
-            value={@current_user.home_location}
-            latitude={@current_user.home_latitude}
-            longitude={@current_user.home_longitude}
-            placeholder="e.g. Austin, TX"
-          />
-          <p :if={@location_error} class="form-error">{@location_error}</p>
-        </form>
-      </div>
-
-      <.form
-        for={@password_form}
-        id="password-form"
-        phx-submit="update_password"
-        phx-change="validate_password"
-      >
-        <div class="panel">
-          <div class="panel-head">
-            <div>
-              <h2>{if @current_user.hashed_password, do: "Change", else: "Set"} password</h2>
-              <div class="panel-sub">
-                <%= if @current_user.hashed_password do %>
-                  Update your password to keep your account secure.
-                <% else %>
-                  Set a password to enable password-based sign in.
+          <div class="profile-photo-row">
+            <.big_avatar user={@current_user} />
+            <div class="profile-photo-actions">
+              <div class="profile-photo-buttons">
+                <label for={@uploads.avatar.ref} class="btn-secondary">
+                  Upload a photo…
+                </label>
+                <%= if @current_user.current_profile_picture_url do %>
+                  <button
+                    id="open-remove-avatar-dialog"
+                    type="button"
+                    class="btn-secondary muted-btn"
+                    phx-click={JS.push_focus() |> JS.push("open_remove_avatar_dialog")}
+                  >
+                    Remove
+                  </button>
                 <% end %>
               </div>
+              <p id="avatar-upload-help" class="form-help">JPG, PNG, or WebP · 5 MB max</p>
+              <div id="avatar-upload-status" aria-live="polite">
+                <%= for entry <- @uploads.avatar.entries,
+                      upload_errors(@uploads.avatar, entry) == [] and entry.progress < 100 do %>
+                  <p class="muted" role="status">
+                    Uploading {entry.client_name}: {entry.progress}%
+                  </p>
+                <% end %>
+              </div>
+              <div
+                :if={avatar_upload_error_messages(@uploads.avatar, @avatar_error) != []}
+                id="avatar-upload-error"
+                class="form-error"
+                role="alert"
+                aria-live="assertive"
+              >
+                <p :for={message <- avatar_upload_error_messages(@uploads.avatar, @avatar_error)}>
+                  {message}
+                </p>
+              </div>
             </div>
           </div>
-          <div class="form-grid">
-            <%= if @current_user.hashed_password do %>
+          <form id="avatar-form" phx-change="validate_avatar" class="hidden">
+            <.live_file_input
+              upload={@uploads.avatar}
+              aria-describedby="avatar-upload-help avatar-upload-error"
+              aria-invalid={
+                avatar_upload_error_messages(@uploads.avatar, @avatar_error) != [] && "true"
+              }
+            />
+          </form>
+        </div>
+
+        <.form for={@form} id="profile-form" phx-submit="save" phx-change="validate">
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Account information</h2>
+            </div>
+            <div class="form-grid">
+              <div class="form-row">
+                <label class="form-label">Email</label>
+                <div class="form-control read-only">
+                  <span>{@current_user.email}</span>
+                  <span class={["pill", role_pill_color(@current_user.role)]}>
+                    {role_label(@current_user.role)}
+                  </span>
+                </div>
+                <p class="form-help">This is the email you use to sign in.</p>
+              </div>
               <.input
-                field={@password_form[:current_password]}
-                id={"password-#{@password_input_reset_generation}-current-password"}
-                value=""
+                field={@form[:display_name]}
+                value={form_value(@form, :display_name)}
+                label="Display name"
+                placeholder="Enter your display name"
+                help="Names aren't unique on huddlz. Pick anything you like."
+              />
+            </div>
+            <div class="form-foot">
+              <.button variant={:primary} type="submit">Save changes</.button>
+            </div>
+          </div>
+        </.form>
+
+        <.form
+          for={@email_form}
+          id="email-change-form"
+          phx-submit="change_email"
+          phx-change="validate_email"
+        >
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Change email</h2>
+                <div class="panel-sub">
+                  Update your sign-in email after confirming your current password.
+                </div>
+              </div>
+            </div>
+            <div class="form-grid">
+              <.input
+                field={@email_form[:email]}
+                type="text"
+                label="New email"
+                placeholder="Enter your new email"
+                autocomplete="email"
+                inputmode="email"
+              />
+              <.input
+                field={@email_form[:current_password]}
                 type="password"
-                phx-update="ignore"
-                label="Current password"
+                label="Confirm current password"
                 placeholder="Enter your current password"
                 autocomplete="current-password"
               />
-            <% end %>
-            <.input
-              field={@password_form[:password]}
-              id={"password-#{@password_input_reset_generation}-password"}
-              value=""
-              type="password"
-              phx-update="ignore"
-              label="New password"
-              placeholder="Enter your new password"
-              autocomplete="new-password"
-              help="At least 8 characters."
-            />
-            <.input
-              field={@password_form[:password_confirmation]}
-              id={"password-#{@password_input_reset_generation}-password-confirmation"}
-              value=""
-              type="password"
-              phx-update="ignore"
-              label="Confirm new password"
-              placeholder="Confirm your new password"
-              autocomplete="new-password"
-            />
+            </div>
+            <div class="form-foot">
+              <.button id="change-email-button" variant={:primary} type="submit">
+                Change email
+              </.button>
+            </div>
           </div>
-          <div class="form-foot">
-            <.button variant={:primary} type="submit">
-              {if @current_user.hashed_password, do: "Update", else: "Set"} password
+        </.form>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Home location</h2>
+              <div class="panel-sub">
+                Used to pre-fill the distance filter when you search huddlz nearby.
+              </div>
+            </div>
+          </div>
+          <form class="form-row">
+            <label class="form-label" for="profile-location-input">Location</label>
+            <.live_component
+              module={HuddlzWeb.Live.LocationAutocomplete}
+              id="profile-location"
+              variant={:form}
+              field_name="home_location"
+              value={@current_user.home_location}
+              latitude={@current_user.home_latitude}
+              longitude={@current_user.home_longitude}
+              placeholder="e.g. Austin, TX"
+            />
+            <p :if={@location_error} class="form-error">{@location_error}</p>
+          </form>
+        </div>
+
+        <.form
+          for={@password_form}
+          id="password-form"
+          phx-submit="update_password"
+          phx-change="validate_password"
+        >
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>{if @current_user.hashed_password, do: "Change", else: "Set"} password</h2>
+                <div class="panel-sub">
+                  <%= if @current_user.hashed_password do %>
+                    Update your password to keep your account secure.
+                  <% else %>
+                    Set a password to enable password-based sign in.
+                  <% end %>
+                </div>
+              </div>
+            </div>
+            <div class="form-grid">
+              <%= if @current_user.hashed_password do %>
+                <.input
+                  field={@password_form[:current_password]}
+                  id={"password-#{@password_input_reset_generation}-current-password"}
+                  value=""
+                  type="password"
+                  phx-update="ignore"
+                  label="Current password"
+                  placeholder="Enter your current password"
+                  autocomplete="current-password"
+                />
+              <% end %>
+              <.input
+                field={@password_form[:password]}
+                id={"password-#{@password_input_reset_generation}-password"}
+                value=""
+                type="password"
+                phx-update="ignore"
+                label="New password"
+                placeholder="Enter your new password"
+                autocomplete="new-password"
+                help="At least 8 characters."
+              />
+              <.input
+                field={@password_form[:password_confirmation]}
+                id={"password-#{@password_input_reset_generation}-password-confirmation"}
+                value=""
+                type="password"
+                phx-update="ignore"
+                label="Confirm new password"
+                placeholder="Confirm your new password"
+                autocomplete="new-password"
+              />
+            </div>
+            <div class="form-foot">
+              <.button variant={:primary} type="submit">
+                {if @current_user.hashed_password, do: "Update", else: "Set"} password
+              </.button>
+            </div>
+          </div>
+        </.form>
+
+        <.modal
+          :if={@remove_avatar_dialog_open}
+          id="remove-avatar-dialog"
+          show
+          on_cancel={JS.push("cancel_remove_avatar")}
+        >
+          <div class="delete-confirm">
+            <div class="delete-confirm-icon" aria-hidden="true">
+              <.icon name="hero-user-circle" class="h-6 w-6" />
+            </div>
+
+            <div class="delete-confirm-copy">
+              <span class="eyebrow eyebrow-magenta">Profile picture</span>
+              <h2 id="remove-avatar-dialog-title">Remove your profile picture?</h2>
+              <p>
+                Your current picture will be removed. Your
+                <strong>initials will appear instead</strong>
+                everywhere your profile is shown.
+              </p>
+            </div>
+          </div>
+
+          <div class="delete-confirm-actions">
+            <.button
+              variant={:muted}
+              id="cancel-remove-avatar"
+              phx-click="cancel_remove_avatar"
+            >
+              Keep picture
+            </.button>
+            <.button
+              variant={:destructive}
+              class="delete-confirm-submit"
+              id="confirm-remove-avatar"
+              phx-click="remove_avatar"
+              phx-disable-with="Removing…"
+            >
+              Remove picture
             </.button>
           </div>
-        </div>
-      </.form>
-
-      <.modal
-        :if={@remove_avatar_dialog_open}
-        id="remove-avatar-dialog"
-        show
-        on_cancel={JS.push("cancel_remove_avatar")}
-      >
-        <div class="delete-confirm">
-          <div class="delete-confirm-icon" aria-hidden="true">
-            <.icon name="hero-user-circle" class="h-6 w-6" />
-          </div>
-
-          <div class="delete-confirm-copy">
-            <span class="eyebrow eyebrow-magenta">Profile picture</span>
-            <h2 id="remove-avatar-dialog-title">Remove your profile picture?</h2>
-            <p>
-              Your current picture will be removed. Your <strong>initials will appear instead</strong>
-              everywhere your profile is shown.
-            </p>
-          </div>
-        </div>
-
-        <div class="delete-confirm-actions">
-          <.button
-            variant={:muted}
-            id="cancel-remove-avatar"
-            phx-click="cancel_remove_avatar"
-          >
-            Keep picture
-          </.button>
-          <.button
-            variant={:destructive}
-            class="delete-confirm-submit"
-            id="confirm-remove-avatar"
-            phx-click="remove_avatar"
-            phx-disable-with="Removing…"
-          >
-            Remove picture
-          </.button>
-        </div>
-      </.modal>
+        </.modal>
+      </div>
     </Layouts.app>
     """
   end
