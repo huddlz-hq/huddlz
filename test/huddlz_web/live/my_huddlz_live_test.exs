@@ -2,6 +2,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
   use HuddlzWeb.ConnCase, async: true
 
   alias Huddlz.Communities
+  alias Huddlz.Communities.HuddlCoverImage
 
   setup do
     host = generate(user(role: :user))
@@ -31,6 +32,19 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
         )
       )
     )
+  end
+
+  defp attach_cover_image!(huddl) do
+    HuddlCoverImage
+    |> Ash.Changeset.for_create(:create, %{
+      filename: "cover.jpg",
+      content_type: "image/jpeg",
+      size_bytes: 123,
+      storage_path: "/uploads/huddl_cover_images/#{huddl.id}/cover.jpg",
+      thumbnail_path: "/uploads/huddl_cover_images/#{huddl.id}/cover_thumb.jpg",
+      huddl_id: huddl.id
+    })
+    |> Ash.create!(authorize?: false)
   end
 
   defp create_past_huddl(host, group, opts) do
@@ -309,6 +323,35 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       |> login(attendee)
       |> visit("/my-huddlz")
       |> assert_has(~s(.grid .card[href="/groups/#{public_group.slug}/huddlz/#{huddl.id}"]))
+    end
+  end
+
+  describe "card covers" do
+    test "shows the group's initials when a huddl has no image, and the image when it does", %{
+      conn: conn,
+      attendee: attendee,
+      host: host
+    } do
+      group =
+        generate(group(name: "Phoenix Elixir Meetup", owner_id: host.id, actor: host))
+
+      bare = create_huddl(host, group, title: "Bare Show")
+      pictured = create_huddl(host, group, title: "Pictured Show")
+      attach_cover_image!(pictured)
+
+      rsvp!(bare, attendee, :rsvp)
+      rsvp!(pictured, attendee, :rsvp)
+
+      bare_card = ~s(.card[href="/groups/#{group.slug}/huddlz/#{bare.id}"])
+      pictured_card = ~s(.card[href="/groups/#{group.slug}/huddlz/#{pictured.id}"])
+
+      conn
+      |> login(attendee)
+      |> visit("/my-huddlz")
+      |> assert_has("#{bare_card} .card-cover-fallback", text: "PE", exact: true)
+      |> refute_has("#{bare_card} .cover-image")
+      |> assert_has("#{pictured_card} #my-huddl-card-cover-#{pictured.id}.cover-image")
+      |> refute_has("#{pictured_card} .card-cover-fallback")
     end
   end
 

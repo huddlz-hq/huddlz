@@ -53,6 +53,40 @@ defmodule HuddlzWeb.HuddlLiveTest do
       |> assert_has(".grid .card .card-cover")
     end
 
+    test "shows the group's initials when a huddl has no image, and the image when it does", %{
+      conn: conn,
+      host: host
+    } do
+      group = generate(group(name: "Phoenix Elixir Meetup", owner_id: host.id, actor: host))
+
+      bare =
+        generate(huddl(group_id: group.id, creator_id: host.id, is_private: false, actor: host))
+
+      pictured =
+        generate(huddl(group_id: group.id, creator_id: host.id, is_private: false, actor: host))
+
+      Huddlz.Communities.HuddlCoverImage
+      |> Ash.Changeset.for_create(:create, %{
+        filename: "cover.jpg",
+        content_type: "image/jpeg",
+        size_bytes: 123,
+        storage_path: "/uploads/huddl_cover_images/#{pictured.id}/cover.jpg",
+        thumbnail_path: "/uploads/huddl_cover_images/#{pictured.id}/cover_thumb.jpg",
+        huddl_id: pictured.id
+      })
+      |> Ash.create!(authorize?: false)
+
+      bare_card = ~s(.card[href="/groups/#{group.slug}/huddlz/#{bare.id}"])
+      pictured_card = ~s(.card[href="/groups/#{group.slug}/huddlz/#{pictured.id}"])
+
+      conn
+      |> visit("/discover")
+      |> assert_has("#{bare_card} .card-cover-fallback", text: "PE", exact: true)
+      |> refute_has("#{bare_card} .cover-image")
+      |> assert_has("#{pictured_card} #huddl-card-cover-#{pictured.id}.cover-image")
+      |> refute_has("#{pictured_card} .card-cover-fallback")
+    end
+
     test "searches huddlz by title", %{conn: conn, host: host, public_group: public_group} do
       _elixir_huddl =
         generate(
