@@ -70,48 +70,51 @@ defmodule HuddlzWeb.HuddlLive.Show do
       active="discover"
     >
       <HuddlzWeb.StructuredData.huddl huddl={@huddl} url={@canonical_url} />
-      <section
-        :if={@huddl.status == :cancelled && @huddl.cancellation_reason}
-        id="cancellation-reason"
-        class="organizer-update"
-        aria-labelledby="organizer-update-title"
-      >
-        <div class="organizer-update-icon" aria-hidden="true">
-          <.icon name="hero-megaphone" class="size-6" />
-        </div>
-        <div class="organizer-update-copy">
-          <h2 id="organizer-update-title">Important update from the organizer</h2>
-          <p>{@huddl.cancellation_reason}</p>
-        </div>
-      </section>
-
-      <div class={["hero", "huddl-hero", HuddlStatus.hero_class(@huddl.status)]}>
-        <div class="hero-media">
-          <.cover_image
-            :if={@huddl.display_image_url}
-            id={"huddl-cover-#{@huddl.id}"}
-            class="hero-img"
-            image_url={@huddl.display_image_url}
-          />
-        </div>
-        <div class="hero-content">
-          <span class={["eyebrow", HuddlStatus.eyebrow_class(@huddl.status)]}>
-            {hero_eyebrow(@huddl)}
-          </span>
-          <h1>{@huddl.title}</h1>
-          <div class="meta">
-            <span :for={{segment, idx} <- Enum.with_index(hero_meta_segments(@huddl))}>
-              <%= if idx > 0 do %>
-                <span class="meta-sep">·</span>
-              <% end %>
-              <span>{segment}</span>
-            </span>
-          </div>
-        </div>
-      </div>
-
       <div class={["huddl-frame", @can_view_photos && "huddl-frame-photos"]}>
         <div class="huddl-main">
+          <section
+            :if={@huddl.status == :cancelled && @huddl.cancellation_reason}
+            id="cancellation-reason"
+            class="organizer-update"
+            aria-labelledby="organizer-update-title"
+          >
+            <div class="organizer-update-icon" aria-hidden="true">
+              <.icon name="hero-megaphone" class="size-6" />
+            </div>
+            <div class="organizer-update-copy">
+              <h2 id="organizer-update-title">Important update from the organizer</h2>
+              <p>{@huddl.cancellation_reason}</p>
+            </div>
+          </section>
+
+          <header class={["hero", "huddl-hero", HuddlStatus.hero_class(@huddl.status)]}>
+            <div class="hero-media">
+              <.cover_image
+                :if={@huddl.display_image_url}
+                id={"huddl-cover-#{@huddl.id}"}
+                class="hero-img"
+                image_url={@huddl.display_image_url}
+              />
+              <div :if={!@huddl.display_image_url} class="hero-fallback" aria-hidden="true">
+                <span>{HuddlzWeb.Avatar.initials(%{display_name: @huddl.group.name})}</span>
+              </div>
+            </div>
+            <div class="hero-content">
+              <span class={["eyebrow", HuddlStatus.eyebrow_class(@huddl.status)]}>
+                {hero_eyebrow(@huddl)}
+              </span>
+              <h1>{@huddl.title}</h1>
+              <div class="meta">
+                <span :for={{segment, idx} <- Enum.with_index(hero_meta_segments(@huddl))}>
+                  <%= if idx > 0 do %>
+                    <span class="meta-sep">·</span>
+                  <% end %>
+                  <span>{segment}</span>
+                </span>
+              </div>
+            </div>
+          </header>
+
           <div class="huddl-intro prose">
             <%= if @huddl.description do %>
               <p :for={paragraph <- description_paragraphs(@huddl.description)}>{paragraph}</p>
