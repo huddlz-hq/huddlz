@@ -336,7 +336,9 @@ defmodule HuddlzWeb.Components.HuddlForm do
       show
       on_cancel={JS.patch(@cancel_path)}
     >
-      <h2 class="font-display text-xl tracking-tight text-glow mb-6">Add New Address</h2>
+      <h2 id="new-location-modal-title" class="text-xl font-bold tracking-tight mb-6">
+        Add New Address
+      </h2>
 
       <form
         id="new-location-form"

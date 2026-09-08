@@ -133,28 +133,7 @@ html {
   font-feature-settings: "ss01", "cv11";
 }
 
-/* Typography — display is now Inter heavy, not Space Mono.
-   Keep Space Mono only for mono-labels (eyebrows, KPI captions). */
-@utility font-display {
-  font-family: 'Inter', system-ui, sans-serif;
-  font-weight: 900;
-  letter-spacing: -0.01em;
-}
-
-@utility font-body {
-  font-family: 'Inter', system-ui, sans-serif;
-}
-
-/* Mono kicker / eyebrow / KPI label — Space Mono survives here only */
-@utility mono-label {
-  font-family: 'Space Mono', monospace;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-/* ===== Soft elevation (replaces neon-glow as the default) =====
+/* ===== Soft elevation =====
    Use --shadow-pop on modals and floating panels. */
 @utility shadow-pop {
   box-shadow: 0 28px 80px oklch(0% 0 0 / 0.56);
@@ -165,27 +144,6 @@ html {
   background: oklch(13% 0.01 200 / 0.92);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-}
-
-/* ===== Glow utilities — kept for opt-in use only =====
-   Previously applied by default on every button via btn-neon.
-   Leave them defined so existing screens that rely on them still render. */
-@utility neon-glow {
-  box-shadow: 0 0 8px oklch(78% 0.13 195 / 0.3),
-              0 0 20px oklch(78% 0.13 195 / 0.08);
-}
-
-@utility text-glow {
-  text-shadow: 0 0 4px oklch(78% 0.13 195 / 0.25);
-}
-
-/* btn-neon was the cyberpunk default. Kept for backward compat but
-   neutralised: a small border-colour transition on hover, no glow. */
-@utility btn-neon {
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-  &:hover {
-    border-color: oklch(78% 0.13 195);
-  }
 }
 
 /* Sharp-edged checkbox. */
@@ -269,7 +227,7 @@ html {
   --radius-sm: 8px;
   --radius-pill: 999px;
   --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --mono: "SFMono-Regular", "Space Mono", Consolas, "Liberation Mono", monospace;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
   --rail-w: 264px;
 }
 
@@ -397,9 +355,8 @@ body.error-page {
 .error-topbar-label,
 .error-kicker,
 .error-footer {
-  font-family: var(--mono);
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
 }
 
 .error-topbar-label {
@@ -1839,25 +1796,27 @@ body .kpi {
 
 body .kpi .label {
   color: var(--muted);
-  font-family: var(--mono);
-  font-size: 10.5px;
-  letter-spacing: 0.12em;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 body .kpi .value {
   margin-top: 8px;
-  font-family: var(--mono);
   font-size: 30px;
   font-weight: 700;
   line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
   color: var(--text);
 }
 
 body .kpi .delta {
   margin-top: 8px;
-  font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
   color: var(--accent-ink);
 }
 
@@ -2003,8 +1962,8 @@ body .role-section-head {
 }
 body .role-section-head h3 {
   margin: 0;
-  font-family: var(--mono);
   font-size: 13px;
+  font-weight: 600;
   color: var(--text);
 }
 body .role-section-head .count { font-size: 12px; }
@@ -2947,9 +2906,8 @@ body .invitation-back-link {
   gap: 8px;
   margin-bottom: 18px;
   color: var(--muted);
-  font-family: var(--mono);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   transition: color 0.15s ease;
 }
 
@@ -2989,9 +2947,8 @@ body .member-mark {
   height: 48px;
   display: grid;
   place-items: center;
-  font-family: var(--mono);
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--on-accent);
   background: linear-gradient(135deg, var(--accent), var(--accent-deep));
   border-radius: var(--radius-sm);
@@ -3360,7 +3317,6 @@ body .land-hero {
 
 body .land-hero h1 {
   margin: 14px auto 20px;
-  font-family: var(--mono);
   font-size: clamp(44px, 5.2vw, 74px);
   line-height: 1.02;
   letter-spacing: -0.025em;
@@ -3441,8 +3397,6 @@ body .land-foot {
   color: var(--muted);
   font-size: 12px;
   text-align: center;
-  font-family: var(--mono);
-  letter-spacing: 0.04em;
 }
 
 /* ─────────────────────────────────────────  AUTH PAGES  ─────── */
@@ -3487,9 +3441,8 @@ body .auth-frame {
 
 body .auth-frame h1 {
   margin: 16px 0 6px;
-  font-family: var(--mono);
   font-size: 30px;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.02em;
 }
 
 body .auth-frame .lede {
@@ -3555,7 +3508,6 @@ body .auth-state.warn .icon-mark {
 
 body .auth-state h2 {
   margin: 0 0 10px;
-  font-family: var(--mono);
   font-size: 18px;
   color: var(--text);
 }
@@ -3589,9 +3541,8 @@ body .big-avatar {
 
 body .profile-head h1 {
   margin: 0 0 6px;
-  font-family: var(--mono);
   font-size: 28px;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.02em;
 }
 
 body .profile-head .who { color: var(--muted); font-size: 13px; }
@@ -3660,7 +3611,6 @@ body .help-copyright {
   padding-top: 18px;
   margin-top: 18px;
   border-top: 1px solid var(--line);
-  font-family: var(--mono);
 }
 
 /* Public legal pages */
@@ -3685,9 +3635,8 @@ body .legal-back-link {
   display: inline-flex;
   margin-bottom: 20px;
   color: var(--accent-ink);
-  font-family: var(--mono);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   text-decoration: none;
 }
 
@@ -3695,17 +3644,17 @@ body .legal-back-link:hover { text-decoration: underline; }
 
 body .legal-document-head h1 {
   margin: 0 0 8px;
-  font-family: var(--mono);
   font-size: clamp(27px, 4vw, 38px);
   line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 
 body .legal-document-head p {
   margin: 0;
   color: var(--muted);
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -3723,9 +3672,8 @@ body .legal-document-nav a {
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   color: var(--muted);
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   text-decoration: none;
 }
 
@@ -3736,7 +3684,7 @@ body .legal-document-nav a:hover {
 
 body .legal-document-nav a[aria-current="page"] {
   border-color: color-mix(in srgb, var(--accent) 35%, transparent);
-  background: var(--accent-ink);
+  background: var(--accent-soft);
   color: var(--accent-ink);
 }
 
@@ -3750,15 +3698,14 @@ body .legal-document-body {
 body .legal-document-body h2 {
   margin: 34px 0 10px;
   color: var(--text);
-  font-family: var(--mono);
   font-size: 20px;
   line-height: 1.3;
+  letter-spacing: -0.01em;
 }
 
 body .legal-document-body h3 {
   margin: 25px 0 8px;
   color: var(--text);
-  font-family: var(--mono);
   font-size: 15px;
 }
 
@@ -4372,8 +4319,8 @@ body .visibility-current {
   align-items: baseline;
   gap: 8px;
   color: var(--muted);
-  font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -4456,7 +4403,6 @@ body .insight-pill {
   font-size: 12.5px;
 }
 
-body .insight-pill strong { color: var(--text); font-weight: 700; font-family: var(--mono); }
 body .insight-pill svg { width: 13px; height: 13px; color: var(--accent-ink); }
 
 /* Subtle helper */
@@ -4524,10 +4470,9 @@ body .admin-table th:nth-child(4),
 body .admin-table td:nth-child(4) { min-width: 200px; white-space: nowrap; }
 
 body .admin-table thead th {
-  font-family: var(--mono);
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
   text-align: left;
@@ -4582,10 +4527,9 @@ body .role-form .btn-primary { padding: 0 14px; }
   body .admin-table tbody td::before {
     content: attr(data-label);
     display: block;
-    font-family: var(--mono);
     font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
+    font-weight: 600;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--muted);
     margin-bottom: 2px;
