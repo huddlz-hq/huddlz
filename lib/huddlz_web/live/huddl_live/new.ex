@@ -159,7 +159,8 @@ defmodule HuddlzWeb.HuddlLive.New do
       current_user={@current_user}
       unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
-      active="my-groups"
+      active_group_slug={@group.slug}
+      active_organize_section={:huddlz}
     >
       <div class="page-head">
         <div>
