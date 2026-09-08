@@ -25,6 +25,17 @@ import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 import {mountMobileNavigation} from "./mobile_navigation.mjs"
 
+// The appearance setting lives on <html data-theme>, outside any LiveView.
+// Settings pushes a "theme" event after saving; "system" drops the attribute
+// so the stylesheet's prefers-color-scheme rules take over.
+window.addEventListener("phx:theme", ({detail}) => {
+  if (detail.theme === "system") {
+    delete document.documentElement.dataset.theme
+  } else {
+    document.documentElement.dataset.theme = detail.theme
+  }
+})
+
 const Hooks = {}
 
 Hooks.LocationAutocomplete = {

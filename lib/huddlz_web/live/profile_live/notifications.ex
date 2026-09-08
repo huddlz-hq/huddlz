@@ -30,6 +30,25 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
   end
 
   @impl true
+  def handle_event("set_theme", %{"theme" => theme}, socket) do
+    user = socket.assigns.current_user
+
+    user
+    |> Ash.Changeset.for_update(:update_theme_preference, %{theme_preference: theme}, actor: user)
+    |> Ash.update()
+    |> case do
+      {:ok, updated_user} ->
+        {:noreply,
+         socket
+         |> assign(:current_user, updated_user)
+         |> push_event("theme", %{theme: Atom.to_string(updated_user.theme_preference)})
+         |> put_flash(:info, "Appearance saved")}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Could not save appearance")}
+    end
+  end
+
   def handle_event("save", %{"prefs" => prefs_params}, socket) do
     user = socket.assigns.current_user
     preferences = normalize_form_params(prefs_params)
@@ -66,9 +85,38 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
       <div class="page-head">
         <div>
           <h1>Settings</h1>
-          <p>Notification preferences and other knobs. We'll add more here as huddlz grows.</p>
+          <p>
+            Notification preferences and other knobs. We'll add more here as huddlz grows.
+          </p>
         </div>
       </div>
+
+      <form id="appearance-form" phx-change="set_theme">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Appearance</h2>
+              <div class="panel-sub">System follows your device. Light and Dark stay put.</div>
+            </div>
+          </div>
+          <fieldset class="scope-tabs appearance-tabs">
+            <legend class="sr-only">Theme</legend>
+            <label
+              :for={{value, label} <- theme_options()}
+              class={["scope-tab", @current_user.theme_preference == value && "is-active"]}
+            >
+              <input
+                type="radio"
+                name="theme"
+                value={value}
+                checked={@current_user.theme_preference == value}
+                class="sr-only"
+              />
+              {label}
+            </label>
+          </fieldset>
+        </div>
+      </form>
 
       <form phx-submit="save">
         <.read_only_panel
@@ -168,6 +216,8 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
     </div>
     """
   end
+
+  defp theme_options, do: [system: "System", light: "Light", dark: "Dark"]
 
   defp group_triggers do
     %{
