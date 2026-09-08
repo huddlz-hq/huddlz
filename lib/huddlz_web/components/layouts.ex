@@ -12,10 +12,8 @@ defmodule HuddlzWeb.Layouts do
   @doc """
   Main app layout — sidebar + topbar shell wrapping the inner content.
 
-  Mirrors the clickthrough mockup at `/dev/design/clickthrough/explore` (and
-  the `clickthrough_shell` function component in `HuddlzWeb.DevDesignHTML`),
-  but reads the real `current_user` and renders an admin link when the user
-  is an admin.
+  Reads the real `current_user` and renders an admin link when the user is
+  an admin.
 
   Pair with `on_mount {HuddlzWeb.LiveUserAuth, :app}`, which loads the
   sidebar's `sb-org-row` groups and sets the chromeless-mode body class

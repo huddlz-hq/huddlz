@@ -371,7 +371,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
 
   # V3 panel-form variant — renders the `.location-display` block on `/profile`.
   # When a location is selected, shows a static pill with explicit
-  # "Change location…" and "Clear" buttons (matching the clickthrough mockup);
+  # "Change location…" and "Clear" buttons;
   # when searching, falls back to a `.form-input` + `.filter-location-listbox`
   # dropdown so the suggestions reuse the v3 panel styling.
   defp render_form(assigns) do
