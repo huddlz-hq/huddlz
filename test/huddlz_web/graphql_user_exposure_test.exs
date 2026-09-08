@@ -26,7 +26,8 @@ defmodule HuddlzWeb.GraphqlUserExposureTest do
              {:change_password_result, :result},
              {:update_display_name_result, :result},
              {:update_home_location_result, :result},
-             {:update_notification_preferences_result, :result}
+             {:update_notification_preferences_result, :result},
+             {:update_theme_preference_result, :result}
            ])
 
   test "no unsanctioned GraphQL exposure of the User type" do

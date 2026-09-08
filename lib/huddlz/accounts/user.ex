@@ -48,6 +48,7 @@ defmodule Huddlz.Accounts.User do
       update :change_password, :change_password
       update :change_email, :change_email
       update :update_notification_preferences, :update_notification_preferences
+      update :update_theme_preference, :update_theme_preference
     end
   end
 
@@ -260,6 +261,11 @@ defmodule Huddlz.Accounts.User do
 
                {:ok, user}
              end)
+    end
+
+    update :update_theme_preference do
+      description "Choose whether huddlz follows the device appearance or stays light or dark"
+      accept [:theme_preference]
     end
 
     update :update_notification_preferences do
@@ -675,6 +681,11 @@ defmodule Huddlz.Accounts.User do
       description "Users can update their own notification preferences"
       authorize_if expr(id == ^actor(:id))
     end
+
+    policy action(:update_theme_preference) do
+      description "Users can update their own appearance preference"
+      authorize_if expr(id == ^actor(:id))
+    end
   end
 
   validations do
@@ -735,6 +746,13 @@ defmodule Huddlz.Accounts.User do
       description "IANA time zone for the user's saved home search location"
       allow_nil? true
       constraints min_length: 1, max_length: 100
+    end
+
+    attribute :theme_preference, Huddlz.Accounts.ThemePreference do
+      description "Follow the device appearance, or always light or dark"
+      allow_nil? false
+      default :system
+      public? true
     end
 
     attribute :notification_preferences, :map do
