@@ -1,8 +1,8 @@
 defmodule HuddlzWeb.Components.Flash do
   @moduledoc """
-  Flash notice rendering plus the `show/2` / `hide/2` JS animation helpers
-  it shares with the layout's client-error banner. Slides in from the top,
-  fades out on dismiss.
+  Flash toast rendering plus the `show/2` / `hide/2` JS animation helpers
+  it shares with the layout's client-error banner. Toasts stack top-right
+  (see `.flash-group` in app.css), slide in, and fade out on dismiss.
   """
   use Phoenix.Component
   use Gettext, backend: HuddlzWeb.Gettext
@@ -27,36 +27,20 @@ defmodule HuddlzWeb.Components.Flash do
       id={@id}
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
       role="alert"
-      class="w-full cursor-pointer mb-4"
+      class={["flash", "flash-#{@kind}"]}
       {@rest}
     >
-      <div class={[
-        "flex items-center gap-3 border rounded-hz-surface px-4 py-3 text-sm",
-        @kind == :info && "border-primary/30 bg-primary/5 text-primary",
-        @kind == :error && "border-error/30 bg-error/5 text-error"
-      ]}>
-        <div class={[
-          "w-1 self-stretch",
-          @kind == :info && "bg-primary",
-          @kind == :error && "bg-error"
-        ]} />
-        <Icon.icon :if={@kind == :info} name="hero-information-circle-mini" class="size-5 shrink-0" />
-        <Icon.icon
-          :if={@kind == :error}
-          name="hero-exclamation-circle-mini"
-          class="size-5 shrink-0"
-        />
-        <span class="flex-1">
-          <span :if={@title} class="font-semibold">{@title}: </span>{msg}
-        </span>
-        <button
-          type="button"
-          class="opacity-50 hover:opacity-100 transition-opacity"
-          aria-label={gettext("close")}
-        >
-          <Icon.icon name="hero-x-mark-solid" class="size-4" />
-        </button>
+      <span class="flash-icon" aria-hidden="true">
+        <Icon.icon :if={@kind == :info} name="hero-check-circle" class="size-5" />
+        <Icon.icon :if={@kind == :error} name="hero-exclamation-circle" class="size-5" />
+      </span>
+      <div class="flash-body">
+        <p :if={@title} class="flash-title">{@title}</p>
+        <span>{msg}</span>
       </div>
+      <button type="button" class="flash-close" aria-label={gettext("close")}>
+        <Icon.icon name="hero-x-mark" class="size-4" />
+      </button>
     </div>
     """
   end
