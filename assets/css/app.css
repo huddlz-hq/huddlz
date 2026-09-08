@@ -2289,81 +2289,77 @@ body .cal-toolbar {
   flex-wrap: wrap;
   align-items: center;
   gap: 16px;
-  margin-bottom: 14px;
+  margin-bottom: 24px;
 }
-
-body .cal-month-title {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-}
-
-body .cal-view-tabs { margin-left: auto; }
-
-body .cal-month-eyebrow {
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--cyan);
-  opacity: 0.7;
-}
-
-body .cal-month-name {
-  font-family: var(--mono);
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-body .cal-month-count {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-body .cal-view-tabs {
-  display: inline-flex;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-sm);
-  padding: 4px;
-  background: color-mix(in srgb, var(--bg) 40%, transparent);
-}
-
-body .cal-view-tabs .scope-tab { padding: 5px 14px; font-size: 12px; }
 
 body .cal-nav { display: flex; gap: 4px; }
 
 body .cal-nav-btn {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--soft);
+  transition: border-color 120ms ease, color 120ms ease;
 }
 
-body .cal-nav-btn:hover { color: var(--cyan); border-color: var(--cyan); }
-
 body .cal-nav-today {
-  height: 32px;
+  height: 36px;
   display: inline-flex;
   align-items: center;
   padding: 0 14px;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--soft);
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  transition: border-color 120ms ease, color 120ms ease;
 }
 
-body .cal-nav-today:hover { color: var(--cyan); border-color: var(--cyan); }
+body .cal-nav-btn:hover,
+body .cal-nav-today:hover { color: var(--accent-ink); border-color: var(--accent); }
+
+body .cal-month-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+body .cal-month-name {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+body .cal-month-count {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+body .cal-view-tabs {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+
+/* Month grid: a bordered panel holding a 7-column table. The panel keeps
+   overflow visible so pill tooltips can escape the cells; the corner cells
+   paint either nothing or the page background, so nothing pokes past the
+   rounded corners. */
+body .cal-calendar-panel {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
 
 body .cal-calendar {
   width: 100%;
@@ -2371,167 +2367,146 @@ body .cal-calendar {
   border-collapse: collapse;
 }
 
-body .cal-calendar-panel {
-  overflow: visible;
-}
-
-body .cal-calendar caption {
-  caption-side: top;
-}
+body .cal-calendar caption { caption-side: top; }
 
 body .cal-day-name {
-  padding: 10px 8px;
+  height: 40px;
+  padding: 0 12px;
   border-bottom: 1px solid var(--line);
-  font-family: var(--mono);
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--cyan);
-  opacity: 0.7;
-  text-align: center;
+  text-align: left;
 }
 
-body .cal-day-name abbr {
-  text-decoration: none;
-}
+body .cal-day-name abbr { text-decoration: none; }
 
 body .cal-day-name:not(:last-child) { border-right: 1px solid var(--line); }
 
 body .cal-cell {
-  height: 100px;
+  height: 116px;
   padding: 0;
   vertical-align: top;
   border-bottom: 1px solid var(--line);
   border-right: 1px solid var(--line);
-  background: color-mix(in srgb, var(--bg) 30%, transparent);
 }
 
 body .cal-cell-content {
-  min-height: 100px;
-  padding: 8px 8px 6px;
+  min-height: 116px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
-body .cal-cell:last-child {
-  border-right: 0;
-}
+body .cal-cell:last-child { border-right: 0; }
 
 body .cal-calendar tbody tr:last-child .cal-cell { border-bottom: 0; }
 
-body .cal-cell.out-of-month { background: color-mix(in srgb, var(--bg) 55%, transparent); }
-body .cal-cell.out-of-month .cal-day-num { color: var(--muted); opacity: 0.5; }
+body .cal-cell.out-of-month { background: var(--bg); }
+body .cal-cell.out-of-month .cal-day-num { color: var(--muted); }
 
 body .cal-day-heading {
-  min-height: 22px;
+  min-height: 26px;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
 }
 
 body .cal-day-num {
+  width: 26px;
+  height: 26px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--soft);
+  border-radius: var(--radius-pill);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
 body .cal-day-num.is-today {
-  color: var(--cyan);
-  width: 22px;
-  height: 22px;
-  border: 1px solid var(--cyan);
-  border-radius: 50%;
-  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 body .cal-day-context {
   color: var(--muted);
-  font-family: var(--mono);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 500;
 }
 
+/* Entry pills: soft tinted blocks, one per huddl. Three stacked lines:
+   the time (with the huddl's own zone abbreviation, which can differ from
+   the calendar's zone), the title, and the status. */
 body .cal-pill {
   position: relative;
   z-index: 1;
   display: flex;
-  min-width: 0;
-  padding: 4px 6px;
   flex-direction: column;
-  gap: 1px;
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-  border-radius: 3px;
-  color: var(--cyan);
+  min-width: 0;
+  padding: 6px 8px;
+  gap: 2px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 12px;
+  line-height: 1.3;
   text-decoration: none;
-  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+  transition: filter 120ms ease, transform 120ms ease;
 }
 
 body .cal-pill:hover {
   z-index: 20;
-  background: var(--cyan-soft);
-  border-color: var(--cyan);
+  filter: brightness(1.08);
   transform: translateY(-1px);
 }
 
 body .cal-pill:focus-visible {
   z-index: 20;
-  outline: 2px solid var(--cyan);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-body .cal-pill-primary {
-  display: flex;
-  min-width: 0;
-  align-items: baseline;
-  gap: 4px;
-  color: var(--soft);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.25;
-  white-space: nowrap;
-}
+body .cal-pill-primary { display: contents; }
 
 body .cal-pill-time {
-  flex: 0 0 auto;
-  color: currentColor;
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 800;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-body .cal-pill-separator {
-  flex: 0 0 auto;
-  color: var(--muted);
-}
+body .cal-pill-separator { display: none; }
 
 body .cal-pill-title {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
 }
 
 body .cal-pill-status {
+  min-width: 0;
   overflow: hidden;
-  color: currentColor;
-  font-family: var(--mono);
-  font-size: 8.5px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  line-height: 1.2;
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.85;
   text-overflow: ellipsis;
-  text-transform: uppercase;
   white-space: nowrap;
 }
+
+body .cal-pill.hosting { background: var(--pink-soft); color: var(--pink); }
+body .cal-pill.tentative { background: var(--warn-soft); color: var(--warn); }
+body .cal-pill.past { background: var(--panel-2); color: var(--muted); }
+body .cal-pill.past:hover { color: var(--soft); }
+body .cal-pill.out-of-month-pill { opacity: 0.7; }
 
 body .cal-pill-tooltip {
   position: absolute;
@@ -2541,14 +2516,13 @@ body .cal-pill-tooltip {
   width: max-content;
   max-width: min(280px, 80vw);
   padding: 8px 10px;
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--panel) 98%, transparent);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55), 0 0 18px color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  box-shadow: var(--shadow);
   color: var(--soft);
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 650;
+  font-size: 12px;
+  font-weight: 500;
   line-height: 1.4;
   opacity: 0;
   overflow-wrap: anywhere;
@@ -2565,9 +2539,9 @@ body .cal-pill-tooltip::after {
   left: 50%;
   width: 7px;
   height: 7px;
-  border-right: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  background: color-mix(in srgb, var(--panel) 98%, transparent);
+  border-right: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+  background: var(--panel);
   content: "";
   transform: translate(-50%, -4px) rotate(45deg);
 }
@@ -2589,9 +2563,7 @@ body .cal-cell:first-child .cal-pill:focus-visible .cal-pill-tooltip {
   transform: translate(0, 0);
 }
 
-body .cal-cell:first-child .cal-pill-tooltip::after {
-  left: 18px;
-}
+body .cal-cell:first-child .cal-pill-tooltip::after { left: 18px; }
 
 body .cal-cell:last-child .cal-pill-tooltip {
   right: -2px;
@@ -2609,42 +2581,38 @@ body .cal-cell:last-child .cal-pill-tooltip::after {
   left: auto;
 }
 
-body .cal-pill.hosting {
-  border-color: color-mix(in srgb, var(--pink) 40%, transparent);
-  color: var(--magenta);
+/* Agenda view: one row per huddl in the focused month. */
+body .cal-agenda-panel {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  padding: 4px 20px;
 }
 
-body .cal-pill.hosting:hover {
-  background: color-mix(in srgb, var(--pink) 8%, transparent);
-  border-color: var(--magenta);
+body .cal-agenda-row {
+  grid-template-columns: 200px minmax(0, 1fr) auto;
+  color: inherit;
+  text-decoration: none;
 }
 
-body .cal-pill.tentative {
-  border-color: color-mix(in srgb, var(--warn) 40%, transparent);
-  color: var(--warn);
+body .cal-agenda-row .row-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+  color: var(--text);
+  transition: color 120ms ease;
 }
 
-body .cal-pill.tentative:hover { background: color-mix(in srgb, var(--warn) 8%, transparent); border-color: var(--warn); }
+body .cal-agenda-row:hover .row-title { color: var(--accent-ink); }
 
-body .cal-pill.past {
-  border-color: var(--line);
-  color: var(--muted);
-}
-
-body .cal-pill.past:hover { color: var(--soft); }
-
-body .cal-pill.out-of-month-pill {
-  border-color: var(--line);
-  color: var(--muted);
-  opacity: 0.7;
-}
-
+/* Touch agenda: the same entries as a list, shown where hover tooltips
+   don't work (narrow screens and coarse pointers). */
 body .cal-touch-agenda {
   display: none;
-  margin-top: 14px;
+  margin-top: 16px;
   border: 1px solid var(--line);
-  border-radius: 5px;
-  background: color-mix(in srgb, var(--bg) 30%, transparent);
+  border-radius: var(--radius);
+  background: var(--panel);
 }
 
 body .cal-touch-agenda-heading {
@@ -2654,22 +2622,21 @@ body .cal-touch-agenda-heading {
 
 body .cal-touch-agenda-heading h2 {
   margin: 2px 0 0;
-  font-size: 17px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 body .cal-touch-agenda-kicker {
   margin: 0;
-  color: var(--cyan);
-  font-family: var(--mono);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-body .cal-touch-agenda-list {
-  display: grid;
-}
+body .cal-touch-agenda-list { display: grid; }
 
 body .cal-touch-entry {
   display: grid;
@@ -2682,88 +2649,85 @@ body .cal-touch-entry {
   transition: background 120ms ease;
 }
 
-body .cal-touch-entry:last-child {
-  border-bottom: 0;
-}
+body .cal-touch-entry:last-child { border-bottom: 0; }
 
 body .cal-touch-entry:hover,
-body .cal-touch-entry:focus-visible {
-  background: var(--cyan-soft);
-}
+body .cal-touch-entry:focus-visible { background: var(--panel-2); }
 
 body .cal-touch-entry:focus-visible {
-  outline: 2px solid var(--cyan);
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
 body .cal-touch-entry time {
   grid-row: 1 / span 2;
   color: var(--muted);
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 body .cal-touch-entry-title {
   min-width: 0;
   overflow-wrap: anywhere;
-  font-size: 13px;
-  font-weight: 700;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
 }
 
 body .cal-touch-entry-status {
-  color: var(--cyan);
-  font-family: var(--mono);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
 }
 
 body .cal-legend {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
-  margin-top: 12px;
-  font-size: 12px;
+  gap: 8px 20px;
+  margin-top: 16px;
   color: var(--soft);
+  font-size: 12px;
+  font-weight: 500;
 }
 
 body .cal-legend-item {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 body .cal-legend-swatch {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
   display: inline-block;
 }
 
-body .cal-legend-swatch.cyan { background: var(--cyan); }
-body .cal-legend-swatch.magenta { background: var(--magenta); }
+body .cal-legend-swatch.cyan { background: var(--accent); }
+body .cal-legend-swatch.magenta { background: var(--pink); }
 body .cal-legend-swatch.warn { background: var(--warn); }
-body .cal-legend-swatch.muted { background: var(--muted); }
+body .cal-legend-swatch.muted { background: var(--line-strong); }
 
 body .cal-legend-note { margin-left: auto; font-size: 12px; }
 
 @media (max-width: 760px) {
-
+  body .cal-toolbar { gap: 12px; margin-bottom: 16px; }
+  body .cal-view-tabs { margin-left: 0; flex: 1 1 100%; }
+  body .cal-view-tabs .scope-tab { flex: 1 1 0; justify-content: center; }
   body .cal-cell { height: 64px; }
-  body .cal-cell-content { min-height: 64px; padding: 4px; }
-  body .cal-day-name { padding: 6px 2px; font-size: 10px; letter-spacing: 0.08em; }
-  body .cal-pill { padding: 3px 4px; }
-  body .cal-pill-primary { gap: 2px; font-size: 9px; }
-  body .cal-pill-time { font-size: 8.5px; }
-  body .cal-pill-status { font-size: 7px; }
-  body .cal-day-num { font-size: 11px; }
-  body .cal-day-num.is-today { width: 18px; height: 18px; }
-  body .cal-day-heading { min-height: 18px; }
-  body .cal-day-context { font-size: 8px; }
+  body .cal-cell-content { min-height: 64px; padding: 4px; gap: 3px; }
+  body .cal-day-name { height: 32px; padding: 0 4px; font-size: 10px; letter-spacing: 0.04em; }
+  body .cal-pill { padding: 3px 4px; gap: 1px; border-radius: 4px; font-size: 9px; }
+  body .cal-pill-status { display: none; }
+  body .cal-day-num { width: 20px; height: 20px; font-size: 11px; }
+  body .cal-day-heading { min-height: 20px; gap: 4px; }
+  body .cal-day-context { font-size: 9px; }
   body .cal-legend-note { margin-left: 0; flex: 1 1 100%; }
+  body .cal-agenda-panel { padding: 0 14px; }
+  body .cal-agenda-row { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; }
+  body .cal-agenda-row .meta { grid-column: 1 / -1; }
   body .cal-touch-agenda { display: block; }
   body .cal-touch-entry { grid-template-columns: 96px minmax(0, 1fr); padding: 11px 12px; }
 }
