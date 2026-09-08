@@ -86,63 +86,71 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
         <div>
           <h1>Settings</h1>
           <p>
-            Notification preferences and other knobs. We'll add more here as huddlz grows.
+            Appearance, notification preferences and other knobs. We'll add more here as huddlz grows.
           </p>
         </div>
       </div>
 
-      <form id="appearance-form" phx-change="set_theme">
-        <div class="panel">
-          <div class="panel-head">
-            <div>
-              <h2>Appearance</h2>
-              <div class="panel-sub">System follows your device. Light and Dark stay put.</div>
+      <div class="settings-stack">
+        <form id="appearance-form" phx-change="set_theme">
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Appearance</h2>
+                <div class="panel-sub">System follows your device. Light and Dark stay put.</div>
+              </div>
+            </div>
+            <div class="settings-list row-list">
+              <div class="row appearance-row">
+                <div class="row-title">Theme</div>
+                <fieldset class="scope-tabs appearance-tabs">
+                  <legend class="sr-only">Theme</legend>
+                  <label
+                    :for={{value, label, icon} <- theme_options()}
+                    class={["scope-tab", @current_user.theme_preference == value && "is-active"]}
+                  >
+                    <input
+                      type="radio"
+                      name="theme"
+                      value={value}
+                      checked={@current_user.theme_preference == value}
+                      class="sr-only"
+                    />
+                    <.icon name={icon} class="size-4" />
+                    {label}
+                  </label>
+                </fieldset>
+              </div>
             </div>
           </div>
-          <fieldset class="scope-tabs appearance-tabs">
-            <legend class="sr-only">Theme</legend>
-            <label
-              :for={{value, label} <- theme_options()}
-              class={["scope-tab", @current_user.theme_preference == value && "is-active"]}
-            >
-              <input
-                type="radio"
-                name="theme"
-                value={value}
-                checked={@current_user.theme_preference == value}
-                class="sr-only"
-              />
-              {label}
-            </label>
-          </fieldset>
-        </div>
-      </form>
+        </form>
 
-      <form phx-submit="save">
-        <.read_only_panel
-          title="Transactional"
-          description="Critical account and huddl updates. Always on — these can't be disabled."
-          triggers={@triggers_by_category.transactional}
-        />
+        <form phx-submit="save" class="settings-stack">
+          <.read_only_panel
+            title="Transactional"
+            description="Critical account and huddl updates. Always on, these can't be disabled."
+            triggers={@triggers_by_category.transactional}
+          />
 
-        <.category_panel
-          title="Activity"
-          description="Things that happen in groups and huddlz you're part of."
-          triggers={@triggers_by_category.activity}
-          user={@current_user}
-        />
+          <.category_panel
+            title="Activity"
+            description="Things that happen in groups and huddlz you're part of."
+            triggers={@triggers_by_category.activity}
+            user={@current_user}
+          />
 
-        <.category_panel
-          title="Digest"
-          description="Optional summaries. Off by default."
-          triggers={@triggers_by_category.digest}
-          user={@current_user}
-        />
+          <.category_panel
+            title="Digest"
+            description="Optional summaries. Off by default."
+            triggers={@triggers_by_category.digest}
+            user={@current_user}
+          />
 
-        <div class="form-foot" style="border:0; margin:0 0 32px">
-          <.button variant={:primary} type="submit">Save preferences</.button>
-        </div>
-      </form>
+          <div class="settings-actions">
+            <.button variant={:primary} type="submit">Save preferences</.button>
+          </div>
+        </form>
+      </div>
     </Layouts.app>
     """
   end
@@ -206,10 +214,10 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
           <div>
             <div class="row-title">{entry.label}</div>
           </div>
-          <span class="toggle">
+          <span class="toggle is-locked">
             <input type="checkbox" checked disabled />
             <span class="track"></span>
-            <span class="toggle-text">On</span>
+            <span class="toggle-text">Always on</span>
           </span>
         </div>
       </div>
@@ -217,7 +225,13 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
     """
   end
 
-  defp theme_options, do: [system: "System", light: "Light", dark: "Dark"]
+  defp theme_options do
+    [
+      {:system, "System", "hero-computer-desktop"},
+      {:light, "Light", "hero-sun"},
+      {:dark, "Dark", "hero-moon"}
+    ]
+  end
 
   defp group_triggers do
     %{

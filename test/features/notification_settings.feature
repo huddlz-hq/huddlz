@@ -7,7 +7,7 @@ Feature: Notification preferences settings page
   Scenario: User opts out of an activity-tier notification
     Given I am signed in as "settings@example.com" with password "Password123!"
     When I visit "/profile/notifications"
-    Then I should see "Notification preferences"
+    Then I should see "notification preferences and other knobs"
     And I should see "Activity"
     When I uncheck "Confirmation when I RSVP to a huddl"
     And I click "Save preferences"
@@ -17,4 +17,4 @@ Feature: Notification preferences settings page
     Given I am signed in as "linknav@example.com" with password "Password123!"
     When I go to my profile page
     And I click "Settings"
-    Then I should see "Notification preferences and other knobs"
+    Then I should see "notification preferences and other knobs"
