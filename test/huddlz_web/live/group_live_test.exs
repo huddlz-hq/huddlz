@@ -229,9 +229,9 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("aside.sidebar")
-      |> assert_has("div.hero .hero-content h1", text: to_string(group.name))
-      |> assert_has(".huddl-side h3", text: "This group")
-      |> assert_has(".facts .label", text: "Members")
+      |> assert_has("header.hero .hero-content h1", text: to_string(group.name))
+      |> assert_has("header.hero .hero-content .pill", text: "Public group")
+      |> assert_has(".huddl-side .facts .label", text: "Members")
     end
 
     test "does not list draft huddlz on the group page", %{
@@ -291,7 +291,7 @@ defmodule HuddlzWeb.GroupLiveTest do
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has(".hero h1", text: to_string(group.name))
-      |> assert_has(".eyebrow", text: "Private")
+      |> assert_has(".hero-content .pill.warn", text: "Private group")
       |> assert_has(".role-pill .pill", text: "Owner")
     end
 

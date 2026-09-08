@@ -14,7 +14,7 @@ Feature: Group cover rendering
       | missing |
       | failed  |
 
-  Scenario: A desktop cover renders behind readable group details
+  Scenario: A desktop cover renders above readable group details
     Given a group with long details and a "valid" cover
     When I open that group in the browser
     Then its cover has the expected image or visible fallback

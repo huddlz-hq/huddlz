@@ -47,6 +47,113 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
     end
   end
 
+  describe "page layout" do
+    setup do
+      owner = generate(user(role: :user))
+
+      group =
+        generate(
+          group(
+            owner_id: owner.id,
+            is_public: true,
+            name: "Phoenix Elixir",
+            location: "Phoenix, AZ",
+            actor: owner
+          )
+        )
+
+      %{owner: owner, group: group}
+    end
+
+    test "stacks the cover above the title with a visibility pill and meta", %{
+      conn: conn,
+      group: group
+    } do
+      conn
+      |> visit(~p"/groups/#{group.slug}")
+      |> assert_has("header#group-detail-hero.group-hero .hero-media .group-cover--hero")
+      |> assert_has("header#group-detail-hero .hero-content .pill.cyan", text: "Public group")
+      |> assert_has("header#group-detail-hero .hero-content h1", text: "Phoenix Elixir")
+      |> assert_has(".group-hero-meta .group-hero-location", text: "Phoenix, AZ")
+      |> assert_has(".group-hero-meta .meta-item", text: "1 member")
+      |> refute_has(".huddl-side h3", text: "This group")
+    end
+
+    test "groups the owner's actions in the side panel", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}")
+      |> assert_has(".side-actions .role-pill .pill", text: "Owner")
+      |> assert_has(
+        ".side-actions a.side-actions-primary[href='/groups/#{group.slug}/huddlz/new']",
+        text: "Create Huddl"
+      )
+      |> assert_has(".side-actions-row a[href='/groups/#{group.slug}/edit']", text: "Edit Group")
+      |> assert_has(".side-actions-row a[href='/groups/#{group.slug}/locations']",
+        text: "Locations"
+      )
+    end
+
+    test "shows an empty state until the group has an upcoming huddl", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      conn
+      |> visit(~p"/groups/#{group.slug}")
+      |> assert_has("#group-huddl-grid-empty.empty-state h3", text: "Nothing scheduled")
+      |> assert_has("#group-huddl-grid-empty p", text: "No upcoming huddlz scheduled.")
+      |> assert_has(".group-huddlz .list-head h2", text: "Huddlz")
+      |> assert_has(".group-huddlz .list-head .filters .chip.is-active", text: "Upcoming")
+
+      generate(huddl(group_id: group.id, creator_id: owner.id, is_private: false, actor: owner))
+
+      conn
+      |> visit(~p"/groups/#{group.slug}")
+      |> refute_has("#group-huddl-grid-empty")
+      |> assert_has("#group-huddl-grid .card", count: 1)
+    end
+
+    test "huddl cards fall back to the group's initials without a cover", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      bare =
+        generate(huddl(group_id: group.id, creator_id: owner.id, is_private: false, actor: owner))
+
+      pictured =
+        generate(huddl(group_id: group.id, creator_id: owner.id, is_private: false, actor: owner))
+
+      Huddlz.Communities.HuddlCoverImage
+      |> Ash.Changeset.for_create(:create, %{
+        filename: "cover.jpg",
+        content_type: "image/jpeg",
+        size_bytes: 123,
+        storage_path: "/uploads/huddl_cover_images/#{pictured.id}/cover.jpg",
+        thumbnail_path: "/uploads/huddl_cover_images/#{pictured.id}/cover_thumb.jpg",
+        huddl_id: pictured.id
+      })
+      |> Ash.create!(authorize?: false)
+
+      bare_card = ~s(#group-huddl-grid .card[href="/groups/#{group.slug}/huddlz/#{bare.id}"])
+
+      pictured_card =
+        ~s(#group-huddl-grid .card[href="/groups/#{group.slug}/huddlz/#{pictured.id}"])
+
+      conn
+      |> visit(~p"/groups/#{group.slug}")
+      |> assert_has("#{bare_card} .card-cover-fallback", text: "PE", exact: true)
+      |> refute_has("#{bare_card} .cover-image")
+      |> assert_has("#{pictured_card} #group-huddl-card-cover-#{pictured.id}.cover-image")
+      |> refute_has("#{pictured_card} .card-cover-fallback")
+    end
+  end
+
   describe "membership action buttons" do
     setup do
       owner = generate(user(role: :user))

@@ -27,6 +27,7 @@ defmodule HuddlzWeb.GroupLive.Show do
      |> assign(:subscribed_group_id, nil)
      |> assign(:members_visible?, false)
      |> assign(:member_grid_extras, 0)
+     |> assign(:huddl_count, 0)
      |> stream(:member_grid, [])
      |> stream(:huddlz, [])}
   end
@@ -154,48 +155,44 @@ defmodule HuddlzWeb.GroupLive.Show do
       active="discover"
     >
       <HuddlzWeb.StructuredData.group group={@group} url={@canonical_url} />
-      <div id="group-detail-hero" class="hero group-hero">
-        <.group_cover
-          id={"group-detail-cover-#{@group.id}"}
-          group={@group}
-          variant={:hero}
-        />
-        <div class="hero-content">
-          <span class="eyebrow">
-            Group ·
-            <%= if @group.is_public do %>
-              Public
-            <% else %>
-              <span class="eyebrow-warn">Private</span>
-            <% end %>
-          </span>
-          <h1>{@group.name}</h1>
-          <div class="meta group-hero-meta">
-            <span :if={@group.location} class="group-hero-location">📍 {@group.location}</span>
-            <span
-              :if={@group.location && @member_count && @member_count > 0}
-              class="group-hero-separator"
-            >
-              ·
-            </span>
-            <span :if={@member_count && @member_count > 0}>
-              {member_count_label(@member_count)}
-            </span>
-          </div>
-        </div>
-      </div>
-
       <div class="huddl-frame">
-        <div class="huddl-intro prose">
-          <%= if @group.description do %>
-            <p :for={paragraph <- description_paragraphs(@group.description)}>{paragraph}</p>
-          <% else %>
-            <p>No description provided.</p>
-          <% end %>
+        <div class="huddl-main">
+          <header id="group-detail-hero" class="hero group-hero">
+            <div class="hero-media">
+              <.group_cover
+                id={"group-detail-cover-#{@group.id}"}
+                group={@group}
+                variant={:hero}
+              />
+            </div>
+            <div class="hero-content">
+              <.pill variant={if @group.is_public, do: :cyan, else: :warn}>
+                {if @group.is_public, do: "Public group", else: "Private group"}
+              </.pill>
+              <h1>{@group.name}</h1>
+              <div class="meta group-hero-meta">
+                <span :if={@group.location} class="meta-item group-hero-location">
+                  <.icon name="hero-map-pin" class="size-4" />
+                  <span>{@group.location}</span>
+                </span>
+                <span :if={@member_count && @member_count > 0} class="meta-item">
+                  <.icon name="hero-users" class="size-4" />
+                  <span>{member_count_label(@member_count)}</span>
+                </span>
+              </div>
+            </div>
+          </header>
+
+          <div class="huddl-intro prose">
+            <%= if @group.description do %>
+              <p :for={paragraph <- description_paragraphs(@group.description)}>{paragraph}</p>
+            <% else %>
+              <p>No description provided.</p>
+            <% end %>
+          </div>
         </div>
 
         <aside class="huddl-side">
-          <h3>This group</h3>
           <ul class="facts">
             <li>
               <svg
@@ -265,34 +262,38 @@ defmodule HuddlzWeb.GroupLive.Show do
           </ul>
 
           <%= if @current_user do %>
-            <div :if={role_pill(assigns)} class="role-pill">
-              <.pill variant={:cyan}>{role_pill(assigns)}</.pill>
-            </div>
             <div class="side-actions">
+              <div :if={role_pill(assigns)} class="role-pill">
+                <.pill variant={:cyan}>{role_pill(assigns)}</.pill>
+              </div>
               <.button
                 :if={@can_create_huddl}
                 variant={:primary}
+                class="side-actions-primary"
                 navigate={~p"/groups/#{@group.slug}/huddlz/new"}
               >
-                + Create Huddl
+                <.icon name="hero-plus" class="size-4" /> Create Huddl
               </.button>
-              <.button
-                :if={@can_edit_group}
-                variant={:secondary}
-                navigate={~p"/groups/#{@group.slug}/edit"}
-              >
-                Edit Group
-              </.button>
-              <.button
-                :if={@can_manage_locations}
-                variant={:secondary}
-                navigate={~p"/groups/#{@group.slug}/locations"}
-              >
-                Locations
-              </.button>
+              <div :if={@can_edit_group or @can_manage_locations} class="side-actions-row">
+                <.button
+                  :if={@can_edit_group}
+                  variant={:secondary}
+                  navigate={~p"/groups/#{@group.slug}/edit"}
+                >
+                  Edit Group
+                </.button>
+                <.button
+                  :if={@can_manage_locations}
+                  variant={:secondary}
+                  navigate={~p"/groups/#{@group.slug}/locations"}
+                >
+                  Locations
+                </.button>
+              </div>
               <.button
                 :if={!@is_member and @can_join_group}
                 variant={:primary}
+                class="side-actions-primary"
                 phx-click="join_group"
                 phx-disable-with="Joining..."
               >
@@ -351,38 +352,40 @@ defmodule HuddlzWeb.GroupLive.Show do
           </div>
         </aside>
 
-        <div class="huddl-rest">
-          <div class="prose">
-            <h2>Huddlz</h2>
+        <section class="huddl-rest group-huddlz" aria-labelledby="group-huddlz-title">
+          <div class="list-head">
+            <h2 id="group-huddlz-title">Huddlz</h2>
+            <nav class="filters" aria-label="Huddl timeframe">
+              <.link
+                id="group-huddlz-upcoming"
+                patch={group_page_path(@group, "upcoming", 1)}
+                aria-current={@active_tab == "upcoming" && "page"}
+                class={["chip", @active_tab == "upcoming" && "is-active"]}
+              >
+                Upcoming
+              </.link>
+              <.link
+                id="group-huddlz-past"
+                patch={group_page_path(@group, "past", 1)}
+                aria-current={@active_tab == "past" && "page"}
+                class={["chip", @active_tab == "past" && "is-active"]}
+              >
+                Past
+              </.link>
+            </nav>
           </div>
 
-          <nav class="filters" aria-label="Huddl timeframe">
-            <.link
-              id="group-huddlz-upcoming"
-              patch={group_page_path(@group, "upcoming", 1)}
-              aria-current={@active_tab == "upcoming" && "page"}
-              class={["chip", @active_tab == "upcoming" && "is-active"]}
-            >
-              Upcoming
-            </.link>
-            <.link
-              id="group-huddlz-past"
-              patch={group_page_path(@group, "past", 1)}
-              aria-current={@active_tab == "past" && "page"}
-              class={["chip", @active_tab == "past" && "is-active"]}
-            >
-              Past
-            </.link>
-          </nav>
-
-          <.huddl_grid
-            huddlz={@streams.huddlz}
-            empty_message={
-              if @active_tab == "upcoming",
-                do: "No upcoming huddlz scheduled.",
-                else: "No past huddlz found."
-            }
-          />
+          <.huddl_grid huddlz={@streams.huddlz} />
+          <.empty_state
+            :if={@huddl_count == 0}
+            id="group-huddl-grid-empty"
+            icon={if @active_tab == "upcoming", do: "hero-calendar", else: "hero-clock"}
+            title={if @active_tab == "upcoming", do: "Nothing scheduled", else: "No past huddlz"}
+          >
+            {if @active_tab == "upcoming",
+              do: "No upcoming huddlz scheduled.",
+              else: "No past huddlz found."}
+          </.empty_state>
           <.pagination
             :if={@active_tab == "past" && @past_total_pages > 1}
             current_page={@past_page}
@@ -390,7 +393,7 @@ defmodule HuddlzWeb.GroupLive.Show do
             id="group-archive-pagination"
             page_path={&group_page_path(@group, "past", &1)}
           />
-        </div>
+        </section>
       </div>
 
       <.share_modal id="share-group-modal" url={@meta.url} label="group" />
@@ -401,46 +404,42 @@ defmodule HuddlzWeb.GroupLive.Show do
         show
         on_cancel={JS.push("cancel_leave_group")}
       >
-        <div class="flex gap-4 pr-8">
-          <div class="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-warning/30 bg-warning/10 text-warning">
-            <.icon name="hero-arrow-right-start-on-rectangle" class="h-5 w-5" />
+        <div class="delete-confirm">
+          <div class="delete-confirm-icon" aria-hidden="true">
+            <.icon name="hero-arrow-right-start-on-rectangle" class="size-5" />
           </div>
-          <div>
-            <h2 id="leave-group-dialog-title" class="text-xl font-bold text-base-content">
-              Leave {@group.name}?
-            </h2>
-            <p class="mt-2 text-sm leading-6 text-base-content/70">
-              Leaving this group will:
+
+          <div class="delete-confirm-copy">
+            <h2 id="leave-group-dialog-title">Leave {@group.name}?</h2>
+            <p>Leaving this group will:</p>
+            <ul class="leave-confirm-list">
+              <li>
+                <.icon name="hero-user-group" class="size-4" />
+                <span>Remove you from the <strong>member roster</strong></span>
+              </li>
+              <li>
+                <.icon name="hero-rectangle-stack" class="size-4" />
+                <span>Remove this group from <strong>My groups</strong></span>
+              </li>
+              <li>
+                <.icon name="hero-bell-slash" class="size-4" />
+                <span>Stop <strong>notifications</strong> from this group</span>
+              </li>
+            </ul>
+            <p class="leave-confirm-note">
+              Leaving does not cancel your existing RSVPs.
+              You can rejoin later if the group is public or you receive another invitation.
             </p>
           </div>
         </div>
 
-        <ul class="mt-5 space-y-3 rounded-hz-card border border-base-300 bg-base-100/50 p-4 text-sm text-base-content/80">
-          <li class="flex gap-3">
-            <.icon name="hero-user-group" class="mt-0.5 h-4 w-4 shrink-0 text-base-content/50" />
-            <span>Remove you from the <strong class="text-base-content">member roster</strong></span>
-          </li>
-          <li class="flex gap-3">
-            <.icon name="hero-rectangle-stack" class="mt-0.5 h-4 w-4 shrink-0 text-base-content/50" />
-            <span>Remove this group from <strong class="text-base-content">My groups</strong></span>
-          </li>
-          <li class="flex gap-3">
-            <.icon name="hero-bell-slash" class="mt-0.5 h-4 w-4 shrink-0 text-base-content/50" />
-            <span>Stop <strong class="text-base-content">notifications</strong> from this group</span>
-          </li>
-        </ul>
-
-        <p class="mt-4 text-sm text-base-content/60">
-          Leaving does not cancel your existing RSVPs.
-          You can rejoin later if the group is public or you receive another invitation.
-        </p>
-
-        <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <.button id="leave-group-dialog-cancel" phx-click="cancel_leave_group">
+        <div class="delete-confirm-actions">
+          <.button id="leave-group-dialog-cancel" variant={:muted} phx-click="cancel_leave_group">
             Cancel
           </.button>
           <.button
             variant={:destructive}
+            class="delete-confirm-submit"
             phx-click="leave_group"
             phx-disable-with="Leaving..."
           >
@@ -453,26 +452,25 @@ defmodule HuddlzWeb.GroupLive.Show do
   end
 
   attr :huddlz, Phoenix.LiveView.LiveStream, required: true
-  attr :empty_message, :string, required: true
 
   defp huddl_grid(assigns) do
     ~H"""
     <div id="group-huddl-grid" class="grid two" phx-update="stream">
-      <p id="group-huddl-grid-empty" class="empty-state muted hidden only:block col-span-full">
-        {@empty_message}
-      </p>
       <.card
         :for={{id, %{huddl: huddl}} <- @huddlz}
         id={id}
         navigate={~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"}
       >
         <:cover>
-          <.cover_image
-            :if={huddl.display_image_url}
-            id={"group-huddl-card-cover-#{huddl.id}"}
-            class="card-cover-img"
-            image_url={huddl.display_image_url}
-          />
+          <%= if huddl.display_image_url do %>
+            <.cover_image
+              id={"group-huddl-card-cover-#{huddl.id}"}
+              class="card-cover-img"
+              image_url={huddl.display_image_url}
+            />
+          <% else %>
+            <.cover_fallback name={huddl.group.name} />
+          <% end %>
           <.date_stamp month={huddl_month(huddl)} day={huddl_day(huddl)} />
           <.card_tag variant={tag_variant(huddl.event_type)}>
             {tag_label(huddl.event_type)}
@@ -497,7 +495,9 @@ defmodule HuddlzWeb.GroupLive.Show do
   defp stream_huddlz(socket, huddlz) do
     entries = Enum.map(huddlz, &%{id: &1.id, huddl: &1})
 
-    stream(socket, :huddlz, entries, reset: true)
+    socket
+    |> assign(:huddl_count, length(entries))
+    |> stream(:huddlz, entries, reset: true)
   end
 
   defp refresh_huddlz(%{assigns: %{active_tab: "past"}} = socket) do
