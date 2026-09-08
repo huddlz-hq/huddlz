@@ -13,6 +13,23 @@ defmodule HuddlzWeb.HuddlLive.ShowPhotosTest do
     %{owner: owner, group: group}
   end
 
+  describe "organizer avatar" do
+    test "falls back to initials on the accent tile", %{conn: conn, owner: owner, group: group} do
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
+
+      {:ok, view, _html} =
+        conn
+        |> login(owner)
+        |> live(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+
+      assert has_element?(
+               view,
+               ".creator-row .avatar-initials",
+               HuddlzWeb.Avatar.initials(owner)
+             )
+    end
+  end
+
   describe "photos section visibility" do
     test "creator sees the photos section on a completed huddl", %{
       conn: conn,
