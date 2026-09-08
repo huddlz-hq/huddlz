@@ -143,9 +143,15 @@ const liveSocket = new LiveSocket("/live", Socket, {
   hooks: Hooks
 })
 
-// Show progress bar on live navigation and form submits
-topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
-window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
+// Progress bar on live navigation and form submits. The colour is read from
+// the accent token at show time so it follows the active theme.
+const accentColor = () =>
+  getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#18cbd4"
+
+window.addEventListener("phx:page-loading-start", _info => {
+  topbar.config({barColors: {0: accentColor()}, barThickness: 2, shadowBlur: 0, shadowColor: "transparent"})
+  topbar.show(300)
+})
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
 // connect if there are any LiveViews on the page
