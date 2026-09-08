@@ -9,6 +9,8 @@ defmodule HuddlzWeb.Components.Input do
   """
   use Phoenix.Component
 
+  import HuddlzWeb.Components.Icon
+
   alias Phoenix.HTML.Form
   alias Phoenix.HTML.FormField
 
@@ -66,6 +68,10 @@ defmodule HuddlzWeb.Components.Input do
   attr :class, :any, default: nil
   attr :control_class, :any, default: nil
 
+  attr :icon, :string,
+    default: nil,
+    doc: ~s(hero icon drawn inside the control's leading edge, e.g. "hero-lock-closed")
+
   slot :prefix
   slot :details
 
@@ -106,7 +112,22 @@ defmodule HuddlzWeb.Components.Input do
     """
   end
 
+  defp input_control(%{icon: icon} = assigns) when is_binary(icon) do
+    ~H"""
+    <div class="form-input-wrap has-icon">
+      <.icon name={@icon} class="size-4 form-input-icon" />
+      <.bare_input {assigns} />
+    </div>
+    """
+  end
+
   defp input_control(assigns) do
+    ~H"""
+    <.bare_input {assigns} />
+    """
+  end
+
+  defp bare_input(assigns) do
     ~H"""
     <input
       type={@type}

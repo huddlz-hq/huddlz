@@ -239,6 +239,17 @@ defmodule HuddlzWeb.ProfileLiveTest do
       refute has_element?(view, "#profile-form", "must not equal")
     end
 
+    test "password fields carry a leading lock icon", %{conn: conn, user: user} do
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> assert_has("#password-form .form-input-wrap.has-icon .hero-lock-closed", count: 2)
+      |> assert_has("#password-form .form-input-wrap.has-icon input[type=password]", count: 2)
+      |> assert_has(
+        "#email-change-form .form-input-wrap.has-icon .hero-lock-closed + input[type=password]"
+      )
+    end
+
     test "never renders password values on load", %{conn: conn, user: user} do
       view = conn |> login(user) |> visit("/profile") |> Map.fetch!(:view)
 
