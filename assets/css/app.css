@@ -195,7 +195,7 @@ html {
   }
 }
 /* ===========================================================
-   V3 DESIGN — the live UI. Ported from docs/design/clickthrough/styles.css.
+   V3 DESIGN — the live UI.
    Variant body classes (.is-landing, .is-auth, .is-signed-out) flip
    between the sidebar shell, the chromeless auth shell, and the landing
    shell. They're assigned by the LiveView on mount.
@@ -3567,8 +3567,8 @@ body .form-foot.is-flush {
   border-top: 0;
 }
 
-/* Flex columns inside .form-row-inline. The basis values match the
-   clickthrough mockup's inline date/time/duration trio. */
+/* Flex columns inside .form-row-inline, sized for the inline
+   date/time/duration trio. */
 body .form-col-sm { flex: 1 1 140px; }
 body .form-col-md { flex: 1 1 180px; }
 body .form-col-lg { flex: 1 1 220px; }

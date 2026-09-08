@@ -5,8 +5,7 @@ defmodule HuddlzWeb.Components do
   Each function component (`<.avatar>`, `<.button>`, `<.card>`, `<.chip>`,
   `<.flash>`, `<.icon>`, `<.input>`, `<.list_row>`, `<.modal>`,
   `<.pagination>`, `<.panel>`, `<.pill>`) lives in its own module under this
-  namespace and renders the vocabulary from the clickthrough mockup at
-  `/dev/design/clickthrough/*`. Styles live in `assets/css/app.css`.
+  namespace. Styles live in `assets/css/app.css`.
 
   Importing this module via `use HuddlzWeb.Components` brings every
   function component into scope at once. It's wired up in
