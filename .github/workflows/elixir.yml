@@ -14,6 +14,9 @@ permissions:
   contents: read
 
 jobs:
+  dependency-audit:
+    uses: ./.github/workflows/dependency-audit.yml
+
   test:
     # Set up a Postgres DB service. By default, Phoenix applications
     # use Postgres. This creates a database for running tests.
@@ -48,10 +51,10 @@ jobs:
 
     # Step: Check out the code.
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v7
 
     - name: Set up Node
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v7
       with:
         node-version: '22'
 
@@ -65,7 +68,7 @@ jobs:
     # Step: Define how to cache deps. Restores existing cache if present.
     - name: Cache deps
       id: cache-deps
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       env:
         cache-name: cache-elixir-deps
       with:
@@ -79,7 +82,7 @@ jobs:
     # project's downloaded deps every run.
     - name: Cache compiled build
       id: cache-build
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       env:
         cache-name: cache-compiled-build
       with:
@@ -148,7 +151,7 @@ jobs:
         elixir-version: ${{matrix.elixir}}
 
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v7
 
     # The example file works as-is: the placeholder Google Maps key makes
     # geocoding fail soft (warning + nil coordinates), which is exactly what
@@ -158,7 +161,7 @@ jobs:
 
     - name: Cache deps
       id: cache-deps
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       env:
         cache-name: cache-elixir-deps
       with:
@@ -169,7 +172,7 @@ jobs:
 
     - name: Cache compiled build
       id: cache-build
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       env:
         cache-name: cache-compiled-dev-build
       with:
@@ -200,18 +203,18 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - uses: erlef/setup-beam@v1
       with:
         otp-version: '29.0.3'
         elixir-version: '1.20.2'
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v7
       with:
         node-version: '22'
         cache: npm
         cache-dependency-path: assets/package-lock.json
     - name: Cache browser job dependencies and compilation
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: |
           deps
@@ -235,7 +238,7 @@ jobs:
       run: mix test.browser
     - name: Preserve first-attempt failure diagnostics
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: browser-failure-diagnostics
         path: |
