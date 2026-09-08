@@ -4006,6 +4006,37 @@ body .settings-stack {
 body .settings-stack .panel { margin-bottom: 0; }
 body .settings-stack .form-grid { max-width: none; }
 
+/* Preference rows bleed to the panel edges so their rules run full width. */
+body .settings-stack .settings-list { margin: -20px -24px; }
+
+body .settings-stack .settings-list .row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 52px;
+  padding: 8px 24px;
+  cursor: default;
+}
+
+body .settings-stack .settings-list .row:first-child { padding-top: 8px; }
+body .settings-stack .settings-list .row .row-title { font-weight: 500; color: var(--text); }
+
+body .appearance-tabs { margin: 0; padding: 4px; border: 1px solid var(--line); }
+body .appearance-tabs .scope-tab { gap: 8px; }
+body .appearance-tabs .scope-tab .size-4 { color: var(--muted); }
+body .appearance-tabs .scope-tab.is-active .size-4 { color: var(--accent-ink); }
+
+body .settings-actions { display: flex; justify-content: flex-end; }
+
+body .toggle.is-locked { opacity: 0.6; cursor: default; }
+
+/* daisyUI's .toggle paints its own knob in ::before on a non-input element;
+   the knob here lives in .track::after. */
+body .toggle::before,
+body .toggle::after { content: none; }
+body .toggle .toggle-text { white-space: nowrap; }
+
 /* Inline form row (multiple fields side by side) */
 body .form-row-inline {
   flex-direction: row;
@@ -4633,6 +4664,12 @@ body .page-nav:disabled {
   }
   body .panel { padding: 14px 14px; }
   body .panel-head { margin: -14px -14px 14px; padding: 14px; }
+  body .settings-stack .settings-list { margin: -14px; }
+  body .settings-stack .settings-list .row { padding: 8px 14px; }
+  body .settings-stack .appearance-row { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 14px; }
+  body .settings-stack .appearance-row .row-title { text-align: left; }
+  body .appearance-tabs { display: flex; margin: 0; }
+  body .appearance-tabs .scope-tab { flex: 1 1 0; justify-content: center; }
   body .panel > .form-foot { margin: 14px -14px -14px; padding: 14px; }
   body .panel.split { gap: 18px; }
   body .visibility-panel-head { flex-direction: column; align-items: flex-start; gap: 10px; }
