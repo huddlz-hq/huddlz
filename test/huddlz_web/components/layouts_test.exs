@@ -39,6 +39,34 @@ defmodule HuddlzWeb.LayoutsTest do
     end
   end
 
+  describe "app/1 chrome navigation" do
+    test "sidebar and topbar destinations use live navigation" do
+      document = render_app(0)
+
+      anchors =
+        document
+        |> LazyHTML.query(".sidebar a[href], .content-topbar a[href]")
+        |> Enum.map(fn anchor ->
+          {LazyHTML.attribute(anchor, "href"), LazyHTML.attribute(anchor, "data-phx-link")}
+        end)
+
+      assert anchors != []
+
+      for {href, link_kind} <- anchors, href != ["/sign-out"] do
+        assert link_kind == ["redirect"], "#{href} should navigate without a full page load"
+      end
+    end
+
+    test "sign out stays a full request so the session cookie is cleared" do
+      document = render_app(0)
+
+      assert has_selector?(
+               document,
+               ~s|#sign-out-link[data-method="delete"]:not([data-phx-link])|
+             )
+    end
+  end
+
   defp render_app(unread_notification_count) do
     assigns = %{
       current_user: %{email: "person@example.com", display_name: "Test Person"},
