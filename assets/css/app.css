@@ -1588,6 +1588,9 @@ body .chip.is-active {
   font-weight: 600;
 }
 
+body .chip-count { color: var(--muted); font-weight: 600; }
+body .chip.is-active .chip-count { color: var(--accent-ink); }
+
 /* Grid + cards */
 body .grid {
   display: grid;
@@ -1792,9 +1795,13 @@ body .card-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding: 12px 16px;
   border-top: 1px solid var(--line);
 }
+
+body .card-foot-note { color: var(--muted); font-size: 12px; }
+body .card-foot .pill.cyan::before { background: var(--success); }
 
 body .stack { display: flex; align-items: center; }
 
@@ -4641,7 +4648,7 @@ body .page-nav:disabled {
   body .visibility-panel-head { flex-direction: column; align-items: flex-start; gap: 10px; }
   body .visibility-selection { grid-template-columns: 1fr; }
   body .visibility-toggle { margin-top: 4px; }
-  body .filters { gap: 6px; }
+  body .filters { gap: 8px; margin-bottom: 16px; }
   body .scope-tabs { display: flex; margin-bottom: 16px; }
   body .scope-tabs .scope-tab { flex: 1 1 0; justify-content: center; }
   body .filter-bar {

@@ -2,7 +2,7 @@ defmodule HuddlzWeb.MyHuddlzLive do
   @moduledoc """
   LiveView at `/my-huddlz`. Personal feed of huddlz the signed-in user is
   attending, waitlisted on, or has already attended. Filter chips
-  (Upcoming · N / Waitlisted · N / Past) drive a `?filter=` URL param;
+  (Upcoming N / Waitlisted N / Past N) drive a `?filter=` URL param;
   `?page=N` paginates the active filter.
 
   Hosting moves to the organizer workspace — by design this view is
@@ -157,30 +157,41 @@ defmodule HuddlzWeb.MyHuddlzLive do
           <h1>My huddlz</h1>
           <p>{filter_blurb(@filter)}</p>
         </div>
-        <.link navigate={~p"/discover"} class="btn-primary">
-          Find another huddl
-        </.link>
+        <.button variant={:primary} navigate={~p"/discover"}>
+          <.icon name="hero-magnifying-glass" class="size-4" /> Find another huddl
+        </.button>
       </div>
 
       <div class="filters">
-        <.chip patch={filter_path(:upcoming, 1)} active={@filter == :upcoming}>
-          Upcoming · {@counts.upcoming}
+        <.chip
+          patch={filter_path(:upcoming, 1)}
+          active={@filter == :upcoming}
+          count={@counts.upcoming}
+        >
+          Upcoming
         </.chip>
-        <.chip patch={filter_path(:waitlisted, 1)} active={@filter == :waitlisted}>
-          Waitlisted · {@counts.waitlisted}
+        <.chip
+          patch={filter_path(:waitlisted, 1)}
+          active={@filter == :waitlisted}
+          count={@counts.waitlisted}
+        >
+          Waitlisted
         </.chip>
-        <.chip patch={filter_path(:past, 1)} active={@filter == :past}>
-          Past · {@counts.past}
+        <.chip patch={filter_path(:past, 1)} active={@filter == :past} count={@counts.past}>
+          Past
         </.chip>
       </div>
 
       <%= if Enum.empty?(@huddls) do %>
-        <p class="muted">{empty_message(@filter)}</p>
+        <.empty_state icon={empty_icon(@filter)} title={empty_title(@filter)}>
+          {empty_message(@filter)}
+          <:action :if={@filter == :upcoming}>
+            <.button variant={:secondary} navigate={~p"/discover"}>Browse huddlz</.button>
+          </:action>
+        </.empty_state>
       <% else %>
         <div class="grid">
-          <%= for {huddl, idx} <- Enum.with_index(@huddls) do %>
-            <.my_huddl_card huddl={huddl} filter={@filter} gradient={Integer.mod(idx, 6) + 1} />
-          <% end %>
+          <.my_huddl_card :for={huddl <- @huddls} huddl={huddl} filter={@filter} />
         </div>
         <.pagination
           :if={@page_info.total_pages > 1}
@@ -195,21 +206,20 @@ defmodule HuddlzWeb.MyHuddlzLive do
 
   attr :huddl, :map, required: true
   attr :filter, :atom, required: true
-  attr :gradient, :integer, required: true
 
   defp my_huddl_card(assigns) do
     ~H"""
-    <.card
-      navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}"}
-      gradient={@gradient}
-    >
+    <.card navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}"}>
       <:cover>
-        <.cover_image
-          :if={@huddl.display_image_url}
-          id={"my-huddl-card-cover-#{@huddl.id}"}
-          class="card-cover-img"
-          image_url={@huddl.display_image_url}
-        />
+        <%= if @huddl.display_image_url do %>
+          <.cover_image
+            id={"my-huddl-card-cover-#{@huddl.id}"}
+            class="card-cover-img"
+            image_url={@huddl.display_image_url}
+          />
+        <% else %>
+          <.cover_fallback name={@huddl.group.name} />
+        <% end %>
         <.date_stamp month={huddl_month(@huddl)} day={huddl_day(@huddl)} />
         <.card_tag variant={tag_variant(@huddl.event_type)}>
           {tag_label(@huddl.event_type)}
@@ -230,7 +240,7 @@ defmodule HuddlzWeb.MyHuddlzLive do
         <.pill variant={pill_variant(@huddl, @filter)}>
           {pill_label(@huddl, @filter)}
         </.pill>
-        <span class="muted" style="font-size:12px">{relative_time(@huddl.starts_at)}</span>
+        <span class="card-foot-note">{relative_time(@huddl.starts_at)}</span>
       </:foot>
     </.card>
     """
@@ -244,6 +254,14 @@ defmodule HuddlzWeb.MyHuddlzLive do
 
   defp filter_blurb(:past),
     do: "Huddlz you've attended. Most recent first."
+
+  defp empty_icon(:upcoming), do: "hero-calendar"
+  defp empty_icon(:waitlisted), do: "hero-clock"
+  defp empty_icon(:past), do: "hero-check-circle"
+
+  defp empty_title(:upcoming), do: "Nothing coming up"
+  defp empty_title(:waitlisted), do: "No waitlists"
+  defp empty_title(:past), do: "Nothing attended yet"
 
   defp empty_message(:upcoming),
     do: "No upcoming RSVPs yet. Find one to attend."
@@ -261,7 +279,7 @@ defmodule HuddlzWeb.MyHuddlzLive do
     end
   end
 
-  defp filter_pill_variant(:upcoming), do: :default
+  defp filter_pill_variant(:upcoming), do: :cyan
   defp filter_pill_variant(:waitlisted), do: :warn
   defp filter_pill_variant(:past), do: :muted
 

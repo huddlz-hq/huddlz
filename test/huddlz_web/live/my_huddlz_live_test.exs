@@ -135,7 +135,9 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       conn
       |> login(attendee)
       |> visit("/my-huddlz")
-      |> assert_has("p", text: "No upcoming RSVPs yet. Find one to attend.")
+      |> assert_has(".empty-state h3", text: "Nothing coming up")
+      |> assert_has(".empty-state p", text: "No upcoming RSVPs yet. Find one to attend.")
+      |> assert_has(".empty-state a[href=\"/discover\"]", text: "Browse huddlz")
     end
 
     test "Upcoming count reflects attended huddlz", %{
@@ -150,7 +152,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       conn
       |> login(attendee)
       |> visit("/my-huddlz")
-      |> assert_has(".filters .chip", text: "Upcoming · 1")
+      |> assert_has(".filters .chip", text: "Upcoming 1")
     end
 
     test "shows a creator's huddl automatically and removes it after cancellation", %{
@@ -164,7 +166,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       |> login(host)
       |> visit("/my-huddlz")
       |> assert_has("h3.card-title", text: "Creator RSVP")
-      |> assert_has(".filters .chip", text: "Upcoming · 1")
+      |> assert_has(".filters .chip", text: "Upcoming 1")
 
       rsvp!(Ash.reload!(huddl), host, :cancel_rsvp)
 
@@ -172,7 +174,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       |> login(host)
       |> visit("/my-huddlz")
       |> refute_has("h3.card-title", text: "Creator RSVP")
-      |> assert_has(".filters .chip", text: "Upcoming · 0")
+      |> assert_has(".filters .chip", text: "Upcoming 0")
     end
   end
 
@@ -213,7 +215,8 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       conn
       |> login(attendee)
       |> visit("/my-huddlz?filter=waitlisted")
-      |> assert_has("p", text: "You're not on a waitlist right now.")
+      |> assert_has(".empty-state p", text: "You're not on a waitlist right now.")
+      |> refute_has(".empty-state a")
     end
   end
 
@@ -239,7 +242,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       conn
       |> login(attendee)
       |> visit("/my-huddlz?filter=past")
-      |> assert_has("p", text: "No past attendance yet.")
+      |> assert_has(".empty-state p", text: "No past attendance yet.")
     end
 
     test "places a creator's RSVP in Past after the huddl ends", %{
@@ -254,7 +257,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       |> login(host)
       |> visit("/my-huddlz?filter=past")
       |> assert_has("h3.card-title", text: "Creator Attended")
-      |> assert_has(".filters .chip", text: "Past · 1")
+      |> assert_has(".filters .chip", text: "Past 1")
       |> assert_has(".pill", text: "Attended")
     end
   end
@@ -288,7 +291,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       |> visit("/my-huddlz")
       |> assert_has("h3.card-title", text: "I Am Going")
       |> refute_has("h3.card-title", text: "They Are Going")
-      |> assert_has(".filters .chip", text: "Upcoming · 1")
+      |> assert_has(".filters .chip", text: "Upcoming 1")
     end
   end
 
@@ -373,7 +376,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       conn
       |> login(attendee)
       |> visit("/my-huddlz")
-      |> assert_has(".filters .chip", text: "Upcoming · 22")
+      |> assert_has(".filters .chip", text: "Upcoming 22")
       |> assert_has(".pagination .page-num", text: "2")
     end
 
