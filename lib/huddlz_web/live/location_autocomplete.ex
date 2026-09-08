@@ -18,7 +18,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   attr :latitude, :float, default: nil
   attr :longitude, :float, default: nil
   attr :label, :string, default: nil
-  attr :label_class, :string, default: "mono-label text-primary/70 mb-1.5 block"
+  attr :label_class, :string, default: "form-label"
   attr :placeholder, :string, default: "Search for a city..."
   attr :types, :list, default: ["locality"]
   attr :show_clear, :boolean, default: true
@@ -37,7 +37,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
        # Configuration defaults (overridden by parent via update/2)
        field_name: nil,
        label: nil,
-       label_class: "mono-label text-primary/70 mb-1.5 block",
+       label_class: "form-label",
        placeholder: "Search for a city...",
        types: ["locality"],
        show_clear: true,
