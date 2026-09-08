@@ -689,9 +689,7 @@ defmodule HuddlzWeb.HuddlLive do
           <.discover_empty {empty_state_copy(assigns)} clearable={any_filter_active?(assigns)} />
         <% else %>
           <div class="grid">
-            <%= for {{huddl, distance}, idx} <- Enum.with_index(@huddls) do %>
-              <.huddl_card huddl={huddl} distance={distance} gradient={Integer.mod(idx, 6) + 1} />
-            <% end %>
+            <.huddl_card :for={{huddl, distance} <- @huddls} huddl={huddl} distance={distance} />
           </div>
           <.pagination
             :if={@page_info.total_pages > 1}
@@ -706,9 +704,7 @@ defmodule HuddlzWeb.HuddlLive do
           <.discover_empty {empty_state_copy(assigns)} clearable={any_filter_active?(assigns)} />
         <% else %>
           <div class="grid">
-            <%= for {group, idx} <- Enum.with_index(@groups) do %>
-              <.group_card group={group} gradient={Integer.mod(idx, 6) + 1} />
-            <% end %>
+            <.group_card :for={group <- @groups} group={group} />
           </div>
           <.pagination
             :if={@page_info.total_pages > 1}
@@ -725,14 +721,10 @@ defmodule HuddlzWeb.HuddlLive do
 
   attr :huddl, :map, required: true
   attr :distance, :float, default: nil
-  attr :gradient, :integer, default: 1
 
   defp huddl_card(assigns) do
     ~H"""
-    <.card
-      navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}"}
-      gradient={@gradient}
-    >
+    <.card navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}"}>
       <:cover>
         <%= if @huddl.display_image_url do %>
           <.cover_image
@@ -770,17 +762,12 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   attr :group, :map, required: true
-  attr :gradient, :integer, default: 1
 
   defp group_card(assigns) do
     ~H"""
-    <.card navigate={~p"/groups/#{@group.slug}"} gradient={@gradient}>
+    <.card navigate={~p"/groups/#{@group.slug}"}>
       <:cover>
-        <.group_cover
-          id={"discover-group-cover-#{@group.id}"}
-          group={@group}
-          gradient={@gradient}
-        />
+        <.group_cover id={"discover-group-cover-#{@group.id}"} group={@group} />
       </:cover>
       <:body>
         <span :if={@group.location} class="card-group">{@group.location}</span>

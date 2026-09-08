@@ -3,8 +3,7 @@ defmodule HuddlzWeb.Components.Card do
   V3 card — anchor card used for huddlz, groups, and saved items in grid views.
 
   Slot-driven so callers can compose cover image, date stamp, tag, body, and
-  foot independently. The default `gradient` cycles through 1–6 to vary cover
-  fallbacks across a list.
+  foot independently.
   """
   use Phoenix.Component
 
@@ -13,12 +12,6 @@ defmodule HuddlzWeb.Components.Card do
   attr :href, :string, default: nil
   attr :navigate, :string, default: nil
   attr :patch, :string, default: nil
-
-  attr :gradient, :integer,
-    values: [1, 2, 3, 4, 5, 6],
-    default: 1,
-    doc: "1–6 selects the cover fallback gradient"
-
   attr :class, :any, default: nil
   attr :rest, :global
 
@@ -35,7 +28,7 @@ defmodule HuddlzWeb.Components.Card do
       class={["card", @class]}
       {@rest}
     >
-      <div :if={@cover != []} class={"card-cover gradient-#{@gradient}"}>
+      <div :if={@cover != []} class="card-cover">
         {render_slot(@cover)}
       </div>
       <div class="card-body">
@@ -49,30 +42,21 @@ defmodule HuddlzWeb.Components.Card do
   end
 
   @doc """
-  Renders group cover media with a branded fallback that remains visible when
-  the image is absent or cannot be loaded.
+  Renders group cover media over a neutral fallback, a `panel-2` field with
+  the group's initials in a tile, that stays visible when the image is absent
+  or cannot be loaded.
   """
   attr :group, :map, required: true
   attr :id, :string, required: true
   attr :variant, :atom, values: [:card, :hero, :thumb], default: :card
 
-  attr :gradient, :integer,
-    values: [1, 2, 3, 4, 5, 6],
-    default: 1,
-    doc: "1–6 selects the fallback gradient"
-
   def group_cover(assigns) do
     assigns = assign(assigns, :initials, group_initials(assigns.group.name))
 
     ~H"""
-    <div
-      id={@id}
-      class={["group-cover", "group-cover--#{@variant}", "gradient-#{@gradient}"]}
-      data-testid="group-cover"
-    >
+    <div id={@id} class={["group-cover", "group-cover--#{@variant}"]} data-testid="group-cover">
       <div class="group-cover-fallback" aria-hidden="true">
         <span class="group-cover-signal">{@initials}</span>
-        <span :if={@variant != :thumb} class="group-cover-label">huddlz group</span>
       </div>
       <.cover_image
         :if={@group.current_image_url}

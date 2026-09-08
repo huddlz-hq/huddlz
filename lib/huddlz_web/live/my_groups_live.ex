@@ -147,34 +147,39 @@ defmodule HuddlzWeb.MyGroupsLive do
           <h1>My groups</h1>
           <p>{filter_blurb(@filter)}</p>
         </div>
-        <.link navigate={~p"/groups/new"} class="btn-primary">
-          Start a group
-        </.link>
+        <.button variant={:primary} navigate={~p"/groups/new"}>
+          <.icon name="hero-plus" class="size-4" /> Start a group
+        </.button>
       </div>
 
       <div class="filters">
-        <.chip patch={filter_path(:all, 1)} active={@filter == :all}>
-          All · {@counts.all}
+        <.chip patch={filter_path(:all, 1)} active={@filter == :all} count={@counts.all}>
+          All
         </.chip>
-        <.chip patch={filter_path(:hosting, 1)} active={@filter == :hosting}>
-          Hosting · {@counts.hosting}
+        <.chip
+          patch={filter_path(:hosting, 1)}
+          active={@filter == :hosting}
+          count={@counts.hosting}
+        >
+          Hosting
         </.chip>
-        <.chip patch={filter_path(:joined, 1)} active={@filter == :joined}>
-          Joined · {@counts.joined}
+        <.chip patch={filter_path(:joined, 1)} active={@filter == :joined} count={@counts.joined}>
+          Joined
         </.chip>
       </div>
 
       <%= if Enum.empty?(@groups) do %>
-        <p class="muted">{empty_message(@filter)}</p>
+        <.empty_state icon={empty_icon(@filter)} title={empty_title(@filter)}>
+          {empty_message(@filter)}
+          <:action :if={@filter != :hosting}>
+            <.button variant={:secondary} navigate={~p"/discover?scope=groups"}>
+              Browse groups
+            </.button>
+          </:action>
+        </.empty_state>
       <% else %>
         <div class="grid">
-          <%= for {group, idx} <- Enum.with_index(@groups) do %>
-            <.my_group_card
-              group={group}
-              role={group.viewer_role}
-              gradient={Integer.mod(idx, 6) + 1}
-            />
-          <% end %>
+          <.my_group_card :for={group <- @groups} group={group} role={group.viewer_role} />
         </div>
         <.pagination
           :if={@page_info.total_pages > 1}
@@ -189,17 +194,12 @@ defmodule HuddlzWeb.MyGroupsLive do
 
   attr :group, :map, required: true
   attr :role, :atom, required: true
-  attr :gradient, :integer, required: true
 
   defp my_group_card(assigns) do
     ~H"""
-    <.card navigate={~p"/groups/#{@group.slug}"} gradient={@gradient}>
+    <.card navigate={~p"/groups/#{@group.slug}"}>
       <:cover>
-        <.group_cover
-          id={"my-group-cover-#{@group.id}"}
-          group={@group}
-          gradient={@gradient}
-        />
+        <.group_cover id={"my-group-cover-#{@group.id}"} group={@group} />
         <span class={["card-tag", role_class(@role)]}>{HuddlzWeb.GroupRole.label(@role)}</span>
       </:cover>
       <:body>
@@ -217,15 +217,23 @@ defmodule HuddlzWeb.MyGroupsLive do
   defp filter_blurb(:hosting), do: "Groups you organize."
   defp filter_blurb(:joined), do: "Groups you've joined."
 
+  defp empty_icon(:all), do: "hero-user-group"
+  defp empty_icon(:hosting), do: "hero-megaphone"
+  defp empty_icon(:joined), do: "hero-user-plus"
+
+  defp empty_title(:all), do: "No groups yet"
+  defp empty_title(:hosting), do: "You're not hosting a group"
+  defp empty_title(:joined), do: "No groups joined"
+
   defp empty_message(:all),
     do: "You haven't organized or joined any groups yet. Start one or browse Discover."
 
   defp empty_message(:hosting), do: "You haven't created a group yet."
   defp empty_message(:joined), do: "You haven't joined any groups yet."
 
-  defp role_class(:owner), do: "hybrid"
-  defp role_class(:organizer), do: "virtual"
-  defp role_class(_), do: "in-person"
+  defp role_class(:owner), do: "owner"
+  defp role_class(:organizer), do: "organizer"
+  defp role_class(_), do: nil
 
   defp member_count_label(group) do
     case Map.get(group, :member_count) do

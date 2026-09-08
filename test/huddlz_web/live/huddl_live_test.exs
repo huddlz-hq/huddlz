@@ -369,9 +369,9 @@ defmodule HuddlzWeb.HuddlLiveTest do
       conn
       |> visit("/discover?scope=groups")
       |> assert_has("#discover-group-cover-#{group.id}[data-testid='group-cover']")
-      |> assert_has(
-        "#discover-group-cover-#{group.id} .group-cover-label",
-        text: "huddlz group"
+      |> assert_has("#discover-group-cover-#{group.id} .group-cover-signal",
+        text: "FC",
+        exact: true
       )
     end
 
