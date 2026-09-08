@@ -367,6 +367,34 @@ defmodule HuddlzWeb.HuddlLive.ShowPhotosTest do
       refute has_element?(view, "#photo-lightbox")
     end
 
+    test "a huddl change broadcast keeps the lightbox open and picks up new photos", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      huddl = generate(past_huddl(group_id: group.id, creator_id: owner.id))
+      {:ok, _first} = create_photo(huddl, owner, "first.jpg")
+
+      {:ok, view, _html} =
+        conn
+        |> login(owner)
+        |> live(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+
+      view |> element(".photo-tile button.photo-open") |> render_click()
+      assert has_element?(view, "#photo-lightbox img.lightbox-image")
+
+      send(view.pid, {:huddl_changed, huddl.id})
+      assert has_element?(view, "#photo-lightbox img.lightbox-image")
+      assert has_element?(view, ".photo-tile button[phx-value-url$='first.jpg']")
+
+      {:ok, _second} = create_photo(huddl, owner, "second.jpg")
+      send(view.pid, {:huddl_changed, huddl.id})
+
+      assert has_element?(view, "#photo-lightbox img.lightbox-image")
+      assert has_element?(view, ".photo-tile button[phx-value-url$='second.jpg']")
+      assert has_element?(view, "#photo-position", "of 2")
+    end
+
     test "clicking the next arrow advances the lightbox to the next photo", %{
       conn: conn,
       owner: owner,
@@ -631,5 +659,19 @@ defmodule HuddlzWeb.HuddlLive.ShowPhotosTest do
 
       assert has_element?(view, "#photo-lightbox img.lightbox-image[src='#{third_url}']")
     end
+  end
+
+  defp create_photo(huddl, actor, filename) do
+    Communities.create_huddl_photo(
+      %{
+        filename: filename,
+        content_type: "image/jpeg",
+        size_bytes: 1000,
+        storage_path: "/uploads/huddl_photos/#{huddl.id}/#{filename}",
+        thumbnail_path: "/uploads/huddl_photos/#{huddl.id}/thumb_#{filename}",
+        huddl_id: huddl.id
+      },
+      actor: actor
+    )
   end
 end
