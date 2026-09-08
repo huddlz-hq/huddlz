@@ -18,27 +18,50 @@ export class MobileNavigation {
     this.handleClick = this.handleClick.bind(this)
     this.handleKeydown = this.handleKeydown.bind(this)
     this.handleBreakpointChange = this.handleBreakpointChange.bind(this)
+    this.handlePageLoaded = this.handlePageLoaded.bind(this)
   }
 
   mount() {
-    this.trigger = this.document.querySelector("[data-mobile-nav-trigger]")
-    this.drawer = this.document.querySelector("#mobile-navigation-drawer")
-    this.scrim = this.document.querySelector("[data-mobile-nav-scrim]")
-    this.background = this.document.querySelector("[data-mobile-nav-background]")
-    this.closeButton = this.document.querySelector("[data-mobile-nav-close]")
-
-    if (!this.trigger || !this.drawer || !this.scrim || !this.background || !this.closeButton) {
-      return false
-    }
+    if (!this.resolveElements()) return false
 
     this.mobileQuery = this.window.matchMedia(MOBILE_NAVIGATION_QUERY)
     this.listen(this.document, "click", this.handleClick)
     this.listen(this.document, "keydown", this.handleKeydown)
     this.listen(this.mobileQuery, "change", this.handleBreakpointChange)
+    if (this.window.addEventListener) {
+      this.listen(this.window, "phx:page-loading-stop", this.handlePageLoaded)
+    }
     this.syncResponsiveState()
     this.observeLiveViewPatches()
 
     return true
+  }
+
+  resolveElements() {
+    const trigger = this.document.querySelector("[data-mobile-nav-trigger]")
+    const drawer = this.document.querySelector("#mobile-navigation-drawer")
+    const scrim = this.document.querySelector("[data-mobile-nav-scrim]")
+    const background = this.document.querySelector("[data-mobile-nav-background]")
+    const closeButton = this.document.querySelector("[data-mobile-nav-close]")
+
+    if (!trigger || !drawer || !scrim || !background || !closeButton) return false
+
+    Object.assign(this, {trigger, drawer, scrim, background, closeButton})
+    return true
+  }
+
+  // Live navigation renders a fresh chrome, so the nodes mounted against are
+  // detached afterwards. LiveView fires page-loading-stop once when the old
+  // view is swapped out and again once the new one has rendered; rebind as
+  // soon as the new nodes exist and put them in the closed state.
+  handlePageLoaded() {
+    if (this.drawer.isConnected !== false) return
+    if (!this.resolveElements()) return
+
+    if (this.observer) this.observer.disconnect()
+    this.opened = false
+    this.syncDomState()
+    this.observeLiveViewPatches()
   }
 
   destroy() {
