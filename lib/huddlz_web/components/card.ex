@@ -85,6 +85,23 @@ defmodule HuddlzWeb.Components.Card do
   end
 
   @doc """
+  Renders the neutral cover shown when a huddl has no image: a 16:9 tile in
+  `panel-2` carrying the group's initials (used inside a `<:cover>` slot of
+  `card`).
+  """
+  attr :name, :string, required: true, doc: "group name the initials are taken from"
+
+  def cover_fallback(assigns) do
+    assigns = assign(assigns, :initials, group_initials(assigns.name))
+
+    ~H"""
+    <div class="card-cover-fallback" aria-hidden="true">
+      <span>{@initials}</span>
+    </div>
+    """
+  end
+
+  @doc """
   Renders a date stamp (used inside a `<:cover>` slot of `card`).
   """
   attr :month, :string, required: true, doc: "3-letter month abbreviation, uppercase"

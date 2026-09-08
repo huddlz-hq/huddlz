@@ -193,6 +193,51 @@ defmodule HuddlzWeb.ComponentsTest do
     end
   end
 
+  describe "cover_fallback/1" do
+    test "renders the group's initials inside the neutral cover tile" do
+      assigns = %{}
+
+      html = rendered_to_string(~H|<.cover_fallback name="Phoenix Elixir Meetup" />|)
+
+      assert html =~ ~s(class="card-cover-fallback")
+      assert html =~ ~s(aria-hidden="true")
+      assert html =~ "<span>PE</span>"
+    end
+  end
+
+  describe "empty_state/1" do
+    test "renders icon, title, guidance and action" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <.empty_state icon="hero-magnifying-glass" title="Nothing matches those filters">
+          Try a wider distance or clear the type and date filters.
+          <:action><.button>Clear filters</.button></:action>
+        </.empty_state>
+        """)
+
+      assert html =~ ~s(class="empty-state )
+      assert html =~ ~s(class="empty-state-icon")
+      assert html =~ "hero-magnifying-glass"
+      assert html =~ "<h3>Nothing matches those filters</h3>"
+      assert html =~ "Try a wider distance"
+      assert html =~ ~s(class="empty-state-action")
+      assert html =~ "Clear filters"
+    end
+
+    test "omits the icon, paragraph and action when not given" do
+      assigns = %{}
+
+      html = rendered_to_string(~H|<.empty_state title="No notifications yet" />|)
+
+      assert html =~ "<h3>No notifications yet</h3>"
+      refute html =~ "empty-state-icon"
+      refute html =~ "<p"
+      refute html =~ "empty-state-action"
+    end
+  end
+
   describe "list_row/1" do
     test "renders a row with passed content and class" do
       assigns = %{}

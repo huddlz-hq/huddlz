@@ -3,7 +3,7 @@ defmodule HuddlzWeb.Components do
   Design components facade.
 
   Each function component (`<.avatar>`, `<.button>`, `<.card>`, `<.chip>`,
-  `<.flash>`, `<.icon>`, `<.input>`, `<.list_row>`, `<.modal>`,
+  `<.empty_state>`, `<.flash>`, `<.icon>`, `<.input>`, `<.list_row>`, `<.modal>`,
   `<.pagination>`, `<.panel>`, `<.pill>`) lives in its own module under this
   namespace. Styles live in `assets/css/app.css`.
 
@@ -20,6 +20,7 @@ defmodule HuddlzWeb.Components do
       import HuddlzWeb.Components.Chip
       import HuddlzWeb.Components.Flash
       import HuddlzWeb.Components.CoverImage
+      import HuddlzWeb.Components.EmptyState
       import HuddlzWeb.Components.Icon
       import HuddlzWeb.Components.Input
       import HuddlzWeb.Components.ListRow
