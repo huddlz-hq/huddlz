@@ -483,7 +483,8 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn
       |> login(attendee)
       |> visit(calendar_path_for(tomorrow(), view: "agenda"))
-      |> assert_has(".row .row-title", text: "Agenda Item")
+      |> assert_has(".cal-agenda-panel .cal-agenda-row .row-title", text: "Agenda Item")
+      |> assert_has("#calendar-entry-#{huddl.id}.cal-agenda-row .meta")
       |> assert_has(
         "#calendar-entry-#{huddl.id} .cal-entry-status[data-status=going]",
         text: "Going"
@@ -571,7 +572,9 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn
       |> login(attendee)
       |> visit("/calendar?view=agenda")
+      |> assert_has("#calendar-agenda-empty.empty-state h3", text: "Nothing this month")
       |> assert_has("p", text: "Nothing on the calendar this month.")
+      |> refute_has(".cal-agenda-panel")
     end
   end
 

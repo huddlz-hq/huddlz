@@ -416,18 +416,7 @@ defmodule HuddlzWeb.CalendarLive do
             class="cal-nav-btn"
             aria-label="Previous month"
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="m15 18-6-6 6-6" />
-            </svg>
+            <.icon name="hero-chevron-left" class="size-4" />
           </.link>
           <.link
             patch={month_path(first_of_month(@today), @view_mode, @today)}
@@ -440,24 +429,13 @@ defmodule HuddlzWeb.CalendarLive do
             class="cal-nav-btn"
             aria-label="Next month"
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="m9 6 6 6-6 6" />
-            </svg>
+            <.icon name="hero-chevron-right" class="size-4" />
           </.link>
         </div>
 
         <div class="cal-month-title">
           <span class="cal-month-name">{format_month(@focus_month)}</span>
-          <span class="cal-month-count">({format_count(@in_month_count)})</span>
+          <span class="cal-month-count">{format_count(@in_month_count)}</span>
         </div>
 
         <div class="cal-view-tabs">
@@ -522,7 +500,7 @@ defmodule HuddlzWeb.CalendarLive do
   defp month_grid(assigns) do
     ~H"""
     <div>
-      <div class="panel cal-calendar-panel" style="padding:0">
+      <div class="cal-calendar-panel">
         <table id="month-calendar" class="cal-calendar">
           <caption class="sr-only">
             Month calendar for {format_month(@focus_month)}
@@ -651,16 +629,17 @@ defmodule HuddlzWeb.CalendarLive do
 
     ~H"""
     <%= if @sorted == [] do %>
-      <p class="muted">Nothing on the calendar this month.</p>
+      <.empty_state id="calendar-agenda-empty" icon="hero-calendar" title="Nothing this month">
+        Nothing on the calendar this month.
+      </.empty_state>
     <% else %>
-      <div class="panel" style="padding:0">
-        <div class="row-list" style="padding:6px 20px">
+      <div class="cal-agenda-panel">
+        <div class="row-list cal-agenda-list">
           <.link
             :for={entry <- @sorted}
             id={"calendar-entry-#{entry.huddl.id}"}
             navigate={huddl_path(entry)}
-            class="row"
-            style="grid-template-columns: 200px 1fr auto; text-decoration: none"
+            class="row cal-agenda-row"
           >
             <span class="meta">{format_agenda_when(entry.huddl)}</span>
             <span class="row-title">{entry.huddl.title}</span>
