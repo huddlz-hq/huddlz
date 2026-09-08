@@ -105,7 +105,12 @@ defmodule BrowserPhotoSteps do
   end
 
   step "I share the selected photos and open the first one", context do
-    conn = context.conn |> click_button("Upload photos") |> assert_has(".photo-tile", count: 2)
+    conn =
+      context.conn
+      |> click_button("Upload photos")
+      |> assert_has(".photo-tile", count: 2)
+      |> refute_has(".photo-upload-entry")
+
     conn = press(conn, ".photo-tile:first-child .photo-open", "Enter")
     Map.put(context, :conn, conn)
   end
@@ -147,7 +152,7 @@ defmodule BrowserPhotoSteps do
     conn =
       context.conn
       |> press(":focus", "Escape")
-      |> refute_has("#photo-lightbox")
+      |> assert_browser("!document.querySelector('#photo-lightbox')")
       |> assert_has(".photo-tile:first-child .photo-open:focus")
 
     Map.put(context, :conn, conn)

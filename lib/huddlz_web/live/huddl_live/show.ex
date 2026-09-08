@@ -1228,8 +1228,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
       end)
     )
     |> assign(:photo_count, length(photos))
-    |> assign(:photo_urls, Enum.map(photos, &HuddlPhotos.url(&1.storage_path)))
-    |> stream(:huddl_photos, photos, reset: true)
+    |> restream_photos(photos, urls)
   end
 
   defp load_photos(socket, _huddl, _user, false) do
@@ -1239,8 +1238,20 @@ defmodule HuddlzWeb.HuddlLive.Show do
     |> assign(:confirming_delete_photo_id, nil)
     |> assign(:confirming_delete_photo, nil)
     |> assign(:photo_count, 0)
-    |> assign(:photo_urls, [])
-    |> stream(:huddl_photos, [], reset: true)
+    |> restream_photos([], [])
+  end
+
+  # Every photo upload broadcasts `huddl_changed`, which lands here as a full
+  # refresh. Resetting the stream on each one tears the tiles down and rebuilds
+  # them, which drops keyboard focus mid-interaction, so only reset when the set
+  # of photos actually changed. The first load always streams: `photo_urls` is
+  # unset until then.
+  defp restream_photos(socket, photos, urls) do
+    changed? = Map.get(socket.assigns, :photo_urls) != urls
+
+    socket = assign(socket, :photo_urls, urls)
+
+    if changed?, do: stream(socket, :huddl_photos, photos, reset: true), else: socket
   end
 
   defp photo_position(urls, url), do: (Enum.find_index(urls, &(&1 == url)) || 0) + 1
