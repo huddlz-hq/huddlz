@@ -2175,6 +2175,30 @@ body .delete-confirm-copy p {
 
 body .delete-confirm-copy strong { color: var(--text); }
 
+body .leave-confirm-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--soft);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+body .leave-confirm-list li { display: flex; gap: 10px; align-items: flex-start; }
+body .leave-confirm-list li > .size-4 { flex: 0 0 auto; margin-top: 2px; color: var(--muted); }
+
+body .delete-confirm-copy .leave-confirm-note {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 body .delete-confirm-series-note {
   margin-top: 12px;
   padding: 10px 12px;
@@ -2791,8 +2815,8 @@ body .member-grid.compact .member-mark { width: 28px; height: 28px; font-size: 1
 
 body .role-pill {
   display: flex;
-  justify-content: center;
-  margin-bottom: 12px;
+  justify-content: flex-start;
+  margin-bottom: 4px;
 }
 
 /* Stacked button stack inside huddl-side (join / leave / manage / create) */
@@ -2803,10 +2827,16 @@ body .side-actions {
 }
 
 body .side-actions > .btn-primary,
-body .side-actions > .btn-secondary {
+body .side-actions > .btn-secondary,
+body .side-actions > .btn-muted {
   width: 100%;
   justify-content: center;
 }
+
+body .side-actions > .side-actions-primary { height: 44px; font-size: 14px; }
+
+body .side-actions-row { display: flex; gap: 8px; }
+body .side-actions-row > .btn-secondary { flex: 1 1 0; justify-content: center; }
 
 /* Warn-colored span inside an eyebrow (e.g. "Group · Private") */
 body .eyebrow .eyebrow-warn { color: var(--warn); }
@@ -3015,7 +3045,8 @@ body .hero-img {
 
 /* The huddl page header: a 16:9 cover on top, then the title block in flow
    (never overlaid on the image, so it reads the same in both themes). */
-body .huddl-hero {
+body .huddl-hero,
+body .group-hero {
   position: static;
   display: flex;
   flex-direction: column;
@@ -3029,7 +3060,8 @@ body .huddl-hero {
   background: none;
 }
 
-body .huddl-hero .hero-media {
+body .huddl-hero .hero-media,
+body .group-hero .hero-media {
   position: relative;
   aspect-ratio: 16 / 9;
   border: 1px solid var(--line);
@@ -3061,7 +3093,8 @@ body .huddl-hero .hero-fallback span {
   letter-spacing: 0.02em;
 }
 
-body .huddl-hero .hero-content {
+body .huddl-hero .hero-content,
+body .group-hero .hero-content {
   position: static;
   display: flex;
   flex-direction: column;
@@ -3071,7 +3104,17 @@ body .huddl-hero .hero-content {
   padding: 24px 0 0;
 }
 
-body .huddl-hero .hero-content h1 { margin: 0; }
+body .huddl-hero .hero-content h1,
+body .group-hero .hero-content h1 { margin: 0; }
+
+body .hero-content .meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+body .hero-content .meta-item > .size-4 { flex: 0 0 auto; color: var(--muted); }
 
 body .hero:not(.group-hero):not(.huddl-hero)::after {
   content: "";
@@ -3079,17 +3122,6 @@ body .hero:not(.group-hero):not(.huddl-hero)::after {
   inset: 0;
   background: linear-gradient(180deg, transparent 40%, rgba(0, 0, 0, 0.72) 100%);
 }
-
-body .group-cover--hero::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  background: linear-gradient(180deg, transparent 40%, rgba(0, 0, 0, 0.72) 100%);
-  pointer-events: none;
-}
-
-body .group-cover--hero .group-cover-fallback { place-items: start center; padding: 32px; }
 
 body .group-cover--hero .group-cover-signal {
   width: 96px;
@@ -3106,21 +3138,6 @@ body .hero-content {
   right: 0;
   padding: 28px 32px;
   z-index: 2;
-}
-
-body .group-hero {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  height: auto;
-  min-height: 280px;
-}
-
-body .group-hero .hero-content {
-  position: relative;
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
 }
 
 body .group-hero-location {
@@ -3211,6 +3228,30 @@ body .huddl-main > .huddl-intro {
 body .huddl-intro { grid-area: intro; }
 body .huddl-side { grid-area: side; }
 body .huddl-rest { grid-area: rest; display: flex; flex-direction: column; gap: 0; }
+
+body .group-huddlz {
+  gap: 20px;
+  padding-top: 32px;
+  border-top: 1px solid var(--line);
+}
+
+body .list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+body .list-head h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+body .list-head .filters { margin: 0; }
 
 @media (max-width: 1100px) {
 
@@ -4587,38 +4628,8 @@ body .page-nav:disabled {
   body .page-head .actions { flex-wrap: wrap; }
   body .hero:not(.huddl-hero):not(.group-hero) { height: 200px; }
   body .hero { margin-bottom: 20px; }
-  body .group-hero {
-    display: grid;
-    grid-template-rows: auto auto;
-    min-height: 0;
-    background: var(--panel-2);
-  }
-  body .group-hero .group-cover--hero {
-    position: relative;
-    inset: auto;
-    grid-row: 1;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-  }
-  body .group-hero .group-cover--hero::after {
-    background: linear-gradient(180deg, transparent 58%, color-mix(in srgb, var(--bg) 50%, transparent) 100%);
-  }
-  body .group-hero .hero-content {
-    position: relative;
-    inset: auto;
-    grid-row: 2;
-    border-top: 1px solid var(--line);
-  }
   body .hero-content { padding: 18px 16px; }
   body .hero-content h1 { font-size: 26px; }
-  body .group-hero-meta {
-    align-items: flex-start;
-    gap: 6px 12px;
-  }
-  body .group-hero-location {
-    flex: 1 1 100%;
-  }
-  body .group-hero-separator { display: none; }
   body .huddl-side {
     position: static;
     padding: 18px 16px;
@@ -4698,7 +4709,8 @@ body .page-nav:disabled {
 
   body .organizer-update h2 { font-size: 15px; }
 
-  body .huddl-hero {
+  body .huddl-hero,
+  body .group-hero {
     display: block;
     height: auto;
     aspect-ratio: auto;
@@ -4708,9 +4720,11 @@ body .page-nav:disabled {
     margin-bottom: 24px;
   }
 
-  body .huddl-hero::after { display: none; }
+  body .huddl-hero::after,
+  body .group-hero::after { display: none; }
 
-  body .huddl-hero .hero-media {
+  body .huddl-hero .hero-media,
+  body .group-hero .hero-media {
     position: relative;
     width: 100%;
     box-sizing: border-box;
@@ -4720,12 +4734,16 @@ body .page-nav:disabled {
     border-radius: var(--radius);
   }
 
-  body .huddl-hero .hero-content {
+  body .huddl-hero .hero-content,
+  body .group-hero .hero-content {
     display: block;
     position: relative;
     padding: 18px 4px 0;
     color: var(--text);
   }
+
+  body .group-hero .hero-content h1 { margin: 10px 0 0; }
+  body .group-hero .hero-content .meta { display: grid; gap: 6px; margin-top: 12px; }
 
   body .huddl-hero .hero-content .eyebrow {
     display: block;
