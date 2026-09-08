@@ -12,6 +12,17 @@ defmodule CurrentNavigationSteps do
     context
   end
 
+  step "navigation should identify {string} under group {string} as the current destination",
+       %{args: [section, group_name], session: session} = context do
+    session
+    |> assert_has(".sb-org-row.active", text: group_name)
+    |> assert_has(".sb-sub-item.active[aria-current='page']", text: section, exact: true)
+    |> refute_has(".sb-item[aria-current]")
+    |> refute_has(".sb-org-row[aria-current]")
+
+    context
+  end
+
   step "view choices should identify {string} as current",
        %{args: [label], session: session} = context do
     session
