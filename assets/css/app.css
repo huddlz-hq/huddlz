@@ -3889,6 +3889,20 @@ body .form-input:focus, body .form-textarea:focus, body .form-select:focus {
 
 body .form-textarea { min-height: 96px; resize: vertical; line-height: 1.5; padding: 10px 12px; }
 
+/* Leading icon inside a text control (password fields) */
+body .form-input-wrap { position: relative; }
+body .form-input-wrap.has-icon .form-input { padding-left: 38px; }
+body .form-input-wrap .form-input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+  transition: color 120ms ease;
+}
+body .form-input-wrap:has(.form-input:focus) .form-input-icon { color: var(--accent-ink); }
+
 body .form-help { color: var(--muted); font-size: 12px; line-height: 1.5; }
 body .form-error { color: var(--danger); font-size: 12px; font-weight: 500; }
 

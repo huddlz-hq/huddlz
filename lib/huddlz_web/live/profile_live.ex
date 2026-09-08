@@ -191,6 +191,7 @@ defmodule HuddlzWeb.ProfileLive do
               <.input
                 field={@email_form[:current_password]}
                 type="password"
+                icon="hero-lock-closed"
                 label="Confirm current password"
                 placeholder="Enter your current password"
                 autocomplete="current-password"
@@ -255,6 +256,7 @@ defmodule HuddlzWeb.ProfileLive do
                   id={"password-#{@password_input_reset_generation}-current-password"}
                   value=""
                   type="password"
+                  icon="hero-lock-closed"
                   phx-update="ignore"
                   label="Current password"
                   placeholder="Enter your current password"
@@ -266,6 +268,7 @@ defmodule HuddlzWeb.ProfileLive do
                 id={"password-#{@password_input_reset_generation}-password"}
                 value=""
                 type="password"
+                icon="hero-lock-closed"
                 phx-update="ignore"
                 label="New password"
                 placeholder="Enter your new password"
@@ -277,6 +280,7 @@ defmodule HuddlzWeb.ProfileLive do
                 id={"password-#{@password_input_reset_generation}-password-confirmation"}
                 value=""
                 type="password"
+                icon="hero-lock-closed"
                 phx-update="ignore"
                 label="Confirm new password"
                 placeholder="Confirm your new password"
