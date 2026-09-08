@@ -142,7 +142,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
               <.live_file_input upload={@uploads.huddl_photos} class="hidden" />
 
               <div class="upload-zone" phx-drop-target={@uploads.huddl_photos.ref}>
-                <.icon name="hero-photo" class="size-6 text-[var(--cyan)]" />
+                <.icon name="hero-photo" class="size-6 text-[var(--accent)]" />
                 <span class="upload-prompt">Drop photos here</span>
                 <.button
                   type="button"
