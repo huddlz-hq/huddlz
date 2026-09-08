@@ -2866,11 +2866,36 @@ body .huddl-side-section h3 {
 /* Notification preference rows (settings page) */
 body .pref-list .row { grid-template-columns: 1fr auto; gap: 18px; }
 
-/* Notification row */
-body .row.notif-row { grid-template-columns: 14px minmax(0, 1fr) auto; gap: 14px; }
-body .row.notif-row.unread .row-title { color: var(--text); }
-body .row.notif-row:not(.unread) .row-title { color: var(--soft); }
-body .row.notif-row:not(.unread) .meta { color: var(--muted); }
+/* Notification row (inbox + invites) — rows bleed to the panel edge */
+body .notif-panel { padding: 0; overflow: hidden; }
+
+body .notif-list .row.notif-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: 16px 24px;
+  border-top: 0;
+  border-bottom: 1px solid var(--line);
+  transition: background-color 120ms ease;
+}
+
+body .notif-list .row.notif-row:last-child { border-bottom: 0; }
+
+body .row.notif-row.unread {
+  background: color-mix(in srgb, var(--accent-soft) 40%, transparent);
+}
+
+body .notif-body { min-width: 0; }
+body .notif-row .row-title {
+  color: var(--soft);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+body .notif-row.unread .row-title,
+body .invitation-row .row-title { color: var(--text); font-weight: 600; }
+body .notif-row .meta { margin-top: 2px; color: var(--muted); font-size: 13px; }
+
 body .notif-actions {
   display: flex;
   align-items: center;
@@ -2878,32 +2903,39 @@ body .notif-actions {
   gap: 8px;
   flex-wrap: wrap;
 }
+
 body .notif-actions .pill {
-  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--soft);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
 }
-body .invitation-open-action {
-  min-width: 88px;
-  min-height: 36px;
-  padding-inline: 16px;
-  justify-content: center;
+
+body .notif-actions .pill:hover { border-color: var(--accent); color: var(--accent-ink); }
+
+body .notif-actions .pill.is-primary {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
 }
-body .notif-actions a.pill:hover,
-body .notif-actions button.pill:hover {
-  color: var(--text);
-  border-color: var(--cyan-dim);
-  background: var(--cyan-soft);
-}
-body .notif-actions a.pill:focus-visible,
-body .notif-actions button.pill:focus-visible {
-  outline: 2px solid var(--cyan);
+
+body .notif-actions .pill.is-primary:hover { background: var(--accent); color: var(--on-accent); }
+
+body .notif-actions .pill:focus-visible {
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
 body .notif-resolved {
   max-width: 12rem;
   color: var(--muted);
-  font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.35;
   text-align: right;
 }
@@ -2913,7 +2945,6 @@ body .notif-mark {
   height: 8px;
   border-radius: 50%;
   background: var(--line-strong);
-  margin-top: 6px;
 }
 
 body .notif-mark.cyan { background: var(--accent); }
@@ -2942,17 +2973,19 @@ body .invitation-back-link:focus-visible {
 body .invitation-detail-head h2 { overflow-wrap: anywhere; }
 
 @media (max-width: 760px) {
-  body .row.notif-row {
-    grid-template-columns: 14px minmax(0, 1fr);
+  body .notif-list .row.notif-row {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px 12px;
+    padding: 14px 16px;
   }
+
+  body .notif-row .notif-actions { grid-column: 2; justify-content: flex-start; }
+  body .notif-actions .pill { height: 36px; padding: 0 14px; }
 
   body .notif-resolved {
     max-width: none;
     text-align: left;
   }
-
-  body .invitation-row .notif-actions { width: 100%; }
-  body .invitation-row .invitation-open-action { width: 100%; }
   body .invitation-detail-head {
     flex-direction: column;
     align-items: flex-start;
@@ -4702,9 +4735,6 @@ body .page-nav:disabled {
   /* Listings on org pages: collapse multi-column rows */
   body .row.huddlz-row, body .row.members-row { grid-template-columns: 56px 1fr; row-gap: 8px; }
   body .row.members-row { grid-template-columns: 48px 1fr; }
-  body .row.notif-row { grid-template-columns: 14px minmax(0, 1fr); }
-  body .notif-actions { grid-column: 2; justify-content: flex-start; }
-  body .notif-actions .pill { min-width: 44px; height: 44px; justify-content: center; }
   /* Land marketing */
   body .land-topbar { height: 64px; padding: 0 16px; }
   body .land-hero { padding: 48px 16px 40px; }

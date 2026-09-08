@@ -120,6 +120,40 @@ defmodule HuddlzWeb.NotificationsLiveTest do
     end
   end
 
+  describe "page layout" do
+    test "renders rows inside an edge-to-edge panel with chip counts", %{conn: conn, user: user} do
+      {group, huddl} = create_huddl_target(user)
+      unread = huddl_notification(user, group, huddl)
+      read = seed_notification(user, :group_member_removed, %{"group_name" => "Old Club"})
+      {:ok, _} = Notifications.mark_read_and_notify(read, user)
+
+      conn
+      |> login(user)
+      |> visit("/notifications")
+      |> assert_has(".filters .chip.is-active .chip-count", text: "1 unread")
+      |> assert_has(".filters .chip .chip-count", text: "0", exact: true)
+      |> assert_has("section.notif-panel #notification-items.row-list.notif-list")
+      |> assert_has("#notification-#{unread.id}.notif-row.unread .notif-mark.cyan")
+      |> assert_has("#notification-#{unread.id} .notif-body .row-title", text: "Boat Drinks")
+      |> assert_has("#mark-notification-read-#{unread.id}.pill.is-primary", text: "Mark read")
+      |> assert_has("#notification-#{read.id}.notif-row:not(.unread) .notif-mark.muted")
+      |> refute_has("#notifications-empty")
+    end
+
+    test "renders pending invitations as rows of the same list", %{conn: conn, user: user} do
+      owner = generate(user(role: :user, confirmed_at: DateTime.utc_now()))
+      group = generate(group(owner_id: owner.id, actor: owner, is_public: false))
+      {:ok, invitation} = Communities.invite_to_group(group.id, user.id, :member, actor: owner)
+
+      conn
+      |> login(user)
+      |> visit("/notifications?filter=invites")
+      |> assert_has("section.notif-panel #invitation-items.notif-list .row.notif-row")
+      |> assert_has("#invitation-#{invitation.id} .notif-mark.cyan")
+      |> assert_has("#open-invitation-#{invitation.id}.pill", text: "Open")
+    end
+  end
+
   describe "Inbox filter (default)" do
     test "lists the actor's notifications", %{conn: conn, user: user} do
       deliver!(user, :password_changed, %{})
@@ -140,16 +174,16 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       conn
       |> login(user)
       |> visit("/notifications")
-      |> assert_has(".filters .chip", text: "Inbox · 2 unread")
+      |> assert_has(".filters .chip", text: "Inbox 2 unread")
     end
 
     test "empty state copy", %{conn: conn, user: user} do
       conn
       |> login(user)
       |> visit("/notifications")
-      |> assert_has("p",
-        text:
-          "No notifications yet. Reminders and group activity will appear here as they happen."
+      |> assert_has("#notifications-empty.empty-state h3", text: "No notifications yet")
+      |> assert_has("#notifications-empty p",
+        text: "Reminders and group activity will appear here as they happen."
       )
     end
 
@@ -169,9 +203,9 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       conn
       |> login(user)
       |> visit("/notifications")
-      |> assert_has(".filters .chip", text: "Inbox · 1 unread")
+      |> assert_has(".filters .chip", text: "Inbox 1 unread")
       |> click_button("Mark all as read")
-      |> assert_has(".filters .chip", text: "Inbox · 0 unread")
+      |> assert_has(".filters .chip", text: "Inbox 0 unread")
     end
 
     test "Mark all as read clears unread beyond the visible page", %{conn: conn, user: user} do
@@ -182,9 +216,9 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       conn
       |> login(user)
       |> visit("/notifications")
-      |> assert_has(".filters .chip", text: "Inbox · 25 unread")
+      |> assert_has(".filters .chip", text: "Inbox 25 unread")
       |> click_button("Mark all as read")
-      |> assert_has(".filters .chip", text: "Inbox · 0 unread")
+      |> assert_has(".filters .chip", text: "Inbox 0 unread")
     end
   end
 
@@ -196,7 +230,7 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       |> login(user)
       |> visit("/notifications?filter=invites")
       |> assert_has(".filters .chip.is-active", text: "Invites")
-      |> assert_has(".filters .chip", text: "Invites · 1")
+      |> assert_has(".filters .chip", text: "Invites 1")
       |> assert_has(".row-title", text: "Invitation to #{group.name}")
       |> assert_has(
         ~s|#open-invitation-#{invitation.id}[href="/invitations/#{invitation.id}"]|,
@@ -219,10 +253,10 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       conn
       |> login(user)
       |> visit("/notifications?filter=invites")
-      |> assert_has(".filters .chip", text: "Invites · 0")
-      |> assert_has("p",
-        text:
-          "No pending invitations. When organizers invite you to a group, they'll show up here."
+      |> assert_has(".filters .chip", text: "Invites 0")
+      |> assert_has("#notifications-empty.empty-state h3", text: "No pending invitations")
+      |> assert_has("#notifications-empty p",
+        text: "When organizers invite you to a group, they'll show up here."
       )
     end
 
@@ -230,9 +264,9 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       conn
       |> login(user)
       |> visit("/notifications?filter=invites")
-      |> assert_has("p",
-        text:
-          "No pending invitations. When organizers invite you to a group, they'll show up here."
+      |> assert_has("#notifications-empty.empty-state h3", text: "No pending invitations")
+      |> assert_has("#notifications-empty p",
+        text: "When organizers invite you to a group, they'll show up here."
       )
     end
 
@@ -252,11 +286,11 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       |> element("#mark-notification-read-#{notification.id}")
       |> render_click()
 
-      assert has_element?(view, ".filters .chip", "Inbox · 0 unread")
+      assert has_element?(view, ".filters .chip", "Inbox 0 unread")
 
       {:ok, invites_view, _html} = live(conn, "/notifications?filter=invites")
 
-      assert has_element?(invites_view, ".filters .chip", "Invites · 1")
+      assert has_element?(invites_view, ".filters .chip", "Invites 1")
       assert has_element?(invites_view, "#invitation-#{invitation.id}")
     end
 
@@ -331,9 +365,9 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       |> login(user)
       |> visit("/notifications")
       |> refute_has(".notif-row .row-title", text: "Password changed")
-      |> assert_has("p",
-        text:
-          "No notifications yet. Reminders and group activity will appear here as they happen."
+      |> assert_has("#notifications-empty.empty-state h3", text: "No notifications yet")
+      |> assert_has("#notifications-empty p",
+        text: "Reminders and group activity will appear here as they happen."
       )
     end
   end
@@ -374,7 +408,7 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       )
       |> refute_has("#notification-#{notification.id}-open")
       |> click_button("#notification-#{notification.id} button", "Mark read")
-      |> assert_has(".filters .chip", text: "Inbox · 0 unread")
+      |> assert_has(".filters .chip", text: "Inbox 0 unread")
     end
 
     test "deleted groups render a resolved state without a broken link", %{
@@ -650,13 +684,13 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       untouched = seed_notification(user, :password_changed, %{})
       {:ok, view, _html} = conn |> login(user) |> live("/notifications")
 
-      assert has_element?(view, ".filters .chip", "Inbox · 2 unread")
+      assert has_element?(view, ".filters .chip", "Inbox 2 unread")
 
       view
       |> element("#mark-notification-read-#{notification.id}")
       |> render_click()
 
-      assert has_element?(view, ".filters .chip", "Inbox · 1 unread")
+      assert has_element?(view, ".filters .chip", "Inbox 1 unread")
       assert has_element?(view, "#notification-#{notification.id}")
       assert has_element?(view, "#notification-actions-#{notification.id} a", "Open")
       refute has_element?(view, "#mark-notification-read-#{notification.id}")
@@ -695,7 +729,7 @@ defmodule HuddlzWeb.NotificationsLiveTest do
       conn
       |> login(user)
       |> visit("/notifications")
-      |> assert_has(".filters .chip", text: "Inbox · 22 unread")
+      |> assert_has(".filters .chip", text: "Inbox 22 unread")
       |> assert_has(".pagination .page-num", text: "2")
     end
 

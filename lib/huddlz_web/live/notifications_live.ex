@@ -223,40 +223,48 @@ defmodule HuddlzWeb.NotificationsLive do
         </div>
       </div>
 
-      <div class="filters">
-        <.chip patch={filter_path(:inbox, 1)} active={@filter == :inbox}>
-          Inbox · {@counts.inbox} unread
+      <nav class="filters" aria-label="Notification filters">
+        <.chip
+          patch={filter_path(:inbox, 1)}
+          active={@filter == :inbox}
+          count={"#{@counts.inbox} unread"}
+        >
+          Inbox
         </.chip>
-        <.chip patch={filter_path(:invites, 1)} active={@filter == :invites}>
-          Invites · {@counts.invites}
+        <.chip
+          patch={filter_path(:invites, 1)}
+          active={@filter == :invites}
+          count={@counts.invites}
+        >
+          Invites
         </.chip>
-      </div>
+      </nav>
 
       <%= if @items_empty? do %>
-        <p class="muted">{empty_message(@filter)}</p>
+        <.empty_state id="notifications-empty" icon={empty_icon(@filter)} title={empty_title(@filter)}>
+          {empty_message(@filter)}
+        </.empty_state>
       <% else %>
-        <div class="panel" style="padding:0">
-          <div class="row-list" style="padding:6px 20px">
-            <%= if @filter == :invites do %>
-              <div id="invitation-items" phx-update="stream">
-                <.invitation_row
-                  :for={{dom_id, invitation} <- @streams.invitations}
-                  id={dom_id}
-                  invitation={invitation}
-                />
-              </div>
-            <% else %>
-              <div id="notification-items" phx-update="stream">
-                <.notification_row
-                  :for={{dom_id, notification} <- @streams.notifications}
-                  id={dom_id}
-                  notification={notification}
-                  target={Map.get(@notification_targets, notification.id, :none)}
-                />
-              </div>
-            <% end %>
-          </div>
-        </div>
+        <section class="panel notif-panel" aria-label={panel_label(@filter)}>
+          <%= if @filter == :invites do %>
+            <div id="invitation-items" phx-update="stream" class="row-list notif-list">
+              <.invitation_row
+                :for={{dom_id, invitation} <- @streams.invitations}
+                id={dom_id}
+                invitation={invitation}
+              />
+            </div>
+          <% else %>
+            <div id="notification-items" phx-update="stream" class="row-list notif-list">
+              <.notification_row
+                :for={{dom_id, notification} <- @streams.notifications}
+                id={dom_id}
+                notification={notification}
+                target={Map.get(@notification_targets, notification.id, :none)}
+              />
+            </div>
+          <% end %>
+        </section>
         <.pagination
           :if={@page_info.total_pages > 1}
           current_page={@page_info.current_page}
@@ -281,8 +289,8 @@ defmodule HuddlzWeb.NotificationsLive do
       id={@id}
       class={["row", "notif-row", @unread && "unread"]}
     >
-      <div class={["notif-mark", mark_color(@notification)]} aria-hidden="true"></div>
-      <div>
+      <span class={["notif-mark", mark_color(@notification)]} aria-hidden="true"></span>
+      <div class="notif-body">
         <div class="row-title">{@notification.title}</div>
         <div :if={meta_line(@notification)} class="meta">{meta_line(@notification)}</div>
       </div>
@@ -310,7 +318,7 @@ defmodule HuddlzWeb.NotificationsLive do
         <button
           :if={@unread}
           type="button"
-          class="pill"
+          class="pill is-primary"
           id={"mark-notification-read-#{@notification.id}"}
           phx-click="mark_read"
           phx-value-id={@notification.id}
@@ -341,8 +349,8 @@ defmodule HuddlzWeb.NotificationsLive do
   defp invitation_row(assigns) do
     ~H"""
     <div id={@id} class="row notif-row invitation-row">
-      <div class="notif-mark cyan" aria-hidden="true"></div>
-      <div>
+      <span class="notif-mark cyan" aria-hidden="true"></span>
+      <div class="notif-body">
         <div class="row-title">Invitation to {@invitation.group.name}</div>
         <div class="meta">{invitation_meta_line(@invitation)}</div>
       </div>
@@ -373,11 +381,20 @@ defmodule HuddlzWeb.NotificationsLive do
   defp filter_blurb(:invites),
     do: "Things that need a response from you."
 
+  defp panel_label(:inbox), do: "Inbox"
+  defp panel_label(:invites), do: "Pending invitations"
+
+  defp empty_icon(:inbox), do: "hero-bell"
+  defp empty_icon(:invites), do: "hero-envelope"
+
+  defp empty_title(:inbox), do: "No notifications yet"
+  defp empty_title(:invites), do: "No pending invitations"
+
   defp empty_message(:inbox),
-    do: "No notifications yet. Reminders and group activity will appear here as they happen."
+    do: "Reminders and group activity will appear here as they happen."
 
   defp empty_message(:invites),
-    do: "No pending invitations. When organizers invite you to a group, they'll show up here."
+    do: "When organizers invite you to a group, they'll show up here."
 
   defp mark_color(%{read_at: %DateTime{}}), do: "muted"
 
