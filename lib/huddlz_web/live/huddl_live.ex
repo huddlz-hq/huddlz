@@ -675,18 +675,18 @@ defmodule HuddlzWeb.HuddlLive do
       </div>
 
       <div class="discover-meta">
-        {result_count_label(@page_info.total_count, @scope)}
-        <span :if={any_filter_active?(assigns)}>
-          ·
+        <span>{result_count_label(@page_info.total_count, @scope)}</span>
+        <%= if any_filter_active?(assigns) and not results_empty?(assigns) do %>
+          <span aria-hidden="true">·</span>
           <button type="button" phx-click="clear_filters" class="button-link">
             Clear filters
           </button>
-        </span>
+        <% end %>
       </div>
 
       <%= if @scope == :huddlz do %>
         <%= if Enum.empty?(@huddls) do %>
-          <p class="muted">{empty_message(assigns)}</p>
+          <.discover_empty {empty_state_copy(assigns)} clearable={any_filter_active?(assigns)} />
         <% else %>
           <div class="grid">
             <%= for {{huddl, distance}, idx} <- Enum.with_index(@huddls) do %>
@@ -703,7 +703,7 @@ defmodule HuddlzWeb.HuddlLive do
         <% end %>
       <% else %>
         <%= if @groups == [] do %>
-          <p class="muted">{empty_message(assigns)}</p>
+          <.discover_empty {empty_state_copy(assigns)} clearable={any_filter_active?(assigns)} />
         <% else %>
           <div class="grid">
             <%= for {group, idx} <- Enum.with_index(@groups) do %>
@@ -734,12 +734,15 @@ defmodule HuddlzWeb.HuddlLive do
       gradient={@gradient}
     >
       <:cover>
-        <.cover_image
-          :if={@huddl.display_image_url}
-          id={"huddl-card-cover-#{@huddl.id}"}
-          class="card-cover-img"
-          image_url={@huddl.display_image_url}
-        />
+        <%= if @huddl.display_image_url do %>
+          <.cover_image
+            id={"huddl-card-cover-#{@huddl.id}"}
+            class="card-cover-img"
+            image_url={@huddl.display_image_url}
+          />
+        <% else %>
+          <.cover_fallback name={@huddl.group.name} />
+        <% end %>
         <.date_stamp month={huddl_month(@huddl)} day={huddl_day(@huddl)} />
         <.card_tag variant={tag_variant(@huddl.event_type)}>
           {tag_label(@huddl.event_type)}
@@ -787,6 +790,24 @@ defmodule HuddlzWeb.HuddlLive do
         </div>
       </:body>
     </.card>
+    """
+  end
+
+  attr :icon, :string, required: true
+  attr :title, :string, required: true
+  attr :body, :string, required: true
+  attr :clearable, :boolean, required: true
+
+  defp discover_empty(assigns) do
+    ~H"""
+    <.empty_state icon={@icon} title={@title}>
+      {@body}
+      <:action :if={@clearable}>
+        <.button variant={:secondary} type="button" phx-click="clear_filters">
+          Clear filters
+        </.button>
+      </:action>
+    </.empty_state>
     """
   end
 
@@ -909,17 +930,48 @@ defmodule HuddlzWeb.HuddlLive do
       assigns.date_filter != "upcoming" or assigns.location_active or assigns.sort != :soonest
   end
 
-  defp empty_message(%{scope: :groups}),
-    do: "No groups match this search. Try Huddlz or change your filters."
+  # The empty state carries its own "Clear filters" action, so the meta line
+  # drops its link whenever there is nothing to list.
+  defp results_empty?(%{huddls: [], groups: []}), do: true
+  defp results_empty?(_), do: false
 
-  defp empty_message(%{yours: :hosting}), do: "You aren't hosting any huddlz that match."
-  defp empty_message(%{yours: :attending}), do: "You aren't attending any huddlz that match."
+  defp empty_state_copy(%{scope: :groups}) do
+    %{
+      icon: "hero-user-group",
+      title: "No groups found",
+      body: "No groups match this search. Try Huddlz or change your filters."
+    }
+  end
 
-  defp empty_message(%{scope: :huddlz} = assigns) do
+  defp empty_state_copy(%{yours: :hosting}) do
+    %{
+      icon: "hero-calendar",
+      title: "Nothing you're hosting",
+      body: "You aren't hosting any huddlz that match."
+    }
+  end
+
+  defp empty_state_copy(%{yours: :attending}) do
+    %{
+      icon: "hero-calendar",
+      title: "Nothing you're attending",
+      body: "You aren't attending any huddlz that match."
+    }
+  end
+
+  defp empty_state_copy(%{scope: :huddlz} = assigns) do
     if any_filter_active?(assigns) do
-      "No huddlz match this search. Try Groups or change your filters."
+      %{
+        icon: "hero-magnifying-glass",
+        title: "Nothing matches those filters",
+        body: "No huddlz match this search. Try Groups or change your filters."
+      }
     else
-      "No upcoming huddlz right now."
+      %{
+        icon: "hero-calendar",
+        title: "Nothing coming up",
+        body: "No upcoming huddlz right now."
+      }
     end
   end
 

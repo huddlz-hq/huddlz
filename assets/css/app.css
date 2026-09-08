@@ -1341,7 +1341,7 @@ body .scope-tabs {
   border-radius: var(--radius-sm);
   background: var(--panel-2);
   padding: 4px;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 
 body .scope-tab {
@@ -1374,7 +1374,7 @@ body .filter-bar {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--panel);
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 
 body .filter-group {
@@ -1550,7 +1550,7 @@ body .filter-distance-value {
 body .chip-group {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
 body .chip-group .chip { height: 32px; padding: 0 14px; font-size: 13px; }
@@ -1591,14 +1591,14 @@ body .chip.is-active {
 /* Grid + cards */
 body .grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
 }
 
-body .grid.two { grid-template-columns: repeat(2, 1fr); }
+body .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
 @media (max-width: 1280px) {
- body .grid { grid-template-columns: repeat(2, 1fr); } }
+ body .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 @media (max-width: 720px) {
  body .grid, body .grid.two { grid-template-columns: 1fr; } }
@@ -1619,9 +1619,29 @@ body .card:hover { border-color: var(--line-strong); transform: translateY(-2px)
 body .card-cover {
   position: relative;
   aspect-ratio: 16 / 9;
-  background-size: cover;
-  background-position: center;
+  background: var(--panel-2);
   overflow: hidden;
+}
+
+body .card-cover-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+body .card-cover-fallback span {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  color: var(--accent-ink);
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 body .card-cover-img {
@@ -1696,15 +1716,6 @@ body .group-cover-image {
   width: 100%;
   height: 100%;
 }
-
-body .card-cover.gradient-1 { background: linear-gradient(135deg, #06424a 0%, #0c1c20 50%, #1a0c30 100%); }
-body .card-cover.gradient-2 { background: linear-gradient(160deg, #2c0a36 0%, #050810 60%, #0a3a44 100%); }
-body .card-cover.gradient-3 { background: linear-gradient(135deg, #1a3633 0%, #050810 60%, #2a1010 100%); }
-body .card-cover.gradient-4 { background: linear-gradient(135deg, #14232a 0%, #060a14 60%, #2a0e2a 100%); }
-body .card-cover.gradient-5 { background: linear-gradient(120deg, #082a2a 0%, #050a14 70%, #1a0c2a 100%); }
-body .card-cover.gradient-6 { background: linear-gradient(160deg, #181818 0%, #051820 50%, #1a3340 100%); }
-
-
 
 body .date-stamp {
   position: absolute;
@@ -2801,8 +2812,44 @@ body .eyebrow .eyebrow-warn { color: var(--warn); }
 /* Empty-state placeholder inside .member-grid */
 body .member-grid-empty { font-size: 13px; }
 
-/* Empty-state placeholder for grid-driven lists (huddlz, etc) */
-body .empty-state { padding: 24px 0; font-size: 14px; }
+/* Empty state: dashed, centered placeholder for lists with nothing to show */
+body .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 24px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+body .empty-state-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+}
+
+body .empty-state h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+body .empty-state p {
+  margin: 0;
+  max-width: 360px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+body .empty-state-action { margin-top: 4px; }
 
 /* Sub-section inside huddl-side */
 body .huddl-side-section {
@@ -4340,14 +4387,18 @@ body .button-link:hover { text-decoration: underline; }
 
 /* Discover-page meta line (result count + inline reset link). */
 body .discover-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
   color: var(--muted);
-  font-size: 12px;
-  margin-bottom: 14px;
+  font-size: 13px;
 }
 
 /* "All huddlz" backlink wrapper used when ?yours= is active. */
 body .discover-back {
-  margin-bottom: 16px;
+  margin-bottom: 24px;
   font-size: 13px;
 }
 
@@ -4591,6 +4642,28 @@ body .page-nav:disabled {
   body .visibility-selection { grid-template-columns: 1fr; }
   body .visibility-toggle { margin-top: 4px; }
   body .filters { gap: 6px; }
+  body .scope-tabs { display: flex; margin-bottom: 16px; }
+  body .scope-tabs .scope-tab { flex: 1 1 0; justify-content: center; }
+  body .filter-bar {
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin: 0 -12px 16px;
+    padding: 0 12px 4px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  body .filter-bar::-webkit-scrollbar { display: none; }
+  body .filter-group { flex: 0 0 auto; flex-wrap: nowrap; gap: 8px; }
+  body .filter-group > * { flex: 0 0 auto; }
+  body .filter-location-wrap { min-width: 160px; }
+  body .filter-label { display: none; }
+  body .chip-group { flex-wrap: nowrap; }
+  body .chip-group .chip { white-space: nowrap; }
+  body .discover-meta { margin-bottom: 16px; }
+  body .grid { gap: 16px; }
   body .insight-strip { gap: 8px; }
   /* Listings on org pages: collapse multi-column rows */
   body .row.huddlz-row, body .row.members-row { grid-template-columns: 56px 1fr; row-gap: 8px; }
