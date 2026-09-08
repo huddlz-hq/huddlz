@@ -388,20 +388,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
         <input :if={@field_name} type="hidden" name={@field_name} value={@selected_text} />
         <div class="location-display" data-testid="location-selected">
           <div class="location-current">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M12 22s7-7.6 7-13a7 7 0 0 0-14 0c0 5.4 7 13 7 13z" />
-              <circle cx="12" cy="9" r="2.5" />
-            </svg>
+            <.icon name="hero-map-pin" class="size-4" />
             <span data-testid="location-display">{@selected_text}</span>
           </div>
           <div class="location-actions">

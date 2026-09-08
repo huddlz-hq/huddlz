@@ -135,6 +135,22 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> assert_has("*", text: to_string(user.email))
     end
 
+    test "stacks the settings panels with the photo actions in a row", %{
+      conn: conn,
+      user: user
+    } do
+      conn
+      |> login(user)
+      |> visit("/profile")
+      |> assert_has(".settings-stack > .panel, .settings-stack > form > .panel", count: 5)
+      |> assert_has(".profile-photo-actions .profile-photo-buttons label.btn-secondary",
+        text: "Upload a photo…"
+      )
+      |> assert_has(".profile-photo-actions #avatar-upload-help.form-help")
+      |> assert_has(".form-control.read-only .pill", text: "User")
+      |> assert_has("label.form-label[for='profile-location-input']", text: "Location")
+    end
+
     test "shows the profile form", %{conn: conn, user: user} do
       conn
       |> login(user)
@@ -736,7 +752,11 @@ defmodule HuddlzWeb.ProfileLiveTest do
       view |> element("[role='option']", "Saint Augustine") |> render_click()
       render_async(view)
 
-      assert render(view) =~ "Home location updated"
+      html = render(view)
+      assert html =~ "Home location updated"
+      assert html =~ ~s(class="location-current")
+      assert html =~ ~s(hero-map-pin)
+      assert html =~ "Change location…"
     end
 
     test "handles autocomplete API errors", %{conn: conn, user: user} do
