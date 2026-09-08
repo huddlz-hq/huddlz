@@ -8,6 +8,7 @@ defmodule HuddlzWeb.Components.Chip do
   use Phoenix.Component
 
   attr :active, :boolean, default: false
+  attr :count, :integer, default: nil, doc: "optional result count shown after the label"
   attr :class, :any, default: nil
 
   attr :rest, :global,
@@ -24,6 +25,7 @@ defmodule HuddlzWeb.Components.Chip do
         {@rest}
       >
         {render_slot(@inner_block)}
+        <span :if={@count} class="chip-count">{" "}{@count}</span>
       </.link>
       """
     else
@@ -32,6 +34,7 @@ defmodule HuddlzWeb.Components.Chip do
       ~H"""
       <button type={@type} class={["chip", @active && "is-active", @class]} {@rest}>
         {render_slot(@inner_block)}
+        <span :if={@count} class="chip-count">{" "}{@count}</span>
       </button>
       """
     end

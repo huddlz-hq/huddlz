@@ -47,6 +47,16 @@ defmodule HuddlzWeb.ComponentsTest do
       refute inactive =~ "is-active"
     end
 
+    test "renders an optional count after the label" do
+      assigns = %{}
+
+      counted = rendered_to_string(~H"<.chip count={3}>Upcoming</.chip>")
+      plain = rendered_to_string(~H"<.chip>Upcoming</.chip>")
+
+      assert counted =~ ~s(<span class="chip-count"> 3</span>)
+      refute plain =~ "chip-count"
+    end
+
     test "renders a link when href is given" do
       assigns = %{}
       active = rendered_to_string(~H|<.chip href="/discover" active>Discover</.chip>|)
