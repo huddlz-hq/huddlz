@@ -1686,7 +1686,7 @@ body .cover-image {
   background-size: cover;
 }
 
-body .huddl-hero .cover-image { background-size: contain; }
+body .huddl-hero .cover-image { background-size: cover; }
 
 body .group-cover-image {
   position: absolute;
@@ -2109,6 +2109,7 @@ body .btn-secondary.virtual-link:hover { border-color: var(--cyan); }
 body .rsvp-state { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
 body .rsvp-state .btn-primary,
 body .rsvp-state .btn-secondary { width: 100%; justify-content: center; }
+body .rsvp-state .btn-primary { height: 44px; font-size: 14px; }
 body .rsvp-state .rsvp-banner { width: 100%; }
 
 /* Inline "Join virtually" link inside .facts .value */
@@ -2963,23 +2964,67 @@ body .hero-img {
   z-index: 0;
 }
 
-/* huddl media keeps its full composition in a consistent 16:9 stage. */
+/* The huddl page header: a 16:9 cover on top, then the title block in flow
+   (never overlaid on the image, so it reads the same in both themes). */
 body .huddl-hero {
+  position: static;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   height: auto;
-  aspect-ratio: 16 / 9;
-  isolation: isolate;
+  min-height: 0;
+  aspect-ratio: auto;
+  margin: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: none;
 }
 
 body .huddl-hero .hero-media {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background: linear-gradient(135deg, #06424a 0%, #0c1c20 50%, #1a0c30 100%);
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--panel-2);
 }
 
-body .huddl-hero .hero-img { object-fit: contain; }
+body .huddl-hero .hero-img { object-fit: cover; }
 
-body .hero:not(.group-hero)::after {
+body .huddl-hero .hero-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+body .huddl-hero .hero-fallback span {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  color: var(--accent-ink);
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+body .huddl-hero .hero-content {
+  position: static;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 24px 0 0;
+}
+
+body .huddl-hero .hero-content h1 { margin: 0; }
+
+body .hero:not(.group-hero):not(.huddl-hero)::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -3047,9 +3092,9 @@ body .hero-content h1 {
 body .hero-content .meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 18px;
+  gap: 8px 20px;
   color: var(--soft);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 body .huddl-hero .hero-content,
@@ -3099,12 +3144,20 @@ body .organizer-update p {
 
 body .huddl-frame {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   grid-template-areas:
     "intro side"
     "rest  side";
-  gap: 28px;
+  gap: 32px;
   align-items: start;
+}
+
+body .huddl-main > .organizer-update { margin-bottom: 24px; }
+
+body .huddl-main > .huddl-intro {
+  margin-top: 32px;
+  padding-top: 32px;
+  border-top: 1px solid var(--line);
 }
 
 body .huddl-intro { grid-area: intro; }
@@ -4627,8 +4680,8 @@ body .page-nav:disabled {
 /* Shared memories sit alongside the completed huddl details. */
 body .huddl-main { grid-area: intro; min-width: 0; }
 body .huddl-frame-photos { grid-template-areas: "intro side"; }
-body .huddl-photos { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--line); }
-body .photo-heading h2 { margin: 0; font-family: var(--mono); font-size: 22px; letter-spacing: -0.02em; }
+body .huddl-photos { margin-top: 32px; padding-top: 32px; border-top: 1px solid var(--line); }
+body .photo-heading h2 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
 body .photo-count { margin-left: 8px; color: var(--muted); font-size: 15px; }
 body .photo-heading p, body .huddl-photos-empty { color: var(--muted); font-size: 14px; line-height: 1.6; }
 body .photo-heading p { margin: 8px 0 20px; }
