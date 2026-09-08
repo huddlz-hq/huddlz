@@ -29,6 +29,7 @@ class FakeElement {
     this.dataset = {}
     this.focusable = []
     this.closestMatches = new Set()
+    this.isConnected = true
   }
 
   setAttribute(name, value) {
@@ -113,7 +114,8 @@ function setup({mobile = true} = {}) {
 
   const mediaQuery = new FakeEventTarget()
   mediaQuery.matches = mobile
-  const windowRef = {matchMedia: () => mediaQuery}
+  const windowRef = new FakeEventTarget()
+  windowRef.matchMedia = () => mediaQuery
 
   const navigation = new MobileNavigation(documentRef, windowRef)
   assert.equal(navigation.mount(), true)
@@ -121,6 +123,8 @@ function setup({mobile = true} = {}) {
   return {
     navigation,
     documentRef,
+    windowRef,
+    elements,
     mediaQuery,
     trigger,
     drawer,
@@ -227,5 +231,37 @@ test("switching to desktop removes drawer and background restrictions", () => {
   assert.equal(drawer.dataset.mobileNavState, "desktop")
   assert.equal(drawer.hasAttribute("inert"), false)
   assert.equal(background.hasAttribute("inert"), false)
+  assert.equal(trigger.attributes.get("aria-expanded"), "false")
+})
+
+test("live navigation swaps in the freshly rendered drawer and closes it", () => {
+  const {navigation, documentRef, windowRef, elements, drawer, trigger, firstLink} = setup()
+  navigation.open()
+  navigation.handleClick({target: firstLink})
+
+  for (const element of elements.values()) element.isConnected = false
+  const previousDrawer = elements.get("#mobile-navigation-drawer")
+  elements.set("#mobile-navigation-drawer", undefined)
+  windowRef.listeners.get("phx:page-loading-stop")()
+  assert.equal(navigation.drawer, previousDrawer, "keeps the old nodes until the new chrome exists")
+
+  const nextDrawer = new FakeElement(documentRef)
+  const nextTrigger = new FakeElement(documentRef)
+  const nextBackground = new FakeElement(documentRef)
+  elements.set("#mobile-navigation-drawer", nextDrawer)
+  elements.set("[data-mobile-nav-trigger]", nextTrigger)
+  elements.set("[data-mobile-nav-background]", nextBackground)
+
+  windowRef.listeners.get("phx:page-loading-stop")()
+
+  assert.equal(navigation.drawer, nextDrawer)
+  assert.equal(nextDrawer.dataset.mobileNavState, "closed")
+  assert.equal(nextDrawer.hasAttribute("inert"), true)
+  assert.equal(nextBackground.hasAttribute("inert"), false)
+  assert.equal(nextTrigger.attributes.get("aria-expanded"), "false")
+
+  navigation.open()
+  assert.equal(nextDrawer.dataset.mobileNavState, "open")
+  assert.equal(drawer.dataset.mobileNavState, "closed")
   assert.equal(trigger.attributes.get("aria-expanded"), "false")
 })
