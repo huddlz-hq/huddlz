@@ -15,7 +15,12 @@ defmodule BrowserPictureSteps do
                local_paths: [Path.expand("test/fixtures/test_image.jpg")]
              )
 
-    conn = assert_has(context.conn, "#open-remove-avatar-dialog")
+    # The crop sheet opens first; the picture is used as it is.
+    conn =
+      context.conn
+      |> assert_has("#avatar-upload-crop[open]")
+      |> click_button("Use photo")
+      |> assert_has("#open-remove-avatar-dialog")
 
     Map.put(context, :conn, conn)
   end
