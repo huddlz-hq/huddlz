@@ -654,6 +654,13 @@ defmodule Huddlz.Communities.GroupTest do
 
       assert Enum.any?(memberships, &(&1.user_id == new_owner.id and &1.role == :owner))
       assert Enum.any?(memberships, &(&1.user_id == owner.id and &1.role == :organizer))
+
+      assert {:ok, _} = Huddlz.Communities.get_group_for_organize(transferred.slug, actor: owner)
+      refute Ash.can?({transferred, :update_details}, owner)
+      refute Ash.can?({transferred, :transfer_ownership, %{new_owner_id: owner.id}}, owner)
+
+      assert {:error, %Ash.Error.Forbidden{}} =
+               Huddlz.Communities.transfer_group_ownership(transferred, owner.id, actor: owner)
     end
 
     test "owner cannot transfer ownership to a non-member", %{
@@ -688,6 +695,21 @@ defmodule Huddlz.Communities.GroupTest do
                group
                |> Ash.Changeset.for_update(:transfer_ownership, %{new_owner_id: target.id})
                |> Ash.update(actor: stranger)
+    end
+
+    for role <- [:member, :organizer] do
+      test "#{role} cannot transfer ownership", %{owner: owner, group: group} do
+        member = generate(user(role: :user))
+
+        generate(
+          group_member(group_id: group.id, user_id: member.id, role: unquote(role), actor: owner)
+        )
+
+        refute Ash.can?({group, :transfer_ownership, %{new_owner_id: member.id}}, member)
+
+        assert {:error, %Ash.Error.Forbidden{}} =
+                 Huddlz.Communities.transfer_group_ownership(group, member.id, actor: member)
+      end
     end
 
     test "rejects transferring ownership to the existing owner", %{owner: owner, group: group} do

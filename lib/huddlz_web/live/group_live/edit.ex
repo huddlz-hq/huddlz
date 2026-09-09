@@ -423,7 +423,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
         >Restore group</.button>
         <.link
           :if={@group.archived_at}
-          navigate={~p"/organize/#{@group.slug}/members"}
+          navigate={~p"/organize/#{@group.slug}/settings"}
           class="btn-secondary"
         >Manage ownership</.link>
       </section>

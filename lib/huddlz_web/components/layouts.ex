@@ -33,7 +33,7 @@ defmodule HuddlzWeb.Layouts do
 
   attr :active_organize_section, :atom,
     default: nil,
-    values: [nil, :overview, :huddlz, :members],
+    values: [nil, :overview, :huddlz, :members, :settings],
     doc: "active sub-tab inside an organize-group section"
 
   attr :sidebar_owned_groups, :list,
@@ -157,6 +157,14 @@ defmodule HuddlzWeb.Layouts do
                   aria-current={@active_organize_section == :members && "page"}
                 >
                   Members
+                </.link>
+                <.link
+                  :if={group.owner_id == @current_user.id}
+                  class={["sb-sub-item", @active_organize_section == :settings && "active"]}
+                  navigate={~p"/organize/#{group.slug}/settings"}
+                  aria-current={@active_organize_section == :settings && "page"}
+                >
+                  Group settings
                 </.link>
               </div>
             <% end %>

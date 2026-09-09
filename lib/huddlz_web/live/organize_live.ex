@@ -10,6 +10,7 @@ defmodule HuddlzWeb.OrganizeLive do
     * `/organize/:group_slug` — overview (KPIs + upcoming huddlz)
     * `/organize/:group_slug/huddlz` — huddlz list, lifecycle filters
     * `/organize/:group_slug/members` — roster grouped by role
+    * `/organize/:group_slug/settings` — owner-only group administration
   """
   use HuddlzWeb, :live_view
 
@@ -59,6 +60,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
     socket =
       socket
+      |> assign(:pending_member_action, nil)
       |> assign(:huddlz_filter, parse_huddlz_filter(params["filter"]))
       |> load_action(action, params, user)
 
@@ -116,6 +118,16 @@ defmodule HuddlzWeb.OrganizeLive do
     |> assign_members(members)
     |> assign(:invitation_count, length(invitations))
     |> stream(:invitations, invitations, reset: true)
+  end
+
+  defp load_section(socket, :settings, group, user) when group.owner_id == user.id do
+    assign_members(socket, list_group_members(group, user))
+  end
+
+  defp load_section(socket, :settings, group, _user) do
+    socket
+    |> assign(:pending_member_action, nil)
+    |> push_navigate(to: ~p"/organize/#{group.slug}")
   end
 
   defp load_group(slug, user) do
@@ -251,7 +263,7 @@ defmodule HuddlzWeb.OrganizeLive do
           :if={@group.owner_id == @current_user.id || @current_user.role == :admin}
           navigate={~p"/groups/#{@group.slug}/edit"}
           class="btn-secondary"
-        >Group settings</.link>
+        >Manage archival</.link>
       </section>
       <%= case @live_action do %>
         <% :index -> %>
@@ -273,8 +285,6 @@ defmodule HuddlzWeb.OrganizeLive do
             organizer_members={@streams.organizer_members}
             regular_members={@streams.regular_members}
             role_counts={@member_role_counts}
-            transfer_candidates={@transfer_candidates}
-            transfer_target_form={@transfer_target_form}
             current_user={@current_user}
           />
           <.invitations_view
@@ -284,6 +294,13 @@ defmodule HuddlzWeb.OrganizeLive do
             invitation_form={@invitation_form}
             invitations={@streams.invitations}
             invitation_count={@invitation_count}
+          />
+        <% :settings -> %>
+          <.settings_view
+            :if={@group.owner_id == @current_user.id}
+            group={@group}
+            transfer_candidates={@transfer_candidates}
+            transfer_target_form={@transfer_target_form}
           />
       <% end %>
 
@@ -300,6 +317,7 @@ defmodule HuddlzWeb.OrganizeLive do
   defp active_section(:overview), do: :overview
   defp active_section(:huddlz), do: :huddlz
   defp active_section(:members), do: :members
+  defp active_section(:settings), do: :settings
   defp active_section(_), do: nil
 
   # ─────────────────────────────────────────  PICKER (/organize)  ───
@@ -582,8 +600,6 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :organizer_members, :any, required: true
   attr :regular_members, :any, required: true
   attr :role_counts, :map, required: true
-  attr :transfer_candidates, :list, required: true
-  attr :transfer_target_form, Phoenix.HTML.Form, required: true
   attr :current_user, :map, required: true
 
   attr :can_edit_group, :boolean, required: true
@@ -595,17 +611,7 @@ defmodule HuddlzWeb.OrganizeLive do
       {:member, assigns.regular_members, assigns.role_counts.member}
     ]
 
-    assigns =
-      assigns
-      |> assign(:grouped, grouped)
-      |> assign(
-        :can_transfer_ownership,
-        assigns.group.owner_id == assigns.current_user.id and assigns.transfer_candidates != []
-      )
-      |> assign(
-        :transfer_candidate_options,
-        Enum.map(assigns.transfer_candidates, &{member_name(&1), &1.id})
-      )
+    assigns = assign(assigns, :grouped, grouped)
 
     ~H"""
     <div class="page-head">
@@ -660,23 +666,61 @@ defmodule HuddlzWeb.OrganizeLive do
         </div>
       <% end %>
     </div>
+    """
+  end
+
+  attr :group, :map, required: true
+  attr :transfer_candidates, :list, required: true
+  attr :transfer_target_form, Phoenix.HTML.Form, required: true
+
+  defp settings_view(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :transfer_candidate_options,
+        Enum.map(assigns.transfer_candidates, &{member_name(&1), &1.id})
+      )
+
+    ~H"""
+    <div class="page-head">
+      <div>
+        <h1>Group settings</h1>
+        <p>Owner-only administration for {@group.name}.</p>
+      </div>
+    </div>
+    <section id="group-details-settings" class="panel">
+      <div class="panel-head">
+        <h2>Group details</h2>
+      </div>
+      <p class="muted">Manage the group's details, cover image, visibility, and archival.</p>
+      <.link
+        id="edit-group-details"
+        navigate={~p"/groups/#{@group.slug}/edit"}
+        class="btn-secondary mt-4"
+      >
+        Edit group details
+      </.link>
+    </section>
 
     <section
-      :if={@can_transfer_ownership}
       id="ownership-danger-zone"
       class="panel mt-6 border-error/40"
       aria-labelledby="ownership-danger-zone-title"
     >
       <div class="panel-head">
         <div>
-          <h2 id="ownership-danger-zone-title">Ownership</h2>
+          <h2 id="ownership-danger-zone-title">Danger zone</h2>
           <p class="panel-sub">
             Transfer final control of this group. You will remain an organizer.
           </p>
         </div>
       </div>
 
+      <p :if={@transfer_candidates == []} class="muted mt-4">
+        Add a member before transferring ownership.
+      </p>
       <.form
+        :if={@transfer_candidates != []}
         for={@transfer_target_form}
         id="transfer-ownership-target-form"
         phx-submit="open_transfer_action"
@@ -948,7 +992,7 @@ defmodule HuddlzWeb.OrganizeLive do
   def handle_event(
         "open_transfer_action",
         %{"transfer_target" => %{"member_id" => id}},
-        socket
+        %{assigns: %{live_action: :settings}} = socket
       ) do
     open_member_action(socket, id, :transfer)
   end
@@ -1085,8 +1129,9 @@ defmodule HuddlzWeb.OrganizeLive do
     end
   end
 
-  defp refresh_members_if_visible(%{assigns: %{live_action: :members}} = socket, group, user) do
-    load_section(socket, :members, group, user)
+  defp refresh_members_if_visible(%{assigns: %{live_action: action}} = socket, group, user)
+       when action in [:members, :settings] do
+    load_section(socket, action, group, user)
   end
 
   defp refresh_members_if_visible(socket, _group, _user), do: socket
@@ -1155,7 +1200,6 @@ defmodule HuddlzWeb.OrganizeLive do
   defp parse_member_action("promote"), do: {:ok, :promote}
   defp parse_member_action("demote"), do: {:ok, :demote}
   defp parse_member_action("remove"), do: {:ok, :remove}
-  defp parse_member_action("transfer"), do: {:ok, :transfer}
   defp parse_member_action(_action), do: :error
 
   defp confirmation_valid?(:transfer, socket) do
@@ -1201,7 +1245,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp member_action_description(%{type: :transfer}, group),
     do:
-      "You will become an organizer. The new owner will control #{group.name}, including roles and ownership."
+      "The selected member becomes the owner of #{group.name}. You will become an organizer. You cannot reverse this transfer without the new owner’s cooperation."
 
   defp member_action_confirm_label(:promote), do: "Promote to organizer"
   defp member_action_confirm_label(:demote), do: "Demote to member"

@@ -51,7 +51,7 @@ defmodule GroupMembershipVisibilitySteps do
 
     Phoenix.ConnTest.build_conn()
     |> login(owner)
-    |> visit("/organize/#{group.slug}/members")
+    |> visit("/organize/#{group.slug}/settings")
     |> select("New owner", option: target.display_name)
     |> click_button("Transfer group ownership")
     |> fill_in("Type #{name} to confirm", with: name)
