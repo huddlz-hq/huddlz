@@ -32,6 +32,7 @@ defmodule Huddlz.Communities.Huddl do
       update :publish_huddl, :publish
       update :cancel_huddl, :cancel
       update :rsvp_to_huddl, :rsvp
+      update :join_huddl_waitlist, :join_waitlist
       update :cancel_rsvp_to_huddl, :cancel_rsvp
       destroy :delete_huddl, :destroy
     end
@@ -53,6 +54,7 @@ defmodule Huddlz.Communities.Huddl do
       :is_private,
       :thumbnail_url,
       :max_attendees,
+      :attendance_state,
       :lifecycle_state,
       :published_at,
       :cancelled_at,
@@ -75,6 +77,7 @@ defmodule Huddlz.Communities.Huddl do
       patch :publish, route: "/:id/publish"
       patch :cancel, route: "/:id/cancel"
       patch :rsvp, route: "/:id/rsvp"
+      patch :join_waitlist, route: "/:id/join_waitlist"
       patch :cancel_rsvp, route: "/:id/cancel_rsvp"
       delete :destroy
     end
@@ -918,6 +921,24 @@ defmodule Huddlz.Communities.Huddl do
   end
 
   calculations do
+    calculate :attendance_state, :string do
+      public? true
+      description "The current caller's attendance: none, waitlisted, or confirmed"
+
+      calculation expr(
+                    cond do
+                      exists(attendees, user_id == ^actor(:id) and not is_nil(waitlisted_at)) ->
+                        "waitlisted"
+
+                      exists(attendees, user_id == ^actor(:id) and is_nil(waitlisted_at)) ->
+                        "confirmed"
+
+                      true ->
+                        "none"
+                    end
+                  )
+    end
+
     calculate :status, :atom do
       calculation expr(
                     cond do
