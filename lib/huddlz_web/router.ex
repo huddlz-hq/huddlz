@@ -41,6 +41,7 @@ defmodule HuddlzWeb.Router do
     get "/sitemap.xml", SitemapController, :index
     get "/sitemap-:file", SitemapController, :child
     get "/og/huddlz/:id/card.png", OgImageController, :huddl
+    get "/og/groups/:slug/card.png", OgImageController, :group
   end
 
   scope "/gql" do

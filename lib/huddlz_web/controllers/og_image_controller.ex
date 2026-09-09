@@ -1,7 +1,7 @@
 defmodule HuddlzWeb.OgImageController do
   @moduledoc """
-  Serves the generated link-preview card for a public huddl. Private or
-  unpublished huddlz are as invisible here as they are on their page.
+  Serves the generated link-preview card for a public huddl or group. Private
+  or unpublished ones are as invisible here as they are on their page.
   """
   use HuddlzWeb, :controller
 
@@ -13,15 +13,28 @@ defmodule HuddlzWeb.OgImageController do
   def huddl(conn, %{"id" => id}) do
     with {:ok, huddl} <- Communities.get_huddl(id, load: [:status, :group], actor: nil),
          true <- shareable?(huddl) do
-      send_card(conn, huddl)
+      send_card(conn, OgImage.etag(huddl), fn -> OgImage.huddl_card(huddl) end, "huddl #{id}")
     else
       _ -> send_resp(conn, 404, "Not found")
     end
   end
 
-  defp send_card(conn, huddl) do
-    etag = OgImage.etag(huddl)
+  def group(conn, %{"slug" => slug}) do
+    case Communities.get_by_slug(slug, load: [:member_count], actor: nil) do
+      {:ok, %{is_public: true} = group} ->
+        send_card(
+          conn,
+          OgImage.group_etag(group),
+          fn -> OgImage.group_card(group) end,
+          "group #{slug}"
+        )
 
+      _ ->
+        send_resp(conn, 404, "Not found")
+    end
+  end
+
+  defp send_card(conn, etag, draw, subject) do
     conn =
       conn
       |> put_resp_header("cache-control", "public, max-age=3600")
@@ -31,19 +44,17 @@ defmodule HuddlzWeb.OgImageController do
     if etag in get_req_header(conn, "if-none-match") do
       send_resp(conn, 304, "")
     else
-      draw(conn, huddl)
+      respond(conn, draw.(), subject)
     end
   end
 
-  defp draw(conn, huddl) do
-    case OgImage.huddl_card(huddl) do
-      {:ok, png} ->
-        conn |> put_resp_content_type("image/png") |> send_resp(200, png)
+  defp respond(conn, {:ok, png}, _subject) do
+    conn |> put_resp_content_type("image/png") |> send_resp(200, png)
+  end
 
-      {:error, reason} ->
-        Logger.error("Could not draw the preview card for huddl #{huddl.id}: #{inspect(reason)}")
-        conn |> delete_resp_header("cache-control") |> send_resp(500, "Preview unavailable")
-    end
+  defp respond(conn, {:error, reason}, subject) do
+    Logger.error("Could not draw the preview card for #{subject}: #{inspect(reason)}")
+    conn |> delete_resp_header("cache-control") |> send_resp(500, "Preview unavailable")
   end
 
   defp shareable?(%{is_private: false, group: %{is_public: true}, lifecycle_state: state})
