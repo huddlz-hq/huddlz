@@ -17,6 +17,24 @@ defmodule HuddlzWeb.Api.Graphql.GroupTest do
   end
 
   describe "searchGroups query" do
+    test "accepts location and distance arguments", %{conn: conn} do
+      owner = generate(user())
+      nearby = generate(group(latitude: 30.2672, longitude: -97.7431, actor: owner))
+      generate(group(latitude: 29.7604, longitude: -95.3698, actor: owner))
+
+      conn =
+        gql_post(conn, """
+        { searchGroups(searchLatitude: 30.2672, searchLongitude: -97.7431, distanceMiles: 25) {
+          results { id }
+        } }
+        """)
+
+      assert %{"data" => %{"searchGroups" => %{"results" => [%{"id" => id}]}}} =
+               json_response(conn, 200)
+
+      assert id == nearby.id
+    end
+
     test "matches groups by name via trigram search", %{conn: conn} do
       owner = generate(user())
 

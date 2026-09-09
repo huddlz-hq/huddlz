@@ -2,6 +2,20 @@
 
 Anonymous clients can discover public huddlz with `GET /api/json/huddlz`.
 
+## Group location search
+
+`GET /api/json/groups/search` and GraphQL `searchGroups` accept
+`search_latitude`, `search_longitude`, and `distance_miles` (GraphQL:
+`searchLatitude`, `searchLongitude`, `distanceMiles`). Distance defaults to
+25 miles and accepts 5–100 miles. Supply both coordinates to filter by the
+group's home location; omit them for an unrestricted search. The optional
+`search` text argument combines with the location filter.
+
+Discover groups uses the account's home search location by default. API clients
+can obtain and apply the same profile defaults described below; read actions
+do not implicitly apply them. Groups that organize virtual huddlz follow the
+same home-location rule; see [the decision](adr/0002-group-discovery-location.md).
+
 ## Private profile and home search defaults
 
 Authenticated clients can read their current private profile with

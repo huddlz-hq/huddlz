@@ -429,7 +429,7 @@ defmodule HuddlzWeb.HuddlLive do
   end
 
   defp search_results(%{scope: :groups} = assigns, page) do
-    {groups, total} = list_groups(assigns.search_query, page, assigns[:current_user])
+    {groups, total} = list_groups(assigns, page, assigns[:current_user])
 
     page_info =
       if total > 0 do
@@ -500,8 +500,14 @@ defmodule HuddlzWeb.HuddlLive do
   defp sort_fields(:newest), do: [inserted_at: :desc]
   defp sort_fields(:soonest), do: [starts_at: :asc]
 
-  defp list_groups(query, page, actor) do
-    case Communities.search_groups(query,
+  defp list_groups(assigns, page, actor) do
+    filters = %{
+      search_latitude: if(assigns.location_active, do: assigns.location_lat),
+      search_longitude: if(assigns.location_active, do: assigns.location_lng),
+      distance_miles: assigns.distance_miles
+    }
+
+    case Communities.search_groups(assigns.search_query, filters,
            actor: actor,
            query: [filter: [is_public: true]],
            load: [:current_image_url, :member_count],
@@ -645,7 +651,7 @@ defmodule HuddlzWeb.HuddlLive do
         </.link>
       </div>
 
-      <div :if={@scope == :huddlz} class="filter-bar">
+      <div class="filter-bar">
         <div class="filter-group">
           <span class="filter-label">Within</span>
           <.live_component
@@ -681,7 +687,7 @@ defmodule HuddlzWeb.HuddlLive do
           </form>
         </div>
 
-        <div class="filter-group">
+        <div :if={@scope == :huddlz} class="filter-group">
           <span class="filter-label">Type</span>
           <div class="chip-group">
             <.chip
@@ -705,7 +711,7 @@ defmodule HuddlzWeb.HuddlLive do
           </div>
         </div>
 
-        <div class="filter-group">
+        <div :if={@scope == :huddlz} class="filter-group">
           <span class="filter-label">When</span>
           <div class="chip-group">
             <.chip
@@ -729,7 +735,7 @@ defmodule HuddlzWeb.HuddlLive do
           </div>
         </div>
 
-        <div class="filter-group">
+        <div :if={@scope == :huddlz} class="filter-group">
           <span class="filter-label">Sort</span>
           <div class="chip-group">
             <.chip patch={sort_toggle_url("soonest", assigns)} active={@sort == :soonest}>
