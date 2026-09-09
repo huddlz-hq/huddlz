@@ -35,6 +35,7 @@ The command builds the actual app assets, starts the test endpoint and Chromium,
 | Profile picture | Real file upload and image decode; removal button hit testing and pointer confirmation; dialog Tab containment, Escape, and focus restoration |
 | Mobile navigation | 320px drawer, native focus wrapping, inert background, dismissal and navigation |
 | Group cover | Valid, missing, and failed images; long details fit at 320px and on desktop |
+| Crop on upload | The crop sheet opens on choosing a picture, real pointer drags move it, and the upload is the 16:9 crop that was chosen; full-screen sheet at 320px |
 
 Browser scenarios live in `features/`, their steps in `steps/`, and Cucumber hooks in `support/`. `browser_features_test.exs` supplies explicit feature/step/support globs to Cucumber. The existing fast root and its steps are loaded only by the normal test runner. No Cucumber fork or second library is needed. Use descriptive tags such as `@calendar_browser`; `@browser` conflicts with the adapter's browser-selection option.
 

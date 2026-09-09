@@ -4709,8 +4709,8 @@ body .upload-meta { font-size: 12px; }
 
 /* Cover slot (`HuddlzWeb.Components.UploadComponents.cover_upload/1`):
    one 16:9 field that never changes size. Idle it is a dashed prompt;
-   dragging a file over it lights it cyan (LiveView adds
-   `phx-drop-target-active`); uploading, the browser's preview fills it
+   dragging a file over it lights it cyan (the `CoverCrop` hook adds
+   `is-dragover`); uploading, the browser's preview fills it
    with the progress over its bottom edge; uploaded, the cover as the
    card and page will show it with the actions over the corner; refused,
    the message lives inside. */
@@ -4734,7 +4734,7 @@ body .cover-slot {
   transition: border-color 120ms ease, background 120ms ease;
 }
 
-body .cover-slot.phx-drop-target-active {
+body .cover-slot.is-dragover {
   border-style: solid;
   border-color: var(--accent);
   background: var(--accent-soft);
@@ -4772,7 +4772,7 @@ body .cover-slot-icon {
   color: var(--muted);
 }
 
-body .cover-slot.phx-drop-target-active .cover-slot-icon { background: var(--panel); color: var(--accent-ink); }
+body .cover-slot.is-dragover .cover-slot-icon { background: var(--panel); color: var(--accent-ink); }
 
 body .cover-slot-icon.is-error {
   background: color-mix(in srgb, var(--danger) 12%, transparent);
@@ -4907,6 +4907,181 @@ body .cover-slot-caption {
 @media (prefers-reduced-motion: reduce) {
   body .cover-slot-track.is-busy > span,
   body .cover-slot-spinner { animation: none; }
+}
+
+/* Crop sheet (`HuddlzWeb.Components.UploadComponents.crop_sheet/1`, driven
+   by the `CoverCrop` hook): a native dialog that opens when a picture is
+   chosen, before it uploads. The picture sits fit and centred in the
+   window; what falls outside is dimmed, never hidden. Desktop is a 720px
+   panel whose stage grows to the fitted picture up to 480px; phones get
+   the sheet full screen with the window 16px in from the edges. */
+body dialog.crop-sheet {
+  width: min(720px, calc(100vw - 32px));
+  max-width: none;
+  max-height: calc(100vh - 32px);
+  margin: auto;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  flex-direction: column;
+  gap: 16px;
+}
+
+body dialog.crop-sheet[open] { display: flex; }
+
+body dialog.crop-sheet::backdrop {
+  background: var(--scrim);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+body .crop-sheet-head { display: flex; flex-direction: column; gap: 4px; padding-right: 40px; order: 0; }
+body .crop-sheet-title { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
+body .crop-sheet-hint { margin: -8px 0 0; order: 1; color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+body .crop-stage {
+  position: relative;
+  order: 2;
+  height: var(--crop-stage-h, 420px);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, #000 35%, var(--bg));
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+  outline: 0;
+}
+
+body .crop-stage:focus-visible { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent); }
+body .crop-stage.is-dragging { cursor: grabbing; }
+
+body .crop-pic {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  max-width: none;
+  pointer-events: none;
+  will-change: transform;
+}
+
+body .crop-window {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 9999px color-mix(in srgb, var(--bg) 64%, transparent);
+  outline: 1px solid color-mix(in srgb, #fff 60%, transparent);
+  outline-offset: -1px;
+  pointer-events: none;
+}
+
+body .crop-window[data-shape="square"] {
+  width: min(288px, 100%);
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+
+body .crop-stage.is-dragging .crop-window {
+  background-image: linear-gradient(to right, transparent calc(33.33% - 0.5px), color-mix(in srgb, #fff 40%, transparent) calc(33.33% - 0.5px), color-mix(in srgb, #fff 40%, transparent) calc(33.33% + 0.5px), transparent calc(33.33% + 0.5px), transparent calc(66.66% - 0.5px), color-mix(in srgb, #fff 40%, transparent) calc(66.66% - 0.5px), color-mix(in srgb, #fff 40%, transparent) calc(66.66% + 0.5px), transparent calc(66.66% + 0.5px)), linear-gradient(to bottom, transparent calc(33.33% - 0.5px), color-mix(in srgb, #fff 40%, transparent) calc(33.33% - 0.5px), color-mix(in srgb, #fff 40%, transparent) calc(33.33% + 0.5px), transparent calc(33.33% + 0.5px), transparent calc(66.66% - 0.5px), color-mix(in srgb, #fff 40%, transparent) calc(66.66% - 0.5px), color-mix(in srgb, #fff 40%, transparent) calc(66.66% + 0.5px), transparent calc(66.66% + 0.5px));
+}
+
+body .crop-zoom { order: 3; display: flex; align-items: center; gap: 12px; color: var(--muted); }
+body .crop-zoom > .hero-magnifying-glass-minus, body .crop-zoom > .hero-magnifying-glass-plus { flex: 0 0 auto; }
+
+body .crop-zoom input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 4px;
+  margin: 0;
+  background: var(--line-strong);
+  border-radius: 2px;
+  outline: 0;
+}
+
+body .crop-zoom input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  cursor: pointer;
+}
+
+body .crop-zoom input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  cursor: pointer;
+}
+
+body .crop-zoom input[type="range"]:focus-visible { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent); }
+
+body .crop-zoom-value {
+  min-width: 34px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+body .crop-sheet-foot { order: 4; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+body .crop-sheet-meta {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+body .crop-sheet-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+
+@media (max-width: 760px) {
+  body dialog.crop-sheet {
+    width: 100vw;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    gap: 0;
+  }
+
+  body .crop-sheet-head {
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    height: 56px;
+    padding: 0 56px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  body .crop-sheet-title { font-size: 16px; font-weight: 600; }
+  body .crop-sheet-hint { order: 3; margin: 0; padding: 0 16px 12px; text-align: center; font-size: 12px; }
+  body .crop-stage { order: 1; flex: 1 1 auto; height: auto; border-radius: 0; }
+  body .crop-window { width: calc(100% - 32px); }
+  body .crop-window[data-shape="square"] { width: min(288px, calc(100% - 32px)); }
+  body .crop-zoom { order: 2; padding: 16px 16px 12px; }
+  body .crop-sheet-foot { order: 4; padding: 0 16px 16px; }
+  body .crop-sheet-meta, body .crop-sheet-actions [data-crop-cancel] { display: none; }
+  body .crop-sheet-actions { flex: 1 1 auto; }
+  body .crop-sheet-actions .btn-primary { flex: 1 1 auto; justify-content: center; height: 48px; font-size: 15px; }
 }
 
 /* Slug-change warning panel */
