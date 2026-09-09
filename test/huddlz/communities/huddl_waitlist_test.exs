@@ -1,10 +1,49 @@
 defmodule Huddlz.Communities.HuddlWaitlistTest do
   use Huddlz.DataCase, async: true
 
+  alias Huddlz.Communities
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupMember
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.HuddlAttendee
+
+  describe "archived waitlist history" do
+    setup :setup_group_and_capped_huddl
+
+    @tag :archived_waitlist
+    test "owners and organizers retain access while ordinary members remain excluded", %{
+      owner: owner,
+      member: member,
+      waitlister: waitlister,
+      group: group,
+      huddl: huddl
+    } do
+      organizer = generate(user(role: :user))
+
+      generate(
+        group_member(group_id: group.id, user_id: organizer.id, role: :organizer, actor: owner)
+      )
+
+      Communities.rsvp_huddl!(huddl, actor: member)
+      Communities.join_waitlist_huddl!(huddl, actor: waitlister)
+
+      for manager <- [owner, organizer] do
+        assert [%{user_id: user_id}] = Communities.list_huddl_waitlist!(huddl.id, actor: manager)
+        assert user_id == waitlister.id
+      end
+
+      Communities.cancel_huddl!(huddl, nil, actor: owner)
+      Communities.archive_group!(group, actor: owner)
+
+      for manager <- [owner, organizer] do
+        assert [%{user_id: user_id}] = Communities.list_huddl_waitlist!(huddl.id, actor: manager)
+        assert user_id == waitlister.id
+      end
+
+      assert [] == Communities.list_huddl_waitlist!(huddl.id, actor: member)
+      assert [] == Communities.list_huddl_waitlist!(huddl.id, actor: waitlister)
+    end
+  end
 
   describe "joining the waitlist" do
     setup :setup_group_and_capped_huddl
