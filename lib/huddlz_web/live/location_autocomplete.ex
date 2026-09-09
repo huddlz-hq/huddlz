@@ -199,11 +199,13 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
       </form>
 
       <%!-- Suggestion dropdown --%>
+      <.suggestion_loading :if={!@selected && @loading && @suggestions == []} id={@id} />
+
       <div
         :if={!@selected && @show_suggestions && @suggestions != []}
         id={"#{@id}-listbox"}
         role="listbox"
-        class="filter-location-listbox"
+        class={["filter-location-listbox", @loading && "is-stale"]}
       >
         <button
           :for={{s, idx} <- Enum.with_index(@suggestions)}
@@ -312,11 +314,13 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
           </button>
         </div>
 
+        <.suggestion_loading :if={@loading && @suggestions == []} id={@id} style="min-width: 100%" />
+
         <div
           :if={@show_suggestions && @suggestions != []}
           id={"#{@id}-listbox"}
           role="listbox"
-          class="filter-location-listbox"
+          class={["filter-location-listbox", @loading && "is-stale"]}
           style="min-width: 100%"
         >
           <button
@@ -346,6 +350,30 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
       <% end %>
 
       <p :if={@error} class="form-error">{@error}</p>
+    </div>
+    """
+  end
+
+  # Placeholder rows shown while a place search is in flight and there is no
+  # earlier list to keep on screen. Held back by the stylesheet for the
+  # loading delay so a fast answer never flashes it.
+  attr :id, :string, required: true
+  attr :style, :string, default: nil
+
+  defp suggestion_loading(assigns) do
+    ~H"""
+    <div
+      id={"#{@id}-searching"}
+      class="filter-location-listbox is-searching"
+      role="status"
+      aria-busy="true"
+      aria-label="Searching places"
+      style={@style}
+    >
+      <div :for={width <- [70, 55, 80]} class="filter-location-option is-skeleton" aria-hidden="true">
+        <span class="skel skel-line" style={"--w: #{width}%"}></span>
+        <span class="skel skel-line skel-secondary"></span>
+      </div>
     </div>
     """
   end
