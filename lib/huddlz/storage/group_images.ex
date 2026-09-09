@@ -31,7 +31,7 @@ defmodule Huddlz.Storage.GroupImages do
          {:ok, %{size: size}} <- File.stat(source_path),
          :ok <- validate_file_size(size),
          {:ok, image_binary} <- File.read(source_path),
-         {:ok, thumbnail_binary} <- ImageProcessing.create_banner_thumbnail(image_binary),
+         {:ok, thumbnail_binary} <- banner_thumbnail(image_binary),
          storage_path = generate_path(group_id, original_filename),
          thumbnail_path = generate_thumbnail_path(storage_path),
          {:ok, _} <- Storage.put(source_path, storage_path, content_type),
@@ -61,7 +61,7 @@ defmodule Huddlz.Storage.GroupImages do
          {:ok, %{size: size}} <- File.stat(source_path),
          :ok <- validate_file_size(size),
          {:ok, image_binary} <- File.read(source_path),
-         {:ok, thumbnail_binary} <- ImageProcessing.create_banner_thumbnail(image_binary),
+         {:ok, thumbnail_binary} <- banner_thumbnail(image_binary),
          storage_path = generate_pending_path(original_filename),
          thumbnail_path = generate_thumbnail_path(storage_path),
          {:ok, _} <- Storage.put(source_path, storage_path, content_type),
@@ -72,6 +72,15 @@ defmodule Huddlz.Storage.GroupImages do
          thumbnail_path: thumbnail_path,
          size_bytes: size
        }}
+    end
+  end
+
+  # A file the image library cannot decode is one error to the person,
+  # whatever the library says about it.
+  defp banner_thumbnail(image_binary) do
+    case ImageProcessing.create_banner_thumbnail(image_binary) do
+      {:ok, thumbnail} -> {:ok, thumbnail}
+      {:error, _reason} -> {:error, :invalid_image}
     end
   end
 

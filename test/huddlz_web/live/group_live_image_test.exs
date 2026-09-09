@@ -30,7 +30,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
       select_group_location(view)
 
       assert has_element?(view, ".panel-head h2", "Cover image")
-      assert has_element?(view, ".upload-zone")
+      assert has_element?(view, ".cover-upload[data-state=idle]")
       assert has_element?(view, "*", "Drop a 16:9 image")
       assert has_element?(view, "*", "JPG, PNG, WebP · 5 MB max")
     end
@@ -81,6 +81,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         }
       ])
       |> render_upload("test_banner.jpg")
+      |> then(fn _ -> render_async(view, 5_000) end)
 
       # Should show "Image uploaded" confirmation
       html = render(view)
@@ -122,6 +123,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         }
       ])
       |> render_upload("banner.jpg")
+      |> then(fn _ -> render_async(view, 5_000) end)
 
       # Submit form
       view
@@ -161,6 +163,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         }
       ])
       |> render_upload("to_cancel.jpg")
+      |> then(fn _ -> render_async(view, 5_000) end)
 
       # Should show uploaded
       assert render(view) =~ "Image uploaded"
@@ -187,6 +190,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         }
       ])
       |> render_upload("first.jpg")
+      |> then(fn _ -> render_async(view, 5_000) end)
 
       # Capture the first image ID from the database
       first_images =
@@ -208,6 +212,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         }
       ])
       |> render_upload("second.jpg")
+      |> then(fn _ -> render_async(view, 5_000) end)
 
       # Check that the first image is now soft-deleted
       reloaded_first = Ash.get!(GroupImage, first_image.id, authorize?: false)
@@ -231,6 +236,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         }
       ])
       |> render_upload("preserved.jpg")
+      |> then(fn _ -> render_async(view, 5_000) end)
 
       # Should show uploaded
       assert render(view) =~ "Image uploaded"
@@ -290,7 +296,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         |> live(~p"/groups/#{group.slug}/edit")
 
       assert has_element?(view, "h2", "Cover image")
-      assert has_element?(view, ".upload-zone")
+      assert has_element?(view, ".cover-upload[data-state=idle]")
     end
 
     test "shows current image when group has one", %{conn: conn, owner: owner, group: group} do
@@ -331,6 +337,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         }
       ])
       |> render_upload("new_banner.jpg")
+      |> then(fn _ -> render_async(view, 5_000) end)
 
       html = render(view)
       assert html =~ "New image uploaded. Save to apply."
@@ -351,6 +358,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         }
       ])
       |> render_upload("save_test.jpg")
+      |> then(fn _ -> render_async(view, 5_000) end)
 
       # Submit form
       view
@@ -409,6 +417,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         }
       ])
       |> render_upload("replacement.jpg")
+      |> then(fn _ -> render_async(view, 5_000) end)
 
       # Should show pending preview
       assert render(view) =~ "New image uploaded"
@@ -530,8 +539,8 @@ defmodule HuddlzWeb.GroupLiveImageTest do
 
       assert updated_group.current_image_url == nil
       refute has_element?(view, "#remove-group-image-dialog")
-      refute has_element?(view, ".image-preview", "Current image")
-      assert has_element?(view, ".upload-zone", "Drop a 16:9 image")
+      refute has_element?(view, ".cover-upload", "Current image")
+      assert has_element?(view, ".cover-upload[data-state=idle]", "Drop a 16:9 image")
       assert has_element?(view, "*", "Image removed")
     end
   end
@@ -557,6 +566,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         }
       ])
       |> render_upload("orphan.jpg")
+      |> then(fn _ -> render_async(view, 5_000) end)
 
       # Navigate away (implicit - just don't submit)
       # The pending image should exist with nil group_id

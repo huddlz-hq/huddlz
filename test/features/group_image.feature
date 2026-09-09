@@ -38,11 +38,25 @@ Feature: Group Image Management
     And I fill in "Description" with "A group with an image"
     And I select "Saint Augustine, FL, USA" as the group city in "America/New_York"
     And I upload "test/fixtures/test_image.jpg" to "Cover image"
-    Then I should see "Image uploaded"
+    Then the cover slot shows the picture as it will appear on the group
+    And I should see "Image uploaded"
     When I click "Create group"
     Then I should see "Group created successfully"
     And I should see "Image Test Group"
     And the group "Image Test Group" should have an image
+
+  Scenario: A file that is not an image is refused inside the cover slot and the form stays usable
+    Given I am signed in as "group-image-owner@example.com"
+    When I visit "/groups/new"
+    And I upload "test/fixtures/corrupt_image.jpg" to "Cover image"
+    Then the cover slot says "That file could not be read as an image."
+    And the cover slot still offers to browse for another
+    When I fill in "Group name" with "Still Usable Group"
+    And I fill in "Description" with "The form survived a bad file"
+    And I select "Saint Augustine, FL, USA" as the group city in "America/New_York"
+    And I click "Create group"
+    Then I should see "Group created successfully"
+    And the group "Still Usable Group" should not have an image
 
   Scenario: Canceling a pending image before saving group
     Given I am signed in as "group-image-owner@example.com"

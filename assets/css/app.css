@@ -4677,7 +4677,8 @@ body .slug-control .form-input:focus { box-shadow: none; }
 
 body .warn-text { color: var(--warn); }
 
-/* Upload zone */
+/* Upload zone: the dashed multi-file dropzone the huddl photos section
+   uses. Covers use the cover slot below. */
 body .upload-zone {
   display: flex;
   flex-direction: column;
@@ -4691,6 +4692,8 @@ body .upload-zone {
   text-align: center;
 }
 
+body .upload-zone.phx-drop-target-active { border-style: solid; border-color: var(--accent); background: var(--accent-soft); }
+
 body .upload-icon {
   width: 44px;
   height: 44px;
@@ -4702,30 +4705,209 @@ body .upload-icon {
 }
 
 body .upload-prompt { color: var(--soft); font-size: 14px; }
-body .upload-link { color: var(--accent-ink); font-weight: 700; cursor: pointer; }
-body .upload-link:hover { text-decoration: underline; }
 body .upload-meta { font-size: 12px; }
 
-body .image-preview .card-cover {
-  border-radius: var(--radius-sm);
+/* Cover slot (`HuddlzWeb.Components.UploadComponents.cover_upload/1`):
+   one 16:9 field that never changes size. Idle it is a dashed prompt;
+   dragging a file over it lights it cyan (LiveView adds
+   `phx-drop-target-active`); uploading, the browser's preview fills it
+   with the progress over its bottom edge; uploaded, the cover as the
+   card and page will show it with the actions over the corner; refused,
+   the message lives inside. */
+body .cover-upload { display: flex; flex-direction: column; gap: 10px; }
+
+body .cover-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
   aspect-ratio: 16 / 9;
-  background-size: cover;
-  background-position: center;
+  padding: 24px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--bg) 40%, transparent);
+  text-align: center;
+  overflow: hidden;
+  transition: border-color 120ms ease, background 120ms ease;
 }
 
-body .image-preview-foot {
+body .cover-slot.phx-drop-target-active {
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+body .cover-upload[data-state="uploading"] .cover-slot,
+body .cover-upload[data-state="uploaded"] .cover-slot {
+  padding: 0;
+  border-style: solid;
+  border-color: var(--line);
+  background: var(--panel-2);
+}
+
+body .cover-upload[data-state="error"] .cover-slot {
+  border-style: solid;
+  border-color: var(--danger);
+}
+
+body .cover-slot-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+body .cover-slot-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--panel-2);
+  color: var(--muted);
+}
+
+body .cover-slot.phx-drop-target-active .cover-slot-icon { background: var(--panel); color: var(--accent-ink); }
+
+body .cover-slot-icon.is-error {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+}
+
+body .cover-slot-prompt,
+body .cover-slot-error {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+body .cover-slot-error { color: var(--danger); }
+body .cover-slot-meta, body .cover-slot-hint { margin: 0; color: var(--muted); font-size: 12px; }
+body .cover-slot-prompt, body .cover-slot-hint { cursor: pointer; }
+body .upload-link { color: var(--accent-ink); font-weight: 700; cursor: pointer; }
+body .cover-slot-prompt:hover .upload-link, body .cover-slot-hint:hover .upload-link { text-decoration: underline; }
+
+/* The progress bar over the bottom edge of the preview. */
+body .cover-slot-bar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-  margin-top: 10px;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  text-align: left;
 }
 
-body .image-preview-actions { display: flex; gap: 8px; }
-body .image-preview-progress { margin-top: 12px; }
-body .upload-replace { cursor: pointer; }
+body .cover-slot-bar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+body .cover-slot-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body .cover-slot-pct { margin-left: auto; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+
+body .cover-slot-cancel {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+body .cover-slot-cancel:hover { color: var(--text); background: var(--panel-2); }
+
+body .cover-slot-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--line);
+  overflow: hidden;
+}
+
+body .cover-slot-track > span {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+}
+
+body .cover-slot-track.is-busy > span { animation: cover-slot-busy 1.1s ease-in-out infinite alternate; }
+
+@keyframes cover-slot-busy {
+  from { margin-left: 0; }
+  to { margin-left: 60%; }
+}
+
+body .cover-slot-spinner {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  border: 2px solid var(--accent-ink);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: cover-slot-spin 0.8s linear infinite;
+}
+
+@keyframes cover-slot-spin { to { transform: rotate(360deg); } }
+
+/* Replace and the caller's actions over the corner of an uploaded cover. */
+body .cover-slot-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+body .cover-slot-actions .btn-secondary,
+body .cover-slot-actions .btn-muted,
+body .cover-slot-actions .btn-primary { background: var(--panel); }
+body .cover-slot-actions .btn-primary { background: var(--accent); }
+body .cover-slot-actions .btn-muted { border-color: var(--line); color: var(--soft); }
+body .cover-slot-actions .btn-muted:hover { color: var(--text); }
+body .cover-slot-replace { cursor: pointer; }
+
+body .cover-slot-caption {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body .cover-slot-track.is-busy > span,
+  body .cover-slot-spinner { animation: none; }
+}
 
 /* Slug-change warning panel */
 body .slug-warn {
