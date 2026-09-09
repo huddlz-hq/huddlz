@@ -26,12 +26,34 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   end
 
   @impl true
-  def handle_params(%{"group_slug" => group_slug, "id" => id}, _, socket) do
+  def handle_params(%{"group_slug" => group_slug, "id" => id} = params, _, socket) do
     if socket.assigns[:huddl] && socket.assigns.huddl.id == id do
       {:noreply, apply_modal_state(socket)}
     else
-      load_huddl(socket, group_slug, id)
+      {:noreply, socket} = load_huddl(socket, group_slug, id)
+      {:noreply, preset_edit_type(socket, params["edit_type"])}
     end
+  end
+
+  # `?edit_type=all` opens a recurring huddl on "Whole series", the way the
+  # organizer's series entry links here.
+  defp preset_edit_type(%{assigns: %{huddl: %{huddl_template_id: id}}} = socket, "all")
+       when not is_nil(id),
+       do: apply_edit_type(socket, "all")
+
+  defp preset_edit_type(socket, _edit_type), do: socket
+
+  defp apply_edit_type(socket, type) do
+    current_params = socket.assigns.form.source.params || %{}
+    updated_params = Map.put(current_params, "edit_type", type)
+
+    socket =
+      socket
+      |> update_event_type_visibility(updated_params)
+      |> update_calculated_end_time(updated_params)
+
+    form = AshPhoenix.Form.validate(socket.assigns.form, updated_params)
+    assign(socket, :form, to_form(form))
   end
 
   defp load_huddl(socket, group_slug, id) do
@@ -401,16 +423,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
   @impl true
   def handle_event("set_edit_type", %{"type" => type}, socket) when type in ["instance", "all"] do
-    current_params = socket.assigns.form.source.params || %{}
-    updated_params = Map.put(current_params, "edit_type", type)
-
-    socket =
-      socket
-      |> update_event_type_visibility(updated_params)
-      |> update_calculated_end_time(updated_params)
-
-    form = AshPhoenix.Form.validate(socket.assigns.form, updated_params)
-    {:noreply, assign(socket, :form, to_form(form))}
+    {:noreply, apply_edit_type(socket, type)}
   end
 
   @impl true

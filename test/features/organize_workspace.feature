@@ -153,8 +153,7 @@ Feature: Organizer workspace
     And the huddl "Synthwave Night" exists in group "Cyberpunk Builders" hosted by "host+organize-workspace@example.com"
     And I am signed in as "host+organize-workspace@example.com"
     When I visit "/organize/cyberpunk-builders/huddlz"
-    Then I should see "Published huddlz"
-    And I should see "Synthwave Night"
+    Then I should see "Synthwave Night"
 
   Scenario: Huddlz tab Past filter lists wrapped huddlz
     Given a public group "Cyberpunk Builders" exists with owner "host+organize-workspace@example.com"
@@ -162,8 +161,7 @@ Feature: Organizer workspace
     And I am signed in as "host+organize-workspace@example.com"
     When I visit "/organize/cyberpunk-builders/huddlz"
     And I click "Past"
-    Then I should see "Past huddlz"
-    And I should see "Last Year's Demoday"
+    Then I should see "Last Year's Demoday"
     And I should not see "Create your first huddl"
 
   Scenario: Huddlz tab does not list huddlz from other groups
@@ -175,12 +173,12 @@ Feature: Organizer workspace
     Then I should see "No huddlz scheduled"
     And I should not see "Modular Jam"
 
-  Scenario: Huddlz rows link to the huddl edit page
+  Scenario: Huddlz rows link to the huddl page and offer Edit
     Given a public group "Cyberpunk Builders" exists with owner "host+organize-workspace@example.com"
     And the huddl "Synthwave Night" exists in group "Cyberpunk Builders" hosted by "host+organize-workspace@example.com"
     And I am signed in as "host+organize-workspace@example.com"
     When I visit "/organize/cyberpunk-builders/huddlz"
-    Then the page should link "Synthwave Night" to its huddl edit screen
+    Then the organizer row for "Synthwave Night" links to the huddl and offers "Edit"
 
   Scenario: Members tab shows the roster grouped by role
     Given a public group "Cyberpunk Builders" exists with owner "host+organize-workspace@example.com"

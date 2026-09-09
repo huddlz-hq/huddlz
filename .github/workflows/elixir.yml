@@ -232,7 +232,12 @@ jobs:
     - name: Install Chromium and system dependencies
       env:
         PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/_build/browser/browsers
-      run: assets/node_modules/.bin/playwright install --with-deps chromium --only-shell
+      # The runner image carries Google's Chrome apt source, which the
+      # Playwright dependency install refreshes even though only Chromium is
+      # wanted; when that mirror's index is inconsistent the whole step fails.
+      run: |
+        sudo grep -rl "dl.google.com" /etc/apt/sources.list.d | xargs -r sudo rm -f
+        assets/node_modules/.bin/playwright install --with-deps chromium --only-shell
     - name: Run browser scenarios
       timeout-minutes: 2
       run: mix test.browser

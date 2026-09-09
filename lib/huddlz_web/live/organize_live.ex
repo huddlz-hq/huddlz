@@ -18,9 +18,17 @@ defmodule HuddlzWeb.OrganizeLive do
   alias Huddlz.Communities.MembershipEvents
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
+  alias HuddlzWeb.Live.Helpers.BrowserTimeZone
+  alias HuddlzWeb.Live.Helpers.HuddlCardHelpers
+
+  require Ash.Query
 
   @group_loads [:current_image_url, :member_count]
-  @huddl_loads [:rsvp_count, :status, :group]
+  @huddl_loads [:rsvp_count, :status, :group, :display_image_url, :huddl_template]
+  @huddlz_filters [:published, :draft, :past, :cancelled]
+  # Rows shown before "Show more". A weekly series alone can run to a
+  # hundred dates, so the list pages rather than folding anything.
+  @huddlz_page 20
   @upcoming_loads [:rsvp_count, :group]
   @upcoming_preview_limit 5
 
@@ -29,9 +37,12 @@ defmodule HuddlzWeb.OrganizeLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    time_zone = BrowserTimeZone.for_socket(socket)
+
     {:ok,
      socket
      |> assign(:page_title, "Organizer workspace")
+     |> assign(:today, DateTime.now!(time_zone) |> DateTime.to_date())
      |> assign(:group, nil)
      |> assign(:owned_groups, [])
      |> assign(:huddlz_list, [])
@@ -107,7 +118,12 @@ defmodule HuddlzWeb.OrganizeLive do
   defp load_section(socket, :huddlz, group, user) do
     state = socket.assigns.huddlz_filter
     huddlz = list_group_huddlz(group, state, user)
-    assign(socket, :huddlz_list, huddlz)
+    counts = Map.new(@huddlz_filters, &{&1, count_group_huddlz(group, &1, user)})
+
+    socket
+    |> assign(:huddlz_list, huddlz)
+    |> assign(:huddlz_limit, @huddlz_page)
+    |> assign(:huddlz_counts, counts)
   end
 
   defp load_section(socket, :members, group, user) do
@@ -154,6 +170,13 @@ defmodule HuddlzWeb.OrganizeLive do
         sort: [starts_at: state_sort_dir(state)]
       ]
     )
+  end
+
+  defp count_group_huddlz(group, state, user) do
+    Huddlz.Communities.Huddl
+    |> Ash.Query.for_read(:huddlz_for_organizer, %{state: state}, actor: user)
+    |> Ash.Query.filter(group_id == ^group.id)
+    |> Ash.count!(actor: user)
   end
 
   defp list_group_members(group, user) do
@@ -276,7 +299,14 @@ defmodule HuddlzWeb.OrganizeLive do
             open_rsvps={@open_rsvps}
           />
         <% :huddlz -> %>
-          <.huddlz_view group={@group} huddlz={@huddlz_list} filter={@huddlz_filter} />
+          <.huddlz_view
+            group={@group}
+            huddlz={@huddlz_list}
+            limit={@huddlz_limit}
+            counts={@huddlz_counts}
+            filter={@huddlz_filter}
+            today={@today}
+          />
         <% :members -> %>
           <.members_view
             group={@group}
@@ -475,16 +505,32 @@ defmodule HuddlzWeb.OrganizeLive do
   # ─────────────────────────────────────────  HUDDLZ  ───
   attr :group, :map, required: true
   attr :huddlz, :list, required: true
+  attr :limit, :integer, required: true
+  attr :counts, :map, required: true
   attr :filter, :atom, required: true
+  attr :today, Date, required: true
 
   defp huddlz_view(assigns) do
+    shown = Enum.take(assigns.huddlz, assigns.limit)
+
+    assigns =
+      assigns
+      |> assign(:days, organizer_days(shown, assigns.today))
+      |> assign(:remaining, length(assigns.huddlz) - length(shown))
+      |> assign(:page, @huddlz_page)
+
     ~H"""
     <div class="page-head">
       <div>
         <h1>Huddlz</h1>
-        <p>Every huddl in {@group.name}. Click one to manage it.</p>
+        <p>
+          Every huddl in {@group.name}, in date order. A repeat mark means it is part of a series.
+        </p>
       </div>
       <div class="actions">
+        <.link class="btn-secondary" navigate={~p"/calendar?view=month"}>
+          <.icon name="hero-calendar" class="size-4" /> Month view
+        </.link>
         <a
           :if={is_nil(@group.archived_at)}
           class="btn-primary"
@@ -496,17 +542,13 @@ defmodule HuddlzWeb.OrganizeLive do
     </div>
 
     <div class="filters" id="organize-huddlz-filters">
-      <.chip patch={huddlz_filter_path(@group, :draft)} active={@filter == :draft}>
-        Draft
-      </.chip>
-      <.chip patch={huddlz_filter_path(@group, :published)} active={@filter == :published}>
-        Published
-      </.chip>
-      <.chip patch={huddlz_filter_path(@group, :cancelled)} active={@filter == :cancelled}>
-        Cancelled
-      </.chip>
-      <.chip patch={huddlz_filter_path(@group, :past)} active={@filter == :past}>
-        Past
+      <.chip
+        :for={filter <- huddlz_filters()}
+        patch={huddlz_filter_path(@group, filter)}
+        active={@filter == filter}
+        count={@counts[filter]}
+      >
+        {huddlz_filter_label(filter)}
       </.chip>
     </div>
 
@@ -527,55 +569,228 @@ defmodule HuddlzWeb.OrganizeLive do
         </div>
       </div>
     <% else %>
-      <div class="panel">
-        <div class="panel-head">
-          <h2>{filter_heading(@filter)}</h2>
-          <span class="panel-sub">{length(@huddlz)} total</span>
-        </div>
-        <div class="row-list">
-          <div
-            :for={huddl <- @huddlz}
-            id={"organize-huddl-#{huddl.id}"}
-            class="row row-split-two"
-          >
-            <div>
-              <div class="row-title">
-                <.link
-                  id={"organize-huddl-link-#{huddl.id}"}
-                  navigate={organizer_huddl_path(@group, huddl)}
-                >
-                  {huddl.title}
-                </.link>
-              </div>
-              <div class="meta">{format_starts_at(huddl)}</div>
-            </div>
-            <span class="pill">{rsvp_label(huddl.rsvp_count)}</span>
-            <span class={["pill", HuddlStatus.pill_class(huddl.status)]}>
-              {HuddlStatus.label(huddl.status)}
+      <div id="organize-huddlz-list" class="cal-agenda org-list">
+        <div
+          :for={day <- @days}
+          id={"organize-day-#{Date.to_iso8601(day.date)}"}
+          class="cal-agenda-day"
+          data-today={day.today? || nil}
+        >
+          <div class="cal-agenda-rail">
+            <span class="cal-agenda-weekday" aria-hidden="true">
+              {Calendar.strftime(day.date, "%a")}
+            </span>
+            <time
+              datetime={Date.to_iso8601(day.date)}
+              class={["cal-agenda-daynum", day.today? && "is-today"]}
+              aria-label={Calendar.strftime(day.date, "%A, %B %-d, %Y")}
+            >
+              {day.date.day}
+            </time>
+            <span :if={day.today?} class="cal-agenda-day-context">Today</span>
+            <span :if={day.other_month?} class="cal-agenda-day-context">
+              {Calendar.strftime(day.date, "%b %Y")}
             </span>
           </div>
+          <div class="cal-agenda-entries">
+            <.organizer_huddl_row :for={huddl <- day.huddlz} group={@group} huddl={huddl} />
+          </div>
         </div>
+      </div>
+      <div :if={@remaining > 0} class="org-list-more">
+        <button type="button" class="btn-secondary" phx-click="show_more_huddlz">
+          Show {min(@remaining, @page)} more
+        </button>
+        <span class="muted">{@remaining} more {if @remaining == 1, do: "huddl", else: "huddlz"} after these</span>
       </div>
     <% end %>
     """
   end
 
+  attr :group, :map, required: true
+  attr :huddl, :map, required: true
+
+  defp organizer_huddl_row(assigns) do
+    ~H"""
+    <div
+      id={"organize-huddl-#{@huddl.id}"}
+      class="org-huddl"
+      data-status={@huddl.status}
+      data-series={@huddl.huddl_template_id}
+    >
+      <.organizer_thumb huddl={@huddl} group={@group} />
+      <div class="org-huddl-body">
+        <h3 class="org-huddl-title">
+          <.link id={"organize-huddl-link-#{@huddl.id}"} navigate={huddl_show_path(@group, @huddl)}>
+            {@huddl.title}
+          </.link>
+          <.organizer_status huddl={@huddl} />
+        </h3>
+        <div class="org-huddl-meta">
+          <span>{format_organizer_time(@huddl)}</span>
+          <span class="dot" aria-hidden="true"></span>
+          <span>{organizer_place(@huddl)}</span>
+          <%= if @huddl.huddl_template do %>
+            <span class="dot" aria-hidden="true"></span>
+            <span class="org-huddl-series">
+              <.icon name="hero-arrow-path" class="size-3.5" />
+              {series_cadence(@huddl)} · until {series_until(@huddl)}
+            </span>
+          <% end %>
+        </div>
+      </div>
+      <.organizer_rsvps huddl={@huddl} />
+      <div class="org-huddl-actions">
+        <.organizer_edit_link group={@group} huddl={@huddl} label="Edit" />
+        <.link
+          :if={@huddl.huddl_template && @huddl.status not in [:cancelled, :completed]}
+          navigate={huddl_edit_path(@group, @huddl, "all")}
+          class="org-huddl-edit-series"
+        >
+          Edit series
+        </.link>
+      </div>
+    </div>
+    """
+  end
+
+  attr :huddl, :map, required: true
+  attr :group, :map, required: true
+
+  defp organizer_thumb(assigns) do
+    ~H"""
+    <div class="org-huddl-thumb">
+      <%= if @huddl.display_image_url do %>
+        <.cover_image
+          id={"organize-huddl-cover-#{@huddl.id}"}
+          class="org-huddl-thumb-img"
+          image_url={@huddl.display_image_url}
+        />
+      <% else %>
+        <.cover_fallback name={@group.name} />
+      <% end %>
+    </div>
+    """
+  end
+
+  attr :huddl, :map, required: true
+
+  defp organizer_status(assigns) do
+    ~H"""
+    <.pill
+      :if={@huddl.status != :upcoming}
+      variant={HuddlStatus.variant(@huddl.status)}
+      class="org-huddl-status"
+    >
+      {HuddlStatus.label(@huddl.status)}
+    </.pill>
+    """
+  end
+
+  attr :huddl, :map, required: true
+
+  defp organizer_rsvps(assigns) do
+    ~H"""
+    <div class="org-huddl-rsvps">
+      <span class="n">{HuddlCardHelpers.rsvp_label(@huddl)}</span>
+      <div
+        :if={is_integer(@huddl.max_attendees) and @huddl.max_attendees > 0}
+        class={["bar", @huddl.rsvp_count >= @huddl.max_attendees && "warn"]}
+        aria-hidden="true"
+      >
+        <span style={"width: #{capacity_percent(@huddl)}%"}></span>
+      </div>
+    </div>
+    """
+  end
+
+  attr :group, :map, required: true
+  attr :huddl, :map, required: true
+  attr :label, :string, required: true
+  attr :scope, :string, default: nil
+
+  defp organizer_edit_link(assigns) do
+    ~H"""
+    <.link
+      :if={@huddl.status not in [:cancelled, :completed]}
+      navigate={huddl_edit_path(@group, @huddl, @scope)}
+      class="btn-secondary btn-sm org-huddl-edit"
+    >
+      {@label}
+    </.link>
+    """
+  end
+
+  # Rows grouped by the day they start, in the list's own order (soonest
+  # first for what is ahead, most recent first for the past).
+  defp organizer_days(huddlz, today) do
+    huddlz
+    |> Enum.chunk_by(&organizer_date/1)
+    |> Enum.map(fn [first | _] = day ->
+      date = organizer_date(first)
+
+      %{
+        date: date,
+        huddlz: day,
+        today?: Date.compare(date, today) == :eq,
+        other_month?: {date.year, date.month} != {today.year, today.month}
+      }
+    end)
+  end
+
+  defp organizer_date(huddl),
+    do: huddl |> HuddlCardHelpers.local_starts_at() |> DateTime.to_date()
+
+  defp huddlz_filters, do: @huddlz_filters
+
+  defp huddlz_filter_label(:published), do: "Upcoming"
+  defp huddlz_filter_label(:draft), do: "Drafts"
+  defp huddlz_filter_label(:past), do: "Past"
+  defp huddlz_filter_label(:cancelled), do: "Cancelled"
+
+  defp huddl_show_path(group, huddl), do: ~p"/groups/#{group.slug}/huddlz/#{huddl.id}"
+
+  defp huddl_edit_path(group, huddl, "all"),
+    do: ~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit?edit_type=all"
+
+  defp huddl_edit_path(group, huddl, _scope),
+    do: ~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit"
+
+  defp capacity_percent(%{rsvp_count: count, max_attendees: max}),
+    do: min(100, div(count * 100, max))
+
+  defp format_organizer_time(huddl) do
+    local = HuddlCardHelpers.local_starts_at(huddl)
+    Calendar.strftime(local, "%-I:%M %p") <> " " <> local.zone_abbr
+  end
+
+  defp organizer_place(%{event_type: :virtual}), do: "Online"
+
+  defp organizer_place(%{physical_location: place}) when is_binary(place) and place != "",
+    do: place
+
+  defp organizer_place(%{event_type: type}), do: HuddlCardHelpers.tag_label(type)
+
+  # "Weekly", "Every two weeks", "Monthly": the day is already on the rail.
+  defp series_cadence(%{huddl_template: %{interval: interval, unit: unit}}) do
+    case {interval, unit} do
+      {1, :week} -> "Weekly"
+      {2, :week} -> "Every two weeks"
+      {n, :week} -> "Every #{n} weeks"
+      {1, :month} -> "Monthly"
+      {n, :month} -> "Every #{n} months"
+    end
+  end
+
+  # The template stores the chosen end date at midnight UTC, so the date
+  # the organizer picked is its UTC date, not a zone-shifted one.
+  defp series_until(%{huddl_template: %{repeat_until: until}}),
+    do: until |> DateTime.to_date() |> Calendar.strftime("%b %-d")
+
   defp huddlz_filter_path(group, :published), do: ~p"/organize/#{group.slug}/huddlz"
 
   defp huddlz_filter_path(group, filter),
     do: ~p"/organize/#{group.slug}/huddlz?filter=#{filter}"
-
-  defp organizer_huddl_path(group, %{status: status} = huddl)
-       when status in [:cancelled, :completed],
-       do: ~p"/groups/#{group.slug}/huddlz/#{huddl.id}"
-
-  defp organizer_huddl_path(group, huddl),
-    do: ~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit"
-
-  defp filter_heading(:draft), do: "Draft huddlz"
-  defp filter_heading(:cancelled), do: "Cancelled huddlz"
-  defp filter_heading(:past), do: "Past huddlz"
-  defp filter_heading(_), do: "Published huddlz"
 
   defp empty_huddlz_heading(:draft), do: "No draft huddlz"
   defp empty_huddlz_heading(:cancelled), do: "No cancelled huddlz"
@@ -951,6 +1166,10 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   @impl true
+  def handle_event("show_more_huddlz", _params, socket) do
+    {:noreply, update(socket, :huddlz_limit, &(&1 + @huddlz_page))}
+  end
+
   def handle_event("invite", %{"invitation" => params}, socket) do
     group = socket.assigns.group
     user = socket.assigns.current_user
