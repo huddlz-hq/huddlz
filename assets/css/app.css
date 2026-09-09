@@ -2033,6 +2033,56 @@ body .rsvp-state .btn-secondary { width: 100%; justify-content: center; }
 body .rsvp-state .btn-primary { height: 44px; font-size: 14px; }
 body .rsvp-state .rsvp-banner { width: 100%; }
 
+/* Docked RSVP on phones. The aside's RSVP block itself pins to the bottom
+   edge (so there is one control, not a copy), joined by a share shortcut
+   that only exists in the dock. Cards, drawers and toasts stack above it. */
+body .rsvp-dock-share { display: none; }
+
+@media (max-width: 760px) {
+  body .content-body:has(.rsvp-state[data-dock]) { padding-bottom: 112px; }
+
+  body .rsvp-state[data-dock] {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    margin: 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+    background: color-mix(in srgb, var(--panel) 94%, transparent);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+
+  body .rsvp-state[data-dock] .btn-primary.rsvp-cta { flex: 1 1 auto; width: auto; }
+  body .rsvp-state[data-dock] .btn-secondary.rsvp-cta { flex: 0 0 auto; width: auto; height: 44px; }
+  body .rsvp-state[data-dock] .rsvp-banner { flex: 1 1 0; min-width: 0; width: auto; height: 44px; }
+  body .rsvp-state[data-dock] .rsvp-banner span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body .rsvp-state[data-dock] .virtual-link { flex: 1 1 100%; order: 10; }
+  body .rsvp-state[data-dock] .virtual-hint { display: none; }
+
+  body .rsvp-state[data-dock] .rsvp-dock-share {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--soft);
+    cursor: pointer;
+  }
+
+  body .rsvp-state[data-dock] .rsvp-dock-share:hover { color: var(--accent-ink); border-color: var(--accent); }
+  body .rsvp-state[data-dock] .rsvp-dock-share:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+}
+
 /* Inline "Join virtually" link inside .facts .value */
 body .facts .value .virtual-link-text { color: var(--accent-ink); font-weight: 700; }
 body .facts .value .virtual-link-text:hover { text-decoration: underline; }

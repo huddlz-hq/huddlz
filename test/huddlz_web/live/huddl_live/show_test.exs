@@ -273,6 +273,30 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has(".facts .value", text: "2 people attending")
     end
 
+    test "docks the RSVP block with a share shortcut while there is something to do", %{
+      conn: conn,
+      member: member,
+      owner: owner,
+      group: group,
+      huddl: huddl
+    } do
+      session =
+        conn
+        |> login(member)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
+        |> assert_has(".rsvp-state[data-dock] .rsvp-cta", text: "RSVP to this huddl")
+        |> assert_has(
+          ".rsvp-state[data-dock] #huddl-rsvp-share[aria-label='Share this huddl'][phx-click*='share-huddl-modal']"
+        )
+
+      Communities.cancel_huddl!(huddl, "Cancelled", actor: owner)
+
+      session
+      |> assert_has(".rsvp-state .rsvp-banner", text: "cancelled")
+      |> refute_has(".rsvp-state[data-dock]")
+      |> refute_has("#huddl-rsvp-share")
+    end
+
     test "shows virtual link after RSVP", %{
       conn: conn,
       member: member,
