@@ -37,7 +37,18 @@ defmodule HuddlzWeb.HuddlLive do
      |> assign(:default_location_lat, user && user.home_latitude)
      |> assign(:default_location_lng, user && user.home_longitude)
      |> assign(:default_location_time_zone, user && user.home_time_zone)
+     |> assign(:live_navigation?, live_navigation?(socket))
+     |> assign(:results_loading?, false)
+     |> assign(:search_ref, nil)
      |> assign_search_defaults()}
+  end
+
+  # A mount reached by live navigation renders before its results exist, so
+  # the shell (and a skeleton grid) paints first and the search runs off the
+  # socket. Full page loads keep the results in the first render, and filter
+  # patches stay synchronous because they finish within the loading delay.
+  defp live_navigation?(socket) do
+    connected?(socket) and is_binary(get_connect_params(socket)["_live_referer"])
   end
 
   defp assign_search_defaults(socket) do
@@ -84,25 +95,86 @@ defmodule HuddlzWeb.HuddlLive do
         |> assign(:canonical_url, canonical_url)
         |> assign(:meta, %{url: canonical_url})
         |> assign_filters_from_params(params)
-        |> perform_search(offset: (page - 1) * @page_size)
 
-      total_pages = socket.assigns.page_info.total_pages
-
-      if page > total_pages do
-        cleared? = location_explicitly_cleared?(socket.assigns)
-
-        path =
-          scoped_path(scope, yours, form_params_from_assigns(socket),
-            override_location_with_cleared: cleared?,
-            page: total_pages
-          )
-
-        {:noreply, push_patch(socket, to: path)}
+      if socket.assigns.live_navigation? do
+        {:noreply, socket |> assign(:live_navigation?, false) |> start_search(page)}
       else
-        {:noreply, socket}
+        {:noreply, socket |> perform_search(page) |> patch_page_overflow(page)}
       end
     end
   end
+
+  defp patch_page_overflow(socket, page) do
+    total_pages = socket.assigns.page_info.total_pages
+
+    if page > total_pages do
+      cleared? = location_explicitly_cleared?(socket.assigns)
+
+      path =
+        scoped_path(socket.assigns.scope, socket.assigns.yours, form_params_from_assigns(socket),
+          override_location_with_cleared: cleared?,
+          page: total_pages
+        )
+
+      push_patch(socket, to: path)
+    else
+      socket
+    end
+  end
+
+  defp start_search(socket, page) do
+    ref = make_ref()
+    input = search_input(socket.assigns)
+
+    socket
+    |> assign(:search_ref, ref)
+    |> assign(:results_loading?, true)
+    |> start_async({:search, ref, page}, fn -> search_results(input, page) end)
+  end
+
+  @search_input_keys [
+    :scope,
+    :yours,
+    :search_query,
+    :event_type_filter,
+    :date_filter,
+    :distance_miles,
+    :sort,
+    :location_active,
+    :location_lat,
+    :location_lng,
+    :location_time_zone,
+    :browser_time_zone,
+    :current_user
+  ]
+
+  # Everything the search reads, as a plain map so the async task never
+  # carries the socket's assigns.
+  defp search_input(assigns), do: Map.take(assigns, @search_input_keys)
+
+  @impl true
+  def handle_async({:search, ref, page}, {:ok, results}, %{assigns: %{search_ref: ref}} = socket) do
+    {:noreply,
+     socket
+     |> assign(results)
+     |> assign(results_loading?: false, search_ref: nil)
+     |> patch_page_overflow(page)}
+  end
+
+  def handle_async(
+        {:search, ref, _page},
+        {:exit, reason},
+        %{assigns: %{search_ref: ref}} = socket
+      ) do
+    Logger.warning("Discover search crashed: #{inspect(reason)}")
+
+    {:noreply,
+     socket
+     |> assign(huddls: [], groups: [], page_info: empty_page_info())
+     |> assign(results_loading?: false, search_ref: nil)}
+  end
+
+  def handle_async({:search, _stale_ref, _page}, _result, socket), do: {:noreply, socket}
 
   defp assign_filters_from_params(socket, params) do
     {location_text, location_lat, location_lng, location_time_zone, location_active} =
@@ -189,6 +261,9 @@ defmodule HuddlzWeb.HuddlLive do
   defp page_title(:huddlz, :hosting), do: "huddlz you're hosting"
   defp page_title(:huddlz, :attending), do: "huddlz you're attending"
   defp page_title(:huddlz, :all), do: "huddlz"
+
+  defp skeleton_label(:groups), do: "Loading groups"
+  defp skeleton_label(:huddlz), do: "Loading huddlz"
 
   defp sign_in_prompt(:hosting), do: "huddlz you're hosting"
   defp sign_in_prompt(:attending), do: "huddlz you're attending"
@@ -330,18 +405,19 @@ defmodule HuddlzWeb.HuddlLive do
   defp put_scope(params, :huddlz), do: params
   defp put_scope(params, :groups), do: [{"scope", "groups"} | params]
 
-  defp perform_search(%{assigns: %{scope: :huddlz}} = socket, opts) do
-    offset = Keyword.get(opts, :offset, 0)
+  defp perform_search(socket, page),
+    do: assign(socket, search_results(search_input(socket.assigns), page))
 
-    base_args = build_search_args(socket)
+  defp search_results(%{scope: :huddlz} = assigns, page) do
+    offset = (page - 1) * @page_size
 
     main_page =
-      run_search(base_args, socket.assigns[:current_user],
-        relationship: yours_to_relationship(socket.assigns.yours),
+      run_search(build_search_args(assigns), assigns[:current_user],
+        relationship: yours_to_relationship(assigns.yours),
         page: [limit: @page_size, offset: offset, count: true]
       )
 
-    {huddls, distances} = load_results_with_distances(main_page, socket)
+    {huddls, distances} = load_results_with_distances(main_page, assigns)
     page_info = extract_page_info(main_page)
 
     page_info =
@@ -349,18 +425,11 @@ defmodule HuddlzWeb.HuddlLive do
         do: Map.put(page_info, :current_page, div(offset, @page_size) + 1),
         else: page_info
 
-    socket
-    |> assign(huddls: Enum.zip(huddls, distances))
-    |> assign(groups: [])
-    |> assign(page_info: page_info)
+    %{huddls: Enum.zip(huddls, distances), groups: [], page_info: page_info}
   end
 
-  defp perform_search(%{assigns: %{scope: :groups}} = socket, opts) do
-    offset = Keyword.get(opts, :offset, 0)
-    page = div(offset, @page_size) + 1
-    actor = socket.assigns[:current_user]
-
-    {groups, total} = list_groups(socket.assigns.search_query, page, actor)
+  defp search_results(%{scope: :groups} = assigns, page) do
+    {groups, total} = list_groups(assigns.search_query, page, assigns[:current_user])
 
     page_info =
       if total > 0 do
@@ -370,41 +439,40 @@ defmodule HuddlzWeb.HuddlLive do
           total_count: total
         }
       else
-        %{total_pages: 1, current_page: 1, total_count: 0}
+        empty_page_info()
       end
 
-    socket
-    |> assign(huddls: [])
-    |> assign(groups: groups)
-    |> assign(page_info: page_info)
+    %{huddls: [], groups: groups, page_info: page_info}
   end
 
-  defp build_search_args(socket) do
+  defp empty_page_info, do: %{total_pages: 1, current_page: 1, total_count: 0}
+
+  defp build_search_args(assigns) do
     {search_lat, search_lng, distance} =
-      if socket.assigns.location_active do
-        {socket.assigns.location_lat, socket.assigns.location_lng, socket.assigns.distance_miles}
+      if assigns.location_active do
+        {assigns.location_lat, assigns.location_lng, assigns.distance_miles}
       else
         {nil, nil, nil}
       end
 
     event_type_atom =
-      if socket.assigns.event_type_filter && socket.assigns.event_type_filter != "",
-        do: String.to_existing_atom(socket.assigns.event_type_filter),
+      if assigns.event_type_filter && assigns.event_type_filter != "",
+        do: String.to_existing_atom(assigns.event_type_filter),
         else: nil
 
     %{
-      query: socket.assigns.search_query,
-      date_filter: String.to_existing_atom(socket.assigns.date_filter),
+      query: assigns.search_query,
+      date_filter: String.to_existing_atom(assigns.date_filter),
       event_type: event_type_atom,
       search_latitude: search_lat,
       search_longitude: search_lng,
       distance_miles: distance,
       search_time_zone:
-        if(socket.assigns.location_active and socket.assigns.location_time_zone,
-          do: socket.assigns.location_time_zone,
-          else: socket.assigns.browser_time_zone
+        if(assigns.location_active and assigns.location_time_zone,
+          do: assigns.location_time_zone,
+          else: assigns.browser_time_zone
         ),
-      sort: socket.assigns.sort
+      sort: assigns.sort
     }
   end
 
@@ -452,23 +520,23 @@ defmodule HuddlzWeb.HuddlLive do
     end
   end
 
-  defp load_results_with_distances({:ok, %{results: results}}, socket) do
-    dists = compute_distances(results, socket)
+  defp load_results_with_distances({:ok, %{results: results}}, assigns) do
+    dists = compute_distances(results, assigns)
     {results, dists}
   end
 
-  defp load_results_with_distances({:error, reason}, _socket) do
+  defp load_results_with_distances({:error, reason}, _assigns) do
     Logger.warning("Huddl search failed: #{inspect(reason)}")
     {[], []}
   end
 
-  defp load_results_with_distances(_, _socket), do: {[], []}
+  defp load_results_with_distances(_, _assigns), do: {[], []}
 
-  defp compute_distances(huddls, %{assigns: %{location_active: false}}) do
+  defp compute_distances(huddls, %{location_active: false}) do
     List.duplicate(nil, length(huddls))
   end
 
-  defp compute_distances(huddls, %{assigns: assigns}) do
+  defp compute_distances(huddls, assigns) do
     origin = {assigns.location_lat, assigns.location_lng}
 
     Enum.map(huddls, fn h ->
@@ -674,47 +742,56 @@ defmodule HuddlzWeb.HuddlLive do
         </div>
       </div>
 
-      <div class="discover-meta">
-        <span>{result_count_label(@page_info.total_count, @scope)}</span>
-        <%= if any_filter_active?(assigns) and not results_empty?(assigns) do %>
-          <span aria-hidden="true">·</span>
-          <button type="button" phx-click="clear_filters" class="button-link">
-            Clear filters
-          </button>
+      <div id="discover-results" data-stale-on-patch>
+        <%= if @results_loading? do %>
+          <div class="discover-meta" aria-hidden="true">
+            <span class="skel skel-line skel-count"></span>
+          </div>
+          <.card_skeleton_grid label={skeleton_label(@scope)} />
+        <% else %>
+          <div class="discover-meta">
+            <span>{result_count_label(@page_info.total_count, @scope)}</span>
+            <%= if any_filter_active?(assigns) and not results_empty?(assigns) do %>
+              <span aria-hidden="true">·</span>
+              <button type="button" phx-click="clear_filters" class="button-link">
+                Clear filters
+              </button>
+            <% end %>
+          </div>
+
+          <%= if @scope == :huddlz do %>
+            <%= if Enum.empty?(@huddls) do %>
+              <.discover_empty {empty_state_copy(assigns)} clearable={any_filter_active?(assigns)} />
+            <% else %>
+              <div class="grid">
+                <.huddl_card :for={{huddl, distance} <- @huddls} huddl={huddl} distance={distance} />
+              </div>
+              <.pagination
+                :if={@page_info.total_pages > 1}
+                id="discovery-pagination"
+                current_page={@page_info.current_page}
+                total_pages={@page_info.total_pages}
+                page_path={&pagination_path(&1, assigns)}
+              />
+            <% end %>
+          <% else %>
+            <%= if @groups == [] do %>
+              <.discover_empty {empty_state_copy(assigns)} clearable={any_filter_active?(assigns)} />
+            <% else %>
+              <div class="grid">
+                <.group_card :for={group <- @groups} group={group} />
+              </div>
+              <.pagination
+                :if={@page_info.total_pages > 1}
+                id="discovery-pagination"
+                current_page={@page_info.current_page}
+                total_pages={@page_info.total_pages}
+                page_path={&pagination_path(&1, assigns)}
+              />
+            <% end %>
+          <% end %>
         <% end %>
       </div>
-
-      <%= if @scope == :huddlz do %>
-        <%= if Enum.empty?(@huddls) do %>
-          <.discover_empty {empty_state_copy(assigns)} clearable={any_filter_active?(assigns)} />
-        <% else %>
-          <div class="grid">
-            <.huddl_card :for={{huddl, distance} <- @huddls} huddl={huddl} distance={distance} />
-          </div>
-          <.pagination
-            :if={@page_info.total_pages > 1}
-            id="discovery-pagination"
-            current_page={@page_info.current_page}
-            total_pages={@page_info.total_pages}
-            page_path={&pagination_path(&1, assigns)}
-          />
-        <% end %>
-      <% else %>
-        <%= if @groups == [] do %>
-          <.discover_empty {empty_state_copy(assigns)} clearable={any_filter_active?(assigns)} />
-        <% else %>
-          <div class="grid">
-            <.group_card :for={group <- @groups} group={group} />
-          </div>
-          <.pagination
-            :if={@page_info.total_pages > 1}
-            id="discovery-pagination"
-            current_page={@page_info.current_page}
-            total_pages={@page_info.total_pages}
-            page_path={&pagination_path(&1, assigns)}
-          />
-        <% end %>
-      <% end %>
     </Layouts.app>
     """
   end

@@ -565,4 +565,63 @@ defmodule HuddlzWeb.HuddlLiveTest do
       assert_patch(view, "/discover?cleared=1")
     end
   end
+
+  describe "live navigation" do
+    setup do
+      host = generate(user(role: :user))
+      group = generate(group(is_public: true, owner_id: host.id, actor: host))
+
+      huddl =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: host.id,
+            is_private: false,
+            title: "Async Arrival",
+            actor: host
+          )
+        )
+
+      %{huddl: huddl}
+    end
+
+    test "renders a skeleton grid until the search completes", %{conn: conn, huddl: huddl} do
+      {:ok, view, html} = live_navigate(conn, ~p"/discover")
+      document = Floki.parse_document!(html)
+
+      assert Floki.find(document, ".grid-skeleton[aria-busy='true'] .card.is-skeleton") != []
+      assert Floki.find(document, "h3.card-title") == []
+
+      html = render_async(view)
+
+      assert html =~ huddl.title
+      refute html =~ "grid-skeleton"
+    end
+
+    test "a filter patch after arrival keeps results in the response", %{
+      conn: conn,
+      huddl: huddl
+    } do
+      {:ok, view, _html} = live_navigate(conn, ~p"/discover")
+      render_async(view)
+
+      html = view |> element(".chip-group a.chip", "Newest") |> render_click()
+
+      assert html =~ huddl.title
+      refute html =~ "grid-skeleton"
+    end
+
+    test "a full page load keeps the results in the first render", %{conn: conn, huddl: huddl} do
+      {:ok, _view, html} = live(conn, ~p"/discover")
+
+      assert html =~ huddl.title
+      refute html =~ "grid-skeleton"
+    end
+  end
+
+  defp live_navigate(conn, path) do
+    conn
+    |> put_connect_params(%{"_live_referer" => "http://localhost/my-huddlz"})
+    |> live(path)
+  end
 end
