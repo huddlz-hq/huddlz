@@ -606,7 +606,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> assert_has("#calendar-first-run.empty-state h3", text: "Your calendar is empty")
     end
 
-    test "today is drawn as the anchor and points at the next huddl", %{
+    test "today is drawn as the anchor even with nothing on", %{
       conn: conn,
       attendee: attendee,
       host: host,
@@ -616,26 +616,16 @@ defmodule HuddlzWeb.CalendarLiveTest do
       rsvp!(next, attendee, :rsvp)
       today = Huddlz.Generator.eastern_today()
 
-      session =
-        conn
-        |> login(attendee)
-        |> visit(calendar_path_for(today, view: "agenda"))
-        |> assert_has("#calendar-agenda .cal-agenda-day[data-today] .cal-agenda-day-context",
-          text: "Today"
-        )
-        |> assert_has("#calendar-agenda .cal-agenda-day[data-today] .cal-agenda-quiet",
-          text: "Nothing today."
-        )
-
-      # Tomorrow is only "next up" while it shares the month; on the last day
-      # of a month the today row says the month is done instead.
-      if tomorrow().month == today.month do
-        assert_has(session, ".cal-agenda-day[data-today] .cal-agenda-quiet a", text: "Next Thing")
-      else
-        assert_has(session, ".cal-agenda-day[data-today] .cal-agenda-quiet",
-          text: "Nothing else this month."
-        )
-      end
+      conn
+      |> login(attendee)
+      |> visit(calendar_path_for(today, view: "agenda"))
+      |> assert_has("#calendar-agenda .cal-agenda-day[data-today] .cal-agenda-day-context",
+        text: "Today"
+      )
+      |> assert_has("#calendar-agenda .cal-agenda-day[data-today] .cal-agenda-quiet",
+        text: "Nothing today."
+      )
+      |> refute_has("#calendar-agenda .cal-agenda-day[data-today] a")
     end
 
     test "past days go quiet and drop the countdown", %{
