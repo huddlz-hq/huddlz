@@ -104,6 +104,15 @@ defmodule HuddlzWeb.HuddlLive.Show do
             </div>
           </section>
 
+          <section
+            :if={@huddl.group.archived_at}
+            id="huddl-group-archived"
+            class="panel"
+            role="status"
+          >
+            <h2>This group is archived</h2>
+            <p>This huddl is preserved as read-only history for group members.</p>
+          </section>
           <header class={["hero", "huddl-hero", HuddlStatus.hero_class(@huddl.status)]}>
             <div class="hero-media">
               <.cover_image
@@ -157,10 +166,13 @@ defmodule HuddlzWeb.HuddlLive.Show do
             </div>
 
             <p :if={@photo_count == 0} class="huddl-photos-empty">
-              No photos yet — be the first to share one!
+              {if @huddl.group.archived_at,
+                do: "No photos were shared.",
+                else: "No photos yet — be the first to share one!"}
             </p>
 
             <form
+              :if={is_nil(@huddl.group.archived_at)}
               id="huddl-photo-upload-form"
               phx-submit="upload_photos"
               phx-change="validate_photos"
@@ -240,7 +252,10 @@ defmodule HuddlzWeb.HuddlLive.Show do
                 </button>
                 <span class="photo-credit">{photo.uploader.display_name || "Member"}</span>
                 <button
-                  :if={photo.uploader_id == @current_user.id || @huddl.creator_id == @current_user.id}
+                  :if={
+                    is_nil(@huddl.group.archived_at) &&
+                      (photo.uploader_id == @current_user.id || @huddl.creator_id == @current_user.id)
+                  }
                   type="button"
                   id={"delete-photo-#{photo.id}"}
                   class="photo-delete"
@@ -1166,19 +1181,22 @@ defmodule HuddlzWeb.HuddlLive.Show do
     |> assign(:waitlist_position, waitlist_position)
     |> assign(
       :can_edit_huddl,
-      editable_lifecycle?(huddl) && Communities.can_update_huddl?(user, huddl)
+      is_nil(huddl.group.archived_at) && editable_lifecycle?(huddl) &&
+        Communities.can_update_huddl?(user, huddl)
     )
     |> assign(
       :can_publish_huddl,
-      huddl.lifecycle_state == :draft && Communities.can_publish_huddl?(user, huddl)
+      is_nil(huddl.group.archived_at) && huddl.lifecycle_state == :draft &&
+        Communities.can_publish_huddl?(user, huddl)
     )
     |> assign(
       :can_cancel_huddl,
-      cancellable_lifecycle?(huddl) && Communities.can_cancel_huddl?(user, huddl)
+      is_nil(huddl.group.archived_at) && cancellable_lifecycle?(huddl) &&
+        Communities.can_cancel_huddl?(user, huddl)
     )
     |> assign(
       :can_delete_huddl,
-      Communities.can_destroy_huddl?(user, huddl)
+      is_nil(huddl.group.archived_at) && Communities.can_destroy_huddl?(user, huddl)
     )
     |> load_photos(huddl, user, can_view_photos)
   end
@@ -1198,7 +1216,10 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp previous_start(huddl),
     do: DateTime.shift_zone!(huddl.previous_starts_at, huddl.previous_time_zone)
 
-  defp public_url(%{is_private: false, group: %{is_public: true}, lifecycle_state: state} = huddl)
+  defp public_url(
+         %{is_private: false, group: %{is_public: true, archived_at: nil}, lifecycle_state: state} =
+           huddl
+       )
        when state in [:published, :completed, :cancelled],
        do: huddl_meta(huddl).url
 

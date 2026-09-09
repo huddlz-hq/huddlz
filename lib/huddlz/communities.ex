@@ -79,6 +79,10 @@ defmodule Huddlz.Communities do
         args: [:new_owner_id]
 
       define :destroy_group, action: :destroy
+      define :archive_group, action: :archive
+      define :restore_group, action: :unarchive
+      define :archived_groups, action: :archived
+      define :get_visible_group_by_slug, action: :get_visible_by_slug, args: [:slug]
     end
 
     resource Huddlz.Communities.GroupImage do

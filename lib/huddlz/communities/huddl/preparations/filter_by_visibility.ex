@@ -30,8 +30,12 @@ defmodule Huddlz.Communities.Huddl.Preparations.FilterByVisibility do
   def prepare(query, _opts, %{actor: actor}) do
     query
     |> Ash.Query.load([:group, :is_publicly_visible])
+    |> Ash.Query.filter(is_nil(group.archived_at) or exists(group.members, id == ^actor.id))
     |> Ash.Query.filter(
-      (lifecycle_state == :cancelled and is_publicly_visible == true) or
+      (lifecycle_state == :cancelled and
+         (is_publicly_visible == true or
+            (is_private == false and group.is_public == true and
+               not is_nil(group.archived_at) and exists(group.members, id == ^actor.id)))) or
         (lifecycle_state in [:published, :completed] and
            (is_publicly_visible == true or exists(group.members, id == ^actor.id))) or
         (lifecycle_state in [:draft, :cancelled] and

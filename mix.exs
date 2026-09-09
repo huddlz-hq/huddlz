@@ -97,6 +97,7 @@ defmodule Huddlz.MixProject do
       {:ash_phoenix, "~> 2.0"},
       {:sourceror, "~> 1.8", only: [:dev, :test]},
       {:ash, "~> 3.0"},
+      {:ash_archival, "~> 2.0"},
       {:igniter, "~> 0.5", only: [:dev, :test]},
       {:faker_fork, "~> 0.19", only: [:dev, :test]},
       {:phoenix, "~> 1.8"},

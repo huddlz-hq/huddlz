@@ -27,7 +27,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
     user = socket.assigns.current_user
 
     with {:ok, group} <- get_group_by_slug(slug, user),
-         :ok <- authorize({group, :update_details}, user) do
+         :ok <- authorize({group, :unarchive}, user) do
       {:ok, assign_edit_form(socket, group)}
     else
       {:error, :not_found} ->
@@ -62,6 +62,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
     |> assign(:original_slug, group.slug)
     |> assign(:slug_changed, false)
     |> assign(:image_error, nil)
+    |> assign(:archive_dialog_open, false)
     |> assign(:remove_image_dialog_open, false)
     |> assign(:pending_image_id, nil)
     |> assign(:pending_preview_url, nil)
@@ -141,7 +142,13 @@ defmodule HuddlzWeb.GroupLive.Edit do
         </div>
       </div>
 
-      <.form for={@form} id="edit-group-form" phx-change="validate" phx-submit="update_group">
+      <.form
+        :if={is_nil(@group.archived_at)}
+        for={@form}
+        id="edit-group-form"
+        phx-change="validate"
+        phx-submit="update_group"
+      >
         <div class="panel">
           <div class="panel-head">
             <h2>Cover image</h2>
@@ -396,6 +403,45 @@ defmodule HuddlzWeb.GroupLive.Edit do
         </div>
       </.form>
 
+      <section id="group-archive-settings" class="panel mt-6">
+        <h2>{if @group.archived_at, do: "Archived group", else: "Close this group"}</h2>
+        <p>
+          Archiving removes this group from discovery and closes new activity. Members keep their history and memberships. You can restore it later.
+        </p>
+        <.button
+          :if={is_nil(@group.archived_at)}
+          id="archive-group"
+          variant={:secondary}
+          phx-click="open_archive_dialog"
+        >Archive group</.button>
+        <.button
+          :if={@group.archived_at}
+          id="restore-group"
+          variant={:primary}
+          phx-click="restore_group"
+          phx-disable-with="Restoring..."
+        >Restore group</.button>
+        <.link
+          :if={@group.archived_at}
+          navigate={~p"/organize/#{@group.slug}/members"}
+          class="btn-secondary"
+        >Manage ownership</.link>
+      </section>
+
+      <.modal
+        :if={@archive_dialog_open}
+        id="archive-group-dialog"
+        show
+        on_cancel={JS.push("close_archive_dialog")}
+      >
+        <h2>Archive {@group.name}?</h2>
+        <p>
+          Members keep access to the group's history and will be notified that it is archived. New activity is closed until you restore it.
+        </p>
+        <.button variant={:secondary} phx-click="close_archive_dialog">Keep group open</.button>
+        <.button variant={:destructive} phx-click="archive_group" phx-disable-with="Archiving...">Yes, archive group</.button>
+      </.modal>
+
       <.modal
         :if={@remove_image_dialog_open}
         id="remove-group-image-dialog"
@@ -442,6 +488,41 @@ defmodule HuddlzWeb.GroupLive.Edit do
   end
 
   @impl true
+  def handle_event("open_archive_dialog", _, socket),
+    do: {:noreply, assign(socket, :archive_dialog_open, true)}
+
+  def handle_event("close_archive_dialog", _, socket),
+    do: {:noreply, assign(socket, :archive_dialog_open, false)}
+
+  def handle_event("archive_group", _, socket) do
+    case Communities.archive_group(socket.assigns.group, actor: socket.assigns.current_user) do
+      :ok ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Group archived")
+         |> push_navigate(to: ~p"/groups/#{socket.assigns.group.slug}")}
+
+      {:error, error} ->
+        {:noreply,
+         socket
+         |> assign(:archive_dialog_open, false)
+         |> put_flash(:error, Ash.Error.to_error_class(error) |> Exception.message())}
+    end
+  end
+
+  def handle_event("restore_group", _, socket) do
+    case Communities.restore_group(socket.assigns.group, actor: socket.assigns.current_user) do
+      {:ok, group} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Group restored")
+         |> push_navigate(to: ~p"/groups/#{group.slug}")}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Unable to restore this group.")}
+    end
+  end
+
   def handle_event("validate", %{"form" => params}, socket) do
     form =
       socket.assigns.form.source
@@ -531,7 +612,8 @@ defmodule HuddlzWeb.GroupLive.Edit do
          |> redirect(to: ~p"/groups/#{updated_group.slug}")}
 
       {:error, form} ->
-        {:noreply, assign(socket, :form, to_form(form))}
+        message = form |> AshPhoenix.Form.errors(format: :plaintext) |> Enum.join(". ")
+        {:noreply, socket |> assign(:form, to_form(form)) |> put_flash(:error, message)}
     end
   end
 
@@ -632,7 +714,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
       "When you save, this group and otherwise-public huddlz will become discoverable again. Current members keep their memberships."
 
   defp get_group_by_slug(slug, actor) do
-    case Huddlz.Communities.get_by_slug(slug,
+    case Huddlz.Communities.get_visible_group_by_slug(slug,
            actor: actor,
            load: [:owner, :current_image_url]
          ) do

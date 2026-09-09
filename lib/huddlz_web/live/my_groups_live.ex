@@ -18,7 +18,7 @@ defmodule HuddlzWeb.MyGroupsLive do
 
   @group_loads [:current_image_url, :member_count, :viewer_role]
   @page_size 20
-  @valid_filters ~w(all hosting joined)
+  @valid_filters ~w(all hosting joined archived)
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -96,10 +96,13 @@ defmodule HuddlzWeb.MyGroupsLive do
     end
   end
 
+  defp list_groups(:archived, opts), do: Communities.archived_groups(opts)
+  defp list_groups(filter, opts), do: Communities.my_groups(filter, opts)
+
   defp load_results(socket, filter, page, user) do
     offset = (page - 1) * @page_size
 
-    case Communities.my_groups(filter,
+    case list_groups(filter,
            actor: user,
            load: @group_loads,
            page: [limit: @page_size, offset: offset, count: true]
@@ -166,6 +169,7 @@ defmodule HuddlzWeb.MyGroupsLive do
         <.chip patch={filter_path(:joined, 1)} active={@filter == :joined} count={@counts.joined}>
           Joined
         </.chip>
+        <.chip patch={filter_path(:archived, 1)} active={@filter == :archived}>Archived</.chip>
       </div>
 
       <%= if Enum.empty?(@groups) do %>
@@ -213,17 +217,25 @@ defmodule HuddlzWeb.MyGroupsLive do
     """
   end
 
+  defp filter_blurb(:archived), do: "Closed groups whose history you can revisit."
+
   defp filter_blurb(:all), do: "Groups you organize and groups you've joined."
   defp filter_blurb(:hosting), do: "Groups you organize."
   defp filter_blurb(:joined), do: "Groups you've joined."
+
+  defp empty_icon(:archived), do: "hero-archive-box"
 
   defp empty_icon(:all), do: "hero-user-group"
   defp empty_icon(:hosting), do: "hero-megaphone"
   defp empty_icon(:joined), do: "hero-user-plus"
 
+  defp empty_title(:archived), do: "No archived groups"
+
   defp empty_title(:all), do: "No groups yet"
   defp empty_title(:hosting), do: "You're not hosting a group"
   defp empty_title(:joined), do: "No groups joined"
+
+  defp empty_message(:archived), do: "Your archived groups will appear here."
 
   defp empty_message(:all),
     do: "You haven't organized or joined any groups yet. Start one or browse Discover."

@@ -73,15 +73,23 @@ defmodule Huddlz.Communities.GroupImage do
   end
 
   actions do
-    defaults [:read, :destroy]
+    defaults [:read]
+
+    destroy :destroy do
+      primary? true
+      require_atomic? false
+      change Huddlz.Communities.Changes.RequireActiveGroup
+    end
 
     create :create do
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "Upload a new image for a group"
       primary? true
       accept [:filename, :content_type, :size_bytes, :storage_path, :thumbnail_path, :group_id]
     end
 
     create :upload do
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "Upload an image for a group from multipart bytes"
       accept [:group_id]
 
@@ -94,6 +102,7 @@ defmodule Huddlz.Communities.GroupImage do
     end
 
     create :create_pending do
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "Create a pending image during eager upload (group_id = nil)"
       accept [:filename, :content_type, :size_bytes, :storage_path, :thumbnail_path]
       # group_id intentionally not accepted - stays nil for pending images
@@ -123,6 +132,8 @@ defmodule Huddlz.Communities.GroupImage do
     end
 
     update :soft_delete do
+      require_atomic? false
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "Soft-delete a group image and trigger cleanup job"
       accept []
       change set_attribute(:deleted_at, &DateTime.utc_now/0)
@@ -130,6 +141,8 @@ defmodule Huddlz.Communities.GroupImage do
     end
 
     update :assign_to_group do
+      require_atomic? false
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "Assign a pending image to a group"
 
       argument :group_id, :uuid do
@@ -310,6 +323,7 @@ defmodule Huddlz.Communities.GroupImage do
 
   relationships do
     belongs_to :group, Huddlz.Communities.Group do
+      read_action :read_with_archived
       attribute_type :uuid
       # Allow nil for pending images (not yet assigned to a group)
       allow_nil? true
