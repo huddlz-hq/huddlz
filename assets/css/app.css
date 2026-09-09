@@ -2498,6 +2498,24 @@ body .cal-day-num.is-today {
   color: var(--on-accent);
 }
 
+/* The day number opens the day panel. Hover lifts it as a control; the
+   open day's cell tints so the panel reads as belonging to it. */
+body a.cal-day-num {
+  text-decoration: none;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+body a.cal-day-num:hover { background: var(--panel-2); color: var(--accent-ink); }
+body a.cal-day-num.is-today:hover { background: var(--accent); color: var(--on-accent); }
+
+body a.cal-day-num:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+body .cal-cell.is-open { background: var(--accent-soft); }
+body .cal-cell.is-open .cal-day-num:not(.is-today) { box-shadow: inset 0 0 0 1px var(--accent); }
+
 body .cal-day-context {
   color: var(--muted);
   font-size: 11px;
@@ -2974,6 +2992,144 @@ body .cal-agenda-quiet {
   font-size: 14px;
 }
 
+/* Week: the agenda list for one Sunday-to-Saturday week. Every day is
+   drawn; an empty day that is not today is a bare rail row. */
+body .cal-agenda-day[data-blank] .cal-agenda-rail { padding-top: 14px; padding-bottom: 14px; }
+
+/* Day panel: one day's huddlz over the month grid. A side panel from the
+   right on wide screens, a bottom sheet on phones. The scrim sits right of
+   the sidebar rail, as the modal does, so the sidebar stays usable. */
+body .cal-day-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+body .cal-day-scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: cal-day-fade 160ms ease-out;
+}
+
+body .cal-day-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 100%);
+  border-left: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  animation: cal-day-slide-in 200ms ease-out;
+}
+
+body .cal-day-head {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 22px 64px 18px 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+body .cal-day-kicker {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+body .cal-day-kicker-today { color: var(--accent-ink); }
+
+body .cal-agenda-day-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+body .cal-day-count {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+body .cal-day-head .modal-close { top: 14px; right: 14px; }
+
+body .cal-day-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+body .cal-day-body .cal-agenda-entry {
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 4px 12px;
+  align-items: start;
+  padding: 14px 24px;
+}
+
+body .cal-day-body .cal-agenda-title { white-space: normal; font-size: 15px; }
+body .cal-day-body .cal-agenda-meta { flex-direction: column; align-items: flex-start; gap: 2px; }
+body .cal-day-body .cal-agenda-meta .dot { display: none; }
+
+body .cal-day-body .cal-agenda-side {
+  grid-column: 2;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+body .cal-day-body .cal-agenda-quiet { min-height: 0; padding: 24px; }
+
+body .cal-day-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 24px;
+  border-top: 1px solid var(--line);
+}
+
+body .cal-day-foot a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+@keyframes cal-day-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cal-day-slide-in {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@keyframes cal-day-rise {
+  from { transform: translateY(32px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@media (min-width: 761px) {
+  body:not(.is-landing):not(.is-auth):not(.is-signed-out) .cal-day-layer { left: var(--rail-w); }
+}
+
 /* Touch agenda: the same list under the month grid, shown where hover
    tooltips don't work (narrow screens and coarse pointers). */
 body .cal-touch-agenda {
@@ -3089,6 +3245,39 @@ body .cal-legend-note { margin-left: auto; font-size: 12px; }
     gap: 10px;
   }
   body .cal-agenda-quiet { min-height: 60px; padding: 12px 14px; }
+
+  /* Cells are too small for titles, so the whole cell opens the day; the
+     pills stay on top of the stretched link and still open their huddl. */
+  body .cal-cell-content { position: relative; }
+  body a.cal-day-num::after { content: ""; position: absolute; inset: 0; }
+
+  /* The day panel becomes a bottom sheet with a grab handle. */
+  body .cal-day-panel {
+    top: auto;
+    right: 0;
+    left: 0;
+    width: auto;
+    max-height: 78%;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 16px 16px 0 0;
+    animation-name: cal-day-rise;
+  }
+  body .cal-day-panel::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 36px;
+    height: 4px;
+    margin: 10px auto 0;
+    border-radius: var(--radius-pill);
+    background: var(--line-strong);
+  }
+  body .cal-day-head { padding: 12px 56px 14px 16px; }
+  body .cal-day-head .modal-close { top: 6px; right: 10px; }
+  body .cal-agenda-day-title { font-size: 20px; }
+  body .cal-day-body .cal-agenda-entry { padding: 12px 16px; }
+  body .cal-day-body .cal-agenda-quiet { padding: 20px 16px; }
+  body .cal-day-foot { padding: 12px 16px 20px; }
 }
 
 @media (hover: none) and (pointer: coarse) {
@@ -3102,6 +3291,8 @@ body .cal-legend-note { margin-left: auto; font-size: 12px; }
   body .cal-touch-entry {
     transition: none;
   }
+  body .cal-day-scrim,
+  body .cal-day-panel { animation: none; }
 }
 
 
