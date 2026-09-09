@@ -6,8 +6,8 @@ Feature: Combined search on /discover
 
   Background:
     Given the following users exist:
-      | email             | role     | display_name |
-      | host@example.com  | verified | Group Host   |
+      | email                              | role     | display_name |
+      | host+discover-combined@example.com | verified | Group Host   |
 
   Scenario: Default scope shows both scope chips
     When I visit "/discover"
@@ -15,13 +15,13 @@ Feature: Combined search on /discover
     And I should see "Groups"
 
   Scenario: scope=groups shows the groups section
-    Given a group named "Tampa Tech Talks" is owned by "host@example.com"
+    Given a group named "Tampa Tech Talks" is owned by "host+discover-combined@example.com"
     When I visit "/discover?scope=groups"
     Then I should see "Browse groups"
     And I should see "Tampa Tech Talks"
 
   Scenario: scope=groups hides huddlz
-    Given a group named "Tampa Tech Talks" is owned by "host@example.com"
+    Given a group named "Tampa Tech Talks" is owned by "host+discover-combined@example.com"
     And the group "Tampa Tech Talks" has an upcoming huddl titled "Builders Night"
     When I visit "/discover?scope=groups"
     Then I should see "Tampa Tech Talks"

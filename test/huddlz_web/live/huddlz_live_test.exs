@@ -1,4 +1,4 @@
-defmodule HuddlzWeb.MyHuddlzLiveTest do
+defmodule HuddlzWeb.HuddlzLiveTest do
   use HuddlzWeb.ConnCase, async: true
 
   alias Huddlz.Communities
@@ -378,7 +378,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       |> visit("/huddlz")
       |> assert_has("#{bare_card} .card-cover-fallback", text: "PE", exact: true)
       |> refute_has("#{bare_card} .cover-image")
-      |> assert_has("#{pictured_card} #my-huddl-card-cover-#{pictured.id}.cover-image")
+      |> assert_has("#{pictured_card} #huddl-list-cover-#{pictured.id}.cover-image")
       |> refute_has("#{pictured_card} .card-cover-fallback")
     end
   end

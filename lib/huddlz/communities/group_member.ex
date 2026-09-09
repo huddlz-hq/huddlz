@@ -16,7 +16,7 @@ defmodule Huddlz.Communities.GroupMember do
 
     queries do
       list :group_members, :get_by_group
-      list :my_memberships, :get_by_user
+      list :viewer_memberships, :get_by_user
     end
 
     mutations do

@@ -40,7 +40,7 @@ defmodule HuddlzWeb.CalendarLive do
 
     {:ok,
      socket
-     |> assign(:page_title, "My calendar")
+     |> assign(:page_title, "Calendar")
      |> assign(:time_zone, time_zone)
      |> assign(:today, today)
      |> stream_configure(:legend_items, dom_id: &"calendar-legend-item-#{&1.key}")}
@@ -445,7 +445,7 @@ defmodule HuddlzWeb.CalendarLive do
     >
       <div class="page-head">
         <div>
-          <h1>My calendar</h1>
+          <h1>Calendar</h1>
           <p>
             huddlz you're hosting, attending, or watching from the waitlist. Calendar dates use <strong id="calendar-time-zone">{@time_zone}</strong>.
           </p>
@@ -515,7 +515,7 @@ defmodule HuddlzWeb.CalendarLive do
           active={@scope == :mine}
           count={@counts.mine}
         >
-          My RSVPs
+          RSVPs
         </.chip>
         <.chip
           id="calendar-scope-groups"
@@ -523,7 +523,7 @@ defmodule HuddlzWeb.CalendarLive do
           active={@scope == :groups}
           count={@counts.groups}
         >
-          My groups
+          Groups
         </.chip>
       </div>
 

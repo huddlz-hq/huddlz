@@ -6,69 +6,69 @@ Feature: Create Huddl
 
   Background:
     Given the following users exist:
-      | email                 | role     | display_name |
-      | owner@example.com     | verified | Group Owner  |
-      | organizer@example.com | verified | Organizer    |
-      | member@example.com    | verified | Member       |
-      | regular@example.com   | regular  | Regular User |
+      | email                              | role     | display_name |
+      | owner+create-huddl@example.com     | verified | Group Owner  |
+      | organizer+create-huddl@example.com | verified | Organizer    |
+      | member+create-huddl@example.com    | verified | Member       |
+      | regular+create-huddl@example.com   | regular  | Regular User |
     And the following groups exist:
-      | name           | owner_email       | is_public |
-      | Tech Meetup    | owner@example.com | true      |
-      | Private Group  | owner@example.com | false     |
+      | name                     | owner_email                    | is_public |
+      | Scheduling Tech Meetup | owner+create-huddl@example.com | true      |
+      | Private Group            | owner+create-huddl@example.com | false     |
     And the following group memberships exist:
-      | group_name   | user_email            | role      |
-      | Tech Meetup  | organizer@example.com | organizer |
-      | Tech Meetup  | member@example.com    | member    |
+      | group_name               | user_email                         | role      |
+      | Scheduling Tech Meetup | organizer+create-huddl@example.com | organizer |
+      | Scheduling Tech Meetup | member+create-huddl@example.com    | member    |
 
   Scenario: Owner creates an in-person huddl
-    Given I am signed in as "owner@example.com"
-    When I visit the "Tech Meetup" group page
+    Given I am signed in as "owner+create-huddl@example.com"
+    When I visit the "Scheduling Tech Meetup" group page
     Then I should see a "Create Huddl" button
     When I click "Create Huddl"
-    Then I should be on the new huddl page for "Tech Meetup"
+    Then I should be on the new huddl page for "Scheduling Tech Meetup"
     When I fill in the huddl form with:
-      | Field             | Value                        |
-      | Title             | Monthly Tech Talk            |
-      | Description       | Discussion about new tech    |
-      | Start Date & Time | tomorrow at 6:00 PM         |
-      | End Date & Time   | tomorrow at 8:00 PM         |
-      | Huddl Type        | In-Person                   |
-      | Physical Location | 123 Main St, Tech City      |
+      | Field             | Value                     |
+      | Title             | Monthly Tech Talk         |
+      | Description       | Discussion about new tech |
+      | Start Date & Time | tomorrow at 6:00 PM       |
+      | End Date & Time   | tomorrow at 8:00 PM       |
+      | Huddl Type        | In-Person                 |
+      | Physical Location | 123 Main St, Tech City    |
     And I submit the form
-    Then I should be redirected to the "Tech Meetup" group page
+    Then I should be redirected to the "Scheduling Tech Meetup" group page
     And I should see "Huddl created successfully!"
     And the huddl "Monthly Tech Talk" should have coordinates 30.27, -97.74
 
   Scenario: Organizer creates a virtual huddl
-    Given I am signed in as "organizer@example.com"
-    When I visit the "Tech Meetup" group page
+    Given I am signed in as "organizer+create-huddl@example.com"
+    When I visit the "Scheduling Tech Meetup" group page
     Then I should see a "Create Huddl" button
     When I click "Create Huddl"
-    Then I should be on the new huddl page for "Tech Meetup"
+    Then I should be on the new huddl page for "Scheduling Tech Meetup"
     When I fill in the huddl form with:
-      | Field             | Value                        |
-      | Title             | Virtual Code Review          |
-      | Description       | Remote code review session   |
-      | Start Date & Time | tomorrow at 3:00 PM         |
-      | End Date & Time   | tomorrow at 4:00 PM         |
-      | Huddl Type        | Virtual                     |
-      | Virtual Link      | https://zoom.us/j/123456    |
+      | Field             | Value                      |
+      | Title             | Virtual Code Review        |
+      | Description       | Remote code review session |
+      | Start Date & Time | tomorrow at 3:00 PM        |
+      | End Date & Time   | tomorrow at 4:00 PM        |
+      | Huddl Type        | Virtual                    |
+      | Virtual Link      | https://zoom.us/j/123456   |
     And I submit the form
-    Then I should be redirected to the "Tech Meetup" group page
+    Then I should be redirected to the "Scheduling Tech Meetup" group page
     And I should see "Huddl created successfully!"
 
   @creator_attendance
   Scenario: Creator automatically attends and can later cancel their RSVP
-    Given I am signed in as "owner@example.com"
-    When I visit the new huddl page for "Tech Meetup"
+    Given I am signed in as "owner+create-huddl@example.com"
+    When I visit the new huddl page for "Scheduling Tech Meetup"
     And I fill in the huddl form with:
-      | Field             | Value                         |
-      | Title             | Creator Attendance            |
-      | Description       | The creator initially hosts   |
-      | Start Date & Time | tomorrow at 6:00 PM          |
-      | End Date & Time   | tomorrow at 8:00 PM          |
-      | Huddl Type        | Virtual                      |
-      | Virtual Link      | https://example.com/creator  |
+      | Field             | Value                       |
+      | Title             | Creator Attendance          |
+      | Description       | The creator initially hosts |
+      | Start Date & Time | tomorrow at 6:00 PM         |
+      | End Date & Time   | tomorrow at 8:00 PM         |
+      | Huddl Type        | Virtual                     |
+      | Virtual Link      | https://example.com/creator |
     And I submit the form
     And I visit "/huddlz"
     Then I should see "Creator Attendance"
@@ -84,48 +84,48 @@ Feature: Create Huddl
     Then I should not see "Creator Attendance"
 
   Scenario: Owner creates a monthly recurring huddl
-    Given I am signed in as "owner@example.com"
-    When I visit the "Tech Meetup" group page
+    Given I am signed in as "owner+create-huddl@example.com"
+    When I visit the "Scheduling Tech Meetup" group page
     Then I should see a "Create Huddl" button
     When I click "Create Huddl"
-    Then I should be on the new huddl page for "Tech Meetup"
+    Then I should be on the new huddl page for "Scheduling Tech Meetup"
     When I check "Recurring huddl"
     When I fill in the huddl form with:
-      | Field             | Value                       |
-      | Title             | Monthly Tech Talk           |
-      | Description       | Discussion about new tech   |
-      | Start Date & Time | tomorrow at 6:00 PM         |
-      | End Date & Time   | tomorrow at 8:00 PM         |
-      | Huddl Type        | In-Person                   |
-      | Physical Location | 123 Main St, Tech City      |
-      | Frequency         | Monthly                     |
-      | Repeat Until      | two months                  |
+      | Field             | Value                     |
+      | Title             | Monthly Tech Talk         |
+      | Description       | Discussion about new tech |
+      | Start Date & Time | tomorrow at 6:00 PM       |
+      | End Date & Time   | tomorrow at 8:00 PM       |
+      | Huddl Type        | In-Person                 |
+      | Physical Location | 123 Main St, Tech City    |
+      | Frequency         | Monthly                   |
+      | Repeat Until      | two months                |
     And I submit the form
     Then the huddl "Monthly Tech Talk" should be created 2 times
 
   Scenario: Owner creates a weekly recurring huddl
-    Given I am signed in as "owner@example.com"
-    When I visit the "Tech Meetup" group page
+    Given I am signed in as "owner+create-huddl@example.com"
+    When I visit the "Scheduling Tech Meetup" group page
     Then I should see a "Create Huddl" button
     When I click "Create Huddl"
-    Then I should be on the new huddl page for "Tech Meetup"
+    Then I should be on the new huddl page for "Scheduling Tech Meetup"
     When I check "Recurring huddl"
     When I fill in the huddl form with:
-      | Field             | Value                       |
-      | Title             | Weekly Tech Talk            |
-      | Description       | Discussion about new tech   |
-      | Start Date & Time | tomorrow at 6:00 PM         |
-      | End Date & Time   | tomorrow at 8:00 PM         |
-      | Huddl Type        | In-Person                   |
-      | Physical Location | 123 Main St, Tech City      |
-      | Frequency         | Weekly                      |
-      | Repeat Until      | two months                  |
+      | Field             | Value                     |
+      | Title             | Weekly Tech Talk          |
+      | Description       | Discussion about new tech |
+      | Start Date & Time | tomorrow at 6:00 PM       |
+      | End Date & Time   | tomorrow at 8:00 PM       |
+      | Huddl Type        | In-Person                 |
+      | Physical Location | 123 Main St, Tech City    |
+      | Frequency         | Weekly                    |
+      | Repeat Until      | two months                |
     And I submit the form
     Then the huddl "Weekly Tech Talk" should be created 9 times
 
   Scenario: Creating a hybrid huddl shows both location fields
-    Given I am signed in as "owner@example.com"
-    When I visit the new huddl page for "Tech Meetup"
+    Given I am signed in as "owner+create-huddl@example.com"
+    When I visit the new huddl page for "Scheduling Tech Meetup"
     Then I should see "Physical Location" field
     And I should not see "Online link" field
     When I choose "Hybrid"
@@ -133,32 +133,32 @@ Feature: Create Huddl
     And I should see "Online link" field
 
   Scenario: Private groups create private huddls only
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "owner+create-huddl@example.com"
     When I visit the new huddl page for "Private Group"
     Then I should not see a checkbox for "Members only"
     And I should see "This will be a private huddl"
     When I fill in the huddl form with:
-      | Field             | Value                        |
-      | Title             | Private Meeting              |
-      | Description       | Members only                 |
-      | Start Date & Time | tomorrow at 2:00 PM         |
-      | End Date & Time   | tomorrow at 3:00 PM         |
-      | Huddl Type        | In-Person                   |
-      | Physical Location | Secret Location              |
+      | Field             | Value               |
+      | Title             | Private Meeting     |
+      | Description       | Members only        |
+      | Start Date & Time | tomorrow at 2:00 PM |
+      | End Date & Time   | tomorrow at 3:00 PM |
+      | Huddl Type        | In-Person           |
+      | Physical Location | Secret Location     |
     And I submit the form
     Then the huddl should be created as private
 
   Scenario: Regular member cannot create huddl
-    Given I am signed in as "member@example.com"
-    When I visit the "Tech Meetup" group page
+    Given I am signed in as "member+create-huddl@example.com"
+    When I visit the "Scheduling Tech Meetup" group page
     Then I should not see a "Create Huddl" button
-    When I try to visit the new huddl page for "Tech Meetup"
-    Then I should be redirected to the "Tech Meetup" group page
+    When I try to visit the new huddl page for "Scheduling Tech Meetup"
+    Then I should be redirected to the "Scheduling Tech Meetup" group page
     And I should see "You don't have permission to create huddlz for this group"
 
   Scenario: Form validation shows errors
-    Given I am signed in as "owner@example.com"
-    When I visit the new huddl page for "Tech Meetup"
+    Given I am signed in as "owner+create-huddl@example.com"
+    When I visit the new huddl page for "Scheduling Tech Meetup"
     And I submit the form without filling it
     Then I should see validation errors for required fields
     And I should remain on the new huddl page

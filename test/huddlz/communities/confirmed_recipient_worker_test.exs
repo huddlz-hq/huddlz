@@ -23,7 +23,7 @@ defmodule Huddlz.Communities.ConfirmedRecipientWorkerTest do
     assert :ok = ConfirmedRecipientWorker.perform(context.job)
     assert :ok = ConfirmedRecipientWorker.perform(context.job)
 
-    assert [invitation] = Communities.list_my_group_invitations!(actor: context.recipient)
+    assert [invitation] = Communities.group_invitations_for_actor!(actor: context.recipient)
     assert invitation.id == context.invitation.id
     assert invitation.status == :pending
     assert [_notification] = Notifications.list_for_user!(actor: context.recipient)
@@ -33,7 +33,7 @@ defmodule Huddlz.Communities.ConfirmedRecipientWorkerTest do
     Communities.revoke_group_invitation!(context.invitation, actor: context.owner)
 
     assert :ok = ConfirmedRecipientWorker.perform(context.job)
-    assert [] = Communities.list_my_group_invitations!(actor: context.recipient)
+    assert [] = Communities.group_invitations_for_actor!(actor: context.recipient)
     assert [] = Notifications.list_for_user!(actor: context.recipient)
   end
 
@@ -41,7 +41,7 @@ defmodule Huddlz.Communities.ConfirmedRecipientWorkerTest do
     job = %{context.job | args: %{context.job.args | "email" => "previous@example.com"}}
 
     assert :ok = ConfirmedRecipientWorker.perform(job)
-    assert [] = Communities.list_my_group_invitations!(actor: context.recipient)
+    assert [] = Communities.group_invitations_for_actor!(actor: context.recipient)
     assert [] = Notifications.list_for_user!(actor: context.recipient)
   end
 end

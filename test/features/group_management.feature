@@ -6,18 +6,18 @@ Feature: Group Management
 
   Background:
     Given the following users exist:
-      | email                    | role     | display_name |
-      | admin@example.com        | admin    | Admin User   |
-      | verified@example.com     | verified | Verified User|
-      | regular@example.com      | regular  | Regular User |
+      | email                                | role     | display_name  |
+      | admin+group-management@example.com   | admin    | Admin User    |
+      | verified@example.com                 | verified | Verified User |
+      | regular+group-management@example.com | regular  | Regular User  |
 
   Scenario: Creating a public group as a verified user
     Given I am signed in as "verified@example.com"
     When I visit "/groups/new"
     Then I should see "Create a group"
     When I fill in the following:
-      | Group name  | Tech Enthusiasts           |
-      | Description | A group for tech lovers    |
+      | Group name  | Tech Enthusiasts        |
+      | Description | A group for tech lovers |
     And I select "San Francisco, CA, USA" as the group city in "America/Los_Angeles"
     And I check "Public group"
     And I click "Create group"
@@ -26,7 +26,7 @@ Feature: Group Management
     And I should see "A group for tech lovers"
 
   Scenario: Creating a private group as an admin
-    Given I am signed in as "admin@example.com"
+    Given I am signed in as "admin+group-management@example.com"
     When I visit "/groups/new"
     When I fill in the following:
       | Group name  | Secret Society |
@@ -39,40 +39,40 @@ Feature: Group Management
     And I should see "Private"
 
   Scenario: Regular users can create groups
-    Given I am signed in as "regular@example.com"
+    Given I am signed in as "regular+group-management@example.com"
     When I visit "/groups/new"
     Then I should see "Create a group"
 
   Scenario: Viewing a public group as a visitor
-    Given a public group "Book Club" exists with owner "verified@example.com"
-    When I visit the group page for "Book Club"
-    Then I should see "Book Club"
+    Given a public group "Management Book Club" exists with owner "verified@example.com"
+    When I visit the group page for "Management Book Club"
+    Then I should see "Management Book Club"
     And the group member count should be 1
 
   Scenario: Cannot view private group as non-member
-    Given a private group "VIP Club" exists with owner "admin@example.com"
-    And I am signed in as "regular@example.com"
+    Given a private group "VIP Club" exists with owner "admin+group-management@example.com"
+    And I am signed in as "regular+group-management@example.com"
     When I try to visit the group page for "VIP Club"
     Then I should see the branded not found recovery page
 
   Scenario: Owner can edit group details
-    Given a public group "Book Club" exists with owner "verified@example.com"
+    Given a public group "Management Book Club" exists with owner "verified@example.com"
     And I am signed in as "verified@example.com"
-    When I visit the group page for "Book Club"
+    When I visit the group page for "Management Book Club"
     And I click "Edit Group"
     Then I should see "Edit Group"
     When I fill in the following:
-      | Group Name  | Updated Book Club       |
-      | Description | Updated description     |
+      | Group Name  | Updated Management Book Club |
+      | Description | Updated description                |
     And I select "Austin, TX, USA" as the group city in "America/Chicago"
     And I click "Save Changes"
     Then I should see "Group updated successfully"
-    And I should see "Updated Book Club"
+    And I should see "Updated Management Book Club"
 
   Scenario: Owner understands making a public group private
-    Given a public group "Book Club" exists with owner "verified@example.com"
+    Given a public group "Management Book Club" exists with owner "verified@example.com"
     And I am signed in as "verified@example.com"
-    When I visit the edit page for "Book Club"
+    When I visit the edit page for "Management Book Club"
     Then I should see "Current visibility"
     And I should see "Public"
     When I uncheck "Public group"
@@ -84,9 +84,9 @@ Feature: Group Management
     Then I should see "Visibility is now private"
 
   Scenario: Owner understands making a private group public
-    Given a private group "Book Club" exists with owner "verified@example.com"
+    Given a private group "Management Book Club" exists with owner "verified@example.com"
     And I am signed in as "verified@example.com"
-    When I visit the edit page for "Book Club"
+    When I visit the edit page for "Management Book Club"
     Then I should see "Current visibility"
     And I should see "Private"
     When I check "Public group"
@@ -97,19 +97,19 @@ Feature: Group Management
     Then I should see "Visibility is now public"
 
   Scenario: Non-owner cannot edit group
-    Given a public group "Book Club" exists with owner "verified@example.com"
-    And I am signed in as "regular@example.com"
-    When I visit the edit page for "Book Club"
+    Given a public group "Management Book Club" exists with owner "verified@example.com"
+    And I am signed in as "regular+group-management@example.com"
+    When I visit the edit page for "Management Book Club"
     Then I should see "You don't have permission to edit this group"
 
   Scenario: Member confirms before leaving a group
-    Given a public group "Book Club" exists with owner "verified@example.com"
-    And "regular@example.com" is a member of "Book Club"
-    And I am signed in as "regular@example.com"
-    When I visit the group page for "Book Club"
+    Given a public group "Management Book Club" exists with owner "verified@example.com"
+    And "regular+group-management@example.com" is a member of "Management Book Club"
+    And I am signed in as "regular+group-management@example.com"
+    When I visit the group page for "Management Book Club"
     Then the group member count should be 2
     When I click "Leave Group"
-    Then I should see the leave dialog for "Book Club"
+    Then I should see the leave dialog for "Management Book Club"
     When I click "Cancel"
     Then the "Leave Group" button should be visible
     When I click "Leave Group"
@@ -118,7 +118,7 @@ Feature: Group Management
     And the "Join Group" button should be visible
     And the group member count should be 1
     When I visit "/groups"
-    Then I should not see "Book Club"
+    Then I should not see "Management Book Club"
 
   Scenario: Group name is required
     Given I am signed in as "verified@example.com"

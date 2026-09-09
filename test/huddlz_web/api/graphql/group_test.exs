@@ -52,7 +52,7 @@ defmodule HuddlzWeb.Api.Graphql.GroupTest do
     end
   end
 
-  describe "myGroups query" do
+  describe "viewerGroups query" do
     test "returns groups the actor owns or has joined (default :all)", %{conn: conn} do
       member = generate(user())
       stranger = generate(user())
@@ -67,9 +67,9 @@ defmodule HuddlzWeb.Api.Graphql.GroupTest do
       conn =
         conn
         |> authenticated_conn(member)
-        |> gql_post("{ myGroups { results { id name } } }")
+        |> gql_post("{ viewerGroups { results { id name } } }")
 
-      assert %{"data" => %{"myGroups" => %{"results" => results}}} =
+      assert %{"data" => %{"viewerGroups" => %{"results" => results}}} =
                json_response(conn, 200)
 
       ids = Enum.map(results, & &1["id"])
@@ -88,9 +88,9 @@ defmodule HuddlzWeb.Api.Graphql.GroupTest do
       conn =
         conn
         |> authenticated_conn(member)
-        |> gql_post(~s|{ myGroups(relationship: "hosting") { results { id } } }|)
+        |> gql_post(~s|{ viewerGroups(relationship: "hosting") { results { id } } }|)
 
-      assert %{"data" => %{"myGroups" => %{"results" => results}}} = json_response(conn, 200)
+      assert %{"data" => %{"viewerGroups" => %{"results" => results}}} = json_response(conn, 200)
 
       ids = Enum.map(results, & &1["id"])
       assert owned.id in ids
@@ -108,9 +108,9 @@ defmodule HuddlzWeb.Api.Graphql.GroupTest do
       conn =
         conn
         |> authenticated_conn(member)
-        |> gql_post(~s|{ myGroups(relationship: "joined") { results { id } } }|)
+        |> gql_post(~s|{ viewerGroups(relationship: "joined") { results { id } } }|)
 
-      assert %{"data" => %{"myGroups" => %{"results" => results}}} = json_response(conn, 200)
+      assert %{"data" => %{"viewerGroups" => %{"results" => results}}} = json_response(conn, 200)
 
       ids = Enum.map(results, & &1["id"])
       assert joined.id in ids
@@ -123,9 +123,9 @@ defmodule HuddlzWeb.Api.Graphql.GroupTest do
       conn =
         conn
         |> authenticated_conn(lonely)
-        |> gql_post("{ myGroups { results { id } } }")
+        |> gql_post("{ viewerGroups { results { id } } }")
 
-      assert %{"data" => %{"myGroups" => %{"results" => []}}} = json_response(conn, 200)
+      assert %{"data" => %{"viewerGroups" => %{"results" => []}}} = json_response(conn, 200)
     end
   end
 end

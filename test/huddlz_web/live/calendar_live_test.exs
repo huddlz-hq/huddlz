@@ -67,9 +67,9 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn
       |> login(attendee)
       |> visit("/calendar?view=month")
-      |> assert_has("h1", text: "My calendar")
+      |> assert_has("h1", text: "Calendar")
       |> assert_has("aside.sidebar")
-      |> assert_has(".sb-item.active[aria-current='page']", text: "My calendar")
+      |> assert_has(".sb-item.active[aria-current='page']", text: "Calendar")
       |> refute_has(".sb-item:not(.active)[aria-current]")
       |> assert_has(".cal-toolbar")
       |> assert_has(".cal-nav-today", text: "Today")
@@ -808,10 +808,10 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn
       |> login(attendee)
       |> visit("/calendar")
-      |> assert_has("#calendar-scope-mine.chip.is-active[aria-current='page']", text: "My RSVPs")
+      |> assert_has("#calendar-scope-mine.chip.is-active[aria-current='page']", text: "RSVPs")
       |> assert_has("#calendar-scope-mine .chip-count", text: "1")
       |> assert_has("#calendar-scope-groups.chip:not(.is-active)[href='/calendar?scope=groups']",
-        text: "My groups"
+        text: "Groups"
       )
       |> assert_has("#calendar-scope-groups .chip-count", text: "2")
       |> refute_has(".cal-agenda-title", text: "Theirs")

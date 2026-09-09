@@ -204,7 +204,7 @@ defmodule Huddlz.Communities.GroupInvitationTest do
              Communities.accept_group_invitation(invitation, actor: outsider)
 
     assert {:ok, nil} =
-             Communities.get_my_group_invitation(
+             Communities.get_group_invitation_for_actor(
                invitation.id,
                actor: outsider,
                not_found_error?: false

@@ -6,15 +6,15 @@ Feature: Cancel Huddl
 
   Background:
     Given the following users exist:
-      | email                 | role     | display_name |
-      | owner@example.com     | verified | Group Owner  |
-      | non_owner@example.com | verified | Other User   |
+      | email                              | role     | display_name |
+      | owner+delete-huddl@example.com     | verified | Group Owner  |
+      | non_owner+delete-huddl@example.com | verified | Other User   |
     Given the following huddlz exist:
-      | name            | creator_name | group_name
-      | Future Workshop | Group Owner  | Tech Meetup
+      | name            | creator_name | group_name               |
+      | Future Workshop | Group Owner  | Delete Huddl Tech Meetup |
 
   Scenario: Owner cancels an in-person huddl
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "owner+delete-huddl@example.com"
     When I visit the "Future Workshop" huddl page
     Then I should see "Cancel huddl"
     When I click "Cancel huddl"
@@ -24,6 +24,6 @@ Feature: Cancel Huddl
     And I should see "Huddl cancelled. Attendees have been notified."
 
   Scenario: Non-owner cannot cancel a huddl
-    Given I am signed in as "non_owner@example.com"
+    Given I am signed in as "non_owner+delete-huddl@example.com"
     When I visit the "Future Workshop" huddl page
     Then I should not see "Cancel huddl"

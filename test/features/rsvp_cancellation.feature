@@ -6,20 +6,20 @@ Feature: RSVP Cancellation
 
   Background:
     Given the following users exist:
-      | email                    | display_name | role     |
-      | organizer@example.com    | Organizer    | verified |
-      | member@example.com       | Member       | verified |
+      | email                                   | display_name | role     |
+      | organizer+rsvp-cancellation@example.com | Organizer    | verified |
+      | member+rsvp-cancellation@example.com    | Member       | verified |
     And the following group exists:
-      | name          | description        | is_public | owner_email           |
-      | Tech Meetup   | Local tech group   | true      | organizer@example.com |
-    And "member@example.com" is a member of "Tech Meetup"
-    And the following huddl exists in "Tech Meetup":
-      | title                 | description              | event_type | starts_at    | virtual_link                |
-      | Virtual Code Review   | Let's review some code   | virtual    | tomorrow 2pm | https://zoom.us/j/123456789 |
+      | name                          | description      | is_public | owner_email                             |
+      | Cancellation Tech Meetup | Local tech group | true      | organizer+rsvp-cancellation@example.com |
+    And "member+rsvp-cancellation@example.com" is a member of "Cancellation Tech Meetup"
+    And the following huddl exists in "Cancellation Tech Meetup":
+      | title               | description            | event_type | starts_at    | virtual_link                |
+      | Virtual Code Review | Let's review some code | virtual    | tomorrow 2pm | https://zoom.us/j/123456789 |
 
   Scenario: User cancels their RSVP to a huddl
-    Given I am logged in as "member@example.com"
-    And I am on the "Tech Meetup" group page
+    Given I am logged in as "member+rsvp-cancellation@example.com"
+    And I am on the "Cancellation Tech Meetup" group page
     Then I should see "Virtual Code Review"
     When I click "Virtual Code Review"
     Then I should be on the huddl page for "Virtual Code Review"
@@ -40,7 +40,7 @@ Feature: RSVP Cancellation
     And I should see "1 person attending"
 
   Scenario: User can RSVP again after cancelling
-    Given I am logged in as "member@example.com"
+    Given I am logged in as "member+rsvp-cancellation@example.com"
     And I have RSVPed to "Virtual Code Review"
     When I visit the "Virtual Code Review" huddl page
     And I click "Cancel RSVP"
@@ -52,9 +52,9 @@ Feature: RSVP Cancellation
     And I should see "2 people attending"
 
   Scenario: Multiple users can manage their RSVPs independently
-    Given I am logged in as "organizer@example.com"
+    Given I am logged in as "organizer+rsvp-cancellation@example.com"
     And I have RSVPed to "Virtual Code Review"
-    And "member@example.com" has RSVPed to "Virtual Code Review"
+    And "member+rsvp-cancellation@example.com" has RSVPed to "Virtual Code Review"
     When I visit the "Virtual Code Review" huddl page
     Then I should see "2 people attending"
     
@@ -63,16 +63,16 @@ Feature: RSVP Cancellation
     And I should see "1 person attending"
     
     When I log out
-    And I am logged in as "member@example.com"
+    And I am logged in as "member+rsvp-cancellation@example.com"
     And I visit the "Virtual Code Review" huddl page
     Then I should see "You're attending"
     And I should see "1 person attending"
 
   Scenario: Cannot cancel RSVP for past events
-    Given I am logged in as "member@example.com"
-    And the following huddl exists in "Tech Meetup":
-      | title        | description    | event_type | starts_at      | ends_at        | virtual_link              |
-      | Past Event   | Already done   | virtual    | yesterday 2pm  | yesterday 3pm  | https://zoom.us/j/999999  |
+    Given I am logged in as "member+rsvp-cancellation@example.com"
+    And the following huddl exists in "Cancellation Tech Meetup":
+      | title      | description  | event_type | starts_at     | ends_at       | virtual_link             |
+      | Past Event | Already done | virtual    | yesterday 2pm | yesterday 3pm | https://zoom.us/j/999999 |
     And I have RSVPed to "Past Event"
     When I visit the "Past Event" huddl page
     Then I should not see "Cancel RSVP"

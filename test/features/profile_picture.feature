@@ -6,9 +6,9 @@ Feature: Profile Picture Management
 
   Background:
     Given the following users exist:
-      | email                | role     | display_name    |
-      | alice@example.com    | user     | Alice User      |
-    And I am signed in as "alice@example.com"
+      | email                             | role | display_name |
+      | alice+profile-picture@example.com | user | Alice User   |
+    And I am signed in as "alice+profile-picture@example.com"
 
   Scenario: Viewing profile picture section
     When I visit "/profile"
@@ -37,45 +37,45 @@ Feature: Profile Picture Management
     And I should see "Display name"
 
   Scenario: Profile picture appears in navbar when user has one
-    Given a public group "Avatar Group" exists with owner "alice@example.com"
+    Given a public group "Avatar Group" exists with owner "alice+profile-picture@example.com"
     And the following profile pictures exist:
-      | user_email          | storage_path                                      |
-      | alice@example.com   | /uploads/profile_pictures/alice/avatar.jpg        |
+      | user_email                        | storage_path                               |
+      | alice+profile-picture@example.com | /uploads/profile_pictures/alice/avatar.jpg |
     When I visit the locations page for "Avatar Group"
     Then I should see the navbar avatar with image
 
   Scenario: Navbar shows initials when user has no profile picture
-    Given a public group "Initials Group" exists with owner "alice@example.com"
+    Given a public group "Initials Group" exists with owner "alice+profile-picture@example.com"
     When I visit the locations page for "Initials Group"
     Then I should see the navbar avatar with initials "AU"
 
   Scenario: Member section shows member initials on the group page
     Given the following groups exist:
-      | name          | slug          | owner_email       | visibility |
-      | Test Group    | test-group    | alice@example.com | public     |
-    And I am signed in as "alice@example.com"
+      | name       | slug       | owner_email                       | visibility |
+      | Test Group | test-group | alice+profile-picture@example.com | public     |
+    And I am signed in as "alice+profile-picture@example.com"
     When I visit "/groups/test-group"
     Then I should see the member tile with initials "AU"
 
   Scenario: Profile picture appears for huddl creator
     Given the following groups exist:
-      | name          | slug          | owner_email       | visibility |
-      | Test Group    | test-group    | alice@example.com | public     |
-    And a huddl "Test Huddl" exists in "Test Group" created by "alice@example.com"
+      | name       | slug       | owner_email                       | visibility |
+      | Test Group | test-group | alice+profile-picture@example.com | public     |
+    And a huddl "Test Huddl" exists in "Test Group" created by "alice+profile-picture@example.com"
     And the following profile pictures exist:
-      | user_email          | storage_path                                      |
-      | alice@example.com   | /uploads/profile_pictures/alice/avatar.jpg        |
+      | user_email                        | storage_path                               |
+      | alice+profile-picture@example.com | /uploads/profile_pictures/alice/avatar.jpg |
     When I visit the huddl "Test Huddl" page
     Then I should see the creator avatar with image
 
   Scenario: Avatar shows initials after profile picture is removed
     Given the following groups exist:
-      | name       | slug       | owner_email       | visibility |
-      | Test Group | test-group | alice@example.com | public     |
-    And a huddl "Test Huddl" exists in "Test Group" created by "alice@example.com"
+      | name       | slug       | owner_email                       | visibility |
+      | Test Group | test-group | alice+profile-picture@example.com | public     |
+    And a huddl "Test Huddl" exists in "Test Group" created by "alice+profile-picture@example.com"
     And the following profile pictures exist:
-      | user_email          | storage_path                                      |
-      | alice@example.com   | /uploads/profile_pictures/alice/avatar.jpg        |
+      | user_email                        | storage_path                               |
+      | alice+profile-picture@example.com | /uploads/profile_pictures/alice/avatar.jpg |
     When I visit "/profile"
     And I click "Remove"
     Then I should see "Remove your profile picture?"
@@ -89,8 +89,8 @@ Feature: Profile Picture Management
 
   Scenario: Canceling profile picture removal preserves the picture
     Given the following profile pictures exist:
-      | user_email        | storage_path                               |
-      | alice@example.com | /uploads/profile_pictures/alice/avatar.jpg |
+      | user_email                        | storage_path                               |
+      | alice+profile-picture@example.com | /uploads/profile_pictures/alice/avatar.jpg |
     When I visit "/profile"
     And I click "Remove"
     Then I should see "Remove your profile picture?"
@@ -100,11 +100,11 @@ Feature: Profile Picture Management
 
   Scenario: Removing profile picture shows initials not previous picture
     Given the following profile pictures exist:
-      | user_email          | storage_path                                      |
-      | alice@example.com   | /uploads/profile_pictures/alice/first.jpg        |
+      | user_email                        | storage_path                              |
+      | alice+profile-picture@example.com | /uploads/profile_pictures/alice/first.jpg |
     And the following profile pictures exist:
-      | user_email          | storage_path                                      |
-      | alice@example.com   | /uploads/profile_pictures/alice/second.jpg       |
+      | user_email                        | storage_path                               |
+      | alice+profile-picture@example.com | /uploads/profile_pictures/alice/second.jpg |
     When I visit "/profile"
     And I click "Remove"
     Then I should see "Remove your profile picture?"

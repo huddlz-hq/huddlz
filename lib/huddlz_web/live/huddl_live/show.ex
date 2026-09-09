@@ -1249,20 +1249,20 @@ defmodule HuddlzWeb.HuddlLive.Show do
       {:ok, [%{waitlisted_at: nil} | _]} ->
         {:attending, nil}
 
-      {:ok, [%{waitlisted_at: %DateTime{} = my_at} | _]} ->
-        {:waitlisted, waitlist_position(huddl, my_at)}
+      {:ok, [%{waitlisted_at: %DateTime{} = waitlisted_at} | _]} ->
+        {:waitlisted, waitlist_position(huddl, waitlisted_at)}
 
       _ ->
         {:none, nil}
     end
   end
 
-  defp waitlist_position(huddl, %DateTime{} = my_at) do
+  defp waitlist_position(huddl, %DateTime{} = waitlisted_at) do
     require Ash.Query
 
     Huddlz.Communities.HuddlAttendee
     |> Ash.Query.filter(
-      huddl_id == ^huddl.id and not is_nil(waitlisted_at) and waitlisted_at <= ^my_at
+      huddl_id == ^huddl.id and not is_nil(waitlisted_at) and waitlisted_at <= ^waitlisted_at
     )
     |> Ash.count!(authorize?: false)
   end

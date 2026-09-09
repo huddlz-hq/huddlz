@@ -23,6 +23,6 @@ defmodule Huddlz.Communities.GroupInvitation.OpenEmailInvitation do
   end
 
   defp open(invitation, _token, actor) do
-    Communities.get_my_group_invitation(invitation.id, actor: actor)
+    Communities.get_group_invitation_for_actor(invitation.id, actor: actor)
   end
 end

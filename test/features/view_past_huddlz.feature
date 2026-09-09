@@ -6,9 +6,9 @@ Feature: View Past Huddlz on Group Pages
 
   Background:
     Given the following users exist:
-      | email                | display_name | role     |
-      | member@example.com   | Test Member  | regular  |
-      | nonmember@example.com| Non Member   | regular  |
+      | email                                  | display_name | role    |
+      | member+view-past-huddlz@example.com    | Test Member  | regular |
+      | nonmember+view-past-huddlz@example.com | Non Member   | regular |
     And there are groups with past and future huddlz in the system
 
   Scenario: View past huddlz in public groups
@@ -19,14 +19,14 @@ Feature: View Past Huddlz on Group Pages
     And the past huddlz should be sorted newest first
 
   Scenario: View past huddlz as a group member
-    Given I am signed in as "member@example.com"
+    Given I am signed in as "member+view-past-huddlz@example.com"
     And I am a member of a private group with past huddlz
     When I visit that private group page
     And I click on the "Past" tab
     Then I should see past huddlz from my private group
 
   Scenario: Non-members cannot see private groups
-    Given I am signed in as "nonmember@example.com"
+    Given I am signed in as "nonmember+view-past-huddlz@example.com"
     And there is a private group with past huddlz I'm not a member of
     When I try to visit that private group page
     Then I should see the branded not found recovery page

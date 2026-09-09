@@ -14,7 +14,8 @@ Feature: Calendar scope: my RSVPs or everything my groups have on
     Given I belong to "Portland Elixir", which has scheduled "Hands-on with Ash Framework"
     And I am going to "Async Rust reading group" with another group
     When I open the agenda
-    Then the agenda lists "Async Rust reading group" as going
+    Then the calendar offers "RSVPs" and "Groups" scopes
+    And the agenda lists "Async Rust reading group" as going
     And the agenda does not list "Hands-on with Ash Framework"
 
   Scenario: Everything my groups have on
