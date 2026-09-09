@@ -3,7 +3,9 @@ defmodule HuddlzWeb.CalendarLive do
   LiveView at `/calendar`. Personal calendar of huddlz the signed-in user
   is hosting, attending, or watching from the waitlist. Month grid by
   default with an agenda toggle; `?month=YYYY-MM` and `?view=month|agenda`
-  drive state.
+  drive state. The agenda groups the month's huddlz by day, one entry per
+  huddl, and always draws today as the anchor between what has passed and
+  what is next.
   """
   use HuddlzWeb, :live_view
 
@@ -21,7 +23,7 @@ defmodule HuddlzWeb.CalendarLive do
     defstruct [:key, :label, :variant, :rank]
   end
 
-  @card_loads [:status, :group]
+  @card_loads [:status, :group, :display_image_url]
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -393,11 +395,6 @@ defmodule HuddlzWeb.CalendarLive do
 
   defp legend_swatch_class(%{variant: variant}), do: ["cal-legend-swatch", variant]
 
-  defp format_agenda_when(%{starts_at: %DateTime{}} = huddl) do
-    local = HuddlCardHelpers.local_starts_at(huddl)
-    Calendar.strftime(local, "%a %b %-d · %-I:%M %p %Z")
-  end
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -593,21 +590,12 @@ defmodule HuddlzWeb.CalendarLive do
           <p class="cal-touch-agenda-kicker">Calendar details</p>
           <h2 id="calendar-touch-agenda-title">Huddlz shown above</h2>
         </div>
-        <div class="cal-touch-agenda-list">
-          <.link
-            :for={entry <- @entries}
-            id={"calendar-touch-entry-#{entry.huddl.id}"}
-            navigate={huddl_path(entry)}
-            class="cal-touch-entry"
-            data-status={entry_status(entry, @today).key}
-          >
-            <time datetime={DateTime.to_iso8601(entry.huddl.starts_at)}>
-              {format_agenda_when(entry.huddl)}
-            </time>
-            <span class="cal-touch-entry-title">{entry.huddl.title}</span>
-            <span class="cal-touch-entry-status">{entry_status(entry, @today).label}</span>
-          </.link>
-        </div>
+        <.agenda_list
+          id="calendar-touch-agenda-list"
+          entry_prefix="calendar-touch-entry"
+          days={agenda_days(@entries, @focus_month, @today, anchor_today: false)}
+          today={@today}
+        />
       </section>
     </div>
     """
@@ -659,40 +647,173 @@ defmodule HuddlzWeb.CalendarLive do
   attr :first_run?, :boolean, default: false
 
   defp agenda_view(assigns) do
-    sorted = agenda_entries(assigns.entries, assigns.focus_month)
-    assigns = assign(assigns, :sorted, sorted)
+    days =
+      assigns.entries
+      |> agenda_entries(assigns.focus_month)
+      |> agenda_days(assigns.focus_month, assigns.today, anchor_today: true)
+
+    assigns = assign(assigns, :days, days)
 
     ~H"""
     <%= if @first_run? do %>
       <.first_run_empty />
     <% else %>
-      <%= if @sorted == [] do %>
+      <%= if Enum.all?(@days, &(&1.entries == [])) do %>
         <.empty_state id="calendar-agenda-empty" icon="hero-calendar" title="Nothing this month">
           Nothing on the calendar this month.
         </.empty_state>
       <% else %>
-        <div class="cal-agenda-panel">
-          <div class="row-list cal-agenda-list">
-            <.link
-              :for={entry <- @sorted}
-              id={"calendar-entry-#{entry.huddl.id}"}
-              navigate={huddl_path(entry)}
-              class="row cal-agenda-row"
-            >
-              <span class="meta">{format_agenda_when(entry.huddl)}</span>
-              <span class="row-title">{entry.huddl.title}</span>
-              <.pill
-                variant={entry_status(entry, @today).variant}
-                class="cal-entry-status"
-                data-status={entry_status(entry, @today).key}
-              >
-                {entry_status(entry, @today).label}
-              </.pill>
-            </.link>
-          </div>
-        </div>
+        <.agenda_list
+          id="calendar-agenda"
+          entry_prefix="calendar-entry"
+          days={@days}
+          today={@today}
+        />
       <% end %>
     <% end %>
     """
   end
+
+  # The agenda list: one group per day with a date rail on the left and
+  # the day's huddlz on the right, in time order. Today is always drawn
+  # when it falls in the month, with or without a huddl on it, so the
+  # list reads as "what has passed, today, what is next".
+  attr :id, :string, required: true
+  attr :entry_prefix, :string, required: true
+  attr :days, :list, required: true
+  attr :today, Date, required: true
+
+  defp agenda_list(assigns) do
+    ~H"""
+    <div id={@id} class="cal-agenda">
+      <div
+        :for={day <- @days}
+        id={"#{@id}-day-#{Date.to_iso8601(day.date)}"}
+        class="cal-agenda-day"
+        data-today={day.today? || nil}
+        data-past={day.past? || nil}
+      >
+        <div class="cal-agenda-rail">
+          <span class="cal-agenda-weekday" aria-hidden="true">
+            {Calendar.strftime(day.date, "%a")}
+          </span>
+          <time
+            datetime={Date.to_iso8601(day.date)}
+            class={["cal-agenda-daynum", day.today? && "is-today"]}
+            aria-label={format_full_date(day.date)}
+          >
+            {day.date.day}
+          </time>
+          <span :if={day.today?} class="cal-agenda-day-context">Today</span>
+          <span :if={day.other_month?} class="cal-agenda-day-context">
+            {Calendar.strftime(day.date, "%b")}
+          </span>
+        </div>
+        <div class="cal-agenda-entries">
+          <.agenda_entry
+            :for={entry <- day.entries}
+            id={"#{@entry_prefix}-#{entry.huddl.id}"}
+            entry={entry}
+            today={@today}
+          />
+          <div :if={day.entries == []} class="cal-agenda-quiet">
+            <p>
+              Nothing today.
+              <%= if day.next_up do %>
+                Next up is <.link navigate={huddl_path(day.next_up)}>{day.next_up.huddl.title}</.link>
+                on {Calendar.strftime(day.next_up.calendar_date, "%A")}.
+              <% else %>
+                Nothing else this month.
+              <% end %>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :entry, :map, required: true
+  attr :today, Date, required: true
+
+  defp agenda_entry(assigns) do
+    assigns = assign(assigns, :status, entry_status(assigns.entry, assigns.today))
+
+    ~H"""
+    <.link
+      id={@id}
+      navigate={huddl_path(@entry)}
+      class="cal-agenda-entry"
+      data-status={@status.key}
+    >
+      <div class="cal-agenda-thumb">
+        <%= if @entry.huddl.display_image_url do %>
+          <.cover_image
+            id={"#{@id}-cover"}
+            class="cal-agenda-thumb-img"
+            image_url={@entry.huddl.display_image_url}
+          />
+        <% else %>
+          <.cover_fallback name={@entry.huddl.group.name} />
+        <% end %>
+      </div>
+      <div class="cal-agenda-body">
+        <time class="cal-agenda-time" datetime={DateTime.to_iso8601(@entry.huddl.starts_at)}>
+          {format_pill_time(@entry)}
+        </time>
+        <span class="cal-agenda-title">{@entry.huddl.title}</span>
+        <span class="cal-agenda-meta">
+          <span>{@entry.huddl.group.name}</span>
+          <span class="dot" aria-hidden="true"></span>
+          <span>{place_label(@entry.huddl)}</span>
+        </span>
+      </div>
+      <div class="cal-agenda-side">
+        <.pill variant={@status.variant} class="cal-entry-status" data-status={@status.key}>
+          {@status.label}
+        </.pill>
+        <span :if={@status.variant != :muted} class="cal-agenda-relative">
+          {HuddlCardHelpers.relative_time(@entry.huddl.starts_at)}
+        </span>
+      </div>
+    </.link>
+    """
+  end
+
+  # Groups entries by calendar day, in date order. With `anchor_today: true`
+  # the focused month always gets a row for today, carrying the next huddl
+  # after it so an empty today still points somewhere.
+  defp agenda_days(entries, focus_month, today, anchor_today: anchor?) do
+    grouped = Enum.group_by(entries, & &1.calendar_date)
+
+    dates =
+      if anchor? and day_in_focus?(today, focus_month),
+        do: Enum.uniq([today | Map.keys(grouped)]),
+        else: Map.keys(grouped)
+
+    dates
+    |> Enum.sort(Date)
+    |> Enum.map(fn date ->
+      %{
+        date: date,
+        entries: Map.get(grouped, date, []),
+        today?: Date.compare(date, today) == :eq,
+        past?: Date.compare(date, today) == :lt,
+        other_month?: !day_in_focus?(date, focus_month),
+        next_up: next_up(entries, date)
+      }
+    end)
+  end
+
+  defp next_up(entries, date) do
+    Enum.find(entries, &(Date.compare(&1.calendar_date, date) == :gt))
+  end
+
+  defp place_label(%{event_type: :virtual}), do: "Online"
+
+  defp place_label(%{physical_location: place}) when is_binary(place) and place != "",
+    do: place
+
+  defp place_label(%{event_type: type}), do: HuddlCardHelpers.tag_label(type)
 end

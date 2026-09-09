@@ -2644,32 +2644,199 @@ body .cal-cell:last-child .cal-pill-tooltip::after {
   left: auto;
 }
 
-/* Agenda view: one row per huddl in the focused month. */
-body .cal-agenda-panel {
+/* Agenda: the month's huddlz grouped by day. A date rail on the left, one
+   horizontal card per huddl on the right. Today is always drawn as the
+   anchor between what has passed and what is next; past days go quiet. */
+body .cal-agenda {
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--panel);
-  padding: 4px 20px;
+  overflow: hidden;
 }
 
-body .cal-agenda-row {
-  grid-template-columns: 200px minmax(0, 1fr) auto;
+body .cal-agenda-day {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  border-bottom: 1px solid var(--line);
+}
+
+body .cal-agenda-day:last-child { border-bottom: 0; }
+
+body .cal-agenda-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 16px 12px 16px 20px;
+  border-right: 1px solid var(--line);
+}
+
+body .cal-agenda-weekday {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+body .cal-agenda-daynum {
+  color: var(--text);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+body .cal-agenda-daynum.is-today {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 17px;
+}
+
+body .cal-agenda-day-context {
+  color: var(--accent-ink);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+body .cal-agenda-day[data-past] .cal-agenda-weekday,
+body .cal-agenda-day[data-past] .cal-agenda-daynum { color: var(--muted); }
+
+body .cal-agenda-entries {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+body .cal-agenda-entry {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 20px 12px 16px;
+  border-bottom: 1px solid var(--line);
   color: inherit;
   text-decoration: none;
+  transition: background 120ms ease;
 }
 
-body .cal-agenda-row .row-title {
+body .cal-agenda-entry:last-child { border-bottom: 0; }
+
+body .cal-agenda-entry:hover,
+body .cal-agenda-entry:focus-visible { background: var(--panel-2); }
+
+body .cal-agenda-entry:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+body .cal-agenda-thumb {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  overflow: hidden;
+}
+
+body .cal-agenda-thumb-img {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+}
+
+body .cal-agenda-thumb .card-cover-fallback span {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+body .cal-agenda-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   min-width: 0;
-  overflow-wrap: anywhere;
+}
+
+body .cal-agenda-time {
+  color: var(--soft);
+  font-size: 12px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+body .cal-agenda-title {
   color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: color 120ms ease;
 }
 
-body .cal-agenda-row:hover .row-title { color: var(--accent-ink); }
+body .cal-agenda-entry:hover .cal-agenda-title { color: var(--accent-ink); }
 
-/* Touch agenda: the same entries as a list, shown where hover tooltips
-   don't work (narrow screens and coarse pointers). */
+body .cal-agenda-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+body .cal-agenda-meta .dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--line-strong);
+}
+
+body .cal-agenda-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+body .cal-agenda-relative {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+body .cal-agenda-day[data-past] .cal-agenda-time { color: var(--muted); }
+body .cal-agenda-day[data-past] .cal-agenda-title { color: var(--soft); }
+body .cal-agenda-day[data-past] .cal-agenda-thumb { opacity: 0.7; filter: saturate(0.5); }
+
+body .cal-agenda-quiet {
+  display: flex;
+  align-items: center;
+  min-height: 76px;
+  padding: 12px 20px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+body .cal-agenda-quiet p { margin: 0; }
+body .cal-agenda-quiet a { color: var(--accent-ink); font-weight: 600; }
+
+/* Touch agenda: the same list under the month grid, shown where hover
+   tooltips don't work (narrow screens and coarse pointers). */
 body .cal-touch-agenda {
   display: none;
   margin-top: 16px;
@@ -2699,49 +2866,9 @@ body .cal-touch-agenda-kicker {
   text-transform: uppercase;
 }
 
-body .cal-touch-agenda-list { display: grid; }
-
-body .cal-touch-entry {
-  display: grid;
-  grid-template-columns: minmax(112px, auto) minmax(0, 1fr);
-  gap: 3px 12px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--line);
-  color: var(--soft);
-  text-decoration: none;
-  transition: background 120ms ease;
-}
-
-body .cal-touch-entry:last-child { border-bottom: 0; }
-
-body .cal-touch-entry:hover,
-body .cal-touch-entry:focus-visible { background: var(--panel-2); }
-
-body .cal-touch-entry:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
-
-body .cal-touch-entry time {
-  grid-row: 1 / span 2;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-}
-
-body .cal-touch-entry-title {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-body .cal-touch-entry-status {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 500;
+body .cal-touch-agenda .cal-agenda {
+  border: 0;
+  border-radius: 0;
 }
 
 body .cal-legend {
@@ -2788,11 +2915,37 @@ body .cal-legend-note { margin-left: auto; font-size: 12px; }
   body .cal-day-heading { min-height: 20px; gap: 4px; }
   body .cal-day-context { font-size: 9px; }
   body .cal-legend-note { margin-left: 0; flex: 1 1 100%; }
-  body .cal-agenda-panel { padding: 0 14px; }
-  body .cal-agenda-row { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; }
-  body .cal-agenda-row .meta { grid-column: 1 / -1; }
   body .cal-touch-agenda { display: block; }
-  body .cal-touch-entry { grid-template-columns: 96px minmax(0, 1fr); padding: 11px 12px; }
+  body .cal-agenda-day { grid-template-columns: minmax(0, 1fr); }
+  body .cal-agenda-rail {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-2);
+  }
+  body .cal-agenda-daynum { font-size: 15px; }
+  body .cal-agenda-daynum.is-today { width: 28px; height: 28px; font-size: 13px; }
+  body .cal-agenda-day-context { margin-left: auto; }
+  body .cal-agenda-entry {
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 4px 12px;
+    align-items: start;
+    padding: 12px 14px;
+  }
+  body .cal-agenda-title { white-space: normal; font-size: 15px; }
+  body .cal-agenda-meta { flex-direction: column; align-items: flex-start; gap: 2px; }
+  body .cal-agenda-meta .dot { display: none; }
+  body .cal-agenda-side {
+    grid-column: 2;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+  body .cal-agenda-quiet { min-height: 60px; padding: 12px 14px; }
 }
 
 @media (hover: none) and (pointer: coarse) {
