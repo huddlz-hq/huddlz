@@ -81,7 +81,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         }
       ])
       |> render_upload("test_banner.jpg")
-      |> then(fn _ -> render_async(view) end)
+      |> then(fn _ -> render_async(view, 5_000) end)
 
       # Should show "Image uploaded" confirmation
       html = render(view)
@@ -123,7 +123,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         }
       ])
       |> render_upload("banner.jpg")
-      |> then(fn _ -> render_async(view) end)
+      |> then(fn _ -> render_async(view, 5_000) end)
 
       # Submit form
       view
@@ -163,7 +163,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         }
       ])
       |> render_upload("to_cancel.jpg")
-      |> then(fn _ -> render_async(view) end)
+      |> then(fn _ -> render_async(view, 5_000) end)
 
       # Should show uploaded
       assert render(view) =~ "Image uploaded"
@@ -190,7 +190,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         }
       ])
       |> render_upload("first.jpg")
-      |> then(fn _ -> render_async(view) end)
+      |> then(fn _ -> render_async(view, 5_000) end)
 
       # Capture the first image ID from the database
       first_images =
@@ -212,7 +212,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         }
       ])
       |> render_upload("second.jpg")
-      |> then(fn _ -> render_async(view) end)
+      |> then(fn _ -> render_async(view, 5_000) end)
 
       # Check that the first image is now soft-deleted
       reloaded_first = Ash.get!(GroupImage, first_image.id, authorize?: false)
@@ -236,7 +236,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         }
       ])
       |> render_upload("preserved.jpg")
-      |> then(fn _ -> render_async(view) end)
+      |> then(fn _ -> render_async(view, 5_000) end)
 
       # Should show uploaded
       assert render(view) =~ "Image uploaded"
@@ -337,7 +337,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         }
       ])
       |> render_upload("new_banner.jpg")
-      |> then(fn _ -> render_async(view) end)
+      |> then(fn _ -> render_async(view, 5_000) end)
 
       html = render(view)
       assert html =~ "New image uploaded. Save to apply."
@@ -358,7 +358,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         }
       ])
       |> render_upload("save_test.jpg")
-      |> then(fn _ -> render_async(view) end)
+      |> then(fn _ -> render_async(view, 5_000) end)
 
       # Submit form
       view
@@ -417,7 +417,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         }
       ])
       |> render_upload("replacement.jpg")
-      |> then(fn _ -> render_async(view) end)
+      |> then(fn _ -> render_async(view, 5_000) end)
 
       # Should show pending preview
       assert render(view) =~ "New image uploaded"
@@ -566,7 +566,7 @@ defmodule HuddlzWeb.GroupLiveImageTest do
         }
       ])
       |> render_upload("orphan.jpg")
-      |> then(fn _ -> render_async(view) end)
+      |> then(fn _ -> render_async(view, 5_000) end)
 
       # Navigate away (implicit - just don't submit)
       # The pending image should exist with nil group_id

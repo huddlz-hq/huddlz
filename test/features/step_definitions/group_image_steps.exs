@@ -69,7 +69,7 @@ defmodule GroupImageSteps do
   step "I upload {string} to {string}", %{args: [file_path, label]} = context do
     session = context[:session] || context[:conn]
     session = upload(session, label, file_path, exact: false)
-    Phoenix.LiveViewTest.render_async(session.view)
+    Phoenix.LiveViewTest.render_async(session.view, 5_000)
     Map.merge(context, %{session: session, conn: session})
   end
 
