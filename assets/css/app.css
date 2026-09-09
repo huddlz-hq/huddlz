@@ -1292,6 +1292,16 @@ body .filter-location-option .opt-secondary {
   color: var(--muted);
 }
 
+/* Place search in flight: placeholder rows before the first answer, a
+   delayed dim on the rows of an earlier list while a newer search runs.
+   The rows dim rather than the panel so the dropdown stays opaque. */
+body .filter-location-option { transition: opacity 120ms ease; }
+body .filter-location-listbox.is-stale .filter-location-option { opacity: 0.45; transition-delay: 250ms; }
+body .filter-location-listbox.is-searching { animation: skeleton-in 120ms ease 250ms both; }
+body .filter-location-option.is-skeleton { align-items: flex-start; gap: 6px; pointer-events: none; }
+body .filter-location-option.is-skeleton .skel-line { height: 10px; }
+body .filter-location-option.is-skeleton .skel-secondary { width: 45%; height: 8px; }
+
 body .filter-location-error {
   margin: 6px 0 0;
   color: var(--warn);
@@ -1642,7 +1652,7 @@ body .skel {
   display: block;
   overflow: hidden;
   border-radius: var(--radius-sm);
-  background: var(--panel-2);
+  background: var(--line);
 }
 
 body .skel::after {
@@ -1685,6 +1695,8 @@ body [data-stale-on-patch].is-stale { opacity: 0.45; transition-delay: 250ms; }
   body .skel::after { animation: none; }
   body .skel { animation: skel-pulse 1.6s ease-in-out infinite; }
   body .grid-skeleton { animation: none; }
+  body .filter-location-listbox.is-searching { animation: none; }
+  body .filter-location-option { transition: none; }
   body [data-stale-on-patch] { transition: none; }
 }
 
