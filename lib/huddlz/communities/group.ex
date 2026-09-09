@@ -138,15 +138,25 @@ defmodule Huddlz.Communities.Group do
     end
 
     read :search do
-      description "Search for groups by name or description. With nil :search arg, returns all groups sorted by name."
+      description "Discover groups by name or description and distance from their home location. Without text search, sorts by name."
 
       argument :search, :string do
         allow_nil? true
       end
 
+      argument :search_latitude, :float, allow_nil?: true, constraints: [min: -90, max: 90]
+      argument :search_longitude, :float, allow_nil?: true, constraints: [min: -180, max: 180]
+
+      argument :distance_miles, :integer do
+        allow_nil? true
+        default 25
+        constraints min: 5, max: 100
+      end
+
       pagination offset?: true, countable: true, required?: false, default_limit: 20
 
       prepare Huddlz.Communities.Group.Preparations.ApplyTrigramSearch
+      prepare Huddlz.Communities.Group.Preparations.FilterByDistance
     end
 
     read :get_by_owner do

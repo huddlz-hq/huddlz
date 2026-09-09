@@ -2,6 +2,22 @@ defmodule HuddlzWeb.Api.Json.GroupTest do
   use HuddlzWeb.ApiCase, async: true
   require Ash.Query
 
+  test "group search accepts location and distance arguments", %{conn: conn} do
+    owner = generate(user())
+    nearby = generate(group(latitude: 30.2672, longitude: -97.7431, actor: owner))
+    generate(group(latitude: 29.7604, longitude: -95.3698, actor: owner))
+
+    conn =
+      get(conn, "/api/json/groups/search", %{
+        search_latitude: 30.2672,
+        search_longitude: -97.7431,
+        distance_miles: 25
+      })
+
+    assert %{"data" => [%{"id" => id}]} = json_response(conn, 200)
+    assert id == nearby.id
+  end
+
   describe "GET /api/json/groups" do
     test "lists public groups with their attributes", %{conn: conn} do
       owner = generate(user())

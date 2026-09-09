@@ -2,11 +2,88 @@ defmodule DiscoverCombinedSteps do
   use Cucumber.StepDefinition
 
   import Huddlz.Generator
+  import Phoenix.LiveViewTest
+  import Huddlz.Test.MoxHelpers
 
   alias Huddlz.Accounts.User
   alias Huddlz.Communities.Group
 
   require Ash.Query
+
+  step "I expand the discover distance to {int} miles", %{args: [distance]} = context do
+    context.session.view
+    |> form("#distance-filter-form", %{"distance_miles" => Integer.to_string(distance)})
+    |> render_change()
+
+    render_async(context.session.view)
+    context
+  end
+
+  step "{string} has Austin as their home search location", %{args: [email]} = context do
+    member = lookup_user(email)
+
+    Huddlz.Accounts.update_home_location!(
+      member,
+      "Austin, TX",
+      30.2672,
+      -97.7431,
+      "America/Chicago",
+      actor: member
+    )
+
+    context
+  end
+
+  step "I change the discover location to Houston", context do
+    stub_places_autocomplete(%{
+      "Houston" => [
+        %{
+          place_id: "houston",
+          display_text: "Houston, TX, USA",
+          main_text: "Houston",
+          secondary_text: "TX, USA"
+        }
+      ]
+    })
+
+    stub_place_details(%{
+      "houston" => %{latitude: 29.7604, longitude: -95.3698, time_zone: "America/Chicago"}
+    })
+
+    view = context.session.view
+    view |> element("[aria-label='Edit location']") |> render_click()
+
+    view
+    |> element("#location-autocomplete-input")
+    |> render_change(%{"location-autocomplete_search" => "Houston"})
+
+    render_async(view)
+    view |> element("[role='option']", "Houston") |> render_click()
+    render_async(view)
+    context
+  end
+
+  step "discover groups are based in Austin and Houston", context do
+    owner = lookup_user("host@example.com")
+
+    for {name, lat, lng} <- [
+          {"Austin Neighbors", 30.2672, -97.7431},
+          {"Houston Neighbors", 29.7604, -95.3698}
+        ] do
+      generate(
+        group(
+          name: name,
+          location: name,
+          latitude: lat,
+          longitude: lng,
+          time_zone: "America/Chicago",
+          actor: owner
+        )
+      )
+    end
+
+    context
+  end
 
   step "a group named {string} is owned by {string}",
        %{args: [group_name, owner_email]} = context do
