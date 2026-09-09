@@ -236,7 +236,7 @@ jobs:
       # Playwright dependency install refreshes even though only Chromium is
       # wanted; when that mirror's index is inconsistent the whole step fails.
       run: |
-        sudo rm -f /etc/apt/sources.list.d/google-chrome*.list
+        sudo grep -rl "dl.google.com" /etc/apt/sources.list.d | xargs -r sudo rm -f
         assets/node_modules/.bin/playwright install --with-deps chromium --only-shell
     - name: Run browser scenarios
       timeout-minutes: 2
