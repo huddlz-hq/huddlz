@@ -742,12 +742,16 @@ defmodule HuddlzWeb.CalendarLiveTest do
       host: host,
       public_group: public_group
     } do
-      in_person = create_huddl(host, public_group, title: "Somewhere", date: tomorrow())
+      {date, start_time} = thirty_hours_out()
+
+      in_person =
+        create_huddl(host, public_group, title: "Somewhere", date: date, start_time: start_time)
 
       online =
         create_huddl(host, public_group,
           title: "Nowhere",
-          date: tomorrow(),
+          date: date,
+          start_time: start_time,
           event_type: :virtual,
           virtual_link: "https://meet.example.com/nowhere"
         )
@@ -819,7 +823,10 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
     test "my groups adds unanswered huddlz with an outlined pill in the grid and a legend entry",
          %{conn: conn, attendee: attendee, host: host, public_group: public_group} do
-      theirs = create_huddl(host, public_group, title: "Theirs", date: tomorrow())
+      {date, start_time} = thirty_hours_out()
+
+      theirs =
+        create_huddl(host, public_group, title: "Theirs", date: date, start_time: start_time)
 
       conn
       |> login(attendee)
@@ -880,7 +887,10 @@ defmodule HuddlzWeb.CalendarLiveTest do
       host: host,
       public_group: public_group
     } do
-      theirs = create_huddl(host, public_group, title: "Theirs", date: tomorrow())
+      {date, start_time} = thirty_hours_out()
+
+      theirs =
+        create_huddl(host, public_group, title: "Theirs", date: date, start_time: start_time)
 
       conn
       |> login(attendee)
@@ -895,6 +905,15 @@ defmodule HuddlzWeb.CalendarLiveTest do
   end
 
   defp tomorrow, do: Date.add(Huddlz.Generator.eastern_today(), 1)
+
+  # A start that reads as "tomorrow" (24 to 48 hours away) whatever the
+  # time of day the suite runs, as a date and time in the huddl's zone.
+  defp thirty_hours_out do
+    local =
+      DateTime.utc_now() |> DateTime.add(30, :hour) |> DateTime.shift_zone!("America/New_York")
+
+    {DateTime.to_date(local), local |> DateTime.to_time() |> Time.truncate(:second)}
+  end
 
   # Build a /calendar URL pinned to the month containing `date`, so the focus
   # month always matches where the huddl actually lives (matters for agenda
