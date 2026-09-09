@@ -251,3 +251,21 @@ jobs:
           _build/browser/traces
         if-no-files-found: ignore
         retention-days: 7
+
+  # One stable check for branch protection to require, whatever the OTP
+  # and Elixir matrix is called this month. Runs even when a job it
+  # depends on fails, and fails with it.
+  ci:
+    name: CI
+    needs: [dependency-audit, test, seeds, browser]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every job to have passed
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          echo "$RESULTS"
+          if echo "$RESULTS" | grep -Eq 'failure|cancelled|skipped'; then
+            exit 1
+          fi
