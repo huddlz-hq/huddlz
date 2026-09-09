@@ -284,6 +284,24 @@ defmodule HuddlzWeb.HuddlLive.EditTest do
       refute_has(session, "input[name='form[repeat_until]']")
     end
 
+    test "?edit_type=all opens on the whole series, the way the organizer's series entry links",
+         %{
+           conn: conn,
+           owner: owner,
+           group: group,
+           huddl: huddl
+         } do
+      session =
+        conn
+        |> login(owner)
+        |> visit(~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit?edit_type=all")
+
+      assert_has(session, "*", text: "Editing every upcoming date")
+      assert_has(session, ".edit-scope-row .chip.is-active", text: "Whole series")
+      assert_has(session, "input[type='hidden'][name='form[edit_type]'][value='all']")
+      assert_has(session, "select[name='form[frequency]']")
+    end
+
     test "clicking 'Whole series' flips scope and reveals series fields", %{
       conn: conn,
       owner: owner,
