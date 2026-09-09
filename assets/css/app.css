@@ -1676,10 +1676,16 @@ body .grid-skeleton { animation: skeleton-in 120ms ease 250ms both; }
   from { opacity: 0; }
 }
 
+/* Results dimmed while a filter patch is in flight (see page_loading.mjs).
+   The delay means a patch that finishes quickly never dims anything. */
+body [data-stale-on-patch] { transition: opacity 120ms ease; }
+body [data-stale-on-patch].is-stale { opacity: 0.45; transition-delay: 250ms; }
+
 @media (prefers-reduced-motion: reduce) {
   body .skel::after { animation: none; }
   body .skel { animation: skel-pulse 1.6s ease-in-out infinite; }
   body .grid-skeleton { animation: none; }
+  body [data-stale-on-patch] { transition: none; }
 }
 
 @keyframes skel-pulse {

@@ -25,6 +25,7 @@ import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 import {mountMobileNavigation} from "./mobile_navigation.mjs"
 import {createCoverImageHook} from "./cover_image.mjs"
+import {mountPageLoading} from "./page_loading.mjs"
 
 // The appearance setting lives on <html data-theme>, outside any LiveView.
 // Settings pushes a "theme" event after saving; "system" drops the attribute
@@ -146,16 +147,9 @@ const liveSocket = new LiveSocket("/live", Socket, {
   hooks: Hooks
 })
 
-// Progress bar on live navigation and form submits. The colour is read from
-// the accent token at show time so it follows the active theme.
-const accentColor = () =>
-  getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#18cbd4"
-
-window.addEventListener("phx:page-loading-start", _info => {
-  topbar.config({barColors: {0: accentColor()}, barThickness: 2, shadowBlur: 0, shadowColor: "transparent"})
-  topbar.show(300)
-})
-window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
+// Progress bar on live navigation and form submits, and stale dimming of
+// results while a filter patch is in flight.
+mountPageLoading({topbar})
 
 // connect if there are any LiveViews on the page
 liveSocket.connect()
