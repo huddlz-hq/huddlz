@@ -1189,7 +1189,9 @@ defmodule HuddlzWeb.HuddlLive.Show do
       description: MetaHelpers.description(huddl, "Find and join this huddl on huddlz."),
       type: "event",
       url: url(~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"),
-      image: MetaHelpers.image_url(huddl.display_image_url, HuddlCoverImages)
+      image:
+        MetaHelpers.image_url(huddl.display_image_url, HuddlCoverImages) ||
+          url(~p"/og/huddlz/#{huddl.id}/card.png")
     }
   end
 
