@@ -276,6 +276,38 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFiltersTest do
       assert hosted.id in Enum.map(results, & &1.id)
     end
 
+    test ":member returns huddlz from groups the actor owns or has joined", %{
+      group: host_group,
+      owner: owner,
+      attendee: attendee,
+      hosted_by_owner: in_my_group,
+      hosted_by_stranger: elsewhere
+    } do
+      generate(group_member(group_id: host_group.id, user_id: attendee.id, actor: owner))
+
+      for actor <- [attendee, owner] do
+        {:ok, %{results: results}} =
+          Huddlz.Communities.Huddl
+          |> Ash.Query.for_read(:search, %{relationship: :member, date_filter: :all},
+            actor: actor
+          )
+          |> Ash.read(actor: actor, page: [limit: 50, count: true])
+
+        ids = Enum.map(results, & &1.id)
+        assert in_my_group.id in ids
+        refute elsewhere.id in ids
+      end
+    end
+
+    test "anonymous actor with :member returns []", %{} do
+      {:ok, %{results: results}} =
+        Huddlz.Communities.Huddl
+        |> Ash.Query.for_read(:search, %{relationship: :member, date_filter: :all}, actor: nil)
+        |> Ash.read(actor: nil, page: [limit: 50, count: true])
+
+      assert results == []
+    end
+
     test "anonymous actor with relationship filter returns []", %{} do
       {:ok, %{results: results}} =
         Huddlz.Communities.Huddl
