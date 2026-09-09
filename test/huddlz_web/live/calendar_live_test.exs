@@ -2,6 +2,8 @@ defmodule HuddlzWeb.CalendarLiveTest do
   use HuddlzWeb.ConnCase, async: true
 
   alias Huddlz.Communities
+  alias HuddlzWeb.Components.Card
+  alias HuddlzWeb.Live.Helpers.HuddlCardHelpers
 
   setup do
     host = generate(user(role: :user))
@@ -483,8 +485,8 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn
       |> login(attendee)
       |> visit(calendar_path_for(tomorrow(), view: "agenda"))
-      |> assert_has(".cal-agenda-panel .cal-agenda-row .row-title", text: "Agenda Item")
-      |> assert_has("#calendar-entry-#{huddl.id}.cal-agenda-row .meta")
+      |> assert_has(".cal-agenda .cal-agenda-entry .cal-agenda-title", text: "Agenda Item")
+      |> assert_has("#calendar-entry-#{huddl.id}.cal-agenda-entry .cal-agenda-time")
       |> assert_has(
         "#calendar-entry-#{huddl.id} .cal-entry-status[data-status=going]",
         text: "Going"
@@ -582,7 +584,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> visit(calendar_path_for(Date.add(Huddlz.Generator.eastern_today(), 400), view: "agenda"))
       |> assert_has("#calendar-agenda-empty.empty-state h3", text: "Nothing this month")
       |> assert_has("p", text: "Nothing on the calendar this month.")
-      |> refute_has(".cal-agenda-panel")
+      |> refute_has(".cal-agenda")
       |> refute_has("#calendar-first-run")
     end
 
@@ -602,6 +604,109 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> visit("/calendar")
       |> assert_has("#month-calendar")
       |> assert_has("#calendar-first-run.empty-state h3", text: "Your calendar is empty")
+    end
+
+    test "today is drawn as the anchor and points at the next huddl", %{
+      conn: conn,
+      attendee: attendee,
+      host: host,
+      public_group: public_group
+    } do
+      next = create_huddl(host, public_group, title: "Next Thing", date: tomorrow())
+      rsvp!(next, attendee, :rsvp)
+      today = Huddlz.Generator.eastern_today()
+
+      session =
+        conn
+        |> login(attendee)
+        |> visit(calendar_path_for(today, view: "agenda"))
+        |> assert_has("#calendar-agenda .cal-agenda-day[data-today] .cal-agenda-day-context",
+          text: "Today"
+        )
+        |> assert_has("#calendar-agenda .cal-agenda-day[data-today] .cal-agenda-quiet",
+          text: "Nothing today."
+        )
+
+      # Tomorrow is only "next up" while it shares the month; on the last day
+      # of a month the today row says the month is done instead.
+      if tomorrow().month == today.month do
+        assert_has(session, ".cal-agenda-day[data-today] .cal-agenda-quiet a", text: "Next Thing")
+      else
+        assert_has(session, ".cal-agenda-day[data-today] .cal-agenda-quiet",
+          text: "Nothing else this month."
+        )
+      end
+    end
+
+    test "past days go quiet and drop the countdown", %{
+      conn: conn,
+      attendee: attendee,
+      host: host,
+      public_group: public_group
+    } do
+      past = create_past_huddl(host, public_group, title: "Agenda Gone By")
+      rsvp!(past, attendee, :rsvp)
+      day = DateTime.to_date(HuddlCardHelpers.local_starts_at(past))
+
+      conn
+      |> login(attendee)
+      |> visit(calendar_path_for(day, view: "agenda"))
+      |> assert_has("#calendar-agenda-day-#{Date.to_iso8601(day)}[data-past] .cal-agenda-title",
+        text: "Agenda Gone By"
+      )
+      |> refute_has("#calendar-entry-#{past.id} .cal-agenda-relative")
+    end
+
+    test "an entry shows the group's initials, its place and how far off it is", %{
+      conn: conn,
+      attendee: attendee,
+      host: host,
+      public_group: public_group
+    } do
+      in_person = create_huddl(host, public_group, title: "Somewhere", date: tomorrow())
+
+      online =
+        create_huddl(host, public_group,
+          title: "Nowhere",
+          date: tomorrow(),
+          event_type: :virtual,
+          virtual_link: "https://meet.example.com/nowhere"
+        )
+
+      rsvp!(in_person, attendee, :rsvp)
+      rsvp!(online, attendee, :rsvp)
+
+      conn
+      |> login(attendee)
+      |> visit(calendar_path_for(tomorrow(), view: "agenda"))
+      |> assert_has("#calendar-entry-#{in_person.id} .cal-agenda-thumb .card-cover-fallback span",
+        text: Card.group_initials(public_group.name)
+      )
+      |> assert_has("#calendar-entry-#{in_person.id} .cal-agenda-meta",
+        text: in_person.physical_location
+      )
+      |> assert_has("#calendar-entry-#{online.id} .cal-agenda-meta", text: "Online")
+      |> assert_has("#calendar-entry-#{in_person.id} .cal-agenda-relative", text: "tomorrow")
+    end
+
+    test "the touch list under the month grid uses the same day groups", %{
+      conn: conn,
+      attendee: attendee,
+      host: host,
+      public_group: public_group
+    } do
+      huddl = create_huddl(host, public_group, title: "Touch Me", date: tomorrow())
+      rsvp!(huddl, attendee, :rsvp)
+      day = Date.to_iso8601(DateTime.to_date(HuddlCardHelpers.local_starts_at(huddl)))
+
+      conn
+      |> login(attendee)
+      |> visit(calendar_path_for(tomorrow()))
+      |> assert_has("#calendar-touch-agenda-list-day-#{day} .cal-agenda-daynum")
+      |> assert_has("#calendar-touch-entry-#{huddl.id}.cal-agenda-entry .cal-agenda-title",
+        text: "Touch Me"
+      )
+      |> refute_has("#calendar-touch-agenda-list .cal-agenda-day[data-today] .cal-agenda-quiet")
     end
   end
 
