@@ -102,30 +102,35 @@ defmodule HuddlzWeb.HuddlLive.New do
 
   defp handle_upload_progress(:huddl_cover_image, entry, socket) do
     if entry.done? do
-      {:noreply, process_eager_upload(socket)}
+      {:noreply, ImageUploadPipeline.start_eager_upload(socket, upload_config(socket))}
     else
       {:noreply, socket}
     end
   end
 
-  defp process_eager_upload(socket),
-    do: ImageUploadPipeline.process_eager_upload(socket, upload_config())
+  @impl true
+  def handle_async(:prepare_cover, result, socket) do
+    {:noreply, ImageUploadPipeline.finish_eager_upload(socket, result, upload_config(socket))}
+  end
 
   defp cleanup_pending_image(socket),
-    do: ImageUploadPipeline.cleanup_pending_image(socket, upload_config())
+    do: ImageUploadPipeline.cleanup_pending_image(socket, upload_config(socket))
 
-  defp upload_config do
+  # The pending cover belongs to the group before it belongs to a huddl.
+  defp upload_config(socket) do
+    group_id = socket.assigns.group.id
+
     %{
       upload_name: :huddl_cover_image,
       storage: HuddlCoverImages,
-      create_pending: &create_pending_huddl_cover_image/3,
+      create_pending: &create_pending_huddl_cover_image(group_id, &1, &2, &3),
       cleanup: &soft_delete_pending_huddl_cover_image/2
     }
   end
 
-  defp create_pending_huddl_cover_image(socket, entry, metadata) do
+  defp create_pending_huddl_cover_image(group_id, actor, entry, metadata) do
     Communities.create_pending_huddl_cover_image(
-      socket.assigns.group.id,
+      group_id,
       %{
         filename: entry.client_name,
         content_type: entry.client_type,
@@ -133,7 +138,7 @@ defmodule HuddlzWeb.HuddlLive.New do
         storage_path: metadata.storage_path,
         thumbnail_path: metadata.thumbnail_path
       },
-      actor: socket.assigns.current_user
+      actor: actor
     )
   end
 
@@ -174,34 +179,17 @@ defmodule HuddlzWeb.HuddlLive.New do
 
       <.form for={@form} id="huddl-form" phx-change="validate" phx-submit="save">
         <.cover_image_panel
+          id="huddl-cover-upload"
           upload={@uploads.huddl_cover_image}
+          image_url={@pending_preview_url}
+          caption="Image uploaded · ready to publish."
+          processing?={@upload_processing}
           image_error={@image_error}
           optional
         >
-          <:preview :if={@pending_preview_url} hide_upload_zone>
-            <div class="image-preview" phx-drop-target={@uploads.huddl_cover_image.ref}>
-              <div class="card-cover" style={"background-image: url('#{@pending_preview_url}')"}>
-              </div>
-              <div
-                class="muted"
-                style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-top:10px"
-              >
-                <span>Image uploaded · ready to publish.</span>
-                <div style="display:flex; gap:8px">
-                  <label
-                    for={@uploads.huddl_cover_image.ref}
-                    class="btn-secondary"
-                    style="cursor:pointer"
-                  >
-                    Replace
-                  </label>
-                  <.button variant={:muted} type="button" phx-click="cancel_pending_image">
-                    Remove
-                  </.button>
-                </div>
-              </div>
-            </div>
-          </:preview>
+          <:actions>
+            <.cover_slot_button phx-click="cancel_pending_image">Remove</.cover_slot_button>
+          </:actions>
         </.cover_image_panel>
 
         <.basics_panel form={@form} />
@@ -317,7 +305,11 @@ defmodule HuddlzWeb.HuddlLive.New do
       |> update_calculated_end_time(params)
 
     form = AshPhoenix.Form.validate(socket.assigns.form, params)
-    {:noreply, assign(socket, :form, to_form(form))}
+
+    {:noreply,
+     socket
+     |> assign(:form, to_form(form))
+     |> ImageUploadPipeline.drop_invalid_entries(upload_config(socket))}
   end
 
   @impl true

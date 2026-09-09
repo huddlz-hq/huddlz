@@ -4,12 +4,14 @@ defmodule HuddlzWeb.GroupLive.New do
   """
   use HuddlzWeb, :live_view
 
+  import HuddlzWeb.Components.UploadComponents
   import HuddlzWeb.Live.Helpers.UploadHelpers
 
   import HuddlzWeb.HuddlLive.FormHelpers,
     only: [
       inject_group_location_param: 2,
-      apply_group_location_to_form: 2
+      apply_group_location_to_form: 2,
+      mark_untouched_group_location: 2
     ]
 
   alias Huddlz.Communities
@@ -51,14 +53,16 @@ defmodule HuddlzWeb.GroupLive.New do
 
   defp handle_upload_progress(:group_image, entry, socket) do
     if entry.done? do
-      {:noreply, process_eager_upload(socket)}
+      {:noreply, ImageUploadPipeline.start_eager_upload(socket, upload_config())}
     else
       {:noreply, socket}
     end
   end
 
-  defp process_eager_upload(socket),
-    do: ImageUploadPipeline.process_eager_upload(socket, upload_config())
+  @impl true
+  def handle_async(:prepare_cover, result, socket) do
+    {:noreply, ImageUploadPipeline.finish_eager_upload(socket, result, upload_config())}
+  end
 
   defp cleanup_pending_image(socket),
     do: ImageUploadPipeline.cleanup_pending_image(socket, upload_config())
@@ -72,7 +76,7 @@ defmodule HuddlzWeb.GroupLive.New do
     }
   end
 
-  defp create_pending_group_image(socket, entry, metadata) do
+  defp create_pending_group_image(actor, entry, metadata) do
     Communities.create_pending_group_image(
       %{
         filename: entry.client_name,
@@ -81,7 +85,7 @@ defmodule HuddlzWeb.GroupLive.New do
         storage_path: metadata.storage_path,
         thumbnail_path: metadata.thumbnail_path
       },
-      actor: socket.assigns.current_user
+      actor: actor
     )
   end
 
@@ -94,6 +98,8 @@ defmodule HuddlzWeb.GroupLive.New do
 
   @impl true
   def handle_event("validate", %{"form" => params}, socket) do
+    params = mark_untouched_group_location(params, socket.assigns.selected_location_data)
+
     form =
       socket.assigns.form.source
       |> AshPhoenix.Form.validate(params)
@@ -101,7 +107,7 @@ defmodule HuddlzWeb.GroupLive.New do
     {:noreply,
      socket
      |> assign(:form, to_form(form))
-     |> assign(:image_error, nil)}
+     |> ImageUploadPipeline.drop_invalid_entries(upload_config())}
   end
 
   @impl true
@@ -247,89 +253,26 @@ defmodule HuddlzWeb.GroupLive.New do
 
         <div class="panel">
           <div class="panel-head">
-            <h2>Cover image</h2>
+            <div>
+              <h2>Cover image</h2>
+              <div class="panel-sub">
+                Optional. Shown on the group card and at the top of the group page.
+              </div>
+            </div>
           </div>
-
-          <label for={@uploads.group_image.ref} class="sr-only">Cover image</label>
-          <.live_file_input upload={@uploads.group_image} class="hidden" />
-
-          <%= if @pending_preview_url do %>
-            <div class="image-preview" phx-drop-target={@uploads.group_image.ref}>
-              <div
-                class="card-cover"
-                style={"height:140px; background-image: url('#{@pending_preview_url}')"}
-              >
-              </div>
-              <div
-                class="muted"
-                style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-top:10px"
-              >
-                <span>Image uploaded · ready to publish.</span>
-                <div style="display:flex; gap:8px">
-                  <label for={@uploads.group_image.ref} class="btn-secondary" style="cursor:pointer">
-                    Replace
-                  </label>
-                  <.button variant={:muted} type="button" phx-click="cancel_pending_image">
-                    Remove
-                  </.button>
-                </div>
-              </div>
-            </div>
-          <% else %>
-            <div class="upload-zone" phx-drop-target={@uploads.group_image.ref}>
-              <div class="upload-icon">
-                <svg
-                  width="22"
-                  height="22"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.6"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <circle cx="9" cy="9" r="2" />
-                  <path d="m21 15-5-5L5 21" />
-                </svg>
-              </div>
-              <label for={@uploads.group_image.ref} class="upload-prompt">
-                Drop a 16:9 image, or <span class="upload-link">browse</span>
-              </label>
-              <div class="upload-meta muted">JPG, PNG, WebP · 5 MB max</div>
-            </div>
-
-            <%= for entry <- @uploads.group_image.entries do %>
-              <div class="image-preview" style="margin-top:12px">
-                <.live_img_preview entry={entry} class="card-cover-img" />
-                <div
-                  class="muted"
-                  style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-top:10px"
-                >
-                  <span>{entry.client_name} · {entry.progress}%</span>
-                  <.button
-                    variant={:muted}
-                    type="button"
-                    phx-click="cancel_image_upload"
-                    phx-value-ref={entry.ref}
-                  >
-                    Cancel
-                  </.button>
-                </div>
-              </div>
-
-              <%= for err <- upload_errors(@uploads.group_image, entry) do %>
-                <p class="form-error">{upload_error_to_string(err)}</p>
-              <% end %>
-            <% end %>
-          <% end %>
-
-          <p :if={@image_error} class="form-error">{@image_error}</p>
-
-          <%= for err <- upload_errors(@uploads.group_image) do %>
-            <p class="form-error">{upload_error_to_string(err)}</p>
-          <% end %>
+          <.cover_upload
+            id="group-cover-upload"
+            upload={@uploads.group_image}
+            image_url={@pending_preview_url}
+            caption="Image uploaded · ready to publish."
+            processing?={@upload_processing}
+            image_error={@image_error}
+            optional
+          >
+            <:actions>
+              <.cover_slot_button phx-click="cancel_pending_image">Remove</.cover_slot_button>
+            </:actions>
+          </.cover_upload>
         </div>
 
         <div class="panel">

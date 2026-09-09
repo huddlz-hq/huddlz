@@ -125,6 +125,18 @@ defmodule HuddlzWeb.HuddlLive.FormHelpers do
   end
 
   @doc """
+  Marks the group location as untouched while it is blank and nothing has
+  been picked. Its value travels in a hidden input, which LiveView never
+  reports as unused, so without this the "is required" error would show
+  on the first change to any other field. Submitting sends no marker, so
+  the error still shows then.
+  """
+  def mark_untouched_group_location(%{"location" => ""} = params, nil),
+    do: Map.put(params, "_unused_location", "")
+
+  def mark_untouched_group_location(params, _selected), do: params
+
+  @doc """
   Updates the group form with a resolved home location.
   """
   def apply_group_location_to_form(socket, location) when is_map(location) do

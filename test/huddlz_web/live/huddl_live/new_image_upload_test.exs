@@ -89,11 +89,12 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
         }
       ])
       |> render_upload("test_banner.jpg")
+      |> then(fn _ -> render_async(view) end)
 
       # Should show "Image uploaded" confirmation
       html = render(view)
       assert html =~ "Image uploaded"
-      refute has_element?(view, ".upload-zone")
+      refute has_element?(view, ".cover-upload[data-state=idle]")
 
       # Should have created a pending image record
       pending_count =
@@ -125,6 +126,7 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
         }
       ])
       |> render_upload("banner.jpg")
+      |> then(fn _ -> render_async(view) end)
 
       # Should show uploaded confirmation
       assert render(view) =~ "Image uploaded"
@@ -174,6 +176,7 @@ defmodule HuddlzWeb.HuddlLive.NewImageUploadTest do
         }
       ])
       |> render_upload("to_cancel.jpg")
+      |> then(fn _ -> render_async(view) end)
 
       # Should show uploaded
       assert render(view) =~ "Image uploaded"

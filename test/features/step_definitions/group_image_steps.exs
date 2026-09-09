@@ -64,20 +64,47 @@ defmodule GroupImageSteps do
     |> Map.put(:current_group, group)
   end
 
+  # The bytes arrive synchronously here; the cover is then prepared off the
+  # LiveView process, so wait for that before looking at the slot.
   step "I upload {string} to {string}", %{args: [file_path, label]} = context do
     session = context[:session] || context[:conn]
     session = upload(session, label, file_path, exact: false)
+    Phoenix.LiveViewTest.render_async(session.view)
     Map.merge(context, %{session: session, conn: session})
   end
 
   step "I cancel the pending image", context do
     session = context[:session] || context[:conn]
 
-    # Scope to the pending image preview so we only see its Remove button
+    # Scope to the cover slot so we only see its Remove button
     # (other "Remove" controls may exist elsewhere on the page).
-    session = within(session, ".image-preview", fn scoped -> click_button(scoped, "Remove") end)
+    session = within(session, ".cover-upload", fn scoped -> click_button(scoped, "Remove") end)
 
     Map.merge(context, %{session: session, conn: session})
+  end
+
+  step "the cover slot shows the picture as it will appear on the group", context do
+    session = context[:session] || context[:conn]
+
+    session
+    |> assert_has(".cover-upload[data-state=uploaded] .cover-slot img[src*='group_images']")
+    |> assert_has(".cover-upload[data-state=uploaded] .cover-slot-actions label", text: "Replace")
+    |> assert_has(".cover-upload[data-state=uploaded] .cover-slot-actions button", text: "Remove")
+    |> refute_has(".cover-upload .cover-slot-bar")
+
+    context
+  end
+
+  step "the cover slot says {string}", %{args: [message]} = context do
+    session = context[:session] || context[:conn]
+    assert_has(session, ".cover-upload[data-state=error] .cover-slot-error", text: message)
+    context
+  end
+
+  step "the cover slot still offers to browse for another", context do
+    session = context[:session] || context[:conn]
+    assert_has(session, ".cover-upload[data-state=error] .cover-slot label", text: "browse")
+    context
   end
 
   # ===== Then Steps =====
