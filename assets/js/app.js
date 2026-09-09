@@ -25,6 +25,7 @@ import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 import {mountMobileNavigation} from "./mobile_navigation.mjs"
 import {createCoverImageHook} from "./cover_image.mjs"
+import {createCoverCropHook} from "./cover_crop.mjs"
 import {mountPageLoading} from "./page_loading.mjs"
 
 // The appearance setting lives on <html data-theme>, outside any LiveView.
@@ -41,6 +42,7 @@ window.addEventListener("phx:theme", ({detail}) => {
 const Hooks = {}
 
 Hooks.CoverImage = createCoverImageHook()
+Hooks.CoverCrop = createCoverCropHook()
 
 Hooks.LocationAutocomplete = {
   mounted() {

@@ -6,6 +6,8 @@ defmodule HuddlzWeb.ProfileLive do
 
   require Logger
 
+  import HuddlzWeb.Components.UploadComponents, only: [crop_sheet: 1]
+
   alias Huddlz.Storage.ProfilePictures
   alias HuddlzWeb.AuthFormErrors
   alias HuddlzWeb.Avatar
@@ -83,55 +85,64 @@ defmodule HuddlzWeb.ProfileLive do
           <div class="panel-head">
             <h2>Profile picture</h2>
           </div>
-          <div class="profile-photo-row">
-            <.big_avatar user={@current_user} />
-            <div class="profile-photo-actions">
-              <div class="profile-photo-buttons">
-                <label for={@uploads.avatar.ref} class="btn-secondary">
-                  Upload a photo…
-                </label>
-                <%= if @current_user.current_profile_picture_url do %>
-                  <button
-                    id="open-remove-avatar-dialog"
-                    type="button"
-                    class="btn-secondary muted-btn"
-                    phx-click={JS.push_focus() |> JS.push("open_remove_avatar_dialog")}
-                  >
-                    Remove
-                  </button>
-                <% end %>
-              </div>
-              <p id="avatar-upload-help" class="form-help">JPG, PNG, or WebP · 5 MB max</p>
-              <div id="avatar-upload-status" aria-live="polite">
-                <%= for entry <- @uploads.avatar.entries,
+          <div
+            id="avatar-upload"
+            phx-hook="CoverCrop"
+            data-upload-name={@uploads.avatar.name}
+            data-shape="square"
+            data-output-width="800"
+          >
+            <div class="profile-photo-row">
+              <.big_avatar user={@current_user} />
+              <div class="profile-photo-actions">
+                <div class="profile-photo-buttons">
+                  <label for={@uploads.avatar.ref} class="btn-secondary">
+                    Upload a photo…
+                  </label>
+                  <%= if @current_user.current_profile_picture_url do %>
+                    <button
+                      id="open-remove-avatar-dialog"
+                      type="button"
+                      class="btn-secondary muted-btn"
+                      phx-click={JS.push_focus() |> JS.push("open_remove_avatar_dialog")}
+                    >
+                      Remove
+                    </button>
+                  <% end %>
+                </div>
+                <p id="avatar-upload-help" class="form-help">JPG, PNG, or WebP · 5 MB max</p>
+                <div id="avatar-upload-status" aria-live="polite">
+                  <%= for entry <- @uploads.avatar.entries,
                       upload_errors(@uploads.avatar, entry) == [] and entry.progress < 100 do %>
-                  <p class="muted" role="status">
-                    Uploading {entry.client_name}: {entry.progress}%
+                    <p class="muted" role="status">
+                      Uploading {entry.client_name}: {entry.progress}%
+                    </p>
+                  <% end %>
+                </div>
+                <div
+                  :if={avatar_upload_error_messages(@uploads.avatar, @avatar_error) != []}
+                  id="avatar-upload-error"
+                  class="form-error"
+                  role="alert"
+                  aria-live="assertive"
+                >
+                  <p :for={message <- avatar_upload_error_messages(@uploads.avatar, @avatar_error)}>
+                    {message}
                   </p>
-                <% end %>
-              </div>
-              <div
-                :if={avatar_upload_error_messages(@uploads.avatar, @avatar_error) != []}
-                id="avatar-upload-error"
-                class="form-error"
-                role="alert"
-                aria-live="assertive"
-              >
-                <p :for={message <- avatar_upload_error_messages(@uploads.avatar, @avatar_error)}>
-                  {message}
-                </p>
+                </div>
               </div>
             </div>
+            <form id="avatar-form" phx-change="validate_avatar" class="hidden">
+              <.live_file_input
+                upload={@uploads.avatar}
+                aria-describedby="avatar-upload-help avatar-upload-error"
+                aria-invalid={
+                  avatar_upload_error_messages(@uploads.avatar, @avatar_error) != [] && "true"
+                }
+              />
+            </form>
+            <.crop_sheet id="avatar-upload" title="Crop your photo" shape="square" />
           </div>
-          <form id="avatar-form" phx-change="validate_avatar" class="hidden">
-            <.live_file_input
-              upload={@uploads.avatar}
-              aria-describedby="avatar-upload-help avatar-upload-error"
-              aria-invalid={
-                avatar_upload_error_messages(@uploads.avatar, @avatar_error) != [] && "true"
-              }
-            />
-          </form>
         </div>
 
         <.form for={@form} id="profile-form" phx-submit="save" phx-change="validate">

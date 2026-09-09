@@ -4,6 +4,11 @@ defmodule HuddlzWeb.Components.UploadComponents do
   changes size while a picture is chosen, uploaded, prepared, shown or
   refused. Used by the group and huddl create and edit forms.
 
+  Choosing a picture opens the crop sheet (`crop_sheet/1`, driven by the
+  `CoverCrop` hook in `assets/js/cover_crop.mjs`) before anything uploads;
+  Use photo hands the 16:9 crop to the `live_file_input` as a JPEG, so the
+  server pipeline sees an ordinary upload.
+
   ```
   <.cover_upload
     id="group-cover-upload"
@@ -58,11 +63,19 @@ defmodule HuddlzWeb.Components.UploadComponents do
       |> assign(:state, state)
 
     ~H"""
-    <div id={@id} class="cover-upload" data-state={@state}>
+    <div
+      id={@id}
+      class="cover-upload"
+      data-state={@state}
+      phx-hook="CoverCrop"
+      data-upload-name={@upload.name}
+      data-shape="wide"
+      data-output-width="1920"
+    >
       <label for={@upload.ref} class="sr-only">Cover image</label>
       <.live_file_input upload={@upload} class="hidden" />
 
-      <div class="cover-slot" phx-drop-target={@upload.ref}>
+      <div class="cover-slot" data-crop-drop>
         <%= case @state do %>
           <% :uploading -> %>
             <.live_img_preview entry={@entry} class="cover-slot-img" />
@@ -122,7 +135,73 @@ defmodule HuddlzWeb.Components.UploadComponents do
       </div>
 
       <p :if={@state == :uploaded && @caption} class="cover-slot-caption">{@caption}</p>
+
+      <.crop_sheet id={@id} title="Crop the cover" />
     </div>
+    """
+  end
+
+  @doc """
+  The crop sheet the `CoverCrop` hook opens when a picture is chosen: a
+  native dialog with the picture in a 16:9 (or square) window, a zoom
+  slider and Use photo. LiveView leaves its contents alone; the hook
+  fills in the picture and does the geometry. Render it inside the hook
+  element, which also holds the `live_file_input` the hook listens to.
+  """
+  attr :id, :string, required: true, doc: "the hook element's id; the dialog is `<id>-crop`"
+  attr :title, :string, required: true
+  attr :shape, :string, default: "wide", values: ~w(wide square)
+
+  def crop_sheet(assigns) do
+    ~H"""
+    <dialog
+      id={"#{@id}-crop"}
+      class="crop-sheet"
+      phx-update="ignore"
+      aria-labelledby={"#{@id}-crop-title"}
+    >
+      <div class="crop-sheet-head">
+        <h2 id={"#{@id}-crop-title"} class="crop-sheet-title">{@title}</h2>
+      </div>
+      <p class="crop-sheet-hint">Drag to move · pinch, scroll or slide to zoom</p>
+      <button type="button" class="modal-close" data-crop-close aria-label="Cancel">
+        <.icon name="hero-x-mark" class="size-5" />
+      </button>
+      <div
+        class="crop-stage"
+        data-crop-stage
+        tabindex="0"
+        role="img"
+        aria-label="Your picture in the frame. Drag to move it; arrow keys nudge, plus and minus zoom."
+      >
+        <img class="crop-pic" alt="" draggable="false" />
+        <div class="crop-window" data-shape={@shape} aria-hidden="true"></div>
+      </div>
+      <div class="crop-zoom">
+        <.icon name="hero-magnifying-glass-minus" class="size-5" />
+        <input
+          type="range"
+          min="1"
+          max="3"
+          step="0.01"
+          value="1"
+          aria-label="Zoom"
+          data-crop-zoom
+        />
+        <.icon name="hero-magnifying-glass-plus" class="size-5" />
+        <span class="crop-zoom-value" data-crop-zoom-value aria-hidden="true">1.0×</span>
+        <.button variant={:muted} type="button" class="btn-sm" data-crop-reset hidden>
+          Reset
+        </.button>
+      </div>
+      <div class="crop-sheet-foot">
+        <p class="crop-sheet-meta" data-crop-meta></p>
+        <div class="crop-sheet-actions">
+          <.button variant={:secondary} type="button" data-crop-cancel>Cancel</.button>
+          <.button variant={:primary} type="button" data-crop-use autofocus>Use photo</.button>
+        </div>
+      </div>
+    </dialog>
     """
   end
 

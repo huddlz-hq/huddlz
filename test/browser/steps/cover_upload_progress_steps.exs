@@ -50,7 +50,13 @@ defmodule BrowserCoverUploadSteps do
                local_paths: [Path.expand("test/fixtures/test_image.jpg")]
              )
 
-    context
+    # The crop sheet opens first; the picture already fits, so use it as is.
+    conn =
+      context.conn
+      |> assert_has("#group-cover-upload-crop[open]")
+      |> click_button("Use photo")
+
+    Map.put(context, :conn, conn)
   end
 
   step "the slot shows my picture with the upload in progress and the form is still usable",
