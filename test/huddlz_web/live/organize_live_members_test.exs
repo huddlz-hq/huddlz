@@ -7,6 +7,8 @@ defmodule HuddlzWeb.OrganizeLiveMembersTest do
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupMember
 
+  @moduletag :organize_members
+
   setup do
     owner = generate(user(role: :user, display_name: "Owner Olivia"))
     organizer = generate(user(role: :user, display_name: "Organizer Oscar"))
@@ -46,8 +48,8 @@ defmodule HuddlzWeb.OrganizeLiveMembersTest do
     |> assert_has("#remove-member-#{member_membership.id}", text: "Remove")
     |> assert_has("#demote-member-#{organizer_membership.id}", text: "Demote")
     |> assert_has("#remove-member-#{organizer_membership.id}", text: "Remove")
-    |> assert_has("#ownership-danger-zone")
-    |> assert_has("#open-transfer-ownership", text: "Transfer group ownership")
+    |> refute_has("#ownership-danger-zone")
+    |> refute_has("#open-transfer-ownership")
     |> refute_has("[id^='transfer-owner-']")
     |> refute_has("[id^='remove-member-']", text: "Owner Olivia")
   end
@@ -186,10 +188,13 @@ defmodule HuddlzWeb.OrganizeLiveMembersTest do
     session =
       conn
       |> login(owner)
-      |> visit(~p"/organize/#{group.slug}/members")
+      |> visit(~p"/organize/#{group.slug}/settings")
       |> select("New owner", option: "Organizer Oscar")
       |> click_button("#open-transfer-ownership", "Transfer group ownership")
       |> assert_has("#member-action-dialog-title", text: "Transfer ownership to Organizer Oscar?")
+      |> assert_has("#member-action-dialog",
+        text: "cannot reverse this transfer without the new owner’s cooperation"
+      )
       |> assert_has("#member-action-confirm[disabled]", text: "Transfer ownership")
 
     session =
@@ -202,6 +207,11 @@ defmodule HuddlzWeb.OrganizeLiveMembersTest do
       click_button(session, "Transfer ownership")
     end)
     |> assert_has("div[role='alert']", text: "Ownership transferred to Organizer Oscar.")
+    |> assert_path(~p"/organize/#{group.slug}")
+    |> refute_has("a[href='/organize/#{group.slug}/settings']")
+    |> click_link("Members")
+    |> assert_has("#member-member-rows")
+    |> refute_has("#ownership-danger-zone")
 
     reloaded_group = Ash.get!(Group, group.id, authorize?: false)
     assert reloaded_group.owner_id == organizer.id
@@ -212,6 +222,83 @@ defmodule HuddlzWeb.OrganizeLiveMembersTest do
 
     assert memberships[owner.id] == :organizer
     assert memberships[organizer.id] == :owner
+  end
+
+  test "organizers cannot see settings or open them directly", %{
+    conn: conn,
+    organizer: organizer,
+    group: group
+  } do
+    conn = login(conn, organizer)
+    {:ok, view, _} = live(conn, ~p"/organize/#{group.slug}/members")
+    refute has_element?(view, "a[href='/organize/#{group.slug}/settings']")
+
+    assert {:error, {:live_redirect, %{to: path}}} =
+             live(conn, ~p"/organize/#{group.slug}/settings")
+
+    assert path == ~p"/organize/#{group.slug}"
+  end
+
+  test "regular members cannot open settings directly", %{
+    conn: conn,
+    member: member,
+    group: group
+  } do
+    assert {:error, {:live_redirect, %{to: "/organize"}}} =
+             conn |> login(member) |> live(~p"/organize/#{group.slug}/settings")
+  end
+
+  test "transfer rejects wrong confirmation and cancellation leaves ownership unchanged", %{
+    conn: conn,
+    owner: owner,
+    group: group,
+    member_membership: membership
+  } do
+    {:ok, view, _} = conn |> login(owner) |> live(~p"/organize/#{group.slug}/settings")
+
+    view
+    |> form("#transfer-ownership-target-form", transfer_target: %{member_id: membership.id})
+    |> render_submit()
+
+    view
+    |> form("#member-action-form", member_action: %{confirmation: "wrong"})
+    |> render_change()
+
+    render_submit(view, "confirm_member_action", %{})
+    assert has_element?(view, "#member-action-confirm[disabled]")
+    assert has_element?(view, "[role='alert']", "Type the group name exactly")
+    view |> element("#member-action-cancel") |> render_click()
+    refute has_element?(view, "#member-action-dialog")
+    assert has_element?(view, "#ownership-danger-zone")
+    assert Ash.get!(Group, group.id, actor: owner).owner_id == owner.id
+  end
+
+  test "a mounted settings page loses access when ownership changes elsewhere", %{
+    conn: conn,
+    owner: owner,
+    member: member,
+    group: group
+  } do
+    {:ok, view, _} = conn |> login(owner) |> live(~p"/organize/#{group.slug}/settings")
+    assert {:ok, _} = Communities.transfer_group_ownership(group, member.id, actor: owner)
+    assert_redirect(view, ~p"/organize/#{group.slug}")
+  end
+
+  test "the roster rejects forged transfer controls", %{
+    conn: conn,
+    owner: owner,
+    group: group,
+    member_membership: membership
+  } do
+    {:ok, view, _} = conn |> login(owner) |> live(~p"/organize/#{group.slug}/members")
+
+    render_submit(view, "open_transfer_action", %{
+      "transfer_target" => %{"member_id" => membership.id}
+    })
+
+    refute has_element?(view, "#member-action-dialog")
+    render_click(view, "open_member_action", %{"id" => membership.id, "action" => "transfer"})
+    refute has_element?(view, "#member-action-dialog")
   end
 
   test "an already-mounted organizer workspace redirects after role loss", %{
