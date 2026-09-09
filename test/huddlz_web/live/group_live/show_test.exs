@@ -107,6 +107,7 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("#group-huddl-grid-empty.empty-state h3", text: "Nothing scheduled")
       |> assert_has("#group-huddl-grid-empty p", text: "No upcoming huddlz scheduled.")
+      |> refute_has("#group-huddl-grid-empty a")
       |> assert_has(".group-huddlz .list-head h2", text: "Huddlz")
       |> assert_has(".group-huddlz .list-head .filters .chip.is-active", text: "Upcoming")
 
@@ -116,6 +117,20 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
       |> visit(~p"/groups/#{group.slug}")
       |> refute_has("#group-huddl-grid-empty")
       |> assert_has("#group-huddl-grid .card", count: 1)
+    end
+
+    test "invites someone who can schedule to fill the empty grid", %{
+      conn: conn,
+      owner: owner,
+      group: group
+    } do
+      conn
+      |> login(owner)
+      |> visit(~p"/groups/#{group.slug}")
+      |> assert_has("#group-huddl-grid-empty p", text: "Members will see your next huddl here.")
+      |> assert_has("#group-huddl-grid-empty a[href='/groups/#{group.slug}/huddlz/new']",
+        text: "Schedule a huddl"
+      )
     end
 
     test "huddl cards fall back to the group's initials without a cover", %{

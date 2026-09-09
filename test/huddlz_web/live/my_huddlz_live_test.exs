@@ -145,13 +145,41 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       |> assert_has(".pill", text: "Cancelled")
     end
 
-    test "empty state shows helpful copy", %{conn: conn, attendee: attendee} do
+    test "empty state on a first run explains the page and offers to find a huddl", %{
+      conn: conn,
+      attendee: attendee
+    } do
       conn
       |> login(attendee)
       |> visit("/my-huddlz")
-      |> assert_has(".empty-state h3", text: "Nothing coming up")
-      |> assert_has(".empty-state p", text: "No upcoming RSVPs yet. Find one to attend.")
-      |> assert_has(".empty-state a[href=\"/discover\"]", text: "Browse huddlz")
+      |> assert_has(".empty-state[data-first-run] h3", text: "No upcoming RSVPs yet")
+      |> assert_has(".empty-state p",
+        text: "Find a huddl worth showing up to and it will land here."
+      )
+      |> assert_has(".empty-state a.btn-primary[href=\"/discover\"]", text: "Find a huddl")
+      |> assert_has(".page-head a.btn-secondary", text: "Find another huddl")
+    end
+
+    test "empty state goes quiet once there is attendance history", %{
+      conn: conn,
+      attendee: attendee,
+      host: host,
+      public_group: group
+    } do
+      past = generate(past_huddl(group_id: group.id, creator_id: host.id, title: "Old Workshop"))
+
+      past
+      |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
+      |> Ash.update!(authorize?: false)
+
+      conn
+      |> login(attendee)
+      |> visit("/my-huddlz")
+      |> assert_has(".empty-state:not([data-first-run]) h3", text: "Nothing coming up")
+      |> assert_has(".empty-state p", text: "Your next RSVP will land here.")
+      |> assert_has(".empty-state a.btn-secondary[href=\"/discover\"]", text: "Browse huddlz")
+      |> assert_has(".page-head a.btn-primary", text: "Find another huddl")
+      |> refute_has(".empty-state", text: "Find a huddl")
     end
 
     test "Upcoming count reflects attended huddlz", %{

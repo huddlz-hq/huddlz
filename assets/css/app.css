@@ -2908,7 +2908,13 @@ body .empty-state p {
   color: var(--muted);
 }
 
-body .empty-state-action { margin-top: 4px; }
+body .empty-state-action {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
 
 /* Sub-section inside huddl-side */
 body .huddl-side-section {

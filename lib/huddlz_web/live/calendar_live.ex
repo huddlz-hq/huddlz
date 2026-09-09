@@ -46,10 +46,8 @@ defmodule HuddlzWeb.CalendarLive do
     {grid_start, grid_end} = month_grid_window(focus_month)
     user = socket.assigns.current_user
 
-    entries =
-      user
-      |> load_entries(grid_start, grid_end, socket.assigns.time_zone)
-      |> Enum.map(&put_calendar_time(&1, socket.assigns.time_zone))
+    {entries, first_run?} = load_entries(user, grid_start, grid_end, socket.assigns.time_zone)
+    entries = Enum.map(entries, &put_calendar_time(&1, socket.assigns.time_zone))
 
     entries_by_day = group_by_day(entries)
     in_month_count = Enum.count(entries, &in_focus_month?(&1, focus_month))
@@ -62,6 +60,7 @@ defmodule HuddlzWeb.CalendarLive do
      |> assign(:grid_start, grid_start)
      |> assign(:grid_end, grid_end)
      |> assign(:entries, entries)
+     |> assign(:first_run?, first_run?)
      |> assign(:entries_by_day, entries_by_day)
      |> assign(:in_month_count, in_month_count)
      |> assign(:legend_empty?, legend_items == [])
@@ -102,19 +101,28 @@ defmodule HuddlzWeb.CalendarLive do
     {grid_start, grid_end}
   end
 
+  # Returns the entries inside the visible grid and whether the account has
+  # no huddlz in any month at all (a first run): the search already fetches
+  # every huddl the person hosts, attends or waits on, so the answer is free.
   defp load_entries(user, grid_start, grid_end, time_zone) do
     grid_start_dt = utc_boundary(grid_start, ~T[00:00:00], time_zone)
     grid_end_dt = utc_boundary(grid_end, ~T[23:59:59], time_zone)
 
-    [:hosting, :attending, :waitlisted]
-    |> Enum.flat_map(fn role -> fetch(user, role) end)
-    |> merge_entry_roles()
-    |> Enum.filter(fn %{huddl: h} ->
-      h.starts_at &&
-        DateTime.compare(h.starts_at, grid_start_dt) != :lt &&
-        DateTime.compare(h.starts_at, grid_end_dt) != :gt
-    end)
-    |> Enum.sort_by(& &1.huddl.starts_at, DateTime)
+    all =
+      [:hosting, :attending, :waitlisted]
+      |> Enum.flat_map(fn role -> fetch(user, role) end)
+      |> merge_entry_roles()
+
+    entries =
+      all
+      |> Enum.filter(fn %{huddl: h} ->
+        h.starts_at &&
+          DateTime.compare(h.starts_at, grid_start_dt) != :lt &&
+          DateTime.compare(h.starts_at, grid_end_dt) != :gt
+      end)
+      |> Enum.sort_by(& &1.huddl.starts_at, DateTime)
+
+    {entries, all == []}
   end
 
   defp fetch(user, role) do
@@ -466,8 +474,14 @@ defmodule HuddlzWeb.CalendarLive do
           entries_by_day={@entries_by_day}
           today={@today}
         />
+        <.first_run_empty :if={@first_run?} />
       <% else %>
-        <.agenda_view entries={@entries} focus_month={@focus_month} today={@today} />
+        <.agenda_view
+          entries={@entries}
+          focus_month={@focus_month}
+          today={@today}
+          first_run?={@first_run?}
+        />
       <% end %>
 
       <div
@@ -619,40 +633,65 @@ defmodule HuddlzWeb.CalendarLive do
     if Date.compare(day, today) == :eq, do: "cal-day-num is-today", else: "cal-day-num"
   end
 
+  # The calendar's first run: no huddl in any month. Says what the page
+  # holds and offers the action that fills it.
+  defp first_run_empty(assigns) do
+    ~H"""
+    <.empty_state
+      id="calendar-first-run"
+      icon="hero-calendar"
+      title="Your calendar is empty"
+      data-first-run
+    >
+      Huddlz you RSVP to show up here, in their own time zone.
+      <:action>
+        <.button variant={:primary} navigate={~p"/discover"}>
+          <.icon name="hero-magnifying-glass" class="size-4" /> Find a huddl
+        </.button>
+      </:action>
+    </.empty_state>
+    """
+  end
+
   attr :entries, :list, required: true
   attr :focus_month, Date, required: true
   attr :today, Date, required: true
+  attr :first_run?, :boolean, default: false
 
   defp agenda_view(assigns) do
     sorted = agenda_entries(assigns.entries, assigns.focus_month)
     assigns = assign(assigns, :sorted, sorted)
 
     ~H"""
-    <%= if @sorted == [] do %>
-      <.empty_state id="calendar-agenda-empty" icon="hero-calendar" title="Nothing this month">
-        Nothing on the calendar this month.
-      </.empty_state>
+    <%= if @first_run? do %>
+      <.first_run_empty />
     <% else %>
-      <div class="cal-agenda-panel">
-        <div class="row-list cal-agenda-list">
-          <.link
-            :for={entry <- @sorted}
-            id={"calendar-entry-#{entry.huddl.id}"}
-            navigate={huddl_path(entry)}
-            class="row cal-agenda-row"
-          >
-            <span class="meta">{format_agenda_when(entry.huddl)}</span>
-            <span class="row-title">{entry.huddl.title}</span>
-            <.pill
-              variant={entry_status(entry, @today).variant}
-              class="cal-entry-status"
-              data-status={entry_status(entry, @today).key}
+      <%= if @sorted == [] do %>
+        <.empty_state id="calendar-agenda-empty" icon="hero-calendar" title="Nothing this month">
+          Nothing on the calendar this month.
+        </.empty_state>
+      <% else %>
+        <div class="cal-agenda-panel">
+          <div class="row-list cal-agenda-list">
+            <.link
+              :for={entry <- @sorted}
+              id={"calendar-entry-#{entry.huddl.id}"}
+              navigate={huddl_path(entry)}
+              class="row cal-agenda-row"
             >
-              {entry_status(entry, @today).label}
-            </.pill>
-          </.link>
+              <span class="meta">{format_agenda_when(entry.huddl)}</span>
+              <span class="row-title">{entry.huddl.title}</span>
+              <.pill
+                variant={entry_status(entry, @today).variant}
+                class="cal-entry-status"
+                data-status={entry_status(entry, @today).key}
+              >
+                {entry_status(entry, @today).label}
+              </.pill>
+            </.link>
+          </div>
         </div>
-      </div>
+      <% end %>
     <% end %>
     """
   end
