@@ -35,23 +35,6 @@ defmodule HuddlzWeb.CalendarLiveTest do
     )
   end
 
-  # Keep the countdown safely within its 24–48 hour "tomorrow" window.
-  defp create_huddl_in_36_hours(host, group, opts) do
-    local_start =
-      DateTime.utc_now()
-      |> DateTime.add(36, :hour)
-      |> DateTime.shift_zone!("America/New_York")
-
-    create_huddl(
-      host,
-      group,
-      Keyword.merge(opts,
-        date: DateTime.to_date(local_start),
-        start_time: DateTime.to_time(local_start)
-      )
-    )
-  end
-
   defp create_past_huddl(host, group, opts) do
     generate(
       past_huddl(
@@ -759,11 +742,16 @@ defmodule HuddlzWeb.CalendarLiveTest do
       host: host,
       public_group: public_group
     } do
-      in_person = create_huddl_in_36_hours(host, public_group, title: "Somewhere")
+      {date, start_time} = thirty_hours_out()
+
+      in_person =
+        create_huddl(host, public_group, title: "Somewhere", date: date, start_time: start_time)
 
       online =
-        create_huddl_in_36_hours(host, public_group,
+        create_huddl(host, public_group,
           title: "Nowhere",
+          date: date,
+          start_time: start_time,
           event_type: :virtual,
           virtual_link: "https://meet.example.com/nowhere"
         )
@@ -773,11 +761,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit(
-        calendar_path_for(DateTime.to_date(HuddlCardHelpers.local_starts_at(in_person)),
-          view: "agenda"
-        )
-      )
+      |> visit(calendar_path_for(tomorrow(), view: "agenda"))
       |> assert_has("#calendar-entry-#{in_person.id} .cal-agenda-thumb .card-cover-fallback span",
         text: Card.group_initials(public_group.name)
       )
@@ -839,7 +823,10 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
     test "my groups adds unanswered huddlz with an outlined pill in the grid and a legend entry",
          %{conn: conn, attendee: attendee, host: host, public_group: public_group} do
-      theirs = create_huddl(host, public_group, title: "Theirs", date: tomorrow())
+      {date, start_time} = thirty_hours_out()
+
+      theirs =
+        create_huddl(host, public_group, title: "Theirs", date: date, start_time: start_time)
 
       conn
       |> login(attendee)
@@ -900,17 +887,16 @@ defmodule HuddlzWeb.CalendarLiveTest do
       host: host,
       public_group: public_group
     } do
-      theirs = create_huddl_in_36_hours(host, public_group, title: "Theirs")
+      {date, start_time} = thirty_hours_out()
+
+      theirs =
+        create_huddl(host, public_group, title: "Theirs", date: date, start_time: start_time)
 
       conn
       |> login(attendee)
       |> visit("/calendar")
       |> assert_has("#calendar-first-run")
-      |> visit(
-        calendar_path_for(DateTime.to_date(HuddlCardHelpers.local_starts_at(theirs)),
-          view: "agenda"
-        ) <> "&scope=groups"
-      )
+      |> visit("/calendar?scope=groups")
       |> refute_has("#calendar-first-run")
       |> assert_has("#calendar-entry-#{theirs.id} .cal-agenda-title", text: "Theirs")
       |> refute_has("#calendar-entry-#{theirs.id} .cal-entry-status")
@@ -918,7 +904,172 @@ defmodule HuddlzWeb.CalendarLiveTest do
     end
   end
 
+  describe "week view" do
+    test "the Week tab opens this week from this month and the first week of another month", %{
+      conn: conn,
+      attendee: attendee
+    } do
+      today = Huddlz.Generator.eastern_today()
+      next = shift(today, 1)
+      first_week = Date.beginning_of_week(next, :sunday)
+
+      conn
+      |> login(attendee)
+      |> visit("/calendar?view=month")
+      |> assert_has("#calendar-view-week[href='/calendar?view=week']", text: "Week")
+      |> visit("/calendar?month=#{next_month_param(today)}&view=month")
+      |> assert_has("#calendar-view-week[href='/calendar?week=#{first_week}&view=week']")
+    end
+
+    test "draws every day of the week, blank where nothing is on, and today says so", %{
+      conn: conn,
+      attendee: attendee
+    } do
+      today = Huddlz.Generator.eastern_today()
+      start = Date.beginning_of_week(today, :sunday)
+
+      session =
+        conn
+        |> login(attendee)
+        |> visit("/calendar?view=week")
+        |> assert_has(".cal-view-tabs .scope-tab.is-active[aria-current='page']", text: "Week")
+        |> assert_has(".cal-month-name", text: Calendar.strftime(start, "%b %-d"))
+        |> assert_has(".cal-month-count", text: "0 huddlz")
+        |> assert_has("#calendar-week .cal-agenda-day", count: 7)
+        |> assert_has("#calendar-week .cal-agenda-day[data-blank]", count: 6)
+        |> assert_has("#calendar-week .cal-agenda-day[data-today] .cal-agenda-quiet",
+          text: "Nothing today."
+        )
+        |> refute_has("#calendar-week .cal-agenda-day[data-blank] .cal-agenda-quiet")
+        |> refute_has("#calendar-legend")
+
+      for offset <- 0..6 do
+        assert_has(session, "#calendar-week-day-#{Date.add(start, offset)}")
+      end
+    end
+
+    test "any date names its week, the rail marks a month change, and nonsense means this week",
+         %{conn: conn, attendee: attendee} do
+      this_week = Date.beginning_of_week(Huddlz.Generator.eastern_today(), :sunday)
+
+      conn
+      |> login(attendee)
+      |> visit("/calendar?view=week&week=2030-10-02")
+      |> assert_has(".cal-month-name", text: "Sep 29 – Oct 5, 2030")
+      |> assert_has("#calendar-week-day-2030-09-29")
+      |> assert_has("#calendar-week-day-2030-10-01 .cal-agenda-day-context", text: "Oct")
+      |> refute_has("#calendar-week-day-2030-09-30 .cal-agenda-day-context")
+      |> assert_has("a.cal-nav-btn[href='/calendar?week=2030-09-22&view=week']",
+        text: "Previous week"
+      )
+      |> assert_has("a.cal-nav-btn[href='/calendar?week=2030-10-06&view=week']",
+        text: "Next week"
+      )
+      |> assert_has("a.cal-nav-today[href='/calendar?view=week']", text: "Today")
+      |> assert_has("#calendar-view-month[href='/calendar?month=2030-09&view=month']")
+      |> visit("/calendar?view=week&week=someday")
+      |> assert_has("#calendar-week-day-#{this_week}")
+      |> assert_has("a.cal-nav-today[href='/calendar?view=week']")
+    end
+
+    test "lists the week's huddlz with the legend for them and keeps the scope", %{
+      conn: conn,
+      host: host,
+      attendee: attendee,
+      public_group: group
+    } do
+      in_week = ~D[2030-10-02]
+      hosted = create_huddl(host, group, title: "In the week", date: in_week)
+      rsvp!(hosted, attendee, :rsvp)
+      after_week = create_huddl(host, group, title: "The week after", date: ~D[2030-10-09])
+      rsvp!(after_week, attendee, :rsvp)
+
+      conn
+      |> login(attendee)
+      |> visit("/calendar?view=week&week=2030-09-29&scope=groups")
+      |> assert_has("#calendar-week-day-2030-10-02 .cal-agenda-title", text: "In the week")
+      |> refute_has("#calendar-week .cal-agenda-title", text: "The week after")
+      |> assert_has(".cal-month-count", text: "1 huddl")
+      |> assert_has("#calendar-legend .cal-legend-item", count: 1)
+      |> assert_has("a.cal-nav-btn[href='/calendar?week=2030-10-06&view=week&scope=groups']")
+      |> assert_has("#calendar-scope-mine[href='/calendar?week=2030-09-29&view=week']")
+    end
+  end
+
+  describe "day panel" do
+    test "opens from a day number with that day's huddlz and closes back to the month", %{
+      conn: conn,
+      host: host,
+      attendee: attendee,
+      public_group: group
+    } do
+      day = ~D[2030-10-17]
+      huddl = create_huddl(host, group, title: "Elixir office hours", date: day)
+      rsvp!(huddl, attendee, :rsvp)
+      other = create_huddl(host, group, title: "The day before", date: ~D[2030-10-16])
+      rsvp!(other, attendee, :rsvp)
+
+      conn
+      |> login(attendee)
+      |> visit("/calendar?month=2030-10&view=month")
+      |> refute_has("#calendar-day-panel")
+      |> assert_has(
+        "#calendar-day-link-2030-10-17[href='/calendar?month=2030-10&view=month&day=2030-10-17']"
+      )
+      |> click_link("#calendar-day-link-2030-10-17", "17")
+      |> assert_has("td.cal-cell.is-open #calendar-day-link-2030-10-17")
+      |> assert_has("#calendar-day-panel[role=dialog][aria-modal=true]")
+      |> assert_has("#calendar-day-panel .cal-day-kicker", text: "Thursday")
+      |> assert_has("#calendar-day-panel-title", text: "October 17")
+      |> assert_has("#calendar-day-panel .cal-day-count", text: "1 huddl")
+      |> assert_has("#calendar-day-entry-#{huddl.id} .cal-agenda-title",
+        text: "Elixir office hours"
+      )
+      |> refute_has("#calendar-day-panel .cal-agenda-title", text: "The day before")
+      |> assert_has("#calendar-day-week[href='/calendar?week=2030-10-13&view=week']",
+        text: "Open this week"
+      )
+      |> assert_has("#calendar-day-layer[phx-key=escape]")
+      |> click_link("#calendar-day-close", "Close")
+      |> assert_path("/calendar", query_params: %{"month" => "2030-10", "view" => "month"})
+      |> refute_has("#calendar-day-panel")
+      |> refute_has("td.cal-cell.is-open")
+    end
+
+    test "an empty day says so and the scope survives opening it", %{
+      conn: conn,
+      attendee: attendee
+    } do
+      conn
+      |> login(attendee)
+      |> visit("/calendar?month=2030-10&view=month&scope=groups&day=2030-10-03")
+      |> assert_has("#calendar-day-panel .cal-agenda-quiet", text: "Nothing on this day.")
+      |> assert_has("#calendar-day-panel .cal-day-count", text: "0 huddlz")
+      |> assert_has("#calendar-day-close[href='/calendar?month=2030-10&view=month&scope=groups']")
+      |> visit("/calendar?month=2030-10&view=month&day=not-a-day")
+      |> refute_has("#calendar-day-panel")
+    end
+
+    test "marks today in the panel", %{conn: conn, attendee: attendee} do
+      today = Huddlz.Generator.eastern_today()
+
+      conn
+      |> login(attendee)
+      |> visit("/calendar?view=month&day=#{today}")
+      |> assert_has("#calendar-day-panel[data-today] .cal-day-kicker-today", text: "Today")
+    end
+  end
+
   defp tomorrow, do: Date.add(Huddlz.Generator.eastern_today(), 1)
+
+  # A start that reads as "tomorrow" (24 to 48 hours away) whatever the
+  # time of day the suite runs, as a date and time in the huddl's zone.
+  defp thirty_hours_out do
+    local =
+      DateTime.utc_now() |> DateTime.add(30, :hour) |> DateTime.shift_zone!("America/New_York")
+
+    {DateTime.to_date(local), local |> DateTime.to_time() |> Time.truncate(:second)}
+  end
 
   # Build a /calendar URL pinned to the month containing `date`, so the focus
   # month always matches where the huddl actually lives (matters for agenda

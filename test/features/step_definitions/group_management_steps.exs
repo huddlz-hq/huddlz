@@ -61,6 +61,12 @@ defmodule GroupManagementSteps do
   end
 
   # Form interaction steps
+  step "I fill the group description with {string} text", %{args: [kind]} = context do
+    text = description_text(kind)
+    session = fill_in(context[:session] || context[:conn], "Description", with: text)
+    Map.merge(context, %{session: session, conn: session})
+  end
+
   step "I fill in the following:", context do
     # For 2-column tables without headers, Cucumber treats them as key-value pairs
     # Access the raw table data instead
@@ -122,6 +128,12 @@ defmodule GroupManagementSteps do
   end
 
   # Assertions specific to groups
+  step "the group description should show a required error", context do
+    session = context[:session] || context[:conn]
+    assert_has(session, "#form_description-error-0", text: "is required")
+    context
+  end
+
   step "I should be redirected to {string}", %{args: [_path]} = context do
     # PhoenixTest handles redirects automatically, so we just check we're on the expected page
     # We can check the path by looking for unique content on that page
@@ -153,4 +165,7 @@ defmodule GroupManagementSteps do
     assert_has(session, ".facts li", text: "Members #{count}")
     context
   end
+
+  defp description_text("empty"), do: ""
+  defp description_text("whitespace-only"), do: " \t\n\u00A0 "
 end

@@ -40,6 +40,46 @@ defmodule BrowserPictureSteps do
     Map.put(context, :conn, conn)
   end
 
+  step "I open the remove picture confirmation by clicking Remove", context do
+    conn =
+      context.conn
+      |> click_button("Remove")
+      |> assert_has("#remove-avatar-dialog [role='dialog']")
+
+    Map.put(context, :conn, conn)
+  end
+
+  step "the Remove picture button is above the backdrop", context do
+    assert_browser(context.conn, """
+    (() => {
+      const button = document.querySelector('#confirm-remove-avatar');
+      if (!button) return false;
+      const rect = button.getBoundingClientRect();
+      const topElement = document.elementFromPoint(
+        rect.left + rect.width / 2, rect.top + rect.height / 2
+      );
+      return rect.width > 0 && rect.height > 0 && button.contains(topElement);
+    })()
+    """)
+
+    context
+  end
+
+  step "I confirm picture removal by clicking Remove picture", context do
+    Map.put(context, :conn, click_button(context.conn, "Remove picture"))
+  end
+
+  step "my profile picture is replaced by initials", context do
+    conn =
+      context.conn
+      |> refute_has("#remove-avatar-dialog")
+      |> assert_has("[role='alert']", text: "Profile picture removed")
+      |> refute_has("img.big-avatar")
+      |> assert_has("main .big-avatar", text: "BM")
+
+    Map.put(context, :conn, conn)
+  end
+
   step "Tab stays inside the confirmation dialog", context do
     conn =
       context.conn

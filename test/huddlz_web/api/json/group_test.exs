@@ -2,6 +2,22 @@ defmodule HuddlzWeb.Api.Json.GroupTest do
   use HuddlzWeb.ApiCase, async: true
   require Ash.Query
 
+  test "group search accepts location and distance arguments", %{conn: conn} do
+    owner = generate(user())
+    nearby = generate(group(latitude: 30.2672, longitude: -97.7431, actor: owner))
+    generate(group(latitude: 29.7604, longitude: -95.3698, actor: owner))
+
+    conn =
+      get(conn, "/api/json/groups/search", %{
+        search_latitude: 30.2672,
+        search_longitude: -97.7431,
+        distance_miles: 25
+      })
+
+    assert %{"data" => [%{"id" => id}]} = json_response(conn, 200)
+    assert id == nearby.id
+  end
+
   describe "GET /api/json/groups" do
     test "lists public groups with their attributes", %{conn: conn} do
       owner = generate(user())
@@ -83,6 +99,58 @@ defmodule HuddlzWeb.Api.Json.GroupTest do
   end
 
   describe "PATCH /api/json/groups/:id" do
+    test "rejects blank descriptions and preserves the existing description", %{conn: conn} do
+      owner = generate(user())
+      group = generate(group(description: "A community for readers", actor: owner))
+
+      for description <- [nil, "", " \t\n\u00A0 "] do
+        response =
+          conn
+          |> authenticated_conn(owner)
+          |> put_req_header("content-type", "application/vnd.api+json")
+          |> patch("/api/json/groups/#{group.id}", %{
+            "data" => %{"type" => "group", "attributes" => %{"description" => description}}
+          })
+
+        assert %{"errors" => [error]} = json_response(response, 400)
+        assert error["source"]["pointer"] == "/data/attributes/description"
+        assert error["detail"] =~ "is required"
+      end
+
+      response = get(conn, "/api/json/groups/#{group.id}")
+      assert %{"data" => %{"attributes" => attributes}} = json_response(response, 200)
+      assert attributes["description"] == "A community for readers"
+    end
+
+    test "legacy groups allow unrelated edits but reject resubmitting a missing description", %{
+      conn: conn
+    } do
+      owner = generate(user())
+      group = generate(group(actor: owner)) |> Ash.Seed.update!(%{description: nil})
+      conn = authenticated_conn(conn, owner)
+
+      response =
+        conn
+        |> put_req_header("content-type", "application/vnd.api+json")
+        |> patch("/api/json/groups/#{group.id}", %{
+          "data" => %{"type" => "group", "attributes" => %{"name" => "Renamed Reading Club"}}
+        })
+
+      assert %{"data" => %{"attributes" => attributes}} = json_response(response, 200)
+      assert attributes["name"] == "Renamed Reading Club"
+      assert attributes["description"] == nil
+
+      response =
+        conn
+        |> put_req_header("content-type", "application/vnd.api+json")
+        |> patch("/api/json/groups/#{group.id}", %{
+          "data" => %{"type" => "group", "attributes" => %{"description" => nil}}
+        })
+
+      assert %{"errors" => [error]} = json_response(response, 400)
+      assert error["source"]["pointer"] == "/data/attributes/description"
+    end
+
     test "owner can update group details", %{conn: conn} do
       owner = generate(user())
       g = generate(group(owner_id: owner.id, is_public: true, actor: owner))
@@ -126,6 +194,41 @@ defmodule HuddlzWeb.Api.Json.GroupTest do
   end
 
   describe "POST /api/json/groups" do
+    test "requires a nonblank description", %{conn: conn} do
+      owner = generate(user())
+
+      for description <- [
+            %{},
+            %{"description" => nil},
+            %{"description" => ""},
+            %{"description" => " \t\n\u00A0 "}
+          ] do
+        attributes =
+          Map.merge(
+            %{
+              "name" => "Reading Club",
+              "location" => "Tucson",
+              "latitude" => 32.2226,
+              "longitude" => -110.9747,
+              "time_zone" => "America/Phoenix"
+            },
+            description
+          )
+
+        response =
+          conn
+          |> authenticated_conn(owner)
+          |> put_req_header("content-type", "application/vnd.api+json")
+          |> post("/api/json/groups", %{
+            "data" => %{"type" => "group", "attributes" => attributes}
+          })
+
+        assert %{"errors" => [error]} = json_response(response, 400)
+        assert error["source"]["pointer"] == "/data/attributes/description"
+        assert error["detail"] =~ "is required"
+      end
+    end
+
     test "creates a group and auto-generates slug from name when omitted", %{conn: conn} do
       me = generate(user())
 

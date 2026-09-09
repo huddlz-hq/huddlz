@@ -297,10 +297,13 @@ defmodule HuddlzWeb.HuddlSearchTest do
              )
     end
 
-    test "filter bar is hidden under scope=groups", %{conn: conn} do
+    test "groups expose location filtering without huddl-specific controls", %{conn: conn} do
       conn
       |> visit("/discover?scope=groups")
-      |> refute_has(".filter-bar")
+      |> assert_has(".filter-label", text: "Within")
+      |> refute_has(".filter-label", text: "Type")
+      |> refute_has(".filter-label", text: "When")
+      |> refute_has(".filter-label", text: "Sort")
     end
 
     test "Sort: Newest patches URL and marks chip active", %{conn: conn} do

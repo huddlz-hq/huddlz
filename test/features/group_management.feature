@@ -125,3 +125,43 @@ Feature: Group Management
     When I visit "/groups/new"
     And I click "Create group"
     Then I should see an error on the "Group name" field
+
+  Scenario: Creating a group requires a description
+    Given I am signed in as "verified@example.com"
+    When I visit "/groups/new"
+    And I fill in the following:
+      | Group name | Description Required Club |
+    And I select "San Francisco, CA, USA" as the group city in "America/Los_Angeles"
+    And I click "Create group"
+    Then I should not see "Group created successfully"
+    And the group description should show a required error
+
+  Scenario: Whitespace does not count as a group description
+    Given I am signed in as "verified@example.com"
+    When I visit "/groups/new"
+    And I fill in the following:
+      | Group name | Whitespace Description Club |
+    And I fill the group description with "whitespace-only" text
+    And I select "San Francisco, CA, USA" as the group city in "America/Los_Angeles"
+    And I click "Create group"
+    Then the group description should show a required error
+    When I fill in the following:
+      | Description | A community for local readers |
+    And I click "Create group"
+    Then I should see "Group created successfully"
+    And I should see "A community for local readers"
+
+  Scenario Outline: An owner cannot clear the group description
+    Given a public group "Management Book Club" exists with owner "verified@example.com"
+    And I am signed in as "verified@example.com"
+    When I visit the edit page for "Management Book Club"
+    And I fill the group description with "<description>" text
+    And I click "Save Changes"
+    Then the group description should show a required error
+    When I visit the group page for "Management Book Club"
+    Then I should see "Management Book Club description"
+
+    Examples:
+      | description     |
+      | empty           |
+      | whitespace-only |
