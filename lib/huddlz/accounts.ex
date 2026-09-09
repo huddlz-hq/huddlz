@@ -11,6 +11,7 @@ defmodule Huddlz.Accounts do
     resource Huddlz.Accounts.Token
 
     resource Huddlz.Accounts.User do
+      define :get_current_user, action: :me
       # Define proper code interfaces for actions
       define :search_by_email, action: :search_by_email, args: [:email]
       define :update_role, action: :update_role, args: [:role]
@@ -34,5 +35,9 @@ defmodule Huddlz.Accounts do
     end
 
     resource Huddlz.Accounts.ApiKey
+
+    resource Huddlz.Accounts.Profile do
+      define :get_profile, action: :get
+    end
   end
 end

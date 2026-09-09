@@ -2,6 +2,76 @@
 
 Anonymous clients can discover public huddlz with `GET /api/json/huddlz`.
 
+## Private profile and home search defaults
+
+Authenticated clients can read their current private profile with
+`GET /api/json/profile`, using `Authorization: Bearer <JWT-or-API-key>`.
+This Ash action returns a JSON object directly, without a JSON:API `data`
+envelope:
+
+```json
+{
+  "id": "00000000-0000-0000-0000-000000000001",
+  "display_name": "Alex",
+  "email": "alex@example.com",
+  "search_defaults": {
+    "home_location": {
+      "label": "Austin, TX",
+      "latitude": 30.2672,
+      "longitude": -97.7431,
+      "time_zone": "America/Chicago"
+    },
+    "distance_miles": 25
+  }
+}
+```
+
+The endpoint accepts no member ID and reads only the authenticated member's
+current profile. Anonymous requests receive 403; invalid credentials receive
+401. These fields are not added to public profiles. The existing
+`/api/auth/me` identity response remains supported.
+
+`home_location` is `null` when unset, cleared, missing either coordinate, or
+missing a valid canonical IANA time zone. Its `label` may be null even when
+the coordinates and time zone are usable; clients can identify that area by
+its coordinates. There is no persisted radius preference: `distance_miles`
+is the application's 25-mile default (search supports 5–100 miles).
+
+Client location selection should follow this order:
+
+1. Use an explicit place or an explicit "everywhere" choice for this search.
+2. Otherwise, use the profile's usable home search location.
+3. Otherwise, omit both coordinates and clearly indicate an unrestricted search.
+
+For a geographic search, map `latitude`, `longitude`, and `time_zone` to
+`search_latitude`, `search_longitude`, and `search_time_zone`, and send
+`distance_miles`. For example:
+
+```text
+/api/json/huddlz?date_filter=upcoming&search_latitude=30.2672&search_longitude=-97.7431&distance_miles=25&search_time_zone=America%2FChicago
+```
+
+For "everywhere", omit both coordinates; the search API does not implicitly
+apply the profile default. A radius alone does not restrict results. Search
+requests do not update the saved home search location.
+
+`this_week` and `this_month` require a canonical IANA `search_time_zone` for
+local calendar boundaries. Use the chosen search location's zone, including
+when traveling. Without a search location, use the client's local zone (the
+browser zone on the website). If unavailable, ask the user to choose a zone
+or use `upcoming`, which does not require one. A home search location's zone
+is not a general member time-zone preference.
+
+Fetch the profile again at the start of a subsequent session, or when the
+member refreshes their preferences. Each request reads current saved values;
+existing credentials continue to work after a location change. Avoid keeping
+a separate permanent home preference in the client.
+
+The generated contract is available at `/api/json/open_api` and
+`/api/json/swaggerui`.
+
+## Ordering
+
 The `sort` query parameter uses standard JSON:API field sorting. Fields sort
 ascending unless prefixed with `-`; comma-separated fields are applied in order.
 
