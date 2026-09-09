@@ -601,9 +601,16 @@ defmodule HuddlzWeb.GroupLive.Show do
       description: MetaHelpers.description(group, "Find and join this group on huddlz."),
       type: "website",
       url: url(~p"/groups/#{group.slug}"),
-      image: MetaHelpers.image_url(group.current_image_url, GroupImages)
+      image:
+        MetaHelpers.image_url(group.current_image_url, GroupImages) ||
+          generated_card_url(group)
     }
   end
+
+  defp generated_card_url(%{is_public: true, slug: slug}),
+    do: url(~p"/og/groups/#{slug}/card.png")
+
+  defp generated_card_url(_group), do: nil
 
   defp current_user_membership(_group, nil), do: nil
 

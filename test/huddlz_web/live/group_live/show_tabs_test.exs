@@ -132,6 +132,32 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
       assert meta_content(html, ~s(meta[name="twitter:card"])) == "summary_large_image"
     end
 
+    test "advertises a generated preview card when the group has no cover", %{
+      conn: conn,
+      group: group
+    } do
+      html =
+        conn
+        |> get(~p"/groups/#{group.slug}")
+        |> html_response(200)
+
+      card_url = HuddlzWeb.Endpoint.url() <> "/og/groups/#{group.slug}/card.png"
+      assert meta_content(html, ~s(meta[property="og:image"])) == card_url
+      assert meta_content(html, ~s(meta[name="twitter:image"])) == card_url
+    end
+
+    test "a private group advertises no preview picture", %{conn: conn, user: user} do
+      group = generate(group(owner_id: user.id, is_public: false, actor: user))
+
+      html =
+        conn
+        |> login(user)
+        |> get(~p"/groups/#{group.slug}")
+        |> html_response(200)
+
+      refute html =~ "/og/groups/"
+    end
+
     test "renders fallback description metadata", %{conn: conn, user: user} do
       group = generate(group(owner_id: user.id, is_public: true, actor: user, description: nil))
 

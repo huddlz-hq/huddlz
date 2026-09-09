@@ -133,4 +133,51 @@ defmodule LinkPreviewImageSteps do
     assert context.response.status == 404
     context
   end
+
+  step "a public group {string} with no cover picture", %{args: [group_name]} = context do
+    owner = generate(user(role: :user))
+
+    group =
+      generate(
+        group(
+          name: group_name,
+          is_public: true,
+          location: "Saint Augustine, FL",
+          owner_id: owner.id,
+          actor: owner
+        )
+      )
+
+    Map.put(context, :group, group)
+  end
+
+  step "a private group {string}", %{args: [group_name]} = context do
+    owner = generate(user(role: :user))
+    group = generate(group(name: group_name, is_public: false, owner_id: owner.id, actor: owner))
+    Map.put(context, :group, group)
+  end
+
+  step "a link preview fetches the group page", context do
+    html =
+      context.conn
+      |> get("/groups/#{context.group.slug}")
+      |> html_response(200)
+
+    Map.put(context, :page_html, html)
+  end
+
+  step "the page advertises a generated group preview picture", context do
+    [image_url] =
+      context.page_html
+      |> Floki.parse_document!()
+      |> Floki.attribute(~s(meta[property="og:image"]), "content")
+
+    assert image_url == HuddlzWeb.Endpoint.url() <> "/og/groups/#{context.group.slug}/card.png"
+
+    Map.put(context, :image_url, image_url)
+  end
+
+  step "a link preview fetches that group's preview picture", context do
+    Map.put(context, :response, get(build_conn(), "/og/groups/#{context.group.slug}/card.png"))
+  end
 end
