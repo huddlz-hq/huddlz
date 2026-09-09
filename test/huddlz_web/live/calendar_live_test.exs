@@ -789,6 +789,111 @@ defmodule HuddlzWeb.CalendarLiveTest do
     end
   end
 
+  describe "scope: my RSVPs or my groups" do
+    setup %{attendee: attendee, host: host, public_group: public_group} do
+      generate(group_member(group_id: public_group.id, user_id: attendee.id, actor: host))
+      %{}
+    end
+
+    test "the chips carry upcoming counts and default to my RSVPs", %{
+      conn: conn,
+      attendee: attendee,
+      host: host,
+      public_group: public_group
+    } do
+      mine = create_huddl(host, public_group, title: "Mine", date: tomorrow())
+      rsvp!(mine, attendee, :rsvp)
+      create_huddl(host, public_group, title: "Theirs", date: Date.add(tomorrow(), 1))
+
+      conn
+      |> login(attendee)
+      |> visit("/calendar")
+      |> assert_has("#calendar-scope-mine.chip.is-active[aria-current='page']", text: "My RSVPs")
+      |> assert_has("#calendar-scope-mine .chip-count", text: "1")
+      |> assert_has("#calendar-scope-groups.chip:not(.is-active)[href='/calendar?scope=groups']",
+        text: "My groups"
+      )
+      |> assert_has("#calendar-scope-groups .chip-count", text: "2")
+      |> refute_has(".cal-agenda-title", text: "Theirs")
+    end
+
+    test "my groups adds unanswered huddlz with an outlined pill in the grid and a legend entry",
+         %{conn: conn, attendee: attendee, host: host, public_group: public_group} do
+      theirs = create_huddl(host, public_group, title: "Theirs", date: tomorrow())
+
+      conn
+      |> login(attendee)
+      |> visit(calendar_path_for(tomorrow()) <> "&scope=groups")
+      |> assert_has("#calendar-entry-#{theirs.id}.cal-pill.open[data-status=open]",
+        text: "Theirs"
+      )
+      |> assert_has("#calendar-legend [data-status=open] .cal-legend-swatch.outline")
+      |> assert_has("#calendar-legend [data-status=open]", text: "No RSVP")
+      |> assert_has("#calendar-scope-groups.chip.is-active")
+    end
+
+    test "the scope survives switching views and paging months", %{
+      conn: conn,
+      attendee: attendee
+    } do
+      next = next_month_param(Huddlz.Generator.eastern_today())
+
+      conn
+      |> login(attendee)
+      |> visit("/calendar?scope=groups")
+      |> assert_has("#calendar-view-month[href='/calendar?view=month&scope=groups']")
+      |> visit("/calendar?view=month&scope=groups")
+      |> assert_has("#calendar-view-agenda[href='/calendar?scope=groups']")
+      |> assert_has(~s(a.cal-nav-btn[href="/calendar?month=#{next}&view=month&scope=groups"]))
+      |> assert_has("#calendar-scope-mine[href='/calendar?view=month']")
+    end
+
+    test "my groups leaves out the past and cancelled huddlz nobody answered", %{
+      conn: conn,
+      attendee: attendee,
+      host: host,
+      public_group: public_group
+    } do
+      gone = create_past_huddl(host, public_group, title: "Missed It")
+      off = create_huddl(host, public_group, title: "Called Off", date: tomorrow())
+      Communities.cancel_huddl!(off, "Venue unavailable", actor: host)
+      answered = create_huddl(host, public_group, title: "Answered", date: tomorrow())
+      Communities.cancel_huddl!(answered, "Venue unavailable", actor: host)
+      rsvp_before_cancel = create_huddl(host, public_group, title: "Was Going", date: tomorrow())
+      rsvp!(rsvp_before_cancel, attendee, :rsvp)
+      Communities.cancel_huddl!(rsvp_before_cancel, "Venue unavailable", actor: host)
+      gone_day = DateTime.to_date(HuddlCardHelpers.local_starts_at(gone))
+
+      conn
+      |> login(attendee)
+      |> visit("/calendar?scope=groups")
+      |> refute_has("#calendar-entry-#{off.id}")
+      |> refute_has("#calendar-entry-#{answered.id}")
+      |> assert_has("#calendar-entry-#{rsvp_before_cancel.id} [data-status=cancelled]")
+      |> visit(calendar_path_for(gone_day) <> "&scope=groups")
+      |> refute_has("#calendar-entry-#{gone.id}")
+    end
+
+    test "a newcomer's groups still show what they have on", %{
+      conn: conn,
+      attendee: attendee,
+      host: host,
+      public_group: public_group
+    } do
+      theirs = create_huddl(host, public_group, title: "Theirs", date: tomorrow())
+
+      conn
+      |> login(attendee)
+      |> visit("/calendar")
+      |> assert_has("#calendar-first-run")
+      |> visit("/calendar?scope=groups")
+      |> refute_has("#calendar-first-run")
+      |> assert_has("#calendar-entry-#{theirs.id} .cal-agenda-title", text: "Theirs")
+      |> refute_has("#calendar-entry-#{theirs.id} .cal-entry-status")
+      |> assert_has("#calendar-entry-#{theirs.id} .cal-agenda-relative", text: "tomorrow")
+    end
+  end
+
   defp tomorrow, do: Date.add(Huddlz.Generator.eastern_today(), 1)
 
   # Build a /calendar URL pinned to the month containing `date`, so the focus

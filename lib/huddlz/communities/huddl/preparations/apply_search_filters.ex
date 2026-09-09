@@ -140,7 +140,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
     # rather than ignoring the relationship filter (which would silently broaden
     # the query and leak unrelated huddlz to API consumers).
     case Ash.Query.get_argument(query, :relationship) do
-      relationship when relationship in [:hosting, :attending, :waitlisted] ->
+      relationship when relationship in [:hosting, :attending, :waitlisted, :member] ->
         Ash.Query.filter(query, false)
 
       _ ->
@@ -163,6 +163,12 @@ defmodule Huddlz.Communities.Huddl.Preparations.ApplySearchFilters do
         Ash.Query.filter(
           query,
           exists(attendees, user_id == ^actor.id and not is_nil(waitlisted_at))
+        )
+
+      :member ->
+        Ash.Query.filter(
+          query,
+          group.owner_id == ^actor.id or exists(group.group_members, user_id == ^actor.id)
         )
 
       _ ->
