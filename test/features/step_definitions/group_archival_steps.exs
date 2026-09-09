@@ -5,6 +5,46 @@ defmodule GroupArchivalSteps do
   import PhoenixTest
   import Phoenix.ConnTest, only: [assert_error_sent: 2, dispatch: 4]
 
+  step "I request attendance for {string} through {string}",
+       %{args: [title, api]} = context do
+    huddl = Enum.find(context.huddls, &(to_string(&1.title) == title))
+
+    conn =
+      Phoenix.ConnTest.build_conn() |> HuddlzWeb.ApiCase.authenticated_conn(context.current_user)
+
+    people =
+      case api do
+        "GraphQL" ->
+          body =
+            conn
+            |> HuddlzWeb.ApiCase.gql_post(
+              "query { huddlAttendees(huddlId: \"#{huddl.id}\") { id } }",
+              %{}
+            )
+            |> Phoenix.ConnTest.json_response(200)
+
+          refute Map.has_key?(body, "errors"), inspect(body)
+          body["data"]["huddlAttendees"]
+
+        "JSON:API" ->
+          conn
+          |> dispatch(
+            HuddlzWeb.Endpoint,
+            :get,
+            "/api/json/huddl_attendees/by_huddl?huddl_id=#{huddl.id}"
+          )
+          |> Phoenix.ConnTest.json_response(200)
+          |> Map.fetch!("data")
+      end
+
+    Map.put(context, :attendance_history, people)
+  end
+
+  step "the attendance history contains {int} people", %{args: [count]} = context do
+    assert length(context.attendance_history) == count
+    context
+  end
+
   step "I open the archived huddl {string}", %{args: [title]} = context do
     path = huddl_path(context, title)
     session = visit(context[:session] || context[:conn], path)

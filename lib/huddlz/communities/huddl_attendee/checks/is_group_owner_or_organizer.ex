@@ -5,7 +5,8 @@ defmodule Huddlz.Communities.HuddlAttendee.Checks.IsGroupOwnerOrOrganizer do
   """
   use Ash.Policy.SimpleCheck
 
-  alias Huddlz.Communities.{GroupMember, Huddl}
+  alias Huddlz.Communities
+  alias Huddlz.Communities.GroupMember
   require Ash.Query
 
   @impl true
@@ -34,9 +35,9 @@ defmodule Huddlz.Communities.HuddlAttendee.Checks.IsGroupOwnerOrOrganizer do
   defp get_huddl_id(_), do: nil
 
   # Check if the actor is owner or organizer of the group
-  defp check_owner_or_organizer(%{id: user_id}, huddl_id) do
-    # First get the huddl to find its group_id
-    case Ash.get(Huddl, huddl_id, authorize?: false) do
+  defp check_owner_or_organizer(%{id: user_id} = actor, huddl_id) do
+    # Preserve member visibility when looking up archived or private history.
+    case Communities.get_huddl(huddl_id, actor: actor) do
       {:ok, %{group_id: group_id}} when not is_nil(group_id) ->
         # Then check if user is owner or organizer of that group
         GroupMember

@@ -326,3 +326,40 @@ Feature: Group archival
       | other@example.com  | GraphQL  | hidden     |
       | member@example.com | JSON:API | visible    |
       | other@example.com  | JSON:API | hidden     |
+
+  @archived_attendance
+  Scenario Outline: Attendance history keeps its access rules after archival
+    Given the following users exist:
+      | email                 | role | display_name |
+      | owner@example.com     | user | Owner        |
+      | organizer@example.com | user | Organizer    |
+      | attendee@example.com  | user | Attendee     |
+      | member@example.com    | user | Member       |
+      | outsider@example.com  | user | Outsider     |
+    And a public group "Attendance Club" exists with owner "owner@example.com"
+    And "organizer@example.com" is an organizer of "Attendance Club"
+    And "member@example.com" is a member of "Attendance Club"
+    And the past huddl "Last meeting" exists in group "Attendance Club" hosted by "owner@example.com"
+    And "attendee@example.com" has RSVPed to "Last meeting"
+    And I am signed in as "<actor>"
+    When I request attendance for "Last meeting" through "<api>"
+    Then the attendance history contains <count> people
+    Given I am signed in as "owner@example.com"
+    When I visit the edit page for "Attendance Club"
+    And I click "Archive group"
+    And I click "Yes, archive group"
+    Then I should see "This group is archived"
+    Given I am signed in as "<actor>"
+    When I request attendance for "Last meeting" through "<api>"
+    Then the attendance history contains <count> people
+
+    Examples:
+      | actor                 | api      | count |
+      | organizer@example.com | GraphQL  | 1     |
+      | owner@example.com     | GraphQL  | 1     |
+      | member@example.com    | GraphQL  | 0     |
+      | outsider@example.com  | GraphQL  | 0     |
+      | organizer@example.com | JSON:API | 1     |
+      | owner@example.com     | JSON:API | 1     |
+      | member@example.com    | JSON:API | 0     |
+      | outsider@example.com  | JSON:API | 0     |
