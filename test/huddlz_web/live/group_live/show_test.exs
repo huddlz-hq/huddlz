@@ -220,7 +220,7 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
         |> assert_has("#leave-group-dialog [role='dialog']")
         |> assert_has("#leave-group-dialog-title", text: "Leave Membership Test Group?")
         |> assert_has("#leave-group-dialog", text: "member roster")
-        |> assert_has("#leave-group-dialog", text: "My groups")
+        |> assert_has("#leave-group-dialog", text: "Groups")
         |> assert_has("#leave-group-dialog", text: "notifications")
         |> assert_has(
           "#leave-group-dialog-container[phx-key='escape'][phx-window-keydown][phx-click-away]"
@@ -235,7 +235,7 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
       |> assert_has("button", text: "Leave Group")
     end
 
-    test "confirming leave updates the group page and My groups", %{
+    test "confirming leave updates the group page and Groups", %{
       conn: conn,
       owner: owner,
       group: group
@@ -263,7 +263,7 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
       |> assert_has(".facts li", text: "Members 1")
       |> refute_has("button", text: "Leave Group")
       |> assert_has("button", text: "Join Group")
-      |> visit(~p"/my-groups")
+      |> visit(~p"/groups")
       |> refute_has("*", text: "Membership Test Group")
     end
 

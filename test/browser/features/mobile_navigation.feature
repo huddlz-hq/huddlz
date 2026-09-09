@@ -6,5 +6,5 @@ Feature: Mobile navigation in a narrow browser
     Then the drawer contains focus and the page behind it is inert
     When I close mobile navigation with Escape
     Then focus returns to the navigation trigger and the page is usable
-    When I reopen mobile navigation and visit My groups
-    Then My groups loads with the drawer closed and can reopen navigation
+    When I reopen mobile navigation and visit Groups
+    Then Groups loads with the drawer closed and can reopen navigation

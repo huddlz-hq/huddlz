@@ -142,7 +142,7 @@ defmodule GroupManagementSteps do
     |> assert_has("#leave-group-dialog [role='dialog']")
     |> assert_has("#leave-group-dialog-title", text: "Leave #{group_name}?")
     |> assert_has("#leave-group-dialog", text: "member roster")
-    |> assert_has("#leave-group-dialog", text: "My groups")
+    |> assert_has("#leave-group-dialog", text: "Groups")
     |> assert_has("#leave-group-dialog", text: "notifications")
 
     context

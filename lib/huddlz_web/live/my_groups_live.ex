@@ -1,6 +1,6 @@
 defmodule HuddlzWeb.MyGroupsLive do
   @moduledoc """
-  LiveView at `/my-groups`. Personal feed of groups the signed-in user
+  LiveView at `/groups`. Personal feed of groups the signed-in user
   organizes (Hosting) or has joined (Joined). Filter chips drive a
   `?filter=` URL param: default `all` is no param, `hosting` and `joined`
   scope the grid. `?page=N` paginates the active filter.
@@ -27,7 +27,7 @@ defmodule HuddlzWeb.MyGroupsLive do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:page_title, "My groups")
+     |> assign(:page_title, "Groups")
      |> assign(:groups, [])
      |> assign(:counts, %{all: 0, hosting: 0, joined: 0})
      |> assign(:page_info, %{total_pages: 1, current_page: 1, total_count: 0})}
@@ -127,13 +127,13 @@ defmodule HuddlzWeb.MyGroupsLive do
     end
   end
 
-  defp filter_path(:all, page) when page > 1, do: ~p"/my-groups?#{[page: page]}"
-  defp filter_path(:all, _page), do: ~p"/my-groups"
+  defp filter_path(:all, page) when page > 1, do: ~p"/groups?#{[page: page]}"
+  defp filter_path(:all, _page), do: ~p"/groups"
 
   defp filter_path(filter, page) when page > 1,
-    do: ~p"/my-groups?#{[filter: filter, page: page]}"
+    do: ~p"/groups?#{[filter: filter, page: page]}"
 
-  defp filter_path(filter, _page), do: ~p"/my-groups?#{[filter: filter]}"
+  defp filter_path(filter, _page), do: ~p"/groups?#{[filter: filter]}"
 
   @impl true
   def render(assigns) do
@@ -143,11 +143,11 @@ defmodule HuddlzWeb.MyGroupsLive do
       current_user={@current_user}
       unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
-      active="my-groups"
+      active="groups"
     >
       <div class="page-head">
         <div>
-          <h1>My groups</h1>
+          <h1>Groups</h1>
           <p>{filter_blurb(@filter)}</p>
         </div>
         <.button

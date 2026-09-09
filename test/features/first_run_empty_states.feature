@@ -11,15 +11,15 @@ Feature: First-run empty states
       | newcomer@example.com | Ada Park     | user |
     And I am signed in as "newcomer@example.com"
 
-  Scenario: A newcomer's My huddlz sends them to find a huddl
-    When I visit "/my-huddlz"
+  Scenario: A newcomer's Huddlz sends them to find a huddl
+    When I visit "/huddlz"
     Then I should see "No upcoming RSVPs yet"
     And I should see "Find a huddl worth showing up to and it will land here."
     When I click link "Find a huddl"
     Then I should see "Browse huddlz"
 
-  Scenario: A newcomer's My groups offers both ways in
-    When I visit "/my-groups"
+  Scenario: A newcomer's Groups offers both ways in
+    When I visit "/groups"
     Then I should see "No groups yet"
     And I should see "Groups are where huddlz come from."
     And I am offered "Browse groups" and "Start your own"
@@ -33,9 +33,9 @@ Feature: First-run empty states
     When I click link "Find a huddl"
     Then I should see "Browse huddlz"
 
-  Scenario: Someone who has attended before sees a quieter My huddlz
+  Scenario: Someone who has attended before sees a quieter Huddlz
     Given I attended a huddl last month
-    When I visit "/my-huddlz"
+    When I visit "/huddlz"
     Then I should see "Nothing coming up"
     And I should not see "No upcoming RSVPs yet"
     And I should see "Browse huddlz"

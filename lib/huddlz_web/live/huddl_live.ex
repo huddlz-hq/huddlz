@@ -5,7 +5,7 @@ defmodule HuddlzWeb.HuddlLive do
   (defaults to `huddlz`). The legacy `?yours=hosting|attending` param scopes
   the huddl results to the actor's relationship; it is huddl-only and ignored
   under `scope=groups`. Personal sections live on the dedicated routes
-  (`/my-huddlz`, `/my-groups`); this view is shared by anonymous and
+  (`/huddlz`, `/groups`); this view is shared by anonymous and
   signed-in users.
   """
   use HuddlzWeb, :live_view

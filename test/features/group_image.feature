@@ -113,7 +113,7 @@ Feature: Group Image Management
     When I visit the group page for "Remove Image Group"
     Then I should not see the group image
     And I should see the group name "Remove Image Group" in the placeholder
-    When I visit "/my-groups"
+    When I visit "/groups"
     Then I should not see the group image
     When I visit the huddl "Group Image Huddl" page
     Then I should not see an image on the huddl page
@@ -187,5 +187,5 @@ Feature: Group Image Management
     When I visit "/groups/new"
     And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "Image uploaded"
-    When I visit "/my-groups"
+    When I visit "/groups"
     Then there should be an orphaned pending image

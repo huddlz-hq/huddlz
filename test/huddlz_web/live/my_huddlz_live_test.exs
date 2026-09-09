@@ -66,17 +66,17 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
   describe "anonymous access" do
     test "redirects to sign-in", %{conn: conn} do
       conn
-      |> visit("/my-huddlz")
+      |> visit("/huddlz")
       |> assert_path("/sign-in")
     end
   end
 
   describe "page chrome" do
-    test "renders v3 sidebar with My huddlz active", %{conn: conn, attendee: attendee} do
+    test "renders v3 sidebar with Huddlz active", %{conn: conn, attendee: attendee} do
       conn
       |> login(attendee)
-      |> visit("/my-huddlz")
-      |> assert_has("h1", text: "My huddlz")
+      |> visit("/huddlz")
+      |> assert_has("h1", text: "Huddlz")
       |> assert_has(
         "button#mobile-nav-trigger[aria-controls='mobile-navigation-drawer'][aria-expanded='false']"
       )
@@ -85,7 +85,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       )
       |> assert_has("button#mobile-nav-close[aria-label='Close navigation']")
       |> assert_has("button.nav-scrim[aria-hidden='true'][tabindex='-1']")
-      |> assert_has(".sb-item.active[aria-current='page']", text: "My huddlz")
+      |> assert_has(".sb-item.active[aria-current='page']", text: "Huddlz")
       |> refute_has("input.nav-toggle")
       |> refute_has(".sb-item:not(.active)[aria-current]")
     end
@@ -93,7 +93,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
     test "shows three filter chips with counts", %{conn: conn, attendee: attendee} do
       conn
       |> login(attendee)
-      |> visit("/my-huddlz")
+      |> visit("/huddlz")
       |> assert_has(".filters .chip", text: "Upcoming")
       |> assert_has(".filters .chip", text: "Waitlisted")
       |> assert_has(".filters .chip", text: "Past")
@@ -102,7 +102,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
     test "Upcoming chip is active by default", %{conn: conn, attendee: attendee} do
       conn
       |> login(attendee)
-      |> visit("/my-huddlz")
+      |> visit("/huddlz")
       |> assert_has(".filters .chip.is-active[aria-current='page']", text: "Upcoming")
       |> refute_has(".filters .chip:not(.is-active)[aria-current]")
     end
@@ -122,7 +122,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/my-huddlz")
+      |> visit("/huddlz")
       |> assert_has("h3.card-title", text: "Going Show")
       |> refute_has("h3.card-title", text: "Skipped Show")
       |> assert_has(".pill", text: "Going")
@@ -140,7 +140,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/my-huddlz")
+      |> visit("/huddlz")
       |> assert_has("h3.card-title", text: "Cancelled Workshop")
       |> assert_has(".pill", text: "Cancelled")
     end
@@ -151,7 +151,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
     } do
       conn
       |> login(attendee)
-      |> visit("/my-huddlz")
+      |> visit("/huddlz")
       |> assert_has(".empty-state[data-first-run] h3", text: "No upcoming RSVPs yet")
       |> assert_has(".empty-state p",
         text: "Find a huddl worth showing up to and it will land here."
@@ -174,7 +174,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/my-huddlz")
+      |> visit("/huddlz")
       |> assert_has(".empty-state:not([data-first-run]) h3", text: "Nothing coming up")
       |> assert_has(".empty-state p", text: "Your next RSVP will land here.")
       |> assert_has(".empty-state a.btn-secondary[href=\"/discover\"]", text: "Browse huddlz")
@@ -193,7 +193,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/my-huddlz")
+      |> visit("/huddlz")
       |> assert_has(".filters .chip", text: "Upcoming 1")
     end
 
@@ -206,7 +206,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
 
       conn
       |> login(host)
-      |> visit("/my-huddlz")
+      |> visit("/huddlz")
       |> assert_has("h3.card-title", text: "Creator RSVP")
       |> assert_has(".filters .chip", text: "Upcoming 1")
 
@@ -214,7 +214,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
 
       conn
       |> login(host)
-      |> visit("/my-huddlz")
+      |> visit("/huddlz")
       |> refute_has("h3.card-title", text: "Creator RSVP")
       |> assert_has(".filters .chip", text: "Upcoming 0")
     end
@@ -247,7 +247,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/my-huddlz?filter=waitlisted")
+      |> visit("/huddlz?filter=waitlisted")
       |> assert_has(".filters .chip.is-active", text: "Waitlisted")
       |> assert_has("h3.card-title", text: "Sold Out Show")
       |> assert_has(".pill", text: "Waitlist")
@@ -256,7 +256,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
     test "empty state copy", %{conn: conn, attendee: attendee} do
       conn
       |> login(attendee)
-      |> visit("/my-huddlz?filter=waitlisted")
+      |> visit("/huddlz?filter=waitlisted")
       |> assert_has(".empty-state p", text: "You're not on a waitlist right now.")
       |> refute_has(".empty-state a")
     end
@@ -274,7 +274,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/my-huddlz?filter=past")
+      |> visit("/huddlz?filter=past")
       |> assert_has(".filters .chip.is-active", text: "Past")
       |> assert_has("h3.card-title", text: "Old Workshop")
       |> assert_has(".pill", text: "Attended")
@@ -283,7 +283,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
     test "empty state copy", %{conn: conn, attendee: attendee} do
       conn
       |> login(attendee)
-      |> visit("/my-huddlz?filter=past")
+      |> visit("/huddlz?filter=past")
       |> assert_has(".empty-state p", text: "No past attendance yet.")
     end
 
@@ -297,7 +297,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
 
       conn
       |> login(host)
-      |> visit("/my-huddlz?filter=past")
+      |> visit("/huddlz?filter=past")
       |> assert_has("h3.card-title", text: "Creator Attended")
       |> assert_has(".filters .chip", text: "Past 1")
       |> assert_has(".pill", text: "Attended")
@@ -308,7 +308,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
     test "unknown filter falls back to Upcoming", %{conn: conn, attendee: attendee} do
       conn
       |> login(attendee)
-      |> visit("/my-huddlz?filter=garbage")
+      |> visit("/huddlz?filter=garbage")
       |> assert_has(".filters .chip.is-active", text: "Upcoming")
     end
   end
@@ -330,7 +330,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/my-huddlz")
+      |> visit("/huddlz")
       |> assert_has("h3.card-title", text: "I Am Going")
       |> refute_has("h3.card-title", text: "They Are Going")
       |> assert_has(".filters .chip", text: "Upcoming 1")
@@ -349,7 +349,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/my-huddlz")
+      |> visit("/huddlz")
       |> assert_has(~s(.grid .card[href="/groups/#{public_group.slug}/huddlz/#{huddl.id}"]))
     end
   end
@@ -375,7 +375,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/my-huddlz")
+      |> visit("/huddlz")
       |> assert_has("#{bare_card} .card-cover-fallback", text: "PE", exact: true)
       |> refute_has("#{bare_card} .cover-image")
       |> assert_has("#{pictured_card} #my-huddl-card-cover-#{pictured.id}.cover-image")
@@ -410,7 +410,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
       session =
         conn
         |> login(attendee)
-        |> visit("/my-huddlz?filter=past")
+        |> visit("/huddlz?filter=past")
 
       html = Phoenix.LiveViewTest.render(session.view)
 
@@ -446,7 +446,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
     test "shows pagination when more than 20 results", %{conn: conn, attendee: attendee} do
       conn
       |> login(attendee)
-      |> visit("/my-huddlz")
+      |> visit("/huddlz")
       |> assert_has(".filters .chip", text: "Upcoming 22")
       |> assert_has(".pagination .page-num", text: "2")
     end
@@ -454,7 +454,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
     test "page 1 shows the soonest 20", %{conn: conn, attendee: attendee} do
       conn
       |> login(attendee)
-      |> visit("/my-huddlz")
+      |> visit("/huddlz")
       |> assert_has("h3.card-title", text: "Huddl 001")
       |> refute_has("h3.card-title", text: "Huddl 021")
     end
@@ -462,7 +462,7 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
     test "page=2 shows the remaining 2", %{conn: conn, attendee: attendee} do
       conn
       |> login(attendee)
-      |> visit("/my-huddlz?page=2")
+      |> visit("/huddlz?page=2")
       |> assert_has("h3.card-title", text: "Huddl 021")
       |> assert_has("h3.card-title", text: "Huddl 022")
       |> refute_has("h3.card-title", text: "Huddl 001")
@@ -471,8 +471,8 @@ defmodule HuddlzWeb.MyHuddlzLiveTest do
     test "out-of-range ?page= clamps to last valid page", %{conn: conn, attendee: attendee} do
       conn
       |> login(attendee)
-      |> visit("/my-huddlz?page=999")
-      |> assert_path("/my-huddlz", query_params: %{"page" => "2"})
+      |> visit("/huddlz?page=999")
+      |> assert_path("/huddlz", query_params: %{"page" => "2"})
     end
   end
 end

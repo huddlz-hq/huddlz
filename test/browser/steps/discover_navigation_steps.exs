@@ -30,9 +30,9 @@ defmodule BrowserDiscoverNavigationSteps do
     conn =
       context.conn
       |> sign_in(member)
-      |> visit("/my-huddlz")
+      |> visit("/huddlz")
       |> assert_has(".phx-connected")
-      |> assert_has("h1", text: "My huddlz")
+      |> assert_has("h1", text: "Huddlz")
 
     Map.merge(context, %{conn: conn, member: member})
   end

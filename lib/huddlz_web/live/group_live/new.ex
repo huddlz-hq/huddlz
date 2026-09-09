@@ -187,7 +187,7 @@ defmodule HuddlzWeb.GroupLive.New do
       current_user={@current_user}
       unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
-      active="my-groups"
+      active="groups"
     >
       <div class="page-head">
         <div>
@@ -363,7 +363,7 @@ defmodule HuddlzWeb.GroupLive.New do
           <.button variant={:primary} type="submit" phx-disable-with="Creating…">
             Create group
           </.button>
-          <.button variant={:secondary} navigate={~p"/my-groups"}>Cancel</.button>
+          <.button variant={:secondary} navigate={~p"/groups"}>Cancel</.button>
         </div>
       </.form>
     </Layouts.app>
