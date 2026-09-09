@@ -34,7 +34,7 @@ defmodule HuddlzWeb.Live.Helpers.UploadHelpers do
     do: "Choose a JPG, PNG, or WebP image."
 
   def format_upload_error(:invalid_image),
-    do: "That file could not be read as an image. Choose another JPG, PNG, or WebP image."
+    do: "That file could not be read as an image."
 
   def format_upload_error(msg) when is_binary(msg), do: msg
   def format_upload_error(_), do: "The image could not be uploaded. Please try again."
