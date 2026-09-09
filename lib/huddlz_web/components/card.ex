@@ -41,6 +41,43 @@ defmodule HuddlzWeb.Components.Card do
     """
   end
 
+  @skeleton_shapes [
+    %{group: 40, title: 85, second: 55, meta: 70},
+    %{group: 55, title: 70, second: nil, meta: 70},
+    %{group: 40, title: 85, second: 40, meta: 55}
+  ]
+
+  @doc """
+  Renders placeholder cards sharing the huddl card's anatomy for a grid whose
+  results are still on their way. The grid fades in after a short delay so a
+  fast search never flashes it.
+  """
+  attr :label, :string, required: true, doc: "accessible name for the busy region"
+  attr :count, :integer, default: 3
+
+  def card_skeleton_grid(assigns) do
+    shapes = @skeleton_shapes |> Stream.cycle() |> Enum.take(assigns.count)
+    assigns = assign(assigns, :shapes, shapes)
+
+    ~H"""
+    <div class="grid grid-skeleton" role="status" aria-busy="true" aria-label={@label}>
+      <div :for={shape <- @shapes} class="card is-skeleton" aria-hidden="true">
+        <div class="card-cover skel"></div>
+        <div class="card-body">
+          <span class="skel skel-line" style={"--w: #{shape.group}%"}></span>
+          <span class="skel skel-line skel-title" style={"--w: #{shape.title}%"}></span>
+          <span :if={shape.second} class="skel skel-line skel-title" style={"--w: #{shape.second}%"}></span>
+          <span class="skel skel-line skel-meta" style={"--w: #{shape.meta}%"}></span>
+        </div>
+        <div class="card-foot">
+          <span class="skel skel-pill"></span>
+          <span class="skel skel-line skel-note"></span>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   @doc """
   Renders group cover media over a neutral fallback, a `panel-2` field with
   the group's initials in a tile, that stays visible when the image is absent

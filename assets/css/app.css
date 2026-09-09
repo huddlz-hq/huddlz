@@ -1635,6 +1635,57 @@ body .card-foot {
 body .card-foot-note { color: var(--muted); font-size: 12px; }
 body .card-foot .pill.cyan::before { background: var(--success); }
 
+/* Placeholder cards while a full set of results is on its way
+   (`card_skeleton_grid`). One shimmer surface, reused by every block. */
+body .skel {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+
+body .skel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--line-strong) 55%, transparent) 50%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  animation: cover-shimmer 1.6s ease-in-out infinite;
+}
+
+body .card.is-skeleton { pointer-events: none; }
+body .card.is-skeleton:hover { transform: none; border-color: var(--line); }
+body .card.is-skeleton .card-cover { border-radius: 0; }
+body .skel-line { height: 10px; width: var(--w, 100%); }
+body .skel-title { height: 14px; margin-top: 2px; }
+body .skel-meta { margin-top: 6px; }
+body .skel-note { width: 64px; }
+body .skel-count { width: 80px; height: 12px; }
+body .skel-pill { width: 72px; height: 24px; border-radius: var(--radius-pill); }
+
+/* Held back for the loading delay so a fast search never flashes it. */
+body .grid-skeleton { animation: skeleton-in 120ms ease 250ms both; }
+
+@keyframes skeleton-in {
+  from { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body .skel::after { animation: none; }
+  body .skel { animation: skel-pulse 1.6s ease-in-out infinite; }
+  body .grid-skeleton { animation: none; }
+}
+
+@keyframes skel-pulse {
+  50% { opacity: 0.6; }
+}
+
 body .stack { display: flex; align-items: center; }
 
 body .stack .pip {
