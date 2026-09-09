@@ -235,16 +235,14 @@ defmodule HuddlzWeb.StructuredDataTest do
     assert html |> Floki.parse_document!() |> structured_data() |> Map.fetch!("@id") ==
              url(~p"/groups/#{group.slug}/huddlz/#{huddl.id}")
 
-    {:ok, home_conn} =
+    {:ok, _home_view, home_html} =
       huddl_view
       |> Phoenix.LiveViewTest.element("a[aria-label='huddlz home']")
       |> Phoenix.LiveViewTest.render_click()
       |> Phoenix.LiveViewTest.follow_redirect(conn)
 
-    assert Floki.find(
-             Floki.parse_document!(html_response(home_conn, 200)),
-             "script[type='application/ld+json']"
-           ) == []
+    assert Floki.find(Floki.parse_document!(home_html), "script[type='application/ld+json']") ==
+             []
   end
 
   test "recurring occurrences have separate identities and local dates across daylight saving",
