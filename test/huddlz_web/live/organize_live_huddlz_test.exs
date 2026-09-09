@@ -15,10 +15,10 @@ defmodule HuddlzWeb.OrganizeLiveHuddlzTest do
       conn
       |> login(owner)
       |> visit(~p"/organize/#{group.slug}/huddlz")
-      |> assert_has("#organize-huddlz-filters .is-active[aria-current='page']", text: "Published")
+      |> assert_has("#organize-huddlz-filters .is-active[aria-current='page']", text: "Upcoming")
       |> refute_has("#organize-huddlz-filters .chip:not(.is-active)[aria-current]")
 
-    Enum.reduce(["Draft", "Cancelled", "Past", "Published"], session, fn label, session ->
+    Enum.reduce(["Drafts", "Cancelled", "Past", "Upcoming"], session, fn label, session ->
       session
       |> click_link("#organize-huddlz-filters a", label)
       |> assert_has("#organize-huddlz-filters .is-active[aria-current='page']", text: label)
