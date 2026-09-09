@@ -7,6 +7,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   alias Huddlz.Communities
   alias Huddlz.Storage.HuddlCoverImages
   alias Huddlz.Storage.HuddlPhotos
+  alias HuddlzWeb.Components.Modal
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
@@ -375,8 +376,18 @@ defmodule HuddlzWeb.HuddlLive.Show do
             <span style={"width:#{capacity_percent(@huddl)}%"}></span>
           </div>
 
-          <div class="rsvp-state">
+          <div class="rsvp-state" data-dock={dock_rsvp?(@huddl)}>
             {render_rsvp_state(assigns)}
+            <button
+              :if={dock_rsvp?(@huddl)}
+              type="button"
+              id="huddl-rsvp-share"
+              class="rsvp-dock-share"
+              aria-label="Share this huddl"
+              phx-click={Modal.show_modal("share-huddl-modal")}
+            >
+              <.icon name="hero-share" class="size-5" />
+            </button>
           </div>
 
           <div class="huddl-side-section">
@@ -802,6 +813,12 @@ defmodule HuddlzWeb.HuddlLive.Show do
       """
     end
   end
+
+  # On phones the RSVP block is pinned to the bottom edge, but only while
+  # there is something to do: a finished, cancelled or draft huddl shows a
+  # status banner that can stay in the aside.
+  defp dock_rsvp?(%{status: status}) when status in [:draft, :completed, :cancelled], do: nil
+  defp dock_rsvp?(_huddl), do: true
 
   defp rsvp_sign_in_path(group_slug, huddl_id) do
     return_to = "/groups/#{group_slug}/huddlz/#{huddl_id}"
