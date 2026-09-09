@@ -95,7 +95,9 @@ defmodule HuddlzWeb.CrawlableLinksTest do
       end
     end
 
-    for huddl <- [cancelled, deleted | hidden] do
+    assert document(conn, "/groups/#{group.slug}/huddlz/#{cancelled.id}")
+
+    for huddl <- [deleted | hidden] do
       slug = if huddl.group_id == group.id, do: group.slug, else: private_group.slug
 
       assert {404, _, _} =

@@ -57,7 +57,7 @@ defmodule HuddlzWeb.SitemapControllerTest do
     refute sitemap_entries()[loc] == original
   end
 
-  test "private groups, private huddlz, drafts and cancellations stay out; completed public pages remain" do
+  test "private pages and drafts stay out; public cancellations and completed pages remain" do
     host = generate(user())
     group = generate(group(actor: host, is_public: true))
     public = generate(huddl(group_id: group.id, actor: host, is_private: false))
@@ -86,9 +86,9 @@ defmodule HuddlzWeb.SitemapControllerTest do
     assert {:ok, :ok} = Sitemaps.refresh()
     assert Map.has_key?(sitemap_entries(), huddl_url(group, draft))
     public |> Ash.Changeset.for_update(:cancel, %{}, actor: host) |> Ash.update!()
-    assert_error_sent 404, fn -> get(build_conn(), URI.parse(huddl_url(group, public)).path) end
+    assert build_conn() |> get(URI.parse(huddl_url(group, public)).path) |> html_response(200)
     assert {:ok, :ok} = Sitemaps.refresh()
-    refute Map.has_key?(sitemap_entries(), huddl_url(group, public))
+    assert Map.has_key?(sitemap_entries(), huddl_url(group, public))
 
     group =
       group

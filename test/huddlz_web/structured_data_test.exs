@@ -153,7 +153,7 @@ defmodule HuddlzWeb.StructuredDataTest do
   test "restricted pages omit structured data even for organizers",
        %{conn: conn, owner: owner, group: group} do
     private_group = generate(group(actor: owner, is_public: false))
-    cancelled = generate(huddl(actor: owner, group_id: group.id))
+    cancelled = generate(huddl(actor: owner, group_id: group.id, is_private: true))
     Huddlz.Communities.cancel_huddl!(cancelled, "Private cancellation reason", actor: owner)
 
     paths =
@@ -178,7 +178,7 @@ defmodule HuddlzWeb.StructuredDataTest do
     end
   end
 
-  test "schedule edits replace current dates in HTTP and connected metadata without inventing history",
+  test "schedule edits preserve the previous start in HTTP and connected metadata",
        %{conn: conn, owner: owner, group: group} do
     huddl =
       generate(
@@ -210,8 +210,8 @@ defmodule HuddlzWeb.StructuredDataTest do
       assert data["name"] == "New schedule"
       assert data["startDate"] == "2030-11-20T15:00:00-05:00"
       assert data["endDate"] == "2030-11-20T16:30:00-05:00"
-      assert data["eventStatus"] == "https://schema.org/EventScheduled"
-      refute Map.has_key?(data, "previousStartDate")
+      assert data["eventStatus"] == "https://schema.org/EventRescheduled"
+      assert data["previousStartDate"] == "2030-07-20T12:00:00-04:00"
       assert data["@id"] == HuddlzWeb.Endpoint.url() <> path
     end
   end

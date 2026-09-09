@@ -43,7 +43,8 @@ defmodule Huddlz.Sitemaps do
     SELECT 'huddl', h.id::text, g.slug, greatest(h.sitemap_modified_at, g.updated_at, g.sitemap_modified_at)
     FROM huddlz h JOIN groups g ON g.id = h.group_id
     WHERE g.is_public = true AND h.is_private = false
-      AND h.lifecycle_state IN ('published', 'completed')
+      AND (h.lifecycle_state IN ('published', 'completed')
+        OR (h.lifecycle_state = 'cancelled' AND h.ends_at > CURRENT_TIMESTAMP))
     ORDER BY kind, id
     """
 

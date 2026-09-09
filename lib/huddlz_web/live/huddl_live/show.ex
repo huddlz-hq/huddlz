@@ -73,7 +73,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
       <div class={["huddl-frame", @can_view_photos && "huddl-frame-photos"]}>
         <div class="huddl-main">
           <section
-            :if={@huddl.status == :cancelled && @huddl.cancellation_reason}
+            :if={@huddl.status == :cancelled && is_binary(@huddl.cancellation_reason)}
             id="cancellation-reason"
             class="organizer-update"
             aria-labelledby="organizer-update-title"
@@ -84,6 +84,23 @@ defmodule HuddlzWeb.HuddlLive.Show do
             <div class="organizer-update-copy">
               <h2 id="organizer-update-title">Important update from the organizer</h2>
               <p>{@huddl.cancellation_reason}</p>
+            </div>
+          </section>
+
+          <section
+            :if={@huddl.previous_starts_at && @huddl.status != :cancelled}
+            id="schedule-update"
+            class="organizer-update"
+            aria-labelledby="schedule-update-title"
+          >
+            <div class="organizer-update-icon" aria-hidden="true">
+              <.icon name="hero-calendar-days" class="size-6" />
+            </div>
+            <div class="organizer-update-copy">
+              <h2 id="schedule-update-title">Rescheduled</h2>
+              <p>
+                Previously scheduled for <time datetime={DateTime.to_iso8601(previous_start(@huddl))}>{Calendar.strftime(previous_start(@huddl), "%a, %b %-d, %Y · %-I:%M %p %Z")}</time>.
+              </p>
             </div>
           </section>
 
@@ -1157,8 +1174,11 @@ defmodule HuddlzWeb.HuddlLive.Show do
     }
   end
 
+  defp previous_start(huddl),
+    do: DateTime.shift_zone!(huddl.previous_starts_at, huddl.previous_time_zone)
+
   defp public_url(%{is_private: false, group: %{is_public: true}, lifecycle_state: state} = huddl)
-       when state in [:published, :completed],
+       when state in [:published, :completed, :cancelled],
        do: huddl_meta(huddl).url
 
   defp public_url(_huddl), do: nil
