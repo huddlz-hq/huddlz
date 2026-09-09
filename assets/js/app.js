@@ -24,6 +24,7 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 import {mountMobileNavigation} from "./mobile_navigation.mjs"
+import {createCoverImageHook} from "./cover_image.mjs"
 
 // The appearance setting lives on <html data-theme>, outside any LiveView.
 // Settings pushes a "theme" event after saving; "system" drops the attribute
@@ -37,6 +38,8 @@ window.addEventListener("phx:theme", ({detail}) => {
 })
 
 const Hooks = {}
+
+Hooks.CoverImage = createCoverImageHook()
 
 Hooks.LocationAutocomplete = {
   mounted() {

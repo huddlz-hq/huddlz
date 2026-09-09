@@ -4,7 +4,7 @@ defmodule HuddlzWeb.Components.CoverImageTest do
   import Phoenix.LiveViewTest
   import HuddlzWeb.Components.CoverImage
 
-  test "renders decorative CSS media without image load handlers" do
+  test "renders decorative CSS media revealed by the cover hook" do
     html =
       render_component(&cover_image/1,
         id: "cover",
@@ -20,7 +20,12 @@ defmodule HuddlzWeb.Components.CoverImageTest do
              ~s|background-image: url("/uploads/cover.png")|
            ]
 
-    assert Floki.find(document, "img, [phx-hook], [onerror], [onload]") == []
+    assert Floki.find(
+             document,
+             ~s|#cover[phx-hook="CoverImage"][data-cover-url="/uploads/cover.png"]|
+           ) != []
+
+    assert Floki.find(document, "img, [onerror], [onload]") == []
   end
 
   test "escapes CSS string delimiters without double-encoding a URL" do

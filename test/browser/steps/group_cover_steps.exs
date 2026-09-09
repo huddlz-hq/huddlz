@@ -120,6 +120,10 @@ defmodule BrowserCoverSteps do
       fn decoded -> assert decoded == (state == "valid") end
     )
 
+    outcome = if state == "valid", do: "loaded", else: "failed"
+    conn = assert_has(conn, "#group-detail-hero .cover-image[data-cover-state='#{outcome}']")
+    refute_has(conn, "#group-detail-hero .cover-image.is-pending")
+
     if state == "failed", do: assert_fallback(conn), else: assert_painted_cover(conn)
   end
 

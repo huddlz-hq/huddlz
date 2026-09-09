@@ -1491,6 +1491,46 @@ body .cover-image {
 
 body .huddl-hero .cover-image { background-size: cover; }
 
+/* Loading surface while the picture is still arriving (see the CoverImage
+   hook). The panel paints over the fallback, then fades out to reveal the
+   picture; a failed picture drops the surface and leaves the fallback. */
+body .cover-image::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--panel-2);
+  opacity: 0;
+  transition: opacity 200ms ease;
+  pointer-events: none;
+}
+
+body .cover-image.is-pending { overflow: hidden; }
+body .cover-image.is-pending::before { opacity: 1; transition: none; }
+
+body .cover-image.is-pending::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--line-strong) 55%, transparent) 50%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  animation: cover-shimmer 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes cover-shimmer {
+  to { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body .cover-image::before { transition: none; }
+  body .cover-image.is-pending::after { animation: none; }
+}
+
 body .group-cover-image {
   position: absolute;
   inset: 0;
