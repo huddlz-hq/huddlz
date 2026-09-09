@@ -4859,7 +4859,6 @@ body .cover-slot-track > span {
   height: 100%;
   border-radius: var(--radius-pill);
   background: var(--accent);
-  transition: width 200ms ease;
 }
 
 body .cover-slot-track.is-busy > span { animation: cover-slot-busy 1.1s ease-in-out infinite alternate; }
