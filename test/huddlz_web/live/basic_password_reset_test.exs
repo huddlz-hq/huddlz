@@ -74,7 +74,7 @@ defmodule HuddlzWeb.BasicPasswordResetTest do
       reset_link =
         assert_email_sent(fn email ->
           if email.subject == "Reset your password" do
-            case Regex.run(~r{<a href="([^"]+)">}, email.html_body) do
+            case Regex.run(~r{<a href="([^"]+)"}, email.html_body) do
               [_, url] -> url
               _ -> false
             end

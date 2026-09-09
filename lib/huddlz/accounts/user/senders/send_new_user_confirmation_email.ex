@@ -6,26 +6,35 @@ defmodule Huddlz.Accounts.User.Senders.SendNewUserConfirmationEmail do
   use AshAuthentication.Sender
   use HuddlzWeb, :verified_routes
 
-  import Swoosh.Email
-
   alias Huddlz.Mailer
+  alias Huddlz.Notifications.Footer
+  alias Huddlz.Notifications.Layout
 
   @impl true
   def send(user, token, _) do
-    new()
-    |> from(Mailer.from())
-    |> to(to_string(user.email))
-    |> subject("Confirm your email address")
-    |> html_body(body(token: token))
+    user
+    |> build(token)
     |> Mailer.deliver!()
   end
 
-  defp body(params) do
-    url = url(~p"/confirm_new_user/#{params[:token]}")
+  @doc "The email, for tests and samples."
+  def build(user, token) do
+    confirm_url = url(~p"/confirm_new_user/#{token}")
 
-    """
-    <p>Click this link to confirm your email:</p>
-    <p><a href="#{url}">#{url}</a></p>
-    """
+    Layout.email(%{
+      to: user.email,
+      subject: "Confirm your email address",
+      kicker: "Welcome to huddlz",
+      title: "Confirm your email address",
+      paragraphs: [
+        "One quick step and your account is ready: confirm that this address is yours."
+      ],
+      action: {"Confirm my email", confirm_url},
+      aside: "If you didn't create a huddlz account, you can ignore this email.",
+      footer:
+        Footer.account(
+          "You're receiving this email because an account was created with this address."
+        )
+    })
   end
 end

@@ -301,7 +301,7 @@ defmodule HuddlzWeb.PasswordValidationTest do
   end
 
   defp reset_link_from_email(%{subject: "Reset your password", html_body: body}) do
-    case Regex.run(~r{<a href="([^"]+)">}, body) do
+    case Regex.run(~r{<a href="([^"]+)"}, body) do
       [_, url] -> url
       _ -> false
     end
