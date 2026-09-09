@@ -13,7 +13,7 @@ Feature: Current navigation for assistive technology
   Scenario: Current destination and view follow navigation
     When I visit "/calendar"
     Then navigation should identify "My calendar" as the current destination
-    And view choices should identify "Month" as current
+    And view choices should identify "Agenda" as current
     When I click link "Agenda"
     Then view choices should identify "Agenda" as current
     When I click link "Discover"
