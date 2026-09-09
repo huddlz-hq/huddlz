@@ -195,7 +195,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     ends_at_local = NaiveDateTime.add(starts_at_local, duration, :second)
 
     cond do
-      not Date.before?(NaiveDateTime.to_date(starts_at_local), repeat_until_date(template)) ->
+      Date.after?(NaiveDateTime.to_date(starts_at_local), repeat_until_date(template)) ->
         :done
 
       starting_after && not NaiveDateTime.after?(starts_at_local, starting_after) ->

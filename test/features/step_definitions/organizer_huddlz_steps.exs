@@ -63,6 +63,8 @@ defmodule OrganizerHuddlzSteps do
     group = lookup_group(group_name)
     host = Ash.get!(Huddlz.Accounts.User, group.owner_id, authorize?: false)
 
+    end_date = Date.add(eastern_today(), 2 + 7 * (weeks - 1))
+
     source =
       generate(
         huddl(
@@ -73,15 +75,15 @@ defmodule OrganizerHuddlzSteps do
           date: Date.add(eastern_today(), 2),
           is_recurring: true,
           frequency: "weekly",
-          # The end date is stored at midnight UTC, so the last date only
-          # generates when the cutoff sits the day after it.
-          repeat_until: Date.add(eastern_today(), 2 + 7 * (weeks - 1) + 1),
+          repeat_until: end_date,
+          start_time: ~T[23:30:00],
+          end_time: ~T[23:45:00],
           actor: host
         )
       )
 
     Oban.drain_queue(queue: :default)
-    Map.put(context, :series_source, source)
+    Map.merge(context, %{series_source: source, series_end_date: end_date})
   end
 
   step "the organizer row for {string} shows when it is and {string}",
@@ -168,6 +170,27 @@ defmodule OrganizerHuddlzSteps do
       |> assert_has(".edit-scope-row .chip.is-active", text: "Whole series")
 
     Map.merge(context, %{conn: session, session: session})
+  end
+
+  step "the organizer dates of {string} show the selected series end date",
+       %{args: [_title], session: session, series_source: source, series_end_date: end_date} =
+         context do
+    assert_has(session, ".org-huddl[data-series='#{source.huddl_template_id}'] .org-huddl-series",
+      text: "until #{Calendar.strftime(end_date, "%b %-d")}",
+      count: 5
+    )
+
+    assert_has(session, "#organize-day-#{Date.to_iso8601(end_date)} .org-huddl-title",
+      text: source.title
+    )
+
+    context
+  end
+
+  step "the series edit form shows the selected end date",
+       %{session: session, series_end_date: end_date} = context do
+    assert_has(session, "input[name='form[repeat_until]'][value='#{Date.to_iso8601(end_date)}']")
+    context
   end
 
   defp lookup_group(name) do

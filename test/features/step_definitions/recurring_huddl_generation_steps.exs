@@ -208,7 +208,7 @@ defmodule RecurringHuddlGenerationSteps do
               date: Date.add(Date.utc_today(), 1),
               is_recurring: true,
               frequency: "weekly",
-              repeat_until: Date.add(Date.utc_today(), 22)
+              repeat_until: Date.add(Date.utc_today(), 15)
             ],
             opts
           )
