@@ -75,7 +75,7 @@ metadata:
 ## Searching Documentation
 
 ```sh
-mix usage_rules.search_docs "search term" -p ash -p ash_authentication_phoenix -p ash_graphql -p ash_json_api -p ash_oban -p ash_ops -p ash_phoenix -p ash_postgres -p ash_rate_limiter
+mix usage_rules.search_docs "search term" -p ash -p ash_archival -p ash_authentication_phoenix -p ash_graphql -p ash_json_api -p ash_oban -p ash_ops -p ash_phoenix -p ash_postgres -p ash_rate_limiter
 ```
 
 ## Available Mix Tasks
