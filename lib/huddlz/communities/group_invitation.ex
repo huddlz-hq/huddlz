@@ -58,6 +58,7 @@ defmodule Huddlz.Communities.GroupInvitation do
     defaults [:read]
 
     create :invite do
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "Invite a person by account or email to a private group."
 
       argument :group_id, :uuid, allow_nil?: false
@@ -96,6 +97,7 @@ defmodule Huddlz.Communities.GroupInvitation do
     end
 
     update :claim do
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "Bind an email invitation to its recipient before they respond."
       accept []
       require_atomic? false
@@ -155,6 +157,7 @@ defmodule Huddlz.Communities.GroupInvitation do
     end
 
     update :accept do
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "Accept a current pending invitation and grant membership once."
       accept []
       require_atomic? false
@@ -321,6 +324,7 @@ defmodule Huddlz.Communities.GroupInvitation do
 
   relationships do
     belongs_to :group, Huddlz.Communities.Group do
+      read_action :read_with_archived
       attribute_type :uuid
       allow_nil? false
     end

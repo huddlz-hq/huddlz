@@ -10,7 +10,7 @@ defmodule Huddlz.Communities.Group do
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
-    extensions: [AshJsonApi.Resource, AshGraphql.Resource]
+    extensions: [AshJsonApi.Resource, AshGraphql.Resource, AshArchival.Resource]
 
   graphql do
     type :group
@@ -23,12 +23,16 @@ defmodule Huddlz.Communities.Group do
       # the `/my-groups` LiveView: returns groups the actor owns or has joined.
       # Pass `relationship: hosting | joined | all` to scope the result.
       list :my_groups, :my_groups
+      list :archived_groups, :archived
+      read_one :get_group_history, :get_visible_by_slug
     end
 
     mutations do
       create :create_group, :create_group
       update :update_group, :update_details
       destroy :delete_group, :destroy
+      destroy :archive_group, :archive
+      update :restore_group, :unarchive, read_action: :read_with_archived
     end
   end
 
@@ -46,6 +50,10 @@ defmodule Huddlz.Communities.Group do
       post :create_group
       patch :update_details
       delete :destroy
+      delete :archive, route: "/:id/archive"
+      patch :unarchive, route: "/:id/restore", read_action: :read_with_archived
+      index :archived, route: "/archived"
+      get :get_visible_by_slug, route: "/history/:slug"
     end
   end
 
@@ -63,6 +71,17 @@ defmodule Huddlz.Communities.Group do
     end
   end
 
+  archive do
+    exclude_destroy_actions([:destroy])
+
+    exclude_read_actions([
+      :read_with_archived,
+      :get_visible_by_slug,
+      :archived,
+      :get_for_organize
+    ])
+  end
+
   actions do
     defaults [:create, :read]
 
@@ -70,6 +89,37 @@ defmodule Huddlz.Communities.Group do
       primary? true
       require_atomic? false
       change Huddlz.Communities.Group.Changes.NotifyArchived
+    end
+
+    destroy :archive do
+      require_atomic? false
+      change Huddlz.Communities.Group.Changes.LockLifecycle
+      change Huddlz.Communities.Group.Changes.NotifyArchived
+    end
+
+    update :unarchive do
+      require_atomic? false
+      accept []
+      atomic_upgrade_with :read_with_archived
+      change Huddlz.Communities.Group.Changes.LockLifecycle
+      change set_attribute(:archived_at, nil)
+    end
+
+    read :read_with_archived do
+      description "Authorized access to active groups and retained member history."
+    end
+
+    read :get_visible_by_slug do
+      argument :slug, :string, allow_nil?: false
+      get? true
+      filter expr(slug == ^arg(:slug))
+    end
+
+    read :archived do
+      filter expr(not is_nil(archived_at))
+      filter expr(owner_id == ^actor(:id) or exists(group_members, user_id == ^actor(:id)))
+      pagination offset?: true, countable: true, required?: false, default_limit: 20
+      prepare build(sort: [name: :asc])
     end
 
     create :create_group do
@@ -197,6 +247,7 @@ defmodule Huddlz.Communities.Group do
 
     update :update_details do
       description "Update group details"
+      change Huddlz.Communities.Changes.RequireActiveGroup
 
       accept [
         :name,
@@ -272,7 +323,7 @@ defmodule Huddlz.Communities.Group do
     # Anyone can read public groups, owner and members can read private groups
     policy action_type(:read) do
       description "Allow reading public groups or groups the actor is related to"
-      authorize_if expr(is_public == true)
+      authorize_if expr(is_public == true and is_nil(archived_at))
       authorize_if relates_to_actor_via(:members)
     end
   end
@@ -298,6 +349,8 @@ defmodule Huddlz.Communities.Group do
   end
 
   attributes do
+    attribute :archived_at, :utc_datetime_usec, public?: true
+
     uuid_primary_key :id
 
     attribute :name, :ci_string do

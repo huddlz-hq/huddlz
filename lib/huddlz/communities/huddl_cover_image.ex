@@ -74,15 +74,23 @@ defmodule Huddlz.Communities.HuddlCoverImage do
   end
 
   actions do
-    defaults [:read, :destroy]
+    defaults [:read]
+
+    destroy :destroy do
+      primary? true
+      require_atomic? false
+      change Huddlz.Communities.Changes.RequireActiveGroup
+    end
 
     create :create do
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "Upload a new image for a huddl"
       primary? true
       accept [:filename, :content_type, :size_bytes, :storage_path, :thumbnail_path, :huddl_id]
     end
 
     create :upload do
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "Upload an image for a huddl from multipart bytes"
       accept [:huddl_id]
 
@@ -95,6 +103,7 @@ defmodule Huddlz.Communities.HuddlCoverImage do
     end
 
     create :create_pending do
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "Create a pending image during eager upload (huddl_id = nil)"
       accept [:filename, :content_type, :size_bytes, :storage_path, :thumbnail_path]
 
@@ -129,6 +138,8 @@ defmodule Huddlz.Communities.HuddlCoverImage do
     end
 
     update :soft_delete do
+      require_atomic? false
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "Soft-delete a huddl image and trigger cleanup job"
       accept []
       change set_attribute(:deleted_at, &DateTime.utc_now/0)
@@ -136,6 +147,8 @@ defmodule Huddlz.Communities.HuddlCoverImage do
     end
 
     update :assign_to_huddl do
+      require_atomic? false
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "Assign a pending image to a huddl"
 
       argument :huddl_id, :uuid do

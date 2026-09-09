@@ -7,6 +7,14 @@ huddlz helps groups organize and discover gatherings while preserving the local 
 **Group**:
 A community that organizes huddlz and has a home location.
 
+**Archived group**:
+A reversibly closed group whose memberships and history are preserved for existing members. Archival is distinct from permanent deletion and moderation suspension.
+_Avoid_: Deleted group, suspended group
+
+**Group restoration**:
+The reopening of an archived group with its existing memberships and history intact.
+_Avoid_: Recreation
+
 **Group home location**:
 The canonical city or region that geographically anchors a group. It is distinct from the specific places where the group's huddlz meet.
 _Avoid_: Group venue, default venue

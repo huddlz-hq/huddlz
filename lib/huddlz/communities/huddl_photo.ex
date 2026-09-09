@@ -130,6 +130,10 @@ defmodule Huddlz.Communities.HuddlPhoto do
     publish :destroy, [:huddl_id]
   end
 
+  changes do
+    change Huddlz.Communities.Changes.RequireActiveGroup, on: [:create, :destroy]
+  end
+
   attributes do
     uuid_primary_key :id
 

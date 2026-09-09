@@ -91,7 +91,7 @@ defmodule Huddlz.Communities.GroupLocation do
     # group's saved meeting addresses are only visible to its members, while
     # public groups' locations stay readable by anyone (including anonymous).
     policy action_type(:read) do
-      authorize_if expr(group.is_public == true)
+      authorize_if expr(group.is_public == true and is_nil(group.archived_at))
       authorize_if relates_to_actor_via([:group, :members])
     end
 
@@ -105,6 +105,10 @@ defmodule Huddlz.Communities.GroupLocation do
                      )
                    )
     end
+  end
+
+  changes do
+    change Huddlz.Communities.Changes.RequireActiveGroup, on: [:create, :update, :destroy]
   end
 
   validations do
@@ -154,6 +158,7 @@ defmodule Huddlz.Communities.GroupLocation do
 
   relationships do
     belongs_to :group, Huddlz.Communities.Group do
+      read_action :read_with_archived
       attribute_type :uuid
       allow_nil? false
     end

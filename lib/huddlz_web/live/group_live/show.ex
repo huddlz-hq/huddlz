@@ -38,7 +38,7 @@ defmodule HuddlzWeb.GroupLive.Show do
 
     case get_group_by_slug(slug, user) do
       {:ok, group} ->
-        tab = if params["tab"] == "past", do: "past", else: "upcoming"
+        tab = group_tab(group, params)
         page = if tab == "past", do: parse_page(params["page"]), else: 1
 
         meta =
@@ -56,7 +56,10 @@ defmodule HuddlzWeb.GroupLive.Show do
           |> subscribe_to_membership_changes(group)
           |> assign(:page_title, group.name)
           |> assign(:meta, meta)
-          |> assign(:canonical_url, if(group.is_public, do: meta.url))
+          |> assign(
+            :canonical_url,
+            if(group.is_public && is_nil(group.archived_at), do: meta.url)
+          )
           |> assign(:group, group)
           |> assign_member_grid(members)
           |> assign(:member_count, group.member_count)
@@ -124,15 +127,22 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   defp assign_action_permissions(socket, group, user, membership) do
     socket
-    |> assign(:can_edit_group, Ash.can?({group, :update_details}, user))
+    |> assign(
+      :can_edit_group,
+      is_nil(group.archived_at) && Ash.can?({group, :update_details}, user)
+    )
     |> assign(
       :can_manage_locations,
-      Ash.can?({GroupLocation, :create, %{group_id: group.id}}, user)
+      is_nil(group.archived_at) && Ash.can?({GroupLocation, :create, %{group_id: group.id}}, user)
     )
-    |> assign(:can_create_huddl, Ash.can?({Huddl, :create, %{group_id: group.id}}, user))
+    |> assign(
+      :can_create_huddl,
+      is_nil(group.archived_at) && Ash.can?({Huddl, :create, %{group_id: group.id}}, user)
+    )
     |> assign(
       :can_join_group,
-      Ash.can?({GroupMember, :join_group, %{group_id: group.id}}, user)
+      is_nil(group.archived_at) &&
+        Ash.can?({GroupMember, :join_group, %{group_id: group.id}}, user)
     )
     |> assign(:can_leave_group, can_leave?(membership, user))
   end
@@ -170,6 +180,23 @@ defmodule HuddlzWeb.GroupLive.Show do
                 {if @group.is_public, do: "Public group", else: "Private group"}
               </.pill>
               <h1>{@group.name}</h1>
+              <div
+                :if={@group.archived_at}
+                id="group-archived-banner"
+                class="panel mt-4"
+                role="status"
+              >
+                <h2>This group is archived</h2>
+                <p>Members keep access to the group's history. New activity is closed.</p>
+                <.link
+                  :if={
+                    @current_user &&
+                      (@group.owner_id == @current_user.id || @current_user.role == :admin)
+                  }
+                  navigate={~p"/groups/#{@group.slug}/edit"}
+                  class="btn-secondary mt-3"
+                >Group settings</.link>
+              </div>
               <div class="meta group-hero-meta">
                 <span :if={@group.location} class="meta-item group-hero-location">
                   <.icon name="hero-map-pin" class="size-4" />
@@ -357,6 +384,7 @@ defmodule HuddlzWeb.GroupLive.Show do
             <h2 id="group-huddlz-title">Huddlz</h2>
             <nav class="filters" aria-label="Huddl timeframe">
               <.link
+                :if={is_nil(@group.archived_at)}
                 id="group-huddlz-upcoming"
                 patch={group_page_path(@group, "upcoming", 1)}
                 aria-current={@active_tab == "upcoming" && "page"}
@@ -370,7 +398,7 @@ defmodule HuddlzWeb.GroupLive.Show do
                 aria-current={@active_tab == "past" && "page"}
                 class={["chip", @active_tab == "past" && "is-active"]}
               >
-                Past
+                {if @group.archived_at, do: "History", else: "Past"}
               </.link>
             </nav>
           </div>
@@ -586,8 +614,12 @@ defmodule HuddlzWeb.GroupLive.Show do
     owner: [:current_profile_picture_url]
   ]
 
+  defp group_tab(%{archived_at: nil}, %{"tab" => "past"}), do: "past"
+  defp group_tab(%{archived_at: nil}, _params), do: "upcoming"
+  defp group_tab(_group, _params), do: "past"
+
   defp get_group_by_slug(slug, actor) do
-    case Communities.get_by_slug(slug, actor: actor, load: @group_loads) do
+    case Communities.get_visible_group_by_slug(slug, actor: actor, load: @group_loads) do
       {:ok, nil} -> {:error, :not_found}
       {:ok, group} -> {:ok, group}
       {:error, %Ash.Error.Query.NotFound{}} -> {:error, :not_found}

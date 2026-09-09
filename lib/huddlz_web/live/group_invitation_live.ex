@@ -105,9 +105,16 @@ defmodule HuddlzWeb.GroupInvitationLive do
         reloaded = normalize_expiration(reloaded, user)
 
         message =
-          if reloaded.status == :pending,
-            do: "Something went wrong. Please try again.",
-            else: unavailable_message(reloaded.status)
+          cond do
+            reloaded.group.archived_at ->
+              "This group is archived. Restore it before accepting invitations."
+
+            reloaded.status == :pending ->
+              "Something went wrong. Please try again."
+
+            true ->
+              unavailable_message(reloaded.status)
+          end
 
         {:noreply,
          socket
@@ -206,11 +213,17 @@ defmodule HuddlzWeb.GroupInvitationLive do
           </span>
         </div>
 
+        <p :if={@invitation.group.archived_at} id="invitation-group-archived" role="status">
+          This group is archived. Invitations cannot be accepted until it is restored.
+        </p>
         <p id="invitation-status-description" class="muted">
           {invitation_status_description(@invitation.status)}
         </p>
 
-        <div :if={@invitation.status == :pending} class="actions mt-6">
+        <div
+          :if={@invitation.status == :pending && is_nil(@invitation.group.archived_at)}
+          class="actions mt-6"
+        >
           <button id="accept-invitation" type="button" class="btn-primary" phx-click="accept">
             Accept invitation
           </button>

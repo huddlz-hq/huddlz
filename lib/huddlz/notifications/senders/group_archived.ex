@@ -1,6 +1,6 @@
 defmodule Huddlz.Notifications.Senders.GroupArchived do
   @moduledoc """
-  Sender for B6: a group has been deleted (or archived in the future).
+  Sends group archival and permanent deletion notices.
 
   Sent to every member of the group at the moment of deletion.
   Transactional — preferences do not apply, no unsubscribe footer.
@@ -20,6 +20,30 @@ defmodule Huddlz.Notifications.Senders.GroupArchived do
   alias Huddlz.Notifications.Senders.HtmlEscape
 
   @impl true
+  def build(user, %{"archived_at" => _, "group_slug" => slug} = payload) do
+    group_url = url(~p"/groups/#{slug}")
+
+    new()
+    |> from(Mailer.from())
+    |> to(to_string(user.email))
+    |> subject(HeaderSafe.safe("#{group_name(payload)} has been archived"))
+    |> html_body("""
+    <p>Hi #{HtmlEscape.escape(user.display_name)},</p>
+    <p>The group <strong>#{HtmlEscape.escape(group_name(payload))}</strong> has been archived on huddlz.</p>
+    <p>New activity is closed. Your membership and the group's history are preserved. The owner can restore the group later.</p>
+    <p><a href="#{HtmlEscape.escape(group_url)}">View group history</a></p>
+    """)
+    |> text_body("""
+    Hi #{user.display_name},
+
+    The group "#{group_name(payload)}" has been archived on huddlz.
+    New activity is closed. Your membership and the group's history are preserved.
+    The owner can restore the group later.
+
+    View group history: #{group_url}
+    """)
+  end
+
   def build(user, payload) do
     safe_name = HtmlEscape.escape(user.display_name)
     safe_group = HtmlEscape.escape(group_name(payload))

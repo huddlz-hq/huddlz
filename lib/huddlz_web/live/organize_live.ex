@@ -79,7 +79,10 @@ defmodule HuddlzWeb.OrganizeLive do
         socket
         |> subscribe_to_membership_changes(group)
         |> assign(:group, group)
-        |> assign(:can_edit_group, Ash.can?({group, :update_details}, user))
+        |> assign(
+          :can_edit_group,
+          is_nil(group.archived_at) && Ash.can?({group, :update_details}, user)
+        )
         |> assign(:page_title, "#{group.name} · Organizer")
         |> load_section(action, group, user)
 
@@ -236,6 +239,20 @@ defmodule HuddlzWeb.OrganizeLive do
       active_group_slug={@group && @group.slug}
       active_organize_section={active_section(@live_action)}
     >
+      <section
+        :if={@group && @group.archived_at}
+        id="organizer-archived-banner"
+        class="panel mb-6"
+        role="status"
+      >
+        <h2>This group is archived</h2>
+        <p>History is read-only. Ownership can transfer without reopening the group.</p>
+        <.link
+          :if={@group.owner_id == @current_user.id || @current_user.role == :admin}
+          navigate={~p"/groups/#{@group.slug}/edit"}
+          class="btn-secondary"
+        >Group settings</.link>
+      </section>
       <%= case @live_action do %>
         <% :index -> %>
           <.picker_view groups={@owned_groups} />
@@ -261,7 +278,7 @@ defmodule HuddlzWeb.OrganizeLive do
             current_user={@current_user}
           />
           <.invitations_view
-            :if={!@group.is_public}
+            :if={!@group.is_public && is_nil(@group.archived_at)}
             group={@group}
             current_user={@current_user}
             invitation_form={@invitation_form}
@@ -365,7 +382,11 @@ defmodule HuddlzWeb.OrganizeLive do
       </div>
       <div class="actions">
         <a :if={@can_edit_group} class="btn-secondary" href={~p"/groups/#{@group.slug}/edit"}>Edit group</a>
-        <a class="btn-primary" href={~p"/groups/#{@group.slug}/huddlz/new"}>
+        <a
+          :if={is_nil(@group.archived_at)}
+          class="btn-primary"
+          href={~p"/groups/#{@group.slug}/huddlz/new"}
+        >
           + Create huddl
         </a>
       </div>
@@ -446,7 +467,11 @@ defmodule HuddlzWeb.OrganizeLive do
         <p>Every huddl in {@group.name}. Click one to manage it.</p>
       </div>
       <div class="actions">
-        <a class="btn-primary" href={~p"/groups/#{@group.slug}/huddlz/new"}>
+        <a
+          :if={is_nil(@group.archived_at)}
+          class="btn-primary"
+          href={~p"/groups/#{@group.slug}/huddlz/new"}
+        >
           + Schedule huddl
         </a>
       </div>
@@ -474,7 +499,11 @@ defmodule HuddlzWeb.OrganizeLive do
         </div>
         <p class="muted">{empty_huddlz_body(@filter)}</p>
         <div :if={@filter in [:draft, :published]} class="panel-cta">
-          <a class="btn-primary" href={~p"/groups/#{@group.slug}/huddlz/new"}>
+          <a
+            :if={is_nil(@group.archived_at)}
+            class="btn-primary"
+            href={~p"/groups/#{@group.slug}/huddlz/new"}
+          >
             Create your first huddl
           </a>
         </div>
@@ -620,6 +649,7 @@ defmodule HuddlzWeb.OrganizeLive do
               <div class="flex flex-wrap items-center justify-end gap-2">
                 <span class={["pill", role_pill_class(role)]}>{role_label(role)}</span>
                 <.member_actions
+                  :if={is_nil(@group.archived_at)}
                   entry={entry}
                   group={@group}
                   current_user={@current_user}
@@ -1041,7 +1071,10 @@ defmodule HuddlzWeb.OrganizeLive do
       {:ok, reloaded_group} ->
         socket
         |> assign(:group, reloaded_group)
-        |> assign(:can_edit_group, Ash.can?({reloaded_group, :update_details}, user))
+        |> assign(
+          :can_edit_group,
+          is_nil(reloaded_group.archived_at) && Ash.can?({reloaded_group, :update_details}, user)
+        )
         |> refresh_members_if_visible(reloaded_group, user)
         |> refresh_pending_member_action()
 

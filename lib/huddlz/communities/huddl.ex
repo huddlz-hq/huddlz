@@ -165,6 +165,7 @@ defmodule Huddlz.Communities.Huddl do
 
   actions do
     destroy :destroy do
+      change Huddlz.Communities.Changes.RequireActiveGroup
       primary? true
       require_atomic? false
     end
@@ -175,6 +176,7 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     create :create do
+      change Huddlz.Communities.Changes.RequireActiveGroup
       primary? true
 
       accept [
@@ -242,6 +244,7 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     update :publish do
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "Publish a draft huddl. Repeated publication is a no-op."
       require_atomic? false
 
@@ -250,6 +253,7 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     update :cancel do
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "Cancel a published huddl without deleting its details or RSVP history."
       require_atomic? false
 
@@ -270,6 +274,7 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     update :update do
+      change Huddlz.Communities.Changes.RequireActiveGroup
       primary? true
 
       accept [
@@ -349,6 +354,15 @@ defmodule Huddlz.Communities.Huddl do
 
       filter expr(status == ^arg(:status))
       prepare Huddlz.Communities.Huddl.Preparations.FilterByVisibility
+    end
+
+    read :read_for_group_lifecycle do
+      description "Internal parent lookup for serializing changes with archival."
+    end
+
+    read :archive_blockers do
+      description "Internal lifecycle check for group archival."
+      filter expr(lifecycle_state == :published and ends_at > now())
     end
 
     read :upcoming do
@@ -453,7 +467,8 @@ defmodule Huddlz.Communities.Huddl do
 
       filter expr(
                group_id == ^arg(:group_id) and
-                 (lifecycle_state == :completed or
+                 ((lifecycle_state == :cancelled and not is_nil(group.archived_at)) or
+                    lifecycle_state == :completed or
                     (lifecycle_state == :published and ends_at < now()))
              )
 
@@ -557,6 +572,7 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     update :rsvp do
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "RSVP to this huddl as the current actor"
       require_atomic? false
 
@@ -566,6 +582,7 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     update :cancel_rsvp do
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "Cancel RSVP or leave waitlist for this huddl as the current actor"
       require_atomic? false
 
@@ -576,6 +593,7 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     update :join_waitlist do
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "Join the waitlist for this huddl as the current actor when full"
       require_atomic? false
 
@@ -629,6 +647,10 @@ defmodule Huddlz.Communities.Huddl do
   end
 
   policies do
+    policy action([:archive_blockers, :read_for_group_lifecycle]) do
+      forbid_if always()
+    end
+
     # Admins can do anything
     bypass always() do
       description "Admins can do anything"
@@ -910,6 +932,7 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     belongs_to :group, Huddlz.Communities.Group do
+      read_action :read_with_archived
       attribute_type :uuid
       attribute_public? false
       allow_nil? false
@@ -982,7 +1005,10 @@ defmodule Huddlz.Communities.Huddl do
 
     calculate :is_publicly_visible, :boolean do
       description "Whether the huddl is visible to everyone (public huddl in public group)"
-      calculation expr(is_private == false and group.is_public == true)
+
+      calculation expr(
+                    is_private == false and group.is_public == true and is_nil(group.archived_at)
+                  )
     end
 
     calculate :at_capacity, :boolean do

@@ -1,11 +1,11 @@
 defmodule Huddlz.Communities.Group.Changes.NotifyArchived do
   @moduledoc """
-  Enqueues B6 (group_archived) notifications when a group is destroyed.
+  Enqueues B6 (group_archived) notifications when a group is archived or permanently deleted.
 
   Captures member user_ids in `before_action` because the GroupMember
   rows cascade-delete with the group. The actor (the user destroying
   the group, typically the owner) is excluded from the recipients.
-  Fans out emails in `after_action` once the destroy commits.
+  Queues delivery inside the action transaction.
   """
 
   use Ash.Resource.Change
@@ -50,6 +50,16 @@ defmodule Huddlz.Communities.Group.Changes.NotifyArchived do
       "group_id" => group.id,
       "group_name" => to_string(group.name)
     }
+
+    payload =
+      if cs.action.name == :archive do
+        Map.merge(payload, %{
+          "group_slug" => group.slug,
+          "archived_at" => DateTime.to_iso8601(group.archived_at)
+        })
+      else
+        payload
+      end
 
     for user_id <- recipients do
       case Ash.get(User, user_id, authorize?: false) do

@@ -66,6 +66,7 @@ defmodule Huddlz.Communities.GroupMember do
     defaults [:create, :read, :destroy]
 
     create :add_member do
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "Add a user to a group"
 
       argument :group_id, :uuid do
@@ -116,6 +117,8 @@ defmodule Huddlz.Communities.GroupMember do
     end
 
     create :accept_invitation do
+      change Huddlz.Communities.Changes.RequireActiveGroup
+
       description """
       Internal helper used only after a GroupInvitation acceptance has been
       authorized. It grants the invited role without sending the unrelated
@@ -141,6 +144,7 @@ defmodule Huddlz.Communities.GroupMember do
     end
 
     destroy :remove_member do
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "Remove a user from a group"
       require_atomic? false
 
@@ -178,7 +182,10 @@ defmodule Huddlz.Communities.GroupMember do
     end
 
     update :change_role do
+      change Huddlz.Communities.Changes.RequireActiveGroup
+
       description "Change a member's role within a group (owner only). Cannot promote to :owner — use Group.:transfer_ownership."
+
       accept [:role]
       require_atomic? false
 
@@ -203,6 +210,7 @@ defmodule Huddlz.Communities.GroupMember do
     end
 
     create :join_group do
+      change Huddlz.Communities.Changes.RequireActiveGroup
       description "Join a group as a regular member as the current actor"
 
       argument :group_id, :uuid do
@@ -363,6 +371,7 @@ defmodule Huddlz.Communities.GroupMember do
 
   relationships do
     belongs_to :group, Huddlz.Communities.Group do
+      read_action :read_with_archived
       attribute_type :uuid
       allow_nil? false
       primary_key? false

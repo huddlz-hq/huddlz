@@ -16,6 +16,16 @@ defmodule Huddlz.Notifications.Target do
   @type resolution :: {:available, String.t()} | :resolved | :none
 
   @spec resolve(Notification.t(), User.t()) :: resolution()
+  def resolve(
+        %Notification{trigger: "group_archived", payload: %{"group_slug" => slug}},
+        %User{} = user
+      ) do
+    case Communities.get_visible_group_by_slug(slug, actor: user) do
+      {:ok, %{slug: ^slug}} -> {:available, "/groups/#{slug}"}
+      _ -> :resolved
+    end
+  end
+
   def resolve(%Notification{trigger: trigger}, %User{})
       when trigger in ["group_archived", "huddl_cancelled"],
       do: :resolved
