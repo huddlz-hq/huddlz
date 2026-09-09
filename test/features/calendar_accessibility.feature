@@ -6,9 +6,9 @@ Feature: Accessible personal calendar
 
   Background:
     Given the following users exist:
-      | email                | display_name | role    |
-      | attendee@example.com | Calendar User | regular |
-    And I am signed in as "attendee@example.com"
+      | email                                       | display_name  | role    |
+      | attendee+calendar-accessibility@example.com | Calendar User | regular |
+    And I am signed in as "attendee+calendar-accessibility@example.com"
 
   Scenario: A past attended huddl keeps its attendance context
     Given I attended a past huddl named "Retrospective"

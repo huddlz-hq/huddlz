@@ -6,11 +6,11 @@ Feature: Organizer pages highlight the group's section
 
   Background:
     Given the following users exist:
-      | email             | display_name | role    |
-      | owner@example.com | Owner User   | regular |
-    And a public group "Portland Elixir" exists with owner "owner@example.com"
-    And a huddl "Ash workshop" exists in "Portland Elixir" created by "owner@example.com"
-    And I am signed in as "owner@example.com"
+      | email                                  | display_name | role    |
+      | owner+organizer-navigation@example.com | Owner User   | regular |
+    And a public group "Portland Elixir" exists with owner "owner+organizer-navigation@example.com"
+    And a huddl "Ash workshop" exists in "Portland Elixir" created by "owner+organizer-navigation@example.com"
+    And I am signed in as "owner+organizer-navigation@example.com"
 
   Scenario: Scheduling a huddl highlights the group's huddlz
     When I visit the new huddl page for group "Portland Elixir"

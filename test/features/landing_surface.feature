@@ -6,8 +6,8 @@ Feature: Landing surface
 
   Background:
     Given the following users exist:
-      | email             | role     | display_name |
-      | regular@example.com | verified | Regular User |
+      | email                               | role     | display_name |
+      | regular+landing-surface@example.com | verified | Regular User |
 
   Scenario: Anonymous visitor sees the landing hero and CTAs
     When I visit "/"
@@ -29,7 +29,7 @@ Feature: Landing surface
     And I should see "Sign up"
 
   Scenario: Authenticated user is redirected from / to /huddlz
-    Given I am signed in as "regular@example.com"
+    Given I am signed in as "regular+landing-surface@example.com"
     When I visit "/"
     Then I should see "Huddlz"
     And I should see "Upcoming"

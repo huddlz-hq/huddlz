@@ -6,19 +6,19 @@ Feature: Waitlist
 
   Background:
     Given the following users exist:
-      | email                    | display_name | role     |
-      | organizer@example.com    | Organizer    | verified |
-      | member@example.com       | Member       | verified |
-      | hopeful@example.com      | Hopeful      | verified |
+      | email                          | display_name | role     |
+      | organizer+waitlist@example.com | Organizer    | verified |
+      | member+waitlist@example.com    | Member       | verified |
+      | hopeful@example.com            | Hopeful      | verified |
     And the following group exists:
-      | name          | description        | is_public | owner_email           |
-      | Tech Meetup   | Local tech group   | true      | organizer@example.com |
-    And "member@example.com" is a member of "Tech Meetup"
-    And "hopeful@example.com" is a member of "Tech Meetup"
-    And the following capped huddl exists in "Tech Meetup":
-      | title              | description       | event_type | starts_at    | virtual_link                | max_attendees |
-      | Capped Code Review | Limited seats     | virtual    | tomorrow 2pm | https://zoom.us/j/123456789 | 2             |
-    And "member@example.com" has RSVPed to "Capped Code Review"
+      | name                 | description      | is_public | owner_email                    |
+      | Waitlist Tech Meetup | Local tech group | true      | organizer+waitlist@example.com |
+    And "member+waitlist@example.com" is a member of "Waitlist Tech Meetup"
+    And "hopeful@example.com" is a member of "Waitlist Tech Meetup"
+    And the following capped huddl exists in "Waitlist Tech Meetup":
+      | title              | description   | event_type | starts_at    | virtual_link                | max_attendees |
+      | Capped Code Review | Limited seats | virtual    | tomorrow 2pm | https://zoom.us/j/123456789 | 2             |
+    And "member+waitlist@example.com" has RSVPed to "Capped Code Review"
 
   Scenario: User joins the waitlist when the huddl is full
     Given I am logged in as "hopeful@example.com"
@@ -45,7 +45,7 @@ Feature: Waitlist
   Scenario: User is promoted when an attendee cancels
     Given I am logged in as "hopeful@example.com"
     And I have joined the waitlist for "Capped Code Review"
-    When "member@example.com" cancels their RSVP to "Capped Code Review"
+    When "member+waitlist@example.com" cancels their RSVP to "Capped Code Review"
     And I visit the "Capped Code Review" huddl page
     Then I should see "You're attending"
     And I should not see "On waitlist"

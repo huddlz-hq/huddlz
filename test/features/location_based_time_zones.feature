@@ -5,9 +5,9 @@ Feature: Location-based time zones
 
   Background:
     Given the following users exist:
-      | email             | role     | display_name |
-      | owner@example.com | verified | Group Owner  |
-    And I am signed in as "owner@example.com"
+      | email                                       | role     | display_name |
+      | owner+location-based-time-zones@example.com | verified | Group Owner  |
+    And I am signed in as "owner+location-based-time-zones@example.com"
 
   Scenario: A group's required city determines its time zone
     When I visit "/groups/new"
