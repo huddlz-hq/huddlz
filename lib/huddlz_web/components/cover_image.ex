@@ -2,8 +2,10 @@ defmodule HuddlzWeb.Components.CoverImage do
   @moduledoc """
   Decorative cover media layered over the surrounding fallback.
 
-  A missing or failed CSS background leaves the fallback visible without
-  client-side state or image load handlers.
+  A missing or failed CSS background leaves the fallback visible without any
+  server-side state. The `CoverImage` hook layers a loading surface over the
+  element while the picture is still arriving and records the outcome in
+  `data-cover-state`; without JavaScript the picture simply paints when ready.
   """
   use Phoenix.Component
 
@@ -12,15 +14,24 @@ defmodule HuddlzWeb.Components.CoverImage do
   attr :class, :any, required: true
 
   def cover_image(assigns) do
-    url =
-      assigns.image_url
-      |> Huddlz.Storage.url()
-      |> URI.encode(&(URI.char_unescaped?(&1) or &1 == ?%))
+    url = Huddlz.Storage.url(assigns.image_url)
+    css_url = URI.encode(url, &(URI.char_unescaped?(&1) or &1 == ?%))
 
-    assigns = assign(assigns, :background, ~s|background-image: url("#{url}")|)
+    assigns =
+      assigns
+      |> assign(:url, url)
+      |> assign(:background, ~s|background-image: url("#{css_url}")|)
 
     ~H"""
-    <div id={@id} class={["cover-image", @class]} style={@background} aria-hidden="true"></div>
+    <div
+      id={@id}
+      class={["cover-image", @class]}
+      style={@background}
+      data-cover-url={@url}
+      phx-hook="CoverImage"
+      aria-hidden="true"
+    >
+    </div>
     """
   end
 end
