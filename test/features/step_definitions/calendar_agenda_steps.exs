@@ -78,17 +78,48 @@ defmodule CalendarAgendaSteps do
     context
   end
 
-  step "I open next month's agenda", %{conn: conn} = context do
-    open_agenda(context, conn, next_month())
+  step "I am going to a huddl on each of the next {int} days",
+       %{args: [count], current_user: attendee} = context do
+    host = generate(user(role: :user))
+    group = generate(group(owner_id: host.id, is_public: true, actor: host))
+
+    huddlz =
+      for offset <- 1..count do
+        huddl =
+          generate(
+            huddl(
+              group_id: group.id,
+              creator_id: host.id,
+              is_private: false,
+              title: "Day #{offset}",
+              date: Date.add(eastern_today(), offset),
+              actor: host
+            )
+          )
+
+        huddl
+        |> Ash.Changeset.for_update(:rsvp, %{}, actor: attendee)
+        |> Ash.update!()
+
+        huddl
+      end
+
+    Map.put(context, :agenda_huddlz, huddlz)
   end
 
-  step "I open this month's agenda", %{conn: conn} = context do
-    open_agenda(context, conn, eastern_today())
+  step "I open the agenda", %{conn: conn} = context do
+    session = visit(conn, "/calendar?view=agenda")
+    Map.merge(context, %{conn: session, session: session})
   end
 
   step "the agenda shows day {int} with {string}",
        %{args: [day, title], session: session} = context do
-    assert_has(session, "#{day_selector(day)} .cal-agenda-title", text: title)
+    session
+    |> assert_has("#{day_selector(day)} .cal-agenda-title", text: title)
+    |> assert_has("#{day_selector(day)} .cal-agenda-day-context",
+      text: Calendar.strftime(next_month(), "%b")
+    )
+
     context
   end
 
@@ -126,10 +157,22 @@ defmodule CalendarAgendaSteps do
     context
   end
 
-  defp open_agenda(context, conn, %Date{year: year, month: month}) do
-    month_param = "#{year}-#{String.pad_leading(to_string(month), 2, "0")}"
-    session = visit(conn, "/calendar?month=#{month_param}&view=agenda")
-    Map.merge(context, %{conn: session, session: session})
+  step "the agenda does not list {string}", %{args: [title], session: session} = context do
+    refute_has(session, "#calendar-agenda .cal-agenda-title", text: title)
+    context
+  end
+
+  step "the agenda lists {int} days of huddlz", %{args: [count], session: session} = context do
+    session
+    |> assert_has("#calendar-agenda .cal-agenda-day .cal-agenda-entry", count: count)
+    |> refute_has("#calendar-agenda .cal-agenda-title", text: "Day #{count + 1}")
+
+    context
+  end
+
+  step "I am pointed at the month view for the rest", %{session: session} = context do
+    assert_has(session, "#calendar-agenda-more a", text: "in the month view")
+    context
   end
 
   defp next_month do
