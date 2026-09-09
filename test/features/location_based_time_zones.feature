@@ -12,6 +12,7 @@ Feature: Location-based time zones
   Scenario: A group's required city determines its time zone
     When I visit "/groups/new"
     And I fill in "Group name" with "Saint Augustine Neighbors"
+    And I fill in "Description" with "A community for Saint Augustine neighbors"
     And I select "Saint Augustine, FL, USA" as the group city in "America/New_York"
     And I click "Create group"
     Then I should see "Group created successfully"
@@ -20,6 +21,7 @@ Feature: Location-based time zones
   Scenario: A group cannot be created without a city
     When I visit "/groups/new"
     And I fill in "Group name" with "Locationless Neighbors"
+    And I fill in "Description" with "A community still choosing its home city"
     And I click "Create group"
     Then I should see an error on the "Location" field
     And the group "Locationless Neighbors" should not exist

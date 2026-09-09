@@ -126,6 +126,8 @@ defmodule Huddlz.Communities.Group do
       description "Create a new group; the owner is always the current actor."
       accept [:name, :description, :location, :latitude, :longitude, :time_zone, :is_public]
 
+      validate present(:description), message: "is required"
+
       argument :slug, :string, allow_nil?: true
       argument :provided_latitude, :float, allow_nil?: true, public?: false
       argument :provided_longitude, :float, allow_nil?: true, public?: false
@@ -274,6 +276,10 @@ defmodule Huddlz.Communities.Group do
 
       argument :provided_latitude, :float, allow_nil?: true, public?: false
       argument :provided_longitude, :float, allow_nil?: true, public?: false
+
+      validate present(:description),
+        where: [changing(:description, touching?: true)],
+        message: "is required"
 
       change Huddlz.Geocoding.ApplyProvidedCoordinates
       change {Huddlz.Geocoding.GeocodeChange, field: :location}

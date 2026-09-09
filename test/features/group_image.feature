@@ -48,6 +48,7 @@ Feature: Group Image Management
     Given I am signed in as "group-image-owner@example.com"
     When I visit "/groups/new"
     And I fill in "Group name" with "Cancel Image Group"
+    And I fill in "Description" with "A community choosing its cover image"
     And I select "Saint Augustine, FL, USA" as the group city in "America/New_York"
     And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "Image uploaded"
