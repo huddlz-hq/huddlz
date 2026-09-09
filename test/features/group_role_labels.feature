@@ -19,12 +19,12 @@ Feature: Actual group role labels
     When I visit the group page for "Role Labels"
     Then my group role should be "Organizer"
     And my navigation role for "Role Labels" should be "Organizer"
-    When I visit "/my-groups"
+    When I visit "/groups"
     Then my card role for "Role Labels" should be "Organizer"
 
-  Scenario: A mounted My groups card follows promotion and demotion
+  Scenario: A mounted Groups card follows promotion and demotion
     Given I am signed in as "member315@example.com"
-    When I visit "/my-groups"
+    When I visit "/groups"
     Then my card role for "Role Labels" should be "Member"
     When the owner promotes me in "Role Labels" in another session
     Then my card role for "Role Labels" should be "Organizer"
@@ -36,7 +36,7 @@ Feature: Actual group role labels
     Given I am signed in as "<email>"
     When I visit the group page for "Role Labels"
     Then my group role should be "<role>"
-    When I visit "/my-groups"
+    When I visit "/groups"
     Then my card role for "Role Labels" should be "<role>"
 
     Examples:
@@ -73,11 +73,11 @@ Feature: Actual group role labels
     When I visit the edit page for "Role Labels"
     Then I should see "You don't have permission to edit this group"
 
-  Scenario: Accepting an invitation adds a mounted My groups card
+  Scenario: Accepting an invitation adds a mounted Groups card
     Given a private group "Invitation Roles" exists with owner "owner315@example.com"
     And "visitor315@example.com" has an organizer invitation to "Invitation Roles"
     And I am signed in as "visitor315@example.com"
-    When I visit "/my-groups"
+    When I visit "/groups"
     Then I should not see "Invitation Roles"
     When I accept my invitation to "Invitation Roles" in another session
     Then my card role for "Invitation Roles" should be "Organizer"

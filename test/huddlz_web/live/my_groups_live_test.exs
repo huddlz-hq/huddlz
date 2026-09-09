@@ -10,25 +10,25 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
   describe "anonymous access" do
     test "redirects to sign-in", %{conn: conn} do
       conn
-      |> visit("/my-groups")
+      |> visit("/groups")
       |> assert_path("/sign-in")
     end
   end
 
   describe "page chrome" do
-    test "renders v3 sidebar with My groups active", %{conn: conn, member: member} do
+    test "renders v3 sidebar with Groups active", %{conn: conn, member: member} do
       conn
       |> login(member)
-      |> visit("/my-groups")
-      |> assert_has("h1", text: "My groups")
+      |> visit("/groups")
+      |> assert_has("h1", text: "Groups")
       |> assert_has("aside.sidebar")
-      |> assert_has(".sb-item.active", text: "My groups")
+      |> assert_has(".sb-item.active", text: "Groups")
     end
 
     test "shows three filter chips with counts", %{conn: conn, member: member} do
       conn
       |> login(member)
-      |> visit("/my-groups")
+      |> visit("/groups")
       |> assert_has(".filters .chip", text: "All")
       |> assert_has(".filters .chip", text: "Hosting")
       |> assert_has(".filters .chip", text: "Joined")
@@ -37,14 +37,14 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
     test "All chip is active by default", %{conn: conn, member: member} do
       conn
       |> login(member)
-      |> visit("/my-groups")
+      |> visit("/groups")
       |> assert_has(".filters .chip.is-active", text: "All")
     end
 
     test "Start a group CTA links to /groups/new", %{conn: conn, member: member} do
       conn
       |> login(member)
-      |> visit("/my-groups")
+      |> visit("/groups")
       |> assert_has(".page-head a[href='/groups/new']", text: "Start a group")
     end
   end
@@ -61,7 +61,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
 
       conn
       |> login(member)
-      |> visit("/my-groups")
+      |> visit("/groups")
       |> assert_has(".grid .card .card-title", text: "Hosted Crew")
       |> assert_has(".grid .card .card-title", text: "Joined Crew")
       |> assert_has(".filters .chip", text: "All 2")
@@ -72,7 +72,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
     test "empty state copy", %{conn: conn, member: member} do
       conn
       |> login(member)
-      |> visit("/my-groups")
+      |> visit("/groups")
       |> assert_has(".empty-state[data-first-run] h3", text: "No groups yet")
       |> assert_has(".empty-state p",
         text:
@@ -101,7 +101,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
 
       conn
       |> login(member)
-      |> visit("/my-groups?filter=hosting")
+      |> visit("/groups?filter=hosting")
       |> assert_has(".filters .chip.is-active", text: "Hosting")
       |> assert_has(".grid .card .card-title", text: "Owned One")
       |> refute_has(".grid .card .card-title", text: "Joined One")
@@ -111,7 +111,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
     test "empty state copy", %{conn: conn, member: member} do
       conn
       |> login(member)
-      |> visit("/my-groups?filter=hosting")
+      |> visit("/groups?filter=hosting")
       |> assert_has(".empty-state p", text: "Start a group and its huddlz will show up here.")
       |> refute_has(".empty-state a")
     end
@@ -133,7 +133,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
 
       conn
       |> login(member)
-      |> visit("/my-groups?filter=joined")
+      |> visit("/groups?filter=joined")
       |> assert_has(".filters .chip.is-active", text: "Joined")
       |> assert_has(".grid .card .card-title", text: "Joined One")
       |> refute_has(".grid .card .card-title", text: "Owned One")
@@ -143,7 +143,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
     test "empty state copy", %{conn: conn, member: member} do
       conn
       |> login(member)
-      |> visit("/my-groups?filter=joined")
+      |> visit("/groups?filter=joined")
       |> assert_has(".empty-state p", text: "Join a group to follow its huddlz here.")
       |> assert_has(".empty-state a[href='/discover?scope=groups']", text: "Browse groups")
       |> refute_has(".empty-state a", text: "Start your own")
@@ -154,7 +154,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
     test "unknown filter falls back to All", %{conn: conn, member: member} do
       conn
       |> login(member)
-      |> visit("/my-groups?filter=garbage")
+      |> visit("/groups?filter=garbage")
       |> assert_has(".filters .chip.is-active", text: "All")
     end
   end
@@ -170,7 +170,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
 
       conn
       |> login(member)
-      |> visit("/my-groups")
+      |> visit("/groups")
       |> refute_has(".grid .card .card-title", text: "Strangers Only")
       |> assert_has(".filters .chip", text: "All 0")
     end
@@ -183,7 +183,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
 
       conn
       |> login(member)
-      |> visit("/my-groups")
+      |> visit("/groups")
       |> assert_has(~s(.grid .card[href="/groups/#{group.slug}"]))
     end
   end
@@ -200,7 +200,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
 
       conn
       |> login(member)
-      |> visit("/my-groups")
+      |> visit("/groups")
       |> assert_has("#my-group-cover-#{group.id}[data-testid='group-cover']")
       |> assert_has("#my-group-cover-#{group.id} .group-cover-signal", text: "FC", exact: true)
       |> refute_has("#my-group-cover-#{group.id} img")
@@ -217,7 +217,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
 
       conn
       |> login(member)
-      |> visit("/my-groups")
+      |> visit("/groups")
       |> assert_has(".grid .card .card-meta", text: "3 members")
     end
   end
@@ -234,7 +234,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
       session =
         conn
         |> login(member)
-        |> visit("/my-groups")
+        |> visit("/groups")
 
       html = Phoenix.LiveViewTest.render(session.view)
 
@@ -269,7 +269,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
     test "shows pagination when more than 20 groups", %{conn: conn, member: member} do
       conn
       |> login(member)
-      |> visit("/my-groups")
+      |> visit("/groups")
       |> assert_has(".grid .card .card-title", text: "Group 001")
       |> assert_has(".grid .card .card-title", text: "Group 020")
       |> refute_has(".grid .card .card-title", text: "Group 021")
@@ -279,7 +279,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
     test "page=2 shows the next 20", %{conn: conn, member: member} do
       conn
       |> login(member)
-      |> visit("/my-groups?page=2")
+      |> visit("/groups?page=2")
       |> assert_has(".grid .card .card-title", text: "Group 021")
       |> assert_has(".grid .card .card-title", text: "Group 022")
       |> refute_has(".grid .card .card-title", text: "Group 001")
@@ -288,8 +288,8 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
     test "out-of-range ?page= clamps to last valid page", %{conn: conn, member: member} do
       conn
       |> login(member)
-      |> visit("/my-groups?page=999")
-      |> assert_path("/my-groups", query_params: %{"page" => "2"})
+      |> visit("/groups?page=999")
+      |> assert_path("/groups", query_params: %{"page" => "2"})
     end
   end
 end

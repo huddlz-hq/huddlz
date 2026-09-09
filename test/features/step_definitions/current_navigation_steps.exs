@@ -3,6 +3,10 @@ defmodule CurrentNavigationSteps do
 
   import PhoenixTest
 
+  step "I choose the {string} view", %{args: [label], session: session} = context do
+    Map.put(context, :session, click_link(session, ".scope-tab", label))
+  end
+
   step "navigation should identify {string} as the current destination",
        %{args: [label], session: session} = context do
     session

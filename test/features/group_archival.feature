@@ -13,7 +13,7 @@ Feature: Group archival
     Then I should see "Members keep access to the group's history"
     When I click "Yes, archive group"
     Then I should see "Group archived"
-    When I visit "/my-groups"
+    When I visit "/groups"
     Then I should not see "Seasonal Club"
     When I click "Archived"
     Then I should see "Seasonal Club"
@@ -22,7 +22,7 @@ Feature: Group archival
     When I click "Group settings"
     And I click "Restore group"
     Then I should see "Group restored"
-    When I visit "/my-groups"
+    When I visit "/groups"
     Then I should see "Seasonal Club"
 
   Scenario: Members retain read-only history while outsiders lose access

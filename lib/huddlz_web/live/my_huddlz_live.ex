@@ -1,6 +1,6 @@
 defmodule HuddlzWeb.MyHuddlzLive do
   @moduledoc """
-  LiveView at `/my-huddlz`. Personal feed of huddlz the signed-in user is
+  LiveView at `/huddlz`. Personal feed of huddlz the signed-in user is
   attending, waitlisted on, or has already attended. Filter chips
   (Upcoming N / Waitlisted N / Past N) drive a `?filter=` URL param;
   `?page=N` paginates the active filter.
@@ -35,7 +35,7 @@ defmodule HuddlzWeb.MyHuddlzLive do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:page_title, "My huddlz")
+     |> assign(:page_title, "Huddlz")
      |> assign(:huddls, [])
      |> assign(:counts, %{upcoming: 0, waitlisted: 0, past: 0})
      |> assign(:page_info, %{total_pages: 1, current_page: 1, total_count: 0})}
@@ -134,13 +134,13 @@ defmodule HuddlzWeb.MyHuddlzLive do
     )
   end
 
-  defp filter_path(:upcoming, page) when page > 1, do: ~p"/my-huddlz?#{[page: page]}"
-  defp filter_path(:upcoming, _page), do: ~p"/my-huddlz"
+  defp filter_path(:upcoming, page) when page > 1, do: ~p"/huddlz?#{[page: page]}"
+  defp filter_path(:upcoming, _page), do: ~p"/huddlz"
 
   defp filter_path(filter, page) when page > 1,
-    do: ~p"/my-huddlz?#{[filter: filter, page: page]}"
+    do: ~p"/huddlz?#{[filter: filter, page: page]}"
 
-  defp filter_path(filter, _page), do: ~p"/my-huddlz?#{[filter: filter]}"
+  defp filter_path(filter, _page), do: ~p"/huddlz?#{[filter: filter]}"
 
   @impl true
   def render(assigns) do
@@ -150,11 +150,11 @@ defmodule HuddlzWeb.MyHuddlzLive do
       current_user={@current_user}
       unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
-      active="my-huddlz"
+      active="huddlz"
     >
       <div class="page-head">
         <div>
-          <h1>My huddlz</h1>
+          <h1>Huddlz</h1>
           <p>{filter_blurb(@filter)}</p>
         </div>
         <.button

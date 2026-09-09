@@ -34,7 +34,7 @@ Feature: Private group invitations
     When I click "Back to invitations"
     Then I should see "Invites 0"
     And I should see "No pending invitations"
-    When I visit "/my-groups"
+    When I visit "/groups"
     Then I should see "Quiet Makers"
 
   Scenario: A new recipient registers from their email and accepts the intended invitation

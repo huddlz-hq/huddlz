@@ -25,7 +25,7 @@ defmodule HuddlzWeb.Layouts do
 
   attr :active, :string,
     default: nil,
-    doc: "active surface key for nav highlighting (e.g. \"discover\", \"my-huddlz\")"
+    doc: "active surface key for nav highlighting (e.g. \"discover\", \"huddlz\")"
 
   attr :active_group_slug, :string,
     default: nil,
@@ -87,20 +87,20 @@ defmodule HuddlzWeb.Layouts do
             <span class="label">Discover</span>
           </.link>
           <.link
-            class={["sb-item", @active == "my-huddlz" && "active"]}
-            navigate={~p"/my-huddlz"}
-            aria-current={@active == "my-huddlz" && "page"}
+            class={["sb-item", @active == "huddlz" && "active"]}
+            navigate={~p"/huddlz"}
+            aria-current={@active == "huddlz" && "page"}
           >
             <.nav_icon name="ticket" />
-            <span class="label">My huddlz</span>
+            <span class="label">Huddlz</span>
           </.link>
           <.link
-            class={["sb-item", @active == "my-groups" && "active"]}
-            navigate={~p"/my-groups"}
-            aria-current={@active == "my-groups" && "page"}
+            class={["sb-item", @active == "groups" && "active"]}
+            navigate={~p"/groups"}
+            aria-current={@active == "groups" && "page"}
           >
             <.nav_icon name="users" />
-            <span class="label">My groups</span>
+            <span class="label">Groups</span>
           </.link>
           <.link
             class={["sb-item", @active == "calendar" && "active"]}

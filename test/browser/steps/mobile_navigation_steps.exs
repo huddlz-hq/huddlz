@@ -53,19 +53,19 @@ defmodule BrowserNavigationSteps do
     Map.put(context, :conn, conn)
   end
 
-  step "I reopen mobile navigation and visit My groups", context do
+  step "I reopen mobile navigation and visit Groups", context do
     conn =
       context.conn
       |> press("#mobile-nav-trigger", "Enter")
-      |> click_link("#mobile-navigation-drawer a", "My groups")
+      |> click_link("#mobile-navigation-drawer a", "Groups")
 
     Map.put(context, :conn, conn)
   end
 
-  step "My groups loads with the drawer closed and can reopen navigation", context do
+  step "Groups loads with the drawer closed and can reopen navigation", context do
     conn =
       context.conn
-      |> assert_has("h1", text: "My groups")
+      |> assert_has("h1", text: "Groups")
       |> assert_has(".phx-connected")
       |> assert_browser("document.querySelector('#mobile-navigation-drawer').inert")
       |> refute_has("[data-mobile-nav-background][inert]")

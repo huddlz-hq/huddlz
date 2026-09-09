@@ -256,11 +256,11 @@ defmodule HuddlzWeb.GroupInvitationLive do
   defp invitation_status_label(:expired), do: "Expired"
 
   defp invitation_status_description(:pending) do
-    "This private group stays hidden until you accept. Accepting adds it to My groups and gives you access to its roster and huddlz."
+    "This private group stays hidden until you accept. Accepting adds it to Groups and gives you access to its roster and huddlz."
   end
 
   defp invitation_status_description(:accepted) do
-    "You accepted this invitation. This private group is now available in My groups."
+    "You accepted this invitation. This private group is now available in Groups."
   end
 
   defp invitation_status_description(:declined) do

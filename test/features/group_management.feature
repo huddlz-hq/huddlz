@@ -117,7 +117,7 @@ Feature: Group Management
     Then the "Leave Group" button should not be visible
     And the "Join Group" button should be visible
     And the group member count should be 1
-    When I visit "/my-groups"
+    When I visit "/groups"
     Then I should not see "Book Club"
 
   Scenario: Group name is required

@@ -450,7 +450,7 @@ defmodule HuddlzWeb.GroupLive.Show do
               </li>
               <li>
                 <.icon name="hero-rectangle-stack" class="size-4" />
-                <span>Remove this group from <strong>My groups</strong></span>
+                <span>Remove this group from <strong>Groups</strong></span>
               </li>
               <li>
                 <.icon name="hero-bell-slash" class="size-4" />

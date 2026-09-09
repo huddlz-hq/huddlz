@@ -20,7 +20,7 @@ defmodule Huddlz.Communities.Group do
       list :list_groups, :read
       list :search_groups, :search
       # `myGroups` mirrors the `Communities.my_groups/1` Elixir interface and
-      # the `/my-groups` LiveView: returns groups the actor owns or has joined.
+      # the `/groups` LiveView: returns groups the actor owns or has joined.
       # Pass `relationship: hosting | joined | all` to scope the result.
       list :my_groups, :my_groups
       list :archived_groups, :archived

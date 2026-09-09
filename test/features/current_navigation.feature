@@ -19,5 +19,5 @@ Feature: Current navigation for assistive technology
     When I click link "Discover"
     Then navigation should identify "Discover" as the current destination
     And view choices should identify "Huddlz" as current
-    When I click link "Groups"
+    When I choose the "Groups" view
     Then view choices should identify "Groups" as current
