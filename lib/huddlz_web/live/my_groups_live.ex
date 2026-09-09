@@ -150,7 +150,10 @@ defmodule HuddlzWeb.MyGroupsLive do
           <h1>My groups</h1>
           <p>{filter_blurb(@filter)}</p>
         </div>
-        <.button variant={:primary} navigate={~p"/groups/new"}>
+        <.button
+          variant={if @counts.all == 0, do: :secondary, else: :primary}
+          navigate={~p"/groups/new"}
+        >
           <.icon name="hero-plus" class="size-4" /> Start a group
         </.button>
       </div>
@@ -173,9 +176,19 @@ defmodule HuddlzWeb.MyGroupsLive do
       </div>
 
       <%= if Enum.empty?(@groups) do %>
-        <.empty_state icon={empty_icon(@filter)} title={empty_title(@filter)}>
+        <.empty_state
+          icon={empty_icon(@filter)}
+          title={empty_title(@filter)}
+          data-first-run={@filter == :all || nil}
+        >
           {empty_message(@filter)}
-          <:action :if={@filter != :hosting}>
+          <:action :if={@filter == :all}>
+            <.button variant={:primary} navigate={~p"/discover?scope=groups"}>
+              <.icon name="hero-magnifying-glass" class="size-4" /> Browse groups
+            </.button>
+            <.button variant={:secondary} navigate={~p"/groups/new"}>Start your own</.button>
+          </:action>
+          <:action :if={@filter == :joined}>
             <.button variant={:secondary} navigate={~p"/discover?scope=groups"}>
               Browse groups
             </.button>
@@ -237,11 +250,13 @@ defmodule HuddlzWeb.MyGroupsLive do
 
   defp empty_message(:archived), do: "Your archived groups will appear here."
 
+  # An empty "All" is a first run: the account belongs to no group at all,
+  # so this page explains what groups are for and offers both ways in.
   defp empty_message(:all),
-    do: "You haven't organized or joined any groups yet. Start one or browse Discover."
+    do: "Groups are where huddlz come from. Join one to follow its huddlz, or start your own."
 
-  defp empty_message(:hosting), do: "You haven't created a group yet."
-  defp empty_message(:joined), do: "You haven't joined any groups yet."
+  defp empty_message(:hosting), do: "Start a group and its huddlz will show up here."
+  defp empty_message(:joined), do: "Join a group to follow its huddlz here."
 
   defp role_class(:owner), do: "owner"
   defp role_class(:organizer), do: "organizer"

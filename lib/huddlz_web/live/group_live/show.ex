@@ -410,9 +410,12 @@ defmodule HuddlzWeb.GroupLive.Show do
             icon={if @active_tab == "upcoming", do: "hero-calendar", else: "hero-clock"}
             title={if @active_tab == "upcoming", do: "Nothing scheduled", else: "No past huddlz"}
           >
-            {if @active_tab == "upcoming",
-              do: "No upcoming huddlz scheduled.",
-              else: "No past huddlz found."}
+            {empty_huddlz_message(@active_tab, @can_create_huddl)}
+            <:action :if={@active_tab == "upcoming" && @can_create_huddl}>
+              <.button variant={:secondary} navigate={~p"/groups/#{@group.slug}/huddlz/new"}>
+                <.icon name="hero-plus" class="size-4" /> Schedule a huddl
+              </.button>
+            </:action>
           </.empty_state>
           <.pagination
             :if={@active_tab == "past" && @past_total_pages > 1}
@@ -626,6 +629,13 @@ defmodule HuddlzWeb.GroupLive.Show do
       {:error, _} -> {:error, :not_found}
     end
   end
+
+  # Someone who can schedule for this group gets the organizer's version of
+  # the empty grid, with the action that fills it. Everyone else reads the
+  # plain fact.
+  defp empty_huddlz_message("upcoming", true), do: "Members will see your next huddl here."
+  defp empty_huddlz_message("upcoming", _can_create), do: "No upcoming huddlz scheduled."
+  defp empty_huddlz_message(_past, _can_create), do: "No past huddlz found."
 
   defp group_meta(group) do
     %{

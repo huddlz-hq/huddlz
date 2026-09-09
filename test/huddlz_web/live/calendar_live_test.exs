@@ -568,13 +568,40 @@ defmodule HuddlzWeb.CalendarLiveTest do
       )
     end
 
-    test "empty agenda shows helpful copy", %{conn: conn, attendee: attendee} do
+    test "empty agenda shows helpful copy", %{
+      conn: conn,
+      host: host,
+      attendee: attendee,
+      public_group: public_group
+    } do
+      past = create_past_huddl(host, public_group, title: "Old Workshop")
+      rsvp!(past, attendee, :rsvp)
+
       conn
       |> login(attendee)
-      |> visit("/calendar?view=agenda")
+      |> visit(calendar_path_for(Date.add(Huddlz.Generator.eastern_today(), 400), view: "agenda"))
       |> assert_has("#calendar-agenda-empty.empty-state h3", text: "Nothing this month")
       |> assert_has("p", text: "Nothing on the calendar this month.")
       |> refute_has(".cal-agenda-panel")
+      |> refute_has("#calendar-first-run")
+    end
+
+    test "a first run explains the calendar in both views", %{conn: conn, attendee: attendee} do
+      session =
+        conn
+        |> login(attendee)
+        |> visit("/calendar?view=agenda")
+        |> assert_has("#calendar-first-run.empty-state h3", text: "Your calendar is empty")
+        |> assert_has("#calendar-first-run p",
+          text: "Huddlz you RSVP to show up here, in their own time zone."
+        )
+        |> assert_has("#calendar-first-run a.btn-primary[href='/discover']", text: "Find a huddl")
+        |> refute_has("#calendar-agenda-empty")
+
+      session
+      |> visit("/calendar")
+      |> assert_has("#month-calendar")
+      |> assert_has("#calendar-first-run.empty-state h3", text: "Your calendar is empty")
     end
   end
 

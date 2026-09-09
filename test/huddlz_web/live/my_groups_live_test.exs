@@ -73,11 +73,16 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
       conn
       |> login(member)
       |> visit("/my-groups")
-      |> assert_has(".empty-state h3", text: "No groups yet")
+      |> assert_has(".empty-state[data-first-run] h3", text: "No groups yet")
       |> assert_has(".empty-state p",
-        text: "You haven't organized or joined any groups yet. Start one or browse Discover."
+        text:
+          "Groups are where huddlz come from. Join one to follow its huddlz, or start your own."
       )
-      |> assert_has(".empty-state a[href='/discover?scope=groups']", text: "Browse groups")
+      |> assert_has(".empty-state a.btn-primary[href='/discover?scope=groups']",
+        text: "Browse groups"
+      )
+      |> assert_has(".empty-state a.btn-secondary[href='/groups/new']", text: "Start your own")
+      |> assert_has(".page-head a.btn-secondary", text: "Start a group")
     end
   end
 
@@ -107,7 +112,7 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
       conn
       |> login(member)
       |> visit("/my-groups?filter=hosting")
-      |> assert_has(".empty-state p", text: "You haven't created a group yet.")
+      |> assert_has(".empty-state p", text: "Start a group and its huddlz will show up here.")
       |> refute_has(".empty-state a")
     end
   end
@@ -139,8 +144,9 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
       conn
       |> login(member)
       |> visit("/my-groups?filter=joined")
-      |> assert_has(".empty-state p", text: "You haven't joined any groups yet.")
+      |> assert_has(".empty-state p", text: "Join a group to follow its huddlz here.")
       |> assert_has(".empty-state a[href='/discover?scope=groups']", text: "Browse groups")
+      |> refute_has(".empty-state a", text: "Start your own")
     end
   end
 

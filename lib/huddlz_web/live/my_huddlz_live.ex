@@ -157,7 +157,10 @@ defmodule HuddlzWeb.MyHuddlzLive do
           <h1>My huddlz</h1>
           <p>{filter_blurb(@filter)}</p>
         </div>
-        <.button variant={:primary} navigate={~p"/discover"}>
+        <.button
+          variant={if first_run?(@counts), do: :secondary, else: :primary}
+          navigate={~p"/discover"}
+        >
           <.icon name="hero-magnifying-glass" class="size-4" /> Find another huddl
         </.button>
       </div>
@@ -183,10 +186,19 @@ defmodule HuddlzWeb.MyHuddlzLive do
       </div>
 
       <%= if Enum.empty?(@huddls) do %>
-        <.empty_state icon={empty_icon(@filter)} title={empty_title(@filter)}>
-          {empty_message(@filter)}
+        <.empty_state
+          icon={empty_icon(@filter)}
+          title={empty_title(@filter, first_run?(@counts))}
+          data-first-run={first_run?(@counts) || nil}
+        >
+          {empty_message(@filter, first_run?(@counts))}
           <:action :if={@filter == :upcoming}>
-            <.button variant={:secondary} navigate={~p"/discover"}>Browse huddlz</.button>
+            <.button :if={first_run?(@counts)} variant={:primary} navigate={~p"/discover"}>
+              <.icon name="hero-magnifying-glass" class="size-4" /> Find a huddl
+            </.button>
+            <.button :if={!first_run?(@counts)} variant={:secondary} navigate={~p"/discover"}>
+              Browse huddlz
+            </.button>
           </:action>
         </.empty_state>
       <% else %>
@@ -259,17 +271,26 @@ defmodule HuddlzWeb.MyHuddlzLive do
   defp empty_icon(:waitlisted), do: "hero-clock"
   defp empty_icon(:past), do: "hero-check-circle"
 
-  defp empty_title(:upcoming), do: "Nothing coming up"
-  defp empty_title(:waitlisted), do: "No waitlists"
-  defp empty_title(:past), do: "Nothing attended yet"
+  # A first run is an account with no RSVP history at all. Its empty page
+  # says what the page is for and hands over the one action that fills it;
+  # once there is history, the same page goes quiet instead.
+  defp first_run?(counts), do: counts.upcoming + counts.waitlisted + counts.past == 0
 
-  defp empty_message(:upcoming),
-    do: "No upcoming RSVPs yet. Find one to attend."
+  defp empty_title(:upcoming, true), do: "No upcoming RSVPs yet"
+  defp empty_title(:upcoming, false), do: "Nothing coming up"
+  defp empty_title(:waitlisted, _first_run), do: "No waitlists"
+  defp empty_title(:past, _first_run), do: "Nothing attended yet"
 
-  defp empty_message(:waitlisted),
+  defp empty_message(:upcoming, true),
+    do: "Find a huddl worth showing up to and it will land here."
+
+  defp empty_message(:upcoming, false),
+    do: "Your next RSVP will land here."
+
+  defp empty_message(:waitlisted, _first_run),
     do: "You're not on a waitlist right now."
 
-  defp empty_message(:past),
+  defp empty_message(:past, _first_run),
     do: "No past attendance yet."
 
   defp pill_variant(%{status: status}, filter) do
