@@ -17,10 +17,10 @@ are disposable. Different pages and filters are not collapsed onto unfiltered
 results or page one. Existing out-of-range page handling remains in place.
 This change does not introduce a noindex policy for search results.
 
-Private groups, members-only huddlz, drafts, and cancelled huddlz do not receive
+Private groups, members-only huddlz, and drafts do not receive
 public canonical links, even when an authorized viewer can access them.
 Authorization still controls anonymous HTTP responses. Canonical links are not
-an access-control mechanism.
+an access-control mechanism. Cancelled public huddlz retain their detail page and canonical URL while their group remains public, including after their scheduled end. See [the lifecycle decision](adr/0001-public-huddl-lifecycle.md).
 
 Each initial HTTP document contains its canonical and `og:url` in the head.
 LiveView navigation retains the original root head, following native LiveView

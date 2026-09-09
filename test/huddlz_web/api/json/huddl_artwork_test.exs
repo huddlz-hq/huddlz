@@ -58,7 +58,7 @@ defmodule HuddlzWeb.Api.Json.HuddlArtworkTest do
           [group_id: public_group.id, is_private: true],
           [group_id: private_group.id],
           [group_id: public_group.id, lifecycle_state: :draft],
-          [group_id: public_group.id, lifecycle_state: :cancelled]
+          [group_id: public_group.id, lifecycle_state: :cancelled, is_private: true]
         ] do
       huddl =
         generate(

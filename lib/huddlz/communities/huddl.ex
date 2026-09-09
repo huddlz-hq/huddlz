@@ -87,6 +87,16 @@ defmodule Huddlz.Communities.Huddl do
       authorize_if expr(can_read_virtual_link)
     end
 
+    field_policy :cancellation_reason do
+      authorize_if actor_attribute_equals(:role, :admin)
+
+      authorize_if expr(
+                     creator_id == ^actor(:id) or group.owner_id == ^actor(:id) or
+                       exists(group.group_members, user_id == ^actor(:id) and role == :organizer) or
+                       exists(attendees, user_id == ^actor(:id))
+                   )
+    end
+
     field_policy :* do
       authorize_if always()
     end
@@ -325,6 +335,7 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz
       change Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup
       change Huddlz.Communities.Huddl.Changes.EnforceCapacityFloor
+      change Huddlz.Communities.Huddl.Changes.TrackScheduleHistory
       change Huddlz.Communities.Huddl.Changes.ResetReminderStamps
       change Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate
       change Huddlz.Communities.Huddl.Changes.PromoteOnCapacityIncrease
@@ -757,6 +768,16 @@ defmodule Huddlz.Communities.Huddl do
       allow_nil? true
       public? true
       constraints max_length: 5000
+    end
+
+    attribute :previous_starts_at, :utc_datetime do
+      writable? false
+      description "Immediately previous published start; no historical backfill"
+    end
+
+    attribute :previous_time_zone, :string do
+      writable? false
+      description "Time zone used to display the previous published start"
     end
 
     attribute :starts_at, :utc_datetime do

@@ -1,10 +1,10 @@
 defmodule Huddlz.Communities.Huddl.Preparations.FilterByVisibility do
   @moduledoc """
   Filters huddlz based on visibility and lifecycle rules:
-  - Published and completed public huddlz in public groups are visible to everyone
+  - Published, completed, and cancelled public huddlz in public groups are visible to everyone
   - Published and completed private huddlz are only visible to group members
   - Drafts are visible only to their organizers
-  - Cancelled huddlz remain visible to organizers and people with RSVP history
+  - Private cancelled huddlz remain visible to organizers and people with RSVP history
 
   This preparation leverages Ash calculations and relationships for a more
   declarative approach to visibility filtering.
@@ -16,7 +16,7 @@ defmodule Huddlz.Communities.Huddl.Preparations.FilterByVisibility do
     query
     |> Ash.Query.load([:group, :is_publicly_visible])
     |> Ash.Query.filter(
-      lifecycle_state in [:published, :completed] and is_publicly_visible == true
+      lifecycle_state in [:published, :completed, :cancelled] and is_publicly_visible == true
     )
   end
 
@@ -31,8 +31,9 @@ defmodule Huddlz.Communities.Huddl.Preparations.FilterByVisibility do
     query
     |> Ash.Query.load([:group, :is_publicly_visible])
     |> Ash.Query.filter(
-      (lifecycle_state in [:published, :completed] and
-         (is_publicly_visible == true or exists(group.members, id == ^actor.id))) or
+      (lifecycle_state == :cancelled and is_publicly_visible == true) or
+        (lifecycle_state in [:published, :completed] and
+           (is_publicly_visible == true or exists(group.members, id == ^actor.id))) or
         (lifecycle_state in [:draft, :cancelled] and
            (creator_id == ^actor.id or group.owner_id == ^actor.id or
               exists(

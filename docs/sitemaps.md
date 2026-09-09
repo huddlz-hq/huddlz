@@ -19,7 +19,7 @@ would be invalid. The next scheduled refresh discovers newly published pages.
 Generation streams one SQL cursor in batches of 500 rows, selecting only kind,
 ID, group slug and modification time. Its explicit public predicates match
 anonymous page access: public groups, and non-private published/completed
-huddlz inside public groups. No full Ash resources, relationships, or attendee
+huddlz inside public groups, plus public cancellations whose scheduled end is still in the future. No full Ash resources, relationships, or attendee
 lists are loaded. The cursor's single statement gives a consistent MVCC
 snapshot, with unique `(kind, id)` ordering and no shifting pagination offsets.
 Concurrent mutations enter the next refresh. The database may sort/spill the
@@ -62,11 +62,11 @@ provide a general resource-query interface or bypass authorization on page reads
 The copied visibility predicates must remain aligned with the anonymous group
 and huddl read policies and the canonical-page rules in
 [canonical-urls.md](canonical-urls.md): public groups only; published/completed,
-non-private huddlz in public groups only. Any change to those policies or to
+non-private huddlz in public groups, plus cancelled public huddlz until their scheduled end. Cancelled detail pages retain their canonical URL after sitemap expiry. Any change to those policies or to
 public canonical eligibility must update this projection and the sitemap HTTP
 parity tests in `test/huddlz_web/controllers/sitemap_controller_test.exs` together.
 Those tests fetch listed pages anonymously, compare canonical URLs, and verify
-that private groups, private huddlz, drafts, cancellations and deleted records
+that private groups, private huddlz, drafts, expired cancellations and deleted records
 are excluded. The Cucumber sitemap scenario also checks that the current index
 preserves an unrelated child's URL and body after publication and deletion.
 

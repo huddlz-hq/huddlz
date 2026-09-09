@@ -58,7 +58,8 @@ defmodule HuddlzWeb.StructuredData do
       "description" => huddl.description,
       "startDate" => local_date(huddl.starts_at, huddl.time_zone),
       "endDate" => local_date(huddl.ends_at, huddl.time_zone),
-      "eventStatus" => "https://schema.org/EventScheduled",
+      "eventStatus" => event_status(huddl),
+      "previousStartDate" => previous_start_date(huddl),
       "eventAttendanceMode" => attendance_mode(huddl.event_type),
       "location" => location(huddl),
       "organizer" => %{
@@ -71,6 +72,16 @@ defmodule HuddlzWeb.StructuredData do
     }
     |> Map.reject(fn {_key, value} -> is_nil(value) end)
   end
+
+  defp event_status(%{lifecycle_state: :cancelled}), do: "https://schema.org/EventCancelled"
+  defp event_status(%{previous_starts_at: %DateTime{}}), do: "https://schema.org/EventRescheduled"
+  defp event_status(_huddl), do: "https://schema.org/EventScheduled"
+
+  defp previous_start_date(%{lifecycle_state: :cancelled}), do: nil
+  defp previous_start_date(%{previous_starts_at: nil}), do: nil
+
+  defp previous_start_date(huddl),
+    do: local_date(huddl.previous_starts_at, huddl.previous_time_zone)
 
   defp local_date(datetime, time_zone) do
     datetime |> DateTime.shift_zone!(time_zone) |> DateTime.to_iso8601()
