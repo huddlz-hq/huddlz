@@ -2355,6 +2355,8 @@ body .cal-toolbar {
   margin-bottom: 24px;
 }
 
+body .cal-scope { margin-bottom: 16px; }
+
 body .cal-nav { display: flex; gap: 4px; }
 
 body .cal-nav-btn {
@@ -2566,6 +2568,11 @@ body .cal-pill-status {
 }
 
 body .cal-pill.hosting { background: var(--pink-soft); color: var(--pink); }
+body .cal-pill.open {
+  border: 1px dashed var(--line-strong);
+  background: transparent;
+  color: var(--soft);
+}
 body .cal-pill.tentative { background: var(--warn-soft); color: var(--warn); }
 body .cal-pill.past { background: var(--panel-2); color: var(--muted); }
 body .cal-pill.past:hover { color: var(--soft); }
@@ -2904,6 +2911,10 @@ body .cal-legend-swatch.cyan { background: var(--accent); }
 body .cal-legend-swatch.magenta { background: var(--pink); }
 body .cal-legend-swatch.warn { background: var(--warn); }
 body .cal-legend-swatch.muted { background: var(--line-strong); }
+body .cal-legend-swatch.outline {
+  border: 1px dashed var(--line-strong);
+  background: transparent;
+}
 
 body .cal-legend-note { margin-left: auto; font-size: 12px; }
 
