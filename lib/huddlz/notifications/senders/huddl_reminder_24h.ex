@@ -19,60 +19,38 @@ defmodule Huddlz.Notifications.Senders.HuddlReminder24h do
   @behaviour Huddlz.Notifications.Sender
 
   use HuddlzWeb, :verified_routes
-  import Swoosh.Email
+  import Swoosh.Email, only: [attachment: 2]
 
-  alias Huddlz.Mailer
-  alias Huddlz.Notifications.DateTimeFormatter
   alias Huddlz.Notifications.Footer
   alias Huddlz.Notifications.HuddlAccess
   alias Huddlz.Notifications.ICS
-  alias Huddlz.Notifications.Senders.HeaderSafe
-  alias Huddlz.Notifications.Senders.HtmlEscape
+  alias Huddlz.Notifications.Layout
 
   @impl true
   def build(user, payload) do
     huddl = fetch_huddl!(payload, user)
-
-    safe_name = HtmlEscape.escape(user.display_name)
-    safe_title = HtmlEscape.escape(huddl.title)
-    safe_group = HtmlEscape.escape(huddl.group.name)
-
-    when_text =
-      DateTimeFormatter.format_starts_at(
-        huddl.starts_at,
-        huddl.time_zone
-      )
-
-    safe_when = HtmlEscape.escape(when_text)
     huddl_url = url(~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}")
-
-    {footer_html, footer_text} = Footer.build(user, :huddl_reminder_24h)
     {ics_filename, ics_content} = ICS.event_for(huddl)
 
-    new()
-    |> from(Mailer.from())
-    |> to(to_string(user.email))
-    |> subject(HeaderSafe.safe("Tomorrow: #{huddl.title}"))
-    |> html_body("""
-    <p>Hi #{safe_name},</p>
-
-    <p>This is a reminder that <strong>#{safe_title}</strong> in
-    <strong>#{safe_group}</strong> starts in about 24 hours
-    (#{safe_when}).</p>
-
-    <p>The calendar event is attached. Or open the huddl page at
-    <a href="#{huddl_url}">#{huddl_url}</a>.</p>
-    #{footer_html}
-    """)
-    |> text_body("""
-    Hi #{user.display_name},
-
-    This is a reminder that "#{huddl.title}" in "#{huddl.group.name}" starts in
-    about 24 hours (#{when_text}).
-
-    The calendar event is attached. Or open the huddl page at #{huddl_url}.
-    #{footer_text}
-    """)
+    Layout.email(%{
+      to: user.email,
+      subject: "Tomorrow: #{huddl.title}",
+      kicker: "Reminder · tomorrow",
+      title: "#{huddl.title} starts tomorrow",
+      paragraphs: [
+        [
+          "Hi #{user.display_name}, you're going to ",
+          {:strong, huddl.title},
+          " with ",
+          {:strong, huddl.group.name},
+          " in about 24 hours. Here is what you need."
+        ]
+      ],
+      facts: Layout.huddl_facts(huddl),
+      action: {"Open the huddl", huddl_url},
+      aside: "The calendar event is attached, in case it is not on your calendar yet.",
+      footer: Footer.activity(user, :huddl_reminder_24h)
+    })
     |> attachment(
       Swoosh.Attachment.new({:data, ics_content},
         filename: ics_filename,

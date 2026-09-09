@@ -1,16 +1,16 @@
 defmodule Huddlz.Notifications.Senders.GroupInvitation do
   @moduledoc """
-  Email for an actionable private-group invitation.
+  Email for an actionable private-group invitation to a registered user.
+
+  Activity category — preferences and the unsubscribe footer apply.
+
+  Payload keys: `"group_name"`, `"inviter_name"`, `"role"`, `"invitation_id"`.
   """
 
   @behaviour Huddlz.Notifications.Sender
 
-  import Swoosh.Email
-
-  alias Huddlz.Mailer
   alias Huddlz.Notifications.Footer
-  alias Huddlz.Notifications.Senders.HeaderSafe
-  alias Huddlz.Notifications.Senders.HtmlEscape
+  alias Huddlz.Notifications.Layout
   alias HuddlzWeb.Endpoint
 
   @impl true
@@ -18,32 +18,29 @@ defmodule Huddlz.Notifications.Senders.GroupInvitation do
     group_name = Map.get(payload, "group_name", "a private group")
     inviter_name = Map.get(payload, "inviter_name", "A group organizer")
     role = Map.get(payload, "role", "member")
-    invitation_url = url("/invitations/#{payload["invitation_id"]}")
-    safe_invitation_url = HtmlEscape.escape(invitation_url)
-    {footer_html, footer_text} = Footer.build(user, :group_invitation)
 
-    new()
-    |> from(Mailer.from())
-    |> to(to_string(user.email))
-    |> subject(HeaderSafe.safe("Invitation to #{group_name}"))
-    |> html_body("""
-    <p>Hi #{HtmlEscape.escape(user.display_name)},</p>
-
-    <p>#{HtmlEscape.escape(inviter_name)} invited you to join
-    <strong>#{HtmlEscape.escape(group_name)}</strong> as a
-    #{HtmlEscape.escape(role)}.</p>
-
-    <p><a href="#{safe_invitation_url}">Review invitation</a></p>
-    #{footer_html}
-    """)
-    |> text_body("""
-    Hi #{user.display_name},
-
-    #{inviter_name} invited you to join "#{group_name}" as a #{role}.
-    Review the invitation: #{invitation_url}
-    #{footer_text}
-    """)
+    Layout.email(%{
+      to: user.email,
+      subject: "Invitation to #{group_name}",
+      kicker: "Invitation",
+      title: "#{inviter_name} invited you to #{group_name}",
+      paragraphs: [
+        [
+          "Hi #{user.display_name}, ",
+          {:strong, inviter_name},
+          " invited you to join ",
+          {:strong, group_name},
+          " as #{article(role)} #{role}. It is a private group on huddlz."
+        ],
+        "Joining is always your choice."
+      ],
+      action: {"Review invitation", Endpoint.url() <> "/invitations/#{payload["invitation_id"]}"},
+      aside: "If you weren't expecting this invitation, you can ignore this email.",
+      footer: Footer.activity(user, :group_invitation)
+    })
   end
 
-  defp url(path), do: Endpoint.url() <> path
+  defp article(word) do
+    if String.starts_with?(to_string(word), ["a", "e", "i", "o", "u"]), do: "an", else: "a"
+  end
 end

@@ -160,16 +160,14 @@ Unsubscribe links in email footers deep-link to a confirmation page, then a POST
 
 Rules every `Huddlz.Notifications.Senders.*` module follows. New senders should be cargo-cultable from any existing one.
 
-### HTML escaping
+### One layout
 
-Every user-controlled string interpolated into `html_body` MUST go through `Huddlz.Notifications.Senders.HtmlEscape.escape/1`. This includes display names, email addresses, and any value that originated outside the sender module. Plain-text bodies use the raw value.
+Every sender builds its email through `Huddlz.Notifications.Layout.email/1` and describes the message as pieces: a kicker, one title, paragraphs (strings or `{:strong, text}` / `{:link, text, url}` segments), an optional facts block, at most one `{label, url}` action, an optional aside, and a footer. The layout renders the HTML (one 600px table, inline styles, light only) and the plain-text body from the same pieces, so the two cannot drift, and escapes every string itself, so senders pass raw values and never build markup. Huddl emails pass `Layout.huddl_facts/1` (the huddl row or the payload) so they carry what the huddl card carries: when in the huddl's own time zone, where, and the group. The design lives on the canvas as the "Email" sheet.
 
 ### Footer
 
-- **Transactional** senders: no footer. There is no preference toggle, so an unsubscribe link would be misleading.
-- **Activity** senders: include `<hr/>` + a settings link + an unsubscribe link. Generate the unsubscribe token via `Huddlz.Notifications.unsubscribe_token(user, trigger)` so the route flips the right preference key.
-
-(When the second activity sender lands, lift the inline footer HTML into a shared helper — until then, inline keeps the diff small.)
+- **Transactional** senders: `Footer.account/1` with a one-line reason and no links. There is no preference toggle, so an unsubscribe link would be misleading; the word "unsubscribe" must not appear.
+- **Activity** senders: `Footer.activity(user, trigger)`, which adds the settings link and a per-trigger unsubscribe link built from `Huddlz.Notifications.unsubscribe_token(user, trigger)` so the route flips the right preference key.
 
 ### Recovery advice in security notices
 
@@ -194,6 +192,8 @@ Each sender test should at minimum assert:
 - a body keyword that anchors the message
 - `<script>` payload in display name is HTML-escaped
 - `refute email.text_body =~ "<"` — no markup leaks into plain text
+
+`test/huddlz/notifications/senders/layout_coverage_test.exs` walks the trigger registry and the auth and invitation emails and checks each renders through the layout with a footer; a new sender needs a payload there.
 
 ## Testing
 

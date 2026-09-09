@@ -1,98 +1,65 @@
 defmodule Huddlz.Notifications.Senders.HuddlSeriesUpdated do
   @moduledoc """
-  Sender for C4: a recurring huddl series was modified (the editor
-  chose `edit_type: "all"`).
+  Sender for C4: a recurring series the recipient attends was updated.
 
-  Sent once to each person with an RSVP on a retained occurrence. The
-  payload points to that person's next upcoming RSVP, so the target remains
-  useful and authorized without sending one message per occurrence. Activity
-  category — preferences and the unsubscribe footer apply.
+  Activity category — preferences and the unsubscribe footer apply.
+  Updated `.ics` files for the recipient's upcoming RSVPs are attached
+  when the payload lists them.
 
-  Required payload keys are the same as C2 (`huddl_id`,
-  `huddl_title`, `starts_at_iso`, `group_name`, `group_slug`,
-  `changed_fields`), but the values describe the next-instance row
-  rather than the row that triggered the edit. `calendar_huddlz` contains
-  schedule payloads for that recipient's active, future RSVPs. Each gets its
-  own attachment with the same UID as its confirmation; waitlisted and cancelled
-  huddlz are excluded. Older queued payloads without this key remain valid.
+  Required payload keys:
+
+    * `"huddl_id"`, `"huddl_title"`, `"starts_at_iso"`, `"group_name"`,
+      `"group_slug"`, `"changed_fields"`.
+
+  Optional: `"calendar_huddlz"` — the instances to attach.
   """
 
   @behaviour Huddlz.Notifications.Sender
 
-  import Swoosh.Email
+  import Swoosh.Email, only: [attachment: 2]
 
-  alias Huddlz.Mailer
-  alias Huddlz.Notifications.DateTimeFormatter
   alias Huddlz.Notifications.Footer
   alias Huddlz.Notifications.ICS
+  alias Huddlz.Notifications.Layout
   alias Huddlz.Notifications.Senders.ChangedFields
-  alias Huddlz.Notifications.Senders.HeaderSafe
-  alias Huddlz.Notifications.Senders.HtmlEscape
   alias Huddlz.Notifications.Senders.Urls
 
   @impl true
   def build(user, payload) do
-    safe_name = HtmlEscape.escape(user.display_name)
-    safe_title = HtmlEscape.escape(huddl_title(payload))
-    safe_group = HtmlEscape.escape(group_name(payload))
-
-    when_text =
-      DateTimeFormatter.format_starts_at_iso(
-        payload["starts_at_iso"],
-        DateTimeFormatter.time_zone_from_payload(payload),
-        payload["starts_at_iso"] || "the scheduled time"
-      )
-
-    safe_when = HtmlEscape.escape(when_text)
-    safe_changed = HtmlEscape.escape(ChangedFields.summary(payload))
-
-    calendar_note =
-      if Map.get(payload, "calendar_huddlz", []) == [],
-        do: "",
-        else:
-          "Updated calendar entries for your upcoming RSVPs are attached. Open each attachment to update that date in your calendar."
-
-    huddl_url = Urls.huddl_url(payload)
-
-    {footer_html, footer_text} = Footer.build(user, :huddl_series_updated)
-
-    new()
-    |> from(Mailer.from())
-    |> to(to_string(user.email))
-    |> subject(HeaderSafe.safe("Recurring series updated: #{huddl_title(payload)}"))
-    |> html_body("""
-    <p>Hi #{safe_name},</p>
-
-    <p>The recurring huddl series in <strong>#{safe_group}</strong>
-    has been updated.</p>
-
-    <p><strong>What changed:</strong> #{safe_changed}.</p>
-
-    <p>Your next upcoming instance, <strong>#{safe_title}</strong>,
-    is now scheduled for #{safe_when}. See it at
-    <a href="#{huddl_url}">#{huddl_url}</a>.</p>
-
-    <p>#{calendar_note}</p>
-
-    <p>You will still receive the usual reminders for each huddl you are attending.</p>
-    #{footer_html}
-    """)
-    |> text_body("""
-    Hi #{user.display_name},
-
-    The recurring huddl series in "#{group_name(payload)}" has been updated.
-
-    What changed: #{ChangedFields.summary(payload)}.
-
-    Your next upcoming instance, "#{huddl_title(payload)}", is now scheduled for
-    #{when_text}. See it at #{huddl_url}.
-
-    #{calendar_note}
-
-    You will still receive the usual reminders for each huddl you are attending.
-    #{footer_text}
-    """)
+    Layout.email(%{
+      to: user.email,
+      subject: "Recurring series updated: #{huddl_title(payload)}",
+      kicker: "Series updated · #{group_name(payload)}",
+      title: "The #{huddl_title(payload)} series has been updated",
+      paragraphs: [
+        [
+          "Hi #{user.display_name}, the recurring huddl series in ",
+          {:strong, group_name(payload)},
+          " has been updated."
+        ],
+        ["What changed: ", {:strong, ChangedFields.summary(payload)}, "."],
+        [
+          "Your next upcoming instance, ",
+          {:strong, huddl_title(payload)},
+          ", is now scheduled as below."
+        ]
+      ],
+      facts: Layout.huddl_facts(payload),
+      action: {"See the next huddl", Urls.huddl_url(payload)},
+      aside: calendar_aside(payload),
+      footer: Footer.activity(user, :huddl_series_updated)
+    })
     |> attach_calendars(payload)
+  end
+
+  defp calendar_aside(payload) do
+    base = "You will still receive the usual reminders for each huddl you are attending."
+
+    if Map.get(payload, "calendar_huddlz", []) == [],
+      do: base,
+      else:
+        "Updated calendar entries for your upcoming RSVPs are attached; open each one to update that date in your calendar. " <>
+          base
   end
 
   defp attach_calendars(email, payload) do

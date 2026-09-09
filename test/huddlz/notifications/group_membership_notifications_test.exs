@@ -195,8 +195,8 @@ defmodule Huddlz.Notifications.GroupMembershipNotificationsTest do
       assert_email_sent(fn email ->
         email.subject == "Your role in Promo Group changed" and
           email.to == [{"", to_string(member.email)}] and
-          email.html_body =~ "<strong>member</strong>" and
-          email.html_body =~ "<strong>organizer</strong>" and
+          email.html_body =~ "member</strong>" and
+          email.html_body =~ "organizer</strong>" and
           email.html_body =~ "/unsubscribe/"
       end)
     end

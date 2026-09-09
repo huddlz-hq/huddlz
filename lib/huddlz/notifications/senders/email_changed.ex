@@ -18,104 +18,58 @@ defmodule Huddlz.Notifications.Senders.EmailChanged do
 
   @behaviour Huddlz.Notifications.Sender
 
-  use HuddlzWeb, :verified_routes
-  import Swoosh.Email
-
-  alias Huddlz.Mailer
-  alias Huddlz.Notifications.Senders.HtmlEscape
+  alias Huddlz.Notifications.Footer
+  alias Huddlz.Notifications.Layout
 
   @subject "Your huddlz email address was changed"
 
   @impl true
   def build(user, %{"audience" => "old"} = payload) do
-    old_email = payload["old_email"]
-    new_email = to_string(user.email)
-    safe_name = HtmlEscape.escape(user.display_name)
-    safe_new_email = HtmlEscape.escape(new_email)
-
-    new()
-    |> from(Mailer.from())
     # Recipient header injection is prevented by the `User.email` regex constraint
     # rejecting whitespace (CR/LF). Swoosh does not sanitize recipient strings.
-    |> to(old_email)
-    |> subject(@subject)
-    |> html_body(html_old(safe_name, safe_new_email))
-    |> text_body(text_old(user.display_name, new_email))
+    Layout.email(%{
+      to: payload["old_email"],
+      subject: @subject,
+      kicker: "Security notice",
+      title: "Your email address was changed",
+      paragraphs: [
+        [
+          "Hi #{user.display_name}, this is a security notice: the email address on your huddlz account was just changed to ",
+          {:strong, to_string(user.email)},
+          "."
+        ],
+        "If this was you, no action is needed. Future emails from huddlz will go to your new address.",
+        [
+          "If this ",
+          {:strong, "wasn't"},
+          " you, contact support right away so we can restore access. Resetting your password won't help here: the reset email would go to the new address, not this one."
+        ]
+      ],
+      footer: Footer.account()
+    })
   end
 
   def build(user, %{"audience" => "new"} = payload) do
-    old_email = payload["old_email"]
-    new_email = to_string(user.email)
-    safe_name = HtmlEscape.escape(user.display_name)
-    safe_old_email = HtmlEscape.escape(old_email)
-
-    new()
-    |> from(Mailer.from())
-    |> to(new_email)
-    |> subject(@subject)
-    |> html_body(html_new(safe_name, safe_old_email))
-    |> text_body(text_new(user.display_name, old_email))
+    Layout.email(%{
+      to: user.email,
+      subject: @subject,
+      kicker: "Your account",
+      title: "This is now your huddlz email address",
+      paragraphs: [
+        [
+          "Hi #{user.display_name}, this email address is now associated with your huddlz account. The previous address on file was ",
+          {:strong, payload["old_email"]},
+          "."
+        ],
+        "If you didn't make this change, contact support right away: someone else may have access to your account."
+      ],
+      footer: Footer.account()
+    })
   end
 
   def build(_user, payload) do
     raise ArgumentError,
           "EmailChanged sender received an unknown audience in payload: #{inspect(payload)}. " <>
             "Expected `audience: \"old\"` or `audience: \"new\"`."
-  end
-
-  defp html_old(safe_name, safe_new_email) do
-    """
-    <p>Hi #{safe_name},</p>
-
-    <p>This is a security notice — the email address on your huddlz account was
-    just changed to <strong>#{safe_new_email}</strong>.</p>
-
-    <p>If this was you, no action is needed. Future emails from huddlz will
-    go to your new address.</p>
-
-    <p>If this <strong>wasn't</strong> you, contact support right away so we
-    can restore access. Resetting your password won't help here — the reset
-    email would go to the new address, not this one.</p>
-    """
-  end
-
-  defp text_old(name, new_email) do
-    """
-    Hi #{name},
-
-    This is a security notice — the email address on your huddlz account was
-    just changed to #{new_email}.
-
-    If this was you, no action is needed. Future emails from huddlz will go to
-    your new address.
-
-    If this wasn't you, contact support right away so we can restore access.
-    Resetting your password won't help here — the reset email would go to the
-    new address, not this one.
-    """
-  end
-
-  defp html_new(safe_name, safe_old_email) do
-    """
-    <p>Hi #{safe_name},</p>
-
-    <p>This email address is now associated with your huddlz account.
-    The previous address on file was <strong>#{safe_old_email}</strong>.</p>
-
-    <p>If you didn't make this change, contact support right away — someone
-    else may have access to your account.</p>
-    """
-  end
-
-  defp text_new(name, old_email) do
-    """
-    Hi #{name},
-
-    This email address is now associated with your huddlz account. The
-    previous address on file was #{old_email}.
-
-    If you didn't make this change, contact support right away — someone
-    else may have access to your account.
-    """
   end
 end

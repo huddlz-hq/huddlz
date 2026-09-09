@@ -37,15 +37,15 @@ defmodule Huddlz.Notifications.Senders.AccountRoleChangedTest do
 
       assert email.subject == "Your huddlz account role was updated"
       assert email.html_body =~ "admin"
-      assert email.html_body =~ "from <strong>user</strong> to <strong>admin</strong>"
+      assert email.html_body =~ ~r{from <strong[^>]*>user</strong> to <strong[^>]*>admin</strong>}
     end
 
     test "omits the 'from X' phrasing when previous_role is missing" do
       user = generate(user(role: :admin))
       email = AccountRoleChanged.build(user, %{"new_role" => "admin"})
 
-      refute email.html_body =~ ~r{from <strong>}
-      assert email.html_body =~ "to <strong>admin</strong>"
+      refute email.html_body =~ ~r{from <strong}
+      assert email.html_body =~ ~r{to <strong[^>]*>admin</strong>}
     end
 
     test "includes a working unsubscribe link in both bodies" do

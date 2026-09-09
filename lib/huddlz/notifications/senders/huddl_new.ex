@@ -14,59 +14,37 @@ defmodule Huddlz.Notifications.Senders.HuddlNew do
     * `"starts_at_iso"` — ISO-8601 string of when it starts.
     * `"group_name"` — host group's display name.
     * `"group_slug"` — host group's slug, used to build the huddl URL.
+
+  Optional: `"ends_at_iso"`, `"time_zone"`, `"physical_location"` and
+  `"event_type"` fill in the facts block.
   """
 
   @behaviour Huddlz.Notifications.Sender
 
-  import Swoosh.Email
-
-  alias Huddlz.Mailer
-  alias Huddlz.Notifications.DateTimeFormatter
   alias Huddlz.Notifications.Footer
-  alias Huddlz.Notifications.Senders.HeaderSafe
-  alias Huddlz.Notifications.Senders.HtmlEscape
+  alias Huddlz.Notifications.Layout
   alias Huddlz.Notifications.Senders.Urls
 
   @impl true
   def build(user, payload) do
-    safe_name = HtmlEscape.escape(user.display_name)
-    safe_title = HtmlEscape.escape(huddl_title(payload))
-    safe_group = HtmlEscape.escape(group_name(payload))
+    group = group_name(payload)
 
-    when_text =
-      DateTimeFormatter.format_starts_at_iso(
-        payload["starts_at_iso"],
-        DateTimeFormatter.time_zone_from_payload(payload),
-        payload["starts_at_iso"] || "the scheduled time"
-      )
-
-    safe_when = HtmlEscape.escape(when_text)
-    huddl_url = Urls.huddl_url(payload)
-
-    {footer_html, footer_text} = Footer.build(user, :huddl_new)
-
-    new()
-    |> from(Mailer.from())
-    |> to(to_string(user.email))
-    |> subject(HeaderSafe.safe("New huddl in #{group_name(payload)}: #{huddl_title(payload)}"))
-    |> html_body("""
-    <p>Hi #{safe_name},</p>
-
-    <p><strong>#{safe_group}</strong> just scheduled a new huddl:
-    <strong>#{safe_title}</strong>, on #{safe_when}.</p>
-
-    <p>RSVP if you can make it: <a href="#{huddl_url}">#{huddl_url}</a>.</p>
-    #{footer_html}
-    """)
-    |> text_body("""
-    Hi #{user.display_name},
-
-    "#{group_name(payload)}" just scheduled a new huddl: "#{huddl_title(payload)}",
-    on #{when_text}.
-
-    RSVP if you can make it: #{huddl_url}.
-    #{footer_text}
-    """)
+    Layout.email(%{
+      to: user.email,
+      subject: "New huddl in #{group}: #{huddl_title(payload)}",
+      kicker: "New huddl · #{group}",
+      title: Layout.sentence_case(huddl_title(payload)),
+      paragraphs: [
+        [
+          "Hi #{user.display_name}, ",
+          {:strong, group},
+          " just scheduled a new huddl. RSVP if you can make it."
+        ]
+      ],
+      facts: Layout.huddl_facts(payload),
+      action: {"See the huddl and RSVP", Urls.huddl_url(payload)},
+      footer: Footer.activity(user, :huddl_new)
+    })
   end
 
   defp huddl_title(%{"huddl_title" => title}) when is_binary(title), do: title

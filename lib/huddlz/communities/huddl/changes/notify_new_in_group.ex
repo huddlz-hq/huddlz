@@ -58,7 +58,10 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyNewInGroup do
       "huddl_id" => huddl.id,
       "huddl_title" => to_string(huddl.title),
       "starts_at_iso" => DateTime.to_iso8601(huddl.starts_at),
+      "ends_at_iso" => huddl.ends_at && DateTime.to_iso8601(huddl.ends_at),
       "time_zone" => huddl.time_zone,
+      "event_type" => to_string(huddl.event_type),
+      "physical_location" => huddl.physical_location,
       "group_name" => to_string(huddl.group.name),
       "group_slug" => to_string(huddl.group.slug)
     }

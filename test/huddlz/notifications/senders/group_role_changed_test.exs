@@ -29,8 +29,8 @@ defmodule Huddlz.Notifications.Senders.GroupRoleChangedTest do
       email = GroupRoleChanged.build(user, payload())
 
       assert email.subject == "Your role in Inner Circle changed"
-      assert email.html_body =~ "<strong>member</strong>"
-      assert email.html_body =~ "<strong>organizer</strong>"
+      assert email.html_body =~ "member</strong>"
+      assert email.html_body =~ "organizer</strong>"
       assert email.text_body =~ "from member to organizer"
     end
 
@@ -75,8 +75,8 @@ defmodule Huddlz.Notifications.Senders.GroupRoleChangedTest do
           payload(%{"previous_role" => :member, "new_role" => :organizer})
         )
 
-      assert email.html_body =~ "<strong>member</strong>"
-      assert email.html_body =~ "<strong>organizer</strong>"
+      assert email.html_body =~ "member</strong>"
+      assert email.html_body =~ "organizer</strong>"
     end
   end
 end

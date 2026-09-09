@@ -15,42 +15,27 @@ defmodule Huddlz.Notifications.Senders.GroupMemberAdded do
 
   @behaviour Huddlz.Notifications.Sender
 
-  import Swoosh.Email
-
-  alias Huddlz.Mailer
   alias Huddlz.Notifications.Footer
-  alias Huddlz.Notifications.Senders.HeaderSafe
-  alias Huddlz.Notifications.Senders.HtmlEscape
+  alias Huddlz.Notifications.Layout
   alias Huddlz.Notifications.Senders.Urls
 
   @impl true
   def build(user, payload) do
-    safe_name = HtmlEscape.escape(user.display_name)
-    safe_group = HtmlEscape.escape(group_name(payload))
-    group_url = Urls.group_url(payload)
-
-    {footer_html, footer_text} = Footer.build(user, :group_member_added)
-
-    new()
-    |> from(Mailer.from())
-    |> to(to_string(user.email))
-    |> subject(HeaderSafe.safe("You're now a member of #{group_name(payload)}"))
-    |> html_body("""
-    <p>Hi #{safe_name},</p>
-
-    <p>You've been added to the group <strong>#{safe_group}</strong> on
-    huddlz. Visit the group page at
-    <a href="#{group_url}">#{group_url}</a> to see upcoming huddlz and
-    say hello.</p>
-    #{footer_html}
-    """)
-    |> text_body("""
-    Hi #{user.display_name},
-
-    You've been added to the group "#{group_name(payload)}" on huddlz.
-    Visit the group page at #{group_url} to see upcoming huddlz and say hello.
-    #{footer_text}
-    """)
+    Layout.email(%{
+      to: user.email,
+      subject: "You're now a member of #{group_name(payload)}",
+      kicker: "Welcome",
+      title: "You're now a member of #{group_name(payload)}",
+      paragraphs: [
+        [
+          "Hi #{user.display_name}, you've been added to ",
+          {:strong, group_name(payload)},
+          " on huddlz. Visit the group page to see upcoming huddlz and say hello."
+        ]
+      ],
+      action: {"Open the group", Urls.group_url(payload)},
+      footer: Footer.activity(user, :group_member_added)
+    })
   end
 
   defp group_name(%{"group_name" => name}) when is_binary(name), do: name
