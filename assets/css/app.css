@@ -1875,7 +1875,8 @@ body .row.organizer-group-row {
   grid-template-columns: 48px minmax(0, 1fr) auto;
 }
 
-body .organizer-group-row .group-cover--thumb {
+body .organizer-group-row .group-cover--thumb,
+body .group-row .group-cover--thumb {
   position: relative;
   inset: auto;
   width: 48px;
@@ -2221,6 +2222,53 @@ body .share-modal-link .form-row {
 
 /* "Organized by" row in huddl-side */
 body .creator-row { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+
+/* Hosting group on the huddl page: a small mark above the hero title and a
+   linked row in the sidebar (see HuddlLive.Show). */
+body .hero-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--soft);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 120ms ease;
+}
+
+body .hero-group:hover { color: var(--text); }
+
+body .hero-group .group-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 10px;
+}
+
+body .group-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+body .group-row:hover { border-color: var(--line-strong); }
+body .group-row .group-cover--thumb { width: 48px; }
+body .group-row-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+body .group-row-name { font-size: 14px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+body .group-row-meta { font-size: 12px; color: var(--muted); }
+body .group-row-chevron { color: var(--muted); transition: color 120ms ease, transform 120ms ease; }
+body .group-row:hover .group-row-chevron { color: var(--accent-ink); transform: translateX(2px); }
 
 /* Cancelled-hero strikethrough on title */
 body .hero.is-cancelled .hero-content h1 {

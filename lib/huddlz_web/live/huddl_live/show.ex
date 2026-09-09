@@ -21,7 +21,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
     :at_capacity,
     :visible_virtual_link,
     :display_image_url,
-    :group,
+    group: [:member_count, :current_image_url],
     creator: [:current_profile_picture_url]
   ]
 
@@ -113,10 +113,20 @@ defmodule HuddlzWeb.HuddlLive.Show do
                 image_url={@huddl.display_image_url}
               />
               <div :if={!@huddl.display_image_url} class="hero-fallback" aria-hidden="true">
-                <span>{HuddlzWeb.Avatar.initials(%{display_name: @huddl.group.name})}</span>
+                <span>{group_initials(@huddl.group.name)}</span>
               </div>
             </div>
             <div class="hero-content">
+              <.link
+                id="huddl-hero-group"
+                navigate={~p"/groups/#{@huddl.group.slug}"}
+                class="hero-group"
+              >
+                <span class="group-mark" aria-hidden="true">
+                  {group_initials(@huddl.group.name)}
+                </span>
+                <span>{@huddl.group.name}</span>
+              </.link>
               <span class={["eyebrow", HuddlStatus.eyebrow_class(@huddl.status)]}>
                 {hero_eyebrow(@huddl)}
               </span>
@@ -400,9 +410,18 @@ defmodule HuddlzWeb.HuddlLive.Show do
             </div>
           </div>
 
-          <div class="huddl-side-section">
-            <h3>Organized by</h3>
+          <div id="huddl-group" class="huddl-side-section">
+            <h3>Hosted by</h3>
+            <.link id="huddl-group-link" navigate={~p"/groups/#{@huddl.group.slug}"} class="group-row">
+              <.group_cover group={@huddl.group} id="huddl-group-cover" variant={:thumb} />
+              <span class="group-row-copy">
+                <span class="group-row-name">{@huddl.group.name}</span>
+                <span class="group-row-meta">{group_meta(@huddl.group)}</span>
+              </span>
+              <.icon name="hero-chevron-right" class="size-4 group-row-chevron" />
+            </.link>
             <div class="creator-row">
+              <span class="muted">Organized by</span>
               <.avatar user={@huddl.creator} size={:sm} />
               <span>{@huddl.creator.display_name || @huddl.creator.email}</span>
             </div>
@@ -1208,6 +1227,18 @@ defmodule HuddlzWeb.HuddlLive.Show do
     |> Ash.count!(authorize?: false)
   end
 
+  defp group_meta(group) do
+    members =
+      case group.member_count do
+        1 -> "1 member"
+        count -> "#{count} members"
+      end
+
+    [members, group.location, if(group.is_public, do: nil, else: "Private group")]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(" · ")
+  end
+
   defp hero_eyebrow(huddl) do
     "#{event_type_label(huddl.event_type)} · #{HuddlStatus.label(huddl.status)}"
   end
@@ -1300,9 +1331,10 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp event_type_label(:hybrid), do: "Hybrid huddl"
   defp event_type_label(_), do: "Huddl"
 
+  # The group is named by the linked mark above the title, so the meta row
+  # only carries the schedule and place.
   defp hero_meta_segments(huddl) do
     [
-      huddl.group.name,
       hero_when_segment(huddl),
       hero_location_segment(huddl)
     ]

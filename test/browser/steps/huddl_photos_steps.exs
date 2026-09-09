@@ -78,7 +78,7 @@ defmodule BrowserPhotoSteps do
   step "I choose two photos using the keyboard upload control", context do
     conn =
       context.conn
-      |> press("#notification-nav-link", "Tab")
+      |> press("#huddl-hero-group", "Tab")
       |> assert_has("#browse-photos:focus")
       |> press(":focus", "Enter")
 
