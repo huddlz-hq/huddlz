@@ -314,33 +314,4 @@ defmodule HuddlzWeb.MyHuddlzLive do
   defp filter_pill_label(:upcoming), do: "Going"
   defp filter_pill_label(:waitlisted), do: "Waitlist"
   defp filter_pill_label(:past), do: "Attended"
-
-  defp relative_time(%DateTime{} = dt) do
-    diff_seconds = DateTime.diff(dt, DateTime.utc_now(), :second)
-    abs_seconds = abs(diff_seconds)
-    future? = diff_seconds >= 0
-
-    cond do
-      abs_seconds < 3600 -> if future?, do: "starting soon", else: "just ended"
-      abs_seconds < 86_400 -> format_hours(div(abs_seconds, 3600), future?)
-      abs_seconds < 7 * 86_400 -> format_days(div(abs_seconds, 86_400), future?)
-      abs_seconds < 30 * 86_400 -> format_weeks(div(abs_seconds, 7 * 86_400), future?)
-      true -> Calendar.strftime(dt, "%b %d, %Y")
-    end
-  end
-
-  defp format_hours(1, true), do: "1 hour away"
-  defp format_hours(n, true), do: "#{n} hours away"
-  defp format_hours(1, false), do: "1 hour ago"
-  defp format_hours(n, false), do: "#{n} hours ago"
-
-  defp format_days(1, true), do: "tomorrow"
-  defp format_days(n, true), do: "#{n} days away"
-  defp format_days(1, false), do: "yesterday"
-  defp format_days(n, false), do: "#{n} days ago"
-
-  defp format_weeks(1, true), do: "1 week away"
-  defp format_weeks(n, true), do: "#{n} weeks away"
-  defp format_weeks(1, false), do: "1 week ago"
-  defp format_weeks(n, false), do: "#{n} weeks ago"
 end
