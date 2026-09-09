@@ -26,6 +26,54 @@ defmodule LinkPreviewImageSteps do
     Map.merge(context, %{group: group, huddl: huddl})
   end
 
+  step "a public group {string} with a cover picture", %{args: [group_name]} = context do
+    owner = generate(user(role: :user))
+    group = generate(group(name: group_name, is_public: true, owner_id: owner.id, actor: owner))
+    thumbnail_path = "/uploads/group_images/#{group.id}/cover_thumb.jpg"
+
+    Huddlz.Communities.create_group_image!(
+      %{
+        filename: "cover.jpg",
+        content_type: "image/jpeg",
+        size_bytes: 1234,
+        storage_path: "/uploads/group_images/#{group.id}/cover.jpg",
+        thumbnail_path: thumbnail_path,
+        group_id: group.id
+      },
+      actor: owner
+    )
+
+    Map.merge(context, %{group: group, owner: owner, group_cover_path: thumbnail_path})
+  end
+
+  step "an upcoming huddl {string} in that group with no cover of its own",
+       %{args: [title]} = context do
+    huddl =
+      generate(
+        huddl(
+          group_id: context.group.id,
+          creator_id: context.owner.id,
+          is_private: false,
+          title: title,
+          actor: context.owner
+        )
+      )
+
+    Map.put(context, :huddl, huddl)
+  end
+
+  step "the page advertises the group's cover picture", context do
+    [image_url] =
+      context.page_html
+      |> Floki.parse_document!()
+      |> Floki.attribute(~s(meta[property="og:image"]), "content")
+
+    assert image_url == HuddlzWeb.Endpoint.url() <> context.group_cover_path
+    refute image_url =~ "/og/huddlz/"
+
+    context
+  end
+
   step "a private huddl {string} with no cover picture", %{args: [title]} = context do
     owner = generate(user(role: :user))
     group = generate(group(is_public: false, owner_id: owner.id, actor: owner))
