@@ -70,16 +70,17 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
         |> Ash.Query.filter(huddl_template_id == ^template.id)
         |> Ash.read!(authorize?: false)
 
-      # With 22 days ahead: day 8 (week 1), day 15 (week 2) should be generated
-      # day 22 is NOT before repeat_until (it equals it), so only 2
-      assert length(generated) == 2
+      # Include day 22, the selected final local date, along with days 8 and 15.
+      assert length(generated) == 3
 
       dates = generated |> Enum.map(&DateTime.to_date(&1.starts_at)) |> Enum.sort()
 
       expected_first = Date.add(DateTime.to_date(ctx.starts_at), 7)
       expected_second = Date.add(DateTime.to_date(ctx.starts_at), 14)
 
-      assert dates == Enum.sort([expected_first, expected_second])
+      expected_third = Date.add(DateTime.to_date(ctx.starts_at), 21)
+
+      assert dates == Enum.sort([expected_first, expected_second, expected_third])
     end
 
     test "generates no huddlz when repeat_until is before next occurrence", ctx do

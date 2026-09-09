@@ -11,7 +11,7 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
   alias Huddlz.Storage
 
   # Creates a recurring huddl through the :create action. Pins the start to
-  # "tomorrow" so the weekly cadence is deterministic: with repeat_until 22 days
+  # "tomorrow" so the weekly cadence is deterministic: with repeat_until 15 days
   # out, exactly 2 future instances are generated (days +7 and +14).
   defp create_recurring(opts \\ []) do
     owner = generate(user(role: :user))
@@ -29,7 +29,7 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
               date: Date.add(Date.utc_today(), 1),
               is_recurring: true,
               frequency: "weekly",
-              repeat_until: Date.add(Date.utc_today(), 22)
+              repeat_until: Date.add(Date.utc_today(), 15)
             ],
             opts
           )
@@ -123,7 +123,7 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
           group_id: group.id,
           is_recurring: true,
           frequency: "weekly",
-          repeat_until: Date.add(Date.utc_today(), 22)
+          repeat_until: Date.add(Date.utc_today(), 15)
         },
         actor: owner
       )
@@ -275,7 +275,7 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
           group_id: group.id,
           is_recurring: true,
           frequency: "weekly",
-          repeat_until: Date.add(Date.utc_today(), 22)
+          repeat_until: Date.add(Date.utc_today(), 15)
         },
         actor: owner
       )

@@ -41,7 +41,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
       )
       |> Ash.update!()
 
-    repeat_until = opts[:repeat_until] || Date.add(Huddlz.Generator.eastern_today(), 22)
+    repeat_until = opts[:repeat_until] || Date.add(Huddlz.Generator.eastern_today(), 15)
 
     template =
       HuddlTemplate
