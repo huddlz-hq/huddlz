@@ -1,9 +1,9 @@
 defmodule HuddlzWeb.CalendarLive do
   @moduledoc """
   LiveView at `/calendar`. Personal calendar of huddlz the signed-in user
-  is hosting, attending, or watching from the waitlist. Month grid by
-  default with an agenda toggle; `?month=YYYY-MM` and `?view=month|agenda`
-  drive state. The agenda ignores the month: it starts at today and runs
+  is hosting, attending, or watching from the waitlist. Agenda by default
+  with a month grid behind `?view=month`; `?month=YYYY-MM` drives the grid.
+  The agenda ignores the month: it starts at today and runs
   forward through the next few days that have huddlz, one entry per huddl,
   leaving the past to the month grid.
   """
@@ -100,8 +100,8 @@ defmodule HuddlzWeb.CalendarLive do
 
   defp parse_month(_, today), do: first_of_month(today)
 
-  defp parse_view("agenda"), do: :agenda
-  defp parse_view(_), do: :month
+  defp parse_view("month"), do: :month
+  defp parse_view(_), do: :agenda
 
   defp first_of_month(date), do: %{date | day: 1}
 
@@ -194,7 +194,7 @@ defmodule HuddlzWeb.CalendarLive do
 
   defp month_path(month, view, today) do
     base = month_param(month, today)
-    view_str = if view == :agenda, do: "agenda"
+    view_str = if view == :month, do: "month"
 
     cond do
       base && view_str -> ~p"/calendar?#{[month: base, view: view_str]}"
@@ -451,20 +451,20 @@ defmodule HuddlzWeb.CalendarLive do
 
         <div class="cal-view-tabs">
           <.link
+            id="calendar-view-agenda"
+            patch={~p"/calendar"}
+            class={["scope-tab", @view_mode == :agenda && "is-active"]}
+            aria-current={if @view_mode == :agenda, do: "page"}
+          >
+            Agenda
+          </.link>
+          <.link
             id="calendar-view-month"
             patch={month_path(@focus_month, :month, @today)}
             class={["scope-tab", @view_mode == :month && "is-active"]}
             aria-current={if @view_mode == :month, do: "page"}
           >
             Month
-          </.link>
-          <.link
-            id="calendar-view-agenda"
-            patch={~p"/calendar?view=agenda"}
-            class={["scope-tab", @view_mode == :agenda && "is-active"]}
-            aria-current={if @view_mode == :agenda, do: "page"}
-          >
-            Agenda
           </.link>
         </div>
       </div>
@@ -770,7 +770,7 @@ defmodule HuddlzWeb.CalendarLive do
         <.pill variant={@status.variant} class="cal-entry-status" data-status={@status.key}>
           {@status.label}
         </.pill>
-        <span :if={@status.variant != :muted} class="cal-agenda-relative">
+        <span :if={countdown?(@status)} class="cal-agenda-relative">
           {HuddlCardHelpers.relative_time(@entry.huddl.starts_at)}
         </span>
       </div>
@@ -815,6 +815,12 @@ defmodule HuddlzWeb.CalendarLive do
       }
     end)
   end
+
+  # A countdown only makes sense for something still going ahead: not for
+  # the past, and not for a cancelled huddl.
+  defp countdown?(%EntryStatus{variant: :muted}), do: false
+  defp countdown?(%EntryStatus{key: "cancelled"}), do: false
+  defp countdown?(_status), do: true
 
   defp place_label(%{event_type: :virtual}), do: "Online"
 
