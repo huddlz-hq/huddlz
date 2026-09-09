@@ -40,6 +40,7 @@ defmodule HuddlzWeb.Router do
     get "/robots.txt", SitemapController, :robots
     get "/sitemap.xml", SitemapController, :index
     get "/sitemap-:file", SitemapController, :child
+    get "/og/huddlz/:id/card.png", OgImageController, :huddl
   end
 
   scope "/gql" do
