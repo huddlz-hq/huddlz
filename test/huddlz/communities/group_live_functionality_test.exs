@@ -135,6 +135,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
         Group
         |> Ash.Changeset.for_create(:create_group, %{
           name: "Unique Name Test",
+          description: "A community with a unique name",
           location: "Saint Augustine, FL",
           latitude: 29.9012,
           longitude: -81.3124,
@@ -148,6 +149,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
                Group
                |> Ash.Changeset.for_create(:create_group, %{
                  name: "Unique Name Test",
+                 description: "Another community using the same name",
                  location: "Saint Augustine, FL",
                  latitude: 29.9012,
                  longitude: -81.3124,
@@ -162,6 +164,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
         Group
         |> Ash.Changeset.for_create(:create_group, %{
           name: "Default Public Test",
+          description: "A community with default visibility",
           location: "Saint Augustine, FL",
           latitude: 29.9012,
           longitude: -81.3124,

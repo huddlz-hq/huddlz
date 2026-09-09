@@ -159,7 +159,9 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
     end
 
     test "renders fallback description metadata", %{conn: conn, user: user} do
-      group = generate(group(owner_id: user.id, is_public: true, actor: user, description: nil))
+      group =
+        generate(group(owner_id: user.id, is_public: true, actor: user))
+        |> Ash.Seed.update!(%{description: nil})
 
       html =
         conn
