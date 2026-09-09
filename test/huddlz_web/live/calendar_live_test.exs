@@ -35,6 +35,23 @@ defmodule HuddlzWeb.CalendarLiveTest do
     )
   end
 
+  # Keep the countdown safely within its 24–48 hour "tomorrow" window.
+  defp create_huddl_in_36_hours(host, group, opts) do
+    local_start =
+      DateTime.utc_now()
+      |> DateTime.add(36, :hour)
+      |> DateTime.shift_zone!("America/New_York")
+
+    create_huddl(
+      host,
+      group,
+      Keyword.merge(opts,
+        date: DateTime.to_date(local_start),
+        start_time: DateTime.to_time(local_start)
+      )
+    )
+  end
+
   defp create_past_huddl(host, group, opts) do
     generate(
       past_huddl(
@@ -742,12 +759,11 @@ defmodule HuddlzWeb.CalendarLiveTest do
       host: host,
       public_group: public_group
     } do
-      in_person = create_huddl(host, public_group, title: "Somewhere", date: tomorrow())
+      in_person = create_huddl_in_36_hours(host, public_group, title: "Somewhere")
 
       online =
-        create_huddl(host, public_group,
+        create_huddl_in_36_hours(host, public_group,
           title: "Nowhere",
-          date: tomorrow(),
           event_type: :virtual,
           virtual_link: "https://meet.example.com/nowhere"
         )
@@ -757,7 +773,11 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit(calendar_path_for(tomorrow(), view: "agenda"))
+      |> visit(
+        calendar_path_for(DateTime.to_date(HuddlCardHelpers.local_starts_at(in_person)),
+          view: "agenda"
+        )
+      )
       |> assert_has("#calendar-entry-#{in_person.id} .cal-agenda-thumb .card-cover-fallback span",
         text: Card.group_initials(public_group.name)
       )
@@ -880,13 +900,17 @@ defmodule HuddlzWeb.CalendarLiveTest do
       host: host,
       public_group: public_group
     } do
-      theirs = create_huddl(host, public_group, title: "Theirs", date: tomorrow())
+      theirs = create_huddl_in_36_hours(host, public_group, title: "Theirs")
 
       conn
       |> login(attendee)
       |> visit("/calendar")
       |> assert_has("#calendar-first-run")
-      |> visit("/calendar?scope=groups")
+      |> visit(
+        calendar_path_for(DateTime.to_date(HuddlCardHelpers.local_starts_at(theirs)),
+          view: "agenda"
+        ) <> "&scope=groups"
+      )
       |> refute_has("#calendar-first-run")
       |> assert_has("#calendar-entry-#{theirs.id} .cal-agenda-title", text: "Theirs")
       |> refute_has("#calendar-entry-#{theirs.id} .cal-entry-status")
