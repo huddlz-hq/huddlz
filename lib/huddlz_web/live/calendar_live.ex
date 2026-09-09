@@ -3,9 +3,9 @@ defmodule HuddlzWeb.CalendarLive do
   LiveView at `/calendar`. Personal calendar of huddlz the signed-in user
   is hosting, attending, or watching from the waitlist. Month grid by
   default with an agenda toggle; `?month=YYYY-MM` and `?view=month|agenda`
-  drive state. The agenda groups the month's huddlz by day, one entry per
-  huddl, and always draws today as the anchor between what has passed and
-  what is next.
+  drive state. The agenda ignores the month: it starts at today and runs
+  forward through the next few days that have huddlz, one entry per huddl,
+  leaving the past to the month grid.
   """
   use HuddlzWeb, :live_view
 
@@ -24,6 +24,10 @@ defmodule HuddlzWeb.CalendarLive do
   end
 
   @card_loads [:status, :group, :display_image_url]
+
+  # How many days with huddlz the agenda shows after today before pointing
+  # at the month view for the rest.
+  @agenda_days 7
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -48,12 +52,16 @@ defmodule HuddlzWeb.CalendarLive do
     {grid_start, grid_end} = month_grid_window(focus_month)
     user = socket.assigns.current_user
 
-    {entries, first_run?} = load_entries(user, grid_start, grid_end, socket.assigns.time_zone)
-    entries = Enum.map(entries, &put_calendar_time(&1, socket.assigns.time_zone))
+    today = socket.assigns.today
+    all = load_entries(user, socket.assigns.time_zone)
+    entries = grid_entries(all, grid_start, grid_end, socket.assigns.time_zone)
+    {agenda_days, agenda_more} = agenda_window(all, today)
+    agenda_entries = Enum.flat_map(agenda_days, & &1.entries)
 
     entries_by_day = group_by_day(entries)
     in_month_count = Enum.count(entries, &in_focus_month?(&1, focus_month))
-    legend_items = legend_items(entries, focus_month, view_mode, socket.assigns.today)
+    visible = if view_mode == :month, do: entries, else: agenda_entries
+    legend_items = legend_items(visible, today)
 
     {:noreply,
      socket
@@ -62,9 +70,12 @@ defmodule HuddlzWeb.CalendarLive do
      |> assign(:grid_start, grid_start)
      |> assign(:grid_end, grid_end)
      |> assign(:entries, entries)
-     |> assign(:first_run?, first_run?)
+     |> assign(:first_run?, all == [])
      |> assign(:entries_by_day, entries_by_day)
      |> assign(:in_month_count, in_month_count)
+     |> assign(:agenda_days, agenda_days)
+     |> assign(:agenda_more, agenda_more)
+     |> assign(:agenda_count, length(agenda_entries))
      |> assign(:legend_empty?, legend_items == [])
      |> stream(:legend_items, legend_items, reset: true)}
   end
@@ -103,28 +114,26 @@ defmodule HuddlzWeb.CalendarLive do
     {grid_start, grid_end}
   end
 
-  # Returns the entries inside the visible grid and whether the account has
-  # no huddlz in any month at all (a first run): the search already fetches
-  # every huddl the person hosts, attends or waits on, so the answer is free.
-  defp load_entries(user, grid_start, grid_end, time_zone) do
+  # Every huddl the person hosts, attends or waits on, in calendar time,
+  # soonest first. The search already fetches them all, so the month grid,
+  # the agenda and the first-run check all read from this one list.
+  defp load_entries(user, time_zone) do
+    [:hosting, :attending, :waitlisted]
+    |> Enum.flat_map(fn role -> fetch(user, role) end)
+    |> merge_entry_roles()
+    |> Enum.filter(& &1.huddl.starts_at)
+    |> Enum.map(&put_calendar_time(&1, time_zone))
+    |> Enum.sort_by(& &1.huddl.starts_at, DateTime)
+  end
+
+  defp grid_entries(entries, grid_start, grid_end, time_zone) do
     grid_start_dt = utc_boundary(grid_start, ~T[00:00:00], time_zone)
     grid_end_dt = utc_boundary(grid_end, ~T[23:59:59], time_zone)
 
-    all =
-      [:hosting, :attending, :waitlisted]
-      |> Enum.flat_map(fn role -> fetch(user, role) end)
-      |> merge_entry_roles()
-
-    entries =
-      all
-      |> Enum.filter(fn %{huddl: h} ->
-        h.starts_at &&
-          DateTime.compare(h.starts_at, grid_start_dt) != :lt &&
-          DateTime.compare(h.starts_at, grid_end_dt) != :gt
-      end)
-      |> Enum.sort_by(& &1.huddl.starts_at, DateTime)
-
-    {entries, all == []}
+    Enum.filter(entries, fn %{huddl: h} ->
+      DateTime.compare(h.starts_at, grid_start_dt) != :lt &&
+        DateTime.compare(h.starts_at, grid_end_dt) != :gt
+    end)
   end
 
   defp fetch(user, role) do
@@ -283,12 +292,6 @@ defmodule HuddlzWeb.CalendarLive do
   defp huddl_path(%{huddl: %{id: id, group: %{slug: slug}}}),
     do: ~p"/groups/#{slug}/huddlz/#{id}"
 
-  defp agenda_entries(entries, focus_month) do
-    entries
-    |> Enum.filter(&in_focus_month?(&1, focus_month))
-    |> Enum.sort_by(fn %{huddl: %{starts_at: dt}} -> dt end, DateTime)
-  end
-
   defp entry_status(%{huddl: %{status: status}} = entry, %Date{} = today) do
     case HuddlStatus.contextual_override(status) do
       nil -> timed_entry_status(entry, today)
@@ -382,16 +385,12 @@ defmodule HuddlzWeb.CalendarLive do
     end
   end
 
-  defp legend_items(entries, focus_month, view_mode, today) do
+  defp legend_items(entries, today) do
     entries
-    |> visible_entries(focus_month, view_mode)
     |> Enum.map(&entry_status(&1, today))
     |> Enum.uniq_by(& &1.key)
     |> Enum.sort_by(& &1.rank)
   end
-
-  defp visible_entries(entries, _focus_month, :month), do: entries
-  defp visible_entries(entries, focus_month, :agenda), do: agenda_entries(entries, focus_month)
 
   defp legend_swatch_class(%{variant: variant}), do: ["cal-legend-swatch", variant]
 
@@ -415,33 +414,40 @@ defmodule HuddlzWeb.CalendarLive do
       </div>
 
       <div class="cal-toolbar">
-        <div class="cal-nav">
-          <.link
-            patch={month_path(shift_month(@focus_month, -1), @view_mode, @today)}
-            class="cal-nav-btn"
-            aria-label="Previous month"
-          >
-            <.icon name="hero-chevron-left" class="size-4" />
-          </.link>
-          <.link
-            patch={month_path(first_of_month(@today), @view_mode, @today)}
-            class="cal-nav-today"
-          >
-            Today
-          </.link>
-          <.link
-            patch={month_path(shift_month(@focus_month, 1), @view_mode, @today)}
-            class="cal-nav-btn"
-            aria-label="Next month"
-          >
-            <.icon name="hero-chevron-right" class="size-4" />
-          </.link>
-        </div>
+        <%= if @view_mode == :month do %>
+          <div class="cal-nav">
+            <.link
+              patch={month_path(shift_month(@focus_month, -1), @view_mode, @today)}
+              class="cal-nav-btn"
+              aria-label="Previous month"
+            >
+              <.icon name="hero-chevron-left" class="size-4" />
+            </.link>
+            <.link
+              patch={month_path(first_of_month(@today), @view_mode, @today)}
+              class="cal-nav-today"
+            >
+              Today
+            </.link>
+            <.link
+              patch={month_path(shift_month(@focus_month, 1), @view_mode, @today)}
+              class="cal-nav-btn"
+              aria-label="Next month"
+            >
+              <.icon name="hero-chevron-right" class="size-4" />
+            </.link>
+          </div>
 
-        <div class="cal-month-title">
-          <span class="cal-month-name">{format_month(@focus_month)}</span>
-          <span class="cal-month-count">{format_count(@in_month_count)}</span>
-        </div>
+          <div class="cal-month-title">
+            <span class="cal-month-name">{format_month(@focus_month)}</span>
+            <span class="cal-month-count">{format_count(@in_month_count)}</span>
+          </div>
+        <% else %>
+          <div class="cal-month-title">
+            <span class="cal-month-name">What's next</span>
+            <span class="cal-month-count">{format_count(@agenda_count)}</span>
+          </div>
+        <% end %>
 
         <div class="cal-view-tabs">
           <.link
@@ -454,7 +460,7 @@ defmodule HuddlzWeb.CalendarLive do
           </.link>
           <.link
             id="calendar-view-agenda"
-            patch={month_path(@focus_month, :agenda, @today)}
+            patch={~p"/calendar?view=agenda"}
             class={["scope-tab", @view_mode == :agenda && "is-active"]}
             aria-current={if @view_mode == :agenda, do: "page"}
           >
@@ -474,8 +480,8 @@ defmodule HuddlzWeb.CalendarLive do
         <.first_run_empty :if={@first_run?} />
       <% else %>
         <.agenda_view
-          entries={@entries}
-          focus_month={@focus_month}
+          days={@agenda_days}
+          more={@agenda_more}
           today={@today}
           first_run?={@first_run?}
         />
@@ -641,26 +647,22 @@ defmodule HuddlzWeb.CalendarLive do
     """
   end
 
-  attr :entries, :list, required: true
-  attr :focus_month, Date, required: true
+  attr :days, :list, required: true
+  attr :more, :any, required: true, doc: "first day with huddlz beyond the window, or nil"
   attr :today, Date, required: true
   attr :first_run?, :boolean, default: false
 
   defp agenda_view(assigns) do
-    days =
-      assigns.entries
-      |> agenda_entries(assigns.focus_month)
-      |> agenda_days(assigns.focus_month, assigns.today, anchor_today: true)
-
-    assigns = assign(assigns, :days, days)
-
     ~H"""
     <%= if @first_run? do %>
       <.first_run_empty />
     <% else %>
       <%= if Enum.all?(@days, &(&1.entries == [])) do %>
-        <.empty_state id="calendar-agenda-empty" icon="hero-calendar" title="Nothing this month">
-          Nothing on the calendar this month.
+        <.empty_state id="calendar-agenda-empty" icon="hero-calendar" title="Nothing coming up">
+          Your next RSVP will land here.
+          <:action>
+            <.button variant={:secondary} navigate={~p"/discover"}>Browse huddlz</.button>
+          </:action>
         </.empty_state>
       <% else %>
         <.agenda_list
@@ -669,15 +671,20 @@ defmodule HuddlzWeb.CalendarLive do
           days={@days}
           today={@today}
         />
+        <p :if={@more} id="calendar-agenda-more" class="cal-agenda-more">
+          More after {Calendar.strftime(List.last(@days).date, "%A, %B %-d")}.
+          <.link patch={month_path(first_of_month(@more), :month, @today)}>
+            Open {format_month(@more)} in the month view
+          </.link>
+        </p>
       <% end %>
     <% end %>
     """
   end
 
   # The agenda list: one group per day with a date rail on the left and
-  # the day's huddlz on the right, in time order. Today is always drawn
-  # when it falls in the month, with or without a huddl on it. The next
-  # row is the next thing, so an empty today says no more than that.
+  # the day's huddlz on the right, in time order. The next row is the next
+  # thing, so an empty today says no more than that.
   attr :id, :string, required: true
   attr :entry_prefix, :string, required: true
   attr :days, :list, required: true
@@ -771,14 +778,28 @@ defmodule HuddlzWeb.CalendarLive do
     """
   end
 
+  # The agenda window: today, then the next @agenda_days days that have
+  # huddlz, whatever month they fall in. Returns the day groups and the
+  # first day with huddlz beyond the window, if any.
+  defp agenda_window(entries, today) do
+    upcoming = Enum.filter(entries, &(Date.compare(&1.calendar_date, today) != :lt))
+    dates = upcoming |> Enum.map(& &1.calendar_date) |> Enum.uniq()
+    {shown, rest} = Enum.split(dates, @agenda_days)
+    shown = MapSet.new(shown)
+    windowed = Enum.filter(upcoming, &MapSet.member?(shown, &1.calendar_date))
+
+    {agenda_days(windowed, first_of_month(today), today, anchor_today: true), List.first(rest)}
+  end
+
   # Groups entries by calendar day, in date order. With `anchor_today: true`
-  # the focused month always gets a row for today, with or without a huddl
-  # on it, so the list reads as what has passed, today, what is next.
-  defp agenda_days(entries, focus_month, today, anchor_today: anchor?) do
+  # the list always gets a row for today, with or without a huddl on it, so
+  # it reads as today, then what is next. Days outside `reference_month`
+  # name their month on the rail.
+  defp agenda_days(entries, reference_month, today, anchor_today: anchor?) do
     grouped = Enum.group_by(entries, & &1.calendar_date)
 
     dates =
-      if anchor? and day_in_focus?(today, focus_month),
+      if anchor?,
         do: Enum.uniq([today | Map.keys(grouped)]),
         else: Map.keys(grouped)
 
@@ -790,7 +811,7 @@ defmodule HuddlzWeb.CalendarLive do
         entries: Map.get(grouped, date, []),
         today?: Date.compare(date, today) == :eq,
         past?: Date.compare(date, today) == :lt,
-        other_month?: !day_in_focus?(date, focus_month)
+        other_month?: !day_in_focus?(date, reference_month)
       }
     end)
   end

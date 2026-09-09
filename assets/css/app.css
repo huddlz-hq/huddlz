@@ -2822,6 +2822,14 @@ body .cal-agenda-day[data-past] .cal-agenda-time { color: var(--muted); }
 body .cal-agenda-day[data-past] .cal-agenda-title { color: var(--soft); }
 body .cal-agenda-day[data-past] .cal-agenda-thumb { opacity: 0.7; filter: saturate(0.5); }
 
+body .cal-agenda-more {
+  margin: 12px 4px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+body .cal-agenda-more a { color: var(--accent-ink); font-weight: 600; }
+
 body .cal-agenda-quiet {
   display: flex;
   align-items: center;
