@@ -40,7 +40,7 @@ defmodule HuddlzWeb.GroupInvitationLiveTest do
     assert has_element?(organizer_view, "#invitation-rows", invitee.display_name)
 
     invitation =
-      Communities.list_my_group_invitations!(actor: invitee)
+      Communities.group_invitations_for_actor!(actor: invitee)
       |> List.first()
 
     {:ok, invitation_view, _html} =
@@ -68,7 +68,7 @@ defmodule HuddlzWeb.GroupInvitationLiveTest do
     refute has_element?(invitation_view, "#accept-invitation")
 
     assert Communities.get_membership_in_group!(group.id, actor: invitee).role == :member
-    assert Enum.any?(Communities.my_groups!(:all, actor: invitee), &(&1.id == group.id))
+    assert Enum.any?(Communities.groups_for_actor!(:all, actor: invitee), &(&1.id == group.id))
   end
 
   test "invitation page keeps the unread notification badge", context do
@@ -200,7 +200,7 @@ defmodule HuddlzWeb.GroupInvitationLiveTest do
     assert has_element?(view, "#group-invitation-form option[value='member']")
     refute has_element?(view, "#group-invitation-form option[value='organizer']")
 
-    assert Communities.list_my_group_invitations!(actor: invitee) == []
+    assert Communities.group_invitations_for_actor!(actor: invitee) == []
   end
 
   test "public groups do not show the invitation form", context do

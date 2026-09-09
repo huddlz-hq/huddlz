@@ -1,4 +1,4 @@
-defmodule Huddlz.Communities.Group.Preparations.ApplyMyGroupsFilter do
+defmodule Huddlz.Communities.Group.Preparations.ApplyGroupRelationshipFilter do
   @moduledoc """
   Filters a Group read down to the actor's relationship with the result rows.
 

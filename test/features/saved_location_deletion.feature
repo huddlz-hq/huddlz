@@ -6,14 +6,14 @@ Feature: Safe saved-location deletion
 
   Background:
     Given the following users exist:
-      | email             | role | display_name |
-      | owner@example.com | user | Group Owner  |
-    And a public group "Book Club" exists with owner "owner@example.com"
-    And the group "Book Club" has a saved location "Library" at "100 Main St" with coordinates 30.27, -97.74
-    And I am signed in as "owner@example.com"
+      | email                                     | role | display_name |
+      | owner+saved-location-deletion@example.com | user | Group Owner  |
+    And a public group "Address Removal Book Club" exists with owner "owner+saved-location-deletion@example.com"
+    And the group "Address Removal Book Club" has a saved location "Library" at "100 Main St" with coordinates 30.27, -97.74
+    And I am signed in as "owner+saved-location-deletion@example.com"
 
   Scenario: Deleting an unused saved location requires confirmation
-    When I visit the locations page for "Book Club"
+    When I visit the locations page for "Address Removal Book Club"
     And I click "Delete"
     Then I should see "Delete this saved location?"
     And I should see "It will no longer appear in future venue pickers"
@@ -26,7 +26,7 @@ Feature: Safe saved-location deletion
 
   Scenario: A scheduled huddl blocks saved-location deletion
     Given the saved location "Library" is used by an upcoming huddl
-    When I visit the locations page for "Book Club"
+    When I visit the locations page for "Address Removal Book Club"
     And I click "Delete"
     Then I should see "This location is used by 1 current or upcoming huddl"
     And I should see "Move it to another venue before deleting it"

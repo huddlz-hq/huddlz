@@ -6,9 +6,9 @@ Feature: Unavailable notification targets
 
   Scenario: A deleted huddl remains visible without an Open action
     Given the following users exist:
-      | email              | display_name | role |
-      | member@example.com | Test Member  | user |
-    And I am signed in as "member@example.com"
+      | email                                               | display_name | role |
+      | member+unavailable-notification-targets@example.com | Test Member  | user |
+    And I am signed in as "member+unavailable-notification-targets@example.com"
     And I have a notification for a deleted huddl named "Boat Drinks"
     When I visit "/notifications"
     Then I should see "Boat Drinks"

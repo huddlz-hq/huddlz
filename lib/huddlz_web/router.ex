@@ -112,8 +112,8 @@ defmodule HuddlzWeb.Router do
       live "/terms", LegalLive, :terms
       live "/code-of-conduct", LegalLive, :conduct
       live "/privacy", LegalLive, :privacy
-      live "/huddlz", MyHuddlzLive, :index
-      live "/groups", MyGroupsLive, :index
+      live "/huddlz", HuddlzLive, :index
+      live "/groups", GroupsLive, :index
       live "/calendar", CalendarLive, :index
       live "/notifications", NotificationsLive, :index
       live "/notifications/:id/open", NotificationsLive, :open
