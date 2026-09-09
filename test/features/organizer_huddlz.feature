@@ -1,7 +1,7 @@
 @database @conn
 Feature: Organizer huddlz page
   As an organizer
-  I want the group's huddlz laid out for managing, with a recurring series shown as one entry
+  I want the group's huddlz laid out for managing, in date order, with series dates marked
   So that I can see at a glance what is scheduled, how full it is, and edit the right thing
 
   Background:
@@ -20,10 +20,10 @@ Feature: Organizer huddlz page
     And the filter chips read "Upcoming 1", "Drafts 1", "Past 0" and "Cancelled 0"
     And I should not see "Modular Jam"
 
-  Scenario: A recurring series is one entry with its dates
+  Scenario: A recurring series keeps its dates in order, each marked as part of it
     Given a weekly series "Office hours" exists in group "Cyberpunk Builders" for the next 5 weeks
+    And the huddl "Synthwave Night" exists in group "Cyberpunk Builders" with room for 20 and 5 RSVPs
     When I visit "/organize/cyberpunk-builders/huddlz"
-    Then the series "Office hours" is one entry reading "Weekly on" with 5 dates
-    And the first date of "Office hours" is marked as next
-    And only 3 dates of "Office hours" show until I ask for the rest
-    And "Edit series" for "Office hours" opens the edit page on the whole series
+    Then the huddlz are listed day by day in date order
+    And every date of "Office hours" is marked "Weekly"
+    And "Edit series" on a date of "Office hours" opens the edit page on the whole series

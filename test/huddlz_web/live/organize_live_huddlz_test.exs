@@ -26,6 +26,39 @@ defmodule HuddlzWeb.OrganizeLiveHuddlzTest do
     end)
   end
 
+  test "a long list pages twenty at a time", %{conn: conn, group: group, owner: owner} do
+    today = Huddlz.Generator.eastern_today()
+
+    source =
+      generate(
+        huddl(
+          title: "Long Running",
+          group_id: group.id,
+          creator_id: owner.id,
+          actor: owner,
+          date: Date.add(today, 1),
+          is_recurring: true,
+          frequency: "weekly",
+          # 25 weekly dates; the cutoff sits the day after the last one.
+          repeat_until: Date.add(today, 1 + 7 * 24 + 1)
+        )
+      )
+
+    Oban.drain_queue(queue: :default)
+
+    conn
+    |> login(owner)
+    |> visit(~p"/organize/#{group.slug}/huddlz")
+    |> assert_has("#organize-huddlz-filters .chip .chip-count", text: "25")
+    |> assert_has("#organize-huddlz-list .org-huddl", count: 20)
+    |> assert_has("#organize-huddl-#{source.id} .org-huddl-series", text: "Weekly")
+    |> assert_has(".org-list-more button", text: "Show 5 more")
+    |> assert_has(".org-list-more", text: "5 more huddlz after these")
+    |> click_button(".org-list-more button", "Show 5 more")
+    |> assert_has("#organize-huddlz-list .org-huddl", count: 25)
+    |> refute_has(".org-list-more")
+  end
+
   test "cancelled huddlz link directly to their detail page", %{
     conn: conn,
     group: group,

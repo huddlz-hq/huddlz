@@ -89,9 +89,12 @@ defmodule OrganizerHuddlzSteps do
     huddl = lookup_huddl(title)
     local = DateTime.shift_zone!(huddl.starts_at, huddl.time_zone)
 
+    day = Date.to_iso8601(DateTime.to_date(local))
+
     session
-    |> assert_has("#organize-huddl-#{huddl.id} .org-huddl-meta",
-      text: Calendar.strftime(local, "%a %b %-d · %-I:%M %p")
+    |> assert_has("#organize-day-#{day} .cal-agenda-daynum", text: to_string(local.day))
+    |> assert_has("#organize-day-#{day} #organize-huddl-#{huddl.id} .org-huddl-meta",
+      text: Calendar.strftime(local, "%-I:%M %p")
     )
     |> assert_has("#organize-huddl-#{huddl.id} .org-huddl-rsvps", text: rsvps)
     |> assert_has("#organize-huddl-#{huddl.id} .org-huddl-rsvps .bar")
@@ -122,65 +125,49 @@ defmodule OrganizerHuddlzSteps do
     context
   end
 
-  step "the series {string} is one entry reading {string} with {int} dates",
-       %{args: [title, cadence, count], session: session, series_source: source} = context do
+  step "the huddlz are listed day by day in date order", %{session: session} = context do
+    days =
+      session.view
+      |> Phoenix.LiveViewTest.render()
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("#organize-huddlz-list .cal-agenda-day")
+      |> Enum.map(&(&1 |> LazyHTML.attribute("id") |> hd()))
+
+    assert length(days) >= 2
+    assert days == Enum.sort(days)
+
     session
-    |> assert_has("#organize-series-#{source.huddl_template_id} .org-huddl-title", text: title)
-    |> assert_has("#organize-series-#{source.huddl_template_id} .org-series-cadence",
-      text: cadence
+    |> assert_has("#organize-huddlz-list .cal-agenda-rail .cal-agenda-daynum")
+    |> assert_has("#organize-huddlz-list .org-huddl .org-huddl-title", text: "Synthwave Night")
+
+    Map.put(context, :listed_days, days)
+  end
+
+  step "every date of {string} is marked {string}",
+       %{args: [title, cadence], session: session, series_source: source} = context do
+    session
+    |> assert_has(".org-huddl[data-series='#{source.huddl_template_id}'] .org-huddl-title",
+      text: title,
+      count: 5
     )
-    |> assert_has("#organize-series-#{source.huddl_template_id} .org-series-cadence",
-      text: "#{count} dates"
+    |> assert_has(".org-huddl[data-series='#{source.huddl_template_id}'] .org-huddl-series",
+      text: cadence,
+      count: 5
     )
-    |> assert_has("#organize-series-#{source.huddl_template_id} .org-instance", count: count)
-    |> assert_has(".org-huddl-title", text: title, count: 1)
+    |> refute_has(".org-huddl:not([data-series]) .org-huddl-series")
 
     context
   end
 
-  step "the first date of {string} is marked as next",
-       %{args: [_title], session: session, series_source: source} = context do
-    session
-    |> assert_has("#organize-huddl-#{source.id}.org-instance[data-next] .org-instance-next",
-      text: "Next"
-    )
-    |> assert_has(".org-instance[data-next]", count: 1)
-
-    context
-  end
-
-  step "only {int} dates of {string} show until I ask for the rest",
-       %{args: [shown, _title], session: session, series_source: source} = context do
-    selector = "#organize-series-#{source.huddl_template_id}"
-    total = session |> instance_count(selector)
-    hidden = total - shown
-
-    session
-    |> assert_has("#{selector}[data-collapsed='true']")
-    |> assert_has("#{selector} .org-instance:not(.org-instance-extra)", count: shown)
-    |> assert_has("#{selector} .org-instance.org-instance-extra", count: hidden)
-    |> assert_has("#{selector} button .when-collapsed", text: "Show #{hidden} more dates")
-
-    context
-  end
-
-  step "{string} for {string} opens the edit page on the whole series",
+  step "{string} on a date of {string} opens the edit page on the whole series",
        %{args: [action, _title], session: session, series_source: source} = context do
     session =
       session
-      |> click_link("#organize-series-#{source.huddl_template_id} a", action)
+      |> click_link("#organize-huddl-#{source.id} a", action)
       |> assert_has("h1", text: "Editing")
       |> assert_has(".edit-scope-row .chip.is-active", text: "Whole series")
 
     Map.merge(context, %{conn: session, session: session})
-  end
-
-  defp instance_count(session, selector) do
-    session.view
-    |> Phoenix.LiveViewTest.render()
-    |> LazyHTML.from_fragment()
-    |> LazyHTML.query("#{selector} .org-instance")
-    |> Enum.count()
   end
 
   defp lookup_group(name) do
