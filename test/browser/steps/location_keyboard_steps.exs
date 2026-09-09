@@ -9,7 +9,7 @@ defmodule BrowserLocationKeyboardSteps do
   import PhoenixTest.Playwright, only: [type: 3, press: 3, evaluate: 3]
 
   step "I have opened my profile in a browser", context do
-    member = generate(user(role: :user))
+    member = generate(user(role: :user, display_name: "Browser Member"))
 
     stub_places_autocomplete(%{"saint" => [:saint_augustine]})
     stub_place_details(:defaults)
