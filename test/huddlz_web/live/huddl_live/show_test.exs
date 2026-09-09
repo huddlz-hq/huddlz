@@ -76,6 +76,23 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       }
     end
 
+    test "links to the hosting group from the hero and the sidebar", %{
+      conn: conn,
+      group: group,
+      huddl: huddl
+    } do
+      session = visit(conn, "/groups/#{group.slug}/huddlz/#{huddl.id}")
+
+      session
+      |> assert_has("#huddl-hero-group[href='/groups/#{group.slug}']", text: "Test Group")
+      |> assert_has("#huddl-hero-group .group-mark", text: "TG", exact: true)
+      |> assert_has(".hero-fallback span", text: "TG", exact: true)
+      |> assert_has("#huddl-group-link[href='/groups/#{group.slug}']", text: "Test Group")
+      |> assert_has("#huddl-group-link .group-row-meta", text: "Saint Augustine, FL")
+      |> assert_has("#huddl-group-link .group-cover-signal", text: "TG")
+      |> assert_has("#huddl-group .creator-row", text: "Organized by")
+    end
+
     test "renders v3 chrome with hero and huddl-frame", %{
       conn: conn,
       member: member,

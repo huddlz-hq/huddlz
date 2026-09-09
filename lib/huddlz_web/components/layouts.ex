@@ -581,20 +581,6 @@ defmodule HuddlzWeb.Layouts do
     """
   end
 
-  defp group_initials(nil), do: "??"
-
-  defp group_initials(name) do
-    name
-    |> to_string()
-    |> String.trim()
-    |> String.split(~r/[\s\-_]+/, trim: true)
-    |> case do
-      [] -> "??"
-      [single] -> single |> String.slice(0, 2) |> String.upcase()
-      [first, second | _] -> String.upcase(String.first(first) <> String.first(second))
-    end
-  end
-
   defp group_mark_variant(idx) do
     case rem(idx, 3) do
       0 -> ""

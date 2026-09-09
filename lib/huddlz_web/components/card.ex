@@ -155,12 +155,22 @@ defmodule HuddlzWeb.Components.Card do
   defp tag_class(:online), do: "online"
   defp tag_class(:hybrid), do: "hybrid"
 
-  defp group_initials(name) do
+  @doc """
+  Initials for a group name, accepting the `Ash.CiString` the resource
+  stores as well as a plain string. Shared by the sidebar, covers and the
+  huddl page hero.
+  """
+  def group_initials(nil), do: "??"
+
+  def group_initials(name) do
     name
     |> to_string()
-    |> String.split(~r/\s+/, trim: true)
-    |> Enum.take(2)
-    |> Enum.map_join(&String.first/1)
-    |> String.upcase()
+    |> String.trim()
+    |> String.split(~r/[\s\-_]+/, trim: true)
+    |> case do
+      [] -> "??"
+      [single] -> single |> String.slice(0, 2) |> String.upcase()
+      [first, second | _] -> String.upcase(String.first(first) <> String.first(second))
+    end
   end
 end
