@@ -2826,14 +2826,11 @@ body .cal-agenda-quiet {
   display: flex;
   align-items: center;
   min-height: 76px;
+  margin: 0;
   padding: 12px 20px;
   color: var(--muted);
   font-size: 14px;
-  line-height: 1.5;
 }
-
-body .cal-agenda-quiet p { margin: 0; }
-body .cal-agenda-quiet a { color: var(--accent-ink); font-weight: 600; }
 
 /* Touch agenda: the same list under the month grid, shown where hover
    tooltips don't work (narrow screens and coarse pointers). */

@@ -676,8 +676,8 @@ defmodule HuddlzWeb.CalendarLive do
 
   # The agenda list: one group per day with a date rail on the left and
   # the day's huddlz on the right, in time order. Today is always drawn
-  # when it falls in the month, with or without a huddl on it, so the
-  # list reads as "what has passed, today, what is next".
+  # when it falls in the month, with or without a huddl on it. The next
+  # row is the next thing, so an empty today says no more than that.
   attr :id, :string, required: true
   attr :entry_prefix, :string, required: true
   attr :days, :list, required: true
@@ -716,17 +716,7 @@ defmodule HuddlzWeb.CalendarLive do
             entry={entry}
             today={@today}
           />
-          <div :if={day.entries == []} class="cal-agenda-quiet">
-            <p>
-              Nothing today.
-              <%= if day.next_up do %>
-                Next up is <.link navigate={huddl_path(day.next_up)}>{day.next_up.huddl.title}</.link>
-                on {Calendar.strftime(day.next_up.calendar_date, "%A")}.
-              <% else %>
-                Nothing else this month.
-              <% end %>
-            </p>
-          </div>
+          <p :if={day.entries == []} class="cal-agenda-quiet">Nothing today.</p>
         </div>
       </div>
     </div>
@@ -782,8 +772,8 @@ defmodule HuddlzWeb.CalendarLive do
   end
 
   # Groups entries by calendar day, in date order. With `anchor_today: true`
-  # the focused month always gets a row for today, carrying the next huddl
-  # after it so an empty today still points somewhere.
+  # the focused month always gets a row for today, with or without a huddl
+  # on it, so the list reads as what has passed, today, what is next.
   defp agenda_days(entries, focus_month, today, anchor_today: anchor?) do
     grouped = Enum.group_by(entries, & &1.calendar_date)
 
@@ -800,14 +790,9 @@ defmodule HuddlzWeb.CalendarLive do
         entries: Map.get(grouped, date, []),
         today?: Date.compare(date, today) == :eq,
         past?: Date.compare(date, today) == :lt,
-        other_month?: !day_in_focus?(date, focus_month),
-        next_up: next_up(entries, date)
+        other_month?: !day_in_focus?(date, focus_month)
       }
     end)
-  end
-
-  defp next_up(entries, date) do
-    Enum.find(entries, &(Date.compare(&1.calendar_date, date) == :gt))
   end
 
   defp place_label(%{event_type: :virtual}), do: "Online"
