@@ -66,7 +66,7 @@ defmodule Huddlz.Communities do
       define :get_by_owner, action: :get_by_owner
       define :get_organizable_groups, action: :get_organizable
       define :get_joined_groups, action: :get_joined
-      define :my_groups, action: :my_groups, args: [{:optional, :relationship}]
+      define :groups_for_actor, action: :groups_for_actor, args: [{:optional, :relationship}]
       define :get_by_slug, action: :get_by_slug, args: [:slug]
       define :get_group_for_organize, action: :get_for_organize, args: [:slug], get?: true
 
@@ -141,9 +141,9 @@ defmodule Huddlz.Communities do
         args: [:group_id, :email, {:optional, :role}]
 
       define :open_email_group_invitation, action: :open_email_invitation, args: [:token]
-      define :list_my_group_invitations, action: :mine
+      define :group_invitations_for_actor, action: :mine
       define :get_group_invitation, action: :read, get_by: [:id]
-      define :get_my_group_invitation, action: :get_mine, args: [:id], get?: true
+      define :get_group_invitation_for_actor, action: :get_mine, args: [:id], get?: true
       define :list_group_invitations, action: :for_group, args: [:group_id]
       define :accept_group_invitation, action: :accept
       define :decline_group_invitation, action: :decline

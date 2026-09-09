@@ -1,11 +1,11 @@
-defmodule HuddlzWeb.MyGroupsLive do
+defmodule HuddlzWeb.GroupsLive do
   @moduledoc """
   LiveView at `/groups`. Personal feed of groups the signed-in user
   organizes (Hosting) or has joined (Joined). Filter chips drive a
   `?filter=` URL param: default `all` is no param, `hosting` and `joined`
   scope the grid. `?page=N` paginates the active filter.
 
-  All sorting and pagination happens in postgres via the `:my_groups` read
+  All sorting and pagination happens in postgres via the `:groups_for_actor` read
   action — we do not sort in code.
   """
   use HuddlzWeb, :live_view
@@ -87,7 +87,7 @@ defmodule HuddlzWeb.MyGroupsLive do
   end
 
   defp count_for(user, relationship) do
-    case Communities.my_groups(relationship,
+    case Communities.groups_for_actor(relationship,
            actor: user,
            page: [limit: 1, offset: 0, count: true]
          ) do
@@ -97,7 +97,7 @@ defmodule HuddlzWeb.MyGroupsLive do
   end
 
   defp list_groups(:archived, opts), do: Communities.archived_groups(opts)
-  defp list_groups(filter, opts), do: Communities.my_groups(filter, opts)
+  defp list_groups(filter, opts), do: Communities.groups_for_actor(filter, opts)
 
   defp load_results(socket, filter, page, user) do
     offset = (page - 1) * @page_size
@@ -119,7 +119,7 @@ defmodule HuddlzWeb.MyGroupsLive do
         })
 
       {:error, reason} ->
-        Logger.warning("MyGroupsLive load failed: #{inspect(reason)}")
+        Logger.warning("GroupsLive load failed: #{inspect(reason)}")
 
         socket
         |> assign(:groups, [])
@@ -196,7 +196,7 @@ defmodule HuddlzWeb.MyGroupsLive do
         </.empty_state>
       <% else %>
         <div class="grid">
-          <.my_group_card :for={group <- @groups} group={group} role={group.viewer_role} />
+          <.group_card :for={group <- @groups} group={group} role={group.viewer_role} />
         </div>
         <.pagination
           :if={@page_info.total_pages > 1}
@@ -212,11 +212,11 @@ defmodule HuddlzWeb.MyGroupsLive do
   attr :group, :map, required: true
   attr :role, :atom, required: true
 
-  defp my_group_card(assigns) do
+  defp group_card(assigns) do
     ~H"""
     <.card navigate={~p"/groups/#{@group.slug}"}>
       <:cover>
-        <.group_cover id={"my-group-cover-#{@group.id}"} group={@group} />
+        <.group_cover id={"group-list-cover-#{@group.id}"} group={@group} />
         <span class={["card-tag", role_class(@role)]}>{HuddlzWeb.GroupRole.label(@role)}</span>
       </:cover>
       <:body>

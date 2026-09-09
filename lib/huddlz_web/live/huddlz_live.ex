@@ -1,4 +1,4 @@
-defmodule HuddlzWeb.MyHuddlzLive do
+defmodule HuddlzWeb.HuddlzLive do
   @moduledoc """
   LiveView at `/huddlz`. Personal feed of huddlz the signed-in user is
   attending, waitlisted on, or has already attended. Filter chips
@@ -106,7 +106,7 @@ defmodule HuddlzWeb.MyHuddlzLive do
         })
 
       {:error, reason} ->
-        Logger.warning("MyHuddlzLive search failed: #{inspect(reason)}")
+        Logger.warning("HuddlzLive search failed: #{inspect(reason)}")
 
         socket
         |> assign(:huddls, [])
@@ -203,7 +203,7 @@ defmodule HuddlzWeb.MyHuddlzLive do
         </.empty_state>
       <% else %>
         <div class="grid">
-          <.my_huddl_card :for={huddl <- @huddls} huddl={huddl} filter={@filter} />
+          <.huddl_card :for={huddl <- @huddls} huddl={huddl} filter={@filter} />
         </div>
         <.pagination
           :if={@page_info.total_pages > 1}
@@ -219,13 +219,13 @@ defmodule HuddlzWeb.MyHuddlzLive do
   attr :huddl, :map, required: true
   attr :filter, :atom, required: true
 
-  defp my_huddl_card(assigns) do
+  defp huddl_card(assigns) do
     ~H"""
     <.card navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}"}>
       <:cover>
         <%= if @huddl.display_image_url do %>
           <.cover_image
-            id={"my-huddl-card-cover-#{@huddl.id}"}
+            id={"huddl-list-cover-#{@huddl.id}"}
             class="card-cover-img"
             image_url={@huddl.display_image_url}
           />

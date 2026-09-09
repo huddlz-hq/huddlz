@@ -4,6 +4,16 @@ defmodule CalendarGroupScopeSteps do
   import Huddlz.Generator
   import PhoenixTest
 
+  step "the calendar offers {string} and {string} scopes",
+       %{args: [rsvps, groups], session: session} = context do
+    session
+    |> assert_has("#calendar-scope-mine", text: rsvps)
+    |> assert_has("#calendar-scope-groups", text: groups)
+    |> refute_has(".cal-scope", text: "My")
+
+    context
+  end
+
   step "I belong to {string}, which has scheduled {string}",
        %{args: [group_name, title], current_user: member} = context do
     host = generate(user(role: :user))
@@ -34,7 +44,7 @@ defmodule CalendarGroupScopeSteps do
   end
 
   step "I switch to everything from my groups", %{session: session} = context do
-    session = click_link(session, "#calendar-scope-groups", "My groups")
+    session = click_link(session, "#calendar-scope-groups", "Groups")
     Map.merge(context, %{conn: session, session: session})
   end
 

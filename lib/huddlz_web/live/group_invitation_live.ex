@@ -149,7 +149,7 @@ defmodule HuddlzWeb.GroupInvitationLive do
 
   defp load_invitation(id, user) do
     with {:ok, %GroupInvitation{} = invitation} <-
-           Communities.get_my_group_invitation(id, actor: user) do
+           Communities.get_group_invitation_for_actor(id, actor: user) do
       {:ok, Communities.load_group_invitation_details!(invitation)}
     end
   end

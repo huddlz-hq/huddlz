@@ -8,7 +8,7 @@ defmodule GroupMembershipVisibilitySteps do
     group = Enum.find(context.groups, &(to_string(&1.name) == name))
 
     invitation =
-      Huddlz.Communities.list_my_group_invitations!(actor: context.current_user)
+      Huddlz.Communities.group_invitations_for_actor!(actor: context.current_user)
       |> Enum.find(&(&1.group_id == group.id))
 
     Phoenix.ConnTest.build_conn()

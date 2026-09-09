@@ -9,6 +9,7 @@ Feature: Notification preferences settings page
     When I visit "/profile/notifications"
     Then I should see "notification preferences and other knobs"
     And I should see "Activity"
+    And I should see "Your group role changed"
     When I uncheck "Confirmation when I RSVP to a huddl"
     And I click "Save preferences"
     Then I should see "Notification preferences saved"

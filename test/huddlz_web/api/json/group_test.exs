@@ -197,7 +197,7 @@ defmodule HuddlzWeb.Api.Json.GroupTest do
     end
   end
 
-  describe "GET /api/json/groups/my-groups" do
+  describe "GET /api/json/groups/mine" do
     test "returns groups the actor owns or has joined", %{conn: conn} do
       me = generate(user())
       mine = generate(group(owner_id: me.id, is_public: true, actor: me))
@@ -212,7 +212,7 @@ defmodule HuddlzWeb.Api.Json.GroupTest do
       conn =
         conn
         |> authenticated_conn(me)
-        |> get("/api/json/groups/my-groups")
+        |> get("/api/json/groups/mine")
 
       assert %{"data" => data} = json_response(conn, 200)
       ids = Enum.map(data, & &1["id"])

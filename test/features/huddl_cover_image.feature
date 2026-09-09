@@ -6,25 +6,25 @@ Feature: Huddl Image Management
 
   Background:
     Given the following users exist:
-      | email                | role     | display_name    |
-      | owner@example.com    | user     | Group Owner     |
-      | organizer@example.com| user     | Organizer       |
-      | member@example.com   | user     | Group Member    |
+      | email                                   | role | display_name |
+      | owner+huddl-cover-image@example.com     | user | Group Owner  |
+      | organizer+huddl-cover-image@example.com | user | Organizer    |
+      | member+huddl-cover-image@example.com    | user | Group Member |
 
   # ===== Huddl Creation with Image =====
 
   Scenario: Owner can see image upload area when creating a huddl
-    Given a public group "Tech Meetup" exists with owner "owner@example.com"
-    And I am signed in as "owner@example.com"
-    When I visit the new huddl page for group "Tech Meetup"
+    Given a public group "Cover Image Tech Meetup" exists with owner "owner+huddl-cover-image@example.com"
+    And I am signed in as "owner+huddl-cover-image@example.com"
+    When I visit the new huddl page for group "Cover Image Tech Meetup"
     Then I should see "Cover image"
     And I should see "Drop a 16:9 image"
 
   Scenario: Creating a huddl without an image falls back to group image
-    Given a public group "Tech Meetup" exists with owner "owner@example.com"
-    And the group "Tech Meetup" has an image
-    And I am signed in as "owner@example.com"
-    When I visit the new huddl page for group "Tech Meetup"
+    Given a public group "Cover Image Tech Meetup" exists with owner "owner+huddl-cover-image@example.com"
+    And the group "Cover Image Tech Meetup" has an image
+    And I am signed in as "owner+huddl-cover-image@example.com"
+    When I visit the new huddl page for group "Cover Image Tech Meetup"
     And I fill in the huddl form with:
       | Field             | Value                |
       | Title             | Code Review Session  |
@@ -39,20 +39,20 @@ Feature: Huddl Image Management
     And the huddl "Code Review Session" should use the group image
 
   Scenario: Creating a huddl with its own image
-    Given a public group "Tech Meetup" exists with owner "owner@example.com"
-    And the group "Tech Meetup" has an image
-    And I am signed in as "owner@example.com"
-    When I visit the new huddl page for group "Tech Meetup"
+    Given a public group "Cover Image Tech Meetup" exists with owner "owner+huddl-cover-image@example.com"
+    And the group "Cover Image Tech Meetup" has an image
+    And I am signed in as "owner+huddl-cover-image@example.com"
+    When I visit the new huddl page for group "Cover Image Tech Meetup"
     And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "Image uploaded"
     When I fill in the huddl form with:
-      | Field             | Value                |
-      | Title             | Workshop             |
-      | Description       | Hands-on workshop    |
-      | Huddl Type        | In-Person            |
-      | Physical Location | Lab                  |
-      | Start Date & Time | tomorrow at 2:00 PM  |
-      | End Date & Time   | tomorrow at 4:00 PM  |
+      | Field             | Value               |
+      | Title             | Workshop            |
+      | Description       | Hands-on workshop   |
+      | Huddl Type        | In-Person           |
+      | Physical Location | Lab                 |
+      | Start Date & Time | tomorrow at 2:00 PM |
+      | End Date & Time   | tomorrow at 4:00 PM |
     And I submit the form
     Then I should see "Huddl created successfully"
     And the huddl "Workshop" should have its own image
@@ -60,21 +60,21 @@ Feature: Huddl Image Management
   # ===== Huddl Editing with Image =====
 
   Scenario: Owner can see image upload area when editing a huddl
-    Given a public group "Tech Meetup" exists with owner "owner@example.com"
-    And the following huddl exists in "Tech Meetup":
-      | title          | description | event_type | physical_location | creator              |
-      | Existing Huddl | Test desc   | in_person  | Test Location     | owner@example.com    |
-    And I am signed in as "owner@example.com"
+    Given a public group "Cover Image Tech Meetup" exists with owner "owner+huddl-cover-image@example.com"
+    And the following huddl exists in "Cover Image Tech Meetup":
+      | title          | description | event_type | physical_location | creator                             |
+      | Existing Huddl | Test desc   | in_person  | Test Location     | owner+huddl-cover-image@example.com |
+    And I am signed in as "owner+huddl-cover-image@example.com"
     When I visit the edit page for huddl "Existing Huddl"
     Then I should see "Cover image"
     And I should see "Drop a 16:9 image"
 
   Scenario: Owner can upload a new image for existing huddl
-    Given a public group "Tech Meetup" exists with owner "owner@example.com"
-    And the following huddl exists in "Tech Meetup":
-      | title        | description | event_type | physical_location | creator              |
-      | Add Image    | Test desc   | in_person  | Test Location     | owner@example.com    |
-    And I am signed in as "owner@example.com"
+    Given a public group "Cover Image Tech Meetup" exists with owner "owner+huddl-cover-image@example.com"
+    And the following huddl exists in "Cover Image Tech Meetup":
+      | title     | description | event_type | physical_location | creator                             |
+      | Add Image | Test desc   | in_person  | Test Location     | owner+huddl-cover-image@example.com |
+    And I am signed in as "owner+huddl-cover-image@example.com"
     When I visit the edit page for huddl "Add Image"
     And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "New image uploaded. Save to apply."
@@ -83,13 +83,13 @@ Feature: Huddl Image Management
     And the huddl "Add Image" should have its own image
 
   Scenario: Owner can remove existing huddl image to fallback to group
-    Given a public group "Tech Meetup" exists with owner "owner@example.com"
-    And the group "Tech Meetup" has an image
-    And the following huddl exists in "Tech Meetup":
-      | title            | description | event_type | physical_location | creator              |
-      | Remove Image     | Test desc   | in_person  | Test Location     | owner@example.com    |
+    Given a public group "Cover Image Tech Meetup" exists with owner "owner+huddl-cover-image@example.com"
+    And the group "Cover Image Tech Meetup" has an image
+    And the following huddl exists in "Cover Image Tech Meetup":
+      | title        | description | event_type | physical_location | creator                             |
+      | Remove Image | Test desc   | in_person  | Test Location     | owner+huddl-cover-image@example.com |
     And the huddl "Remove Image" has an image
-    And I am signed in as "owner@example.com"
+    And I am signed in as "owner+huddl-cover-image@example.com"
     When I visit the edit page for huddl "Remove Image"
     Then I should see "Current image"
     When I click the "Remove" button
@@ -99,10 +99,10 @@ Feature: Huddl Image Management
   # ===== Organizer Permissions =====
 
   Scenario: Organizer can upload images for huddl
-    Given a public group "Tech Meetup" exists with owner "owner@example.com"
-    And "organizer@example.com" is an organizer of "Tech Meetup"
-    And I am signed in as "organizer@example.com"
-    When I visit the new huddl page for group "Tech Meetup"
+    Given a public group "Cover Image Tech Meetup" exists with owner "owner+huddl-cover-image@example.com"
+    And "organizer+huddl-cover-image@example.com" is an organizer of "Cover Image Tech Meetup"
+    And I am signed in as "organizer+huddl-cover-image@example.com"
+    When I visit the new huddl page for group "Cover Image Tech Meetup"
     And I upload "test/fixtures/test_image.jpg" to "Cover image"
     Then I should see "Image uploaded"
     When I fill in the huddl form with:
@@ -120,40 +120,40 @@ Feature: Huddl Image Management
   # ===== Image Display Fallback =====
 
   Scenario: Huddl without image displays group image on show page
-    Given a public group "Tech Meetup" exists with owner "owner@example.com"
-    And the group "Tech Meetup" has an image
-    And the following huddl exists in "Tech Meetup":
-      | title          | description | event_type | physical_location | creator              |
-      | No Image Huddl | Test desc   | in_person  | Test Location     | owner@example.com    |
+    Given a public group "Cover Image Tech Meetup" exists with owner "owner+huddl-cover-image@example.com"
+    And the group "Cover Image Tech Meetup" has an image
+    And the following huddl exists in "Cover Image Tech Meetup":
+      | title          | description | event_type | physical_location | creator                             |
+      | No Image Huddl | Test desc   | in_person  | Test Location     | owner+huddl-cover-image@example.com |
     When I visit the huddl page for "No Image Huddl"
     Then I should see the group fallback image
 
   Scenario: Huddl with image displays its own image
-    Given a public group "Tech Meetup" exists with owner "owner@example.com"
-    And the group "Tech Meetup" has an image
-    And the following huddl exists in "Tech Meetup":
-      | title          | description | event_type | physical_location | creator              |
-      | Has Image      | Test desc   | in_person  | Test Location     | owner@example.com    |
+    Given a public group "Cover Image Tech Meetup" exists with owner "owner+huddl-cover-image@example.com"
+    And the group "Cover Image Tech Meetup" has an image
+    And the following huddl exists in "Cover Image Tech Meetup":
+      | title     | description | event_type | physical_location | creator                             |
+      | Has Image | Test desc   | in_person  | Test Location     | owner+huddl-cover-image@example.com |
     And the huddl "Has Image" has an image
     When I visit the huddl page for "Has Image"
     Then I should see the huddl image
 
   Scenario: Huddl without image and no group image shows placeholder
-    Given a public group "No Images Group" exists with owner "owner@example.com"
+    Given a public group "No Images Group" exists with owner "owner+huddl-cover-image@example.com"
     And the following huddl exists in "No Images Group":
-      | title          | description | event_type | physical_location | creator              |
-      | Placeholder    | Test desc   | in_person  | Test Location     | owner@example.com    |
+      | title       | description | event_type | physical_location | creator                             |
+      | Placeholder | Test desc   | in_person  | Test Location     | owner+huddl-cover-image@example.com |
     When I visit the huddl page for "Placeholder"
     Then I should not see an image on the huddl page
 
   # ===== Member Permissions =====
 
   Scenario: Regular member cannot edit huddl images
-    Given a public group "Tech Meetup" exists with owner "owner@example.com"
-    And "member@example.com" is a member of "Tech Meetup"
-    And the following huddl exists in "Tech Meetup":
-      | title          | description | event_type | physical_location | creator              |
-      | Member Test    | Test desc   | in_person  | Test Location     | owner@example.com    |
-    And I am signed in as "member@example.com"
+    Given a public group "Cover Image Tech Meetup" exists with owner "owner+huddl-cover-image@example.com"
+    And "member+huddl-cover-image@example.com" is a member of "Cover Image Tech Meetup"
+    And the following huddl exists in "Cover Image Tech Meetup":
+      | title       | description | event_type | physical_location | creator                             |
+      | Member Test | Test desc   | in_person  | Test Location     | owner+huddl-cover-image@example.com |
+    And I am signed in as "member+huddl-cover-image@example.com"
     When I visit the edit page for huddl "Member Test"
     Then I should be redirected away from the edit page

@@ -6,15 +6,15 @@ Feature: User Profile Management
 
   Background:
     Given the following users exist:
-      | email                | role     | display_name    |
-      | alice@example.com    | user     | BraveEagle726   |
-    And I am signed in as "alice@example.com"
+      | email                          | role | display_name  |
+      | alice+user-profile@example.com | user | BraveEagle726 |
+    And I am signed in as "alice+user-profile@example.com"
 
   Scenario: Viewing my profile
     When I visit "/profile"
     Then I should see "Profile"
     And I should see my current display name
-    And I should see "alice@example.com"
+    And I should see "alice+user-profile@example.com"
 
   Scenario: Updating my display name
     Given I am on my profile page
@@ -24,36 +24,36 @@ Feature: User Profile Management
     And the display name field should contain "Alice Cooper"
 
   Scenario: Changing my sign-in email securely
-    Given the user "alice@example.com" has password "OldPassword123!"
+    Given the user "alice+user-profile@example.com" has password "OldPassword123!"
     And I am on my profile page
     When I fill in "New email" with "alice.changed@example.com"
     And I fill in "Confirm current password" with "OldPassword123!"
     And I click the "Change email" button
     Then I should see "Email updated successfully"
     And I should see "alice.changed@example.com"
-    And a security notice should be sent to "alice@example.com" naming the new address "alice.changed@example.com"
-    And a confirmation should be sent to "alice.changed@example.com" naming the previous address "alice@example.com"
+    And a security notice should be sent to "alice+user-profile@example.com" naming the new address "alice.changed@example.com"
+    And a confirmation should be sent to "alice.changed@example.com" naming the previous address "alice+user-profile@example.com"
 
   Scenario: Rejecting an invalid sign-in email
-    Given the user "alice@example.com" has password "OldPassword123!"
+    Given the user "alice+user-profile@example.com" has password "OldPassword123!"
     And I am on my profile page
     When I fill in "New email" with "not-an-email"
     And I fill in "Confirm current password" with "OldPassword123!"
     And I click the "Change email" button
     Then I should see "Enter a valid email address."
-    And I should see "alice@example.com"
+    And I should see "alice+user-profile@example.com"
 
   Scenario: Rejecting a sign-in email change with the wrong password
-    Given the user "alice@example.com" has password "OldPassword123!"
+    Given the user "alice+user-profile@example.com" has password "OldPassword123!"
     And I am on my profile page
     When I fill in "New email" with "alice.changed@example.com"
     And I fill in "Confirm current password" with "WrongPassword"
     And I click the "Change email" button
     Then I should see "Email could not be updated"
-    And I should see "alice@example.com"
+    And I should see "alice+user-profile@example.com"
 
   Scenario: Rejecting a sign-in email already used by another person
-    Given the user "alice@example.com" has password "OldPassword123!"
+    Given the user "alice+user-profile@example.com" has password "OldPassword123!"
     And the following users exist:
       | email             | role | display_name |
       | taken@example.com | user | Taken Email  |
@@ -62,7 +62,7 @@ Feature: User Profile Management
     And I fill in "Confirm current password" with "OldPassword123!"
     And I click the "Change email" button
     Then I should see "That email is already in use."
-    And I should see "alice@example.com"
+    And I should see "alice+user-profile@example.com"
 
   Scenario: Display name validation - empty
     Given I am on my profile page

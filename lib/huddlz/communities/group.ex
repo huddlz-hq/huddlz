@@ -19,10 +19,10 @@ defmodule Huddlz.Communities.Group do
       read_one :get_group, :get_by_slug
       list :list_groups, :read
       list :search_groups, :search
-      # `myGroups` mirrors the `Communities.my_groups/1` Elixir interface and
+      # `viewerGroups` mirrors the `Communities.groups_for_actor/1` Elixir interface and
       # the `/groups` LiveView: returns groups the actor owns or has joined.
       # Pass `relationship: hosting | joined | all` to scope the result.
-      list :my_groups, :my_groups
+      list :viewer_groups, :groups_for_actor
       list :archived_groups, :archived
       read_one :get_group_history, :get_visible_by_slug
     end
@@ -45,7 +45,7 @@ defmodule Huddlz.Communities.Group do
       get :read
       index :read
       index :search, route: "/search"
-      index :my_groups, route: "/my-groups"
+      index :groups_for_actor, route: "/mine"
       get :get_by_slug, route: "/by_slug/:slug"
       post :create_group
       patch :update_details
@@ -208,7 +208,7 @@ defmodule Huddlz.Communities.Group do
       prepare Huddlz.Communities.Group.Preparations.ApplyTrigramSearch
     end
 
-    read :my_groups do
+    read :groups_for_actor do
       description """
       Groups the actor either owns or has joined. The `:relationship` arg
       scopes the result: `:hosting` (owned), `:joined` (member but not
@@ -223,7 +223,7 @@ defmodule Huddlz.Communities.Group do
 
       pagination offset?: true, countable: true, required?: false, default_limit: 20
 
-      prepare Huddlz.Communities.Group.Preparations.ApplyMyGroupsFilter
+      prepare Huddlz.Communities.Group.Preparations.ApplyGroupRelationshipFilter
       prepare Huddlz.Communities.Group.Preparations.ApplyTrigramSearch
     end
 

@@ -30,7 +30,7 @@ defmodule PrivateGroupInvitationSteps do
     group = find_group(context, group_name)
 
     invitation =
-      Communities.list_my_group_invitations!(actor: context.current_user)
+      Communities.group_invitations_for_actor!(actor: context.current_user)
       |> Enum.find(&(&1.group_id == group.id))
 
     session = context[:session] || context[:conn]

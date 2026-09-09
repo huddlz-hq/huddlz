@@ -37,7 +37,7 @@ defmodule Huddlz.Notifications.Target do
         %User{} = user
       )
       when is_binary(id) do
-    case Communities.get_my_group_invitation(id, actor: user) do
+    case Communities.get_group_invitation_for_actor(id, actor: user) do
       {:ok, _invitation} -> {:available, "/invitations/#{id}"}
       _ -> :resolved
     end

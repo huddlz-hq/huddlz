@@ -64,7 +64,7 @@ defmodule DiscoverCombinedSteps do
   end
 
   step "discover groups are based in Austin and Houston", context do
-    owner = lookup_user("host@example.com")
+    owner = lookup_user("host+discover-combined@example.com")
 
     for {name, lat, lng} <- [
           {"Austin Neighbors", 30.2672, -97.7431},

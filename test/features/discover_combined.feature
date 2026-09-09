@@ -6,9 +6,9 @@ Feature: Combined search on /discover
 
   Background:
     Given the following users exist:
-      | email              | role     | display_name |
-      | host@example.com   | verified | Group Host   |
-      | viewer@example.com | user     | Viewer       |
+      | email                               | role     | display_name |
+      | host+discover-combined@example.com   | verified | Group Host   |
+      | viewer+discover-combined@example.com | user     | Viewer       |
 
   Scenario: Default scope shows both scope chips
     When I visit "/discover"
@@ -16,13 +16,13 @@ Feature: Combined search on /discover
     And I should see "Groups"
 
   Scenario: scope=groups shows the groups section
-    Given a group named "Tampa Tech Talks" is owned by "host@example.com"
+    Given a group named "Tampa Tech Talks" is owned by "host+discover-combined@example.com"
     When I visit "/discover?scope=groups"
     Then I should see "Browse groups"
     And I should see "Tampa Tech Talks"
 
   Scenario: scope=groups hides huddlz
-    Given a group named "Tampa Tech Talks" is owned by "host@example.com"
+    Given a group named "Tampa Tech Talks" is owned by "host+discover-combined@example.com"
     And the group "Tampa Tech Talks" has an upcoming huddl titled "Builders Night"
     When I visit "/discover?scope=groups"
     Then I should see "Tampa Tech Talks"
@@ -71,8 +71,8 @@ Feature: Combined search on /discover
   @group_distance
   Scenario: Group discovery defaults to the member's home search location
     Given discover groups are based in Austin and Houston
-    And "viewer@example.com" has Austin as their home search location
-    And I am logged in as "viewer@example.com"
+    And "viewer+discover-combined@example.com" has Austin as their home search location
+    And I am logged in as "viewer+discover-combined@example.com"
     When I visit "/discover?scope=groups"
     Then I should see "Austin Neighbors"
     And I should not see "Houston Neighbors"
