@@ -1,10 +1,13 @@
 defmodule Huddlz.Notifications.Footer do
   @moduledoc """
-  Shared unsubscribe / settings footer markup for Activity emails.
+  The footer every email ends with: why the person is receiving it and,
+  for activity emails, the unsubscribe and settings links. Returns the
+  footer spec `Huddlz.Notifications.Layout` renders in both bodies.
 
-  Builds a per-trigger unsubscribe URL from `Notifications.unsubscribe_token/2`
-  and a link to the notification settings page. Returned as `{html, text}`
-  so senders can splice both bodies.
+  Activity emails get `activity/2`, which builds a per-trigger unsubscribe
+  URL from `Notifications.unsubscribe_token/2`. Transactional emails get
+  `account/1` with a plain reason and no links, since there is no
+  preference to switch off.
   """
 
   use HuddlzWeb, :verified_routes
@@ -12,32 +15,24 @@ defmodule Huddlz.Notifications.Footer do
   alias Huddlz.Accounts.User
   alias Huddlz.Notifications
 
-  @doc """
-  Returns `{html_footer, text_footer}` for the given user + trigger.
-  """
-  @spec build(User.t(), atom()) :: {String.t(), String.t()}
-  def build(%User{} = user, trigger) when is_atom(trigger) do
+  @activity_reason "You're receiving this email because of your huddlz notification settings."
+  @account_reason "You're receiving this email because it concerns your huddlz account."
+
+  @spec activity(User.t(), atom()) :: Notifications.Layout.footer()
+  def activity(%User{} = user, trigger) when is_atom(trigger) do
     token = Notifications.unsubscribe_token(user, trigger)
-    unsub_url = url(~p"/unsubscribe/#{token}")
-    settings_url = url(~p"/profile/notifications")
 
-    html = """
-    <hr/>
-    <p style="font-size: 0.85em; color: #666;">
-      You're receiving this email because of your huddlz notification settings.
-      <a href="#{unsub_url}">Unsubscribe from this kind of email</a>
-      or <a href="#{settings_url}">manage all your preferences</a>.
-    </p>
-    """
+    %{
+      reason: @activity_reason,
+      links: [
+        {"Unsubscribe from this kind of email", url(~p"/unsubscribe/#{token}")},
+        {"Manage all your preferences", url(~p"/profile/notifications")}
+      ]
+    }
+  end
 
-    text = """
-
-    ---
-    You're receiving this email because of your huddlz notification settings.
-    Unsubscribe from this kind of email: #{unsub_url}
-    Manage all your preferences: #{settings_url}
-    """
-
-    {html, text}
+  @spec account(String.t()) :: Notifications.Layout.footer()
+  def account(reason \\ @account_reason) when is_binary(reason) do
+    %{reason: reason, links: []}
   end
 end

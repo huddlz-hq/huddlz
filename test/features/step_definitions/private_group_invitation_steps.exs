@@ -46,11 +46,14 @@ defmodule PrivateGroupInvitationSteps do
   end
 
   step "I follow that invitation email while signed out", context do
-    [{_, [{_, url}], _}] =
+    [url] =
       context.invitation_email_body
-      |> Floki.parse_fragment!()
+      |> Floki.parse_document!()
       |> Floki.find("a")
-      |> Enum.filter(fn {_, _, content} -> Floki.text(content) == "Review invitation" end)
+      |> Enum.filter(fn {_, _, content} ->
+        String.trim(Floki.text(content)) == "Review invitation"
+      end)
+      |> Floki.attribute("href")
 
     uri = URI.parse(url)
     path = uri.path <> if(uri.query, do: "?" <> uri.query, else: "")

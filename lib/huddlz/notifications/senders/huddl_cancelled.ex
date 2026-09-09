@@ -1,79 +1,47 @@
 defmodule Huddlz.Notifications.Senders.HuddlCancelled do
   @moduledoc """
-  Sender for C3: a huddl has been cancelled.
+  Sender for C3: a huddl the recipient RSVP'd to was cancelled.
 
-  Sent to every user who had RSVP'd at the moment of cancellation.
-  Transactional — preferences do not apply, no unsubscribe footer.
-  People with travel plans need this no matter what their settings say.
+  Sent to every RSVP'd user except the actor. Transactional — a
+  cancellation of plans the person made is not something to switch off,
+  so there is no unsubscribe link.
 
   Required payload keys:
 
-    * `"huddl_title"` — title of the huddl at time of cancellation.
-    * `"starts_at_iso"` — ISO-8601 string of when it was supposed to start.
-    * `"group_name"` — the host group's display name.
-    * `"group_slug"` — the host group's slug, used to link back so the
-      recipient can find replacement huddlz.
+    * `"huddl_title"`, `"starts_at_iso"`, `"group_name"`, `"group_slug"`.
+
+  Optional: `"cancellation_reason"`, `"time_zone"`, `"physical_location"`.
   """
 
   @behaviour Huddlz.Notifications.Sender
 
-  import Swoosh.Email
-
-  alias Huddlz.Mailer
-  alias Huddlz.Notifications.DateTimeFormatter
-  alias Huddlz.Notifications.Senders.HeaderSafe
-  alias Huddlz.Notifications.Senders.HtmlEscape
+  alias Huddlz.Notifications.Footer
+  alias Huddlz.Notifications.Layout
   alias Huddlz.Notifications.Senders.Urls
 
   @impl true
   def build(user, payload) do
-    safe_name = HtmlEscape.escape(user.display_name)
-    safe_title = HtmlEscape.escape(huddl_title(payload))
-    safe_group = HtmlEscape.escape(group_name(payload))
-
-    when_text =
-      DateTimeFormatter.format_starts_at_iso(
-        payload["starts_at_iso"],
-        DateTimeFormatter.time_zone_from_payload(payload),
-        payload["starts_at_iso"] || "the scheduled time"
-      )
-
-    safe_when = HtmlEscape.escape(when_text)
-    group_url = Urls.group_url(payload)
-    reason_html = reason_html(payload)
-    reason_text = reason_text(payload)
-
-    new()
-    |> from(Mailer.from())
-    |> to(to_string(user.email))
-    |> subject(HeaderSafe.safe("Cancelled: #{huddl_title(payload)}"))
-    |> html_body("""
-    <p>Hi #{safe_name},</p>
-
-    <p>The huddl <strong>#{safe_title}</strong> in
-    <strong>#{safe_group}</strong>, scheduled for #{safe_when}, has
-    been cancelled.</p>
-
-    #{reason_html}
-
-    <p>If you'd made plans around this, you'll want to know. Sorry for
-    the disruption.</p>
-
-    <p>You can browse other upcoming huddlz at
-    <a href="#{group_url}">#{group_url}</a>.</p>
-    """)
-    |> text_body("""
-    Hi #{user.display_name},
-
-    The huddl "#{huddl_title(payload)}" in "#{group_name(payload)}", scheduled for
-    #{when_text}, has been cancelled.
-
-    #{reason_text}
-
-    If you'd made plans around this, you'll want to know. Sorry for the disruption.
-
-    You can browse other upcoming huddlz at #{group_url}.
-    """)
+    Layout.email(%{
+      to: user.email,
+      subject: "Cancelled: #{huddl_title(payload)}",
+      kicker: "Cancelled",
+      title: Layout.sentence_case("#{huddl_title(payload)} has been cancelled"),
+      paragraphs:
+        [
+          [
+            "Hi #{user.display_name}, ",
+            {:strong, huddl_title(payload)},
+            " with ",
+            {:strong, group_name(payload)},
+            " has been cancelled. It was scheduled for the time below."
+          ]
+        ] ++
+          reason_paragraphs(payload) ++
+          ["If you'd made plans around this, you'll want to know. Sorry for the disruption."],
+      facts: Layout.huddl_facts(payload),
+      action: {"Browse other huddlz", Urls.group_url(payload)},
+      footer: Footer.account("You're receiving this email because you had RSVP'd to this huddl.")
+    })
   end
 
   defp huddl_title(%{"huddl_title" => title}) when is_binary(title), do: title
@@ -82,15 +50,10 @@ defmodule Huddlz.Notifications.Senders.HuddlCancelled do
   defp group_name(%{"group_name" => name}) when is_binary(name), do: name
   defp group_name(_), do: "a group"
 
-  defp reason_html(%{"cancellation_reason" => reason}) when is_binary(reason) and reason != "" do
-    "<p>The organizer shared: <strong>#{HtmlEscape.escape(reason)}</strong></p>"
+  defp reason_paragraphs(%{"cancellation_reason" => reason})
+       when is_binary(reason) and reason != "" do
+    [["The organizer shared: ", {:strong, reason}]]
   end
 
-  defp reason_html(_payload), do: ""
-
-  defp reason_text(%{"cancellation_reason" => reason}) when is_binary(reason) and reason != "" do
-    "The organizer shared: #{reason}"
-  end
-
-  defp reason_text(_payload), do: ""
+  defp reason_paragraphs(_payload), do: []
 end

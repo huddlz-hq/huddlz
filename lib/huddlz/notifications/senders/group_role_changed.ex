@@ -1,60 +1,42 @@
 defmodule Huddlz.Notifications.Senders.GroupRoleChanged do
   @moduledoc """
-  Sender for B4: a user's role within a group has changed.
+  Sender for B5: the recipient's role in a group changed.
 
-  Sent to the user whose role changed. Activity category — preferences
-  and the unsubscribe footer apply.
+  Activity category — preferences and the unsubscribe footer apply.
 
-  Required payload keys:
-
-    * `"group_id"` — used for fallback links.
-    * `"group_name"` — display name of the group.
-    * `"group_slug"` — slug for the group page URL.
-    * `"previous_role"` — role string the user used to have.
-    * `"new_role"` — role string the user now has.
+  Payload keys: `"group_name"`, `"group_slug"`, `"previous_role"`, `"new_role"`.
   """
 
   @behaviour Huddlz.Notifications.Sender
 
-  import Swoosh.Email
-
-  alias Huddlz.Mailer
   alias Huddlz.Notifications.Footer
-  alias Huddlz.Notifications.Senders.HeaderSafe
-  alias Huddlz.Notifications.Senders.HtmlEscape
+  alias Huddlz.Notifications.Layout
   alias Huddlz.Notifications.Senders.Urls
 
   @impl true
   def build(user, payload) do
-    safe_name = HtmlEscape.escape(user.display_name)
-    safe_group = HtmlEscape.escape(group_name(payload))
-    safe_prev = HtmlEscape.escape(role_label(role_value(payload, "previous_role")))
-    safe_new = HtmlEscape.escape(role_label(role_value(payload, "new_role")))
-    group_url = Urls.group_url(payload)
+    previous = role_label(role_value(payload, "previous_role"))
+    new_role = role_label(role_value(payload, "new_role"))
 
-    {footer_html, footer_text} = Footer.build(user, :group_role_changed)
-
-    new()
-    |> from(Mailer.from())
-    |> to(to_string(user.email))
-    |> subject(HeaderSafe.safe("Your role in #{group_name(payload)} changed"))
-    |> html_body("""
-    <p>Hi #{safe_name},</p>
-
-    <p>Your role in <strong>#{safe_group}</strong> changed from
-    <strong>#{safe_prev}</strong> to <strong>#{safe_new}</strong>.</p>
-
-    <p>Visit the group at <a href="#{group_url}">#{group_url}</a>.</p>
-    #{footer_html}
-    """)
-    |> text_body("""
-    Hi #{user.display_name},
-
-    Your role in "#{group_name(payload)}" changed from #{role_label(role_value(payload, "previous_role"))} to #{role_label(role_value(payload, "new_role"))}.
-
-    Visit the group at #{group_url}.
-    #{footer_text}
-    """)
+    Layout.email(%{
+      to: user.email,
+      subject: "Your role in #{group_name(payload)} changed",
+      kicker: "Your role",
+      title: "You're now #{article(new_role)} #{new_role} of #{group_name(payload)}",
+      paragraphs: [
+        [
+          "Hi #{user.display_name}, your role in ",
+          {:strong, group_name(payload)},
+          " changed from ",
+          {:strong, previous},
+          " to ",
+          {:strong, new_role},
+          "."
+        ]
+      ],
+      action: {"Open the group", Urls.group_url(payload)},
+      footer: Footer.activity(user, :group_role_changed)
+    })
   end
 
   defp group_name(%{"group_name" => name}) when is_binary(name), do: name
@@ -63,11 +45,15 @@ defmodule Huddlz.Notifications.Senders.GroupRoleChanged do
   defp role_value(payload, key) do
     case Map.get(payload, key) do
       value when is_binary(value) -> value
-      value when is_atom(value) -> Atom.to_string(value)
+      value when is_atom(value) and not is_nil(value) -> Atom.to_string(value)
       _ -> ""
     end
   end
 
   defp role_label(""), do: "member"
   defp role_label(role), do: role
+
+  defp article(word) do
+    if String.starts_with?(word, ["a", "e", "i", "o", "u"]), do: "an", else: "a"
+  end
 end

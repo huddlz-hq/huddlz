@@ -1,64 +1,41 @@
 defmodule Huddlz.Notifications.Senders.RsvpCancelled do
   @moduledoc """
-  Sender for E2: someone cancelled their RSVP to a huddl in a group I
-  organize.
+  Sender for E2: someone cancelled their RSVP to a huddl the recipient
+  organizes.
 
-  Sent to each owner/organizer of the group (deduplicated, actor
-  excluded). Activity category — preferences and the unsubscribe footer
-  apply.
+  Activity category — preferences and the unsubscribe footer apply.
 
-  Required payload keys:
-
-    * `"huddl_id"` — used to render the huddl page link.
-    * `"huddl_title"` — display name of the huddl.
-    * `"group_name"` — display name of the group.
-    * `"group_slug"` — slug used in the huddl page URL.
-    * `"rsvper_display_name"` — name of the user who cancelled.
+  Payload keys: `"huddl_id"`, `"huddl_title"`, `"group_name"`,
+  `"group_slug"`, `"rsvper_display_name"`.
   """
 
   @behaviour Huddlz.Notifications.Sender
 
-  import Swoosh.Email
-
-  alias Huddlz.Mailer
   alias Huddlz.Notifications.Footer
-  alias Huddlz.Notifications.Senders.HeaderSafe
-  alias Huddlz.Notifications.Senders.HtmlEscape
+  alias Huddlz.Notifications.Layout
   alias Huddlz.Notifications.Senders.Urls
 
   @impl true
   def build(user, payload) do
-    safe_name = HtmlEscape.escape(user.display_name)
-    safe_title = HtmlEscape.escape(huddl_title(payload))
-    safe_group = HtmlEscape.escape(group_name(payload))
-    safe_rsvper = HtmlEscape.escape(rsvper_display_name(payload))
-    huddl_url = Urls.huddl_url(payload)
-
-    {footer_html, footer_text} = Footer.build(user, :rsvp_cancelled)
-
-    new()
-    |> from(Mailer.from())
-    |> to(to_string(user.email))
-    |> subject(
-      HeaderSafe.safe(
-        "#{rsvper_display_name(payload)} cancelled their RSVP to #{huddl_title(payload)}"
-      )
-    )
-    |> html_body("""
-    <p>Hi #{safe_name},</p>
-
-    <p><strong>#{safe_rsvper}</strong> cancelled their RSVP to
-    <strong>#{safe_title}</strong> in <strong>#{safe_group}</strong>.
-    See the current attendee list at <a href="#{huddl_url}">#{huddl_url}</a>.</p>
-    #{footer_html}
-    """)
-    |> text_body("""
-    Hi #{user.display_name},
-
-    #{rsvper_display_name(payload)} cancelled their RSVP to "#{huddl_title(payload)}" in "#{group_name(payload)}".
-    See the current attendee list at #{huddl_url}.
-    #{footer_text}
-    """)
+    Layout.email(%{
+      to: user.email,
+      subject: "#{rsvper_display_name(payload)} cancelled their RSVP to #{huddl_title(payload)}",
+      kicker: "RSVP cancelled · #{group_name(payload)}",
+      title: "#{rsvper_display_name(payload)} can't make #{huddl_title(payload)}",
+      paragraphs: [
+        [
+          "Hi #{user.display_name}, ",
+          {:strong, rsvper_display_name(payload)},
+          " cancelled their RSVP to ",
+          {:strong, huddl_title(payload)},
+          " with ",
+          {:strong, group_name(payload)},
+          "."
+        ]
+      ],
+      action: {"See who's coming", Urls.huddl_url(payload)},
+      footer: Footer.activity(user, :rsvp_cancelled)
+    })
   end
 
   defp huddl_title(%{"huddl_title" => title}) when is_binary(title), do: title

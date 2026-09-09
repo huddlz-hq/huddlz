@@ -17,58 +17,38 @@ defmodule Huddlz.Notifications.Senders.RsvpConfirmation do
   @behaviour Huddlz.Notifications.Sender
 
   use HuddlzWeb, :verified_routes
-  import Swoosh.Email
+  import Swoosh.Email, only: [attachment: 2]
 
-  alias Huddlz.Mailer
-  alias Huddlz.Notifications.DateTimeFormatter
   alias Huddlz.Notifications.Footer
   alias Huddlz.Notifications.HuddlAccess
   alias Huddlz.Notifications.ICS
-  alias Huddlz.Notifications.Senders.HeaderSafe
-  alias Huddlz.Notifications.Senders.HtmlEscape
+  alias Huddlz.Notifications.Layout
 
   @impl true
   def build(user, payload) do
     huddl = fetch_huddl!(payload, user)
-
-    safe_name = HtmlEscape.escape(user.display_name)
-    safe_title = HtmlEscape.escape(huddl.title)
-    safe_group = HtmlEscape.escape(huddl.group.name)
-
-    when_text =
-      DateTimeFormatter.format_starts_at(
-        huddl.starts_at,
-        huddl.time_zone
-      )
-
-    safe_when = HtmlEscape.escape(when_text)
     huddl_url = url(~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}")
-
-    {footer_html, footer_text} = Footer.build(user, :rsvp_confirmation)
     {ics_filename, ics_content} = ICS.event_for(huddl)
 
-    new()
-    |> from(Mailer.from())
-    |> to(to_string(user.email))
-    |> subject(HeaderSafe.safe("You're going to #{huddl.title}"))
-    |> html_body("""
-    <p>Hi #{safe_name},</p>
-
-    <p>You're confirmed for <strong>#{safe_title}</strong> in
-    <strong>#{safe_group}</strong> on #{safe_when}.</p>
-
-    <p>The calendar event is attached. Or open the huddl page at
-    <a href="#{huddl_url}">#{huddl_url}</a>.</p>
-    #{footer_html}
-    """)
-    |> text_body("""
-    Hi #{user.display_name},
-
-    You're confirmed for "#{huddl.title}" in "#{huddl.group.name}" on #{when_text}.
-
-    The calendar event is attached. Or open the huddl page at #{huddl_url}.
-    #{footer_text}
-    """)
+    Layout.email(%{
+      to: user.email,
+      subject: "You're going to #{huddl.title}",
+      kicker: "You're going",
+      title: huddl.title,
+      paragraphs: [
+        [
+          "Hi #{user.display_name}, you're confirmed for ",
+          {:strong, huddl.title},
+          " with ",
+          {:strong, huddl.group.name},
+          "."
+        ]
+      ],
+      facts: Layout.huddl_facts(huddl),
+      action: {"Open the huddl", huddl_url},
+      aside: "The calendar event is attached so you can save it to your calendar.",
+      footer: Footer.activity(user, :rsvp_confirmation)
+    })
     |> attachment(
       Swoosh.Attachment.new({:data, ics_content},
         filename: ics_filename,
