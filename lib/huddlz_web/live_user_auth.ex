@@ -201,7 +201,7 @@ defmodule HuddlzWeb.LiveUserAuth do
 
   defp refresh_organizer_access(_message, socket), do: {:cont, socket}
 
-  defp organizer_access_result(%{view: HuddlzWeb.MyGroupsLive} = socket), do: {:cont, socket}
+  defp organizer_access_result(%{view: HuddlzWeb.GroupsLive} = socket), do: {:cont, socket}
   defp organizer_access_result(socket), do: {:halt, socket}
 
   defp maybe_assign_picker_groups(%{assigns: %{owned_groups: _}} = socket, groups) do

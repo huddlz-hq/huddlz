@@ -15,7 +15,7 @@ defmodule Huddlz.Communities.HuddlAttendee do
 
     queries do
       list :huddl_attendees, :by_huddl
-      list :my_rsvps, :by_user
+      list :viewer_rsvps, :by_user
     end
   end
 

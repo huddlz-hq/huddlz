@@ -1,4 +1,4 @@
-defmodule HuddlzWeb.MyGroupsLiveTest do
+defmodule HuddlzWeb.GroupsLiveTest do
   use HuddlzWeb.ConnCase, async: true
 
   setup do
@@ -201,9 +201,9 @@ defmodule HuddlzWeb.MyGroupsLiveTest do
       conn
       |> login(member)
       |> visit("/groups")
-      |> assert_has("#my-group-cover-#{group.id}[data-testid='group-cover']")
-      |> assert_has("#my-group-cover-#{group.id} .group-cover-signal", text: "FC", exact: true)
-      |> refute_has("#my-group-cover-#{group.id} img")
+      |> assert_has("#group-list-cover-#{group.id}[data-testid='group-cover']")
+      |> assert_has("#group-list-cover-#{group.id} .group-cover-signal", text: "FC", exact: true)
+      |> refute_has("#group-list-cover-#{group.id} img")
     end
 
     test "renders the complete member count", %{conn: conn, member: member} do

@@ -108,7 +108,7 @@ defmodule HuddlzWeb.Layouts do
             aria-current={@active == "calendar" && "page"}
           >
             <.nav_icon name="calendar" />
-            <span class="label">My calendar</span>
+            <span class="label">Calendar</span>
           </.link>
 
           <div class="sb-orgs">

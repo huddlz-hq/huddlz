@@ -68,7 +68,7 @@ defmodule Huddlz.Notifications.Triggers do
       category: :activity,
       sender: Senders.GroupRoleChanged,
       default: true,
-      label: "My role in a group changed"
+      label: "Your group role changed"
     },
     group_archived: %{
       category: :transactional,
