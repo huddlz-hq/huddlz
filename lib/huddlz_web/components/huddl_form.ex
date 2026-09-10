@@ -333,6 +333,7 @@ defmodule HuddlzWeb.Components.HuddlForm do
     <.modal
       :if={@live_action == :new_location}
       id="new-location-modal"
+      return_focus="#saved-location-picker-input"
       show
       on_cancel={JS.patch(@cancel_path)}
     >

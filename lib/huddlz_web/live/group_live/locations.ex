@@ -90,7 +90,11 @@ defmodule HuddlzWeb.GroupLive.Locations do
           </p>
         </div>
         <div class="actions">
-          <.button variant={:primary} patch={~p"/groups/#{@group.slug}/locations/new"}>
+          <.button
+            id="add-address"
+            variant={:primary}
+            patch={~p"/groups/#{@group.slug}/locations/new"}
+          >
             Add Address
           </.button>
         </div>
@@ -218,10 +222,11 @@ defmodule HuddlzWeb.GroupLive.Locations do
       <.modal
         :if={@live_action == :new_location}
         id="new-location-modal"
+        return_focus="#add-address"
         show
         on_cancel={JS.patch(~p"/groups/#{@group.slug}/locations")}
       >
-        <h2 class="modal-title">Add New Address</h2>
+        <h2 id="new-location-modal-title" class="modal-title">Add New Address</h2>
         <p class="modal-sub">
           Saved venues show up in the venue picker for everyone in your group.
         </p>

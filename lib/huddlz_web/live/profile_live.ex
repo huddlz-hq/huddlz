@@ -421,6 +421,7 @@ defmodule HuddlzWeb.ProfileLive do
 
         {:noreply,
          socket
+         |> clear_flash(:error)
          |> put_flash(:info, "Display name updated successfully")
          |> assign(:current_user, updated_user)
          |> assign(:form, form)}
@@ -495,6 +496,7 @@ defmodule HuddlzWeb.ProfileLive do
       {:ok, updated_user} ->
         {:noreply,
          socket
+         |> clear_flash(:error)
          |> put_flash(:info, "Password updated successfully")
          |> assign(:current_user, updated_user)
          |> assign(:password_form, password_form(updated_user))
@@ -546,6 +548,7 @@ defmodule HuddlzWeb.ProfileLive do
 
         {:noreply,
          socket
+         |> clear_flash(:error)
          |> put_flash(:info, "Profile picture removed")
          |> assign(:remove_avatar_dialog_open, false)
          |> assign(:current_user, updated_user)}
@@ -579,6 +582,7 @@ defmodule HuddlzWeb.ProfileLive do
 
         {:noreply,
          socket
+         |> clear_flash(:error)
          |> put_flash(:info, "Home location updated")
          |> assign(:current_user, updated_user)
          |> assign(:location_error, nil)}
@@ -597,6 +601,7 @@ defmodule HuddlzWeb.ProfileLive do
       {:ok, updated_user} ->
         {:noreply,
          socket
+         |> clear_flash(:error)
          |> put_flash(:info, "Home location cleared")
          |> assign(:current_user, updated_user)}
 
@@ -731,6 +736,7 @@ defmodule HuddlzWeb.ProfileLive do
     {:ok, updated_user} = Ash.load(user, [:current_profile_picture_url], actor: user)
 
     socket
+    |> clear_flash(:error)
     |> put_flash(:info, flash_message)
     |> assign(:current_user, updated_user)
     |> assign(:avatar_error, nil)

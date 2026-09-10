@@ -6053,3 +6053,33 @@ body .photo-delete-preview figcaption { overflow-wrap: anywhere; }
   body .photo-tile img { transition: none; }
   body .photo-open:hover img { transform: none; }
 }
+
+/* Keyboard shortcuts and programmatically focused page context. */
+.skip-link {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1000;
+  padding: 12px 18px;
+  background: var(--bg, #fff);
+  color: var(--text, #111);
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  transform: translateY(-200%);
+}
+.skip-link:focus { transform: translateY(0); }
+body :is(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.error-summary {
+  grid-column: 1 / -1;
+  margin-bottom: 24px;
+  padding: 20px;
+  border: 2px solid var(--danger, #b42318);
+  border-radius: 10px;
+}
+.error-summary h2 { margin: 0 0 12px; font-size: 1rem; font-weight: 600; }
+.error-summary ul { margin: 0; padding-left: 20px; list-style: disc; }
+.error-summary a { text-decoration: underline; text-underline-offset: 3px; }
+.error-summary li + li { margin-top: 8px; }

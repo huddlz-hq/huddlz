@@ -39,6 +39,8 @@ window.addEventListener("phx:theme", ({detail}) => {
   }
 })
 
+import {mountFocusNavigation} from "./focus_navigation.mjs"
+
 const Hooks = {}
 
 Hooks.CoverImage = createCoverImageHook()
@@ -157,6 +159,7 @@ mountPageLoading({topbar})
 liveSocket.connect()
 
 mountMobileNavigation()
+mountFocusNavigation()
 
 // "/" focuses the chrome search box, GitHub-style. Skipped while the user
 // is already typing in an editable field, or when modifier keys are held.
