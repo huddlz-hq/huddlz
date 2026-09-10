@@ -14,6 +14,16 @@ defmodule OverviewKpisSteps do
   alias Huddlz.Communities.{Group, GroupMember, Huddl, HuddlAttendee}
   alias Huddlz.Repo
 
+  step "the summary headings omit the selected range", %{session: session} = context do
+    session
+    |> assert_has("#kpi-members .label", text: "Members", exact: true)
+    |> assert_has("#kpi-rsvps .label", text: "RSVPs", exact: true)
+    |> assert_has("#kpi-showrate .label", text: "Show rate", exact: true)
+    |> assert_has("#kpi-waitlist .label", text: "Waitlisted now", exact: true)
+
+    context
+  end
+
   step "{string} was started {int} months ago", %{args: [group_name, months]} = context do
     group = find_group(group_name)
     started_at = months_ago(months)

@@ -484,7 +484,10 @@ defmodule HuddlzWeb.OrganizeLive do
       <.link navigate={huddl_show_path(@group, @turnout_nudge)}>Add turnout</.link>
     </div>
 
-    <div class="kpis">
+    <p id="overview-summary-scope" class="mb-3 text-sm text-[var(--muted)]">
+      RSVPs and show rate cover the selected period. Members and waitlisted counts are current totals.
+    </p>
+    <div class="kpis" aria-describedby="overview-summary-scope">
       <div id="kpi-members" class="kpi">
         <div class="label">Members</div>
         <div class="value">{@stats.members.count}</div>
@@ -494,7 +497,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <.sparkline id="spark-members" points={@stats.members.spark} />
       </div>
       <div id="kpi-rsvps" class="kpi">
-        <div class="label">RSVPs · last {GroupStats.period_label(@period)}</div>
+        <div class="label">RSVPs</div>
         <div class="value">{@stats.rsvps.count}</div>
         <div class={["delta", rsvps_delta_class(@stats.rsvps)]}>
           {rsvps_delta(@stats.rsvps, @period)}
@@ -502,7 +505,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <.sparkline id="spark-rsvps" points={@stats.rsvps.spark} />
       </div>
       <div id="kpi-showrate" class="kpi">
-        <div class="label">Show rate · last {GroupStats.period_label(@period)}</div>
+        <div class="label">Show rate</div>
         <div class="value">{show_rate_value(@stats.turnout)}</div>
         <div class={["delta", @stats.turnout.counted == 0 && "muted"]}>
           <%= if @stats.turnout.counted == 0 do %>
