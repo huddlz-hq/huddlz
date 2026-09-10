@@ -14,7 +14,10 @@ defmodule HuddlzWeb.OrganizeLive do
   """
   use HuddlzWeb, :live_view
 
+  import HuddlzWeb.Components.Sparkline
+
   alias Huddlz.Communities
+  alias Huddlz.Communities.GroupStats
   alias Huddlz.Communities.MembershipEvents
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
@@ -59,8 +62,9 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:huddlz_list, [])
      |> assign(:huddlz_filter, :published)
      |> assign(:upcoming_huddlz, [])
-     |> assign(:open_rsvps, 0)
      |> assign(:turnout_nudge, nil)
+     |> assign(:period, GroupStats.default_period())
+     |> assign(:stats, nil)
      |> assign(:invitation_count, 0)
      |> assign(:invitation_form, invitation_form())
      |> assign(:member_lookup, %{})
@@ -85,6 +89,7 @@ defmodule HuddlzWeb.OrganizeLive do
       socket
       |> assign(:pending_member_action, nil)
       |> assign(:huddlz_filter, parse_huddlz_filter(params["filter"]))
+      |> assign(:period, GroupStats.parse_period(params["period"]))
       |> load_action(action, params, user)
 
     {:noreply, socket}
@@ -120,12 +125,11 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp load_section(socket, :overview, group, user) do
     upcoming = list_upcoming_huddlz(group, user)
-    open_rsvps = Enum.reduce(upcoming, 0, &(&1.rsvp_count + &2))
 
     socket
     |> assign(:upcoming_huddlz, upcoming)
-    |> assign(:open_rsvps, open_rsvps)
     |> assign(:turnout_nudge, latest_uncounted_huddl(group, user))
+    |> assign(:stats, Communities.group_overview!(group.id, socket.assigns.period, actor: user))
   end
 
   defp load_section(socket, :huddlz, group, user) do
@@ -325,8 +329,9 @@ defmodule HuddlzWeb.OrganizeLive do
             group={@group}
             can_edit_group={@can_edit_group}
             upcoming_huddlz={@upcoming_huddlz}
-            open_rsvps={@open_rsvps}
             turnout_nudge={@turnout_nudge}
+            period={@period}
+            stats={@stats}
           />
         <% :huddlz -> %>
           <.huddlz_view
@@ -442,8 +447,9 @@ defmodule HuddlzWeb.OrganizeLive do
   # ─────────────────────────────────────────  OVERVIEW  ───
   attr :group, :map, required: true
   attr :upcoming_huddlz, :list, required: true
-  attr :open_rsvps, :integer, required: true
   attr :turnout_nudge, :map, default: nil
+  attr :period, :string, required: true
+  attr :stats, :map, required: true
 
   attr :can_edit_group, :boolean, required: true
 
@@ -460,6 +466,16 @@ defmodule HuddlzWeb.OrganizeLive do
         <p>A scannable summary of this group's huddlz and members.</p>
       </div>
       <div class="actions">
+        <nav id="overview-period" class="cal-view-tabs" aria-label="Period">
+          <.link
+            :for={{key, label} <- GroupStats.periods()}
+            patch={~p"/organize/#{@group.slug}?period=#{key}"}
+            class={["scope-tab", key == @period && "is-active"]}
+            aria-current={if key == @period, do: "page"}
+          >
+            {label}
+          </.link>
+        </nav>
         <a :if={@can_edit_group} class="btn-secondary" href={~p"/groups/#{@group.slug}/edit"}>Edit group</a>
         <a
           :if={is_nil(@group.archived_at)}
@@ -480,26 +496,30 @@ defmodule HuddlzWeb.OrganizeLive do
       <.link navigate={huddl_show_path(@group, @turnout_nudge)}>Add turnout</.link>
     </div>
 
-    <div class="kpis">
-      <div class="kpi">
+    <div class="kpis kpis-3">
+      <div id="kpi-members" class="kpi">
         <div class="label">Members</div>
-        <div class="value">{@group.member_count}</div>
-        <div class="delta muted">In this group</div>
+        <div class="value">{@stats.members.count}</div>
+        <div class={["delta", @stats.members.joined_this_month == 0 && "muted"]}>
+          {members_delta(@stats.members)}
+        </div>
+        <.sparkline id="spark-members" points={@stats.members.spark} />
       </div>
-      <div class="kpi">
-        <div class="label">Upcoming</div>
-        <div class="value">{@upcoming_count}</div>
-        <div class="delta muted">Huddlz scheduled</div>
+      <div id="kpi-rsvps" class="kpi">
+        <div class="label">RSVPs · last {GroupStats.period_label(@period)}</div>
+        <div class="value">{@stats.rsvps.count}</div>
+        <div class={["delta", rsvps_delta_class(@stats.rsvps)]}>
+          {rsvps_delta(@stats.rsvps, @period)}
+        </div>
+        <.sparkline id="spark-rsvps" points={@stats.rsvps.spark} />
       </div>
-      <div class="kpi">
-        <div class="label">Open RSVPs</div>
-        <div class="value">{@open_rsvps}</div>
-        <div class="delta muted">Across upcoming huddlz</div>
-      </div>
-      <div class="kpi">
-        <div class="label">Visibility</div>
-        <div class="value">{visibility_label(@group.is_public)}</div>
-        <div class="delta muted">{visibility_subtitle(@group.is_public)}</div>
+      <div id="kpi-waitlist" class="kpi">
+        <div class="label">Waitlisted now</div>
+        <div class="value">{@stats.waitlist.count}</div>
+        <div class={["delta", waitlist_delta_class(@stats.waitlist)]}>
+          {waitlist_delta(@stats.waitlist)}
+        </div>
+        <.sparkline id="spark-waitlist" points={@stats.waitlist.spark} />
       </div>
     </div>
 
@@ -1622,15 +1642,38 @@ defmodule HuddlzWeb.OrganizeLive do
   defp visibility_label(true), do: "Public"
   defp visibility_label(false), do: "Private"
 
-  defp visibility_subtitle(true), do: "Anyone can find it"
-  defp visibility_subtitle(false), do: "Invite only"
-
   defp member_label(0), do: "No members yet"
   defp member_label(1), do: "1 member"
   defp member_label(n), do: "#{n} members"
 
   defp group_count_label(1), do: "1 group"
   defp group_count_label(n), do: "#{n} groups"
+
+  # KPI deltas read as a sentence; a zero is quiet, never a warning.
+  defp members_delta(%{joined_this_month: 0}), do: "No new members this month"
+  defp members_delta(%{joined_this_month: n}), do: "+#{n} this month"
+
+  defp rsvps_delta(%{count: 0, previous: 0}, _period), do: "No RSVPs yet"
+
+  defp rsvps_delta(%{previous: 0}, period),
+    do: "None in the previous #{GroupStats.period_label(period)}"
+
+  defp rsvps_delta(%{count: count, previous: previous}, period) do
+    change = round((count - previous) * 100 / previous)
+    sign = if change < 0, do: "−", else: "+"
+    "#{sign}#{abs(change)}% vs previous #{GroupStats.period_label(period)}"
+  end
+
+  defp rsvps_delta_class(%{previous: 0}), do: "muted"
+  defp rsvps_delta_class(%{count: count, previous: previous}) when count < previous, do: "muted"
+  defp rsvps_delta_class(_rsvps), do: nil
+
+  defp waitlist_delta(%{count: 0}), do: "No one waiting"
+  defp waitlist_delta(%{full_huddlz: [title]}), do: "#{title} is full"
+  defp waitlist_delta(%{full_huddlz: titles}), do: "#{length(titles)} huddlz are full"
+
+  defp waitlist_delta_class(%{count: 0}), do: "muted"
+  defp waitlist_delta_class(_waitlist), do: "warn"
 
   defp rsvp_label(0), do: "0 RSVPs"
   defp rsvp_label(1), do: "1 RSVP"

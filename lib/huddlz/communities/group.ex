@@ -25,6 +25,7 @@ defmodule Huddlz.Communities.Group do
       list :viewer_groups, :groups_for_actor
       list :archived_groups, :archived
       read_one :get_group_history, :get_visible_by_slug
+      action :group_overview, :overview
     end
 
     mutations do
@@ -83,6 +84,26 @@ defmodule Huddlz.Communities.Group do
   end
 
   actions do
+    action :overview, :map do
+      description """
+      Organizer overview figures for a group over a period: members and
+      this month's joins, RSVPs in the period against the period before,
+      and people waitlisted now, each with sparkline points. Periods are
+      "30d", "90d" (default) and "12m".
+      """
+
+      argument :group_id, :uuid do
+        allow_nil? false
+      end
+
+      argument :period, :string do
+        allow_nil? true
+        default "90d"
+      end
+
+      run Huddlz.Communities.Group.Actions.Overview
+    end
+
     defaults [:create, :read]
 
     destroy :destroy do
@@ -326,6 +347,12 @@ defmodule Huddlz.Communities.Group do
       # Explicitly forbid users that are not the owner
       forbid_unless relates_to_actor_via(:owner)
       authorize_if relates_to_actor_via(:owner)
+    end
+
+    # Overview figures are organizer planning data.
+    policy action(:overview) do
+      description "Owner or :organizer member can read the group's overview figures"
+      authorize_if Huddlz.Communities.Group.Checks.OrganizesGroupArgument
     end
 
     # Owner or :organizer member can open the per-group organizer workspace.
