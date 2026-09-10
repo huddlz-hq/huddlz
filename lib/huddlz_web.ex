@@ -17,7 +17,9 @@ defmodule HuddlzWeb do
   those modules here.
   """
 
-  def static_paths, do: ~w(assets fonts images uploads favicon.ico favicon.png)
+  def static_paths,
+    do:
+      ~w(assets fonts images uploads favicon.ico favicon.svg apple-touch-icon.png icon-192.png icon-512.png)
 
   def router do
     quote do

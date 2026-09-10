@@ -88,7 +88,7 @@ defmodule BrowserPhotoSteps do
                timeout: 5_000,
                local_paths: [
                  Path.expand("test/fixtures/test_image.jpg"),
-                 Path.expand("priv/static/favicon.png")
+                 Path.expand("priv/static/icon-512.png")
                ]
              )
 
@@ -99,7 +99,7 @@ defmodule BrowserPhotoSteps do
     context.conn
     |> assert_has(".photo-upload-entry", text: "test_image.jpg")
     |> assert_has("button[aria-label='Remove test_image.jpg']")
-    |> assert_has("button[aria-label='Remove favicon.png']")
+    |> assert_has("button[aria-label='Remove icon-512.png']")
 
     context
   end

@@ -56,8 +56,11 @@ defmodule HuddlzWeb.ErrorHTML do
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="noindex, nofollow" />
         <title>{@code} · huddlz</title>
-        <link rel="icon" href={~p"/favicon.png"} type="image/png" sizes="512x512" />
+        <link rel="icon" href={~p"/favicon.svg"} type="image/svg+xml" />
         <link rel="alternate icon" href={~p"/favicon.ico"} sizes="16x16 32x32 48x48" />
+        <link rel="icon" href={~p"/icon-192.png"} type="image/png" sizes="192x192" />
+        <link rel="icon" href={~p"/icon-512.png"} type="image/png" sizes="512x512" />
+        <link rel="apple-touch-icon" href={~p"/apple-touch-icon.png"} sizes="180x180" />
         <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
       </head>
       <body class="error-page">

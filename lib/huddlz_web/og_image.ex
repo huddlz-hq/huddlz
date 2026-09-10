@@ -28,6 +28,25 @@ defmodule HuddlzWeb.OgImage do
   @doc "Renders the site card, shared by pages with no picture of their own, as a PNG binary."
   def site_card, do: site_svg() |> render_png()
 
+  @doc "Renders the brand mark at `size` pixels square as a PNG binary."
+  def mark_png(size), do: size |> mark_svg() |> render_png()
+
+  @doc """
+  The brand mark as SVG markup at `size` pixels square: the accent rounded
+  square with the site card's Inter 700 "h" converted to an outline, preserving
+  its shape and placement without requiring a font at render time.
+  See `priv/branding/README.md` for the source and license.
+  `mix huddlz.icons` writes the favicon set from it.
+  """
+  def mark_svg(size) do
+    """
+    <svg xmlns="http://www.w3.org/2000/svg" width="#{size}" height="#{size}" viewBox="0 0 512 512">
+      <rect width="512" height="512" rx="121.9048" fill="#18cbd4"/>
+      <path d="M221.0227 260.8751V368.7619H171.0435V120.4286H220.1228V228.9452H216.0361Q223.3661 205.6317 238.3061 192.8635Q253.2462 180.0952 276.8427 180.0952Q296.216 180.0952 310.646 188.5202Q325.076 196.9452 333.0377 212.6635Q340.9994 228.3818 340.9994 250.2486V368.7619H290.9435V258.9583Q290.9435 241.5982 281.9884 231.7264Q273.0333 221.8546 257.2232 221.8546Q246.6797 221.8546 238.488 226.473Q230.2962 231.0914 225.6595 239.7832Q221.0227 248.4749 221.0227 260.8751Z" fill="#05191b"/>
+    </svg>
+    """
+  end
+
   defp render_png(svg) do
     with {:ok, image} <- Image.from_binary(svg) do
       Image.write(image, :memory, suffix: ".png")
