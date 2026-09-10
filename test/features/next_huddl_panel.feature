@@ -45,6 +45,17 @@ Feature: Next huddl panel on the overview
     Then the next huddl panel names "Elixir hack night"
     And the panel lists the other upcoming huddl "Elixir office hours · 8 / 20"
     And the panel lists the other upcoming huddl "Phoenix workshop · 1 / 1 · 6 waitlisted"
+    And the panel offers no link to more upcoming huddlz
+
+  Scenario: Also upcoming shows only the nearest few
+    Given the huddl "Elixir hack night" in "Portland Elixir" starts in 3 days with room for 20 and 18 RSVPs
+    And "Portland Elixir" has 5 more upcoming huddlz called "Study group" a week apart
+    When I visit "/organize/portland-elixir"
+    Then the panel lists only these other upcoming huddlz:
+      | Study group 1 |
+      | Study group 2 |
+      | Study group 3 |
+    And the panel links to all 6 upcoming huddlz
 
   Scenario: Nothing upcoming
     When I visit "/organize/portland-elixir"

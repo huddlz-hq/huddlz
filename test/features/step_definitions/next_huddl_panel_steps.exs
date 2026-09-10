@@ -168,6 +168,56 @@ defmodule NextHuddlPanelSteps do
     context
   end
 
+  step "{string} has {int} more upcoming huddlz called {string} a week apart",
+       %{args: [group_name, count, title]} = context do
+    group = find_group(group_name)
+    host = Ash.get!(Huddlz.Accounts.User, group.owner_id, authorize?: false)
+
+    for n <- 1..count//1 do
+      generate(
+        huddl(
+          title: "#{title} #{n}",
+          group_id: group.id,
+          creator_id: host.id,
+          is_private: false,
+          max_attendees: 20,
+          date: Date.add(eastern_today(), 3 + 7 * n),
+          actor: host
+        )
+      )
+    end
+
+    context
+  end
+
+  step "the panel lists only these other upcoming huddlz:", %{session: session} = context do
+    listed =
+      session.view
+      |> Phoenix.LiveViewTest.render()
+      |> LazyHTML.from_document()
+      |> LazyHTML.query("#next-huddl-others li a")
+      |> Enum.map(&LazyHTML.text/1)
+
+    expected = List.flatten(context.datatable.raw)
+    assert listed == expected, "expected #{inspect(expected)}, got #{inspect(listed)}"
+    context
+  end
+
+  step "the panel links to all {int} upcoming huddlz",
+       %{args: [count], session: session} = context do
+    assert_has(session, "#next-huddl-others-all[href$='/huddlz']",
+      text: "All #{count} upcoming",
+      exact: true
+    )
+
+    context
+  end
+
+  step "the panel offers no link to more upcoming huddlz", %{session: session} = context do
+    refute_has(session, "#next-huddl-others-all")
+    context
+  end
+
   step "the panel invites me to create a huddl", %{session: session} = context do
     session
     |> assert_has("#next-huddl", text: "Nothing on the calendar yet")

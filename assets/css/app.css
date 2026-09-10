@@ -1972,6 +1972,14 @@ body .next-huddl-others ul {
 body .next-huddl-others a { color: var(--text); font-weight: 500; }
 body .next-huddl-others a:hover { color: var(--accent-ink); }
 
+body .next-huddl-others .more {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--accent-ink);
+}
+body .next-huddl-others .more:hover { text-decoration: underline; text-underline-offset: 3px; }
+
 /* ─────────────────────────────────────────  TABLES / LISTS  ──── */
 /* Activity feed */
 body .feed { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
