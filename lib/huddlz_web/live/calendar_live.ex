@@ -1,20 +1,23 @@
 defmodule HuddlzWeb.CalendarLive do
   @moduledoc """
-  LiveView at `/calendar`. Personal calendar of huddlz the signed-in user
-  is hosting, attending, or watching from the waitlist. Three views:
+  LiveView at `/agenda` and `/calendar`. Personal schedule of huddlz the
+  signed-in user is hosting, attending, or watching from the waitlist.
+  Three views over the same entries:
 
-    * the agenda (default) ignores the month: it starts at today and runs
-      forward through the next few days that have huddlz, leaving the past
-      to the other two;
-    * the week, `?view=week&week=YYYY-MM-DD`, is the same day-by-day list
-      for one Sunday-to-Saturday week, every day drawn, any week;
-    * the month grid, `?view=month&month=YYYY-MM`, is the overview. A day
-      in it opens as a panel, `?day=YYYY-MM-DD`, listing that day's huddlz.
+    * the agenda, `/agenda`, is the signed-in home page. It ignores the
+      month: it starts at today and runs forward through the next few days
+      that have huddlz, leaving the past to the calendar;
+    * the week, `/calendar` (or `?week=YYYY-MM-DD`), is the same day-by-day
+      list for one Sunday-to-Saturday week, every day drawn, any week;
+    * the month grid, `/calendar?view=month&month=YYYY-MM`, is the
+      overview. A day in it opens as a panel, `?day=YYYY-MM-DD`, listing
+      that day's huddlz.
 
   Every piece of state is in the URL, so closing the panel, the browser's
   back button and returning from a huddl all land on the same view.
   `?scope=groups` widens every view from the person's own RSVPs to
-  everything their groups have scheduled.
+  everything their groups have scheduled. Links to the agenda's old home,
+  `/calendar?view=agenda`, are sent on to `/agenda`.
   """
   use HuddlzWeb, :live_view
 
@@ -49,16 +52,23 @@ defmodule HuddlzWeb.CalendarLive do
 
     {:ok,
      socket
-     |> assign(:page_title, "Calendar")
      |> assign(:time_zone, time_zone)
      |> assign(:today, today)
      |> stream_configure(:legend_items, dom_id: &"calendar-legend-item-#{&1.key}")}
   end
 
   @impl true
+  def handle_params(
+        %{"view" => "agenda"} = params,
+        _uri,
+        %{assigns: %{live_action: :index}} = socket
+      ) do
+    {:noreply, push_navigate(socket, to: agenda_path(params["scope"]))}
+  end
+
   def handle_params(params, _uri, socket) do
     today = socket.assigns.today
-    view_mode = parse_view(params["view"])
+    view_mode = view_mode(socket.assigns.live_action, params["view"])
     focus_week = parse_week(params["week"], today)
 
     focus_month =
@@ -96,6 +106,7 @@ defmodule HuddlzWeb.CalendarLive do
 
     {:noreply,
      socket
+     |> assign(:page_title, page_title(view_mode))
      |> assign(:focus_month, focus_month)
      |> assign(:focus_week, focus_week)
      |> assign(:view_mode, view_mode)
@@ -145,9 +156,18 @@ defmodule HuddlzWeb.CalendarLive do
 
   defp parse_month(_, today), do: first_of_month(today)
 
-  defp parse_view("month"), do: :month
-  defp parse_view("week"), do: :week
-  defp parse_view(_), do: :agenda
+  defp view_mode(:agenda, _param), do: :agenda
+  defp view_mode(:index, "month"), do: :month
+  defp view_mode(:index, _param), do: :week
+
+  defp page_title(:agenda), do: "Agenda"
+  defp page_title(_view), do: "Calendar"
+
+  defp nav_key(:agenda), do: "agenda"
+  defp nav_key(_view), do: "calendar"
+
+  defp agenda_path("groups"), do: ~p"/agenda?scope=groups"
+  defp agenda_path(_scope), do: ~p"/agenda"
 
   # Any date in the week names it; the week runs Sunday to Saturday, like
   # the month grid. Anything unreadable means this week.
@@ -293,11 +313,12 @@ defmodule HuddlzWeb.CalendarLive do
     Date.new!(Integer.floor_div(total, 12), Integer.mod(total, 12) + 1, 1)
   end
 
-  # The calendar's own URL, from the current state (`@nav`) with anything
-  # in `overrides` changed. The month only matters to the month view and
-  # the week to the week view; the defaults (agenda, this month, this
-  # week, own RSVPs, no day open) are left out, so the plain `/calendar`
-  # is the default view and an open day never outlives a view change.
+  # The page's own URL, from the current state (`@nav`) with anything in
+  # `overrides` changed. The agenda has its own path; the month only
+  # matters to the month view and the week to the week view; the defaults
+  # (this week, this month, own RSVPs, no day open) are left out, so the
+  # plain `/calendar` is the week and an open day never outlives a view
+  # change.
   defp calendar_path(nav, overrides \\ []) do
     view = Keyword.get(overrides, :view, nav.view)
     month = Keyword.get(overrides, :month, nav.month)
@@ -309,14 +330,19 @@ defmodule HuddlzWeb.CalendarLive do
       [
         month: view == :month && month_param(month, nav.today),
         week: view == :week && week_param(week, nav.today),
-        view: view != :agenda && Atom.to_string(view),
+        view: view == :month && "month",
         scope: scope == :groups && "groups",
         day: day && Date.to_iso8601(day)
       ]
       |> Enum.filter(fn {_key, value} -> value end)
 
-    if params == [], do: ~p"/calendar", else: ~p"/calendar?#{params}"
+    page_path(view, params)
   end
+
+  defp page_path(:agenda, []), do: ~p"/agenda"
+  defp page_path(:agenda, params), do: ~p"/agenda?#{params}"
+  defp page_path(_view, []), do: ~p"/calendar"
+  defp page_path(_view, params), do: ~p"/calendar?#{params}"
 
   defp month_param(month, today) do
     today_first = first_of_month(today)
@@ -543,10 +569,16 @@ defmodule HuddlzWeb.CalendarLive do
       current_user={@current_user}
       unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
-      active="calendar"
+      active={nav_key(@view_mode)}
     >
       <div class="page-head">
-        <div>
+        <div :if={@view_mode == :agenda}>
+          <h1>Agenda</h1>
+          <p>
+            What's next across the huddlz you're hosting, attending, or watching from the waitlist. Times use <strong id="calendar-time-zone">{@time_zone}</strong>.
+          </p>
+        </div>
+        <div :if={@view_mode != :agenda}>
           <h1>Calendar</h1>
           <p>
             huddlz you're hosting, attending, or watching from the waitlist. Calendar dates use <strong id="calendar-time-zone">{@time_zone}</strong>.
@@ -585,9 +617,9 @@ defmodule HuddlzWeb.CalendarLive do
             </div>
         <% end %>
 
-        <div class="cal-view-tabs">
+        <div :if={@view_mode != :agenda} class="cal-view-tabs">
           <.link
-            :for={{view, label} <- [agenda: "Agenda", week: "Week", month: "Month"]}
+            :for={{view, label} <- [week: "Week", month: "Month"]}
             id={"calendar-view-#{view}"}
             patch={calendar_path(@nav, view: view)}
             class={["scope-tab", @view_mode == view && "is-active"]}
@@ -834,17 +866,24 @@ defmodule HuddlzWeb.CalendarLive do
     if Date.compare(day, today) == :eq, do: "cal-day-num is-today", else: "cal-day-num"
   end
 
-  # The calendar's first run: no huddl in any month. Says what the page
-  # holds and offers the action that fills it.
+  # The first run: no huddl in any month. Says what the page holds and
+  # offers the action that fills it. The agenda is the signed-in home, so
+  # its copy speaks of the agenda rather than the calendar.
+  attr :agenda?, :boolean, default: false
+
   defp first_run_empty(assigns) do
     ~H"""
     <.empty_state
       id="calendar-first-run"
       icon="hero-calendar"
-      title="Your calendar is empty"
+      title={if @agenda?, do: "Nothing on your agenda yet", else: "Your calendar is empty"}
       data-first-run
     >
-      Huddlz you RSVP to show up here, in their own time zone.
+      <%= if @agenda? do %>
+        Huddlz you RSVP to show up here, soonest first.
+      <% else %>
+        Huddlz you RSVP to show up here, in their own time zone.
+      <% end %>
       <:action>
         <.button variant={:primary} navigate={~p"/discover"}>
           <.icon name="hero-magnifying-glass" class="size-4" /> Find a huddl
@@ -955,7 +994,7 @@ defmodule HuddlzWeb.CalendarLive do
   defp agenda_view(assigns) do
     ~H"""
     <%= if @first_run? do %>
-      <.first_run_empty />
+      <.first_run_empty agenda?={true} />
     <% else %>
       <%= if Enum.all?(@days, &(&1.entries == [])) do %>
         <.empty_state id="calendar-agenda-empty" icon="hero-calendar" title="Nothing coming up">

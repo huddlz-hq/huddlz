@@ -108,7 +108,7 @@ defmodule CalendarAgendaSteps do
   end
 
   step "I open the agenda", %{conn: conn} = context do
-    session = visit(conn, "/calendar")
+    session = visit(conn, "/agenda")
     Map.merge(context, %{conn: session, session: session})
   end
 

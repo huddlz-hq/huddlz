@@ -13,9 +13,11 @@ Feature: Current navigation for assistive technology
   Scenario: Current destination and view follow navigation
     When I visit "/calendar"
     Then navigation should identify "Calendar" as the current destination
-    And view choices should identify "Agenda" as current
+    And view choices should identify "Week" as current
+    When I click link "Month"
+    Then view choices should identify "Month" as current
     When I click link "Agenda"
-    Then view choices should identify "Agenda" as current
+    Then navigation should identify "Agenda" as the current destination
     When I click link "Discover"
     Then navigation should identify "Discover" as the current destination
     And view choices should identify "Huddlz" as current

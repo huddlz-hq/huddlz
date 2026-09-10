@@ -89,6 +89,7 @@ defmodule HuddlzWeb.Router do
 
     get "/unsubscribe/:token", UnsubscribeController, :show
     post "/unsubscribe/:token", UnsubscribeController, :update
+    get "/huddlz", LegacyController, :huddlz
 
     ash_authentication_live_session :authenticated_routes,
       on_mount_prepend:
@@ -113,7 +114,7 @@ defmodule HuddlzWeb.Router do
       live "/terms", LegalLive, :terms
       live "/code-of-conduct", LegalLive, :conduct
       live "/privacy", LegalLive, :privacy
-      live "/huddlz", HuddlzLive, :index
+      live "/agenda", CalendarLive, :agenda
       live "/groups", GroupsLive, :index
       live "/calendar", CalendarLive, :index
       live "/notifications", NotificationsLive, :index
