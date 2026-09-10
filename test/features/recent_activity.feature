@@ -46,6 +46,17 @@ Feature: Recent activity on the overview
     Then the feed shows "Sam Nguyen left the group"
     And the feed shows "Sam Nguyen joined the group"
 
+  Scenario: Accepted invitations are remembered
+    Given a private group "Elixir Insiders" exists with owner "host@example.com"
+    And "Sam Nguyen" accepted an invitation to "Elixir Insiders" 10 minutes ago
+    And "Avery Park" was added to "Elixir Insiders" while an invitation was pending
+    And "Avery Park" accepted that invitation 5 minutes ago
+    When I visit "/organize/elixir-insiders"
+    Then the feed shows "Sam Nguyen accepted an invitation" once
+    And the feed does not show "Sam Nguyen joined the group"
+    And the feed shows "Avery Park joined the group"
+    And the feed shows "Avery Park accepted an invitation" once
+
   Scenario: The feed is organizer-only
     Given "member@example.com" is a member of "Portland Elixir"
     When "host@example.com" reads the activity of "Portland Elixir" through GraphQL

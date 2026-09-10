@@ -4,11 +4,13 @@ defmodule Huddlz.Communities.ActivityLog do
   run. A notifier, like `MembershipEvents`: it sees each committed action
   and records what it meant in the group's terms.
 
-  Membership: joining (directly, by an organizer, or by accepting an
-  invitation) and leaving (or being removed). Attendance: an RSVP, a
-  waitlist entry, a cancelled RSVP, a withdrawn waitlist entry, and a
-  promotion from the waitlist. Owner rows from group creation and role
-  changes are not activity.
+  Membership: joining (directly or added by an organizer) and leaving (or
+  being removed). Invitations: accepting one, recorded from the invitation
+  itself so it counts even when the person was already added meanwhile;
+  the membership row an acceptance creates is not logged again.
+  Attendance: an RSVP, a waitlist entry, a cancelled RSVP, a withdrawn
+  waitlist entry, and a promotion from the waitlist. Owner rows from group
+  creation and role changes are not activity.
 
   A failure to log is reported, never raised: the action that caused it
   has already committed.
@@ -18,7 +20,7 @@ defmodule Huddlz.Communities.ActivityLog do
 
   require Logger
 
-  alias Huddlz.Communities.{GroupActivity, GroupMember, Huddl, HuddlAttendee}
+  alias Huddlz.Communities.{GroupActivity, GroupInvitation, GroupMember, Huddl, HuddlAttendee}
 
   @impl true
   def requires_original_data?(_resource, _action), do: false
@@ -29,6 +31,14 @@ defmodule Huddlz.Communities.ActivityLog do
       nil -> :ok
       kind -> record(kind, member.group_id, member.user_id, nil)
     end
+  end
+
+  def notify(%Ash.Notifier.Notification{
+        resource: GroupInvitation,
+        action: %{name: :accept},
+        data: invitation
+      }) do
+    record(:accepted_invitation, invitation.group_id, invitation.invitee_id, nil)
   end
 
   def notify(%Ash.Notifier.Notification{resource: HuddlAttendee, action: action, data: attendee}) do
@@ -42,7 +52,6 @@ defmodule Huddlz.Communities.ActivityLog do
 
   defp member_kind(:join_group), do: :joined
   defp member_kind(:add_member), do: :joined
-  defp member_kind(:accept_invitation), do: :accepted_invitation
   defp member_kind(:leave_group), do: :left
   defp member_kind(:remove_member), do: :left
   defp member_kind(_other), do: nil

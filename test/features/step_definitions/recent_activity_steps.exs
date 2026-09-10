@@ -11,6 +11,7 @@ defmodule RecentActivitySteps do
   require Ash.Query
 
   alias Huddlz.Accounts.User
+  alias Huddlz.Communities
   alias Huddlz.Communities.{Group, GroupActivity, GroupMember, Huddl}
   alias Huddlz.Repo
 
@@ -57,7 +58,7 @@ defmodule RecentActivitySteps do
       |> Ash.Query.filter(group_id == ^group.id and user_id == ^person.id)
       |> Ash.read_one!(authorize?: false)
 
-    Ash.destroy!(membership, action: :leave_group, actor: person)
+    Communities.leave_group!(membership, actor: person)
     backdate_latest(group, person, :left, ago(amount, unit))
     context
   end
@@ -67,7 +68,7 @@ defmodule RecentActivitySteps do
     person = find_user(name)
     huddl = find_huddl(title)
 
-    huddl |> Ash.Changeset.for_update(:rsvp, %{}, actor: person) |> Ash.update!()
+    Communities.rsvp_huddl!(huddl, actor: person)
     backdate_latest(huddl, person, :rsvped, ago(amount, unit))
     context
   end
@@ -77,7 +78,7 @@ defmodule RecentActivitySteps do
     person = find_user(name)
     huddl = find_huddl(title)
 
-    huddl |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: person) |> Ash.update!()
+    Communities.cancel_rsvp_huddl!(huddl, actor: person)
     backdate_latest(huddl, person, :cancelled_rsvp, ago(amount, unit))
     context
   end
@@ -87,8 +88,48 @@ defmodule RecentActivitySteps do
     person = find_user(name)
     huddl = find_huddl(title)
 
-    huddl |> Ash.Changeset.for_update(:join_waitlist, %{}, actor: person) |> Ash.update!()
+    Communities.join_waitlist_huddl!(huddl, actor: person)
     backdate_latest(huddl, person, :waitlisted, ago(amount, unit))
+    context
+  end
+
+  step "{string} accepted an invitation to {string} {int} {word} ago",
+       %{args: [name, group_name, amount, unit]} = context do
+    person = find_user(name)
+    group = find_group(group_name)
+
+    group |> invite(person) |> accept(person)
+    backdate_latest(group, person, :accepted_invitation, ago(amount, unit))
+    context
+  end
+
+  step "{string} was added to {string} while an invitation was pending",
+       %{args: [name, group_name]} = context do
+    person = find_user(name)
+    group = find_group(group_name)
+    host = Ash.get!(User, group.owner_id, authorize?: false)
+
+    invitation = invite(group, person)
+    Communities.add_member!(group.id, person.id, :member, actor: host)
+    Map.put(context, :pending_invitation, invitation)
+  end
+
+  step "{string} accepted that invitation {int} {word} ago",
+       %{args: [name, amount, unit]} = context do
+    person = find_user(name)
+    invitation = accept(context.pending_invitation, person)
+    group = find_group_by_id(invitation.group_id)
+    backdate_latest(group, person, :accepted_invitation, ago(amount, unit))
+    context
+  end
+
+  step "the feed shows {string} once", %{args: [line], session: session} = context do
+    assert_has(session, "#recent-activity .item .what", text: line, exact: true, count: 1)
+    context
+  end
+
+  step "the feed does not show {string}", %{args: [line], session: session} = context do
+    refute_has(session, "#recent-activity .item .what", text: line, exact: true)
     context
   end
 
@@ -149,13 +190,22 @@ defmodule RecentActivitySteps do
     context
   end
 
+  defp invite(group, person) do
+    host = Ash.get!(User, group.owner_id, authorize?: false)
+    Communities.invite_to_group!(group.id, person.id, :member, actor: host)
+  end
+
+  defp accept(invitation, person) do
+    Communities.accept_group_invitation!(invitation, actor: person)
+  end
+
+  defp find_group_by_id(id), do: Ash.get!(Group, id, authorize?: false)
+
   defp join(name, group_name, at) do
     person = find_user(name)
     group = find_group(group_name)
 
-    GroupMember
-    |> Ash.Changeset.for_create(:join_group, %{group_id: group.id}, actor: person)
-    |> Ash.create!()
+    Communities.join_group!(group.id, actor: person)
 
     backdate_latest(group, person, :joined, at)
   end

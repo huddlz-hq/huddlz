@@ -119,6 +119,8 @@ defmodule Huddlz.Communities do
     end
 
     resource Huddlz.Communities.GroupMember do
+      define :join_group, action: :join_group, args: [:group_id]
+      define :leave_group, action: :leave_group
       define :add_member, action: :add_member, args: [:group_id, :user_id, :role]
       define :get_group_member, action: :read, get_by: [:group_id, :user_id]
 
