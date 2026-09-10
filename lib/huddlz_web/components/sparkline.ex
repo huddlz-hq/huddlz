@@ -24,6 +24,7 @@ defmodule HuddlzWeb.Components.Sparkline do
       preserveAspectRatio="none"
       aria-hidden="true"
       data-points={Enum.join(@points, ",")}
+      data-count={length(@points)}
     >
       <polyline
         fill="none"
