@@ -15,6 +15,7 @@ defmodule HuddlzWeb.OrganizeLive do
   use HuddlzWeb, :live_view
 
   import HuddlzWeb.Components.Sparkline
+  import HuddlzWeb.Components.GrowthChart
   import HuddlzWeb.Components.SignupChart
 
   alias Huddlz.Communities
@@ -505,59 +506,98 @@ defmodule HuddlzWeb.OrganizeLive do
       </div>
     </div>
 
-    <div id="next-huddl" class="panel">
-      <div class="panel-head">
-        <div>
-          <h2>Next huddl</h2>
-          <div :if={@next} class="panel-sub">
-            <.link navigate={huddl_show_path(@group, @next)}>{@next.title}</.link>
-            · {short_date(@next)}
+    <div class="overview-row">
+      <div id="member-growth-panel" class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Member growth</h2>
+            <div class="panel-sub">{growth_sub(@stats.growth.unit)}</div>
           </div>
-          <div :if={is_nil(@next)} class="panel-sub">Next on the calendar</div>
+          <div class="stat">
+            <span class="big">+{@stats.growth.gained}</span>
+            <span class="cmp">in {GroupStats.period_label(@period)}</span>
+          </div>
         </div>
-        <.link :if={@next} navigate={huddl_show_path(@group, @next)} class="pill">Open</.link>
+        <div class="growth-chart-wrap">
+          <.growth_chart
+            id="member-growth"
+            class="wide-only"
+            unit={@stats.growth.unit}
+            buckets={@stats.growth.buckets}
+          />
+          <.growth_chart
+            id="member-growth-compact"
+            class="compact-only"
+            width={360}
+            compact
+            unit={@stats.growth.unit}
+            buckets={@stats.growth.buckets}
+          />
+        </div>
+        <div class="legend">
+          <span><i></i>Members</span>
+          <span><i class="sq"></i>Joined that {@stats.growth.unit}</span>
+        </div>
       </div>
 
-      <%= if @next do %>
-        <div class={["next-huddl-body", @next.others != [] && "has-others"]}>
-          <div class="next-huddl-chart">
-            <div class="stat">
-              <span class="big">{signups_figure(@next)}</span>
-              <span class="cmp">{published_ago(@next.days)}</span>
+      <div id="next-huddl" class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Next huddl</h2>
+            <div :if={@next} class="panel-sub">
+              <.link navigate={huddl_show_path(@group, @next)}>{@next.title}</.link>
+              · {short_date(@next)}
             </div>
-            <.signup_chart
-              id="next-huddl"
-              curve={@next.curve}
-              typical={@next.typical}
-              capacity={@next.capacity}
-            />
-            <div class="legend">
-              <span><i></i>RSVPs since publish</span>
-              <span :if={@next.typical}><i class="typ"></i>Typical for this group</span>
-              <span :if={@next.capacity}><i class="cap"></i>Capacity</span>
+            <div :if={is_nil(@next)} class="panel-sub">Next on the calendar</div>
+          </div>
+          <.link :if={@next} navigate={huddl_show_path(@group, @next)} class="pill">Open</.link>
+        </div>
+
+        <%= if @next do %>
+          <div class={["next-huddl-body", @next.others != [] && "has-others"]}>
+            <div class="next-huddl-chart">
+              <div class="stat">
+                <span class="big">{signups_figure(@next)}</span>
+                <span class="cmp">{published_ago(@next.days)}</span>
+              </div>
+              <.signup_chart
+                id="next-huddl"
+                curve={@next.curve}
+                typical={@next.typical}
+                capacity={@next.capacity}
+              />
+              <div class="legend">
+                <span><i></i>RSVPs since publish</span>
+                <span :if={@next.typical}><i class="typ"></i>Typical for this group</span>
+                <span :if={@next.capacity}><i class="cap"></i>Capacity</span>
+              </div>
+            </div>
+            <div :if={@next.others != []} class="next-huddl-others">
+              <div class="label">Also upcoming</div>
+              <ul id="next-huddl-others">
+                <li :for={huddl <- @next.others}>
+                  <.link navigate={huddl_show_path(@group, huddl)}>{huddl.title}</.link>
+                  <span class="count">· {signups_figure(huddl)}{waitlisted_suffix(huddl)}</span>
+                </li>
+              </ul>
             </div>
           </div>
-          <div :if={@next.others != []} class="next-huddl-others">
-            <div class="label">Also upcoming</div>
-            <ul id="next-huddl-others">
-              <li :for={huddl <- @next.others}>
-                <.link navigate={huddl_show_path(@group, huddl)}>{huddl.title}</.link>
-                <span class="count">· {signups_figure(huddl)}{waitlisted_suffix(huddl)}</span>
-              </li>
-            </ul>
+        <% else %>
+          <p class="muted">
+            Nothing on the calendar yet. Create a huddl and its signups will show here.
+          </p>
+          <div :if={is_nil(@group.archived_at)} class="panel-cta">
+            <a class="btn-primary" href={~p"/groups/#{@group.slug}/huddlz/new"}>Create a huddl</a>
           </div>
-        </div>
-      <% else %>
-        <p class="muted">
-          Nothing on the calendar yet. Create a huddl and its signups will show here.
-        </p>
-        <div :if={is_nil(@group.archived_at)} class="panel-cta">
-          <a class="btn-primary" href={~p"/groups/#{@group.slug}/huddlz/new"}>Create a huddl</a>
-        </div>
-      <% end %>
+        <% end %>
+      </div>
     </div>
     """
   end
+
+  defp growth_sub(:month), do: "Members at month end, with how many joined each month"
+  defp growth_sub(:fortnight), do: "Members at each fortnight's end, with how many joined in it"
+  defp growth_sub(:week), do: "Members at each week's end, with how many joined that week"
 
   # ─────────────────────────────────────────  HUDDLZ  ───
   attr :group, :map, required: true

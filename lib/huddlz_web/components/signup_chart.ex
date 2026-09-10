@@ -9,7 +9,6 @@ defmodule HuddlzWeb.Components.SignupChart do
   """
   use Phoenix.Component
 
-  @width 600
   @height 200
   @left 32
   @right 16
@@ -20,6 +19,7 @@ defmodule HuddlzWeb.Components.SignupChart do
   attr :curve, :list, required: true, doc: "RSVPs standing at the end of each day since publish"
   attr :typical, :list, default: nil, doc: "the group's typical curve over the same days, or nil"
   attr :capacity, :integer, default: nil
+  attr :width, :integer, default: 400, doc: "viewBox width; the height is fixed"
 
   def signup_chart(assigns) do
     assigns = assign(assigns, :chart, layout(assigns))
@@ -80,10 +80,10 @@ defmodule HuddlzWeb.Components.SignupChart do
     """
   end
 
-  defp layout(%{curve: curve, typical: typical, capacity: capacity}) do
+  defp layout(%{curve: curve, typical: typical, capacity: capacity, width: width}) do
     n = length(curve)
     hi = ceiling([capacity | curve ++ (typical || [])])
-    plot_width = @width - @left - @right
+    plot_width = width - @left - @right
     plot_height = @height - @top - @bottom
     x = fn i -> Float.round(@left + i * plot_width / max(n - 1, 1), 1) end
     y = fn v -> Float.round(@top + plot_height * (1 - v / hi), 1) end
@@ -93,10 +93,10 @@ defmodule HuddlzWeb.Components.SignupChart do
     end
 
     %{
-      width: @width,
+      width: width,
       height: @height,
       left: @left,
-      right: @width - @right,
+      right: width - @right,
       gridlines: gridlines(hi, y),
       capacity_y: capacity && y.(capacity),
       typical_path: typical && points.(typical),
