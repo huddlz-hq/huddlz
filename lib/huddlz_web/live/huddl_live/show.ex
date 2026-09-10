@@ -1410,7 +1410,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   defp huddl_meta(huddl) do
     %{
-      title: "#{huddl.title} · huddlz",
+      title: "#{huddl.title} · #{preview_when(huddl)}",
       description: MetaHelpers.description(huddl, "Find and join this huddl on huddlz."),
       type: "event",
       url: url(~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"),
@@ -1418,6 +1418,14 @@ defmodule HuddlzWeb.HuddlLive.Show do
         MetaHelpers.image_url(huddl.display_image_url, HuddlCoverImages) ||
           url(~p"/og/huddlz/#{huddl.id}/card.png")
     }
+  end
+
+  # "Sat, Jul 20, 2030 · 12:00 PM EDT": a pasted link is read later and
+  # elsewhere, so the year and zone stay in, unlike the page's own hero line.
+  defp preview_when(huddl) do
+    starts_at = DateTime.shift_zone!(huddl.starts_at, huddl.time_zone)
+
+    "#{Calendar.strftime(starts_at, "%a, %b %-d, %Y")} · #{format_time_only(starts_at)} #{starts_at.zone_abbr}"
   end
 
   defp previous_start(huddl),
