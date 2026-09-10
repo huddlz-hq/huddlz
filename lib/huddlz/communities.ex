@@ -71,6 +71,7 @@ defmodule Huddlz.Communities do
       define :groups_for_actor, action: :groups_for_actor, args: [{:optional, :relationship}]
       define :get_by_slug, action: :get_by_slug, args: [:slug]
       define :get_group_for_organize, action: :get_for_organize, args: [:slug], get?: true
+      define :group_overview, action: :overview, args: [:group_id, {:optional, :period}]
 
       define :update_details,
         action: :update_details,

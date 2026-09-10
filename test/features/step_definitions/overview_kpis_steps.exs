@@ -2,11 +2,15 @@ defmodule OverviewKpisSteps do
   use Cucumber.StepDefinition
 
   import Ecto.Query, only: [from: 2]
+  import ExUnit.Assertions
   import Huddlz.Generator
+  import HuddlzWeb.ApiCase
+  import Phoenix.ConnTest, only: [build_conn: 0, json_response: 2]
   import PhoenixTest
 
   require Ash.Query
 
+  alias Huddlz.Accounts.User
   alias Huddlz.Communities.{Group, GroupMember, Huddl, HuddlAttendee}
   alias Huddlz.Repo
 
@@ -87,6 +91,45 @@ defmodule OverviewKpisSteps do
 
     context
   end
+
+  step "{string} reads the overview of {string} for {string} through GraphQL",
+       %{args: [email, group_name, period]} = context do
+    user = User |> Ash.Query.filter(email == ^email) |> Ash.read_one!(authorize?: false)
+    group = find_group(group_name)
+
+    response =
+      build_conn()
+      |> authenticated_conn(user)
+      |> gql_post(~s|{ groupOverview(groupId: "#{group.id}", period: "#{period}") }|)
+      |> json_response(200)
+
+    Map.put(context, :overview_response, response)
+  end
+
+  step "the API overview shows {int} members and {int} joined this month",
+       %{args: [count, joined]} = context do
+    overview = overview_payload(context.overview_response)
+    assert overview["members"]["count"] == count
+    assert overview["members"]["joined_this_month"] == joined
+    context
+  end
+
+  step "the API refuses the overview", context do
+    response = context.overview_response
+    assert is_nil(response["data"]["groupOverview"])
+    assert [_ | _] = response["errors"]
+    context
+  end
+
+  # The action returns a map; GraphQL carries it as JSON, sometimes as a
+  # string, so accept both.
+  defp overview_payload(%{"data" => %{"groupOverview" => payload}}) when is_binary(payload),
+    do: Jason.decode!(payload)
+
+  defp overview_payload(%{"data" => %{"groupOverview" => payload}}) when is_map(payload),
+    do: payload
+
+  defp overview_payload(response), do: flunk("unexpected overview response: #{inspect(response)}")
 
   defp kpi_id("Members"), do: "kpi-members"
   defp kpi_id("RSVPs"), do: "kpi-rsvps"

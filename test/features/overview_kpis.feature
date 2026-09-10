@@ -6,8 +6,9 @@ Feature: Overview KPIs over a period
 
   Background:
     Given the following users exist:
-      | email            | display_name | role    |
-      | host@example.com | Host User    | regular |
+      | email              | display_name | role    |
+      | host@example.com   | Host User    | regular |
+      | member@example.com | Member User  | regular |
     And a public group "Portland Elixir" exists with owner "host@example.com"
     And "Portland Elixir" was started 3 months ago
     And I am signed in as "host@example.com"
@@ -55,3 +56,11 @@ Feature: Overview KPIs over a period
     Then the Members KPI shows "1" and "+1 this month"
     And the RSVPs KPI shows "0" and "No RSVPs yet"
     And the Waitlisted KPI shows "0" and "No one waiting"
+
+  Scenario: The overview figures are an action organizers can call through the API
+    Given 2 members joined "Portland Elixir" this month
+    And "member@example.com" is a member of "Portland Elixir"
+    When "host@example.com" reads the overview of "Portland Elixir" for "30d" through GraphQL
+    Then the API overview shows 4 members and 3 joined this month
+    When "member@example.com" reads the overview of "Portland Elixir" for "30d" through GraphQL
+    Then the API refuses the overview

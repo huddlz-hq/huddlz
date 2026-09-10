@@ -1,6 +1,8 @@
 defmodule Huddlz.Communities.GroupStats do
   @moduledoc """
   The figures behind a group's organizer overview, for a chosen period.
+  Reached through the group's `:overview` action (`Communities.group_overview/3`),
+  which authorizes the actor; the reads here trust that boundary.
 
   Everything here is derived from rows the app already keeps: member join
   dates, RSVP times and waitlist times. Members who left and RSVPs that
@@ -40,7 +42,9 @@ defmodule Huddlz.Communities.GroupStats do
   def period_label(period), do: period_spec(period).label
 
   @doc """
-  Overview figures for a group over a period.
+  Overview figures for a group over a period. Called by
+  `Huddlz.Communities.Group.Actions.Overview` once the actor is authorized;
+  reach it through `Huddlz.Communities.group_overview/3`, not directly.
 
     * `members` — current member count, how many joined this calendar
       month in the group's time zone, and a cumulative sparkline
@@ -49,7 +53,7 @@ defmodule Huddlz.Communities.GroupStats do
     * `waitlist` — people waitlisted on upcoming huddlz right now, the
       titles of the huddlz that are full, and a cumulative sparkline
   """
-  def overview(group, period, now \\ DateTime.utc_now()) do
+  def compute(group, period, now \\ DateTime.utc_now()) do
     spec = period_spec(period)
     edges = bucket_edges(now, spec)
 

@@ -62,10 +62,10 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:huddlz_list, [])
      |> assign(:huddlz_filter, :published)
      |> assign(:upcoming_huddlz, [])
-     |> assign(:open_rsvps, 0)
      |> assign(:turnout_nudge, nil)
      |> assign(:period, GroupStats.default_period())
      |> assign(:stats, nil)
+     |> assign(:open_rsvps, 0)
      |> assign(:invitation_count, 0)
      |> assign(:invitation_form, invitation_form())
      |> assign(:member_lookup, %{})
@@ -132,7 +132,7 @@ defmodule HuddlzWeb.OrganizeLive do
     |> assign(:upcoming_huddlz, upcoming)
     |> assign(:open_rsvps, open_rsvps)
     |> assign(:turnout_nudge, latest_uncounted_huddl(group, user))
-    |> assign(:stats, GroupStats.overview(group, socket.assigns.period))
+    |> assign(:stats, Communities.group_overview!(group.id, socket.assigns.period, actor: user))
   end
 
   defp load_section(socket, :huddlz, group, user) do
