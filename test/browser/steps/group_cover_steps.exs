@@ -96,6 +96,18 @@ defmodule BrowserCoverSteps do
     context
   end
 
+  step "the group sidebar aligns with the top of the cover", context do
+    assert_browser(context.conn, """
+    (() => {
+      const cover = document.querySelector('#group-detail-hero .group-cover').getBoundingClientRect();
+      const sidebar = document.querySelector('.huddl-side').getBoundingClientRect();
+      return sidebar.left >= cover.right && Math.abs(sidebar.top - cover.top) <= 1;
+    })()
+    """)
+
+    context
+  end
+
   defp assert_cover(conn, "missing") do
     conn
     |> refute_has("#group-detail-hero .cover-image")
