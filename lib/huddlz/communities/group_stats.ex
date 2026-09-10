@@ -8,8 +8,9 @@ defmodule Huddlz.Communities.GroupStats do
   dates, RSVP times and waitlist times, plus the group activity log for
   what those rows forget. Leaves come from the log, and so do the joins of
   people who have since left; members at any past moment are counted back
-  from today's members through those joins and leaves. RSVPs that were
-  cancelled leave no trace yet, so RSVP counts are of RSVPs still standing.
+  from today's members through those joins and leaves. The signup curves
+  are rebuilt the same way from cancelled RSVPs and promotions from the
+  waitlist. The RSVP tile counts RSVPs still standing.
 
   Periods are `"30d"`, `"90d"` (the default) and `"12m"`. Each is split
   into equal buckets for the sparklines: six for the day periods, twelve
@@ -18,9 +19,9 @@ defmodule Huddlz.Communities.GroupStats do
   up to now.
 
   The next huddl's signup curve is one point per day since it was
-  published: how many RSVPs stood by the end of that day. The group's
-  typical curve is the same measure averaged over its past huddlz, drawn
-  only once there are three of them to average.
+  published: how many RSVPs stood at the end of that day, cancellations
+  and all. The group's typical curve is the same measure averaged over its
+  past huddlz, drawn only once there are three of them to average.
 
   Turnout comes from the counts organizers record after a huddl ends. The
   show rate over a period is turnout divided by RSVPs across the counted
@@ -175,8 +176,9 @@ defmodule Huddlz.Communities.GroupStats do
   defp show_rate(_came, 0), do: nil
   defp show_rate(came, rsvps), do: round(came * 100 / rsvps)
 
-  # Combine current join dates with the log, keeping each membership's first
-  # join. Accepting an invitation while already a member is not another join.
+  # Today's members as joins at their join time, merged with the log's
+  # joins, acceptances and leaves. Accepting an invitation while already a
+  # member is not another join.
   defp membership_history(group) do
     rows =
       GroupMember
@@ -195,28 +197,34 @@ defmodule Huddlz.Communities.GroupStats do
     current_joins =
       Enum.map(rows, &%{kind: :joined, user_id: &1.user_id, occurred_at: &1.created_at})
 
-    {_members, joined_at} =
-      (current_joins ++ activity)
+    runs = runs(current_joins ++ activity, :left)
+    %{count: length(rows), joined_at: runs.started_at, left_at: runs.ended_at}
+  end
+
+  # Walk entries in time order, one person at a time: a start counts only
+  # when the person is not already in, and the ending kind closes the run.
+  # Endings are kept even without a known start, so a join or RSVP from
+  # before the log existed shows its end and not its start.
+  defp runs(entries, ending) do
+    {_in, started_at} =
+      entries
       |> Enum.sort_by(& &1.occurred_at, DateTime)
-      |> Enum.reduce({MapSet.new(), []}, &membership_join/2)
+      |> Enum.reduce({MapSet.new(), []}, fn
+        %{kind: ^ending, user_id: user_id}, {present, started_at} ->
+          {MapSet.delete(present, user_id), started_at}
+
+        %{user_id: user_id, occurred_at: at}, {present, started_at} ->
+          if MapSet.member?(present, user_id) do
+            {present, started_at}
+          else
+            {MapSet.put(present, user_id), [at | started_at]}
+          end
+      end)
 
     %{
-      count: length(rows),
-      joined_at: joined_at,
-      left_at: for(%{kind: :left, occurred_at: at} <- activity, do: at)
+      started_at: started_at,
+      ended_at: for(%{kind: ^ending, occurred_at: at} <- entries, do: at)
     }
-  end
-
-  defp membership_join(%{kind: :left, user_id: user_id}, {members, joined_at}) do
-    {MapSet.delete(members, user_id), joined_at}
-  end
-
-  defp membership_join(%{user_id: user_id, occurred_at: at}, {members, joined_at}) do
-    if MapSet.member?(members, user_id) do
-      {members, joined_at}
-    else
-      {MapSet.put(members, user_id), [at | joined_at]}
-    end
   end
 
   defp members(membership, group, now, edges) do
@@ -263,11 +271,13 @@ defmodule Huddlz.Communities.GroupStats do
 
   # Today's count, minus everyone who joined after the moment, plus
   # everyone who left after it. The last point is always today's count.
-  defp members_at(membership, at) do
-    joined_since = Enum.count(membership.joined_at, &(DateTime.compare(&1, at) != :lt))
-    left_since = Enum.count(membership.left_at, &(DateTime.compare(&1, at) != :lt))
-    membership.count - joined_since + left_since
-  end
+  defp members_at(membership, at),
+    do: count_at(membership.count, membership.joined_at, membership.left_at, at)
+
+  defp count_at(count, started_at, ended_at, at),
+    do: count - since(started_at, at) + since(ended_at, at)
+
+  defp since(timestamps, at), do: Enum.count(timestamps, &(DateTime.compare(&1, at) != :lt))
 
   # Twelve calendar months in the group's time zone, this month last.
   defp growth_buckets(group, now, %{growth: :month, buckets: count}) do
@@ -369,8 +379,7 @@ defmodule Huddlz.Communities.GroupStats do
         |> Map.merge(%{
           published_at: published_at,
           days: days,
-          curve:
-            cumulative_by_day(standing_rsvp_times([next.id])[next.id] || [], published_at, days),
+          curve: standing_by_day(next, rsvp_histories([next.id]), published_at, days),
           typical: typical_curve(past, days),
           expected: expected_turnout(next, past, now),
           others: Enum.map(others, &huddl_summary/1)
@@ -386,10 +395,10 @@ defmodule Huddlz.Communities.GroupStats do
     if length(past) < @typical_min_history do
       nil
     else
-      times = standing_rsvp_times(Enum.map(past, & &1.id))
+      histories = rsvp_histories(Enum.map(past, & &1.id))
 
       past
-      |> Enum.map(&cumulative_by_day(times[&1.id] || [], &1.published_at, days))
+      |> Enum.map(&standing_by_day(&1, histories, &1.published_at, days))
       |> Enum.zip_with(fn counts -> Float.round(Enum.sum(counts) / length(counts), 1) end)
     end
   end
@@ -416,20 +425,58 @@ defmodule Huddlz.Communities.GroupStats do
     }
   end
 
-  # Standing (non-waitlisted) RSVP times, grouped by huddl.
-  defp standing_rsvp_times(huddl_ids) do
-    HuddlAttendee
-    |> Ash.Query.filter(huddl_id in ^huddl_ids and is_nil(waitlisted_at))
-    |> Ash.Query.select([:huddl_id, :rsvped_at])
-    |> Ash.read!(authorize?: false)
-    |> Enum.group_by(& &1.huddl_id, & &1.rsvped_at)
+  # Each huddl's RSVP history, built like the membership history: today's
+  # standing rows as RSVPs at their RSVP time, or at their promotion when
+  # the log has one, merged with the log's RSVPs, promotions and
+  # cancellations. Waitlist entries and withdrawals do not move the curve.
+  defp rsvp_histories(huddl_ids) do
+    rows =
+      HuddlAttendee
+      |> Ash.Query.filter(huddl_id in ^huddl_ids and is_nil(waitlisted_at))
+      |> Ash.Query.select([:huddl_id, :user_id, :rsvped_at])
+      |> Ash.read!(authorize?: false)
+
+    activity =
+      GroupActivity
+      |> Ash.Query.filter(
+        huddl_id in ^huddl_ids and kind in [:rsvped, :promoted, :cancelled_rsvp]
+      )
+      |> Ash.Query.select([:huddl_id, :user_id, :kind, :occurred_at])
+      |> Ash.read!(authorize?: false)
+
+    promoted_at =
+      activity
+      |> Enum.filter(&(&1.kind == :promoted))
+      |> Enum.group_by(&{&1.huddl_id, &1.user_id}, & &1.occurred_at)
+      |> Map.new(fn {key, times} -> {key, Enum.max(times, DateTime)} end)
+
+    standing =
+      Enum.map(rows, fn row ->
+        %{
+          kind: :rsvped,
+          huddl_id: row.huddl_id,
+          user_id: row.user_id,
+          occurred_at: latest(row.rsvped_at, promoted_at[{row.huddl_id, row.user_id}])
+        }
+      end)
+
+    (standing ++ activity)
+    |> Enum.group_by(& &1.huddl_id)
+    |> Map.new(fn {huddl_id, entries} -> {huddl_id, runs(entries, :cancelled_rsvp)} end)
   end
 
-  # One point per day from publish: RSVPs standing by the end of that day.
-  defp cumulative_by_day(timestamps, published_at, days) do
+  defp latest(at, nil), do: at
+  defp latest(at, other), do: if(DateTime.compare(other, at) == :gt, do: other, else: at)
+
+  # One point per day from publish: RSVPs standing at the end of that day,
+  # counted back from today's count through the RSVPs and cancellations
+  # since. The last point is always today's count.
+  defp standing_by_day(huddl, histories, published_at, days) do
+    history = Map.get(histories, huddl.id, %{started_at: [], ended_at: []})
+
     Enum.map(0..days, fn d ->
       day_end = DateTime.add(published_at, (d + 1) * @day, :second)
-      Enum.count(timestamps, &(DateTime.compare(&1, day_end) == :lt))
+      count_at(huddl.rsvp_count, history.started_at, history.ended_at, day_end)
     end)
   end
 
