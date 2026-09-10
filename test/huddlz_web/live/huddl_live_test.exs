@@ -621,7 +621,7 @@ defmodule HuddlzWeb.HuddlLiveTest do
 
   defp live_navigate(conn, path) do
     conn
-    |> put_connect_params(%{"_live_referer" => "http://localhost/huddlz"})
+    |> put_connect_params(%{"_live_referer" => "http://localhost/agenda"})
     |> live(path)
   end
 end

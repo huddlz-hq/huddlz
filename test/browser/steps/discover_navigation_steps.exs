@@ -24,15 +24,15 @@ defmodule BrowserDiscoverNavigationSteps do
     Map.put(context, :huddl, huddl)
   end
 
-  step "I have opened my huddlz in a browser", context do
+  step "I have opened my agenda in a browser", context do
     member = generate(user(role: :user))
 
     conn =
       context.conn
       |> sign_in(member)
-      |> visit("/huddlz")
+      |> visit("/agenda")
       |> assert_has(".phx-connected")
-      |> assert_has("h1", text: "Huddlz")
+      |> assert_has("h1", text: "Agenda")
 
     Map.merge(context, %{conn: conn, member: member})
   end

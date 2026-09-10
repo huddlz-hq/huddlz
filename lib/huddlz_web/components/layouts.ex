@@ -25,7 +25,7 @@ defmodule HuddlzWeb.Layouts do
 
   attr :active, :string,
     default: nil,
-    doc: "active surface key for nav highlighting (e.g. \"discover\", \"huddlz\")"
+    doc: "active surface key for nav highlighting (e.g. \"discover\", \"agenda\")"
 
   attr :active_group_slug, :string,
     default: nil,
@@ -87,12 +87,12 @@ defmodule HuddlzWeb.Layouts do
             <span class="label">Discover</span>
           </.link>
           <.link
-            class={["sb-item", @active == "huddlz" && "active"]}
-            navigate={~p"/huddlz"}
-            aria-current={@active == "huddlz" && "page"}
+            class={["sb-item", @active == "agenda" && "active"]}
+            navigate={~p"/agenda"}
+            aria-current={@active == "agenda" && "page"}
           >
-            <.nav_icon name="ticket" />
-            <span class="label">Huddlz</span>
+            <.nav_icon name="agenda" />
+            <span class="label">Agenda</span>
           </.link>
           <.link
             class={["sb-item", @active == "groups" && "active"]}
@@ -387,6 +387,33 @@ defmodule HuddlzWeb.Layouts do
       stroke-linejoin="round"
     >
       <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+    </svg>
+    """
+  end
+
+  defp nav_icon(%{name: "agenda"} = assigns) do
+    ~H"""
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M9 6h11" /><path d="M9 12h11" /><path d="M9 18h11" /><circle
+        cx="4.5"
+        cy="6"
+        r="1.1"
+        fill="currentColor"
+        stroke="none"
+      /><circle cx="4.5" cy="12" r="1.1" fill="currentColor" stroke="none" /><circle
+        cx="4.5"
+        cy="18"
+        r="1.1"
+        fill="currentColor"
+        stroke="none"
+      />
     </svg>
     """
   end

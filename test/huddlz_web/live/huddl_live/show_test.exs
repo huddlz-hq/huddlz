@@ -176,8 +176,6 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has("#huddl-card-cover-#{huddl.id}#{image_fallback_attributes}")
       |> visit(~p"/groups/#{group.slug}")
       |> assert_has("#group-huddl-card-cover-#{huddl.id}#{image_fallback_attributes}")
-      |> visit(~p"/huddlz")
-      |> assert_has("#huddl-list-cover-#{huddl.id}#{image_fallback_attributes}")
     end
 
     test "renders rich link preview metadata", %{conn: conn, group: group, huddl: huddl} do

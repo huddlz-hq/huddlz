@@ -70,7 +70,7 @@ Feature: Create Huddl
       | Huddl Type        | Virtual                     |
       | Virtual Link      | https://example.com/creator |
     And I submit the form
-    And I visit "/huddlz"
+    And I visit "/agenda"
     Then I should see "Creator Attendance"
 
     When I visit the "Creator Attendance" huddl page
@@ -80,8 +80,7 @@ Feature: Create Huddl
 
     When I click "Cancel RSVP"
     Then I should see "RSVP cancelled successfully"
-    When I visit "/huddlz"
-    Then I should not see "Creator Attendance"
+    And I should not see "You're attending"
 
   Scenario: Owner creates a monthly recurring huddl
     Given I am signed in as "owner+create-huddl@example.com"

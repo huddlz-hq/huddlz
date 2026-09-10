@@ -45,7 +45,7 @@ defmodule HuddlzWeb.LiveUserAuth do
 
   def on_mount(:redirect_to_me_if_authenticated, _params, _session, socket) do
     if socket.assigns[:current_user] do
-      {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/huddlz")}
+      {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/agenda")}
     else
       {:cont, assign(socket, :current_user, nil)}
     end
@@ -119,7 +119,7 @@ defmodule HuddlzWeb.LiveUserAuth do
       {:halt,
        socket
        |> Phoenix.LiveView.put_flash(:error, "You don't have access to the admin area.")
-       |> Phoenix.LiveView.redirect(to: ~p"/huddlz")}
+       |> Phoenix.LiveView.redirect(to: ~p"/agenda")}
     end
   end
 

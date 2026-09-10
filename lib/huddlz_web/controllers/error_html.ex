@@ -129,7 +129,7 @@ defmodule HuddlzWeb.ErrorHTML do
   end
 
   defp home_destination(nil), do: {~p"/", "huddlz home"}
-  defp home_destination(_current_user), do: {~p"/huddlz", "Back to Huddlz"}
+  defp home_destination(_current_user), do: {~p"/agenda", "Back to your agenda"}
 
   defp safe_retry_path("//" <> _path), do: ~p"/"
   defp safe_retry_path("/\\" <> _path), do: ~p"/"

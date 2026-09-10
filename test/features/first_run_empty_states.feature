@@ -11,10 +11,10 @@ Feature: First-run empty states
       | newcomer@example.com | Ada Park     | user |
     And I am signed in as "newcomer@example.com"
 
-  Scenario: A newcomer's Huddlz sends them to find a huddl
-    When I visit "/huddlz"
-    Then I should see "No upcoming RSVPs yet"
-    And I should see "Find a huddl worth showing up to and it will land here."
+  Scenario: A newcomer's agenda sends them to find a huddl
+    When I visit "/agenda"
+    Then I should see "Nothing on your agenda yet"
+    And I should see "Huddlz you RSVP to show up here, soonest first."
     When I click link "Find a huddl"
     Then I should see "Browse huddlz"
 
@@ -33,11 +33,11 @@ Feature: First-run empty states
     When I click link "Find a huddl"
     Then I should see "Browse huddlz"
 
-  Scenario: Someone who has attended before sees a quieter Huddlz
+  Scenario: Someone who has attended before sees a quieter agenda
     Given I attended a huddl last month
-    When I visit "/huddlz"
+    When I visit "/agenda"
     Then I should see "Nothing coming up"
-    And I should not see "No upcoming RSVPs yet"
+    And I should not see "Nothing on your agenda yet"
     And I should see "Browse huddlz"
 
   Scenario: The owner of a new group is invited to schedule its first huddl
