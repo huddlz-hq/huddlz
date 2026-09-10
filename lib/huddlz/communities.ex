@@ -167,6 +167,10 @@ defmodule Huddlz.Communities do
         get?: false
     end
 
+    resource Huddlz.Communities.GroupActivity do
+      define :list_group_activity, action: :for_group, args: [:group_id, {:optional, :limit}]
+    end
+
     resource Huddlz.Communities.HuddlTemplate
 
     resource Huddlz.Communities.GroupLocation do

@@ -8,6 +8,7 @@ defmodule Huddlz.Communities.HuddlAttendee do
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
+    notifiers: [Huddlz.Communities.ActivityLog],
     extensions: [AshJsonApi.Resource, AshGraphql.Resource]
 
   graphql do

@@ -14,6 +14,7 @@ defmodule HuddlzWeb.OrganizeLive do
   """
   use HuddlzWeb, :live_view
 
+  import HuddlzWeb.Components.Avatar
   import HuddlzWeb.Components.Sparkline
   import HuddlzWeb.Components.GrowthChart
   import HuddlzWeb.Components.SignupChart
@@ -42,6 +43,7 @@ defmodule HuddlzWeb.OrganizeLive do
   # overview; after this many days the moment has passed.
   @turnout_nudge_days 14
   @huddlz_filters [:published, :draft, :past, :cancelled]
+  @activity_limit 10
   # Rows shown before "Show more". A weekly series alone can run to a
   # hundred dates, so the list pages rather than folding anything.
   @huddlz_page 20
@@ -126,6 +128,7 @@ defmodule HuddlzWeb.OrganizeLive do
     socket
     |> assign(:turnout_nudge, latest_uncounted_huddl(group, user))
     |> assign(:stats, Communities.group_overview!(group.id, socket.assigns.period, actor: user))
+    |> assign(:activity, Communities.list_group_activity!(group.id, @activity_limit, actor: user))
   end
 
   defp load_section(socket, :huddlz, group, user) do
@@ -318,6 +321,7 @@ defmodule HuddlzWeb.OrganizeLive do
             can_edit_group={@can_edit_group}
             turnout_nudge={@turnout_nudge}
             period={@period}
+            activity={@activity}
             stats={@stats}
           />
         <% :huddlz -> %>
@@ -436,6 +440,7 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :turnout_nudge, :map, default: nil
   attr :period, :string, required: true
   attr :stats, :map, required: true
+  attr :activity, :list, required: true
 
   attr :can_edit_group, :boolean, required: true
 
@@ -592,7 +597,79 @@ defmodule HuddlzWeb.OrganizeLive do
         <% end %>
       </div>
     </div>
+
+    <div id="recent-activity" class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Recent activity</h2>
+          <div class="panel-sub">Joins, RSVPs and cancellations</div>
+        </div>
+        <.link navigate={~p"/organize/#{@group.slug}/members"} class="pill">All members</.link>
+      </div>
+      <p :if={@activity == []} class="muted">
+        Nothing yet. Joins, RSVPs and cancellations will show here as they happen.
+      </p>
+      <ol :if={@activity != []} class="feed">
+        <li :for={entry <- @activity} class="item" data-kind={entry.kind}>
+          <.avatar user={entry.user} size={:sm} />
+          <span class="what">
+            <i class={["kind", activity_tone(entry.kind)]}></i>
+            <.activity_line entry={entry} />
+          </span>
+          <span class="when">{feed_time(entry.occurred_at, @group.time_zone)}</span>
+        </li>
+      </ol>
+    </div>
     """
+  end
+
+  attr :entry, :map, required: true
+
+  defp activity_line(%{entry: %{kind: kind}} = assigns)
+       when kind in [:joined, :left, :accepted_invitation] do
+    ~H"""
+    <b>{@entry.user.display_name}</b> {activity_verb(@entry.kind)}
+    """
+  end
+
+  defp activity_line(assigns) do
+    ~H"""
+    <b>{@entry.user.display_name}</b> {activity_verb(@entry.kind)} <b>{huddl_name(@entry.huddl)}</b>
+    """
+  end
+
+  defp activity_verb(:joined), do: "joined the group"
+  defp activity_verb(:left), do: "left the group"
+  defp activity_verb(:accepted_invitation), do: "accepted an invitation"
+  defp activity_verb(:rsvped), do: "RSVPd to"
+  defp activity_verb(:cancelled_rsvp), do: "cancelled their RSVP to"
+  defp activity_verb(:waitlisted), do: "joined the waitlist for"
+  defp activity_verb(:left_waitlist), do: "left the waitlist for"
+  defp activity_verb(:promoted), do: "got a spot from the waitlist for"
+
+  defp huddl_name(nil), do: "a huddl since deleted"
+  defp huddl_name(%{title: title}), do: title
+
+  defp activity_tone(kind) when kind in [:joined, :accepted_invitation, :promoted], do: "join"
+  defp activity_tone(kind) when kind in [:left, :cancelled_rsvp, :left_waitlist], do: "off"
+  defp activity_tone(:waitlisted), do: "wait"
+  defp activity_tone(_kind), do: nil
+
+  # How long ago, in the shortest words that still read: minutes and hours
+  # within a day, then the day itself.
+  defp feed_time(at, time_zone, now \\ DateTime.utc_now()) do
+    seconds = DateTime.diff(now, at, :second)
+    today = now |> DateTime.shift_zone!(time_zone) |> DateTime.to_date()
+    day = at |> DateTime.shift_zone!(time_zone) |> DateTime.to_date()
+
+    cond do
+      seconds < 60 -> "now"
+      seconds < 3600 -> "#{div(seconds, 60)}m"
+      seconds < 86_400 -> "#{div(seconds, 3600)}h"
+      Date.diff(today, day) == 1 -> "Yesterday"
+      Date.diff(today, day) < 7 -> Calendar.strftime(day, "%a")
+      true -> Calendar.strftime(day, "%b %-d")
+    end
   end
 
   defp growth_sub(:month), do: "Members at month end, with how many joined each month"

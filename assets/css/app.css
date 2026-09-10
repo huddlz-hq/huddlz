@@ -1945,6 +1945,43 @@ body .next-huddl-others a { color: var(--text); font-weight: 500; }
 body .next-huddl-others a:hover { color: var(--accent-ink); }
 
 /* ─────────────────────────────────────────  TABLES / LISTS  ──── */
+/* Activity feed */
+body .feed { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+
+body .feed .item {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+body .feed .item:last-child { border-bottom: 0; padding-bottom: 0; }
+body .feed .what { font-size: 13px; color: var(--soft); line-height: 1.4; }
+body .feed .what b { color: var(--text); font-weight: 600; }
+
+body .feed .when {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+body .feed .kind {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: 1px;
+  background: var(--accent);
+}
+
+body .feed .kind.join { background: var(--success); }
+body .feed .kind.off { background: var(--warn); }
+body .feed .kind.wait { background: var(--line-strong); }
+
 body .panel {
   border: 1px solid var(--line);
   border-radius: var(--radius);
