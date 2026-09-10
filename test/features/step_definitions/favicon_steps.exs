@@ -27,23 +27,17 @@ defmodule FaviconSteps do
     response = get(build_conn(), "/favicon.svg")
     assert response.status == 200
     assert response_content_type(response, :svg) =~ "image/svg+xml"
-    Map.put(context, :svg, Floki.parse_fragment!(response.resp_body))
+    Map.put(context, :svg, response.resp_body)
   end
 
   step "it is a cyan rounded square with a dark \"h\" and no glow effects", context do
-    svg = context.svg
+    {:ok, actual} = Image.from_binary(context.svg)
+    {:ok, reference} = Image.open("test/fixtures/brand-mark.png")
+    {:ok, difference, _image} = Image.compare(actual, reference, metric: :rmse)
 
-    [tile] = Floki.find(svg, "rect")
-    assert Floki.attribute([tile], "fill") == ["#18cbd4"]
-    assert [rx] = Floki.attribute([tile], "rx")
-    assert String.to_integer(rx) > 0
-    assert Floki.attribute([tile], "stroke") == []
-
-    glyphs = Floki.find(svg, "path")
-    assert glyphs != []
-    assert Enum.all?(glyphs, &(Floki.attribute([&1], "stroke") == ["#05191b"]))
-
-    assert Floki.find(svg, "filter, feGaussianBlur, feDropShadow") == []
+    # Allow small rasterizer/antialiasing differences, while checking the visible
+    # glyph, placement, colors and tile instead of how the SVG is constructed.
+    assert difference < 0.01, "favicon differs from the brand mark (RMSE #{difference})"
     context
   end
 
