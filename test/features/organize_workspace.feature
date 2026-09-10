@@ -112,7 +112,6 @@ Feature: Organizer workspace
     Then I should see "Cyberpunk Builders"
     And I should see "Members"
     And I should see "RSVPs · last 90 days"
-    And I should see "Upcoming"
     And I should see "Waitlisted now"
     And I should see "No upcoming huddlz right now. Create one to get started."
 
@@ -124,13 +123,13 @@ Feature: Organizer workspace
     Then I should see "Upcoming huddlz"
     And I should see "Synthwave Night"
 
-  Scenario: Open RSVPs roll up into the overview KPI tile
+  Scenario: Overview shows the upcoming huddl's RSVPs
     Given a public group "Cyberpunk Builders" exists with owner "host+organize-workspace@example.com"
     And the huddl "Synthwave Night" exists in group "Cyberpunk Builders" hosted by "host+organize-workspace@example.com"
     And "attendee+organize-workspace@example.com" has RSVPed to "Synthwave Night"
     And I am signed in as "host+organize-workspace@example.com"
     When I visit "/organize/cyberpunk-builders"
-    Then I should see "2 open RSVPs"
+    Then I should see "Upcoming huddlz"
     And I should see "2 RSVPs"
 
   Scenario: Overview does not show huddlz from groups the actor does not organize

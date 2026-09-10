@@ -65,7 +65,6 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:turnout_nudge, nil)
      |> assign(:period, GroupStats.default_period())
      |> assign(:stats, nil)
-     |> assign(:open_rsvps, 0)
      |> assign(:invitation_count, 0)
      |> assign(:invitation_form, invitation_form())
      |> assign(:member_lookup, %{})
@@ -126,11 +125,9 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp load_section(socket, :overview, group, user) do
     upcoming = list_upcoming_huddlz(group, user)
-    open_rsvps = Enum.reduce(upcoming, 0, &(&1.rsvp_count + &2))
 
     socket
     |> assign(:upcoming_huddlz, upcoming)
-    |> assign(:open_rsvps, open_rsvps)
     |> assign(:turnout_nudge, latest_uncounted_huddl(group, user))
     |> assign(:stats, Communities.group_overview!(group.id, socket.assigns.period, actor: user))
   end
@@ -332,7 +329,6 @@ defmodule HuddlzWeb.OrganizeLive do
             group={@group}
             can_edit_group={@can_edit_group}
             upcoming_huddlz={@upcoming_huddlz}
-            open_rsvps={@open_rsvps}
             turnout_nudge={@turnout_nudge}
             period={@period}
             stats={@stats}
@@ -451,7 +447,6 @@ defmodule HuddlzWeb.OrganizeLive do
   # ─────────────────────────────────────────  OVERVIEW  ───
   attr :group, :map, required: true
   attr :upcoming_huddlz, :list, required: true
-  attr :open_rsvps, :integer, required: true
   attr :turnout_nudge, :map, default: nil
   attr :period, :string, required: true
   attr :stats, :map, required: true
@@ -501,7 +496,7 @@ defmodule HuddlzWeb.OrganizeLive do
       <.link navigate={huddl_show_path(@group, @turnout_nudge)}>Add turnout</.link>
     </div>
 
-    <div class="kpis">
+    <div class="kpis kpis-3">
       <div id="kpi-members" class="kpi">
         <div class="label">Members</div>
         <div class="value">{@stats.members.count}</div>
@@ -517,11 +512,6 @@ defmodule HuddlzWeb.OrganizeLive do
           {rsvps_delta(@stats.rsvps, @period)}
         </div>
         <.sparkline id="spark-rsvps" points={@stats.rsvps.spark} />
-      </div>
-      <div id="kpi-upcoming" class="kpi">
-        <div class="label">Upcoming</div>
-        <div class="value">{@upcoming_count}</div>
-        <div class="delta muted">{open_rsvps_label(@open_rsvps)}</div>
       </div>
       <div id="kpi-waitlist" class="kpi">
         <div class="label">Waitlisted now</div>
@@ -1684,9 +1674,6 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp waitlist_delta_class(%{count: 0}), do: "muted"
   defp waitlist_delta_class(_waitlist), do: "warn"
-
-  defp open_rsvps_label(1), do: "1 open RSVP"
-  defp open_rsvps_label(n), do: "#{n} open RSVPs"
 
   defp rsvp_label(0), do: "0 RSVPs"
   defp rsvp_label(1), do: "1 RSVP"
