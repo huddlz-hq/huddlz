@@ -15,3 +15,7 @@ Feature: The favicon is the brand mark
     When a browser fetches the home page
     And a browser fetches each linked icon
     Then each is served as an image of the size it is linked as
+
+  Scenario: The icons are served under their cache-busting names
+    When a browser fetches an icon by its cache-busting name
+    Then the icon is served

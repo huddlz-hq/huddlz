@@ -2,6 +2,7 @@ defmodule FaviconSteps do
   use Cucumber.StepDefinition
 
   import ExUnit.Assertions
+  import ExUnit.Callbacks, only: [on_exit: 1]
   import Phoenix.ConnTest
 
   @endpoint HuddlzWeb.Endpoint
@@ -57,6 +58,25 @@ defmodule FaviconSteps do
       assert served_sizes(href, response.resp_body) == expected, "#{href} sizes"
     end
 
+    context
+  end
+
+  step "a browser fetches an icon by its cache-busting name", context do
+    # Once the assets are digested, `~p` stamps a content hash into the name of
+    # every static file it knows about, so the endpoint has to serve the stamped
+    # name too. Nothing is digested under test, so stand one in by hand.
+    stamped = "favicon-#{String.duplicate("0", 32)}.svg"
+    root = Application.app_dir(:huddlz, "priv/static")
+
+    File.cp!(Path.join(root, "favicon.svg"), Path.join(root, stamped))
+    on_exit(fn -> File.rm(Path.join(root, stamped)) end)
+
+    Map.put(context, :response, get(build_conn(), "/#{stamped}?vsn=d"))
+  end
+
+  step "the icon is served", context do
+    assert context.response.status == 200
+    assert response_content_type(context.response, :svg) =~ "image/svg+xml"
     context
   end
 

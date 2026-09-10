@@ -43,7 +43,8 @@ defmodule HuddlzWeb.Endpoint do
     at: "/",
     from: :huddlz,
     gzip: not code_reloading?,
-    only: HuddlzWeb.static_paths()
+    only: HuddlzWeb.static_paths(),
+    only_matching: HuddlzWeb.static_prefixes()
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
