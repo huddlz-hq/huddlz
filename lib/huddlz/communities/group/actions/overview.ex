@@ -13,7 +13,7 @@ defmodule Huddlz.Communities.Group.Actions.Overview do
   require Ash.Query
 
   @impl true
-  def run(input, _opts, _context) do
+  def run(input, _opts, context) do
     group_id = Ash.ActionInput.get_argument(input, :group_id)
     period = input |> Ash.ActionInput.get_argument(:period) |> GroupStats.parse_period()
 
@@ -23,7 +23,7 @@ defmodule Huddlz.Communities.Group.Actions.Overview do
     |> Ash.Query.filter(id == ^group_id)
     |> Ash.read_one(authorize?: false)
     |> case do
-      {:ok, %Group{} = group} -> {:ok, GroupStats.compute(group, period)}
+      {:ok, %Group{} = group} -> {:ok, GroupStats.compute(group, period, context.actor)}
       {:ok, nil} -> {:error, NotFound.exception(resource: Group)}
       {:error, error} -> {:error, error}
     end

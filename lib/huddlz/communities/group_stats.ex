@@ -12,11 +12,19 @@ defmodule Huddlz.Communities.GroupStats do
   Periods are `"30d"`, `"90d"` (the default) and `"12m"`. Each is split
   into equal buckets for the sparklines: six for the day periods, twelve
   for the year.
+
+  The next huddl's signup curve is one point per day since it was
+  published: how many RSVPs stood by the end of that day. The group's
+  typical curve is the same measure averaged over its past huddlz, drawn
+  only once there are three of them to average.
   """
 
   require Ash.Query
 
-  alias Huddlz.Communities.{GroupMember, HuddlAttendee}
+  alias Huddlz.Communities.{GroupMember, Huddl, HuddlAttendee}
+
+  @day 86_400
+  @typical_min_history 3
 
   @periods [
     {"30d", %{days: 30, buckets: 6, label: "30 days"}},
@@ -45,6 +53,8 @@ defmodule Huddlz.Communities.GroupStats do
   Overview figures for a group over a period. Called by
   `Huddlz.Communities.Group.Actions.Overview` once the actor is authorized;
   reach it through `Huddlz.Communities.group_overview/3`, not directly.
+  The actor is the organizer asking, used to read the group's huddlz
+  through the organizer read.
 
     * `members` — current member count, how many joined this calendar
       month in the group's time zone, and a cumulative sparkline
@@ -52,8 +62,11 @@ defmodule Huddlz.Communities.GroupStats do
       it, and a per-bucket sparkline
     * `waitlist` — people waitlisted on upcoming huddlz right now, the
       titles of the huddlz that are full, and a cumulative sparkline
+    * `next_huddl` — the next upcoming huddl with its RSVPs, capacity,
+      signup curve since publish, the group's typical curve (or nil) and
+      the other upcoming huddlz; nil when nothing is upcoming
   """
-  def compute(group, period, now \\ DateTime.utc_now()) do
+  def compute(group, period, actor, now \\ DateTime.utc_now()) do
     spec = period_spec(period)
     edges = bucket_edges(now, spec)
 
@@ -61,7 +74,8 @@ defmodule Huddlz.Communities.GroupStats do
       period: period,
       members: members(group, now, edges),
       rsvps: rsvps(group, now, spec, edges),
-      waitlist: waitlist(group, now, edges)
+      waitlist: waitlist(group, now, edges),
+      next_huddl: next_huddl(group, actor, now)
     }
   end
 
@@ -120,6 +134,87 @@ defmodule Huddlz.Communities.GroupStats do
       spark: cumulative(Enum.map(rows, & &1.waitlisted_at), edges)
     }
   end
+
+  defp next_huddl(group, actor, now) do
+    case organizer_huddlz(group, actor, :published, starts_at: :asc) do
+      [] ->
+        nil
+
+      [next | others] ->
+        published_at = next.published_at || next.inserted_at
+        days = days_between(published_at, now)
+
+        next
+        |> huddl_summary()
+        |> Map.merge(%{
+          published_at: published_at,
+          days: days,
+          curve:
+            cumulative_by_day(standing_rsvp_times([next.id])[next.id] || [], published_at, days),
+          typical: typical_curve(group, actor, days),
+          others: Enum.map(others, &huddl_summary/1)
+        })
+    end
+  end
+
+  # The group's past huddlz averaged day by day since each was published.
+  # Nil until there are enough of them for an average to mean anything.
+  defp typical_curve(group, actor, days) do
+    past =
+      group
+      |> organizer_huddlz(actor, :past, starts_at: :desc)
+      |> Enum.reject(&is_nil(&1.published_at))
+
+    if length(past) < @typical_min_history do
+      nil
+    else
+      times = standing_rsvp_times(Enum.map(past, & &1.id))
+
+      past
+      |> Enum.map(&cumulative_by_day(times[&1.id] || [], &1.published_at, days))
+      |> Enum.zip_with(fn counts -> Float.round(Enum.sum(counts) / length(counts), 1) end)
+    end
+  end
+
+  defp organizer_huddlz(group, actor, state, sort) do
+    Huddl
+    |> Ash.Query.for_read(:huddlz_for_organizer, %{state: state}, actor: actor)
+    |> Ash.Query.filter(group_id == ^group.id)
+    |> Ash.Query.sort(sort)
+    |> Ash.Query.load([:rsvp_count, :waitlist_count])
+    |> Ash.read!(actor: actor)
+  end
+
+  defp huddl_summary(huddl) do
+    %{
+      id: huddl.id,
+      title: huddl.title,
+      starts_at: huddl.starts_at,
+      time_zone: huddl.time_zone,
+      rsvp_count: huddl.rsvp_count,
+      capacity: huddl.max_attendees,
+      waitlist_count: huddl.waitlist_count
+    }
+  end
+
+  # Standing (non-waitlisted) RSVP times, grouped by huddl.
+  defp standing_rsvp_times(huddl_ids) do
+    HuddlAttendee
+    |> Ash.Query.filter(huddl_id in ^huddl_ids and is_nil(waitlisted_at))
+    |> Ash.Query.select([:huddl_id, :rsvped_at])
+    |> Ash.read!(authorize?: false)
+    |> Enum.group_by(& &1.huddl_id, & &1.rsvped_at)
+  end
+
+  # One point per day from publish: RSVPs standing by the end of that day.
+  defp cumulative_by_day(timestamps, published_at, days) do
+    Enum.map(0..days, fn d ->
+      day_end = DateTime.add(published_at, (d + 1) * @day, :second)
+      Enum.count(timestamps, &(DateTime.compare(&1, day_end) == :lt))
+    end)
+  end
+
+  defp days_between(from, to), do: max(div(DateTime.diff(to, from, :second), @day), 0)
 
   # One point per bucket: how many timestamps fall inside it.
   defp per_bucket(timestamps, edges) do
