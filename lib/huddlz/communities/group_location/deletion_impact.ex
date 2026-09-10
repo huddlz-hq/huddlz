@@ -7,21 +7,14 @@ defmodule Huddlz.Communities.GroupLocation.DeletionImpact do
   huddlz without changing their displayable venue details.
   """
 
-  require Ash.Query
-
-  alias Huddlz.Communities.Huddl
+  alias Huddlz.Communities
 
   def active_references(location) do
-    now = DateTime.utc_now()
-
-    Huddl
-    |> Ash.Query.filter(
-      group_id == ^location.group_id and
-        group_location_id == ^location.id and
-        ends_at >= ^now
+    Communities.location_deletion_blockers(
+      location.group_id,
+      location.id,
+      authorize?: false
     )
-    |> Ash.Query.select([:id])
-    |> Ash.read(authorize?: false)
   end
 
   def error_message(reference_count) do

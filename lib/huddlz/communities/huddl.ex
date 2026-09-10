@@ -270,6 +270,8 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup
       change Huddlz.Communities.Huddl.Changes.SetInitialLifecycleTimestamps
       change Huddlz.Communities.Huddl.Changes.NotifyNewInGroup
+      validate Huddlz.TimeZone.Validation
+      validate {Huddlz.Communities.Huddl.Validations.WebUrlValidation, attribute: :virtual_link}
     end
 
     update :publish do
@@ -321,7 +323,6 @@ defmodule Huddlz.Communities.Huddl do
 
     update :skip_turnout do
       description "Dismiss the turnout prompt for this huddl. Turnout can still be recorded later."
-      require_atomic? false
 
       change set_attribute(:turnout_skipped_at, &DateTime.utc_now/0)
     end
@@ -397,6 +398,8 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Communities.Huddl.Changes.ResetReminderStamps
       change Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate
       change Huddlz.Communities.Huddl.Changes.PromoteOnCapacityIncrease
+      validate Huddlz.TimeZone.Validation
+      validate {Huddlz.Communities.Huddl.Validations.WebUrlValidation, attribute: :virtual_link}
     end
 
     read :by_status do
@@ -416,6 +419,19 @@ defmodule Huddlz.Communities.Huddl do
     read :archive_blockers do
       description "Internal lifecycle check for group archival."
       filter expr(lifecycle_state == :published and ends_at > now())
+    end
+
+    read :location_deletion_blockers do
+      description "Internal integrity check including private huddlz and drafts."
+      argument :group_id, :uuid, allow_nil?: false
+      argument :group_location_id, :uuid, allow_nil?: false
+
+      filter expr(
+               group_id == ^arg(:group_id) and
+                 group_location_id == ^arg(:group_location_id) and ends_at >= now()
+             )
+
+      prepare build(select: [:id])
     end
 
     read :upcoming do
@@ -701,7 +717,14 @@ defmodule Huddlz.Communities.Huddl do
   end
 
   policies do
-    policy action([:archive_blockers, :read_for_group_lifecycle]) do
+    policy action([
+             :archive_blockers,
+             :read_for_group_lifecycle,
+             :location_deletion_blockers,
+             :get_for_recurrence,
+             :get_for_mutation,
+             :get_for_lifecycle_transition
+           ]) do
       forbid_if always()
     end
 
@@ -809,20 +832,12 @@ defmodule Huddlz.Communities.Huddl do
   # changes section removed - validation is handled by FutureDateValidation module
 
   validations do
-    validate Huddlz.TimeZone.Validation do
-      where action_is([:create, :update])
-    end
-
     validate string_length(:title, min: 3, max: 200) do
       message "Must be between 3 and 200 characters"
     end
 
     validate compare(:max_attendees, greater_than_or_equal_to: 1) do
       message "Must be at least 1"
-    end
-
-    validate {Huddlz.Communities.Huddl.Validations.WebUrlValidation, attribute: :virtual_link} do
-      where action_is([:create, :update])
     end
 
     validate compare(:ends_at, greater_than: :starts_at) do
