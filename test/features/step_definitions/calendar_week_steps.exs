@@ -7,7 +7,7 @@ defmodule CalendarWeekSteps do
 
   step "I open the week of day {int} of next month", %{args: [day], conn: conn} = context do
     week = day |> next_month_date() |> Date.beginning_of_week(:sunday)
-    session = visit(conn, "/calendar?view=week&week=#{Date.to_iso8601(week)}")
+    session = visit(conn, "/calendar/week?week=#{Date.to_iso8601(week)}")
     Map.merge(context, %{conn: session, session: session, week_start: week})
   end
 
@@ -44,7 +44,7 @@ defmodule CalendarWeekSteps do
   end
 
   step "I open next month in the month view", %{conn: conn} = context do
-    session = visit(conn, "/calendar?view=month&month=#{month_param()}")
+    session = visit(conn, "/calendar/month?month=#{month_param()}")
     Map.merge(context, %{conn: session, session: session})
   end
 
@@ -86,9 +86,8 @@ defmodule CalendarWeekSteps do
   end
 
   step "the open day is part of the address", %{session: session} = context do
-    assert_path(session, "/calendar",
+    assert_path(session, "/calendar/month",
       query_params: %{
-        "view" => "month",
         "month" => month_param(),
         "day" => Date.to_iso8601(next_month_date(17))
       }
@@ -105,7 +104,7 @@ defmodule CalendarWeekSteps do
   step "I am back on next month in the month view with no day open",
        %{session: session} = context do
     session
-    |> assert_path("/calendar", query_params: %{"view" => "month", "month" => month_param()})
+    |> assert_path("/calendar/month", query_params: %{"month" => month_param()})
     |> refute_has("#calendar-day-panel")
     |> assert_has("#month-calendar")
 

@@ -542,7 +542,7 @@ defmodule LocationBasedTimeZonesSteps do
        %{args: [time_zone]} = context do
     conn = browser_conn(context.current_user, time_zone)
 
-    session = PhoenixTest.visit(conn, "/calendar?month=2030-07&view=month")
+    session = PhoenixTest.visit(conn, "/calendar/month?month=2030-07")
     Map.merge(context, %{session: session, conn: session})
   end
 

@@ -34,7 +34,7 @@ defmodule CalendarAccessibilitySteps do
        %{conn: conn, calendar_huddl: huddl} = context do
     date = DateTime.to_date(huddl.starts_at)
     month = :io_lib.format("~4..0B-~2..0B", [date.year, date.month]) |> IO.iodata_to_binary()
-    session = visit(conn, "/calendar?month=#{month}&view=month")
+    session = visit(conn, "/calendar/month?month=#{month}")
 
     Map.merge(context, %{conn: session, session: session})
   end

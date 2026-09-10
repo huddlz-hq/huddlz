@@ -1,17 +1,18 @@
 defmodule HuddlzWeb.CalendarLive do
   @moduledoc """
-  LiveView at `/agenda` and `/calendar`. Personal schedule of huddlz the
-  signed-in user is hosting, attending, or watching from the waitlist.
-  Three views over the same entries:
+  LiveView at `/agenda`, `/calendar/week` and `/calendar/month`. Personal
+  schedule of huddlz the signed-in user is hosting, attending, or watching
+  from the waitlist. Three views over the same entries, each with its own
+  address; the bare `/calendar` shows the week:
 
     * the agenda, `/agenda`, is the signed-in home page. It ignores the
       month: it starts at today and runs forward through the next few days
       that have huddlz, leaving the past to the calendar;
-    * the week, `/calendar` (or `?week=YYYY-MM-DD`), is the same day-by-day
+    * the week, `/calendar/week?week=YYYY-MM-DD`, is the same day-by-day
       list for one Sunday-to-Saturday week, every day drawn, any week;
-    * the month grid, `/calendar?view=month&month=YYYY-MM`, is the
-      overview. A day in it opens as a panel, `?day=YYYY-MM-DD`, listing
-      that day's huddlz.
+    * the month grid, `/calendar/month?month=YYYY-MM`, is the overview. A
+      day in it opens as a panel, `?day=YYYY-MM-DD`, listing that day's
+      huddlz.
 
   Every piece of state is in the URL, so closing the panel, the browser's
   back button and returning from a huddl all land on the same view.
@@ -59,7 +60,7 @@ defmodule HuddlzWeb.CalendarLive do
   @impl true
   def handle_params(params, _uri, socket) do
     today = socket.assigns.today
-    view_mode = view_mode(socket.assigns.live_action, params["view"])
+    view_mode = socket.assigns.live_action
     focus_week = parse_week(params["week"], today)
 
     focus_month =
@@ -154,10 +155,6 @@ defmodule HuddlzWeb.CalendarLive do
   end
 
   defp parse_month(_, today), do: first_of_month(today)
-
-  defp view_mode(:agenda, _param), do: :agenda
-  defp view_mode(:index, "month"), do: :month
-  defp view_mode(:index, _param), do: :week
 
   defp page_title(:agenda), do: "Agenda"
   defp page_title(_view), do: "Calendar"
@@ -325,11 +322,10 @@ defmodule HuddlzWeb.CalendarLive do
   end
 
   # The page's own URL, from the current state (`@nav`) with anything in
-  # `overrides` changed. The agenda has its own path; the month only
+  # `overrides` changed. Each view has its own path; the month only
   # matters to the month view and the week to the week view; the defaults
-  # (this week, this month, own RSVPs, no day open) are left out, so the
-  # plain `/calendar` is the week and an open day never outlives a view
-  # change.
+  # (this week, this month, own RSVPs, no day open) are left out, and an
+  # open day never outlives a view change.
   defp calendar_path(nav, overrides \\ []) do
     view = Keyword.get(overrides, :view, nav.view)
     month = Keyword.get(overrides, :month, nav.month)
@@ -341,7 +337,6 @@ defmodule HuddlzWeb.CalendarLive do
       [
         month: view == :month && month_param(month, nav.today),
         week: view == :week && week_param(week, nav.today),
-        view: view == :month && "month",
         scope: scope == :groups && "groups",
         day: day && Date.to_iso8601(day)
       ]
@@ -352,8 +347,10 @@ defmodule HuddlzWeb.CalendarLive do
 
   defp page_path(:agenda, []), do: ~p"/agenda"
   defp page_path(:agenda, params), do: ~p"/agenda?#{params}"
-  defp page_path(_view, []), do: ~p"/calendar"
-  defp page_path(_view, params), do: ~p"/calendar?#{params}"
+  defp page_path(:week, []), do: ~p"/calendar/week"
+  defp page_path(:week, params), do: ~p"/calendar/week?#{params}"
+  defp page_path(:month, []), do: ~p"/calendar/month"
+  defp page_path(:month, params), do: ~p"/calendar/month?#{params}"
 
   defp month_param(month, today) do
     today_first = first_of_month(today)

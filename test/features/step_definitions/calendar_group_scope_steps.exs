@@ -91,7 +91,7 @@ defmodule CalendarGroupScopeSteps do
 
   step "I open next month", %{conn: conn} = context do
     month = next_month()
-    session = visit(conn, "/calendar?view=month&month=#{month.year}-#{pad(month.month)}")
+    session = visit(conn, "/calendar/month?month=#{month.year}-#{pad(month.month)}")
     Map.merge(context, %{conn: session, session: session})
   end
 

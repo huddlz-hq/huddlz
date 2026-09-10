@@ -44,7 +44,7 @@ defmodule BrowserCalendarSteps do
   step "I open Calendar in a New York browser", context do
     conn =
       context.conn
-      |> visit("/calendar?month=2030-07&view=month")
+      |> visit("/calendar/month?month=2030-07")
       |> assert_has(".phx-connected")
       |> assert_browser("Intl.DateTimeFormat().resolvedOptions().timeZone === 'America/New_York'")
 

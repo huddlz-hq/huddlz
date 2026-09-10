@@ -813,7 +813,7 @@ defmodule HuddlzWeb.OrganizeLive do
         </p>
       </div>
       <div class="actions">
-        <.link class="btn-secondary" navigate={~p"/calendar?view=month"}>
+        <.link class="btn-secondary" navigate={~p"/calendar/month"}>
           <.icon name="hero-calendar" class="size-4" /> Month view
         </.link>
         <a

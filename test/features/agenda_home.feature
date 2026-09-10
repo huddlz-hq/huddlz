@@ -38,3 +38,12 @@ Feature: Agenda is home
     When I visit "/calendar"
     Then view choices should identify "Week" as current
     And the view choices are "Week" and "Month"
+
+  Scenario: Each calendar view has its own address
+    Given I am signed in as "ada@example.com"
+    When I visit "/calendar/month"
+    Then view choices should identify "Month" as current
+    When I visit "/calendar/week"
+    Then view choices should identify "Week" as current
+    When I visit "/calendar"
+    Then view choices should identify "Week" as current
