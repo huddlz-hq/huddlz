@@ -22,6 +22,8 @@ defmodule HuddlzWeb.HuddlLive.Show do
     :at_capacity,
     :visible_virtual_link,
     :display_image_url,
+    :turnout_total,
+    :show_rate,
     group: [:member_count, :current_image_url],
     creator: [:current_profile_picture_url]
   ]
@@ -38,6 +40,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
      |> assign(:confirming_delete_photo, nil)
      |> assign(:photo_upload_errors, [])
      |> assign(:selected_photo_url, nil)
+     |> assign(:turnout_form, nil)
      |> assign(:cancel_form, to_form(%{"cancellation_reason" => ""}, as: :cancel))
      |> allow_upload(:huddl_photos,
        accept: HuddlPhotos.allowed_extensions(),
@@ -113,6 +116,96 @@ defmodule HuddlzWeb.HuddlLive.Show do
           >
             <h2>This group is archived</h2>
             <p>This huddl is preserved as read-only history for group members.</p>
+          </section>
+
+          <section
+            :if={@can_record_turnout}
+            id="huddl-turnout"
+            class="turnout"
+            aria-labelledby="turnout-title"
+          >
+            <.form
+              :if={@turnout_form}
+              for={@turnout_form}
+              id="turnout-form"
+              phx-change="validate_turnout"
+              phx-submit="record_turnout"
+            >
+              <div class="turnout-copy">
+                <h2 id="turnout-title">{turnout_question(@huddl)}</h2>
+                <p>A rough count is fine. Count everyone, not just who RSVPd.</p>
+              </div>
+              <div class="turnout-fields">
+                <.input
+                  :if={@huddl.event_type in [:in_person, :hybrid]}
+                  field={@turnout_form[:in_room]}
+                  type="number"
+                  label="People in the room"
+                  min="0"
+                  inputmode="numeric"
+                />
+                <.input
+                  :if={@huddl.event_type in [:virtual, :hybrid]}
+                  field={@turnout_form[:on_call]}
+                  type="number"
+                  label="People on the call"
+                  min="0"
+                  inputmode="numeric"
+                />
+              </div>
+              <div class="turnout-actions">
+                <.button type="submit" variant={:primary} phx-disable-with="Saving…">
+                  Save turnout
+                </.button>
+                <.button
+                  :if={is_nil(turnout(@huddl, :turnout_recorded_at))}
+                  variant={:secondary}
+                  phx-click="skip_turnout"
+                >
+                  Skip for now
+                </.button>
+                <.button
+                  :if={turnout(@huddl, :turnout_recorded_at)}
+                  variant={:secondary}
+                  phx-click="cancel_turnout"
+                >
+                  Cancel
+                </.button>
+              </div>
+            </.form>
+
+            <%= if is_nil(@turnout_form) and turnout(@huddl, :turnout_recorded_at) do %>
+              <div class="turnout-copy">
+                <h2 id="turnout-title">Turnout</h2>
+                <ul class="turnout-figures">
+                  <li :if={turnout(@huddl, :turnout_in_room)}>
+                    {turnout(@huddl, :turnout_in_room)} in the room
+                  </li>
+                  <li :if={turnout(@huddl, :turnout_on_call)}>
+                    {turnout(@huddl, :turnout_on_call)} on the call
+                  </li>
+                  <li :if={turnout(@huddl, :turnout_in_room) && turnout(@huddl, :turnout_on_call)}>
+                    {turnout(@huddl, :turnout_total)} in total
+                  </li>
+                  <li :if={turnout(@huddl, :show_rate)} class="rate">
+                    {turnout(@huddl, :show_rate)}% showed
+                  </li>
+                </ul>
+              </div>
+              <div class="turnout-actions">
+                <.button variant={:secondary} phx-click="edit_turnout">Edit turnout</.button>
+              </div>
+            <% end %>
+
+            <%= if is_nil(@turnout_form) and is_nil(turnout(@huddl, :turnout_recorded_at)) do %>
+              <div class="turnout-copy">
+                <h2 id="turnout-title">Turnout not recorded</h2>
+                <p>Add it any time to get a show rate for planning the next one.</p>
+              </div>
+              <div class="turnout-actions">
+                <.button variant={:secondary} phx-click="edit_turnout">Add turnout</.button>
+              </div>
+            <% end %>
           </section>
           <header class={["hero", "huddl-hero", HuddlStatus.hero_class(@huddl.status)]}>
             <div class="hero-media">
@@ -1074,6 +1167,51 @@ defmodule HuddlzWeb.HuddlLive.Show do
     end
   end
 
+  def handle_event("edit_turnout", _, socket) do
+    %{huddl: huddl, current_user: user} = socket.assigns
+    {:noreply, assign(socket, :turnout_form, turnout_form(huddl, user, turnout_params(huddl)))}
+  end
+
+  def handle_event("cancel_turnout", _, socket) do
+    {:noreply, assign(socket, :turnout_form, nil)}
+  end
+
+  def handle_event("validate_turnout", %{"turnout" => params}, socket) do
+    form = AshPhoenix.Form.validate(socket.assigns.turnout_form, params)
+    {:noreply, assign(socket, :turnout_form, to_form(form))}
+  end
+
+  def handle_event("record_turnout", %{"turnout" => params}, socket) do
+    %{huddl: huddl, current_user: user} = socket.assigns
+
+    case AshPhoenix.Form.submit(socket.assigns.turnout_form, params: params) do
+      {:ok, _huddl} ->
+        {:noreply,
+         socket
+         |> assign(:turnout_form, nil)
+         |> put_flash(:info, "Turnout saved.")
+         |> refresh_attendance(huddl, user)}
+
+      {:error, form} ->
+        {:noreply, assign(socket, :turnout_form, to_form(form))}
+    end
+  end
+
+  def handle_event("skip_turnout", _, socket) do
+    %{huddl: huddl, current_user: user} = socket.assigns
+
+    case Communities.skip_turnout(huddl, actor: user) do
+      {:ok, _huddl} ->
+        {:noreply,
+         socket
+         |> assign(:turnout_form, nil)
+         |> refresh_attendance(huddl, user)}
+
+      {:error, _error} ->
+        {:noreply, put_flash(socket, :error, "Could not skip turnout right now.")}
+    end
+  end
+
   def handle_event("confirm_delete_huddl", _, socket) do
     {:noreply, assign(socket, :confirming_delete?, true)}
   end
@@ -1215,8 +1353,60 @@ defmodule HuddlzWeb.HuddlLive.Show do
       :can_delete_huddl,
       is_nil(huddl.group.archived_at) && Communities.can_destroy_huddl?(user, huddl)
     )
+    |> assign_turnout(huddl, user)
     |> load_photos(huddl, user, can_view_photos)
   end
+
+  # Turnout is asked once a huddl has ended, of organizers only. The form
+  # shows itself until the organizer records or skips; after that it only
+  # appears on request, and a live reload never throws away an open form.
+  defp assign_turnout(socket, huddl, user) do
+    can_record =
+      huddl.status == :completed && not is_nil(user) && is_nil(huddl.group.archived_at) &&
+        Communities.can_record_turnout?(user, huddl)
+
+    form =
+      cond do
+        not can_record -> nil
+        socket.assigns[:turnout_form] -> socket.assigns.turnout_form
+        turnout_unanswered?(huddl) -> turnout_form(huddl, user, %{})
+        true -> nil
+      end
+
+    socket
+    |> assign(:can_record_turnout, can_record)
+    |> assign(:turnout_form, form)
+  end
+
+  defp turnout_unanswered?(huddl) do
+    is_nil(turnout(huddl, :turnout_recorded_at)) and is_nil(turnout(huddl, :turnout_skipped_at))
+  end
+
+  defp turnout_form(huddl, user, params) do
+    huddl
+    |> AshPhoenix.Form.for_update(:record_turnout, actor: user, as: "turnout", params: params)
+    |> to_form()
+  end
+
+  defp turnout_params(huddl) do
+    %{
+      "in_room" => turnout(huddl, :turnout_in_room),
+      "on_call" => turnout(huddl, :turnout_on_call)
+    }
+    |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+    |> Map.new()
+  end
+
+  # Turnout fields are organizer-only; other viewers receive a forbidden marker.
+  defp turnout(huddl, field) do
+    case Map.get(huddl, field) do
+      %Ash.ForbiddenField{} -> nil
+      value -> value
+    end
+  end
+
+  defp turnout_question(%{event_type: :virtual}), do: "How many joined?"
+  defp turnout_question(_huddl), do: "How many came?"
 
   defp huddl_meta(huddl) do
     %{

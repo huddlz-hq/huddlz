@@ -55,3 +55,17 @@ _Avoid_: User time zone, home time zone
 
 **Calendar time zone**:
 The viewer's browser-reported time zone, used to arrange and display the personal calendar. The calendar identifies this time zone to the viewer.
+
+## Organizing
+
+**Turnout**:
+An organizer's rough count of the people who actually came to a huddl: people in the room for an in-person huddl, people on the call for a virtual one, both for a hybrid one. Optional, recorded after the huddl ends, and visible only to the group's organizers and owner.
+_Avoid_: Headcount, attendance, check-in
+
+**Show rate**:
+Turnout as a share of a huddl's RSVPs, not counting the waitlist. It can exceed 100% when more people come than RSVPd.
+_Avoid_: Attendance rate, conversion
+
+**Overview**:
+The organizer-only summary page for a group: how membership, RSVPs and turnout are moving over a chosen period.
+_Avoid_: Dashboard, analytics, stats page

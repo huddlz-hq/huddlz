@@ -34,6 +34,8 @@ defmodule Huddlz.Communities.Huddl do
       update :rsvp_to_huddl, :rsvp
       update :join_huddl_waitlist, :join_waitlist
       update :cancel_rsvp_to_huddl, :cancel_rsvp
+      update :record_huddl_turnout, :record_turnout
+      update :skip_huddl_turnout, :skip_turnout
       destroy :delete_huddl, :destroy
     end
   end
@@ -61,7 +63,12 @@ defmodule Huddlz.Communities.Huddl do
       :completed_at,
       :cancellation_reason,
       :inserted_at,
-      :image_url
+      :image_url,
+      :turnout_in_room,
+      :turnout_on_call,
+      :turnout_recorded_at,
+      :turnout_total,
+      :show_rate
     ]
 
     routes do
@@ -79,6 +86,8 @@ defmodule Huddlz.Communities.Huddl do
       patch :rsvp, route: "/:id/rsvp"
       patch :join_waitlist, route: "/:id/join_waitlist"
       patch :cancel_rsvp, route: "/:id/cancel_rsvp"
+      patch :record_turnout, route: "/:id/record_turnout"
+      patch :skip_turnout, route: "/:id/skip_turnout"
       delete :destroy
     end
   end
@@ -97,6 +106,23 @@ defmodule Huddlz.Communities.Huddl do
                      creator_id == ^actor(:id) or group.owner_id == ^actor(:id) or
                        exists(group.group_members, user_id == ^actor(:id) and role == :organizer) or
                        exists(attendees, user_id == ^actor(:id))
+                   )
+    end
+
+    # Turnout is organizer planning data; members and the public never see it.
+    field_policy [
+      :turnout_in_room,
+      :turnout_on_call,
+      :turnout_recorded_at,
+      :turnout_skipped_at,
+      :turnout_total,
+      :show_rate
+    ] do
+      authorize_if actor_attribute_equals(:role, :admin)
+
+      authorize_if expr(
+                     group.owner_id == ^actor(:id) or
+                       exists(group.group_members, user_id == ^actor(:id) and role == :organizer)
                    )
     end
 
@@ -274,6 +300,30 @@ defmodule Huddlz.Communities.Huddl do
       require_atomic? false
 
       change {Huddlz.Communities.Huddl.Changes.TransitionLifecycle, to: :completed}
+    end
+
+    update :record_turnout do
+      description "Record how many people came, once the huddl has ended: the room, the call, or both by huddl type."
+      require_atomic? false
+
+      argument :in_room, :integer do
+        allow_nil? true
+        constraints min: 0
+      end
+
+      argument :on_call, :integer do
+        allow_nil? true
+        constraints min: 0
+      end
+
+      change Huddlz.Communities.Huddl.Changes.RecordTurnout
+    end
+
+    update :skip_turnout do
+      description "Dismiss the turnout prompt for this huddl. Turnout can still be recorded later."
+      require_atomic? false
+
+      change set_attribute(:turnout_skipped_at, &DateTime.utc_now/0)
     end
 
     update :update do
@@ -704,6 +754,21 @@ defmodule Huddlz.Communities.Huddl do
                    )
     end
 
+    policy action([:record_turnout, :skip_turnout]) do
+      description "Group owners and organizers record turnout once a huddl has ended"
+
+      forbid_unless expr(
+                      lifecycle_state == :completed or
+                        (lifecycle_state == :published and ends_at < now())
+                    )
+
+      authorize_if expr(group.owner_id == ^actor(:id))
+
+      authorize_if expr(
+                     exists(group.group_members, user_id == ^actor(:id) and role == :organizer)
+                   )
+    end
+
     policy action([:publish, :cancel]) do
       description "Only group owners and organizers can change a huddl lifecycle"
       authorize_if expr(group.owner_id == ^actor(:id))
@@ -898,6 +963,32 @@ defmodule Huddlz.Communities.Huddl do
       constraints min: -180, max: 180
     end
 
+    attribute :turnout_in_room, :integer do
+      allow_nil? true
+      public? true
+      constraints min: 0
+      description "Organizer's count of people in the room. See ADR 0003."
+    end
+
+    attribute :turnout_on_call, :integer do
+      allow_nil? true
+      public? true
+      constraints min: 0
+      description "Organizer's count of people on the call. See ADR 0003."
+    end
+
+    attribute :turnout_recorded_at, :utc_datetime_usec do
+      allow_nil? true
+      public? true
+      description "When turnout was last recorded; nil until an organizer records it."
+    end
+
+    attribute :turnout_skipped_at, :utc_datetime_usec do
+      allow_nil? true
+      public? true
+      description "When an organizer dismissed the turnout prompt without recording."
+    end
+
     attribute :reminder_24h_sent_at, :utc_datetime_usec do
       allow_nil? true
       public? false
@@ -1036,6 +1127,20 @@ defmodule Huddlz.Communities.Huddl do
     calculate :at_capacity, :boolean do
       description "Whether the huddl has reached max_attendees (no open seats remain)"
       calculation expr(not is_nil(max_attendees) and rsvp_count >= max_attendees)
+    end
+
+    calculate :turnout_total, :integer do
+      public? true
+      description "People in the room plus people on the call; nil until turnout is recorded"
+      calculation {Huddlz.Communities.Huddl.Calculations.Turnout, field: :total}
+    end
+
+    calculate :show_rate, :integer do
+      public? true
+
+      description "Turnout as a whole-number percentage of RSVPs (waitlist excluded); can exceed 100"
+
+      calculation {Huddlz.Communities.Huddl.Calculations.Turnout, field: :show_rate}
     end
 
     calculate :display_image_url, :string do

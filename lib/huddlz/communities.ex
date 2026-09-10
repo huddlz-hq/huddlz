@@ -54,6 +54,8 @@ defmodule Huddlz.Communities do
       define :publish_huddl, action: :publish
       define :cancel_huddl, action: :cancel, args: [{:optional, :cancellation_reason}]
       define :complete_huddl, action: :complete
+      define :record_turnout, action: :record_turnout
+      define :skip_turnout, action: :skip_turnout
       define :destroy_huddl, action: :destroy
     end
 
