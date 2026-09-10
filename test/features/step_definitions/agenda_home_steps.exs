@@ -9,11 +9,6 @@ defmodule AgendaHomeSteps do
     context
   end
 
-  step "I am on the agenda page", %{session: session} = context do
-    on_agenda(session)
-    context
-  end
-
   step "navigation offers no {string} destination",
        %{args: [label], session: session} = context do
     refute_has(session, ".sb-item .label", text: label, exact: true)
