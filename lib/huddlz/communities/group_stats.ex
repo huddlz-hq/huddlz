@@ -11,7 +11,9 @@ defmodule Huddlz.Communities.GroupStats do
 
   Periods are `"30d"`, `"90d"` (the default) and `"12m"`. Each is split
   into equal buckets for the sparklines: six for the day periods, twelve
-  for the year.
+  for the year. Member growth buckets by calendar month for the year, by
+  fortnight for 90 days and by week for 30 days, the last bucket running
+  up to now.
 
   The next huddl's signup curve is one point per day since it was
   published: how many RSVPs stood by the end of that day. The group's
@@ -27,10 +29,11 @@ defmodule Huddlz.Communities.GroupStats do
   @typical_min_history 3
 
   @periods [
-    {"30d", %{days: 30, buckets: 6, label: "30 days"}},
-    {"90d", %{days: 90, buckets: 6, label: "90 days"}},
-    {"12m", %{days: 365, buckets: 12, label: "12 months"}}
+    {"30d", %{days: 30, buckets: 6, label: "30 days", growth: :week}},
+    {"90d", %{days: 90, buckets: 6, label: "90 days", growth: :fortnight}},
+    {"12m", %{days: 365, buckets: 12, label: "12 months", growth: :month}}
   ]
+  @growth_bucket_days %{week: 7, fortnight: 14}
   @default_period "90d"
 
   @type period :: String.t()
@@ -58,6 +61,8 @@ defmodule Huddlz.Communities.GroupStats do
 
     * `members` — current member count, how many joined this calendar
       month in the group's time zone, and a cumulative sparkline
+    * `growth` — the period bucketed by month, fortnight or week: members
+      at each bucket's end, how many joined in it, and the total gained
     * `rsvps` — RSVPs made in the period, the count in the period before
       it, and a per-bucket sparkline
     * `waitlist` — people waitlisted on upcoming huddlz right now, the
@@ -69,24 +74,27 @@ defmodule Huddlz.Communities.GroupStats do
   def compute(group, period, actor, now \\ DateTime.utc_now()) do
     spec = period_spec(period)
     edges = bucket_edges(now, spec)
+    joined_at = member_join_times(group)
 
     %{
       period: period,
-      members: members(group, now, edges),
+      members: members(joined_at, group, now, edges),
+      growth: growth(joined_at, group, now, spec),
       rsvps: rsvps(group, now, spec, edges),
       waitlist: waitlist(group, now, edges),
       next_huddl: next_huddl(group, actor, now)
     }
   end
 
-  defp members(group, now, edges) do
-    joined_at =
-      GroupMember
-      |> Ash.Query.filter(group_id == ^group.id)
-      |> Ash.Query.select([:created_at])
-      |> Ash.read!(authorize?: false)
-      |> Enum.map(& &1.created_at)
+  defp member_join_times(group) do
+    GroupMember
+    |> Ash.Query.filter(group_id == ^group.id)
+    |> Ash.Query.select([:created_at])
+    |> Ash.read!(authorize?: false)
+    |> Enum.map(& &1.created_at)
+  end
 
+  defp members(joined_at, group, now, edges) do
     month_start = start_of_month(now, group.time_zone)
 
     %{
@@ -94,6 +102,76 @@ defmodule Huddlz.Communities.GroupStats do
       joined_this_month: Enum.count(joined_at, &(DateTime.compare(&1, month_start) != :lt)),
       spark: cumulative(joined_at, edges)
     }
+  end
+
+  # Members at the end of each bucket, reconstructed from the join dates of
+  # today's members, with the joins inside each bucket.
+  defp growth(joined_at, group, now, spec) do
+    buckets =
+      group
+      |> growth_buckets(now, spec)
+      |> Enum.map(fn {label, from, to} ->
+        %{
+          label: label,
+          starts_at: from,
+          ends_at: to,
+          joined: Enum.count(joined_at, &within?(&1, from, to)),
+          members: Enum.count(joined_at, &(DateTime.compare(&1, to) == :lt))
+        }
+      end)
+
+    %{
+      unit: spec.growth,
+      gained: buckets |> Enum.map(& &1.joined) |> Enum.sum(),
+      buckets: buckets
+    }
+  end
+
+  # Twelve calendar months in the group's time zone, this month last.
+  defp growth_buckets(group, now, %{growth: :month, buckets: count}) do
+    this_month = start_of_month(now, group.time_zone)
+
+    starts =
+      Enum.map((count - 1)..0//-1, fn back ->
+        shift_months(this_month, -back, group.time_zone)
+      end)
+
+    starts
+    |> Enum.zip(tl(starts) ++ [now])
+    |> Enum.map(fn {from, to} ->
+      {from |> DateTime.shift_zone!(group.time_zone) |> Calendar.strftime("%b"), from, to}
+    end)
+  end
+
+  # Whole weeks or fortnights from the start of the period, the last one
+  # running up to now.
+  defp growth_buckets(group, now, %{growth: unit, days: days}) do
+    bucket_days = @growth_bucket_days[unit]
+    start = DateTime.add(now, -days, :day)
+
+    0..(days - 1)//bucket_days
+    |> Enum.map(fn offset ->
+      from = DateTime.add(start, offset, :day)
+      to = DateTime.add(from, bucket_days, :day)
+      {label_date(from, group.time_zone), from, min_datetime(to, now)}
+    end)
+  end
+
+  defp within?(t, from, to),
+    do: DateTime.compare(t, from) != :lt and DateTime.compare(t, to) == :lt
+
+  defp min_datetime(a, b), do: if(DateTime.compare(a, b) == :gt, do: b, else: a)
+
+  defp label_date(at, time_zone),
+    do: at |> DateTime.shift_zone!(time_zone) |> Calendar.strftime("%b %-d")
+
+  defp shift_months(month_start, months, time_zone) do
+    month_start
+    |> DateTime.shift_zone!(time_zone)
+    |> DateTime.to_date()
+    |> Date.shift(month: months)
+    |> DateTime.new!(~T[00:00:00], time_zone)
+    |> DateTime.shift_zone!("Etc/UTC")
   end
 
   defp rsvps(group, now, spec, edges) do
