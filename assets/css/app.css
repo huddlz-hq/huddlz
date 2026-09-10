@@ -1119,7 +1119,7 @@ body .page-head p {
   line-height: 1.5;
 }
 
-body .page-head .actions { display: flex; gap: 8px; flex: 0 0 auto; }
+body .page-head .actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
 
 body .eyebrow {
   color: var(--accent-ink);
