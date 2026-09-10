@@ -532,8 +532,8 @@ defmodule HuddlzWeb.OrganizeLive do
             <div class="panel-sub">{growth_sub(@stats.growth.unit)}</div>
           </div>
           <div class="stat">
-            <span class="big">+{@stats.growth.gained}</span>
-            <span class="cmp">in {GroupStats.period_label(@period)}</span>
+            <span class="big">{signed(@stats.growth.gained)}</span>
+            <span class="cmp">{growth_cmp(@stats.growth, @period)}</span>
           </div>
         </div>
         <div class="growth-chart-wrap">
@@ -555,6 +555,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <div class="legend">
           <span><i></i>Members</span>
           <span><i class="sq"></i>Joined that {@stats.growth.unit}</span>
+          <span :if={@stats.growth.left > 0}><i class="sq left"></i>Left that {@stats.growth.unit}</span>
         </div>
       </div>
 
@@ -759,6 +760,14 @@ defmodule HuddlzWeb.OrganizeLive do
       true -> Calendar.strftime(day, "%b %-d")
     end
   end
+
+  defp signed(n) when n < 0, do: "−#{abs(n)}"
+  defp signed(n), do: "+#{n}"
+
+  defp growth_cmp(%{left: 0}, period), do: "in #{GroupStats.period_label(period)}"
+
+  defp growth_cmp(%{joined: joined, left: left}, period),
+    do: "in #{GroupStats.period_label(period)} · #{joined} joined, #{left} left"
 
   defp growth_sub(:month), do: "Members at month end, with how many joined each month"
   defp growth_sub(:fortnight), do: "Members at each fortnight's end, with how many joined in it"
