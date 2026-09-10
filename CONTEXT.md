@@ -69,3 +69,7 @@ _Avoid_: Attendance rate, conversion
 **Overview**:
 The organizer-only summary page for a group: how membership, RSVPs and turnout are moving over a chosen period.
 _Avoid_: Dashboard, analytics, stats page
+
+**Activity**:
+The group's own record of what people did: joined or left, RSVPd or cancelled, joined a waitlist or got a spot from it, accepted an invitation. Appended as those actions run, so it remembers what the membership and RSVP rows forget, and shown newest first on the overview to the group's organizers and owner.
+_Avoid_: Audit log, events, history, feed (in the domain; "feed" is fine for the panel)

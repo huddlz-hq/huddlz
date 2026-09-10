@@ -10,7 +10,8 @@ defmodule Huddlz.Communities.GroupInvitation do
     otp_app: :huddlz,
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    notifiers: [Huddlz.Communities.ActivityLog]
 
   alias Huddlz.Communities.GroupInvitation.Changes.Accept
   alias Huddlz.Communities.GroupInvitation.Changes.ExpirePrevious

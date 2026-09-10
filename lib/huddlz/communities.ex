@@ -124,6 +124,8 @@ defmodule Huddlz.Communities do
     end
 
     resource Huddlz.Communities.GroupMember do
+      define :join_group, action: :join_group, args: [:group_id]
+      define :leave_group, action: :leave_group
       define :add_member, action: :add_member, args: [:group_id, :user_id, :role]
       define :get_group_member, action: :read, get_by: [:group_id, :user_id]
 
@@ -170,6 +172,10 @@ defmodule Huddlz.Communities do
         action: :notification_recipients,
         args: [:huddl_ids],
         get?: false
+    end
+
+    resource Huddlz.Communities.GroupActivity do
+      define :list_group_activity, action: :for_group, args: [:group_id, {:optional, :limit}]
     end
 
     resource Huddlz.Communities.HuddlTemplate
