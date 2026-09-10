@@ -22,6 +22,7 @@ defmodule HuddlzWeb.OrganizeLive do
   alias Huddlz.Communities
   alias Huddlz.Communities.GroupStats
   alias Huddlz.Communities.MembershipEvents
+  alias HuddlzWeb.Components.TurnoutForm
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.BrowserTimeZone
@@ -67,6 +68,7 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:huddlz_list, [])
      |> assign(:huddlz_filter, :published)
      |> assign(:turnout_nudge, nil)
+     |> assign(:turnout_editor, nil)
      |> assign(:period, GroupStats.default_period())
      |> assign(:stats, nil)
      |> assign(:invitation_count, 0)
@@ -179,6 +181,32 @@ defmodule HuddlzWeb.OrganizeLive do
     |> Ash.Query.sort(ends_at: :desc)
     |> Ash.Query.limit(1)
     |> Ash.read_one!(actor: user)
+  end
+
+  # The huddl a turnout event names: the nudge's, or one of the listed rows.
+  defp turnout_subject(socket, id) do
+    case socket.assigns.turnout_nudge do
+      %{id: ^id} = huddl -> huddl
+      _ -> Enum.find(socket.assigns.huddlz_list, &(&1.id == id))
+    end
+  end
+
+  # Saving turnout in place refreshes what the page shows without moving
+  # it: the overview's nudge and figures, or the list's rows at the same
+  # scroll depth.
+  defp refresh_after_turnout(socket) do
+    %{group: group, current_user: user} = socket.assigns
+
+    case socket.assigns.live_action do
+      :overview ->
+        load_section(socket, :overview, group, user)
+
+      :huddlz ->
+        assign(socket, :huddlz_list, list_group_huddlz(group, socket.assigns.huddlz_filter, user))
+
+      _other ->
+        socket
+    end
   end
 
   defp load_group(slug, user) do
@@ -323,6 +351,7 @@ defmodule HuddlzWeb.OrganizeLive do
             group={@group}
             can_edit_group={@can_edit_group}
             turnout_nudge={@turnout_nudge}
+            turnout_editor={@turnout_editor}
             period={@period}
             activity={@activity}
             stats={@stats}
@@ -335,6 +364,7 @@ defmodule HuddlzWeb.OrganizeLive do
             counts={@huddlz_counts}
             filter={@huddlz_filter}
             today={@today}
+            turnout_editor={@turnout_editor}
           />
         <% :members -> %>
           <.members_view
@@ -441,6 +471,7 @@ defmodule HuddlzWeb.OrganizeLive do
   # ─────────────────────────────────────────  OVERVIEW  ───
   attr :group, :map, required: true
   attr :turnout_nudge, :map, default: nil
+  attr :turnout_editor, :map, default: nil
   attr :period, :string, required: true
   attr :stats, :map, required: true
   attr :activity, :list, required: true
@@ -478,13 +509,29 @@ defmodule HuddlzWeb.OrganizeLive do
       </div>
     </div>
 
-    <div :if={@turnout_nudge} id="turnout-nudge" class="nudge" role="status">
-      <.icon name="hero-users" class="size-5 nudge-icon" />
-      <span>
-        <strong>{@turnout_nudge.title}</strong>
-        ended {nudge_ended(@turnout_nudge)} and has no turnout yet.
-      </span>
-      <.link navigate={huddl_show_path(@group, @turnout_nudge)}>Add turnout</.link>
+    <div :if={@turnout_nudge} id="turnout-nudge" class="nudge-block">
+      <div class="nudge" role="status">
+        <.icon name="hero-users" class="size-5 nudge-icon" />
+        <span>
+          <strong>{@turnout_nudge.title}</strong>
+          ended {nudge_ended(@turnout_nudge)} and has no turnout yet.
+        </span>
+        <button
+          :if={!editing?(@turnout_editor, @turnout_nudge)}
+          type="button"
+          class="nudge-action"
+          phx-click="edit_turnout"
+          phx-value-id={@turnout_nudge.id}
+        >
+          Add turnout
+        </button>
+      </div>
+      <TurnoutForm.turnout_form
+        :if={editing?(@turnout_editor, @turnout_nudge)}
+        id="turnout-form-nudge"
+        huddl={@turnout_editor.huddl}
+        form={@turnout_editor.form}
+      />
     </div>
 
     <p id="overview-summary-scope" class="mb-3 text-sm text-[var(--muted)]">
@@ -794,6 +841,7 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :counts, :map, required: true
   attr :filter, :atom, required: true
   attr :today, Date, required: true
+  attr :turnout_editor, :map, default: nil
 
   defp huddlz_view(assigns) do
     shown = Enum.take(assigns.huddlz, assigns.limit)
@@ -878,7 +926,12 @@ defmodule HuddlzWeb.OrganizeLive do
             </span>
           </div>
           <div class="cal-agenda-entries">
-            <.organizer_huddl_row :for={huddl <- day.huddlz} group={@group} huddl={huddl} />
+            <.organizer_huddl_row
+              :for={huddl <- day.huddlz}
+              group={@group}
+              huddl={huddl}
+              turnout_editor={@turnout_editor}
+            />
           </div>
         </div>
       </div>
@@ -894,6 +947,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
   attr :group, :map, required: true
   attr :huddl, :map, required: true
+  attr :turnout_editor, :map, default: nil
 
   defp organizer_huddl_row(assigns) do
     ~H"""
@@ -927,7 +981,7 @@ defmodule HuddlzWeb.OrganizeLive do
       <.organizer_rsvps huddl={@huddl} />
       <div class="org-huddl-actions">
         <.organizer_edit_link group={@group} huddl={@huddl} label="Edit" />
-        <.organizer_turnout_action group={@group} huddl={@huddl} />
+        <.organizer_turnout_action huddl={@huddl} />
         <.link
           :if={@huddl.huddl_template && @huddl.status not in [:cancelled, :completed]}
           navigate={huddl_edit_path(@group, @huddl, "all")}
@@ -936,9 +990,19 @@ defmodule HuddlzWeb.OrganizeLive do
           Edit series
         </.link>
       </div>
+      <div :if={editing?(@turnout_editor, @huddl)} class="org-huddl-editor">
+        <TurnoutForm.turnout_form
+          id={"turnout-form-#{@huddl.id}"}
+          huddl={@turnout_editor.huddl}
+          form={@turnout_editor.form}
+        />
+      </div>
     </div>
     """
   end
+
+  defp editing?(%{huddl: %{id: id}}, %{id: id}), do: true
+  defp editing?(_editor, _huddl), do: false
 
   attr :huddl, :map, required: true
   attr :group, :map, required: true
@@ -996,23 +1060,23 @@ defmodule HuddlzWeb.OrganizeLive do
     """
   end
 
-  attr :group, :map, required: true
   attr :huddl, :map, required: true
 
-  # A past row either wears its show rate or offers to record one.
+  # A past row wears its show rate and opens the turnout form in place.
   defp organizer_turnout_action(assigns) do
     ~H"""
     <%= if @huddl.status == :completed do %>
       <.pill :if={@huddl.show_rate} variant={:cyan} class="org-huddl-show-rate">
         {@huddl.show_rate}% showed
       </.pill>
-      <.link
-        :if={is_nil(@huddl.turnout_recorded_at)}
-        navigate={huddl_show_path(@group, @huddl)}
-        class="btn-secondary btn-sm org-huddl-add-turnout"
+      <.button
+        variant={:secondary}
+        class="btn-sm org-huddl-add-turnout"
+        phx-click="edit_turnout"
+        phx-value-id={@huddl.id}
       >
-        Add turnout
-      </.link>
+        {if @huddl.turnout_recorded_at, do: "Edit turnout", else: "Add turnout"}
+      </.button>
     <% end %>
     """
   end
@@ -1521,6 +1585,52 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   @impl true
+  def handle_event("edit_turnout", %{"id" => id}, socket) do
+    case turnout_subject(socket, id) do
+      nil ->
+        {:noreply, socket}
+
+      huddl ->
+        form = TurnoutForm.build(huddl, socket.assigns.current_user)
+        {:noreply, assign(socket, :turnout_editor, %{huddl: huddl, form: form})}
+    end
+  end
+
+  def handle_event("cancel_turnout", _params, socket) do
+    {:noreply, assign(socket, :turnout_editor, nil)}
+  end
+
+  def handle_event("validate_turnout", %{"turnout" => params}, socket) do
+    editor = socket.assigns.turnout_editor
+    form = AshPhoenix.Form.validate(editor.form, params)
+    {:noreply, assign(socket, :turnout_editor, %{editor | form: to_form(form)})}
+  end
+
+  def handle_event("record_turnout", %{"turnout" => params}, socket) do
+    editor = socket.assigns.turnout_editor
+
+    case AshPhoenix.Form.submit(editor.form, params: params) do
+      {:ok, huddl} ->
+        {:noreply,
+         socket
+         |> assign(:turnout_editor, nil)
+         |> put_flash(:info, "Turnout saved for #{huddl.title}.")
+         |> refresh_after_turnout()}
+
+      {:error, form} ->
+        {:noreply, assign(socket, :turnout_editor, %{editor | form: to_form(form)})}
+    end
+  end
+
+  def handle_event("skip_turnout", %{"id" => id}, socket) do
+    with huddl when not is_nil(huddl) <- turnout_subject(socket, id),
+         {:ok, _huddl} <- Communities.skip_turnout(huddl, actor: socket.assigns.current_user) do
+      {:noreply, socket |> assign(:turnout_editor, nil) |> refresh_after_turnout()}
+    else
+      _ -> {:noreply, put_flash(socket, :error, "Could not skip turnout right now.")}
+    end
+  end
+
   def handle_event("show_more_huddlz", _params, socket) do
     {:noreply, update(socket, :huddlz_limit, &(&1 + @huddlz_page))}
   end
