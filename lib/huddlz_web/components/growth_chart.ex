@@ -1,12 +1,13 @@
 defmodule HuddlzWeb.Components.GrowthChart do
   @moduledoc """
   Member growth over a period: a line of members at each bucket's end
-  above a strip of bars for how many joined in each bucket. Inline SVG
-  on the design tokens, server-rendered like the sparkline.
+  above a strip of bars for how many joined in each bucket, with a smaller
+  bar below the axis for how many left. Inline SVG on the design tokens,
+  server-rendered like the sparkline.
 
   Readable back from the markup: the line and the bar strip carry their
-  values in `data-points`, each dot and bar its bucket label and value,
-  and the root the bucket unit and count.
+  values in `data-points` (leaves in `data-left`), each dot and bar its
+  bucket label and value, and the root the bucket unit and count.
   """
   use Phoenix.Component
 
@@ -14,8 +15,8 @@ defmodule HuddlzWeb.Components.GrowthChart do
   @right 20
   @top 26
   @bar_width 26
-  @wide %{line_height: 140, bar_gap: 26, bar_height: 44, bottom: 30}
-  @compact %{line_height: 110, bar_gap: 22, bar_height: 32, bottom: 26}
+  @wide %{line_height: 140, bar_gap: 26, bar_height: 44, leave_height: 22, bottom: 30}
+  @compact %{line_height: 110, bar_gap: 22, bar_height: 32, leave_height: 16, bottom: 26}
   @compact_label_limit 8
 
   attr :id, :string, required: true
@@ -23,7 +24,7 @@ defmodule HuddlzWeb.Components.GrowthChart do
 
   attr :buckets, :list,
     required: true,
-    doc: "maps with :label, :members (at the bucket's end) and :joined (inside it)"
+    doc: "maps with :label, :members (at the bucket's end), :joined and :left (inside it)"
 
   attr :width, :integer, default: 720, doc: "viewBox width"
 
@@ -77,7 +78,11 @@ defmodule HuddlzWeb.Components.GrowthChart do
       </text>
 
       <line class="axis" x1={@chart.left} x2={@chart.right} y1={@chart.bar_base} y2={@chart.bar_base} />
-      <g id={"#{@id}-bars"} data-points={Enum.map_join(@buckets, ",", & &1.joined)}>
+      <g
+        id={"#{@id}-bars"}
+        data-points={Enum.map_join(@buckets, ",", & &1.joined)}
+        data-left={Enum.map_join(@buckets, ",", & &1.left)}
+      >
         <%= for {bucket, {x, height}} <- Enum.zip(@buckets, @chart.bars) do %>
           <rect
             class="col"
@@ -99,6 +104,27 @@ defmodule HuddlzWeb.Components.GrowthChart do
             {joined_label(bucket.joined)}
           </text>
         <% end %>
+        <%= for {bucket, {x, height}} <- Enum.zip(@buckets, @chart.leave_bars), bucket.left > 0 do %>
+          <rect
+            class="col left"
+            data-label={bucket.label}
+            data-left={bucket.left}
+            x={x - @chart.bar_width / 2}
+            y={@chart.bar_base}
+            width={@chart.bar_width}
+            height={height}
+            rx="3"
+          />
+          <text
+            :if={@chart.bar_values?}
+            class="val"
+            x={x}
+            y={@chart.bar_base + height + 13}
+            text-anchor="middle"
+          >
+            −{bucket.left}
+          </text>
+        <% end %>
       </g>
 
       <text
@@ -118,6 +144,7 @@ defmodule HuddlzWeb.Components.GrowthChart do
     n = length(buckets)
     members = Enum.map(buckets, & &1.members)
     joined = Enum.map(buckets, & &1.joined)
+    left = Enum.map(buckets, & &1.left)
     {lo, hi, step} = scale(members)
     plot_width = width - @left - @right
     bar_base = @top + dims.line_height + dims.bar_gap + dims.bar_height
@@ -127,12 +154,14 @@ defmodule HuddlzWeb.Components.GrowthChart do
     line_path = Enum.map_join(line_points, " ", fn {px, py} -> "#{px},#{py}" end)
     {last_x, last_y} = List.last(line_points)
     most_joined = max(Enum.max(joined), 1)
+    most_left = max(Enum.max(left), 1)
+    leave_track = if Enum.any?(left, &(&1 > 0)), do: dims.leave_height + 14, else: 0
 
     crowded? = compact and n > @compact_label_limit
 
     %{
       width: width,
-      height: bar_base + dims.bottom,
+      height: bar_base + leave_track + dims.bottom,
       left: @left,
       right: width - @right,
       gridlines: Enum.map(lo..hi//step, fn v -> {v, y.(v)} end),
@@ -150,6 +179,10 @@ defmodule HuddlzWeb.Components.GrowthChart do
         joined
         |> Enum.with_index()
         |> Enum.map(fn {v, i} -> {x.(i), Float.round(dims.bar_height * v / most_joined, 1)} end),
+      leave_bars:
+        left
+        |> Enum.with_index()
+        |> Enum.map(fn {v, i} -> {x.(i), Float.round(dims.leave_height * v / most_left, 1)} end),
       labels: labels(buckets, x, crowded?)
     }
   end

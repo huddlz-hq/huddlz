@@ -5,9 +5,11 @@ defmodule Huddlz.Communities.GroupStats do
   which authorizes the actor; the reads here trust that boundary.
 
   Everything here is derived from rows the app already keeps: member join
-  dates, RSVP times and waitlist times. Members who left and RSVPs that
-  were cancelled leave no trace yet, so growth is "as it stands today by
-  join date" and RSVP counts are of RSVPs still standing.
+  dates, RSVP times and waitlist times, plus the group activity log for
+  what those rows forget. Leaves come from the log, and so do the joins of
+  people who have since left; members at any past moment are counted back
+  from today's members through those joins and leaves. RSVPs that were
+  cancelled leave no trace yet, so RSVP counts are of RSVPs still standing.
 
   Periods are `"30d"`, `"90d"` (the default) and `"12m"`. Each is split
   into equal buckets for the sparklines: six for the day periods, twelve
@@ -29,7 +31,7 @@ defmodule Huddlz.Communities.GroupStats do
 
   require Ash.Query
 
-  alias Huddlz.Communities.{GroupMember, Huddl, HuddlAttendee}
+  alias Huddlz.Communities.{GroupActivity, GroupMember, Huddl, HuddlAttendee}
 
   @day 86_400
   @typical_min_history 3
@@ -69,9 +71,10 @@ defmodule Huddlz.Communities.GroupStats do
   through the organizer read.
 
     * `members` — current member count, how many joined this calendar
-      month in the group's time zone, and a cumulative sparkline
+      month in the group's time zone, and a sparkline of members over time
     * `growth` — the period bucketed by month, fortnight or week: members
-      at each bucket's end, how many joined in it, and the total gained
+      at each bucket's end, how many joined and left in it, and the totals
+      joined, left and gained (net)
     * `rsvps` — RSVPs made in the period, the count in the period before
       it, and a per-bucket sparkline
     * `waitlist` — people waitlisted on upcoming huddlz right now, the
@@ -89,13 +92,13 @@ defmodule Huddlz.Communities.GroupStats do
   def compute(group, period, actor, now \\ DateTime.utc_now()) do
     spec = period_spec(period)
     edges = bucket_edges(now, spec)
-    joined_at = member_join_times(group)
+    membership = membership_history(group)
     past = organizer_huddlz(group, actor, :past, starts_at: :desc)
 
     %{
       period: period,
-      members: members(joined_at, group, now, edges),
-      growth: growth(joined_at, group, now, spec),
+      members: members(membership, group, now, edges),
+      growth: growth(membership, group, now, spec),
       rsvps: rsvps(group, now, spec, edges),
       waitlist: waitlist(group, now, edges),
       turnout: turnout(past, now, spec),
@@ -172,27 +175,66 @@ defmodule Huddlz.Communities.GroupStats do
   defp show_rate(_came, 0), do: nil
   defp show_rate(came, rsvps), do: round(came * 100 / rsvps)
 
-  defp member_join_times(group) do
-    GroupMember
-    |> Ash.Query.filter(group_id == ^group.id)
-    |> Ash.Query.select([:created_at])
-    |> Ash.read!(authorize?: false)
-    |> Enum.map(& &1.created_at)
-  end
+  # Combine current join dates with the log, keeping each membership's first
+  # join. Accepting an invitation while already a member is not another join.
+  defp membership_history(group) do
+    rows =
+      GroupMember
+      |> Ash.Query.filter(group_id == ^group.id)
+      |> Ash.Query.select([:user_id, :created_at])
+      |> Ash.read!(authorize?: false)
 
-  defp members(joined_at, group, now, edges) do
-    month_start = start_of_month(now, group.time_zone)
+    activity =
+      GroupActivity
+      |> Ash.Query.filter(
+        group_id == ^group.id and kind in [:joined, :accepted_invitation, :left]
+      )
+      |> Ash.Query.select([:user_id, :kind, :occurred_at])
+      |> Ash.read!(authorize?: false)
+
+    current_joins =
+      Enum.map(rows, &%{kind: :joined, user_id: &1.user_id, occurred_at: &1.created_at})
+
+    {_members, joined_at} =
+      (current_joins ++ activity)
+      |> Enum.sort_by(& &1.occurred_at, DateTime)
+      |> Enum.reduce({MapSet.new(), []}, &membership_join/2)
 
     %{
-      count: length(joined_at),
-      joined_this_month: Enum.count(joined_at, &(DateTime.compare(&1, month_start) != :lt)),
-      spark: cumulative(joined_at, edges)
+      count: length(rows),
+      joined_at: joined_at,
+      left_at: for(%{kind: :left, occurred_at: at} <- activity, do: at)
     }
   end
 
-  # Members at the end of each bucket, reconstructed from the join dates of
-  # today's members, with the joins inside each bucket.
-  defp growth(joined_at, group, now, spec) do
+  defp membership_join(%{kind: :left, user_id: user_id}, {members, joined_at}) do
+    {MapSet.delete(members, user_id), joined_at}
+  end
+
+  defp membership_join(%{user_id: user_id, occurred_at: at}, {members, joined_at}) do
+    if MapSet.member?(members, user_id) do
+      {members, joined_at}
+    else
+      {MapSet.put(members, user_id), [at | joined_at]}
+    end
+  end
+
+  defp members(membership, group, now, edges) do
+    month_start = start_of_month(now, group.time_zone)
+    [_first | ends] = edges
+
+    %{
+      count: membership.count,
+      joined_this_month:
+        Enum.count(membership.joined_at, &(DateTime.compare(&1, month_start) != :lt)),
+      spark: Enum.map(ends, &members_at(membership, &1))
+    }
+  end
+
+  # Members at the end of each bucket, counted back from today's members
+  # through the joins and leaves since, with the joins and leaves inside
+  # each bucket.
+  defp growth(membership, group, now, spec) do
     buckets =
       group
       |> growth_buckets(now, spec)
@@ -201,16 +243,30 @@ defmodule Huddlz.Communities.GroupStats do
           label: label,
           starts_at: from,
           ends_at: to,
-          joined: Enum.count(joined_at, &within?(&1, from, to)),
-          members: Enum.count(joined_at, &(DateTime.compare(&1, to) == :lt))
+          joined: Enum.count(membership.joined_at, &within?(&1, from, to)),
+          left: Enum.count(membership.left_at, &within?(&1, from, to)),
+          members: members_at(membership, to)
         }
       end)
 
+    joined = buckets |> Enum.map(& &1.joined) |> Enum.sum()
+    left = buckets |> Enum.map(& &1.left) |> Enum.sum()
+
     %{
       unit: spec.growth,
-      gained: buckets |> Enum.map(& &1.joined) |> Enum.sum(),
+      joined: joined,
+      left: left,
+      gained: joined - left,
       buckets: buckets
     }
+  end
+
+  # Today's count, minus everyone who joined after the moment, plus
+  # everyone who left after it. The last point is always today's count.
+  defp members_at(membership, at) do
+    joined_since = Enum.count(membership.joined_at, &(DateTime.compare(&1, at) != :lt))
+    left_since = Enum.count(membership.left_at, &(DateTime.compare(&1, at) != :lt))
+    membership.count - joined_since + left_since
   end
 
   # Twelve calendar months in the group's time zone, this month last.

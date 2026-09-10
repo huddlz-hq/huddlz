@@ -1829,6 +1829,7 @@ body .chart .typical {
 body .chart .cap { stroke: var(--soft); stroke-width: 1.5; }
 body .chart .col { fill: var(--line-strong); }
 body .chart .col.room { fill: var(--accent); opacity: 0.85; }
+body .chart .col.left { fill: var(--warn); opacity: 0.85; }
 body .chart .col.call { fill: var(--accent-deep); }
 
 body .chart .col.none {
@@ -1882,6 +1883,7 @@ body .legend i.typ {
 body .legend i.cap { height: 2px; background: var(--soft); }
 body .legend i.sq { width: 10px; height: 10px; background: var(--line-strong); }
 body .legend i.sq.room { background: var(--accent); }
+body .legend i.sq.left { background: var(--warn); }
 body .legend i.sq.call { background: var(--accent-deep); }
 body .legend i.sq.none { background: none; border: 1.5px dashed var(--line-strong); }
 
@@ -1918,6 +1920,11 @@ body .turnout-chart-wrap .compact-only { display: none; }
   body .turnout-chart-wrap .compact-only { display: block; }
 }
 body #member-growth-panel .panel-head .stat { margin: 0; flex: 0 0 auto; }
+
+@media (max-width: 640px) {
+  body #member-growth-panel .panel-head { flex-wrap: wrap; }
+  body #member-growth-panel .panel-head .stat { flex-basis: 100%; }
+}
 body #next-huddl { container-type: inline-size; }
 body .next-huddl-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
 body .next-huddl-chart { max-width: 560px; }
