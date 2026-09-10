@@ -221,22 +221,33 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   defp create_invitation(socket, group, user, role, email, params) do
-    case Communities.invite_to_group_by_email(group.id, email, role, actor: user) do
+    params = Map.merge(params, %{"group_id" => group.id, "email" => email, "role" => role})
+
+    form =
+      AshPhoenix.Form.for_create(Huddlz.Communities.GroupInvitation, :invite,
+        domain: Communities,
+        actor: user,
+        as: "invitation",
+        params: params
+      )
+
+    case AshPhoenix.Form.submit(form, params: params) do
       {:ok, _invitation} ->
         {:noreply,
          socket
+         |> clear_flash(:error)
          |> put_flash(:info, "Invitation sent to #{email}.")
          |> assign(:invitation_form, invitation_form())
          |> refresh_invitations(group, user)}
 
-      {:error, _reason} ->
+      {:error, form} ->
         {:noreply,
          socket
          |> put_flash(
            :error,
            "Could not send that invitation. They may already be a member or have a pending invitation."
          )
-         |> assign(:invitation_form, invitation_form(params))}
+         |> assign(:invitation_form, to_form(form))}
     end
   end
 
@@ -1279,7 +1290,7 @@ defmodule HuddlzWeb.OrganizeLive do
         :if={@transfer_candidates != []}
         for={@transfer_target_form}
         id="transfer-ownership-target-form"
-        phx-submit="open_transfer_action"
+        phx-submit={JS.push_focus(to: "#open-transfer-ownership") |> JS.push("open_transfer_action")}
         class="mt-5 grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
       >
         <.select
@@ -1417,7 +1428,7 @@ defmodule HuddlzWeb.OrganizeLive do
       <.button
         :if={@can_promote}
         id={"promote-member-#{@entry.id}"}
-        phx-click="open_member_action"
+        phx-click={JS.push_focus() |> JS.push("open_member_action")}
         phx-value-id={@entry.id}
         phx-value-action="promote"
         class="text-sm"
@@ -1427,7 +1438,7 @@ defmodule HuddlzWeb.OrganizeLive do
       <.button
         :if={@can_demote}
         id={"demote-member-#{@entry.id}"}
-        phx-click="open_member_action"
+        phx-click={JS.push_focus() |> JS.push("open_member_action")}
         phx-value-id={@entry.id}
         phx-value-action="demote"
         class="text-sm"
@@ -1438,7 +1449,7 @@ defmodule HuddlzWeb.OrganizeLive do
         :if={@can_remove}
         id={"remove-member-#{@entry.id}"}
         variant={:destructive}
-        phx-click="open_member_action"
+        phx-click={JS.push_focus() |> JS.push("open_member_action")}
         phx-value-id={@entry.id}
         phx-value-action="remove"
         class="text-sm"

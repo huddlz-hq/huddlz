@@ -184,8 +184,8 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> click_button("Save changes")
       |> assert_has("*", text: "Failed to update display name")
 
-      # Test too long (> 30 chars)
-      long_name = String.duplicate("a", 31)
+      # Test too long (> 70 chars)
+      long_name = String.duplicate("a", 71)
 
       session
       |> fill_in("Display name", with: long_name)

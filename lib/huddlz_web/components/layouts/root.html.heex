@@ -43,5 +43,7 @@
   </head>
   <body class={Map.get(assigns, :body_class, "")}>
     {@inner_content}
+    <div id="page-context" class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+    </div>
   </body>
 </html>

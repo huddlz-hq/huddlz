@@ -362,7 +362,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
           :if={is_nil(@group.archived_at)}
           id="archive-group"
           variant={:secondary}
-          phx-click="open_archive_dialog"
+          phx-click={JS.push_focus() |> JS.push("open_archive_dialog")}
         >Archive group</.button>
         <.button
           :if={@group.archived_at}
@@ -384,7 +384,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
         show
         on_cancel={JS.push("close_archive_dialog")}
       >
-        <h2>Archive {@group.name}?</h2>
+        <h2 id="archive-group-dialog-title">Archive {@group.name}?</h2>
         <p>
           Members keep access to the group's history and will be notified that it is archived. New activity is closed until you restore it.
         </p>

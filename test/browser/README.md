@@ -28,6 +28,7 @@ The command builds the actual app assets, starts the test endpoint and Chromium,
 
 | Feature | Browser-specific acceptance check |
 | --- | --- |
+| Keyboard focus | Skip navigation, page context, linked submission errors across forms, correction and repeated saves, and dialog focus restoration |
 | Home location | ArrowDown/Enter select a suggestion without a native form submission |
 | Calendar | Actual `Intl` time-zone detection moves a late Denver huddl to the next New York calendar day |
 | Organizer | Native Tab, arrow keys, Space, visible focus, and switch state survive LiveView patches |

@@ -90,7 +90,11 @@ defmodule HuddlzWeb.GroupLive.Locations do
           </p>
         </div>
         <div class="actions">
-          <.button variant={:primary} patch={~p"/groups/#{@group.slug}/locations/new"}>
+          <.button
+            id="add-address"
+            variant={:primary}
+            patch={~p"/groups/#{@group.slug}/locations/new"}
+          >
             Add Address
           </.button>
         </div>
@@ -218,10 +222,11 @@ defmodule HuddlzWeb.GroupLive.Locations do
       <.modal
         :if={@live_action == :new_location}
         id="new-location-modal"
+        return_focus="#add-address"
         show
         on_cancel={JS.patch(~p"/groups/#{@group.slug}/locations")}
       >
-        <h2 class="modal-title">Add New Address</h2>
+        <h2 id="new-location-modal-title" class="modal-title">Add New Address</h2>
         <p class="modal-sub">
           Saved venues show up in the venue picker for everyone in your group.
         </p>
@@ -247,18 +252,15 @@ defmodule HuddlzWeb.GroupLive.Locations do
             />
           </div>
 
-          <div class="form-row">
-            <label class="form-label" for="location-name-input">Location name (optional)</label>
-            <input
-              type="text"
-              id="location-name-input"
-              name="location_name"
-              value={@modal_location_name}
-              phx-debounce="100"
-              placeholder="e.g., Community Center"
-              class="form-input"
-            />
-          </div>
+          <.input
+            field={@modal_location_form[:name]}
+            id="location-name-input"
+            name="location_name"
+            label="Location name (optional)"
+            value={@modal_location_name}
+            phx-debounce="100"
+            placeholder="e.g., Community Center"
+          />
 
           <div class="form-foot is-flush">
             <.button variant={:primary} type="submit" disabled={is_nil(@modal_location_address)}>
@@ -275,32 +277,25 @@ defmodule HuddlzWeb.GroupLive.Locations do
   end
 
   @impl true
-  def handle_event("save_new_location", _params, socket) do
+  def handle_event("save_new_location", params, socket) do
     user = socket.assigns.current_user
-    address = socket.assigns.modal_location_address
-    name = socket.assigns.modal_location_name
-    name = if name == "", do: nil, else: name
 
-    case Communities.create_group_location(
-           name,
-           address,
-           socket.assigns.modal_location_lat,
-           socket.assigns.modal_location_lng,
-           socket.assigns.modal_location_time_zone,
-           socket.assigns.group.id,
-           actor: user
-         ) do
+    case ModalLocationHelpers.submit(socket, socket.assigns.group.id, params) do
       {:ok, _location} ->
         locations = load_group_locations(socket.assigns.group.id, user)
 
         {:noreply,
          socket
          |> assign(:locations, locations)
+         |> clear_flash(:error)
          |> put_flash(:info, "Location saved")
          |> push_patch(to: ~p"/groups/#{socket.assigns.group.slug}/locations")}
 
-      {:error, _error} ->
-        {:noreply, put_flash(socket, :error, "Failed to save location")}
+      {:error, form} ->
+        {:noreply,
+         socket
+         |> assign(:modal_location_form, to_form(form))
+         |> put_flash(:error, "Failed to save location")}
     end
   end
 

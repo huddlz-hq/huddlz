@@ -359,6 +359,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         cancel_path={~p"/groups/#{@group_slug}/huddlz/#{@huddl.id}/edit"}
         modal_location_address={@modal_location_address}
         modal_location_name={@modal_location_name}
+        modal_location_form={@modal_location_form}
       />
     </Layouts.app>
     """
@@ -485,34 +486,27 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   end
 
   @impl true
-  def handle_event("save_location", _params, socket) do
+  def handle_event("save_location", params, socket) do
     user = socket.assigns.current_user
-    address = socket.assigns.modal_location_address
-    name = socket.assigns.modal_location_name
-    name = if name == "", do: nil, else: name
 
-    case Communities.create_group_location(
-           name,
-           address,
-           socket.assigns.modal_location_lat,
-           socket.assigns.modal_location_lng,
-           socket.assigns.modal_location_time_zone,
-           socket.assigns.huddl.group.id,
-           actor: user
-         ) do
+    case ModalLocationHelpers.submit(socket, socket.assigns.huddl.group.id, params) do
       {:ok, location} ->
         group_locations = load_group_locations(socket.assigns.huddl.group.id, user)
 
         {:noreply,
          socket
          |> assign(:group_locations, group_locations)
+         |> clear_flash(:error)
          |> apply_saved_location_to_form(location)
          |> push_patch(
            to: ~p"/groups/#{socket.assigns.group_slug}/huddlz/#{socket.assigns.huddl.id}/edit"
          )}
 
-      {:error, _error} ->
-        {:noreply, put_flash(socket, :error, "Failed to save location")}
+      {:error, form} ->
+        {:noreply,
+         socket
+         |> assign(:modal_location_form, to_form(form))
+         |> put_flash(:error, "Failed to save location")}
     end
   end
 

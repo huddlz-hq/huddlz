@@ -47,6 +47,7 @@ defmodule HuddlzWeb.Layouts do
     assigns = assign_new(assigns, :signed_in, fn -> assigns.current_user != nil end)
 
     ~H"""
+    <a :if={@signed_in} href="#main-content" class="skip-link">Skip to main content</a>
     <%= if @signed_in do %>
       <button
         type="button"
@@ -232,7 +233,13 @@ defmodule HuddlzWeb.Layouts do
       </aside>
     <% end %>
 
-    <main class="main" data-mobile-nav-background>
+    <main
+      id="main-content"
+      tabindex="-1"
+      aria-label="Main content"
+      class="main"
+      data-mobile-nav-background
+    >
       <header class="content-topbar">
         <%= if @signed_in do %>
           <button
@@ -327,9 +334,9 @@ defmodule HuddlzWeb.Layouts do
         </a>
       </header>
 
-      <div class="auth-frame">
+      <main id="main-content" tabindex="-1" aria-label="Main content" class="auth-frame">
         {render_slot(@inner_block)}
-      </div>
+      </main>
     </div>
     """
   end
