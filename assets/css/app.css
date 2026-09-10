@@ -3760,6 +3760,94 @@ body .organizer-update p {
   overflow-wrap: anywhere;
 }
 
+/* ─────────────────────────────────────────  TURNOUT  ──── */
+/* Organizer-only strip on an ended huddl: one question, one or two counts. */
+body .turnout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px 24px;
+  margin-bottom: 16px;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+/* The question sits on its own line; counts and actions share the next. */
+body .turnout form {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+}
+
+body .turnout form .turnout-copy { flex: 1 1 100%; }
+
+body .turnout-copy {
+  flex: 1 1 260px;
+  min-width: 0;
+  align-self: center;
+}
+
+body .turnout > .turnout-actions { margin-left: auto; }
+
+body .turnout-copy h2 {
+  margin: 0 0 2px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+body .turnout-copy p {
+  margin: 0;
+  color: var(--soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+body .turnout-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+body .turnout-fields .form-row { margin: 0; }
+
+body .turnout-fields input {
+  width: 140px;
+  font-variant-numeric: tabular-nums;
+}
+
+body .turnout-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+body .turnout-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+body .turnout-figures .rate { color: var(--accent-ink); }
+
+@media (max-width: 760px) {
+  body .turnout { align-items: stretch; }
+  body .turnout-fields input { width: 100%; }
+  body .turnout-fields .form-row { flex: 1 1 140px; }
+}
+
 body .huddl-frame {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
