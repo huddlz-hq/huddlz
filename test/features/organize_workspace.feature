@@ -111,9 +111,9 @@ Feature: Organizer workspace
     When I visit "/organize/cyberpunk-builders"
     Then I should see "Cyberpunk Builders"
     And I should see "Members"
+    And I should see "RSVPs · last 90 days"
     And I should see "Upcoming"
-    And I should see "Open RSVPs"
-    And I should see "Visibility"
+    And I should see "Waitlisted now"
     And I should see "No upcoming huddlz right now. Create one to get started."
 
   Scenario: Group overview lists the group's upcoming huddl
@@ -130,7 +130,7 @@ Feature: Organizer workspace
     And "attendee+organize-workspace@example.com" has RSVPed to "Synthwave Night"
     And I am signed in as "host+organize-workspace@example.com"
     When I visit "/organize/cyberpunk-builders"
-    Then I should see "Open RSVPs"
+    Then I should see "2 open RSVPs"
     And I should see "2 RSVPs"
 
   Scenario: Overview does not show huddlz from groups the actor does not organize
