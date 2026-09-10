@@ -54,7 +54,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
   describe "anonymous access" do
     test "redirects to sign-in", %{conn: conn} do
       conn
-      |> visit("/calendar?view=month")
+      |> visit("/calendar/month")
       |> assert_path("/sign-in")
     end
   end
@@ -66,7 +66,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
     } do
       conn
       |> login(attendee)
-      |> visit("/calendar?view=month")
+      |> visit("/calendar/month")
       |> assert_has("h1", text: "Calendar")
       |> assert_has("aside.sidebar")
       |> assert_has(".sb-item.active[aria-current='page']", text: "Calendar")
@@ -84,7 +84,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
     } do
       conn
       |> login(attendee)
-      |> visit("/calendar?view=month")
+      |> visit("/calendar/month")
       |> assert_has(".cal-month-name", text: current_month_name())
       |> assert_has(".cal-month-count", text: "0 huddlz")
     end
@@ -93,7 +93,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       session =
         conn
         |> login(attendee)
-        |> visit("/calendar?view=month")
+        |> visit("/calendar/month")
 
       for day <- ~w(Sun Mon Tue Wed Thu Fri Sat) do
         assert_has(session, "#month-calendar th[scope='col']", text: day)
@@ -109,7 +109,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar?view=month")
+      |> visit("/calendar/month")
       |> assert_has("#month-calendar caption", text: current_month_name())
       |> assert_has("#month-calendar thead")
       |> assert_has("#month-calendar tbody tr", count: 6)
@@ -123,7 +123,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       session =
         conn
         |> login(attendee)
-        |> visit("/calendar?view=month")
+        |> visit("/calendar/month")
 
       document =
         session.view
@@ -147,10 +147,10 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> assert_has(".cal-view-tabs .scope-tab:first-child.is-active[aria-current='page']",
         text: "Week"
       )
-      |> assert_has(".cal-view-tabs .scope-tab:last-child[href='/calendar?view=month']",
+      |> assert_has(".cal-view-tabs .scope-tab:last-child[href='/calendar/month']",
         text: "Month"
       )
-      |> assert_has(".cal-view-tabs .scope-tab.is-active[href='/calendar']", text: "Week")
+      |> assert_has(".cal-view-tabs .scope-tab.is-active[href='/calendar/week']", text: "Week")
       |> assert_has(".cal-view-tabs .scope-tab", count: 2)
       |> refute_has(".cal-view-tabs .scope-tab", text: "Agenda")
       |> refute_has("#month-calendar")
@@ -162,10 +162,10 @@ defmodule HuddlzWeb.CalendarLiveTest do
     } do
       conn
       |> login(attendee)
-      |> visit("/calendar?view=month")
+      |> visit("/calendar/month")
       |> assert_has(".cal-view-tabs a[aria-current='page']", text: "Month")
       |> refute_has(".cal-view-tabs a[aria-current]", text: "Week")
-      |> visit("/calendar?view=week")
+      |> visit("/calendar/week")
       |> assert_has(".cal-view-tabs a[aria-current='page']", text: "Week")
       |> refute_has(".cal-view-tabs a[aria-current]", text: "Month")
     end
@@ -369,7 +369,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar?month=#{next_month_param(Huddlz.Generator.eastern_today())}&view=month")
+      |> visit("/calendar/month?month=#{next_month_param(Huddlz.Generator.eastern_today())}")
       |> assert_has(".cal-month-count", text: "1 huddl")
     end
 
@@ -456,8 +456,8 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar?view=month")
-      |> assert_has(~s(a.cal-nav-btn[href="/calendar?month=#{next}&view=month"]))
+      |> visit("/calendar/month")
+      |> assert_has(~s(a.cal-nav-btn[href="/calendar/month?month=#{next}"]))
     end
 
     test "Today link returns to current month from a navigated state", %{
@@ -468,14 +468,14 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar?month=#{next}&view=month")
-      |> assert_has(~s(a.cal-nav-today[href="/calendar?view=month"]))
+      |> visit("/calendar/month?month=#{next}")
+      |> assert_has(~s(a.cal-nav-today[href="/calendar/month"]))
     end
 
     test "invalid ?month= falls back to current month", %{conn: conn, attendee: attendee} do
       conn
       |> login(attendee)
-      |> visit("/calendar?month=not-a-month&view=month")
+      |> visit("/calendar/month?month=not-a-month")
       |> assert_has(".cal-month-name", text: current_month_name())
     end
   end
@@ -615,7 +615,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
         |> refute_has("#calendar-agenda-empty")
 
       session
-      |> visit("/calendar?view=month")
+      |> visit("/calendar/month")
       |> assert_has("#month-calendar")
       |> assert_has("#calendar-first-run.empty-state h3", text: "Your calendar is empty")
     end
@@ -815,7 +815,8 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> visit("/calendar")
       |> assert_has("#calendar-scope-mine.chip.is-active[aria-current='page']", text: "RSVPs")
       |> assert_has("#calendar-scope-mine .chip-count", text: "1")
-      |> assert_has("#calendar-scope-groups.chip:not(.is-active)[href='/calendar?scope=groups']",
+      |> assert_has(
+        "#calendar-scope-groups.chip:not(.is-active)[href='/calendar/week?scope=groups']",
         text: "Groups"
       )
       |> assert_has("#calendar-scope-groups .chip-count", text: "2")
@@ -848,12 +849,12 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar?scope=groups")
-      |> assert_has("#calendar-view-month[href='/calendar?view=month&scope=groups']")
-      |> visit("/calendar?view=month&scope=groups")
-      |> assert_has("#calendar-view-week[href='/calendar?scope=groups']")
-      |> assert_has(~s(a.cal-nav-btn[href="/calendar?month=#{next}&view=month&scope=groups"]))
-      |> assert_has("#calendar-scope-mine[href='/calendar?view=month']")
+      |> visit("/calendar/week?scope=groups")
+      |> assert_has("#calendar-view-month[href='/calendar/month?scope=groups']")
+      |> visit("/calendar/month?scope=groups")
+      |> assert_has("#calendar-view-week[href='/calendar/week?scope=groups']")
+      |> assert_has(~s(a.cal-nav-btn[href="/calendar/month?month=#{next}&scope=groups"]))
+      |> assert_has("#calendar-scope-mine[href='/calendar/month']")
     end
 
     test "my groups leaves out the past and cancelled huddlz nobody answered", %{
@@ -874,7 +875,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar?scope=groups")
+      |> visit("/calendar/week?scope=groups")
       |> refute_has("#calendar-entry-#{off.id}")
       |> refute_has("#calendar-entry-#{answered.id}")
       |> assert_has("#calendar-entry-#{rsvp_before_cancel.id} [data-status=cancelled]")
@@ -897,7 +898,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> login(attendee)
       |> visit("/calendar")
       |> assert_has("#calendar-first-run")
-      |> visit("/calendar?scope=groups")
+      |> visit("/calendar/week?scope=groups")
       |> refute_has("#calendar-first-run")
       |> assert_has("#calendar-entry-#{theirs.id} .cal-agenda-title", text: "Theirs")
       |> refute_has("#calendar-entry-#{theirs.id} .cal-entry-status")
@@ -916,10 +917,10 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar?view=month")
-      |> assert_has("#calendar-view-week[href='/calendar']", text: "Week")
-      |> visit("/calendar?month=#{next_month_param(today)}&view=month")
-      |> assert_has("#calendar-view-week[href='/calendar?week=#{first_week}']")
+      |> visit("/calendar/month")
+      |> assert_has("#calendar-view-week[href='/calendar/week']", text: "Week")
+      |> visit("/calendar/month?month=#{next_month_param(today)}")
+      |> assert_has("#calendar-view-week[href='/calendar/week?week=#{first_week}']")
     end
 
     test "draws every day of the week, blank where nothing is on, and today says so", %{
@@ -932,7 +933,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       session =
         conn
         |> login(attendee)
-        |> visit("/calendar?view=week")
+        |> visit("/calendar/week")
         |> assert_has(".cal-view-tabs .scope-tab.is-active[aria-current='page']", text: "Week")
         |> assert_has(".cal-month-name", text: Calendar.strftime(start, "%b %-d"))
         |> assert_has(".cal-month-count", text: "0 huddlz")
@@ -955,22 +956,22 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar?view=week&week=2030-10-02")
+      |> visit("/calendar/week?week=2030-10-02")
       |> assert_has(".cal-month-name", text: "Sep 29 – Oct 5, 2030")
       |> assert_has("#calendar-week-day-2030-09-29")
       |> assert_has("#calendar-week-day-2030-10-01 .cal-agenda-day-context", text: "Oct")
       |> refute_has("#calendar-week-day-2030-09-30 .cal-agenda-day-context")
-      |> assert_has("a.cal-nav-btn[href='/calendar?week=2030-09-22']",
+      |> assert_has("a.cal-nav-btn[href='/calendar/week?week=2030-09-22']",
         text: "Previous week"
       )
-      |> assert_has("a.cal-nav-btn[href='/calendar?week=2030-10-06']",
+      |> assert_has("a.cal-nav-btn[href='/calendar/week?week=2030-10-06']",
         text: "Next week"
       )
-      |> assert_has("a.cal-nav-today[href='/calendar']", text: "Today")
-      |> assert_has("#calendar-view-month[href='/calendar?month=2030-09&view=month']")
-      |> visit("/calendar?view=week&week=someday")
+      |> assert_has("a.cal-nav-today[href='/calendar/week']", text: "Today")
+      |> assert_has("#calendar-view-month[href='/calendar/month?month=2030-09']")
+      |> visit("/calendar/week?week=someday")
       |> assert_has("#calendar-week-day-#{this_week}")
-      |> assert_has("a.cal-nav-today[href='/calendar']")
+      |> assert_has("a.cal-nav-today[href='/calendar/week']")
     end
 
     test "lists the week's huddlz with the legend for them and keeps the scope", %{
@@ -987,13 +988,13 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar?view=week&week=2030-09-29&scope=groups")
+      |> visit("/calendar/week?week=2030-09-29&scope=groups")
       |> assert_has("#calendar-week-day-2030-10-02 .cal-agenda-title", text: "In the week")
       |> refute_has("#calendar-week .cal-agenda-title", text: "The week after")
       |> assert_has(".cal-month-count", text: "1 huddl")
       |> assert_has("#calendar-legend .cal-legend-item", count: 1)
-      |> assert_has("a.cal-nav-btn[href='/calendar?week=2030-10-06&scope=groups']")
-      |> assert_has("#calendar-scope-mine[href='/calendar?week=2030-09-29']")
+      |> assert_has("a.cal-nav-btn[href='/calendar/week?week=2030-10-06&scope=groups']")
+      |> assert_has("#calendar-scope-mine[href='/calendar/week?week=2030-09-29']")
     end
   end
 
@@ -1012,10 +1013,10 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar?month=2030-10&view=month")
+      |> visit("/calendar/month?month=2030-10")
       |> refute_has("#calendar-day-panel")
       |> assert_has(
-        "#calendar-day-link-2030-10-17[href='/calendar?month=2030-10&view=month&day=2030-10-17']"
+        "#calendar-day-link-2030-10-17[href='/calendar/month?month=2030-10&day=2030-10-17']"
       )
       |> click_link("#calendar-day-link-2030-10-17", "17")
       |> assert_has("td.cal-cell.is-open #calendar-day-link-2030-10-17")
@@ -1027,12 +1028,12 @@ defmodule HuddlzWeb.CalendarLiveTest do
         text: "Elixir office hours"
       )
       |> refute_has("#calendar-day-panel .cal-agenda-title", text: "The day before")
-      |> assert_has("#calendar-day-week[href='/calendar?week=2030-10-13']",
+      |> assert_has("#calendar-day-week[href='/calendar/week?week=2030-10-13']",
         text: "Open this week"
       )
       |> assert_has("#calendar-day-layer[phx-key=escape]")
       |> click_link("#calendar-day-close", "Close")
-      |> assert_path("/calendar", query_params: %{"month" => "2030-10", "view" => "month"})
+      |> assert_path("/calendar/month", query_params: %{"month" => "2030-10"})
       |> refute_has("#calendar-day-panel")
       |> refute_has("td.cal-cell.is-open")
     end
@@ -1043,11 +1044,11 @@ defmodule HuddlzWeb.CalendarLiveTest do
     } do
       conn
       |> login(attendee)
-      |> visit("/calendar?month=2030-10&view=month&scope=groups&day=2030-10-03")
+      |> visit("/calendar/month?month=2030-10&scope=groups&day=2030-10-03")
       |> assert_has("#calendar-day-panel .cal-agenda-quiet", text: "Nothing on this day.")
       |> assert_has("#calendar-day-panel .cal-day-count", text: "0 huddlz")
-      |> assert_has("#calendar-day-close[href='/calendar?month=2030-10&view=month&scope=groups']")
-      |> visit("/calendar?month=2030-10&view=month&day=not-a-day")
+      |> assert_has("#calendar-day-close[href='/calendar/month?month=2030-10&scope=groups']")
+      |> visit("/calendar/month?month=2030-10&day=not-a-day")
       |> refute_has("#calendar-day-panel")
     end
 
@@ -1056,7 +1057,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar?view=month&day=#{today}")
+      |> visit("/calendar/month?day=#{today}")
       |> assert_has("#calendar-day-panel[data-today] .cal-day-kicker-today", text: "Today")
     end
   end
@@ -1078,9 +1079,8 @@ defmodule HuddlzWeb.CalendarLiveTest do
   defp calendar_path_for(date, opts \\ []) do
     month = "#{date.year}-#{String.pad_leading(to_string(date.month), 2, "0")}"
     view = Keyword.get(opts, :view, "month")
-    params = "?month=#{month}&view=#{view}"
 
-    "/calendar" <> params
+    "/calendar/#{view}?month=#{month}"
   end
 
   defp current_month_name do

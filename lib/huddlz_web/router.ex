@@ -115,7 +115,9 @@ defmodule HuddlzWeb.Router do
       live "/privacy", LegalLive, :privacy
       live "/agenda", CalendarLive, :agenda
       live "/groups", GroupsLive, :index
-      live "/calendar", CalendarLive, :index
+      live "/calendar", CalendarLive, :week
+      live "/calendar/week", CalendarLive, :week
+      live "/calendar/month", CalendarLive, :month
       live "/notifications", NotificationsLive, :index
       live "/notifications/:id/open", NotificationsLive, :open
       live "/invitations/email/:token", GroupInvitationLive, :email
