@@ -39,5 +39,10 @@ defmodule Huddlz.Accounts do
     resource Huddlz.Accounts.Profile do
       define :get_profile, action: :get
     end
+
+    resource Huddlz.Accounts.OauthClient
+    resource Huddlz.Accounts.OauthAuthorizationCode
+    resource Huddlz.Accounts.OauthRefreshToken
+    resource Huddlz.Accounts.OauthConsent
   end
 end

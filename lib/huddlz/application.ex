@@ -23,6 +23,7 @@ defmodule Huddlz.Application do
       # Start to serve requests, typically the last entry
       HuddlzWeb.Endpoint,
       {AshAuthentication.Supervisor, [otp_app: :huddlz]},
+      {AshAuthentication.Oauth2Server.Supervisor, [otp_app: :huddlz]},
       {Absinthe.Subscription, HuddlzWeb.Endpoint},
       AshGraphql.Subscription.Batcher
     ]

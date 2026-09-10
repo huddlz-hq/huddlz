@@ -84,6 +84,20 @@ defmodule HuddlzWeb.HelpLive do
             </a>
             <a
               class="row help-link-row"
+              href="https://github.com/huddlz-hq/huddlz/blob/main/docs/mcp.md"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <div>
+                <div class="row-title">Connect your agent with MCP</div>
+                <div class="row-desc">
+                  Find huddlz and manage your RSVPs through an authenticated agent.
+                </div>
+              </div>
+              <.pill>Setup ↗</.pill>
+            </a>
+            <a
+              class="row help-link-row"
               href={~p"/gql/playground"}
               target="_blank"
               rel="noopener"

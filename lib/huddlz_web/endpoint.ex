@@ -65,9 +65,9 @@ defmodule HuddlzWeb.Endpoint do
   plug Corsica,
     origins: {HuddlzWeb.Cors, :allowed?, []},
     allow_credentials: true,
-    allow_headers: ["content-type", "authorization"],
+    allow_headers: ["content-type", "authorization", "mcp-protocol-version", "mcp-session-id"],
     allow_methods: ~w(GET POST PUT PATCH DELETE OPTIONS HEAD),
-    expose_headers: ["x-request-id"],
+    expose_headers: ["x-request-id", "www-authenticate", "mcp-session-id", "retry-after"],
     max_age: 600
 
   plug Plug.Parsers,

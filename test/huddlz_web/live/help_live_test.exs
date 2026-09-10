@@ -13,6 +13,8 @@ defmodule HuddlzWeb.HelpLiveTest do
     |> assert_has("#help-legal a[href='/code-of-conduct']")
     |> assert_has("#help-legal a[href='/privacy']")
     |> refute_has("#help-directory", text: "Coming soon")
-    |> refute_has("#help-directory", text: "MCP")
+    |> assert_has(
+      "#help-developers a[href='https://github.com/huddlz-hq/huddlz/blob/main/docs/mcp.md']"
+    )
   end
 end

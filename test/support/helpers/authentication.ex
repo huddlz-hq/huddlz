@@ -15,7 +15,7 @@ defmodule Huddlz.Test.Helpers.Authentication do
         |> Plug.Conn.put_session(:user_token, token)
         |> Plug.Conn.put_session(:live_socket_id, live_socket_id(token))
 
-      :error ->
+      {:error, _reason} ->
         raise "Failed to generate token for test user"
     end
   end
