@@ -14,7 +14,10 @@ defmodule HuddlzWeb.OgImage do
   @height 630
   @title_chars_per_line 28
   @secondary_chars 72
-  @version 1
+  @version 2
+  @mark_box 512
+  @mark_radius 121.9048
+  @mark_glyph "M221.0227 260.8751V368.7619H171.0435V120.4286H220.1228V228.9452H216.0361Q223.3661 205.6317 238.3061 192.8635Q253.2462 180.0952 276.8427 180.0952Q296.216 180.0952 310.646 188.5202Q325.076 196.9452 333.0377 212.6635Q340.9994 228.3818 340.9994 250.2486V368.7619H290.9435V258.9583Q290.9435 241.5982 281.9884 231.7264Q273.0333 221.8546 257.2232 221.8546Q246.6797 221.8546 238.488 226.473Q230.2962 231.0914 225.6595 239.7832Q221.0227 248.4749 221.0227 260.8751Z"
 
   def width, do: @width
   def height, do: @height
@@ -40,11 +43,19 @@ defmodule HuddlzWeb.OgImage do
   """
   def mark_svg(size) do
     """
-    <svg xmlns="http://www.w3.org/2000/svg" width="#{size}" height="#{size}" viewBox="0 0 512 512">
-      <rect width="512" height="512" rx="121.9048" fill="#18cbd4"/>
-      <path d="M221.0227 260.8751V368.7619H171.0435V120.4286H220.1228V228.9452H216.0361Q223.3661 205.6317 238.3061 192.8635Q253.2462 180.0952 276.8427 180.0952Q296.216 180.0952 310.646 188.5202Q325.076 196.9452 333.0377 212.6635Q340.9994 228.3818 340.9994 250.2486V368.7619H290.9435V258.9583Q290.9435 241.5982 281.9884 231.7264Q273.0333 221.8546 257.2232 221.8546Q246.6797 221.8546 238.488 226.473Q230.2962 231.0914 225.6595 239.7832Q221.0227 248.4749 221.0227 260.8751Z" fill="#05191b"/>
+    <svg xmlns="http://www.w3.org/2000/svg" width="#{size}" height="#{size}" viewBox="0 0 #{@mark_box} #{@mark_box}">
+    #{mark_markup(0, 0, @mark_box)}
     </svg>
     """
+  end
+
+  # The mark placed at `x`, `y` and `size` pixels square inside a larger
+  # drawing. The cards and the favicon all draw it through here, so the
+  # tile and the "h" stay one thing.
+  defp mark_markup(x, y, size) do
+    scale = size / @mark_box
+
+    ~s|  <g transform="translate(#{x} #{y}) scale(#{scale})"><rect width="#{@mark_box}" height="#{@mark_box}" rx="#{@mark_radius}" fill="#18cbd4"/><path d="#{@mark_glyph}" fill="#05191b"/></g>|
   end
 
   defp render_png(svg) do
@@ -88,8 +99,7 @@ defmodule HuddlzWeb.OgImage do
     <svg xmlns="http://www.w3.org/2000/svg" width="#{@width}" height="#{@height}" viewBox="0 0 #{@width} #{@height}">
       <rect width="#{@width}" height="#{@height}" fill="#0b1112"/>
       <rect x="0" y="#{@height - 6}" width="#{@width}" height="6" fill="#18cbd4"/>
-      <rect x="72" y="182" width="168" height="168" rx="40" fill="#18cbd4"/>
-      <text x="156" y="303" text-anchor="middle" font-family="#{font()}" font-size="112" font-weight="700" fill="#05191b">h</text>
+    #{mark_markup(72, 182, 168)}
       <text x="288" y="306" font-family="#{font()}" font-size="112" font-weight="700" letter-spacing="-3" fill="#eef5f5">huddlz</text>
       <text x="72" y="428" font-family="#{font()}" font-size="36" font-weight="500" fill="#b3bfc1">Find and join local community gatherings.</text>
       <text x="72" y="486" font-family="#{font()}" font-size="28" fill="#7f8c8f">huddlz.com</text>
@@ -136,8 +146,7 @@ defmodule HuddlzWeb.OgImage do
     <svg xmlns="http://www.w3.org/2000/svg" width="#{@width}" height="#{@height}" viewBox="0 0 #{@width} #{@height}">
       <rect width="#{@width}" height="#{@height}" fill="#0b1112"/>
       <rect x="0" y="#{@height - 6}" width="#{@width}" height="6" fill="#18cbd4"/>
-      <rect x="72" y="72" width="44" height="44" rx="12" fill="#18cbd4"/>
-      <text x="94" y="103" text-anchor="middle" font-family="#{font()}" font-size="26" font-weight="700" fill="#05191b">h</text>
+    #{mark_markup(72, 72, 44)}
       <text x="132" y="103" font-family="#{font()}" font-size="30" font-weight="700" fill="#eef5f5">huddlz</text>
       <rect x="960" y="72" width="168" height="168" rx="24" fill="#10181a" stroke="#2c3a3d" stroke-width="2"/>
       <text x="1044" y="176" text-anchor="middle" font-family="#{font()}" font-size="56" font-weight="700" letter-spacing="1" fill="#35d6de">#{escape(card.initials)}</text>

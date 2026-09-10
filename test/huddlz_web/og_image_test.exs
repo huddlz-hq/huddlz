@@ -3,6 +3,14 @@ defmodule HuddlzWeb.OgImageTest do
 
   alias HuddlzWeb.OgImage
 
+  @group %{
+    name: Ash.CiString.new("Phoenix Elixir Meetup"),
+    member_count: 12,
+    location: "Saint Augustine, FL",
+    description:
+      Ash.CiString.new("Monthly hands-on sessions for Elixir folks in the Phoenix ecosystem.")
+  }
+
   @huddl %{
     title: "Hands-on with Ash Framework",
     starts_at: ~U[2030-09-10 22:30:00Z],
@@ -57,6 +65,15 @@ defmodule HuddlzWeb.OgImageTest do
     assert OgImage.huddl_svg(%{@huddl | event_type: :virtual}) =~ "PHOENIX ELIXIR MEETUP · ONLINE"
   end
 
+  test "every card draws the brand mark from the one outline, never as text" do
+    [_, glyph] = Regex.run(~r/<path d="([^"]+)" fill="#05191b"/, OgImage.mark_svg(512))
+
+    for svg <- [OgImage.huddl_svg(@huddl), OgImage.group_svg(@group), OgImage.site_svg()] do
+      assert svg =~ glyph
+      refute svg =~ ~r/>h<\/text>/
+    end
+  end
+
   test "the ETag changes with what is drawn" do
     assert OgImage.etag(@huddl) == OgImage.etag(@huddl)
     refute OgImage.etag(@huddl) == OgImage.etag(%{@huddl | title: "Renamed"})
@@ -70,14 +87,6 @@ defmodule HuddlzWeb.OgImageTest do
   end
 
   describe "group cards" do
-    @group %{
-      name: Ash.CiString.new("Phoenix Elixir Meetup"),
-      member_count: 12,
-      location: "Saint Augustine, FL",
-      description:
-        Ash.CiString.new("Monthly hands-on sessions for Elixir folks in the Phoenix ecosystem.")
-    }
-
     test "draws the member count, name, place and description" do
       svg = OgImage.group_svg(@group)
 
