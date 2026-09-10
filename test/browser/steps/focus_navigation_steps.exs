@@ -3,6 +3,7 @@ defmodule BrowserFocusSteps do
 
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
+  import Huddlz.Test.MoxHelpers
   import PhoenixTest
   import PhoenixTest.Playwright, only: [press: 3]
 
@@ -194,6 +195,27 @@ defmodule BrowserFocusSteps do
     context
   end
 
+  step "I confirm group archival", context do
+    conn =
+      context.conn
+      |> press("#archive-group", "Enter")
+      |> assert_has("#archive-group-dialog button:focus")
+      |> click_button("Yes, archive group")
+
+    Map.put(context, :conn, conn)
+  end
+
+  step "the archived group's page receives focus and is announced", context do
+    context.conn
+    |> assert_has("main h1:focus")
+    |> assert_browser("""
+    document.querySelector('#page-context').textContent.trim() ===
+      document.querySelector('main h1').textContent.trim()
+    """)
+
+    context
+  end
+
   step "I open member management with a member to promote", context do
     owner = generate(user(role: :user))
     member = generate(user(role: :user))
@@ -247,5 +269,93 @@ defmodule BrowserFocusSteps do
       |> assert_has(".row-title", text: "Community room")
 
     Map.put(context, :conn, conn)
+  end
+
+  step "I open a new address dialog from {string}", %{args: [surface]} = context do
+    owner = generate(user(role: :user))
+    group = generate(group(owner_id: owner.id, actor: owner))
+
+    {path, link} =
+      case surface do
+        "address book" ->
+          {"/groups/#{group.slug}/locations", "Add Address"}
+
+        "huddl creation" ->
+          {"/groups/#{group.slug}/huddlz/new", "Add new address"}
+
+        "huddl editing" ->
+          huddl = generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
+          {"/groups/#{group.slug}/huddlz/#{huddl.id}/edit", "Add new address"}
+      end
+
+    conn =
+      context.conn
+      |> sign_in(owner)
+      |> visit(path)
+      |> assert_has(".phx-connected")
+      |> click_link(link)
+      |> assert_has("#new-location-modal input:focus")
+
+    Map.merge(context, %{conn: conn, location_surface: surface})
+  end
+
+  step "I try to save a new address with a name longer than 200 characters", context do
+    stub_places_autocomplete(%{"saint" => [:saint_augustine]})
+    stub_place_details(:defaults)
+
+    conn =
+      context.conn
+      |> fill_in("Search for an address", with: "saint")
+      |> assert_has("#modal-address-autocomplete [role=option]")
+      |> press("#modal-address-autocomplete-input", "ArrowDown")
+      |> assert_has("#modal-address-autocomplete[data-has-highlight=true]")
+      |> press("#modal-address-autocomplete-input", "Enter")
+      |> assert_has("#new-location-form button[type=submit]:not([disabled])")
+      |> fill_in("Location name (optional)", with: String.duplicate("a", 201))
+      |> press("#new-location-form button[type=submit]", "Enter")
+
+    Map.put(context, :conn, conn)
+  end
+
+  step "the address dialog focuses a summary linking to the invalid name", context do
+    context.conn
+    |> assert_has("#new-location-modal .error-summary:focus")
+    |> assert_has("#new-location-modal .error-summary a[href='#location-name-input']")
+    |> assert_has("#location-name-input[aria-invalid=true][aria-describedby]")
+
+    context
+  end
+
+  step "I follow the location name error and correct it", context do
+    conn =
+      context.conn
+      |> press(".error-summary a[href='#location-name-input']", "Enter")
+      |> assert_has("#location-name-input:focus")
+      |> assert_browser("""
+      document.getElementById(document.activeElement.getAttribute('aria-describedby'))
+        .textContent.includes('200')
+      """)
+      |> fill_in("Location name (optional)", with: "Community room")
+      |> press("#new-location-form button[type=submit]", "Enter")
+
+    Map.put(context, :conn, conn)
+  end
+
+  step "I can save the address and return to the page", context do
+    conn = refute_has(context.conn, "#new-location-modal")
+
+    case context.location_surface do
+      "address book" ->
+        conn
+        |> assert_has(".row-title", text: "Community room")
+        |> assert_has("#add-address:focus")
+
+      _huddl ->
+        conn
+        |> assert_has("[data-testid=saved-location-display]", text: "Community room")
+        |> assert_has("#main-content:focus")
+    end
+
+    context
   end
 end

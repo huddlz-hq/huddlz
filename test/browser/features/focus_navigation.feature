@@ -48,6 +48,12 @@ Feature: Keyboard access to page content
     When I open group archival and dismiss it with Escape
     Then focus returns to Archive group
 
+  @archive_focus
+  Scenario: Archiving a group announces the resulting page
+    Given I open the "group" form as a group owner
+    When I confirm group archival
+    Then the archived group's page receives focus and is announced
+
   Scenario: Dismissing a member action returns to the member
     Given I open member management with a member to promote
     When I open promotion and dismiss it with Escape
@@ -62,3 +68,17 @@ Feature: Keyboard access to page content
     Given I open the "address book" form as a group owner
     When I save a new address-book name
     Then keyboard focus is in the main content
+
+  @location_creation_focus
+  Scenario Outline: Correcting a new saved location from <surface> keeps keyboard focus in the dialog
+    Given I open a new address dialog from "<surface>"
+    When I try to save a new address with a name longer than 200 characters
+    Then the address dialog focuses a summary linking to the invalid name
+    When I follow the location name error and correct it
+    Then I can save the address and return to the page
+
+    Examples:
+      | surface        |
+      | address book   |
+      | huddl creation |
+      | huddl editing  |

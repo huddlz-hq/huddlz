@@ -326,6 +326,7 @@ defmodule HuddlzWeb.Components.HuddlForm do
   attr :live_action, :atom, required: true
   attr :modal_location_address, :string, default: nil
   attr :modal_location_name, :string, default: nil
+  attr :modal_location_form, :any, required: true
   attr :cancel_path, :string, required: true
 
   def location_modal(assigns) do
@@ -362,20 +363,15 @@ defmodule HuddlzWeb.Components.HuddlForm do
           />
         </div>
 
-        <div class="form-row">
-          <label class="form-label" for="location-name-input">
-            Location name (optional)
-          </label>
-          <input
-            type="text"
-            id="location-name-input"
-            name="location_name"
-            value={@modal_location_name}
-            phx-debounce="100"
-            placeholder="e.g., Community Center"
-            class="form-input"
-          />
-        </div>
+        <.input
+          field={@modal_location_form[:name]}
+          id="location-name-input"
+          name="location_name"
+          label="Location name (optional)"
+          value={@modal_location_name}
+          phx-debounce="100"
+          placeholder="e.g., Community Center"
+        />
 
         <div class="form-foot is-flush">
           <.button variant={:primary} type="submit" disabled={is_nil(@modal_location_address)}>

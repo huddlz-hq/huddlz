@@ -20,7 +20,9 @@ export function mountFocusNavigation() {
   window.addEventListener("phx:page-loading-start", ({detail}) => {
     if (detail.kind === "redirect" ||
         (detail.kind === "patch" && new URL(detail.to, location.href).pathname !== previousPath)) {
-      leavingDialog = !!visibleDialog()
+      // Closing a patched dialog restores its trigger; a redirect still needs
+      // to focus and announce the destination page.
+      leavingDialog = detail.kind === "patch" && !!visibleDialog()
       navigation = true
     }
   })
