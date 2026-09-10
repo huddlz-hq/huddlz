@@ -6,8 +6,9 @@ Feature: Next huddl panel on the overview
 
   Background:
     Given the following users exist:
-      | email            | display_name | role    |
-      | host@example.com | Host User    | regular |
+      | email             | display_name | role    |
+      | host@example.com  | Host User    | regular |
+      | riley@example.com | Riley Shah   | regular |
     And a public group "Portland Elixir" exists with owner "host@example.com"
     And I am signed in as "host@example.com"
 
@@ -48,3 +49,30 @@ Feature: Next huddl panel on the overview
   Scenario: Nothing upcoming
     When I visit "/organize/portland-elixir"
     Then the panel invites me to create a huddl
+
+  Scenario: A cancelled RSVP shows as a rise and a fall
+    Given the huddl "Elixir hack night" in "Portland Elixir" starts in 3 days with room for 20 and 2 RSVPs
+    And "Elixir hack night" was published 14 days ago and its RSVPs came in evenly since
+    And "Riley Shah" RSVPd to "Elixir hack night" 10 days ago
+    And "Riley Shah" cancelled their RSVP to "Elixir hack night" 4 days ago
+    When I visit "/organize/portland-elixir"
+    Then the next huddl panel shows "2 / 20"
+    And the signup curve reads:
+      | day 3  | 1 |
+      | day 4  | 2 |
+      | day 9  | 2 |
+      | day 10 | 1 |
+      | today  | 2 |
+
+  Scenario: The typical curve remembers cancellations too
+    Given "Portland Elixir" has 3 past huddlz
+    And "Riley Shah" RSVPd to "Past huddl 1" 20 days ago
+    And "Riley Shah" cancelled their RSVP to "Past huddl 1" 17 days ago
+    And the huddl "Elixir hack night" in "Portland Elixir" starts in 3 days with room for 20 and 18 RSVPs
+    And "Elixir hack night" was published 14 days ago and its RSVPs came in evenly since
+    When I visit "/organize/portland-elixir"
+    Then the typical curve reads:
+      | day 0 | 0.0 |
+      | day 1 | 1.3 |
+      | day 3 | 3.3 |
+      | day 4 | 3.0 |
