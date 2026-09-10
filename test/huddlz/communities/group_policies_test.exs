@@ -91,18 +91,14 @@ defmodule Huddlz.Communities.GroupPoliciesTest do
     test "user can create group", %{verified_user: user} do
       assert {:ok, group} =
                Group
-               |> Ash.Changeset.for_create(
-                 :create_group,
-                 %{
-                   name: "New Group",
-                   description: "Test group",
-                   location: "Test Location",
-                   time_zone: "America/New_York",
-                   is_public: true
-                 },
-                 actor: user
-               )
-               |> Ash.create()
+               |> Ash.Changeset.for_create(:create_group, %{
+                 name: "New Group",
+                 description: "Test group",
+                 location: "Test Location",
+                 time_zone: "America/New_York",
+                 is_public: true
+               })
+               |> Ash.create(actor: user)
 
       assert to_string(group.name) == "New Group"
       assert group.owner_id == user.id
@@ -113,18 +109,14 @@ defmodule Huddlz.Communities.GroupPoliciesTest do
 
       assert {:ok, group} =
                Group
-               |> Ash.Changeset.for_create(
-                 :create_group,
-                 %{
-                   name: "Admin Group",
-                   description: "Test group",
-                   location: "Test Location",
-                   time_zone: "America/New_York",
-                   is_public: true
-                 },
-                 actor: admin
-               )
-               |> Ash.create()
+               |> Ash.Changeset.for_create(:create_group, %{
+                 name: "Admin Group",
+                 description: "Test group",
+                 location: "Test Location",
+                 time_zone: "America/New_York",
+                 is_public: true
+               })
+               |> Ash.create(actor: admin)
 
       assert to_string(group.name) == "Admin Group"
     end
@@ -132,18 +124,14 @@ defmodule Huddlz.Communities.GroupPoliciesTest do
     test "regular user can create group", %{regular_user: user} do
       assert {:ok, group} =
                Group
-               |> Ash.Changeset.for_create(
-                 :create_group,
-                 %{
-                   name: "New Group",
-                   description: "Test group",
-                   location: "Test Location",
-                   time_zone: "America/New_York",
-                   is_public: true
-                 },
-                 actor: user
-               )
-               |> Ash.create()
+               |> Ash.Changeset.for_create(:create_group, %{
+                 name: "New Group",
+                 description: "Test group",
+                 location: "Test Location",
+                 time_zone: "America/New_York",
+                 is_public: true
+               })
+               |> Ash.create(actor: user)
 
       assert to_string(group.name) == "New Group"
       assert group.owner_id == user.id

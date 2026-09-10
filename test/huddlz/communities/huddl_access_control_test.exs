@@ -620,19 +620,15 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
 
       assert {:error, _} =
                Huddl
-               |> Ash.Changeset.for_create(
-                 :create,
-                 %{
-                   title: "Test Huddl",
-                   description: long_desc,
-                   event_type: :virtual,
-                   starts_at: DateTime.add(DateTime.utc_now(), 7, :day),
-                   ends_at: DateTime.add(DateTime.utc_now(), 7 * 24 * 3600 + 3600, :second),
-                   group_id: group.id
-                 },
-                 actor: owner
-               )
-               |> Ash.create()
+               |> Ash.Changeset.for_create(:create, %{
+                 title: "Test Huddl",
+                 description: long_desc,
+                 event_type: :virtual,
+                 starts_at: DateTime.add(DateTime.utc_now(), 7, :day),
+                 ends_at: DateTime.add(DateTime.utc_now(), 7 * 24 * 3600 + 3600, :second),
+                 group_id: group.id
+               })
+               |> Ash.create(actor: owner)
     end
 
     test "rejects physical_location over 500 characters", %{owner: owner, group: group} do
@@ -640,19 +636,15 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
 
       assert {:error, _} =
                Huddl
-               |> Ash.Changeset.for_create(
-                 :create,
-                 %{
-                   title: "Test Huddl",
-                   physical_location: long_loc,
-                   event_type: :in_person,
-                   starts_at: DateTime.add(DateTime.utc_now(), 7, :day),
-                   ends_at: DateTime.add(DateTime.utc_now(), 7 * 24 * 3600 + 3600, :second),
-                   group_id: group.id
-                 },
-                 actor: owner
-               )
-               |> Ash.create()
+               |> Ash.Changeset.for_create(:create, %{
+                 title: "Test Huddl",
+                 physical_location: long_loc,
+                 event_type: :in_person,
+                 starts_at: DateTime.add(DateTime.utc_now(), 7, :day),
+                 ends_at: DateTime.add(DateTime.utc_now(), 7 * 24 * 3600 + 3600, :second),
+                 group_id: group.id
+               })
+               |> Ash.create(actor: owner)
     end
 
     test "rejects virtual_link over 2048 characters", %{owner: owner, group: group} do
@@ -660,19 +652,15 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
 
       assert {:error, _} =
                Huddl
-               |> Ash.Changeset.for_create(
-                 :create,
-                 %{
-                   title: "Test Huddl",
-                   virtual_link: long_link,
-                   event_type: :virtual,
-                   starts_at: DateTime.add(DateTime.utc_now(), 7, :day),
-                   ends_at: DateTime.add(DateTime.utc_now(), 7 * 24 * 3600 + 3600, :second),
-                   group_id: group.id
-                 },
-                 actor: owner
-               )
-               |> Ash.create()
+               |> Ash.Changeset.for_create(:create, %{
+                 title: "Test Huddl",
+                 virtual_link: long_link,
+                 event_type: :virtual,
+                 starts_at: DateTime.add(DateTime.utc_now(), 7, :day),
+                 ends_at: DateTime.add(DateTime.utc_now(), 7 * 24 * 3600 + 3600, :second),
+                 group_id: group.id
+               })
+               |> Ash.create(actor: owner)
     end
 
     test "admin can update and destroy huddl", %{admin: admin, huddl: huddl} do

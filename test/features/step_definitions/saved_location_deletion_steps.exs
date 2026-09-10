@@ -5,20 +5,6 @@ defmodule SavedLocationDeletionSteps do
 
   step "the saved location {string} is used by an upcoming huddl",
        %{args: [location_name]} = context do
-    create_huddl(context, location_name, [])
-  end
-
-  step "the saved location {string} is used by an upcoming private huddl",
-       %{args: [location_name]} = context do
-    create_huddl(context, location_name, is_private: true)
-  end
-
-  step "the saved location {string} is used by an upcoming draft",
-       %{args: [location_name]} = context do
-    create_huddl(context, location_name, lifecycle_state: :draft)
-  end
-
-  defp create_huddl(context, location_name, opts) do
     location =
       context
       |> Map.get(:group_locations, [])
@@ -30,18 +16,13 @@ defmodule SavedLocationDeletionSteps do
 
     generate(
       huddl_at_location(
-        Keyword.merge(
-          [
-            group_id: location.group_id,
-            creator_id: owner.id,
-            group_location_id: location.id,
-            latitude: location.latitude,
-            longitude: location.longitude,
-            starts_at: starts_at,
-            ends_at: DateTime.add(starts_at, 1, :hour)
-          ],
-          opts
-        )
+        group_id: location.group_id,
+        creator_id: owner.id,
+        group_location_id: location.id,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        starts_at: starts_at,
+        ends_at: DateTime.add(starts_at, 1, :hour)
       )
     )
 

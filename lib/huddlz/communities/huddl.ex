@@ -252,7 +252,7 @@ defmodule Huddlz.Communities.Huddl do
         message "is required for recurring huddlz"
       end
 
-      change relate_actor(:creator, allow_nil?: true)
+      change Huddlz.Communities.Huddl.Changes.SetCreatorToActor
       change Huddlz.Communities.Huddl.Changes.AddCreatorAsAttendee
       change Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup
       change Huddlz.Communities.Huddl.Changes.ApplySavedLocation
