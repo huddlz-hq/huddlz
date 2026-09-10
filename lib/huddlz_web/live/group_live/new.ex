@@ -289,7 +289,7 @@ defmodule HuddlzWeb.GroupLive.New do
               <div>
                 <label class="row-title" for={@form[:is_public].id}>Public group</label>
                 <div class="row-desc">
-                  Anyone can find and join this group. Huddlz are visible without signing in.
+                  Anyone can find and join this group. huddlz are visible without signing in.
                 </div>
               </div>
               <.toggle

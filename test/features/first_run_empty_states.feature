@@ -29,7 +29,7 @@ Feature: First-run empty states
   Scenario: A newcomer's calendar explains what fills it
     When I visit "/calendar"
     Then I should see "Your calendar is empty"
-    And I should see "Huddlz you RSVP to show up here"
+    And I should see "huddlz you RSVP to show up here"
     When I click link "Find a huddl"
     Then I should see "Browse huddlz"
 
