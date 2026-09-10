@@ -491,17 +491,6 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> refute_has(".cal-grid")
     end
 
-    test "the agenda's old calendar address sends people on, scope and all", %{
-      conn: conn,
-      attendee: attendee
-    } do
-      conn
-      |> login(attendee)
-      |> visit("/calendar?view=agenda&scope=groups")
-      |> assert_path("/agenda", query_params: %{"scope" => "groups"})
-      |> assert_has("#calendar-scope-groups.is-active")
-    end
-
     test "agenda lists RSVP'd huddlz with title and pill", %{
       conn: conn,
       attendee: attendee,
@@ -620,7 +609,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
         |> visit("/agenda")
         |> assert_has("#calendar-first-run.empty-state h3", text: "Nothing on your agenda yet")
         |> assert_has("#calendar-first-run p",
-          text: "Huddlz you RSVP to show up here, soonest first."
+          text: "huddlz you RSVP to show up here, soonest first."
         )
         |> assert_has("#calendar-first-run a.btn-primary[href='/discover']", text: "Find a huddl")
         |> refute_has("#calendar-agenda-empty")
@@ -684,7 +673,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit(calendar_path_for(far, view: "agenda"))
+      |> visit("/agenda?month=#{Calendar.strftime(far, "%Y-%m")}")
       |> assert_has(".cal-month-name", text: "What's next")
       |> assert_has(".cal-month-count", text: "1 huddl")
       |> refute_has(".cal-nav")

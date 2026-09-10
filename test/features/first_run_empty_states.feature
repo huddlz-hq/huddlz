@@ -14,7 +14,7 @@ Feature: First-run empty states
   Scenario: A newcomer's agenda sends them to find a huddl
     When I visit "/agenda"
     Then I should see "Nothing on your agenda yet"
-    And I should see "Huddlz you RSVP to show up here, soonest first."
+    And I should see "huddlz you RSVP to show up here, soonest first."
     When I click link "Find a huddl"
     Then I should see "Browse huddlz"
 

@@ -16,8 +16,7 @@ defmodule HuddlzWeb.CalendarLive do
   Every piece of state is in the URL, so closing the panel, the browser's
   back button and returning from a huddl all land on the same view.
   `?scope=groups` widens every view from the person's own RSVPs to
-  everything their groups have scheduled. Links to the agenda's old home,
-  `/calendar?view=agenda`, are sent on to `/agenda`.
+  everything their groups have scheduled.
   """
   use HuddlzWeb, :live_view
 
@@ -58,14 +57,6 @@ defmodule HuddlzWeb.CalendarLive do
   end
 
   @impl true
-  def handle_params(
-        %{"view" => "agenda"} = params,
-        _uri,
-        %{assigns: %{live_action: :index}} = socket
-      ) do
-    {:noreply, push_navigate(socket, to: agenda_path(params["scope"]))}
-  end
-
   def handle_params(params, _uri, socket) do
     today = socket.assigns.today
     view_mode = view_mode(socket.assigns.live_action, params["view"])
@@ -165,9 +156,6 @@ defmodule HuddlzWeb.CalendarLive do
 
   defp nav_key(:agenda), do: "agenda"
   defp nav_key(_view), do: "calendar"
-
-  defp agenda_path("groups"), do: ~p"/agenda?scope=groups"
-  defp agenda_path(_scope), do: ~p"/agenda"
 
   # Any date in the week names it; the week runs Sunday to Saturday, like
   # the month grid. Anything unreadable means this week.
@@ -880,7 +868,7 @@ defmodule HuddlzWeb.CalendarLive do
       data-first-run
     >
       <%= if @agenda? do %>
-        Huddlz you RSVP to show up here, soonest first.
+        huddlz you RSVP to show up here, soonest first.
       <% else %>
         Huddlz you RSVP to show up here, in their own time zone.
       <% end %>

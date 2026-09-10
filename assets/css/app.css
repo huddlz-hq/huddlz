@@ -633,7 +633,7 @@ body .sb-item {
   transition: background 120ms ease, color 120ms ease;
 }
 
-body .sb-item svg {
+body .sb-item :is(svg, .sb-icon) {
   width: 18px;
   height: 18px;
   flex: 0 0 auto;
@@ -645,7 +645,7 @@ body .sb-item:hover {
   color: var(--text);
 }
 
-body .sb-item:hover svg { color: var(--soft); }
+body .sb-item:hover :is(svg, .sb-icon) { color: var(--soft); }
 
 body .sb-item.active {
   background: var(--accent-soft);
@@ -653,7 +653,7 @@ body .sb-item.active {
   font-weight: 600;
 }
 
-body .sb-item.active svg { color: var(--accent-ink); }
+body .sb-item.active :is(svg, .sb-icon) { color: var(--accent-ink); }
 
 body .sb-item .badge {
   margin-left: auto;

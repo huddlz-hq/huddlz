@@ -38,10 +38,3 @@ Feature: Agenda is home
     When I visit "/calendar"
     Then view choices should identify "Week" as current
     And the view choices are "Week" and "Month"
-
-  Scenario: Old links lead to the agenda
-    Given I am signed in as "ada@example.com"
-    When I visit "/huddlz"
-    Then I am on the agenda page
-    When I visit "/calendar?view=agenda"
-    Then I am on the agenda page

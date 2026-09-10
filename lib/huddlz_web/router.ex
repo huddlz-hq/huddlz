@@ -89,7 +89,6 @@ defmodule HuddlzWeb.Router do
 
     get "/unsubscribe/:token", UnsubscribeController, :show
     post "/unsubscribe/:token", UnsubscribeController, :update
-    get "/huddlz", LegacyController, :huddlz
 
     ash_authentication_live_session :authenticated_routes,
       on_mount_prepend:
