@@ -2745,6 +2745,11 @@ body .facts .value .virtual-link-text { color: var(--accent-ink); font-weight: 7
 body .facts .value .virtual-link-text:hover { text-decoration: underline; }
 body .facts .value .muted { color: var(--muted); font-weight: 500; font-size: 12px; }
 
+/* Inline "View on map" link inside .facts .value */
+body .facts .value .map-link { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; color: var(--muted); font-size: 12px; font-weight: 600; vertical-align: middle; }
+body .facts .value .map-link svg { width: 14px; height: 14px; flex-shrink: 0; }
+body .facts .value .map-link:hover { color: var(--accent-ink); text-decoration: underline; }
+
 /* Magenta-warn destructive button (delete huddl) */
 body .btn-secondary.destructive-btn {
   color: var(--danger);
