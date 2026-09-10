@@ -19,3 +19,4 @@ Feature: Group cover rendering
     When I open that group in the browser
     Then its cover has the expected image or visible fallback
     And its title and location fit without clipping or horizontal overflow
+    And the group sidebar aligns with the top of the cover

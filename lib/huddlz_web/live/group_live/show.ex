@@ -165,7 +165,7 @@ defmodule HuddlzWeb.GroupLive.Show do
       active="discover"
     >
       <HuddlzWeb.StructuredData.group group={@group} url={@canonical_url} />
-      <div class="huddl-frame">
+      <div class="huddl-frame group-frame">
         <div class="huddl-main">
           <header id="group-detail-hero" class="hero group-hero">
             <div class="hero-media">

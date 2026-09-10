@@ -3825,6 +3825,9 @@ body .huddl-side {
   padding: 24px;
 }
 
+/* The content body already provides the group sidebar's top spacing. */
+body .group-frame > .huddl-side { top: 0; }
+
 body .huddl-side h3 {
   margin: 0 0 12px;
   font-size: 12px;
