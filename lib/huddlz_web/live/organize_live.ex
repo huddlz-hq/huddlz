@@ -7,7 +7,7 @@ defmodule HuddlzWeb.OrganizeLive do
   Routes:
 
     * `/organize` — landing picker (owned groups + create CTA, or empty state)
-    * `/organize/:group_slug` — overview (KPIs + upcoming huddlz)
+    * `/organize/:group_slug` — overview (KPIs + next huddl)
     * `/organize/:group_slug/huddlz` — huddlz list, lifecycle filters
     * `/organize/:group_slug/members` — roster grouped by role
     * `/organize/:group_slug/settings` — owner-only group administration
@@ -15,6 +15,7 @@ defmodule HuddlzWeb.OrganizeLive do
   use HuddlzWeb, :live_view
 
   import HuddlzWeb.Components.Sparkline
+  import HuddlzWeb.Components.SignupChart
 
   alias Huddlz.Communities
   alias Huddlz.Communities.GroupStats
@@ -43,8 +44,6 @@ defmodule HuddlzWeb.OrganizeLive do
   # Rows shown before "Show more". A weekly series alone can run to a
   # hundred dates, so the list pages rather than folding anything.
   @huddlz_page 20
-  @upcoming_loads [:rsvp_count, :group]
-  @upcoming_preview_limit 5
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -61,7 +60,6 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:owned_groups, [])
      |> assign(:huddlz_list, [])
      |> assign(:huddlz_filter, :published)
-     |> assign(:upcoming_huddlz, [])
      |> assign(:turnout_nudge, nil)
      |> assign(:period, GroupStats.default_period())
      |> assign(:stats, nil)
@@ -124,10 +122,7 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   defp load_section(socket, :overview, group, user) do
-    upcoming = list_upcoming_huddlz(group, user)
-
     socket
-    |> assign(:upcoming_huddlz, upcoming)
     |> assign(:turnout_nudge, latest_uncounted_huddl(group, user))
     |> assign(:stats, Communities.group_overview!(group.id, socket.assigns.period, actor: user))
   end
@@ -184,14 +179,6 @@ defmodule HuddlzWeb.OrganizeLive do
       {:ok, %Huddlz.Communities.Group{} = group} -> {:ok, group}
       _ -> :error
     end
-  end
-
-  defp list_upcoming_huddlz(group, user) do
-    Communities.list_upcoming_huddlz!(
-      actor: user,
-      load: @upcoming_loads,
-      query: [filter: [group_id: group.id]]
-    )
   end
 
   defp list_group_huddlz(group, state, user) do
@@ -328,7 +315,6 @@ defmodule HuddlzWeb.OrganizeLive do
           <.overview_view
             group={@group}
             can_edit_group={@can_edit_group}
-            upcoming_huddlz={@upcoming_huddlz}
             turnout_nudge={@turnout_nudge}
             period={@period}
             stats={@stats}
@@ -446,7 +432,6 @@ defmodule HuddlzWeb.OrganizeLive do
 
   # ─────────────────────────────────────────  OVERVIEW  ───
   attr :group, :map, required: true
-  attr :upcoming_huddlz, :list, required: true
   attr :turnout_nudge, :map, default: nil
   attr :period, :string, required: true
   attr :stats, :map, required: true
@@ -454,10 +439,7 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :can_edit_group, :boolean, required: true
 
   defp overview_view(assigns) do
-    assigns =
-      assigns
-      |> assign(:preview_limit, @upcoming_preview_limit)
-      |> assign(:upcoming_count, length(assigns.upcoming_huddlz))
+    assigns = assign(assigns, :next, assigns.stats.next_huddl)
 
     ~H"""
     <div class="page-head">
@@ -523,39 +505,54 @@ defmodule HuddlzWeb.OrganizeLive do
       </div>
     </div>
 
-    <div class="panel">
+    <div id="next-huddl" class="panel">
       <div class="panel-head">
         <div>
-          <h2>Upcoming huddlz</h2>
-          <div class="panel-sub">Next on the calendar</div>
+          <h2>Next huddl</h2>
+          <div :if={@next} class="panel-sub">
+            <.link navigate={huddl_show_path(@group, @next)}>{@next.title}</.link>
+            · {short_date(@next)}
+          </div>
+          <div :if={is_nil(@next)} class="panel-sub">Next on the calendar</div>
         </div>
-        <.link
-          :if={@upcoming_count > @preview_limit}
-          navigate={~p"/organize/#{@group.slug}/huddlz"}
-          class="pill"
-        >
-          View all
-        </.link>
+        <.link :if={@next} navigate={huddl_show_path(@group, @next)} class="pill">Open</.link>
       </div>
 
-      <%= if @upcoming_huddlz == [] do %>
-        <p class="muted">No upcoming huddlz right now. Create one to get started.</p>
-      <% else %>
-        <div class="row-list">
-          <div
-            :for={huddl <- Enum.take(@upcoming_huddlz, @preview_limit)}
-            class="row row-split"
-          >
-            <div>
-              <div class="row-title">
-                <.link navigate={~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"}>
-                  {huddl.title}
-                </.link>
-              </div>
-              <div class="meta">{format_starts_at(huddl)}</div>
+      <%= if @next do %>
+        <div class={["next-huddl-body", @next.others != [] && "has-others"]}>
+          <div class="next-huddl-chart">
+            <div class="stat">
+              <span class="big">{signups_figure(@next)}</span>
+              <span class="cmp">{published_ago(@next.days)}</span>
             </div>
-            <span class="pill">{rsvp_label(huddl.rsvp_count)}</span>
+            <.signup_chart
+              id="next-huddl"
+              curve={@next.curve}
+              typical={@next.typical}
+              capacity={@next.capacity}
+            />
+            <div class="legend">
+              <span><i></i>RSVPs since publish</span>
+              <span :if={@next.typical}><i class="typ"></i>Typical for this group</span>
+              <span :if={@next.capacity}><i class="cap"></i>Capacity</span>
+            </div>
           </div>
+          <div :if={@next.others != []} class="next-huddl-others">
+            <div class="label">Also upcoming</div>
+            <ul id="next-huddl-others">
+              <li :for={huddl <- @next.others}>
+                <.link navigate={huddl_show_path(@group, huddl)}>{huddl.title}</.link>
+                <span class="count">· {signups_figure(huddl)}{waitlisted_suffix(huddl)}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      <% else %>
+        <p class="muted">
+          Nothing on the calendar yet. Create a huddl and its signups will show here.
+        </p>
+        <div :if={is_nil(@group.archived_at)} class="panel-cta">
+          <a class="btn-primary" href={~p"/groups/#{@group.slug}/huddlz/new"}>Create a huddl</a>
         </div>
       <% end %>
     </div>
@@ -862,6 +859,20 @@ defmodule HuddlzWeb.OrganizeLive do
   defp huddlz_filter_label(:cancelled), do: "Cancelled"
 
   defp huddl_show_path(group, huddl), do: ~p"/groups/#{group.slug}/huddlz/#{huddl.id}"
+
+  defp short_date(%{starts_at: starts_at, time_zone: time_zone}) do
+    starts_at |> DateTime.shift_zone!(time_zone) |> Calendar.strftime("%b %-d")
+  end
+
+  defp signups_figure(%{capacity: nil, rsvp_count: count}), do: rsvp_label(count)
+  defp signups_figure(%{capacity: capacity, rsvp_count: count}), do: "#{count} / #{capacity}"
+
+  defp waitlisted_suffix(%{waitlist_count: 0}), do: ""
+  defp waitlisted_suffix(%{waitlist_count: count}), do: " · #{count} waitlisted"
+
+  defp published_ago(0), do: "published today"
+  defp published_ago(1), do: "published yesterday"
+  defp published_ago(days), do: "published #{days} days ago"
 
   defp huddl_edit_path(group, huddl, "all"),
     do: ~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit?edit_type=all"
@@ -1630,14 +1641,6 @@ defmodule HuddlzWeb.OrganizeLive do
   defp format_member_meta(_), do: ""
 
   defp format_date_short(%DateTime{} = at), do: Calendar.strftime(at, "%b %d, %Y")
-
-  defp format_starts_at(%{starts_at: %DateTime{} = starts_at, time_zone: time_zone}) do
-    starts_at
-    |> DateTime.shift_zone!(time_zone)
-    |> Calendar.strftime("%b %d, %Y · %I:%M %p %Z")
-  end
-
-  defp format_starts_at(_), do: ""
 
   defp visibility_label(true), do: "Public"
   defp visibility_label(false), do: "Private"

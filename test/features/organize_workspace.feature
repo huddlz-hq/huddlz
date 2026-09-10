@@ -105,7 +105,7 @@ Feature: Organizer workspace
     Then I should see "Phoenix Devs"
     And I should not see "That group doesn't exist, or you don't organize it."
 
-  Scenario: Group overview shows zeroed KPIs and empty upcoming list
+  Scenario: Group overview shows zeroed KPIs and an empty next huddl panel
     Given a public group "Cyberpunk Builders" exists with owner "host+organize-workspace@example.com"
     And I am signed in as "host+organize-workspace@example.com"
     When I visit "/organize/cyberpunk-builders"
@@ -113,14 +113,14 @@ Feature: Organizer workspace
     And I should see "Members"
     And I should see "RSVPs · last 90 days"
     And I should see "Waitlisted now"
-    And I should see "No upcoming huddlz right now. Create one to get started."
+    And I should see "Nothing on the calendar yet. Create a huddl and its signups will show here."
 
-  Scenario: Group overview lists the group's upcoming huddl
+  Scenario: Group overview names the group's next huddl
     Given a public group "Cyberpunk Builders" exists with owner "host+organize-workspace@example.com"
     And the huddl "Synthwave Night" exists in group "Cyberpunk Builders" hosted by "host+organize-workspace@example.com"
     And I am signed in as "host+organize-workspace@example.com"
     When I visit "/organize/cyberpunk-builders"
-    Then I should see "Upcoming huddlz"
+    Then I should see "Next huddl"
     And I should see "Synthwave Night"
 
   Scenario: Overview shows the upcoming huddl's RSVPs
@@ -129,7 +129,7 @@ Feature: Organizer workspace
     And "attendee+organize-workspace@example.com" has RSVPed to "Synthwave Night"
     And I am signed in as "host+organize-workspace@example.com"
     When I visit "/organize/cyberpunk-builders"
-    Then I should see "Upcoming huddlz"
+    Then I should see "Next huddl"
     And I should see "2 RSVPs"
 
   Scenario: Overview does not show huddlz from groups the actor does not organize
