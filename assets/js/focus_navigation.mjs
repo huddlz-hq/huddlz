@@ -1,11 +1,11 @@
 // Focus page context only after navigation, never while someone is typing or
 // filtering the current page. Live redirects can finish before the new join.
-export function mountFocusNavigation() {
+export function mountFocusNavigation({liveSocket}) {
   let previousMain = document.querySelector("#main-content")
   let previousPath = location.pathname
   let navigation = false
   let leavingDialog = false
-  watchSubmissions()
+  watchSubmissions(liveSocket)
   watchModalRemoval()
 
   document.addEventListener("input", () => { navigation = false })
@@ -50,12 +50,12 @@ function focusPage(main) {
 
 // LiveView locks submitted forms until their reply has patched the DOM. Watch
 // that public loading class rather than guessing a timeout or reacting to validation.
-function watchSubmissions() {
+function watchSubmissions(liveSocket) {
   document.addEventListener("submit", event => {
     const form = event.target
     if (!form.matches("form[phx-submit]")) return
     form.querySelector(".error-summary")?.remove()
-    const previousInfo = document.querySelector("#flash-info")?.textContent
+    dismissStaleError(liveSocket)
     const observer = new MutationObserver(records => {
       const completed = records.some(record =>
         record.target === form && record.attributeName === "class" &&
@@ -65,7 +65,7 @@ function watchSubmissions() {
         restoreLostFocus()
       } else if (completed && !form.classList.contains("phx-submit-loading")) {
         observer.disconnect()
-        requestAnimationFrame(() => submissionFinished(form, previousInfo))
+        requestAnimationFrame(() => submissionFinished(form))
       }
     })
     observer.observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ["class"], attributeOldValue: true})
@@ -84,7 +84,15 @@ function watchSubmissions() {
   })
 }
 
-function submissionFinished(form, previousInfo) {
+// A flash stands until something clears it. Run the error flash's own dismiss
+// commands before the submission, so whatever stands once the reply lands
+// belongs to it. Not a DOM click: that would trip a dialog's click-away.
+function dismissStaleError(liveSocket) {
+  const flash = document.querySelector("#flash-error")
+  if (flash) liveSocket.execJS(flash, flash.getAttribute("phx-click"))
+}
+
+function submissionFinished(form) {
   if (!form.isConnected || form.hasAttribute("phx-trigger-action")) return
   const dialog = visibleDialog()
   if (dialog && !dialog.contains(form)) return
@@ -117,9 +125,7 @@ function submissionFinished(form, previousInfo) {
     return
   }
   const error = document.querySelector("#flash-error")
-  const info = document.querySelector("#flash-info")?.textContent
-  const newSuccess = info && info !== previousInfo
-  if (error && !newSuccess) {
+  if (error) {
     error.tabIndex = -1
     error.focus({preventScroll: true})
     return

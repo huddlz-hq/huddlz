@@ -27,6 +27,7 @@ import {mountMobileNavigation} from "./mobile_navigation.mjs"
 import {createCoverImageHook} from "./cover_image.mjs"
 import {createCoverCropHook} from "./cover_crop.mjs"
 import {mountPageLoading} from "./page_loading.mjs"
+import {mountFocusNavigation} from "./focus_navigation.mjs"
 
 // The appearance setting lives on <html data-theme>, outside any LiveView.
 // Settings pushes a "theme" event after saving; "system" drops the attribute
@@ -38,8 +39,6 @@ window.addEventListener("phx:theme", ({detail}) => {
     document.documentElement.dataset.theme = detail.theme
   }
 })
-
-import {mountFocusNavigation} from "./focus_navigation.mjs"
 
 const Hooks = {}
 
@@ -159,7 +158,7 @@ mountPageLoading({topbar})
 liveSocket.connect()
 
 mountMobileNavigation()
-mountFocusNavigation()
+mountFocusNavigation({liveSocket})
 
 // "/" focuses the chrome search box, GitHub-style. Skipped while the user
 // is already typing in an editable field, or when modifier keys are held.

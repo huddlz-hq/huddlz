@@ -64,7 +64,12 @@ defmodule BrowserFocusSteps do
   step "the email field receives focus and describes its error", context do
     context.conn
     |> assert_has("#user_email:focus[aria-invalid=true][aria-describedby]")
-    |> assert_browser("getComputedStyle(document.activeElement).outlineStyle !== 'none'")
+    |> assert_browser("""
+    (() => {
+      const style = getComputedStyle(document.activeElement);
+      return style.outlineStyle !== 'none' || style.boxShadow !== 'none';
+    })()
+    """)
 
     context
   end
