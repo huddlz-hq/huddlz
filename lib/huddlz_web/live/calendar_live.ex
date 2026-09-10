@@ -75,7 +75,8 @@ defmodule HuddlzWeb.CalendarLive do
     scope = parse_scope(params["scope"])
     own = load_entries(user, socket.assigns.time_zone)
     group_extras = load_group_extras(user, socket.assigns.time_zone, own, today)
-    all = if scope == :groups, do: merge_entries(own, group_extras), else: own
+    everything = merge_entries(own, group_extras)
+    all = if scope == :groups, do: everything, else: own
     entries = grid_entries(all, grid_start, grid_end, socket.assigns.time_zone)
     {agenda_days, agenda_more} = agenda_window(all, today)
     agenda_entries = Enum.flat_map(agenda_days, & &1.entries)
@@ -111,7 +112,14 @@ defmodule HuddlzWeb.CalendarLive do
      })
      |> assign(:open_day, open_day)
      |> assign(:day_entries, day_entries)
-     |> assign(:counts, scope_counts(own, group_extras, today))
+     |> assign(
+       :counts,
+       scope_counts(view_mode, own, everything, %{
+         today: today,
+         week: focus_week,
+         month: focus_month
+       })
+     )
      |> assign(:grid_start, grid_start)
      |> assign(:grid_end, grid_end)
      |> assign(:entries, entries)
@@ -230,10 +238,25 @@ defmodule HuddlzWeb.CalendarLive do
     Enum.sort_by(own ++ extras, & &1.huddl.starts_at, DateTime)
   end
 
-  defp scope_counts(own, extras, today) do
-    mine = Enum.count(own, &(Date.compare(&1.calendar_date, today) != :lt))
-    %{mine: mine, groups: mine + length(extras)}
+  # What each scope would show in the current view, so a chip's count
+  # answers "how many here", not "how many ever".
+  defp scope_counts(view_mode, own, everything, window) do
+    %{
+      mine: count_in_view(view_mode, own, window),
+      groups: count_in_view(view_mode, everything, window)
+    }
   end
+
+  defp count_in_view(:agenda, entries, %{today: today}) do
+    {days, _more} = agenda_window(entries, today)
+    days |> Enum.map(&length(&1.entries)) |> Enum.sum()
+  end
+
+  defp count_in_view(:week, entries, %{week: week}),
+    do: Enum.count(entries, &(Date.diff(&1.calendar_date, week) in 0..6))
+
+  defp count_in_view(:month, entries, %{month: month}),
+    do: Enum.count(entries, &in_focus_month?(&1, month))
 
   defp grid_entries(entries, grid_start, grid_end, time_zone) do
     grid_start_dt = utc_boundary(grid_start, ~T[00:00:00], time_zone)
