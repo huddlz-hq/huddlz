@@ -2,6 +2,7 @@ defmodule NextHuddlPanelSteps do
   use Cucumber.StepDefinition
 
   import Ecto.Query, only: [from: 2]
+  import ExUnit.Assertions
   import Huddlz.Generator
   import PhoenixTest
 
@@ -151,6 +152,16 @@ defmodule NextHuddlPanelSteps do
     context
   end
 
+  step "the signup curve reads:", %{session: session} = context do
+    assert_curve(session, "next-huddl-curve", context.datatable.raw)
+    context
+  end
+
+  step "the typical curve reads:", %{session: session} = context do
+    assert_curve(session, "next-huddl-typical", context.datatable.raw)
+    context
+  end
+
   step "the panel lists the other upcoming huddl {string}",
        %{args: [line], session: session} = context do
     assert_has(session, "#next-huddl-others li", text: line, exact: true)
@@ -164,6 +175,29 @@ defmodule NextHuddlPanelSteps do
 
     context
   end
+
+  # The line's points read back from its data attribute, one per day since
+  # publish; "today" is the last.
+  defp assert_curve(session, id, rows) do
+    [points] =
+      session.view
+      |> Phoenix.LiveViewTest.render()
+      |> LazyHTML.from_document()
+      |> LazyHTML.query("##{id}")
+      |> LazyHTML.attribute("data-points")
+
+    points = String.split(points, ",")
+
+    for [day, expected] <- rows do
+      actual = Enum.at(points, day_index(day, points))
+
+      assert actual == expected,
+             "expected #{day} to read #{expected}, got #{actual} in #{Enum.join(points, ",")}"
+    end
+  end
+
+  defp day_index("today", points), do: length(points) - 1
+  defp day_index("day " <> day, _points), do: String.to_integer(day)
 
   defp find_group(name) do
     Group |> Ash.Query.filter(name == ^name) |> Ash.read_one!(authorize?: false)
