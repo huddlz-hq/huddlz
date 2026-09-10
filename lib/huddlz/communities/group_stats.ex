@@ -19,6 +19,12 @@ defmodule Huddlz.Communities.GroupStats do
   published: how many RSVPs stood by the end of that day. The group's
   typical curve is the same measure averaged over its past huddlz, drawn
   only once there are three of them to average.
+
+  Turnout comes from the counts organizers record after a huddl ends. The
+  show rate over a period is turnout divided by RSVPs across the counted
+  huddlz that ended in it. The next huddl's expected turnout applies the
+  show rate of counted huddlz of its own type from the last year, once
+  there are three of them.
   """
 
   require Ash.Query
@@ -27,6 +33,9 @@ defmodule Huddlz.Communities.GroupStats do
 
   @day 86_400
   @typical_min_history 3
+  @expected_min_history 3
+  @expected_history_days 365
+  @turnout_chart_limit 8
 
   @periods [
     {"30d", %{days: 30, buckets: 6, label: "30 days", growth: :week}},
@@ -67,14 +76,21 @@ defmodule Huddlz.Communities.GroupStats do
       it, and a per-bucket sparkline
     * `waitlist` — people waitlisted on upcoming huddlz right now, the
       titles of the huddlz that are full, and a cumulative sparkline
+    * `turnout` — counted huddlz that ended in the period: how many, their
+      RSVPs and turnout, the show rate (nil without counts) and a
+      sparkline of per-huddl show rates
+    * `turnout_chart` — the last few past huddlz, oldest first, each with
+      RSVPs, capacity and turnout (room and call) or marked uncounted
     * `next_huddl` — the next upcoming huddl with its RSVPs, capacity,
-      signup curve since publish, the group's typical curve (or nil) and
-      the other upcoming huddlz; nil when nothing is upcoming
+      signup curve since publish, the group's typical curve (or nil), the
+      expected turnout (or nil) and the other upcoming huddlz; nil when
+      nothing is upcoming
   """
   def compute(group, period, actor, now \\ DateTime.utc_now()) do
     spec = period_spec(period)
     edges = bucket_edges(now, spec)
     joined_at = member_join_times(group)
+    past = organizer_huddlz(group, actor, :past, starts_at: :desc)
 
     %{
       period: period,
@@ -82,9 +98,79 @@ defmodule Huddlz.Communities.GroupStats do
       growth: growth(joined_at, group, now, spec),
       rsvps: rsvps(group, now, spec, edges),
       waitlist: waitlist(group, now, edges),
-      next_huddl: next_huddl(group, actor, now)
+      turnout: turnout(past, now, spec),
+      turnout_chart: turnout_chart(past),
+      next_huddl: next_huddl(group, actor, past, now)
     }
   end
+
+  defp turnout(past, now, spec) do
+    period_start = DateTime.add(now, -spec.days, :day)
+
+    counted =
+      Enum.filter(past, &(counted?(&1) and DateTime.compare(&1.ends_at, period_start) != :lt))
+
+    rsvps = counted |> Enum.map(& &1.rsvp_count) |> Enum.sum()
+    came = counted |> Enum.map(&turnout_total/1) |> Enum.sum()
+
+    %{
+      counted: length(counted),
+      rsvps: rsvps,
+      turnout: came,
+      show_rate: show_rate(came, rsvps),
+      spark:
+        counted
+        |> Enum.reverse()
+        |> Enum.map(&show_rate(turnout_total(&1), &1.rsvp_count))
+        |> Enum.reject(&is_nil/1)
+    }
+  end
+
+  defp turnout_chart(past) do
+    past
+    |> Enum.take(@turnout_chart_limit)
+    |> Enum.reverse()
+    |> Enum.map(fn huddl ->
+      %{
+        id: huddl.id,
+        title: huddl.title,
+        starts_at: huddl.starts_at,
+        time_zone: huddl.time_zone,
+        rsvp_count: huddl.rsvp_count,
+        capacity: huddl.max_attendees,
+        counted?: counted?(huddl),
+        in_room: huddl.turnout_in_room,
+        on_call: huddl.turnout_on_call,
+        turnout: if(counted?(huddl), do: turnout_total(huddl))
+      }
+    end)
+  end
+
+  # About how many to expect at the next huddl: the show rate of counted
+  # huddlz of the same type in the last year, applied to its RSVPs.
+  defp expected_turnout(next, past, now) do
+    since = DateTime.add(now, -@expected_history_days, :day)
+
+    alike =
+      Enum.filter(past, fn huddl ->
+        counted?(huddl) and huddl.event_type == next.event_type and
+          DateTime.compare(huddl.ends_at, since) != :lt
+      end)
+
+    rsvps = alike |> Enum.map(& &1.rsvp_count) |> Enum.sum()
+
+    if length(alike) >= @expected_min_history and rsvps > 0 do
+      came = alike |> Enum.map(&turnout_total/1) |> Enum.sum()
+      %{count: round(came * next.rsvp_count / rsvps), from: length(alike)}
+    end
+  end
+
+  defp counted?(huddl), do: not is_nil(huddl.turnout_recorded_at)
+
+  defp turnout_total(huddl), do: (huddl.turnout_in_room || 0) + (huddl.turnout_on_call || 0)
+
+  defp show_rate(_came, 0), do: nil
+  defp show_rate(came, rsvps), do: round(came * 100 / rsvps)
 
   defp member_join_times(group) do
     GroupMember
@@ -213,7 +299,7 @@ defmodule Huddlz.Communities.GroupStats do
     }
   end
 
-  defp next_huddl(group, actor, now) do
+  defp next_huddl(group, actor, past, now) do
     case organizer_huddlz(group, actor, :published, starts_at: :asc) do
       [] ->
         nil
@@ -229,7 +315,8 @@ defmodule Huddlz.Communities.GroupStats do
           days: days,
           curve:
             cumulative_by_day(standing_rsvp_times([next.id])[next.id] || [], published_at, days),
-          typical: typical_curve(group, actor, days),
+          typical: typical_curve(past, days),
+          expected: expected_turnout(next, past, now),
           others: Enum.map(others, &huddl_summary/1)
         })
     end
@@ -237,11 +324,8 @@ defmodule Huddlz.Communities.GroupStats do
 
   # The group's past huddlz averaged day by day since each was published.
   # Nil until there are enough of them for an average to mean anything.
-  defp typical_curve(group, actor, days) do
-    past =
-      group
-      |> organizer_huddlz(actor, :past, starts_at: :desc)
-      |> Enum.reject(&is_nil(&1.published_at))
+  defp typical_curve(past, days) do
+    past = Enum.reject(past, &is_nil(&1.published_at))
 
     if length(past) < @typical_min_history do
       nil
@@ -269,6 +353,7 @@ defmodule Huddlz.Communities.GroupStats do
       title: huddl.title,
       starts_at: huddl.starts_at,
       time_zone: huddl.time_zone,
+      event_type: huddl.event_type,
       rsvp_count: huddl.rsvp_count,
       capacity: huddl.max_attendees,
       waitlist_count: huddl.waitlist_count

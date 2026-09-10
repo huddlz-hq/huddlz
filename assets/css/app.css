@@ -1744,11 +1744,6 @@ body .kpis {
 @media (max-width: 1100px) {
  body .kpis { grid-template-columns: repeat(2, 1fr); } }
 
-body .kpis.kpis-3 { grid-template-columns: repeat(3, 1fr); }
-
-@media (max-width: 1100px) {
- body .kpis.kpis-3 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); } }
-
 
 body .kpi {
   border: 1px solid var(--line);
@@ -1833,6 +1828,22 @@ body .chart .typical {
 
 body .chart .cap { stroke: var(--soft); stroke-width: 1.5; }
 body .chart .col { fill: var(--line-strong); }
+body .chart .col.room { fill: var(--accent); opacity: 0.85; }
+body .chart .col.call { fill: var(--accent-deep); }
+
+body .chart .col.none {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+
+body .turnout-chart .pair text {
+  paint-order: stroke;
+  stroke: var(--panel);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
 body .chart .val { fill: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
 body .chart .callout {
   fill: var(--text);
@@ -1870,8 +1881,12 @@ body .legend i.typ {
 
 body .legend i.cap { height: 2px; background: var(--soft); }
 body .legend i.sq { width: 10px; height: 10px; background: var(--line-strong); }
+body .legend i.sq.room { background: var(--accent); }
+body .legend i.sq.call { background: var(--accent-deep); }
+body .legend i.sq.none { background: none; border: 1.5px dashed var(--line-strong); }
 
-body .stat { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+body .stat { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin-bottom: 8px; }
+body .stat .big { white-space: nowrap; }
 
 body .stat .big {
   font-size: 26px;
@@ -1889,12 +1904,18 @@ body .overview-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 
   body .overview-row { grid-template-columns: minmax(0, 5fr) minmax(0, 3fr); align-items: stretch; }
 }
 
-body .growth-chart-wrap { max-width: 800px; }
-body .growth-chart-wrap .compact-only { display: none; }
+body .growth-chart-wrap,
+body .turnout-chart-wrap { max-width: 800px; }
+
+body .growth-chart-wrap .compact-only,
+body .turnout-chart-wrap .compact-only { display: none; }
 
 @media (max-width: 640px) {
-  body .growth-chart-wrap .wide-only { display: none; }
-  body .growth-chart-wrap .compact-only { display: block; }
+  body .growth-chart-wrap .wide-only,
+  body .turnout-chart-wrap .wide-only { display: none; }
+
+  body .growth-chart-wrap .compact-only,
+  body .turnout-chart-wrap .compact-only { display: block; }
 }
 body #member-growth-panel .panel-head .stat { margin: 0; flex: 0 0 auto; }
 body #next-huddl { container-type: inline-size; }

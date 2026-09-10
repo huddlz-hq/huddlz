@@ -17,6 +17,7 @@ defmodule HuddlzWeb.OrganizeLive do
   import HuddlzWeb.Components.Sparkline
   import HuddlzWeb.Components.GrowthChart
   import HuddlzWeb.Components.SignupChart
+  import HuddlzWeb.Components.TurnoutChart
 
   alias Huddlz.Communities
   alias Huddlz.Communities.GroupStats
@@ -483,7 +484,7 @@ defmodule HuddlzWeb.OrganizeLive do
       <.link navigate={huddl_show_path(@group, @turnout_nudge)}>Add turnout</.link>
     </div>
 
-    <div class="kpis kpis-3">
+    <div class="kpis">
       <div id="kpi-members" class="kpi">
         <div class="label">Members</div>
         <div class="value">{@stats.members.count}</div>
@@ -499,6 +500,19 @@ defmodule HuddlzWeb.OrganizeLive do
           {rsvps_delta(@stats.rsvps, @period)}
         </div>
         <.sparkline id="spark-rsvps" points={@stats.rsvps.spark} />
+      </div>
+      <div id="kpi-showrate" class="kpi">
+        <div class="label">Show rate · last {GroupStats.period_label(@period)}</div>
+        <div class="value">{show_rate_value(@stats.turnout)}</div>
+        <div class={["delta", @stats.turnout.counted == 0 && "muted"]}>
+          <%= if @stats.turnout.counted == 0 do %>
+            <.link navigate={~p"/organize/#{@group.slug}/huddlz?filter=past"}>Record turnout</.link>
+            after a huddl
+          <% else %>
+            {show_rate_delta(@stats.turnout)}
+          <% end %>
+        </div>
+        <.sparkline id="spark-showrate" points={@stats.turnout.spark} />
       </div>
       <div id="kpi-waitlist" class="kpi">
         <div class="label">Waitlisted now</div>
@@ -562,7 +576,7 @@ defmodule HuddlzWeb.OrganizeLive do
             <div class="next-huddl-chart">
               <div class="stat">
                 <span class="big">{signups_figure(@next)}</span>
-                <span class="cmp">{published_ago(@next.days)}</span>
+                <span class="cmp">{published_ago(@next.days)}{expectation(@next)}</span>
               </div>
               <.signup_chart
                 id="next-huddl"
@@ -597,30 +611,84 @@ defmodule HuddlzWeb.OrganizeLive do
       </div>
     </div>
 
-    <div id="recent-activity" class="panel">
-      <div class="panel-head">
-        <div>
-          <h2>Recent activity</h2>
-          <div class="panel-sub">Joins, RSVPs and cancellations</div>
+    <div class="overview-row">
+      <div id="turnout-panel" class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Turnout per huddl</h2>
+            <div class="panel-sub">{turnout_sub(@stats.turnout_chart)}</div>
+          </div>
+          <.link navigate={~p"/organize/#{@group.slug}/huddlz?filter=past"} class="pill">
+            All past huddlz
+          </.link>
         </div>
-        <.link navigate={~p"/organize/#{@group.slug}/members"} class="pill">All members</.link>
+        <p :if={@stats.turnout_chart == []} class="muted">
+          No past huddlz yet. Once one ends, its RSVPs and turnout will show here.
+        </p>
+        <div :if={@stats.turnout_chart != []} class="turnout-chart-wrap">
+          <.turnout_chart id="turnout-chart" class="wide-only" huddlz={@stats.turnout_chart} />
+          <.turnout_chart
+            id="turnout-chart-compact"
+            class="compact-only"
+            width={360}
+            huddlz={Enum.take(@stats.turnout_chart, -5)}
+          />
+          <div class="legend">
+            <span><i class="sq"></i>RSVPs</span>
+            <span><i class="sq room"></i>In the room</span>
+            <span><i class="sq call"></i>On the call</span>
+            <span><i class="cap"></i>Capacity</span>
+            <span><i class="sq none"></i>No turnout</span>
+          </div>
+        </div>
       </div>
-      <p :if={@activity == []} class="muted">
-        Nothing yet. Joins, RSVPs and cancellations will show here as they happen.
-      </p>
-      <ol :if={@activity != []} class="feed">
-        <li :for={entry <- @activity} class="item" data-kind={entry.kind}>
-          <.person_mark user={entry.user} />
-          <span class="what">
-            <i class={["kind", activity_tone(entry.kind)]}></i>
-            <.activity_line entry={entry} />
-          </span>
-          <span class="when">{feed_time(entry.occurred_at, @group.time_zone)}</span>
-        </li>
-      </ol>
+
+      <div id="recent-activity" class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Recent activity</h2>
+            <div class="panel-sub">Joins, RSVPs and cancellations</div>
+          </div>
+          <.link navigate={~p"/organize/#{@group.slug}/members"} class="pill">All members</.link>
+        </div>
+        <p :if={@activity == []} class="muted">
+          Nothing yet. Joins, RSVPs and cancellations will show here as they happen.
+        </p>
+        <ol :if={@activity != []} class="feed">
+          <li :for={entry <- @activity} class="item" data-kind={entry.kind}>
+            <.person_mark user={entry.user} />
+            <span class="what">
+              <i class={["kind", activity_tone(entry.kind)]}></i>
+              <.activity_line entry={entry} />
+            </span>
+            <span class="when">{feed_time(entry.occurred_at, @group.time_zone)}</span>
+          </li>
+        </ol>
+      </div>
     </div>
     """
   end
+
+  defp show_rate_value(%{show_rate: nil}), do: "—"
+  defp show_rate_value(%{show_rate: rate}), do: "#{rate}%"
+
+  defp show_rate_delta(%{counted: 1}), do: "Over 1 counted huddl"
+  defp show_rate_delta(%{counted: n}), do: "Over #{n} counted huddlz"
+
+  defp turnout_sub([]), do: "RSVPs next to how many actually came"
+
+  defp turnout_sub(huddlz) do
+    "RSVPs next to how many actually came, last #{length(huddlz)} huddlz. Dashed means no turnout was recorded."
+  end
+
+  defp expectation(%{expected: nil}), do: ""
+
+  defp expectation(%{expected: %{count: count}, event_type: type}),
+    do: " · expect about #{count} #{expected_where(type)}"
+
+  defp expected_where(:virtual), do: "on the call"
+  defp expected_where(:hybrid), do: "in the room or on the call"
+  defp expected_where(_in_person), do: "in the room"
 
   # The app's mark for a person: their picture, or initials on a gradient
   # that stays the same for them wherever they appear.
