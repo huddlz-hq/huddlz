@@ -2994,8 +2994,16 @@ body .nudge {
 
 body .nudge-icon { flex: 0 0 auto; color: var(--accent-ink); }
 body .nudge strong { color: var(--text); font-weight: 600; }
-body .nudge a { margin-left: auto; color: var(--accent-ink); font-weight: 600; white-space: nowrap; text-decoration: none; }
-body .nudge a:hover { text-decoration: underline; }
+body .nudge :is(a, .nudge-action) { margin-left: auto; color: var(--accent-ink); font-weight: 600; white-space: nowrap; text-decoration: none; }
+body .nudge :is(a, .nudge-action):hover { text-decoration: underline; }
+body .nudge-action { padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }
+
+/* The turnout form opened under the nudge or inside a past row. */
+body .nudge-block { margin-bottom: 20px; }
+body .nudge-block .nudge { margin-bottom: 0; }
+body .nudge-block .turnout-inline { margin: 8px 0 0; }
+body .org-huddl-editor { grid-column: 1 / -1; }
+body .org-huddl-editor .turnout-inline { margin: 0; background: var(--panel-2); }
 
 body .org-huddl-series {
   display: inline-flex;

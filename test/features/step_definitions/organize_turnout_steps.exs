@@ -58,6 +58,12 @@ defmodule OrganizeTurnoutSteps do
     context
   end
 
+  step "the past row for {string} shows {string}",
+       %{args: [title, text], session: session} = context do
+    assert_row_texts(session, find_huddl(title), [text])
+    context
+  end
+
   step "the past row for {string} shows {string} and {string}",
        %{args: [title | texts], session: session} = context do
     assert_row_texts(session, find_huddl(title), texts)
@@ -69,12 +75,74 @@ defmodule OrganizeTurnoutSteps do
 
     session
     |> assert_has("#turnout-nudge", text: title)
-    |> assert_has("#turnout-nudge a[href='/groups/#{huddl.group.slug}/huddlz/#{huddl.id}']",
-      text: "Add turnout"
-    )
+    |> assert_has("#turnout-nudge button[phx-value-id='#{huddl.id}']", text: "Add turnout")
 
     context
   end
+
+  step "the overview nudge asks {string}", %{args: [question], session: session} = context do
+    assert_has(session, "#turnout-nudge", text: question)
+    context
+  end
+
+  step "the past row for {string} asks {string}",
+       %{args: [title, question], session: session} = context do
+    assert_has(session, "#organize-huddl-#{find_huddl(title).id}", text: question)
+    context
+  end
+
+  step "the past row for {string} says {string}",
+       %{args: [title, message], session: session} = context do
+    assert_has(session, "#organize-huddl-#{find_huddl(title).id} .form-error", text: message)
+    context
+  end
+
+  step "the {string} field still reads {string}",
+       %{args: [label, value], session: session} = context do
+    assert_has(session, "input[name='#{field_name(label)}'][value='#{value}']")
+    context
+  end
+
+  step "I record {int} in the room for {string}",
+       %{args: [count, title], session: session} = context do
+    huddl = find_huddl(title)
+
+    session =
+      session
+      |> click_button("#organize-huddl-#{huddl.id} button", "Add turnout")
+      |> fill_in("People in the room", with: count)
+      |> click_button("Save turnout")
+
+    Map.merge(context, %{conn: session, session: session})
+  end
+
+  step "the row for {string} offers no turnout action",
+       %{args: [title], session: session} = context do
+    session
+    |> refute_has("#organize-huddl-#{find_huddl(title).id} button", text: "Add turnout")
+    |> refute_has("#organize-huddl-#{find_huddl(title).id} button", text: "Edit turnout")
+
+    context
+  end
+
+  step "the row for {string} still offers {string}",
+       %{args: [title, label], session: session} = context do
+    assert_has(session, "#organize-huddl-#{find_huddl(title).id} button", text: label)
+    context
+  end
+
+  step "I am still on the past huddlz list", %{session: session} = context do
+    assert_path(session, "/organize/portland-elixir/huddlz", query_params: %{"filter" => "past"})
+    context
+  end
+
+  step "I am still on the overview", %{session: session} = context do
+    assert_path(session, "/organize/portland-elixir")
+    context
+  end
+
+  defp field_name("People in the room"), do: "turnout[in_room]"
+  defp field_name("People on the call"), do: "turnout[on_call]"
 
   step "the overview nudge does not name {string}",
        %{args: [title], session: session} = context do
