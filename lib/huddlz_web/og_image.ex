@@ -28,6 +28,24 @@ defmodule HuddlzWeb.OgImage do
   @doc "Renders the site card, shared by pages with no picture of their own, as a PNG binary."
   def site_card, do: site_svg() |> render_png()
 
+  @doc "Renders the brand mark at `size` pixels square as a PNG binary."
+  def mark_png(size), do: size |> mark_svg() |> render_png()
+
+  @doc """
+  The brand mark as SVG markup at `size` pixels square: the accent rounded
+  square with the "h" drawn as strokes, so it looks the same wherever it is
+  rendered, fonts or not. `mix huddlz.icons` writes the favicon set from it.
+  """
+  def mark_svg(size) do
+    """
+    <svg xmlns="http://www.w3.org/2000/svg" width="#{size}" height="#{size}" viewBox="0 0 512 512">
+      <rect width="512" height="512" rx="128" fill="#18cbd4"/>
+      <path d="M170 108 V404" fill="none" stroke="#05191b" stroke-width="76" stroke-linecap="round"/>
+      <path d="M170 302 C170 234 214 194 262 194 C316 194 342 236 342 302 V404" fill="none" stroke="#05191b" stroke-width="76" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    """
+  end
+
   defp render_png(svg) do
     with {:ok, image} <- Image.from_binary(svg) do
       Image.write(image, :memory, suffix: ".png")
