@@ -23,9 +23,10 @@ defmodule Huddlz.Communities.GroupTest do
             location: "Saint Augustine, FL",
             time_zone: "America/New_York",
             is_public: true
-          }
+          },
+          actor: actor
         )
-        |> Ash.create(actor: actor)
+        |> Ash.create()
 
       assert group.slug == Slug.slugify("Slug From Name Test")
     end
@@ -44,9 +45,10 @@ defmodule Huddlz.Communities.GroupTest do
             time_zone: "America/New_York",
             is_public: true,
             slug: "i-picked-this"
-          }
+          },
+          actor: actor
         )
-        |> Ash.create(actor: actor)
+        |> Ash.create()
 
       assert group.slug == "i-picked-this"
     end
@@ -65,9 +67,10 @@ defmodule Huddlz.Communities.GroupTest do
             time_zone: "America/New_York",
             is_public: true,
             slug: ""
-          }
+          },
+          actor: actor
         )
-        |> Ash.create(actor: actor)
+        |> Ash.create()
 
       assert group.slug == Slug.slugify("Blank Slug Test")
     end
@@ -80,14 +83,18 @@ defmodule Huddlz.Communities.GroupTest do
       # Admin should be able to create a group
       {:ok, group} =
         Group
-        |> Ash.Changeset.for_create(:create_group, %{
-          name: "Admin Created Group",
-          description: "A test group created by an admin",
-          location: "Saint Augustine, FL",
-          time_zone: "America/New_York",
-          is_public: true
-        })
-        |> Ash.create(actor: admin_user)
+        |> Ash.Changeset.for_create(
+          :create_group,
+          %{
+            name: "Admin Created Group",
+            description: "A test group created by an admin",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
+            is_public: true
+          },
+          actor: admin_user
+        )
+        |> Ash.create()
 
       assert to_string(group.name) == "Admin Created Group"
       assert group.owner_id == admin_user.id
@@ -99,14 +106,18 @@ defmodule Huddlz.Communities.GroupTest do
       # Verified user should be able to create a group
       {:ok, group} =
         Group
-        |> Ash.Changeset.for_create(:create_group, %{
-          name: "Verified Created Group",
-          description: "A test group created by a user",
-          location: "Saint Augustine, FL",
-          time_zone: "America/New_York",
-          is_public: true
-        })
-        |> Ash.create(actor: verified_user)
+        |> Ash.Changeset.for_create(
+          :create_group,
+          %{
+            name: "Verified Created Group",
+            description: "A test group created by a user",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
+            is_public: true
+          },
+          actor: verified_user
+        )
+        |> Ash.create()
 
       assert to_string(group.name) == "Verified Created Group"
       assert group.owner_id == verified_user.id
@@ -118,14 +129,18 @@ defmodule Huddlz.Communities.GroupTest do
       # All users can now create groups
       assert {:ok, group} =
                Group
-               |> Ash.Changeset.for_create(:create_group, %{
-                 name: "Regular Created Group",
-                 description: "A test group created by a user",
-                 location: "Saint Augustine, FL",
-                 time_zone: "America/New_York",
-                 is_public: true
-               })
-               |> Ash.create(actor: regular_user)
+               |> Ash.Changeset.for_create(
+                 :create_group,
+                 %{
+                   name: "Regular Created Group",
+                   description: "A test group created by a user",
+                   location: "Saint Augustine, FL",
+                   time_zone: "America/New_York",
+                   is_public: true
+                 },
+                 actor: regular_user
+               )
+               |> Ash.create()
 
       assert to_string(group.name) == "Regular Created Group"
     end
@@ -182,14 +197,18 @@ defmodule Huddlz.Communities.GroupTest do
       # All users can now create groups and be owners
       assert {:ok, group} =
                Group
-               |> Ash.Changeset.for_create(:create_group, %{
-                 name: "User Owned Group",
-                 description: "A group owned by a regular user",
-                 location: "Saint Augustine, FL",
-                 time_zone: "America/New_York",
-                 is_public: true
-               })
-               |> Ash.create(actor: regular_user)
+               |> Ash.Changeset.for_create(
+                 :create_group,
+                 %{
+                   name: "User Owned Group",
+                   description: "A group owned by a regular user",
+                   location: "Saint Augustine, FL",
+                   time_zone: "America/New_York",
+                   is_public: true
+                 },
+                 actor: regular_user
+               )
+               |> Ash.create()
 
       assert group.owner_id == regular_user.id
     end
@@ -563,14 +582,18 @@ defmodule Huddlz.Communities.GroupTest do
 
       assert {:error, _} =
                Group
-               |> Ash.Changeset.for_create(:create_group, %{
-                 name: "Test Group",
-                 description: long_desc,
-                 location: "Saint Augustine, FL",
-                 time_zone: "America/New_York",
-                 is_public: true
-               })
-               |> Ash.create(actor: owner)
+               |> Ash.Changeset.for_create(
+                 :create_group,
+                 %{
+                   name: "Test Group",
+                   description: long_desc,
+                   location: "Saint Augustine, FL",
+                   time_zone: "America/New_York",
+                   is_public: true
+                 },
+                 actor: owner
+               )
+               |> Ash.create()
     end
 
     test "rejects location over 500 characters" do
@@ -579,13 +602,17 @@ defmodule Huddlz.Communities.GroupTest do
 
       assert {:error, _} =
                Group
-               |> Ash.Changeset.for_create(:create_group, %{
-                 name: "Test Group",
-                 location: long_loc,
-                 time_zone: "America/New_York",
-                 is_public: true
-               })
-               |> Ash.create(actor: owner)
+               |> Ash.Changeset.for_create(
+                 :create_group,
+                 %{
+                   name: "Test Group",
+                   location: long_loc,
+                   time_zone: "America/New_York",
+                   is_public: true
+                 },
+                 actor: owner
+               )
+               |> Ash.create()
     end
   end
 
@@ -749,36 +776,48 @@ defmodule Huddlz.Communities.GroupTest do
       # Create some groups with distinctive names and descriptions for search testing
       {:ok, group1} =
         Group
-        |> Ash.Changeset.for_create(:create_group, %{
-          name: "Alpha Search Group",
-          description: "This is the first test group for search",
-          location: "Saint Augustine, FL",
-          time_zone: "America/New_York",
-          is_public: true
-        })
-        |> Ash.create(actor: owner)
+        |> Ash.Changeset.for_create(
+          :create_group,
+          %{
+            name: "Alpha Search Group",
+            description: "This is the first test group for search",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
+            is_public: true
+          },
+          actor: owner
+        )
+        |> Ash.create()
 
       {:ok, group2} =
         Group
-        |> Ash.Changeset.for_create(:create_group, %{
-          name: "Beta Group",
-          description: "This is a search test group with beta in the name",
-          location: "Saint Augustine, FL",
-          time_zone: "America/New_York",
-          is_public: true
-        })
-        |> Ash.create(actor: owner)
+        |> Ash.Changeset.for_create(
+          :create_group,
+          %{
+            name: "Beta Group",
+            description: "This is a search test group with beta in the name",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
+            is_public: true
+          },
+          actor: owner
+        )
+        |> Ash.create()
 
       {:ok, group3} =
         Group
-        |> Ash.Changeset.for_create(:create_group, %{
-          name: "Gamma Group",
-          description: "This group contains alpha in the description",
-          location: "Saint Augustine, FL",
-          time_zone: "America/New_York",
-          is_public: true
-        })
-        |> Ash.create(actor: owner)
+        |> Ash.Changeset.for_create(
+          :create_group,
+          %{
+            name: "Gamma Group",
+            description: "This group contains alpha in the description",
+            location: "Saint Augustine, FL",
+            time_zone: "America/New_York",
+            is_public: true
+          },
+          actor: owner
+        )
+        |> Ash.create()
 
       {:ok, %{owner: owner, group1: group1, group2: group2, group3: group3}}
     end

@@ -153,7 +153,7 @@ defmodule Huddlz.Communities.Group do
       argument :provided_latitude, :float, allow_nil?: true, public?: false
       argument :provided_longitude, :float, allow_nil?: true, public?: false
 
-      change Huddlz.Communities.Group.Changes.SetOwnerToActor
+      change relate_actor(:owner)
       change Huddlz.Communities.Group.Changes.AddOwnerAsMember
       change Huddlz.Communities.Group.Changes.GenerateSlug
       change Huddlz.Geocoding.ApplyProvidedCoordinates

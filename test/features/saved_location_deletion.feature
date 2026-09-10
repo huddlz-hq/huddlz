@@ -30,3 +30,20 @@ Feature: Safe saved-location deletion
     And I click "Delete"
     Then I should see "This location is used by 1 current or upcoming huddl"
     And I should see "Move it to another venue before deleting it"
+
+  Scenario: A private scheduled huddl protects its address book location
+    Given the saved location "Library" is used by an upcoming private huddl
+    When I visit the locations page for "Address Removal Book Club"
+    And I click "Delete"
+    Then I should see "This location is used by 1 current or upcoming huddl"
+    And I should see "Library"
+    When I visit the locations page for "Address Removal Book Club"
+    Then I should see "Library"
+
+  Scenario: A draft protects its address book location
+    Given the saved location "Library" is used by an upcoming draft
+    When I visit the locations page for "Address Removal Book Club"
+    And I click "Delete"
+    Then I should see "This location is used by 1 current or upcoming huddl"
+    When I visit the locations page for "Address Removal Book Club"
+    Then I should see "Library"

@@ -79,13 +79,17 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
     test "requires name", %{actor: actor} do
       assert {:error, %Ash.Error.Invalid{errors: errors}} =
                Group
-               |> Ash.Changeset.for_create(:create_group, %{
-                 description: "Missing name",
-                 location: "Saint Augustine, FL",
-                 time_zone: "America/New_York",
-                 is_public: true
-               })
-               |> Ash.create(actor: actor)
+               |> Ash.Changeset.for_create(
+                 :create_group,
+                 %{
+                   description: "Missing name",
+                   location: "Saint Augustine, FL",
+                   time_zone: "America/New_York",
+                   is_public: true
+                 },
+                 actor: actor
+               )
+               |> Ash.create()
 
       assert Enum.any?(errors, fn error ->
                error.field == :name
@@ -95,14 +99,17 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
     test "enforces minimum name length", %{actor: actor} do
       assert {:error, %Ash.Error.Invalid{errors: errors}} =
                Group
-               |> Ash.Changeset.for_create(:create_group, %{
-                 # Too short
-                 name: "AB",
-                 location: "Saint Augustine, FL",
-                 time_zone: "America/New_York",
-                 is_public: true
-               })
-               |> Ash.create(actor: actor)
+               |> Ash.Changeset.for_create(
+                 :create_group,
+                 %{
+                   name: "AB",
+                   location: "Saint Augustine, FL",
+                   time_zone: "America/New_York",
+                   is_public: true
+                 },
+                 actor: actor
+               )
+               |> Ash.create()
 
       assert Enum.any?(errors, fn error ->
                error.field == :name &&
@@ -115,13 +122,17 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
 
       assert {:error, %Ash.Error.Invalid{errors: errors}} =
                Group
-               |> Ash.Changeset.for_create(:create_group, %{
-                 name: long_name,
-                 location: "Saint Augustine, FL",
-                 time_zone: "America/New_York",
-                 is_public: true
-               })
-               |> Ash.create(actor: actor)
+               |> Ash.Changeset.for_create(
+                 :create_group,
+                 %{
+                   name: long_name,
+                   location: "Saint Augustine, FL",
+                   time_zone: "America/New_York",
+                   is_public: true
+                 },
+                 actor: actor
+               )
+               |> Ash.create()
 
       assert Enum.any?(errors, fn error ->
                error.field == :name &&
@@ -133,44 +144,56 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
       # Create first group
       {:ok, _group1} =
         Group
-        |> Ash.Changeset.for_create(:create_group, %{
-          name: "Unique Name Test",
-          description: "A community with a unique name",
-          location: "Saint Augustine, FL",
-          latitude: 29.9012,
-          longitude: -81.3124,
-          time_zone: "America/New_York",
-          is_public: true
-        })
-        |> Ash.create(actor: actor)
+        |> Ash.Changeset.for_create(
+          :create_group,
+          %{
+            name: "Unique Name Test",
+            description: "A community with a unique name",
+            location: "Saint Augustine, FL",
+            latitude: 29.9012,
+            longitude: -81.3124,
+            time_zone: "America/New_York",
+            is_public: true
+          },
+          actor: actor
+        )
+        |> Ash.create()
 
       # Try to create second group with same name
       assert {:error, %Ash.Error.Invalid{}} =
                Group
-               |> Ash.Changeset.for_create(:create_group, %{
-                 name: "Unique Name Test",
-                 description: "Another community using the same name",
-                 location: "Saint Augustine, FL",
-                 latitude: 29.9012,
-                 longitude: -81.3124,
-                 time_zone: "America/New_York",
-                 is_public: true
-               })
-               |> Ash.create(actor: actor)
+               |> Ash.Changeset.for_create(
+                 :create_group,
+                 %{
+                   name: "Unique Name Test",
+                   description: "Another community using the same name",
+                   location: "Saint Augustine, FL",
+                   latitude: 29.9012,
+                   longitude: -81.3124,
+                   time_zone: "America/New_York",
+                   is_public: true
+                 },
+                 actor: actor
+               )
+               |> Ash.create()
     end
 
     test "defaults is_public to true", %{actor: actor} do
       {:ok, group} =
         Group
-        |> Ash.Changeset.for_create(:create_group, %{
-          name: "Default Public Test",
-          description: "A community with default visibility",
-          location: "Saint Augustine, FL",
-          latitude: 29.9012,
-          longitude: -81.3124,
-          time_zone: "America/New_York"
-        })
-        |> Ash.create(actor: actor)
+        |> Ash.Changeset.for_create(
+          :create_group,
+          %{
+            name: "Default Public Test",
+            description: "A community with default visibility",
+            location: "Saint Augustine, FL",
+            latitude: 29.9012,
+            longitude: -81.3124,
+            time_zone: "America/New_York"
+          },
+          actor: actor
+        )
+        |> Ash.create()
 
       assert group.is_public == true
     end
@@ -178,16 +201,20 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
     test "allows optional fields", %{actor: actor} do
       {:ok, group} =
         Group
-        |> Ash.Changeset.for_create(:create_group, %{
-          name: "Full Details Group",
-          description: "A group with all details",
-          location: "San Francisco, CA",
-          latitude: 37.7749,
-          longitude: -122.4194,
-          time_zone: "America/Los_Angeles",
-          is_public: false
-        })
-        |> Ash.create(actor: actor)
+        |> Ash.Changeset.for_create(
+          :create_group,
+          %{
+            name: "Full Details Group",
+            description: "A group with all details",
+            location: "San Francisco, CA",
+            latitude: 37.7749,
+            longitude: -122.4194,
+            time_zone: "America/Los_Angeles",
+            is_public: false
+          },
+          actor: actor
+        )
+        |> Ash.create()
 
       assert to_string(group.description) == "A group with all details"
       assert group.location == "San Francisco, CA"

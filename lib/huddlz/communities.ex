@@ -10,6 +10,11 @@ defmodule Huddlz.Communities do
   resources do
     resource Huddlz.Communities.Huddl do
       define :get_huddl, action: :read, get_by: [:id]
+      define :create_huddl, action: :create
+
+      define :location_deletion_blockers,
+        action: :location_deletion_blockers,
+        args: [:group_id, :group_location_id]
 
       define :search_huddlz,
         action: :search,

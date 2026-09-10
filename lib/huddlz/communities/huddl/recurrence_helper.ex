@@ -213,7 +213,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
       |> Ash.Changeset.for_create(:create, instance_attrs(source, starts_at, ends_at, template))
       # creator_id is not an accepted input — the :create action derives it from
       # the actor. This actorless generation sets it directly so each instance
-      # inherits the source's creator (SetCreatorToActor no-ops without an actor).
+      # inherits the source's creator (relate_actor allows a nil actor here).
       |> Ash.Changeset.force_change_attribute(:creator_id, source.creator_id)
       |> Ash.create!(authorize?: false)
 
