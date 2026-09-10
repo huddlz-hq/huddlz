@@ -1958,6 +1958,7 @@ body .feed .item {
 }
 
 body .feed .item:last-child { border-bottom: 0; padding-bottom: 0; }
+body .feed .member-mark { width: 32px; height: 32px; font-size: 11px; }
 body .feed .what { font-size: 13px; color: var(--soft); line-height: 1.4; }
 body .feed .what b { color: var(--text); font-weight: 600; }
 

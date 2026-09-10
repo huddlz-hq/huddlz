@@ -14,7 +14,6 @@ defmodule HuddlzWeb.OrganizeLive do
   """
   use HuddlzWeb, :live_view
 
-  import HuddlzWeb.Components.Avatar
   import HuddlzWeb.Components.Sparkline
   import HuddlzWeb.Components.GrowthChart
   import HuddlzWeb.Components.SignupChart
@@ -611,7 +610,7 @@ defmodule HuddlzWeb.OrganizeLive do
       </p>
       <ol :if={@activity != []} class="feed">
         <li :for={entry <- @activity} class="item" data-kind={entry.kind}>
-          <.avatar user={entry.user} size={:sm} />
+          <.person_mark user={entry.user} />
           <span class="what">
             <i class={["kind", activity_tone(entry.kind)]}></i>
             <.activity_line entry={entry} />
@@ -619,6 +618,27 @@ defmodule HuddlzWeb.OrganizeLive do
           <span class="when">{feed_time(entry.occurred_at, @group.time_zone)}</span>
         </li>
       </ol>
+    </div>
+    """
+  end
+
+  # The app's mark for a person: their picture, or initials on a gradient
+  # that stays the same for them wherever they appear.
+  attr :user, :map, required: true
+
+  defp person_mark(assigns) do
+    assigns =
+      assigns
+      |> assign(:picture, HuddlzWeb.Avatar.picture_url(assigns.user))
+      |> assign(:initials, HuddlzWeb.Avatar.initials(assigns.user) || "?")
+      |> assign(:variant, "m#{:erlang.phash2(assigns.user.id, 5) + 1}")
+
+    ~H"""
+    <div class={["member-mark", @variant]} title={@user.display_name}>
+      <img :if={@picture} src={@picture} alt={@user.display_name || ""} />
+      <%= if is_nil(@picture) do %>
+        {@initials}
+      <% end %>
     </div>
     """
   end
