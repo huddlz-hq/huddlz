@@ -1,7 +1,8 @@
 defmodule HuddlzWeb.OgImageController do
   @moduledoc """
-  Serves the generated link-preview card for a public huddl or group. Private
-  or unpublished ones are as invisible here as they are on their page.
+  Serves the generated link-preview card for a public huddl or group, and the
+  site card every other page shares. Private or unpublished huddlz and groups
+  are as invisible here as they are on their page.
   """
   use HuddlzWeb, :controller
 
@@ -9,6 +10,10 @@ defmodule HuddlzWeb.OgImageController do
   alias HuddlzWeb.OgImage
 
   require Logger
+
+  def site(conn, _params) do
+    send_card(conn, OgImage.site_etag(), &OgImage.site_card/0, "the site")
+  end
 
   def huddl(conn, %{"id" => id}) do
     with {:ok, huddl} <- Communities.get_huddl(id, load: [:status, :group], actor: nil),

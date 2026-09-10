@@ -157,6 +157,25 @@ defmodule LinkPreviewImageSteps do
     Map.put(context, :group, group)
   end
 
+  step "a link preview fetches the home page", context do
+    Map.put(context, :page_html, context.conn |> get("/") |> html_response(200))
+  end
+
+  step "a link preview fetches the discover page", context do
+    Map.put(context, :page_html, context.conn |> get("/discover") |> html_response(200))
+  end
+
+  step "the page advertises the huddlz site card as its preview picture", context do
+    [image_url] = preview_images(context.page_html)
+    assert image_url == HuddlzWeb.Endpoint.url() <> "/og/card.png"
+    Map.put(context, :image_url, image_url)
+  end
+
+  step "the page does not advertise the site card", context do
+    refute (HuddlzWeb.Endpoint.url() <> "/og/card.png") in preview_images(context.page_html)
+    context
+  end
+
   step "a link preview fetches the group page", context do
     html =
       context.conn
@@ -179,5 +198,9 @@ defmodule LinkPreviewImageSteps do
 
   step "a link preview fetches that group's preview picture", context do
     Map.put(context, :response, get(build_conn(), "/og/groups/#{context.group.slug}/card.png"))
+  end
+
+  defp preview_images(html) do
+    html |> Floki.parse_document!() |> Floki.attribute(~s(meta[property="og:image"]), "content")
   end
 end

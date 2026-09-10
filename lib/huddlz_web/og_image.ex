@@ -1,7 +1,7 @@
 defmodule HuddlzWeb.OgImage do
   @moduledoc """
   Draws the link-preview card advertised as `og:image` for a huddl or group
-  that has no cover picture.
+  that has no cover picture, and the site card every other page shares.
 
   Chat apps and social sites fetch that picture when someone pastes a link,
   so this is the first thing many people see of a huddl or group. The card
@@ -24,6 +24,9 @@ defmodule HuddlzWeb.OgImage do
 
   @doc "Renders a group's card as a PNG binary."
   def group_card(group), do: group |> group_svg() |> render_png()
+
+  @doc "Renders the site card, shared by pages with no picture of their own, as a PNG binary."
+  def site_card, do: site_svg() |> render_png()
 
   defp render_png(svg) do
     with {:ok, image} <- Image.from_binary(svg) do
@@ -52,6 +55,27 @@ defmodule HuddlzWeb.OgImage do
        group.description && to_string(group.description)}
 
     ~s("og-#{:erlang.phash2(fingerprint)}")
+  end
+
+  @doc "A strong ETag for the site card; it only changes with this module."
+  def site_etag, do: ~s("og-site-#{@version}")
+
+  @doc """
+  The site card as SVG markup: the mark, the wordmark and the tagline, on
+  the same ground as the other cards.
+  """
+  def site_svg do
+    """
+    <svg xmlns="http://www.w3.org/2000/svg" width="#{@width}" height="#{@height}" viewBox="0 0 #{@width} #{@height}">
+      <rect width="#{@width}" height="#{@height}" fill="#0b1112"/>
+      <rect x="0" y="#{@height - 6}" width="#{@width}" height="6" fill="#18cbd4"/>
+      <rect x="72" y="182" width="168" height="168" rx="40" fill="#18cbd4"/>
+      <text x="156" y="303" text-anchor="middle" font-family="#{font()}" font-size="112" font-weight="700" fill="#05191b">h</text>
+      <text x="288" y="306" font-family="#{font()}" font-size="112" font-weight="700" letter-spacing="-3" fill="#eef5f5">huddlz</text>
+      <text x="72" y="428" font-family="#{font()}" font-size="36" font-weight="500" fill="#b3bfc1">Find and join local community gatherings.</text>
+      <text x="72" y="486" font-family="#{font()}" font-size="28" fill="#7f8c8f">huddlz.com</text>
+    </svg>
+    """
   end
 
   @doc "A huddl's card as SVG markup."
