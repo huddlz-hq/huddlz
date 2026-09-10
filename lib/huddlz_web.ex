@@ -21,6 +21,18 @@ defmodule HuddlzWeb do
     do:
       ~w(assets fonts images uploads favicon.ico favicon.svg apple-touch-icon.png icon-192.png icon-512.png)
 
+  @doc """
+  The name prefixes the endpoint serves as well as `static_paths/0`.
+
+  Digested assets carry a content hash in their file name, so `~p"/favicon.svg"`
+  renders as `/favicon-<hash>.svg` once the assets are built for production. A
+  directory keeps its own name and so still matches `static_paths/0`, but a file
+  at the root no longer does, and the endpoint would refuse to serve it. Match
+  those on their name up to the extension instead.
+  """
+  def static_prefixes,
+    do: for(path <- static_paths(), Path.extname(path) != "", uniq: true, do: Path.rootname(path))
+
   def router do
     quote do
       use Phoenix.Router, helpers: false
