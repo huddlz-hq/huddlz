@@ -87,7 +87,7 @@ defmodule PrivateGroupInvitationSteps do
       end
 
     [url] = body |> Floki.parse_fragment!() |> Floki.attribute("a", "href")
-    session = context.session |> visit(URI.parse(url).path) |> click_button("Confirm your email")
+    session = context.session |> visit(URI.parse(url).path) |> click_button("Confirm my email")
     result = Oban.drain_queue(queue: :notifications)
     assert result.failure == 0, inspect(result)
     Map.merge(context, %{session: session, conn: session})

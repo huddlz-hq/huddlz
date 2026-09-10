@@ -154,14 +154,12 @@ defmodule HuddlzWeb.Router do
     auth_routes AuthController, Huddlz.Accounts.User, path: "/auth"
     sign_out_route AuthController
 
-    reset_route path: "/password-reset",
-                auth_routes_prefix: "/auth",
-                overrides: [HuddlzWeb.AuthOverrides, AshAuthentication.Phoenix.Overrides.Default]
-
-    # Remove this if you do not use the confirmation strategy
-    confirm_route Huddlz.Accounts.User, :confirm_new_user,
-      auth_routes_prefix: "/auth",
-      overrides: [HuddlzWeb.AuthOverrides, AshAuthentication.Phoenix.Overrides.Default]
+    # The confirmation email's page; registration signs people in before
+    # they confirm, so it takes a signed-in visitor too.
+    ash_authentication_live_session :confirm_routes,
+      on_mount: [{HuddlzWeb.LiveUserAuth, :live_user_optional}] do
+      live "/confirm_new_user/:token", AuthLive.ConfirmEmail, :confirm
+    end
 
     # Custom authentication pages
     ash_authentication_live_session :custom_auth_routes,

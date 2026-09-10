@@ -49,6 +49,9 @@ defmodule HuddlzWeb.AuthController do
         {{:password, :reset}, _} ->
           "The password reset link is invalid or has expired. Please request a new one."
 
+        {{:confirm_new_user, :confirm}, _} ->
+          "That confirmation link no longer works. If your email is confirmed, just sign in."
+
         _ ->
           "Incorrect email or password"
       end
