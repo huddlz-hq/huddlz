@@ -27,7 +27,7 @@ Feature: First-run empty states
     Then I should see "Create a group"
 
   Scenario: A newcomer's calendar explains what fills it
-    When I visit "/calendar"
+    When I visit "/calendar/week"
     Then I should see "Your calendar is empty"
     And I should see "huddlz you RSVP to show up here"
     When I click link "Find a huddl"

@@ -104,7 +104,7 @@ defmodule HuddlzWeb.Layouts do
           </.link>
           <.link
             class={["sb-item", @active == "calendar" && "active"]}
-            navigate={~p"/calendar"}
+            navigate={~p"/calendar/week"}
             aria-current={@active == "calendar" && "page"}
           >
             <.nav_icon name="calendar" />
