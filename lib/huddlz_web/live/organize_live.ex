@@ -43,6 +43,9 @@ defmodule HuddlzWeb.OrganizeLive do
   # overview; after this many days the moment has passed.
   @turnout_nudge_days 14
   @huddlz_filters [:published, :draft, :past, :cancelled]
+
+  # "Also upcoming" shows the nearest few; a recurring series can queue dozens.
+  @also_upcoming_limit 3
   @activity_limit 10
   # Rows shown before "Show more". A weekly series alone can run to a
   # hundred dates, so the list pages rather than folding anything.
@@ -597,11 +600,19 @@ defmodule HuddlzWeb.OrganizeLive do
             <div :if={@next.others != []} class="next-huddl-others">
               <div class="label">Also upcoming</div>
               <ul id="next-huddl-others">
-                <li :for={huddl <- @next.others}>
+                <li :for={huddl <- also_upcoming(@next.others)}>
                   <.link navigate={huddl_show_path(@group, huddl)}>{huddl.title}</.link>
                   <span class="count">· {signups_figure(huddl)}{waitlisted_suffix(huddl)}</span>
                 </li>
               </ul>
+              <.link
+                :if={more_upcoming?(@next.others)}
+                id="next-huddl-others-all"
+                navigate={~p"/organize/#{@group.slug}/huddlz"}
+                class="more"
+              >
+                All {length(@next.others) + 1} upcoming
+              </.link>
             </div>
           </div>
         <% else %>
@@ -1069,6 +1080,9 @@ defmodule HuddlzWeb.OrganizeLive do
     do: huddl |> HuddlCardHelpers.local_starts_at() |> DateTime.to_date()
 
   defp huddlz_filters, do: @huddlz_filters
+
+  defp also_upcoming(others), do: Enum.take(others, @also_upcoming_limit)
+  defp more_upcoming?(others), do: length(others) > @also_upcoming_limit
 
   defp huddlz_filter_label(:published), do: "Upcoming"
   defp huddlz_filter_label(:draft), do: "Drafts"
