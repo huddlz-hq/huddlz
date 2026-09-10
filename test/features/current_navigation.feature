@@ -11,7 +11,7 @@ Feature: Current navigation for assistive technology
     And I am signed in as "attendee+current-navigation@example.com"
 
   Scenario: Current destination and view follow navigation
-    When I visit "/calendar"
+    When I visit "/calendar/week"
     Then navigation should identify "Calendar" as the current destination
     And view choices should identify "Week" as current
     When I click link "Month"

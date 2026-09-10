@@ -143,7 +143,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
     } do
       conn
       |> login(attendee)
-      |> visit("/calendar")
+      |> visit("/calendar/week")
       |> assert_has(".cal-view-tabs .scope-tab:first-child.is-active[aria-current='page']",
         text: "Week"
       )
@@ -653,7 +653,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar")
+      |> visit("/calendar/week")
       |> assert_has("#calendar-entry-#{huddl.id} .cal-agenda-title", text: "Called Off")
       |> assert_has("#calendar-entry-#{huddl.id} .cal-entry-status[data-status=cancelled]",
         text: "Cancelled"
@@ -812,7 +812,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar")
+      |> visit("/calendar/week")
       |> assert_has("#calendar-scope-mine.chip.is-active[aria-current='page']", text: "RSVPs")
       |> assert_has("#calendar-scope-mine .chip-count", text: "1")
       |> assert_has(
@@ -896,7 +896,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar")
+      |> visit("/calendar/week")
       |> assert_has("#calendar-first-run")
       |> visit("/calendar/week?scope=groups")
       |> refute_has("#calendar-first-run")

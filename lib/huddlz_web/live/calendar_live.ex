@@ -3,7 +3,7 @@ defmodule HuddlzWeb.CalendarLive do
   LiveView at `/agenda`, `/calendar/week` and `/calendar/month`. Personal
   schedule of huddlz the signed-in user is hosting, attending, or watching
   from the waitlist. Three views over the same entries, each with its own
-  address; the bare `/calendar` shows the week:
+  address:
 
     * the agenda, `/agenda`, is the signed-in home page. It ignores the
       month: it starts at today and runs forward through the next few days
