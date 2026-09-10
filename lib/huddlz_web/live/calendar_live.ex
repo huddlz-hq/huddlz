@@ -837,7 +837,7 @@ defmodule HuddlzWeb.CalendarLive do
       >
         <div class="cal-touch-agenda-heading">
           <p class="cal-touch-agenda-kicker">Calendar details</p>
-          <h2 id="calendar-touch-agenda-title">Huddlz shown above</h2>
+          <h2 id="calendar-touch-agenda-title">huddlz shown above</h2>
         </div>
         <.agenda_list
           id="calendar-touch-agenda-list"
@@ -890,7 +890,7 @@ defmodule HuddlzWeb.CalendarLive do
       <%= if @agenda? do %>
         huddlz you RSVP to show up here, soonest first.
       <% else %>
-        Huddlz you RSVP to show up here, in their own time zone.
+        huddlz you RSVP to show up here, in their own time zone.
       <% end %>
       <:action>
         <.button variant={:primary} navigate={~p"/discover"}>
