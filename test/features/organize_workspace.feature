@@ -111,7 +111,7 @@ Feature: Organizer workspace
     When I visit "/organize/cyberpunk-builders"
     Then I should see "Cyberpunk Builders"
     And I should see "Members"
-    And I should see "RSVPs · last 90 days"
+    And I should see "RSVPs"
     And I should see "Waitlisted now"
     And I should see "Nothing on the calendar yet. Create a huddl and its signups will show here."
 

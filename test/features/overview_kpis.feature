@@ -13,6 +13,20 @@ Feature: Overview KPIs over a period
     And "Portland Elixir" was started 3 months ago
     And I am signed in as "host@example.com"
 
+  Scenario: Summary headings stay consistent when switching the period
+    When I visit "/organize/portland-elixir"
+    Then the summary headings omit the selected range
+    And I should see "RSVPs and show rate cover the selected period. Members and waitlisted counts are current totals."
+    When I click "30 days"
+    Then the summary headings omit the selected range
+    And the overview URL records the period "30d"
+    When I click "12 months"
+    Then the summary headings omit the selected range
+    And the overview URL records the period "12m"
+    When I click "90 days"
+    Then the summary headings omit the selected range
+    And the overview URL records the period "90d"
+
   Scenario: Members KPI shows this month's growth
     Given 4 members joined "Portland Elixir" 2 months ago
     And 2 members joined "Portland Elixir" this month
