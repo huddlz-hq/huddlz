@@ -2745,6 +2745,29 @@ body .org-huddl-meta .dot { width: 3px; height: 3px; border-radius: 50%; backgro
 
 body .org-huddl-rsvps { display: flex; flex-direction: column; gap: 6px; }
 body .org-huddl-rsvps .n { color: var(--soft); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+body .org-huddl-turnout { color: var(--text); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+body .org-huddl-turnout.missing { color: var(--muted); font-weight: 500; }
+body .org-huddl-show-rate { white-space: nowrap; }
+
+/* One-line reminder on the overview while a recent huddl is uncounted. */
+body .nudge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  color: var(--soft);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+body .nudge-icon { flex: 0 0 auto; color: var(--accent-ink); }
+body .nudge strong { color: var(--text); font-weight: 600; }
+body .nudge a { margin-left: auto; color: var(--accent-ink); font-weight: 600; white-space: nowrap; text-decoration: none; }
+body .nudge a:hover { text-decoration: underline; }
 
 body .org-huddl-series {
   display: inline-flex;

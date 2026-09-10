@@ -24,7 +24,18 @@ defmodule HuddlzWeb.OrganizeLive do
   require Ash.Query
 
   @group_loads [:current_image_url, :member_count]
-  @huddl_loads [:rsvp_count, :status, :group, :display_image_url, :huddl_template]
+  @huddl_loads [
+    :rsvp_count,
+    :status,
+    :group,
+    :display_image_url,
+    :huddl_template,
+    :turnout_total,
+    :show_rate
+  ]
+  # A recently ended huddl with no turnout is worth one reminder on the
+  # overview; after this many days the moment has passed.
+  @turnout_nudge_days 14
   @huddlz_filters [:published, :draft, :past, :cancelled]
   # Rows shown before "Show more". A weekly series alone can run to a
   # hundred dates, so the list pages rather than folding anything.
@@ -49,6 +60,7 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:huddlz_filter, :published)
      |> assign(:upcoming_huddlz, [])
      |> assign(:open_rsvps, 0)
+     |> assign(:turnout_nudge, nil)
      |> assign(:invitation_count, 0)
      |> assign(:invitation_form, invitation_form())
      |> assign(:member_lookup, %{})
@@ -113,6 +125,7 @@ defmodule HuddlzWeb.OrganizeLive do
     socket
     |> assign(:upcoming_huddlz, upcoming)
     |> assign(:open_rsvps, open_rsvps)
+    |> assign(:turnout_nudge, latest_uncounted_huddl(group, user))
   end
 
   defp load_section(socket, :huddlz, group, user) do
@@ -144,6 +157,22 @@ defmodule HuddlzWeb.OrganizeLive do
     socket
     |> assign(:pending_member_action, nil)
     |> push_navigate(to: ~p"/organize/#{group.slug}")
+  end
+
+  # The most recent huddl that ended within the nudge window and has been
+  # neither counted nor dismissed. One at a time: the freshest memory first.
+  defp latest_uncounted_huddl(group, user) do
+    cutoff = DateTime.add(DateTime.utc_now(), -@turnout_nudge_days, :day)
+
+    Huddlz.Communities.Huddl
+    |> Ash.Query.for_read(:huddlz_for_organizer, %{state: :past}, actor: user)
+    |> Ash.Query.filter(
+      group_id == ^group.id and ends_at > ^cutoff and
+        is_nil(turnout_recorded_at) and is_nil(turnout_skipped_at)
+    )
+    |> Ash.Query.sort(ends_at: :desc)
+    |> Ash.Query.limit(1)
+    |> Ash.read_one!(actor: user)
   end
 
   defp load_group(slug, user) do
@@ -297,6 +326,7 @@ defmodule HuddlzWeb.OrganizeLive do
             can_edit_group={@can_edit_group}
             upcoming_huddlz={@upcoming_huddlz}
             open_rsvps={@open_rsvps}
+            turnout_nudge={@turnout_nudge}
           />
         <% :huddlz -> %>
           <.huddlz_view
@@ -413,6 +443,7 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :group, :map, required: true
   attr :upcoming_huddlz, :list, required: true
   attr :open_rsvps, :integer, required: true
+  attr :turnout_nudge, :map, default: nil
 
   attr :can_edit_group, :boolean, required: true
 
@@ -438,6 +469,15 @@ defmodule HuddlzWeb.OrganizeLive do
           + Create huddl
         </a>
       </div>
+    </div>
+
+    <div :if={@turnout_nudge} id="turnout-nudge" class="nudge" role="status">
+      <.icon name="hero-users" class="size-5 nudge-icon" />
+      <span>
+        <strong>{@turnout_nudge.title}</strong>
+        ended {nudge_ended(@turnout_nudge)} and has no turnout yet.
+      </span>
+      <.link navigate={huddl_show_path(@group, @turnout_nudge)}>Add turnout</.link>
     </div>
 
     <div class="kpis">
@@ -642,6 +682,7 @@ defmodule HuddlzWeb.OrganizeLive do
       <.organizer_rsvps huddl={@huddl} />
       <div class="org-huddl-actions">
         <.organizer_edit_link group={@group} huddl={@huddl} label="Edit" />
+        <.organizer_turnout_action group={@group} huddl={@huddl} />
         <.link
           :if={@huddl.huddl_template && @huddl.status not in [:cancelled, :completed]}
           navigate={huddl_edit_path(@group, @huddl, "all")}
@@ -700,8 +741,60 @@ defmodule HuddlzWeb.OrganizeLive do
       >
         <span style={"width: #{capacity_percent(@huddl)}%"}></span>
       </div>
+      <span
+        :if={@huddl.status == :completed}
+        class={["org-huddl-turnout", turnout_missing_class(@huddl)]}
+      >
+        {turnout_label(@huddl)}
+      </span>
     </div>
     """
+  end
+
+  attr :group, :map, required: true
+  attr :huddl, :map, required: true
+
+  # A past row either wears its show rate or offers to record one.
+  defp organizer_turnout_action(assigns) do
+    ~H"""
+    <%= if @huddl.status == :completed do %>
+      <.pill :if={@huddl.show_rate} variant={:cyan} class="org-huddl-show-rate">
+        {@huddl.show_rate}% showed
+      </.pill>
+      <.link
+        :if={is_nil(@huddl.turnout_recorded_at)}
+        navigate={huddl_show_path(@group, @huddl)}
+        class="btn-secondary btn-sm org-huddl-add-turnout"
+      >
+        Add turnout
+      </.link>
+    <% end %>
+    """
+  end
+
+  defp turnout_label(%{turnout_recorded_at: nil}), do: "No turnout yet"
+
+  defp turnout_label(huddl) do
+    [
+      huddl.turnout_in_room && "#{huddl.turnout_in_room} in the room",
+      huddl.turnout_on_call && "#{huddl.turnout_on_call} on the call"
+    ]
+    |> Enum.reject(&(!&1))
+    |> Enum.join(" · ")
+  end
+
+  defp turnout_missing_class(%{turnout_recorded_at: nil}), do: "missing"
+  defp turnout_missing_class(_huddl), do: nil
+
+  defp nudge_ended(huddl) do
+    local = DateTime.shift_zone!(huddl.ends_at, huddl.time_zone)
+    today = DateTime.now!(huddl.time_zone) |> DateTime.to_date()
+
+    case Date.diff(today, DateTime.to_date(local)) do
+      0 -> "today"
+      1 -> "yesterday"
+      _ -> "on " <> Calendar.strftime(local, "%a, %b %-d")
+    end
   end
 
   attr :group, :map, required: true
