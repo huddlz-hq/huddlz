@@ -1,4 +1,4 @@
-@database @conn
+@database @conn @calendar_scope
 Feature: Calendar scope: my RSVPs or everything my groups have on
   As a member of active groups
   I want the calendar to show everything my groups have scheduled, not only what I have responded to
@@ -27,3 +27,14 @@ Feature: Calendar scope: my RSVPs or everything my groups have on
     Then the agenda lists "Hands-on with Ash Framework" without an RSVP status
     And the agenda lists "Async Rust reading group" as going
     And the agenda does not list "Not for me"
+
+  Scenario: The scope counts describe the view I am looking at
+    Given "Portland Elixir", a group I belong to, has scheduled "Hands-on with Ash Framework" on day 16 of next month
+    And my RSVP "Async Rust reading group" is on day 16 of next month
+    And my RSVP "Elixir office hours" is on day 24 of next month
+    When I open next month
+    Then the scopes count "RSVPs 2" and "Groups 3"
+    When I open the week of day 16 of next month
+    Then the scopes count "RSVPs 1" and "Groups 2"
+    When I open the agenda
+    Then the scopes count "RSVPs 2" and "Groups 3"
