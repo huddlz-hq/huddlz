@@ -51,3 +51,4 @@ Feature: Turnout on the overview
     Given the in-person huddl "Elixir office hours" in "Portland Elixir" ended 2 days ago with 12 RSVPs
     When I visit "/organize/portland-elixir"
     Then the Show rate KPI reads as not yet available and points at recording turnout
+    And the Show rate KPI draws an empty baseline where its sparkline would be

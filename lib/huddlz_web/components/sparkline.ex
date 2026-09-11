@@ -5,7 +5,10 @@ defmodule HuddlzWeb.Components.Sparkline do
   polyline.
 
   The points are also written to `data-points` so the figure can be read
-  back in words, by tests and by anyone inspecting the markup.
+  back in words, by tests and by anyone inspecting the markup. With no
+  points at all the box draws a muted dashed baseline and carries
+  `data-empty`, so a tile with nothing to chart keeps the shape of its
+  neighbours instead of ending in a blank.
   """
   use Phoenix.Component
 
@@ -25,8 +28,21 @@ defmodule HuddlzWeb.Components.Sparkline do
       aria-hidden="true"
       data-points={Enum.join(@points, ",")}
       data-count={length(@points)}
+      data-empty={@points == [] || nil}
     >
+      <line
+        :if={@points == []}
+        x1="0"
+        y1="24"
+        x2="100"
+        y2="24"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-dasharray="3 3"
+        vector-effect="non-scaling-stroke"
+      />
       <polyline
+        :if={@points != []}
         fill="none"
         stroke="currentColor"
         stroke-width="2"

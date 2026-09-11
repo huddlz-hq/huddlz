@@ -85,6 +85,15 @@ defmodule OverviewTurnoutSteps do
     context
   end
 
+  step "the Show rate KPI draws an empty baseline where its sparkline would be",
+       %{session: session} = context do
+    session
+    |> assert_has("#spark-showrate[data-count='0'][data-empty] line")
+    |> assert_has("#kpi-showrate .value.muted")
+
+    context
+  end
+
   step "the turnout chart pairs {string} as {int} RSVPs and {int} came, with a capacity tick at {int}",
        %{args: [title, rsvps, came, capacity], session: session} = context do
     pair = pair(title)
