@@ -9,7 +9,7 @@ defmodule HuddlzWeb.OrganizeLive do
     * `/organize` — landing picker (owned groups + create CTA, or empty state)
     * `/organize/:group_slug` — overview (KPIs + next huddl)
     * `/organize/:group_slug/huddlz` — huddlz list, lifecycle filters
-    * `/organize/:group_slug/members` — roster grouped by role
+    * `/organize/:group_slug/members` — roster grouped by role, one menu per person
     * `/organize/:group_slug/settings` — owner-only group administration
   """
   use HuddlzWeb, :live_view
@@ -1262,54 +1262,45 @@ defmodule HuddlzWeb.OrganizeLive do
     <div class="page-head">
       <div>
         <h1>Members</h1>
-        <p>Who's part of {@group.name}.</p>
+        <p>{people_count(@group.member_count)} · {visibility_label(@group.is_public)} group</p>
       </div>
       <div class="actions">
         <a :if={@can_edit_group} class="btn-secondary" href={~p"/groups/#{@group.slug}/edit"}>Edit group</a>
       </div>
     </div>
 
-    <div class="panel">
-      <div class="panel-head">
-        <div>
-          <h2>{member_count_heading(@group.member_count)}</h2>
-          <div class="panel-sub">
-            {visibility_label(@group.is_public)} group · {member_label(@group.member_count)}
-          </div>
+    <div class="panel roster">
+      <section
+        :for={{role, rows, count} <- @grouped}
+        class="role-section"
+        aria-labelledby={"role-#{role}-heading"}
+      >
+        <div class="role-section-head">
+          <h3 id={"role-#{role}-heading"}>{role_heading(role)}</h3>
+          <span :if={role != :owner} class="muted count">{count}</span>
         </div>
-      </div>
-
-      <%= for {role, rows, count} <- @grouped do %>
-        <div class="role-section">
-          <div class="role-section-head">
-            <h3>{role_heading(role)}</h3>
-            <span :if={role != :owner} class="muted count">({count})</span>
-          </div>
-          <div id={"#{role}-member-rows"} class="row-list" phx-update="stream">
-            <p
-              id={"#{role}-member-rows-empty"}
-              class="hidden only:block muted role-section-empty"
-            >
-              {role_empty_copy(role)}
-            </p>
-            <div :for={{id, entry} <- rows} id={id} class="row row-split gap-4">
-              <div>
-                <div class="row-title">{member_name(entry)}</div>
-                <div class="meta">{format_member_meta(entry)}</div>
-              </div>
-              <div class="flex flex-wrap items-center justify-end gap-2">
-                <span class={["pill", role_pill_class(role)]}>{role_label(role)}</span>
-                <.member_actions
-                  :if={is_nil(@group.archived_at)}
-                  entry={entry}
-                  group={@group}
-                  current_user={@current_user}
-                />
-              </div>
+        <div id={"#{role}-member-rows"} class="row-list" phx-update="stream">
+          <p
+            id={"#{role}-member-rows-empty"}
+            class="hidden only:block muted role-section-empty"
+          >
+            {role_empty_copy(role)}
+          </p>
+          <div :for={{id, entry} <- rows} id={id} class="row member-row">
+            <.person_mark user={entry.user} />
+            <div class="member-copy">
+              <div class="row-title">{member_name(entry)}</div>
+              <div class="meta">{format_member_meta(entry)}</div>
             </div>
+            <.member_menu
+              :if={is_nil(@group.archived_at)}
+              entry={entry}
+              group={@group}
+              current_user={@current_user}
+            />
           </div>
         </div>
-      <% end %>
+      </section>
     </div>
     """
   end
@@ -1482,11 +1473,16 @@ defmodule HuddlzWeb.OrganizeLive do
   defp invitation_status_label(:revoked), do: "Revoked"
   defp invitation_status_label(:expired), do: "Expired"
 
+  # One quiet menu per person holding exactly the actions the viewer may
+  # take on them. A native popover: the trigger's `popovertarget` opens it,
+  # each item's `popovertargetaction="hide"` closes it on pick, the browser
+  # handles Escape, click-away and focus return, and the PopoverMenu hook
+  # places it beside its trigger.
   attr :entry, :map, required: true
   attr :group, :map, required: true
   attr :current_user, :map, required: true
 
-  defp member_actions(assigns) do
+  defp member_menu(assigns) do
     assigns =
       assign(assigns,
         can_promote:
@@ -1494,47 +1490,91 @@ defmodule HuddlzWeb.OrganizeLive do
         can_demote:
           member_action_allowed?(:demote, assigns.entry, assigns.group, assigns.current_user),
         can_remove:
-          member_action_allowed?(:remove, assigns.entry, assigns.group, assigns.current_user)
+          member_action_allowed?(:remove, assigns.entry, assigns.group, assigns.current_user),
+        label: "Manage #{member_name(assigns.entry)}",
+        menu_id: "member-menu-#{assigns.entry.id}"
       )
 
     ~H"""
-    <div
-      :if={@can_promote or @can_demote or @can_remove}
-      class="flex flex-wrap justify-end gap-2"
-      aria-label={"Manage #{member_name(@entry)}"}
-    >
-      <.button
-        :if={@can_promote}
-        id={"promote-member-#{@entry.id}"}
-        phx-click="open_member_action"
-        phx-value-id={@entry.id}
-        phx-value-action="promote"
-        class="text-sm"
+    <div :if={@can_promote or @can_demote or @can_remove} class="member-menu">
+      <button
+        type="button"
+        id={"#{@menu_id}-trigger"}
+        class="icon-pill member-menu-trigger"
+        popovertarget={@menu_id}
+        aria-label={@label}
+        aria-haspopup="menu"
       >
-        Promote
-      </.button>
-      <.button
-        :if={@can_demote}
-        id={"demote-member-#{@entry.id}"}
-        phx-click="open_member_action"
-        phx-value-id={@entry.id}
-        phx-value-action="demote"
-        class="text-sm"
+        <.icon name="hero-ellipsis-horizontal" class="size-4" />
+      </button>
+      <div
+        id={@menu_id}
+        class="row-menu"
+        popover="auto"
+        role="menu"
+        aria-label={@label}
+        phx-hook="PopoverMenu"
       >
-        Demote
-      </.button>
-      <.button
-        :if={@can_remove}
-        id={"remove-member-#{@entry.id}"}
-        variant={:destructive}
-        phx-click="open_member_action"
-        phx-value-id={@entry.id}
-        phx-value-action="remove"
-        class="text-sm"
-      >
-        Remove
-      </.button>
+        <.member_menu_item
+          :if={@can_promote}
+          id={"promote-member-#{@entry.id}"}
+          menu={@menu_id}
+          entry={@entry}
+          action="promote"
+          icon="hero-arrow-up-circle"
+        >
+          Promote to organizer
+        </.member_menu_item>
+        <.member_menu_item
+          :if={@can_demote}
+          id={"demote-member-#{@entry.id}"}
+          menu={@menu_id}
+          entry={@entry}
+          action="demote"
+          icon="hero-arrow-down-circle"
+        >
+          Demote to member
+        </.member_menu_item>
+        <.member_menu_item
+          :if={@can_remove}
+          id={"remove-member-#{@entry.id}"}
+          menu={@menu_id}
+          entry={@entry}
+          action="remove"
+          icon="hero-user-minus"
+          danger
+        >
+          Remove from group
+        </.member_menu_item>
+      </div>
     </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :menu, :string, required: true
+  attr :entry, :map, required: true
+  attr :action, :string, required: true
+  attr :icon, :string, required: true
+  attr :danger, :boolean, default: false
+  slot :inner_block, required: true
+
+  defp member_menu_item(assigns) do
+    ~H"""
+    <button
+      type="button"
+      id={@id}
+      class={["row-menu-item", @danger && "is-danger"]}
+      role="menuitem"
+      phx-click="open_member_action"
+      phx-value-id={@entry.id}
+      phx-value-action={@action}
+      popovertarget={@menu}
+      popovertargetaction="hide"
+    >
+      <.icon name={@icon} class="size-4 row-menu-icon" />
+      {render_slot(@inner_block)}
+    </button>
     """
   end
 
@@ -1970,18 +2010,14 @@ defmodule HuddlzWeb.OrganizeLive do
   defp role_label(:organizer), do: "Organizer"
   defp role_label(:member), do: "Member"
 
-  defp role_pill_class(:owner), do: "cyan"
-  defp role_pill_class(:organizer), do: "warn"
-  defp role_pill_class(_), do: nil
-
   defp role_empty_copy(:organizer),
     do: "No organizers yet. Promote a member to organizer to share the load."
 
   defp role_empty_copy(:member), do: "Nobody has joined yet."
   defp role_empty_copy(_), do: ""
 
-  defp member_count_heading(1), do: "1 person in this group"
-  defp member_count_heading(n), do: "#{n} people in this group"
+  defp people_count(1), do: "1 person"
+  defp people_count(n), do: "#{n} people"
 
   defp member_name(%{user: %{display_name: name}}) when is_binary(name) and name != "", do: name
   defp member_name(%{user: %{email: email}}) when is_binary(email), do: email
@@ -1992,7 +2028,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp format_member_meta(_), do: ""
 
-  defp format_date_short(%DateTime{} = at), do: Calendar.strftime(at, "%b %d, %Y")
+  defp format_date_short(%DateTime{} = at), do: Calendar.strftime(at, "%b %-d, %Y")
 
   defp visibility_label(true), do: "Public"
   defp visibility_label(false), do: "Private"
