@@ -6,6 +6,8 @@ Feature: The sidebar scrolls as one on short screens
     And the brand and account rows keep their height
     When I tab through to Sign out
     Then Sign out is scrolled into view
-    When I scroll the lower sidebar back to the top
+    When I scroll up with the wheel over the account area
     Then the top navigation is in view and the account area has scrolled away
-    And the page behind the sidebar is still usable
+    When I scroll down with the wheel over the top navigation
+    Then Sign out is scrolled into view
+    And the page behind the sidebar has not moved and is still usable

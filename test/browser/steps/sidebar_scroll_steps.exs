@@ -84,20 +84,14 @@ defmodule BrowserSidebarScrollSteps do
     Map.put(context, :conn, conn)
   end
 
-  step "I scroll the lower sidebar back to the top", context do
-    # Scrolling over the account area moves the same region as scrolling
-    # over the navigation: there is only one.
-    assert evaluate(context.conn, """
-           (() => {
-             const sidebar = #{@sidebar};
-             const account = sidebar.querySelector('.sb-account');
-             sidebar.scrollTop = account.getBoundingClientRect().top - sidebar.getBoundingClientRect().top + sidebar.scrollTop;
-             sidebar.scrollTop = 0;
-             return sidebar.scrollTop === 0;
-           })()
-           """)
+  # Real wheel events, so an intercepted wheel or a second scroll container
+  # would fail here where setting scrollTop from a script would not.
+  step "I scroll up with the wheel over the account area", context do
+    Map.put(context, :conn, wheel_over(context.conn, "#sidebar-user", -2000))
+  end
 
-    context
+  step "I scroll down with the wheel over the top navigation", context do
+    Map.put(context, :conn, wheel_over(context.conn, "#mobile-navigation-drawer .sb-item", 2000))
   end
 
   step "the top navigation is in view and the account area has scrolled away", context do
@@ -115,15 +109,37 @@ defmodule BrowserSidebarScrollSteps do
     Map.put(context, :conn, conn)
   end
 
-  step "the page behind the sidebar is still usable", context do
+  step "the page behind the sidebar has not moved and is still usable", context do
     conn =
       context.conn
       |> assert_has("main h1", text: "Agenda")
-      |> assert_browser(
-        "!document.querySelector('main').inert && document.querySelector('main').getBoundingClientRect().left > 0"
-      )
+      |> assert_browser("""
+      window.scrollY === 0 && !document.querySelector('main').inert &&
+        document.querySelector('main').getBoundingClientRect().left > 0
+      """)
 
     Map.put(context, :conn, conn)
+  end
+
+  defp wheel_over(conn, selector, delta_y) do
+    %{"x" => x, "y" => y} =
+      evaluate(conn, """
+      (() => {
+        const r = document.querySelector(#{inspect(selector)}).getBoundingClientRect();
+        return {x: r.left + r.width / 2, y: r.top + r.height / 2};
+      })()
+      """)
+
+    {:ok, _} = PlaywrightEx.Page.mouse_move(conn.page_id, x: x, y: y, timeout: 5_000)
+
+    # The wheel call answers with an empty result; the next step observes the effect.
+    %{id: _} =
+      PlaywrightEx.send(
+        %{guid: conn.page_id, method: :mouse_wheel, params: %{delta_x: 0, delta_y: delta_y}},
+        timeout: 5_000
+      )
+
+    conn
   end
 
   defp evaluate(conn, expression) do
