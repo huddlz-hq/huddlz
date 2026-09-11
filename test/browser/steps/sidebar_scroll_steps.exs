@@ -43,6 +43,19 @@ defmodule BrowserSidebarScrollSteps do
     Map.put(context, :conn, conn)
   end
 
+  step "the brand and account rows keep their height", context do
+    conn =
+      assert_browser(context.conn, """
+      (() => {
+        const brand = document.querySelector('#mobile-navigation-drawer .sidebar-brand').getBoundingClientRect().height;
+        const user = document.querySelector('#sidebar-user').getBoundingClientRect().height;
+        return Math.round(brand) === 64 && user >= 60;
+      })()
+      """)
+
+    Map.put(context, :conn, conn)
+  end
+
   step "I tab through to Sign out", context do
     # Nothing is focused on a fresh page, so the first Tab starts from the body.
     conn =

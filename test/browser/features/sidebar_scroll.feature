@@ -3,6 +3,7 @@ Feature: The sidebar scrolls as one on short screens
   Scenario: Every sidebar control can be reached on a short screen
     Given I have opened my agenda in a browser with enough groups to overflow the sidebar
     Then the sidebar is one scroll region
+    And the brand and account rows keep their height
     When I tab through to Sign out
     Then Sign out is scrolled into view
     When I scroll the lower sidebar back to the top
