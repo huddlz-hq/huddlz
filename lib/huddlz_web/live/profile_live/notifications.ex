@@ -2,14 +2,17 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
   @moduledoc """
   Notifications page: the user's email notification preferences.
 
-  Renders one toggle per entry in `Huddlz.Notifications.Triggers`, grouped
-  by category. Transactional triggers are shown disabled-but-on for
-  transparency. Activity and digest triggers are editable. Submitting the
-  form merges the changes onto `User.notification_preferences` via the
-  `:update_notification_preferences` Ash action.
+  Renders one switch per editable entry in `Huddlz.Notifications.Triggers`,
+  grouped by category. Each switch saves as soon as it is flipped, merging
+  that one key onto `User.notification_preferences` through the
+  `:update_notification_preferences` action, and the row confirms with a
+  fading "Saved". Transactional triggers are listed as always sent, without
+  controls.
   """
 
   use HuddlzWeb, :live_view
+
+  import HuddlzWeb.Components.Input, only: [toggle: 1]
 
   alias Huddlz.Notifications
   alias Huddlz.Notifications.Triggers
@@ -26,18 +29,22 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
      socket
      |> assign(:page_title, "Notifications")
      |> assign(:triggers_by_category, group_triggers())
-     |> assign(:current_user, user)}
+     |> assign(:current_user, user)
+     |> assign(:form, preferences_form(user))
+     |> assign(:saved, nil)
+     |> assign(:failed, nil)
+     |> assign(:save_seq, 0)}
   end
 
   @impl true
-  def handle_event("save", %{"prefs" => prefs_params}, socket) do
+  def handle_event("toggle", %{"_target" => ["prefs", key], "prefs" => prefs}, socket) do
     user = socket.assigns.current_user
-    preferences = normalize_form_params(prefs_params)
+    enabled = Map.get(prefs, key) == "true"
 
     user
     |> Ash.Changeset.for_update(
       :update_notification_preferences,
-      %{preferences: preferences},
+      %{preferences: %{key => enabled}},
       actor: user
     )
     |> Ash.update()
@@ -46,12 +53,21 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
         {:noreply,
          socket
          |> assign(:current_user, updated_user)
-         |> put_flash(:info, "Notification preferences saved")}
+         |> assign(:form, preferences_form(updated_user))
+         |> assign(:saved, key)
+         |> assign(:failed, nil)
+         |> update(:save_seq, &(&1 + 1))}
 
       {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Could not save preferences")}
+        {:noreply,
+         socket
+         |> assign(:form, preferences_form(user))
+         |> assign(:saved, nil)
+         |> assign(:failed, key)}
     end
   end
+
+  def handle_event("toggle", _params, socket), do: {:noreply, socket}
 
   @impl true
   def render(assigns) do
@@ -66,39 +82,33 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
       <div class="page-head">
         <div>
           <h1>Notifications</h1>
-          <p>
-            Choose which emails huddlz sends you. Account and huddl essentials are always on.
-          </p>
+          <p>Choose which emails huddlz sends you. Changes save as you flip them.</p>
         </div>
       </div>
 
-      <div class="settings-stack">
-        <form phx-submit="save" class="settings-stack">
-          <.read_only_panel
-            title="Transactional"
-            description="Critical account and huddl updates. Always on, these can't be disabled."
-            triggers={@triggers_by_category.transactional}
-          />
+      <form id="notification-preferences" phx-change="toggle" class="settings-stack">
+        <.category_panel
+          title="Activity"
+          description="Things that happen in groups and huddlz you're part of."
+          triggers={@triggers_by_category.activity}
+          form={@form}
+          saved={@saved}
+          failed={@failed}
+          save_seq={@save_seq}
+        />
 
-          <.category_panel
-            title="Activity"
-            description="Things that happen in groups and huddlz you're part of."
-            triggers={@triggers_by_category.activity}
-            user={@current_user}
-          />
+        <.category_panel
+          title="Digests"
+          description="Optional summaries. Off unless you turn them on."
+          triggers={@triggers_by_category.digest}
+          form={@form}
+          saved={@saved}
+          failed={@failed}
+          save_seq={@save_seq}
+        />
 
-          <.category_panel
-            title="Digest"
-            description="Optional summaries. Off by default."
-            triggers={@triggers_by_category.digest}
-            user={@current_user}
-          />
-
-          <div class="settings-actions">
-            <.button variant={:primary} type="submit">Save preferences</.button>
-          </div>
-        </form>
-      </div>
+        <.always_sent_panel triggers={@triggers_by_category.transactional} />
+      </form>
     </Layouts.app>
     """
   end
@@ -106,7 +116,10 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
   attr :title, :string, required: true
   attr :description, :string, required: true
   attr :triggers, :list, required: true
-  attr :user, :any, required: true
+  attr :form, Phoenix.HTML.Form, required: true
+  attr :saved, :string, default: nil
+  attr :failed, :string, default: nil
+  attr :save_seq, :integer, required: true
 
   defp category_panel(assigns) do
     ~H"""
@@ -118,59 +131,62 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
         </div>
       </div>
       <div class="settings-list row-list pref-list">
-        <div :for={{trigger, entry} <- @triggers} class="row">
-          <div>
-            <label class="row-title" for={"prefs-#{Triggers.preference_key(trigger)}"}>
-              {entry.label}
-            </label>
-          </div>
-          <label class="toggle">
-            <input type="hidden" name={"prefs[#{Triggers.preference_key(trigger)}]"} value="false" />
-            <input
-              id={"prefs-#{Triggers.preference_key(trigger)}"}
-              type="checkbox"
-              name={"prefs[#{Triggers.preference_key(trigger)}]"}
-              value="true"
-              checked={Notifications.preference_for(@user, trigger)}
-            />
-            <span class="track"></span>
-            <span class="toggle-text">
-              {if Notifications.preference_for(@user, trigger), do: "On", else: "Off"}
-            </span>
+        <div :for={{trigger, entry} <- @triggers} class="row pref-row">
+          <label class="row-title" for={@form[Triggers.preference_key(trigger)].id}>
+            {entry.label}
           </label>
+          <div class="pref-control">
+            <span
+              :if={@saved == Triggers.preference_key(trigger)}
+              id={"pref-saved-#{Triggers.preference_key(trigger)}-#{@save_seq}"}
+              class="pref-saved"
+              role="status"
+            >
+              Saved
+            </span>
+            <span :if={@failed == Triggers.preference_key(trigger)} class="pref-failed" role="alert">
+              Couldn't save. Try again.
+            </span>
+            <.toggle
+              field={@form[Triggers.preference_key(trigger)]}
+              label={entry.label}
+              labelled_externally
+            />
+          </div>
         </div>
       </div>
     </div>
     """
   end
 
-  attr :title, :string, required: true
-  attr :description, :string, required: true
   attr :triggers, :list, required: true
 
-  defp read_only_panel(assigns) do
+  defp always_sent_panel(assigns) do
     ~H"""
     <div class="panel">
       <div class="panel-head">
         <div>
-          <h2>{@title}</h2>
-          <div class="panel-sub">{@description}</div>
+          <h2>Always sent</h2>
+          <div class="panel-sub">Account and huddl essentials. These go out no matter what.</div>
         </div>
       </div>
-      <div class="settings-list row-list pref-list">
-        <div :for={{_trigger, entry} <- @triggers} class="row">
-          <div>
-            <div class="row-title">{entry.label}</div>
-          </div>
-          <span class="toggle is-locked">
-            <input type="checkbox" checked disabled />
-            <span class="track"></span>
-            <span class="toggle-text">Always on</span>
-          </span>
-        </div>
-      </div>
+      <ul id="always-sent" class="always-sent">
+        <li :for={{_trigger, entry} <- @triggers}>
+          <.icon name="hero-lock-closed" class="size-4" />
+          <span>{entry.label}</span>
+        </li>
+      </ul>
     </div>
     """
+  end
+
+  defp preferences_form(user) do
+    Triggers.all()
+    |> Enum.reject(fn {_trigger, entry} -> entry.category == :transactional end)
+    |> Map.new(fn {trigger, _entry} ->
+      {Triggers.preference_key(trigger), Notifications.preference_for(user, trigger)}
+    end)
+    |> to_form(as: :prefs)
   end
 
   defp group_triggers do
@@ -182,21 +198,6 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
   end
 
   defp sort_entries(entries) do
-    entries
-    |> Enum.sort_by(fn {_atom, entry} -> entry.label end)
-  end
-
-  # The form only sends keys for *checked* boxes (we don't render a hidden
-  # paired input). Iterate every editable trigger so the saved map stays
-  # exhaustive: missing keys become `false`.
-  defp normalize_form_params(form_prefs) do
-    all_editable_keys =
-      Triggers.all()
-      |> Enum.reject(fn {_atom, entry} -> entry.category == :transactional end)
-      |> Enum.map(fn {atom, _entry} -> Triggers.preference_key(atom) end)
-
-    Enum.into(all_editable_keys, %{}, fn key ->
-      {key, Map.get(form_prefs, key) == "true"}
-    end)
+    Enum.sort_by(entries, fn _atom_entry = {_atom, entry} -> entry.label end)
   end
 end
