@@ -576,6 +576,8 @@ body .sidebar-brand > a {
 
 
 /* ─────────────────────────────────────────────  SIDEBAR  ─────── */
+/* One scroll region: brand, navigation, groups, utilities and account
+   move together when the window is too short for them. */
 body .sidebar {
   display: flex;
   flex-direction: column;
@@ -584,6 +586,7 @@ body .sidebar {
   height: 100vh;
   position: sticky;
   top: 0;
+  overflow-y: auto;
 }
 
 body .sidebar-brand {
@@ -615,8 +618,7 @@ body .brand-text {
 }
 
 body .sb-nav {
-  flex: 1 1 auto;
-  overflow-y: auto;
+  flex: 1 0 auto;
   padding: 12px 8px;
 }
 
