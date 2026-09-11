@@ -6,10 +6,18 @@ defmodule HuddlzWeb.HuddlSearchTest do
 
   setup :verify_on_exit!
 
+  # A full local day stays in progress through late-night test runs, even
+  # on the last day of the week or month.
+  defp move_huddl_to_date(huddl, date) do
+    starts_at = DateTime.new!(date, ~T[00:00:00], "America/New_York")
+    ends_at = DateTime.new!(Date.add(date, 1), ~T[00:00:00], "America/New_York")
+    Ash.Seed.update!(huddl, %{starts_at: starts_at, ends_at: ends_at})
+  end
+
   setup do
     user = generate(user(role: :user))
     group = generate(group(owner_id: user.id, is_public: true, actor: user))
-    today = Date.utc_today()
+    today = eastern_today()
     saturday = Date.add(today, 6 - rem(Date.day_of_week(today), 7))
 
     huddl1 =
@@ -204,7 +212,9 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> refute_has("h3", text: "Hybrid Workshop")
     end
 
-    test "filters by date range - this week", %{conn: conn} do
+    test "filters by date range - this week", %{conn: conn, huddl1: yoga} do
+      move_huddl_to_date(yoga, eastern_today())
+
       conn
       |> visit("/discover")
       |> click_link(".chip-group a.chip", "This week")
@@ -215,14 +225,24 @@ defmodule HuddlzWeb.HuddlSearchTest do
       |> refute_has("h3", text: "Past Event")
     end
 
-    test "filters by date range - this month", %{conn: conn} do
+    test "filters by date range - this month", %{
+      conn: conn,
+      huddl1: yoga,
+      huddl2: book_club,
+      huddl3: workshop
+    } do
+      today = eastern_today()
+      move_huddl_to_date(yoga, today)
+      move_huddl_to_date(book_club, today)
+      move_huddl_to_date(workshop, today |> Date.end_of_month() |> Date.add(1))
+
       conn
       |> visit("/discover")
       |> click_link(".chip-group a.chip", "This month")
       # All future huddlz in the current calendar month should show
       |> assert_has("h3", text: "Morning Yoga Session")
       |> assert_has("h3", text: "Virtual Book Club")
-      |> assert_has("h3", text: "Hybrid Workshop")
+      |> refute_has("h3", text: "Hybrid Workshop")
       |> refute_has("h3", text: "Past Event")
     end
 
