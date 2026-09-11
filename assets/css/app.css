@@ -591,6 +591,7 @@ body .sidebar {
 
 body .sidebar-brand {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 10px;
   height: 64px;
@@ -789,6 +790,7 @@ body .sb-org-row.create:hover .plus-mark {
 
 body .sb-user {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
