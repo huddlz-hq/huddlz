@@ -653,7 +653,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar/week")
+      |> visit("/agenda")
       |> assert_has("#calendar-entry-#{huddl.id} .cal-agenda-title", text: "Called Off")
       |> assert_has("#calendar-entry-#{huddl.id} .cal-entry-status[data-status=cancelled]",
         text: "Cancelled"
@@ -810,13 +810,15 @@ defmodule HuddlzWeb.CalendarLiveTest do
       rsvp!(mine, attendee, :rsvp)
       create_huddl(host, public_group, title: "Theirs", date: Date.add(tomorrow(), 1))
 
+      # The agenda counts from today onward, whatever weekday the suite runs
+      # on; the week window is covered with pinned dates in the scope feature.
       conn
       |> login(attendee)
-      |> visit("/calendar/week")
+      |> visit("/agenda")
       |> assert_has("#calendar-scope-mine.chip.is-active[aria-current='page']", text: "RSVPs")
       |> assert_has("#calendar-scope-mine .chip-count", text: "1")
       |> assert_has(
-        "#calendar-scope-groups.chip:not(.is-active)[href='/calendar/week?scope=groups']",
+        "#calendar-scope-groups.chip:not(.is-active)[href='/agenda?scope=groups']",
         text: "Groups"
       )
       |> assert_has("#calendar-scope-groups .chip-count", text: "2")
@@ -896,9 +898,9 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar/week")
+      |> visit("/agenda")
       |> assert_has("#calendar-first-run")
-      |> visit("/calendar/week?scope=groups")
+      |> visit("/agenda?scope=groups")
       |> refute_has("#calendar-first-run")
       |> assert_has("#calendar-entry-#{theirs.id} .cal-agenda-title", text: "Theirs")
       |> refute_has("#calendar-entry-#{theirs.id} .cal-entry-status")
