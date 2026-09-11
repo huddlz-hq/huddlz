@@ -22,6 +22,9 @@ This is a web application written using the Phoenix web framework.
   Each scenario exercises a full vertical slice through a public user interface
   and asserts observable outcomes in domain language. Treat this guidance as
   seam agreement when applying TDD skills; proceed without reconfirming it.
+- Scenarios describe user actions and observable outcomes in domain language.
+  Never assert markup, classes, styles, or incidental layout; visual changes
+  alone must not break a scenario.
 - Work one scenario at a time: demonstrate the expected behavior failing,
   implement enough to make it pass, then move to the next scenario.
 - Add integration or unit tests when they clarify complex rules or cover cases
