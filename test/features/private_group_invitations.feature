@@ -143,9 +143,8 @@ Feature: Private group invitations
   Scenario: Registered recipients keep their invitation email preference
     Given I am signed in as "invitee@example.com"
     When I visit "/profile/notifications"
-    And I uncheck "I was invited to a group"
-    And I click "Save preferences"
-    Then I should see "Notification preferences saved"
+    And I turn off "I was invited to a group"
+    Then the page confirms the change was saved
     Given I am signed in as "owner@example.com"
     When I open the member workspace for "Quiet Makers"
     And I submit a member invitation for "invitee@example.com"
@@ -164,9 +163,8 @@ Feature: Private group invitations
     And I start registration without an invitation link
     And I complete registration as "new-maker@example.com"
     And I visit "/profile/notifications"
-    And I uncheck "I was invited to a group"
-    And I click "Save preferences"
-    Then I should see "Notification preferences saved"
+    And I turn off "I was invited to a group"
+    Then the page confirms the change was saved
     And no invitation email should be sent to "new-maker@example.com"
 
     When I confirm the registration email sent to "new-maker@example.com"

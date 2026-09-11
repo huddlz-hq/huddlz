@@ -5043,9 +5043,60 @@ body .settings-stack .settings-list .row {
 body .settings-stack .settings-list .row:first-child { padding-top: 8px; }
 body .settings-stack .settings-list .row .row-title { font-weight: 500; color: var(--text); }
 
-body .settings-actions { display: flex; justify-content: flex-end; }
+/* Preference rows: label on the left, a switch on the right with a fading
+   "Saved" beside it. Transactional emails are a plain locked list. */
+body .pref-row .row-title { cursor: pointer; }
+body .pref-control { display: inline-flex; align-items: center; gap: 12px; flex: 0 0 auto; }
+body .pref-control .toggle { align-self: center; }
 
-body .toggle.is-locked { opacity: 0.6; cursor: default; }
+body .pref-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-ink);
+  animation: pref-saved-fade 2.4s ease forwards;
+}
+
+body .pref-saved::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+@keyframes pref-saved-fade {
+  0%, 60% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body .pref-saved { animation: none; }
+}
+
+body .pref-failed { font-size: 12px; font-weight: 600; color: var(--danger); }
+
+body .always-sent {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 24px;
+}
+
+body .always-sent li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--soft);
+  line-height: 1.4;
+}
+
+body .always-sent li .size-4 { flex: 0 0 auto; margin-top: 2px; color: var(--muted); }
 
 /* daisyUI's .toggle paints its own knob in ::before on a non-input element;
    the knob here lives in .track::after. */
@@ -6036,6 +6087,7 @@ body .page-nav:disabled {
   body .panel { padding: 14px 14px; }
   body .panel-head { margin: -14px -14px 14px; padding: 14px; }
   body .settings-stack .settings-list { margin: -14px; }
+  body .always-sent { grid-template-columns: 1fr; }
   body .settings-stack .settings-list .row { padding: 8px 14px; }
   body .panel > .form-foot { margin: 14px -14px -14px; padding: 14px; }
   body .panel.split { gap: 18px; }

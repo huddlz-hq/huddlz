@@ -19,6 +19,7 @@ defmodule HuddlzWeb.Components.Input do
   attr :show_state_text, :boolean, default: false
   attr :labelled_externally, :boolean, default: false
   attr :disabled, :boolean, default: false
+  attr :rest, :global
 
   @doc """
   Renders a native checkbox with switch semantics.
@@ -32,7 +33,10 @@ defmodule HuddlzWeb.Components.Input do
     assigns =
       assigns
       |> assign(:checked, checked)
-      |> assign(:visible_label, toggle_label(assigns.label, assigns.show_state_text, checked))
+      |> assign(
+        :visible_label,
+        toggle_label(assigns.label, assigns.show_state_text, assigns.labelled_externally, checked)
+      )
 
     ~H"""
     <div class="toggle">
@@ -47,9 +51,10 @@ defmodule HuddlzWeb.Components.Input do
         aria-checked={to_string(@checked)}
         aria-label={!@labelled_externally && @label}
         disabled={@disabled}
+        {@rest}
       />
       <span class="track" aria-hidden="true"></span>
-      <span class="toggle-text" aria-hidden="true">{@visible_label}</span>
+      <span :if={@visible_label} class="toggle-text" aria-hidden="true">{@visible_label}</span>
       <label for={@field.id} class="toggle-hitbox" aria-hidden={@labelled_externally}>
         <span :if={!@labelled_externally} class="sr-only">{@label}</span>
       </label>
@@ -320,7 +325,10 @@ defmodule HuddlzWeb.Components.Input do
   defp help_id(id), do: "#{id}-help"
   defp error_id(id, index), do: "#{id}-error-#{index}"
 
-  defp toggle_label(_label, true, true), do: "On"
-  defp toggle_label(_label, true, false), do: "Off"
-  defp toggle_label(label, false, _checked), do: label
+  # State words when asked for; otherwise the label, unless a visible label
+  # already sits outside the switch.
+  defp toggle_label(_label, true, _external, true), do: "On"
+  defp toggle_label(_label, true, _external, false), do: "Off"
+  defp toggle_label(_label, false, true, _checked), do: nil
+  defp toggle_label(label, false, false, _checked), do: label
 end

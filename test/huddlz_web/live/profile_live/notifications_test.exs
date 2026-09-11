@@ -25,54 +25,41 @@ defmodule HuddlzWeb.ProfileLive.NotificationsTest do
       |> assert_has(".sb-item.active", text: "Notifications")
     end
 
-    test "renders the three category panels in v3 chrome", %{conn: conn, user: user} do
+    test "renders the activity and always-sent panels", %{conn: conn, user: user} do
       conn
       |> login(user)
       |> visit("/profile/notifications")
-      |> assert_has(".panel-head h2", text: "Transactional")
-      |> assert_has("*", text: "Critical account and huddl updates")
       |> assert_has(".panel-head h2", text: "Activity")
-      |> assert_has(".panel-head h2", text: "Digest")
+      |> assert_has(".panel-head h2", text: "Always sent")
+      |> refute_has(".panel-head h2", text: "Digests")
     end
 
-    test "transactional toggles are disabled", %{conn: conn, user: user} do
+    test "lists the essentials without switches", %{conn: conn, user: user} do
       conn
       |> login(user)
       |> visit("/profile/notifications")
-      |> assert_has(".row .toggle.is-locked input[type=checkbox][disabled]")
-      |> assert_has(".row .toggle.is-locked .toggle-text", text: "Always on")
+      |> assert_has("#always-sent li", text: "Password changed")
+      |> refute_has("input[role=switch][name='prefs[password_changed]']")
+      |> refute_has("button", text: "Save")
     end
 
-    test "holds only the three preference panels and a save button", %{conn: conn, user: user} do
-      conn
-      |> login(user)
-      |> visit("/profile/notifications")
-      |> refute_has("*", text: "Theme")
-      |> assert_has(".settings-stack form.settings-stack .panel", count: 3)
-      |> assert_has(".settings-stack .settings-actions button[type=submit]",
-        text: "Save preferences"
-      )
-    end
-
-    test "saving with an activity preference unchecked persists the change",
-         %{conn: conn, user: user} do
+    test "flipping a switch saves that preference on its own", %{conn: conn, user: user} do
       conn
       |> login(user)
       |> visit("/profile/notifications")
       |> uncheck("Confirmation when I RSVP to a huddl")
-      |> check("Weekly digest of upcoming huddlz")
-      |> click_button("Save preferences")
-      |> assert_has("*", text: "Notification preferences saved")
+      |> assert_has("[role=status]", text: "Saved")
+      |> check("Someone joined a group I organize")
 
       reloaded = Ash.get!(Huddlz.Accounts.User, user.id, actor: user)
       assert reloaded.notification_preferences["rsvp_confirmation"] == false
-      assert reloaded.notification_preferences["weekly_digest"] == true
+      assert reloaded.notification_preferences["group_member_joined"] == true
 
       conn
       |> login(user)
       |> visit("/profile/notifications")
-      |> assert_has("#prefs-rsvp_confirmation:not([checked])")
-      |> assert_has("#prefs-weekly_digest[checked]")
+      |> assert_has("input[role=switch][name='prefs[rsvp_confirmation]'][aria-checked=false]")
+      |> assert_has("input[role=switch][name='prefs[group_member_joined]'][aria-checked=true]")
     end
   end
 end
