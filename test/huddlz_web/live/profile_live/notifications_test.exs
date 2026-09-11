@@ -5,7 +5,7 @@ defmodule HuddlzWeb.ProfileLive.NotificationsTest do
   import Huddlz.Test.Helpers.Authentication
 
   setup do
-    user = create_user(%{display_name: "Settings User"})
+    user = create_user(%{display_name: "Preferences User"})
     %{user: user}
   end
 
@@ -16,13 +16,13 @@ defmodule HuddlzWeb.ProfileLive.NotificationsTest do
       |> assert_path("/sign-in")
     end
 
-    test "renders v3 chrome with Settings sidebar item active", %{conn: conn, user: user} do
+    test "renders v3 chrome with the Notifications sidebar item active", %{conn: conn, user: user} do
       conn
       |> login(user)
       |> visit("/profile/notifications")
-      |> assert_has("h1", text: "Settings")
+      |> assert_has("h1", text: "Notifications")
       |> assert_has("aside.sidebar")
-      |> assert_has(".sb-item.active", text: "Settings")
+      |> assert_has(".sb-item.active", text: "Notifications")
     end
 
     test "renders the three category panels in v3 chrome", %{conn: conn, user: user} do
@@ -43,17 +43,11 @@ defmodule HuddlzWeb.ProfileLive.NotificationsTest do
       |> assert_has(".row .toggle.is-locked .toggle-text", text: "Always on")
     end
 
-    test "stacks the appearance and preference panels", %{conn: conn, user: user} do
+    test "holds only the three preference panels and a save button", %{conn: conn, user: user} do
       conn
       |> login(user)
       |> visit("/profile/notifications")
-      |> assert_has(".settings-stack #appearance-form .panel .appearance-row .row-title",
-        text: "Theme"
-      )
-      |> assert_has(".appearance-row .appearance-tabs label.scope-tab", count: 3)
-      |> assert_has(".appearance-tabs label.scope-tab.is-active .hero-computer-desktop")
-      |> assert_has(".appearance-tabs label.scope-tab .hero-sun")
-      |> assert_has(".appearance-tabs label.scope-tab .hero-moon")
+      |> refute_has("*", text: "Theme")
       |> assert_has(".settings-stack form.settings-stack .panel", count: 3)
       |> assert_has(".settings-stack .settings-actions button[type=submit]",
         text: "Save preferences"

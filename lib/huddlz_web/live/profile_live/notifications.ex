@@ -1,6 +1,6 @@
 defmodule HuddlzWeb.ProfileLive.Notifications do
   @moduledoc """
-  Settings page for the user's email notification preferences.
+  Notifications page: the user's email notification preferences.
 
   Renders one toggle per entry in `Huddlz.Notifications.Triggers`, grouped
   by category. Transactional triggers are shown disabled-but-on for
@@ -24,31 +24,12 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
 
     {:ok,
      socket
-     |> assign(:page_title, "Settings")
+     |> assign(:page_title, "Notifications")
      |> assign(:triggers_by_category, group_triggers())
      |> assign(:current_user, user)}
   end
 
   @impl true
-  def handle_event("set_theme", %{"theme" => theme}, socket) do
-    user = socket.assigns.current_user
-
-    user
-    |> Ash.Changeset.for_update(:update_theme_preference, %{theme_preference: theme}, actor: user)
-    |> Ash.update()
-    |> case do
-      {:ok, updated_user} ->
-        {:noreply,
-         socket
-         |> assign(:current_user, updated_user)
-         |> push_event("theme", %{theme: Atom.to_string(updated_user.theme_preference)})
-         |> put_flash(:info, "Appearance saved")}
-
-      {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Could not save appearance")}
-    end
-  end
-
   def handle_event("save", %{"prefs" => prefs_params}, socket) do
     user = socket.assigns.current_user
     preferences = normalize_form_params(prefs_params)
@@ -80,51 +61,18 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
       current_user={@current_user}
       unread_notification_count={@unread_notification_count}
       sidebar_owned_groups={@sidebar_owned_groups}
-      active="settings"
+      active="preferences"
     >
       <div class="page-head">
         <div>
-          <h1>Settings</h1>
+          <h1>Notifications</h1>
           <p>
-            Appearance, notification preferences and other knobs. We'll add more here as huddlz grows.
+            Choose which emails huddlz sends you. Account and huddl essentials are always on.
           </p>
         </div>
       </div>
 
       <div class="settings-stack">
-        <form id="appearance-form" phx-change="set_theme">
-          <div class="panel">
-            <div class="panel-head">
-              <div>
-                <h2>Appearance</h2>
-                <div class="panel-sub">System follows your device. Light and Dark stay put.</div>
-              </div>
-            </div>
-            <div class="settings-list row-list">
-              <div class="row appearance-row">
-                <div class="row-title">Theme</div>
-                <fieldset class="scope-tabs appearance-tabs">
-                  <legend class="sr-only">Theme</legend>
-                  <label
-                    :for={{value, label, icon} <- theme_options()}
-                    class={["scope-tab", @current_user.theme_preference == value && "is-active"]}
-                  >
-                    <input
-                      type="radio"
-                      name="theme"
-                      value={value}
-                      checked={@current_user.theme_preference == value}
-                      class="sr-only"
-                    />
-                    <.icon name={icon} class="size-4" />
-                    {label}
-                  </label>
-                </fieldset>
-              </div>
-            </div>
-          </div>
-        </form>
-
         <form phx-submit="save" class="settings-stack">
           <.read_only_panel
             title="Transactional"
@@ -223,14 +171,6 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
       </div>
     </div>
     """
-  end
-
-  defp theme_options do
-    [
-      {:system, "System", "hero-computer-desktop"},
-      {:light, "Light", "hero-sun"},
-      {:dark, "Dark", "hero-moon"}
-    ]
   end
 
   defp group_triggers do
