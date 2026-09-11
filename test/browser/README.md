@@ -28,6 +28,7 @@ The command builds the actual app assets, starts the test endpoint and Chromium,
 
 | Feature | Browser-specific acceptance check |
 | --- | --- |
+| Sidebar scroll | A 1280×520 window: the aside is the one scroll region, Tab reaches Sign out with it scrolled into view, and scrolling the account area moves the same content |
 | Home location | ArrowDown/Enter select a suggestion without a native form submission |
 | Calendar | Actual `Intl` time-zone detection moves a late Denver huddl to the next New York calendar day |
 | Organizer | Native Tab, arrow keys, Space, visible focus, and switch state survive LiveView patches |
