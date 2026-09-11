@@ -29,7 +29,7 @@ import {createCoverCropHook} from "./cover_crop.mjs"
 import {mountPageLoading} from "./page_loading.mjs"
 
 // The appearance setting lives on <html data-theme>, outside any LiveView.
-// Settings pushes a "theme" event after saving; "system" drops the attribute
+// The header menu pushes a "theme" event after saving; "system" drops the attribute
 // so the stylesheet's prefers-color-scheme rules take over.
 window.addEventListener("phx:theme", ({detail}) => {
   if (detail.theme === "system") {

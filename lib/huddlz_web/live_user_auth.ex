@@ -88,8 +88,35 @@ defmodule HuddlzWeb.LiveUserAuth do
       |> assign_new(:unread_notification_count, fn -> load_unread_notification_count(socket) end)
       |> subscribe_to_organizer_access_changes()
       |> maybe_subscribe_to_unread_count()
+      |> maybe_attach_theme_menu()
 
     {:cont, socket}
+  end
+
+  # The topbar's appearance menu lives in the layout, so every LiveView that
+  # renders the app chrome answers its "set_theme" event here.
+  defp maybe_attach_theme_menu(%{assigns: %{current_user: %User{}}} = socket) do
+    Phoenix.LiveView.attach_hook(socket, :theme_menu, :handle_event, fn
+      "set_theme", %{"theme" => theme}, socket -> {:halt, set_theme(socket, theme)}
+      _event, _params, socket -> {:cont, socket}
+    end)
+  end
+
+  defp maybe_attach_theme_menu(socket), do: socket
+
+  defp set_theme(%{assigns: %{current_user: user}} = socket, theme) do
+    user
+    |> Ash.Changeset.for_update(:update_theme_preference, %{theme_preference: theme}, actor: user)
+    |> Ash.update()
+    |> case do
+      {:ok, updated} ->
+        socket
+        |> assign(:current_user, %{user | theme_preference: updated.theme_preference})
+        |> Phoenix.LiveView.push_event("theme", %{theme: Atom.to_string(updated.theme_preference)})
+
+      {:error, _changeset} ->
+        Phoenix.LiveView.put_flash(socket, :error, "Could not save appearance")
+    end
   end
 
   defp maybe_load_user_details(%{assigns: %{current_user: user}} = socket)

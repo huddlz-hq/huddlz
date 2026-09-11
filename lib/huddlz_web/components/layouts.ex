@@ -264,6 +264,7 @@ defmodule HuddlzWeb.Layouts do
         </form>
         <div class="content-actions">
           <%= if @signed_in do %>
+            <.theme_menu current={theme_current(@current_user)} />
             <.link
               id="notification-nav-link"
               class={["icon-pill", @active == "notifications" && "active"]}
@@ -294,6 +295,68 @@ defmodule HuddlzWeb.Layouts do
       </div>
     </main>
     """
+  end
+
+  attr :current, :atom, required: true, values: [:system, :light, :dark]
+
+  # A native popover: the trigger's `popovertarget` opens it, each option's
+  # `popovertargetaction="hide"` closes it on pick, and the browser handles
+  # Escape, click-away and returning focus to the trigger.
+  defp theme_menu(assigns) do
+    ~H"""
+    <button
+      type="button"
+      id="theme-menu-trigger"
+      class="icon-pill"
+      popovertarget="theme-menu"
+      aria-label={"Appearance: #{theme_label(@current)}"}
+      title="Appearance"
+    >
+      <.icon name={theme_icon(@current)} class="size-4" />
+    </button>
+    <div id="theme-menu" class="theme-menu" popover="auto" role="menu" aria-label="Appearance">
+      <div class="theme-menu-title" aria-hidden="true">Appearance</div>
+      <button
+        :for={{value, label, icon, hint} <- theme_options()}
+        type="button"
+        class="theme-option"
+        role="menuitemradio"
+        aria-checked={to_string(@current == value)}
+        phx-click="set_theme"
+        phx-value-theme={value}
+        popovertarget="theme-menu"
+        popovertargetaction="hide"
+      >
+        <.icon name={icon} class="size-4 theme-option-icon" />
+        <span class="theme-option-text">
+          <span class="theme-option-label">{label}</span>
+          <span class="theme-option-hint">{hint}</span>
+        </span>
+        <.icon :if={@current == value} name="hero-check" class="size-4 theme-option-check" />
+      </button>
+    </div>
+    """
+  end
+
+  defp theme_options do
+    [
+      {:system, "System", "hero-computer-desktop", "Follows your device"},
+      {:light, "Light", "hero-sun", "Always light"},
+      {:dark, "Dark", "hero-moon", "Always dark"}
+    ]
+  end
+
+  defp theme_current(%{theme_preference: theme}) when theme in [:light, :dark], do: theme
+  defp theme_current(_user), do: :system
+
+  defp theme_label(current) do
+    {_value, label, _icon, _hint} = List.keyfind!(theme_options(), current, 0)
+    label
+  end
+
+  defp theme_icon(current) do
+    {_value, _label, icon, _hint} = List.keyfind!(theme_options(), current, 0)
+    icon
   end
 
   defp notification_label(0), do: "Notifications"
