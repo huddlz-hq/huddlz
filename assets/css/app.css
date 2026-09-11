@@ -1785,6 +1785,7 @@ body .kpi .delta {
 body .kpi .value.muted { color: var(--muted); }
 body .kpi .delta.warn { color: var(--warn); }
 body .kpi .delta.muted { color: var(--muted); }
+body .kpi .delta a { color: var(--accent-ink); text-decoration: underline; text-underline-offset: 3px; }
 
 body .kpi .spark {
   margin-top: 12px;

@@ -28,6 +28,7 @@ The command builds the actual app assets, starts the test endpoint and Chromium,
 
 | Feature | Browser-specific acceptance check |
 | --- | --- |
+| Overview cards | The Show rate card is as tall as its neighbours before turnout is recorded and after recording it in place |
 | Sidebar scroll | A 1280×520 window: the aside is the one scroll region, Tab reaches Sign out with it scrolled into view, and scrolling the account area moves the same content |
 | Home location | ArrowDown/Enter select a suggestion without a native form submission |
 | Calendar | Actual `Intl` time-zone detection moves a late Denver huddl to the next New York calendar day |
