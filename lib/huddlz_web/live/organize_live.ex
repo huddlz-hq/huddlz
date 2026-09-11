@@ -564,7 +564,9 @@ defmodule HuddlzWeb.OrganizeLive do
       </div>
       <div id="kpi-showrate" class="kpi">
         <div class="label">Show rate</div>
-        <div class="value">{show_rate_value(@stats.turnout)}</div>
+        <div class={["value", @stats.turnout.counted == 0 && "muted"]}>
+          {show_rate_value(@stats.turnout)}
+        </div>
         <div class={["delta", @stats.turnout.counted == 0 && "muted"]}>
           <%= if @stats.turnout.counted == 0 do %>
             <.link navigate={~p"/organize/#{@group.slug}/huddlz?filter=past"}>Record turnout</.link>

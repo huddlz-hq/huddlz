@@ -1782,6 +1782,7 @@ body .kpi .delta {
   color: var(--accent-ink);
 }
 
+body .kpi .value.muted { color: var(--muted); }
 body .kpi .delta.warn { color: var(--warn); }
 body .kpi .delta.muted { color: var(--muted); }
 
@@ -1792,6 +1793,12 @@ body .kpi .spark {
   display: block;
   color: var(--accent-ink);
   opacity: 0.9;
+}
+
+/* Nothing to chart yet: a dashed baseline holds the tile's shape. */
+body .kpi .spark[data-empty] {
+  color: var(--line-strong);
+  opacity: 1;
 }
 
 /* ─────────────────────────────────────────  CHARTS  ──── */
