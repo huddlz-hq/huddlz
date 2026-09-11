@@ -12,9 +12,9 @@ defmodule Huddlz.Accounts.User.Senders.SendPasswordResetEmail do
 
   @impl true
   def send(user, token, _) do
-    user
-    |> build(token)
-    |> Mailer.deliver!()
+    with {:ok, _receipt} <- user |> build(token) |> Mailer.deliver() do
+      :ok
+    end
   end
 
   @doc "The email, for tests and samples."

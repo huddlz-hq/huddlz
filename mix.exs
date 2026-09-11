@@ -79,6 +79,8 @@ defmodule Huddlz.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:ash_ai, "~> 1.0"},
+      {:ash_authentication_oauth2_server, "~> 0.3.1"},
       {:absinthe_phoenix, "~> 2.0"},
       {:open_api_spex, "~> 3.0"},
       {:ash_graphql, "~> 1.0"},
@@ -92,7 +94,7 @@ defmodule Huddlz.MixProject do
       {:ash_ops, "~> 0.2.4"},
       {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false},
       {:picosat_elixir, "~> 0.2"},
-      {:ash_authentication_phoenix, "~> 2.0"},
+      {:ash_authentication_phoenix, "~> 3.0-rc"},
       {:ash_postgres, "~> 2.0"},
       {:ash_phoenix, "~> 2.0"},
       {:sourceror, "~> 1.8", only: [:dev, :test]},

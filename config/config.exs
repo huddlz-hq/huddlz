@@ -7,6 +7,15 @@
 # General application configuration
 import Config
 
+config :phoenix, :filter_parameters, [
+  "password",
+  "token",
+  "secret",
+  "code",
+  "code_verifier",
+  "consent_request"
+]
+
 config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
 
 config :ash_graphql, authorize_update_destroy_with_error?: true
@@ -100,7 +109,7 @@ config :spark,
 config :huddlz,
   ecto_repos: [Huddlz.Repo],
   generators: [timestamp_type: :utc_datetime],
-  ash_domains: [Huddlz.Accounts, Huddlz.Communities, Huddlz.Notifications]
+  ash_domains: [Huddlz.Accounts, Huddlz.Communities, Huddlz.Notifications, Huddlz.Mcp]
 
 # Geocoding adapter (compile-time)
 config :huddlz, :geocoding, adapter: Huddlz.Geocoding.Google

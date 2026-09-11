@@ -174,7 +174,8 @@ Feature: Password Authentication
       | password_confirmation | NewSecurePass456! |
     And I submit the password reset form
     Then I should see "Your password has successfully been reset"
-    When I am on the sign-in page
+    When I log out
+    And I am on the sign-in page
     And I fill in the password sign-in form with:
       | email    | resetpwd@example.com |
       | password | NewSecurePass456!    |

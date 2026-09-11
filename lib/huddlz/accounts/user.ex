@@ -537,6 +537,8 @@ defmodule Huddlz.Accounts.User do
     end
 
     update :reset_password_with_token do
+      require_atomic? false
+
       argument :reset_token, :string do
         allow_nil? false
         sensitive? true

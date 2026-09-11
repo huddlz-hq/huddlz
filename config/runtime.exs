@@ -47,6 +47,14 @@ check_origin = optional("PHX_CHECK_ORIGIN", "true") |> boolean!()
 # In development (http), use the actual server port (e.g., 4000).
 url_port = if scheme == "https", do: 443, else: port
 
+oauth_origin = URI.to_string(%URI{scheme: scheme, host: host, port: url_port})
+
+config :huddlz,
+  oauth2_issuer_url: oauth_origin,
+  oauth2_resource_url: oauth_origin <> "/mcp",
+  oauth2_signing_secret:
+    Plug.Crypto.KeyGenerator.generate(secret_key_base, "huddlz oauth access tokens", length: 32)
+
 config :huddlz, HuddlzWeb.Endpoint,
   url: [host: host, port: url_port, scheme: scheme],
   http: [ip: http_ip, port: port],
