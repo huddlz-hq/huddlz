@@ -11,6 +11,33 @@ Feature: Turnout across Organize
     And a public group "Portland Elixir" exists with owner "host@example.com"
     And I am signed in as "host@example.com"
 
+  @archived_turnout
+  Scenario: Archived groups keep turnout history read-only
+    Given the in-person huddl "Elixir hack night" in "Portland Elixir" ended yesterday with 4 RSVPs
+    And the turnout for "Elixir hack night" was recorded as 2 in the room
+    And the in-person huddl "Elixir office hours" in "Portland Elixir" ended 3 days ago with 4 RSVPs
+    When I archive "Portland Elixir" through the API
+    Then API archival is "allowed"
+    When I visit "/organize/portland-elixir/huddlz?filter=past"
+    Then I should see "2 in the room"
+    And I should see "50% showed"
+    And I should not see "Add turnout"
+    And I should not see "Edit turnout"
+
+  @archived_turnout
+  Scenario: Archival locks a turnout form that is already open
+    Given the in-person huddl "Elixir hack night" in "Portland Elixir" ended yesterday with 4 RSVPs
+    When I visit "/organize/portland-elixir/huddlz?filter=past"
+    And I click "Add turnout"
+    And I fill in "People in the room" with "2"
+    And I archive "Portland Elixir" through the API
+    Then API archival is "allowed"
+    When I click the "Save turnout" button
+    Then I should see "This group is archived or unavailable. Restore it before making changes."
+    When I visit "/organize/portland-elixir/huddlz?filter=past"
+    Then I should see "No turnout yet"
+    And I should not see "2 in the room"
+
   Scenario: A counted past row shows turnout and show rate
     Given the in-person huddl "Elixir hack night" in "Portland Elixir" ended yesterday with 4 RSVPs
     And the turnout for "Elixir hack night" was recorded as 2 in the room
