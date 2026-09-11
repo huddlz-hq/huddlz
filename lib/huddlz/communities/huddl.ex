@@ -305,7 +305,10 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     update :record_turnout do
+      change Huddlz.Communities.Changes.RequireActiveGroup
+
       description "Record how many people came, once the huddl has ended: the room, the call, or both by huddl type."
+
       require_atomic? false
 
       argument :in_room, :integer do
@@ -322,6 +325,9 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     update :skip_turnout do
+      change Huddlz.Communities.Changes.RequireActiveGroup
+      require_atomic? false
+
       description "Dismiss the turnout prompt for this huddl. Turnout can still be recorded later."
 
       change set_attribute(:turnout_skipped_at, &DateTime.utc_now/0)

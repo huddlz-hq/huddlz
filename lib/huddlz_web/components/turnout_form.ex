@@ -58,6 +58,13 @@ defmodule HuddlzWeb.Components.TurnoutForm do
           </.button>
           <.button variant={:secondary} phx-click="cancel_turnout">Cancel</.button>
         </div>
+        <p
+          :for={{:base, message} <- AshPhoenix.Form.errors(@form, format: :simple)}
+          class="form-error"
+          role="alert"
+        >
+          {message}
+        </p>
       </.form>
     </div>
     """

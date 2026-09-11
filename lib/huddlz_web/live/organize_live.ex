@@ -169,6 +169,10 @@ defmodule HuddlzWeb.OrganizeLive do
 
   # The most recent huddl that ended within the nudge window and has been
   # neither counted nor dismissed. One at a time: the freshest memory first.
+  defp latest_uncounted_huddl(%{archived_at: archived_at}, _user)
+       when not is_nil(archived_at),
+       do: nil
+
   defp latest_uncounted_huddl(group, user) do
     cutoff = DateTime.add(DateTime.utc_now(), -@turnout_nudge_days, :day)
 
@@ -184,6 +188,10 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   # The huddl a turnout event names: the nudge's, or one of the listed rows.
+  defp turnout_subject(%{assigns: %{group: %{archived_at: archived_at}}}, _id)
+       when not is_nil(archived_at),
+       do: nil
+
   defp turnout_subject(socket, id) do
     case socket.assigns.turnout_nudge do
       %{id: ^id} = huddl -> huddl
@@ -1070,6 +1078,7 @@ defmodule HuddlzWeb.OrganizeLive do
         {@huddl.show_rate}% showed
       </.pill>
       <.button
+        :if={is_nil(@huddl.group.archived_at)}
         variant={:secondary}
         class="btn-sm org-huddl-add-turnout"
         phx-click="edit_turnout"
