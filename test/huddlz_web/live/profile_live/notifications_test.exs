@@ -25,13 +25,13 @@ defmodule HuddlzWeb.ProfileLive.NotificationsTest do
       |> assert_has(".sb-item.active", text: "Notifications")
     end
 
-    test "renders the three category panels in v3 chrome", %{conn: conn, user: user} do
+    test "renders the activity and always-sent panels", %{conn: conn, user: user} do
       conn
       |> login(user)
       |> visit("/profile/notifications")
       |> assert_has(".panel-head h2", text: "Activity")
-      |> assert_has(".panel-head h2", text: "Digests")
       |> assert_has(".panel-head h2", text: "Always sent")
+      |> refute_has(".panel-head h2", text: "Digests")
     end
 
     test "lists the essentials without switches", %{conn: conn, user: user} do
@@ -49,17 +49,17 @@ defmodule HuddlzWeb.ProfileLive.NotificationsTest do
       |> visit("/profile/notifications")
       |> uncheck("Confirmation when I RSVP to a huddl")
       |> assert_has("[role=status]", text: "Saved")
-      |> check("Weekly digest of upcoming huddlz")
+      |> check("Someone joined a group I organize")
 
       reloaded = Ash.get!(Huddlz.Accounts.User, user.id, actor: user)
       assert reloaded.notification_preferences["rsvp_confirmation"] == false
-      assert reloaded.notification_preferences["weekly_digest"] == true
+      assert reloaded.notification_preferences["group_member_joined"] == true
 
       conn
       |> login(user)
       |> visit("/profile/notifications")
       |> assert_has("input[role=switch][name='prefs[rsvp_confirmation]'][aria-checked=false]")
-      |> assert_has("input[role=switch][name='prefs[weekly_digest]'][aria-checked=true]")
+      |> assert_has("input[role=switch][name='prefs[group_member_joined]'][aria-checked=true]")
     end
   end
 end

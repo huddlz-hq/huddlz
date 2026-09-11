@@ -13,13 +13,11 @@ Feature: Notification preferences
     When I visit "/profile/notifications"
     Then "Confirmation when I RSVP to a huddl" is off
 
-  Scenario: Turning a digest on saves right away
+  Scenario: Digests stay hidden until they exist
     Given I am signed in as "digest@example.com" with password "Password123!"
     When I visit "/profile/notifications"
-    And I turn on "Weekly digest of upcoming huddlz"
-    Then the page confirms the change was saved
-    When I visit "/profile/notifications"
-    Then "Weekly digest of upcoming huddlz" is on
+    Then I should not see "Digests"
+    And "Weekly digest of upcoming huddlz" has no switch
 
   Scenario: Essentials are listed without switches
     Given I am signed in as "essentials@example.com" with password "Password123!"

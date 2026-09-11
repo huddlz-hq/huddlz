@@ -2,12 +2,16 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
   @moduledoc """
   Notifications page: the user's email notification preferences.
 
-  Renders one switch per editable entry in `Huddlz.Notifications.Triggers`,
-  grouped by category. Each switch saves as soon as it is flipped, merging
-  that one key onto `User.notification_preferences` through the
+  Renders one switch per activity entry in `Huddlz.Notifications.Triggers`.
+  Each switch saves as soon as it is flipped, merging that one key onto
+  `User.notification_preferences` through the
   `:update_notification_preferences` action, and the row confirms with a
   fading "Saved". Transactional triggers are listed as always sent, without
   controls.
+
+  Digest triggers are registered but have no senders yet (issue #561), so
+  the page hides them rather than offering switches that do nothing. Saved
+  digest preferences are kept for when they ship.
   """
 
   use HuddlzWeb, :live_view
@@ -97,16 +101,6 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
           save_seq={@save_seq}
         />
 
-        <.category_panel
-          title="Digests"
-          description="Optional summaries. Off unless you turn them on."
-          triggers={@triggers_by_category.digest}
-          form={@form}
-          saved={@saved}
-          failed={@failed}
-          save_seq={@save_seq}
-        />
-
         <.always_sent_panel triggers={@triggers_by_category.transactional} />
       </form>
     </Layouts.app>
@@ -181,8 +175,7 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
   end
 
   defp preferences_form(user) do
-    Triggers.all()
-    |> Enum.reject(fn {_trigger, entry} -> entry.category == :transactional end)
+    Triggers.by_category(:activity)
     |> Map.new(fn {trigger, _entry} ->
       {Triggers.preference_key(trigger), Notifications.preference_for(user, trigger)}
     end)
@@ -192,8 +185,7 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
   defp group_triggers do
     %{
       transactional: sort_entries(Triggers.by_category(:transactional)),
-      activity: sort_entries(Triggers.by_category(:activity)),
-      digest: sort_entries(Triggers.by_category(:digest))
+      activity: sort_entries(Triggers.by_category(:activity))
     }
   end
 
