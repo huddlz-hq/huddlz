@@ -78,7 +78,26 @@ defmodule SharedUISteps do
     Map.merge(context, %{session: session, conn: session})
   end
 
+  step "I click {string} in the sidebar", %{args: [text]} = context do
+    session = context[:session] || context[:conn]
+    session = click_link(session, "aside.sidebar a", text)
+
+    Map.merge(context, %{session: session, conn: session})
+  end
+
   # Content assertions
+  step "I should see {string} as the page heading", %{args: [text]} = context do
+    session = context[:session] || context[:conn]
+    assert_has(session, "h1", text: text, exact: true)
+    context
+  end
+
+  step "the sidebar marks {string} as the current page", %{args: [text]} = context do
+    session = context[:session] || context[:conn]
+    assert_has(session, "aside.sidebar a[aria-current=page]", text: text, exact: true)
+    context
+  end
+
   step "I should see {string}", %{args: [text]} = context do
     session = context[:session] || context[:conn]
     assert_has(session, "*", text: text)

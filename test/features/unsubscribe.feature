@@ -11,7 +11,7 @@ Feature: Unsubscribe URL
     And the user "unsub@example.com" should not have trigger "rsvp_received" disabled
     When I confirm the unsubscribe
     Then I should see "Unsubscribed from"
-    And I should see "notification preferences and other knobs"
+    And I should see "Choose which emails huddlz sends you"
     And the user "unsub@example.com" should have trigger "rsvp_received" disabled
 
   Scenario: An invalid unsubscribe token redirects with an error

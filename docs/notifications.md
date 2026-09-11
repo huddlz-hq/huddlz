@@ -110,7 +110,7 @@ Locked for v1, no re-litigation:
 4. `.ics` attachments ship in v1 on C2, E3, D1, D2.
 5. Defaults: Activity ON, Digest OFF, Transactional always on.
 
-## Settings page
+## Notifications page
 
 Lives under profile (`lib/huddlz_web/live/profile_live.ex`) or a new `/profile/notifications` route. One toggle per item below, stored in `User.notification_preferences` (JSONB map keyed by trigger code, e.g. `"huddl_new"`, `"huddl_reminder_24h"`, `"rsvp_received"`).
 
