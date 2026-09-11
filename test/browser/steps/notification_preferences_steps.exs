@@ -27,7 +27,7 @@ defmodule BrowserNotificationPreferencesSteps do
   # A person flips a switch by clicking its row label; the checkbox itself
   # is visually hidden behind the track.
   step "I flip {string} off", %{args: [label]} = context do
-    Map.put(context, :conn, click(context.conn, "label.row-title", label))
+    Map.put(context, :conn, click(context.conn, "label", label))
   end
 
   step "the row says the change could not be saved", context do
@@ -44,6 +44,13 @@ defmodule BrowserNotificationPreferencesSteps do
         return !!input && input.checked && input.getAttribute('aria-checked') === 'true';
       })()
       """)
+
+    Map.put(context, :conn, conn)
+  end
+
+  step "the preference switch keeps keyboard focus", context do
+    conn =
+      assert_browser(context.conn, "document.activeElement?.getAttribute('role') === 'switch'")
 
     Map.put(context, :conn, conn)
   end

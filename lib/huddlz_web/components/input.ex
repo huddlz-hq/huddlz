@@ -19,6 +19,7 @@ defmodule HuddlzWeb.Components.Input do
   attr :show_state_text, :boolean, default: false
   attr :labelled_externally, :boolean, default: false
   attr :disabled, :boolean, default: false
+  attr :rest, :global
 
   @doc """
   Renders a native checkbox with switch semantics.
@@ -50,6 +51,7 @@ defmodule HuddlzWeb.Components.Input do
         aria-checked={to_string(@checked)}
         aria-label={!@labelled_externally && @label}
         disabled={@disabled}
+        {@rest}
       />
       <span class="track" aria-hidden="true"></span>
       <span :if={@visible_label} class="toggle-text" aria-hidden="true">{@visible_label}</span>

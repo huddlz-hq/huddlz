@@ -6,3 +6,7 @@ Feature: Notification preferences in a browser
     When I flip "Confirmation when I RSVP to a huddl" off
     Then the row says the change could not be saved
     And "Confirmation when I RSVP to a huddl" is shown as on
+    When I flip "Confirmation when I RSVP to a huddl" off
+    Then the row says the change could not be saved
+    And "Confirmation when I RSVP to a huddl" is shown as on
+    And the preference switch keeps keyboard focus

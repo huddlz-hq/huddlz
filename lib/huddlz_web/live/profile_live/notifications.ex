@@ -67,7 +67,8 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
          socket
          |> assign(:form, preferences_form(user))
          |> assign(:saved, nil)
-         |> assign(:failed, key)}
+         |> assign(:failed, key)
+         |> update(:save_seq, &(&1 + 1))}
     end
   end
 
@@ -141,10 +142,12 @@ defmodule HuddlzWeb.ProfileLive.Notifications do
             <span :if={@failed == Triggers.preference_key(trigger)} class="pref-failed" role="alert">
               Couldn't save. Try again.
             </span>
+            <%!-- Patch the switch on every failed attempt even when its saved value is unchanged. --%>
             <.toggle
               field={@form[Triggers.preference_key(trigger)]}
               label={entry.label}
               labelled_externally
+              data-save-failure={if @failed == Triggers.preference_key(trigger), do: @save_seq}
             />
           </div>
         </div>
