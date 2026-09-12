@@ -212,6 +212,7 @@ defmodule Huddlz.Communities.GroupInvitation do
       description "Record that a pending invitation has reached its expiration time."
       accept []
       require_atomic? false
+      change Huddlz.Audit.MarkAutomatic
 
       validate attribute_equals(:status, :pending) do
         message "is no longer pending"

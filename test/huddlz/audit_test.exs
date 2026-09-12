@@ -4,8 +4,129 @@ defmodule Huddlz.AuditTest do
 
   require Ash.Query
   alias Huddlz.Communities
+  alias Huddlz.Communities.GroupInvitation
+  alias Huddlz.Communities.GroupInvitation.ConfirmedRecipientWorker
+  alias Huddlz.Communities.GroupInvitation.EmailToken
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.Workers.RegenerateRecurringSeries
+
+  test "invitation expiry is explicitly automatic", %{owner: owner} do
+    group = generate(group(actor: owner, is_public: false))
+    email = "audit-#{Ash.UUID.generate()}@example.com"
+    invitation = Communities.invite_to_group_by_email!(group.id, email, :member, actor: owner)
+
+    Repo.update_all(from(i in GroupInvitation, where: i.id == ^invitation.id),
+      set: [expires_at: DateTime.add(DateTime.utc_now(), -60)]
+    )
+
+    invitation = Ash.get!(GroupInvitation, invitation.id, authorize?: false)
+    Communities.expire_group_invitation!(invitation, authorize?: false)
+
+    row =
+      GroupInvitation.Version
+      |> Ash.Query.filter(version_source_id == ^invitation.id and version_action_name == :expire)
+      |> Ash.read_one!(authorize?: false)
+
+    assert row.automatic?
+    assert is_nil(row.actor_id)
+  end
+
+  test "completion is explicitly automatic", %{huddl: huddl} do
+    now = DateTime.utc_now()
+
+    Repo.update_all(from(h in Huddl, where: h.id == ^huddl.id),
+      set: [starts_at: DateTime.add(now, -7200), ends_at: DateTime.add(now, -3600)]
+    )
+
+    huddl = Ash.get!(Huddl, huddl.id, authorize?: false)
+    Communities.complete_huddl!(huddl, authorize?: false)
+    row = Enum.find(versions(huddl), &(&1.version_action_name == :complete))
+    assert row.automatic?
+    assert is_nil(row.actor_id)
+  end
+
+  test "confirmed-recipient claims are automatic rather than actions by the recipient", %{
+    owner: owner
+  } do
+    group = generate(group(actor: owner, is_public: false))
+    email = "audit-#{Ash.UUID.generate()}@example.com"
+    invitation = Communities.invite_to_group_by_email!(group.id, email, :member, actor: owner)
+    recipient = generate(user(email: email))
+
+    assert :ok =
+             ConfirmedRecipientWorker.perform(%Oban.Job{
+               args: %{"user_id" => recipient.id, "email" => email}
+             })
+
+    row = invitation_claim(invitation)
+    assert row.automatic?
+    assert is_nil(row.actor_id)
+    assert row.changes["invitee_id"] == recipient.id
+  end
+
+  test "opening an email invitation preserves impersonation attribution", %{owner: owner} do
+    group = generate(group(actor: owner, is_public: false))
+    email = "audit-#{Ash.UUID.generate()}@example.com"
+    invitation = Communities.invite_to_group_by_email!(group.id, email, :member, actor: owner)
+    recipient = generate(user(email: email))
+    admin = generate(user(role: :admin))
+    id = Ash.UUID.generate()
+
+    Communities.open_email_group_invitation!(EmailToken.sign(invitation),
+      actor: recipient,
+      context: %{paper_trail_metadata: %{impersonation_id: id, impersonator_id: admin.id}}
+    )
+
+    row = invitation_claim(invitation)
+    assert row.actor_id == recipient.id
+    assert row.impersonation_id == id
+    assert row.impersonator_id == admin.id
+  end
+
+  defp invitation_claim(invitation) do
+    GroupInvitation.Version
+    |> Ash.Query.filter(version_source_id == ^invitation.id and version_action_name == :claim)
+    |> Ash.read_one!(authorize?: false)
+  end
+
+  test "extending a series records the editor without changing its original creator", %{
+    owner: owner,
+    group: group
+  } do
+    editor = generate(user())
+    Communities.add_member!(group.id, editor.id, :organizer, actor: owner)
+    date = Date.add(eastern_today(), 2)
+
+    source =
+      generate(
+        huddl(
+          group_id: group.id,
+          actor: owner,
+          date: date,
+          is_recurring: true,
+          frequency: :weekly,
+          repeat_until: Date.add(date, 7)
+        )
+      )
+
+    id = Ash.UUID.generate()
+
+    Communities.update_huddl!(
+      source,
+      %{edit_type: "all", frequency: :weekly, repeat_until: Date.add(date, 14)},
+      actor: editor,
+      context: %{paper_trail_metadata: %{impersonation_id: id}}
+    )
+
+    generated =
+      Huddl.Version
+      |> Ash.Query.filter(impersonation_id == ^id and version_action_type == :create)
+      |> Ash.read!(authorize?: false)
+
+    assert generated != []
+    assert Enum.all?(generated, &(&1.actor_id == editor.id))
+    assert Enum.all?(generated, &(&1.changes["creator_id"] == owner.id))
+  end
 
   setup do
     owner = generate(user())

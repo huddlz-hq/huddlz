@@ -43,7 +43,13 @@ defmodule Huddlz.Communities.GroupInvitation.ConfirmedRecipientWorker do
   defp claim_invitation(invitation, :ok, user) do
     # The queued confirmation proves ownership of this exact email.
     # Reuse the locked claim action and its one-time notification path.
-    case Communities.open_email_group_invitation(EmailToken.sign(invitation), actor: user) do
+    case Communities.open_email_group_invitation(EmailToken.sign(invitation),
+           actor: user,
+           context: %{
+             paper_trail_metadata: %{automatic?: true},
+             shared: %{audit_system_action?: true}
+           }
+         ) do
       {:ok, _invitation} -> {:cont, :ok}
       {:error, reason} -> {:halt, {:error, reason}}
     end

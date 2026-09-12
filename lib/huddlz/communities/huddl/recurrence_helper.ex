@@ -86,7 +86,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     end)
 
     Enum.each(new_desired, fn {starts_at, ends_at} ->
-      create_instance!(source, template, starts_at, ends_at, opts[:context])
+      create_instance!(source, template, starts_at, ends_at, opts)
     end)
 
     Enum.each(obsolete_existing, &remove_instance!(&1, opts))
@@ -208,25 +208,32 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     end
   end
 
-  defp create_instance!(source, template, starts_at, ends_at, context \\ %{}) do
+  defp create_instance!(source, template, starts_at, ends_at, opts \\ []) do
+    context = Keyword.get(opts, :context, %{})
     metadata = Map.put(context[:paper_trail_metadata] || %{}, :automatic?, true)
 
     instance =
       Huddl
       |> Ash.Changeset.new()
-      |> Ash.Changeset.for_create(:create, instance_attrs(source, starts_at, ends_at, template))
+      |> Ash.Changeset.for_create(
+        :create,
+        instance_attrs(source, starts_at, ends_at, template),
+        opts
+      )
       |> Ash.Changeset.set_context(%{paper_trail_metadata: metadata})
-      # creator_id is not an accepted input — the :create action derives it from
-      # the actor. This actorless generation sets it directly so each instance
-      # inherits the source's creator (SetCreatorToActor no-ops without an actor).
-      |> Ash.Changeset.force_change_attribute(:creator_id, source.creator_id)
+      # Preserve series authorship after SetCreatorToActor runs, while the
+      # initiating editor remains the actor for audit attribution. This hook
+      # is internal; public creation still derives its creator from the actor.
+      |> Ash.Changeset.before_action(fn changeset ->
+        Ash.Changeset.force_change_attribute(changeset, :creator_id, source.creator_id)
+      end)
       |> Ash.create!(authorize?: false)
 
-    copy_current_image!(source, instance, metadata)
+    copy_current_image!(source, instance, metadata, opts)
     instance
   end
 
-  defp copy_current_image!(source, instance, metadata) do
+  defp copy_current_image!(source, instance, metadata, opts) do
     case Communities.list_huddl_cover_images(source.id, authorize?: false) do
       {:ok, []} ->
         :ok
@@ -235,7 +242,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
         attrs = duplicate_image!(image, instance.id)
 
         HuddlCoverImage
-        |> Ash.Changeset.for_create(:create, Map.put(attrs, :huddl_id, instance.id))
+        |> Ash.Changeset.for_create(:create, Map.put(attrs, :huddl_id, instance.id), opts)
         |> Ash.Changeset.set_context(%{paper_trail_metadata: metadata})
         |> Ash.create(authorize?: false)
         |> case do

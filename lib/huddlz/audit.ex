@@ -1,13 +1,13 @@
 defmodule Huddlz.Audit do
   @moduledoc "Attribution propagation and retention for internal PaperTrail history."
 
-  import Ecto.Query, only: [from: 2]
-
-  @retention_days 90
+  alias Ash.Domain.Info
+  alias Huddlz.Accounts
+  alias Huddlz.Communities
 
   def version_resources do
-    [Huddlz.Communities, Huddlz.Accounts]
-    |> Enum.flat_map(&Ash.Domain.Info.resources/1)
+    [Communities, Accounts]
+    |> Enum.flat_map(&Info.resources/1)
     |> Enum.filter(fn resource ->
       Code.ensure_loaded?(resource) and function_exported?(resource, :resource_version?, 0)
     end)
@@ -26,12 +26,12 @@ defmodule Huddlz.Audit do
 
   @doc "Delete versions older than the agreed troubleshooting window."
   def prune(now \\ DateTime.utc_now()) do
-    cutoff = DateTime.add(now, -@retention_days, :day)
-
     Enum.each(version_resources(), fn resource ->
-      table = AshPostgres.DataLayer.Info.table(resource)
-
-      Huddlz.Repo.delete_all(from(version in table, where: version.version_inserted_at < ^cutoff))
+      Ash.bulk_destroy!(resource, :expire, %{now: now},
+        authorize?: false,
+        strategy: [:atomic],
+        return_errors?: true
+      )
     end)
 
     :ok

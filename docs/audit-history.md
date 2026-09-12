@@ -30,8 +30,12 @@ Version resources have strict deny policies and no web/API exposure. Trusted int
 
 The Ash actor is recorded as `actor_id`. Callers may supply `context: %{paper_trail_metadata: %{impersonation_id: id, impersonator_id: administrator_id}}` through supported PaperTrail metadata. #554 supplies this from its trusted session. Nested participation actions must propagate the actor and this context. Known automatic work explicitly records `automatic?: true`; missing attribution is unknown, not proof of automation.
 
+Extending a recurring series retains the original creator while recording the known editor as the audit actor of generated occurrences. Scheduled completion, invitation expiry and confirmed-recipient claims are explicitly automatic. The confirmation worker uses the recipient for authorization, but supplies the trusted shared context flag `audit_system_action?`; a supported version-resource change clears that authorization identity from `actor_id` because no person initiated the claim. The recipient remains the affected person in the changes.
+
 ## Retention and personal data
 
 Keep versions for 90 days and prune expired versions daily. Hard deletion of an item does not immediately delete its versions. Account deletion clears actor/impersonator links; item/subject IDs and group content may remain until expiry. Do not copy direct profile/contact values, password hashes, API-key hashes, tokens, or media paths into versions. Do not store action inputs. Free text in group/huddl content remains subject to the same 90-day limit.
+
+Pruning uses atomic bulk destruction through each version resource's `:expire` action. That action enforces the 90-day cutoff; the job only orchestrates the actions and propagates failures for retry.
 
 Retention applies to new PaperTrail versions only; this work does not change the existing organizer activity feed's deletion policy. An audit UI and private-group moderation access are deferred.

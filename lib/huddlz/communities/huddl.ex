@@ -314,6 +314,7 @@ defmodule Huddlz.Communities.Huddl do
     update :complete do
       description "Persist completion after a published huddl ends."
       require_atomic? false
+      change Huddlz.Audit.MarkAutomatic
 
       change {Huddlz.Communities.Huddl.Changes.TransitionLifecycle, to: :completed}
     end

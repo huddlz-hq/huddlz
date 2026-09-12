@@ -13,7 +13,13 @@ defmodule Huddlz.Audit.Version do
       actions do
         destroy :expire do
           accept []
+          argument :now, :utc_datetime_usec, allow_nil?: false, default: &DateTime.utc_now/0
+          change filter(expr(^ref(:version_inserted_at) < datetime_add(^arg(:now), -90, :day)))
         end
+      end
+
+      changes do
+        change Huddlz.Audit.ClearSystemActor, on: [:create]
       end
 
       relationships do
