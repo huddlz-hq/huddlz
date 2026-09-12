@@ -22,7 +22,7 @@ defmodule GroupMembershipVisibilitySteps do
 
   step "I open the promotion confirmation for {string}", %{args: [name]} = context do
     session =
-      within(context.session, "[aria-label='Manage #{name}']", fn session ->
+      within(context.session, "[role='menu'][aria-label='Manage #{name}']", fn session ->
         click_button(session, "Promote")
       end)
 
@@ -184,10 +184,13 @@ defmodule GroupMembershipVisibilitySteps do
     Phoenix.ConnTest.build_conn()
     |> login(owner)
     |> visit("/organize/#{group.slug}/members")
-    |> within("[aria-label='Manage #{context.current_user.display_name}']", fn session ->
-      click_button(session, action)
-    end)
-    |> click_button(confirmation)
+    |> within(
+      "[role='menu'][aria-label='Manage #{context.current_user.display_name}']",
+      fn session ->
+        click_button(session, action)
+      end
+    )
+    |> within("[role='dialog']", fn session -> click_button(session, confirmation) end)
 
     context
   end
