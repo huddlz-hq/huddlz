@@ -1289,7 +1289,7 @@ defmodule HuddlzWeb.OrganizeLive do
           <div :for={{id, entry} <- rows} id={id} class="row member-row">
             <.person_mark user={entry.user} />
             <div class="member-copy">
-              <div class="row-title">{member_name(entry)}</div>
+              <div class="row-title" title={member_name(entry)}>{member_name(entry)}</div>
               <div class="meta">{format_member_meta(entry)}</div>
             </div>
             <.member_menu
@@ -1432,32 +1432,40 @@ defmodule HuddlzWeb.OrganizeLive do
           <p id="invitations-empty" class="hidden only:block muted role-section-empty">
             No invitations yet.
           </p>
-          <div :for={{id, invitation} <- @invitations} id={id} class="row row-split">
-            <div>
-              <div class="row-title">{invitation_recipient(invitation)}</div>
-              <div class="meta">
-                {role_label(invitation.role)} · {invitation_status_label(invitation.status)}
+          <div :for={{id, invitation} <- @invitations} id={id} class="row member-row">
+            <.person_mark user={invitation_person(invitation)} />
+            <div class="member-copy">
+              <div class="row-title" title={invitation_recipient(invitation)}>
+                {invitation_recipient(invitation)}
+              </div>
+              <div class="meta invitation-meta">
+                {role_label(invitation.role)}
+                <span class="pill">{invitation_status_label(invitation.status)}</span>
               </div>
             </div>
-            <button
-              :if={invitation.status == :pending && Ash.can?({invitation, :revoke}, @current_user)}
-              id={"revoke-invitation-#{invitation.id}"}
-              type="button"
-              class="pill"
-              phx-click="revoke_invitation"
-              phx-value-id={invitation.id}
-            >
-              Revoke
-            </button>
-            <span :if={invitation.status != :pending} class="pill">
-              {invitation_status_label(invitation.status)}
-            </span>
+            <div>
+              <button
+                :if={invitation.status == :pending && Ash.can?({invitation, :revoke}, @current_user)}
+                id={"revoke-invitation-#{invitation.id}"}
+                type="button"
+                class="pill"
+                phx-click="revoke_invitation"
+                phx-value-id={invitation.id}
+              >
+                Revoke
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </div>
     """
   end
+
+  defp invitation_person(%{invitee: nil, email: email}),
+    do: %{id: to_string(email), display_name: to_string(email)}
+
+  defp invitation_person(%{invitee: invitee}), do: invitee
 
   defp invitation_recipient(%{invitee: nil, email: email}), do: to_string(email)
   defp invitation_recipient(invitation), do: member_name(%{user: invitation.invitee})

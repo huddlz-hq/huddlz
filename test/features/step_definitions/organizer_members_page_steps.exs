@@ -5,10 +5,7 @@ defmodule OrganizerMembersPageSteps do
   import PhoenixTest
 
   step "{string} is listed under {string}", %{args: [name, heading]} = context do
-    names = names_under(context.session, heading)
-
-    assert name in names,
-           "expected #{inspect(name)} under #{inspect(heading)}, found #{inspect(names)}"
+    assert_has(context.session, role_section(context.session, heading), text: name)
 
     context
   end
@@ -49,8 +46,8 @@ defmodule OrganizerMembersPageSteps do
 
   defp menu_for(name), do: "[role='menu'][aria-label='Manage #{name}']"
 
-  # The people named inside the roster section whose heading reads `heading`.
-  defp names_under(session, heading) do
+  # Resolve the roster region by its accessible heading.
+  defp role_section(session, heading) do
     doc = session |> page_html() |> Floki.parse_document!()
 
     section =
@@ -67,9 +64,8 @@ defmodule OrganizerMembersPageSteps do
 
     assert section, "no roster section headed #{inspect(heading)}"
 
-    section
-    |> Floki.find(".row-title")
-    |> Enum.map(&(&1 |> Floki.text() |> String.trim()))
+    [labelled_by] = Floki.attribute(section, "aria-labelledby")
+    "section[aria-labelledby='#{labelled_by}']"
   end
 
   defp page_html(%PhoenixTest.Live{view: view}), do: Phoenix.LiveViewTest.render(view)
