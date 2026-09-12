@@ -9,7 +9,7 @@ defmodule Huddlz.Communities.GroupMember do
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
     notifiers: [Huddlz.Communities.MembershipEvents, Huddlz.Communities.ActivityLog],
-    extensions: [AshJsonApi.Resource, AshGraphql.Resource]
+    extensions: [AshPaperTrail.Resource, AshJsonApi.Resource, AshGraphql.Resource]
 
   graphql do
     type :group_member
@@ -42,6 +42,20 @@ defmodule Huddlz.Communities.GroupMember do
       route :delete, "/remove", :remove_member_by_ids
       patch :change_role, route: "/role"
     end
+  end
+
+  paper_trail do
+    change_tracking_mode :snapshot
+    store_action_name? true
+    reference_source? false
+    sensitive_attributes :ignore
+    ignore_attributes [:inserted_at, :updated_at]
+    belongs_to_actor :actor, Huddlz.Accounts.User, domain: Huddlz.Accounts, on_delete: :nilify
+    metadata :impersonation_id, :uuid
+    metadata :impersonator_id, :uuid
+    metadata :automatic?, :boolean
+    version_extensions authorizers: [Ash.Policy.Authorizer]
+    mixin {Huddlz.Audit.Version, :mixin, []}
   end
 
   alias Huddlz.Communities.GroupMember.Checks.GroupMember

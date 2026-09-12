@@ -42,7 +42,7 @@ defmodule Huddlz.Communities.Huddl.Changes.Rsvp do
     if huddl.at_capacity do
       Ash.Changeset.add_error(cs, "This huddl is full")
     else
-      create_rsvp!(huddl.id, user_id)
+      create_rsvp!(cs, huddl.id, user_id)
       # Load-bearing: NotifyRsvp{Received,Confirmation} skip when this flag is absent
       # so duplicate RSVPs do not enqueue spurious emails.
       Ash.Changeset.put_context(cs, :rsvp_created, true)
@@ -55,9 +55,13 @@ defmodule Huddlz.Communities.Huddl.Changes.Rsvp do
     |> Ash.read_one(authorize?: false)
   end
 
-  defp create_rsvp!(huddl_id, user_id) do
+  defp create_rsvp!(cs, huddl_id, user_id) do
     HuddlAttendee
-    |> Ash.Changeset.for_create(:rsvp, %{huddl_id: huddl_id, user_id: user_id})
+    |> Ash.Changeset.for_create(
+      :rsvp,
+      %{huddl_id: huddl_id, user_id: user_id},
+      Huddlz.Audit.nested_opts(cs)
+    )
     |> Ash.create!(authorize?: false)
   end
 end

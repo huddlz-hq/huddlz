@@ -13,8 +13,25 @@ defmodule Huddlz.Accounts.User do
     otp_app: :huddlz,
     domain: Huddlz.Accounts,
     authorizers: [Ash.Policy.Authorizer],
-    extensions: [AshAuthentication, AshGraphql.Resource, AshRateLimiter],
+    extensions: [AshPaperTrail.Resource, AshAuthentication, AshGraphql.Resource, AshRateLimiter],
     data_layer: AshPostgres.DataLayer
+
+  graphql do
+    type :user
+
+    queries do
+      read_one :me, :me
+    end
+
+    mutations do
+      update :update_display_name, :update_display_name
+      update :update_home_location, :update_home_location
+      update :change_password, :change_password
+      update :change_email, :change_email
+      update :update_notification_preferences, :update_notification_preferences
+      update :update_theme_preference, :update_theme_preference
+    end
+  end
 
   # Per-email rate limits on the auth actions, enforced at the action layer (see
   # `Huddlz.RateLimit` and `Huddlz.RateLimit.Keys`). Read from `:auth_rate_limits` at
@@ -35,21 +52,33 @@ defmodule Huddlz.Accounts.User do
                                per: :timer.hours(1)
                              )
 
-  graphql do
-    type :user
+  paper_trail do
+    change_tracking_mode :snapshot
+    store_action_name? true
+    reference_source? false
+    sensitive_attributes :ignore
 
-    queries do
-      read_one :me, :me
-    end
+    ignore_attributes [
+      :inserted_at,
+      :updated_at,
+      :email,
+      :display_name,
+      :hashed_password,
+      :confirmed_at,
+      :home_location,
+      :home_latitude,
+      :home_longitude,
+      :home_time_zone,
+      :legal_terms_accepted_at,
+      :legal_documents_version
+    ]
 
-    mutations do
-      update :update_display_name, :update_display_name
-      update :update_home_location, :update_home_location
-      update :change_password, :change_password
-      update :change_email, :change_email
-      update :update_notification_preferences, :update_notification_preferences
-      update :update_theme_preference, :update_theme_preference
-    end
+    belongs_to_actor :actor, Huddlz.Accounts.User, domain: Huddlz.Accounts, on_delete: :nilify
+    metadata :impersonation_id, :uuid
+    metadata :impersonator_id, :uuid
+    metadata :automatic?, :boolean
+    version_extensions authorizers: [Ash.Policy.Authorizer]
+    mixin {Huddlz.Audit.Version, :mixin, []}
   end
 
   authentication do

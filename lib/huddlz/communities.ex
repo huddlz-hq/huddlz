@@ -5,7 +5,11 @@ defmodule Huddlz.Communities do
 
   use Ash.Domain,
     otp_app: :huddlz,
-    extensions: [AshJsonApi.Domain, AshGraphql.Domain]
+    extensions: [AshJsonApi.Domain, AshGraphql.Domain, AshPaperTrail.Domain]
+
+  paper_trail do
+    include_versions? true
+  end
 
   resources do
     resource Huddlz.Communities.Huddl do

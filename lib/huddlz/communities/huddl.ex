@@ -9,7 +9,7 @@ defmodule Huddlz.Communities.Huddl do
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
     notifiers: [Ash.Notifier.PubSub],
-    extensions: [AshOban, AshJsonApi.Resource, AshGraphql.Resource],
+    extensions: [AshOban, AshJsonApi.Resource, AshGraphql.Resource, AshPaperTrail.Resource],
     primary_read_warning?: false
 
   graphql do
@@ -192,6 +192,21 @@ defmodule Huddlz.Communities.Huddl do
     end
   end
 
+  paper_trail do
+    ignore_actions [:send_24h_reminder, :send_1h_reminder]
+    change_tracking_mode :snapshot
+    store_action_name? true
+    reference_source? false
+    sensitive_attributes :ignore
+    ignore_attributes [:inserted_at, :updated_at, :virtual_link, :thumbnail_url]
+    belongs_to_actor :actor, Huddlz.Accounts.User, domain: Huddlz.Accounts, on_delete: :nilify
+    metadata :impersonation_id, :uuid
+    metadata :impersonator_id, :uuid
+    metadata :automatic?, :boolean
+    version_extensions authorizers: [Ash.Policy.Authorizer]
+    mixin {Huddlz.Audit.Version, :mixin, []}
+  end
+
   actions do
     destroy :destroy do
       change Huddlz.Communities.Changes.RequireActiveGroup
@@ -300,6 +315,7 @@ defmodule Huddlz.Communities.Huddl do
     update :complete do
       description "Persist completion after a published huddl ends."
       require_atomic? false
+      change Huddlz.Audit.MarkAutomatic
 
       change {Huddlz.Communities.Huddl.Changes.TransitionLifecycle, to: :completed}
     end

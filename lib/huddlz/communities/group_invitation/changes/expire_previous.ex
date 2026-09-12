@@ -23,7 +23,7 @@ defmodule Huddlz.Communities.GroupInvitation.Changes.ExpirePrevious do
           expires_at <= now()
       )
       |> Ash.read!(authorize?: false)
-      |> Enum.each(&Communities.expire_group_invitation!(&1, authorize?: false))
+      |> Enum.each(&Communities.expire_group_invitation!(&1, Huddlz.Audit.nested_opts(changeset)))
 
       changeset
     end)

@@ -10,13 +10,13 @@ defmodule Huddlz.Communities.GroupInvitation.Changes.Accept do
     changeset
     |> Ash.Changeset.force_change_attribute(:status, :accepted)
     |> Ash.Changeset.force_change_attribute(:responded_at, DateTime.utc_now())
-    |> Ash.Changeset.after_action(fn _changeset, invitation ->
-      ensure_membership(invitation)
+    |> Ash.Changeset.after_action(fn cs, invitation ->
+      ensure_membership(invitation, Huddlz.Audit.nested_opts(cs))
       {:ok, invitation}
     end)
   end
 
-  defp ensure_membership(invitation) do
+  defp ensure_membership(invitation, opts) do
     case Communities.get_group_member(
            invitation.group_id,
            invitation.invitee_id,
@@ -28,14 +28,14 @@ defmodule Huddlz.Communities.GroupInvitation.Changes.Accept do
           invitation.group_id,
           invitation.invitee_id,
           invitation.role,
-          authorize?: false
+          opts
         )
 
       {:ok, %{role: :member} = membership} when invitation.role == :organizer ->
         Communities.set_member_role_from_invitation!(
           membership,
           :organizer,
-          authorize?: false
+          opts
         )
 
       {:ok, _membership} ->
