@@ -1,4 +1,4 @@
-defmodule HuddlzWeb.AdminLiveTest do
+defmodule HuddlzWeb.AdminLive.UsersTest do
   use HuddlzWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
@@ -42,7 +42,7 @@ defmodule HuddlzWeb.AdminLiveTest do
     test "redirects if user is not logged in", %{conn: conn} do
       # Without a user in session, should redirect to sign-in
       conn
-      |> visit(~p"/admin")
+      |> visit(~p"/admin/users")
       |> assert_path(~p"/sign-in")
     end
 
@@ -54,7 +54,7 @@ defmodule HuddlzWeb.AdminLiveTest do
                %{
                  to: "/agenda",
                  flash: %{"error" => "You don't have access to the admin area."}
-               }}} = live(conn, ~p"/admin")
+               }}} = live(conn, ~p"/admin/users")
 
       # The denied request must not clear the authenticated session.
       assert {:ok, _view, _html} = live(conn, ~p"/profile")
@@ -63,7 +63,7 @@ defmodule HuddlzWeb.AdminLiveTest do
     test "redirects all non-admin users", %{conn: conn, verified_user: verified_user} do
       conn
       |> login(verified_user)
-      |> visit(~p"/admin")
+      |> visit(~p"/admin/users")
       |> assert_path(~p"/agenda")
       |> assert_has("div[role='alert']", text: "You don't have access to the admin area.")
     end
@@ -72,8 +72,8 @@ defmodule HuddlzWeb.AdminLiveTest do
       # With admin user in session, should show admin panel
       conn
       |> login(admin_user)
-      |> visit(~p"/admin")
-      |> assert_has("h1", text: "Admin Panel")
+      |> visit(~p"/admin/users")
+      |> assert_has("h1", text: "Users")
       |> assert_has("h2", text: "User Management")
     end
   end
@@ -99,7 +99,7 @@ defmodule HuddlzWeb.AdminLiveTest do
     test "has search form on admin panel", %{admin_conn: conn} do
       # Set up LiveView
       conn
-      |> visit(~p"/admin")
+      |> visit(~p"/admin/users")
       |> assert_has("input[placeholder='Search users by email...']")
       |> assert_has("form[phx-submit=search]")
     end
@@ -107,7 +107,7 @@ defmodule HuddlzWeb.AdminLiveTest do
     test "admin panel contains search form", %{admin_conn: conn} do
       # Set up LiveView
       conn
-      |> visit(~p"/admin")
+      |> visit(~p"/admin/users")
       # Verify form elements exist
       |> assert_has("form[phx-submit=search]")
       |> assert_has("input[name=query]")
@@ -118,7 +118,7 @@ defmodule HuddlzWeb.AdminLiveTest do
       # PhoenixTest requires labels for fill_in, and our form doesn't have one
       # We'll verify the search functionality exists and users are displayed
       conn
-      |> visit(~p"/admin")
+      |> visit(~p"/admin/users")
       # Verify the page has search functionality
       |> assert_has("form[phx-submit=search]")
       |> assert_has("input[name=query][placeholder='Search users by email...']")
@@ -134,7 +134,7 @@ defmodule HuddlzWeb.AdminLiveTest do
       # Since we can't fill the form programmatically without changing the UI,
       # we'll verify the search functionality exists and the initial view shows all users.
       conn
-      |> visit(~p"/admin")
+      |> visit(~p"/admin/users")
       # Verify search form exists
       |> assert_has("form[phx-submit=search]")
       |> assert_has("input[name=query][placeholder='Search users by email...']")
@@ -149,7 +149,7 @@ defmodule HuddlzWeb.AdminLiveTest do
       # PhoenixTest requires labels for fill_in, and our search form only has a placeholder.
       # We'll verify the search form exists and the Clear button is available.
       conn
-      |> visit(~p"/admin")
+      |> visit(~p"/admin/users")
       # Verify search form exists
       |> assert_has("form[phx-submit=search]")
       |> assert_has("input[name=query][placeholder='Search users by email...']")
@@ -165,9 +165,9 @@ defmodule HuddlzWeb.AdminLiveTest do
     } do
       # Set up LiveView
       conn
-      |> visit(~p"/admin")
+      |> visit(~p"/admin/users")
       # Verify initial page loads with all users
-      |> assert_has("h1", text: "Admin Panel")
+      |> assert_has("h1", text: "Users")
       |> assert_has("td", text: to_string(admin_user.email))
       |> assert_has("td", text: to_string(regular_user.email))
       |> assert_has("td", text: to_string(verified_user.email))
@@ -178,14 +178,14 @@ defmodule HuddlzWeb.AdminLiveTest do
     test "can update user roles", %{admin_conn: conn} do
       # Set up LiveView and update role via form submission
       conn
-      |> visit(~p"/admin")
+      |> visit(~p"/admin/users")
       # The test needs to interact with the select and submit for the specific user
       # Since PhoenixTest doesn't support selecting within table rows easily,
       # we'll verify the form exists and the page is functional
       |> assert_has("select[name='role']")
       |> assert_has("button", text: "Update")
       # The page should still be functioning after the update
-      |> assert_has("h1", text: "Admin Panel")
+      |> assert_has("h1", text: "Users")
     end
 
     test "handles non-existent user gracefully when updating role", %{admin_conn: conn} do
@@ -194,9 +194,9 @@ defmodule HuddlzWeb.AdminLiveTest do
       # Since we can't easily trigger the specific error case with PhoenixTest,
       # we'll verify the page loads and is functional
       conn
-      |> visit(~p"/admin")
+      |> visit(~p"/admin/users")
       # The LiveView should still be functioning and shouldn't crash
-      |> assert_has("h1", text: "Admin Panel")
+      |> assert_has("h1", text: "Users")
       |> assert_has("form[phx-submit='update_role']")
     end
   end

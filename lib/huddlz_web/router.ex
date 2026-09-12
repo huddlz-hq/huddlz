@@ -122,6 +122,7 @@ defmodule HuddlzWeb.Router do
       live "/invitations/email/:token", GroupInvitationLive, :email
       live "/invitations/:id", GroupInvitationLive, :show
       live "/admin", AdminLive, :index
+      live "/admin/users", AdminLive.Users, :index
       live "/profile", ProfileLive, :index
       live "/profile/notifications", ProfileLive.Notifications, :index
 
