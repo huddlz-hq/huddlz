@@ -31,6 +31,41 @@ defmodule Huddlz.AuditTest do
     assert is_nil(row.actor_id)
   end
 
+  test "re-inviting during impersonation preserves attribution on the previous expiry", %{
+    owner: owner
+  } do
+    group = generate(group(actor: owner, is_public: false))
+    email = "audit-#{Ash.UUID.generate()}@example.com"
+    invitation = Communities.invite_to_group_by_email!(group.id, email, :member, actor: owner)
+    admin = generate(user(role: :admin))
+    impersonation_id = Ash.UUID.generate()
+
+    Repo.update_all(from(i in GroupInvitation, where: i.id == ^invitation.id),
+      set: [expires_at: DateTime.add(DateTime.utc_now(), -60)]
+    )
+
+    replacement =
+      Communities.invite_to_group_by_email!(group.id, email, :member,
+        actor: owner,
+        context: %{
+          paper_trail_metadata: %{impersonation_id: impersonation_id, impersonator_id: admin.id}
+        }
+      )
+
+    assert replacement.id != invitation.id
+    assert replacement.status == :pending
+
+    row =
+      GroupInvitation.Version
+      |> Ash.Query.filter(version_source_id == ^invitation.id and version_action_name == :expire)
+      |> Ash.read_one!(authorize?: false)
+
+    assert row.automatic?
+    assert row.actor_id == owner.id
+    assert row.impersonation_id == impersonation_id
+    assert row.impersonator_id == admin.id
+  end
+
   test "completion is explicitly automatic", %{huddl: huddl} do
     now = DateTime.utc_now()
 
