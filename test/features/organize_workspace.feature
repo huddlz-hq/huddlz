@@ -95,15 +95,14 @@ Feature: Organizer workspace
     And I should see "Members"
     And I should not see "That group doesn't exist, or you don't organize it."
 
-  Scenario: An admin can open the workspace for any group
+  Scenario: An admin cannot open the workspace of a group they do not organize
     Given the following users exist:
       | email                                | role  | display_name |
       | admin+organize-workspace@example.com | admin | Admin User   |
     And a public group "Phoenix Devs" exists with owner "stranger@example.com"
     And I am signed in as "admin+organize-workspace@example.com"
     When I visit "/organize/phoenix-devs"
-    Then I should see "Phoenix Devs"
-    And I should not see "That group doesn't exist, or you don't organize it."
+    Then I should see "That group doesn't exist, or you don't organize it."
 
   Scenario: Group overview shows zeroed KPIs and an empty next huddl panel
     Given a public group "Cyberpunk Builders" exists with owner "host+organize-workspace@example.com"

@@ -49,9 +49,27 @@ defmodule HuddlzWeb.Layouts do
   slot :inner_block, required: true
 
   def app(assigns) do
-    assigns = assign_new(assigns, :signed_in, fn -> assigns.current_user != nil end)
+    assigns =
+      assigns
+      |> assign_new(:signed_in, fn -> assigns.current_user != nil end)
+      |> assign(:impersonation, impersonation(assigns.current_user))
 
     ~H"""
+    <div
+      :if={@impersonation}
+      id="impersonation-bar"
+      class="impersonation-bar"
+      role="region"
+      aria-label="Impersonation"
+    >
+      <span class="impersonation-who">
+        Viewing huddlz as <strong>{@impersonation.user.display_name}</strong>
+        ({@impersonation.user.email})
+      </span>
+      <.link href={~p"/admin/impersonations/current"} method="delete" class="impersonation-stop">
+        Stop viewing as {@impersonation.user.display_name}
+      </.link>
+    </div>
     <%= if @signed_in do %>
       <button
         type="button"
@@ -657,6 +675,11 @@ defmodule HuddlzWeb.Layouts do
     </div>
     """
   end
+
+  # The session's impersonation rides on the current user (set by the
+  # `:app` mount hook), so every page renders the bar without passing it.
+  defp impersonation(%User{__metadata__: %{impersonation: impersonation}}), do: impersonation
+  defp impersonation(_user), do: nil
 
   defp group_mark_variant(idx) do
     case rem(idx, 3) do

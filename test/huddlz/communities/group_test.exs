@@ -534,18 +534,14 @@ defmodule Huddlz.Communities.GroupTest do
                Communities.get_group_for_organize(group.slug, actor: stranger)
     end
 
-    test "admin can open any group's slug via the resource-level bypass" do
-      # Mirrors the action's docstring: admins are not auto-included in the
-      # picker (`:get_organizable`), but the per-slug check intentionally lets
-      # an admin into any group's organizer workspace.
+    test "admin cannot open the workspace of a group they do not organize" do
+      # The organizer workspace is management, not reading: an administrator
+      # gets in only through a group role of their own.
       admin = generate(user(role: :admin))
       owner = generate(user(role: :user))
       group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
 
-      assert {:ok, %Group{id: id}} =
-               Communities.get_group_for_organize(group.slug, actor: admin)
-
-      assert id == group.id
+      assert {:error, _} = Communities.get_group_for_organize(group.slug, actor: admin)
     end
 
     test "unknown slug returns NotFound" do

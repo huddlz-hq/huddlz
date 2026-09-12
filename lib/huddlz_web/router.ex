@@ -157,6 +157,10 @@ defmodule HuddlzWeb.Router do
     auth_routes AuthController, Huddlz.Accounts.User, path: "/auth"
     sign_out_route AuthController
 
+    # An administrator viewing huddlz as someone else, and stopping.
+    post "/admin/impersonations/:user_id", ImpersonationController, :create
+    delete "/admin/impersonations/current", ImpersonationController, :delete
+
     # The confirmation email's page; registration signs people in before
     # they confirm, so it takes a signed-in visitor too.
     ash_authentication_live_session :confirm_routes,

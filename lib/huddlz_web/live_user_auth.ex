@@ -8,6 +8,7 @@ defmodule HuddlzWeb.LiveUserAuth do
 
   alias AshAuthentication.Phoenix.LiveSession
   alias Huddlz.Accounts.User
+  alias Huddlz.Admin.Impersonation
   alias Huddlz.Communities.MembershipEvents
   alias Huddlz.Notifications
 
@@ -77,12 +78,13 @@ defmodule HuddlzWeb.LiveUserAuth do
   # Also loads the user details the sidebar reads (profile picture URL, home
   # location) plus the groups the user organizes, which appear as `sb-org-row`
   # entries in the sidebar.
-  def on_mount(:app, _params, _session, socket) do
+  def on_mount(:app, _params, session, socket) do
     body_class = if socket.assigns[:current_user], do: "", else: "is-signed-out"
 
     socket =
       socket
       |> maybe_load_user_details()
+      |> assign_impersonation(session)
       |> assign(:body_class, body_class)
       |> assign_new(:sidebar_owned_groups, fn -> load_sidebar_owned_groups(socket) end)
       |> assign_new(:unread_notification_count, fn -> load_unread_notification_count(socket) end)
@@ -92,6 +94,26 @@ defmodule HuddlzWeb.LiveUserAuth do
 
     {:cont, socket}
   end
+
+  # An administrator viewing huddlz as someone else: the session carries the
+  # impersonation, the layout shows it, and the actor carries its id so the
+  # activity log can say who was at the keyboard.
+  defp assign_impersonation(socket, %{"impersonation_id" => id}) when is_binary(id) do
+    case Ash.get(Impersonation, id, load: [:admin, :user], authorize?: false) do
+      {:ok, %Impersonation{ended_at: nil} = impersonation} ->
+        socket
+        |> assign(:impersonation, impersonation)
+        |> update(:current_user, fn
+          %User{} = user -> Ash.Resource.put_metadata(user, :impersonation, impersonation)
+          other -> other
+        end)
+
+      _ ->
+        assign(socket, :impersonation, nil)
+    end
+  end
+
+  defp assign_impersonation(socket, _session), do: assign(socket, :impersonation, nil)
 
   # The topbar's appearance menu lives in the layout, so every LiveView that
   # renders the app chrome answers its "set_theme" event here.
