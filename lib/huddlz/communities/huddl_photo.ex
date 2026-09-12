@@ -11,7 +11,8 @@ defmodule Huddlz.Communities.HuddlPhoto do
     domain: Huddlz.Communities,
     authorizers: [Ash.Policy.Authorizer],
     notifiers: [Ash.Notifier.PubSub],
-    data_layer: AshPostgres.DataLayer
+    data_layer: AshPostgres.DataLayer,
+    extensions: [AshPaperTrail.Resource]
 
   postgres do
     table "huddl_photos"
@@ -25,6 +26,20 @@ defmodule Huddlz.Communities.HuddlPhoto do
     custom_indexes do
       index [:huddl_id, :inserted_at]
     end
+  end
+
+  paper_trail do
+    change_tracking_mode :snapshot
+    store_action_name? true
+    reference_source? false
+    sensitive_attributes :ignore
+    ignore_attributes [:inserted_at, :updated_at, :filename, :storage_path, :thumbnail_path]
+    belongs_to_actor :actor, Huddlz.Accounts.User, domain: Huddlz.Accounts, on_delete: :nilify
+    metadata :impersonation_id, :uuid
+    metadata :impersonator_id, :uuid
+    metadata :automatic?, :boolean
+    version_extensions authorizers: [Ash.Policy.Authorizer]
+    mixin {Huddlz.Audit.Version, :mixin, []}
   end
 
   actions do

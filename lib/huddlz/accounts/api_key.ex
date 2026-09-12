@@ -10,7 +10,8 @@ defmodule Huddlz.Accounts.ApiKey do
     otp_app: :huddlz,
     domain: Huddlz.Accounts,
     data_layer: AshPostgres.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshPaperTrail.Resource]
 
   postgres do
     table "api_keys"
@@ -23,6 +24,20 @@ defmodule Huddlz.Accounts.ApiKey do
     custom_indexes do
       index [:user_id]
     end
+  end
+
+  paper_trail do
+    change_tracking_mode :snapshot
+    store_action_name? true
+    reference_source? false
+    sensitive_attributes :ignore
+    ignore_attributes [:inserted_at, :updated_at, :api_key_hash]
+    belongs_to_actor :actor, Huddlz.Accounts.User, domain: Huddlz.Accounts, on_delete: :nilify
+    metadata :impersonation_id, :uuid
+    metadata :impersonator_id, :uuid
+    metadata :automatic?, :boolean
+    version_extensions authorizers: [Ash.Policy.Authorizer]
+    mixin {Huddlz.Audit.Version, :mixin, []}
   end
 
   actions do

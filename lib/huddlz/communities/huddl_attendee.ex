@@ -9,7 +9,7 @@ defmodule Huddlz.Communities.HuddlAttendee do
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
     notifiers: [Huddlz.Communities.ActivityLog],
-    extensions: [AshJsonApi.Resource, AshGraphql.Resource]
+    extensions: [AshPaperTrail.Resource, AshJsonApi.Resource, AshGraphql.Resource]
 
   graphql do
     type :huddl_attendee
@@ -29,6 +29,20 @@ defmodule Huddlz.Communities.HuddlAttendee do
       index :by_huddl, route: "/by_huddl"
       index :by_user, route: "/mine"
     end
+  end
+
+  paper_trail do
+    change_tracking_mode :snapshot
+    store_action_name? true
+    reference_source? false
+    sensitive_attributes :ignore
+    ignore_attributes [:inserted_at, :updated_at]
+    belongs_to_actor :actor, Huddlz.Accounts.User, domain: Huddlz.Accounts, on_delete: :nilify
+    metadata :impersonation_id, :uuid
+    metadata :impersonator_id, :uuid
+    metadata :automatic?, :boolean
+    version_extensions authorizers: [Ash.Policy.Authorizer]
+    mixin {Huddlz.Audit.Version, :mixin, []}
   end
 
   postgres do

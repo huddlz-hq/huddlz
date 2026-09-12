@@ -23,38 +23,43 @@ defmodule Huddlz.Communities.Huddl.Changes.CancelRsvp do
   alias Huddlz.Communities.Huddl.Changes.LockedHuddl
   alias Huddlz.Communities.HuddlAttendee
 
-  def change(changeset, _opts, %{actor: %{id: user_id} = actor}) when not is_nil(user_id) do
-    Ash.Changeset.before_action(changeset, &cancel(&1, actor))
+  def change(changeset, _opts, %{actor: %{id: user_id}}) when not is_nil(user_id) do
+    Ash.Changeset.before_action(changeset, &cancel(&1, user_id))
   end
 
   def change(changeset, _opts, _context) do
     Ash.Changeset.add_error(changeset, "An actor is required to cancel an RSVP")
   end
 
-  defp cancel(cs, actor) do
+  defp cancel(cs, user_id) do
     # Lock the huddl row up front so the freed seat and any waitlist
     # promotion serialize against concurrent RSVP/waitlist transactions.
     case LockedHuddl.fetch(cs.data.id) do
-      {:ok, %Huddl{}} -> cancel_locked(cs, actor)
+      {:ok, %Huddl{}} -> cancel_locked(cs, user_id)
       error -> LockedHuddl.add_read_error(cs, error)
     end
   end
 
-  # The actor rides along so the activity log knows who was at the keyboard.
-  defp cancel_locked(cs, %{id: user_id} = actor) do
+  defp cancel_locked(cs, user_id) do
     case fetch_existing(cs.data.id, user_id) do
       {:ok, nil} ->
         cs
 
       {:ok, %{waitlisted_at: nil} = attendee} ->
-        Ash.destroy!(attendee, authorize?: false, actor: actor)
+        attendee
+        |> Ash.Changeset.for_destroy(:cancel_rsvp, %{}, Huddlz.Audit.nested_opts(cs))
+        |> Ash.destroy!(authorize?: false)
+
         # Load-bearing: NotifyRsvpCancelled and PromoteFromWaitlist skip
         # when this flag is absent — pure waitlist withdrawals don't
         # free a seat or warrant an organizer email.
         Ash.Changeset.put_context(cs, :rsvp_cancelled, true)
 
       {:ok, %{waitlisted_at: %DateTime{}} = attendee} ->
-        Ash.destroy!(attendee, authorize?: false, actor: actor)
+        attendee
+        |> Ash.Changeset.for_destroy(:cancel_rsvp, %{}, Huddlz.Audit.nested_opts(cs))
+        |> Ash.destroy!(authorize?: false)
+
         Ash.Changeset.put_context(cs, :waitlist_left, true)
 
       {:error, error} ->

@@ -10,19 +10,19 @@ defmodule Huddlz.Communities.GroupInvitation.OpenEmailInvitation do
   def run(input, _opts, %{actor: actor}) do
     with {:ok, id} <- EmailToken.verify(input.arguments.token),
          {:ok, invitation} <- Ash.get(GroupInvitation, id, authorize?: false) do
-      open(invitation, input.arguments.token, actor)
+      open(invitation, input.arguments.token, actor, input.context)
     else
       _ -> {:error, "That invitation isn't available."}
     end
   end
 
-  defp open(%{invitee_id: nil} = invitation, token, actor) do
+  defp open(%{invitee_id: nil} = invitation, token, actor, context) do
     invitation
-    |> Ash.Changeset.for_update(:claim, %{token: token}, actor: actor)
+    |> Ash.Changeset.for_update(:claim, %{token: token}, actor: actor, context: context)
     |> Ash.update()
   end
 
-  defp open(invitation, _token, actor) do
+  defp open(invitation, _token, actor, _context) do
     Communities.get_group_invitation_for_actor(invitation.id, actor: actor)
   end
 end

@@ -17,17 +17,24 @@ defmodule Huddlz.Accounts.ProfilePicture.Changes.SoftDeletePrevious do
 
       with {:ok, pictures} <-
              Accounts.list_profile_pictures(new_picture.user_id, actor: actor),
-           :ok <- soft_delete_previous(pictures, new_picture.id, actor) do
+           :ok <-
+             soft_delete_previous(pictures, new_picture.id,
+               actor: actor,
+               context: %{
+                 paper_trail_metadata:
+                   Map.put(changeset.context[:paper_trail_metadata] || %{}, :automatic?, true)
+               }
+             ) do
         {:ok, new_picture}
       end
     end)
   end
 
-  defp soft_delete_previous(pictures, current_picture_id, actor) do
+  defp soft_delete_previous(pictures, current_picture_id, opts) do
     pictures
     |> Enum.reject(&(&1.id == current_picture_id))
     |> Enum.reduce_while(:ok, fn picture, :ok ->
-      case Accounts.soft_delete_profile_picture(picture, actor: actor) do
+      case Accounts.soft_delete_profile_picture(picture, opts) do
         {:ok, _picture} -> {:cont, :ok}
         {:error, reason} -> {:halt, {:error, reason}}
       end
