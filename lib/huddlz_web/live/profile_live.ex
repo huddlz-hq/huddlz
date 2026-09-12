@@ -145,6 +145,16 @@ defmodule HuddlzWeb.ProfileLive do
           </div>
         </div>
 
+        <.form
+          :if={is_nil(@current_user.confirmed_at)}
+          for={%{}}
+          id="profile-resend-confirmation"
+          action={~p"/account/confirmation/resend"}
+          method="post"
+        >
+          {nil}
+        </.form>
+
         <.form for={@form} id="profile-form" phx-submit="save" phx-change="validate">
           <div class="panel">
             <div class="panel-head">
@@ -166,14 +176,14 @@ defmodule HuddlzWeb.ProfileLive do
                       {role_label(@current_user.role)}
                     </span>
                   </div>
-                  <.form
+                  <button
                     :if={is_nil(@current_user.confirmed_at)}
-                    for={%{}}
-                    action={~p"/account/confirmation/resend"}
-                    method="post"
+                    type="submit"
+                    form="profile-resend-confirmation"
+                    class="btn-secondary"
                   >
-                    <button type="submit" class="btn-secondary">Resend confirmation</button>
-                  </.form>
+                    Resend confirmation
+                  </button>
                 </div>
                 <p class="form-help">{confirmation_help(@current_user)}</p>
               </div>
