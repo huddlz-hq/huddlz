@@ -410,8 +410,9 @@ defmodule HuddlzWeb.AdminLive do
   defp active_delta_class(%{previous: nil}), do: "muted"
   defp active_delta_class(active), do: period_delta_class(active)
 
+  # A no-break space keeps the date on one line inside the tile.
   defp measured_since(from, %Date{year: year}) do
-    Calendar.strftime(from, if(from.year == year, do: "%b %-d", else: "%b %-d, %Y"))
+    Calendar.strftime(from, if(from.year == year, do: "%b\u00a0%-d", else: "%b\u00a0%-d, %Y"))
   end
 
   defp estimated_signups(1), do: "1 account has an estimated sign-up date, excluded from growth."
