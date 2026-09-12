@@ -2,6 +2,8 @@ defmodule HuddlzWeb.Endpoint do
   use Phoenix.Endpoint, otp_app: :huddlz
   use Absinthe.Phoenix.Endpoint
 
+  plug HuddlzWeb.Plugs.RedirectWww
+
   if Application.compile_env(:huddlz, :sql_sandbox?, false) do
     plug Phoenix.Ecto.SQL.Sandbox
   end
