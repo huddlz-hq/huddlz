@@ -562,6 +562,9 @@ defmodule HuddlzWeb.HuddlLiveTest do
       |> element(~s|button[aria-label="Clear location"]|)
       |> render_click()
 
+      # Clearing the component notifies its parent asynchronously. Synchronize
+      # with the LiveView before checking the navigation message on busy runners.
+      render(view)
       assert_patch(view, "/discover?cleared=1")
     end
   end

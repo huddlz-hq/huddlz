@@ -7,6 +7,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
   import HuddlzWeb.HuddlLive.FormHelpers, only: [load_group_locations: 2]
 
   alias Huddlz.Communities
+  alias Huddlz.Communities.GroupLocation
   alias Huddlz.Communities.GroupLocation.DeletionImpact
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
@@ -101,7 +102,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
           <h2>Addresses</h2>
         </:head>
         <:sub :if={@locations != []}>
-          Click a row's actions to rename or remove it.
+          Edit a location's name or unit details, or remove it.
         </:sub>
 
         <%= if @locations == [] do %>
@@ -127,6 +128,12 @@ defmodule HuddlzWeb.GroupLive.Locations do
                     autocomplete="off"
                     autofocus
                   />
+                  <.input
+                    field={@rename_form[:unit]}
+                    label="Unit (optional)"
+                    placeholder="e.g., 711 or 4B"
+                    autocomplete="address-line2"
+                  />
                   <div class="location-rename-actions">
                     <.button variant={:primary} type="submit">Save</.button>
                     <.button variant={:secondary} type="button" phx-click="cancel_rename">
@@ -136,8 +143,8 @@ defmodule HuddlzWeb.GroupLive.Locations do
                 </.form>
               <% else %>
                 <div class="location-info">
-                  <div class="row-title">{loc.name || loc.address}</div>
-                  <div :if={loc.name} class="row-desc">{loc.address}</div>
+                  <div class="row-title">{loc.name || GroupLocation.full_address(loc)}</div>
+                  <div :if={loc.name} class="row-desc">{GroupLocation.full_address(loc)}</div>
                 </div>
                 <div class="location-actions">
                   <.button
@@ -146,7 +153,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
                     phx-click="start_rename"
                     phx-value-id={loc.id}
                   >
-                    Rename
+                    Edit
                   </.button>
                   <.button
                     variant={:destructive}
@@ -181,8 +188,9 @@ defmodule HuddlzWeb.GroupLive.Locations do
             </span>
             <h2 id="delete-location-modal-title">Delete this saved location?</h2>
             <p>
-              <strong>{@deleting_location.name || @deleting_location.address}</strong>
-              <span :if={@deleting_location.name}>{" — " <> @deleting_location.address}</span>
+              <strong>{@deleting_location.name || GroupLocation.full_address(@deleting_location)}</strong>
+              <span :if={@deleting_location.name}>{" — " <>
+                GroupLocation.full_address(@deleting_location)}</span>
             </p>
             <p :if={!@delete_location_blocked?}>
               It will no longer appear in future venue pickers. Past huddlz keep their
@@ -261,6 +269,16 @@ defmodule HuddlzWeb.GroupLive.Locations do
             />
           </div>
 
+          <.input
+            type="text"
+            id="location-unit-input"
+            name="location_unit"
+            value={@modal_location_unit}
+            label="Unit (optional)"
+            placeholder="e.g., 711 or 4B"
+            autocomplete="address-line2"
+          />
+
           <div class="form-foot is-flush">
             <.button variant={:primary} type="submit" disabled={is_nil(@modal_location_address)}>
               Save Address
@@ -276,7 +294,8 @@ defmodule HuddlzWeb.GroupLive.Locations do
   end
 
   @impl true
-  def handle_event("save_new_location", _params, socket) do
+  def handle_event("save_new_location", params, socket) do
+    socket = ModalLocationHelpers.apply_params(socket, params)
     user = socket.assigns.current_user
     address = socket.assigns.modal_location_address
     name = socket.assigns.modal_location_name
@@ -289,6 +308,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
            socket.assigns.modal_location_lng,
            socket.assigns.modal_location_time_zone,
            socket.assigns.group.id,
+           %{unit: socket.assigns.modal_location_unit},
            actor: user
          ) do
       {:ok, _location} ->
@@ -306,13 +326,8 @@ defmodule HuddlzWeb.GroupLive.Locations do
   end
 
   @impl true
-  def handle_event("modal_form_changed", %{"location_name" => name}, socket) do
-    {:noreply, assign(socket, :modal_location_name, name)}
-  end
-
-  @impl true
-  def handle_event("modal_form_changed", _params, socket) do
-    {:noreply, socket}
+  def handle_event("modal_form_changed", params, socket) do
+    {:noreply, ModalLocationHelpers.apply_params(socket, params)}
   end
 
   @impl true

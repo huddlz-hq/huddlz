@@ -360,6 +360,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         cancel_path={~p"/groups/#{@group_slug}/huddlz/#{@huddl.id}/edit"}
         modal_location_address={@modal_location_address}
         modal_location_name={@modal_location_name}
+        modal_location_unit={@modal_location_unit}
       />
     </Layouts.app>
     """
@@ -486,7 +487,8 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   end
 
   @impl true
-  def handle_event("save_location", _params, socket) do
+  def handle_event("save_location", params, socket) do
+    socket = ModalLocationHelpers.apply_params(socket, params)
     user = socket.assigns.current_user
     address = socket.assigns.modal_location_address
     name = socket.assigns.modal_location_name
@@ -499,6 +501,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
            socket.assigns.modal_location_lng,
            socket.assigns.modal_location_time_zone,
            socket.assigns.huddl.group.id,
+           %{unit: socket.assigns.modal_location_unit},
            actor: user
          ) do
       {:ok, location} ->
@@ -518,13 +521,8 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   end
 
   @impl true
-  def handle_event("modal_form_changed", %{"location_name" => name}, socket) do
-    {:noreply, assign(socket, :modal_location_name, name)}
-  end
-
-  @impl true
-  def handle_event("modal_form_changed", _params, socket) do
-    {:noreply, socket}
+  def handle_event("modal_form_changed", params, socket) do
+    {:noreply, ModalLocationHelpers.apply_params(socket, params)}
   end
 
   @impl true

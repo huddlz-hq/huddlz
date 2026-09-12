@@ -326,6 +326,7 @@ defmodule HuddlzWeb.Components.HuddlForm do
   attr :live_action, :atom, required: true
   attr :modal_location_address, :string, default: nil
   attr :modal_location_name, :string, default: nil
+  attr :modal_location_unit, :string, default: nil
   attr :cancel_path, :string, required: true
   attr :location_bias, :map, default: nil
 
@@ -377,6 +378,16 @@ defmodule HuddlzWeb.Components.HuddlForm do
             class="form-input"
           />
         </div>
+
+        <.input
+          type="text"
+          id="location-unit-input"
+          name="location_unit"
+          value={@modal_location_unit}
+          label="Unit (optional)"
+          placeholder="e.g., 711 or 4B"
+          autocomplete="address-line2"
+        />
 
         <div class="form-foot is-flush">
           <.button variant={:primary} type="submit" disabled={is_nil(@modal_location_address)}>

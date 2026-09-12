@@ -117,6 +117,48 @@ defmodule HuddlzWeb.HuddlLive.NewLocationTest do
       assert hd(locations).address == "500 E Cesar Chavez St, Austin, TX"
     end
 
+    for mode <- [:new, :edit] do
+      @mode mode
+      test "#{mode} huddl address dialog saves unit details from the final submission", %{
+        conn: conn,
+        owner: owner,
+        group: group
+      } do
+        path =
+          case @mode do
+            :new ->
+              ~p"/groups/#{group.slug}/huddlz/new/locations/new"
+
+            :edit ->
+              huddl = generate(huddl(group_id: group.id, creator_id: owner.id, actor: owner))
+              ~p"/groups/#{group.slug}/huddlz/#{huddl.id}/edit/locations/new"
+          end
+
+        {:ok, view, _html} = conn |> login(owner) |> live(path)
+
+        select_location(view,
+          id: "modal-address-autocomplete",
+          display_text: "320 1st St N, Jacksonville Beach, FL",
+          main_text: "Beach meeting place"
+        )
+
+        view
+        |> form("#new-location-form", %{"location_unit" => "  4B  "})
+        |> render_submit()
+
+        assert has_element?(
+                 view,
+                 "[data-testid='saved-location-display']",
+                 ~r/320 1st St N, Jacksonville Beach, FL\s+Unit 4B/
+               )
+
+        locations = Huddlz.Communities.list_group_locations!(group.id, actor: owner)
+        location = Enum.find(locations, &(&1.name == "Beach meeting place"))
+        assert location.unit == "4B"
+        assert location.address == "320 1st St N, Jacksonville Beach, FL"
+      end
+    end
+
     test "cancel returns to huddl form without creating a location", %{
       conn: conn,
       owner: owner,

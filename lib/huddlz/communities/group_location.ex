@@ -72,15 +72,16 @@ defmodule Huddlz.Communities.GroupLocation do
 
     create :create do
       primary? true
-      accept [:name, :address, :latitude, :longitude, :time_zone, :group_id]
+      accept [:name, :address, :unit, :latitude, :longitude, :time_zone, :group_id]
     end
 
     update :update do
       primary? true
-      accept [:name]
+      accept [:name, :unit]
       require_atomic? false
 
       validate present(:name) do
+        where changing(:name)
         message "Name is required"
       end
     end
@@ -144,6 +145,13 @@ defmodule Huddlz.Communities.GroupLocation do
       constraints min_length: 1, max_length: 500
     end
 
+    attribute :unit, :string do
+      allow_nil? true
+      public? true
+      description "Optional unit identifier (e.g., 711 or 4B)"
+      constraints max_length: 100
+    end
+
     attribute :latitude, :float do
       allow_nil? false
       public? true
@@ -178,8 +186,16 @@ defmodule Huddlz.Communities.GroupLocation do
     end
   end
 
+  @doc "The street address with any optional unit details for display and huddl snapshots."
+  def full_address(%{address: address} = location) do
+    case Map.get(location, :unit) do
+      unit when unit in [nil, ""] -> address
+      unit -> address <> "\nUnit " <> unit
+    end
+  end
+
   identities do
-    identity :unique_name_per_group, [:group_id, :name],
+    identity :unique_name_and_unit_per_group, [:group_id, :name, :unit],
       nils_distinct?: false,
       pre_check?: true
   end

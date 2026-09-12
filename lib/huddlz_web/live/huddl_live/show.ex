@@ -350,7 +350,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
               </svg>
               <div>
                 <div class="label">Where</div>
-                <div class="value">{@huddl.physical_location}</div>
+                <div class="value whitespace-pre-line">{@huddl.physical_location}</div>
               </div>
             </li>
 

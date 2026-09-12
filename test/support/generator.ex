@@ -204,6 +204,7 @@ defmodule Huddlz.Generator do
       :create,
       defaults: [
         name: StreamData.repeatedly(fn -> Faker.Company.name() end),
+        unit: nil,
         address:
           StreamData.repeatedly(fn ->
             Faker.Address.street_address() <> ", " <> Faker.Address.city() <> ", TX"
@@ -346,7 +347,9 @@ defmodule Huddlz.Generator do
     alias Huddlz.Communities.GroupLocation
     group = Ash.get!(Group, group_id, authorize?: false)
 
-    case Ash.get(GroupLocation, [group_id: group_id, name: "Main Street"], authorize?: false) do
+    case Ash.get(GroupLocation, [group_id: group_id, name: "Main Street", unit: nil],
+           authorize?: false
+         ) do
       {:ok, location} ->
         location.id
 
