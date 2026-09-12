@@ -2,6 +2,8 @@ defmodule HuddlzWeb.ImpersonationControllerTest do
   use HuddlzWeb.ConnCase, async: false
   @moduletag :impersonation_controller
 
+  alias AshAuthentication.TokenResource.Actions, as: Tokens
+  alias Huddlz.Accounts.Token
   alias Huddlz.Admin.Impersonation
   alias HuddlzWeb.ApiCase
 
@@ -49,6 +51,71 @@ defmodule HuddlzWeb.ImpersonationControllerTest do
     refute get_session(conn, :impersonator_token)
     refute get_session(conn, :impersonation_id)
     assert Ash.get!(Impersonation, id, authorize?: false).ended_at
+  end
+
+  test "confirming another account finalizes impersonation before replacing the identity", ctx do
+    other = generate(user_with_password())
+    confirmation_token = other.__metadata__.confirmation_token
+
+    conn = build_conn() |> login(ctx.admin) |> post(~p"/admin/impersonations/#{ctx.target.id}")
+    id = get_session(conn, :impersonation_id)
+    target_token = get_session(conn, :user_token)
+    admin_token = get_session(conn, :impersonator_token)
+    topic = get_session(conn, :live_socket_id)
+    HuddlzWeb.Endpoint.subscribe(topic)
+
+    conn =
+      conn
+      |> recycle()
+      |> post(~p"/auth/user/confirm_new_user", user: %{confirm: confirmation_token})
+
+    assert conn.assigns.current_user.id == other.id
+    assert Ash.get!(Impersonation, id, authorize?: false).ended_at
+    refute get_session(conn, :impersonation_id)
+    refute get_session(conn, :impersonator_token)
+    assert_receive %Phoenix.Socket.Broadcast{topic: ^topic, event: "disconnect"}
+
+    for token <- [target_token, admin_token] do
+      assert Tokens.token_revoked?(Token, token)
+    end
+
+    replacement_token = get_session(conn, :user_token)
+
+    refute Tokens.token_revoked?(
+             Token,
+             replacement_token
+           )
+
+    conn = conn |> recycle() |> delete(~p"/sign-out")
+    refute get_session(conn, :user_token)
+    assert Ash.get!(Impersonation, id, authorize?: false).ended_at
+
+    assert Tokens.token_revoked?(
+             Token,
+             replacement_token
+           )
+  end
+
+  test "failed authentication keeps the current impersonation open", ctx do
+    conn = build_conn() |> login(ctx.admin) |> post(~p"/admin/impersonations/#{ctx.target.id}")
+    id = get_session(conn, :impersonation_id)
+    target_token = get_session(conn, :user_token)
+    admin_token = get_session(conn, :impersonator_token)
+
+    conn =
+      conn
+      |> recycle()
+      |> post(~p"/auth/user/confirm_new_user", user: %{confirm: "invalid"})
+
+    assert redirected_to(conn) == "/sign-in"
+    assert get_session(conn, :impersonation_id) == id
+    assert get_session(conn, :user_token) == target_token
+    assert get_session(conn, :impersonator_token) == admin_token
+    refute Ash.get!(Impersonation, id, authorize?: false).ended_at
+
+    for token <- [target_token, admin_token] do
+      refute Tokens.token_revoked?(Token, token)
+    end
   end
 
   test "bearer authentication keeps its own identity during browser impersonation", ctx do

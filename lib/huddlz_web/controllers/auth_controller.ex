@@ -24,6 +24,8 @@ defmodule HuddlzWeb.AuthController do
       end
 
     conn
+    |> BrowserSession.finalize_impersonation()
+    |> BrowserSession.disconnect_live_views()
     |> delete_session(:return_to)
     |> store_in_session(user)
     |> put_live_socket_id()
@@ -66,7 +68,7 @@ defmodule HuddlzWeb.AuthController do
     return_to = return_to(conn)
 
     conn
-    |> HuddlzWeb.ImpersonationController.stop_from_session()
+    |> BrowserSession.finalize_impersonation()
     |> BrowserSession.disconnect_live_views()
     |> clear_session(:huddlz)
     |> put_flash(:info, "You are now signed out")

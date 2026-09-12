@@ -2,7 +2,8 @@ defmodule HuddlzWeb.BrowserSession do
   @moduledoc "Browser identity metadata and LiveView session topics."
   import Plug.Conn
 
-  alias Huddlz.Accounts.User
+  alias AshAuthentication.TokenResource.Actions, as: Tokens
+  alias Huddlz.Accounts.{Token, User}
   alias Huddlz.Admin
   alias Huddlz.Admin.Impersonation
 
@@ -24,6 +25,38 @@ defmodule HuddlzWeb.BrowserSession do
   end
 
   def resolve(user, _id), do: {user, nil}
+
+  @doc "End impersonation and discard both saved identities before sign-out or reauthentication."
+  def finalize_impersonation(conn) do
+    case get_session(conn, :impersonation_id) do
+      id when is_binary(id) ->
+        stop_impersonation(id, conn.assigns[:current_user])
+
+        revoke(get_session(conn, :user_token))
+        revoke(get_session(conn, :impersonator_token))
+
+        conn
+        |> delete_session(:impersonation_id)
+        |> delete_session(:impersonator_token)
+        |> delete_session(:user_token)
+
+      _ ->
+        conn
+    end
+  end
+
+  defp stop_impersonation(id, user) do
+    case Admin.resolve_impersonation_session(id, actor: user) do
+      {:ok, %Impersonation{} = record} ->
+        Admin.stop_impersonation!(record, actor: record.admin)
+
+      _ ->
+        :ok
+    end
+  end
+
+  defp revoke(token) when is_binary(token), do: Tokens.revoke(Token, token)
+  defp revoke(_token), do: :ok
 
   def disconnect_live_views(conn) do
     case get_session(conn, :live_socket_id) do

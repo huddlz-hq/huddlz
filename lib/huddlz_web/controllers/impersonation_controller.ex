@@ -71,18 +71,6 @@ defmodule HuddlzWeb.ImpersonationController do
     end
   end
 
-  @doc "Stamps the end of the impersonation a session carries, if any."
-  def stop_from_session(conn) do
-    with id when is_binary(id) <- get_session(conn, :impersonation_id),
-         {:ok, %Impersonation{} = record} <-
-           Admin.resolve_impersonation_session(id, actor: conn.assigns[:current_user]) do
-      stop_record(record)
-      revoke(get_session(conn, :impersonator_token))
-    end
-
-    conn
-  end
-
   defp stop_record(%Impersonation{ended_at: nil} = record) do
     Admin.stop_impersonation!(record, actor: record.admin)
   end
