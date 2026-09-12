@@ -7,6 +7,12 @@ huddlz helps groups organize and discover gatherings while preserving the local 
 **Sign-up**:
 The creation of a huddlz account, distinct from confirming its email address. A historical estimate of its date is not an observed sign-up date.
 
+**Email confirmation**:
+Proof that a person can access a particular email address associated with their huddlz account. It establishes ownership of that address, not the person's identity or trustworthiness.
+
+**Pending email change**:
+A requested replacement for an account's email address that has not completed the required approvals. The existing address remains active until the change completes.
+
 **Active user**:
 A signed-in person who used huddlz during the selected period, including browsing without joining a group, RSVPing, or organizing a huddl. The platform overview shows this figure as active people.
 

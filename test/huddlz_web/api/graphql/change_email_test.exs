@@ -2,8 +2,8 @@ defmodule HuddlzWeb.Api.Graphql.ChangeEmailTest do
   use HuddlzWeb.ApiCase, async: true
   use Oban.Testing, repo: Huddlz.Repo
 
+  alias Huddlz.Accounts.EmailChangeDelivery
   alias Huddlz.Accounts.User
-  alias Huddlz.Notifications.DeliverWorker
 
   @mutation """
   mutation ChangeEmail($id: ID!, $email: String!, $currentPassword: String!) {
@@ -22,7 +22,7 @@ defmodule HuddlzWeb.Api.Graphql.ChangeEmailTest do
       {:ok, user: user}
     end
 
-    test "actor changes their own email with the correct current password", %{
+    test "actor requests a pending change with the correct current password", %{
       conn: conn,
       user: user
     } do
@@ -48,17 +48,22 @@ defmodule HuddlzWeb.Api.Graphql.ChangeEmailTest do
       assert id == user.id
 
       reloaded = Ash.get!(User, user.id, authorize?: false)
-      assert to_string(reloaded.email) == "after@example.com"
+      assert to_string(reloaded.email) == "before@example.com"
+      assert reloaded.pending_email_change["new_email"] == "after@example.com"
 
-      enqueued =
-        all_enqueued(worker: DeliverWorker)
-        |> Enum.filter(&(&1.args["trigger"] == "email_changed"))
+      Oban.drain_queue(queue: :notifications)
 
-      audiences = enqueued |> Enum.map(& &1.args["payload"]["audience"]) |> Enum.sort()
-      assert audiences == ["new", "old"]
+      assert_receive {:email,
+                      %Swoosh.Email{
+                        subject: "Approve your huddlz email change",
+                        to: [{"", "before@example.com"}]
+                      }}
 
-      assert Enum.all?(enqueued, &(&1.args["user_id"] == user.id))
-      assert Enum.all?(enqueued, &(&1.args["payload"]["old_email"] == "before@example.com"))
+      assert_receive {:email,
+                      %Swoosh.Email{
+                        subject: "Approve your huddlz email change",
+                        to: [{"", "after@example.com"}]
+                      }}
     end
 
     test "wrong current password leaves the email untouched", %{conn: conn, user: user} do
@@ -79,7 +84,7 @@ defmodule HuddlzWeb.Api.Graphql.ChangeEmailTest do
       reloaded = Ash.get!(User, user.id, authorize?: false)
       assert to_string(reloaded.email) == "before@example.com"
 
-      refute_enqueued(worker: DeliverWorker, args: %{"trigger" => "email_changed"})
+      refute_enqueued(worker: EmailChangeDelivery)
     end
 
     test "unauthenticated callers cannot change another user's email", %{
@@ -100,7 +105,7 @@ defmodule HuddlzWeb.Api.Graphql.ChangeEmailTest do
       reloaded = Ash.get!(User, user.id, authorize?: false)
       assert to_string(reloaded.email) == "before@example.com"
 
-      refute_enqueued(worker: DeliverWorker, args: %{"trigger" => "email_changed"})
+      refute_enqueued(worker: EmailChangeDelivery)
     end
   end
 end

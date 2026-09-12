@@ -8,7 +8,6 @@ defmodule HuddlzWeb.ProfileLiveTest do
   import Huddlz.Test.Helpers.Authentication
 
   alias Huddlz.Accounts.User
-  alias Huddlz.Notifications.DeliverWorker
 
   setup :verify_on_exit!
 
@@ -413,7 +412,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
       %{user: user}
     end
 
-    test "changes the signed-in identity and sends both security notices", %{
+    test "retains the signed-in identity and sends both approval requests", %{
       conn: conn,
       user: user
     } do
@@ -427,24 +426,32 @@ defmodule HuddlzWeb.ProfileLiveTest do
         |> fill_in("New email", with: new_email)
         |> fill_in("Confirm current password", with: "OldPassword123!")
         |> click_button("#change-email-button", "Change email")
-        |> assert_has("*", text: "Email updated successfully")
-        |> assert_has("aside.sidebar .sb-user", text: new_email)
+        |> assert_has("*", text: "Check both inboxes to approve your email change")
+        |> assert_has("aside.sidebar .sb-user", text: to_string(user.email))
 
       session
       |> visit("/profile/notifications")
-      |> assert_has("aside.sidebar .sb-user", text: new_email)
+      |> assert_has("aside.sidebar .sb-user", text: to_string(user.email))
       |> visit("/profile")
       |> refute_has("#email_change_current_password[value='OldPassword123!']")
 
       assert User |> Ash.get!(user.id, authorize?: false) |> Map.fetch!(:email) |> to_string() ==
-               new_email
+               to_string(user.email)
 
-      enqueued =
-        all_enqueued(worker: DeliverWorker)
-        |> Enum.filter(&(&1.args["trigger"] == "email_changed"))
+      Oban.drain_queue(queue: :notifications)
+      old_email = to_string(user.email)
 
-      assert enqueued |> Enum.map(& &1.args["payload"]["audience"]) |> Enum.sort() ==
-               ["new", "old"]
+      assert_receive {:email,
+                      %Swoosh.Email{
+                        subject: "Approve your huddlz email change",
+                        to: [{"", ^old_email}]
+                      }}
+
+      assert_receive {:email,
+                      %Swoosh.Email{
+                        subject: "Approve your huddlz email change",
+                        to: [{"", ^new_email}]
+                      }}
     end
 
     test "shows a field error for an invalid email and clears the submitted password", %{
@@ -476,7 +483,7 @@ defmodule HuddlzWeb.ProfileLiveTest do
       |> click_button("#change-email-button", "Change email")
       |> assert_has("#email_change_email-error-0", text: "Enter a different email address.")
 
-      refute_enqueued(worker: DeliverWorker, args: %{"trigger" => "email_changed"})
+      refute_enqueued(worker: Huddlz.Accounts.EmailChangeDelivery)
     end
 
     test "shows a field error when the new email is already used", %{conn: conn, user: user} do
@@ -512,12 +519,12 @@ defmodule HuddlzWeb.ProfileLiveTest do
         |> refute_has("#email_change_current_password[value='WrongPassword']")
 
       assert User |> Ash.get!(user.id, authorize?: false) |> Map.fetch!(:email) == user.email
-      refute_enqueued(worker: DeliverWorker, args: %{"trigger" => "email_changed"})
+      refute_enqueued(worker: Huddlz.Accounts.EmailChangeDelivery)
 
       session
       |> fill_in("Confirm current password", with: "OldPassword123!")
       |> click_button("#change-email-button", "Change email")
-      |> assert_has("*", text: "Email updated successfully")
+      |> assert_has("*", text: "Check both inboxes to approve your email change")
       |> refute_has("*", text: "Email could not be updated")
     end
   end

@@ -42,23 +42,23 @@ defmodule EmailChangeNotificationSteps do
     {:ok, context}
   end
 
-  step "a security notice should be sent to {string} naming the new address {string}",
+  step "an email-change approval should be sent to {string} naming the new address {string}",
        %{args: [recipient, new_email]} = context do
     Oban.drain_queue(queue: :notifications)
 
     receive_email_matching(recipient, fn email ->
-      email.html_body =~ "security notice" and email.html_body =~ new_email
+      email.html_body =~ "Both inboxes must approve" and email.html_body =~ new_email
     end)
 
     {:ok, context}
   end
 
-  step "a confirmation should be sent to {string} naming the previous address {string}",
+  step "an email-change approval should be sent to {string} naming the previous address {string}",
        %{args: [recipient, old_email]} = context do
     Oban.drain_queue(queue: :notifications)
 
     receive_email_matching(recipient, fn email ->
-      email.html_body =~ "now associated" and email.html_body =~ old_email
+      email.html_body =~ "Both inboxes must approve" and email.html_body =~ old_email
     end)
 
     {:ok, context}
@@ -68,7 +68,7 @@ defmodule EmailChangeNotificationSteps do
     Oban.drain_queue(queue: :notifications)
 
     refute_email_matching(fn email ->
-      email.subject == "Your huddlz email address was changed"
+      email.subject == "Approve your huddlz email change"
     end)
 
     {:ok, context}
@@ -78,7 +78,7 @@ defmodule EmailChangeNotificationSteps do
     receive do
       {:email,
        %Swoosh.Email{
-         subject: "Your huddlz email address was changed",
+         subject: "Approve your huddlz email change",
          to: [{"", ^recipient}]
        } = email} ->
         if predicate.(email) do

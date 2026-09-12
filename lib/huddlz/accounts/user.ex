@@ -66,6 +66,8 @@ defmodule Huddlz.Accounts.User do
       :display_name,
       :hashed_password,
       :confirmed_at,
+      :pending_email_change,
+      :email_change_resends,
       :home_location,
       :home_latitude,
       :home_longitude,
@@ -169,8 +171,14 @@ defmodule Huddlz.Accounts.User do
       argument :confirm, :string, allow_nil?: false, sensitive?: true
       metadata :token, :string, allow_nil?: false
 
-      validate Huddlz.Accounts.User.Validations.ConfirmationLinkIsCurrent
+      change get_and_lock(:for_update)
+
+      validate Huddlz.Accounts.User.Validations.ConfirmationLinkIsCurrent do
+        before_action? true
+      end
+
       change AshAuthentication.AddOn.Confirmation.ConfirmChange
+      change Huddlz.Accounts.User.Changes.RequireCurrentConfirmationAddress
       change AshAuthentication.GenerateTokenChange
       change Huddlz.Accounts.User.Changes.QueueConfirmedInvitations
       change Huddlz.Accounts.User.Changes.DiscardConfirmationLinks
@@ -344,47 +352,55 @@ defmodule Huddlz.Accounts.User do
     end
 
     update :change_email do
-      description "Change the user's email address. Requires the current password and emails old + new addresses as a security notice."
-
+      description "Request an email change requiring approval from both inboxes."
       require_atomic? false
-      accept [:email]
-
+      accept []
+      argument :email, :ci_string, allow_nil?: false
       argument :current_password, :string, sensitive?: true, allow_nil?: false
 
-      validate present(:current_password) do
-        message "Current password is required."
-      end
+      validate match(:email, @email_pattern), message: "Enter a valid email address."
+      validate present(:current_password), message: "Current password is required."
+      change get_and_lock(:for_update)
 
       validate {AshAuthentication.Strategy.Password.PasswordValidation,
                 strategy_name: :password, password_argument: :current_password} do
+        before_action? true
         where present(:current_password)
       end
 
-      validate fn changeset, _context ->
-        current_email = to_string(changeset.data.email)
+      change Huddlz.Accounts.User.Changes.RequestEmailChange
+    end
 
-        requested_email =
-          Map.get(changeset.params, :email) || Map.get(changeset.params, "email")
+    update :resend_email_change do
+      accept []
+      require_atomic? false
+      argument :request_id, :uuid, allow_nil?: false
+      change get_and_lock(:for_update)
+      change Huddlz.Accounts.User.Changes.ResendEmailChange
+    end
 
-        if not is_nil(requested_email) and
-             String.downcase(to_string(requested_email)) == String.downcase(current_email) do
-          {:error, field: :email, message: "Enter a different email address."}
-        else
-          :ok
-        end
-      end
+    update :cancel_email_change do
+      accept []
+      require_atomic? false
+      argument :request_id, :uuid, allow_nil?: false
+      change get_and_lock(:for_update)
+      change Huddlz.Accounts.User.Changes.CancelEmailChange
+    end
 
-      change after_action(fn changeset, user, _ctx ->
-               previous_email = to_string(changeset.data.email)
-               new_email = to_string(user.email)
+    update :report_email_change do
+      accept []
+      require_atomic? false
+      argument :token, :string, allow_nil?: false, sensitive?: true
+      change get_and_lock(:for_update)
+      change Huddlz.Accounts.User.Changes.ReportEmailChange
+    end
 
-               if previous_email != new_email do
-                 enqueue_email_changed(user, previous_email, "old")
-                 enqueue_email_changed(user, previous_email, "new")
-               end
-
-               {:ok, user}
-             end)
+    update :approve_email_change do
+      accept []
+      require_atomic? false
+      argument :token, :string, allow_nil?: false, sensitive?: true
+      change get_and_lock(:for_update)
+      change Huddlz.Accounts.User.Changes.ApproveEmailChange
     end
 
     update :change_password do
@@ -719,7 +735,12 @@ defmodule Huddlz.Accounts.User do
       authorize_if expr(id == ^actor(:id))
     end
 
-    policy action(:change_email) do
+    policy action([:approve_email_change, :report_email_change]) do
+      description "A valid approval token authorizes only its own pending request"
+      authorize_if always()
+    end
+
+    policy action([:change_email, :cancel_email_change, :resend_email_change]) do
       description "Users can change their own email"
       authorize_if expr(id == ^actor(:id))
     end
@@ -758,6 +779,16 @@ defmodule Huddlz.Accounts.User do
     attribute :email, :ci_string do
       allow_nil? false
       public? true
+    end
+
+    attribute :email_change_resends, {:array, :integer} do
+      allow_nil? false
+      default []
+      sensitive? true
+    end
+
+    attribute :pending_email_change, :map do
+      sensitive? true
     end
 
     attribute :display_name, :string do
@@ -895,18 +926,4 @@ defmodule Huddlz.Accounts.User do
   def admin?(%{is_admin: false}), do: false
   def admin?(%{role: :admin}), do: true
   def admin?(_), do: false
-
-  defp enqueue_email_changed(user, previous_email, audience) do
-    payload = %{"audience" => audience, "old_email" => previous_email}
-
-    case Huddlz.Notifications.deliver(user, :email_changed, payload) do
-      {:ok, _job} ->
-        :ok
-
-      {:error, reason} ->
-        Logger.error(
-          "Failed to enqueue email-changed (#{audience}) notification: #{inspect(reason)}"
-        )
-    end
-  end
 end

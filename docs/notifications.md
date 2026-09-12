@@ -169,6 +169,16 @@ Every sender builds its email through `Huddlz.Notifications.Layout.email/1` and 
 - **Transactional** senders: `Footer.account/1` with a one-line reason and no links. There is no preference toggle, so an unsubscribe link would be misleading; the word "unsubscribe" must not appear.
 - **Activity** senders: `Footer.activity(user, trigger)`, which adds the settings link and a per-trigger unsubscribe link built from `Huddlz.Notifications.unsubscribe_token(user, trigger)` so the route flips the right preference key.
 
+### Email-change approvals
+
+Email changes remain pending until both the current and proposed inboxes approve. The current password is required to request a change. The original sign-in and recovery address, confirmation status, and notification preferences remain active until both approvals complete.
+
+`Huddlz.Accounts.EmailChangeDelivery` queues one transactional approval email per inbox, with the exact recipient and request captured in the job. These capability links never appear in the in-app notification feed. Opening a link only displays a review page; approval and reporting require an explicit action. Reporting cancels the request and records a security warning in application logs.
+
+Profile settings offer cancellation and resending to outstanding inboxes. Resends allow one request per minute and five per hour per account, even across replacement requests. They do not extend the request's three-day lifetime or invalidate its earlier links. Completion, cancellation, replacement, and expiry make obsolete approvals unusable. No missed activity emails are replayed and preferences remain unchanged.
+
+Both inboxes are required even if the current address was never confirmed. There is no lost-inbox override; someone without access to both inboxes needs a new account. The `email_changed` informational sender below is retained for existing queued notifications; new requests use the approval flow.
+
 ### Recovery advice in security notices
 
 Include a `/reset` link **only when the recipient's address is the current account email**, i.e. when the password-reset channel itself is unchanged.

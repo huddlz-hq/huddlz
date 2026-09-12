@@ -19,7 +19,8 @@ defmodule Huddlz.Accounts.User.ChangeEmailTest do
                )
                |> Ash.update()
 
-      assert to_string(updated.email) == "alice2@example.com"
+      assert updated.email == user.email
+      assert updated.pending_email_change["new_email"] == "alice2@example.com"
     end
 
     test "rejects when the current password is wrong", %{user: user} do
@@ -101,10 +102,11 @@ defmodule Huddlz.Accounts.User.ChangeEmailTest do
                  actor: user
                )
 
-      assert to_string(updated.email) == "alice3@example.com"
+      assert updated.email == user.email
+      assert updated.pending_email_change["new_email"] == "alice3@example.com"
     end
 
-    test "leaves confirmed_at alone (no re-confirmation required)", %{user: user} do
+    test "retains the original confirmation status while approvals are pending", %{user: user} do
       {:ok, updated} =
         user
         |> Ash.Changeset.for_update(

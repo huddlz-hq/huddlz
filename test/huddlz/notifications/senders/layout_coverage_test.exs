@@ -2,7 +2,7 @@ defmodule Huddlz.Notifications.Senders.LayoutCoverageTest do
   @moduledoc """
   Every email the app sends renders through `Huddlz.Notifications.Layout`
   with a footer: the trigger registry's senders, the two authentication
-  emails and the email-address invitation.
+  emails, email-change approvals and the email-address invitation.
 
   Set `EMAIL_SAMPLES_DIR` to also write each rendered email to disk, for
   screenshots: `EMAIL_SAMPLES_DIR=/tmp/emails mix test <this file>`.
@@ -10,6 +10,7 @@ defmodule Huddlz.Notifications.Senders.LayoutCoverageTest do
 
   use Huddlz.DataCase, async: false
 
+  alias Huddlz.Accounts.EmailChangeDelivery
   alias Huddlz.Accounts.User.Senders.SendNewUserConfirmationEmail
   alias Huddlz.Accounts.User.Senders.SendPasswordResetEmail
   alias Huddlz.Communities
@@ -175,6 +176,32 @@ defmodule Huddlz.Notifications.Senders.LayoutCoverageTest do
     assert_layout(confirm, :new_user_confirmation)
     assert confirm.html_body =~ "/confirm_new_user/confirm-token"
     refute confirm.html_body =~ "unsubscribe"
+  end
+
+  test "email-change approvals render through the layout with an account footer" do
+    for {side, recipient} <- [{:old, "old@example.com"}, {:new, "new@example.com"}] do
+      args = %{
+        "to" => recipient,
+        "old_email" => "old@example.com",
+        "new_email" => "new@example.com",
+        "token" => "approval-token"
+      }
+
+      assert :ok = EmailChangeDelivery.perform(%Oban.Job{args: args})
+      assert_receive {:email, %Swoosh.Email{to: [{"", ^recipient}]} = email}
+
+      name = "email_change_#{side}"
+      save_sample(name, email)
+      assert_layout(email, name)
+      assert email.html_body =~ @button
+      assert email.html_body =~ "/email-change/approval-token"
+
+      assert email.text_body =~
+               "You're receiving this email because it concerns your huddlz account."
+
+      refute email.html_body =~ "unsubscribe"
+      refute email.text_body =~ "unsubscribe"
+    end
   end
 
   test "the invitation to an address without an account renders through the layout", %{
