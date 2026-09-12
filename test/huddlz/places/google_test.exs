@@ -4,6 +4,42 @@ defmodule Huddlz.Places.GoogleTest do
   alias Huddlz.Places.Google
 
   describe "autocomplete/3" do
+    test "prefers nearby address matches when a search location is supplied" do
+      Req.Test.stub(Google, fn conn ->
+        {:ok, body, conn} = Plug.Conn.read_body(conn)
+        request = Jason.decode!(body)
+
+        assert request["locationBias"] == %{
+                 "circle" => %{
+                   "center" => %{"latitude" => 29.9012, "longitude" => -81.3124},
+                   "radius" => 50_000.0
+                 }
+               }
+
+        refute Map.has_key?(request, "locationRestriction")
+        Req.Test.json(conn, %{"suggestions" => []})
+      end)
+
+      assert {:ok, []} =
+               Google.autocomplete("222 W King", "session-token",
+                 types: [],
+                 location_bias: %{latitude: 29.9012, longitude: -81.3124}
+               )
+    end
+
+    test "searches normally without a valid search location" do
+      Req.Test.stub(Google, fn conn ->
+        {:ok, body, conn} = Plug.Conn.read_body(conn)
+        request = Jason.decode!(body)
+        refute Map.has_key?(request, "locationBias")
+        Req.Test.json(conn, %{"suggestions" => []})
+      end)
+
+      for bias <- [nil, %{latitude: nil, longitude: nil}, %{latitude: 91, longitude: 0}] do
+        assert {:ok, []} = Google.autocomplete("222 W King", "token", location_bias: bias)
+      end
+    end
+
     test "returns parsed suggestions" do
       Req.Test.stub(Google, fn conn ->
         Req.Test.json(conn, %{

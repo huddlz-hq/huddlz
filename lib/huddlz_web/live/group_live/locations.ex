@@ -242,6 +242,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
               variant={:form}
               placeholder="Search for an address or venue..."
               types={[]}
+              location_bias={%{latitude: @group.latitude, longitude: @group.longitude}}
               fetch_coordinates={true}
               show_clear={true}
             />

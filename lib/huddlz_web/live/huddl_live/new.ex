@@ -271,6 +271,7 @@ defmodule HuddlzWeb.HuddlLive.New do
       </.form>
 
       <.location_modal
+        location_bias={%{latitude: @group.latitude, longitude: @group.longitude}}
         live_action={@live_action}
         cancel_path={~p"/groups/#{@group.slug}/huddlz/new"}
         modal_location_address={@modal_location_address}

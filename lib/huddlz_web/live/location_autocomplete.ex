@@ -20,6 +20,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   attr :label, :string, default: nil
   attr :placeholder, :string, default: "Search for a city..."
   attr :types, :list, default: ["locality"]
+  attr :location_bias, :map, default: nil
   attr :show_clear, :boolean, default: true
   attr :fetch_coordinates, :boolean, default: true
 
@@ -38,6 +39,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
        label: nil,
        placeholder: "Search for a city...",
        types: ["locality"],
+       location_bias: nil,
        show_clear: true,
        fetch_coordinates: true,
        variant: :form,
@@ -595,12 +597,12 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
 
   defp maybe_autocomplete(socket, text) do
     session_token = socket.assigns.session_token
-    types = socket.assigns.types
+    opts = [types: socket.assigns.types, location_bias: socket.assigns.location_bias]
 
     socket
     |> assign(loading: true)
     |> start_async(:autocomplete, fn ->
-      Huddlz.Places.autocomplete(text, session_token, types: types)
+      Huddlz.Places.autocomplete(text, session_token, opts)
     end)
   end
 

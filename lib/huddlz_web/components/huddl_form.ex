@@ -327,6 +327,7 @@ defmodule HuddlzWeb.Components.HuddlForm do
   attr :modal_location_address, :string, default: nil
   attr :modal_location_name, :string, default: nil
   attr :cancel_path, :string, required: true
+  attr :location_bias, :map, default: nil
 
   def location_modal(assigns) do
     ~H"""
@@ -356,6 +357,7 @@ defmodule HuddlzWeb.Components.HuddlForm do
             variant={:form}
             placeholder="Search for an address or venue..."
             types={[]}
+            location_bias={@location_bias}
             fetch_coordinates={true}
             show_clear={true}
           />
