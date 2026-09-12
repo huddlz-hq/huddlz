@@ -865,19 +865,22 @@ defmodule HuddlzWeb.CalendarLiveTest do
       host: host,
       public_group: public_group
     } do
+      # The week view needs a pinned window: "tomorrow" falls into next week
+      # whenever the suite runs on a Saturday.
+      in_week = ~D[2030-10-02]
       gone = create_past_huddl(host, public_group, title: "Missed It")
-      off = create_huddl(host, public_group, title: "Called Off", date: tomorrow())
+      off = create_huddl(host, public_group, title: "Called Off", date: in_week)
       Communities.cancel_huddl!(off, "Venue unavailable", actor: host)
-      answered = create_huddl(host, public_group, title: "Answered", date: tomorrow())
+      answered = create_huddl(host, public_group, title: "Answered", date: in_week)
       Communities.cancel_huddl!(answered, "Venue unavailable", actor: host)
-      rsvp_before_cancel = create_huddl(host, public_group, title: "Was Going", date: tomorrow())
+      rsvp_before_cancel = create_huddl(host, public_group, title: "Was Going", date: in_week)
       rsvp!(rsvp_before_cancel, attendee, :rsvp)
       Communities.cancel_huddl!(rsvp_before_cancel, "Venue unavailable", actor: host)
       gone_day = DateTime.to_date(HuddlCardHelpers.local_starts_at(gone))
 
       conn
       |> login(attendee)
-      |> visit("/calendar/week?scope=groups")
+      |> visit("/calendar/week?week=2030-09-29&scope=groups")
       |> refute_has("#calendar-entry-#{off.id}")
       |> refute_has("#calendar-entry-#{answered.id}")
       |> assert_has("#calendar-entry-#{rsvp_before_cancel.id} [data-status=cancelled]")

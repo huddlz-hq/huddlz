@@ -170,7 +170,8 @@ defmodule Huddlz.Notifications.LayoutTest do
             group_id: group.id,
             creator_id: owner.id,
             actor: owner,
-            date: ~D[2026-09-12],
+            # Pinned to a future Saturday: huddlz must start in the future.
+            date: ~D[2030-10-05],
             start_time: ~T[10:00:00],
             duration_minutes: 120
           )
