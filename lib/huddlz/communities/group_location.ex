@@ -81,6 +81,7 @@ defmodule Huddlz.Communities.GroupLocation do
       require_atomic? false
 
       validate present(:name) do
+        where changing(:name)
         message "Name is required"
       end
     end
