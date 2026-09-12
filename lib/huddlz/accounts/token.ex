@@ -61,6 +61,13 @@ defmodule Huddlz.Accounts.Token do
       change filter expr(expires_at < now())
     end
 
+    destroy :discard_confirmation_links do
+      description "Removes a subject's stored confirmation links once its address is confirmed."
+      argument :subject, :string, allow_nil?: false, sensitive?: true
+
+      change filter(expr(subject == ^arg(:subject) and purpose == "confirm_new_user"))
+    end
+
     update :revoke_all_stored_for_subject do
       description "Revokes all stored tokens for a specific subject."
       accept [:extra_data]

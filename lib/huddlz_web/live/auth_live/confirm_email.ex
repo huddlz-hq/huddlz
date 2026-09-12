@@ -10,8 +10,7 @@ defmodule HuddlzWeb.AuthLive.ConfirmEmail do
   """
   use HuddlzWeb, :live_view
 
-  alias AshAuthentication.{Info, Jwt, TokenResource}
-  alias Huddlz.Accounts.User
+  alias Huddlz.Accounts.Confirmation
 
   on_mount {HuddlzWeb.LiveUserAuth, :app}
 
@@ -22,14 +21,14 @@ defmodule HuddlzWeb.AuthLive.ConfirmEmail do
      |> assign(:page_title, "Confirm your email")
      |> assign(:body_class, "is-auth")
      |> assign(:token, token)
-     |> assign(:token_valid, usable?(token))}
+     |> assign(:state, Confirmation.link_state(token))}
   end
 
   @impl true
   def render(assigns) do
     ~H"""
     <Layouts.auth_shell flash={@flash} current_user={@current_user}>
-      <%= if @token_valid do %>
+      <%= if @state == :usable do %>
         <h1>Confirm your email</h1>
         <p class="lede">
           One quick step and your account is ready: confirm that this address is yours.
@@ -52,24 +51,20 @@ defmodule HuddlzWeb.AuthLive.ConfirmEmail do
           <div class="icon-mark">
             <Layouts.auth_state_icon name="warn" />
           </div>
-          <h2>This confirmation link no longer works</h2>
-          <p>It may have expired or already been used. If your email is confirmed, just sign in.</p>
+          <%= if @state == :previous_address do %>
+            <h2>This link was for a previous address</h2>
+            <p>
+              The account has moved on to another email address since this link was sent.
+              Confirm from the email sent to the current address instead.
+            </p>
+          <% else %>
+            <h2>This confirmation link no longer works</h2>
+            <p>It may have expired or already been used. If your email is confirmed, just sign in.</p>
+          <% end %>
           <.link navigate={~p"/sign-in"} class="btn-primary">Sign in</.link>
         </div>
       <% end %>
     </Layouts.auth_shell>
     """
-  end
-
-  # A token that verifies and has not been spent. Confirming revokes it,
-  # so a second visit lands on the expired state. The strategy itself
-  # still checks the token when the form is posted.
-  defp usable?(token) do
-    with {:ok, _claims, _resource} <- Jwt.verify(token, User),
-         {:ok, token_resource} <- Info.authentication_tokens_token_resource(User) do
-      not TokenResource.token_revoked?(token_resource, token)
-    else
-      _ -> false
-    end
   end
 end

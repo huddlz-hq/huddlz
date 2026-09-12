@@ -316,11 +316,58 @@ defmodule HuddlzWeb.Layouts do
 
       <div class="content-body">
         <.flash_group flash={@flash} />
+        <.confirmation_reminder current_user={@current_user} />
         {render_slot(@inner_block)}
       </div>
     </main>
     """
   end
+
+  attr :current_user, :map, default: nil
+
+  # An unconfirmed account is reminded at the top of every page until the
+  # address is confirmed or the reminder is hidden for the session. Both
+  # buttons post to the confirmation controller and come back here.
+  def confirmation_reminder(assigns) do
+    assigns = assign(assigns, :reminded, reminded(assigns.current_user))
+
+    ~H"""
+    <div
+      :if={@reminded}
+      id="confirmation-reminder"
+      class="confirmation-reminder"
+      role="region"
+      aria-label="Email confirmation"
+    >
+      <.icon name="hero-envelope" class="size-5 reminder-icon" />
+      <p class="reminder-copy">
+        <strong>Confirm your email.</strong>
+        We sent a link to <strong>{@current_user.email}</strong>. Look in your inbox and junk folder.
+        Huddl reminders and group updates wait until it's confirmed.
+      </p>
+      <div class="reminder-actions">
+        <.form for={%{}} action={~p"/account/confirmation/resend"} method="post">
+          <button type="submit" class="btn-secondary reminder-resend">Resend email</button>
+        </.form>
+        <.form for={%{}} action={~p"/account/confirmation/hide"} method="post">
+          <button
+            type="submit"
+            class="reminder-hide"
+            title="Hide until next time"
+            aria-label="Hide until next time"
+          >
+            <.icon name="hero-x-mark" class="size-4" />
+          </button>
+        </.form>
+      </div>
+    </div>
+    """
+  end
+
+  defp reminded(%User{confirmed_at: nil, __metadata__: metadata}),
+    do: not (metadata[:confirmation_reminder_hidden] == true)
+
+  defp reminded(_user), do: false
 
   attr :current, :atom, required: true, values: [:system, :light, :dark]
 
