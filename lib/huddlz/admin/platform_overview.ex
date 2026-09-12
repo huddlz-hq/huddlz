@@ -35,9 +35,9 @@ defmodule Huddlz.Admin.PlatformOverview do
         default "90d"
       end
 
-      run fn input, _context ->
+      run fn input, context ->
         period = input |> Ash.ActionInput.get_argument(:period) |> Periods.parse_period()
-        {:ok, PlatformStats.compute(period)}
+        {:ok, PlatformStats.compute(period, context.actor)}
       end
     end
   end

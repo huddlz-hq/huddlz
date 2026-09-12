@@ -2,7 +2,9 @@ defmodule Huddlz.Admin.PlatformStats do
   @moduledoc """
   The figures behind the admin overview, for a chosen period. Reached
   through `Huddlz.Admin.platform_overview/2`, which lets only
-  administrators in; the reads here trust that boundary.
+  administrators in; the reads here trust that boundary. The actor is
+  passed along so huddl reads see everything an administrator does,
+  private groups included.
 
   Every definition is the organizer overview's (`Huddlz.Communities.GroupStats`)
   so a number means the same thing on `/admin` and on a group's page:
@@ -50,7 +52,7 @@ defmodule Huddlz.Admin.PlatformStats do
     * `coming_up` — the next 30 days: huddlz scheduled, RSVPs so far,
       groups with something on, and the next few huddlz
   """
-  def compute(period, now \\ DateTime.utc_now()) do
+  def compute(period, actor, now \\ DateTime.utc_now()) do
     spec = Periods.spec(period)
     {period_start, previous_start} = Periods.starts(now, spec)
 
@@ -59,12 +61,13 @@ defmodule Huddlz.Admin.PlatformStats do
       start: period_start,
       previous_start: previous_start,
       spec: spec,
-      edges: Periods.bucket_edges(now, spec)
+      edges: Periods.bucket_edges(now, spec),
+      actor: actor
     }
 
-    ended = ended_huddlz(now)
+    ended = ended_huddlz(window)
     groups = groups()
-    rsvps = standing_rsvps(previous_start)
+    rsvps = standing_rsvps(window)
 
     %{
       period: period,
@@ -96,7 +99,7 @@ defmodule Huddlz.Admin.PlatformStats do
 
   # Everyone who did something since the previous period began, as
   # {person, when} pairs from every record the app keeps.
-  defp active_people(%{start: start, previous_start: since, edges: edges}) do
+  defp active_people(%{start: start, previous_start: since, edges: edges, actor: actor}) do
     attendees =
       HuddlAttendee
       |> Ash.Query.filter(rsvped_at >= ^since)
@@ -115,7 +118,7 @@ defmodule Huddlz.Admin.PlatformStats do
       Huddl
       |> Ash.Query.filter(inserted_at >= ^since)
       |> Ash.Query.select([:creator_id, :inserted_at])
-      |> Ash.read!(authorize?: false)
+      |> Ash.read!(authorize?: false, actor: actor)
       |> Enum.map(&{&1.creator_id, &1.inserted_at})
 
     logged =
@@ -170,7 +173,7 @@ defmodule Huddlz.Admin.PlatformStats do
 
   # Every huddl that has ended, cancelled ones included, with the fields
   # the period figures and the group ranking need.
-  defp ended_huddlz(now) do
+  defp ended_huddlz(%{now: now, actor: actor}) do
     Huddl
     |> Ash.Query.filter(
       ends_at < ^now and lifecycle_state in [:published, :completed, :cancelled]
@@ -186,7 +189,7 @@ defmodule Huddlz.Admin.PlatformStats do
       :turnout_skipped_at
     ])
     |> Ash.Query.load(:rsvp_count)
-    |> Ash.read!(authorize?: false)
+    |> Ash.read!(authorize?: false, actor: actor)
   end
 
   defp held?(huddl), do: huddl.lifecycle_state != :cancelled
@@ -223,12 +226,12 @@ defmodule Huddlz.Admin.PlatformStats do
 
   # RSVPs still standing, made since the previous period began, each with
   # the group its huddl belongs to.
-  defp standing_rsvps(since) do
+  defp standing_rsvps(%{previous_start: since, actor: actor}) do
     HuddlAttendee
     |> Ash.Query.filter(is_nil(waitlisted_at) and rsvped_at >= ^since)
     |> Ash.Query.select([:rsvped_at])
     |> Ash.Query.load(huddl: Ash.Query.select(Huddl, [:group_id]))
-    |> Ash.read!(authorize?: false)
+    |> Ash.read!(authorize?: false, actor: actor)
     |> Enum.map(&%{rsvped_at: &1.rsvped_at, group_id: &1.huddl.group_id})
   end
 
@@ -315,7 +318,7 @@ defmodule Huddlz.Admin.PlatformStats do
     }
   end
 
-  defp coming_up(%{now: now}) do
+  defp coming_up(%{now: now, actor: actor}) do
     until = DateTime.add(now, @coming_up_days, :day)
 
     upcoming =
@@ -326,7 +329,7 @@ defmodule Huddlz.Admin.PlatformStats do
       |> Ash.Query.sort(starts_at: :asc)
       |> Ash.Query.select([:id, :title, :starts_at, :time_zone, :max_attendees, :group_id])
       |> Ash.Query.load([:rsvp_count, group: Ash.Query.select(Group, [:name, :slug])])
-      |> Ash.read!(authorize?: false)
+      |> Ash.read!(authorize?: false, actor: actor)
 
     %{
       days: @coming_up_days,

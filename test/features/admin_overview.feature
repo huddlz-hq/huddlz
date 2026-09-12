@@ -31,6 +31,14 @@ Feature: Admin platform overview
     And the RSVPs KPI shows "6"
     And the Show rate KPI shows "75%" and "1 of 2 past huddlz counted"
 
+  Scenario: Huddlz in private groups count too
+    Given a private group "Quiet Club" exists with owner "owner553@example.com"
+    And the in-person huddl "Members only" in "Quiet Club" ended 3 days ago with 2 RSVPs
+    And I am signed in as "admin553@example.com"
+    When I visit "/admin"
+    Then the Huddlz held KPI shows "1"
+    And the RSVPs KPI shows "2"
+
   Scenario: Figures move with the period
     Given the in-person huddl "Old" in "Portland Elixir" ended 60 days ago with 5 RSVPs
     And I am signed in as "admin553@example.com"
