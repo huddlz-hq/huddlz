@@ -18,8 +18,8 @@ jobs:
       - uses: actions/checkout@v7
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: '29.0.3'
-          elixir-version: '1.20.2'
+          otp-version: '29.0.6'
+          elixir-version: '1.20.4'
       # Hex 2.5 includes security advisories in hex.audit.
       - name: Install Hex with security advisory support
         run: mix local.hex 2.5.1 --force
