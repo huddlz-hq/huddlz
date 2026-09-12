@@ -65,6 +65,7 @@ defmodule HuddlzWeb.AuthController do
     return_to = return_to(conn)
 
     conn
+    |> HuddlzWeb.ImpersonationController.stop_from_session()
     |> disconnect_live_views()
     |> clear_session(:huddlz)
     |> put_flash(:info, "You are now signed out")

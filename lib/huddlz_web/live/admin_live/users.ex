@@ -125,6 +125,15 @@ defmodule HuddlzWeb.AdminLive.Users do
                     <span class={["pill", role_pill_variant(user.role)]}>{user.role}</span>
                   </td>
                   <td data-label="Actions">
+                    <.link
+                      :if={viewable_as?(user, @current_user)}
+                      href={~p"/admin/impersonations/#{user.id}"}
+                      method="post"
+                      class="btn-secondary view-as"
+                      aria-label={"View as #{user.email}"}
+                    >
+                      View as
+                    </.link>
                     <%= if Ash.can?({user, :update_role}, @current_user) do %>
                       <form id={"role-form-#{user.id}"} phx-submit="update_role" class="role-form">
                         <input type="hidden" name="user_id" value={user.id} />
@@ -157,6 +166,11 @@ defmodule HuddlzWeb.AdminLive.Users do
     </Layouts.app>
     """
   end
+
+  # Administrators view huddlz as other people, never as each other.
+  defp viewable_as?(%{role: :admin}, _admin), do: false
+  defp viewable_as?(%{id: id}, %{id: id}), do: false
+  defp viewable_as?(_user, _admin), do: true
 
   defp user_count_label(1), do: "1 user"
   defp user_count_label(n), do: "#{n} users"

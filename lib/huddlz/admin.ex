@@ -12,5 +12,10 @@ defmodule Huddlz.Admin do
     resource Huddlz.Admin.PlatformOverview do
       define :platform_overview, action: :overview, args: [{:optional, :period}]
     end
+
+    resource Huddlz.Admin.Impersonation do
+      define :start_impersonation, action: :start, args: [:user_id]
+      define :stop_impersonation, action: :stop
+    end
   end
 end

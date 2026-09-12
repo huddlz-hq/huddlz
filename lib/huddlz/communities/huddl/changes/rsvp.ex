@@ -12,37 +12,37 @@ defmodule Huddlz.Communities.Huddl.Changes.Rsvp do
   alias Huddlz.Communities.Huddl.Changes.LockedHuddl
   alias Huddlz.Communities.HuddlAttendee
 
-  def change(changeset, _opts, %{actor: %{id: user_id}}) when not is_nil(user_id) do
-    Ash.Changeset.before_action(changeset, &reserve_spot(&1, user_id))
+  def change(changeset, _opts, %{actor: %{id: user_id} = actor}) when not is_nil(user_id) do
+    Ash.Changeset.before_action(changeset, &reserve_spot(&1, actor))
   end
 
   def change(changeset, _opts, _context) do
     Ash.Changeset.add_error(changeset, "An actor is required to RSVP")
   end
 
-  defp reserve_spot(cs, user_id) do
+  defp reserve_spot(cs, actor) do
     case LockedHuddl.fetch(cs.data.id, :at_capacity) do
       {:ok, %Huddl{} = huddl} ->
-        reserve_spot(cs, huddl, user_id)
+        reserve_spot(cs, huddl, actor)
 
       error ->
         LockedHuddl.add_read_error(cs, error)
     end
   end
 
-  defp reserve_spot(cs, huddl, user_id) do
+  defp reserve_spot(cs, huddl, %{id: user_id} = actor) do
     case fetch_existing_rsvp(huddl.id, user_id) do
-      {:ok, nil} -> claim_or_reject(cs, huddl, user_id)
+      {:ok, nil} -> claim_or_reject(cs, huddl, actor)
       {:ok, _attendee} -> cs
       {:error, error} -> Ash.Changeset.add_error(cs, error)
     end
   end
 
-  defp claim_or_reject(cs, huddl, user_id) do
+  defp claim_or_reject(cs, huddl, actor) do
     if huddl.at_capacity do
       Ash.Changeset.add_error(cs, "This huddl is full")
     else
-      create_rsvp!(huddl.id, user_id)
+      create_rsvp!(huddl.id, actor)
       # Load-bearing: NotifyRsvp{Received,Confirmation} skip when this flag is absent
       # so duplicate RSVPs do not enqueue spurious emails.
       Ash.Changeset.put_context(cs, :rsvp_created, true)
@@ -55,9 +55,10 @@ defmodule Huddlz.Communities.Huddl.Changes.Rsvp do
     |> Ash.read_one(authorize?: false)
   end
 
-  defp create_rsvp!(huddl_id, user_id) do
+  # The actor rides along so the activity log knows who was at the keyboard.
+  defp create_rsvp!(huddl_id, %{id: user_id} = actor) do
     HuddlAttendee
-    |> Ash.Changeset.for_create(:rsvp, %{huddl_id: huddl_id, user_id: user_id})
+    |> Ash.Changeset.for_create(:rsvp, %{huddl_id: huddl_id, user_id: user_id}, actor: actor)
     |> Ash.create!(authorize?: false)
   end
 end
