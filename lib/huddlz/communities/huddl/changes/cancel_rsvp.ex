@@ -46,14 +46,20 @@ defmodule Huddlz.Communities.Huddl.Changes.CancelRsvp do
         cs
 
       {:ok, %{waitlisted_at: nil} = attendee} ->
-        Ash.destroy!(attendee, authorize?: false)
+        attendee
+        |> Ash.Changeset.for_destroy(:cancel_rsvp, %{}, Huddlz.Audit.nested_opts(cs))
+        |> Ash.destroy!(authorize?: false)
+
         # Load-bearing: NotifyRsvpCancelled and PromoteFromWaitlist skip
         # when this flag is absent — pure waitlist withdrawals don't
         # free a seat or warrant an organizer email.
         Ash.Changeset.put_context(cs, :rsvp_cancelled, true)
 
       {:ok, %{waitlisted_at: %DateTime{}} = attendee} ->
-        Ash.destroy!(attendee, authorize?: false)
+        attendee
+        |> Ash.Changeset.for_destroy(:cancel_rsvp, %{}, Huddlz.Audit.nested_opts(cs))
+        |> Ash.destroy!(authorize?: false)
+
         Ash.Changeset.put_context(cs, :waitlist_left, true)
 
       {:error, error} ->

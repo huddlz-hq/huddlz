@@ -58,14 +58,17 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz do
             Map.merge(schedule, %{
               repeat_until: repeat_until,
               frequency: frequency
-            })
+            }),
+            Huddlz.Audit.nested_opts(changeset)
           )
           |> Ash.update(authorize?: false)
 
         # Synchronous: "edit all" is a rare organizer action, bounded at the
         # series cap, and immediate consistency is preferable here. The create
         # path defers its fan-out to RegenerateRecurringSeries instead.
-        case RecurrenceHelper.reconcile_future_instances(huddl, huddl_template, actor) do
+        case RecurrenceHelper.reconcile_future_instances(huddl, huddl_template, actor, %{
+               paper_trail_metadata: changeset.context[:paper_trail_metadata] || %{}
+             }) do
           :ok ->
             notify_series(huddl, actor, changed_fields)
             {:ok, huddl}

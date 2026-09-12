@@ -46,7 +46,11 @@ defmodule Huddlz.Communities.Huddl.Changes.JoinWaitlist do
 
   defp create_waitlist_entry(cs, huddl_id, user_id) do
     HuddlAttendee
-    |> Ash.Changeset.for_create(:join_waitlist, %{huddl_id: huddl_id, user_id: user_id})
+    |> Ash.Changeset.for_create(
+      :join_waitlist,
+      %{huddl_id: huddl_id, user_id: user_id},
+      Huddlz.Audit.nested_opts(cs)
+    )
     |> Ash.create!(authorize?: false)
 
     cs

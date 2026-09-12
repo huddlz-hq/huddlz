@@ -10,7 +10,12 @@ defmodule Huddlz.Communities.Group do
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
-    extensions: [AshJsonApi.Resource, AshGraphql.Resource, AshArchival.Resource]
+    extensions: [
+      AshPaperTrail.Resource,
+      AshJsonApi.Resource,
+      AshGraphql.Resource,
+      AshArchival.Resource
+    ]
 
   graphql do
     type :group
@@ -56,6 +61,20 @@ defmodule Huddlz.Communities.Group do
       index :archived, route: "/archived"
       get :get_visible_by_slug, route: "/history/:slug"
     end
+  end
+
+  paper_trail do
+    change_tracking_mode :snapshot
+    store_action_name? true
+    reference_source? false
+    sensitive_attributes :ignore
+    ignore_attributes [:inserted_at, :updated_at]
+    belongs_to_actor :actor, Huddlz.Accounts.User, domain: Huddlz.Accounts, on_delete: :nilify
+    metadata :impersonation_id, :uuid
+    metadata :impersonator_id, :uuid
+    metadata :automatic?, :boolean
+    version_extensions authorizers: [Ash.Policy.Authorizer]
+    mixin {Huddlz.Audit.Version, :mixin, []}
   end
 
   postgres do

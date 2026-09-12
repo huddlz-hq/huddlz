@@ -9,6 +9,7 @@
     :ash_authentication,
     :ash_authentication_phoenix,
     :ash_postgres,
+    :ash_paper_trail,
     :ash_phoenix,
     :ash,
     :reactor,

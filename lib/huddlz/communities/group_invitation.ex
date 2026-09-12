@@ -11,19 +11,8 @@ defmodule Huddlz.Communities.GroupInvitation do
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
-    notifiers: [Huddlz.Communities.ActivityLog]
-
-  alias Huddlz.Communities.GroupInvitation.Changes.Accept
-  alias Huddlz.Communities.GroupInvitation.Changes.ExpirePrevious
-  alias Huddlz.Communities.GroupInvitation.Changes.LockPending
-  alias Huddlz.Communities.GroupInvitation.Changes.NotifyInvitee
-  alias Huddlz.Communities.GroupInvitation.Changes.SetExpiration
-  alias Huddlz.Communities.GroupInvitation.Checks.InviteeIsNotMember
-  alias Huddlz.Communities.GroupInvitation.Preparations.LoadPendingDetails
-  alias Huddlz.Communities.GroupInvitation.Validations.GroupIsPrivate
-  alias Huddlz.Communities.GroupInvitation.Validations.PendingAndCurrent
-  alias Huddlz.Communities.GroupMember.Checks.GroupOrganizer
-  alias Huddlz.Communities.GroupMember.Checks.GroupOwner
+    notifiers: [Huddlz.Communities.ActivityLog],
+    extensions: [AshPaperTrail.Resource]
 
   postgres do
     table "group_invitations"
@@ -53,6 +42,32 @@ defmodule Huddlz.Communities.GroupInvitation do
       index [:invitee_id, :status, :inserted_at]
       index [:group_id, :status, :inserted_at]
     end
+  end
+
+  alias Huddlz.Communities.GroupInvitation.Changes.Accept
+  alias Huddlz.Communities.GroupInvitation.Changes.ExpirePrevious
+  alias Huddlz.Communities.GroupInvitation.Changes.LockPending
+  alias Huddlz.Communities.GroupInvitation.Changes.NotifyInvitee
+  alias Huddlz.Communities.GroupInvitation.Changes.SetExpiration
+  alias Huddlz.Communities.GroupInvitation.Checks.InviteeIsNotMember
+  alias Huddlz.Communities.GroupInvitation.Preparations.LoadPendingDetails
+  alias Huddlz.Communities.GroupInvitation.Validations.GroupIsPrivate
+  alias Huddlz.Communities.GroupInvitation.Validations.PendingAndCurrent
+  alias Huddlz.Communities.GroupMember.Checks.GroupOrganizer
+  alias Huddlz.Communities.GroupMember.Checks.GroupOwner
+
+  paper_trail do
+    change_tracking_mode :snapshot
+    store_action_name? true
+    reference_source? false
+    sensitive_attributes :ignore
+    ignore_attributes [:inserted_at, :updated_at, :email]
+    belongs_to_actor :actor, Huddlz.Accounts.User, domain: Huddlz.Accounts, on_delete: :nilify
+    metadata :impersonation_id, :uuid
+    metadata :impersonator_id, :uuid
+    metadata :automatic?, :boolean
+    version_extensions authorizers: [Ash.Policy.Authorizer]
+    mixin {Huddlz.Audit.Version, :mixin, []}
   end
 
   actions do

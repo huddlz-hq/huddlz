@@ -5,7 +5,11 @@ defmodule Huddlz.Accounts do
 
   use Ash.Domain,
     otp_app: :huddlz,
-    extensions: [AshJsonApi.Domain]
+    extensions: [AshJsonApi.Domain, AshPaperTrail.Domain]
+
+  paper_trail do
+    include_versions? true
+  end
 
   resources do
     resource Huddlz.Accounts.Token

@@ -27,9 +27,9 @@ defmodule Huddlz.Communities.Group.Changes.TransferOwnership do
 
     changeset
     |> Ash.Changeset.force_change_attribute(:owner_id, new_owner_id)
-    |> Ash.Changeset.after_action(fn _cs, group ->
-      with :ok <- demote(group.id, previous_owner_id),
-           :ok <- promote(group.id, new_owner_id) do
+    |> Ash.Changeset.after_action(fn cs, group ->
+      with :ok <- demote(group.id, previous_owner_id, cs),
+           :ok <- promote(group.id, new_owner_id, cs) do
         notify(group, previous_owner_id, new_owner_id)
         {:ok, group}
       end
@@ -82,29 +82,29 @@ defmodule Huddlz.Communities.Group.Changes.TransferOwnership do
     end
   end
 
-  defp demote(_group_id, nil), do: :ok
+  defp demote(_group_id, nil, _cs), do: :ok
 
-  defp demote(group_id, user_id) do
+  defp demote(group_id, user_id, cs) do
     case fetch_membership(group_id, user_id) do
       nil ->
         :ok
 
       membership ->
         membership
-        |> Ash.Changeset.for_update(:set_role, %{role: :organizer})
+        |> Ash.Changeset.for_update(:set_role, %{role: :organizer}, Huddlz.Audit.nested_opts(cs))
         |> Ash.update(authorize?: false)
         |> ok_or_error()
     end
   end
 
-  defp promote(group_id, user_id) do
+  defp promote(group_id, user_id, cs) do
     case fetch_membership(group_id, user_id) do
       nil ->
         {:error, "new owner must already be a group member"}
 
       membership ->
         membership
-        |> Ash.Changeset.for_update(:set_role, %{role: :owner})
+        |> Ash.Changeset.for_update(:set_role, %{role: :owner}, Huddlz.Audit.nested_opts(cs))
         |> Ash.update(authorize?: false)
         |> ok_or_error()
     end
