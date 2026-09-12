@@ -42,6 +42,22 @@ defmodule Huddlz.Accounts.ActiveDays do
     if seen?(person.id, day) do
       :ok
     else
+      # Only this node shares the cache. Keep the write in the request process
+      # and recheck under the lock: another request may have just recorded it.
+      :global.trans(
+        {{__MODULE__, person.id}, self()},
+        fn -> record_once(person, day) end,
+        [node()]
+      )
+    end
+  end
+
+  def mark(_other, _now), do: :ok
+
+  defp record_once(person, day) do
+    if seen?(person.id, day) do
+      :ok
+    else
       case Accounts.record_active_day(%{day: day}, actor: person) do
         {:ok, _active_day} ->
           :ets.insert(@table, {person.id, day})
@@ -53,8 +69,6 @@ defmodule Huddlz.Accounts.ActiveDays do
       end
     end
   end
-
-  def mark(_other, _now), do: :ok
 
   defp seen?(user_id, day) do
     case :ets.lookup(@table, user_id) do
