@@ -24,14 +24,14 @@ defmodule Huddlz.Communities.Huddl.Changes.PromoteOnCapacityIncrease do
     end
   end
 
-  defp promote_then_notify(_cs, huddl) do
+  defp promote_then_notify(changeset, huddl) do
     huddl = Ash.load!(huddl, [:rsvp_count, :group], authorize?: false)
 
     seats_open = seats_open(huddl)
 
     promoted_ids =
       if seats_open > 0 do
-        promote_n(huddl.id, seats_open)
+        promote_n(huddl.id, seats_open, Huddlz.Audit.nested_opts(changeset, %{automatic?: true}))
       else
         []
       end
@@ -64,7 +64,7 @@ defmodule Huddlz.Communities.Huddl.Changes.PromoteOnCapacityIncrease do
     |> Ash.count!(authorize?: false)
   end
 
-  defp promote_n(huddl_id, n) do
+  defp promote_n(huddl_id, n, opts) do
     HuddlAttendee
     |> Ash.Query.filter(huddl_id == ^huddl_id and not is_nil(waitlisted_at))
     |> Ash.Query.sort(waitlisted_at: :asc)
@@ -72,7 +72,7 @@ defmodule Huddlz.Communities.Huddl.Changes.PromoteOnCapacityIncrease do
     |> Ash.read!(authorize?: false)
     |> Enum.map(fn entry ->
       entry
-      |> Ash.Changeset.for_update(:promote_from_waitlist)
+      |> Ash.Changeset.for_update(:promote_from_waitlist, %{}, opts)
       |> Ash.update!(authorize?: false)
 
       entry.user_id

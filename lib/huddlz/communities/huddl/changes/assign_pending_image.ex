@@ -28,7 +28,7 @@ defmodule Huddlz.Communities.Huddl.Changes.AssignPendingImage do
                Communities.assign_huddl_cover_image_to_huddl(
                  image,
                  huddl.id,
-                 authorize?: false
+                 Huddlz.Audit.nested_opts(changeset)
                ) do
           {:ok, huddl}
         else

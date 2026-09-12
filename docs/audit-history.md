@@ -32,6 +32,8 @@ The Ash actor is recorded as `actor_id`. Callers may supply `context: %{paper_tr
 
 Extending a recurring series retains the original creator while recording the known editor as the audit actor of generated occurrences. Scheduled completion, invitation expiry and confirmed-recipient claims are explicitly automatic. The confirmation worker uses the recipient for authorization, but supplies the trusted shared context flag `audit_system_action?`; a supported version-resource change clears that authorization identity from `actor_id` because no person initiated the claim. The recipient remains the affected person in the changes.
 
+Capacity-driven waitlist promotion and retirement of replaced profile pictures are automatic consequences that retain the initiating person and supplied impersonation identities. Media cleanup workers are explicitly automatic; synchronous cover-image deletion retains its caller attribution. Reminder-delivery actions are excluded from version creation.
+
 ## Retention and personal data
 
 Keep versions for 90 days and prune expired versions daily. Hard deletion of an item does not immediately delete its versions. Account deletion clears actor/impersonator links; item/subject IDs and group content may remain until expiry. Do not copy direct profile/contact values, password hashes, API-key hashes, tokens, or media paths into versions. Do not store action inputs. Free text in group/huddl content remains subject to the same 90-day limit.

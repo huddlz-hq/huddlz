@@ -182,6 +182,7 @@ defmodule Huddlz.Communities.HuddlCoverImage do
     end
 
     destroy :cleanup_orphaned do
+      change Huddlz.Audit.MarkAutomatic
       description "Delete orphaned pending image and its storage files"
       require_atomic? false
 
@@ -206,6 +207,7 @@ defmodule Huddlz.Communities.HuddlCoverImage do
     end
 
     destroy :hard_delete do
+      change {Huddlz.Audit.MarkAutomatic, only_oban?: true}
       description "Hard-delete a huddl image and remove from storage"
       require_atomic? false
 

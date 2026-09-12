@@ -31,7 +31,8 @@ defmodule Huddlz.Communities.GroupMember.Actions.RemoveMemberByIds do
         |> Ash.Changeset.for_destroy(
           :remove_member,
           %{group_id: group_id, user_id: user_id},
-          actor: actor
+          actor: actor,
+          context: input.context
         )
         |> Ash.destroy(return_destroyed?: true)
 

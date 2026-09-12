@@ -176,6 +176,7 @@ defmodule Huddlz.Communities.GroupImage do
     end
 
     destroy :cleanup_orphaned do
+      change Huddlz.Audit.MarkAutomatic
       description "Delete orphaned pending image and its storage files"
       require_atomic? false
 
@@ -200,6 +201,7 @@ defmodule Huddlz.Communities.GroupImage do
     end
 
     destroy :hard_delete do
+      change Huddlz.Audit.MarkAutomatic
       description "Hard-delete a group image and remove from storage"
       require_atomic? false
 

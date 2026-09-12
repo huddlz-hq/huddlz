@@ -133,6 +133,7 @@ defmodule Huddlz.Accounts.ProfilePicture do
     end
 
     destroy :hard_delete do
+      change Huddlz.Audit.MarkAutomatic
       description "Hard-delete a profile picture and remove from storage"
       require_atomic? false
 

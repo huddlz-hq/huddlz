@@ -193,6 +193,7 @@ defmodule Huddlz.Communities.Huddl do
   end
 
   paper_trail do
+    ignore_actions [:send_24h_reminder, :send_1h_reminder]
     change_tracking_mode :snapshot
     store_action_name? true
     reference_source? false
