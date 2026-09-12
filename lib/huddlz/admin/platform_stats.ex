@@ -16,13 +16,13 @@ defmodule Huddlz.Admin.PlatformStats do
 
   People are confirmed accounts. Active people are the distinct people
   with an `Huddlz.Accounts.ActiveDay` in the period; measurement began
-  when those rows did, and figures say so rather than compare against
-  days nobody measured.
+  on the separately recorded collection date. Figures say so rather than
+  compare against days nobody measured.
   """
 
   require Ash.Query
 
-  alias Huddlz.Accounts.{ActiveDay, User}
+  alias Huddlz.Accounts.{ActiveDay, UsageMeasurement, User}
   alias Huddlz.Communities.{Group, Huddl, HuddlAttendee, Periods}
 
   @coming_up_days 30
@@ -96,7 +96,7 @@ defmodule Huddlz.Admin.PlatformStats do
   # people among the rows on its dates. Buckets and the previous period
   # only count when measurement had begun by then.
   defp active_people(%{start: start, previous_start: previous_start, edges: edges}) do
-    measured_from = Ash.min!(ActiveDay, :day, authorize?: false)
+    measured_from = Ash.read_one!(UsageMeasurement, authorize?: false).started_on
     since = DateTime.to_date(previous_start)
     start_day = DateTime.to_date(start)
 
@@ -110,7 +110,9 @@ defmodule Huddlz.Admin.PlatformStats do
 
     %{
       count: distinct_people(current),
-      previous: if(measured?(measured_from, since), do: distinct_people(previous), else: nil),
+      # Collection starts partway through its first date. Only later dates
+      # can begin a completely measured previous period.
+      previous: if(Date.compare(since, measured_from) == :gt, do: distinct_people(previous)),
       spark:
         edges
         |> Enum.chunk_every(2, 1, :discard)

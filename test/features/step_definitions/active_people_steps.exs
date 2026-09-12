@@ -6,10 +6,42 @@ defmodule ActivePeopleSteps do
   import Phoenix.ConnTest, only: [build_conn: 0, json_response: 2]
 
   require Ash.Query
+  require Ecto.Query
 
-  alias Huddlz.Accounts.{ActiveDay, User}
+  alias Huddlz.Accounts.{ActiveDay, UsageMeasurement, User}
   alias Huddlz.Communities
   alias Huddlz.Communities.{Group, GroupMember}
+
+  step "usage measurement began {int} days ago", %{args: [days]} = context do
+    UsageMeasurement
+    |> Ash.read_one!(authorize?: false)
+    |> Ash.Seed.update!(%{started_on: Date.add(Date.utc_today(), -days)})
+
+    context
+  end
+
+  step "the API reports usage measured from {int} days ago", %{args: [days]} = context do
+    active = overview_payload(context.overview_response)["active"]
+    assert active["measured_from"] == Date.to_iso8601(Date.add(Date.utc_today(), -days))
+    context
+  end
+
+  step "the API reports {int} active people in the previous period", %{args: [count]} = context do
+    assert overview_payload(context.overview_response)["active"]["previous"] == count
+    context
+  end
+
+  step "the API reports no active people comparison", context do
+    assert overview_payload(context.overview_response)["active"]["previous"] == nil
+    context
+  end
+
+  step "the account {string} has been deleted", %{args: [email]} = context do
+    id = find_user(email).id
+    Huddlz.Repo.delete_all(Ecto.Query.from(user in User, where: user.id == ^id))
+    assert ActiveDay |> Ash.Query.filter(user_id == ^id) |> Ash.count!(authorize?: false) == 0
+    context
+  end
 
   step "{string} is counted as active today", %{args: [email]} = context do
     assert active_days(email, Date.utc_today()) >= 1

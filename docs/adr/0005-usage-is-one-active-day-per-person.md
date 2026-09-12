@@ -6,6 +6,10 @@ A day is recorded when a signed-in person makes a browser page request, opens a 
 
 The rows hold a person and a date. They stay for as long as the account exists and are deleted with it. Measurement began when this shipped; earlier days are not backfilled and figures that would compare against unmeasured days say when measuring began instead.
 
+The deployment migration records the UTC collection-start date separately from active days. Days with no usage are still measured, and deleting accounts must not move that date. The first date is partial: a previous period is comparable only when it starts after that date. Sparkline buckets can include the partial first date, while buckets ending before collection began stay unmeasured.
+
+On each node, concurrent requests for the same person share a lock around recording and caching a successful write. Failed writes are not cached, so a later request can retry. The database upsert still protects against duplicate rows across nodes and restarts.
+
 ## Considered options
 
 - **A last-active timestamp on the account.** Rejected: it answers "when was this person last here" but loses the history a distinct-people count over any past period needs.
