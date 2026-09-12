@@ -88,9 +88,6 @@ defmodule EmailChangeNotificationSteps do
             "Email-change message to #{recipient} did not match expected content. Body:\n#{email.html_body}"
           )
         end
-
-      {:email, _other} ->
-        receive_email_matching(recipient, predicate)
     after
       100 -> flunk("No email-change notification received for #{recipient}")
     end
