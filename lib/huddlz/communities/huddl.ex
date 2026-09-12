@@ -100,8 +100,6 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     field_policy :cancellation_reason do
-      authorize_if actor_attribute_equals(:role, :admin)
-
       authorize_if expr(
                      creator_id == ^actor(:id) or group.owner_id == ^actor(:id) or
                        exists(group.group_members, user_id == ^actor(:id) and role == :organizer) or
@@ -118,8 +116,6 @@ defmodule Huddlz.Communities.Huddl do
       :turnout_total,
       :show_rate
     ] do
-      authorize_if actor_attribute_equals(:role, :admin)
-
       authorize_if expr(
                      group.owner_id == ^actor(:id) or
                        exists(group.group_members, user_id == ^actor(:id) and role == :organizer)
@@ -579,8 +575,8 @@ defmodule Huddlz.Communities.Huddl do
       Every later instance in the same recurring series, used internally when
       regenerating a series ("edit all"). Deliberately omits the
       FilterByVisibility preparation: series regeneration must find every
-      instance regardless of the editor's visibility (e.g. a private series, or
-      an admin who isn't a group member). Invoke only with `authorize?: false`.
+      instance, including future private occurrences. Invoke only with
+      `authorize?: false` after authorizing the series edit.
       """
 
       argument :huddl_template_id, :uuid, allow_nil?: false
@@ -740,6 +736,7 @@ defmodule Huddlz.Communities.Huddl do
 
   policies do
     policy action([
+             :siblings_in_series,
              :archive_blockers,
              :read_for_group_lifecycle,
              :location_deletion_blockers,
@@ -748,12 +745,6 @@ defmodule Huddlz.Communities.Huddl do
              :get_for_lifecycle_transition
            ]) do
       forbid_if always()
-    end
-
-    # Admins can do anything
-    bypass always() do
-      description "Admins can do anything"
-      authorize_if actor_attribute_equals(:role, :admin)
     end
 
     # Creation policies

@@ -3,8 +3,9 @@ defmodule Huddlz.Admin.PlatformStats do
   The figures behind the admin overview, for a chosen period. Reached
   through `Huddlz.Admin.platform_overview/2`, which lets only
   administrators in; the reads here trust that boundary. The actor is
-  passed along so huddl reads see everything an administrator does,
-  private groups included.
+  passed along so group and huddl reads follow the administrator's ordinary
+  visibility. Private-group analytics additionally require an owner or
+  organizer role, as on the group's overview.
 
   Every definition is the organizer overview's (`Huddlz.Communities.GroupStats`)
   so a number means the same thing on `/admin` and on a group's page:
@@ -48,8 +49,9 @@ defmodule Huddlz.Admin.PlatformStats do
   def compute(period, actor, now \\ DateTime.utc_now()) do
     window = now |> Periods.calendar_window(Periods.spec(period)) |> Map.put(:actor, actor)
 
+    groups = groups(actor)
+    window = Map.put(window, :group_ids, Enum.map(groups, & &1.id))
     ended = ended_huddlz(window)
-    groups = groups()
     rsvps = standing_rsvps(window)
 
     %{
@@ -82,12 +84,16 @@ defmodule Huddlz.Admin.PlatformStats do
     }
   end
 
-  defp groups do
+  defp groups(actor) do
     Group
-    |> Ash.Query.for_read(:read_with_archived)
+    |> Ash.Query.for_read(:read_with_archived, %{}, actor: actor)
+    |> Ash.Query.filter(
+      is_public == true or owner_id == ^actor.id or
+        exists(group_members, user_id == ^actor.id and role == :organizer)
+    )
     |> Ash.Query.select([:id, :name, :slug, :created_at, :archived_at])
     |> Ash.Query.load(:member_count)
-    |> Ash.read!(authorize?: false)
+    |> Ash.read!(actor: actor)
   end
 
   defp group_figures(groups, ended, %{start: start, now: now, edges: [_first | ends]}) do
@@ -108,10 +114,11 @@ defmodule Huddlz.Admin.PlatformStats do
 
   # Every huddl that has ended, cancelled ones included, with the fields
   # the period figures and the group ranking need.
-  defp ended_huddlz(%{now: now, actor: actor}) do
+  defp ended_huddlz(%{now: now, actor: actor, group_ids: group_ids}) do
     Huddl
     |> Ash.Query.filter(
-      ends_at < ^now and lifecycle_state in [:published, :completed, :cancelled]
+      group_id in ^group_ids and ends_at < ^now and
+        lifecycle_state in [:published, :completed, :cancelled]
     )
     |> Ash.Query.select([
       :id,
@@ -160,9 +167,18 @@ defmodule Huddlz.Admin.PlatformStats do
 
   # RSVPs still standing, made since the previous period began, each with
   # the group its huddl belongs to.
-  defp standing_rsvps(%{previous_start: since, actor: actor}) do
+  defp standing_rsvps(%{previous_start: since, actor: actor, group_ids: group_ids}) do
+    visible_huddl_ids =
+      Huddl
+      |> Ash.Query.filter(group_id in ^group_ids)
+      |> Ash.Query.select(:id)
+      |> Ash.read!(actor: actor)
+      |> Enum.map(& &1.id)
+
     HuddlAttendee
-    |> Ash.Query.filter(is_nil(waitlisted_at) and rsvped_at >= ^since)
+    |> Ash.Query.filter(
+      huddl_id in ^visible_huddl_ids and is_nil(waitlisted_at) and rsvped_at >= ^since
+    )
     |> Ash.Query.select([:rsvped_at])
     |> Ash.Query.load(huddl: Ash.Query.select(Huddl, [:group_id]))
     |> Ash.read!(authorize?: false, actor: actor)
@@ -252,13 +268,14 @@ defmodule Huddlz.Admin.PlatformStats do
     }
   end
 
-  defp coming_up(%{now: now, actor: actor}) do
+  defp coming_up(%{now: now, actor: actor, group_ids: group_ids}) do
     until = DateTime.add(now, @coming_up_days, :day)
 
     upcoming =
       Huddl
       |> Ash.Query.filter(
-        lifecycle_state == :published and starts_at >= ^now and starts_at < ^until
+        group_id in ^group_ids and lifecycle_state == :published and
+          starts_at >= ^now and starts_at < ^until
       )
       |> Ash.Query.sort(starts_at: :asc)
       |> Ash.Query.select([:id, :title, :starts_at, :time_zone, :max_attendees, :group_id])

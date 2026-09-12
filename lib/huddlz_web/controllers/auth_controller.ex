@@ -3,6 +3,7 @@ defmodule HuddlzWeb.AuthController do
   use AshAuthentication.Phoenix.Controller
 
   alias HuddlzWeb.AuthReturnTo
+  alias HuddlzWeb.BrowserSession
 
   def success(conn, activity, user, _token) do
     return_to = return_to(conn)
@@ -23,6 +24,8 @@ defmodule HuddlzWeb.AuthController do
       end
 
     conn
+    |> BrowserSession.finalize_impersonation()
+    |> BrowserSession.disconnect_live_views()
     |> delete_session(:return_to)
     |> store_in_session(user)
     |> put_live_socket_id()
@@ -65,7 +68,8 @@ defmodule HuddlzWeb.AuthController do
     return_to = return_to(conn)
 
     conn
-    |> disconnect_live_views()
+    |> BrowserSession.finalize_impersonation()
+    |> BrowserSession.disconnect_live_views()
     |> clear_session(:huddlz)
     |> put_flash(:info, "You are now signed out")
     |> redirect(to: return_to)
@@ -74,25 +78,12 @@ defmodule HuddlzWeb.AuthController do
   defp put_live_socket_id(conn) do
     case get_session(conn, :user_token) do
       token when is_binary(token) ->
-        put_session(conn, :live_socket_id, live_socket_id(token))
+        put_session(conn, :live_socket_id, BrowserSession.live_socket_id(token))
 
       _ ->
         conn
     end
   end
-
-  defp disconnect_live_views(conn) do
-    case get_session(conn, :live_socket_id) do
-      topic when is_binary(topic) ->
-        HuddlzWeb.Endpoint.broadcast(topic, "disconnect", %{})
-        conn
-
-      _ ->
-        conn
-    end
-  end
-
-  defp live_socket_id(token), do: "users_sessions:#{Base.url_encode64(token)}"
 
   defp return_to(conn) do
     [conn.params["return_to"], get_session(conn, :return_to)]

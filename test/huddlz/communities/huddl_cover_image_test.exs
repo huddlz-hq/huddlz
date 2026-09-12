@@ -82,7 +82,7 @@ defmodule Huddlz.Communities.HuddlCoverImageTest do
       end
     end
 
-    test "admin can create huddl image for any huddl" do
+    test "admin cannot create a cover image for a huddl they do not organize" do
       admin = generate(user(role: :admin))
       owner = generate(user(role: :user))
       group = generate(group(owner_id: owner.id, actor: owner))
@@ -96,8 +96,8 @@ defmodule Huddlz.Communities.HuddlCoverImageTest do
         huddl_id: huddl.id
       }
 
-      assert {:ok, huddl_cover_image} = Communities.create_huddl_cover_image(attrs, actor: admin)
-      assert huddl_cover_image.huddl_id == huddl.id
+      assert {:error, %Ash.Error.Forbidden{}} =
+               Communities.create_huddl_cover_image(attrs, actor: admin)
     end
   end
 

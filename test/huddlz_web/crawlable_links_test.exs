@@ -84,7 +84,7 @@ defmodule HuddlzWeb.CrawlableLinksTest do
     cancelled = cancelled |> Ash.Changeset.for_update(:cancel, %{}, actor: owner) |> Ash.update!()
     deleted = generate(huddl(group_id: group.id, actor: owner))
     deleted = deleted |> Ash.Changeset.for_update(:cancel, %{}, actor: owner) |> Ash.update!()
-    Ash.destroy!(deleted, actor: generate(user(role: :admin)))
+    Ash.destroy!(deleted, authorize?: false)
 
     for path <- ["/discover", "/discover?date_filter=all", "/groups/#{group.slug}"] do
       links = Floki.attribute(document(conn, path), "a", "href")

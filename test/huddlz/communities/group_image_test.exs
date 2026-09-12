@@ -44,7 +44,7 @@ defmodule Huddlz.Communities.GroupImageTest do
       end
     end
 
-    test "admin can create group image for any group" do
+    test "admin cannot create a group image for a group they do not organize" do
       admin = generate(user(role: :admin))
       owner = generate(user(role: :user))
       group = generate(group(owner_id: owner.id, actor: owner))
@@ -57,8 +57,8 @@ defmodule Huddlz.Communities.GroupImageTest do
         group_id: group.id
       }
 
-      assert {:ok, group_image} = Communities.create_group_image(attrs, actor: admin)
-      assert group_image.group_id == group.id
+      assert {:error, %Ash.Error.Forbidden{}} =
+               Communities.create_group_image(attrs, actor: admin)
     end
   end
 

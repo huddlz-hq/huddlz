@@ -115,8 +115,11 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                |> Ash.create()
     end
 
-    test "admin can create huddl", %{admin: admin, group: group} do
-      assert {:ok, huddl} =
+    test "admin cannot create a huddl in a group they do not organize", %{
+      admin: admin,
+      group: group
+    } do
+      assert {:error, %Ash.Error.Forbidden{}} =
                Huddl
                |> Ash.Changeset.for_create(
                  :create,
@@ -132,8 +135,6 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                  actor: admin
                )
                |> Ash.create()
-
-      assert huddl.title == "Admin's Huddl"
     end
   end
 
@@ -663,15 +664,16 @@ defmodule Huddlz.Communities.HuddlAccessControlTest do
                |> Ash.create(actor: owner)
     end
 
-    test "admin can update and destroy huddl", %{admin: admin, huddl: huddl} do
-      assert {:ok, updated} =
+    test "admin cannot update or destroy a huddl they do not organize", %{
+      admin: admin,
+      huddl: huddl
+    } do
+      assert {:error, %Ash.Error.Forbidden{}} =
                huddl
                |> Ash.Changeset.for_update(:update, %{title: "Updated by Admin"}, actor: admin)
                |> Ash.update()
 
-      assert updated.title == "Updated by Admin"
-
-      assert :ok = Ash.destroy(updated, actor: admin)
+      assert {:error, %Ash.Error.Forbidden{}} = Ash.destroy(huddl, actor: admin)
     end
   end
 end

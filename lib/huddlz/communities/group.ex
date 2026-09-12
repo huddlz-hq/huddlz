@@ -219,10 +219,9 @@ defmodule Huddlz.Communities.Group do
       Groups the actor actually organizes — they own the group, or are an
       `:organizer` GroupMember of it. Sorted alphabetically by name.
 
-      Admins are not auto-included via this action; the admin bypass for
-      managing a specific group lives in `OrganizeLive`'s per-slug auth
-      check, not in the list query, so the sidebar/picker stay scoped to
-      groups the actor truly organizes.
+      Administrators are not auto-included: the workspace is management,
+      so the sidebar and picker stay scoped to groups the actor truly
+      organizes.
       """
 
       pagination offset?: true, countable: true, required?: false, default_limit: 50
@@ -283,8 +282,8 @@ defmodule Huddlz.Communities.Group do
     read :get_for_organize do
       description """
       Get a group by slug, but only when the actor can manage it as an
-      organizer — they own the group, are an `:organizer` GroupMember, or are
-      an admin (via the resource-level admin bypass). Drives `OrganizeLive`'s
+      organizer — they own the group or are an `:organizer` GroupMember.
+      Being an administrator does not count. Drives `OrganizeLive`'s
       per-slug auth check; nil result means "not organizable by this actor."
       """
 
@@ -341,14 +340,9 @@ defmodule Huddlz.Communities.Group do
   end
 
   policies do
-    # Admin bypass - admins can do everything
-    bypass actor_attribute_equals(:role, :admin) do
-      authorize_if always()
-    end
-
-    # All logged-in users can create groups
+    # Anyone signed in can create a group, administrators included.
     policy action(:create_group) do
-      authorize_if actor_attribute_equals(:role, :user)
+      authorize_if actor_present()
     end
 
     # Only the owner can update group details
@@ -375,7 +369,6 @@ defmodule Huddlz.Communities.Group do
     end
 
     # Owner or :organizer member can open the per-group organizer workspace.
-    # Admins are covered by the bypass at the top of this block.
     policy action(:get_for_organize) do
       description "Owner or :organizer member can manage this group as an organizer"
       authorize_if expr(owner_id == ^actor(:id))

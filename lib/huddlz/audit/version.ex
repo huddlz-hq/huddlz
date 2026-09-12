@@ -19,6 +19,7 @@ defmodule Huddlz.Audit.Version do
       end
 
       changes do
+        change Huddlz.Audit.AttributeImpersonation, on: [:create]
         change Huddlz.Audit.ClearSystemActor, on: [:create]
       end
 

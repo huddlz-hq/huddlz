@@ -36,7 +36,7 @@ defmodule Huddlz.Communities.HuddlCoverImage.Checks.IsHuddlGroupOwnerOrOrganizer
 
   defp group_owner_or_organizer?(actor, huddl_id) do
     # Get the huddl to find its group_id
-    case Ash.get(Huddl, huddl_id, authorize?: false) do
+    case Ash.get(Huddl, huddl_id, actor: actor) do
       {:ok, %Huddl{group_id: group_id}} ->
         check_authorization(actor, group_id)
 

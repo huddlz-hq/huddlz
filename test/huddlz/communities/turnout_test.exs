@@ -3,10 +3,9 @@ defmodule Huddlz.Communities.TurnoutTest do
 
   alias Huddlz.Communities
 
-  test "archival locks turnout actions even with stale records or admin access" do
+  test "archival locks turnout actions even with stale records" do
     owner = generate(user(role: :user))
     organizer = generate(user(role: :user))
-    admin = generate(user(role: :admin))
 
     {group, _memberships} =
       generate_group_with_members(owner: owner, members: [%{user: organizer, role: :organizer}])
@@ -15,7 +14,7 @@ defmodule Huddlz.Communities.TurnoutTest do
     recorded = Communities.record_turnout!(huddl, %{in_room: 7}, actor: owner)
     Communities.archive_group!(group, actor: owner)
 
-    for actor <- [owner, organizer, admin] do
+    for actor <- [owner, organizer] do
       assert {:error, error} = Communities.record_turnout(recorded, %{in_room: 9}, actor: actor)
       assert Exception.message(error) =~ "Restore it before making changes"
       assert {:error, error} = Communities.skip_turnout(recorded, actor: actor)

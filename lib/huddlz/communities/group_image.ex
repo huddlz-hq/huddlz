@@ -227,10 +227,6 @@ defmodule Huddlz.Communities.GroupImage do
   end
 
   policies do
-    bypass actor_attribute_equals(:role, :admin) do
-      authorize_if always()
-    end
-
     # Group owners can upload images for their groups
     # Note: create needs custom check since relationship isn't loaded yet
     policy action(:create) do
@@ -267,9 +263,11 @@ defmodule Huddlz.Communities.GroupImage do
       authorize_if always()
     end
 
-    # Anyone can read group images (they're public)
+    # Assigned images follow their group's visibility; pending uploads have no group yet.
     policy action_type(:read) do
-      authorize_if always()
+      authorize_if expr(is_nil(group_id))
+      authorize_if expr(group.is_public == true and is_nil(group.archived_at))
+      authorize_if relates_to_actor_via([:group, :members])
     end
 
     # Group owners can destroy their group's images

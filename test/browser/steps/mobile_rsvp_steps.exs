@@ -9,7 +9,7 @@ defmodule BrowserMobileRsvpSteps do
     owner = generate(user(display_name: "Sam Rivera"))
     member = generate(user(display_name: "Ada Park"))
     group = generate(group(owner_id: owner.id, actor: owner))
-    generate(group_member(group_id: group.id, user_id: member.id, role: :member))
+    generate(group_member(group_id: group.id, user_id: member.id, role: :member, actor: owner))
 
     huddl =
       generate(

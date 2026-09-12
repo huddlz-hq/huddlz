@@ -86,10 +86,6 @@ defmodule Huddlz.Notifications.Notification do
   end
 
   policies do
-    bypass actor_attribute_equals(:role, :admin) do
-      authorize_if always()
-    end
-
     # System-driven create from Huddlz.Notifications.deliver/3 runs with
     # authorize?: false. No actor-driven path creates notifications, so
     # forbid the action whenever an actor is in play.

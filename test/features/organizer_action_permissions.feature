@@ -27,7 +27,12 @@ Feature: Organizer action permissions
     Examples:
       | email                |
       | owner314@example.com |
-      | admin314@example.com |
+
+  Scenario: An administrator who does not organize the group cannot open the workspace
+    Given I am signed in as "admin314@example.com"
+    When I open the organizer roster for "Organizer Permissions"
+    Then I should see "That group doesn't exist, or you don't organize it."
+    And the group edit action should be hidden
 
   Scenario: A member cannot open the workspace directly
     Given "member314@example.com" is a member of "Organizer Permissions"

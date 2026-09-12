@@ -25,6 +25,7 @@ defmodule HuddlzWeb.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :load_from_session_unless_loaded
+    plug HuddlzWeb.BrowserSession
     plug :prevent_authenticated_page_caching
   end
 
@@ -155,7 +156,14 @@ defmodule HuddlzWeb.Router do
     pipe_through :browser
 
     auth_routes AuthController, Huddlz.Accounts.User, path: "/auth"
-    sign_out_route AuthController
+
+    sign_out_route AuthController, "/sign-out",
+      on_mount: [{HuddlzWeb.LiveUserAuth, :app}],
+      layout: {HuddlzWeb.Layouts, :impersonation_layout}
+
+    # An administrator viewing huddlz as someone else, and stopping.
+    post "/admin/impersonations/:user_id", ImpersonationController, :create
+    delete "/admin/impersonations/current", ImpersonationController, :delete
 
     # The confirmation email's page; registration signs people in before
     # they confirm, so it takes a signed-in visitor too.

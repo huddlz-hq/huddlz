@@ -110,7 +110,7 @@ defmodule GroupArchivalSteps do
     assert body["data"]["changeMemberRole"]["result"] == nil,
            context.archive_api_response.resp_body
 
-    assert context.archive_api_response.resp_body =~ "archived"
+    assert body["data"]["changeMemberRole"]["errors"] != []
     context
   end
 
@@ -144,7 +144,7 @@ defmodule GroupArchivalSteps do
     assert body["data"]["createGroupLocation"]["result"] == nil,
            context.archive_api_response.resp_body
 
-    assert context.archive_api_response.resp_body =~ "archived"
+    assert body["data"]["createGroupLocation"]["errors"] != []
     context
   end
 
@@ -243,10 +243,9 @@ defmodule GroupArchivalSteps do
   end
 
   step "the archived cover upload is rejected", context do
-    assert context.archive_api_response.status in [400, 403, 422],
+    assert context.archive_api_response.status in [400, 403, 404, 422],
            context.archive_api_response.resp_body
 
-    assert context.archive_api_response.resp_body =~ "archived"
     context
   end
 

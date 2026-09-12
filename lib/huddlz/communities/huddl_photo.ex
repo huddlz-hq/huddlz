@@ -89,10 +89,6 @@ defmodule Huddlz.Communities.HuddlPhoto do
   end
 
   policies do
-    bypass actor_attribute_equals(:role, :admin) do
-      authorize_if always()
-    end
-
     policy action(:create) do
       description "Only the huddl's creator or a confirmed attendee can upload photos, after the huddl has ended"
 

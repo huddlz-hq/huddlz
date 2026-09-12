@@ -26,25 +26,36 @@ defmodule Huddlz.Communities.ActivityLog do
   def requires_original_data?(_resource, _action), do: false
 
   @impl true
-  def notify(%Ash.Notifier.Notification{resource: GroupMember, action: action, data: member}) do
+  def notify(%Ash.Notifier.Notification{
+        resource: GroupMember,
+        action: action,
+        data: member,
+        actor: actor
+      }) do
     case member_kind(action.name) do
       nil -> :ok
-      kind -> record(kind, member.group_id, member.user_id, nil)
+      kind -> record(kind, member.group_id, member.user_id, nil, actor)
     end
   end
 
   def notify(%Ash.Notifier.Notification{
         resource: GroupInvitation,
         action: %{name: :accept},
-        data: invitation
+        data: invitation,
+        actor: actor
       }) do
-    record(:accepted_invitation, invitation.group_id, invitation.invitee_id, nil)
+    record(:accepted_invitation, invitation.group_id, invitation.invitee_id, nil, actor)
   end
 
-  def notify(%Ash.Notifier.Notification{resource: HuddlAttendee, action: action, data: attendee}) do
+  def notify(%Ash.Notifier.Notification{
+        resource: HuddlAttendee,
+        action: action,
+        data: attendee,
+        actor: actor
+      }) do
     case attendee_kind(action, attendee) do
       nil -> :ok
-      kind -> record_for_huddl(kind, attendee)
+      kind -> record_for_huddl(kind, attendee, actor)
     end
   end
 
@@ -63,7 +74,7 @@ defmodule Huddlz.Communities.ActivityLog do
   defp attendee_kind(%{type: :destroy}, _waitlisted), do: :left_waitlist
   defp attendee_kind(_action, _attendee), do: nil
 
-  defp record_for_huddl(kind, attendee) do
+  defp record_for_huddl(kind, attendee, actor) do
     # The visibility-free read: the primary read hides private huddlz from
     # actorless lookups, and this one runs after the actor's action.
     Huddl
@@ -71,19 +82,30 @@ defmodule Huddlz.Communities.ActivityLog do
     |> Ash.Query.select([:group_id])
     |> Ash.read_one(authorize?: false)
     |> case do
-      {:ok, %{group_id: group_id}} -> record(kind, group_id, attendee.user_id, attendee.huddl_id)
-      {:ok, nil} -> report(kind, :huddl_not_found)
-      {:error, error} -> report(kind, error)
+      {:ok, %{group_id: group_id}} ->
+        record(kind, group_id, attendee.user_id, attendee.huddl_id, actor)
+
+      {:ok, nil} ->
+        report(kind, :huddl_not_found)
+
+      {:error, error} ->
+        report(kind, error)
     end
   end
 
-  defp record(kind, group_id, user_id, huddl_id) do
+  # The actor carries the impersonation it acts under, when an administrator
+  # is viewing huddlz as the person.
+  defp impersonation_id(%{__metadata__: %{impersonation: %{id: id}}}), do: id
+  defp impersonation_id(_actor), do: nil
+
+  defp record(kind, group_id, user_id, huddl_id, actor) do
     GroupActivity
     |> Ash.Changeset.for_create(:record, %{
       kind: kind,
       group_id: group_id,
       user_id: user_id,
-      huddl_id: huddl_id
+      huddl_id: huddl_id,
+      impersonation_id: impersonation_id(actor)
     })
     |> Ash.create(authorize?: false)
     |> case do

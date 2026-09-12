@@ -126,7 +126,7 @@ defmodule HuddlzWeb.SitemapControllerTest do
            |> response(304) == ""
 
     huddl = huddl |> Ash.Changeset.for_update(:cancel, %{}, actor: host) |> Ash.update!()
-    Ash.destroy!(huddl, actor: generate(user(role: :admin)))
+    Ash.destroy!(huddl, authorize?: false)
     assert_error_sent 404, fn -> get(build_conn(), URI.parse(huddl_url(group, huddl)).path) end
     assert build_conn() |> get("/sitemap.xml") |> response(200) == old_index
     assert {:ok, :ok} = Sitemaps.refresh()

@@ -380,14 +380,21 @@ defmodule Huddlz.AuditTest do
     end
   end
 
-  test "account deletion clears actor and impersonator links", %{owner: owner, huddl: huddl} do
+  test "account deletion clears actor and impersonator links", %{
+    owner: owner,
+    group: group,
+    huddl: huddl
+  } do
     admin = generate(user(role: :admin))
+
+    membership = Communities.add_member!(group.id, admin.id, :organizer, actor: owner)
 
     Communities.update_huddl!(huddl, %{title: "Admin edit"},
       actor: admin,
       context: %{paper_trail_metadata: %{impersonator_id: admin.id}}
     )
 
+    Communities.remove_member!(membership, group.id, admin.id, actor: owner)
     Repo.delete_all(from(user in Huddlz.Accounts.User, where: user.id == ^admin.id))
     row = Enum.find(versions(huddl), &(&1.changes["title"] == "Admin edit"))
     assert is_nil(row.actor_id)

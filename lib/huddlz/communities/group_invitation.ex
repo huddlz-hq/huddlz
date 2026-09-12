@@ -229,10 +229,6 @@ defmodule Huddlz.Communities.GroupInvitation do
   end
 
   policies do
-    bypass actor_attribute_equals(:role, :admin) do
-      authorize_if always()
-    end
-
     policy action(:open_email_invitation) do
       authorize_if actor_present()
     end

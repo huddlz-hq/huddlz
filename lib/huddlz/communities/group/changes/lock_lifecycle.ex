@@ -19,7 +19,7 @@ defmodule Huddlz.Communities.Group.Changes.LockLifecycle do
         is_nil(group) ->
           Ash.Changeset.add_error(changeset, "This group is no longer available.")
 
-        context.actor && context.actor.role != :admin && context.actor.id != group.owner_id ->
+        context.actor && context.actor.id != group.owner_id ->
           Ash.Changeset.add_error(changeset, "Only the current owner can manage this group.")
 
         changeset.action.name == :archive && not is_nil(group.archived_at) ->

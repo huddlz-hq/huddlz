@@ -159,10 +159,6 @@ defmodule Huddlz.Accounts.ProfilePicture do
   end
 
   policies do
-    bypass actor_attribute_equals(:role, :admin) do
-      authorize_if always()
-    end
-
     # Users can upload pictures for themselves via the API
     policy action(:upload) do
       description "Authenticated actors can upload their own profile picture"

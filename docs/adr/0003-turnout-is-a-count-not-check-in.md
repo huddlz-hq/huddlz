@@ -10,3 +10,5 @@ Organizers want to know how many people actually came to a huddl, because RSVPs 
 ## Consequences
 
 Show rate is turnout divided by RSVPs and can exceed 100%. There is no per-member attendance history, so nothing should be built that needs to know whether a specific person came.
+
+ADR-0004 narrows administrator access: direct turnout reads follow ordinary group roles, and private-group analytics in the platform overview require an owner or organizer role. Troubleshooting another person's group uses explicit impersonation.

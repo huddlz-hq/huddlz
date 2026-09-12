@@ -77,12 +77,13 @@ defmodule HuddlzWeb.LiveUserAuth do
   # Also loads the user details the sidebar reads (profile picture URL, home
   # location) plus the groups the user organizes, which appear as `sb-org-row`
   # entries in the sidebar.
-  def on_mount(:app, _params, _session, socket) do
+  def on_mount(:app, _params, session, socket) do
     body_class = if socket.assigns[:current_user], do: "", else: "is-signed-out"
 
     socket =
       socket
       |> maybe_load_user_details()
+      |> assign_impersonation(session)
       |> assign(:body_class, body_class)
       |> assign_new(:sidebar_owned_groups, fn -> load_sidebar_owned_groups(socket) end)
       |> assign_new(:unread_notification_count, fn -> load_unread_notification_count(socket) end)
@@ -91,6 +92,16 @@ defmodule HuddlzWeb.LiveUserAuth do
       |> maybe_attach_theme_menu()
 
     {:cont, socket}
+  end
+
+  # The signed browser session supplies attribution for both activity and PaperTrail.
+  defp assign_impersonation(socket, session) do
+    {user, record} =
+      HuddlzWeb.BrowserSession.resolve(socket.assigns[:current_user], session["impersonation_id"])
+
+    socket
+    |> assign(:current_user, user)
+    |> assign(:impersonation, record)
   end
 
   # The topbar's appearance menu lives in the layout, so every LiveView that

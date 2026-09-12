@@ -5,6 +5,7 @@ defmodule HuddlzWeb.Layouts do
   use HuddlzWeb, :html
 
   alias Huddlz.Accounts.User
+  alias Huddlz.Admin.Impersonation
   alias HuddlzWeb.Avatar
 
   embed_templates "layouts/*"
@@ -49,9 +50,12 @@ defmodule HuddlzWeb.Layouts do
   slot :inner_block, required: true
 
   def app(assigns) do
-    assigns = assign_new(assigns, :signed_in, fn -> assigns.current_user != nil end)
+    assigns =
+      assigns
+      |> assign_new(:signed_in, fn -> assigns.current_user != nil end)
 
     ~H"""
+    <.impersonation_banner current_user={@current_user} />
     <%= if @signed_in do %>
       <button
         type="button"
@@ -388,6 +392,39 @@ defmodule HuddlzWeb.Layouts do
   defp compact_notification_count(count) when count > 99, do: "99+"
   defp compact_notification_count(count), do: count
 
+  attr :current_user, :map, default: nil
+
+  def impersonation_banner(assigns) do
+    assigns = assign(assigns, :impersonation, impersonation(assigns.current_user))
+
+    ~H"""
+    <div
+      :if={@impersonation}
+      id="impersonation-bar"
+      class="impersonation-bar"
+      role="region"
+      aria-label="Impersonation"
+    >
+      <span class="impersonation-who">
+        Viewing huddlz as <strong>{@impersonation.user.display_name}</strong>
+        ({@impersonation.user.email})
+      </span>
+      <.form for={%{}} action={~p"/admin/impersonations/current"} method="delete">
+        <button type="submit" class="impersonation-stop">
+          Stop viewing as {@impersonation.user.display_name}
+        </button>
+      </.form>
+    </div>
+    """
+  end
+
+  def impersonation_layout(assigns) do
+    ~H"""
+    <.impersonation_banner current_user={assigns[:current_user]} />
+    {@inner_content}
+    """
+  end
+
   @doc """
   V3 auth shell — chromeless wrapper used by `/sign-in`, `/register`, `/reset`,
   and `/reset/:token`. Renders the brand topbar, the flash group, and an
@@ -396,11 +433,13 @@ defmodule HuddlzWeb.Layouts do
   Pair with `assign(socket, :body_class, "is-auth")` in the LiveView's
   `mount/3` so the v3 auth styles in `app.css` take effect.
   """
+  attr :current_user, :map, default: nil
   attr :flash, :map, required: true
   slot :inner_block, required: true
 
   def auth_shell(assigns) do
     ~H"""
+    <.impersonation_banner current_user={@current_user} />
     <Layouts.flash_group flash={@flash} />
 
     <div class="auth-shell">
@@ -657,6 +696,16 @@ defmodule HuddlzWeb.Layouts do
     </div>
     """
   end
+
+  # The browser session and LiveView mount attach an active record to the user.
+  # Rejected sessions carry nil and render without an impersonation bar.
+  defp impersonation(
+         %User{__metadata__: %{impersonation: %Impersonation{} = impersonation}} = user
+       ) do
+    %{impersonation | user: %{impersonation.user | display_name: user.display_name}}
+  end
+
+  defp impersonation(_user), do: nil
 
   defp group_mark_variant(idx) do
     case rem(idx, 3) do

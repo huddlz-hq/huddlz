@@ -93,10 +93,6 @@ defmodule Huddlz.Communities.GroupLocation do
   end
 
   policies do
-    bypass actor_attribute_equals(:role, :admin) do
-      authorize_if always()
-    end
-
     policy action(:create) do
       authorize_if Huddlz.Communities.Huddl.Checks.GroupOwnerOrOrganizer
     end

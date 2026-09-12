@@ -417,6 +417,66 @@ body.error-page {
 
 
 
+/* ─────────────────────────────────────────────  IMPERSONATION  ───
+   An administrator viewing huddlz as someone else: a bar above the whole
+   shell on every page, in the warn tone, with the way out. */
+:root { --impersonation-h: 44px; }
+
+body .impersonation-bar {
+  grid-column: 1 / -1;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: var(--impersonation-h);
+  padding: 6px 20px;
+  background: var(--warn-soft);
+  border-bottom: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
+  color: var(--text);
+  font-size: 13px;
+}
+
+body .impersonation-bar strong { font-weight: 600; }
+
+body .impersonation-stop {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--warn) 50%, transparent);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+body .impersonation-stop:hover { border-color: var(--warn); }
+
+body:has(.impersonation-bar) .sidebar {
+  top: var(--impersonation-h);
+  height: calc(100vh - var(--impersonation-h));
+}
+
+body:has(.impersonation-bar) .content-topbar { top: var(--impersonation-h); }
+body:has(.impersonation-bar) .flash-group { top: calc(var(--impersonation-h) + 16px); }
+
+/* On a phone the bar wraps and scrolls with the page, so nothing needs an offset. */
+@media (max-width: 640px) {
+  body .impersonation-bar { position: static; flex-wrap: wrap; padding: 8px 14px; }
+  body:has(.impersonation-bar) .sidebar { top: 0; height: 100vh; }
+  body:has(.impersonation-bar) .content-topbar { top: 0; }
+  body:has(.impersonation-bar) .flash-group { top: 16px; }
+}
+
+/* "View as" sits on the same line as the role form in a user's row. */
+body .view-as { height: 32px; padding: 0 12px; margin-right: 8px; vertical-align: middle; }
+body .admin-table .role-form { display: inline-flex; vertical-align: middle; }
+
 /* ─────────────────────────────────────────────  APP SHELL  ───── */
 body:not(.is-landing):not(.is-auth):not(.is-signed-out):not(.error-page) {
   display: grid;
