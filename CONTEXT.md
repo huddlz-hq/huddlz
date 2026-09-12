@@ -13,6 +13,13 @@ A signed-in person who used huddlz during the selected period, including browsin
 **Visitor**:
 A person browsing huddlz without being signed in, whether or not they have an account.
 
+**Administrator**:
+A person with the admin role. Administrators see everything on the platform and manage accounts, but editing a group or its huddlz needs a group role of their own; being an administrator grants none.
+
+**Viewing as**:
+An administrator using huddlz as a particular person to troubleshoot what that person sees and can do, with that person's permissions and none of their own, announced on every page, and on record from start to stop.
+_Avoid_: Impersonation (in copy; the code and the record use the word)
+
 ## Communities and places
 
 **Group**:
