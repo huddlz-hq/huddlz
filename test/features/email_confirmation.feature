@@ -11,6 +11,76 @@ Feature: Email confirmation status
       | olive573@example.com | user | Owner Olive  |
     And "maya573@example.com" has not confirmed their address
 
+  Scenario: An unconfirmed person is told on every page
+    Given I am signed in as "maya573@example.com"
+    When I visit "/agenda"
+    Then I am told to confirm my address "maya573@example.com"
+    And I am offered to resend the confirmation
+
+  Scenario: A confirmed person is not reminded
+    Given I am signed in as "olive573@example.com"
+    When I visit "/agenda"
+    Then I am not told to confirm my address
+
+  Scenario: Hiding the reminder lasts for the session
+    Given I am signed in as "maya573@example.com"
+    When I hide the confirmation reminder
+    And I visit "/groups"
+    Then I am not told to confirm my address
+    When I sign out and sign in again as "maya573@example.com"
+    Then I am told to confirm my address "maya573@example.com"
+
+  Scenario: The profile keeps the status and controls after hiding
+    Given I am signed in as "maya573@example.com"
+    And I hide the confirmation reminder
+    When I visit "/profile"
+    Then my email is shown as "Not confirmed"
+    And I am offered to resend the confirmation
+
+  Scenario: Confirming removes the reminder
+    Given I am signed in as "maya573@example.com"
+    And I ask for the confirmation email again
+    When I follow the confirmation link from the email
+    And I visit "/profile"
+    Then my email is shown as "Confirmed"
+    And I am not told to confirm my address
+
+  Scenario: Resending sends another confirmation to the current address
+    Given I am signed in as "maya573@example.com"
+    When I ask for the confirmation email again
+    Then a confirmation email is sent to "maya573@example.com"
+    And I am told it was sent and to look in junk
+
+  Scenario: A second request within a minute is refused with a retry time
+    Given resend limits are enforced
+    And I am signed in as "maya573@example.com"
+    And I asked for the confirmation email a moment ago
+    When I ask for the confirmation email again
+    Then no confirmation email is sent
+    And I am told when I can try again
+
+  Scenario: Five requests in an hour is the limit, even when they arrive together
+    Given resend limits are enforced
+    And "maya573@example.com" asked for the confirmation email five times this hour
+    When "maya573@example.com" asks for the confirmation email through the API twice at once
+    Then both requests are refused
+    And no confirmation email is sent
+
+  Scenario: A failed send says nothing went out
+    Given I am signed in as "maya573@example.com"
+    And email cannot be sent right now
+    When I ask for the confirmation email again
+    Then I am told nothing went out and to try again
+    And "maya573@example.com" has no confirmation links
+
+  Scenario: Resending keeps earlier links working
+    Given I am signed in as "maya573@example.com"
+    And I asked for the confirmation email an hour ago
+    When I ask for the confirmation email again
+    And I follow the earlier confirmation link
+    And I visit "/profile"
+    Then my email is shown as "Confirmed"
+
   Scenario: Confirming spends the remaining links
     Given I am signed in as "maya573@example.com"
     And I have two unexpired confirmation links

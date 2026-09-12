@@ -465,6 +465,62 @@ body:has(.impersonation-bar) .sidebar {
 body:has(.impersonation-bar) .content-topbar { top: var(--impersonation-h); }
 body:has(.impersonation-bar) .flash-group { top: calc(var(--impersonation-h) + 16px); }
 
+/* ─────────────────────────────────────────  EMAIL CONFIRMATION REMINDER  ───
+   An unconfirmed account's reminder at the top of the content column: the
+   address, where to look, what waits on it, and the two things to do. */
+body .confirmation-reminder {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
+  border-radius: var(--radius);
+  background: var(--warn-soft);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+body .confirmation-reminder .reminder-icon { flex: 0 0 auto; color: var(--warn); }
+body .confirmation-reminder .reminder-copy { flex: 1 1 auto; min-width: 0; margin: 0; color: var(--soft); }
+body .confirmation-reminder .reminder-copy strong { color: var(--text); font-weight: 600; }
+body .confirmation-reminder .reminder-actions { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
+
+body .confirmation-reminder .reminder-resend {
+  height: 32px;
+  background: var(--panel);
+  border-color: color-mix(in srgb, var(--warn) 50%, transparent);
+}
+
+body .confirmation-reminder .reminder-hide {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+body .confirmation-reminder .reminder-hide:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--warn) 18%, transparent);
+}
+
+@media (max-width: 640px) {
+  body .confirmation-reminder { flex-wrap: wrap; align-items: flex-start; padding: 12px 14px; }
+  body .confirmation-reminder .reminder-copy { flex-basis: calc(100% - 34px); }
+  body .confirmation-reminder .reminder-actions { flex-basis: 100%; }
+}
+
+/* The profile's email row: the read-only address beside its resend button. */
+body .email-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+body .email-row .form-control.read-only { flex: 1 1 260px; }
+body .email-row .btn-secondary { height: 36px; }
+
 /* On a phone the bar wraps and scrolls with the page, so nothing needs an offset. */
 @media (max-width: 640px) {
   body .impersonation-bar { position: static; flex-wrap: wrap; padding: 8px 14px; }

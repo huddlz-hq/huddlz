@@ -153,13 +153,29 @@ defmodule HuddlzWeb.ProfileLive do
             <div class="form-grid">
               <div class="form-row">
                 <label class="form-label">Email</label>
-                <div class="form-control read-only">
-                  <span>{@current_user.email}</span>
-                  <span class={["pill", role_pill_color(@current_user.role)]}>
-                    {role_label(@current_user.role)}
-                  </span>
+                <div class="email-row">
+                  <div class="form-control read-only">
+                    <span>{@current_user.email}</span>
+                    <span
+                      id="email-confirmation-status"
+                      class={["pill", confirmation_pill(@current_user)]}
+                    >
+                      {confirmation_label(@current_user)}
+                    </span>
+                    <span class={["pill", role_pill_color(@current_user.role)]}>
+                      {role_label(@current_user.role)}
+                    </span>
+                  </div>
+                  <.form
+                    :if={is_nil(@current_user.confirmed_at)}
+                    for={%{}}
+                    action={~p"/account/confirmation/resend"}
+                    method="post"
+                  >
+                    <button type="submit" class="btn-secondary">Resend confirmation</button>
+                  </.form>
                 </div>
-                <p class="form-help">This is the email you use to sign in.</p>
+                <p class="form-help">{confirmation_help(@current_user)}</p>
               </div>
               <.input
                 field={@form[:display_name]}
@@ -370,6 +386,19 @@ defmodule HuddlzWeb.ProfileLive do
   defp role_label(:admin), do: "Admin"
   defp role_label(role) when is_atom(role), do: role |> to_string() |> String.capitalize()
   defp role_label(_), do: "Member"
+
+  # The email row's confirmation status.
+  defp confirmation_pill(%{confirmed_at: nil}), do: "warn"
+  defp confirmation_pill(_user), do: "cyan"
+
+  defp confirmation_label(%{confirmed_at: nil}), do: "Not confirmed"
+  defp confirmation_label(_user), do: "Confirmed"
+
+  defp confirmation_help(%{confirmed_at: nil}),
+    do:
+      "We sent a confirmation link to this address. Huddl reminders and group updates wait until it's confirmed."
+
+  defp confirmation_help(_user), do: "This is the email you use to sign in."
 
   defp role_pill_color(:admin), do: "magenta"
   defp role_pill_color(_), do: "cyan"
