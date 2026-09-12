@@ -36,10 +36,12 @@ routes. Sitemaps use the same verified detail paths and endpoint configuration; 
 [sitemaps.md](sitemaps.md). Listing and archive pages provide on-site discovery
 and do not need sitemap entries. Structured data remains separate in #162.
 
-Deployment configuration is unchanged: runtime defaults are `https` and
-`huddlz.com`, while the checked-in `fly.toml` sets `PHX_HOST=huddlz.fly.dev`.
-Operators must configure the intended launch host; local verification does not
-establish the deployed host or Google's selected canonical.
+Runtime defaults and the checked-in Fly configuration use `https://huddlz.com`.
+Requests to `www.huddlz.com` receive a permanent 301 redirect to that host,
+preserving their path and query string before a LiveView page is rendered.
+Keep the www DNS record and Fly certificate active so HTTPS visitors can reach
+the redirect. Local verification does not establish the deployed host or
+Google's selected canonical.
 
 References:
 

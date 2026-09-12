@@ -13,7 +13,7 @@ kill_signal = 'SIGTERM'
   release_command = "/bin/sh -lc 'DATABASE_URL=$DIRECT_DATABASE_URL POOL_SIZE=2 /app/bin/migrate'"
 
 [env]
-  PHX_HOST = 'huddlz.fly.dev'
+  PHX_HOST = 'huddlz.com'
   PORT = '8080'
 
 [http_service]
