@@ -38,8 +38,8 @@ Capacity-driven waitlist promotion and retirement of replaced profile pictures a
 
 ## Retention and personal data
 
-Keep versions for 90 days and prune expired versions daily. Hard deletion of an item does not immediately delete its versions. Account deletion clears actor/impersonator links; item/subject IDs and group content may remain until expiry. Do not copy direct profile/contact values, password hashes, API-key hashes, tokens, or media paths into versions. Do not store action inputs. Free text in group/huddl content remains subject to the same 90-day limit.
+Keep versions for 90 days and prune expired versions daily. Participation history keeps two years (ADR 0007): every `HuddlAttendee` and `GroupMember` version, and a huddl's creation, publication, cancellation, completion, turnout and deletion versions; a huddl's edits keep the 90 days. Hard deletion of an item does not immediately delete its versions. Account deletion clears actor/impersonator links; item/subject IDs and group content may remain until expiry. Do not copy direct profile/contact values, password hashes, API-key hashes, tokens, or media paths into versions. Do not store action inputs. Free text in group/huddl content remains subject to the same 90-day limit.
 
-Pruning uses atomic bulk destruction through each version resource's `:expire` action. That action enforces the 90-day cutoff; the job only orchestrates the actions and propagates failures for retry.
+Pruning uses atomic bulk destruction through each version resource's `:expire` action. That action enforces the cutoff for its resource, 90 days or the two years of participation history; the job only orchestrates the actions and propagates failures for retry.
 
 Retention applies to new PaperTrail versions only; this work does not change the existing organizer activity feed's deletion policy. An audit UI and private-group moderation access are deferred.

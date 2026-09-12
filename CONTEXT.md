@@ -28,6 +28,9 @@ An email address whose owner has followed a confirmation link sent to it. Confir
 **Confirmation link**:
 A link sent to an address so its owner can confirm it, minted for that address and usable for three days. Asking for the email again mints another link without spending earlier ones; confirming spends all of the account's links; a link minted for an address the account no longer has confirms nothing.
 
+**Participation history**:
+The record of who joined, left, RSVPed, was promoted from a waitlist or removed, and of each huddl's creation, outcome and turnout, kept for two years with the person who acted separate from the person affected. Troubleshooting history of other changes keeps 90 days.
+
 **Administrator**:
 A person responsible for platform and account administration. This role is distinct from a group's owner, organizer, or member roles.
 
