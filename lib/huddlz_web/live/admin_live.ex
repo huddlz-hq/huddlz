@@ -59,30 +59,22 @@ defmodule HuddlzWeb.AdminLive do
       </div>
 
       <p id="overview-summary-scope" class="mb-3 text-sm text-[var(--muted)]">
-        Active people, huddlz held, RSVPs and show rate cover the selected period and compare
-        with the {Periods.period_label(@period)} before it. People and groups are current totals.
-        Days end at midnight UTC.
+        People counts confirmed accounts; groups excludes archived groups. Both are current totals.
+        Days end at midnight UTC; today is included so far. Comparisons use complete preceding periods.
+        <span :if={@period == "12m"}>12 months covers this month and the previous eleven.</span>
       </p>
-      <div class="kpis six" aria-describedby="overview-summary-scope">
+      <div class="kpis platform" aria-describedby="overview-summary-scope">
         <div id="kpi-people" class="kpi">
           <div class="label">People</div>
-          <div class="value">{@stats.people.count}</div>
+          <output class="value block" aria-label="People">{@stats.people.count}</output>
           <div class={["delta", @stats.people.joined == 0 && "muted"]}>
             {people_delta(@stats.people, @period)}
           </div>
           <.sparkline id="spark-people" points={@stats.people.spark} />
         </div>
-        <div id="kpi-active" class="kpi">
-          <div class="label">Active people</div>
-          <div class="value">{@stats.active.count}</div>
-          <div class={["delta", period_delta_class(@stats.active)]}>
-            {period_delta(@stats.active, @period)}
-          </div>
-          <.sparkline id="spark-active" points={@stats.active.spark} />
-        </div>
         <div id="kpi-groups" class="kpi">
           <div class="label">Groups</div>
-          <div class="value">{@stats.groups.count}</div>
+          <output class="value block" aria-label="Groups">{@stats.groups.count}</output>
           <div class={["delta", groups_delta_class(@stats.groups)]}>
             {groups_delta(@stats.groups)}
           </div>
@@ -90,7 +82,7 @@ defmodule HuddlzWeb.AdminLive do
         </div>
         <div id="kpi-huddlz" class="kpi">
           <div class="label">Huddlz held</div>
-          <div class="value">{@stats.held.count}</div>
+          <output class="value block" aria-label="Huddlz held">{@stats.held.count}</output>
           <div class={["delta", period_delta_class(@stats.held)]}>
             {period_delta(@stats.held, @period)}
           </div>
@@ -98,7 +90,7 @@ defmodule HuddlzWeb.AdminLive do
         </div>
         <div id="kpi-rsvps" class="kpi">
           <div class="label">RSVPs</div>
-          <div class="value">{@stats.rsvps.count}</div>
+          <output class="value block" aria-label="RSVPs">{@stats.rsvps.count}</output>
           <div class={["delta", period_delta_class(@stats.rsvps)]}>
             {period_delta(@stats.rsvps, @period)}
           </div>
@@ -106,15 +98,22 @@ defmodule HuddlzWeb.AdminLive do
         </div>
         <div id="kpi-showrate" class="kpi">
           <div class="label">Show rate</div>
-          <div class={["value", @stats.turnout.counted == 0 && "muted"]}>
+          <output
+            class={["value block", @stats.turnout.counted == 0 && "muted"]}
+            aria-label="Show rate"
+          >
             {show_rate_value(@stats.turnout)}
-          </div>
+          </output>
           <div class={["delta", @stats.turnout.counted == 0 && "muted"]}>
             {show_rate_delta(@stats.turnout)}
           </div>
           <.sparkline id="spark-showrate" points={@stats.turnout.spark} />
         </div>
       </div>
+
+      <p :if={@stats.people.estimated > 0} class="mb-4 text-sm text-[var(--muted)]">
+        {estimated_signups(@stats.people.estimated)}
+      </p>
 
       <div class="overview-row">
         <div id="held-panel" class="panel">
@@ -242,13 +241,17 @@ defmodule HuddlzWeb.AdminLive do
                     {group.name}
                   </.link>
                 </td>
-                <td class="n" data-label="Huddlz" data-one={group.held == 1 || nil}>{group.held}</td>
-                <td class="n" data-label="RSVPs" data-one={group.rsvps == 1 || nil}>{group.rsvps}</td>
+                <td class="n" data-label="Huddlz" data-one={group.held == 1 || nil}>
+                  <output aria-label={"Huddlz held for #{group.name}"}>{group.held}</output>
+                </td>
+                <td class="n" data-label="RSVPs" data-one={group.rsvps == 1 || nil}>
+                  <output aria-label={"RSVPs for #{group.name}"}>{group.rsvps}</output>
+                </td>
                 <td class={["n", is_nil(group.show_rate) && "muted"]} data-label="Show rate">
-                  {show_rate_value(group)}
+                  <output aria-label={"Show rate for #{group.name}"}>{show_rate_value(group)}</output>
                 </td>
                 <td class="n" data-label="Members" data-one={group.members == 1 || nil}>
-                  {group.members}
+                  <output aria-label={"Members for #{group.name}"}>{group.members}</output>
                 </td>
               </tr>
             </tbody>
@@ -273,15 +276,15 @@ defmodule HuddlzWeb.AdminLive do
           <div :if={@stats.coming_up.count > 0}>
             <div class="stat-row">
               <div id="coming-up-huddlz" class="stat">
-                <span class="big">{@stats.coming_up.count}</span>
+                <output class="big" aria-label="Scheduled huddlz">{@stats.coming_up.count}</output>
                 <span class="cmp">{if @stats.coming_up.count == 1, do: "huddl", else: "huddlz"} scheduled</span>
               </div>
               <div id="coming-up-rsvps" class="stat">
-                <span class="big">{@stats.coming_up.rsvps}</span>
+                <output class="big" aria-label="Upcoming RSVPs">{@stats.coming_up.rsvps}</output>
                 <span class="cmp">RSVPs so far</span>
               </div>
               <div id="coming-up-groups" class="stat">
-                <span class="big">{@stats.coming_up.groups}</span>
+                <output class="big" aria-label="Upcoming groups">{@stats.coming_up.groups}</output>
                 <span class="cmp">{if @stats.coming_up.groups == 1, do: "group", else: "groups"}</span>
               </div>
             </div>
@@ -370,8 +373,15 @@ defmodule HuddlzWeb.AdminLive do
   defp signups_figure(%{capacity: capacity, rsvp_count: count}), do: "#{count} / #{capacity}"
 
   # KPI deltas read as a sentence; a zero is quiet, never a warning.
-  defp people_delta(%{joined: 0}, period), do: "No one new in #{Periods.period_label(period)}"
-  defp people_delta(%{joined: n}, period), do: "+#{n} in #{Periods.period_label(period)}"
+  defp people_delta(%{joined: 0}, period),
+    do: "No recorded sign-ups in #{Periods.period_label(period)}"
+
+  defp people_delta(%{joined: n}, period), do: "+#{n} recorded in #{Periods.period_label(period)}"
+
+  defp estimated_signups(1), do: "1 account has an estimated sign-up date, excluded from growth."
+
+  defp estimated_signups(n),
+    do: "#{n} accounts have estimated sign-up dates, excluded from growth."
 
   defp period_delta(%{count: 0}, _period), do: "Nothing in this period"
 

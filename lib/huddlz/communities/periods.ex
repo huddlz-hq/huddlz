@@ -85,6 +85,52 @@ defmodule Huddlz.Communities.Periods do
     end)
   end
 
+  @doc """
+  UTC calendar periods for the platform overview, including today so far.
+  Day periods contain the named number of calendar dates; a year contains
+  the current month and the preceding eleven. The previous period covers
+  the same number of complete dates or months. Organizer rolling periods
+  continue to use `starts/2` and `growth_buckets/3`.
+  """
+  def calendar_window(now, %{growth: :month, buckets: count} = spec) do
+    this_month = start_of_month(now, "Etc/UTC")
+    start = shift_months(this_month, 1 - count, "Etc/UTC")
+    starts = Enum.map(0..(count - 1), &shift_months(start, &1, "Etc/UTC"))
+    edges = starts ++ [now]
+
+    %{
+      now: now,
+      spec: spec,
+      start: start,
+      previous_start: shift_months(start, -count, "Etc/UTC"),
+      edges: edges,
+      buckets: calendar_buckets(edges, "%b")
+    }
+  end
+
+  def calendar_window(now, %{days: days, buckets: count, growth: unit} = spec) do
+    today = now |> DateTime.to_date() |> DateTime.new!(~T[00:00:00], "Etc/UTC")
+    start = DateTime.add(today, 1 - days, :day)
+    edges = Enum.map(0..(count - 1), &DateTime.add(start, div(days * &1, count), :day))
+    bucket_days = @growth_bucket_days[unit]
+    starts = Enum.map(0..(days - 1)//bucket_days, &DateTime.add(start, &1, :day))
+
+    %{
+      now: now,
+      spec: spec,
+      start: start,
+      previous_start: DateTime.add(start, -days, :day),
+      edges: edges ++ [now],
+      buckets: calendar_buckets(starts ++ [now], "%b %-d")
+    }
+  end
+
+  defp calendar_buckets(edges, format) do
+    edges
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.map(fn [from, to] -> {Calendar.strftime(from, format), from, to} end)
+  end
+
   @doc "Whether `t` falls on or after `from` and before `to`."
   def within?(t, from, to),
     do: DateTime.compare(t, from) != :lt and DateTime.compare(t, to) == :lt

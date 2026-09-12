@@ -1814,15 +1814,12 @@ body .kpis {
 @media (max-width: 1100px) {
  body .kpis { grid-template-columns: repeat(2, 1fr); } }
 
-/* The admin overview's six tiles: three to a row before they go to two. */
-body .kpis.six { grid-template-columns: repeat(6, 1fr); }
-
-@media (max-width: 1400px) {
-  body .kpis.six { grid-template-columns: repeat(3, 1fr); }
-}
+/* The platform overview's five figures, with a full-width show rate on small screens. */
+body .kpis.platform { grid-template-columns: repeat(5, 1fr); }
 
 @media (max-width: 1100px) {
-  body .kpis.six { grid-template-columns: repeat(2, 1fr); }
+  body .kpis.platform { grid-template-columns: repeat(2, 1fr); }
+  body .kpis.platform > :last-child { grid-column: 1 / -1; }
 }
 
 

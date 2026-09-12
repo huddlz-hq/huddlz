@@ -13,19 +13,14 @@ defmodule Huddlz.Admin.PlatformStats do
   counted huddlz. The platform has no single time zone, so buckets and
   "today" run on UTC days.
 
-  People are confirmed accounts. Active people are the distinct people
-  who did something the app keeps for good in the period: RSVPd or
-  joined a waitlist, joined a group, created a huddl, or anything the
-  group activity log recorded. Sign-ins are not kept, so they never
-  count.
+  People are confirmed accounts. Signed-in usage is not yet measured.
   """
 
   require Ash.Query
 
   alias Huddlz.Accounts.User
-  alias Huddlz.Communities.{Group, GroupActivity, GroupMember, Huddl, HuddlAttendee, Periods}
+  alias Huddlz.Communities.{Group, Huddl, HuddlAttendee, Periods}
 
-  @zone "Etc/UTC"
   @coming_up_days 30
   @coming_up_limit 5
   @active_groups_limit 8
@@ -34,9 +29,7 @@ defmodule Huddlz.Admin.PlatformStats do
   Overview figures for the platform over a period.
 
     * `people` — confirmed accounts now, how many signed up in the period,
-      and a sparkline of accounts over time
-    * `active` — distinct people active in the period, the count in the
-      period before, and a per-bucket sparkline
+      and a sparkline of recorded sign-ups; historical estimates are excluded
     * `groups` — live groups now, how many started in the period, how
       many held a huddl in it, and a sparkline of live groups over time
     * `held` — huddlz held in the period, the count in the period before,
@@ -53,17 +46,7 @@ defmodule Huddlz.Admin.PlatformStats do
       groups with something on, and the next few huddlz
   """
   def compute(period, actor, now \\ DateTime.utc_now()) do
-    spec = Periods.spec(period)
-    {period_start, previous_start} = Periods.starts(now, spec)
-
-    window = %{
-      now: now,
-      start: period_start,
-      previous_start: previous_start,
-      spec: spec,
-      edges: Periods.bucket_edges(now, spec),
-      actor: actor
-    }
+    window = now |> Periods.calendar_window(Periods.spec(period)) |> Map.put(:actor, actor)
 
     ended = ended_huddlz(window)
     groups = groups()
@@ -72,7 +55,6 @@ defmodule Huddlz.Admin.PlatformStats do
     %{
       period: period,
       people: people(window),
-      active: active_people(window),
       groups: group_figures(groups, ended, window),
       held: held(ended, window),
       rsvps: rsvp_figures(rsvps, window),
@@ -82,70 +64,23 @@ defmodule Huddlz.Admin.PlatformStats do
     }
   end
 
-  defp people(%{start: start, edges: edges}) do
-    signed_up =
+  defp people(%{start: start, now: now, edges: edges}) do
+    users =
       User
       |> Ash.Query.filter(not is_nil(confirmed_at))
-      |> Ash.Query.select([:inserted_at])
+      |> Ash.Query.select([:inserted_at, :signup_date_source])
       |> Ash.read!(authorize?: false)
-      |> Enum.map(& &1.inserted_at)
+
+    {recorded, estimated} = Enum.split_with(users, &(&1.signup_date_source == :recorded))
+    signed_up = Enum.map(recorded, & &1.inserted_at)
 
     %{
-      count: length(signed_up),
-      joined: Enum.count(signed_up, &(DateTime.compare(&1, start) != :lt)),
-      spark: Periods.cumulative(signed_up, edges)
+      count: length(users),
+      joined: Enum.count(signed_up, &Periods.within?(&1, start, now)),
+      estimated: length(estimated),
+      spark: Periods.per_bucket(signed_up, edges)
     }
   end
-
-  # Everyone who did something since the previous period began, as
-  # {person, when} pairs from every record the app keeps.
-  defp active_people(%{start: start, previous_start: since, edges: edges, actor: actor}) do
-    attendees =
-      HuddlAttendee
-      |> Ash.Query.filter(rsvped_at >= ^since)
-      |> Ash.Query.select([:user_id, :rsvped_at])
-      |> Ash.read!(authorize?: false)
-      |> Enum.map(&{&1.user_id, &1.rsvped_at})
-
-    joins =
-      GroupMember
-      |> Ash.Query.filter(created_at >= ^since)
-      |> Ash.Query.select([:user_id, :created_at])
-      |> Ash.read!(authorize?: false)
-      |> Enum.map(&{&1.user_id, &1.created_at})
-
-    creators =
-      Huddl
-      |> Ash.Query.filter(inserted_at >= ^since)
-      |> Ash.Query.select([:creator_id, :inserted_at])
-      |> Ash.read!(authorize?: false, actor: actor)
-      |> Enum.map(&{&1.creator_id, &1.inserted_at})
-
-    logged =
-      GroupActivity
-      |> Ash.Query.filter(occurred_at >= ^since)
-      |> Ash.Query.select([:user_id, :occurred_at])
-      |> Ash.read!(authorize?: false)
-      |> Enum.map(&{&1.user_id, &1.occurred_at})
-
-    actions = attendees ++ joins ++ creators ++ logged
-
-    {current, previous} =
-      Enum.split_with(actions, fn {_, at} -> DateTime.compare(at, start) != :lt end)
-
-    %{
-      count: distinct(current),
-      previous: distinct(previous),
-      spark:
-        edges
-        |> Enum.chunk_every(2, 1, :discard)
-        |> Enum.map(fn [from, to] ->
-          distinct(Enum.filter(current, fn {_, at} -> Periods.within?(at, from, to) end))
-        end)
-    }
-  end
-
-  defp distinct(actions), do: actions |> Enum.map(&elem(&1, 0)) |> Enum.uniq() |> length()
 
   defp groups do
     Group
@@ -202,8 +137,7 @@ defmodule Huddlz.Admin.PlatformStats do
     cancelled = Enum.reject(ended, &held?/1)
 
     buckets =
-      now
-      |> Periods.growth_buckets(window.spec, @zone)
+      window.buckets
       |> Enum.map(fn {label, from, to} ->
         %{
           label: label,

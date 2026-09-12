@@ -25,27 +25,28 @@ Feature: Admin platform overview
     And the in-person huddl "Coffee" in "Founder Coffee" ended 5 days ago with 2 RSVPs
     And I am signed in as "admin553@example.com"
     When I visit "/admin"
-    Then the Active people KPI shows "8"
-    And the Groups KPI shows "2" and "2 held a huddl"
-    And the Huddlz held KPI shows "2"
-    And the RSVPs KPI shows "6"
-    And the Show rate KPI shows "75%" and "1 of 2 past huddlz counted"
+    Then I should not see "Active people"
+    And I should not see "Active users"
+    And the platform "Groups" figure shows "2" and "2 held a huddl"
+    And the platform "Huddlz held" figure shows "2"
+    And the platform "RSVPs" figure shows "6"
+    And the platform "Show rate" figure shows "75%" and "1 of 2 past huddlz counted"
 
   Scenario: Huddlz in private groups count too
     Given a private group "Quiet Club" exists with owner "owner553@example.com"
     And the in-person huddl "Members only" in "Quiet Club" ended 3 days ago with 2 RSVPs
     And I am signed in as "admin553@example.com"
     When I visit "/admin"
-    Then the Huddlz held KPI shows "1"
-    And the RSVPs KPI shows "2"
+    Then the platform "Huddlz held" figure shows "1"
+    And the platform "RSVPs" figure shows "2"
 
   Scenario: Figures move with the period
     Given the in-person huddl "Old" in "Portland Elixir" ended 60 days ago with 5 RSVPs
     And I am signed in as "admin553@example.com"
     When I visit "/admin"
-    Then the Huddlz held KPI shows "1"
+    Then the platform "Huddlz held" figure shows "1"
     When I click "30 days"
-    Then the Huddlz held KPI shows "0" and "Nothing in this period"
+    Then the platform "Huddlz held" figure shows "0" and "Nothing in this period"
 
   Scenario: Groups are ranked by the activity they carried
     Given the in-person huddl "Kickoff" in "Portland Elixir" ended 10 days ago with 4 RSVPs
@@ -60,8 +61,8 @@ Feature: Admin platform overview
   Scenario: A quiet platform says so
     Given I am signed in as "admin553@example.com"
     When I visit "/admin"
-    Then the People KPI shows "3" and "+3 in 90 days"
-    And the Show rate KPI reads as not yet available
+    Then the platform "People" figure shows "3" and "+3 recorded in 90 days"
+    And the platform "Show rate" figure shows "—" and "No turnout recorded yet"
     And I should see "No group held a huddl in this period."
     And I should see "Nothing scheduled in the next 30 days."
 
@@ -76,6 +77,7 @@ Feature: Admin platform overview
     Given the in-person huddl "Kickoff" in "Portland Elixir" ended 10 days ago with 4 RSVPs
     When "admin553@example.com" reads the platform overview for "90d" through GraphQL
     Then the API platform overview shows 1 huddl held and 4 RSVPs
+    And the API overview omits unmeasured active users
     When "owner553@example.com" reads the platform overview for "90d" through GraphQL
     Then the API refuses the platform overview
 
@@ -84,3 +86,23 @@ Feature: Admin platform overview
     When I visit "/admin/users"
     Then I should see "Owner Olive"
     And I can change the role of "member553@example.com"
+
+  Scenario: Platform day buckets begin at midnight UTC
+    When "admin553@example.com" reads the platform overview for "30d" through GraphQL
+    Then the platform chart buckets begin at midnight UTC
+    When "admin553@example.com" reads the platform overview for "90d" through GraphQL
+    Then the platform chart buckets begin at midnight UTC
+
+  Scenario: The annual total and chart cover the same twelve calendar months
+    Given a huddl in "Portland Elixir" ended just before the twelve calendar months
+    And a huddl in "Portland Elixir" ended in the first of the twelve calendar months
+    When "admin553@example.com" reads the platform overview for "12m" through GraphQL
+    Then the annual platform total and chart both show 1 huddl held
+
+  Scenario: Estimated account dates do not pretend to be measured sign-ups
+    Given the sign-up date for "owner553@example.com" was estimated from confirmation
+    And the sign-up date for "member553@example.com" was estimated from migration
+    And I am signed in as "admin553@example.com"
+    When I visit "/admin"
+    Then the platform "People" figure shows "3" and "+1 recorded in 90 days"
+    And I should see "2 accounts have estimated sign-up dates, excluded from growth."

@@ -24,7 +24,7 @@ defmodule Huddlz.Admin.PlatformOverview do
     action :overview, :map do
       description """
       Platform-wide overview figures for a period: people and how many
-      signed up, people active, groups and how many held a huddl, huddlz
+      signed up, groups and how many held a huddl, huddlz
       held, RSVPs and show rate against the period before, the most
       active groups and what is coming up. Periods are "30d", "90d"
       (default) and "12m".
