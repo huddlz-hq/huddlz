@@ -8,7 +8,10 @@ huddlz helps groups organize and discover gatherings while preserving the local 
 The creation of a huddlz account, distinct from confirming its email address. A historical estimate of its date is not an observed sign-up date.
 
 **Active user**:
-A signed-in person who used huddlz during the selected period, including browsing without joining a group, RSVPing, or organizing a huddl.
+A signed-in person who used huddlz during the selected period, including browsing without joining a group, RSVPing, or organizing a huddl. The platform overview shows this figure as active people.
+
+**Active day**:
+The record that a signed-in person used huddlz on a UTC calendar date. At most one exists per person per date, and it holds nothing else about the visit.
 
 **Visitor**:
 A person browsing huddlz without being signed in, whether or not they have an account.
