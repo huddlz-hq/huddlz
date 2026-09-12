@@ -463,8 +463,19 @@ body:has(.impersonation-bar) .sidebar {
 }
 
 body:has(.impersonation-bar) .content-topbar { top: var(--impersonation-h); }
+body:has(.impersonation-bar) .flash-group { top: calc(var(--impersonation-h) + 16px); }
 
-body .view-as { height: 32px; padding: 0 12px; margin-right: 8px; }
+/* On a phone the bar wraps and scrolls with the page, so nothing needs an offset. */
+@media (max-width: 640px) {
+  body .impersonation-bar { position: static; flex-wrap: wrap; padding: 8px 14px; }
+  body:has(.impersonation-bar) .sidebar { top: 0; height: 100vh; }
+  body:has(.impersonation-bar) .content-topbar { top: 0; }
+  body:has(.impersonation-bar) .flash-group { top: 16px; }
+}
+
+/* "View as" sits on the same line as the role form in a user's row. */
+body .view-as { height: 32px; padding: 0 12px; margin-right: 8px; vertical-align: middle; }
+body .admin-table .role-form { display: inline-flex; vertical-align: middle; }
 
 /* ─────────────────────────────────────────────  APP SHELL  ───── */
 body:not(.is-landing):not(.is-auth):not(.is-signed-out):not(.error-page) {
