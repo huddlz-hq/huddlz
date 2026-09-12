@@ -1996,23 +1996,199 @@ body .overview-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 
 }
 
 body .growth-chart-wrap,
+body .held-chart-wrap,
 body .turnout-chart-wrap { max-width: 800px; }
 
 body .growth-chart-wrap .compact-only,
+body .held-chart-wrap .compact-only,
 body .turnout-chart-wrap .compact-only { display: none; }
 
 @media (max-width: 640px) {
   body .growth-chart-wrap .wide-only,
+  body .held-chart-wrap .wide-only,
   body .turnout-chart-wrap .wide-only { display: none; }
 
   body .growth-chart-wrap .compact-only,
+  body .held-chart-wrap .compact-only,
   body .turnout-chart-wrap .compact-only { display: block; }
 }
-body #member-growth-panel .panel-head .stat { margin: 0; flex: 0 0 auto; }
+body #member-growth-panel .panel-head .stat,
+body #held-panel .panel-head .stat { margin: 0; flex: 0 0 auto; }
 
 @media (max-width: 640px) {
-  body #member-growth-panel .panel-head { flex-wrap: wrap; }
-  body #member-growth-panel .panel-head .stat { flex-basis: 100%; }
+  body #member-growth-panel .panel-head,
+  body #held-panel .panel-head { flex-wrap: wrap; }
+  body #member-growth-panel .panel-head .stat,
+  body #held-panel .panel-head .stat { flex-basis: 100%; }
+}
+
+/* ─────────────────────────────────────────  ADMIN OVERVIEW PANELS  ─── */
+body .coverage { display: flex; flex-direction: column; gap: 14px; }
+
+body .coverage-bar {
+  display: flex;
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--line);
+}
+
+body .coverage-bar span { display: block; height: 100%; }
+body .coverage .counted { background: var(--accent); }
+body .coverage .skipped { background: var(--line-strong); }
+
+body .coverage .unanswered {
+  background: repeating-linear-gradient(135deg, var(--line-strong) 0 3px, transparent 3px 7px);
+}
+
+body .coverage-rows { display: flex; flex-direction: column; }
+
+body .coverage-row {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto 44px;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--soft);
+}
+
+body .coverage-row:last-child { border-bottom: 0; }
+body .coverage-row i.sq { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+body .coverage-row b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+body .coverage-row small {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+body .coverage-note {
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+body .group-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+body .group-table th {
+  text-align: left;
+  padding: 0 0 10px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+}
+
+body .group-table td {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--soft);
+  font-variant-numeric: tabular-nums;
+}
+
+body .group-table tr:last-child td { border-bottom: 0; }
+body .group-table .n { text-align: right; padding-left: 12px; }
+body .group-table td.n { color: var(--text); font-weight: 600; }
+body .group-table td.muted { color: var(--muted); font-weight: 500; }
+
+body .group-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+body .group-name:hover { color: var(--accent-ink); }
+
+/* On a phone each group becomes a row: mark and name, then its figures
+   in one line, each cell naming itself. */
+@media (max-width: 640px) {
+  body .group-table thead { display: none; }
+  body .group-table, body .group-table tbody { display: block; }
+
+  body .group-table tr {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 6px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  body .group-table tr:last-child { border-bottom: 0; }
+  body .group-table td { display: inline; padding: 0; border: 0; }
+  body .group-table td[data-label="Group"] { grid-column: 1 / -1; margin-bottom: 2px; }
+  body .group-table td.n { color: var(--muted); font-weight: 500; font-size: 12px; text-align: left; }
+  body .group-table td[data-label="Huddlz"]::after { content: " huddlz · "; }
+  body .group-table td[data-label="RSVPs"]::after { content: " RSVPs · "; }
+  body .group-table td[data-label="Show rate"]:not(.muted)::after { content: " show rate · "; }
+  body .group-table td[data-label="Show rate"].muted::after { content: " show rate · "; }
+  body .group-table td[data-label="Members"]::after { content: " members"; }
+}
+
+body .note-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+body .stat-row { display: flex; gap: 24px; margin-bottom: 14px; }
+body .stat-row .stat { flex-direction: column; align-items: flex-start; gap: 2px; margin: 0; }
+body .stat-row .stat .cmp { color: var(--muted); }
+
+body .upcoming { display: flex; flex-direction: column; }
+
+body .upcoming-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+body .upcoming-row:last-child { border-bottom: 0; }
+
+body .upcoming-date {
+  color: var(--accent-ink);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+body .upcoming-copy { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+
+body .upcoming-copy a {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body .upcoming-copy a:hover { color: var(--accent-ink); }
+body .upcoming-copy small { color: var(--muted); font-size: 12px; }
+
+body .upcoming-count {
+  color: var(--soft);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 body #next-huddl { container-type: inline-size; }
 body .next-huddl-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
