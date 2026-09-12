@@ -5,6 +5,7 @@ defmodule HuddlzWeb.Layouts do
   use HuddlzWeb, :html
 
   alias Huddlz.Accounts.User
+  alias Huddlz.Admin.Impersonation
   alias HuddlzWeb.Avatar
 
   embed_templates "layouts/*"
@@ -696,9 +697,11 @@ defmodule HuddlzWeb.Layouts do
     """
   end
 
-  # The session's impersonation rides on the current user (set by the
-  # `:app` mount hook), so every page renders the bar without passing it.
-  defp impersonation(%User{__metadata__: %{impersonation: impersonation}} = user) do
+  # The browser session and LiveView mount attach an active record to the user.
+  # Rejected sessions carry nil and render without an impersonation bar.
+  defp impersonation(
+         %User{__metadata__: %{impersonation: %Impersonation{} = impersonation}} = user
+       ) do
     %{impersonation | user: %{impersonation.user | display_name: user.display_name}}
   end
 

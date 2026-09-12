@@ -98,6 +98,23 @@ defmodule HuddlzWeb.ImpersonationControllerTest do
              Huddlz.Admin.resolve_impersonation_session(record.id, actor: ctx.target)
   end
 
+  test "pages render without impersonation controls for an ended session", ctx do
+    record = Huddlz.Admin.start_impersonation!(ctx.target.id, actor: ctx.admin)
+    Huddlz.Admin.stop_impersonation!(record, actor: ctx.admin)
+
+    assert_rejected_session_pages(ctx.target, record.id)
+  end
+
+  test "pages render without impersonation controls for a missing session", ctx do
+    assert_rejected_session_pages(ctx.target, Ash.UUID.generate())
+  end
+
+  test "pages render without impersonation controls for another person's session", ctx do
+    record = Huddlz.Admin.start_impersonation!(generate(user()).id, actor: ctx.admin)
+
+    assert_rejected_session_pages(ctx.target, record.id)
+  end
+
   test "an active impersonation cannot be nested", ctx do
     conn = build_conn() |> login(ctx.admin) |> post(~p"/admin/impersonations/#{ctx.target.id}")
     id = get_session(conn, :impersonation_id)
@@ -105,5 +122,19 @@ defmodule HuddlzWeb.ImpersonationControllerTest do
     assert redirected_to(conn) == "/agenda"
     assert get_session(conn, :impersonation_id) == id
     assert length(Ash.read!(Impersonation, authorize?: false)) == 1
+  end
+
+  defp assert_rejected_session_pages(user, id) do
+    token = Huddlz.Notifications.unsubscribe_token(user, :rsvp_received)
+
+    build_conn()
+    |> login(user)
+    |> put_session(:impersonation_id, id)
+    |> visit("/help")
+    |> assert_has("h1", text: "Help")
+    |> refute_has("[role='region'][aria-label='Impersonation']")
+    |> visit("/unsubscribe/#{token}")
+    |> assert_has("h1", text: "Confirm unsubscribe")
+    |> refute_has("[role='region'][aria-label='Impersonation']")
   end
 end
