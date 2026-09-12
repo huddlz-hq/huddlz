@@ -61,7 +61,7 @@ The huddl's date and wall-clock time in its time zone. A recurring huddl retains
 The place that anchors a geographic huddl search, including its distance radius and local date boundaries. Without a search location, the viewer's browser time zone supplies those boundaries.
 
 **Home search location**:
-A member's saved place that serves as their default search location. It is a resolved place with its own local scheduling context, not a personal time-zone preference.
+A member's saved city or region that serves as their default search location. It is a resolved place with its own local scheduling context, not a street address or personal time-zone preference.
 _Avoid_: User time zone, home time zone
 
 **Calendar time zone**:

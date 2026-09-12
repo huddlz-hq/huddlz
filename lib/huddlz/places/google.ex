@@ -26,6 +26,7 @@ defmodule Huddlz.Places.Google do
     }
 
     body = if types != [], do: Map.put(body, :includedPrimaryTypes, types), else: body
+    body = put_location_bias(body, opts[:location_bias])
 
     opts =
       [
@@ -89,6 +90,17 @@ defmodule Huddlz.Places.Google do
         {:error, {:request_failed, reason}}
     end
   end
+
+  # Favor the area around the supplied city without excluding farther places.
+  defp put_location_bias(body, %{latitude: lat, longitude: lng})
+       when is_number(lat) and lat >= -90 and lat <= 90 and
+              is_number(lng) and lng >= -180 and lng <= 180 do
+    Map.put(body, :locationBias, %{
+      circle: %{center: %{latitude: lat, longitude: lng}, radius: 50_000.0}
+    })
+  end
+
+  defp put_location_bias(body, _), do: body
 
   defp parse_suggestions(suggestions) when is_list(suggestions) do
     suggestions

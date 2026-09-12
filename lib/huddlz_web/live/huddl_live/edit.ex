@@ -355,6 +355,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
       </.form>
 
       <.location_modal
+        location_bias={%{latitude: @huddl.group.latitude, longitude: @huddl.group.longitude}}
         live_action={@live_action}
         cancel_path={~p"/groups/#{@group_slug}/huddlz/#{@huddl.id}/edit"}
         modal_location_address={@modal_location_address}
