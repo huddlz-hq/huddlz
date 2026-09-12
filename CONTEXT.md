@@ -22,6 +22,12 @@ The record that a signed-in person used huddlz on a UTC calendar date. At most o
 **Visitor**:
 A person browsing huddlz without being signed in, whether or not they have an account.
 
+**Confirmed address**:
+An email address whose owner has followed a confirmation link sent to it. Confirmation proves ownership of the address, not identity. Huddl reminders and group updates wait until the account's address is confirmed.
+
+**Confirmation link**:
+A link sent to an address so its owner can confirm it, minted for that address and usable for three days. Asking for the email again mints another link without spending earlier ones; confirming spends all of the account's links; a link minted for an address the account no longer has confirms nothing.
+
 **Administrator**:
 A person responsible for platform and account administration. This role is distinct from a group's owner, organizer, or member roles.
 

@@ -48,3 +48,15 @@ Feature: Both inboxes approve an email change
     And I should see "If you own this huddlz account, reset your password to secure it."
     When I open the email-change link sent to "original+dual@example.com"
     Then I should see "This approval link is invalid, expired, or already used."
+
+  Scenario: The confirmation reminder stays until both inboxes approve an unconfirmed account's change
+    Given "original+dual@example.com" has not confirmed their address
+    When I visit "/profile"
+    Then I am told to confirm my address "original+dual@example.com"
+    When I approve the email change from "original+dual@example.com"
+    And I visit "/profile"
+    Then I am told to confirm my address "original+dual@example.com"
+    When I approve the email change from "replacement+dual@example.com"
+    And I visit "/profile"
+    Then my email is shown as "Confirmed"
+    And I am not told to confirm my address

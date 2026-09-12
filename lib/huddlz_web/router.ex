@@ -169,6 +169,10 @@ defmodule HuddlzWeb.Router do
     post "/admin/impersonations/:user_id", ImpersonationController, :create
     delete "/admin/impersonations/current", ImpersonationController, :delete
 
+    # The email confirmation reminder: send the email again, or hide it for now.
+    post "/account/confirmation/resend", ConfirmationController, :resend
+    post "/account/confirmation/hide", ConfirmationController, :hide
+
     # The confirmation email's page; registration signs people in before
     # they confirm, so it takes a signed-in visitor too.
     ash_authentication_live_session :confirm_routes,

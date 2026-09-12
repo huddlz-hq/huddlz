@@ -85,6 +85,7 @@ defmodule HuddlzWeb.LiveUserAuth do
       socket
       |> maybe_load_user_details()
       |> assign_impersonation(session)
+      |> note_hidden_reminder(session)
       |> mark_active()
       |> assign(:body_class, body_class)
       |> assign_new(:sidebar_owned_groups, fn -> load_sidebar_owned_groups(socket) end)
@@ -105,6 +106,17 @@ defmodule HuddlzWeb.LiveUserAuth do
     |> assign(:current_user, user)
     |> assign(:impersonation, record)
   end
+
+  # The confirmation reminder's X sets a session flag; the layout reads it
+  # off the user, like the impersonation, so no LiveView passes it along.
+  defp note_hidden_reminder(socket, %{"confirmation_reminder_hidden" => true}) do
+    update(socket, :current_user, fn
+      %User{} = user -> Ash.Resource.put_metadata(user, :confirmation_reminder_hidden, true)
+      other -> other
+    end)
+  end
+
+  defp note_hidden_reminder(socket, _session), do: socket
 
   # A page opened by navigation counts as using huddlz today, even on a
   # socket that connected yesterday. The page's own HTTP request already

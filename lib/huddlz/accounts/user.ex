@@ -28,6 +28,7 @@ defmodule Huddlz.Accounts.User do
       update :update_home_location, :update_home_location
       update :change_password, :change_password
       update :change_email, :change_email
+      update :resend_confirmation, :resend_confirmation
       update :update_notification_preferences, :update_notification_preferences
       update :update_theme_preference, :update_theme_preference
     end
@@ -94,6 +95,8 @@ defmodule Huddlz.Accounts.User do
         confirm_on_create? true
         confirm_on_update? false
         require_interaction? true
+        # Links last three days; see Huddlz.Accounts.Confirmation.
+        token_lifetime {3, :days}
         confirmed_at_field :confirmed_at
         auto_confirm_actions [:reset_password_with_token]
         sender Huddlz.Accounts.User.Senders.SendNewUserConfirmationEmail
@@ -169,10 +172,34 @@ defmodule Huddlz.Accounts.User do
       metadata :token, :string, allow_nil?: false
 
       change get_and_lock(:for_update)
+
+      validate Huddlz.Accounts.User.Validations.ConfirmationLinkIsCurrent do
+        before_action? true
+      end
+
       change AshAuthentication.AddOn.Confirmation.ConfirmChange
       change Huddlz.Accounts.User.Changes.RequireCurrentConfirmationAddress
       change AshAuthentication.GenerateTokenChange
       change Huddlz.Accounts.User.Changes.QueueConfirmedInvitations
+      change Huddlz.Accounts.User.Changes.DiscardConfirmationLinks
+    end
+
+    update :resend_confirmation do
+      description """
+      Send the confirmation email again, to the account's current address.
+      Refused for a confirmed account, and limited to one a minute and five
+      an hour per account.
+      """
+
+      accept []
+      require_atomic? false
+
+      validate absent(:confirmed_at) do
+        message "this address is already confirmed"
+      end
+
+      change Huddlz.Accounts.User.Changes.LimitResends
+      change Huddlz.Accounts.User.Changes.ResendConfirmation
     end
 
     read :public_profile do
@@ -715,6 +742,11 @@ defmodule Huddlz.Accounts.User do
 
     policy action([:change_email, :cancel_email_change, :resend_email_change]) do
       description "Users can change their own email"
+      authorize_if expr(id == ^actor(:id))
+    end
+
+    policy action(:resend_confirmation) do
+      description "People can ask for their own confirmation email again"
       authorize_if expr(id == ^actor(:id))
     end
 
