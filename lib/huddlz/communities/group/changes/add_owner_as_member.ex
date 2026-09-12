@@ -10,7 +10,6 @@ defmodule Huddlz.Communities.Group.Changes.AddOwnerAsMember do
       # Automatically add the owner as a member with owner role.
       # Pass the actor (the new owner) through so any add-member side
       # effects can recognise this as a self-add and skip notifications.
-      actor = cs.context[:private][:actor]
 
       Huddlz.Communities.GroupMember
       |> Ash.Changeset.for_create(
@@ -19,7 +18,7 @@ defmodule Huddlz.Communities.Group.Changes.AddOwnerAsMember do
           group_id: group.id,
           user_id: group.owner_id
         },
-        actor: actor
+        Huddlz.Audit.nested_opts(cs, %{automatic?: true})
       )
       |> Ash.create!(authorize?: false)
 

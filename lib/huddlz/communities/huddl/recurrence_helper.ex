@@ -61,16 +61,18 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   `actor` is the editor; it is threaded through so they are excluded from the
   update emails for instances they're attending.
   """
-  def reconcile_future_instances(source, template, actor) do
+  def reconcile_future_instances(source, template, actor, context \\ %{}) do
+    opts = [actor: actor, authorize?: false, context: context]
+
     starting_after =
       source.starts_at |> DateTime.shift_zone!(template.time_zone) |> DateTime.to_naive()
 
     with {:ok, desired} <- desired_occurrences(template, starting_after) do
-      reconcile_desired_instances(source, template, actor, desired)
+      reconcile_desired_instances(source, template, opts, desired)
     end
   end
 
-  defp reconcile_desired_instances(source, template, actor, desired) do
+  defp reconcile_desired_instances(source, template, opts, desired) do
     existing =
       source
       |> future_instances()
@@ -80,14 +82,14 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     {retained, new_desired, obsolete_existing} = match_occurrences(existing, desired)
 
     Enum.each(retained, fn {instance, {starts_at, ends_at}} ->
-      update_instance!(instance, source, starts_at, ends_at, actor)
+      update_instance!(instance, source, starts_at, ends_at, opts)
     end)
 
     Enum.each(new_desired, fn {starts_at, ends_at} ->
-      create_instance!(source, template, starts_at, ends_at)
+      create_instance!(source, template, starts_at, ends_at, opts[:context])
     end)
 
-    Enum.each(obsolete_existing, &remove_instance!(&1, actor))
+    Enum.each(obsolete_existing, &remove_instance!(&1, opts))
 
     :ok
   end
@@ -206,22 +208,25 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     end
   end
 
-  defp create_instance!(source, template, starts_at, ends_at) do
+  defp create_instance!(source, template, starts_at, ends_at, context \\ %{}) do
+    metadata = Map.put(context[:paper_trail_metadata] || %{}, :automatic?, true)
+
     instance =
       Huddl
       |> Ash.Changeset.new()
       |> Ash.Changeset.for_create(:create, instance_attrs(source, starts_at, ends_at, template))
+      |> Ash.Changeset.set_context(%{paper_trail_metadata: metadata})
       # creator_id is not an accepted input — the :create action derives it from
       # the actor. This actorless generation sets it directly so each instance
       # inherits the source's creator (SetCreatorToActor no-ops without an actor).
       |> Ash.Changeset.force_change_attribute(:creator_id, source.creator_id)
       |> Ash.create!(authorize?: false)
 
-    copy_current_image!(source, instance)
+    copy_current_image!(source, instance, metadata)
     instance
   end
 
-  defp copy_current_image!(source, instance) do
+  defp copy_current_image!(source, instance, metadata) do
     case Communities.list_huddl_cover_images(source.id, authorize?: false) do
       {:ok, []} ->
         :ok
@@ -231,6 +236,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
 
         HuddlCoverImage
         |> Ash.Changeset.for_create(:create, Map.put(attrs, :huddl_id, instance.id))
+        |> Ash.Changeset.set_context(%{paper_trail_metadata: metadata})
         |> Ash.create(authorize?: false)
         |> case do
           {:ok, _image} ->
@@ -254,26 +260,35 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     end
   end
 
-  defp destroy_instance!(instance, actor \\ nil) do
+  defp destroy_instance!(
+         instance,
+         opts \\ [authorize?: false, context: %{paper_trail_metadata: %{automatic?: true}}]
+       ) do
     instance.id
     |> Communities.list_huddl_cover_images(authorize?: false)
     |> then(fn
       {:ok, images} ->
-        Enum.each(images, &Ash.destroy!(&1, action: :hard_delete, authorize?: false))
+        Enum.each(images, fn image ->
+          image
+          |> Ash.Changeset.for_destroy(:hard_delete, %{}, opts)
+          |> Ash.destroy!(authorize?: false)
+        end)
 
       {:error, error} ->
         raise error
     end)
 
-    Ash.destroy!(instance, actor: actor, authorize?: false)
+    instance
+    |> Ash.Changeset.for_destroy(:destroy, %{}, opts)
+    |> Ash.destroy!(authorize?: false)
   end
 
-  defp remove_instance!(%{lifecycle_state: :draft} = instance, actor) do
-    destroy_instance!(instance, actor)
+  defp remove_instance!(%{lifecycle_state: :draft} = instance, opts) do
+    destroy_instance!(instance, opts)
   end
 
-  defp remove_instance!(%{lifecycle_state: :published} = instance, actor) do
-    Communities.cancel_huddl!(instance, nil, actor: actor, authorize?: false)
+  defp remove_instance!(%{lifecycle_state: :published} = instance, opts) do
+    Communities.cancel_huddl!(instance, nil, opts)
   end
 
   defp remove_instance!(%{lifecycle_state: state}, _actor)
@@ -283,15 +298,16 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   # Updates a kept instance in place via the :update action with
   # edit_type "instance", so the per-instance update notification emails this
   # occurrence's subscribers without re-triggering series reconciliation.
-  defp update_instance!(instance, source, starts_at, ends_at, actor) do
+  defp update_instance!(instance, source, starts_at, ends_at, opts) do
     instance
     |> Ash.Changeset.new()
     |> Ash.Changeset.set_argument(:suppress_update_notification, true)
     |> Ash.Changeset.for_update(
       :update,
-      instance_attrs(source, starts_at, ends_at) |> Map.put(:edit_type, "instance")
+      instance_attrs(source, starts_at, ends_at) |> Map.put(:edit_type, "instance"),
+      opts
     )
-    |> Ash.update!(actor: actor, authorize?: false)
+    |> Ash.update!(authorize?: false)
   end
 
   defp instance_attrs(source, starts_at, ends_at, template \\ nil) do

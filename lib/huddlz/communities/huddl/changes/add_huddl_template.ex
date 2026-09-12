@@ -36,7 +36,8 @@ defmodule Huddlz.Communities.Huddl.Changes.AddHuddlTemplate do
         Map.merge(schedule, %{
           repeat_until: Ash.Changeset.get_argument(changeset, :repeat_until),
           frequency: Ash.Changeset.get_argument(changeset, :frequency)
-        })
+        }),
+        Huddlz.Audit.nested_opts(changeset)
       )
       |> Ash.create!(authorize?: false)
 

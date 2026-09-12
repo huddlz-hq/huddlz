@@ -53,7 +53,11 @@ defmodule Huddlz.Communities.Huddl.Changes.PromoteFromWaitlist do
 
         attendee ->
           attendee
-          |> Ash.Changeset.for_update(:promote_from_waitlist)
+          |> Ash.Changeset.for_update(
+            :promote_from_waitlist,
+            %{},
+            Huddlz.Audit.nested_opts(cs, %{automatic?: true})
+          )
           |> Ash.update!(authorize?: false)
 
           Ash.Changeset.put_context(cs, :promoted_user_id, attendee.user_id)
