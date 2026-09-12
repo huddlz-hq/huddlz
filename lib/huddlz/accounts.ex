@@ -42,6 +42,12 @@ defmodule Huddlz.Accounts do
 
     resource Huddlz.Accounts.ApiKey
 
+    resource Huddlz.Accounts.UsageMeasurement
+
+    resource Huddlz.Accounts.ActiveDay do
+      define :record_active_day, action: :record
+    end
+
     resource Huddlz.Accounts.Profile do
       define :get_profile, action: :get
     end

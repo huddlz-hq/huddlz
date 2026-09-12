@@ -1,0 +1,53 @@
+{
+  "attributes": [
+    {
+      "allow_nil?": false,
+      "default": "1",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": true,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "id",
+      "type": "bigint"
+    },
+    {
+      "allow_nil?": false,
+      "default": "nil",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "started_on",
+      "type": "date"
+    }
+  ],
+  "base_filter": null,
+  "check_constraints": [],
+  "create_table_options": null,
+  "custom_indexes": [],
+  "custom_statements": [
+    {
+      "after_tables": [],
+      "code?": false,
+      "down": "DELETE FROM usage_measurement WHERE id = 1",
+      "global?": false,
+      "name": "begin_collection",
+      "up": "INSERT INTO usage_measurement (id, started_on) VALUES (1, (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::date)"
+    }
+  ],
+  "has_create_action": false,
+  "hash": "2C7BEE83ACBD17164B696B72B692BBD9253A9DE3F1DD99E46EB6F1F48FEDF441",
+  "identities": [],
+  "multitenancy": {
+    "attribute": null,
+    "global": null,
+    "strategy": null
+  },
+  "repo": "Elixir.Huddlz.Repo",
+  "schema": null,
+  "table": "usage_measurement"
+}

@@ -7,6 +7,7 @@ defmodule HuddlzWeb.LiveUserAuth do
   use HuddlzWeb, :verified_routes
 
   alias AshAuthentication.Phoenix.LiveSession
+  alias Huddlz.Accounts.ActiveDays
   alias Huddlz.Accounts.User
   alias Huddlz.Communities.MembershipEvents
   alias Huddlz.Notifications
@@ -84,6 +85,7 @@ defmodule HuddlzWeb.LiveUserAuth do
       socket
       |> maybe_load_user_details()
       |> assign_impersonation(session)
+      |> mark_active()
       |> assign(:body_class, body_class)
       |> assign_new(:sidebar_owned_groups, fn -> load_sidebar_owned_groups(socket) end)
       |> assign_new(:unread_notification_count, fn -> load_unread_notification_count(socket) end)
@@ -102,6 +104,25 @@ defmodule HuddlzWeb.LiveUserAuth do
     socket
     |> assign(:current_user, user)
     |> assign(:impersonation, record)
+  end
+
+  # A page opened by navigation counts as using huddlz today, even on a
+  # socket that connected yesterday. The page's own HTTP request already
+  # counted, and a tab reconnecting after a blip is not a person coming
+  # back, so only the first connected mount of a view records.
+  defp mark_active(socket) do
+    if Phoenix.LiveView.connected?(socket) and first_mount?(socket) do
+      ActiveDays.mark(socket.assigns[:current_user])
+    end
+
+    socket
+  end
+
+  defp first_mount?(socket) do
+    case Phoenix.LiveView.get_connect_params(socket) do
+      %{"_mounts" => mounts} -> mounts == 0
+      _ -> true
+    end
   end
 
   # The topbar's appearance menu lives in the layout, so every LiveView that
