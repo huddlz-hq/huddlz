@@ -8,7 +8,6 @@ defmodule HuddlzWeb.LiveUserAuth do
 
   alias AshAuthentication.Phoenix.LiveSession
   alias Huddlz.Accounts.User
-  alias Huddlz.Admin.Impersonation
   alias Huddlz.Communities.MembershipEvents
   alias Huddlz.Notifications
 
@@ -96,26 +95,14 @@ defmodule HuddlzWeb.LiveUserAuth do
   end
 
   # The signed browser session supplies attribution for both activity and PaperTrail.
-  defp assign_impersonation(
-         %{assigns: %{current_user: %User{id: user_id}}} = socket,
-         %{"impersonation_id" => id}
-       )
-       when is_binary(id) do
-    case Ash.get(Impersonation, id, load: [:admin, :user], authorize?: false) do
-      {:ok, %Impersonation{user_id: ^user_id, ended_at: nil} = impersonation} ->
-        socket
-        |> assign(:impersonation, impersonation)
-        |> update(:current_user, fn
-          %User{} = user -> Ash.Resource.put_metadata(user, :impersonation, impersonation)
-          other -> other
-        end)
+  defp assign_impersonation(socket, session) do
+    {user, record} =
+      HuddlzWeb.BrowserSession.resolve(socket.assigns[:current_user], session["impersonation_id"])
 
-      _ ->
-        assign(socket, :impersonation, nil)
-    end
+    socket
+    |> assign(:current_user, user)
+    |> assign(:impersonation, record)
   end
-
-  defp assign_impersonation(socket, _session), do: assign(socket, :impersonation, nil)
 
   # The topbar's appearance menu lives in the layout, so every LiveView that
   # renders the app chrome answers its "set_theme" event here.

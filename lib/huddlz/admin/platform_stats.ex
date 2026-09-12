@@ -86,7 +86,7 @@ defmodule Huddlz.Admin.PlatformStats do
 
   defp groups(actor) do
     Group
-    |> Ash.Query.for_read(:read_with_archived)
+    |> Ash.Query.for_read(:read_with_archived, %{}, actor: actor)
     |> Ash.Query.filter(
       is_public == true or owner_id == ^actor.id or
         exists(group_members, user_id == ^actor.id and role == :organizer)

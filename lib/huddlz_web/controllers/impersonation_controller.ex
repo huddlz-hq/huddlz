@@ -16,6 +16,7 @@ defmodule HuddlzWeb.ImpersonationController do
   alias Huddlz.Accounts.{Token, User}
   alias Huddlz.Admin
   alias Huddlz.Admin.Impersonation
+  alias HuddlzWeb.BrowserSession
 
   def create(conn, %{"user_id" => user_id}) do
     admin = conn.assigns[:current_user]
@@ -32,16 +33,17 @@ defmodule HuddlzWeb.ImpersonationController do
   def delete(conn, _params) do
     with id when is_binary(id) <- get_session(conn, :impersonation_id),
          admin_token when is_binary(admin_token) <- get_session(conn, :impersonator_token),
-         {:ok, %Impersonation{} = record} <- Ash.get(Impersonation, id, authorize?: false) do
+         {:ok, %Impersonation{} = record} <-
+           Admin.resolve_impersonation_session(id, actor: conn.assigns[:current_user]) do
       stop_record(record)
       revoke(get_session(conn, :user_token))
 
       conn
-      |> disconnect_live_views()
+      |> BrowserSession.disconnect_live_views()
       |> delete_session(:impersonation_id)
       |> delete_session(:impersonator_token)
       |> put_session(:user_token, admin_token)
-      |> put_session(:live_socket_id, live_socket_id(admin_token))
+      |> put_session(:live_socket_id, BrowserSession.live_socket_id(admin_token))
       |> put_flash(:info, "You are back in your own session")
       |> redirect(to: ~p"/admin/users")
     else
@@ -50,15 +52,15 @@ defmodule HuddlzWeb.ImpersonationController do
   end
 
   defp start(conn, admin, user_id) do
-    with {:ok, %User{} = target} <- Ash.get(User, user_id, authorize?: false),
+    with {:ok, %User{} = target} <- Accounts.get_user(user_id, authorize?: false),
          {:ok, record} <- Admin.start_impersonation(target.id, actor: admin),
          {:ok, token, _claims} <- Jwt.token_for_user(target, %{}, domain: Accounts) do
       conn
-      |> disconnect_live_views()
+      |> BrowserSession.disconnect_live_views()
       |> put_session(:impersonation_id, record.id)
       |> put_session(:impersonator_token, get_session(conn, :user_token))
       |> put_session(:user_token, token)
-      |> put_session(:live_socket_id, live_socket_id(token))
+      |> put_session(:live_socket_id, BrowserSession.live_socket_id(token))
       |> put_flash(:info, "Viewing huddlz as #{target.display_name}")
       |> redirect(to: ~p"/agenda")
     else
@@ -72,7 +74,8 @@ defmodule HuddlzWeb.ImpersonationController do
   @doc "Stamps the end of the impersonation a session carries, if any."
   def stop_from_session(conn) do
     with id when is_binary(id) <- get_session(conn, :impersonation_id),
-         {:ok, %Impersonation{} = record} <- Ash.get(Impersonation, id, authorize?: false) do
+         {:ok, %Impersonation{} = record} <-
+           Admin.resolve_impersonation_session(id, actor: conn.assigns[:current_user]) do
       stop_record(record)
       revoke(get_session(conn, :impersonator_token))
     end
@@ -81,25 +84,11 @@ defmodule HuddlzWeb.ImpersonationController do
   end
 
   defp stop_record(%Impersonation{ended_at: nil} = record) do
-    admin = Ash.get!(User, record.admin_id, authorize?: false)
-    Admin.stop_impersonation!(record, actor: admin)
+    Admin.stop_impersonation!(record, actor: record.admin)
   end
 
   defp stop_record(_record), do: :ok
 
   defp revoke(token) when is_binary(token), do: Tokens.revoke(Token, token)
   defp revoke(_token), do: :ok
-
-  defp disconnect_live_views(conn) do
-    case get_session(conn, :live_socket_id) do
-      topic when is_binary(topic) ->
-        HuddlzWeb.Endpoint.broadcast(topic, "disconnect", %{})
-        conn
-
-      _ ->
-        conn
-    end
-  end
-
-  defp live_socket_id(token), do: "users_sessions:#{Base.url_encode64(token)}"
 end

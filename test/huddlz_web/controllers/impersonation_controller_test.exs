@@ -74,6 +74,30 @@ defmodule HuddlzWeb.ImpersonationControllerTest do
     assert result["data"]["listGroups"]["results"] == [%{"id" => group.id}]
   end
 
+  test "session resolution only returns an active record for its target", ctx do
+    record = Huddlz.Admin.start_impersonation!(ctx.target.id, actor: ctx.admin)
+
+    assert {:ok, resolved} =
+             Huddlz.Admin.resolve_impersonation_session(record.id, actor: ctx.target)
+
+    assert resolved.id == record.id
+    assert resolved.admin.id == ctx.admin.id
+    assert resolved.user.id == ctx.target.id
+
+    assert {:ok, nil} =
+             Huddlz.Admin.resolve_impersonation_session(record.id, actor: ctx.admin)
+
+    assert {:ok, nil} =
+             Huddlz.Admin.resolve_impersonation_session(record.id, actor: generate(user()))
+
+    assert {:error, _} = Huddlz.Admin.resolve_impersonation_session(record.id)
+
+    Huddlz.Admin.stop_impersonation!(record, actor: ctx.admin)
+
+    assert {:ok, nil} =
+             Huddlz.Admin.resolve_impersonation_session(record.id, actor: ctx.target)
+  end
+
   test "an active impersonation cannot be nested", ctx do
     conn = build_conn() |> login(ctx.admin) |> post(~p"/admin/impersonations/#{ctx.target.id}")
     id = get_session(conn, :impersonation_id)

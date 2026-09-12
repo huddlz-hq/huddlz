@@ -15,6 +15,8 @@ defmodule Huddlz.Accounts do
     resource Huddlz.Accounts.Token
 
     resource Huddlz.Accounts.User do
+      define :get_user, action: :read, get_by: [:id]
+      define :update_notification_preferences, action: :update_notification_preferences
       define :get_current_user, action: :me
       # Define proper code interfaces for actions
       define :search_by_email, action: :search_by_email, args: [:email]

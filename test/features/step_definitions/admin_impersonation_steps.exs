@@ -78,9 +78,12 @@ defmodule AdminImpersonationSteps do
         text: "Viewing huddlz as #{name}"
       )
 
+    user = User |> Ash.Query.filter(display_name == ^name) |> Ash.read_one!(authorize?: false)
+    token = Huddlz.Notifications.unsubscribe_token(user, :rsvp_received)
+
     session =
       Enum.reduce(
-        ["/help", "/sign-out", "/confirm_new_user/invalid", "/groups"],
+        ["/help", "/sign-out", "/confirm_new_user/invalid", "/unsubscribe/#{token}", "/groups"],
         session,
         fn path, session ->
           session

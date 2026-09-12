@@ -25,6 +25,7 @@ defmodule HuddlzWeb.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :load_from_session_unless_loaded
+    plug HuddlzWeb.BrowserSession
     plug :prevent_authenticated_page_caching
   end
 

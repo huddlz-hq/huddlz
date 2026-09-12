@@ -29,6 +29,14 @@ defmodule Huddlz.Admin.Impersonation do
   actions do
     defaults [:read]
 
+    action :resolve_session, :struct do
+      description "Resolve an active browser impersonation belonging to the current actor"
+      constraints instance_of: __MODULE__
+      allow_nil? true
+      argument :id, :uuid, allow_nil?: false
+      run Huddlz.Admin.Impersonation.ResolveSession
+    end
+
     create :start do
       description "Begin viewing huddlz as the given person"
       accept [:user_id]
@@ -68,6 +76,10 @@ defmodule Huddlz.Admin.Impersonation do
   end
 
   policies do
+    policy action(:resolve_session) do
+      authorize_if actor_present()
+    end
+
     policy action(:start) do
       authorize_if actor_attribute_equals(:role, :admin)
     end

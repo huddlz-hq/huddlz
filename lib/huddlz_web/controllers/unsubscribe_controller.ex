@@ -13,7 +13,9 @@ defmodule HuddlzWeb.UnsubscribeController do
 
   use HuddlzWeb, :controller
 
+  alias Huddlz.Accounts
   alias Huddlz.Accounts.User
+  alias Huddlz.Admin.Impersonation
   alias Huddlz.Notifications
   alias Huddlz.Notifications.Triggers
 
@@ -31,8 +33,9 @@ defmodule HuddlzWeb.UnsubscribeController do
 
   def update(conn, %{"token" => token}) do
     with {:ok, user_id, trigger, entry} <- verify(token),
-         {:ok, user} <- Ash.get(User, user_id, authorize?: false),
-         {:ok, _updated} <- opt_out(user, trigger) do
+         :ok <- check_recipient(conn.assigns[:current_user], user_id),
+         {:ok, user} <- Accounts.get_user(user_id, authorize?: false),
+         {:ok, _updated} <- opt_out(user, trigger, conn.assigns[:current_user]) do
       conn
       |> put_flash(
         :info,
@@ -40,9 +43,27 @@ defmodule HuddlzWeb.UnsubscribeController do
       )
       |> redirect(to: ~p"/profile/notifications")
     else
-      _ -> invalid_link(conn)
+      :recipient_mismatch ->
+        conn
+        |> put_flash(
+          :error,
+          "This unsubscribe link belongs to someone else. Stop impersonation before using it."
+        )
+        |> redirect(to: ~p"/unsubscribe/#{token}")
+
+      _ ->
+        invalid_link(conn)
     end
   end
+
+  defp check_recipient(
+         %User{__metadata__: %{impersonation: %Impersonation{user_id: target_id}}},
+         user_id
+       )
+       when target_id != user_id,
+       do: :recipient_mismatch
+
+  defp check_recipient(_user, _user_id), do: :ok
 
   defp verify(token) do
     with {:ok, {user_id, trigger}} <- Notifications.verify_unsubscribe_token(token),
@@ -59,19 +80,18 @@ defmodule HuddlzWeb.UnsubscribeController do
     |> redirect(to: ~p"/")
   end
 
-  defp opt_out(%User{} = user, trigger) do
+  defp opt_out(%User{} = user, trigger, actor) do
     key = Triggers.preference_key(trigger)
 
     if Map.get(user.notification_preferences || %{}, key) == false do
       {:ok, user}
     else
-      user
-      |> Ash.Changeset.for_update(
-        :update_notification_preferences,
+      Accounts.update_notification_preferences(
+        user,
         %{preferences: %{key => false}},
+        actor: actor,
         authorize?: false
       )
-      |> Ash.update()
     end
   end
 end
