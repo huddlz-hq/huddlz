@@ -1,6 +1,6 @@
 # Turnout is a headcount, not per-person check-in
 
-Organizers want to know how many people actually came to a huddl, because RSVPs mislead in both directions: some groups draw more walk-ins than RSVPs, others see half the RSVPs not show. We decided to record turnout as one or two integers per huddl (people in the room for in-person, people on the call for virtual, both for hybrid), entered by an organizer after the huddl ends, always optional and always skippable. Turnout and show rate are visible to the group's organizers and owner, and to platform administrators. The platform overview introduced in #553 extends the original organizer-only boundary so administrators can understand participation across groups; other users still cannot see these figures.
+Organizers want to know how many people actually came to a huddl, because RSVPs mislead in both directions: some groups draw more walk-ins than RSVPs, others see half the RSVPs not show. We decided to record turnout as one or two integers per huddl (people in the room for in-person, people on the call for virtual, both for hybrid), entered by an organizer after the huddl ends, always optional and always skippable. Turnout and show rate are visible to the group's organizers and owner, and to platform administrators. The platform overview extends the original organizer-only boundary so administrators can understand participation across groups; other users still cannot see these figures.
 
 ## Considered options
 
