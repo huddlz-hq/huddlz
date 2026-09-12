@@ -24,6 +24,7 @@ defmodule HuddlzWeb.GraphqlUserExposureTest do
              # `id == ^actor(:id)`, so result is always the actor themselves.
              {:change_email_result, :result},
              {:change_password_result, :result},
+             {:resend_confirmation_result, :result},
              {:update_display_name_result, :result},
              {:update_home_location_result, :result},
              {:update_notification_preferences_result, :result},

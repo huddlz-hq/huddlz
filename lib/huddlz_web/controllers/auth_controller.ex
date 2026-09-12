@@ -52,8 +52,12 @@ defmodule HuddlzWeb.AuthController do
         {{:password, :reset}, _} ->
           "The password reset link is invalid or has expired. Please request a new one."
 
-        {{:confirm_new_user, :confirm}, _} ->
-          "That confirmation link no longer works. If your email is confirmed, just sign in."
+        {{:confirm_new_user, :confirm}, reason} ->
+          if previous_address?(reason) do
+            "That confirmation link was for a previous address. Confirm from the email sent to your current address."
+          else
+            "That confirmation link no longer works. If your email is confirmed, just sign in."
+          end
 
         _ ->
           "Incorrect email or password"
@@ -62,6 +66,10 @@ defmodule HuddlzWeb.AuthController do
     conn
     |> put_flash(:error, message)
     |> redirect(to: ~p"/sign-in")
+  end
+
+  defp previous_address?(reason) do
+    is_exception(reason) and Exception.message(reason) =~ "previous address"
   end
 
   def sign_out(conn, _params) do

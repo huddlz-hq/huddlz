@@ -29,6 +29,7 @@ defmodule Huddlz.Accounts do
         args: [:home_location, :home_latitude, :home_longitude, :home_time_zone]
 
       define :change_email, action: :change_email, args: [:email, :current_password]
+      define :resend_confirmation, action: :resend_confirmation
     end
 
     resource Huddlz.Accounts.ProfilePicture do
