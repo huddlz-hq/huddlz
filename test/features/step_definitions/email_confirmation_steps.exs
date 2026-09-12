@@ -12,7 +12,6 @@ defmodule EmailConfirmationSteps do
   alias AshAuthentication.Jwt
   alias Huddlz.Accounts.{Confirmation, Token, User}
   alias Huddlz.Accounts.User.Changes.LimitResends
-  alias Huddlz.Test.Helpers.Authentication
 
   @resend_query ~s|mutation($id: ID!) { resendConfirmation(id: $id) { result { id } errors { message } } }|
 
@@ -49,11 +48,16 @@ defmodule EmailConfirmationSteps do
     Map.merge(context, %{conn: session, session: session})
   end
 
-  step "I sign out and sign in again as {string}", %{args: [email]} = context do
+  step "I sign out and sign in again as {string} with password {string}",
+       %{args: [email, password], session: session} = context do
     session =
-      build_conn()
-      |> Authentication.login(find_user(email))
-      |> visit("/agenda")
+      session
+      |> click_link("Sign out")
+      |> click_link("Sign in")
+      |> fill_in("Email", with: email)
+      |> fill_in("Password", with: password)
+      |> click_button("Sign in")
+      |> assert_has("[role=alert]", text: "You are now signed in")
 
     Map.merge(context, %{conn: session, session: session})
   end
@@ -118,7 +122,8 @@ defmodule EmailConfirmationSteps do
     response = context.api_response
     assert response["data"]["resendConfirmation"]["result"] == nil
     assert [%{"message" => message} | _] = response["data"]["resendConfirmation"]["errors"]
-    assert message =~ "less than a minute ago"
+    assert [_, seconds] = Regex.run(~r/Try again in (\d+) seconds/, message)
+    assert String.to_integer(seconds) in 1..60
     context
   end
 
@@ -144,6 +149,19 @@ defmodule EmailConfirmationSteps do
 
   step "I am told when I can try again", %{session: session} = context do
     assert_has(session, "*", text: "Try again in")
+    context
+  end
+
+  step "the retry guidance does not claim an email was sent", %{session: session} = context do
+    refute_has(session, "[role=alert]", text: "We sent a link")
+    assert_has(session, "[role=alert]", text: "requested")
+    context
+  end
+
+  step "the API retry guidance does not claim an email was sent", context do
+    [error | _] = context.api_response["data"]["resendConfirmation"]["errors"]
+    refute error["message"] =~ "was sent"
+    assert error["message"] =~ "requested"
     context
   end
 
@@ -225,6 +243,17 @@ defmodule EmailConfirmationSteps do
   step "the old link is opened", context do
     session = visit(build_conn(), "/confirm_new_user/#{context.old_link}")
     Map.merge(context, %{conn: session, session: session})
+  end
+
+  step "I submit the open confirmation page", %{session: session} = context do
+    session = click_button(session, "Confirm my email")
+    Map.merge(context, %{conn: session, session: session})
+  end
+
+  step "the confirmation failure explains that the link was for a previous address",
+       %{session: session} = context do
+    assert_has(session, "[role=alert]", text: "That confirmation link was for a previous address")
+    context
   end
 
   step "I am told the link was for a previous address", %{session: session} = context do

@@ -6,8 +6,8 @@ defmodule Huddlz.Accounts.User.Errors.ResendLimited do
   """
   use Splode.Error, fields: [:window, :limit, :retry_after_ms], class: :forbidden
 
-  def message(%{window: :minute}), do: "a confirmation email was sent less than a minute ago"
-  def message(%{window: :hour}), do: "five confirmation emails were sent in the past hour"
+  def message(%{window: :minute}), do: "you requested confirmation less than a minute ago"
+  def message(%{window: :hour}), do: "you requested confirmation five times in the past hour"
 
   defimpl Plug.Exception do
     def actions(_), do: []
@@ -16,7 +16,8 @@ defmodule Huddlz.Accounts.User.Errors.ResendLimited do
 
   defimpl AshGraphql.Error do
     def to_error(error) do
-      message = Exception.message(error)
+      seconds = max(1, div(error.retry_after_ms + 999, 1000))
+      message = "#{Exception.message(error)}. Try again in #{seconds} seconds."
 
       %{
         message: message,

@@ -23,11 +23,12 @@ Feature: Email confirmation status
     Then I am not told to confirm my address
 
   Scenario: Hiding the reminder lasts for the session
-    Given I am signed in as "maya573@example.com"
+    Given the user "maya573@example.com" has password "Password123!"
+    And I am signed in as "maya573@example.com"
     When I hide the confirmation reminder
     And I visit "/groups"
     Then I am not told to confirm my address
-    When I sign out and sign in again as "maya573@example.com"
+    When I sign out and sign in again as "maya573@example.com" with password "Password123!"
     Then I am told to confirm my address "maya573@example.com"
 
   Scenario: The profile keeps the status and controls after hiding
@@ -108,3 +109,25 @@ Feature: Email confirmation status
     Then a confirmation email is sent to "maya573@example.com"
     When "maya573@example.com" asks for the confirmation email through GraphQL
     Then the API refuses the resend with a retry time
+
+  Scenario: Retrying a failed send does not claim an email was sent
+    Given resend limits are enforced
+    And I am signed in as "maya573@example.com"
+    And email cannot be sent right now
+    When I ask for the confirmation email again
+    Then I am told nothing went out and to try again
+    When I ask for the confirmation email again
+    Then I am told when I can try again
+    And the retry guidance does not claim an email was sent
+    When "maya573@example.com" asks for the confirmation email through GraphQL
+    Then the API refuses the resend with a retry time
+    And the API retry guidance does not claim an email was sent
+    And no confirmation email is sent
+
+  Scenario: An address changes while the confirmation page is open
+    Given "maya573@example.com" has an unexpired confirmation link
+    And the old link is opened
+    And that account's address has since changed to "maya573@work.example"
+    When I submit the open confirmation page
+    Then the confirmation failure explains that the link was for a previous address
+    And the account's address is still "maya573@work.example" and not confirmed

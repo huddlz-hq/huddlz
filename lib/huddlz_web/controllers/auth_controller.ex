@@ -2,6 +2,7 @@ defmodule HuddlzWeb.AuthController do
   use HuddlzWeb, :controller
   use AshAuthentication.Phoenix.Controller
 
+  alias Huddlz.Accounts.User.Errors.ConfirmationAddressChanged
   alias HuddlzWeb.AuthReturnTo
   alias HuddlzWeb.BrowserSession
 
@@ -68,9 +69,12 @@ defmodule HuddlzWeb.AuthController do
     |> redirect(to: ~p"/sign-in")
   end
 
-  defp previous_address?(reason) do
-    is_exception(reason) and Exception.message(reason) =~ "previous address"
-  end
+  defp previous_address?(%ConfirmationAddressChanged{}), do: true
+
+  defp previous_address?(%{errors: errors}) when is_list(errors),
+    do: Enum.any?(errors, &previous_address?/1)
+
+  defp previous_address?(_reason), do: false
 
   def sign_out(conn, _params) do
     return_to = return_to(conn)

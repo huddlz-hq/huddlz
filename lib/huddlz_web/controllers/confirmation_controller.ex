@@ -41,11 +41,11 @@ defmodule HuddlzWeb.ConfirmationController do
     case find_error(error) do
       %ResendLimited{window: :minute, retry_after_ms: ms} ->
         {:error,
-         "We sent a link less than a minute ago. Try again in #{max(1, div(ms, 1000))} seconds."}
+         "You requested a link less than a minute ago. Try again in #{max(1, div(ms + 999, 1000))} seconds."}
 
       %ResendLimited{window: :hour, retry_after_ms: ms} ->
         {:error,
-         "That's five in the past hour. Give the inbox a chance to catch up; you can try again in #{minutes(ms)}."}
+         "You requested confirmation five times in the past hour. Try again in #{minutes(ms)}."}
 
       %ConfirmationNotSent{} ->
         {:error, "Couldn't send just now. Nothing went out. Try again in a minute."}

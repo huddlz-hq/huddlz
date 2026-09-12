@@ -7,11 +7,12 @@ defmodule Huddlz.Accounts.User.Validations.ConfirmationLinkIsCurrent do
   use Ash.Resource.Validation
 
   alias Huddlz.Accounts.Confirmation
+  alias Huddlz.Accounts.User.Errors.ConfirmationAddressChanged
 
   @impl true
   def validate(changeset, _opts, _context) do
     case changeset |> Ash.Changeset.get_argument(:confirm) |> Confirmation.link_state() do
-      :previous_address -> {:error, field: :confirm, message: "was for a previous address"}
+      :previous_address -> {:error, ConfirmationAddressChanged.exception()}
       _state -> :ok
     end
   end
