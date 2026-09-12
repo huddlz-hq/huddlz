@@ -213,8 +213,9 @@ defmodule Huddlz.Communities.GroupInvitation do
   end
 
   policies do
+    # Administrators read everything and edit nothing they do not organize.
     bypass actor_attribute_equals(:role, :admin) do
-      authorize_if always()
+      authorize_if action_type(:read)
     end
 
     policy action(:open_email_invitation) do

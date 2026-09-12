@@ -84,33 +84,29 @@ Feature: Group archival
     Then I should see "Archived: Quiet Club"
     And I can open the archived group from its notification
 
-  Scenario: Archived groups reject membership changes even through the admin API
+  Scenario: Archived groups reject membership changes even through the API
     Given the following users exist:
       | email              | role  | display_name |
       | owner@example.com  | user  | Owner        |
       | member@example.com | user  | Member       |
-      | admin@example.com  | admin | Admin        |
     And a public group "Frozen Club" exists with owner "owner@example.com"
     And "member@example.com" is a member of "Frozen Club"
     And I am signed in as "owner@example.com"
     When I visit the edit page for "Frozen Club"
     And I click "Archive group"
     And I click "Yes, archive group"
-    Given I am signed in as "admin@example.com"
     When I try to promote "member@example.com" in "Frozen Club" through the API
     Then the archived group change is rejected
 
-  Scenario: Archived groups reject new address book locations through the admin API
+  Scenario: Archived groups reject new address book locations through the API
     Given the following users exist:
       | email             | role  | display_name |
       | owner@example.com | user  | Owner        |
-      | admin@example.com | admin | Admin        |
     And a public group "Closed Club" exists with owner "owner@example.com"
     And I am signed in as "owner@example.com"
     When I visit the edit page for "Closed Club"
     And I click "Archive group"
     And I click "Yes, archive group"
-    Given I am signed in as "admin@example.com"
     When I try to add a location to "Closed Club" through the API
     Then the archived location change is rejected
 
@@ -200,18 +196,16 @@ Feature: Group archival
     Then I should see "This group is archived"
     And the "Accept invitation" button should not be visible
 
-  Scenario Outline: Archived cover images cannot be replaced through the admin API
+  Scenario Outline: Archived cover images cannot be replaced through the API
     Given the following users exist:
       | email             | role  | display_name |
       | owner@example.com | user  | Owner        |
-      | admin@example.com | admin | Admin        |
     And a public group "Cover Club" exists with owner "owner@example.com"
     And the past huddl "Old cover" exists in group "Cover Club" hosted by "owner@example.com"
     And I am signed in as "owner@example.com"
     When I visit the edit page for "Cover Club"
     And I click "Archive group"
     And I click "Yes, archive group"
-    Given I am signed in as "admin@example.com"
     When I upload an archived "<target>" cover through the API
     Then the archived cover upload is rejected
 
@@ -248,7 +242,7 @@ Feature: Group archival
     When I visit "/notifications"
     Then I should see 2 archive notifications for "Repeat Club"
 
-  Scenario Outline: Only owners and admins can archive through the API
+  Scenario Outline: Only owners can archive through the API
     Given the following users exist:
       | email              | role  | display_name |
       | owner@example.com  | user  | Owner        |
@@ -263,7 +257,7 @@ Feature: Group archival
     Examples:
       | actor              | outcome |
       | owner@example.com  | allowed |
-      | admin@example.com  | allowed |
+      | admin@example.com  | denied  |
       | member@example.com | denied  |
 
   Scenario Outline: API clients can restore an archived group

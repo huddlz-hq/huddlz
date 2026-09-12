@@ -138,9 +138,9 @@ defmodule Huddlz.Communities.HuddlAttendee do
   end
 
   policies do
-    # Admin bypass - admins can do everything
+    # Administrators read everything and edit nothing they do not organize.
     bypass actor_attribute_equals(:role, :admin) do
-      authorize_if always()
+      authorize_if action_type(:read)
     end
 
     # Users can RSVP to huddlz they have access to

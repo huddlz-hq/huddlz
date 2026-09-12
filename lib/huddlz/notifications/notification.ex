@@ -86,8 +86,9 @@ defmodule Huddlz.Notifications.Notification do
   end
 
   policies do
+    # Administrators read everything and edit nothing they do not organize.
     bypass actor_attribute_equals(:role, :admin) do
-      authorize_if always()
+      authorize_if action_type(:read)
     end
 
     # System-driven create from Huddlz.Notifications.deliver/3 runs with

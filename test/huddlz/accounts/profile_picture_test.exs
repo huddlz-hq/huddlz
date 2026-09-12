@@ -41,7 +41,7 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
       end
     end
 
-    test "admins can create profile pictures for any user" do
+    test "admins cannot create profile pictures for other people" do
       admin = generate(user(role: :admin))
       user = generate(user())
 
@@ -53,8 +53,8 @@ defmodule Huddlz.Accounts.ProfilePictureTest do
         user_id: user.id
       }
 
-      assert {:ok, profile_picture} = Accounts.create_profile_picture(attrs, actor: admin)
-      assert profile_picture.user_id == user.id
+      assert {:error, %Ash.Error.Forbidden{}} =
+               Accounts.create_profile_picture(attrs, actor: admin)
     end
   end
 

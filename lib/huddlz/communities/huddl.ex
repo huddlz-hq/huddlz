@@ -734,10 +734,9 @@ defmodule Huddlz.Communities.Huddl do
       forbid_if always()
     end
 
-    # Admins can do anything
-    bypass always() do
-      description "Admins can do anything"
-      authorize_if actor_attribute_equals(:role, :admin)
+    # Administrators read everything and edit nothing they do not organize.
+    bypass actor_attribute_equals(:role, :admin) do
+      authorize_if action_type(:read)
     end
 
     # Creation policies
