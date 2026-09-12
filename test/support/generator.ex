@@ -347,7 +347,9 @@ defmodule Huddlz.Generator do
     alias Huddlz.Communities.GroupLocation
     group = Ash.get!(Group, group_id, authorize?: false)
 
-    case Ash.get(GroupLocation, [group_id: group_id, name: "Main Street"], authorize?: false) do
+    case Ash.get(GroupLocation, [group_id: group_id, name: "Main Street", unit: nil],
+           authorize?: false
+         ) do
       {:ok, location} ->
         location.id
 

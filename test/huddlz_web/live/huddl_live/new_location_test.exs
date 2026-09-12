@@ -146,7 +146,11 @@ defmodule HuddlzWeb.HuddlLive.NewLocationTest do
         |> form("#new-location-form", %{"location_unit" => "  4B  "})
         |> render_submit()
 
-        assert render(view) =~ "320 1st St N, Jacksonville Beach, FL\nUnit 4B"
+        assert has_element?(
+                 view,
+                 "[data-testid='saved-location-display']",
+                 ~r/320 1st St N, Jacksonville Beach, FL\s+Unit 4B/
+               )
 
         locations = Huddlz.Communities.list_group_locations!(group.id, actor: owner)
         location = Enum.find(locations, &(&1.name == "Beach meeting place"))

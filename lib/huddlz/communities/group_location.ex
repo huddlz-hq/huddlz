@@ -199,7 +199,7 @@ defmodule Huddlz.Communities.GroupLocation do
   end
 
   identities do
-    identity :unique_name_per_group, [:group_id, :name],
+    identity :unique_name_and_unit_per_group, [:group_id, :name, :unit],
       nils_distinct?: false,
       pre_check?: true
   end

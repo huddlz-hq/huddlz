@@ -11,6 +11,38 @@ Feature: Address book unit details
     And a public group "Beach Neighbors" exists with owner "owner+address-units@example.com"
     And I am signed in as "owner+address-units@example.com"
 
+  Scenario: Saving different units with the same friendly name
+    When I visit the locations page for "Beach Neighbors"
+    And I click "Add Address"
+    And I choose the address book street address "320 1st St N, Jacksonville Beach, FL"
+    And I fill in "Location name (optional)" with "Beach meeting place"
+    And I fill in "Unit (optional)" with "4B"
+    And I click "Save Address"
+    And I click "Add Address"
+    And I choose the address book street address "320 1st St N, Jacksonville Beach, FL"
+    And I fill in "Location name (optional)" with "Beach meeting place"
+    And I fill in "Unit (optional)" with "711"
+    And I click "Save Address"
+    And I visit the locations page for "Beach Neighbors"
+    Then I should see "320 1st St N, Jacksonville Beach, FL Unit 4B"
+    And I should see "320 1st St N, Jacksonville Beach, FL Unit 711"
+
+  Scenario: Saving different units without friendly names
+    When I visit the locations page for "Beach Neighbors"
+    And I click "Add Address"
+    And I choose the address book street address "320 1st St N, Jacksonville Beach, FL"
+    And I fill in "Location name (optional)" with ""
+    And I fill in "Unit (optional)" with "4B"
+    And I click "Save Address"
+    And I click "Add Address"
+    And I choose the address book street address "320 1st St N, Jacksonville Beach, FL"
+    And I fill in "Location name (optional)" with ""
+    And I fill in "Unit (optional)" with "711"
+    And I click "Save Address"
+    And I visit the locations page for "Beach Neighbors"
+    Then I should see "320 1st St N, Jacksonville Beach, FL Unit 4B"
+    And I should see "320 1st St N, Jacksonville Beach, FL Unit 711"
+
   Scenario: Saving a unit with a street address
     When I visit the locations page for "Beach Neighbors"
     And I click "Add Address"
