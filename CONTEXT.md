@@ -14,11 +14,7 @@ A signed-in person who used huddlz during the selected period, including browsin
 A person browsing huddlz without being signed in, whether or not they have an account.
 
 **Administrator**:
-A person with the admin role. Administrators see everything on the platform and manage accounts, but editing a group or its huddlz needs a group role of their own; being an administrator grants none.
-
-**Viewing as**:
-An administrator using huddlz as a particular person to troubleshoot what that person sees and can do, with that person's permissions and none of their own, announced on every page, and on record from start to stop.
-_Avoid_: Impersonation (in copy; the code and the record use the word)
+A person responsible for platform and account administration. This role is distinct from a group's owner, organizer, or member roles.
 
 ## Communities and places
 
@@ -77,7 +73,7 @@ The viewer's browser-reported time zone, used to arrange and display the persona
 ## Organizing
 
 **Turnout**:
-An organizer's rough count of the people who actually came to a huddl: people in the room for an in-person huddl, people on the call for a virtual one, both for a hybrid one. Optional, recorded after the huddl ends, and visible to the group's organizers and owner and to platform administrators.
+An organizer's rough count of the people who actually came to a huddl: people in the room for an in-person huddl, people on the call for a virtual one, both for a hybrid one. Optional, recorded after the huddl ends, and visible to the group's organizers and owner.
 _Avoid_: Headcount, attendance, check-in
 
 **Show rate**:

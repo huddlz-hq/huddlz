@@ -77,18 +77,14 @@ defmodule Huddlz.Communities.HuddlTemplate do
   end
 
   policies do
-    # Administrators read everything and edit nothing they do not organize.
-    bypass actor_attribute_equals(:role, :admin) do
-      authorize_if action_type(:read)
-    end
-
-    # Templates are managed internally; require admin for direct access
+    # Templates are managed through huddl actions.
     policy action_type([:create, :update, :destroy]) do
       forbid_if always()
     end
 
     policy action_type(:read) do
-      authorize_if always()
+      authorize_if expr(exists(huddlz, group.is_public == true and is_nil(group.archived_at)))
+      authorize_if expr(exists(huddlz, exists(group.members, id == ^actor(:id))))
     end
   end
 
@@ -126,6 +122,12 @@ defmodule Huddlz.Communities.HuddlTemplate do
     attribute :time_zone, :string do
       allow_nil? false
       constraints min_length: 1, max_length: 100
+    end
+  end
+
+  relationships do
+    has_many :huddlz, Huddlz.Communities.Huddl do
+      destination_attribute :huddl_template_id
     end
   end
 

@@ -10,6 +10,7 @@ defmodule AdminImpersonationSteps do
 
   alias Huddlz.Accounts.User
   alias Huddlz.Communities.Group
+  alias Huddlz.Test.Helpers.Authentication
 
   step "I am told I cannot edit {string}", %{args: [name], session: session} = context do
     group = find_group(name)
@@ -64,7 +65,7 @@ defmodule AdminImpersonationSteps do
 
     session =
       Phoenix.ConnTest.build_conn()
-      |> Huddlz.Test.Helpers.Authentication.login(admin)
+      |> Authentication.login(admin)
       |> visit("/admin/users")
       |> click_link("View as #{email}")
 
@@ -72,12 +73,26 @@ defmodule AdminImpersonationSteps do
   end
 
   step "every page says I am viewing as {string}", %{args: [name], session: session} = context do
-    session
-    |> assert_has("#impersonation-bar", text: "Viewing huddlz as #{name}")
-    |> visit("/groups")
-    |> assert_has("#impersonation-bar", text: "Viewing huddlz as #{name}")
+    session =
+      assert_has(session, "[role='region'][aria-label='Impersonation']",
+        text: "Viewing huddlz as #{name}"
+      )
 
-    context
+    session =
+      Enum.reduce(
+        ["/help", "/sign-out", "/confirm_new_user/invalid", "/groups"],
+        session,
+        fn path, session ->
+          session
+          |> visit(path)
+          |> assert_has("[role='region'][aria-label='Impersonation']",
+            text: "Viewing huddlz as #{name}"
+          )
+          |> assert_has("button", text: "Stop viewing as #{name}")
+        end
+      )
+
+    Map.merge(context, %{session: session, conn: session})
   end
 
   step "no page says I am viewing as {string}", %{args: [name], session: session} = context do
@@ -95,8 +110,7 @@ defmodule AdminImpersonationSteps do
   end
 
   step "I stop viewing as {string}", %{args: [name], session: session} = context do
-    assert_has(session, "#impersonation-bar a", text: "Stop viewing as #{name}")
-    session = click_link(session, "Stop viewing as #{name}")
+    session = click_button(session, "Stop viewing as #{name}")
     Map.merge(context, %{conn: session, session: session})
   end
 
@@ -110,7 +124,7 @@ defmodule AdminImpersonationSteps do
 
     conn =
       Phoenix.ConnTest.build_conn()
-      |> Huddlz.Test.Helpers.Authentication.login(context.current_user)
+      |> Authentication.login(context.current_user)
       |> Plug.Conn.put_private(:plug_skip_csrf_protection, true)
       |> Phoenix.ConnTest.dispatch(
         HuddlzWeb.Endpoint,
@@ -170,11 +184,88 @@ defmodule AdminImpersonationSteps do
       |> Ash.read_one!(authorize?: false)
 
     assert activity.impersonation_id == context.impersonation.id
+
+    version =
+      Huddlz.Communities.HuddlAttendee.Version
+      |> Ash.Query.filter(actor_id == ^user.id and version_action_name == :rsvp)
+      |> Ash.read_one!(authorize?: false)
+
+    assert version.impersonation_id == context.impersonation.id
+    assert version.impersonator_id == context.impersonation.admin_id
+    context
+  end
+
+  step "{string} is private for impersonation troubleshooting", %{args: [name]} = context do
+    group = find_group(name)
+    owner = Ash.get!(User, group.owner_id, authorize?: false)
+    Ash.update!(group, %{is_public: false}, action: :update_details, actor: owner)
+    context
+  end
+
+  step "I cannot discover the private group {string}",
+       %{args: [name], session: session} = context do
+    session = session |> visit("/groups") |> refute_has("a", text: name)
+    group = find_group(name)
+
+    Phoenix.ConnTest.assert_error_sent(404, fn ->
+      Phoenix.ConnTest.dispatch(session.conn, HuddlzWeb.Endpoint, :get, "/groups/#{group.slug}")
+    end)
+
+    Map.merge(context, %{session: session, conn: session})
+  end
+
+  step "I cannot open the private huddl {string}", %{args: [title], session: session} = context do
+    huddl = find_huddl(title)
+
+    Phoenix.ConnTest.assert_error_sent(404, fn ->
+      Phoenix.ConnTest.dispatch(
+        session.conn,
+        HuddlzWeb.Endpoint,
+        :get,
+        "/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"
+      )
+    end)
+
+    response = gql_as("admin554@example.com", ~s|{ getHuddl(id: "#{huddl.id}") { id } }|)
+    assert response["data"]["getHuddl"] == nil
+    context
+  end
+
+  step "I rename {string} to {string}", %{args: [name, new_name], session: session} = context do
+    group = find_group(name)
+
+    session =
+      session
+      |> visit("/groups/#{group.slug}/edit")
+      |> fill_in("Group Name", with: new_name)
+      |> click_button("Save Changes")
+
+    Map.merge(context, %{session: session, conn: session})
+  end
+
+  step "the group edit to {string} records both impersonation identities",
+       %{args: [name]} = context do
+    group = find_group(name)
+
+    row =
+      Group.Version
+      |> Ash.Query.filter(
+        version_source_id == ^group.id and version_action_name == :update_details
+      )
+      |> Ash.read_one!(authorize?: false)
+
+    record = Huddlz.Admin.Impersonation |> Ash.read_one!(authorize?: false)
+    assert row.actor_id == record.user_id
+    assert row.impersonator_id == record.admin_id
+    assert row.impersonation_id == record.id
+    assert row.changes["name"] == name
+    assert row.version_inserted_at
     context
   end
 
   defp find_huddl(title) do
     Huddlz.Communities.Huddl
+    |> Ash.Query.for_read(:read_for_group_lifecycle)
     |> Ash.Query.filter(title == ^title)
     |> Ash.Query.load(:group)
     |> Ash.read_one!(authorize?: false)

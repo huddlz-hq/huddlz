@@ -145,12 +145,12 @@ defmodule Huddlz.Communities.GroupTest do
       {:ok, _} = Ash.get(Group, public_group.id, actor: regular_user)
     end
 
-    test "admin can read private groups" do
+    test "admin cannot read private groups without membership" do
       private_group = generate(group(is_public: false))
 
-      # Admin can read the private group
+      # Platform administration does not grant membership.
       admin_user = generate(user(role: :admin))
-      assert {:ok, _} = Ash.get(Group, private_group.id, actor: admin_user)
+      assert {:error, _} = Ash.get(Group, private_group.id, actor: admin_user)
     end
 
     test "non-admin cannot see private groups" do

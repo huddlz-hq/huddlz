@@ -191,7 +191,7 @@ defmodule HuddlzWeb.GroupLive.Show do
                 <.link
                   :if={
                     @current_user &&
-                      (@group.owner_id == @current_user.id || @current_user.role == :admin)
+                      @group.owner_id == @current_user.id
                   }
                   navigate={~p"/groups/#{@group.slug}/edit"}
                   class="btn-secondary mt-3"

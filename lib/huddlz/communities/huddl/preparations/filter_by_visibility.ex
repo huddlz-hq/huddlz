@@ -20,10 +20,6 @@ defmodule Huddlz.Communities.Huddl.Preparations.FilterByVisibility do
     )
   end
 
-  def prepare(query, _opts, %{actor: %{role: :admin}}) do
-    Ash.Query.load(query, [:group, :is_publicly_visible])
-  end
-
   # One declarative database predicate is safer here than merging separately
   # fetched lifecycle result sets, and keeps every visibility branch in SQL.
   # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity

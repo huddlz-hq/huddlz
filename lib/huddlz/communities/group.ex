@@ -340,13 +340,6 @@ defmodule Huddlz.Communities.Group do
   end
 
   policies do
-    # Administrators read everything and edit nothing they do not organize.
-    # The organizer workspace is management, so it is not theirs to open.
-    bypass actor_attribute_equals(:role, :admin) do
-      forbid_if action(:get_for_organize)
-      authorize_if action_type(:read)
-    end
-
     # Anyone signed in can create a group, administrators included.
     policy action(:create_group) do
       authorize_if actor_present()
@@ -376,7 +369,6 @@ defmodule Huddlz.Communities.Group do
     end
 
     # Owner or :organizer member can open the per-group organizer workspace.
-    # Administrators are covered by the read bypass at the top of this block.
     policy action(:get_for_organize) do
       description "Owner or :organizer member can manage this group as an organizer"
       authorize_if expr(owner_id == ^actor(:id))

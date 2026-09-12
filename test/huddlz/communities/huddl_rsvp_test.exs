@@ -909,17 +909,26 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
       assert {:ok, []} = result
     end
 
-    test "admin can see attendee list", %{huddl: huddl, attendee: attendee} do
+    test "admin needs ordinary participation to see the attendee list", %{
+      huddl: huddl,
+      attendee: attendee
+    } do
       admin = generate(user(role: :admin))
 
-      # Admin can see attendee list
+      # An administrator without participation has the same visibility as any nonattendee.
       result =
         HuddlAttendee
         |> Ash.Query.for_read(:by_huddl, %{huddl_id: huddl.id})
         |> Ash.read(actor: admin)
 
-      assert {:ok, attendees} = result
-      assert length(attendees) == 2
+      assert {:ok, []} = result
+      Huddlz.Communities.rsvp_huddl!(huddl, actor: admin)
+
+      attendees =
+        HuddlAttendee
+        |> Ash.Query.for_read(:by_huddl, %{huddl_id: huddl.id}, actor: admin)
+        |> Ash.read!()
+
       assert Enum.any?(attendees, &(&1.user_id == attendee.id))
     end
   end

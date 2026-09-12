@@ -95,12 +95,14 @@ defmodule HuddlzWeb.LiveUserAuth do
     {:cont, socket}
   end
 
-  # An administrator viewing huddlz as someone else: the session carries the
-  # impersonation, the layout shows it, and the actor carries its id so the
-  # activity log can say who was at the keyboard.
-  defp assign_impersonation(socket, %{"impersonation_id" => id}) when is_binary(id) do
+  # The signed browser session supplies attribution for both activity and PaperTrail.
+  defp assign_impersonation(
+         %{assigns: %{current_user: %User{id: user_id}}} = socket,
+         %{"impersonation_id" => id}
+       )
+       when is_binary(id) do
     case Ash.get(Impersonation, id, load: [:admin, :user], authorize?: false) do
-      {:ok, %Impersonation{ended_at: nil} = impersonation} ->
+      {:ok, %Impersonation{user_id: ^user_id, ended_at: nil} = impersonation} ->
         socket
         |> assign(:impersonation, impersonation)
         |> update(:current_user, fn

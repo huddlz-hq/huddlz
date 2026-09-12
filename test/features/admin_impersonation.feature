@@ -66,3 +66,36 @@ Feature: Administrators troubleshoot as a user instead of editing as one
     And I stop viewing as "Member Maya"
     Then the record shows "admin554@example.com" viewed as "member554@example.com" and stopped
     And the RSVP by "member554@example.com" to "Kickoff" is attributed to that viewing
+
+  @admin_private_visibility
+  Scenario: Private visibility follows the impersonated member and ends on stop
+    Given "Portland Elixir" is private for impersonation troubleshooting
+    And the in-person huddl "Private planning" in "Portland Elixir" is upcoming with 0 RSVPs
+    And I am signed in as "admin554@example.com"
+    Then I cannot discover the private group "Portland Elixir"
+    And I cannot open the private huddl "Private planning"
+    When I visit "/admin/users"
+    And I choose to view as "member554@example.com"
+    And I visit "/groups/portland-elixir"
+    Then I should see "Portland Elixir"
+    And I should see "Private planning"
+    When I stop viewing as "Member Maya"
+    Then I cannot discover the private group "Portland Elixir"
+    And I cannot open the private huddl "Private planning"
+
+  @impersonation_edit_audit
+  Scenario: An impersonated owner's edit records both identities and the change
+    Given I am viewing huddlz as "owner554@example.com"
+    When I rename "Portland Elixir" to "Portland Elixir Updated"
+    Then the group edit to "Portland Elixir Updated" records both impersonation identities
+
+  @impersonation_profile
+  Scenario: Personal profile changes keep impersonation active
+    Given I am viewing huddlz as "member554@example.com"
+    When I visit "/profile"
+    And I fill in "Display name" with "Maya Updated"
+    And I click "Save changes"
+    Then I should see "Display name updated successfully"
+    And every page says I am viewing as "Maya Updated"
+    When I stop viewing as "Maya Updated"
+    Then I am on the users page

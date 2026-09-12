@@ -89,11 +89,6 @@ defmodule Huddlz.Communities.HuddlPhoto do
   end
 
   policies do
-    # Administrators read everything and edit nothing they do not organize.
-    bypass actor_attribute_equals(:role, :admin) do
-      authorize_if action_type(:read)
-    end
-
     policy action(:create) do
       description "Only the huddl's creator or a confirmed attendee can upload photos, after the huddl has ended"
 

@@ -1,12 +1,11 @@
 defmodule Huddlz.Admin.Impersonation do
   @moduledoc """
-  One stretch of an administrator viewing huddlz as another person: who
-  started it, whom they viewed as, when it started and when it stopped.
-  The record is the audit trail; group activity written meanwhile points
-  back at it.
+  One browser impersonation: its initiating administrator, target person,
+  start and stop. Shared audit versions and group activity reference this
+  record directly.
 
-  Only administrators start one, never for another administrator or for
-  themselves, and only the administrator who started it stops it.
+  Only administrators start impersonation. Self-targeting and administrator
+  targets are unsupported in this release; the initiator may stop it.
   """
 
   use Ash.Resource,

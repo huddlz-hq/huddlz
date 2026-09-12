@@ -155,7 +155,10 @@ defmodule HuddlzWeb.Router do
     pipe_through :browser
 
     auth_routes AuthController, Huddlz.Accounts.User, path: "/auth"
-    sign_out_route AuthController
+
+    sign_out_route AuthController, "/sign-out",
+      on_mount: [{HuddlzWeb.LiveUserAuth, :app}],
+      layout: {HuddlzWeb.Layouts, :impersonation_layout}
 
     # An administrator viewing huddlz as someone else, and stopping.
     post "/admin/impersonations/:user_id", ImpersonationController, :create

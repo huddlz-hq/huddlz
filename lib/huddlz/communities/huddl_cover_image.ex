@@ -233,11 +233,6 @@ defmodule Huddlz.Communities.HuddlCoverImage do
   end
 
   policies do
-    # Administrators read everything and edit nothing they do not organize.
-    bypass actor_attribute_equals(:role, :admin) do
-      authorize_if action_type(:read)
-    end
-
     # Group owners/organizers can upload images for huddlz in their groups
     policy action(:create) do
       description "Only group owners/organizers can upload images for huddlz"
@@ -273,9 +268,11 @@ defmodule Huddlz.Communities.HuddlCoverImage do
       authorize_if always()
     end
 
-    # Anyone can read huddl images (they're public)
+    # Assigned images follow their group's visibility; pending uploads have no huddl yet.
     policy action_type(:read) do
-      authorize_if always()
+      authorize_if expr(is_nil(huddl_id))
+      authorize_if expr(huddl.group.is_public == true and is_nil(huddl.group.archived_at))
+      authorize_if relates_to_actor_via([:huddl, :group, :members])
     end
 
     # Group owners/organizers can destroy their huddl's images

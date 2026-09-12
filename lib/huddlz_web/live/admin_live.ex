@@ -42,7 +42,7 @@ defmodule HuddlzWeb.AdminLive do
       <div class="page-head">
         <div>
           <h1>Overview</h1>
-          <p>How huddlz as a whole is doing: who is joining, what is being held, and who shows up.</p>
+          <p>Account growth across huddlz, plus public groups and private groups you organize.</p>
         </div>
         <div class="actions">
           <nav id="overview-period" class="cal-view-tabs" aria-label="Period">

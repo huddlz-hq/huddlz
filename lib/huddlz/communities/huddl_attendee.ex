@@ -152,11 +152,6 @@ defmodule Huddlz.Communities.HuddlAttendee do
   end
 
   policies do
-    # Administrators read everything and edit nothing they do not organize.
-    bypass actor_attribute_equals(:role, :admin) do
-      authorize_if action_type(:read)
-    end
-
     # Users can RSVP to huddlz they have access to
     policy action(:rsvp) do
       description "Allow users to RSVP to accessible huddlz"
@@ -188,8 +183,10 @@ defmodule Huddlz.Communities.HuddlAttendee do
 
     # Allow the default read action (used by aggregates like rsvp_count)
     policy action(:read) do
-      description "Allow reads for aggregates and internal use"
-      authorize_if always()
+      description "Participation in public groups or groups the actor belongs to"
+      authorize_if expr(huddl.group.is_public == true and is_nil(huddl.group.archived_at))
+      authorize_if relates_to_actor_via([:huddl, :group, :members])
+      authorize_if relates_to_actor_via(:user)
     end
 
     # Only attendees and group owners/organizers can see who's attending

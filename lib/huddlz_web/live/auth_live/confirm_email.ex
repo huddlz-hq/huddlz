@@ -13,6 +13,8 @@ defmodule HuddlzWeb.AuthLive.ConfirmEmail do
   alias AshAuthentication.{Info, Jwt, TokenResource}
   alias Huddlz.Accounts.User
 
+  on_mount {HuddlzWeb.LiveUserAuth, :app}
+
   @impl true
   def mount(%{"token" => token}, _session, socket) do
     {:ok,
@@ -26,7 +28,7 @@ defmodule HuddlzWeb.AuthLive.ConfirmEmail do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.auth_shell flash={@flash}>
+    <Layouts.auth_shell flash={@flash} current_user={@current_user}>
       <%= if @token_valid do %>
         <h1>Confirm your email</h1>
         <p class="lede">

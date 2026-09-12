@@ -240,8 +240,7 @@ defmodule Huddlz.Communities.GroupMember do
     destroy :leave_group do
       description "Leave a group (member removes themselves; owners must transfer ownership first)"
 
-      # Encoded as a validation, not just a policy guard, so the admin bypass
-      # cannot delete an owner's membership row and corrupt group state.
+      # Keep this invariant even for trusted internal calls that bypass authorization.
       validate attribute_does_not_equal(:role, :owner) do
         message "owners cannot leave their own group; transfer ownership first"
       end
@@ -275,11 +274,6 @@ defmodule Huddlz.Communities.GroupMember do
   end
 
   policies do
-    # Administrators read everything and edit nothing they do not organize.
-    bypass actor_attribute_equals(:role, :admin) do
-      authorize_if action_type(:read)
-    end
-
     # Owners may add members or organizers; organizers may add regular
     # members only. Granting the organizer role is owner-only (mirroring
     # :change_role), so an organizer cannot escalate a confederate — or

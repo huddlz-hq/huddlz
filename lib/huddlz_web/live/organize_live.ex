@@ -346,7 +346,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <h2>This group is archived</h2>
         <p>History is read-only. Ownership can transfer without reopening the group.</p>
         <.link
-          :if={@group.owner_id == @current_user.id || @current_user.role == :admin}
+          :if={@group.owner_id == @current_user.id}
           navigate={~p"/groups/#{@group.slug}/edit"}
           class="btn-secondary"
         >Manage archival</.link>

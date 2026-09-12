@@ -20,7 +20,7 @@ defmodule HuddlzWeb.ImpersonationController do
   def create(conn, %{"user_id" => user_id}) do
     admin = conn.assigns[:current_user]
 
-    if User.admin?(admin) do
+    if User.admin?(admin) and is_nil(get_session(conn, :impersonation_id)) do
       start(conn, admin, user_id)
     else
       conn

@@ -28,7 +28,7 @@ Version resources have strict deny policies and no web/API exposure. Trusted int
 
 ## Attribution
 
-The Ash actor is recorded as `actor_id`. Callers may supply `context: %{paper_trail_metadata: %{impersonation_id: id, impersonator_id: administrator_id}}` through supported PaperTrail metadata. #554 supplies this from its trusted session. Nested participation actions must propagate the actor and this context. Known automatic work explicitly records `automatic?: true`; missing attribution is unknown, not proof of automation.
+The Ash actor is recorded as `actor_id`. Callers may supply `context: %{paper_trail_metadata: %{impersonation_id: id, impersonator_id: administrator_id}}` through supported PaperTrail metadata. #554 supplies this from its trusted session. The browser attaches its active impersonation to the target actor. A shared version-resource change copies that trusted identity into PaperTrail metadata, including atomic and nested writes. Nested participation actions propagate the actor and supplied context. Known automatic work explicitly records `automatic?: true`; missing attribution is unknown, not proof of automation.
 
 Extending a recurring series retains the original creator while recording the known editor as the audit actor of generated occurrences. Scheduled completion, invitation expiry and confirmed-recipient claims are explicitly automatic. The confirmation worker uses the recipient for authorization, but supplies the trusted shared context flag `audit_system_action?`; a supported version-resource change clears that authorization identity from `actor_id` because no person initiated the claim. The recipient remains the affected person in the changes.
 

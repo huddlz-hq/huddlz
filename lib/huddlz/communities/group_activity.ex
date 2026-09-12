@@ -81,7 +81,6 @@ defmodule Huddlz.Communities.GroupActivity do
   policies do
     policy action(:for_group) do
       access_type :strict
-      authorize_if actor_attribute_equals(:role, :admin)
       authorize_if Huddlz.Communities.GroupMember.Checks.GroupOwner
       authorize_if Huddlz.Communities.GroupMember.Checks.GroupOrganizer
     end

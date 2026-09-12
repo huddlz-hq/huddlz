@@ -1193,12 +1193,11 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   defp get_huddl(id, group_slug, user) do
     case Communities.get_huddl(id, load: @huddl_loads, actor: user) do
-      {:ok, huddl} ->
-        if huddl.group.slug == group_slug do
-          {:ok, huddl}
-        else
-          {:error, :not_found}
-        end
+      {:ok, %{group: %{slug: ^group_slug}} = huddl} ->
+        {:ok, huddl}
+
+      {:ok, _} ->
+        {:error, :not_found}
 
       {:error, %Ash.Error.Query.NotFound{}} ->
         {:error, :not_found}
