@@ -142,6 +142,8 @@ defmodule OverviewKpisSteps do
   defp overview_payload(response), do: flunk("unexpected overview response: #{inspect(response)}")
 
   defp kpi_id("Members"), do: "kpi-members"
+  defp kpi_id("People"), do: "kpi-people"
+  defp kpi_id("Groups"), do: "kpi-groups"
   defp kpi_id("RSVPs"), do: "kpi-rsvps"
   defp kpi_id("Waitlisted"), do: "kpi-waitlist"
 

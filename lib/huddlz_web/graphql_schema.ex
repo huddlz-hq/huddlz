@@ -3,7 +3,7 @@ defmodule HuddlzWeb.GraphqlSchema do
   use Absinthe.Schema
 
   use AshGraphql,
-    domains: [Huddlz.Communities, Huddlz.Accounts]
+    domains: [Huddlz.Communities, Huddlz.Accounts, Huddlz.Admin]
 
   import_types Absinthe.Plug.Types
 
