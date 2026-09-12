@@ -229,6 +229,10 @@ defmodule Huddlz.Communities.GroupInvitation do
   end
 
   policies do
+    policy action([:accept, :decline, :invite, :revoke]) do
+      authorize_if Huddlz.Accounts.Checks.ConfirmedActor
+    end
+
     policy action(:open_email_invitation) do
       authorize_if actor_present()
     end

@@ -94,6 +94,12 @@ defmodule Huddlz.Communities.GroupLocation do
   end
 
   policies do
+    # Background maintenance retains its existing policies. A signed-in
+    # actor must prove address ownership before mutating community data.
+    policy [action_type([:create, :update, :destroy]), actor_present()] do
+      authorize_if Huddlz.Accounts.Checks.ConfirmedActor
+    end
+
     policy action(:create) do
       authorize_if Huddlz.Communities.Huddl.Checks.GroupOwnerOrOrganizer
     end

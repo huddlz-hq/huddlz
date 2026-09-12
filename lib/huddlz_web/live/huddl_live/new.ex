@@ -18,6 +18,7 @@ defmodule HuddlzWeb.HuddlLive.New do
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
+  on_mount {HuddlzWeb.LiveUserAuth, :confirmed_user_required}
 
   @impl true
   def mount(%{"group_slug" => group_slug}, _session, socket) do

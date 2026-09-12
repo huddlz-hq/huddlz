@@ -8,6 +8,8 @@ defmodule HuddlzWeb.LiveUserAuth do
 
   alias AshAuthentication.Phoenix.LiveSession
   alias Huddlz.Accounts.ActiveDays
+  alias Huddlz.Accounts.Checks.ConfirmedActor
+  alias Huddlz.Accounts.ConfirmationDestination
   alias Huddlz.Accounts.User
   alias Huddlz.Communities.MembershipEvents
   alias Huddlz.Notifications
@@ -34,6 +36,33 @@ defmodule HuddlzWeb.LiveUserAuth do
     else
       {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/sign-in")}
     end
+  end
+
+  def on_mount(:confirmed_user_required, params, _session, socket) do
+    if ConfirmedActor.match?(socket.assigns[:current_user], %{}, []) do
+      {:cont, guard_participation(socket, :all)}
+    else
+      slug = params["group_slug"] || params["slug"]
+
+      if slug,
+        do:
+          ConfirmationDestination.remember(
+            socket.assigns[:current_user],
+            ~p"/groups/#{slug}"
+          )
+
+      {:halt,
+       socket
+       |> Phoenix.LiveView.put_flash(
+         :error,
+         "Confirm your email before organizing. Check your inbox or junk mail, or resend below."
+       )
+       |> Phoenix.LiveView.redirect(to: ~p"/profile")}
+    end
+  end
+
+  def on_mount({:participation, events}, _params, _session, socket) do
+    {:cont, guard_participation(socket, events)}
   end
 
   def on_mount(:live_no_user, _params, _session, socket) do
@@ -96,6 +125,56 @@ defmodule HuddlzWeb.LiveUserAuth do
 
     {:cont, socket}
   end
+
+  # UI recovery for stale pages. Resource policies independently enforce the
+  # same requirement for every caller, including requests without a browser.
+  defp guard_participation(socket, events) do
+    Phoenix.LiveView.attach_hook(socket, :participation, :handle_event, fn event,
+                                                                           _params,
+                                                                           socket ->
+      if (events == :all or event in events) and
+           not ConfirmedActor.match?(
+             socket.assigns[:current_user],
+             %{},
+             []
+           ) do
+        require_confirmation(socket)
+      else
+        {:cont, socket}
+      end
+    end)
+  end
+
+  defp require_confirmation(socket) do
+    destination = participation_destination(socket)
+    user = socket.assigns[:current_user]
+
+    if user,
+      do:
+        ConfirmationDestination.remember(
+          %{user | confirmed_at: nil},
+          destination
+        )
+
+    {:halt,
+     socket
+     |> Phoenix.LiveView.put_flash(
+       :error,
+       "Confirm your email before participating. Check your inbox or junk mail, or resend from your profile."
+     )
+     |> Phoenix.LiveView.push_navigate(to: destination || ~p"/profile")}
+  end
+
+  defp participation_destination(%{assigns: %{huddl: %{id: id, group: %{slug: slug}}}}),
+    do: ~p"/groups/#{slug}/huddlz/#{id}"
+
+  defp participation_destination(%{assigns: %{invitation: %{id: id}}}),
+    do: ~p"/invitations/#{id}"
+
+  defp participation_destination(%{assigns: %{group: %{slug: slug}}}),
+    do: ~p"/groups/#{slug}"
+
+  defp participation_destination(_socket), do: nil
 
   # The signed browser session supplies attribution for both activity and PaperTrail.
   defp assign_impersonation(socket, session) do

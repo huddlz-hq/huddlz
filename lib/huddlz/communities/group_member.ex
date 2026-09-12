@@ -274,6 +274,12 @@ defmodule Huddlz.Communities.GroupMember do
   end
 
   policies do
+    # Background maintenance retains its existing policies. A signed-in
+    # actor must prove address ownership before mutating community data.
+    policy [action_type([:create, :update, :destroy]), actor_present()] do
+      authorize_if Huddlz.Accounts.Checks.ConfirmedActor
+    end
+
     # Owners may add members or organizers; organizers may add regular
     # members only. Granting the organizer role is owner-only (mirroring
     # :change_role), so an organizer cannot escalate a confederate — or

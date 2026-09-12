@@ -19,6 +19,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
+  on_mount {HuddlzWeb.LiveUserAuth, :confirmed_user_required}
 
   @impl true
   def mount(_params, _session, socket) do

@@ -5,12 +5,14 @@ defmodule HuddlzWeb.GroupInvitationLive do
 
   use HuddlzWeb, :live_view
 
+  alias Huddlz.Accounts.ConfirmationDestination
   alias Huddlz.Communities
   alias Huddlz.Communities.GroupInvitation
   alias HuddlzWeb.Layouts
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
+  on_mount {HuddlzWeb.LiveUserAuth, {:participation, ~w(accept decline)}}
 
   @impl true
   def mount(params, _session, %{assigns: %{current_user: nil}} = socket) do
@@ -23,6 +25,7 @@ defmodule HuddlzWeb.GroupInvitationLive do
 
     case open_invitation(params, user) do
       {:ok, invitation} ->
+        ConfirmationDestination.remember(user, invitation_path(params))
         invitation = normalize_expiration(invitation, user)
 
         {:ok,
@@ -220,8 +223,15 @@ defmodule HuddlzWeb.GroupInvitationLive do
           {invitation_status_description(@invitation.status)}
         </p>
 
+        <Layouts.confirmation_required
+          :if={is_nil(@current_user.confirmed_at)}
+          action="accept an invitation"
+        />
         <div
-          :if={@invitation.status == :pending && is_nil(@invitation.group.archived_at)}
+          :if={
+            @invitation.status == :pending && is_nil(@invitation.group.archived_at) &&
+              not is_nil(@current_user.confirmed_at)
+          }
           class="actions mt-6"
         >
           <button id="accept-invitation" type="button" class="btn-primary" phx-click="accept">

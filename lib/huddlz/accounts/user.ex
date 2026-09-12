@@ -182,6 +182,15 @@ defmodule Huddlz.Accounts.User do
       change AshAuthentication.GenerateTokenChange
       change Huddlz.Accounts.User.Changes.QueueConfirmedInvitations
       change Huddlz.Accounts.User.Changes.DiscardConfirmationLinks
+      change Huddlz.Accounts.User.Changes.ConsumeConfirmationDestination
+    end
+
+    update :remember_confirmation_destination do
+      accept []
+      require_atomic? false
+      argument :destination, :string, allow_nil?: false, constraints: [max_length: 2048]
+      change get_and_lock(:for_update)
+      change Huddlz.Accounts.User.Changes.RememberConfirmationDestination
     end
 
     update :resend_confirmation do
@@ -745,7 +754,7 @@ defmodule Huddlz.Accounts.User do
       authorize_if expr(id == ^actor(:id))
     end
 
-    policy action(:resend_confirmation) do
+    policy action([:resend_confirmation, :remember_confirmation_destination]) do
       description "People can ask for their own confirmation email again"
       authorize_if expr(id == ^actor(:id))
     end
@@ -774,6 +783,8 @@ defmodule Huddlz.Accounts.User do
   end
 
   attributes do
+    attribute :confirmation_destination, :string, sensitive?: true
+
     uuid_primary_key :id
 
     attribute :email, :ci_string do

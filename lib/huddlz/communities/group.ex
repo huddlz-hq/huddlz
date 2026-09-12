@@ -340,6 +340,12 @@ defmodule Huddlz.Communities.Group do
   end
 
   policies do
+    # Background maintenance retains its existing policies. A signed-in
+    # actor must prove address ownership before mutating community data.
+    policy [action_type([:create, :update, :destroy]), actor_present()] do
+      authorize_if Huddlz.Accounts.Checks.ConfirmedActor
+    end
+
     # Anyone signed in can create a group, administrators included.
     policy action(:create_group) do
       authorize_if actor_present()
@@ -363,6 +369,10 @@ defmodule Huddlz.Communities.Group do
     end
 
     # Overview figures are organizer planning data.
+    policy action([:overview, :get_for_organize]) do
+      authorize_if Huddlz.Accounts.Checks.ConfirmedActor
+    end
+
     policy action(:overview) do
       description "Owner or :organizer member can read the group's overview figures"
       authorize_if Huddlz.Communities.Group.Checks.OrganizesGroupArgument
