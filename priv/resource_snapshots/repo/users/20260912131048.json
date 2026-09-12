@@ -85,6 +85,18 @@
       "type": "utc_datetime_usec"
     },
     {
+      "allow_nil?": false,
+      "default": "\"recorded\"",
+      "generated?": false,
+      "precision": null,
+      "primary_key?": false,
+      "references": null,
+      "scale": null,
+      "size": null,
+      "source": "signup_date_source",
+      "type": "text"
+    },
+    {
       "allow_nil?": true,
       "default": "nil",
       "generated?": false,
@@ -209,7 +221,7 @@
   ],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "078F3F6C4985E11FA127287D35BBFB9570099CF20823EF0AB19CAD62BFC7F3DF",
+  "hash": "3D405AB11E10E274E456FAADC5AA5395C493004E40FF9CFA25142CC87E37A47A",
   "identities": [
     {
       "all_tenants?": false,

@@ -120,6 +120,7 @@ defmodule Huddlz.Accounts.UserTest do
         })
         |> Ash.create!()
 
+      assert user.signup_date_source == :recorded
       assert DateTime.compare(user.inserted_at, before) != :lt
       assert DateTime.compare(user.inserted_at, DateTime.utc_now()) != :gt
     end

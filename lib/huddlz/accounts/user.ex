@@ -726,7 +726,14 @@ defmodule Huddlz.Accounts.User do
     end
 
     create_timestamp :inserted_at do
-      description "When the account was created; rows from before this was kept carry their confirmation time"
+      description "Account creation time, or a historical estimate identified by signup_date_source"
+    end
+
+    attribute :signup_date_source, :atom do
+      description "Whether the sign-up date was recorded or estimated from confirmation or migration"
+      allow_nil? false
+      default :recorded
+      constraints one_of: [:recorded, :confirmation, :migration]
     end
 
     attribute :home_location, :string do
