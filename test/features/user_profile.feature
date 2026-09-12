@@ -23,16 +23,17 @@ Feature: User Profile Management
     Then I should see "Display name updated successfully"
     And the display name field should contain "Alice Cooper"
 
-  Scenario: Changing my sign-in email securely
+  @email_change_pending
+  Scenario: Requesting a sign-in email change keeps the current address active
     Given the user "alice+user-profile@example.com" has password "OldPassword123!"
     And I am on my profile page
     When I fill in "New email" with "alice.changed@example.com"
     And I fill in "Confirm current password" with "OldPassword123!"
     And I click the "Change email" button
-    Then I should see "Email updated successfully"
+    Then I should see "Check both inboxes to approve your email change"
     And I should see "alice.changed@example.com"
-    And a security notice should be sent to "alice+user-profile@example.com" naming the new address "alice.changed@example.com"
-    And a confirmation should be sent to "alice.changed@example.com" naming the previous address "alice+user-profile@example.com"
+    And I should see "alice+user-profile@example.com"
+    And I should see "Awaiting approval from both addresses"
 
   Scenario: Rejecting an invalid sign-in email
     Given the user "alice+user-profile@example.com" has password "OldPassword123!"

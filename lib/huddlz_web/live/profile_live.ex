@@ -175,6 +175,37 @@ defmodule HuddlzWeb.ProfileLive do
           </div>
         </.form>
 
+        <section
+          :if={@current_user.pending_email_change}
+          class="panel"
+          aria-label="Pending email change"
+        >
+          <div class="space-y-4 break-words">
+            <h2 class="text-base font-semibold">Pending email change</h2>
+            <p>Proposed address: {@current_user.pending_email_change["new_email"]}</p>
+            <p :if={Huddlz.Accounts.EmailChange.active?(@current_user.pending_email_change)}>
+              {Huddlz.Accounts.EmailChange.status(@current_user.pending_email_change)}
+            </p>
+            <p :if={!Huddlz.Accounts.EmailChange.active?(@current_user.pending_email_change)}>
+              This request has expired. Request a new email change below.
+            </p>
+            <p>
+              Check both inboxes and junk folders. Approval links expire three days after the request.
+            </p>
+            <div class="flex flex-wrap gap-3">
+              <.button
+                :if={Huddlz.Accounts.EmailChange.active?(@current_user.pending_email_change)}
+                phx-click="resend_email_change"
+                phx-disable-with="Sending…"
+              >Resend approval emails</.button>
+              <.button phx-click="cancel_email_change" phx-disable-with="Cancelling…">Cancel email change</.button>
+            </div>
+            <p>
+              Your current sign-in address remains {@current_user.email} until both approvals are complete.
+            </p>
+          </div>
+        </section>
+
         <.form
           for={@email_form}
           id="email-change-form"
@@ -186,7 +217,7 @@ defmodule HuddlzWeb.ProfileLive do
               <div>
                 <h2>Change email</h2>
                 <div class="panel-sub">
-                  Update your sign-in email after confirming your current password.
+                  Both your current and new inboxes must approve the change. If you cannot access both inboxes, you will need to create a new account.
                 </div>
               </div>
             </div>
@@ -434,6 +465,66 @@ defmodule HuddlzWeb.ProfileLive do
   end
 
   @impl true
+  def handle_event("resend_email_change", _params, socket) do
+    user = socket.assigns.current_user
+
+    case user
+         |> Ash.Changeset.for_update(
+           :resend_email_change,
+           %{request_id: user.pending_email_change["id"]},
+           actor: user
+         )
+         |> Ash.update() do
+      {:ok, updated} ->
+        updated = Ash.load!(updated, [:current_profile_picture_url], actor: updated)
+
+        {:noreply,
+         socket
+         |> assign(:current_user, updated)
+         |> put_flash(:info, "Approval emails sent. Check your inboxes and junk folders.")}
+
+      {:error, error} ->
+        message =
+          error
+          |> Ash.Error.to_error_class()
+          |> Map.get(:errors, [])
+          |> Enum.find_value(
+            "Approval emails could not be sent. Please try again.",
+            &Map.get(&1, :message)
+          )
+
+        {:noreply, put_flash(socket, :error, message)}
+    end
+  end
+
+  @impl true
+  def handle_event("cancel_email_change", _params, socket) do
+    user = socket.assigns.current_user
+
+    case user
+         |> Ash.Changeset.for_update(
+           :cancel_email_change,
+           %{request_id: user.pending_email_change["id"]},
+           actor: user
+         )
+         |> Ash.update() do
+      {:ok, updated} ->
+        updated = Ash.load!(updated, [:current_profile_picture_url], actor: updated)
+
+        {:noreply,
+         socket |> assign(:current_user, updated) |> put_flash(:info, "Email change cancelled")}
+
+      {:error, _} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "This email-change request is no longer pending. Reload your profile."
+         )}
+    end
+  end
+
+  @impl true
   def handle_event("validate_email", %{"email_change" => params}, socket) do
     form =
       socket.assigns.email_form.source
@@ -463,7 +554,7 @@ defmodule HuddlzWeb.ProfileLive do
         {:noreply,
          socket
          |> clear_flash(:error)
-         |> put_flash(:info, "Email updated successfully")
+         |> put_flash(:info, "Check both inboxes to approve your email change")
          |> assign(:current_user, updated_user)
          |> assign(:email_form, email_form(updated_user))}
 
