@@ -2240,12 +2240,7 @@ body .row.member-row {
 }
 body .member-row .member-mark { width: 36px; height: 36px; font-size: 12px; }
 body .member-copy { min-width: 0; }
-body .member-copy .row-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-body .member-copy .meta { white-space: nowrap; }
+body .member-copy .row-title { overflow-wrap: anywhere; }
 body .invitation-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 body .member-menu-trigger { color: var(--muted); cursor: pointer; }
 body .member-menu-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

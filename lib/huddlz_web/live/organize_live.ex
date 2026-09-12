@@ -1289,7 +1289,7 @@ defmodule HuddlzWeb.OrganizeLive do
           <div :for={{id, entry} <- rows} id={id} class="row member-row">
             <.person_mark user={entry.user} />
             <div class="member-copy">
-              <div class="row-title" title={member_name(entry)}>{member_name(entry)}</div>
+              <div class="row-title">{member_name(entry)}</div>
               <div class="meta">{format_member_meta(entry)}</div>
             </div>
             <.member_menu
@@ -1435,9 +1435,7 @@ defmodule HuddlzWeb.OrganizeLive do
           <div :for={{id, invitation} <- @invitations} id={id} class="row member-row">
             <.person_mark user={invitation_person(invitation)} />
             <div class="member-copy">
-              <div class="row-title" title={invitation_recipient(invitation)}>
-                {invitation_recipient(invitation)}
-              </div>
+              <div class="row-title">{invitation_recipient(invitation)}</div>
               <div class="meta invitation-meta">
                 {role_label(invitation.role)}
                 <span class="pill">{invitation_status_label(invitation.status)}</span>
