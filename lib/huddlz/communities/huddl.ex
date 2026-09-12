@@ -934,7 +934,7 @@ defmodule Huddlz.Communities.Huddl do
     attribute :physical_location, :string do
       allow_nil? true
       public? true
-      constraints max_length: 500
+      constraints max_length: 606
     end
 
     attribute :virtual_link, :string do

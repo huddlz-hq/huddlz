@@ -3,11 +3,12 @@ defmodule HuddlzWeb.Live.Helpers.ModalLocationHelpers do
   Shared state handling for the "Select a location" modal used in the
   huddl and group new/edit/locations LiveViews.
 
-  The modal owns five socket assigns:
+  The modal owns these socket assigns:
 
     * `:modal_location_address` — full display text (nil when empty)
     * `:modal_location_lat` / `:modal_location_lng` — geocoded coordinates
     * `:modal_location_time_zone` — canonical IANA time zone
+    * `:modal_location_unit` — optional unit identifier
     * `:modal_location_name` — short name (bound to the name input)
   """
 
@@ -20,7 +21,16 @@ defmodule HuddlzWeb.Live.Helpers.ModalLocationHelpers do
       modal_location_lat: nil,
       modal_location_lng: nil,
       modal_location_time_zone: nil,
-      modal_location_name: ""
+      modal_location_name: "",
+      modal_location_unit: ""
+    )
+  end
+
+  @doc "Capture the editable fields, including the final values sent on submit."
+  def apply_params(socket, params) do
+    assign(socket,
+      modal_location_name: Map.get(params, "location_name", socket.assigns.modal_location_name),
+      modal_location_unit: Map.get(params, "location_unit", socket.assigns.modal_location_unit)
     )
   end
 

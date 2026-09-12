@@ -9,6 +9,7 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
   """
   use HuddlzWeb, :live_component
 
+  alias Huddlz.Communities.GroupLocation
   alias HuddlzWeb.Components.Input
   alias Phoenix.HTML.FormField
 
@@ -101,7 +102,10 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
               <circle cx="12" cy="9" r="2.5" />
             </svg>
             <span data-testid="saved-location-display">
-              {@selected_location.name || @selected_location.address}
+              {@selected_location.name || GroupLocation.full_address(@selected_location)}
+              <span :if={@selected_location.name && @selected_location.unit}>
+                — {GroupLocation.full_address(@selected_location)}
+              </span>
             </span>
           </div>
           <div class="location-actions">
@@ -172,8 +176,8 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
             phx-target={@myself}
             class="filter-location-option"
           >
-            <span class="opt-main">{loc.name || loc.address}</span>
-            <span :if={loc.name} class="opt-secondary">{loc.address}</span>
+            <span class="opt-main">{loc.name || GroupLocation.full_address(loc)}</span>
+            <span :if={loc.name} class="opt-secondary">{GroupLocation.full_address(loc)}</span>
           </button>
         </div>
 
@@ -298,7 +302,7 @@ defmodule HuddlzWeb.Live.SavedLocationPicker do
 
     Enum.filter(locations, fn loc ->
       (loc.name && String.contains?(String.downcase(loc.name), text_down)) ||
-        String.contains?(String.downcase(loc.address), text_down)
+        String.contains?(String.downcase(GroupLocation.full_address(loc)), text_down)
     end)
   end
 end
