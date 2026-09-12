@@ -105,6 +105,27 @@ defmodule Huddlz.Accounts.UserTest do
     end
   end
 
+  describe "registering records when the account was created" do
+    test "a new account carries the time it was created" do
+      before = DateTime.utc_now()
+
+      user =
+        User
+        |> Ash.Changeset.for_create(:register_with_password, %{
+          email: "signup#{:rand.uniform(99999)}@example.com",
+          password: "password123",
+          password_confirmation: "password123",
+          display_name: "New Person",
+          legal_acceptance: true
+        })
+        |> Ash.create!()
+
+      assert user.signup_date_source == :recorded
+      assert DateTime.compare(user.inserted_at, before) != :lt
+      assert DateTime.compare(user.inserted_at, DateTime.utc_now()) != :gt
+    end
+  end
+
   describe "register_with_password with display_name" do
     test "registration with valid display_name succeeds" do
       user =

@@ -30,7 +30,7 @@ Each trigger has an ID (e.g. C3) used throughout the doc and the GitHub issues.
 | A2 | Password reset requested | User | Transactional | EXISTS (`SendPasswordResetEmail`) |
 | A3 | Password successfully changed | User | Transactional | "If this wasn't you…" security notice |
 | A4 | Email address changed | Old + new email | Transactional | Security notice on both addresses |
-| A5 | Account role changed by admin | User | Activity | Triggered from `lib/huddlz_web/live/admin_live.ex:45` |
+| A5 | Account role changed by admin | User | Activity | Triggered from `lib/huddlz_web/live/admin_live/users.ex` |
 
 ### B. Group membership
 

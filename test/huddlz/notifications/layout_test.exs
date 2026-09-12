@@ -170,7 +170,7 @@ defmodule Huddlz.Notifications.LayoutTest do
             group_id: group.id,
             creator_id: owner.id,
             actor: owner,
-            date: ~D[2026-09-12],
+            date: Date.add(Huddlz.Generator.eastern_today(), 1),
             start_time: ~T[10:00:00],
             duration_minutes: 120
           )

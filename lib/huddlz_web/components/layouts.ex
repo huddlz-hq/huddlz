@@ -36,6 +36,11 @@ defmodule HuddlzWeb.Layouts do
     values: [nil, :overview, :huddlz, :members, :settings],
     doc: "active sub-tab inside an organize-group section"
 
+  attr :active_admin_section, :atom,
+    default: nil,
+    values: [nil, :overview, :users],
+    doc: "active sub-item under the Admin sidebar item"
+
   attr :sidebar_owned_groups, :list,
     default: [],
     doc: "groups the current_user organizes — rendered as sb-org-row entries"
@@ -214,11 +219,27 @@ defmodule HuddlzWeb.Layouts do
             <.link
               class={["sb-item", @active == "admin" && "active"]}
               navigate={~p"/admin"}
-              aria-current={@active == "admin" && "page"}
+              aria-current={@active == "admin" && is_nil(@active_admin_section) && "page"}
             >
               <.nav_icon name="shield" />
               <span class="label">Admin</span>
             </.link>
+            <div :if={@active == "admin"} class="sb-sub">
+              <.link
+                class={["sb-sub-item", @active_admin_section == :overview && "active"]}
+                navigate={~p"/admin"}
+                aria-current={@active_admin_section == :overview && "page"}
+              >
+                Overview
+              </.link>
+              <.link
+                class={["sb-sub-item", @active_admin_section == :users && "active"]}
+                navigate={~p"/admin/users"}
+                aria-current={@active_admin_section == :users && "page"}
+              >
+                Users
+              </.link>
+            </div>
           <% end %>
         </div>
 

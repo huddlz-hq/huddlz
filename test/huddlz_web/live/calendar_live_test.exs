@@ -877,7 +877,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/calendar/week?scope=groups")
+      |> visit("/calendar/week?week=#{Date.to_iso8601(tomorrow())}&scope=groups")
       |> refute_has("#calendar-entry-#{off.id}")
       |> refute_has("#calendar-entry-#{answered.id}")
       |> assert_has("#calendar-entry-#{rsvp_before_cancel.id} [data-status=cancelled]")
