@@ -725,6 +725,10 @@ defmodule Huddlz.Accounts.User do
       public? true
     end
 
+    create_timestamp :inserted_at do
+      description "When the account was created; rows from before this was kept carry their confirmation time"
+    end
+
     attribute :home_location, :string do
       description "User's home city/region for pre-filling location search"
       allow_nil? true
