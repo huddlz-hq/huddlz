@@ -14,6 +14,7 @@ defmodule HuddlzWeb.Router do
     plug :load_from_bearer
     plug :set_actor, :user
     plug HuddlzWeb.ApiAuth, resource: Huddlz.Accounts.User, required?: false
+    plug HuddlzWeb.MarkActive
     plug AshGraphql.Plug
   end
 
@@ -26,6 +27,7 @@ defmodule HuddlzWeb.Router do
     plug :put_secure_browser_headers
     plug :load_from_session_unless_loaded
     plug HuddlzWeb.BrowserSession
+    plug HuddlzWeb.MarkActive
     plug :prevent_authenticated_page_caching
   end
 
@@ -34,6 +36,7 @@ defmodule HuddlzWeb.Router do
     plug :load_from_bearer
     plug :set_actor, :user
     plug HuddlzWeb.ApiAuth, resource: Huddlz.Accounts.User, required?: false
+    plug HuddlzWeb.MarkActive
   end
 
   scope "/", HuddlzWeb do
