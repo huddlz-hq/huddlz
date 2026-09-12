@@ -402,13 +402,16 @@ defmodule Huddlz.AuditTest do
     assert Ash.get!(Huddlz.Accounts.User, owner.id, authorize?: false)
   end
 
+  # An edit is troubleshooting history and goes after 90 days; the huddl's
+  # creation is participation history and stays (ADR 0007).
   test "retention removes expired versions and keeps recent history", %{
     huddl: huddl,
     owner: owner
   } do
     now = DateTime.utc_now()
     old = DateTime.add(now, -91, :day)
-    [version | _] = versions(huddl)
+    Communities.update_huddl!(huddl, %{title: "Old edit"}, actor: owner)
+    version = Enum.find(versions(huddl), &(&1.changes["title"] == "Old edit"))
 
     Repo.update_all(from(v in Huddl.Version, where: v.id == ^version.id),
       set: [version_inserted_at: old]
@@ -418,5 +421,6 @@ defmodule Huddlz.AuditTest do
     assert :ok = Huddlz.Audit.prune(now)
     refute Enum.any?(versions(huddl), &(&1.id == version.id))
     assert Enum.any?(versions(huddl), &(&1.changes["title"] == "Recent edit"))
+    assert Enum.any?(versions(huddl), &(&1.version_action_name == :create))
   end
 end
