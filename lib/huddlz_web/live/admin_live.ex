@@ -60,6 +60,7 @@ defmodule HuddlzWeb.AdminLive do
 
       <p id="overview-summary-scope" class="mb-3 text-sm text-[var(--muted)]">
         People counts confirmed accounts; groups excludes archived groups. Both are current totals.
+        Active people counts signed-in people who used huddlz on a day in the period.
         Days end at midnight UTC; today is included so far. Comparisons use complete preceding periods.
         <span :if={@period == "12m"}>12 months covers this month and the previous eleven.</span>
       </p>
@@ -71,6 +72,19 @@ defmodule HuddlzWeb.AdminLive do
             {people_delta(@stats.people, @period)}
           </div>
           <.sparkline id="spark-people" points={@stats.people.spark} />
+        </div>
+        <div id="kpi-active" class="kpi">
+          <div class="label">Active people</div>
+          <output
+            class={["value block", is_nil(@stats.active.measured_from) && "muted"]}
+            aria-label="Active people"
+          >
+            {active_value(@stats.active)}
+          </output>
+          <div class={["delta", active_delta_class(@stats.active)]}>
+            {active_delta(@stats.active, @period)}
+          </div>
+          <.sparkline id="spark-active" points={@stats.active.spark} />
         </div>
         <div id="kpi-groups" class="kpi">
           <div class="label">Groups</div>
@@ -377,6 +391,28 @@ defmodule HuddlzWeb.AdminLive do
     do: "No recorded sign-ups in #{Periods.period_label(period)}"
 
   defp people_delta(%{joined: n}, period), do: "+#{n} recorded in #{Periods.period_label(period)}"
+
+  # Active people compares only against a fully measured previous period;
+  # before that the line says when measuring began.
+  defp active_value(%{measured_from: nil}), do: "—"
+  defp active_value(%{count: count}), do: count
+
+  defp active_delta(%{measured_from: nil}, _period), do: "Not measured yet"
+  defp active_delta(%{count: 0, previous: nil}, _period), do: "No one yet"
+
+  defp active_delta(%{previous: nil, measured_from: from}, _period),
+    do: "Measured since #{measured_since(from, Date.utc_today())}"
+
+  defp active_delta(%{count: 0}, _period), do: "No one in this period"
+  defp active_delta(active, period), do: period_delta(active, period)
+
+  defp active_delta_class(%{measured_from: nil}), do: "muted"
+  defp active_delta_class(%{previous: nil}), do: "muted"
+  defp active_delta_class(active), do: period_delta_class(active)
+
+  defp measured_since(from, %Date{year: year}) do
+    Calendar.strftime(from, if(from.year == year, do: "%b %-d", else: "%b %-d, %Y"))
+  end
 
   defp estimated_signups(1), do: "1 account has an estimated sign-up date, excluded from growth."
 

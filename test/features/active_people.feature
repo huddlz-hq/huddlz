@@ -45,3 +45,24 @@ Feature: Active people
     When I visit "/discover"
     Then "admin564@example.com" is counted as active today
     And "member564@example.com" is not counted as active today
+
+  # The administrator's own visit to the overview counts them too.
+  Scenario: The overview counts distinct people over the period
+    Given "owner564@example.com" used huddlz 200 days ago
+    And "member564@example.com" used huddlz 1 day ago
+    And "member564@example.com" used huddlz 3 days ago
+    And "quiet564@example.com" used huddlz 100 days ago
+    And I am signed in as "admin564@example.com"
+    When I visit "/admin"
+    Then the platform "Active people" figure shows "2" and "+100% vs previous 90 days"
+
+  Scenario: Periods before measurement began are not compared
+    Given "member564@example.com" used huddlz 3 days ago
+    And I am signed in as "admin564@example.com"
+    When I visit "/admin"
+    Then the platform "Active people" figure shows "2" and "Measured since"
+
+  Scenario: The API carries the figure with its coverage
+    Given "member564@example.com" used huddlz 3 days ago
+    When "admin564@example.com" reads the platform overview for "30d" through GraphQL
+    Then the API active people figure counts 2 people measured from 3 days ago with no comparison

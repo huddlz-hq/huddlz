@@ -60,6 +60,33 @@ defmodule ActivePeopleSteps do
     context
   end
 
+  step "{string} used huddlz {int} day ago", %{args: [email, days]} = context do
+    seed_active_day(email, days)
+    context
+  end
+
+  step "{string} used huddlz {int} days ago", %{args: [email, days]} = context do
+    seed_active_day(email, days)
+    context
+  end
+
+  step "the API active people figure counts {int} people measured from {int} days ago with no comparison",
+       %{args: [count, days]} = context do
+    active = overview_payload(context.overview_response)["active"]
+    assert active["count"] == count
+    assert active["previous"] == nil
+    assert active["measured_from"] == Date.to_iso8601(Date.add(Date.utc_today(), -days))
+    assert Enum.any?(active["spark"], &is_nil/1)
+    context
+  end
+
+  defp seed_active_day(email, days_ago) do
+    Ash.Seed.seed!(ActiveDay, %{
+      user_id: find_user(email).id,
+      day: Date.add(Date.utc_today(), -days_ago)
+    })
+  end
+
   defp active_days(email, day) do
     user = find_user(email)
 
@@ -70,4 +97,10 @@ defmodule ActivePeopleSteps do
 
   defp find_user(email),
     do: User |> Ash.Query.filter(email == ^email) |> Ash.read_one!(authorize?: false)
+
+  defp overview_payload(%{"data" => %{"platformOverview" => payload}}) when is_binary(payload),
+    do: Jason.decode!(payload)
+
+  defp overview_payload(%{"data" => %{"platformOverview" => payload}}) when is_map(payload),
+    do: payload
 end

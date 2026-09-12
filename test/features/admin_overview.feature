@@ -25,8 +25,7 @@ Feature: Admin platform overview
     And the in-person huddl "Coffee" in "Founder Coffee" ended 5 days ago with 2 RSVPs
     And I am signed in as "admin553@example.com"
     When I visit "/admin"
-    Then I should not see "Active people"
-    And I should not see "Active users"
+    Then the platform "Active people" figure shows "1"
     And the platform "Groups" figure shows "2" and "2 held a huddl"
     And the platform "Huddlz held" figure shows "2"
     And the platform "RSVPs" figure shows "6"
@@ -77,7 +76,7 @@ Feature: Admin platform overview
     Given the in-person huddl "Kickoff" in "Portland Elixir" ended 10 days ago with 4 RSVPs
     When "admin553@example.com" reads the platform overview for "90d" through GraphQL
     Then the API platform overview shows 1 huddl held and 4 RSVPs
-    And the API overview omits unmeasured active users
+    And the API overview counts 1 active person
     When "owner553@example.com" reads the platform overview for "90d" through GraphQL
     Then the API refuses the platform overview
 

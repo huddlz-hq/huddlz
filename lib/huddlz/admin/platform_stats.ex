@@ -14,12 +14,15 @@ defmodule Huddlz.Admin.PlatformStats do
   counted huddlz. The platform has no single time zone, so buckets and
   "today" run on UTC days.
 
-  People are confirmed accounts. Signed-in usage is not yet measured.
+  People are confirmed accounts. Active people are the distinct people
+  with an `Huddlz.Accounts.ActiveDay` in the period; measurement began
+  when those rows did, and figures say so rather than compare against
+  days nobody measured.
   """
 
   require Ash.Query
 
-  alias Huddlz.Accounts.User
+  alias Huddlz.Accounts.{ActiveDay, User}
   alias Huddlz.Communities.{Group, Huddl, HuddlAttendee, Periods}
 
   @coming_up_days 30
@@ -31,6 +34,10 @@ defmodule Huddlz.Admin.PlatformStats do
 
     * `people` — confirmed accounts now, how many signed up in the period,
       and a sparkline of recorded sign-ups; historical estimates are excluded
+    * `active` — distinct people who used huddlz on a day in the period,
+      the count for the period before (nil unless measurement covers all
+      of it), a per-bucket sparkline (nil for buckets that ended before
+      measurement began) and the first measured day
     * `groups` — live groups now, how many started in the period, how
       many held a huddl in it, and a sparkline of live groups over time
     * `held` — huddlz held in the period, the count in the period before,
@@ -57,6 +64,7 @@ defmodule Huddlz.Admin.PlatformStats do
     %{
       period: period,
       people: people(window),
+      active: active_people(window),
       groups: group_figures(groups, ended, window),
       held: held(ended, window),
       rsvps: rsvp_figures(rsvps, window),
@@ -83,6 +91,51 @@ defmodule Huddlz.Admin.PlatformStats do
       spark: Periods.per_bucket(signed_up, edges)
     }
   end
+
+  # One row per person per UTC day; a period's figure is the distinct
+  # people among the rows on its dates. Buckets and the previous period
+  # only count when measurement had begun by then.
+  defp active_people(%{start: start, previous_start: previous_start, edges: edges}) do
+    measured_from = Ash.min!(ActiveDay, :day, authorize?: false)
+    since = DateTime.to_date(previous_start)
+    start_day = DateTime.to_date(start)
+
+    rows =
+      ActiveDay
+      |> Ash.Query.filter(day >= ^since)
+      |> Ash.Query.select([:user_id, :day])
+      |> Ash.read!(authorize?: false)
+
+    {current, previous} = Enum.split_with(rows, &(Date.compare(&1.day, start_day) != :lt))
+
+    %{
+      count: distinct_people(current),
+      previous: if(measured?(measured_from, since), do: distinct_people(previous), else: nil),
+      spark:
+        edges
+        |> Enum.chunk_every(2, 1, :discard)
+        |> Enum.map(fn [from, to] -> active_in_bucket(rows, measured_from, from, to) end),
+      measured_from: measured_from
+    }
+  end
+
+  # A bucket runs from its first date to the date before the next edge,
+  # or to today for the last one.
+  defp active_in_bucket(rows, measured_from, from, to) do
+    first = DateTime.to_date(from)
+    last = to |> DateTime.add(-1, :second) |> DateTime.to_date()
+
+    if measured?(measured_from, last) do
+      rows
+      |> Enum.filter(&(Date.compare(&1.day, first) != :lt and Date.compare(&1.day, last) != :gt))
+      |> distinct_people()
+    end
+  end
+
+  defp measured?(nil, _day), do: false
+  defp measured?(measured_from, day), do: Date.compare(measured_from, day) != :gt
+
+  defp distinct_people(rows), do: rows |> Enum.map(& &1.user_id) |> Enum.uniq() |> length()
 
   defp groups(actor) do
     Group

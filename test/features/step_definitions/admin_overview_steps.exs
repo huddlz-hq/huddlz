@@ -48,8 +48,8 @@ defmodule AdminOverviewSteps do
     context
   end
 
-  step "the API overview omits unmeasured active users", context do
-    refute Map.has_key?(overview_payload(context.overview_response), "active")
+  step "the API overview counts {int} active person", %{args: [count]} = context do
+    assert overview_payload(context.overview_response)["active"]["count"] == count
     context
   end
 
@@ -205,6 +205,7 @@ defmodule AdminOverviewSteps do
   defp kpi_id("Huddlz held"), do: "kpi-huddlz"
   defp kpi_id("Show rate"), do: "kpi-showrate"
   defp kpi_id("People"), do: "kpi-people"
+  defp kpi_id("Active people"), do: "kpi-active"
   defp kpi_id("Groups"), do: "kpi-groups"
   defp kpi_id("RSVPs"), do: "kpi-rsvps"
 
