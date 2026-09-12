@@ -212,7 +212,7 @@ defmodule HuddlzWeb.AdminLive do
                 By RSVPs gathered in the period. Show rate is over the group's counted huddlz.
               </div>
             </div>
-            <span :if={@stats.active_groups.groups != []} class="panel-sub">
+            <span :if={@stats.active_groups.groups != []} class="panel-sub panel-count">
               {length(@stats.active_groups.groups)} of {@stats.active_groups.ranked}
             </span>
           </div>
@@ -242,12 +242,14 @@ defmodule HuddlzWeb.AdminLive do
                     {group.name}
                   </.link>
                 </td>
-                <td class="n" data-label="Huddlz">{group.held}</td>
-                <td class="n" data-label="RSVPs">{group.rsvps}</td>
+                <td class="n" data-label="Huddlz" data-one={group.held == 1 || nil}>{group.held}</td>
+                <td class="n" data-label="RSVPs" data-one={group.rsvps == 1 || nil}>{group.rsvps}</td>
                 <td class={["n", is_nil(group.show_rate) && "muted"]} data-label="Show rate">
                   {show_rate_value(group)}
                 </td>
-                <td class="n" data-label="Members">{group.members}</td>
+                <td class="n" data-label="Members" data-one={group.members == 1 || nil}>
+                  {group.members}
+                </td>
               </tr>
             </tbody>
           </table>

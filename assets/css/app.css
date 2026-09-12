@@ -2116,23 +2116,26 @@ body .group-name:hover { color: var(--accent-ink); }
   body .group-table, body .group-table tbody { display: block; }
 
   body .group-table tr {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    column-gap: 6px;
+    display: block;
     padding: 10px 0;
     border-bottom: 1px solid var(--line);
   }
 
   body .group-table tr:last-child { border-bottom: 0; }
   body .group-table td { display: inline; padding: 0; border: 0; }
-  body .group-table td[data-label="Group"] { grid-column: 1 / -1; margin-bottom: 2px; }
-  body .group-table td.n { color: var(--muted); font-weight: 500; font-size: 12px; text-align: left; }
+  body .group-table td[data-label="Group"] { display: block; margin-bottom: 2px; }
+  body .group-table td.n { color: var(--muted); font-weight: 500; font-size: 12px; text-align: left; padding-left: 0; }
   body .group-table td[data-label="Huddlz"]::after { content: " huddlz · "; }
+  body .group-table td[data-label="Huddlz"][data-one]::after { content: " huddl · "; }
   body .group-table td[data-label="RSVPs"]::after { content: " RSVPs · "; }
-  body .group-table td[data-label="Show rate"]:not(.muted)::after { content: " show rate · "; }
-  body .group-table td[data-label="Show rate"].muted::after { content: " show rate · "; }
+  body .group-table td[data-label="RSVPs"][data-one]::after { content: " RSVP · "; }
+  body .group-table td[data-label="Show rate"]::after { content: " show rate · "; }
+  body .group-table td[data-label="Show rate"].muted { display: none; }
   body .group-table td[data-label="Members"]::after { content: " members"; }
+  body .group-table td[data-label="Members"][data-one]::after { content: " member"; }
 }
+
+body .panel-count { white-space: nowrap; }
 
 body .note-line {
   display: flex;
