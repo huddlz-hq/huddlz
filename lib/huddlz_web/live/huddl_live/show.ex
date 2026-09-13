@@ -8,9 +8,9 @@ defmodule HuddlzWeb.HuddlLive.Show do
   alias Huddlz.Communities
   alias Huddlz.Storage.HuddlCoverImages
   alias Huddlz.Storage.HuddlPhotos
+  alias HuddlzWeb.Avatar
   alias HuddlzWeb.Components.Modal
   alias HuddlzWeb.HuddlStatus
-  alias HuddlzWeb.Avatar
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
 
@@ -1397,7 +1397,10 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp going_heading(_huddl), do: "Going"
 
   defp going_locked_copy(_huddl, nil), do: "Sign in and RSVP to see who's going."
-  defp going_locked_copy(%{status: :completed}, _user), do: "Only people who RSVPd can see this list."
+
+  defp going_locked_copy(%{status: :completed}, _user),
+    do: "Only people who RSVPd can see this list."
+
   defp going_locked_copy(%{at_capacity: true}, _user), do: "Join the waitlist to see who's going."
   defp going_locked_copy(_huddl, _user), do: "RSVP to see who's going."
 
