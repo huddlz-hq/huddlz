@@ -10,8 +10,11 @@ defmodule HuddlzWeb.HuddlLive.Show do
   alias Huddlz.Storage.HuddlPhotos
   alias HuddlzWeb.Components.Modal
   alias HuddlzWeb.HuddlStatus
+  alias HuddlzWeb.Avatar
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
+
+  @going_visible 6
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -440,6 +443,38 @@ defmodule HuddlzWeb.HuddlLive.Show do
             >
               <.icon name="hero-share" class="size-5" />
             </button>
+          </div>
+
+          <div :if={@huddl.status != :cancelled} id="huddl-going" class="huddl-side-section">
+            <h3>{going_heading(@huddl)}</h3>
+            <%= cond do %>
+              <% @huddl.rsvp_count == 0 -> %>
+                <p class="going-locked">No one yet.</p>
+              <% @going -> %>
+                <ul class="going-list">
+                  <li :for={person <- visible_going(@going, @going_expanded)}>
+                    <span class={["member-mark", mark_variant(person.user_id)]} aria-hidden="true">
+                      <%= if person.picture_url do %>
+                        <img src={person.picture_url} alt="" />
+                      <% else %>
+                        {Avatar.initials(person) || "?"}
+                      <% end %>
+                    </span>
+                    <span class="going-name">{person.display_name}</span>
+                    <span :if={person.user_id == @current_user.id} class="going-you">You</span>
+                  </li>
+                </ul>
+                <button
+                  :if={length(@going) > @going_visible}
+                  type="button"
+                  class="going-more"
+                  phx-click="toggle_going"
+                >
+                  {if @going_expanded, do: "Show fewer", else: "Show all #{length(@going)}"}
+                </button>
+              <% true -> %>
+                <p class="going-locked">{going_locked_copy(@huddl, @current_user)}</p>
+            <% end %>
           </div>
 
           <div class="huddl-side-section">
@@ -1203,6 +1238,11 @@ defmodule HuddlzWeb.HuddlLive.Show do
   end
 
   @impl true
+  def handle_event("toggle_going", _, socket) do
+    {:noreply, assign(socket, :going_expanded, !socket.assigns.going_expanded)}
+  end
+
+  @impl true
   def handle_info({:huddl_changed, id}, %{assigns: %{huddl: %{id: id} = huddl}} = socket) do
     {:noreply, refresh_attendance(socket, huddl, socket.assigns.current_user)}
   end
@@ -1253,6 +1293,8 @@ defmodule HuddlzWeb.HuddlLive.Show do
     |> assign(:can_view_photos, can_view_photos)
     |> assign(:attendance, attendance)
     |> assign(:waitlist_position, waitlist_position)
+    |> assign(:going_visible, @going_visible)
+    |> assign_going(huddl, user, attendance)
     |> assign(
       :can_edit_huddl,
       is_nil(huddl.group.archived_at) && editable_lifecycle?(huddl) &&
@@ -1326,6 +1368,38 @@ defmodule HuddlzWeb.HuddlLive.Show do
        do: huddl_meta(huddl).url
 
   defp public_url(_huddl), do: nil
+
+  # You see who's going only if you're going, so nobody else pays for the query.
+  defp assign_going(socket, huddl, user, attendance)
+       when attendance in [:attending, :waitlisted] do
+    going =
+      huddl.id
+      |> Communities.list_huddl_attendees!(actor: user, load: [:display_name, :picture_url])
+      |> Enum.sort_by(&(&1.user_id != user.id))
+
+    socket
+    |> assign(:going, going)
+    |> assign_new(:going_expanded, fn -> false end)
+  end
+
+  defp assign_going(socket, _huddl, _user, _attendance) do
+    socket
+    |> assign(:going, nil)
+    |> assign(:going_expanded, false)
+  end
+
+  defp visible_going(going, true), do: going
+  defp visible_going(going, false), do: Enum.take(going, @going_visible)
+
+  defp mark_variant(user_id), do: "m#{:erlang.phash2(user_id, 5) + 1}"
+
+  defp going_heading(%{status: :completed}), do: "RSVPd"
+  defp going_heading(_huddl), do: "Going"
+
+  defp going_locked_copy(_huddl, nil), do: "Sign in and RSVP to see who's going."
+  defp going_locked_copy(%{status: :completed}, _user), do: "Only people who RSVPd can see this list."
+  defp going_locked_copy(%{at_capacity: true}, _user), do: "Join the waitlist to see who's going."
+  defp going_locked_copy(_huddl, _user), do: "RSVP to see who's going."
 
   defp attendance_info(_huddl, nil), do: {:none, nil}
 
@@ -1479,7 +1553,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   end
 
   defp hero_when_segment(%{status: :completed} = huddl) do
-    "#{format_short_date(huddl.starts_at, huddl.time_zone)} · #{huddl.rsvp_count} attended"
+    "#{format_short_date(huddl.starts_at, huddl.time_zone)} · #{huddl.rsvp_count} RSVPd"
   end
 
   defp hero_when_segment(huddl) do
@@ -1515,14 +1589,14 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp same_day?(%DateTime{} = a, %DateTime{} = b),
     do: DateTime.to_date(a) == DateTime.to_date(b)
 
-  defp capacity_fact_label(%{status: :completed}), do: "Attended"
+  defp capacity_fact_label(%{status: :completed}), do: "RSVPs"
   defp capacity_fact_label(_), do: "Capacity"
 
   defp format_fact_capacity(%{status: :completed} = huddl) do
     case huddl.rsvp_count do
-      0 -> "No one attended"
-      1 -> "1 person attended"
-      n -> "#{n} people attended"
+      0 -> "No one RSVPd"
+      1 -> "1 person RSVPd"
+      n -> "#{n} people RSVPd"
     end
   end
 

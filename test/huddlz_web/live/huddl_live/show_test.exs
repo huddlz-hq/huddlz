@@ -680,8 +680,8 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       # Should not show Cancel RSVP button for past events
       |> refute_has("button", text: "Cancel RSVP")
       |> refute_has("button", text: "RSVP to this huddl")
-      # But should still show attended status for past event
-      |> assert_has(".facts .value", text: "1 person attended")
+      # But should still count the RSVP for the past huddl
+      |> assert_has(".facts .value", text: "1 person RSVPd")
     end
 
     test "handles cancel_rsvp event successfully", %{
@@ -781,7 +781,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has(".eyebrow", text: "Happening now")
     end
 
-    test "shows completed banner and 'attended' copy for past huddlz", %{
+    test "shows completed banner and 'RSVPd' copy for past huddlz", %{
       conn: conn,
       member: member,
       owner: owner,
@@ -807,7 +807,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> visit(~p"/groups/#{group.slug}/huddlz/#{completed_huddl.id}")
       |> assert_has(".eyebrow", text: "Completed")
       |> assert_has(".rsvp-banner.muted", text: "This huddl has ended")
-      |> assert_has(".facts .label", text: "Attended")
+      |> assert_has(".facts .label", text: "RSVPs")
       |> assert_has(".facts .value .muted", text: "Link expired")
       |> refute_has("button", text: "RSVP to this huddl")
       |> refute_has("button", text: "Cancel RSVP")
