@@ -1,6 +1,6 @@
 defmodule HuddlzWeb.Api.EndToEndTest do
   @moduledoc """
-  End-to-end happy path covering register → sign_in → create_group →
+  End-to-end happy path covering register → sign_in → confirm → create_group →
   create_huddl → RSVP → list my RSVPs → sign_out.
 
   This catches integration problems even when each unit test passes
@@ -35,6 +35,18 @@ defmodule HuddlzWeb.Api.EndToEndTest do
       |> json_response(200)
 
     assert %{"token" => signed_in_token} = sign_in_resp
+
+    # Prove ownership using the delivered link. The existing bearer token
+    # becomes eligible without signing in again.
+    assert_receive {:email, %Swoosh.Email{subject: "Confirm your email address", text_body: body}}
+    [_, confirmation_token] = Regex.run(~r{/confirm_new_user/([A-Za-z0-9._~-]+)}, body)
+
+    confirmation =
+      post(build_conn(), "/auth/user/confirm_new_user", %{
+        "user" => %{"confirm" => confirmation_token}
+      })
+
+    assert redirected_to(confirmation) == "/"
 
     # 3. Create a group via JSON:API
     group_resp =

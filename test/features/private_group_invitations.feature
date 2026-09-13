@@ -47,6 +47,7 @@ Feature: Private group invitations
     Then I should see "Sign in"
     When I click "Sign up"
     And I complete registration as "new-maker@example.com"
+    And I confirm the registration email sent to "new-maker@example.com"
     Then I should see "Group invitation"
     And I should see "Quiet Makers"
     And I should see "Accept invitation"
@@ -103,6 +104,7 @@ Feature: Private group invitations
     When I follow that invitation email while signed out
     And I click "Sign up"
     And I complete registration as "new-maker@example.com"
+    And I confirm the registration email sent to "new-maker@example.com"
     And I click "Decline"
     Then I should see "Invitation declined."
     When I reopen the invitation email

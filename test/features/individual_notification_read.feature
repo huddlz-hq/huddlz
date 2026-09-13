@@ -6,6 +6,7 @@ Feature: Individual notification read state
 
   Scenario: A read waitlist promotion remains visible in the Inbox
     Given I am signed in as "reader@example.com" with password "Password123!"
+    And I confirm the registration email sent to "reader@example.com"
     And I have an unread waitlist promotion notification for "Elixir Picnic"
     When I visit "/notifications"
     Then I should see "Inbox 1 unread"

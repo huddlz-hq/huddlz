@@ -6,6 +6,7 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   import HuddlzWeb.Live.Helpers.HuddlCardHelpers
 
+  alias Huddlz.Accounts.ConfirmationDestination
   alias Huddlz.Communities
   alias Huddlz.Communities.{GroupLocation, GroupMember, Huddl, MembershipEvents}
   alias Huddlz.Storage.GroupImages
@@ -16,6 +17,7 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
+  on_mount {HuddlzWeb.LiveUserAuth, {:participation, ~w(join_group leave_group)}}
 
   @member_grid_visible 7
 
@@ -38,6 +40,7 @@ defmodule HuddlzWeb.GroupLive.Show do
 
     case get_group_by_slug(slug, user) do
       {:ok, group} ->
+        ConfirmationDestination.remember(user, ~p"/groups/#{slug}")
         tab = group_tab(group, params)
         page = if tab == "past", do: parse_page(params["page"]), else: 1
 
@@ -288,8 +291,16 @@ defmodule HuddlzWeb.GroupLive.Show do
             </li>
           </ul>
 
+          <.button
+            :if={is_nil(@current_user) and @group.is_public and is_nil(@group.archived_at)}
+            variant={:primary}
+            navigate={~p"/sign-in?#{[return_to: ~p"/groups/#{@group.slug}"]}"}
+          >
+            Sign in to join
+          </.button>
           <%= if @current_user do %>
             <div class="side-actions">
+              <Layouts.confirmation_required :if={is_nil(@current_user.confirmed_at)} action="join" />
               <div :if={role_pill(assigns)} class="role-pill">
                 <.pill variant={:cyan}>{role_pill(assigns)}</.pill>
               </div>

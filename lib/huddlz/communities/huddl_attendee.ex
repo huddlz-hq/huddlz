@@ -152,6 +152,12 @@ defmodule Huddlz.Communities.HuddlAttendee do
   end
 
   policies do
+    # Background maintenance retains its existing policies. A signed-in
+    # actor must prove address ownership before mutating community data.
+    policy [action_type([:create, :update, :destroy]), actor_present()] do
+      authorize_if Huddlz.Accounts.Checks.ConfirmedActor
+    end
+
     # Users can RSVP to huddlz they have access to
     policy action(:rsvp) do
       description "Allow users to RSVP to accessible huddlz"

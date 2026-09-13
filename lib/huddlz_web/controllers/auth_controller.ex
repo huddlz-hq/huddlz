@@ -2,12 +2,20 @@ defmodule HuddlzWeb.AuthController do
   use HuddlzWeb, :controller
   use AshAuthentication.Phoenix.Controller
 
+  alias Huddlz.Accounts.ConfirmationDestination
   alias Huddlz.Accounts.User.Errors.ConfirmationAddressChanged
   alias HuddlzWeb.AuthReturnTo
   alias HuddlzWeb.BrowserSession
 
   def success(conn, activity, user, _token) do
-    return_to = return_to(conn)
+    return_to =
+      if activity == {:confirm_new_user, :confirm} do
+        ConfirmationDestination.validate(user.__metadata__[:confirmation_destination]) || ~p"/"
+      else
+        return_to(conn)
+      end
+
+    ConfirmationDestination.remember(user, return_to)
 
     message =
       case activity do

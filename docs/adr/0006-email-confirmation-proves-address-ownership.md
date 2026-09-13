@@ -12,7 +12,7 @@ Preserve the intended huddl through registration and email confirmation, then re
 
 The destination survives confirmation in another browser or device. Preserve group invitation destinations through the same flow, with acceptance remaining an explicit action after confirmation.
 
-Confirmation must apply to the specific address, including after an email change. A banner across signed-in pages shows the address and offers ways to resend confirmation or request an email change, with guidance to check junk mail. Dismissal lasts for the current session; profile settings retain the confirmation status. Existing unconfirmed accounts receive the same banner, without a bulk email campaign.
+Confirmation must apply to the specific address, including after an email change. A banner across signed-in pages shows the address and offers confirmation resends, with guidance to check junk mail. Profile settings retain the confirmation and pending-email-change controls. Dismissal lasts for the current session; profile settings retain the confirmation status. Existing unconfirmed accounts receive the same banner, without a bulk email campaign.
 
 There is no automatic follow-up email: the banner helps people find the original message or request another themselves. Confirmation does not replay missed emails or change notification preferences.
 
@@ -24,4 +24,4 @@ Resends allow one request per minute and five per hour per account. Resending do
 
 Automatic expiration or deletion of unconfirmed accounts is out of scope. Existing unconfirmed accounts retain their data, receive the banner, and must confirm before further participation. Expired or incomplete email-change approvals never switch the address.
 
-This accepted design records the intended behavior. Implementation is pending.
+Participation is enforced through resource policies as well as the browser. Confirmation uses the account’s current status, so existing API credentials and already-open pages cannot retain permission to participate without it. The saved destination is limited to local huddl, group, and invitation pages and grants no access of its own.

@@ -4,7 +4,6 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
   import Huddlz.Test.Helpers.Authentication
   import Huddlz.Generator
 
-  alias Huddlz.Accounts.User
   alias Huddlz.Communities
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupMember
@@ -14,9 +13,9 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
 
   describe "Show huddl details" do
     setup do
-      owner = create_verified_user()
-      member = create_verified_user()
-      non_member = create_verified_user()
+      owner = create_confirmed_user()
+      member = create_confirmed_user()
+      non_member = create_confirmed_user()
 
       # Create a public group
       group =
@@ -451,7 +450,12 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
         |> Ash.Changeset.for_update(:update, %{max_attendees: 5}, actor: owner)
         |> Ash.update!()
 
-      for actor <- [owner, create_verified_user(), create_verified_user(), create_verified_user()] do
+      for actor <- [
+            owner,
+            create_confirmed_user(),
+            create_confirmed_user(),
+            create_confirmed_user()
+          ] do
         capped
         |> Ash.reload!()
         |> Ash.Changeset.for_update(:rsvp, %{}, actor: actor)
@@ -1034,13 +1038,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
     |> is_struct(Huddl)
   end
 
-  defp create_verified_user do
-    User
-    |> Ash.Changeset.for_create(:create, %{
-      email: "user#{System.unique_integer()}@example.com",
-      display_name: "Test User",
-      role: :user
-    })
-    |> Ash.create!(authorize?: false)
+  defp create_confirmed_user do
+    generate(user(display_name: "Test User"))
   end
 end

@@ -364,6 +364,17 @@ defmodule HuddlzWeb.Layouts do
     """
   end
 
+  attr :action, :string, required: true
+
+  def confirmation_required(assigns) do
+    ~H"""
+    <p role="status" class="text-sm leading-relaxed">
+      Confirm your email before you {@action}. Check your inbox or junk mail.
+      <.link navigate={~p"/profile"} class="underline">Review confirmation and resend email</.link>
+    </p>
+    """
+  end
+
   defp reminded(%User{confirmed_at: nil, __metadata__: metadata}),
     do: not (metadata[:confirmation_reminder_hidden] == true)
 

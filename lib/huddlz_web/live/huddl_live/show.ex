@@ -4,6 +4,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   """
   use HuddlzWeb, :live_view
 
+  alias Huddlz.Accounts.ConfirmationDestination
   alias Huddlz.Communities
   alias Huddlz.Storage.HuddlCoverImages
   alias Huddlz.Storage.HuddlPhotos
@@ -14,6 +15,10 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
+
+  on_mount {HuddlzWeb.LiveUserAuth,
+            {:participation,
+             ~w(rsvp join_waitlist cancel_rsvp leave_waitlist upload_photos delete_photo publish_huddl cancel_huddl delete_huddl)}}
 
   @huddl_loads [
     :status,
@@ -52,6 +57,11 @@ defmodule HuddlzWeb.HuddlLive.Show do
   def handle_params(%{"group_slug" => group_slug, "id" => id}, _, socket) do
     case get_huddl(id, group_slug, socket.assigns.current_user) do
       {:ok, huddl} ->
+        ConfirmationDestination.remember(
+          socket.assigns.current_user,
+          ~p"/groups/#{group_slug}/huddlz/#{id}"
+        )
+
         {:noreply, assign_huddl(socket, huddl)}
 
       {:error, :not_found} ->
@@ -715,6 +725,12 @@ defmodule HuddlzWeb.HuddlLive.Show do
     >
       Sign in to RSVP
     </.button>
+    """
+  end
+
+  defp render_rsvp_state(%{current_user: %{confirmed_at: nil}} = assigns) do
+    ~H"""
+    <Layouts.confirmation_required action="RSVP" />
     """
   end
 

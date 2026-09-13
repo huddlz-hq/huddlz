@@ -227,6 +227,12 @@ defmodule Huddlz.Communities.GroupImage do
   end
 
   policies do
+    # Background maintenance retains its existing policies. A signed-in
+    # actor must prove address ownership before mutating community data.
+    policy [action_type([:create, :update, :destroy]), actor_present()] do
+      authorize_if Huddlz.Accounts.Checks.ConfirmedActor
+    end
+
     # Group owners can upload images for their groups
     # Note: create needs custom check since relationship isn't loaded yet
     policy action(:create) do
