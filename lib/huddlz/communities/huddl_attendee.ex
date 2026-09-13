@@ -237,18 +237,6 @@ defmodule Huddlz.Communities.HuddlAttendee do
     end
   end
 
-  calculations do
-    calculate :display_name, :string, expr(user.display_name) do
-      public? true
-      description "The display name of the person going"
-    end
-
-    calculate :picture_url, :string, Huddlz.Communities.HuddlAttendee.Calculations.PictureUrl do
-      public? true
-      description "The person's current profile picture, when they have one"
-    end
-  end
-
   relationships do
     belongs_to :huddl, Huddlz.Communities.Huddl do
       attribute_type :uuid
@@ -260,6 +248,18 @@ defmodule Huddlz.Communities.HuddlAttendee do
       attribute_type :uuid
       allow_nil? false
       primary_key? false
+    end
+  end
+
+  calculations do
+    calculate :display_name, :string, expr(user.display_name) do
+      public? true
+      description "The display name of the person going"
+    end
+
+    calculate :picture_url, :string, Huddlz.Communities.HuddlAttendee.Calculations.PictureUrl do
+      public? true
+      description "The person's current profile picture, when they have one"
     end
   end
 
