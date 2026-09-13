@@ -109,6 +109,10 @@ _Avoid_: Dashboard, analytics, stats page
 The administrator summary of growth, huddlz and participation across huddlz as a whole.
 _Avoid_: Dashboard, analytics, stats page
 
+**Who's going**:
+The people with an RSVP to a huddl, shown on the huddl page and on the API only to people who are going themselves: anyone with an RSVP or a waitlist spot on that huddl. Everyone else sees the count. Group roles and administration grant no exception. After the huddl ends it is still the people who RSVPd, never who came.
+_Avoid_: Attendee list, attendees (for the people; "attendee" stays the API resource name), who attended
+
 **Activity**:
 The group's own record of what people did: joined or left, RSVPd or cancelled, joined a waitlist or got a spot from it, accepted an invitation. Appended as those actions run, so it remembers what the membership and RSVP rows forget, and shown newest first on the overview to the group's organizers and owner.
 _Avoid_: Audit log, events, history, feed (in the domain; "feed" is fine for the panel)

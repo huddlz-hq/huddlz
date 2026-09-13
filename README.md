@@ -14,8 +14,6 @@ documentation for contributors and readers.
 
 ### Domain and feature specifications
 
-- [Group membership](docs/group_membership.md) defines membership roles,
-  verification, and access rules.
 - [Email notifications](docs/notifications.md) specifies notification
   categories, triggers, and delivery rules.
 - [Discovery API](docs/api-discovery.md) documents discovery ordering.

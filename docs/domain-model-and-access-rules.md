@@ -51,10 +51,10 @@ erDiagram
 | Delete huddl         |   ✓   |   ✓   |     ✓     |    ✓    |   -    |      -      |   -   |
 | RSVP                 |   ✓   |   ✓   |     ✓     |    ✓    |   ✓    |      ✓      |   -   |
 | Cancel own RSVP      |   ✓   |   ✓   |     ✓     |    ✓    |   ✓    |      ✓      |   -   |
-| View attendee list   |   ✓   |   ✓   |     ✓     |    ✓    |   ✓*   |      -      |   -   |
+| See who's going      |   ✓*  |   ✓*  |     ✓*    |    ✓*   |   ✓*   |      ✓*     |   -   |
 | See virtual link     |   ✓   |   ✓   |     ✓     |    ✓    |  ✓**   |      -      |   -   |
 
-\* Members can only see attendee list if they are attending
+\* Only while going: an RSVP or a waitlist spot on that huddl. No role grants an exception (ADR-0008); creating a huddl RSVPs the creator.
 \*\* Virtual link only visible after RSVP
 
 ## Visibility Rules
