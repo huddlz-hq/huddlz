@@ -18,7 +18,13 @@ defmodule ConfirmationParticipationSteps do
 
   step "{string} fills while I check my email", %{args: [title]} = context do
     owner = Enum.find(context.users, &(to_string(&1.email) == "owner575@example.com"))
-    huddl = Huddl |> Ash.Query.filter(title == ^title) |> Ash.read_one!(actor: owner)
+
+    huddl =
+      Huddl
+      |> Ash.Query.for_read(:read, %{}, actor: owner)
+      |> Ash.Query.filter(title == ^title)
+      |> Ash.read_one!()
+
     # The owner already attends. Reducing capacity to that one spot uses
     # the same public organizer action as editing the huddl in the UI.
     Communities.update_huddl!(huddl, %{max_attendees: 1}, actor: owner)
@@ -74,7 +80,13 @@ defmodule ConfirmationParticipationSteps do
   step "the unconfirmed owner tries public participation actions", context do
     owner = Enum.find(context.users, &(to_string(&1.email) == "owner575@example.com"))
     member = Enum.find(context.users, &(to_string(&1.email) == "member575@example.com"))
-    huddl = Huddl |> Ash.Query.filter(title == "Making Night") |> Ash.read_one!(actor: owner)
+
+    huddl =
+      Huddl
+      |> Ash.Query.for_read(:read, %{}, actor: owner)
+      |> Ash.Query.filter(title == "Making Night")
+      |> Ash.read_one!()
+
     group = context.group
 
     results = [
@@ -122,7 +134,12 @@ defmodule ConfirmationParticipationSteps do
     # The fixture still holds the original confirmed actor. Both credentials
     # predate the account's current unconfirmed state.
     stale_user = Enum.find(context.users, &(to_string(&1.email) == "member575@example.com"))
-    huddl = Huddl |> Ash.Query.filter(title == "Making Night") |> Ash.read_one!(actor: stale_user)
+
+    huddl =
+      Huddl
+      |> Ash.Query.for_read(:read, %{}, actor: stale_user)
+      |> Ash.Query.filter(title == "Making Night")
+      |> Ash.read_one!()
 
     Ash.Seed.update!(stale_user, %{confirmed_at: DateTime.utc_now()})
     bearer_conn = authenticated_conn(build_conn(), stale_user)
