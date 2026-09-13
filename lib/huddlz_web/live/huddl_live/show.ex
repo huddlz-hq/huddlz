@@ -450,9 +450,9 @@ defmodule HuddlzWeb.HuddlLive.Show do
             <%= cond do %>
               <% @huddl.rsvp_count == 0 -> %>
                 <p class="going-locked">No one yet.</p>
-              <% @going -> %>
-                <ul class="going-list">
-                  <li :for={person <- visible_going(@going, @going_expanded)}>
+              <% @can_view_going -> %>
+                <ul id="going-list" class="going-list" phx-update="stream">
+                  <li :for={{dom_id, person} <- @streams.going} id={dom_id}>
                     <span class={["member-mark", mark_variant(person.user_id)]} aria-hidden="true">
                       <%= if person.picture_url do %>
                         <img src={person.picture_url} alt="" />
@@ -465,12 +465,12 @@ defmodule HuddlzWeb.HuddlLive.Show do
                   </li>
                 </ul>
                 <button
-                  :if={length(@going) > @going_visible}
+                  :if={@going_count > @going_visible}
                   type="button"
                   class="going-more"
                   phx-click="toggle_going"
                 >
-                  {if @going_expanded, do: "Show fewer", else: "Show all #{length(@going)}"}
+                  {if @going_expanded, do: "Show fewer", else: "Show all #{@going_count}"}
                 </button>
               <% true -> %>
                 <p class="going-locked">{going_locked_copy(@huddl, @current_user)}</p>
@@ -1239,7 +1239,10 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   @impl true
   def handle_event("toggle_going", _, socket) do
-    {:noreply, assign(socket, :going_expanded, !socket.assigns.going_expanded)}
+    {:noreply,
+     socket
+     |> assign(:going_expanded, !socket.assigns.going_expanded)
+     |> refresh_attendance(socket.assigns.huddl, socket.assigns.current_user)}
   end
 
   @impl true
@@ -1372,20 +1375,25 @@ defmodule HuddlzWeb.HuddlLive.Show do
   # You see who's going only if you're going, so nobody else pays for the query.
   defp assign_going(socket, huddl, user, attendance)
        when attendance in [:attending, :waitlisted] do
+    socket = assign_new(socket, :going_expanded, fn -> false end)
+
     going =
       huddl.id
       |> Communities.list_huddl_attendees!(actor: user, load: [:display_name, :picture_url])
       |> Enum.sort_by(&(&1.user_id != user.id))
 
     socket
-    |> assign(:going, going)
-    |> assign_new(:going_expanded, fn -> false end)
+    |> assign(:can_view_going, true)
+    |> assign(:going_count, length(going))
+    |> stream(:going, visible_going(going, socket.assigns.going_expanded), reset: true)
   end
 
   defp assign_going(socket, _huddl, _user, _attendance) do
     socket
-    |> assign(:going, nil)
+    |> assign(:can_view_going, false)
+    |> assign(:going_count, 0)
     |> assign(:going_expanded, false)
+    |> stream(:going, [], reset: true)
   end
 
   defp visible_going(going, true), do: going
@@ -1396,10 +1404,10 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp going_heading(%{status: :completed}), do: "RSVPd"
   defp going_heading(_huddl), do: "Going"
 
-  defp going_locked_copy(_huddl, nil), do: "Sign in and RSVP to see who's going."
-
   defp going_locked_copy(%{status: :completed}, _user),
     do: "Only people who RSVPd can see this list."
+
+  defp going_locked_copy(_huddl, nil), do: "Sign in and RSVP to see who's going."
 
   defp going_locked_copy(%{at_capacity: true}, _user), do: "Join the waitlist to see who's going."
   defp going_locked_copy(_huddl, _user), do: "RSVP to see who's going."

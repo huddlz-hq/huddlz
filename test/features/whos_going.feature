@@ -70,6 +70,12 @@ Feature: Who's going
     When I click the "Show all 13" button
     Then 13 people going are named
     And I should see "Show fewer"
+    When "quinn14@example.com" RSVPs to "Elixir hack night" in another session
+    Then 14 people going are named
+    When I click the "Show fewer" button
+    Then 6 people going are named
+    When I click the "Show all 14" button
+    Then 14 people going are named
 
   Scenario: Nobody has RSVPd yet
     Given an upcoming huddl "Lightning talks" exists in "Portland Elixir"
@@ -87,6 +93,14 @@ Feature: Who's going
     Then I should see "2 people RSVPd"
     And I should not see "attended"
     And the people going are "You, Sam Rivera"
+
+  Scenario: A visitor cannot RSVP to reveal an ended huddl's list
+    Given a past huddl "Elixir retro" exists in "Portland Elixir"
+    And "maya14@example.com" and "sam14@example.com" have RSVPd to "Elixir retro"
+    When I visit the huddl "Elixir retro"
+    Then nobody going is named
+    And I should see "Only people who RSVPd can see this list."
+    And I should not see "Sign in and RSVP to see who's going."
 
   Scenario Outline: The API names people going only to people who are going
     When "maya14@example.com" reads who is going to "Elixir hack night" through "<api>"
