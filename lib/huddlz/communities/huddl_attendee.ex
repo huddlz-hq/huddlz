@@ -23,6 +23,8 @@ defmodule Huddlz.Communities.HuddlAttendee do
   json_api do
     type "huddl_attendee"
 
+    default_fields [:waitlisted_at, :display_name, :picture_url]
+
     routes do
       base "/huddl_attendees"
 
@@ -104,13 +106,14 @@ defmodule Huddlz.Communities.HuddlAttendee do
     end
 
     read :by_huddl do
-      description "Get all attendees for a huddl"
+      description "The people going to a huddl, in RSVP order"
 
       argument :huddl_id, :uuid do
         allow_nil? false
       end
 
       filter expr(huddl_id == ^arg(:huddl_id) and is_nil(waitlisted_at))
+      prepare build(sort: [rsvped_at: :asc])
     end
 
     read :waitlist_for_huddl do
@@ -195,13 +198,11 @@ defmodule Huddlz.Communities.HuddlAttendee do
       authorize_if relates_to_actor_via(:user)
     end
 
-    # Only attendees and group owners/organizers can see who's attending
+    # You see who's going only if you're going: an RSVP or a waitlist spot on
+    # this huddl. Organizers get no exception here; the organize workspace has
+    # its own record of what people did.
     policy action(:by_huddl) do
-      # Allow if the actor is attending this huddl
       authorize_if Huddlz.Communities.HuddlAttendee.Checks.IsAttendee
-      # Or if they're the group owner/organizer
-      authorize_if Huddlz.Communities.HuddlAttendee.Checks.IsGroupOwnerOrOrganizer
-      # Explicitly forbid if neither condition is met
       forbid_if always()
     end
 
@@ -233,6 +234,18 @@ defmodule Huddlz.Communities.HuddlAttendee do
       allow_nil? true
       public? true
       description "When set, this row is a waitlist entry; when nil, an active RSVP."
+    end
+  end
+
+  calculations do
+    calculate :display_name, :string, expr(user.display_name) do
+      public? true
+      description "The display name of the person going"
+    end
+
+    calculate :picture_url, :string, Huddlz.Communities.HuddlAttendee.Calculations.PictureUrl do
+      public? true
+      description "The person's current profile picture, when they have one"
     end
   end
 
