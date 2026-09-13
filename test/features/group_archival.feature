@@ -349,11 +349,13 @@ Feature: Group archival
 
     Examples:
       | actor                 | api      | count |
-      | organizer@example.com | GraphQL  | 1     |
-      | owner@example.com     | GraphQL  | 1     |
+      | attendee@example.com  | GraphQL  | 1     |
+      | organizer@example.com | GraphQL  | 0     |
+      | owner@example.com     | GraphQL  | 0     |
       | member@example.com    | GraphQL  | 0     |
       | outsider@example.com  | GraphQL  | 0     |
-      | organizer@example.com | JSON:API | 1     |
-      | owner@example.com     | JSON:API | 1     |
+      | attendee@example.com  | JSON:API | 1     |
+      | organizer@example.com | JSON:API | 0     |
+      | owner@example.com     | JSON:API | 0     |
       | member@example.com    | JSON:API | 0     |
       | outsider@example.com  | JSON:API | 0     |

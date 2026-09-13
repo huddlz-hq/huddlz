@@ -848,32 +848,28 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
       assert Enum.any?(attendees, &(&1.user_id == attendee.id))
     end
 
-    test "group owner can see attendee list", %{owner: owner, huddl: huddl, attendee: attendee} do
-      # Group owner can see who's attending
+    test "group owner who is not going cannot see attendee list", %{owner: owner, huddl: huddl} do
+      # Creating the huddl RSVPd the owner; step out of it first.
+      huddl |> Ash.Changeset.for_update(:cancel_rsvp, %{}, actor: owner) |> Ash.update!()
+
       result =
         HuddlAttendee
         |> Ash.Query.for_read(:by_huddl, %{huddl_id: huddl.id})
         |> Ash.read(actor: owner)
 
-      assert {:ok, attendees} = result
-      assert length(attendees) == 2
-      assert Enum.any?(attendees, &(&1.user_id == attendee.id))
+      assert {:ok, []} = result
     end
 
-    test "group organizer can see attendee list", %{
+    test "group organizer who is not going cannot see attendee list", %{
       organizer: organizer,
-      huddl: huddl,
-      attendee: attendee
+      huddl: huddl
     } do
-      # Group organizer can see who's attending
       result =
         HuddlAttendee
         |> Ash.Query.for_read(:by_huddl, %{huddl_id: huddl.id})
         |> Ash.read(actor: organizer)
 
-      assert {:ok, attendees} = result
-      assert length(attendees) == 2
-      assert Enum.any?(attendees, &(&1.user_id == attendee.id))
+      assert {:ok, []} = result
     end
 
     test "group member who is not attending cannot see attendee list", %{
