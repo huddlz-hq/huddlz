@@ -1,5 +1,5 @@
 defmodule Huddlz.Audit.Version do
-  @moduledoc "Internal access and retention configuration for AshPaperTrail versions."
+  @moduledoc "Internal access and uniform two-year (730-day) retention for AshPaperTrail versions."
 
   def mixin do
     quote do
@@ -14,7 +14,7 @@ defmodule Huddlz.Audit.Version do
         destroy :expire do
           accept []
           argument :now, :utc_datetime_usec, allow_nil?: false, default: &DateTime.utc_now/0
-          change filter(expr(^ref(:version_inserted_at) < datetime_add(^arg(:now), -90, :day)))
+          change filter(expr(^ref(:version_inserted_at) < datetime_add(^arg(:now), -730, :day)))
         end
       end
 

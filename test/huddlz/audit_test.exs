@@ -402,13 +402,14 @@ defmodule Huddlz.AuditTest do
     assert Ash.get!(Huddlz.Accounts.User, owner.id, authorize?: false)
   end
 
-  test "retention removes expired versions and keeps recent history", %{
+  test "retention keeps snapshots at the 730-day cutoff and expires them afterwards", %{
     huddl: huddl,
     owner: owner
   } do
     now = DateTime.utc_now()
-    old = DateTime.add(now, -91, :day)
-    [version | _] = versions(huddl)
+    old = DateTime.add(now, -730, :day)
+    Communities.update_huddl!(huddl, %{title: "Old edit"}, actor: owner)
+    version = Enum.find(versions(huddl), &(&1.changes["title"] == "Old edit"))
 
     Repo.update_all(from(v in Huddl.Version, where: v.id == ^version.id),
       set: [version_inserted_at: old]
@@ -416,7 +417,10 @@ defmodule Huddlz.AuditTest do
 
     Communities.update_huddl!(huddl, %{title: "Recent edit"}, actor: owner)
     assert :ok = Huddlz.Audit.prune(now)
+    assert Enum.any?(versions(huddl), &(&1.id == version.id))
+    assert :ok = Huddlz.Audit.prune(DateTime.add(now, 1, :second))
     refute Enum.any?(versions(huddl), &(&1.id == version.id))
     assert Enum.any?(versions(huddl), &(&1.changes["title"] == "Recent edit"))
+    assert Enum.any?(versions(huddl), &(&1.version_action_name == :create))
   end
 end

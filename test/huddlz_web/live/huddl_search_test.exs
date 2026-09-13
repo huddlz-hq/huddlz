@@ -54,6 +54,9 @@ defmodule HuddlzWeb.HuddlSearchTest do
       )
       |> move_huddl_to_date(saturday)
 
+    # Create in the future before placing the fixture on the local calendar.
+    huddl2 = move_huddl_to_date(huddl2, saturday)
+
     huddl3 =
       generate(
         huddl(
