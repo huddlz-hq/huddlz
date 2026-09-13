@@ -42,7 +42,7 @@ defmodule Huddlz.Communities.HuddlAttendee do
     metadata :impersonator_id, :uuid
     metadata :automatic?, :boolean
     version_extensions authorizers: [Ash.Policy.Authorizer]
-    mixin {Huddlz.Audit.Version, :mixin, [[keep: :all]]}
+    mixin {Huddlz.Audit.Version, :mixin, []}
   end
 
   postgres do

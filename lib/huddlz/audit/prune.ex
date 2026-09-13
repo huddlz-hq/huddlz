@@ -1,5 +1,5 @@
 defmodule Huddlz.Audit.Prune do
-  @moduledoc "Prunes expired troubleshooting history daily."
+  @moduledoc "Prunes expired audit history daily."
   use Oban.Worker, queue: :default, max_attempts: 3
 
   @impl true

@@ -24,7 +24,7 @@ defmodule Huddlz.Audit do
     ]
   end
 
-  @doc "Delete versions older than the agreed troubleshooting window."
+  @doc "Delete versions older than the two-year audit window."
   def prune(now \\ DateTime.utc_now()) do
     Enum.each(version_resources(), fn resource ->
       Ash.bulk_destroy!(resource, :expire, %{now: now},

@@ -200,21 +200,7 @@ defmodule Huddlz.Communities.Huddl do
     metadata :impersonator_id, :uuid
     metadata :automatic?, :boolean
     version_extensions authorizers: [Ash.Policy.Authorizer]
-    # Creation, lifecycle and turnout are participation history; edits are not.
-    mixin {Huddlz.Audit.Version, :mixin,
-           [
-             [
-               keep: [
-                 :create,
-                 :publish,
-                 :cancel,
-                 :complete,
-                 :record_turnout,
-                 :skip_turnout,
-                 :destroy
-               ]
-             ]
-           ]}
+    mixin {Huddlz.Audit.Version, :mixin, []}
   end
 
   actions do

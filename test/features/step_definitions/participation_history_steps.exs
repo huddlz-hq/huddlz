@@ -54,7 +54,11 @@ defmodule ParticipationHistorySteps do
         actor: owner
       )
 
-    huddl = Communities.update_huddl!(huddl, %{title: "#{title} (edited)"}, actor: owner)
+    huddl =
+      Communities.update_huddl!(
+        huddl,
+        %{title: "#{title} (edited)", description: "Updated plans for the quarter"}, actor: owner)
+
     ended_at = days_ago(120)
 
     huddl =
@@ -93,9 +97,22 @@ defmodule ParticipationHistorySteps do
     context
   end
 
-  step "the edit to {string} is no longer on record", %{args: [_title]} = context do
-    actions = context.huddl_id |> huddl_versions() |> Enum.map(& &1.version_action_name)
-    refute :update in actions
+  step "the original and edited descriptions of {string} are still on record",
+       %{args: [_title]} = context do
+    versions = huddl_versions(context.huddl_id)
+
+    assert Enum.any?(
+             versions,
+             &(&1.version_action_name == :create and
+                 &1.changes["description"] == "Looking back on the quarter")
+           )
+
+    assert Enum.any?(
+             versions,
+             &(&1.version_action_name == :update and
+                 &1.changes["description"] == "Updated plans for the quarter")
+           )
+
     context
   end
 
@@ -123,6 +140,38 @@ defmodule ParticipationHistorySteps do
     assert removal.actor_id == owner.id
     assert removal.changes["user_id"] == member.id
     context
+  end
+
+  step "{string} had its description changed {int} days ago",
+       %{args: [name, days]} = context do
+    group = find_group(name)
+    owner = Ash.get!(User, group.owner_id, authorize?: false)
+
+    group
+    |> Ash.Changeset.for_update(:update_details, %{description: "Weekly Elixir conversations"},
+      actor: owner
+    )
+    |> Ash.update!()
+
+    backdate(Group.Version, [group.id], days_ago(days))
+    context
+  end
+
+  step "the edited description of {string} is still on record", %{args: [name]} = context do
+    assert [version] = group_edits(find_group(name))
+    assert version.changes["description"] == "Weekly Elixir conversations"
+    context
+  end
+
+  step "the edited description of {string} is no longer on record", %{args: [name]} = context do
+    assert [] = group_edits(find_group(name))
+    context
+  end
+
+  defp group_edits(group) do
+    Group.Version
+    |> Ash.Query.filter(version_source_id == ^group.id and version_action_name == :update_details)
+    |> Ash.read!(authorize?: false)
   end
 
   defp attendee_versions(user, huddl, action) do

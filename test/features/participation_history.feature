@@ -1,7 +1,7 @@
 @database @participation_history
 Feature: Participation history
   As huddlz
-  I want the record of who joined, RSVPed and organized to outlive troubleshooting history
+  I want the record of who joined, RSVPed and organized alongside troubleshooting history for two years
   So that participation over a year can be charted later without guessing
 
   Background:
@@ -22,11 +22,11 @@ Feature: Participation history
     When the daily pruning runs
     Then the join by "maya565@example.com" to "Portland Elixir" is no longer on record
 
-  Scenario: A huddl's edits age out while its creation and turnout stay
+  Scenario: A huddl's original and edited details stay with its creation and turnout
     Given "Kickoff" was created, edited and had its turnout recorded four months ago
     When the daily pruning runs
     Then the creation of "Kickoff" and its turnout recording are still on record
-    And the edit to "Kickoff" is no longer on record
+    And the original and edited descriptions of "Kickoff" are still on record
 
   Scenario: Cancelling an RSVP keeps the RSVP on record
     Given "maya565@example.com" RSVPed to "Kickoff"
@@ -37,3 +37,13 @@ Feature: Participation history
     Given "maya565@example.com" is a member of "Portland Elixir"
     When the owner removes "maya565@example.com" from "Portland Elixir"
     Then the removal names "owner565@example.com" as the actor and "maya565@example.com" as the person removed
+
+  Scenario: A group's edited description is still on record a year later
+    Given "Portland Elixir" had its description changed 365 days ago
+    When the daily pruning runs
+    Then the edited description of "Portland Elixir" is still on record
+
+  Scenario: A group's edited description ages out after two years
+    Given "Portland Elixir" had its description changed 731 days ago
+    When the daily pruning runs
+    Then the edited description of "Portland Elixir" is no longer on record
