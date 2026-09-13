@@ -57,7 +57,9 @@ defmodule ParticipationHistorySteps do
     huddl =
       Communities.update_huddl!(
         huddl,
-        %{title: "#{title} (edited)", description: "Updated plans for the quarter"}, actor: owner)
+        %{title: "#{title} (edited)", description: "Updated plans for the quarter"},
+        actor: owner
+      )
 
     ended_at = days_ago(120)
 
