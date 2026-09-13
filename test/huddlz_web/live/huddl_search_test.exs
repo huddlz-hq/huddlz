@@ -45,13 +45,14 @@ defmodule HuddlzWeb.HuddlSearchTest do
           description: "Discuss latest tech books",
           event_type: :virtual,
           virtual_link: "https://zoom.us/meeting/123",
-          date: saturday,
+          date: Date.add(Date.utc_today(), 2),
           start_time: ~T[23:59:00],
           duration_minutes: 60,
           is_private: false,
           actor: user
         )
       )
+      |> move_huddl_to_date(saturday)
 
     huddl3 =
       generate(
