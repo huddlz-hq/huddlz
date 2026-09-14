@@ -34,6 +34,17 @@ The record of who joined, left, RSVPed, was promoted from a waitlist or removed,
 **Administrator**:
 A person responsible for platform and account administration. This role is distinct from a group's owner, organizer, or member roles.
 
+**Account suspension**:
+An administrator's indefinite closure of an account for abuse, recorded with a reason, who acted and when. It ends the person's access everywhere at once, releases their upcoming spots and hides their personal content, while their groups, huddlz and history stay. It is separate from group or huddl moderation and from archival.
+_Avoid_: Ban, deactivation, deletion
+
+**Suspended account**:
+The neutral label every ordinary surface, including the API, shows in place of a suspended person's name and picture wherever a record must keep its author. The original name is read only in account administration and participation history.
+
+**Account restoration**:
+An administrator's manual reversal of a suspension judged mistaken. It lets the person sign in again from scratch; revoked sessions and API keys stay revoked and released spots are not rebooked.
+_Avoid_: Unban, reactivation
+
 ## Communities and places
 
 **Group**:

@@ -186,10 +186,13 @@ Include a `/reset` link **only when the recipient's address is the current accou
 | Sender | Recipient | Recovery channel intact? | Link `/reset`? |
 |---|---|---|---|
 | `password_changed` | current email | yes | yes |
+| `account_suspended` | current email | n/a — the account cannot sign in until restored | no — direct to support |
 | `email_changed` (audience: "old") | previous email | **no** — reset email goes to the new (possibly attacker-controlled) address | no — direct to support |
 | `email_changed` (audience: "new") | new email | n/a — confirmation only | no |
 
 When the channel has moved, lead with "contact support" and explicitly note that `/reset` won't help. Anything else gives the user a false sense of recovery.
+
+The suspension notice (`account_suspended`) is the one email a suspended account receives; every other trigger, in-app and by email, is dropped for a suspended recipient at `Huddlz.Notifications.deliver/3` and `deliver_now/3`. The notice says what happened and how to reach a person, and never carries the reason, reports or reporters.
 
 ### Test floor
 
