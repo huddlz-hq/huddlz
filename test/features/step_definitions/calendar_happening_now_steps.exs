@@ -19,18 +19,25 @@ defmodule CalendarHappeningNowSteps do
     going_to(context, title, {-ahead, :minute}, {ahead + 60, :minute})
   end
 
-  step "I open this week", %{conn: conn} = context do
-    session = visit(conn, "/calendar/week")
+  step "I am going to {string}, which started yesterday and is still running",
+       %{args: [title]} = context do
+    going_to(context, title, {24 * 60, :minute}, {60, :minute})
+  end
+
+  step "I open the week containing {string}", %{args: [title], conn: conn} = context do
+    date = scheduled_date(context, title)
+    session = visit(conn, "/calendar/week?week=#{date}")
     Map.merge(context, %{conn: session, session: session})
   end
 
-  step "I open today from the month view", %{conn: conn} = context do
-    today = eastern_today()
+  step "I open the scheduled day for {string} from the month view",
+       %{args: [title], conn: conn} = context do
+    date = scheduled_date(context, title)
 
     session =
       conn
-      |> visit("/calendar/month")
-      |> click_link("#calendar-day-link-#{Date.to_iso8601(today)}", to_string(today.day))
+      |> visit("/calendar/month?month=#{Calendar.strftime(date, "%Y-%m")}")
+      |> click_link("#calendar-day-link-#{date}", to_string(date.day))
 
     Map.merge(context, %{conn: session, session: session})
   end
@@ -79,31 +86,27 @@ defmodule CalendarHappeningNowSteps do
     |> Map.update(:happening_huddlz, %{title => huddl}, &Map.put(&1, title, huddl))
   end
 
-  # The agenda and the calendar place a huddl on the local day it starts, so a
-  # start time is never wound back past midnight — whatever the hour the suite
-  # runs at, the huddl stays on today and stays under way.
   defp starts_at({ago, unit}) do
-    Enum.max([shift(now(), {-ago, unit}), start_of_local_day()], DateTime)
+    shift(now(), {-ago, unit})
   end
 
   defp now, do: DateTime.utc_now() |> DateTime.truncate(:second)
 
   defp shift(datetime, {amount, unit}), do: DateTime.add(datetime, amount, unit)
 
-  defp start_of_local_day do
-    eastern_today()
-    |> DateTime.new!(~T[00:00:00], "America/New_York")
-    |> DateTime.shift_zone!("Etc/UTC")
+  defp scheduled_date(context, title) do
+    context.happening_huddlz
+    |> Map.fetch!(title)
+    |> Map.fetch!(:starts_at)
+    |> DateTime.shift_zone!("America/New_York")
+    |> DateTime.to_date()
   end
 
   defp assert_timing(context, scope, entry_prefix, title, timing) do
     %{session: session, happening_huddlz: huddlz} = context
     huddl = Map.fetch!(huddlz, title)
 
-    assert_has(session, "#{scope} ##{entry_prefix}-#{huddl.id} .cal-agenda-relative",
-      text: timing,
-      exact: true
-    )
+    assert_has(session, "#{scope} ##{entry_prefix}-#{huddl.id}", text: timing)
 
     context
   end

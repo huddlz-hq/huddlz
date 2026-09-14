@@ -22,15 +22,33 @@ Feature: Huddlz that are happening now on the agenda and calendar
 
   Scenario: The week view says a huddl under way is happening now
     Given I am going to "Elixir office hours", which started 20 minutes ago and runs for another 40 minutes
-    When I open this week
+    When I open the week containing "Elixir office hours"
     Then the week times "Elixir office hours" as "happening now"
 
   Scenario: The day panel says a huddl under way is happening now
     Given I am going to "Elixir office hours", which started 20 minutes ago and runs for another 40 minutes
-    When I open today from the month view
+    When I open the scheduled day for "Elixir office hours" from the month view
     Then the day panel times "Elixir office hours" as "happening now"
 
   Scenario: A huddl still to come keeps counting down
     Given I am going to "Async Rust reading group", which starts in 90 minutes
     When I open the agenda
     Then the agenda times "Async Rust reading group" as "1 hour away"
+
+  Scenario: The agenda keeps a huddl that started yesterday and is still running
+    Given I am going to "Overnight sprint", which started yesterday and is still running
+    When I open the agenda
+    Then the agenda times "Overnight sprint" as "happening now"
+    And the agenda times "Overnight sprint" as "Going"
+
+  Scenario: The week keeps a running overnight huddl's RSVP
+    Given I am going to "Overnight sprint", which started yesterday and is still running
+    When I open the week containing "Overnight sprint"
+    Then the week times "Overnight sprint" as "happening now"
+    And the week times "Overnight sprint" as "Going"
+
+  Scenario: The month day panel keeps a running overnight huddl's RSVP
+    Given I am going to "Overnight sprint", which started yesterday and is still running
+    When I open the scheduled day for "Overnight sprint" from the month view
+    Then the day panel times "Overnight sprint" as "happening now"
+    And the day panel times "Overnight sprint" as "Going"
