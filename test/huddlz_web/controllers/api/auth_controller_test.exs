@@ -3,6 +3,35 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
   import Swoosh.TestAssertions
 
   describe "POST /api/auth/register" do
+    test "rejects a contact link without creating an account or sending confirmation", %{
+      conn: conn
+    } do
+      params = %{
+        "email" => "name-link-api@example.com",
+        "display_name" => "example.com",
+        "password" => "correct horse battery staple",
+        "password_confirmation" => "correct horse battery staple",
+        "legal_acceptance" => true
+      }
+
+      response = conn |> post("/api/auth/register", params) |> json_response(422)
+
+      assert Enum.any?(response["errors"], fn error ->
+               error["field"] == "display_name" and
+                 String.contains?(
+                   error["message"],
+                   "Choose a display name without links or email addresses."
+                 )
+             end)
+
+      refute_email_sent()
+
+      corrected = Map.put(params, "display_name", "Alex")
+      response = conn |> post("/api/auth/register", corrected) |> json_response(201)
+      assert response["user"]["email"] == params["email"]
+      assert response["user"]["display_name"] == "Alex"
+    end
+
     test "creates a user and returns a JWT that authenticates the user", %{conn: conn} do
       params = %{
         "email" => "alice@example.com",

@@ -122,6 +122,7 @@ defmodule Huddlz.MixProject do
       {:swoosh, "~> 1.16"},
       {:multipart, "~> 0.4"},
       {:ical, "~> 3.2"},
+      {:idna, "~> 7.1"},
       {:eqrcode, "~> 0.2.1"},
       {:req, "~> 0.5"},
       {:req_s3, "~> 0.2"},
