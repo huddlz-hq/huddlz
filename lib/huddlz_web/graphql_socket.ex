@@ -4,6 +4,8 @@ defmodule HuddlzWeb.GraphqlSocket do
   use Absinthe.Phoenix.Socket,
     schema: HuddlzWeb.GraphqlSchema
 
+  alias Huddlz.Accounts.User
+
   @impl true
   def connect(params, socket, _connect_info) do
     socket =
@@ -13,8 +15,9 @@ defmodule HuddlzWeb.GraphqlSocket do
 
         token ->
           with {:ok, %{"sub" => subject}, _resource} <-
-                 AshAuthentication.Jwt.verify(token, Huddlz.Accounts.User),
-               {:ok, user} <- AshAuthentication.subject_to_user(subject, Huddlz.Accounts.User) do
+                 AshAuthentication.Jwt.verify(token, User),
+               {:ok, user} <- AshAuthentication.subject_to_user(subject, User),
+               false <- User.suspended?(user) do
             Absinthe.Phoenix.Socket.put_options(socket, context: %{actor: user})
           else
             _ ->

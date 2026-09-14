@@ -2,10 +2,25 @@ defmodule HuddlzWeb.AuthController do
   use HuddlzWeb, :controller
   use AshAuthentication.Phoenix.Controller
 
+  alias AshAuthentication.TokenResource.Actions, as: Tokens
   alias Huddlz.Accounts.ConfirmationDestination
+  alias Huddlz.Accounts.Token
+  alias Huddlz.Accounts.User
   alias Huddlz.Accounts.User.Errors.ConfirmationAddressChanged
   alias HuddlzWeb.AuthReturnTo
   alias HuddlzWeb.BrowserSession
+
+  # A suspended account can prove a password or an address, but neither
+  # lifts the suspension: the token just minted is revoked and no session
+  # is stored.
+  def success(conn, _activity, %User{suspended_at: %DateTime{}}, token) do
+    if is_binary(token), do: Tokens.revoke(Token, token)
+
+    conn
+    |> BrowserSession.finalize_impersonation()
+    |> clear_session(:huddlz)
+    |> redirect(to: ~p"/account-suspended")
+  end
 
   def success(conn, activity, user, _token) do
     return_to =

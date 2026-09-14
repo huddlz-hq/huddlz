@@ -23,6 +23,7 @@ defmodule HuddlzWeb.ErrorContext do
     if browser_request?(conn) do
       conn
       |> fetch_session()
+      |> HuddlzWeb.RejectSuspended.remember_session_token()
       |> AuthenticationPlug.load_from_session([])
     else
       conn
