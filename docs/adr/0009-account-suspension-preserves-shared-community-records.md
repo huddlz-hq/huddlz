@@ -1,7 +1,3 @@
----
-status: accepted
----
-
 # Account suspension preserves shared community records
 
 Account suspension indefinitely removes authenticated access and hides personal profile content and identity from ordinary member surfaces, while preserving records. Only a platform administrator may restore an account after finding the suspension mistaken; proving human control alone is insufficient because people can also advertise or scam. Reports are requests for review, never automatic suspension triggers.
