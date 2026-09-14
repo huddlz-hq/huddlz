@@ -42,6 +42,38 @@ defmodule HuddlzWeb.Api.Graphql.HuddlTest do
   end
 
   describe "updateDisplayName mutation" do
+    test "rejects a contact link without changing the saved name", %{conn: conn} do
+      target = generate(user(display_name: "Alex"))
+
+      response =
+        conn
+        |> authenticated_conn(target)
+        |> gql_post("""
+        mutation {
+          updateDisplayName(id: "#{target.id}", input: {displayName: "alex@example.test"}) {
+            result { displayName }
+            errors { message }
+          }
+        }
+        """)
+        |> json_response(200)
+
+      assert %{"data" => %{"updateDisplayName" => %{"result" => nil, "errors" => errors}}} =
+               response
+
+      assert Enum.any?(errors, fn error ->
+               error["message"] == "Choose a display name without links or email addresses."
+             end)
+
+      saved_profile =
+        conn
+        |> authenticated_conn(target)
+        |> gql_post("{ me { displayName } }")
+        |> json_response(200)
+
+      assert %{"data" => %{"me" => %{"displayName" => "Alex"}}} = saved_profile
+    end
+
     test "actor updates their own display name", %{conn: conn} do
       target = generate(user(display_name: "Old"))
 

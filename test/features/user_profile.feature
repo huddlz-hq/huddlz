@@ -23,6 +23,34 @@ Feature: User Profile Management
     Then I should see "Display name updated successfully"
     And the display name field should contain "Alice Cooper"
 
+  @display_name_profile
+  Scenario: A person replaces a web address before saving their name
+    Given I am on my profile page
+    When I fill in "Display name" with "Find me at example.com"
+    And I click the "Save changes" button
+    Then I should see "Choose a display name without links or email addresses."
+    And I should not see "Display name updated successfully"
+    And the display name field should contain "Find me at example.com"
+    When I visit "/profile"
+    Then the display name field should contain "BraveEagle726"
+    When I fill in "Display name" with "J.R. Smith"
+    And I click the "Save changes" button
+    Then I should see "Display name updated successfully"
+    When I visit "/profile"
+    Then the display name field should contain "J.R. Smith"
+
+  @display_name_email
+  Scenario: A person replaces an email address before saving their name
+    Given I am on my profile page
+    When I fill in "Display name" with "Contact alex@example.test"
+    And I click the "Save changes" button
+    Then I should see "Choose a display name without links or email addresses."
+    When I fill in "Display name" with "🔥 Alex"
+    And I click the "Save changes" button
+    Then I should see "Display name updated successfully"
+    When I visit "/profile"
+    Then the display name field should contain "🔥 Alex"
+
   @email_change_pending
   Scenario: Requesting a sign-in email change keeps the current address active
     Given the user "alice+user-profile@example.com" has password "OldPassword123!"
