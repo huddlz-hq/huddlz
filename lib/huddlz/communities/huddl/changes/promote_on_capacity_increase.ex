@@ -60,13 +60,17 @@ defmodule Huddlz.Communities.Huddl.Changes.PromoteOnCapacityIncrease do
 
   defp count_waitlist(huddl_id) do
     HuddlAttendee
-    |> Ash.Query.filter(huddl_id == ^huddl_id and not is_nil(waitlisted_at))
+    |> Ash.Query.filter(
+      huddl_id == ^huddl_id and not is_nil(waitlisted_at) and is_nil(user.suspended_at)
+    )
     |> Ash.count!(authorize?: false)
   end
 
   defp promote_n(huddl_id, n, opts) do
     HuddlAttendee
-    |> Ash.Query.filter(huddl_id == ^huddl_id and not is_nil(waitlisted_at))
+    |> Ash.Query.filter(
+      huddl_id == ^huddl_id and not is_nil(waitlisted_at) and is_nil(user.suspended_at)
+    )
     |> Ash.Query.sort(waitlisted_at: :asc)
     |> Ash.Query.limit(n)
     |> Ash.read!(authorize?: false)

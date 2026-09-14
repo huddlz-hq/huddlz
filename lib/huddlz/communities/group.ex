@@ -472,6 +472,7 @@ defmodule Huddlz.Communities.Group do
 
   relationships do
     belongs_to :owner, Huddlz.Accounts.User do
+      read_action :read_for_others
       attribute_type :uuid
       allow_nil? false
       primary_key? false
@@ -486,6 +487,7 @@ defmodule Huddlz.Communities.Group do
     end
 
     many_to_many :members, Huddlz.Accounts.User do
+      read_action :read_for_others
       through Huddlz.Communities.GroupMember
       source_attribute_on_join_resource :group_id
       destination_attribute_on_join_resource :user_id
@@ -529,8 +531,9 @@ defmodule Huddlz.Communities.Group do
     end
 
     count :member_count, :group_members do
-      description "Total members in the group, including owner and organizers"
+      description "Members in the group, including owner and organizers; suspended accounts are not counted"
       authorize? false
+      filter expr(is_nil(user.suspended_at))
     end
   end
 

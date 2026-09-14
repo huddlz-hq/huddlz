@@ -347,10 +347,12 @@ defmodule Huddlz.Communities.GroupInvitation do
     end
 
     belongs_to :invitee, Huddlz.Accounts.User do
+      read_action :read_for_others
       attribute_type :uuid
     end
 
     belongs_to :inviter, Huddlz.Accounts.User do
+      read_action :read_for_others
       attribute_type :uuid
       allow_nil? false
     end

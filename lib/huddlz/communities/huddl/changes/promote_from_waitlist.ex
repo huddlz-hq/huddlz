@@ -67,7 +67,9 @@ defmodule Huddlz.Communities.Huddl.Changes.PromoteFromWaitlist do
 
   defp fetch_oldest_waitlist_entry(huddl_id) do
     HuddlAttendee
-    |> Ash.Query.filter(huddl_id == ^huddl_id and not is_nil(waitlisted_at))
+    |> Ash.Query.filter(
+      huddl_id == ^huddl_id and not is_nil(waitlisted_at) and is_nil(user.suspended_at)
+    )
     |> Ash.Query.sort(waitlisted_at: :asc)
     |> Ash.Query.limit(1)
     |> Ash.read_one!(authorize?: false)

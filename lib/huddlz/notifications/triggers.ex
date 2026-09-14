@@ -32,6 +32,12 @@ defmodule Huddlz.Notifications.Triggers do
       default: true,
       label: "Email address changed"
     },
+    account_suspended: %{
+      category: :transactional,
+      sender: Senders.AccountSuspended,
+      default: true,
+      label: "Your account was suspended"
+    },
     account_role_changed: %{
       category: :activity,
       sender: Senders.AccountRoleChanged,

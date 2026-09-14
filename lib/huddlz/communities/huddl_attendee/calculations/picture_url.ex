@@ -6,11 +6,14 @@ defmodule Huddlz.Communities.HuddlAttendee.Calculations.PictureUrl do
   use Ash.Resource.Calculation
 
   @impl true
-  def load(_query, _opts, _context), do: [user: [:current_profile_picture_url]]
+  def load(_query, _opts, _context), do: [user: [:current_profile_picture_url, :suspended_at]]
 
   @impl true
   def calculate(records, _opts, _context) do
-    Enum.map(records, &picture_url(&1.user.current_profile_picture_url))
+    Enum.map(records, fn
+      %{user: %{suspended_at: %DateTime{}}} -> nil
+      %{user: user} -> picture_url(user.current_profile_picture_url)
+    end)
   end
 
   defp picture_url(nil), do: nil

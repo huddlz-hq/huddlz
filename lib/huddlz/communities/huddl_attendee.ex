@@ -123,7 +123,11 @@ defmodule Huddlz.Communities.HuddlAttendee do
         allow_nil? false
       end
 
-      filter expr(huddl_id == ^arg(:huddl_id) and not is_nil(waitlisted_at))
+      filter expr(
+               huddl_id == ^arg(:huddl_id) and not is_nil(waitlisted_at) and
+                 is_nil(user.suspended_at)
+             )
+
       prepare build(sort: [waitlisted_at: :asc])
     end
 
@@ -245,6 +249,7 @@ defmodule Huddlz.Communities.HuddlAttendee do
     end
 
     belongs_to :user, Huddlz.Accounts.User do
+      read_action :read_for_others
       attribute_type :uuid
       allow_nil? false
       primary_key? false
@@ -252,9 +257,17 @@ defmodule Huddlz.Communities.HuddlAttendee do
   end
 
   calculations do
-    calculate :display_name, :string, expr(user.display_name) do
+    calculate :display_name,
+              :string,
+              expr(
+                if is_nil(user.suspended_at) do
+                  user.display_name
+                else
+                  "Suspended account"
+                end
+              ) do
       public? true
-      description "The display name of the person going"
+      description "The display name of the person going, or a neutral label once suspended"
     end
 
     calculate :picture_url, :string, Huddlz.Communities.HuddlAttendee.Calculations.PictureUrl do

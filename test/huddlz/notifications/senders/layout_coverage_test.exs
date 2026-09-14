@@ -70,6 +70,7 @@ defmodule Huddlz.Notifications.Senders.LayoutCoverageTest do
 
     payloads = %{
       password_changed: %{},
+      account_suspended: %{},
       email_changed: %{"audience" => "old", "old_email" => "sam.old@example.com"},
       account_role_changed: %{"previous_role" => "user", "new_role" => "admin"},
       group_member_joined: Map.put(group_payload, "joiner_display_name", "Jordan Lee"),
