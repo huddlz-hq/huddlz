@@ -7,7 +7,7 @@ defmodule HuddlzWeb.CalendarLive do
 
     * the agenda, `/agenda`, is the signed-in home page. It ignores the
       month: it starts at today and runs forward through the next few days
-      that have huddlz, leaving the past to the calendar;
+      that have huddlz, retaining running huddlz from earlier days;
     * the week, `/calendar/week?week=YYYY-MM-DD`, is the same day-by-day
       list for one Sunday-to-Saturday week, every day drawn, any week;
     * the month grid, `/calendar/month?month=YYYY-MM`, is the overview. A
@@ -228,7 +228,7 @@ defmodule HuddlzWeb.CalendarLive do
     |> Enum.filter(& &1.huddl.starts_at)
     |> Enum.map(&%{huddl: &1.huddl, roles: MapSet.new([:member])})
     |> Enum.map(&put_calendar_time(&1, time_zone))
-    |> Enum.filter(&(Date.compare(&1.calendar_date, today) != :lt))
+    |> Enum.filter(&current_or_future?(&1, today))
   end
 
   defp merge_entries(own, extras) do
@@ -448,16 +448,10 @@ defmodule HuddlzWeb.CalendarLive do
     "#{entry.huddl.title}, #{calendar_status_label(entry, today)}, #{date_and_time}"
   end
 
-  defp calendar_status_label(%{huddl: %{status: status}} = entry, today) do
-    case HuddlStatus.contextual_override(status) do
-      %{label: label} ->
-        label
-
-      nil ->
-        case Date.compare(entry.calendar_date, today) do
-          :lt -> past_relationship_label(entry)
-          _ -> relationship_status(entry).label
-        end
+  defp calendar_status_label(entry, today) do
+    case entry_status(entry, today) do
+      %{variant: :muted} -> past_relationship_label(entry)
+      %{label: label} -> label
     end
   end
 
@@ -470,6 +464,9 @@ defmodule HuddlzWeb.CalendarLive do
       presentation -> struct!(EntryStatus, presentation)
     end
   end
+
+  defp timed_entry_status(%{huddl: %{status: :in_progress}} = entry, _today),
+    do: relationship_status(entry)
 
   defp timed_entry_status(entry, today) do
     case Date.compare(entry.calendar_date, today) do
@@ -1124,7 +1121,7 @@ defmodule HuddlzWeb.CalendarLive do
           {@status.label}
         </.pill>
         <span :if={countdown?(@status)} class="cal-agenda-relative">
-          {HuddlCardHelpers.relative_time(@entry.huddl.starts_at)}
+          {HuddlCardHelpers.relative_time(@entry.huddl)}
         </span>
       </div>
     </.link>
@@ -1135,7 +1132,7 @@ defmodule HuddlzWeb.CalendarLive do
   # huddlz, whatever month they fall in. Returns the day groups and the
   # first day with huddlz beyond the window, if any.
   defp agenda_window(entries, today) do
-    upcoming = Enum.filter(entries, &(Date.compare(&1.calendar_date, today) != :lt))
+    upcoming = Enum.filter(entries, &current_or_future?(&1, today))
     dates = upcoming |> Enum.map(& &1.calendar_date) |> Enum.uniq()
     {shown, rest} = Enum.split(dates, @agenda_days)
     shown = MapSet.new(shown)
@@ -1143,6 +1140,11 @@ defmodule HuddlzWeb.CalendarLive do
 
     {agenda_days(windowed, first_of_month(today), today, anchor_today: true), List.first(rest)}
   end
+
+  defp current_or_future?(%{huddl: %{status: :in_progress}}, _today), do: true
+
+  defp current_or_future?(entry, today),
+    do: Date.compare(entry.calendar_date, today) != :lt
 
   # Groups entries by calendar day, in date order. With `anchor_today: true`
   # the list always gets a row for today, with or without a huddl on it, so

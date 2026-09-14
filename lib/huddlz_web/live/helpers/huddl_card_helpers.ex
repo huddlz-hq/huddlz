@@ -36,11 +36,26 @@ defmodule HuddlzWeb.Live.Helpers.HuddlCardHelpers do
   def rsvp_label(%{rsvp_count: count}), do: "#{count} RSVPs"
 
   @doc """
-  How far a moment is from now, in the words a card foot or agenda entry
-  uses: "tomorrow", "3 days away", "2 weeks ago", or the date once it is
-  more than a month out.
+  How a huddl's timing reads beside it in a card foot or an agenda entry:
+  counting down while it is still to come, "happening now" while it is under
+  way, and counting up from when it ended once it is over.
+
+  A huddl that is under way reads here as it reads on its own page, where
+  `HuddlzWeb.HuddlStatus` labels it "Happening now".
   """
-  def relative_time(%DateTime{} = dt) do
+  def relative_time(%{starts_at: %DateTime{} = starts_at, ends_at: %DateTime{} = ends_at}) do
+    now = DateTime.utc_now()
+
+    cond do
+      DateTime.after?(starts_at, now) -> relative_to_now(starts_at)
+      DateTime.after?(now, ends_at) -> relative_to_now(ends_at)
+      true -> "happening now"
+    end
+  end
+
+  # "tomorrow", "3 days away", "2 weeks ago", or the date once the moment is
+  # more than a month from now.
+  defp relative_to_now(%DateTime{} = dt) do
     diff_seconds = DateTime.diff(dt, DateTime.utc_now(), :second)
     abs_seconds = abs(diff_seconds)
     future? = diff_seconds >= 0
