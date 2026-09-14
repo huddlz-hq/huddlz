@@ -5,6 +5,7 @@ defmodule Huddlz.Accounts.User do
 
   require Logger
 
+  alias Huddlz.Accounts.DisplayName
   alias Huddlz.RateLimit.Keys
 
   @email_pattern ~r/^[^\s]+@[^\s]+$/
@@ -857,6 +858,11 @@ defmodule Huddlz.Accounts.User do
   end
 
   validations do
+    validate match(:display_name, DisplayName.allowed_pattern()) do
+      where changing(:display_name)
+      message "Choose a display name without links or email addresses."
+    end
+
     validate match(:email, @email_pattern) do
       where changing(:email)
       message "Enter a valid email address."

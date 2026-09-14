@@ -16,6 +16,22 @@ Feature: Password Authentication
     Then I should be signed in
     And I should see "huddlz"
 
+  @display_name_signup
+  Scenario: A person replaces an advertising link before signing up
+    Given I am on the registration page
+    When I fill in the password registration form with:
+      | email                 | name-link@example.com                |
+      | display_name          | 🔥 Bonus https://bit.ly/example 🔥     |
+      | password              | SuperSecret123!                      |
+      | password_confirmation | SuperSecret123!                      |
+    And I check "I agree to the Terms of Service and Code of Conduct and acknowledge the Privacy Policy."
+    And I click "Create account"
+    Then I should see "Choose a display name without links or email addresses."
+    And I should not be signed in
+    When I fill in "Display Name" with "Dr. Smith"
+    And I click "Create account"
+    Then I should be signed in
+
   Scenario: Registration explains a short and mismatched password
     Given I am on the registration page
     When I fill in the password registration form with:
