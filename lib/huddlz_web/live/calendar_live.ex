@@ -448,16 +448,10 @@ defmodule HuddlzWeb.CalendarLive do
     "#{entry.huddl.title}, #{calendar_status_label(entry, today)}, #{date_and_time}"
   end
 
-  defp calendar_status_label(%{huddl: %{status: status}} = entry, today) do
-    case HuddlStatus.contextual_override(status) do
-      %{label: label} ->
-        label
-
-      nil ->
-        case Date.compare(entry.calendar_date, today) do
-          :lt -> past_relationship_label(entry)
-          _ -> relationship_status(entry).label
-        end
+  defp calendar_status_label(entry, today) do
+    case entry_status(entry, today) do
+      %{variant: :muted} -> past_relationship_label(entry)
+      %{label: label} -> label
     end
   end
 

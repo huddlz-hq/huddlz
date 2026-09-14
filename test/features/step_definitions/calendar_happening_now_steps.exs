@@ -24,6 +24,46 @@ defmodule CalendarHappeningNowSteps do
     going_to(context, title, {24 * 60, :minute}, {60, :minute})
   end
 
+  step "my group has {string} running since yesterday without my RSVP",
+       %{args: [title], current_user: member} = context do
+    host = generate(user(role: :user))
+
+    group =
+      generate(group(name: "Portland Elixir", owner_id: host.id, is_public: true, actor: host))
+
+    generate(group_member(group_id: group.id, user_id: member.id, role: "member", actor: host))
+
+    huddl =
+      generate(
+        past_huddl(
+          group_id: group.id,
+          creator_id: host.id,
+          is_private: false,
+          title: title,
+          starts_at: starts_at({24 * 60, :minute}),
+          ends_at: shift(now(), {60, :minute})
+        )
+      )
+
+    Map.put(context, :happening_huddlz, %{title => huddl})
+  end
+
+  step "I open the month containing {string}", %{args: [title], conn: conn} = context do
+    date = scheduled_date(context, title)
+    session = visit(conn, "/calendar/month?month=#{Calendar.strftime(date, "%Y-%m")}")
+    Map.merge(context, %{conn: session, session: session})
+  end
+
+  step "the calendar announces {string} as {string}",
+       %{args: [title, status], session: session} = context do
+    huddl = Map.fetch!(context.happening_huddlz, title)
+    local = DateTime.shift_zone!(huddl.starts_at, "America/New_York")
+    date_and_time = Calendar.strftime(local, "%A, %B %-d, %Y at %-I:%M %p %Z")
+    label = "#{title}, #{status}, #{date_and_time}"
+    assert_has(session, "a[aria-label=\"#{label}\"]")
+    context
+  end
+
   step "I open the week containing {string}", %{args: [title], conn: conn} = context do
     date = scheduled_date(context, title)
     session = visit(conn, "/calendar/week?week=#{date}")

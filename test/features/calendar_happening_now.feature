@@ -52,3 +52,14 @@ Feature: Huddlz that are happening now on the agenda and calendar
     When I open the scheduled day for "Overnight sprint" from the month view
     Then the day panel times "Overnight sprint" as "happening now"
     And the day panel times "Overnight sprint" as "Going"
+
+  Scenario: A running group huddl without my RSVP is accessible in the month view
+    Given my group has "Overnight sprint" running since yesterday without my RSVP
+    When I open the month containing "Overnight sprint"
+    And I switch to everything from my groups
+    Then the calendar announces "Overnight sprint" as "No RSVP"
+
+  Scenario: A running overnight RSVP has the same visible and accessible status
+    Given I am going to "Overnight sprint", which started yesterday and is still running
+    When I open the month containing "Overnight sprint"
+    Then the calendar announces "Overnight sprint" as "Going"
