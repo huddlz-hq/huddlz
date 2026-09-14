@@ -14,6 +14,7 @@ defmodule Huddlz.Accounts.User do
     otp_app: :huddlz,
     domain: Huddlz.Accounts,
     authorizers: [Ash.Policy.Authorizer],
+    notifiers: [Huddlz.Accounts.SuspensionEvents],
     extensions: [AshPaperTrail.Resource, AshAuthentication, AshGraphql.Resource, AshRateLimiter],
     data_layer: AshPostgres.DataLayer
 
@@ -32,6 +33,8 @@ defmodule Huddlz.Accounts.User do
       update :resend_confirmation, :resend_confirmation
       update :update_notification_preferences, :update_notification_preferences
       update :update_theme_preference, :update_theme_preference
+      update :suspend_account, :suspend
+      update :restore_account, :restore
     end
   end
 
@@ -212,6 +215,16 @@ defmodule Huddlz.Accounts.User do
       change Huddlz.Accounts.User.Changes.ResendConfirmation
     end
 
+    read :read_for_others do
+      description """
+      How other people read a person: the read every relationship pointing
+      at a user goes through. A suspended account reads as "Suspended
+      account" with no picture, except to administrators.
+      """
+
+      prepare Huddlz.Accounts.User.Preparations.NeutralizeSuspended
+    end
+
     read :public_profile do
       description "Slim, public-facing profile shape used on relationships exposed via the API."
       prepare build(select: [:id, :display_name], load: [:current_profile_picture_url])
@@ -256,7 +269,15 @@ defmodule Huddlz.Accounts.User do
         default ""
       end
 
-      filter expr(contains(email, ^arg(:email)))
+      argument :suspended, :boolean do
+        description "List suspended accounts (the review queue) instead of the active ones"
+        default false
+      end
+
+      filter expr(
+               contains(email, ^arg(:email)) and is_nil(suspended_at) == not (^arg(:suspended))
+             )
+
       prepare Huddlz.Accounts.User.Preparations.AdminOnlySearch
     end
 
@@ -331,6 +352,53 @@ defmodule Huddlz.Accounts.User do
 
                {:ok, user}
              end)
+    end
+
+    update :suspend do
+      description """
+      Suspend an account: access ends everywhere at once and stays off until an
+      administrator restores it. Requires a reason, recorded with who acted and
+      when. Administrators cannot suspend themselves or other administrators.
+      """
+
+      require_atomic? false
+      accept []
+
+      argument :reason, :string do
+        constraints max_length: 500, trim?: true
+      end
+
+      validate present(:reason) do
+        message "Say why. The reason stays with the account until it is restored."
+      end
+
+      validate absent(:suspended_at) do
+        message "is already suspended"
+      end
+
+      change set_attribute(:suspension_reason, arg(:reason))
+      change set_attribute(:suspended_at, &DateTime.utc_now/0)
+      change relate_actor(:suspended_by)
+      change Huddlz.Accounts.User.Changes.Suspend
+    end
+
+    update :restore do
+      description """
+      Restore a suspended account so the person can sign in again from scratch.
+      Only for a suspension judged mistaken. Revoked sessions and API keys stay
+      revoked; released spots are not rebooked.
+      """
+
+      require_atomic? false
+      accept []
+
+      validate present(:suspended_at) do
+        message "is not suspended"
+      end
+
+      change set_attribute(:suspension_reason, nil)
+      change set_attribute(:suspended_at, nil)
+      change set_attribute(:suspended_by_id, nil)
     end
 
     update :update_theme_preference do
@@ -674,11 +742,24 @@ defmodule Huddlz.Accounts.User do
     # self-role-change block.
     bypass actor_attribute_equals(:role, :admin) do
       forbid_if action(:update_role)
+      forbid_if action([:suspend, :restore])
       authorize_if always()
+    end
+
+    policy action([:suspend, :restore]) do
+      description "Administrators suspend and restore accounts, never their own or another administrator's"
+      forbid_if expr(id == ^actor(:id))
+      forbid_if expr(role == :admin)
+      authorize_if actor_attribute_equals(:role, :admin)
     end
 
     # Basic read permissions - needed for auth
     policy action(:read) do
+      authorize_if always()
+    end
+
+    policy action(:read_for_others) do
+      description "Anyone can read a person as others see them; the read itself neutralizes suspended accounts"
       authorize_if always()
     end
 
@@ -864,6 +945,15 @@ defmodule Huddlz.Accounts.User do
       constraints min_length: 1, max_length: 100
     end
 
+    attribute :suspended_at, :utc_datetime_usec do
+      description "When an administrator suspended this account; nil once restored"
+    end
+
+    attribute :suspension_reason, :string do
+      description "Why the account was suspended. Administrators only; never sent to the person."
+      constraints max_length: 500
+    end
+
     attribute :theme_preference, Huddlz.Accounts.ThemePreference do
       description "Follow the device appearance, or always light or dark"
       allow_nil? false
@@ -904,12 +994,20 @@ defmodule Huddlz.Accounts.User do
       destination_attribute :invitee_id
     end
 
+    belongs_to :suspended_by, Huddlz.Accounts.User do
+      description "The administrator who suspended this account"
+    end
+
     has_many :valid_api_keys, Huddlz.Accounts.ApiKey do
       filter expr(valid)
     end
   end
 
   calculations do
+    calculate :suspended, :boolean, expr(not is_nil(suspended_at)) do
+      description "True while an administrator's suspension is in force"
+    end
+
     calculate :is_admin, :boolean, expr(role == :admin) do
       description """
       Single expression for "this user is an admin". Use this — instead of
@@ -943,4 +1041,8 @@ defmodule Huddlz.Accounts.User do
   def admin?(%{is_admin: false}), do: false
   def admin?(%{role: :admin}), do: true
   def admin?(_), do: false
+
+  @doc "True while the account is suspended. Nil-safe."
+  def suspended?(%{suspended_at: %DateTime{}}), do: true
+  def suspended?(_), do: false
 end

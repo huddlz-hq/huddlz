@@ -13,7 +13,7 @@ Issue #568 supplies change history for troubleshooting; #554 attaches browser im
 | GroupInvitation | Invitation, claiming, acceptance, decline, revocation, expiry |
 | HuddlAttendee | RSVP, cancellation, waitlist entry/withdrawal/promotion |
 | GroupImage, HuddlCoverImage, HuddlPhoto | Image metadata creation/replacement/deletion |
-| User | Account changes, including administrative role changes; no profile/contact values |
+| User | Account changes, including administrative role changes and suspensions with their reason; no profile/contact values |
 | ProfilePicture, ApiKey | Lifecycle changes without file paths, names, credentials or key hashes |
 
 Reads, page views, searches, authentication attempts, notification delivery and error diagnostics are not audited here. Existing historical rows are not backfilled. Database cascades are not separate Ash actions: a parent deletion is recorded, while any existing child versions remain available for the retention period.

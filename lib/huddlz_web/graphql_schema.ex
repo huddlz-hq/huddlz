@@ -7,6 +7,9 @@ defmodule HuddlzWeb.GraphqlSchema do
 
   import_types Absinthe.Plug.Types
 
+  @impl true
+  def context(context), do: HuddlzWeb.GraphqlSocket.refresh_context(context)
+
   query do
     # Custom Absinthe queries can be placed here
   end

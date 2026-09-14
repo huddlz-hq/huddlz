@@ -1043,18 +1043,21 @@ defmodule Huddlz.Communities.Huddl do
 
   relationships do
     belongs_to :creator, Huddlz.Accounts.User do
+      read_action :read_for_others
       attribute_type :uuid
       allow_nil? false
       primary_key? false
     end
 
     belongs_to :published_by, Huddlz.Accounts.User do
+      read_action :read_for_others
       attribute_type :uuid
       allow_nil? true
       primary_key? false
     end
 
     belongs_to :cancelled_by, Huddlz.Accounts.User do
+      read_action :read_for_others
       attribute_type :uuid
       allow_nil? true
       primary_key? false

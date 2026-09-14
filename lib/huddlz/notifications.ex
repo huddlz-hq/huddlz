@@ -21,7 +21,7 @@ defmodule Huddlz.Notifications do
   resources do
     resource Huddlz.Notifications.Notification do
       define :create_notification, action: :create
-      define :get_notification, action: :read, get_by: [:id]
+      define :get_notification, action: :get_for_user, get_by: [:id]
       define :list_for_user, action: :for_user
       define :mark_read, action: :mark_read
       define :mark_unread, action: :mark_unread
@@ -33,6 +33,7 @@ defmodule Huddlz.Notifications do
 
   alias Huddlz.Accounts.User
   alias Huddlz.Mailer
+  alias Huddlz.Notifications.Attribution
   alias Huddlz.Notifications.Notification
   alias Huddlz.Notifications.Summary
   alias Huddlz.Notifications.Triggers
@@ -72,11 +73,19 @@ defmodule Huddlz.Notifications do
   retry on the worker's backoff schedule.
   """
   @spec deliver(User.t(), atom(), map()) ::
-          {:ok, Oban.Job.t()} | {:error, term()}
-  def deliver(%User{id: user_id}, trigger, payload \\ %{}) when is_atom(trigger) do
+          {:ok, Oban.Job.t() | :skipped} | {:error, term()}
+  def deliver(%User{id: user_id} = user, trigger, payload \\ %{}) when is_atom(trigger) do
     _ = Triggers.fetch!(trigger)
     payload = Map.delete(payload, "virtual_link")
 
+    if reaches_suspended?(user, trigger) do
+      enqueue(user_id, trigger, payload)
+    else
+      {:ok, :skipped}
+    end
+  end
+
+  defp enqueue(user_id, trigger, payload) do
     %{user_id: user_id, trigger: Atom.to_string(trigger), payload: payload}
     |> notification_queue().enqueue()
     |> case do
@@ -146,7 +155,7 @@ defmodule Huddlz.Notifications do
 
     if should_deliver?(user, trigger, entry) do
       ensure_sender_implemented!(trigger, entry.sender)
-      email = entry.sender.build(user, payload)
+      email = entry.sender.build(user, Attribution.resolve(payload))
 
       case Mailer.deliver(email) do
         {:ok, _result} -> :sent
@@ -253,8 +262,16 @@ defmodule Huddlz.Notifications do
   """
   @spec should_deliver?(User.t(), atom(), map()) :: boolean()
   def should_deliver?(user, trigger, entry) do
-    user_can_receive?(user, entry.category) and preference_allows?(user, trigger, entry)
+    reaches_suspended?(user, trigger) and user_can_receive?(user, entry.category) and
+      preference_allows?(user, trigger, entry)
   end
+
+  # A suspended account hears from huddlz exactly once, about the
+  # suspension itself. Nothing else reaches it, in-app or by email.
+  defp reaches_suspended?(%User{suspended_at: %DateTime{}}, trigger),
+    do: trigger == :account_suspended
+
+  defp reaches_suspended?(_user, _trigger), do: true
 
   # Transactional security emails (password changed, account removed, etc.)
   # must go through even before email confirmation — otherwise an attacker

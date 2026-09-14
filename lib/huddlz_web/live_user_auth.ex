@@ -10,6 +10,7 @@ defmodule HuddlzWeb.LiveUserAuth do
   alias Huddlz.Accounts.ActiveDays
   alias Huddlz.Accounts.Checks.ConfirmedActor
   alias Huddlz.Accounts.ConfirmationDestination
+  alias Huddlz.Accounts.SuspensionEvents
   alias Huddlz.Accounts.User
   alias Huddlz.Communities.MembershipEvents
   alias Huddlz.Notifications
@@ -19,7 +20,7 @@ defmodule HuddlzWeb.LiveUserAuth do
   # on_mount {HuddlzWeb.LiveUserAuth, :current_user}
   def on_mount(:current_user, _params, session, socket) do
     socket = LiveSession.assign_new_resources(socket, session)
-    {:cont, maybe_load_user_details(socket)}
+    reject_suspended(socket, fn -> {:cont, maybe_load_user_details(socket)} end)
   end
 
   def on_mount(:live_user_optional, _params, _session, socket) do
@@ -96,7 +97,7 @@ defmodule HuddlzWeb.LiveUserAuth do
   end
 
   def on_mount(:load_user_details, _params, _session, socket) do
-    {:cont, maybe_load_user_details(socket)}
+    reject_suspended(socket, fn -> {:cont, maybe_load_user_details(socket)} end)
   end
 
   # Pair with `<Layouts.app>` in the LiveView template. Assigns
@@ -108,6 +109,10 @@ defmodule HuddlzWeb.LiveUserAuth do
   # location) plus the groups the user organizes, which appear as `sb-org-row`
   # entries in the sidebar.
   def on_mount(:app, _params, session, socket) do
+    reject_suspended(socket, fn -> mount_app(session, socket) end)
+  end
+
+  defp mount_app(session, socket) do
     body_class = if socket.assigns[:current_user], do: "", else: "is-signed-out"
 
     socket =
@@ -122,9 +127,39 @@ defmodule HuddlzWeb.LiveUserAuth do
       |> subscribe_to_organizer_access_changes()
       |> maybe_subscribe_to_unread_count()
       |> maybe_attach_theme_menu()
+      |> watch_for_suspension()
 
     {:cont, socket}
   end
+
+  # A token identifies an account; it does not freeze its standing. A page
+  # mounted by a suspended account is sent away signed out, and a page that
+  # is open when the suspension lands hears about it and leaves too.
+  defp reject_suspended(socket, continue) do
+    if User.suspended?(socket.assigns[:current_user]) do
+      {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/account-suspended?signed_out=1")}
+    else
+      continue.()
+    end
+  end
+
+  defp watch_for_suspension(%{assigns: %{current_user: %User{id: user_id}}} = socket) do
+    if Phoenix.LiveView.connected?(socket) do
+      :ok = SuspensionEvents.subscribe(user_id)
+
+      Phoenix.LiveView.attach_hook(socket, :account_suspended, :handle_info, fn
+        {:account_suspended, ^user_id}, socket ->
+          {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/account-suspended?signed_out=1")}
+
+        _message, socket ->
+          {:cont, socket}
+      end)
+    else
+      socket
+    end
+  end
+
+  defp watch_for_suspension(socket), do: socket
 
   # UI recovery for stale pages. Resource policies independently enforce the
   # same requirement for every caller, including requests without a browser.

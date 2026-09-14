@@ -186,10 +186,15 @@ Include a `/reset` link **only when the recipient's address is the current accou
 | Sender | Recipient | Recovery channel intact? | Link `/reset`? |
 |---|---|---|---|
 | `password_changed` | current email | yes | yes |
+| `account_suspended` | current email | n/a — the account cannot sign in until restored | no — direct to support |
 | `email_changed` (audience: "old") | previous email | **no** — reset email goes to the new (possibly attacker-controlled) address | no — direct to support |
 | `email_changed` (audience: "new") | new email | n/a — confirmation only | no |
 
 When the channel has moved, lead with "contact support" and explicitly note that `/reset` won't help. Anything else gives the user a false sense of recovery.
+
+The suspension notice (`account_suspended`) is the one email a suspended account receives; every other trigger, in-app and by email, is dropped for a suspended recipient at `Huddlz.Notifications.deliver/3` and `deliver_now/3`. The notice says what happened and how to reach a person, and never carries the reason, reports or reporters.
+
+Notifications naming another person carry that person's ID alongside the name snapshot. Email delivery and inbox reads resolve current suspension status, replacing the name with “Suspended account” even when the notification predates suspension. Older payloads without an attributable person ID use “Someone”; a name alone cannot safely identify an account. Original stored notification data remains unchanged.
 
 ### Test floor
 
@@ -202,6 +207,8 @@ Each sender test should at minimum assert:
 - a body keyword that anchors the message
 - `<script>` payload in display name is HTML-escaped
 - `refute email.text_body =~ "<"` — no markup leaks into plain text
+
+The suspension notice deliberately omits the display name. Its sender test verifies that the name, moderation notes, reports and reporters never appear in either body, along with the recipient, configured sender, subject, suspension date, escaped account address and support contact.
 
 `test/huddlz/notifications/senders/layout_coverage_test.exs` walks the trigger registry and the auth and invitation emails and checks each renders through the layout with a footer; a new sender needs a payload there.
 

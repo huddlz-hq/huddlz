@@ -38,6 +38,7 @@ defmodule Huddlz.Notifications.Summary do
   # Authentication / account
   defp title(:password_changed, _), do: "Password changed"
   defp title(:email_changed, _), do: "Email address changed"
+  defp title(:account_suspended, _), do: "Account suspended"
   defp title(:account_role_changed, %{"new_role" => role}), do: "Account role changed to #{role}"
   defp title(:account_role_changed, _), do: "Account role changed"
 

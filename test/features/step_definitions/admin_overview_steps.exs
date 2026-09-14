@@ -198,6 +198,10 @@ defmodule AdminOverviewSteps do
   defp column(label) when label in ["huddlz", "huddl"], do: "Huddlz held"
   defp column(label) when label in ["members", "member"], do: "Members"
 
+  defp find_user(email) do
+    User |> Ash.Query.filter(email == ^email) |> Ash.read_one!(authorize?: false)
+  end
+
   defp find_group(name) do
     Group |> Ash.Query.filter(name == ^name) |> Ash.read_one!(authorize?: false)
   end
@@ -210,16 +214,16 @@ defmodule AdminOverviewSteps do
   defp kpi_id("RSVPs"), do: "kpi-rsvps"
 
   step "I can change the role of {string}", %{args: [email], session: session} = context do
-    session =
-      session
-      |> select("Role for #{email}", option: "Admin")
-      |> click_button("Update role for #{email}")
-      |> assert_has("*", text: "User role updated successfully")
+    user = find_user(email)
+    menu = "[role='menu'][aria-label='Manage #{user.display_name}']"
 
     session =
       session
+      |> within(menu, &click_button(&1, "Make an administrator"))
+      |> within("[role='dialog']", &click_button(&1, "Make an administrator"))
+      |> assert_has("*", text: "User role updated successfully")
       |> visit("/admin/users")
-      |> assert_has("select", label: "Role for #{email}", selected: "Admin")
+      |> assert_has("section[aria-labelledby='role-admins-heading']", text: user.display_name)
 
     Map.merge(context, %{conn: session, session: session})
   end

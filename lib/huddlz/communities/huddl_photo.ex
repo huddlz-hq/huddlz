@@ -195,6 +195,7 @@ defmodule Huddlz.Communities.HuddlPhoto do
     end
 
     belongs_to :uploader, Huddlz.Accounts.User do
+      read_action :read_for_others
       attribute_type :uuid
       allow_nil? false
       public? true

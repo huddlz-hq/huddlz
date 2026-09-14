@@ -129,6 +129,7 @@ defmodule Huddlz.Communities.GroupActivity do
     # The person stays out of the GraphQL type (User has no field policies);
     # the API gets their id.
     belongs_to :user, Huddlz.Accounts.User do
+      read_action :read_for_others
       allow_nil? false
       attribute_public? true
     end

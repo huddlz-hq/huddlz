@@ -529,10 +529,6 @@ body .email-row .btn-secondary { height: 36px; }
   body:has(.impersonation-bar) .flash-group { top: 16px; }
 }
 
-/* "View as" sits on the same line as the role form in a user's row. */
-body .view-as { height: 32px; padding: 0 12px; margin-right: 8px; vertical-align: middle; }
-body .admin-table .role-form { display: inline-flex; vertical-align: middle; }
-
 /* ─────────────────────────────────────────────  APP SHELL  ───── */
 body:not(.is-landing):not(.is-auth):not(.is-signed-out):not(.error-page) {
   display: grid;
@@ -6306,100 +6302,107 @@ body .discover-back {
 }
 
 /* ───────────────────────────────────────  ADMIN PANEL  ──────────── */
+body .admin-users-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
 body .admin-search {
   display: flex;
   gap: 10px;
-  margin-bottom: 20px;
   flex-wrap: wrap;
 }
 
-body .admin-search .form-input { flex: 1; min-width: 180px; }
-body .admin-search .btn-primary,
+body .admin-search .form-input { flex: 1; min-width: 220px; height: 36px; }
 body .admin-search .btn-secondary { flex: 0 0 auto; }
 
-body .admin-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-  table-layout: auto;
+body .role-section-hint { margin-left: auto; font-size: 12px; }
+body .member-row .row-title { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+
+/* A suspended account's review card opens under its row. */
+body .review-card {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin: 8px 0 6px 48px;
+  padding: 20px 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-2);
 }
 
-body .admin-table th:nth-child(1),
-body .admin-table td:nth-child(1) { min-width: 180px; }
+body .review-lead { margin: 0; color: var(--soft); font-size: 13px; line-height: 1.5; }
+body .review-lead strong { color: var(--text); font-weight: 600; }
+body .review-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 
-body .admin-table th:nth-child(3),
-body .admin-table td:nth-child(3) { min-width: 84px; white-space: nowrap; }
-
-body .admin-table th:nth-child(4),
-body .admin-table td:nth-child(4) { min-width: 200px; white-space: nowrap; }
-
-body .admin-table thead th {
+body .review-key {
+  margin: 0 0 4px;
+  color: var(--muted);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--muted);
-  text-align: left;
-  padding: 10px 8px;
-  border-bottom: 1px solid var(--line-strong);
 }
 
-body .admin-table tbody td {
-  padding: 12px 8px;
-  border-bottom: 1px solid var(--line);
-  color: var(--text);
-  vertical-align: middle;
-  word-break: break-word;
-  line-height: 1.4;
+body .review-value { margin: 0; color: var(--text); font-size: 14px; font-weight: 500; line-height: 1.5; }
+body .review-value small { display: block; color: var(--muted); font-weight: 400; font-size: 13px; }
+
+body .review-flagged {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
 }
 
-body .admin-table tbody tr:last-child td { border-bottom: 0; }
-body .admin-table tbody tr:hover td { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+body .review-flagged-empty { margin: 0; padding: 10px 14px; font-size: 13px; }
 
-body .role-form {
+body .review-flagged-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+
+body .review-flagged-row:first-child { border-top: 0; }
+body .review-flagged-row a { font-weight: 600; white-space: nowrap; }
+body .review-note { margin: 8px 0 0; font-size: 12px; line-height: 1.5; }
+
+body .review-foot {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-wrap: nowrap;
-  white-space: nowrap;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
 }
 
-body .role-form .form-select {
-  width: auto;
-  height: 36px;
-  padding: 0 10px;
-  min-width: 88px;
+body .review-foot p { margin: 0; font-size: 12px; line-height: 1.5; max-width: 620px; }
+body .review-actions { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
+
+body .link-btn {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--accent-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
 }
-body .role-form .btn-primary { padding: 0 14px; }
 
 @media (max-width: 720px) {
-  body .admin-table thead { display: none; }
-
-  body .admin-table,
-  body .admin-table tbody,
-  body .admin-table tr,
-  body .admin-table td { display: block; width: 100%; }
-
-  body .admin-table tbody tr {
-    padding: 12px 0;
-    border-bottom: 1px solid var(--line);
-  }
-
-  body .admin-table tbody tr:last-child { border-bottom: 0; }
-  body .admin-table tbody td { border-bottom: 0; padding: 4px 0; }
-
-  body .admin-table tbody td::before {
-    content: attr(data-label);
-    display: block;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 2px;
-  }
-
-  body .role-form { margin-top: 6px; }
+  body .review-card { margin-left: 0; padding: 16px; }
+  body .review-facts { grid-template-columns: 1fr; }
+  body .review-foot { flex-direction: column; align-items: stretch; }
 }
 
 /* ───────────────────────────────────────  PAGINATION  ──────────── */

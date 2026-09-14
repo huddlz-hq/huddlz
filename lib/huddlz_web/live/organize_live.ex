@@ -763,27 +763,6 @@ defmodule HuddlzWeb.OrganizeLive do
   defp expected_where(:hybrid), do: "in the room or on the call"
   defp expected_where(_in_person), do: "in the room"
 
-  # The app's mark for a person: their picture, or initials on a gradient
-  # that stays the same for them wherever they appear.
-  attr :user, :map, required: true
-
-  defp person_mark(assigns) do
-    assigns =
-      assigns
-      |> assign(:picture, HuddlzWeb.Avatar.picture_url(assigns.user))
-      |> assign(:initials, HuddlzWeb.Avatar.initials(assigns.user) || "?")
-      |> assign(:variant, "m#{:erlang.phash2(assigns.user.id, 5) + 1}")
-
-    ~H"""
-    <div class={["member-mark", @variant]} title={@user.display_name}>
-      <img :if={@picture} src={@picture} alt={@user.display_name || ""} />
-      <%= if is_nil(@picture) do %>
-        {@initials}
-      <% end %>
-    </div>
-    """
-  end
-
   attr :entry, :map, required: true
 
   defp activity_line(%{entry: %{kind: kind}} = assigns)

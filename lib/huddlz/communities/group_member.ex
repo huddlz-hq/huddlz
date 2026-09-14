@@ -253,7 +253,7 @@ defmodule Huddlz.Communities.GroupMember do
         allow_nil? false
       end
 
-      filter expr(group_id == ^arg(:group_id))
+      filter expr(group_id == ^arg(:group_id) and is_nil(user.suspended_at))
     end
 
     read :get_by_user do
@@ -392,6 +392,7 @@ defmodule Huddlz.Communities.GroupMember do
     end
 
     belongs_to :user, Huddlz.Accounts.User do
+      read_action :read_for_others
       attribute_type :uuid
       allow_nil? false
       primary_key? false

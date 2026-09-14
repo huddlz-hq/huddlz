@@ -21,6 +21,8 @@ defmodule Huddlz.Accounts do
       # Define proper code interfaces for actions
       define :search_by_email, action: :search_by_email, args: [:email]
       define :update_role, action: :update_role, args: [:role]
+      define :suspend_user, action: :suspend, args: [:reason]
+      define :restore_user, action: :restore
       define :get_by_email, action: :get_by_email, args: [:email]
       define :update_display_name, action: :update_display_name, args: [:display_name]
 

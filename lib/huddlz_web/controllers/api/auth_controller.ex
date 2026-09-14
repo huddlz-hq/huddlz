@@ -33,6 +33,13 @@ defmodule HuddlzWeb.Api.AuthController do
     |> Ash.Query.for_read(:sign_in_with_password, params)
     |> Ash.read_one()
     |> case do
+      {:ok, %User{suspended_at: %DateTime{}} = user} ->
+        TokenResource.Actions.revoke(Token, Ash.Resource.get_metadata(user, :token))
+
+        conn
+        |> put_status(:forbidden)
+        |> json(%{error: "This account is suspended"})
+
       {:ok, %User{} = user} ->
         json(conn, %{token: Ash.Resource.get_metadata(user, :token), user: serialize_self(user)})
 

@@ -40,6 +40,13 @@ A person responsible for platform and account administration. This role is disti
 **Account suspension**:
 An administrator decision that indefinitely removes an account's authenticated access and hides its personal profile and identity from ordinary member surfaces. Restoration requires a finding that suspension was mistaken; suspension is separate from moderation of the groups and huddlz the person owns.
 
+**Suspended account**:
+The neutral label every ordinary surface, including the API and notifications, shows in place of a suspended person's name and picture wherever a record must keep its author. The original name is read only in account administration and participation history.
+
+**Account restoration**:
+An administrator's manual reversal of a suspension judged mistaken. It lets the person sign in again from scratch; revoked sessions and API keys stay revoked and released spots are not rebooked.
+_Avoid_: Unban, reactivation
+
 **Account report**:
 A confirmed member's request for administrators to review an account they can already see, for spam or another concern. A report does not itself suspend the account, and the reporter's identity is not disclosed to the reported account.
 

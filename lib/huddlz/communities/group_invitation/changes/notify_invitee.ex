@@ -17,6 +17,7 @@ defmodule Huddlz.Communities.GroupInvitation.Changes.NotifyInvitee do
         Notifications.deliver(invitation.invitee, :group_invitation, %{
           "invitation_id" => invitation.id,
           "group_name" => to_string(invitation.group.name),
+          "inviter_id" => invitation.inviter_id,
           "inviter_name" => invitation.inviter.display_name,
           "role" => Atom.to_string(invitation.role)
         })

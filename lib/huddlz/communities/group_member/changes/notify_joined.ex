@@ -28,6 +28,7 @@ defmodule Huddlz.Communities.GroupMember.Changes.NotifyJoined do
         "group_id" => group.id,
         "group_name" => to_string(group.name),
         "group_slug" => group.slug,
+        "joiner_id" => joiner.id,
         "joiner_display_name" => joiner.display_name
       }
 
