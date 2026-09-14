@@ -4,6 +4,9 @@ huddlz helps groups organize and discover gatherings while preserving the local 
 
 ## Platform usage
 
+**Display name**:
+The name a person chooses to be recognized by on huddlz. Nicknames, international text, punctuation, emoji, and business names are welcome; web addresses, email addresses, and overt advertisements do not belong in a display name.
+
 **Sign-up**:
 The creation of a huddlz account, distinct from confirming its email address. A historical estimate of its date is not an observed sign-up date.
 
@@ -33,6 +36,12 @@ The record of who joined, left, RSVPed, was promoted from a waitlist or removed,
 
 **Administrator**:
 A person responsible for platform and account administration. This role is distinct from a group's owner, organizer, or member roles.
+
+**Account suspension**:
+An administrator decision that indefinitely removes an account's authenticated access and hides its personal profile and identity from ordinary member surfaces. Restoration requires a finding that suspension was mistaken; suspension is separate from moderation of the groups and huddlz the person owns.
+
+**Account report**:
+A confirmed member's request for administrators to review an account they can already see, for spam or another concern. A report does not itself suspend the account, and the reporter's identity is not disclosed to the reported account.
 
 ## Communities and places
 
