@@ -14,6 +14,7 @@ defmodule Huddlz.Accounts.SuspensionEvents do
 
   @impl true
   def notify(%Ash.Notifier.Notification{action: %{name: :suspend}, data: %{id: user_id}}) do
+    HuddlzWeb.Endpoint.broadcast("graphql_users:#{user_id}", "disconnect", %{})
     Phoenix.PubSub.broadcast(@pubsub, topic(user_id), {:account_suspended, user_id})
   end
 

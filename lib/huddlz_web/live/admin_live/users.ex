@@ -54,7 +54,7 @@ defmodule HuddlzWeb.AdminLive.Users do
     review =
       if socket.assigns.review && socket.assigns.review.user.id == id,
         do: nil,
-        else: build_review(id)
+        else: build_review(id, socket.assigns.current_user)
 
     {:noreply, assign(socket, :review, review)}
   end
@@ -180,33 +180,28 @@ defmodule HuddlzWeb.AdminLive.Users do
     |> Ash.count!()
   end
 
-  # The review card reads what an administrator needs to judge a suspension
-  # and what it touched. Group names are read directly: the account owns
-  # them, and a name is what the flag is for. A private group still opens
-  # only as far as the administrator's own access allows.
-  defp build_review(user_id) do
-    user = Ash.get!(User, user_id, authorize?: false, load: [:suspended_by])
+  # Account administration grants no additional access to community records.
+  defp build_review(user_id, actor) do
+    user = Ash.get!(User, user_id, actor: actor, load: [:suspended_by])
 
     groups =
       Group
-      |> Ash.Query.for_read(:read_with_archived)
+      |> Ash.Query.for_read(:read_with_archived, %{}, actor: actor)
       |> Ash.Query.filter(owner_id == ^user_id and is_nil(archived_at))
-      |> Ash.Query.load(:member_count)
       |> Ash.Query.sort(name: :asc)
-      |> Ash.read!(authorize?: false)
-      |> Enum.map(fn group ->
-        upcoming =
-          Huddl
-          |> Ash.Query.for_read(:read_for_group_lifecycle)
-          |> Ash.Query.filter(
-            group_id == ^group.id and lifecycle_state == :published and ends_at > now()
-          )
-          |> Ash.count!(authorize?: false)
+      |> Ash.read!()
 
-        %{group: group, upcoming: upcoming}
-      end)
+    huddlz =
+      Huddl
+      |> Ash.Query.for_read(:read, %{}, actor: actor)
+      |> Ash.Query.filter(
+        (creator_id == ^user_id or group.owner_id == ^user_id) and
+          lifecycle_state in [:draft, :published] and ends_at > now()
+      )
+      |> Ash.Query.sort(starts_at: :asc)
+      |> Ash.read!()
 
-    %{user: user, groups: groups}
+    %{user: user, groups: groups, huddlz: huddlz}
   end
 
   defp users_path(:suspended, ""), do: ~p"/admin/users?scope=suspended"
@@ -515,24 +510,45 @@ defmodule HuddlzWeb.AdminLive.Users do
       <div>
         <p class="review-key">Flagged for review · groups they own</p>
         <div class="review-flagged">
-          <p :if={@review.groups == []} class="muted review-flagged-empty">They own no groups.</p>
-          <div :for={%{group: group, upcoming: upcoming} <- @review.groups} class="review-flagged-row">
+          <p :if={@review.groups == []} class="muted review-flagged-empty">No groups to show.</p>
+          <div :for={group <- @review.groups} class="review-flagged-row">
             <div>
               <div class="row-title">
                 {group.name}
                 <.pill variant={:warn}>Needs a look</.pill>
               </div>
               <div class="meta">
-                {if group.is_public, do: "Public", else: "Private"} · {people_count(
-                  group.member_count
-                )} · {upcoming_count(upcoming)}
+                {if group.is_public, do: "Public", else: "Private"}
               </div>
             </div>
-            <.link :if={group.is_public} navigate={~p"/groups/#{group.slug}"}>Open group</.link>
-            <span :if={not group.is_public} class="muted">Opens only as far as your own membership allows</span>
+            <.link navigate={~p"/groups/#{group.slug}"}>Open group</.link>
           </div>
         </div>
         <p class="muted review-note">
+          Only groups you can normally access are shown.
+        </p>
+      </div>
+      <div>
+        <p class="review-key">Flagged for review · upcoming huddlz</p>
+        <div class="review-flagged">
+          <p :if={@review.huddlz == []} class="muted review-flagged-empty">
+            No upcoming huddlz to show.
+          </p>
+          <div :for={huddl <- @review.huddlz} class="review-flagged-row">
+            <div>
+              <div class="row-title">
+                {huddl.title}
+                <.pill variant={:warn}>Needs a look</.pill>
+              </div>
+              <div class="meta">
+                {huddl.group.name} · {format_date(huddl.starts_at)}
+              </div>
+            </div>
+            <.link navigate={~p"/groups/#{huddl.group.slug}/huddlz/#{huddl.id}"}>Open huddl</.link>
+          </div>
+        </div>
+        <p class="muted review-note">
+          Only huddlz you can normally access are shown.
           Groups and huddlz stay as they are. Nothing is hidden or removed on their behalf; an administrator decides each one.
         </p>
       </div>
@@ -671,11 +687,4 @@ defmodule HuddlzWeb.AdminLive.Users do
 
   defp format_datetime(%DateTime{} = at), do: Calendar.strftime(at, "%b %-d, %Y, %-I:%M %p UTC")
   defp format_datetime(_), do: "—"
-
-  defp people_count(1), do: "1 member"
-  defp people_count(n), do: "#{n} members"
-
-  defp upcoming_count(0), do: "no upcoming huddlz"
-  defp upcoming_count(1), do: "1 upcoming huddl"
-  defp upcoming_count(n), do: "#{n} upcoming huddlz"
 end

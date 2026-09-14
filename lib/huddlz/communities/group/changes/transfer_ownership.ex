@@ -61,6 +61,8 @@ defmodule Huddlz.Communities.Group.Changes.TransferOwnership do
       "group_id" => group.id,
       "group_name" => to_string(group.name),
       "group_slug" => group.slug,
+      "previous_owner_id" => previous_owner_id,
+      "new_owner_id" => new_owner_id,
       "previous_owner_display_name" => previous_owner && previous_owner.display_name,
       "new_owner_display_name" => new_owner && new_owner.display_name
     }

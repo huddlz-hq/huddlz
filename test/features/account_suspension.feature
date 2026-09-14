@@ -55,6 +55,12 @@ Feature: Administrators suspend abusive accounts and restore mistaken suspension
     And "spam587@example.com" cannot sign in with password "Password123!"
     But the public group page for "Portland Elixir" is still open to browse
 
+  @suspension_socket
+  Scenario: Suspension ends access on an already connected API client
+    Given "spam587@example.com" has an open authenticated API connection
+    When "admin587@example.com" suspends "spam587@example.com" for "Spam"
+    Then the open API connection can no longer read the person's account
+
   Scenario: A password reset does not lift a suspension
     Given the user "spam587@example.com" has password "Password123!"
     And "admin587@example.com" suspends "spam587@example.com" for "Spam"
@@ -125,9 +131,11 @@ Feature: Administrators suspend abusive accounts and restore mistaken suspension
     Then "owner587@example.com" is confirmed for "Tight Squeeze"
     And "spam587@example.com" is no longer attending "Tight Squeeze"
 
-  Scenario: Owned groups stay and are flagged for review
+  @suspension_huddl_review
+  Scenario: Owned groups and upcoming huddlz stay and are flagged for review
     Given a public group "Crypto Kings PDX" exists with owner "spam587@example.com"
     And the huddl "Coin Launch" exists in group "Crypto Kings PDX" hosted by "spam587@example.com"
+    And the huddl "Guest Coin Talk" exists in group "Portland Elixir" hosted by "spam587@example.com"
     When "admin587@example.com" suspends "spam587@example.com" for "Spam"
     Given I am signed in as "admin587@example.com"
     When I visit "/admin/users"
@@ -135,9 +143,60 @@ Feature: Administrators suspend abusive accounts and restore mistaken suspension
     And I choose "Review" from the menu for "Crypto Kings Promo"
     Then I should see "Crypto Kings PDX"
     And I should see "Needs a look"
+    And I should see "Coin Launch"
+    And I should see "Guest Coin Talk"
     When I visit the group page for "Crypto Kings PDX"
     Then I should see "Coin Launch"
     And I should not see "Edit Group"
+
+  @suspension_private_review
+  Scenario: Account review respects private group permissions
+    Given a private group "Quiet Circle" exists with owner "spam587@example.com"
+    And the huddl "Private Conversation" exists in group "Quiet Circle" hosted by "spam587@example.com"
+    And "admin587@example.com" suspends "spam587@example.com" for "Spam"
+    And I am signed in as "admin587@example.com"
+    When I visit "/admin/users?scope=suspended"
+    And I choose "Review" from the menu for "Crypto Kings Promo"
+    Then I should not see "Quiet Circle"
+    And I should not see "Private Conversation"
+    And I should see "Only groups you can normally access are shown."
+
+  @suspension_private_review
+  Scenario: Account review keeps the administrator's ordinary organizer access
+    Given a private group "Quiet Circle" exists with owner "spam587@example.com"
+    And "admin587@example.com" is an organizer of "Quiet Circle"
+    And the huddl "Private Conversation" exists in group "Quiet Circle" hosted by "spam587@example.com"
+    And "admin587@example.com" suspends "spam587@example.com" for "Spam"
+    And I am signed in as "admin587@example.com"
+    When I visit "/admin/users?scope=suspended"
+    And I choose "Review" from the menu for "Crypto Kings Promo"
+    Then I should see "Quiet Circle"
+    And I should see "Private Conversation"
+
+  @suspension_notification_names
+  Scenario: Pending email and the inbox hide a suspended person's old name
+    Given the huddl "Elixir Hack Night" exists in group "Portland Elixir" hosted by "owner587@example.com"
+    And "spam587@example.com" has RSVPed to "Elixir Hack Night"
+    And I am signed in as "owner587@example.com"
+    When I visit "/notifications"
+    Then I should see "Crypto Kings Promo RSVPed to Elixir Hack Night"
+    When "admin587@example.com" suspends "spam587@example.com" for "Spam"
+    And pending notification email is delivered
+    Then the RSVP email to "owner587@example.com" for "Elixir Hack Night" names "Suspended account" instead of "Crypto Kings Promo"
+    When I visit "/notifications"
+    Then I should see "Suspended account RSVPed to Elixir Hack Night"
+    And I should not see "Crypto Kings Promo"
+
+  @suspension_legacy_notification
+  Scenario: Older notifications do not expose names that cannot be safely attributed
+    Given an older RSVP notification names "Crypto Kings Promo" to "owner587@example.com" for "Elixir Hack Night"
+    When "admin587@example.com" suspends "spam587@example.com" for "Spam"
+    And pending notification email is delivered
+    Then the RSVP email to "owner587@example.com" for "Elixir Hack Night" names "Someone" instead of "Crypto Kings Promo"
+    Given I am signed in as "owner587@example.com"
+    When I visit "/notifications"
+    Then I should see "Someone RSVPed to Elixir Hack Night"
+    And I should not see "Crypto Kings Promo"
 
   Scenario: The person gets one plain notice and no further community email
     When "admin587@example.com" suspends "spam587@example.com" for "Two member reports"

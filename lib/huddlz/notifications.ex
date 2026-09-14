@@ -21,7 +21,7 @@ defmodule Huddlz.Notifications do
   resources do
     resource Huddlz.Notifications.Notification do
       define :create_notification, action: :create
-      define :get_notification, action: :read, get_by: [:id]
+      define :get_notification, action: :get_for_user, get_by: [:id]
       define :list_for_user, action: :for_user
       define :mark_read, action: :mark_read
       define :mark_unread, action: :mark_unread
@@ -33,6 +33,7 @@ defmodule Huddlz.Notifications do
 
   alias Huddlz.Accounts.User
   alias Huddlz.Mailer
+  alias Huddlz.Notifications.Attribution
   alias Huddlz.Notifications.Notification
   alias Huddlz.Notifications.Summary
   alias Huddlz.Notifications.Triggers
@@ -154,7 +155,7 @@ defmodule Huddlz.Notifications do
 
     if should_deliver?(user, trigger, entry) do
       ensure_sender_implemented!(trigger, entry.sender)
-      email = entry.sender.build(user, payload)
+      email = entry.sender.build(user, Attribution.resolve(payload))
 
       case Mailer.deliver(email) do
         {:ok, _result} -> :sent

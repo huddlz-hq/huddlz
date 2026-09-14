@@ -6,6 +6,7 @@ defmodule AccountSuspensionSteps do
   import HuddlzWeb.ApiCase, only: [authenticated_conn: 2, gql_post: 3, api_key_conn: 2]
   import Phoenix.ConnTest, only: [build_conn: 0, dispatch: 4, json_response: 2]
   import PhoenixTest
+  import Phoenix.ChannelTest
 
   require Ash.Query
 
@@ -16,6 +17,24 @@ defmodule AccountSuspensionSteps do
   alias Huddlz.Test.Helpers.Authentication
 
   @notice_subject "Your huddlz account has been suspended"
+  @endpoint HuddlzWeb.Endpoint
+
+  step "{string} has an open authenticated API connection", %{args: [email]} = context do
+    user = find_user(email)
+    {:ok, token, _} = AshAuthentication.Jwt.token_for_user(user, %{}, domain: Accounts)
+    {:ok, socket} = connect(HuddlzWeb.GraphqlSocket, %{"token" => token})
+    {:ok, _, socket} = subscribe_and_join(socket, "__absinthe__:control")
+    ref = push(socket, "doc", %{"query" => "{ me { id } }"})
+    assert_reply ref, :ok, %{data: %{"me" => %{"id" => id}}}
+    assert id == user.id
+    Map.put(context, :api_socket, socket)
+  end
+
+  step "the open API connection can no longer read the person's account", context do
+    ref = push(context.api_socket, "doc", %{"query" => "{ me { id } }"})
+    assert_reply ref, :ok, %{data: %{"me" => nil}}
+    context
+  end
 
   # ── suspension state ────────────────────────────────────────────────
 
@@ -261,6 +280,34 @@ defmodule AccountSuspensionSteps do
   end
 
   # ── email ───────────────────────────────────────────────────────────
+
+  step "an older RSVP notification names {string} to {string} for {string}",
+       %{args: [name, email, title]} = context do
+    Huddlz.Notifications.deliver(find_user(email), :rsvp_received, %{
+      "rsvper_display_name" => name,
+      "huddl_title" => title,
+      "group_name" => "Portland Elixir",
+      "group_slug" => "portland-elixir"
+    })
+
+    context
+  end
+
+  step "pending notification email is delivered", context do
+    Oban.drain_queue(queue: :notifications)
+    context
+  end
+
+  step "the RSVP email to {string} for {string} names {string} instead of {string}",
+       %{args: [email, title, shown, hidden]} = context do
+    subject = "#{shown} RSVPd to #{title}"
+    assert_receive {:email, %Swoosh.Email{to: [{_, ^email}], subject: ^subject} = notice}, 1000
+    assert notice.html_body =~ shown
+    assert notice.text_body =~ shown
+    refute notice.html_body =~ hidden
+    refute notice.text_body =~ hidden
+    context
+  end
 
   step "a suspension notice is sent to {string} with the support address",
        %{args: [email]} = context do

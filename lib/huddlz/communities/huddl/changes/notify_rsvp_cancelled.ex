@@ -36,6 +36,7 @@ defmodule Huddlz.Communities.Huddl.Changes.NotifyRsvpCancelled do
       "huddl_title" => to_string(huddl.title),
       "group_name" => to_string(huddl.group.name),
       "group_slug" => to_string(huddl.group.slug),
+      "rsvper_id" => actor.id,
       "rsvper_display_name" => to_string(actor.display_name)
     }
 

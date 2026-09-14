@@ -31,6 +31,12 @@ defmodule Huddlz.Notifications.Notification do
   actions do
     defaults [:read]
 
+    # Keep the primary read free of display hooks so mark_all_read can use an
+    # atomic update. All inbox reads resolve attribution through these actions.
+    read :get_for_user do
+      prepare Huddlz.Notifications.Notification.Preparations.ResolveAttribution
+    end
+
     create :create do
       description "System-only: persist a triggered notification for a user."
 
@@ -47,6 +53,7 @@ defmodule Huddlz.Notifications.Notification do
       description "List the actor's notifications, newest first."
 
       filter expr(user_id == ^actor(:id))
+      prepare Huddlz.Notifications.Notification.Preparations.ResolveAttribution
       prepare build(sort: [inserted_at: :desc])
 
       pagination keyset?: true,
@@ -101,7 +108,7 @@ defmodule Huddlz.Notifications.Notification do
       authorize_if relates_to_actor_via(:user)
     end
 
-    policy action(:read) do
+    policy action([:read, :get_for_user]) do
       description "Default read; restricted to the row's owner. User-facing reads use :for_user."
       authorize_if relates_to_actor_via(:user)
     end
