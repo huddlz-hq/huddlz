@@ -2,8 +2,8 @@ defmodule AccountReportsSteps do
   use Cucumber.StepDefinition
 
   import ExUnit.Assertions
-  import HuddlzWeb.ApiCase, only: [authenticated_conn: 2, gql_post: 3]
-  import Phoenix.ConnTest, only: [build_conn: 0, json_response: 2]
+  import HuddlzWeb.ApiCase, only: [authenticated_conn: 2, api_key_conn: 2, gql_post: 3]
+  import Phoenix.ConnTest, only: [build_conn: 0, dispatch: 5, json_response: 2, response: 2]
   import PhoenixTest
 
   require Ash.Query
@@ -106,6 +106,56 @@ defmodule AccountReportsSteps do
 
   # ── API ─────────────────────────────────────────────────────────────
 
+  step "I use an API key to submit reports", context do
+    Map.put(context, :report_authentication, :api_key)
+  end
+
+  step "I report {string} for {string} saying {string} through JSON:API",
+       %{args: [email, reason, details]} = context do
+    attributes = %{
+      "reported_user_id" => find_user(email).id,
+      "reason" => reason,
+      "details" => details
+    }
+
+    attributes = if reason == "", do: Map.delete(attributes, "reason"), else: attributes
+
+    response =
+      context
+      |> report_api_conn()
+      |> Plug.Conn.put_req_header("content-type", "application/vnd.api+json")
+      |> dispatch(HuddlzWeb.Endpoint, :post, "/api/json/account_reports", %{
+        "data" => %{
+          "type" => "account_report",
+          "attributes" => attributes
+        }
+      })
+
+    Map.put(context, :json_report_response, response)
+  end
+
+  step "the JSON:API report is accepted", context do
+    response = json_response(context.json_report_response, 201)
+    assert %{"type" => "account_report", "id" => id} = response["data"]
+    assert is_binary(id)
+    refute Map.has_key?(response, "included")
+    assert Map.get(response["data"], "relationships", %{}) == %{}
+    refute Map.has_key?(response["data"]["attributes"], "reporter_id")
+    refute Map.has_key?(response["data"]["attributes"], "handled_by_id")
+    context
+  end
+
+  step "the JSON:API report is refused", context do
+    assert %{"errors" => [_ | _]} = json_response(context.json_report_response, 403)
+    context
+  end
+
+  step "JSON:API asks for a report reason", context do
+    assert %{"errors" => errors} = json_response(context.json_report_response, 400)
+    assert Enum.any?(errors, &(&1["detail"] =~ "Say what's wrong"))
+    context
+  end
+
   step "the API offers member reporting without account administration", context do
     response =
       gql_as(context.current_user, """
@@ -121,6 +171,25 @@ defmodule AccountReportsSteps do
     refute "suspendAccount" in mutations
     refute "restoreAccount" in mutations
     assert "reportAccount" in mutations
+    context
+  end
+
+  step "JSON:API offers report submission without administration", context do
+    spec =
+      context
+      |> report_api_conn()
+      |> dispatch(HuddlzWeb.Endpoint, :get, "/api/json/open_api", %{})
+      |> response(200)
+      |> Jason.decode!()
+
+    report_routes =
+      for {path, operations} <- spec["paths"],
+          String.contains?(path, "/account_reports"),
+          {method, _operation} <- operations,
+          method in ["get", "post", "patch", "put", "delete"],
+          do: {path, method}
+
+    assert [{"/api/json/account_reports", "post"}] = report_routes
     context
   end
 
@@ -172,6 +241,14 @@ defmodule AccountReportsSteps do
   end
 
   # ── helpers ─────────────────────────────────────────────────────────
+
+  defp report_api_conn(%{current_user: %User{} = user, report_authentication: :api_key}),
+    do: api_key_conn(build_conn(), user)
+
+  defp report_api_conn(%{current_user: %User{} = user}),
+    do: authenticated_conn(build_conn(), user)
+
+  defp report_api_conn(_context), do: build_conn()
 
   defp report!(reporter, reported, reason, details, source) do
     {source_type, source_id} = source || {nil, nil}

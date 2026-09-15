@@ -19,7 +19,7 @@ defmodule Huddlz.Accounts.AccountReport do
     domain: Huddlz.Accounts,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
-    extensions: [AshGraphql.Resource]
+    extensions: [AshGraphql.Resource, AshJsonApi.Resource]
 
   alias Huddlz.Accounts.User
 
@@ -28,6 +28,15 @@ defmodule Huddlz.Accounts.AccountReport do
 
     mutations do
       create :report_account, :report
+    end
+  end
+
+  json_api do
+    type "account_report"
+
+    routes do
+      base "/account_reports"
+      post :report
     end
   end
 
@@ -63,7 +72,9 @@ defmodule Huddlz.Accounts.AccountReport do
       end
 
       change set_attribute(:reason, arg(:reason))
-      change relate_actor(:reporter)
+      # Let the confirmation policy refuse anonymous callers rather than
+      # failing to relate them; stored reports still require a reporter.
+      change relate_actor(:reporter, allow_nil?: true)
       change Huddlz.Accounts.AccountReport.Changes.SetExpiry
 
       upsert? true

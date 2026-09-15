@@ -19,10 +19,11 @@ Feature: Confirmed members report accounts to an administrator queue
     And "spam589@example.com" has RSVPed to "Elixir Hack Night"
     And "member589@example.com" has RSVPed to "Elixir Hack Night"
 
-  @dashboard_administration
+  @dashboard_administration @json_account_reports
   Scenario: Account administration is available through the dashboard only
     Given I am signed in as "admin589@example.com"
     Then the API offers member reporting without account administration
+    And JSON:API offers report submission without administration
 
   Scenario: A member reports an account from who's going
     Given I am signed in as "member589@example.com"
@@ -38,6 +39,37 @@ Feature: Confirmed members report accounts to an administrator queue
     Then I should see "Thanks—we've received your report."
     And "member589@example.com" has an open report about "spam589@example.com" for "spam" saying "Posts coin listings in every thread"
     And no email is sent about the report
+
+  @json_account_reports
+  Scenario: A member submits a report through JSON:API and retries through either API
+    Given I am signed in as "member589@example.com"
+    When I report "spam589@example.com" for "other" saying "Repeated advertising" through JSON:API
+    Then the JSON:API report is accepted
+    And "member589@example.com" has an open report about "spam589@example.com" for "other" saying "Repeated advertising"
+    Given I use an API key to submit reports
+    When I report "spam589@example.com" for "spam" saying "A retry" through JSON:API
+    Then the JSON:API report is accepted
+    When I report "spam589@example.com" through the API
+    Then the report is accepted
+    And there is exactly 1 report about "spam589@example.com"
+    And "member589@example.com" has an open report about "spam589@example.com" for "other" saying "Repeated advertising"
+    And no email is sent about the report
+
+  @json_account_reports
+  Scenario: JSON:API requires a reason but details are optional
+    Given I am signed in as "member589@example.com"
+    When I report "spam589@example.com" for "" saying "" through JSON:API
+    Then JSON:API asks for a report reason
+    And there are no reports about "spam589@example.com"
+    When I report "spam589@example.com" for "spam" saying "" through JSON:API
+    Then the JSON:API report is accepted
+    And there is exactly 1 report about "spam589@example.com"
+
+  @json_account_reports
+  Scenario: Visitors cannot submit reports through JSON:API
+    When I report "spam589@example.com" for "spam" saying "" through JSON:API
+    Then the JSON:API report is refused
+    And there are no reports about "spam589@example.com"
 
   Scenario: Reporting again while a report is open adds nothing
     Given "member589@example.com" has reported "spam589@example.com" for "spam"
@@ -59,6 +91,7 @@ Feature: Confirmed members report accounts to an administrator queue
     And the menu for "Crypto Kings Promo" offers "Report account"
     And there is no menu for "Owner Olive"
 
+  @json_account_reports
   Scenario: Only confirmed members who can already see the account may report it
     Given "member589@example.com" has not confirmed their address
     And I am signed in as "member589@example.com"
@@ -66,17 +99,24 @@ Feature: Confirmed members report accounts to an administrator queue
     Then there is no menu for "Crypto Kings Promo"
     When I report "spam589@example.com" through the API
     Then the report is refused
+    When I report "spam589@example.com" for "spam" saying "" through JSON:API
+    Then the JSON:API report is refused
     Given I am signed in as "outsider589@example.com"
     When I report "spam589@example.com" through the API
     Then the report is refused
+    When I report "spam589@example.com" for "spam" saying "" through JSON:API
+    Then the JSON:API report is refused
     And there are no reports about "spam589@example.com"
 
+  @json_account_reports
   Scenario: Nobody reports themselves, and administrators use their own controls
     Given I am signed in as "member589@example.com"
     When I visit the huddl page for "Elixir Hack Night"
     Then there is no menu for "Member Maya"
     When I report "member589@example.com" through the API
     Then the report is refused
+    When I report "member589@example.com" for "spam" saying "" through JSON:API
+    Then the JSON:API report is refused
     Given "admin589@example.com" is a member of "Portland Elixir"
     And I am signed in as "admin589@example.com"
     When I visit the group page for "Portland Elixir"
