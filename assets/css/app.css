@@ -6507,6 +6507,35 @@ body .report-option-title { font-size: 14px; font-weight: 600; color: var(--text
 body .report-option-title::before { content: ""; position: absolute; inset: 0; cursor: pointer; }
 body .report-option-desc { font-size: 12px; line-height: 1.45; color: var(--muted); }
 body .report-reason-error { display: flex; align-items: center; gap: 6px; margin: 2px 0 0; }
+
+/* Admin · Reports */
+body .sb-sub-count {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--pink-soft);
+  color: var(--pink);
+  font-size: 11px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+body .report-row { align-items: start; }
+body .report-row .member-mark { margin-top: 2px; }
+body .report-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; }
+body .report-meta strong { font-weight: 600; color: var(--soft); }
+body .report-meta a { color: var(--soft); text-decoration: underline; text-decoration-color: var(--line-strong); }
+body .report-meta a:hover { color: var(--accent-ink); }
+body .report-quote { margin: 6px 0 0; font-size: 13px; line-height: 1.5; color: var(--text); }
+body .report-quote.muted { font-style: italic; }
+body .review-facts.review-facts-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+body .review-flagged-row .row-title { display: flex; align-items: center; gap: 8px; }
+
+@media (max-width: 720px) {
+  body .review-facts.review-facts-3 { grid-template-columns: 1fr; }
   body .report-row { grid-template-columns: auto minmax(0, 1fr) auto; }
 }
 

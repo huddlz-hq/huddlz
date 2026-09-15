@@ -76,3 +76,61 @@ Feature: Confirmed members report accounts to an administrator queue
     And I am signed in as "admin589@example.com"
     When I visit the group page for "Portland Elixir"
     Then there is no menu for "Crypto Kings Promo"
+
+  Scenario: Reports are for administrators only and never reach the reported person
+    Given "member589@example.com" has reported "spam589@example.com" for "spam" saying "Posts coin listings in every thread"
+    And I am signed in as "spam589@example.com"
+    When I read the reports through the API
+    Then no reports are returned
+    When I visit "/notifications"
+    Then I should not see "report"
+    And "spam589@example.com" is not suspended
+    Given I am signed in as "owner589@example.com"
+    When I read the reports through the API
+    Then no reports are returned
+    When I visit "/admin/reports"
+    Then I should not see "Posts coin listings in every thread"
+
+  Scenario: An administrator reviews a report, suspends the account and marks the report handled
+    Given "member589@example.com" has reported "spam589@example.com" for "spam" saying "Posts coin listings in every thread" from the huddl "Elixir Hack Night"
+    And I am signed in as "admin589@example.com"
+    When I visit "/admin/reports"
+    Then "Crypto Kings Promo" is listed under "Open"
+    And I should see "Spam or advertising"
+    And I should see "Member Maya"
+    When I choose "Review" from the menu for "Crypto Kings Promo"
+    Then I should see "Posts coin listings in every thread"
+    And I should see "Elixir Hack Night"
+    When I click "Suspend account" in the review card
+    And I fill in "Reason" with "Two member reports"
+    And I confirm with "Suspend account"
+    Then I should see "Crypto Kings Promo is suspended"
+    And "spam589@example.com" is suspended
+    And "Crypto Kings Promo" is listed under "Open"
+    And I should see "Suspended"
+    When I choose "Mark handled" from the menu for "Crypto Kings Promo"
+    Then I should see "Report handled"
+    And the report about "spam589@example.com" is handled by "admin589@example.com"
+    When I click "Handled"
+    Then "Crypto Kings Promo" is listed under "Handled"
+
+  Scenario: The queue shows where a report came from only within the administrator's ordinary access
+    Given a private group "Quiet Circle" exists with owner "spam589@example.com"
+    And "member589@example.com" is a member of "Quiet Circle"
+    And "member589@example.com" has reported "spam589@example.com" for "other" from the group "Quiet Circle"
+    And I am signed in as "admin589@example.com"
+    When I visit "/admin/reports"
+    Then "Crypto Kings Promo" is listed under "Open"
+    And I should see "Other"
+    And I should see "a group you cannot open"
+    And I should not see "Quiet Circle"
+
+  Scenario: A report expires after two years while the suspension stays
+    Given "member589@example.com" reported "spam589@example.com" for "spam" two years ago
+    And "admin589@example.com" suspends "spam589@example.com" for "Spam"
+    And I am signed in as "admin589@example.com"
+    When I visit "/admin/reports"
+    Then I should see "Nothing to review"
+    And "spam589@example.com" is suspended
+    When I read the reports through the API
+    Then no reports are returned
