@@ -272,7 +272,17 @@ defmodule HuddlzWeb.AdminLive.Users do
                   <div class="row-title">{user.display_name}</div>
                   <div class="meta">{suspension_meta(user)}</div>
                 </div>
-                <.account_menu user={user} current_user={@current_user} scope={:suspended} />
+                <div class="account-row-actions">
+                  <.button
+                    id={"review-#{user.id}"}
+                    phx-click="review"
+                    phx-value-id={user.id}
+                    aria-expanded={@review != nil && @review.user.id == user.id}
+                  >
+                    Review
+                  </.button>
+                  <.account_menu user={user} current_user={@current_user} scope={:suspended} />
+                </div>
                 <.review_card :if={@review && @review.user.id == user.id} review={@review} />
               </div>
             </div>
@@ -396,18 +406,6 @@ defmodule HuddlzWeb.AdminLive.Users do
             Suspend account
           </.account_menu_item>
         <% else %>
-          <button
-            type="button"
-            id={"review-#{@user.id}"}
-            class="row-menu-item"
-            role="menuitem"
-            phx-click="review"
-            phx-value-id={@user.id}
-            popovertarget={@menu_id}
-            popovertargetaction="hide"
-          >
-            <.icon name="hero-document-magnifying-glass" class="size-4 row-menu-icon" /> Review
-          </button>
           <.account_menu_item
             :if={@can_restore}
             id={"restore-#{@user.id}"}
@@ -459,6 +457,13 @@ defmodule HuddlzWeb.AdminLive.Users do
       <p class="review-lead">
         <strong>Shown to everyone else as “Suspended account”.</strong>
         The original name and email are kept here and in participation history only.
+      </p>
+      <p>
+        <.link navigate={~p"/admin/reports?account_id=#{@review.user.id}"}>
+          {@review.user.open_report_count} {if @review.user.open_report_count == 1,
+            do: "open report",
+            else: "open reports"}
+        </.link>
       </p>
       <div class="review-facts">
         <div>

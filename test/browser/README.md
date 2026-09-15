@@ -32,6 +32,7 @@ The command builds the actual app assets, starts the test endpoint and Chromium,
 | Sidebar scroll | A 1280×520 window: the aside is the one scroll region, Tab reaches Sign out with it scrolled into view, and scrolling the account area moves the same content |
 | Home location | ArrowDown/Enter select a suggestion without a native form submission |
 | Calendar | Actual `Intl` time-zone detection moves a late Denver huddl to the next New York calendar day |
+| Report review | Review and menu controls stay together on desktop and phone; reopening returns to the open report; Users links to account reports |
 | Organizer | Native Tab, arrow keys, Space, visible focus, and switch state survive LiveView patches |
 | Huddl photos | Mixed-batch rejection, corrupt-image feedback, native Tab access to upload, keyboard carousel, dialog focus wrapping and restoration, and mobile gallery placement |
 | Profile picture | Real file upload and image decode; removal button hit testing and pointer confirmation; dialog Tab containment, Escape, and focus restoration |

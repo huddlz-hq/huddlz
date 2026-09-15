@@ -21,7 +21,7 @@ defmodule Huddlz.Admin.AccountReview do
         with {:ok, user} <-
                Accounts.get_user(input.arguments.user_id,
                  actor: context.actor,
-                 load: [:suspended_by]
+                 load: [:suspended_by, :open_report_count]
                ),
              {:ok, groups} <- owned_groups(user.id, context.actor),
              {:ok, huddlz} <- remaining_huddlz(user.id, context.actor) do

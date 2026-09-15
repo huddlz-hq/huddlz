@@ -1,7 +1,7 @@
 defmodule Huddlz.Admin do
   @moduledoc """
   Platform administration: the figures across every group and account
-  that only trusted huddlz staff may read through the dashboard.
+  that only huddlz staff may read through the dashboard.
   These actions are not exposed through GraphQL or JSON:API.
   """
 

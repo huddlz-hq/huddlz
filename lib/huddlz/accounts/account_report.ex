@@ -8,7 +8,7 @@ defmodule Huddlz.Accounts.AccountReport do
   look at the account within their ordinary access, suspend when
   warranted, and mark the report handled. The reporter gets one thanks
   and nothing else. Report details and reporter identities are available
-  only to trusted huddlz staff through account administration; no report
+  only to huddlz staff through account administration; no report
   notification is sent to the reported person.
   Reports expire two years after they were sent, whatever became of the
   account.
@@ -102,6 +102,7 @@ defmodule Huddlz.Accounts.AccountReport do
     action :count_queue, :integer do
       description "Count unexpired reports using the same rules as the queue"
       argument :handled, :boolean, default: false
+      argument :reported_user_id, :uuid
 
       run fn input, context ->
         __MODULE__

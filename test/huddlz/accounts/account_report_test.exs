@@ -145,6 +145,14 @@ defmodule Huddlz.Accounts.AccountReportTest do
 
       assert Accounts.count_account_reports!(false, actor: ctx.admin) == 3
 
+      assert Accounts.count_account_reports!(false, %{reported_user_id: ctx.reported.id},
+               actor: ctx.admin
+             ) == 2
+
+      assert Accounts.count_account_reports!(true, %{reported_user_id: ctx.reported.id},
+               actor: ctx.admin
+             ) == 0
+
       reports =
         Accounts.list_account_reports!(false, %{reported_user_id: ctx.reported.id},
           actor: ctx.admin

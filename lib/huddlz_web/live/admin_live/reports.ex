@@ -33,11 +33,20 @@ defmodule HuddlzWeb.AdminLive.Reports do
   def handle_params(params, _uri, socket) do
     scope = if params["scope"] == "handled", do: :handled, else: :open
 
-    {:noreply,
-     socket
-     |> assign(:scope, scope)
-     |> assign(:review, nil)
-     |> load_reports()}
+    socket =
+      socket
+      |> assign(:scope, scope)
+      |> assign(:account_id, valid_id(params["account_id"]))
+      |> assign(:review, nil)
+      |> load_reports()
+
+    review =
+      case valid_id(params["review"]) do
+        nil -> nil
+        id -> build_review(id, socket)
+      end
+
+    {:noreply, set_review(socket, review)}
   end
 
   @impl true
@@ -80,7 +89,9 @@ defmodule HuddlzWeb.AdminLive.Reports do
        socket
        |> assign(:review, nil)
        |> put_flash(:info, "Report reopened")
-       |> load_reports()}
+       |> push_patch(
+         to: ~p"/admin/reports?review=#{id}&account_id=#{socket.assigns.account_id || ""}"
+       )}
     else
       _ ->
         {:noreply,
@@ -154,23 +165,31 @@ defmodule HuddlzWeb.AdminLive.Reports do
     actor = socket.assigns.current_user
 
     reports =
-      Accounts.list_account_reports!(scope == :handled, actor: actor, load: @loads)
+      Accounts.list_account_reports!(
+        scope == :handled,
+        %{reported_user_id: socket.assigns.account_id},
+        actor: actor,
+        load: @loads
+      )
 
-    open_count = Accounts.count_account_reports!(false, actor: actor)
+    filter = %{reported_user_id: socket.assigns.account_id}
+    open_count = Accounts.count_account_reports!(false, filter, actor: actor)
 
     socket
     |> assign(:reports_empty, reports == [])
     |> assign(:report_summary, summary(reports))
     |> stream(:reports, reports, reset: true)
     |> assign(:open_count, open_count)
-    |> assign(:handled_count, Accounts.count_account_reports!(true, actor: actor))
-    |> assign(:open_report_count, open_count)
+    |> assign(:handled_count, Accounts.count_account_reports!(true, filter, actor: actor))
+    |> assign(:open_report_count, Accounts.count_account_reports!(false, actor: actor))
   end
 
   defp build_review(report_id, socket) do
     actor = socket.assigns.current_user
 
-    case Accounts.list_account_reports!(socket.assigns.scope == :handled,
+    case Accounts.list_account_reports!(
+           socket.assigns.scope == :handled,
+           %{reported_user_id: socket.assigns.account_id},
            actor: actor,
            load: @loads,
            query: [filter: [id: report_id]]
@@ -207,8 +226,15 @@ defmodule HuddlzWeb.AdminLive.Reports do
     socket |> assign(:review, review) |> refresh_review_row(review)
   end
 
-  defp reports_path(:open), do: ~p"/admin/reports"
-  defp reports_path(:handled), do: ~p"/admin/reports?scope=handled"
+  defp reports_path(scope, nil), do: ~p"/admin/reports?scope=#{scope}"
+  defp reports_path(scope, id), do: ~p"/admin/reports?scope=#{scope}&account_id=#{id}"
+
+  defp valid_id(value) do
+    case Ecto.UUID.cast(value) do
+      {:ok, id} -> id
+      :error -> nil
+    end
+  end
 
   # ── render ──────────────────────────────────────────────────────────
 
@@ -235,14 +261,22 @@ defmodule HuddlzWeb.AdminLive.Reports do
 
       <div class="admin-users-bar">
         <div class="chip-group">
-          <.chip patch={reports_path(:open)} active={@scope == :open} count={@open_count}>
+          <.chip patch={reports_path(:open, @account_id)} active={@scope == :open} count={@open_count}>
             Open
           </.chip>
-          <.chip patch={reports_path(:handled)} active={@scope == :handled} count={@handled_count}>
+          <.chip
+            patch={reports_path(:handled, @account_id)}
+            active={@scope == :handled}
+            count={@handled_count}
+          >
             Handled
           </.chip>
         </div>
       </div>
+
+      <p :if={@account_id} class="mb-4 text-sm">
+        Showing reports for one account. <.link patch={~p"/admin/reports"}>All reports</.link>
+      </p>
 
       <div id="reports-queue" class="panel roster">
         <section class="role-section" aria-labelledby="reports-heading">
@@ -286,15 +320,17 @@ defmodule HuddlzWeb.AdminLive.Reports do
                 <p :if={report.details} class="report-quote">“{report.details}”</p>
                 <p :if={is_nil(report.details)} class="report-quote muted">No details</p>
               </div>
-              <.button
-                id={"review-#{report.id}"}
-                phx-click="review"
-                phx-value-id={report.id}
-                aria-expanded={@review != nil && @review.report.id == report.id}
-              >
-                Review
-              </.button>
-              <.report_row_menu report={report} current_user={@current_user} />
+              <div class="account-row-actions">
+                <.button
+                  id={"review-#{report.id}"}
+                  phx-click="review"
+                  phx-value-id={report.id}
+                  aria-expanded={@review != nil && @review.report.id == report.id}
+                >
+                  Review
+                </.button>
+                <.report_row_menu report={report} current_user={@current_user} />
+              </div>
               <.review_card
                 :if={@review && @review.report.id == report.id}
                 review={@review}
@@ -442,7 +478,7 @@ defmodule HuddlzWeb.AdminLive.Reports do
       </div>
       <div class="review-foot">
         <p class="muted">
-          Mark handled closes this report only. Suspending is your call, never automatic. Report details and reporter identities are visible only to trusted huddlz staff; no report notification is sent to the reported person.
+          Mark handled closes this report only. Suspending is your call, never automatic. Report details and reporter identities are visible only to huddlz staff; no report notification is sent to the reported person.
         </p>
         <div class="review-actions">
           <button type="button" class="link-btn" phx-click="collapse_review">Collapse</button>

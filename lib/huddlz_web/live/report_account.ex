@@ -214,7 +214,7 @@ defmodule HuddlzWeb.ReportAccount do
             Report {@name}?
           </h2>
           <p class="mt-3 text-sm leading-6 text-base-content/70">
-            Only trusted huddlz staff can review your report and see who sent it. We won't notify {@name}, and you won't get a follow-up.
+            Only huddlz staff can review your report and see who sent it. We won't notify {@name} or send you updates about the outcome.
           </p>
         </div>
       </div>
@@ -261,7 +261,7 @@ defmodule HuddlzWeb.ReportAccount do
           label="Details"
           rows="3"
           placeholder="What you saw, in a sentence or two."
-          help="Optional. Shared with trusted huddlz staff along with your name."
+          help="Optional. Shared with huddlz staff along with your name."
         />
 
         <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

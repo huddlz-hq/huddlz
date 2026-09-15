@@ -2538,6 +2538,8 @@ body .row.member-row {
 }
 body .member-row .member-mark { width: 36px; height: 36px; font-size: 12px; }
 body .member-copy { min-width: 0; }
+body .account-row-actions { display: flex; align-items: center; gap: 8px; }
+body .account-row-actions > button { padding-inline: 12px; }
 body .member-copy .row-title { overflow-wrap: anywhere; }
 body .invitation-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 body .member-menu-trigger { color: var(--muted); cursor: pointer; }
@@ -6816,4 +6818,16 @@ body .photo-delete-preview figcaption { overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) {
   body .photo-tile img { transition: none; }
   body .photo-open:hover img { transform: none; }
+}
+
+/* Keep the account text readable on phones, with both actions together below it. */
+@media (max-width: 640px) {
+  body .row.member-row:has(> .account-row-actions) {
+    grid-template-columns: 36px minmax(0, 1fr);
+    align-items: start;
+  }
+  body .account-row-actions {
+    grid-column: 2;
+    justify-self: end;
+  }
 }
