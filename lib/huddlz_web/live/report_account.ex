@@ -19,6 +19,7 @@ defmodule HuddlzWeb.ReportAccount do
   import HuddlzWeb.Components.Modal
   import Phoenix.LiveView
 
+  alias Huddlz.Accounts
   alias Huddlz.Accounts.{AccountReport, User}
   alias Phoenix.LiveView.JS
 
@@ -68,7 +69,7 @@ defmodule HuddlzWeb.ReportAccount do
     viewer = socket.assigns[:current_user]
 
     with true <- offer?(viewer, user_id, false),
-         {:ok, %User{} = user} <- Ash.get(User, user_id, actor: viewer, action: :read_for_others),
+         {:ok, %User{} = user} <- Accounts.get_user_for_others(user_id, actor: viewer),
          false <- User.suspended?(user) do
       source = %{
         "reported_user_id" => user.id,

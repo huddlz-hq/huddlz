@@ -16,6 +16,8 @@ defmodule Huddlz.Accounts do
 
     resource Huddlz.Accounts.User do
       define :get_user, action: :read, get_by: [:id]
+      define :get_user_for_others, action: :read_for_others, get_by: [:id]
+      define :count_users_by_email, action: :count_by_email, args: [:email, :suspended]
       define :update_notification_preferences, action: :update_notification_preferences
       define :get_current_user, action: :me
       # Define proper code interfaces for actions
@@ -57,6 +59,8 @@ defmodule Huddlz.Accounts do
 
     resource Huddlz.Accounts.AccountReport do
       define :report_account, action: :report
+      define :get_account_report, action: :read, get_by: [:id]
+      define :count_account_reports, action: :count_queue, args: [:handled]
       define :list_account_reports, action: :queue, args: [{:optional, :handled}]
       define :mark_report_handled, action: :mark_handled
     end

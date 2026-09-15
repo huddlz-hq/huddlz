@@ -3,6 +3,8 @@ defmodule Huddlz.Communities.Huddl do
   A huddl is a gathering within the huddlz platform.
   """
 
+  require Ash.Query
+
   use Ash.Resource,
     otp_app: :huddlz,
     domain: Huddlz.Communities,
@@ -659,6 +661,46 @@ defmodule Huddlz.Communities.Huddl do
              )
     end
 
+    action :count_for_organizer, :integer do
+      description "Count a group's huddlz in one organizer lifecycle view"
+      argument :group_id, :uuid, allow_nil?: false
+
+      argument :state, :atom do
+        allow_nil? false
+        constraints one_of: [:live, :draft, :published, :cancelled, :past]
+      end
+
+      run fn input, context ->
+        __MODULE__
+        |> Ash.Query.for_read(:huddlz_for_organizer, %{state: input.arguments.state},
+          actor: context.actor
+        )
+        |> Ash.Query.filter(group_id == ^input.arguments.group_id)
+        |> Ash.count()
+      end
+    end
+
+    action :latest_uncounted_for_group, :struct do
+      description "The most recent uncounted huddl in the past fourteen days for an active group"
+      constraints instance_of: __MODULE__
+      allow_nil? true
+      argument :group_id, :uuid, allow_nil?: false
+
+      run fn input, context ->
+        cutoff = DateTime.add(DateTime.utc_now(), -14, :day)
+
+        __MODULE__
+        |> Ash.Query.for_read(:huddlz_for_organizer, %{state: :past}, actor: context.actor)
+        |> Ash.Query.filter(
+          group_id == ^input.arguments.group_id and is_nil(group.archived_at) and
+            ends_at > ^cutoff and is_nil(turnout_recorded_at) and is_nil(turnout_skipped_at)
+        )
+        |> Ash.Query.sort(ends_at: :desc)
+        |> Ash.Query.limit(1)
+        |> Ash.read_one()
+      end
+    end
+
     update :rsvp do
       change Huddlz.Communities.Changes.RequireActiveGroup
       description "RSVP to this huddl as the current actor"
@@ -735,6 +777,10 @@ defmodule Huddlz.Communities.Huddl do
   end
 
   policies do
+    policy action([:count_for_organizer, :latest_uncounted_for_group]) do
+      authorize_if actor_present()
+    end
+
     # Background maintenance retains its existing policies. A signed-in
     # actor must prove address ownership before mutating community data.
     policy [action_type([:create, :update, :destroy]), actor_present()] do

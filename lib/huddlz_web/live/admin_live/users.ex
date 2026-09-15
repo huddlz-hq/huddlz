@@ -11,11 +11,8 @@ defmodule HuddlzWeb.AdminLive.Users do
 
   alias Huddlz.Accounts
   alias Huddlz.Accounts.User
-  alias Huddlz.Communities.{Group, Huddl}
-  alias HuddlzWeb.AdminLive.Reports
+  alias Huddlz.Admin
   alias HuddlzWeb.Layouts
-
-  require Ash.Query
 
   on_mount {HuddlzWeb.LiveUserAuth, :admin_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -25,7 +22,10 @@ defmodule HuddlzWeb.AdminLive.Users do
     {:ok,
      socket
      |> assign(:page_title, "Users")
-     |> assign(:open_report_count, Reports.open_count(socket.assigns.current_user))
+     |> assign(
+       :open_report_count,
+       Accounts.count_account_reports!(false, actor: socket.assigns.current_user)
+     )
      |> assign(:search_query, "")
      |> assign(:action, nil)
      |> assign(:review, nil)}
@@ -57,7 +57,7 @@ defmodule HuddlzWeb.AdminLive.Users do
     review =
       if socket.assigns.review && socket.assigns.review.user.id == id,
         do: nil,
-        else: build_review(id, socket.assigns.current_user)
+        else: Admin.review_account!(id, actor: socket.assigns.current_user)
 
     {:noreply, assign(socket, :review, review)}
   end
@@ -67,7 +67,7 @@ defmodule HuddlzWeb.AdminLive.Users do
   end
 
   def handle_event("open_action", %{"id" => id, "action" => action}, socket) do
-    case Ash.get(User, id, actor: socket.assigns.current_user) do
+    case Accounts.get_user(id, actor: socket.assigns.current_user) do
       {:ok, user} -> {:noreply, assign(socket, :action, build_action(action, user, socket))}
       _ -> {:noreply, put_flash(socket, :error, "User not found")}
     end
@@ -156,8 +156,8 @@ defmodule HuddlzWeb.AdminLive.Users do
         query: [sort: [display_name: :asc]]
       )
 
-    active_count = count(actor, query, false)
-    suspended_count = count(actor, query, true)
+    active_count = Accounts.count_users_by_email!(query, false, actor: actor)
+    suspended_count = Accounts.count_users_by_email!(query, true, actor: actor)
 
     {admins, others} = Enum.split_with(people, &User.admin?/1)
 
@@ -167,36 +167,6 @@ defmodule HuddlzWeb.AdminLive.Users do
     |> assign(:others, others)
     |> assign(:active_count, active_count)
     |> assign(:suspended_count, suspended_count)
-  end
-
-  defp count(actor, query, suspended?) do
-    User
-    |> Ash.Query.for_read(:search_by_email, %{email: query, suspended: suspended?}, actor: actor)
-    |> Ash.count!()
-  end
-
-  # Account administration grants no additional access to community records.
-  defp build_review(user_id, actor) do
-    user = Ash.get!(User, user_id, actor: actor, load: [:suspended_by])
-
-    groups =
-      Group
-      |> Ash.Query.for_read(:read_with_archived, %{}, actor: actor)
-      |> Ash.Query.filter(owner_id == ^user_id and is_nil(archived_at))
-      |> Ash.Query.sort(name: :asc)
-      |> Ash.read!()
-
-    huddlz =
-      Huddl
-      |> Ash.Query.for_read(:read, %{}, actor: actor)
-      |> Ash.Query.filter(
-        (creator_id == ^user_id or group.owner_id == ^user_id) and
-          lifecycle_state in [:draft, :published] and ends_at > now()
-      )
-      |> Ash.Query.sort(starts_at: :asc)
-      |> Ash.read!()
-
-    %{user: user, groups: groups, huddlz: huddlz}
   end
 
   defp users_path(:suspended, ""), do: ~p"/admin/users?scope=suspended"

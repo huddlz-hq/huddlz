@@ -1448,26 +1448,16 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp attendance_info(_huddl, nil), do: {:none, nil}
 
   defp attendance_info(huddl, user) do
-    case Communities.check_user_rsvp(huddl.id, actor: user) do
+    case Communities.check_user_rsvp(huddl.id, actor: user, load: [:waitlist_position]) do
       {:ok, [%{waitlisted_at: nil} | _]} ->
         {:attending, nil}
 
-      {:ok, [%{waitlisted_at: %DateTime{} = waitlisted_at} | _]} ->
-        {:waitlisted, waitlist_position(huddl, waitlisted_at)}
+      {:ok, [%{waitlisted_at: %DateTime{}, waitlist_position: position} | _]} ->
+        {:waitlisted, position}
 
       _ ->
         {:none, nil}
     end
-  end
-
-  defp waitlist_position(huddl, %DateTime{} = waitlisted_at) do
-    require Ash.Query
-
-    Huddlz.Communities.HuddlAttendee
-    |> Ash.Query.filter(
-      huddl_id == ^huddl.id and not is_nil(waitlisted_at) and waitlisted_at <= ^waitlisted_at
-    )
-    |> Ash.count!(authorize?: false)
   end
 
   defp group_meta(group) do

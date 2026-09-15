@@ -279,6 +279,24 @@ defmodule Huddlz.Accounts.User do
       prepare Huddlz.Accounts.User.Preparations.AdminOnlySearch
     end
 
+    action :count_by_email, :integer do
+      description "Count the accounts matching an administrator's search"
+
+      argument :email, :string do
+        allow_nil? false
+        constraints allow_empty?: true
+        default ""
+      end
+
+      argument :suspended, :boolean, default: false
+
+      run fn input, context ->
+        __MODULE__
+        |> Ash.Query.for_read(:search_by_email, input.arguments, actor: context.actor)
+        |> Ash.count()
+      end
+    end
+
     update :update_display_name do
       description "Update a user's display_name"
       accept [:display_name]
@@ -777,6 +795,10 @@ defmodule Huddlz.Accounts.User do
 
     policy action(:get_by_email) do
       authorize_if always()
+    end
+
+    policy action(:count_by_email) do
+      authorize_if actor_attribute_equals(:role, :admin)
     end
 
     policy action(:search_by_email) do

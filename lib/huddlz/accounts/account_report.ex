@@ -92,8 +92,22 @@ defmodule Huddlz.Accounts.AccountReport do
         default false
       end
 
+      argument :reported_user_id, :uuid
+
       filter expr(expires_at > now() and is_nil(handled_at) == not (^arg(:handled)))
+      filter expr(is_nil(^arg(:reported_user_id)) or reported_user_id == ^arg(:reported_user_id))
       prepare build(sort: [inserted_at: :desc])
+    end
+
+    action :count_queue, :integer do
+      description "Count unexpired reports using the same rules as the queue"
+      argument :handled, :boolean, default: false
+
+      run fn input, context ->
+        __MODULE__
+        |> Ash.Query.for_read(:queue, input.arguments, actor: context.actor)
+        |> Ash.count()
+      end
     end
 
     update :mark_handled do
@@ -117,7 +131,7 @@ defmodule Huddlz.Accounts.AccountReport do
       authorize_if Huddlz.Accounts.AccountReport.Checks.ReporterCanSeeAccount
     end
 
-    policy action([:read, :queue, :mark_handled]) do
+    policy action([:read, :queue, :count_queue, :mark_handled]) do
       description "Only administrators see or handle reports"
       authorize_if actor_attribute_equals(:role, :admin)
     end
@@ -186,6 +200,8 @@ defmodule Huddlz.Accounts.AccountReport do
   end
 
   calculations do
+    calculate :source, :map, Huddlz.Accounts.AccountReport.Calculations.Source
+
     calculate :handled, :boolean, expr(not is_nil(handled_at)) do
       public? true
     end

@@ -31,8 +31,6 @@ defmodule HuddlzWeb.OrganizeLive do
   alias HuddlzWeb.Live.Helpers.HuddlCardHelpers
   alias HuddlzWeb.ReportAccount
 
-  require Ash.Query
-
   @group_loads [:current_image_url, :member_count]
   @huddl_loads [
     :rsvp_count,
@@ -43,9 +41,6 @@ defmodule HuddlzWeb.OrganizeLive do
     :turnout_total,
     :show_rate
   ]
-  # A recently ended huddl with no turnout is worth one reminder on the
-  # overview; after this many days the moment has passed.
-  @turnout_nudge_days 14
   @huddlz_filters [:published, :draft, :past, :cancelled]
 
   # "Also upcoming" shows the nearest few; a recurring series can queue dozens.
@@ -107,7 +102,12 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   defp load_action(socket, :index, _params, user) do
-    groups = Ash.load!(socket.assigns.sidebar_owned_groups, :current_image_url, actor: user)
+    groups =
+      Communities.get_organizable_groups!(
+        actor: user,
+        load: [:current_image_url, :member_count, :viewer_role],
+        query: [sort: [name: :asc]]
+      )
 
     socket
     |> assign(:group, nil)
@@ -136,7 +136,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp load_section(socket, :overview, group, user) do
     socket
-    |> assign(:turnout_nudge, latest_uncounted_huddl(group, user))
+    |> assign(:turnout_nudge, Communities.latest_uncounted_huddl!(group.id, actor: user))
     |> assign(:stats, Communities.group_overview!(group.id, socket.assigns.period, actor: user))
     |> assign(:activity, Communities.list_group_activity!(group.id, @activity_limit, actor: user))
   end
@@ -144,7 +144,12 @@ defmodule HuddlzWeb.OrganizeLive do
   defp load_section(socket, :huddlz, group, user) do
     state = socket.assigns.huddlz_filter
     huddlz = list_group_huddlz(group, state, user)
-    counts = Map.new(@huddlz_filters, &{&1, count_group_huddlz(group, &1, user)})
+
+    counts =
+      Map.new(
+        @huddlz_filters,
+        &{&1, Communities.count_organizer_huddlz!(group.id, &1, actor: user)}
+      )
 
     socket
     |> assign(:huddlz_list, huddlz)
@@ -170,26 +175,6 @@ defmodule HuddlzWeb.OrganizeLive do
     socket
     |> assign(:pending_member_action, nil)
     |> push_navigate(to: ~p"/organize/#{group.slug}")
-  end
-
-  # The most recent huddl that ended within the nudge window and has been
-  # neither counted nor dismissed. One at a time: the freshest memory first.
-  defp latest_uncounted_huddl(%{archived_at: archived_at}, _user)
-       when not is_nil(archived_at),
-       do: nil
-
-  defp latest_uncounted_huddl(group, user) do
-    cutoff = DateTime.add(DateTime.utc_now(), -@turnout_nudge_days, :day)
-
-    Huddlz.Communities.Huddl
-    |> Ash.Query.for_read(:huddlz_for_organizer, %{state: :past}, actor: user)
-    |> Ash.Query.filter(
-      group_id == ^group.id and ends_at > ^cutoff and
-        is_nil(turnout_recorded_at) and is_nil(turnout_skipped_at)
-    )
-    |> Ash.Query.sort(ends_at: :desc)
-    |> Ash.Query.limit(1)
-    |> Ash.read_one!(actor: user)
   end
 
   # The huddl a turnout event names: the nudge's, or one of the listed rows.
@@ -238,13 +223,6 @@ defmodule HuddlzWeb.OrganizeLive do
         sort: [starts_at: state_sort_dir(state)]
       ]
     )
-  end
-
-  defp count_group_huddlz(group, state, user) do
-    Huddlz.Communities.Huddl
-    |> Ash.Query.for_read(:huddlz_for_organizer, %{state: state}, actor: user)
-    |> Ash.Query.filter(group_id == ^group.id)
-    |> Ash.count!(actor: user)
   end
 
   defp list_group_members(group, user) do

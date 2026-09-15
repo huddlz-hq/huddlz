@@ -12,23 +12,11 @@ defmodule HuddlzWeb.AdminLive.Reports do
   import HuddlzWeb.AdminLive.AccountActionDialog
 
   alias Huddlz.Accounts
-  alias Huddlz.Accounts.{AccountReport, User}
-  alias Huddlz.Communities.{Group, Huddl}
+  alias Huddlz.Accounts.User
   alias HuddlzWeb.Layouts
-
-  require Ash.Query
 
   on_mount {HuddlzWeb.LiveUserAuth, :admin_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
-
-  @doc "How many reports are waiting, for the sidebar. Nil for anyone but an administrator."
-  def open_count(%User{role: :admin} = actor) do
-    AccountReport
-    |> Ash.Query.for_read(:queue, %{handled: false}, actor: actor)
-    |> Ash.count!()
-  end
-
-  def open_count(_actor), do: nil
 
   @impl true
   def mount(_params, _session, socket) do
@@ -36,7 +24,9 @@ defmodule HuddlzWeb.AdminLive.Reports do
      socket
      |> assign(:page_title, "Reports")
      |> assign(:action, nil)
-     |> assign(:review, nil)}
+     |> assign(:review, nil)
+     |> stream_configure(:reports, dom_id: &"report-#{&1.id}")
+     |> stream(:reports, [])}
   end
 
   @impl true
@@ -57,17 +47,17 @@ defmodule HuddlzWeb.AdminLive.Reports do
         do: nil,
         else: build_review(id, socket)
 
-    {:noreply, assign(socket, :review, review)}
+    {:noreply, set_review(socket, review)}
   end
 
   def handle_event("collapse_review", _params, socket) do
-    {:noreply, assign(socket, :review, nil)}
+    {:noreply, set_review(socket, nil)}
   end
 
   def handle_event("mark_handled", %{"id" => id}, socket) do
     actor = socket.assigns.current_user
 
-    with {:ok, report} <- Ash.get(AccountReport, id, actor: actor),
+    with {:ok, report} <- Accounts.get_account_report(id, actor: actor),
          {:ok, _handled} <- Accounts.mark_report_handled(report, actor: actor) do
       {:noreply,
        socket
@@ -82,7 +72,7 @@ defmodule HuddlzWeb.AdminLive.Reports do
   end
 
   def handle_event("open_action", %{"id" => id}, socket) do
-    case Ash.get(User, id, actor: socket.assigns.current_user) do
+    case Accounts.get_user(id, actor: socket.assigns.current_user) do
       {:ok, user} ->
         {:noreply,
          assign(socket, :action, account_action(:suspend, user, socket.assigns.current_user))}
@@ -131,6 +121,7 @@ defmodule HuddlzWeb.AdminLive.Reports do
   # ── data ────────────────────────────────────────────────────────────
 
   @loads [
+    :source,
     :handled,
     reporter: [:current_profile_picture_url],
     handled_by: [],
@@ -143,91 +134,56 @@ defmodule HuddlzWeb.AdminLive.Reports do
     reports =
       Accounts.list_account_reports!(scope == :handled, actor: actor, load: @loads)
 
-    sources = resolve_sources(reports, actor)
+    open_count = Accounts.count_account_reports!(false, actor: actor)
 
     socket
-    |> assign(
-      :reports,
-      Enum.map(reports, &Map.put(&1, :source, sources[{&1.source_type, &1.source_id}]))
-    )
-    |> assign(:open_count, count(actor, false))
-    |> assign(:handled_count, count(actor, true))
-    |> assign(:open_report_count, count(actor, false))
-  end
-
-  defp count(actor, handled?) do
-    AccountReport
-    |> Ash.Query.for_read(:queue, %{handled: handled?}, actor: actor)
-    |> Ash.count!()
-  end
-
-  # Where each report was sent from, read as the administrator: a huddl or
-  # group they cannot ordinarily open stays a closed door (ADR-0004).
-  defp resolve_sources(reports, actor) do
-    ids = fn type ->
-      for %{source_type: ^type, source_id: id} when not is_nil(id) <- reports, uniq: true, do: id
-    end
-
-    huddlz =
-      case ids.(:huddl) do
-        [] ->
-          %{}
-
-        huddl_ids ->
-          Huddl
-          |> Ash.Query.for_read(:read, %{}, actor: actor)
-          |> Ash.Query.filter(id in ^huddl_ids)
-          |> Ash.Query.load(:group)
-          |> Ash.read!()
-          |> Map.new(
-            &{{:huddl, &1.id},
-             %{kind: :huddl, label: &1.title, path: ~p"/groups/#{&1.group.slug}/huddlz/#{&1.id}"}}
-          )
-      end
-
-    groups =
-      case ids.(:group) do
-        [] ->
-          %{}
-
-        group_ids ->
-          Group
-          |> Ash.Query.for_read(:read, %{}, actor: actor)
-          |> Ash.Query.filter(id in ^group_ids)
-          |> Ash.read!()
-          |> Map.new(
-            &{{:group, &1.id}, %{kind: :group, label: &1.name, path: ~p"/groups/#{&1.slug}"}}
-          )
-      end
-
-    Map.merge(huddlz, groups)
+    |> assign(:reports_empty, reports == [])
+    |> assign(:report_summary, summary(reports))
+    |> stream(:reports, reports, reset: true)
+    |> assign(:open_count, open_count)
+    |> assign(:handled_count, Accounts.count_account_reports!(true, actor: actor))
+    |> assign(:open_report_count, open_count)
   end
 
   defp build_review(report_id, socket) do
     actor = socket.assigns.current_user
 
-    case Enum.find(socket.assigns.reports, &(&1.id == report_id)) do
-      nil ->
+    case Accounts.list_account_reports!(socket.assigns.scope == :handled,
+           actor: actor,
+           load: @loads,
+           query: [filter: [id: report_id]]
+         ) do
+      [] ->
         nil
 
-      report ->
+      [report] ->
         others =
-          Accounts.list_account_reports!(false, actor: actor, load: [reporter: []])
-          |> Enum.filter(&(&1.reported_user_id == report.reported_user_id and &1.id != report.id))
+          Accounts.list_account_reports!(false, %{reported_user_id: report.reported_user_id},
+            actor: actor,
+            load: [:source, reporter: []],
+            query: [filter: [id: [not_eq: report.id]]]
+          )
 
-        sources = resolve_sources(others, actor)
-
-        %{
-          report: report,
-          others: Enum.map(others, &Map.put(&1, :source, sources[{&1.source_type, &1.source_id}]))
-        }
+        %{report: report, others: others}
     end
   end
 
+  defp set_review(socket, review) do
+    previous = socket.assigns.review
+    socket = assign(socket, :review, review)
+    socket = refresh_review_row(socket, previous)
+    refresh_review_row(socket, review)
+  end
+
+  defp refresh_review_row(socket, nil), do: socket
+  defp refresh_review_row(socket, %{report: report}), do: stream_insert(socket, :reports, report)
+
   defp refresh_review(%{assigns: %{review: nil}} = socket), do: socket
 
-  defp refresh_review(%{assigns: %{review: %{report: %{id: id}}}} = socket),
-    do: assign(socket, :review, build_review(id, socket))
+  defp refresh_review(%{assigns: %{review: %{report: %{id: id}}}} = socket) do
+    review = build_review(id, socket)
+    socket |> assign(:review, review) |> refresh_review_row(review)
+  end
 
   defp reports_path(:open), do: ~p"/admin/reports"
   defp reports_path(:handled), do: ~p"/admin/reports?scope=handled"
@@ -270,16 +226,16 @@ defmodule HuddlzWeb.AdminLive.Reports do
         <section class="role-section" aria-labelledby="reports-heading">
           <div class="role-section-head">
             <h3 id="reports-heading">{scope_heading(@scope)}</h3>
-            <span class="muted count">{summary(@reports)}</span>
+            <span class="muted count">{@report_summary}</span>
             <span class="muted role-section-hint">
               Newest first · a report expires two years after it was sent
             </span>
           </div>
-          <div class="row-list">
-            <p :if={@reports == []} class="muted role-section-empty">{empty_copy(@scope)}</p>
+          <p :if={@reports_empty} class="muted role-section-empty">{empty_copy(@scope)}</p>
+          <div class="row-list" id="report-rows" phx-update="stream">
             <div
-              :for={report <- @reports}
-              id={"report-#{report.id}"}
+              :for={{dom_id, report} <- @streams.reports}
+              id={dom_id}
               class="row member-row report-row"
             >
               <.person_mark user={report.reported_user} />
@@ -514,7 +470,7 @@ defmodule HuddlzWeb.AdminLive.Reports do
 
   defp source_label(assigns) do
     ~H"""
-    <span>from <.link navigate={@source.path}>{@source.label}</.link></span>
+    <span>from <.link navigate={source_path(@source)}>{@source.name}</.link></span>
     """
   end
 
@@ -529,15 +485,20 @@ defmodule HuddlzWeb.AdminLive.Reports do
 
   defp source_sentence(%{type: :huddl} = assigns) do
     ~H"""
-    <span>from the huddl page for <.link navigate={@source.path}>{@source.label}</.link></span>
+    <span>from the huddl page for <.link navigate={source_path(@source)}>{@source.name}</.link></span>
     """
   end
 
   defp source_sentence(assigns) do
     ~H"""
-    <span>from the members of <.link navigate={@source.path}>{@source.label}</.link></span>
+    <span>from the members of <.link navigate={source_path(@source)}>{@source.name}</.link></span>
     """
   end
+
+  defp source_path(%{kind: :group, group_slug: slug}), do: ~p"/groups/#{slug}"
+
+  defp source_path(%{kind: :huddl, id: id, group_slug: slug}),
+    do: ~p"/groups/#{slug}/huddlz/#{id}"
 
   # ── copy ────────────────────────────────────────────────────────────
 

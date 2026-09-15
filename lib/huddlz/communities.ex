@@ -56,6 +56,9 @@ defmodule Huddlz.Communities do
         args: [{:optional, :state}],
         get?: false
 
+      define :count_organizer_huddlz, action: :count_for_organizer, args: [:group_id, :state]
+      define :latest_uncounted_huddl, action: :latest_uncounted_for_group, args: [:group_id]
+
       define :update_huddl, action: :update
       define :rsvp_huddl, action: :rsvp
       define :cancel_rsvp_huddl, action: :cancel_rsvp

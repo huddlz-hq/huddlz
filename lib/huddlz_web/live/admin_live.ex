@@ -8,9 +8,9 @@ defmodule HuddlzWeb.AdminLive do
   import HuddlzWeb.Components.HeldChart
   import HuddlzWeb.Components.Sparkline
 
+  alias Huddlz.Accounts
   alias Huddlz.Admin
   alias Huddlz.Communities.Periods
-  alias HuddlzWeb.AdminLive.Reports
   alias HuddlzWeb.Components.Card
   alias HuddlzWeb.Layouts
 
@@ -22,7 +22,10 @@ defmodule HuddlzWeb.AdminLive do
     {:ok,
      socket
      |> assign(:page_title, "Admin")
-     |> assign(:open_report_count, Reports.open_count(socket.assigns.current_user))}
+     |> assign(
+       :open_report_count,
+       Accounts.count_account_reports!(false, actor: socket.assigns.current_user)
+     )}
   end
 
   @impl true

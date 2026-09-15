@@ -597,7 +597,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   def handle_event("join_group", _, socket) do
     user = socket.assigns.current_user
 
-    case join_group(socket.assigns.group, user) do
+    case Communities.join_group(socket.assigns.group.id, actor: user) do
       {:ok, _} ->
         {:noreply,
          socket
@@ -698,16 +698,10 @@ defmodule HuddlzWeb.GroupLive.Show do
     |> Enum.map(& &1.user)
   end
 
-  defp join_group(group, user) do
-    GroupMember
-    |> Ash.Changeset.for_create(:join_group, %{group_id: group.id}, actor: user)
-    |> Ash.create()
-  end
-
   defp leave_group(group, user) do
     case Communities.get_membership_in_group(group.id, actor: user) do
       {:ok, %{} = membership} ->
-        Ash.destroy(membership, action: :leave_group, actor: user)
+        Communities.leave_group(membership, actor: user)
 
       _ ->
         {:error, :not_a_member}

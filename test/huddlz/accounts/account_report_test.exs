@@ -105,6 +105,53 @@ defmodule Huddlz.Accounts.AccountReportTest do
   end
 
   describe "queue" do
+    test "account filtering and counts share the queue's handling and expiry rules", ctx do
+      {:ok, first} = report(ctx.reporter, ctx.reported, reason: :spam)
+      {:ok, second} = report(ctx.owner, ctx.reported, reason: :other)
+      {:ok, unrelated} = report(ctx.reporter, ctx.owner, reason: :spam)
+
+      assert Accounts.count_account_reports!(false, actor: ctx.admin) == 3
+
+      reports =
+        Accounts.list_account_reports!(false, %{reported_user_id: ctx.reported.id},
+          actor: ctx.admin
+        )
+
+      assert Enum.map(reports, & &1.id) == [second.id, first.id]
+
+      Ash.Seed.update!(unrelated, %{expires_at: DateTime.add(DateTime.utc_now(), -1, :day)})
+      Accounts.mark_report_handled!(first, actor: ctx.admin)
+
+      assert Accounts.count_account_reports!(false, actor: ctx.admin) == 1
+      assert Accounts.count_account_reports!(true, actor: ctx.admin) == 1
+
+      assert {:error, %Ash.Error.Forbidden{}} =
+               Accounts.count_account_reports(false, actor: ctx.reporter)
+    end
+
+    test "source names follow the reader's current group permissions", ctx do
+      private = generate(group(owner_id: ctx.owner.id, is_public: false, actor: ctx.owner))
+      join!(private, ctx.reporter)
+      join!(private, ctx.reported)
+
+      {:ok, _report} =
+        report(ctx.reporter, ctx.reported,
+          reason: :spam,
+          source_type: :group,
+          source_id: private.id
+        )
+
+      assert [%{source: nil}] =
+               Accounts.list_account_reports!(false, actor: ctx.admin, load: [:source])
+
+      join!(private, ctx.admin)
+
+      assert [%{source: %{kind: :group, name: name, group_slug: slug}}] =
+               Accounts.list_account_reports!(false, actor: ctx.admin, load: [:source])
+
+      assert {name, slug} == {private.name, private.slug}
+    end
+
     test "administrators read open and handled reports, newest first", ctx do
       other = generate(user())
       join!(ctx.group, other)
