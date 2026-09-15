@@ -7,7 +7,9 @@ defmodule Huddlz.Accounts.AccountReport do
   A report never suspends anyone by itself. Administrators read the queue,
   look at the account within their ordinary access, suspend when
   warranted, and mark the report handled. The reporter gets one thanks
-  and nothing else; the reported person never learns of the report.
+  and nothing else. Report details and reporter identities are available
+  only to trusted huddlz staff through account administration; no report
+  notification is sent to the reported person.
   Reports expire two years after they were sent, whatever became of the
   account.
   """
@@ -23,10 +25,6 @@ defmodule Huddlz.Accounts.AccountReport do
 
   graphql do
     type :account_report
-
-    queries do
-      list :account_reports, :queue
-    end
 
     mutations do
       create :report_account, :report

@@ -213,7 +213,7 @@ defmodule HuddlzWeb.ReportAccount do
             Report {@name}?
           </h2>
           <p class="mt-3 text-sm leading-6 text-base-content/70">
-            An administrator will look at this account. {@name} won't know who sent the report, and you won't get a follow-up.
+            Only trusted huddlz staff can review your report and see who sent it. We won't notify {@name}, and you won't get a follow-up.
           </p>
         </div>
       </div>
@@ -260,7 +260,7 @@ defmodule HuddlzWeb.ReportAccount do
           label="Details"
           rows="3"
           placeholder="What you saw, in a sentence or two."
-          help="Optional. Goes only to administrators, with your name, so they can ask you if they need to."
+          help="Optional. Shared with trusted huddlz staff along with your name."
         />
 
         <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

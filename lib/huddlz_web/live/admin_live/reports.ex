@@ -468,7 +468,7 @@ defmodule HuddlzWeb.AdminLive.Reports do
       </div>
       <div class="review-foot">
         <p class="muted">
-          Mark handled closes this report only. Suspending is your call, never automatic, and nothing here reaches the reported person: not the report, not who sent it.
+          Mark handled closes this report only. Suspending is your call, never automatic. Report details and reporter identities are visible only to trusted huddlz staff; no report notification is sent to the reported person.
         </p>
         <div class="review-actions">
           <button type="button" class="link-btn" phx-click="collapse_review">Collapse</button>

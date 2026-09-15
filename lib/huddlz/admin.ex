@@ -1,12 +1,12 @@
 defmodule Huddlz.Admin do
   @moduledoc """
   Platform administration: the figures across every group and account
-  that only administrators may read.
+  that only trusted huddlz staff may read through the dashboard.
+  These actions are not exposed through GraphQL or JSON:API.
   """
 
   use Ash.Domain,
-    otp_app: :huddlz,
-    extensions: [AshGraphql.Domain]
+    otp_app: :huddlz
 
   resources do
     resource Huddlz.Admin.PlatformOverview do

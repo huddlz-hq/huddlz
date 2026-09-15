@@ -19,6 +19,11 @@ Feature: Confirmed members report accounts to an administrator queue
     And "spam589@example.com" has RSVPed to "Elixir Hack Night"
     And "member589@example.com" has RSVPed to "Elixir Hack Night"
 
+  @dashboard_administration
+  Scenario: Account administration is available through the dashboard only
+    Given I am signed in as "admin589@example.com"
+    Then the API offers member reporting without account administration
+
   Scenario: A member reports an account from who's going
     Given I am signed in as "member589@example.com"
     When I visit the huddl page for "Elixir Hack Night"

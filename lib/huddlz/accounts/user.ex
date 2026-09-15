@@ -33,8 +33,6 @@ defmodule Huddlz.Accounts.User do
       update :resend_confirmation, :resend_confirmation
       update :update_notification_preferences, :update_notification_preferences
       update :update_theme_preference, :update_theme_preference
-      update :suspend_account, :suspend
-      update :restore_account, :restore
     end
   end
 

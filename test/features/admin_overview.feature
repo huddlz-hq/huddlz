@@ -72,11 +72,11 @@ Feature: Admin platform overview
     Then the Coming up panel shows "1" huddl and "3" RSVPs
     And the Coming up panel lists "Next week"
 
-  Scenario: The overview figures are an action administrators can call through the API
+  @dashboard_overview
+  Scenario: Platform figures are available through the dashboard only
     Given the in-person huddl "Kickoff" in "Portland Elixir" ended 10 days ago with 4 RSVPs
     When "admin553@example.com" reads the platform overview for "90d" through GraphQL
-    Then the API platform overview shows 1 huddl held and 4 RSVPs
-    And the API overview counts 1 active person
+    Then the API refuses the platform overview
     When "owner553@example.com" reads the platform overview for "90d" through GraphQL
     Then the API refuses the platform overview
 
@@ -87,15 +87,15 @@ Feature: Admin platform overview
     And I can change the role of "member553@example.com"
 
   Scenario: Platform day buckets begin at midnight UTC
-    When "admin553@example.com" reads the platform overview for "30d" through GraphQL
+    When "admin553@example.com" views the platform overview for "30d"
     Then the platform chart buckets begin at midnight UTC
-    When "admin553@example.com" reads the platform overview for "90d" through GraphQL
+    When "admin553@example.com" views the platform overview for "90d"
     Then the platform chart buckets begin at midnight UTC
 
   Scenario: The annual total and chart cover the same twelve calendar months
     Given a huddl in "Portland Elixir" ended just before the twelve calendar months
     And a huddl in "Portland Elixir" ended in the first of the twelve calendar months
-    When "admin553@example.com" reads the platform overview for "12m" through GraphQL
+    When "admin553@example.com" views the platform overview for "12m"
     Then the annual platform total and chart both show 1 huddl held
 
   Scenario: Estimated account dates do not pretend to be measured sign-ups

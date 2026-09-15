@@ -20,19 +20,20 @@ defmodule ActivePeopleSteps do
     context
   end
 
-  step "the API reports usage measured from {int} days ago", %{args: [days]} = context do
-    active = overview_payload(context.overview_response)["active"]
-    assert active["measured_from"] == Date.to_iso8601(Date.add(Date.utc_today(), -days))
+  step "the overview reports usage measured from {int} days ago", %{args: [days]} = context do
+    active = context.overview_stats.active
+    assert active.measured_from == Date.add(Date.utc_today(), -days)
     context
   end
 
-  step "the API reports {int} active people in the previous period", %{args: [count]} = context do
-    assert overview_payload(context.overview_response)["active"]["previous"] == count
+  step "the overview reports {int} active people in the previous period",
+       %{args: [count]} = context do
+    assert context.overview_stats.active.previous == count
     context
   end
 
-  step "the API reports no active people comparison", context do
-    assert overview_payload(context.overview_response)["active"]["previous"] == nil
+  step "the overview reports no active people comparison", context do
+    assert context.overview_stats.active.previous == nil
     context
   end
 
@@ -102,13 +103,13 @@ defmodule ActivePeopleSteps do
     context
   end
 
-  step "the API active people figure counts {int} people measured from {int} days ago with no comparison",
+  step "the overview active people figure counts {int} people measured from {int} days ago with no comparison",
        %{args: [count, days]} = context do
-    active = overview_payload(context.overview_response)["active"]
-    assert active["count"] == count
-    assert active["previous"] == nil
-    assert active["measured_from"] == Date.to_iso8601(Date.add(Date.utc_today(), -days))
-    assert Enum.any?(active["spark"], &is_nil/1)
+    active = context.overview_stats.active
+    assert active.count == count
+    assert active.previous == nil
+    assert active.measured_from == Date.add(Date.utc_today(), -days)
+    assert Enum.any?(active.spark, &is_nil/1)
     context
   end
 
@@ -129,10 +130,4 @@ defmodule ActivePeopleSteps do
 
   defp find_user(email),
     do: User |> Ash.Query.filter(email == ^email) |> Ash.read_one!(authorize?: false)
-
-  defp overview_payload(%{"data" => %{"platformOverview" => payload}}) when is_binary(payload),
-    do: Jason.decode!(payload)
-
-  defp overview_payload(%{"data" => %{"platformOverview" => payload}}) when is_map(payload),
-    do: payload
 end

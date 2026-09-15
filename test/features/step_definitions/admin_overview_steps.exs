@@ -10,7 +10,9 @@ defmodule AdminOverviewSteps do
   require Ash.Query
 
   alias Huddlz.Accounts.User
+  alias Huddlz.Admin
   alias Huddlz.Communities.Group
+  alias Huddlz.Test.Helpers.Authentication
 
   step "the platform {string} figure shows {string}",
        %{args: [figure, value], session: session} = context do
@@ -40,23 +42,25 @@ defmodule AdminOverviewSteps do
     Map.put(context, :overview_response, response)
   end
 
-  step "the API platform overview shows {int} huddl held and {int} RSVPs",
-       %{args: [held, rsvps]} = context do
-    overview = overview_payload(context.overview_response)
-    assert overview["held"]["count"] == held
-    assert overview["rsvps"]["count"] == rsvps
-    context
-  end
+  step "{string} views the platform overview for {string}",
+       %{args: [email, period]} = context do
+    user = find_user(email)
 
-  step "the API overview counts {int} active person", %{args: [count]} = context do
-    assert overview_payload(context.overview_response)["active"]["count"] == count
-    context
+    session =
+      build_conn()
+      |> Authentication.login(user)
+      |> visit("/admin?period=#{period}")
+      |> assert_has("h1", text: "Overview")
+
+    # The visit exercises dashboard access and records usage. Inspect the public
+    # action's figures for period boundaries and coverage that the page rounds.
+    stats = Admin.platform_overview!(period, actor: user)
+    Map.merge(context, %{session: session, conn: session, overview_stats: stats})
   end
 
   step "the platform chart buckets begin at midnight UTC", context do
-    for bucket <- overview_payload(context.overview_response)["held"]["buckets"] do
-      {:ok, at, 0} = DateTime.from_iso8601(bucket["starts_at"])
-      assert DateTime.to_time(at) == ~T[00:00:00]
+    for bucket <- context.overview_stats.held.buckets do
+      assert DateTime.to_time(bucket.starts_at) == ~T[00:00:00]
     end
 
     context
@@ -76,11 +80,11 @@ defmodule AdminOverviewSteps do
 
   step "the annual platform total and chart both show {int} huddl held",
        %{args: [count]} = context do
-    held = overview_payload(context.overview_response)["held"]
-    assert held["count"] == count
-    assert length(held["buckets"]) == 12
-    assert Enum.sum(Enum.map(held["buckets"], & &1["held"])) == count
-    assert hd(held["buckets"])["held"] == count
+    held = context.overview_stats.held
+    assert held.count == count
+    assert length(held.buckets) == 12
+    assert Enum.sum(Enum.map(held.buckets, & &1.held)) == count
+    assert hd(held.buckets).held == count
     context
   end
 
@@ -122,19 +126,14 @@ defmodule AdminOverviewSteps do
   step "the API refuses the platform overview", context do
     response = context.overview_response
     assert is_nil(response["data"]["platformOverview"])
-    assert [_ | _] = response["errors"]
+
+    assert Enum.any?(
+             response["errors"],
+             &(&1["message"] =~ "Cannot query field \"platformOverview\"")
+           )
+
     context
   end
-
-  # The action returns a map; GraphQL carries it as JSON, sometimes as a
-  # string, so accept both.
-  defp overview_payload(%{"data" => %{"platformOverview" => payload}}) when is_binary(payload),
-    do: Jason.decode!(payload)
-
-  defp overview_payload(%{"data" => %{"platformOverview" => payload}}) when is_map(payload),
-    do: payload
-
-  defp overview_payload(response), do: flunk("unexpected overview response: #{inspect(response)}")
 
   step "the most active groups list {string} before {string}",
        %{args: [first, second], session: session} = context do

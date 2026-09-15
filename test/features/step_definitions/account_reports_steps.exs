@@ -106,6 +106,24 @@ defmodule AccountReportsSteps do
 
   # ── API ─────────────────────────────────────────────────────────────
 
+  step "the API offers member reporting without account administration", context do
+    response =
+      gql_as(context.current_user, """
+      { __schema { queryType { fields { name } } mutationType { fields { name } } } }
+      """)
+
+    schema = response["data"]["__schema"]
+    queries = Enum.map(schema["queryType"]["fields"], & &1["name"])
+    mutations = Enum.map(schema["mutationType"]["fields"], & &1["name"])
+
+    refute "accountReports" in queries
+    refute "platformOverview" in queries
+    refute "suspendAccount" in mutations
+    refute "restoreAccount" in mutations
+    assert "reportAccount" in mutations
+    context
+  end
+
   step "I report {string} through the API", %{args: [email]} = context do
     target = find_user(email)
 
@@ -144,6 +162,12 @@ defmodule AccountReportsSteps do
 
   step "no reports are returned", context do
     assert context.api_response["data"]["accountReports"] in [nil, []]
+
+    assert Enum.any?(
+             context.api_response["errors"],
+             &(&1["message"] =~ "Cannot query field \"accountReports\"")
+           )
+
     context
   end
 
