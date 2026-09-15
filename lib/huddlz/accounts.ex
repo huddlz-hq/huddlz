@@ -54,5 +54,11 @@ defmodule Huddlz.Accounts do
     resource Huddlz.Accounts.Profile do
       define :get_profile, action: :get
     end
+
+    resource Huddlz.Accounts.AccountReport do
+      define :report_account, action: :report
+      define :list_account_reports, action: :queue, args: [{:optional, :handled}]
+      define :mark_report_handled, action: :mark_handled
+    end
   end
 end
