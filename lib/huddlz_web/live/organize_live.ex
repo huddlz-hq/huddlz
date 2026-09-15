@@ -18,7 +18,9 @@ defmodule HuddlzWeb.OrganizeLive do
   import HuddlzWeb.Components.GrowthChart
   import HuddlzWeb.Components.SignupChart
   import HuddlzWeb.Components.TurnoutChart
+  import HuddlzWeb.ReportAccount, only: [report_menu_item: 1, report_account_dialog: 1]
 
+  alias Huddlz.Accounts.User
   alias Huddlz.Communities
   alias Huddlz.Communities.GroupStats
   alias Huddlz.Communities.MembershipEvents
@@ -27,6 +29,7 @@ defmodule HuddlzWeb.OrganizeLive do
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.BrowserTimeZone
   alias HuddlzWeb.Live.Helpers.HuddlCardHelpers
+  alias HuddlzWeb.ReportAccount
 
   require Ash.Query
 
@@ -55,6 +58,7 @@ defmodule HuddlzWeb.OrganizeLive do
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
   on_mount {HuddlzWeb.LiveUserAuth, :confirmed_user_required}
+  on_mount HuddlzWeb.ReportAccount
 
   @impl true
   def mount(_params, _session, socket) do
@@ -408,6 +412,7 @@ defmodule HuddlzWeb.OrganizeLive do
         group={@group}
         form={@member_action_form}
       />
+      <.report_account_dialog :if={@report} report={@report} />
     </Layouts.app>
     """
   end
@@ -1477,12 +1482,18 @@ defmodule HuddlzWeb.OrganizeLive do
           member_action_allowed?(:demote, assigns.entry, assigns.group, assigns.current_user),
         can_remove:
           member_action_allowed?(:remove, assigns.entry, assigns.group, assigns.current_user),
+        can_report:
+          ReportAccount.offer?(
+            assigns.current_user,
+            assigns.entry.user_id,
+            User.suspended?(assigns.entry.user)
+          ),
         label: "Manage #{member_name(assigns.entry)}",
         menu_id: "member-menu-#{assigns.entry.id}"
       )
 
     ~H"""
-    <div :if={@can_promote or @can_demote or @can_remove} class="member-menu">
+    <div :if={@can_promote or @can_demote or @can_remove or @can_report} class="member-menu">
       <button
         type="button"
         id={"#{@menu_id}-trigger"}
@@ -1532,6 +1543,13 @@ defmodule HuddlzWeb.OrganizeLive do
         >
           Remove from group
         </.member_menu_item>
+        <.report_menu_item
+          :if={@can_report}
+          menu={@menu_id}
+          user_id={@entry.user_id}
+          source={{:group, @group.id}}
+          divider={@can_promote or @can_demote or @can_remove}
+        />
       </div>
     </div>
     """

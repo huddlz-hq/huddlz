@@ -6405,6 +6405,111 @@ body .link-btn {
   body .review-foot { flex-direction: column; align-items: stretch; }
 }
 
+/* ───────────────────────────────────────  ACCOUNT REPORTS  ──────── */
+/* The person menu: one quiet ⋯ at the end of a who's going row or the
+   organized-by line. It shows on hover or focus where there is a pointer
+   to hover with, and always on a touch screen. */
+body .person-menu { margin-left: auto; }
+body .going-list li:hover .person-menu .member-menu-trigger,
+body .going-list li:focus-within .person-menu .member-menu-trigger,
+body .creator-row:hover .person-menu .member-menu-trigger,
+body .creator-row:focus-within .person-menu .member-menu-trigger,
+body .person-menu .member-menu-trigger:focus-visible { opacity: 1; }
+
+@media (hover: hover) and (pointer: fine) {
+  body .going-list .person-menu .member-menu-trigger,
+  body .creator-row .person-menu .member-menu-trigger {
+    opacity: 0;
+    transition: opacity 120ms ease, border-color 120ms ease, color 120ms ease;
+  }
+}
+
+body .going-list .person-menu .member-menu-trigger,
+body .creator-row .person-menu .member-menu-trigger { width: 28px; height: 28px; }
+
+/* A member-grid mark that opens the person menu. */
+body .member-mark-button {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+body .member-mark-button:hover .member-mark { outline: 2px solid var(--line-strong); outline-offset: 2px; }
+body .member-mark-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+body .row-menu-divider { margin: 6px 4px; border: 0; border-top: 1px solid var(--line); }
+
+/* Report dialog */
+body .report-head { display: flex; align-items: flex-start; gap: 14px; }
+
+body .report-flag {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+body .report-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+}
+
+body .report-reasons legend { margin-bottom: 8px; padding: 0; }
+
+body .report-option {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+body .report-option:hover { border-color: var(--line-strong); }
+body .report-option.is-active { border-color: var(--accent); background: var(--accent-soft); }
+body .report-option.is-invalid { border-color: var(--danger); }
+body .report-option:has(.choice-control-input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+body .report-option-radio {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border: 2px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--panel);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+body .report-option.is-active .report-option-radio {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 4px var(--panel);
+  background: var(--accent);
+}
+
+body .report-option-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+body .report-option-title { font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer; }
+body .report-option-title::before { content: ""; position: absolute; inset: 0; cursor: pointer; }
+body .report-option-desc { font-size: 12px; line-height: 1.45; color: var(--muted); }
+body .report-reason-error { display: flex; align-items: center; gap: 6px; margin: 2px 0 0; }
+  body .report-row { grid-template-columns: auto minmax(0, 1fr) auto; }
+}
+
 /* ───────────────────────────────────────  PAGINATION  ──────────── */
 body .pagination {
   display: flex;
