@@ -68,6 +68,24 @@ defmodule Huddlz.AdminAccessTest do
     assert Enum.any?(stats.coming_up.next, &(&1.id == ctx.huddl.id))
   end
 
+  test "account review and account counts require staff and respect community permissions", ctx do
+    assert {:error, %Ash.Error.Forbidden{}} =
+             Huddlz.Admin.review_account(ctx.owner.id, actor: ctx.owner)
+
+    assert {:error, %Ash.Error.Forbidden{}} =
+             Huddlz.Accounts.count_users_by_email("", false, actor: ctx.owner)
+
+    review = Huddlz.Admin.review_account!(ctx.owner.id, actor: ctx.admin)
+    assert review.user.id == ctx.owner.id
+    assert review.groups == []
+    assert review.huddlz == []
+
+    Communities.add_member!(ctx.group.id, ctx.admin.id, :organizer, actor: ctx.owner)
+    review = Huddlz.Admin.review_account!(ctx.owner.id, actor: ctx.admin)
+    assert Enum.map(review.groups, & &1.id) == [ctx.group.id]
+    assert Enum.map(review.huddlz, & &1.id) == [ctx.huddl.id]
+  end
+
   test "administrators retain personal actions and their own group permissions", ctx do
     group = generate(group(actor: ctx.admin, is_public: false))
     huddl = generate(huddl(group_id: group.id, actor: ctx.admin))

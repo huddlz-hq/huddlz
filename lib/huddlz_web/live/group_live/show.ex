@@ -5,18 +5,22 @@ defmodule HuddlzWeb.GroupLive.Show do
   use HuddlzWeb, :live_view
 
   import HuddlzWeb.Live.Helpers.HuddlCardHelpers
+  import HuddlzWeb.ReportAccount, only: [report_menu: 1, report_account_dialog: 1]
 
   alias Huddlz.Accounts.ConfirmationDestination
+  alias Huddlz.Accounts.User
   alias Huddlz.Communities
   alias Huddlz.Communities.{GroupLocation, GroupMember, Huddl, MembershipEvents}
   alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Avatar
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
+  alias HuddlzWeb.ReportAccount
   alias Phoenix.LiveView.JS
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
+  on_mount HuddlzWeb.ReportAccount
   on_mount {HuddlzWeb.LiveUserAuth, {:participation, ~w(join_group leave_group)}}
 
   @member_grid_visible 7
@@ -362,16 +366,26 @@ defmodule HuddlzWeb.GroupLive.Show do
                     id={id}
                     class="member-mini"
                   >
-                    <div
-                      class={["member-mark", entry.mark_variant]}
-                      title={entry.member.display_name || "Member"}
-                    >
-                      <%= if url = Avatar.picture_url(entry.member) do %>
-                        <img src={url} alt={entry.member.display_name || ""} />
-                      <% else %>
-                        {member_initials(entry.member)}
-                      <% end %>
-                    </div>
+                    <%= if entry.reportable do %>
+                      <button
+                        type="button"
+                        id={"member-menu-#{entry.id}-trigger"}
+                        class="member-mark-button"
+                        popovertarget={"member-menu-#{entry.id}"}
+                        aria-label={"Manage #{entry.member.display_name}"}
+                        aria-haspopup="menu"
+                      >
+                        <.grid_mark entry={entry} />
+                      </button>
+                      <.report_menu
+                        id={"member-menu-#{entry.id}"}
+                        name={entry.member.display_name}
+                        user_id={entry.member.id}
+                        source={{:group, @group.id}}
+                      />
+                    <% else %>
+                      <.grid_mark entry={entry} />
+                    <% end %>
                   </div>
                 </div>
                 <div :if={@member_grid_extras > 0} class="member-mini">
@@ -439,6 +453,7 @@ defmodule HuddlzWeb.GroupLive.Show do
       </div>
 
       <.share_modal id="share-group-modal" url={@meta.url} label="group" />
+      <.report_account_dialog :if={@report} report={@report} />
 
       <.modal
         :if={@leave_dialog_open}
@@ -582,7 +597,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   def handle_event("join_group", _, socket) do
     user = socket.assigns.current_user
 
-    case join_group(socket.assigns.group, user) do
+    case Communities.join_group(socket.assigns.group.id, actor: user) do
       {:ok, _} ->
         {:noreply,
          socket
@@ -683,16 +698,10 @@ defmodule HuddlzWeb.GroupLive.Show do
     |> Enum.map(& &1.user)
   end
 
-  defp join_group(group, user) do
-    GroupMember
-    |> Ash.Changeset.for_create(:join_group, %{group_id: group.id}, actor: user)
-    |> Ash.create()
-  end
-
   defp leave_group(group, user) do
     case Communities.get_membership_in_group(group.id, actor: user) do
       {:ok, %{} = membership} ->
-        Ash.destroy(membership, action: :leave_group, actor: user)
+        Communities.leave_group(membership, actor: user)
 
       _ ->
         {:error, :not_a_member}
@@ -760,12 +769,19 @@ defmodule HuddlzWeb.GroupLive.Show do
   end
 
   defp assign_member_grid(socket, members) do
+    viewer = socket.assigns.current_user
+
     entries =
       members
       |> Enum.take(@member_grid_visible)
       |> Enum.with_index()
       |> Enum.map(fn {member, index} ->
-        %{id: member.id, member: member, mark_variant: member_mark_variant(index)}
+        %{
+          id: member.id,
+          member: member,
+          mark_variant: member_mark_variant(index),
+          reportable: ReportAccount.offer?(viewer, member.id, User.suspended?(member))
+        }
       end)
 
     socket
@@ -775,6 +791,23 @@ defmodule HuddlzWeb.GroupLive.Show do
   end
 
   defp member_mark_variant(idx), do: "m#{Integer.mod(idx, 5) + 1}"
+
+  attr :entry, :map, required: true
+
+  defp grid_mark(assigns) do
+    ~H"""
+    <div
+      class={["member-mark", @entry.mark_variant]}
+      title={@entry.member.display_name || "Member"}
+    >
+      <%= if url = Avatar.picture_url(@entry.member) do %>
+        <img src={url} alt={@entry.member.display_name || ""} />
+      <% else %>
+        {member_initials(@entry.member)}
+      <% end %>
+    </div>
+    """
+  end
 
   defp member_initials(member) do
     case Avatar.initials(member) do

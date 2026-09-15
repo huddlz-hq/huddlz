@@ -35,7 +35,7 @@ A link sent to an address so its owner can confirm it, minted for that address a
 The record of who joined, left, RSVPed, was promoted from a waitlist or removed, and of each huddl's creation, outcome and turnout, kept for two years with the person who acted separate from the person affected. The same two-year window applies to all audit history, including troubleshooting changes.
 
 **Administrator**:
-A person responsible for platform and account administration. This role is distinct from a group's owner, organizer, or member roles.
+A member of the huddlz staff responsible for platform and account administration. This role is distinct from a group's owner, organizer, or member roles.
 
 **Account suspension**:
 An administrator decision that indefinitely removes an account's authenticated access and hides its personal profile and identity from ordinary member surfaces. Restoration requires a finding that suspension was mistaken; suspension is separate from moderation of the groups and huddlz the person owns.
@@ -48,7 +48,7 @@ An administrator's manual reversal of a suspension judged mistaken. It lets the 
 _Avoid_: Unban, reactivation
 
 **Account report**:
-A confirmed member's request for administrators to review an account they can already see, for spam or another concern. A report does not itself suspend the account, and the reporter's identity is not disclosed to the reported account.
+A confirmed member's request for administrators to review an account they can already see, including the organizer of a public huddl without joining its group or RSVPing, for spam or another concern. A report does not itself suspend the account; its details and the reporter's identity are available only to huddlz staff for review.
 
 ## Communities and places
 

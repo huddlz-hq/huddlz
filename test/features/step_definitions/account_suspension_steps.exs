@@ -79,7 +79,7 @@ defmodule AccountSuspensionSteps do
         ~s|mutation { suspendAccount(id: "#{target.id}", input: {reason: "Spam"}) { result { id } errors { message } } }|
       )
 
-    Map.put(context, :api_response, response["data"]["suspendAccount"])
+    Map.put(context, :api_response, response)
   end
 
   step "I try to restore {string} through the API", %{args: [email]} = context do
@@ -91,18 +91,28 @@ defmodule AccountSuspensionSteps do
         ~s|mutation { restoreAccount(id: "#{target.id}") { result { id } errors { message } } }|
       )
 
-    Map.put(context, :api_response, response["data"]["restoreAccount"])
+    Map.put(context, :api_response, response)
   end
 
   step "the suspension is refused", context do
-    assert context.api_response["result"] == nil
-    assert [_ | _] = context.api_response["errors"]
+    assert get_in(context.api_response, ["data", "suspendAccount"]) == nil
+
+    assert Enum.any?(
+             context.api_response["errors"],
+             &(&1["message"] =~ "Cannot query field \"suspendAccount\"")
+           )
+
     context
   end
 
   step "the restoration is refused", context do
-    assert context.api_response["result"] == nil
-    assert [_ | _] = context.api_response["errors"]
+    assert get_in(context.api_response, ["data", "restoreAccount"]) == nil
+
+    assert Enum.any?(
+             context.api_response["errors"],
+             &(&1["message"] =~ "Cannot query field \"restoreAccount\"")
+           )
+
     context
   end
 

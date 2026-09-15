@@ -33,8 +33,6 @@ defmodule Huddlz.Accounts.User do
       update :resend_confirmation, :resend_confirmation
       update :update_notification_preferences, :update_notification_preferences
       update :update_theme_preference, :update_theme_preference
-      update :suspend_account, :suspend
-      update :restore_account, :restore
     end
   end
 
@@ -279,6 +277,24 @@ defmodule Huddlz.Accounts.User do
              )
 
       prepare Huddlz.Accounts.User.Preparations.AdminOnlySearch
+    end
+
+    action :count_by_email, :integer do
+      description "Count the accounts matching an administrator's search"
+
+      argument :email, :string do
+        allow_nil? false
+        constraints allow_empty?: true
+        default ""
+      end
+
+      argument :suspended, :boolean, default: false
+
+      run fn input, context ->
+        __MODULE__
+        |> Ash.Query.for_read(:search_by_email, input.arguments, actor: context.actor)
+        |> Ash.count()
+      end
     end
 
     update :update_display_name do
@@ -781,6 +797,10 @@ defmodule Huddlz.Accounts.User do
       authorize_if always()
     end
 
+    policy action(:count_by_email) do
+      authorize_if actor_attribute_equals(:role, :admin)
+    end
+
     policy action(:search_by_email) do
       description "All users can search, but results are filtered"
       authorize_if always()
@@ -1001,6 +1021,10 @@ defmodule Huddlz.Accounts.User do
     has_many :valid_api_keys, Huddlz.Accounts.ApiKey do
       filter expr(valid)
     end
+
+    has_many :reports_received, Huddlz.Accounts.AccountReport do
+      destination_attribute :reported_user_id
+    end
   end
 
   calculations do
@@ -1018,6 +1042,11 @@ defmodule Huddlz.Accounts.User do
   end
 
   aggregates do
+    count :open_report_count, :reports_received do
+      description "Reports about this account that administrators have not yet handled"
+      filter expr(is_nil(handled_at) and expires_at > now())
+    end
+
     first :current_profile_picture_url, :profile_pictures, :thumbnail_path do
       description "Returns the thumbnail path of the user's current profile picture"
       sort inserted_at: :desc

@@ -7,13 +7,12 @@ defmodule HuddlzWeb.AdminLive.Users do
   """
   use HuddlzWeb, :live_view
 
+  import HuddlzWeb.AdminLive.AccountActionDialog
+
   alias Huddlz.Accounts
   alias Huddlz.Accounts.User
-  alias Huddlz.Communities.{Group, Huddl}
+  alias Huddlz.Admin
   alias HuddlzWeb.Layouts
-  alias Phoenix.LiveView.JS
-
-  require Ash.Query
 
   on_mount {HuddlzWeb.LiveUserAuth, :admin_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -23,6 +22,10 @@ defmodule HuddlzWeb.AdminLive.Users do
     {:ok,
      socket
      |> assign(:page_title, "Users")
+     |> assign(
+       :open_report_count,
+       Accounts.count_account_reports!(false, actor: socket.assigns.current_user)
+     )
      |> assign(:search_query, "")
      |> assign(:action, nil)
      |> assign(:review, nil)}
@@ -54,7 +57,7 @@ defmodule HuddlzWeb.AdminLive.Users do
     review =
       if socket.assigns.review && socket.assigns.review.user.id == id,
         do: nil,
-        else: build_review(id, socket.assigns.current_user)
+        else: Admin.review_account!(id, actor: socket.assigns.current_user)
 
     {:noreply, assign(socket, :review, review)}
   end
@@ -64,7 +67,7 @@ defmodule HuddlzWeb.AdminLive.Users do
   end
 
   def handle_event("open_action", %{"id" => id, "action" => action}, socket) do
-    case Ash.get(User, id, actor: socket.assigns.current_user) do
+    case Accounts.get_user(id, actor: socket.assigns.current_user) do
       {:ok, user} -> {:noreply, assign(socket, :action, build_action(action, user, socket))}
       _ -> {:noreply, put_flash(socket, :error, "User not found")}
     end
@@ -94,19 +97,11 @@ defmodule HuddlzWeb.AdminLive.Users do
 
   # ── actions ─────────────────────────────────────────────────────────
 
-  defp build_action("suspend", user, socket) do
-    form =
-      AshPhoenix.Form.for_update(user, :suspend, actor: socket.assigns.current_user, as: "form")
+  defp build_action("suspend", user, socket),
+    do: account_action(:suspend, user, socket.assigns.current_user)
 
-    %{type: :suspend, user: user, form: to_form(form)}
-  end
-
-  defp build_action("restore", user, socket) do
-    form =
-      AshPhoenix.Form.for_update(user, :restore, actor: socket.assigns.current_user, as: "form")
-
-    %{type: :restore, user: user, form: to_form(form)}
-  end
+  defp build_action("restore", user, socket),
+    do: account_action(:restore, user, socket.assigns.current_user)
 
   defp build_action(role, user, _socket) when role in ["make_admin", "remove_admin"] do
     %{type: String.to_existing_atom(role), user: user, form: nil}
@@ -161,8 +156,8 @@ defmodule HuddlzWeb.AdminLive.Users do
         query: [sort: [display_name: :asc]]
       )
 
-    active_count = count(actor, query, false)
-    suspended_count = count(actor, query, true)
+    active_count = Accounts.count_users_by_email!(query, false, actor: actor)
+    suspended_count = Accounts.count_users_by_email!(query, true, actor: actor)
 
     {admins, others} = Enum.split_with(people, &User.admin?/1)
 
@@ -172,36 +167,6 @@ defmodule HuddlzWeb.AdminLive.Users do
     |> assign(:others, others)
     |> assign(:active_count, active_count)
     |> assign(:suspended_count, suspended_count)
-  end
-
-  defp count(actor, query, suspended?) do
-    User
-    |> Ash.Query.for_read(:search_by_email, %{email: query, suspended: suspended?}, actor: actor)
-    |> Ash.count!()
-  end
-
-  # Account administration grants no additional access to community records.
-  defp build_review(user_id, actor) do
-    user = Ash.get!(User, user_id, actor: actor, load: [:suspended_by])
-
-    groups =
-      Group
-      |> Ash.Query.for_read(:read_with_archived, %{}, actor: actor)
-      |> Ash.Query.filter(owner_id == ^user_id and is_nil(archived_at))
-      |> Ash.Query.sort(name: :asc)
-      |> Ash.read!()
-
-    huddlz =
-      Huddl
-      |> Ash.Query.for_read(:read, %{}, actor: actor)
-      |> Ash.Query.filter(
-        (creator_id == ^user_id or group.owner_id == ^user_id) and
-          lifecycle_state in [:draft, :published] and ends_at > now()
-      )
-      |> Ash.Query.sort(starts_at: :asc)
-      |> Ash.read!()
-
-    %{user: user, groups: groups, huddlz: huddlz}
   end
 
   defp users_path(:suspended, ""), do: ~p"/admin/users?scope=suspended"
@@ -221,6 +186,7 @@ defmodule HuddlzWeb.AdminLive.Users do
       sidebar_owned_groups={@sidebar_owned_groups}
       active="admin"
       active_admin_section={:users}
+      open_report_count={@open_report_count}
     >
       <div class="page-head">
         <div>
@@ -306,7 +272,17 @@ defmodule HuddlzWeb.AdminLive.Users do
                   <div class="row-title">{user.display_name}</div>
                   <div class="meta">{suspension_meta(user)}</div>
                 </div>
-                <.account_menu user={user} current_user={@current_user} scope={:suspended} />
+                <div class="account-row-actions">
+                  <.button
+                    id={"review-#{user.id}"}
+                    phx-click="review"
+                    phx-value-id={user.id}
+                    aria-expanded={@review != nil && @review.user.id == user.id}
+                  >
+                    Review
+                  </.button>
+                  <.account_menu user={user} current_user={@current_user} scope={:suspended} />
+                </div>
                 <.review_card :if={@review && @review.user.id == user.id} review={@review} />
               </div>
             </div>
@@ -430,18 +406,6 @@ defmodule HuddlzWeb.AdminLive.Users do
             Suspend account
           </.account_menu_item>
         <% else %>
-          <button
-            type="button"
-            id={"review-#{@user.id}"}
-            class="row-menu-item"
-            role="menuitem"
-            phx-click="review"
-            phx-value-id={@user.id}
-            popovertarget={@menu_id}
-            popovertargetaction="hide"
-          >
-            <.icon name="hero-document-magnifying-glass" class="size-4 row-menu-icon" /> Review
-          </button>
           <.account_menu_item
             :if={@can_restore}
             id={"restore-#{@user.id}"}
@@ -493,6 +457,13 @@ defmodule HuddlzWeb.AdminLive.Users do
       <p class="review-lead">
         <strong>Shown to everyone else as “Suspended account”.</strong>
         The original name and email are kept here and in participation history only.
+      </p>
+      <p>
+        <.link navigate={~p"/admin/reports?account_id=#{@review.user.id}"}>
+          {@review.user.open_report_count} {if @review.user.open_report_count == 1,
+            do: "open report",
+            else: "open reports"}
+        </.link>
       </p>
       <div class="review-facts">
         <div>
@@ -571,102 +542,6 @@ defmodule HuddlzWeb.AdminLive.Users do
     </div>
     """
   end
-
-  attr :action, :map, required: true
-
-  defp account_action_dialog(assigns) do
-    ~H"""
-    <.modal id="account-action-dialog" show on_cancel={JS.push("cancel_action")}>
-      <div class="pr-8">
-        <h2 id="account-action-dialog-title" class="text-xl font-bold text-base-content">
-          {action_title(@action)}
-        </h2>
-        <p class="mt-3 text-sm leading-6 text-base-content/70">{action_description(@action)}</p>
-        <ul :if={action_effects(@action.type) != []} class="leave-confirm-list">
-          <li :for={effect <- action_effects(@action.type)}>{effect}</li>
-        </ul>
-      </div>
-
-      <.form
-        for={@action.form || %{}}
-        id="account-action-form"
-        phx-submit="confirm_action"
-        phx-change="validate_action"
-        class="mt-6"
-      >
-        <.textarea
-          :if={@action.type == :suspend}
-          field={@action.form[:reason]}
-          id="suspend-reason"
-          label="Reason"
-          rows="3"
-          placeholder="What happened, in a sentence or two."
-          help="Kept with the account and shown only to administrators. Reports and reporters stay out of the email."
-        />
-
-        <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <.button id="account-action-cancel" phx-click="cancel_action">Cancel</.button>
-          <.button
-            id="account-action-confirm"
-            type="submit"
-            variant={if @action.type == :suspend, do: :destructive, else: :primary}
-            phx-disable-with="Saving..."
-          >
-            {action_confirm_label(@action.type)}
-          </.button>
-        </div>
-      </.form>
-    </.modal>
-    """
-  end
-
-  # ── copy ────────────────────────────────────────────────────────────
-
-  defp action_title(%{type: :suspend, user: user}), do: "Suspend #{user.display_name}?"
-  defp action_title(%{type: :restore, user: user}), do: "Restore #{user.display_name}?"
-
-  defp action_title(%{type: :make_admin, user: user}),
-    do: "Make #{user.display_name} an administrator?"
-
-  defp action_title(%{type: :remove_admin, user: user}),
-    do: "Remove #{user.display_name} as an administrator?"
-
-  defp action_description(%{type: :suspend}),
-    do:
-      "Their access ends now, on every device and API key, and stays off until an administrator restores it."
-
-  defp action_description(%{type: :restore}),
-    do:
-      "Only for a suspension that was a mistake. Proof that a person is at the keyboard is not enough on its own."
-
-  defp action_description(%{type: :make_admin}),
-    do:
-      "Administrators manage accounts and see the platform overview. Their group roles do not change."
-
-  defp action_description(%{type: :remove_admin}),
-    do: "They keep their account and group roles and lose the admin area."
-
-  defp action_effects(:suspend),
-    do: [
-      "Upcoming RSVP and waitlist spots are released. History is kept.",
-      "Other members see “Suspended account” instead of their name and picture.",
-      "Their groups and huddlz stay and are flagged for review.",
-      "They get one email with the support address. Nothing from this form is in it."
-    ]
-
-  defp action_effects(:restore),
-    do: [
-      "They can sign in again from scratch. Old sessions and API keys stay revoked.",
-      "Their name and picture come back everywhere.",
-      "Released RSVP and waitlist spots are not rebooked."
-    ]
-
-  defp action_effects(_type), do: []
-
-  defp action_confirm_label(:suspend), do: "Suspend account"
-  defp action_confirm_label(:restore), do: "Restore account"
-  defp action_confirm_label(:make_admin), do: "Make an administrator"
-  defp action_confirm_label(:remove_admin), do: "Remove as administrator"
 
   # Administrators view huddlz as other people, never as each other.
   defp viewable_as?(%{role: :admin}, _admin), do: false

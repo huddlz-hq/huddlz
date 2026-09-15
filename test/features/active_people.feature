@@ -50,9 +50,9 @@ Feature: Active people
   @coverage_start
   Scenario: Collection covers days before anyone used huddlz
     Given usage measurement began 200 days ago
-    When "admin564@example.com" reads the platform overview for "30d" through GraphQL
-    Then the API reports usage measured from 200 days ago
-    And the API reports 0 active people in the previous period
+    When "admin564@example.com" views the platform overview for "30d"
+    Then the overview reports usage measured from 200 days ago
+    And the overview reports 0 active people in the previous period
 
   Scenario: The overview counts distinct people over the period
     Given usage measurement began 200 days ago
@@ -71,31 +71,31 @@ Feature: Active people
     When I visit "/admin"
     Then the platform "Active people" figure shows "2" and "Measured since"
 
-  Scenario: The API carries the figure with its coverage
+  Scenario: The overview carries the figure with its coverage
     Given usage measurement began 3 days ago
     And "member564@example.com" used huddlz 3 days ago
-    When "admin564@example.com" reads the platform overview for "30d" through GraphQL
-    Then the API active people figure counts 2 people measured from 3 days ago with no comparison
+    When "admin564@example.com" views the platform overview for "30d"
+    Then the overview active people figure counts 2 people measured from 3 days ago with no comparison
 
   @partial_launch_day
   Scenario: The partial first day does not provide a full previous period
     Given usage measurement began 59 days ago
     And "member564@example.com" used huddlz 59 days ago
-    When "admin564@example.com" reads the platform overview for "30d" through GraphQL
-    Then the API reports usage measured from 59 days ago
-    And the API reports no active people comparison
+    When "admin564@example.com" views the platform overview for "30d"
+    Then the overview reports usage measured from 59 days ago
+    And the overview reports no active people comparison
 
   Scenario: A previous period beginning after the launch day can be compared
     Given usage measurement began 60 days ago
     And "member564@example.com" used huddlz 59 days ago
-    When "admin564@example.com" reads the platform overview for "30d" through GraphQL
-    Then the API reports 1 active people in the previous period
+    When "admin564@example.com" views the platform overview for "30d"
+    Then the overview reports 1 active people in the previous period
 
   Scenario: Deleting the earliest active account preserves collection coverage
     Given usage measurement began 200 days ago
     And "quiet564@example.com" used huddlz 200 days ago
     And "member564@example.com" used huddlz 100 days ago
     And the account "quiet564@example.com" has been deleted
-    When "admin564@example.com" reads the platform overview for "90d" through GraphQL
-    Then the API reports usage measured from 200 days ago
-    And the API reports 1 active people in the previous period
+    When "admin564@example.com" views the platform overview for "90d"
+    Then the overview reports usage measured from 200 days ago
+    And the overview reports 1 active people in the previous period

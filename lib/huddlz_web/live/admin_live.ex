@@ -8,6 +8,7 @@ defmodule HuddlzWeb.AdminLive do
   import HuddlzWeb.Components.HeldChart
   import HuddlzWeb.Components.Sparkline
 
+  alias Huddlz.Accounts
   alias Huddlz.Admin
   alias Huddlz.Communities.Periods
   alias HuddlzWeb.Components.Card
@@ -18,7 +19,13 @@ defmodule HuddlzWeb.AdminLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :page_title, "Admin")}
+    {:ok,
+     socket
+     |> assign(:page_title, "Admin")
+     |> assign(
+       :open_report_count,
+       Accounts.count_account_reports!(false, actor: socket.assigns.current_user)
+     )}
   end
 
   @impl true
@@ -38,6 +45,7 @@ defmodule HuddlzWeb.AdminLive do
       sidebar_owned_groups={@sidebar_owned_groups}
       active="admin"
       active_admin_section={:overview}
+      open_report_count={@open_report_count}
     >
       <div class="page-head">
         <div>

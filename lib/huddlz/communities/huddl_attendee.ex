@@ -257,6 +257,14 @@ defmodule Huddlz.Communities.HuddlAttendee do
   end
 
   calculations do
+    calculate :waitlist_position,
+              :integer,
+              Huddlz.Communities.HuddlAttendee.Calculations.WaitlistPosition
+
+    calculate :account_suspended, :boolean, expr(not is_nil(user.suspended_at)) do
+      description "True while the person's account is suspended"
+    end
+
     calculate :display_name,
               :string,
               expr(

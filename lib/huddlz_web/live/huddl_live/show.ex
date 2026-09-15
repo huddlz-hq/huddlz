@@ -4,7 +4,10 @@ defmodule HuddlzWeb.HuddlLive.Show do
   """
   use HuddlzWeb, :live_view
 
+  import HuddlzWeb.ReportAccount, only: [person_menu: 1, report_account_dialog: 1]
+
   alias Huddlz.Accounts.ConfirmationDestination
+  alias Huddlz.Accounts.User
   alias Huddlz.Communities
   alias Huddlz.Storage.HuddlCoverImages
   alias Huddlz.Storage.HuddlPhotos
@@ -13,11 +16,13 @@ defmodule HuddlzWeb.HuddlLive.Show do
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
+  alias HuddlzWeb.ReportAccount
 
   @going_visible 6
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_optional}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
+  on_mount HuddlzWeb.ReportAccount
 
   on_mount {HuddlzWeb.LiveUserAuth,
             {:participation,
@@ -462,6 +467,16 @@ defmodule HuddlzWeb.HuddlLive.Show do
                     </span>
                     <span class="going-name">{person.display_name}</span>
                     <span :if={person.user_id == @current_user.id} class="going-you">You</span>
+                    <.person_menu
+                      :if={
+                        ReportAccount.offer?(@current_user, person.user_id, person.account_suspended)
+                      }
+                      id={"going-menu-#{person.user_id}"}
+                      name={person.display_name}
+                      user_id={person.user_id}
+                      source={{:huddl, @huddl.id}}
+                      class="going-menu"
+                    />
                   </li>
                 </ul>
                 <button
@@ -537,12 +552,27 @@ defmodule HuddlzWeb.HuddlLive.Show do
               <span class="muted">Organized by</span>
               <.avatar user={@huddl.creator} size={:sm} />
               <span>{@huddl.creator.display_name || @huddl.creator.email}</span>
+              <.person_menu
+                :if={
+                  ReportAccount.offer?(
+                    @current_user,
+                    @huddl.creator.id,
+                    User.suspended?(@huddl.creator)
+                  )
+                }
+                id={"creator-menu-#{@huddl.creator.id}"}
+                name={@huddl.creator.display_name}
+                user_id={@huddl.creator.id}
+                source={{:huddl, @huddl.id}}
+                class="creator-menu"
+              />
             </div>
           </div>
         </aside>
       </div>
 
       <.share_modal id="share-huddl-modal" url={@meta.url} label="huddl" />
+      <.report_account_dialog :if={@report} report={@report} />
 
       <.modal
         :if={@confirming_delete?}
@@ -1379,7 +1409,10 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
     going =
       huddl.id
-      |> Communities.list_huddl_attendees!(actor: user, load: [:display_name, :picture_url])
+      |> Communities.list_huddl_attendees!(
+        actor: user,
+        load: [:display_name, :picture_url, :account_suspended]
+      )
       |> Enum.sort_by(&(&1.user_id != user.id))
 
     socket
@@ -1415,26 +1448,16 @@ defmodule HuddlzWeb.HuddlLive.Show do
   defp attendance_info(_huddl, nil), do: {:none, nil}
 
   defp attendance_info(huddl, user) do
-    case Communities.check_user_rsvp(huddl.id, actor: user) do
+    case Communities.check_user_rsvp(huddl.id, actor: user, load: [:waitlist_position]) do
       {:ok, [%{waitlisted_at: nil} | _]} ->
         {:attending, nil}
 
-      {:ok, [%{waitlisted_at: %DateTime{} = waitlisted_at} | _]} ->
-        {:waitlisted, waitlist_position(huddl, waitlisted_at)}
+      {:ok, [%{waitlisted_at: %DateTime{}, waitlist_position: position} | _]} ->
+        {:waitlisted, position}
 
       _ ->
         {:none, nil}
     end
-  end
-
-  defp waitlist_position(huddl, %DateTime{} = waitlisted_at) do
-    require Ash.Query
-
-    Huddlz.Communities.HuddlAttendee
-    |> Ash.Query.filter(
-      huddl_id == ^huddl.id and not is_nil(waitlisted_at) and waitlisted_at <= ^waitlisted_at
-    )
-    |> Ash.count!(authorize?: false)
   end
 
   defp group_meta(group) do

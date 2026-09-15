@@ -1,24 +1,17 @@
 defmodule Huddlz.Admin.PlatformOverview do
   @moduledoc """
-  The admin overview's figures as an action, so they are reachable from
-  the API with an actor like everything else. Only administrators may
-  run it; the figures themselves come from `Huddlz.Admin.PlatformStats`.
+  The admin overview's figures as an action for the huddlz dashboard.
+  Only administrators may run it; the figures themselves come from
+  `Huddlz.Admin.PlatformStats`.
   """
 
   use Ash.Resource,
     otp_app: :huddlz,
     domain: Huddlz.Admin,
-    authorizers: [Ash.Policy.Authorizer],
-    extensions: [AshGraphql.Resource]
+    authorizers: [Ash.Policy.Authorizer]
 
   alias Huddlz.Admin.PlatformStats
   alias Huddlz.Communities.Periods
-
-  graphql do
-    queries do
-      action :platform_overview, :overview
-    end
-  end
 
   actions do
     action :overview, :map do

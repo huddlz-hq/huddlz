@@ -28,12 +28,7 @@ defmodule HuddlzWeb.GraphqlUserExposureTest do
              {:update_display_name_result, :result},
              {:update_home_location_result, :result},
              {:update_notification_preferences_result, :result},
-             {:update_theme_preference_result, :result},
-             # Administrator-only: the :suspend and :restore policies admit only
-             # an administrator, who already reads every account through
-             # :search_by_email; the result is the account acted on.
-             {:suspend_account_result, :result},
-             {:restore_account_result, :result}
+             {:update_theme_preference_result, :result}
            ])
 
   test "no unsanctioned GraphQL exposure of the User type" do

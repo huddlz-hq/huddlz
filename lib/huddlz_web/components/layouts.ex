@@ -39,8 +39,12 @@ defmodule HuddlzWeb.Layouts do
 
   attr :active_admin_section, :atom,
     default: nil,
-    values: [nil, :overview, :users],
+    values: [nil, :overview, :users, :reports],
     doc: "active sub-item under the Admin sidebar item"
+
+  attr :open_report_count, :integer,
+    default: nil,
+    doc: "open account reports, shown on the Admin › Reports sub-item"
 
   attr :sidebar_owned_groups, :list,
     default: [],
@@ -242,6 +246,16 @@ defmodule HuddlzWeb.Layouts do
                 aria-current={@active_admin_section == :users && "page"}
               >
                 Users
+              </.link>
+              <.link
+                class={["sb-sub-item", @active_admin_section == :reports && "active"]}
+                navigate={~p"/admin/reports"}
+                aria-current={@active_admin_section == :reports && "page"}
+              >
+                Reports
+                <span :if={@open_report_count && @open_report_count > 0} class="sb-sub-count">
+                  {@open_report_count}
+                </span>
               </.link>
             </div>
           <% end %>
