@@ -89,9 +89,7 @@ defmodule HuddlzWeb.AdminLive.Reports do
        socket
        |> assign(:review, nil)
        |> put_flash(:info, "Report reopened")
-       |> push_patch(
-         to: ~p"/admin/reports?review=#{id}&account_id=#{socket.assigns.account_id || ""}"
-       )}
+       |> push_patch(to: reopened_report_path(id, socket.assigns.account_id))}
     else
       _ ->
         {:noreply,
@@ -229,6 +227,14 @@ defmodule HuddlzWeb.AdminLive.Reports do
   defp reports_path(scope, nil), do: ~p"/admin/reports?scope=#{scope}"
   defp reports_path(scope, id), do: ~p"/admin/reports?scope=#{scope}&account_id=#{id}"
 
+  defp reopened_report_path(id, nil), do: ~p"/admin/reports?review=#{id}"
+
+  defp reopened_report_path(id, account_id),
+    do: ~p"/admin/reports?review=#{id}&account_id=#{account_id}"
+
+  defp can_suspend?(user, actor),
+    do: not User.suspended?(user) and Ash.can?({user, :suspend}, actor)
+
   defp valid_id(value) do
     case Ecto.UUID.cast(value) do
       {:ok, id} -> id
@@ -352,7 +358,7 @@ defmodule HuddlzWeb.AdminLive.Reports do
   defp report_row_menu(assigns) do
     assigns =
       assign(assigns,
-        can_suspend: Ash.can?({assigns.report.reported_user, :suspend}, assigns.current_user),
+        can_suspend: can_suspend?(assigns.report.reported_user, assigns.current_user),
         label: "Manage #{assigns.report.reported_user.display_name}",
         menu_id: "report-menu-#{assigns.report.id}"
       )
@@ -426,7 +432,7 @@ defmodule HuddlzWeb.AdminLive.Reports do
       assign(assigns,
         report: report,
         user: report.reported_user,
-        can_suspend: Ash.can?({report.reported_user, :suspend}, assigns.current_user)
+        can_suspend: can_suspend?(report.reported_user, assigns.current_user)
       )
 
     ~H"""

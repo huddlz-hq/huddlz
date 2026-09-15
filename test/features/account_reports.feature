@@ -153,6 +153,7 @@ Feature: Confirmed members report accounts to an administrator queue
     And "spam589@example.com" is suspended
     And "Crypto Kings Promo" is listed under "Open"
     And I should see "Suspended"
+    And I should not see "Suspend account"
     When I choose "Mark handled" from the menu for "Crypto Kings Promo"
     Then I should see "Report handled"
     And the report about "spam589@example.com" is handled by "admin589@example.com"
@@ -219,5 +220,23 @@ Feature: Confirmed members report accounts to an administrator queue
     And I click "1 open report"
     Then I should see "Repeated coin advertisements"
     And I should not see "An unrelated concern"
+    When I click "Review"
+    And I click "Mark handled" in the review card
+    And I click "Handled"
+    And I click "Review"
+    And I click "Reopen" in the review card
+    Then I should see "Report reopened"
+    And I should not see "An unrelated concern"
     When I click "All reports"
     Then I should see "An unrelated concern"
+
+  @suspended_report_controls
+  Scenario: A suspended account cannot be suspended again from Reports
+    Given "member589@example.com" has reported "spam589@example.com" for "spam"
+    And "admin589@example.com" suspends "spam589@example.com" for "Spam"
+    And I am signed in as "admin589@example.com"
+    When I visit "/admin/reports"
+    Then I should not see "Suspend account"
+    When I click "Review"
+    Then I should not see "Suspend account"
+    And I should see "Mark handled"

@@ -50,6 +50,8 @@ defmodule BrowserReportReviewSteps do
       context.conn
       |> assert_has(".review-card", text: "Repeated advertisements")
       |> assert_has(".review-card button", text: "Mark handled")
+      |> refute_has("button", text: "Suspend account")
+      |> assert_browser("!new URL(window.location.href).searchParams.has('account_id')")
 
     Map.put(context, :conn, conn)
   end
