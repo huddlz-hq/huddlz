@@ -63,6 +63,7 @@ defmodule Huddlz.Accounts do
       define :count_account_reports, action: :count_queue, args: [:handled]
       define :list_account_reports, action: :queue, args: [{:optional, :handled}]
       define :mark_report_handled, action: :mark_handled
+      define :reopen_report, action: :reopen
     end
   end
 end

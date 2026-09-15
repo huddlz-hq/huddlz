@@ -110,6 +110,17 @@ defmodule Huddlz.Accounts.AccountReport do
       end
     end
 
+    update :reopen do
+      description "Reopen an unexpired report that was handled by mistake"
+      require_atomic? false
+      accept []
+
+      validate present(:handled_at)
+      validate compare(:expires_at, greater_than: &DateTime.utc_now/0)
+      change set_attribute(:handled_at, nil)
+      change set_attribute(:handled_by_id, nil)
+    end
+
     update :mark_handled do
       description "Close one report once an administrator has looked at it"
       require_atomic? false
@@ -131,7 +142,7 @@ defmodule Huddlz.Accounts.AccountReport do
       authorize_if Huddlz.Accounts.AccountReport.Checks.ReporterCanSeeAccount
     end
 
-    policy action([:read, :queue, :count_queue, :mark_handled]) do
+    policy action([:read, :queue, :count_queue, :mark_handled, :reopen]) do
       description "Only administrators see or handle reports"
       authorize_if actor_attribute_equals(:role, :admin)
     end

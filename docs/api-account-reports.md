@@ -4,6 +4,9 @@ Confirmed members can submit account reports through either API using a bearer
 JWT or API key. Both entry points use the same reporting action, eligibility
 checks, validation, and retry handling. Reporting an account never suspends it.
 
+A confirmed member may report the organizer of a publicly visible huddl without
+joining its group or RSVPing. This does not grant access to the attendee list.
+
 | Operation | JSON:API | GraphQL mutation |
 | --- | --- | --- |
 | Submit a report | `POST /api/json/account_reports` | `reportAccount(input: ...)` |

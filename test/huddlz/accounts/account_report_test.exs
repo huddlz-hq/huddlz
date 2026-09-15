@@ -31,6 +31,39 @@ defmodule Huddlz.Accounts.AccountReportTest do
       assert_in_delta DateTime.diff(report.expires_at, DateTime.utc_now(), :day), 730, 2
     end
 
+    test "public organizers can be reported without sharing a group or RSVP", ctx do
+      outsider = generate(user())
+
+      generate(
+        huddl(
+          group_id: ctx.group.id,
+          creator_id: ctx.owner.id,
+          is_private: false,
+          actor: ctx.owner
+        )
+      )
+
+      assert {:ok, _} = report(outsider, ctx.owner, reason: :spam)
+
+      assert {:error, %Ash.Error.Forbidden{}} =
+               report(Ash.Seed.update!(outsider, %{confirmed_at: nil}), ctx.owner, reason: :spam)
+    end
+
+    test "a private huddl does not make its organizer reportable to outsiders", ctx do
+      outsider = generate(user())
+
+      generate(
+        huddl(
+          group_id: ctx.group.id,
+          creator_id: ctx.owner.id,
+          is_private: true,
+          actor: ctx.owner
+        )
+      )
+
+      assert {:error, %Ash.Error.Forbidden{}} = report(outsider, ctx.owner, reason: :spam)
+    end
+
     test "needs a reason", ctx do
       assert {:error, %Ash.Error.Invalid{errors: errors}} = report(ctx.reporter, ctx.reported)
       assert Enum.any?(errors, &(&1.field == :reason))
@@ -180,6 +213,40 @@ defmodule Huddlz.Accounts.AccountReportTest do
         assert {:error, %Ash.Error.Forbidden{}} =
                  Accounts.mark_report_handled(report, actor: actor)
       end
+    end
+
+    test "reopening clears handling without changing the original report or expiry", ctx do
+      {:ok, original} = report(ctx.reporter, ctx.reported, reason: :spam)
+      handled = Accounts.mark_report_handled!(original, actor: ctx.admin)
+      reopened = Accounts.reopen_report!(handled, actor: ctx.admin)
+      assert reopened.handled_at == nil
+      assert reopened.handled_by_id == nil
+      assert reopened.expires_at == original.expires_at
+      assert reopened.inserted_at == original.inserted_at
+      assert {:error, _} = Accounts.reopen_report(reopened, actor: ctx.admin)
+    end
+
+    test "only staff reopen reports and expired reports remain closed", ctx do
+      {:ok, original} = report(ctx.reporter, ctx.reported, reason: :spam)
+      handled = Accounts.mark_report_handled!(original, actor: ctx.admin)
+
+      assert {:error, %Ash.Error.Forbidden{}} =
+               Accounts.reopen_report(handled, actor: ctx.reporter)
+
+      expired =
+        Ash.Seed.update!(handled, %{expires_at: DateTime.add(DateTime.utc_now(), -1, :day)})
+
+      assert {:error, _} = Accounts.reopen_report(expired, actor: ctx.admin)
+    end
+
+    test "reopening cannot duplicate a newer open report by the same member", ctx do
+      {:ok, original} = report(ctx.reporter, ctx.reported, reason: :spam)
+      handled = Accounts.mark_report_handled!(original, actor: ctx.admin)
+      {:ok, newer} = report(ctx.reporter, ctx.reported, reason: :other)
+      assert {:error, _} = Accounts.reopen_report(handled, actor: ctx.admin)
+      assert [%{id: id}] = Accounts.list_account_reports!(false, actor: ctx.admin)
+      assert id == newer.id
+      assert Accounts.get_account_report!(handled.id, actor: ctx.admin).handled_at != nil
     end
 
     test "marks a report handled once", ctx do

@@ -71,6 +71,28 @@ defmodule HuddlzWeb.AdminLive.Reports do
     end
   end
 
+  def handle_event("reopen", %{"id" => id}, socket) do
+    actor = socket.assigns.current_user
+
+    with {:ok, report} <- Accounts.get_account_report(id, actor: actor),
+         {:ok, _reopened} <- Accounts.reopen_report(report, actor: actor) do
+      {:noreply,
+       socket
+       |> assign(:review, nil)
+       |> put_flash(:info, "Report reopened")
+       |> load_reports()}
+    else
+      _ ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Could not reopen this report. It may already be open, expired, or have a newer open report from the same member."
+         )
+         |> load_reports()}
+    end
+  end
+
   def handle_event("open_action", %{"id" => id}, socket) do
     case Accounts.get_user(id, actor: socket.assigns.current_user) do
       {:ok, user} ->
@@ -264,6 +286,14 @@ defmodule HuddlzWeb.AdminLive.Reports do
                 <p :if={report.details} class="report-quote">“{report.details}”</p>
                 <p :if={is_nil(report.details)} class="report-quote muted">No details</p>
               </div>
+              <.button
+                id={"review-#{report.id}"}
+                phx-click="review"
+                phx-value-id={report.id}
+                aria-expanded={@review != nil && @review.report.id == report.id}
+              >
+                Review
+              </.button>
               <.report_row_menu report={report} current_user={@current_user} />
               <.review_card
                 :if={@review && @review.report.id == report.id}
@@ -311,18 +341,6 @@ defmodule HuddlzWeb.AdminLive.Reports do
         aria-label={@label}
         phx-hook="PopoverMenu"
       >
-        <button
-          type="button"
-          id={"review-#{@report.id}"}
-          class="row-menu-item"
-          role="menuitem"
-          phx-click="review"
-          phx-value-id={@report.id}
-          popovertarget={@menu_id}
-          popovertargetaction="hide"
-        >
-          <.icon name="hero-document-magnifying-glass" class="size-4 row-menu-icon" /> Review
-        </button>
         <.link
           navigate={users_link(@report.reported_user)}
           class="row-menu-item"
@@ -435,6 +453,15 @@ defmodule HuddlzWeb.AdminLive.Reports do
             phx-value-id={@user.id}
           >
             <.icon name="hero-no-symbol" class="size-4" /> Suspend account
+          </.button>
+          <.button
+            :if={@report.handled}
+            id={"review-reopen-#{@report.id}"}
+            phx-click="reopen"
+            phx-value-id={@report.id}
+            phx-disable-with="Reopening..."
+          >
+            Reopen
           </.button>
           <.button
             :if={not @report.handled}

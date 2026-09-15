@@ -143,7 +143,7 @@ Feature: Confirmed members report accounts to an administrator queue
     Then "Crypto Kings Promo" is listed under "Open"
     And I should see "Spam or advertising"
     And I should see "Member Maya"
-    When I choose "Review" from the menu for "Crypto Kings Promo"
+    When I click "Review"
     Then I should see "Posts coin listings in every thread"
     And I should see "Elixir Hack Night"
     When I click "Suspend account" in the review card
@@ -179,3 +179,31 @@ Feature: Confirmed members report accounts to an administrator queue
     And "spam589@example.com" is suspended
     When I read the reports through the API
     Then no reports are returned
+
+  @public_organizer_report
+  Scenario: A confirmed visitor reports a public organizer without joining or RSVPing
+    Given I am signed in as "outsider589@example.com"
+    When I visit the huddl page for "Elixir Hack Night"
+    Then I should see "RSVP to see who's going."
+    When I choose "Report account" from the menu for "Owner Olive"
+    And I choose "Spam or advertising"
+    And I confirm with "Report account"
+    Then I should see "Thanks—we've received your report."
+    And there is exactly 1 report about "owner589@example.com"
+    When I report "owner589@example.com" through the API
+    Then the report is accepted
+    When I report "owner589@example.com" for "spam" saying "" through JSON:API
+    Then the JSON:API report is accepted
+
+  @reopen_report
+  Scenario: An administrator reopens an accidentally handled report
+    Given "member589@example.com" has reported "spam589@example.com" for "spam"
+    And I am signed in as "admin589@example.com"
+    When I visit "/admin/reports"
+    And I choose "Mark handled" from the menu for "Crypto Kings Promo"
+    And I click "Handled"
+    And I click "Review"
+    And I click "Reopen" in the review card
+    Then I should see "Report reopened"
+    When I click "Open"
+    Then "Crypto Kings Promo" is listed under "Open"
