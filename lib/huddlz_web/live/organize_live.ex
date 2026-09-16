@@ -412,7 +412,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <p>Pick a group to manage, or start a new one.</p>
       </div>
       <div :if={@groups != []} class="actions">
-        <a class="btn-primary" href={~p"/groups/new"}>+ Create group</a>
+        <.link class="btn-primary" navigate={~p"/groups/new"}>+ Create group</.link>
       </div>
     </div>
 
@@ -426,7 +426,7 @@ defmodule HuddlzWeb.OrganizeLive do
           each group gets its own workspace here.
         </p>
         <div class="panel-cta">
-          <a class="btn-primary" href={~p"/groups/new"}>Create your first group</a>
+          <.link class="btn-primary" navigate={~p"/groups/new"}>Create your first group</.link>
         </div>
       </div>
     <% else %>
@@ -436,10 +436,10 @@ defmodule HuddlzWeb.OrganizeLive do
           <span class="panel-sub">{group_count_label(length(@groups))}</span>
         </div>
         <div class="row-list">
-          <a
+          <.link
             :for={group <- @groups}
             class="row row-split organizer-group-row"
-            href={~p"/organize/#{group.slug}"}
+            navigate={~p"/organize/#{group.slug}"}
           >
             <.group_cover
               id={"organizer-group-cover-#{group.id}"}
@@ -453,7 +453,7 @@ defmodule HuddlzWeb.OrganizeLive do
               </div>
             </div>
             <span class="pill">Open →</span>
-          </a>
+          </.link>
         </div>
       </div>
     <% end %>
@@ -490,14 +490,14 @@ defmodule HuddlzWeb.OrganizeLive do
             {label}
           </.link>
         </nav>
-        <a :if={@can_edit_group} class="btn-secondary" href={~p"/groups/#{@group.slug}/edit"}>Edit group</a>
-        <a
+        <.link :if={@can_edit_group} class="btn-secondary" navigate={~p"/groups/#{@group.slug}/edit"}>Edit group</.link>
+        <.link
           :if={is_nil(@group.archived_at)}
           class="btn-primary"
-          href={~p"/groups/#{@group.slug}/huddlz/new"}
+          navigate={~p"/groups/#{@group.slug}/huddlz/new"}
         >
           + Create huddl
-        </a>
+        </.link>
       </div>
     </div>
 
@@ -661,7 +661,7 @@ defmodule HuddlzWeb.OrganizeLive do
             Nothing on the calendar yet. Create a huddl and its signups will show here.
           </p>
           <div :if={is_nil(@group.archived_at)} class="panel-cta">
-            <a class="btn-primary" href={~p"/groups/#{@group.slug}/huddlz/new"}>Create a huddl</a>
+            <.link class="btn-primary" navigate={~p"/groups/#{@group.slug}/huddlz/new"}>Create a huddl</.link>
           </div>
         <% end %>
       </div>
@@ -837,13 +837,13 @@ defmodule HuddlzWeb.OrganizeLive do
         <.link class="btn-secondary" navigate={~p"/calendar/month"}>
           <.icon name="hero-calendar" class="size-4" /> Month view
         </.link>
-        <a
+        <.link
           :if={is_nil(@group.archived_at)}
           class="btn-primary"
-          href={~p"/groups/#{@group.slug}/huddlz/new"}
+          navigate={~p"/groups/#{@group.slug}/huddlz/new"}
         >
           + Schedule huddl
-        </a>
+        </.link>
       </div>
     </div>
 
@@ -865,13 +865,13 @@ defmodule HuddlzWeb.OrganizeLive do
         </div>
         <p class="muted">{empty_huddlz_body(@filter)}</p>
         <div :if={@filter in [:draft, :published]} class="panel-cta">
-          <a
+          <.link
             :if={is_nil(@group.archived_at)}
             class="btn-primary"
-            href={~p"/groups/#{@group.slug}/huddlz/new"}
+            navigate={~p"/groups/#{@group.slug}/huddlz/new"}
           >
             Create your first huddl
-          </a>
+          </.link>
         </div>
       </div>
     <% else %>
@@ -1228,7 +1228,7 @@ defmodule HuddlzWeb.OrganizeLive do
         <p>{people_count(@group.member_count)} · {visibility_label(@group.is_public)} group</p>
       </div>
       <div class="actions">
-        <a :if={@can_edit_group} class="btn-secondary" href={~p"/groups/#{@group.slug}/edit"}>Edit group</a>
+        <.link :if={@can_edit_group} class="btn-secondary" navigate={~p"/groups/#{@group.slug}/edit"}>Edit group</.link>
       </div>
     </div>
 

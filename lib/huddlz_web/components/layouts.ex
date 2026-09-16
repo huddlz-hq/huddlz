@@ -322,8 +322,8 @@ defmodule HuddlzWeb.Layouts do
               </span>
             </.link>
           <% else %>
-            <a class="btn-secondary" href="/sign-in">Sign in</a>
-            <a class="btn-primary" href="/register">Sign up</a>
+            <.link class="btn-secondary" navigate={~p"/sign-in"}>Sign in</.link>
+            <.link class="btn-primary" navigate={~p"/register"}>Sign up</.link>
           <% end %>
         </div>
       </header>
@@ -516,10 +516,10 @@ defmodule HuddlzWeb.Layouts do
 
     <div class="auth-shell">
       <header class="auth-topbar">
-        <a href={~p"/"}>
+        <.link navigate={~p"/"}>
           <div class="brand-glyph">h</div>
           <div class="brand-text">huddlz</div>
-        </a>
+        </.link>
       </header>
 
       <div class="auth-frame">
