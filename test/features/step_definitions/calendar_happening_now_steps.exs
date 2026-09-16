@@ -4,6 +4,21 @@ defmodule CalendarHappeningNowSteps do
   import Huddlz.Generator
   import PhoenixTest
 
+  step "I am going to {string}, which starts at midnight two calendar days from today",
+       %{args: [title]} = context do
+    current = now()
+
+    starts_at =
+      current
+      |> DateTime.shift_zone!("America/New_York")
+      |> DateTime.to_date()
+      |> Date.add(2)
+      |> DateTime.new!(~T[00:00:00], "America/New_York")
+
+    seconds = DateTime.diff(starts_at, current)
+    going_to(context, title, {-seconds, :second}, {seconds + 3600, :second})
+  end
+
   step "I am going to {string}, which started {int} minutes ago and runs for another {int} minutes",
        %{args: [title, ago, remaining]} = context do
     going_to(context, title, {ago, :minute}, {remaining, :minute})

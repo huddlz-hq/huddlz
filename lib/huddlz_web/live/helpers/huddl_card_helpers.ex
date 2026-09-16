@@ -42,30 +42,51 @@ defmodule HuddlzWeb.Live.Helpers.HuddlCardHelpers do
 
   A huddl that is under way reads here as it reads on its own page, where
   `HuddlzWeb.HuddlStatus` labels it "Happening now".
+
+  Day and week labels count calendar dates in `:time_zone` (defaulting to
+  the huddl's zone). Countdowns under 24 hours retain their hour precision
+  within today or the adjacent date.
+  `:now` can supply a shared reference instant instead of reading the clock.
   """
-  def relative_time(%{starts_at: %DateTime{} = starts_at, ends_at: %DateTime{} = ends_at}) do
-    now = DateTime.utc_now()
+  def relative_time(
+        %{starts_at: %DateTime{} = starts_at, ends_at: %DateTime{} = ends_at} = huddl,
+        opts \\ []
+      ) do
+    now = Keyword.get_lazy(opts, :now, &DateTime.utc_now/0)
+    time_zone = Keyword.get(opts, :time_zone, Map.get(huddl, :time_zone, "Etc/UTC"))
 
     cond do
-      DateTime.after?(starts_at, now) -> relative_to_now(starts_at)
-      DateTime.after?(now, ends_at) -> relative_to_now(ends_at)
+      DateTime.after?(starts_at, now) -> relative_to_now(starts_at, now, time_zone)
+      DateTime.after?(now, ends_at) -> relative_to_now(ends_at, now, time_zone)
       true -> "happening now"
     end
   end
 
   # "tomorrow", "3 days away", "2 weeks ago", or the date once the moment is
   # more than a month from now.
-  defp relative_to_now(%DateTime{} = dt) do
-    diff_seconds = DateTime.diff(dt, DateTime.utc_now(), :second)
+  defp relative_to_now(%DateTime{} = dt, now, time_zone) do
+    diff_seconds = DateTime.diff(dt, now, :second)
     abs_seconds = abs(diff_seconds)
     future? = diff_seconds >= 0
+    local_dt = DateTime.shift_zone!(dt, time_zone)
+    local_now = DateTime.shift_zone!(now, time_zone)
+    days = abs(Date.diff(DateTime.to_date(local_dt), DateTime.to_date(local_now)))
 
     cond do
-      abs_seconds < 3600 -> if future?, do: "starting soon", else: "just ended"
-      abs_seconds < 86_400 -> format_hours(div(abs_seconds, 3600), future?)
-      abs_seconds < 7 * 86_400 -> format_days(div(abs_seconds, 86_400), future?)
-      abs_seconds < 30 * 86_400 -> format_weeks(div(abs_seconds, 7 * 86_400), future?)
-      true -> Calendar.strftime(dt, "%b %d, %Y")
+      abs_seconds < 3600 ->
+        if future?, do: "starting soon", else: "just ended"
+
+      days == 0 or (days == 1 and abs_seconds < 86_400) ->
+        format_hours(div(abs_seconds, 3600), future?)
+
+      days < 7 ->
+        format_days(days, future?)
+
+      days < 30 ->
+        format_weeks(div(days, 7), future?)
+
+      true ->
+        Calendar.strftime(local_dt, "%b %d, %Y")
     end
   end
 

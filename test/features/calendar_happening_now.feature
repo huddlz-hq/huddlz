@@ -15,6 +15,12 @@ Feature: Huddlz that are happening now on the agenda and calendar
     When I open the agenda
     Then the agenda times "Elixir office hours" as "happening now"
 
+  @calendar_relative_dates
+  Scenario: The agenda counts calendar days rather than full 24-hour periods
+    Given I am going to "Day after tomorrow", which starts at midnight two calendar days from today
+    When I open the agenda
+    Then the agenda times "Day after tomorrow" as "2 days away"
+
   Scenario: A long huddl still reads as happening now hours after it started
     Given I am going to "All-day sprint", which started 3 hours ago and runs for another 5 hours
     When I open the agenda
