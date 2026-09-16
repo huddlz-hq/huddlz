@@ -21,10 +21,10 @@ defmodule HuddlzWeb.LandingLive do
     <Layouts.flash_group flash={@flash} />
 
     <header class="land-topbar">
-      <a href={~p"/"} style="display:flex;align-items:center;gap:10px">
+      <.link navigate={~p"/"} style="display:flex;align-items:center;gap:10px">
         <div class="brand-glyph">h</div>
         <div class="brand-text">huddlz</div>
-      </a>
+      </.link>
       <nav class="nav">
         <.link navigate={~p"/sign-in"} class="btn-secondary">Sign in</.link>
         <.link navigate={~p"/register"} class="btn-primary">Sign up</.link>
