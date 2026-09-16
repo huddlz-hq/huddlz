@@ -743,7 +743,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       host: host,
       public_group: public_group
     } do
-      {date, start_time} = thirty_hours_out()
+      {date, start_time} = two_calendar_days_out()
 
       in_person =
         create_huddl(host, public_group, title: "Somewhere", date: date, start_time: start_time)
@@ -770,7 +770,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
         text: in_person.physical_location
       )
       |> assert_has("#calendar-entry-#{online.id} .cal-agenda-meta", text: "Online")
-      |> assert_has("#calendar-entry-#{in_person.id} .cal-agenda-relative", text: "tomorrow")
+      |> assert_has("#calendar-entry-#{in_person.id} .cal-agenda-relative", text: "2 days away")
     end
 
     test "the touch list under the month grid uses the same day groups", %{
@@ -827,14 +827,14 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
     test "my groups adds unanswered huddlz with an outlined pill in the grid and a legend entry",
          %{conn: conn, attendee: attendee, host: host, public_group: public_group} do
-      {date, start_time} = thirty_hours_out()
+      {date, start_time} = two_calendar_days_out()
 
       theirs =
         create_huddl(host, public_group, title: "Theirs", date: date, start_time: start_time)
 
       conn
       |> login(attendee)
-      |> visit(calendar_path_for(tomorrow()) <> "&scope=groups")
+      |> visit(calendar_path_for(date) <> "&scope=groups")
       |> assert_has("#calendar-entry-#{theirs.id}.cal-pill.open[data-status=open]",
         text: "Theirs"
       )
@@ -891,7 +891,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       host: host,
       public_group: public_group
     } do
-      {date, start_time} = thirty_hours_out()
+      {date, start_time} = two_calendar_days_out()
 
       theirs =
         create_huddl(host, public_group, title: "Theirs", date: date, start_time: start_time)
@@ -904,7 +904,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> refute_has("#calendar-first-run")
       |> assert_has("#calendar-entry-#{theirs.id} .cal-agenda-title", text: "Theirs")
       |> refute_has("#calendar-entry-#{theirs.id} .cal-entry-status")
-      |> assert_has("#calendar-entry-#{theirs.id} .cal-agenda-relative", text: "tomorrow")
+      |> assert_has("#calendar-entry-#{theirs.id} .cal-agenda-relative", text: "2 days away")
     end
   end
 
@@ -1066,13 +1066,9 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
   defp tomorrow, do: Date.add(Huddlz.Generator.eastern_today(), 1)
 
-  # A start that reads as "tomorrow" (24 to 48 hours away) whatever the
-  # time of day the suite runs, as a date and time in the huddl's zone.
-  defp thirty_hours_out do
-    local =
-      DateTime.utc_now() |> DateTime.add(30, :hour) |> DateTime.shift_zone!("America/New_York")
-
-    {DateTime.to_date(local), local |> DateTime.to_time() |> Time.truncate(:second)}
+  # Two calendar days away, even when fewer than 48 hours remain.
+  defp two_calendar_days_out do
+    {Date.add(Huddlz.Generator.eastern_today(), 2), ~T[00:00:00]}
   end
 
   # Build a /calendar URL pinned to the month containing `date`, so the focus

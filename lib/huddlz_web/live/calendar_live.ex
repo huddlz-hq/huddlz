@@ -1121,7 +1121,9 @@ defmodule HuddlzWeb.CalendarLive do
           {@status.label}
         </.pill>
         <span :if={countdown?(@status)} class="cal-agenda-relative">
-          {HuddlCardHelpers.relative_time(@entry.huddl)}
+          {HuddlCardHelpers.relative_time(@entry.huddl,
+            time_zone: @entry.calendar_starts_at.time_zone
+          )}
         </span>
       </div>
     </.link>
