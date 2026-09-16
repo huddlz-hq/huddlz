@@ -540,6 +540,10 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> login(non_member)
       |> visit(~p"/groups/#{group.slug}/huddlz/#{in_person_huddl.id}")
       |> assert_has(".facts .value", text: "123 Main St, Anytown, USA")
+      |> assert_has(
+        "a.map-link[href='https://www.google.com/maps/search/?api=1&query=123+Main+St%2C+Anytown%2C+USA']",
+        text: "View on map"
+      )
       |> refute_has(".facts .label", text: "Virtual access")
 
       # Create hybrid huddl
@@ -567,6 +571,10 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> login(non_member)
       |> visit(~p"/groups/#{group.slug}/huddlz/#{hybrid_huddl.id}")
       |> assert_has(".facts .value", text: "123 Main St, Anytown, USA")
+      |> assert_has(
+        "a.map-link[href='https://www.google.com/maps/search/?api=1&query=123+Main+St%2C+Anytown%2C+USA']",
+        text: "View on map"
+      )
       |> assert_has(".facts .label", text: "Virtual access")
       |> assert_has(".facts .value .muted", text: "Virtual link available after RSVP")
       # RSVP to see virtual link

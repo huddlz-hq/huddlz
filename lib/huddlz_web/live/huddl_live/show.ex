@@ -368,7 +368,18 @@ defmodule HuddlzWeb.HuddlLive.Show do
               </svg>
               <div>
                 <div class="label">Where</div>
-                <div class="value whitespace-pre-line">{@huddl.physical_location}</div>
+                <div class="value">
+                  <span class="whitespace-pre-line">{@huddl.physical_location}</span>
+                  <a
+                    class="map-link"
+                    href={"https://www.google.com/maps/search/?api=1&query=" <> URI.encode_www_form(@huddl.physical_location)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <.icon name="hero-map-pin" class="size-3.5 shrink-0" />
+                    <span>View on map</span>
+                  </a>
+                </div>
               </div>
             </li>
 
