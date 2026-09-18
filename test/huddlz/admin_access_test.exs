@@ -14,7 +14,10 @@ defmodule Huddlz.AdminAccessTest do
     admin = generate(user(role: :admin))
     owner = generate(user())
     group = generate(group(actor: owner, is_public: false))
-    huddl = generate(huddl(group_id: group.id, actor: owner))
+
+    huddl =
+      generate(huddl(group_id: group.id, actor: owner, date: Date.add(Date.utc_today(), 1)))
+
     %{admin: admin, owner: owner, group: group, huddl: huddl}
   end
 
