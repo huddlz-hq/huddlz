@@ -81,6 +81,7 @@ defmodule Huddlz.Communities do
       define :get_organizable_groups, action: :get_organizable
       define :get_joined_groups, action: :get_joined
       define :groups_for_actor, action: :groups_for_actor, args: [{:optional, :relationship}]
+      define :list_drop_ins, action: :drop_ins
       define :get_by_slug, action: :get_by_slug, args: [:slug]
       define :get_group_for_organize, action: :get_for_organize, args: [:slug], get?: true
       define :group_overview, action: :overview, args: [:group_id, {:optional, :period}]
@@ -180,6 +181,8 @@ defmodule Huddlz.Communities do
       define :check_user_rsvp, action: :check_rsvp, args: [:huddl_id]
       define :list_huddl_attendees, action: :by_huddl, args: [:huddl_id], get?: false
       define :list_huddl_waitlist, action: :waitlist_for_huddl, args: [:huddl_id], get?: false
+
+      define :list_drop_in_spots, action: :drop_in_spots, args: [:group_ids], get?: false
 
       define :list_huddl_notification_recipients,
         action: :notification_recipients,

@@ -3001,6 +3001,26 @@ body .group-row {
 }
 
 body .group-row:hover { border-color: var(--line-strong); }
+/* Groups page: the groups a person has dropped in on. Same cards as their
+   own groups, with one fact line and the two answers in the foot. */
+body .dropped-in {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 32px;
+  padding-top: 32px;
+  border-top: 1px solid var(--line);
+}
+body .dropped-in-head h2 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; color: var(--text); }
+body .dropped-in-head p { margin: 4px 0 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
+body .dropped-in > .btn-secondary { align-self: flex-start; }
+body .dropped-in-card:hover { transform: none; }
+body .dropped-in-card .card-title a { color: inherit; text-decoration: none; }
+body .dropped-in-card .card-title a:hover { color: var(--accent-ink); }
+body .dropped-in-fact { align-items: flex-start; gap: 6px; color: var(--soft); flex-wrap: nowrap; }
+body .dropped-in-fact [class*="hero-"] { flex: 0 0 auto; margin-top: 1px; color: var(--muted); }
+body .dropped-in-actions { justify-content: flex-start; gap: 8px; }
+
 body .group-row-actions {
   display: flex;
   align-items: center;

@@ -72,6 +72,35 @@ defmodule Huddlz.Communities.DropInGroupsTest do
     assert dropped_in(ctx.person) == []
   end
 
+  # A huddl that is over stays published until the completion job records it,
+  # so the end time decides, not the lifecycle state.
+  defp end_now(huddl) do
+    ended_at = DateTime.add(DateTime.utc_now(), -60, :second)
+
+    Ash.Seed.update!(huddl, %{
+      starts_at: DateTime.add(ended_at, -1, :hour),
+      ends_at: ended_at
+    })
+  end
+
+  test "an RSVP still counts once the huddl has ended but is not yet completed", ctx do
+    huddl = upcoming(ctx.group, ctx.owner)
+    Communities.rsvp_huddl!(huddl, actor: ctx.person)
+    end_now(huddl)
+
+    assert dropped_in(ctx.person) == [ctx.group.id]
+    assert [_spot] = Communities.list_drop_in_spots!([ctx.group.id], actor: ctx.person)
+  end
+
+  test "a waitlist spot stops counting the moment the huddl ends", ctx do
+    huddl = upcoming(ctx.group, ctx.owner)
+    hold_waitlist_spot(ctx.person, huddl)
+    end_now(huddl)
+
+    assert dropped_in(ctx.person) == []
+    assert [] == Communities.list_drop_in_spots!([ctx.group.id], actor: ctx.person)
+  end
+
   test "a cancelled huddl does not count", ctx do
     hold_rsvp(ctx.person, finished(ctx.group, ctx.owner, :cancelled))
     assert dropped_in(ctx.person) == []

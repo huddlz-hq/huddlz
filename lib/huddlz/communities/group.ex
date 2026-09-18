@@ -103,6 +103,16 @@ defmodule Huddlz.Communities.Group do
   end
 
   actions do
+    action :drop_ins, :map do
+      description "Dropped-in groups with one RSVP fact each, newest activity first."
+
+      argument :limit, :integer do
+        constraints min: 1
+      end
+
+      run Huddlz.Communities.Group.Actions.DropIns
+    end
+
     action :overview, :map do
       description """
       Organizer overview figures for a group over a period: members and
@@ -345,6 +355,10 @@ defmodule Huddlz.Communities.Group do
   end
 
   policies do
+    policy action(:drop_ins) do
+      authorize_if actor_present()
+    end
+
     # Background maintenance retains its existing policies. A signed-in
     # actor must prove address ownership before mutating community data.
     policy [action_type([:create, :update, :destroy]), actor_present()] do
