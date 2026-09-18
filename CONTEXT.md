@@ -86,6 +86,10 @@ _Avoid_: Event, huddle, meeting
 The physical meeting place of an in-person or hybrid huddl, always chosen from the group's address book. A virtual huddl has no huddl location.
 _Avoid_: Group home location, typed address
 
+**Drop-in**:
+A signed-in person with an RSVP or waitlist spot at a group's huddl who has not joined the group. RSVPing never joins the group; a drop-in is reminded once per group that they can join. Someone who left a group or was removed from it is not a drop-in there.
+_Avoid_: Guest, non-member, participant
+
 ## Scheduling and discovery
 
 **Group time zone**:
