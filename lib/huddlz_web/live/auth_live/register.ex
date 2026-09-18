@@ -10,6 +10,7 @@ defmodule HuddlzWeb.AuthLive.Register do
   alias Huddlz.Accounts.User
   alias Huddlz.Legal
   alias HuddlzWeb.AuthFormErrors
+  alias HuddlzWeb.AuthLive.Components
   alias HuddlzWeb.AuthReturnTo
 
   @impl true
@@ -41,6 +42,7 @@ defmodule HuddlzWeb.AuthLive.Register do
      |> assign(:page_title, "Create account")
      |> assign(:body_class, "is-auth")
      |> assign(:check_errors, false)
+     |> assign(:sign_in_token, nil)
      |> assign(:return_to, AuthReturnTo.validate(params["return_to"]))
      |> assign_form(password_form)}
   end
@@ -139,6 +141,8 @@ defmodule HuddlzWeb.AuthLive.Register do
         </div>
       </.form>
 
+      <Components.sign_in_token_form token={@sign_in_token} return_to={@return_to} />
+
       <div class="auth-aside">
         Already have an account? <.link navigate={sign_in_path(@return_to)}>Sign in</.link>
       </div>
@@ -206,7 +210,7 @@ defmodule HuddlzWeb.AuthLive.Register do
     token = result.__metadata__.token
 
     if token do
-      redirect(socket, to: sign_in_token_path(token, socket.assigns.return_to))
+      assign(socket, :sign_in_token, token)
     else
       socket
       |> put_flash(
@@ -236,11 +240,4 @@ defmodule HuddlzWeb.AuthLive.Register do
   defp sign_in_path(nil), do: ~p"/sign-in"
 
   defp sign_in_path(return_to), do: ~p"/sign-in?#{[return_to: return_to]}"
-
-  defp sign_in_token_path(token, nil), do: "/auth/user/password/sign_in_with_token?token=#{token}"
-
-  defp sign_in_token_path(token, return_to) do
-    "/auth/user/password/sign_in_with_token?" <>
-      URI.encode_query(token: token, return_to: return_to)
-  end
 end
