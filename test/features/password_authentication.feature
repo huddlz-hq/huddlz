@@ -4,6 +4,7 @@ Feature: Password Authentication
   I want to be able to sign up and sign in with a password
   So that I can access the platform without relying on email links
 
+  @password_registration
   Scenario: User registers with password
     Given I am on the registration page
     When I fill in the password registration form with:
@@ -52,6 +53,7 @@ Feature: Password Authentication
     Then I should see "Password is required."
     And I should not be signed in
 
+  @password_sign_in
   Scenario: User signs in with password
     Given a user exists with email "existing@example.com" and password "Password123!"
     And I am on the sign-in page

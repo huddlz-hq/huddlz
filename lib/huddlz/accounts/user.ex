@@ -117,6 +117,7 @@ defmodule Huddlz.Accounts.User do
       password :password do
         identity_field :email
         hash_provider AshAuthentication.BcryptProvider
+        sign_in_token_via_post? true
 
         resettable do
           sender Huddlz.Accounts.User.Senders.SendPasswordResetEmail
