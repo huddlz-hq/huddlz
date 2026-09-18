@@ -8,29 +8,31 @@ defmodule DropInGroupsPageSteps do
 
   alias Huddlz.Accounts.User
   alias Huddlz.Communities
-  alias Huddlz.Communities.{Group, HuddlAttendee}
+  alias Huddlz.Communities.{Group, Huddl, HuddlAttendee}
 
   @section "#dropped-in-groups"
 
+  step "{string} ends before completion is recorded", %{args: [title]} = context do
+    huddl = Huddl |> Ash.Query.filter(title == ^title) |> Ash.read_one!(authorize?: false)
+    ended_at = DateTime.add(DateTime.utc_now(), -60, :second)
+
+    Ash.Seed.update!(huddl, %{
+      starts_at: DateTime.add(ended_at, -1, :hour),
+      ends_at: ended_at
+    })
+
+    context
+  end
+
+  step "{string} held an RSVP to {string} in {string} when it ended",
+       %{args: [email, title, group_name]} = context do
+    hold_past_rsvp(email, title, group_name, :published)
+    context
+  end
+
   step "{string} held an RSVP to {string} in {string} when it completed",
        %{args: [email, title, group_name]} = context do
-    group = find_group(group_name)
-
-    huddl =
-      generate(
-        past_huddl(
-          title: title,
-          group_id: group.id,
-          creator_id: group.owner_id,
-          is_private: false,
-          lifecycle_state: :completed
-        )
-      )
-
-    HuddlAttendee
-    |> Ash.Changeset.for_create(:rsvp, %{huddl_id: huddl.id, user_id: find_user(email).id})
-    |> Ash.create!(authorize?: false)
-
+    hold_past_rsvp(email, title, group_name, :completed)
     context
   end
 
@@ -91,6 +93,25 @@ defmodule DropInGroupsPageSteps do
   step "there is no section for groups I've dropped in on", context do
     refute_has(context.session, @section)
     context
+  end
+
+  defp hold_past_rsvp(email, title, group_name, lifecycle_state) do
+    group = find_group(group_name)
+
+    huddl =
+      generate(
+        past_huddl(
+          title: title,
+          group_id: group.id,
+          creator_id: group.owner_id,
+          is_private: false,
+          lifecycle_state: lifecycle_state
+        )
+      )
+
+    HuddlAttendee
+    |> Ash.Changeset.for_create(:rsvp, %{huddl_id: huddl.id, user_id: find_user(email).id})
+    |> Ash.create!(authorize?: false)
   end
 
   defp click_in_card(session, group_name, button) do

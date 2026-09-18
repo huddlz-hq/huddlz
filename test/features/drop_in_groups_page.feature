@@ -33,12 +33,25 @@ Feature: Groups I've dropped in on appear on my groups page
     Then "Tuesday Runners" is listed among groups I've dropped in on
     And its listing says I'm waitlisted for "Long Run"
 
+  Scenario: An ended huddl reads as a past RSVP before completion is recorded
+    Given "maya605@example.com" held an RSVP to "Track Night" in "Tuesday Runners" when it ended
+    When I visit "/groups"
+    Then its listing says I RSVPd to "Track Night"
+
   Scenario: An upcoming huddl is mentioned ahead of a completed one
     Given "maya605@example.com" held an RSVP to "Track Night" in "Tuesday Runners" when it completed
     And an upcoming huddl "Long Run" exists in "Tuesday Runners"
     And "maya605@example.com" has RSVPd to "Long Run"
     When I visit "/groups"
     Then its listing says I'm going to "Long Run"
+
+  Scenario: A waitlist spot stops suggesting the group when the huddl ends
+    Given an upcoming huddl "Long Run" exists in "Tuesday Runners"
+    And "Long Run" has room for 1 people
+    And "maya605@example.com" is on the waitlist for "Long Run"
+    When "Long Run" ends before completion is recorded
+    And I visit "/groups"
+    Then there is no section for groups I've dropped in on
 
   Scenario: Joining from the list
     Given an upcoming huddl "Long Run" exists in "Tuesday Runners"
@@ -78,3 +91,8 @@ Feature: Groups I've dropped in on appear on my groups page
     Then 6 groups are listed among groups I've dropped in on
     When I click the "Show all 8" button
     Then 8 groups are listed among groups I've dropped in on
+    When I choose not now for "Club 8"
+    Then 7 groups are listed among groups I've dropped in on
+    When I join "Club 7" from the groups I've dropped in on
+    Then 6 groups are listed among groups I've dropped in on
+    And "Club 7" is listed among my groups

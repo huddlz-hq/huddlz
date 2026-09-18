@@ -1,4 +1,4 @@
-defmodule Huddlz.Communities.DropIns do
+defmodule Huddlz.Communities.Group.Actions.DropIns do
   @moduledoc """
   The groups a person has dropped in on, each with the huddl worth
   mentioning: "You're going to Long Run on Sep 20".
@@ -16,27 +16,27 @@ defmodule Huddlz.Communities.DropIns do
   never "went" (ADR-0003, ADR-0008).
   """
 
+  use Ash.Resource.Actions.Implementation
+
   alias Huddlz.Communities
 
-  @type spot :: :going | :waitlisted | :rsvpd
-  @type entry :: %{group: struct(), huddl: struct(), spot: spot()}
-
-  @doc """
-  Lists the actor's dropped-in groups. `opts[:load]` is passed to the group
-  read.
-  """
-  @spec list(struct(), keyword()) :: {:ok, [entry()]} | {:error, term()}
-  def list(actor, opts \\ []) do
+  @impl true
+  def run(input, _opts, %{actor: actor}) do
     with {:ok, groups} <-
            Communities.groups_for_actor(:dropped_in,
              actor: actor,
-             load: Keyword.get(opts, :load, []),
+             load: [:current_image_url],
              page: false
            ),
          {:ok, spots} <- spots_for(groups, actor) do
-      {:ok, entries(groups, spots)}
+      entries = entries(groups, spots)
+      limit = Ash.ActionInput.get_argument(input, :limit)
+      {:ok, %{entries: limit_entries(entries, limit), count: length(entries)}}
     end
   end
+
+  defp limit_entries(entries, nil), do: entries
+  defp limit_entries(entries, limit), do: Enum.take(entries, limit)
 
   defp spots_for([], _actor), do: {:ok, []}
 
@@ -45,32 +45,37 @@ defmodule Huddlz.Communities.DropIns do
   end
 
   defp entries(groups, spots) do
-    by_group = Enum.group_by(spots, & &1.huddl.group_id)
+    now = DateTime.utc_now()
+
+    by_group =
+      spots
+      |> Enum.reject(&(not is_nil(&1.waitlisted_at) and ended?(&1.huddl, now)))
+      |> Enum.group_by(& &1.huddl.group_id)
 
     groups
     |> Enum.flat_map(fn group ->
       case Map.get(by_group, group.id, []) do
         [] -> []
-        group_spots -> [entry(group, group_spots)]
+        group_spots -> [entry(group, group_spots, now)]
       end
     end)
     |> Enum.sort_by(& &1.latest_rsvp, {:desc, DateTime})
     |> Enum.map(&Map.delete(&1, :latest_rsvp))
   end
 
-  defp entry(group, spots) do
-    chosen = mention(spots)
+  defp entry(group, spots, now) do
+    chosen = mention(spots, now)
 
     %{
       group: group,
       huddl: chosen.huddl,
-      spot: spot(chosen),
+      spot: spot(chosen, now),
       latest_rsvp: spots |> Enum.map(& &1.rsvped_at) |> Enum.max(DateTime)
     }
   end
 
-  defp mention(spots) do
-    {upcoming, completed} = Enum.split_with(spots, &(&1.huddl.lifecycle_state == :published))
+  defp mention(spots, now) do
+    {completed, upcoming} = Enum.split_with(spots, &ended?(&1.huddl, now))
 
     case Enum.sort_by(upcoming, & &1.huddl.starts_at, DateTime) do
       [soonest | _] -> soonest
@@ -78,7 +83,13 @@ defmodule Huddlz.Communities.DropIns do
     end
   end
 
-  defp spot(%{huddl: %{lifecycle_state: :completed}}), do: :rsvpd
+  defp spot(spot, now) do
+    if ended?(spot.huddl, now), do: :rsvpd, else: spot(spot)
+  end
+
+  defp ended?(%{lifecycle_state: :completed}, _now), do: true
+  defp ended?(huddl, now), do: DateTime.compare(huddl.ends_at, now) != :gt
+
   defp spot(%{waitlisted_at: nil}), do: :going
   defp spot(_waitlisted), do: :waitlisted
 end
