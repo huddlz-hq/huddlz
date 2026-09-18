@@ -178,6 +178,7 @@ defmodule Huddlz.Communities.GroupMember do
       end
 
       change Huddlz.Communities.GroupMember.Changes.NotifyRemoved
+      change Huddlz.Communities.GroupMember.Changes.CloseDropInReminder
     end
 
     action :remove_member_by_ids, :struct do
@@ -239,11 +240,14 @@ defmodule Huddlz.Communities.GroupMember do
 
     destroy :leave_group do
       description "Leave a group (member removes themselves; owners must transfer ownership first)"
+      require_atomic? false
 
       # Keep this invariant even for trusted internal calls that bypass authorization.
       validate attribute_does_not_equal(:role, :owner) do
         message "owners cannot leave their own group; transfer ownership first"
       end
+
+      change Huddlz.Communities.GroupMember.Changes.CloseDropInReminder
     end
 
     read :get_by_group do

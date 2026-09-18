@@ -27,7 +27,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   on_mount {HuddlzWeb.LiveUserAuth,
             {:participation,
-             ~w(rsvp join_waitlist cancel_rsvp leave_waitlist join_group upload_photos delete_photo publish_huddl cancel_huddl delete_huddl)}}
+             ~w(rsvp join_waitlist cancel_rsvp leave_waitlist join_group dismiss_join_suggestion upload_photos delete_photo publish_huddl cancel_huddl delete_huddl)}}
 
   @huddl_loads [
     :status,
@@ -482,6 +482,14 @@ defmodule HuddlzWeb.HuddlLive.Show do
                 phx-disable-with="Joining..."
               >
                 Join group
+              </.button>
+              <.button
+                variant={:muted}
+                id="huddl-suggestion-dismiss"
+                phx-click="dismiss_join_suggestion"
+                phx-disable-with="Not now"
+              >
+                Not now
               </.button>
             </div>
           </div>
@@ -1115,6 +1123,20 @@ defmodule HuddlzWeb.HuddlLive.Show do
   end
 
   @impl true
+  def handle_event("dismiss_join_suggestion", _, socket) do
+    huddl = socket.assigns.huddl
+    user = socket.assigns.current_user
+
+    case Communities.dismiss_join_suggestion(huddl.group.id, actor: user) do
+      {:ok, _} ->
+        {:noreply, assign(socket, :join_suggestion, :none)}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Couldn't save that. Please try again.")}
+    end
+  end
+
+  @impl true
   def handle_event("join_waitlist", _, socket) do
     huddl = socket.assigns.huddl
     user = socket.assigns.current_user
@@ -1460,12 +1482,25 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
     suggestion =
       case {going?, socket.assigns.group_membership, socket.assigns.just_joined_group?} do
-        {true, :joinable, _} -> :suggest
+        {true, :joinable, _} -> open_suggestion(huddl.group, socket.assigns.current_user)
         {true, :member, true} -> :joined
         _ -> :none
       end
 
     assign(socket, :join_suggestion, suggestion)
+  end
+
+  # "Not now", leaving the group and being removed from it each end the
+  # reminder for that group for good.
+  defp open_suggestion(group, user) do
+    case Communities.get_drop_in_reminder(group.id, actor: user, not_found_error?: false) do
+      {:ok, %{dismissed_at: dismissed_at, closed_at: closed_at}}
+      when not is_nil(dismissed_at) or not is_nil(closed_at) ->
+        :none
+
+      _ ->
+        :suggest
+    end
   end
 
   defp suggestion_lead(:waitlisted), do: "You're on the waitlist."

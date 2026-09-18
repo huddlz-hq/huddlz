@@ -54,3 +54,30 @@ Feature: Drop-ins can join the group from the huddl page
     Given I am signed in as "maya604@example.com"
     When I visit the huddl "Elixir hack night"
     Then the huddl page does not suggest joining "Portland Elixir"
+
+  Scenario: Not now ends the suggestion for that group
+    Given an upcoming huddl "Elixir lightning talks" exists in "Portland Elixir"
+    And I am signed in as "maya604@example.com"
+    And "maya604@example.com" has RSVPd to "Elixir hack night"
+    When I visit the huddl "Elixir hack night"
+    And I decline the suggestion to join "Portland Elixir"
+    Then the huddl page does not suggest joining "Portland Elixir"
+    And I can join "Portland Elixir" from the huddl page
+    When I visit the huddl "Elixir lightning talks"
+    And I click the "RSVP to this huddl" button
+    Then the huddl page does not suggest joining "Portland Elixir"
+
+  Scenario: Someone who left the group is not reminded
+    Given "maya604@example.com" joined and then left "Portland Elixir"
+    And I am signed in as "maya604@example.com"
+    When I visit the huddl "Elixir hack night"
+    And I click the "RSVP to this huddl" button
+    Then the huddl page does not suggest joining "Portland Elixir"
+    And I can join "Portland Elixir" from the huddl page
+
+  Scenario: Someone removed from the group is not reminded
+    Given "maya604@example.com" joined "Portland Elixir" and was removed by "owner604@example.com"
+    And I am signed in as "maya604@example.com"
+    When I visit the huddl "Elixir hack night"
+    And I click the "RSVP to this huddl" button
+    Then the huddl page does not suggest joining "Portland Elixir"

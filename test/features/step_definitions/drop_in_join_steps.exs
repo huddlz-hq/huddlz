@@ -53,6 +53,30 @@ defmodule DropInJoinSteps do
     Map.put(context, :session, session)
   end
 
+  step "I decline the suggestion to join {string}", %{args: [_group_name]} = context do
+    session = within(context.session, "#huddl-join-suggestion", &click_button(&1, "Not now"))
+    Map.put(context, :session, session)
+  end
+
+  step "{string} joined and then left {string}", %{args: [email, group_name]} = context do
+    user = find_user(email)
+    membership = Communities.join_group!(find_group(group_name).id, actor: user)
+    :ok = Communities.leave_group!(membership, actor: user)
+    context
+  end
+
+  step "{string} joined {string} and was removed by {string}",
+       %{args: [email, group_name, organizer_email]} = context do
+    user = find_user(email)
+    group = find_group(group_name)
+    membership = Communities.join_group!(group.id, actor: user)
+
+    :ok =
+      Communities.remove_member!(membership, group.id, user.id, actor: find_user(organizer_email))
+
+    context
+  end
+
   step "{string} does not belong to {string}", %{args: [email, group_name]} = context do
     refute membership(email, group_name)
     context
@@ -63,9 +87,17 @@ defmodule DropInJoinSteps do
     context
   end
 
+  defp find_user(email) do
+    User |> Ash.Query.filter(email == ^email) |> Ash.read_one!(authorize?: false)
+  end
+
+  defp find_group(name) do
+    Group |> Ash.Query.filter(name == ^name) |> Ash.read_one!(authorize?: false)
+  end
+
   defp membership(email, group_name) do
-    user = User |> Ash.Query.filter(email == ^email) |> Ash.read_one!(authorize?: false)
-    group = Group |> Ash.Query.filter(name == ^group_name) |> Ash.read_one!(authorize?: false)
+    user = find_user(email)
+    group = find_group(group_name)
 
     GroupMember
     |> Ash.Query.filter(group_id == ^group.id and user_id == ^user.id)

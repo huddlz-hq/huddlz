@@ -482,6 +482,10 @@ defmodule Huddlz.Communities.Group do
       destination_attribute :group_id
     end
 
+    has_many :drop_in_reminders, Huddlz.Communities.DropInReminder do
+      destination_attribute :group_id
+    end
+
     has_many :group_invitations, Huddlz.Communities.GroupInvitation do
       destination_attribute :group_id
     end

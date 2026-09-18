@@ -148,6 +148,12 @@ defmodule Huddlz.Communities do
       define :get_membership_in_group, action: :get_in_group, args: [:group_id], get?: true
     end
 
+    resource Huddlz.Communities.DropInReminder do
+      define :dismiss_join_suggestion, action: :dismiss, args: [:group_id]
+      define :close_drop_in_reminder, action: :close
+      define :get_drop_in_reminder, action: :for_group, args: [:group_id], get?: true
+    end
+
     resource Huddlz.Communities.GroupInvitation do
       define :invite_to_group,
         action: :invite,
