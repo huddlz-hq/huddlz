@@ -86,10 +86,12 @@ defmodule HuddlzWeb.Live.Helpers.HuddlCardHelpers do
         format_weeks(div(days, 7), future?)
 
       true ->
-        date = Calendar.strftime(local_dt, "%b %d, %Y")
-        if future?, do: date, else: "Ended on #{date}"
+        format_date(local_dt, future?)
     end
   end
+
+  defp format_date(datetime, true), do: Calendar.strftime(datetime, "%b %d, %Y")
+  defp format_date(datetime, false), do: "Ended on #{Calendar.strftime(datetime, "%b %d, %Y")}"
 
   defp format_hours(1, true), do: "1 hour away"
   defp format_hours(n, true), do: "#{n} hours away"
