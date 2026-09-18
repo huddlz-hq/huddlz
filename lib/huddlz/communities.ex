@@ -181,6 +181,8 @@ defmodule Huddlz.Communities do
       define :list_huddl_attendees, action: :by_huddl, args: [:huddl_id], get?: false
       define :list_huddl_waitlist, action: :waitlist_for_huddl, args: [:huddl_id], get?: false
 
+      define :list_drop_in_spots, action: :drop_in_spots, args: [:group_ids], get?: false
+
       define :list_huddl_notification_recipients,
         action: :notification_recipients,
         args: [:huddl_ids],
