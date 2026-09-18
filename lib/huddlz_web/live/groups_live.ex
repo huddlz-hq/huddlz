@@ -89,28 +89,30 @@ defmodule HuddlzWeb.GroupsLive do
   def handle_event("join_dropped_in", %{"group-id" => group_id}, socket) do
     user = socket.assigns.current_user
 
-    with %{group: group} <- find_drop_in(socket, group_id),
-         {:ok, _membership} <- Communities.join_group(group.id, actor: user) do
-      {:noreply,
-       socket
-       |> put_flash(:info, "You joined #{group.name}.")
-       |> assign(:counts, load_counts(user))
-       |> load_results(socket.assigns.filter, socket.assigns.page_info.current_page, user)
-       |> load_drop_ins(socket.assigns.filter, socket.assigns.page_info.current_page, user)}
-    else
-      _ -> {:noreply, put_flash(socket, :error, "Couldn't join the group. Please try again.")}
+    case Communities.join_group(group_id, actor: user, load: [:group]) do
+      {:ok, %{group: group}} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "You joined #{group.name}.")
+         |> assign(:counts, load_counts(user))
+         |> load_results(socket.assigns.filter, socket.assigns.page_info.current_page, user)
+         |> load_drop_ins(socket.assigns.filter, socket.assigns.page_info.current_page, user)}
+
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, "Couldn't join the group. Please try again.")}
     end
   end
 
   def handle_event("dismiss_dropped_in", %{"group-id" => group_id}, socket) do
     user = socket.assigns.current_user
 
-    with %{group: group} <- find_drop_in(socket, group_id),
-         {:ok, _reminder} <- Communities.dismiss_join_suggestion(group.id, actor: user) do
-      {:noreply,
-       load_drop_ins(socket, socket.assigns.filter, socket.assigns.page_info.current_page, user)}
-    else
-      _ -> {:noreply, put_flash(socket, :error, "Couldn't save that. Please try again.")}
+    case Communities.dismiss_join_suggestion(group_id, actor: user) do
+      {:ok, _reminder} ->
+        {:noreply,
+         load_drop_ins(socket, socket.assigns.filter, socket.assigns.page_info.current_page, user)}
+
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, "Couldn't save that. Please try again.")}
     end
   end
 
@@ -123,13 +125,6 @@ defmodule HuddlzWeb.GroupsLive do
        socket.assigns.page_info.current_page,
        socket.assigns.current_user
      )}
-  end
-
-  defp find_drop_in(socket, group_id) do
-    case Communities.list_drop_ins(actor: socket.assigns.current_user) do
-      {:ok, %{entries: entries}} -> Enum.find(entries, &(&1.group.id == group_id))
-      {:error, _reason} -> nil
-    end
   end
 
   # The section belongs to the default view's first page: it follows the
