@@ -73,7 +73,7 @@ defmodule Huddlz.Communities.Group.Preparations.ApplyGroupRelationshipFilter do
       query,
       not exists(
         drop_in_reminders,
-        user_id == ^actor_id and (not is_nil(dismissed_at) or not is_nil(closed_at))
+        user_id == ^actor_id and suppressed?
       )
     )
   end

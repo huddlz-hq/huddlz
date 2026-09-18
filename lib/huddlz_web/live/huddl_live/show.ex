@@ -1494,8 +1494,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   # reminder for that group for good.
   defp open_suggestion(group, user) do
     case Communities.get_drop_in_reminder(group.id, actor: user, not_found_error?: false) do
-      {:ok, %{dismissed_at: dismissed_at, closed_at: closed_at}}
-      when not is_nil(dismissed_at) or not is_nil(closed_at) ->
+      {:ok, %{suppressed?: true}} ->
         :none
 
       _ ->

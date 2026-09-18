@@ -98,6 +98,7 @@ defmodule Huddlz.Communities.DropInReminder do
       end
 
       filter expr(group_id == ^arg(:group_id) and user_id == ^actor(:id))
+      prepare build(load: [:suppressed?])
     end
   end
 
@@ -144,6 +145,14 @@ defmodule Huddlz.Communities.DropInReminder do
       read_action :read_for_others
       attribute_type :uuid
       allow_nil? false
+    end
+  end
+
+  calculations do
+    calculate :suppressed?,
+              :boolean,
+              expr(not is_nil(dismissed_at) or not is_nil(closed_at)) do
+      description "Whether this person has permanently ended join suggestions for the group."
     end
   end
 
