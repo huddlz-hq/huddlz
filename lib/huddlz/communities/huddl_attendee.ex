@@ -139,10 +139,10 @@ defmodule Huddlz.Communities.HuddlAttendee do
     read :drop_in_spots do
       description """
       The actor's own spots that make them a drop-in at the given groups: an
-      RSVP or waitlist spot on a published huddl, or an RSVP held when a
-      huddl completed. Which groups qualify is decided by Group's
-      `:groups_for_actor` with `relationship: :dropped_in`; this read only
-      finds the huddlz to mention for them.
+      RSVP on a published or completed huddl, or a waitlist spot on a huddl
+      that has not ended yet. Which groups qualify is decided by Group's
+      `:groups_for_actor` with `relationship: :dropped_in`, which states the
+      same rule; this read only finds the huddlz to mention for them.
       """
 
       argument :group_ids, {:array, :uuid} do
@@ -152,8 +152,8 @@ defmodule Huddlz.Communities.HuddlAttendee do
       filter expr(
                user_id == ^actor(:id) and huddl.group_id in ^arg(:group_ids) and
                  huddl.is_private == false and
-                 (huddl.lifecycle_state == :published or
-                    (huddl.lifecycle_state == :completed and is_nil(waitlisted_at)))
+                 ((huddl.lifecycle_state in [:published, :completed] and is_nil(waitlisted_at)) or
+                    (huddl.lifecycle_state == :published and huddl.ends_at > now()))
              )
 
       prepare build(load: [:huddl], sort: [rsvped_at: :desc])

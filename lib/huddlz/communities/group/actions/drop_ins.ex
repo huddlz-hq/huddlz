@@ -14,6 +14,11 @@ defmodule Huddlz.Communities.Group.Actions.DropIns do
   Groups come back newest activity first, by the person's latest RSVP there.
   huddlz knows who RSVPd, not who came, so a completed huddl is `:rsvpd`,
   never "went" (ADR-0003, ADR-0008).
+
+  Nothing here decides whether a spot counts: the two reads already have.
+  The end time is consulted only for wording, because a huddl that is over
+  stays published until the completion job records it, and "You're going to"
+  would be wrong for it.
   """
 
   use Ash.Resource.Actions.Implementation
@@ -47,10 +52,7 @@ defmodule Huddlz.Communities.Group.Actions.DropIns do
   defp entries(groups, spots) do
     now = DateTime.utc_now()
 
-    by_group =
-      spots
-      |> Enum.reject(&(not is_nil(&1.waitlisted_at) and ended?(&1.huddl, now)))
-      |> Enum.group_by(& &1.huddl.group_id)
+    by_group = Enum.group_by(spots, & &1.huddl.group_id)
 
     groups
     |> Enum.flat_map(fn group ->

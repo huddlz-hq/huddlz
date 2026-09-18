@@ -8,9 +8,10 @@ defmodule Huddlz.Communities.Group.Preparations.ApplyGroupRelationshipFilter do
     * `:joined`  — the actor is a member but not the owner.
     * `:all`     — either of the above.
     * `:dropped_in` — public groups the actor has not joined, where they
-      hold an RSVP or waitlist spot on a published huddl or held an RSVP at
-      a completed one, and have not dismissed or closed the reminder
-      (see `Huddlz.Communities.DropInReminder`). Never part of `:all`.
+      hold an RSVP on a published or completed huddl, or a waitlist spot on
+      a huddl that has not ended yet, and have not dismissed or closed the
+      reminder (see `Huddlz.Communities.DropInReminder`). Never part of
+      `:all`.
 
   Sorting is delegated to `ApplyTrigramSearch` (alphabetical by `name` when
   no `:search` arg is present), so the SQL ordering matches the other group
@@ -78,17 +79,21 @@ defmodule Huddlz.Communities.Group.Preparations.ApplyGroupRelationshipFilter do
     )
   end
 
-  # An RSVP or waitlist spot on a published huddl, or an RSVP held when a
-  # huddl completed. A waitlist spot at a completed huddl never got in.
+  # An RSVP counts on a published or completed huddl. A waitlist spot counts
+  # only while the huddl has not ended: once it is over, that spot never got
+  # in. The end time decides, not the lifecycle state, because a huddl stays
+  # published until the completion job records it. `HuddlAttendee`'s
+  # `:drop_in_spots` read states the same rule from the spot's side.
   defp holding_a_spot(query, actor_id) do
     Ash.Query.filter(
       query,
       exists(
         huddlz,
         is_private == false and
-          ((lifecycle_state == :published and exists(attendees, user_id == ^actor_id)) or
-             (lifecycle_state == :completed and
-                exists(attendees, user_id == ^actor_id and is_nil(waitlisted_at))))
+          ((lifecycle_state in [:published, :completed] and
+              exists(attendees, user_id == ^actor_id and is_nil(waitlisted_at))) or
+             (lifecycle_state == :published and ends_at > now() and
+                exists(attendees, user_id == ^actor_id)))
       )
     )
   end
