@@ -2986,6 +2986,13 @@ body .group-row {
 }
 
 body .group-row:hover { border-color: var(--line-strong); }
+body .group-row-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: -2px 0 14px;
+}
 body .group-row .group-cover--thumb { width: 48px; }
 body .group-row-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 body .group-row-name { font-size: 14px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }

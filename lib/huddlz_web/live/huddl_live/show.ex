@@ -9,6 +9,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   alias Huddlz.Accounts.ConfirmationDestination
   alias Huddlz.Accounts.User
   alias Huddlz.Communities
+  alias Huddlz.Communities.GroupMember
   alias Huddlz.Storage.HuddlCoverImages
   alias Huddlz.Storage.HuddlPhotos
   alias HuddlzWeb.Avatar
@@ -26,7 +27,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   on_mount {HuddlzWeb.LiveUserAuth,
             {:participation,
-             ~w(rsvp join_waitlist cancel_rsvp leave_waitlist upload_photos delete_photo publish_huddl cancel_huddl delete_huddl)}}
+             ~w(rsvp join_waitlist cancel_rsvp leave_waitlist join_group upload_photos delete_photo publish_huddl cancel_huddl delete_huddl)}}
 
   @huddl_loads [
     :status,
@@ -48,6 +49,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
     {:ok,
      socket
      |> assign(:confirming_delete?, false)
+     |> assign(:just_joined_group?, false)
      |> assign(:confirming_cancel?, false)
      |> assign(:confirming_delete_photo_id, nil)
      |> assign(:confirming_delete_photo, nil)
@@ -559,6 +561,22 @@ defmodule HuddlzWeb.HuddlLive.Show do
               </span>
               <.icon name="hero-chevron-right" class="size-4 group-row-chevron" />
             </.link>
+            <div :if={@group_membership == :joinable} class="group-row-actions">
+              <.button
+                variant={:secondary}
+                id="huddl-group-join"
+                phx-click="join_group"
+                phx-disable-with="Joining..."
+              >
+                Join group
+              </.button>
+            </div>
+            <div :if={@group_membership == :member} class="group-row-actions">
+              <.pill variant={:cyan} id="huddl-group-member">Member</.pill>
+              <span :if={@just_joined_group?} id="huddl-group-joined" class="pref-saved" role="status">
+                Joined
+              </span>
+            </div>
             <div class="creator-row">
               <span class="muted">Organized by</span>
               <.avatar user={@huddl.creator} size={:sm} />
@@ -1042,6 +1060,23 @@ defmodule HuddlzWeb.HuddlLive.Show do
   end
 
   @impl true
+  def handle_event("join_group", _, socket) do
+    huddl = socket.assigns.huddl
+    user = socket.assigns.current_user
+
+    case Communities.join_group(huddl.group.id, actor: user) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> assign(:just_joined_group?, true)
+         |> refresh_attendance(huddl, user)}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Couldn't join the group. Please try again.")}
+    end
+  end
+
+  @impl true
   def handle_event("join_waitlist", _, socket) do
     huddl = socket.assigns.huddl
     user = socket.assigns.current_user
@@ -1339,6 +1374,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
     |> assign(:waitlist_position, waitlist_position)
     |> assign(:going_visible, @going_visible)
     |> assign_going(huddl, user, attendance)
+    |> assign_group_membership(huddl.group, user)
     |> assign(
       :can_edit_huddl,
       is_nil(huddl.group.archived_at) && editable_lifecycle?(huddl) &&
@@ -1360,6 +1396,26 @@ defmodule HuddlzWeb.HuddlLive.Show do
     )
     |> assign_turnout(huddl, user)
     |> load_photos(huddl, user, can_view_photos)
+  end
+
+  # The Hosted by card knows whether the viewer belongs to the group: a member
+  # sees so, anyone who may join a public group can do it from here, and
+  # everyone else (signed out, unconfirmed, archived group) gets the plain link.
+  defp assign_group_membership(socket, _group, nil), do: assign(socket, :group_membership, :none)
+
+  defp assign_group_membership(socket, group, user) do
+    membership =
+      case Communities.get_membership_in_group(group.id, actor: user) do
+        {:ok, %GroupMember{}} -> :member
+        _ -> if joinable?(group, user), do: :joinable, else: :none
+      end
+
+    assign(socket, :group_membership, membership)
+  end
+
+  defp joinable?(group, user) do
+    is_nil(group.archived_at) &&
+      Ash.can?({GroupMember, :join_group, %{group_id: group.id}}, user)
   end
 
   # Turnout is shown once a huddl has ended, to organizers only. It is
