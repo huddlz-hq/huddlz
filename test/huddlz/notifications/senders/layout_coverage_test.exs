@@ -81,6 +81,7 @@ defmodule Huddlz.Notifications.Senders.LayoutCoverageTest do
           "inviter_name" => owner.display_name,
           "role" => "member"
         }),
+      group_join_suggestion: %{"huddl_id" => huddl.id},
       group_member_removed: group_payload,
       group_role_changed:
         Map.merge(group_payload, %{"previous_role" => "member", "new_role" => "organizer"}),

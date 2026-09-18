@@ -53,6 +53,7 @@ defmodule Huddlz.Notifications.Senders.HeaderSafeIntegrationTest do
 
   defp payload_variants(trigger, huddl)
        when trigger in [
+              :group_join_suggestion,
               :huddl_reminder_24h,
               :huddl_reminder_1h,
               :rsvp_confirmation,

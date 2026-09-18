@@ -187,6 +187,15 @@ defmodule Huddlz.Communities.Huddl do
         worker_module_name Huddlz.Communities.Workers.CompleteHuddl
         scheduler_module_name Huddlz.Communities.Workers.CompleteHuddlScheduler
       end
+
+      trigger :suggest_joining do
+        action :suggest_joining
+        read_action :due_for_join_suggestions
+        scheduler_cron "*/10 * * * *"
+        queue :notifications
+        worker_module_name Huddlz.Notifications.Workers.SuggestJoining
+        scheduler_module_name Huddlz.Notifications.Workers.SuggestJoiningScheduler
+      end
     end
   end
 
@@ -761,6 +770,24 @@ defmodule Huddlz.Communities.Huddl do
       filter expr(lifecycle_state == :published and ends_at <= now())
     end
 
+    read :due_for_join_suggestions do
+      description "Huddlz that completed at least a day ago and have not had their join suggestions sent."
+
+      pagination keyset?: true, required?: false, default_limit: 100
+
+      filter expr(
+               lifecycle_state == :completed and completed_at <= ago(1, :day) and
+                 is_nil(join_suggestions_sent_at)
+             )
+    end
+
+    update :suggest_joining do
+      description "Mark and fan out the join suggestion to this completed huddl's drop-ins. Invoked by the AshOban scheduler."
+      require_atomic? false
+
+      change Huddlz.Communities.Huddl.Changes.SuggestJoining
+    end
+
     update :send_24h_reminder do
       description "Mark and fan out the 24-hour reminder for this huddl. Invoked by the AshOban scheduler."
       require_atomic? false
@@ -814,7 +841,7 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     # Background lifecycle and reminder actions run through AshOban with no actor.
-    policy action([:complete, :send_24h_reminder, :send_1h_reminder]) do
+    policy action([:complete, :send_24h_reminder, :send_1h_reminder, :suggest_joining]) do
       description "Scheduled huddl maintenance runs from background workers"
       authorize_if always()
     end
@@ -1067,6 +1094,13 @@ defmodule Huddlz.Communities.Huddl do
       allow_nil? true
       public? true
       description "When an organizer dismissed the turnout prompt without recording."
+    end
+
+    attribute :join_suggestions_sent_at, :utc_datetime_usec do
+      allow_nil? true
+      public? false
+
+      description "Stamped when the join suggestion has gone out to this completed huddl's drop-ins. Huddlz completed before the suggestion existed were stamped by its migration."
     end
 
     attribute :reminder_24h_sent_at, :utc_datetime_usec do
