@@ -36,7 +36,7 @@ defmodule HuddlzWeb.Live.Helpers.HuddlCardHelpersTest do
       }
 
       assert HuddlCardHelpers.relative_time(huddl, now: ~U[2026-09-16 12:00:00Z]) ==
-               "2 days ago"
+               "Ended 2 days ago"
     end
 
     test "calendar days survive the spring daylight-saving change" do
@@ -89,8 +89,19 @@ defmodule HuddlzWeb.Live.Helpers.HuddlCardHelpersTest do
     end
 
     test "counts a finished huddl up from when it ended, not from when it started" do
-      assert timing(from_now(hour: -9), from_now(hour: -1)) == "1 hour ago"
-      assert timing(from_now(hour: -33), from_now(hour: -25)) == "yesterday"
+      assert timing(from_now(hour: -9), from_now(hour: -1)) == "Ended 1 hour ago"
+      assert timing(from_now(hour: -33), from_now(hour: -25)) == "Ended yesterday"
+    end
+
+    test "makes the end reference explicit beside a morning start time" do
+      huddl = %{
+        starts_at: ~U[2026-09-17 13:00:00Z],
+        ends_at: ~U[2026-09-17 16:00:00Z],
+        time_zone: "America/New_York"
+      }
+
+      assert HuddlCardHelpers.relative_time(huddl, now: ~U[2026-09-18 00:52:00Z]) ==
+               "Ended 8 hours ago"
     end
 
     test "reads as just ended once the end has passed" do

@@ -38,7 +38,7 @@ defmodule HuddlzWeb.Live.Helpers.HuddlCardHelpers do
   @doc """
   How a huddl's timing reads beside it in a card foot or an agenda entry:
   counting down while it is still to come, "happening now" while it is under
-  way, and counting up from when it ended once it is over.
+  way, and counting up with an explicit "Ended" label once it is over.
 
   A huddl that is under way reads here as it reads on its own page, where
   `HuddlzWeb.HuddlStatus` labels it "Happening now".
@@ -86,22 +86,23 @@ defmodule HuddlzWeb.Live.Helpers.HuddlCardHelpers do
         format_weeks(div(days, 7), future?)
 
       true ->
-        Calendar.strftime(local_dt, "%b %d, %Y")
+        date = Calendar.strftime(local_dt, "%b %d, %Y")
+        if future?, do: date, else: "Ended on #{date}"
     end
   end
 
   defp format_hours(1, true), do: "1 hour away"
   defp format_hours(n, true), do: "#{n} hours away"
-  defp format_hours(1, false), do: "1 hour ago"
-  defp format_hours(n, false), do: "#{n} hours ago"
+  defp format_hours(1, false), do: "Ended 1 hour ago"
+  defp format_hours(n, false), do: "Ended #{n} hours ago"
 
   defp format_days(1, true), do: "tomorrow"
   defp format_days(n, true), do: "#{n} days away"
-  defp format_days(1, false), do: "yesterday"
-  defp format_days(n, false), do: "#{n} days ago"
+  defp format_days(1, false), do: "Ended yesterday"
+  defp format_days(n, false), do: "Ended #{n} days ago"
 
   defp format_weeks(1, true), do: "1 week away"
   defp format_weeks(n, true), do: "#{n} weeks away"
-  defp format_weeks(1, false), do: "1 week ago"
-  defp format_weeks(n, false), do: "#{n} weeks ago"
+  defp format_weeks(1, false), do: "Ended 1 week ago"
+  defp format_weeks(n, false), do: "Ended #{n} weeks ago"
 end
