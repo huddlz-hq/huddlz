@@ -98,6 +98,18 @@ defmodule Huddlz.Notifications.LayoutTest do
       assert html =~ "&lt;why&gt;"
     end
 
+    test "puts closing paragraphs between the facts and the button" do
+      spec = Map.put(@spec_base, :closing, [["Hosted by ", {:strong, "Pickup Sports"}, "."]])
+      {html, text} = Layout.render(spec)
+
+      for body <- [html, text] do
+        {facts, _} = :binary.match(body, "Laurelhurst Park")
+        {closing, _} = :binary.match(body, "Hosted by ")
+        {button, _} = :binary.match(body, "Open the huddl")
+        assert facts < closing and closing < button
+      end
+    end
+
     test "leaves out the pieces that are not given" do
       {html, text} = Layout.render(%{title: "Just a title", footer: Footer.account()})
 

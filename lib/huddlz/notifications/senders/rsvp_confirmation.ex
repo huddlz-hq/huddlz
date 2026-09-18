@@ -7,6 +7,10 @@ defmodule Huddlz.Notifications.Senders.RsvpConfirmation do
   calendar attachment so the recipient can save the huddl to their
   calendar.
 
+  A drop-in (someone who has not joined the group, see ADR-0011) gets one
+  more paragraph after the facts saying who hosts the huddl and that joining
+  is how they hear about the next one. Members see nothing extra.
+
   Required payload keys:
 
     * `"huddl_id"` — UUID of the huddl. The sender re-reads the row
@@ -19,6 +23,7 @@ defmodule Huddlz.Notifications.Senders.RsvpConfirmation do
   use HuddlzWeb, :verified_routes
   import Swoosh.Email, only: [attachment: 2]
 
+  alias Huddlz.Communities
   alias Huddlz.Notifications.Footer
   alias Huddlz.Notifications.HuddlAccess
   alias Huddlz.Notifications.ICS
@@ -45,6 +50,7 @@ defmodule Huddlz.Notifications.Senders.RsvpConfirmation do
         ]
       ],
       facts: Layout.huddl_facts(huddl),
+      closing: join_suggestion(user, huddl.group),
       action: {"Open the huddl", huddl_url},
       aside: "The calendar event is attached so you can save it to your calendar.",
       footer: Footer.activity(user, :rsvp_confirmation)
@@ -55,6 +61,22 @@ defmodule Huddlz.Notifications.Senders.RsvpConfirmation do
         content_type: "text/calendar"
       )
     )
+  end
+
+  defp join_suggestion(user, group) do
+    if Communities.drop_in?(user, group.id) do
+      [
+        [
+          "Hosted by ",
+          {:strong, group.name},
+          ". You're not a member yet; joining is how you hear about their next huddlz. ",
+          {:link, "See the group", url(~p"/groups/#{group.slug}")},
+          "."
+        ]
+      ]
+    else
+      []
+    end
   end
 
   defp fetch_huddl!(%{"huddl_id" => id}, user) when is_binary(id) do
