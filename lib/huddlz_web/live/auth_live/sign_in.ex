@@ -7,6 +7,7 @@ defmodule HuddlzWeb.AuthLive.SignIn do
 
   alias AshPhoenix.Form
   alias Huddlz.Accounts.User
+  alias HuddlzWeb.AuthLive.Components
   alias HuddlzWeb.AuthReturnTo
 
   @impl true
@@ -47,6 +48,8 @@ defmodule HuddlzWeb.AuthLive.SignIn do
           </button>
         </div>
       </.form>
+
+      <Components.sign_in_token_form token={@sign_in_token} return_to={@return_to} />
 
       <div class="auth-aside">
         <.link navigate={~p"/reset"}>Forgot your password?</.link>
@@ -89,6 +92,7 @@ defmodule HuddlzWeb.AuthLive.SignIn do
      |> assign(:body_class, "is-auth")
      |> assign(:password_form, password_form)
      |> assign(:return_to, AuthReturnTo.validate(params["return_to"]))
+     |> assign(:sign_in_token, nil)
      |> assign(:trigger_action, false)}
   end
 
@@ -138,9 +142,7 @@ defmodule HuddlzWeb.AuthLive.SignIn do
   defp submit_password_form(socket, form) do
     case Form.submit(form, params: nil, read_one?: true) do
       {:ok, user} ->
-        redirect(socket,
-          to: sign_in_token_path(user.__metadata__.token, socket.assigns.return_to)
-        )
+        assign(socket, :sign_in_token, user.__metadata__.token)
 
       {:error, form} ->
         socket
@@ -161,13 +163,6 @@ defmodule HuddlzWeb.AuthLive.SignIn do
 
   defp sign_in_path(return_to) do
     "/auth/user/password/sign_in?" <> URI.encode_query(return_to: return_to)
-  end
-
-  defp sign_in_token_path(token, nil), do: "/auth/user/password/sign_in_with_token?token=#{token}"
-
-  defp sign_in_token_path(token, return_to) do
-    "/auth/user/password/sign_in_with_token?" <>
-      URI.encode_query(token: token, return_to: return_to)
   end
 
   defp register_path(nil), do: ~p"/register"
