@@ -2690,6 +2690,20 @@ body .rsvp-state .btn-secondary { width: 100%; justify-content: center; }
 body .rsvp-state .btn-primary { height: 44px; font-size: 14px; }
 body .rsvp-state .rsvp-banner { width: 100%; }
 
+/* The drop-in line: under the RSVP state, one sentence and the way to join.
+   On phones the RSVP state is docked, so the line says what the dock says. */
+body .join-suggestion {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+body .join-suggestion p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--soft); }
+body .join-suggestion-lead { display: none; }
+body .join-suggestion-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+
 /* Docked RSVP on phones. The aside's RSVP block itself pins to the bottom
    edge (so there is one control, not a copy), joined by a share shortcut
    that only exists in the dock. Cards, drawers and toasts stack above it. */
@@ -2697,6 +2711,7 @@ body .rsvp-dock-share { display: none; }
 
 @media (max-width: 760px) {
   body .content-body:has(.rsvp-state[data-dock]) { padding-bottom: 112px; }
+  body .join-suggestion-lead { display: inline; }
 
   body .rsvp-state[data-dock] {
     position: fixed;
@@ -2986,6 +3001,13 @@ body .group-row {
 }
 
 body .group-row:hover { border-color: var(--line-strong); }
+body .group-row-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: -2px 0 14px;
+}
 body .group-row .group-cover--thumb { width: 48px; }
 body .group-row-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 body .group-row-name { font-size: 14px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }

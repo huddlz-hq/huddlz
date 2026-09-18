@@ -9,6 +9,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
   alias Huddlz.Accounts.ConfirmationDestination
   alias Huddlz.Accounts.User
   alias Huddlz.Communities
+  alias Huddlz.Communities.GroupMember
   alias Huddlz.Storage.HuddlCoverImages
   alias Huddlz.Storage.HuddlPhotos
   alias HuddlzWeb.Avatar
@@ -26,7 +27,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   on_mount {HuddlzWeb.LiveUserAuth,
             {:participation,
-             ~w(rsvp join_waitlist cancel_rsvp leave_waitlist upload_photos delete_photo publish_huddl cancel_huddl delete_huddl)}}
+             ~w(rsvp join_waitlist cancel_rsvp leave_waitlist join_group dismiss_join_suggestion upload_photos delete_photo publish_huddl cancel_huddl delete_huddl)}}
 
   @huddl_loads [
     :status,
@@ -48,6 +49,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
     {:ok,
      socket
      |> assign(:confirming_delete?, false)
+     |> assign(:just_joined_group?, false)
      |> assign(:confirming_cancel?, false)
      |> assign(:confirming_delete_photo_id, nil)
      |> assign(:confirming_delete_photo, nil)
@@ -461,6 +463,47 @@ defmodule HuddlzWeb.HuddlLive.Show do
             </button>
           </div>
 
+          <div
+            :if={@join_suggestion == :suggest}
+            id="huddl-join-suggestion"
+            class="join-suggestion"
+            role="region"
+            aria-label="Join the group"
+          >
+            <p>
+              <span class="join-suggestion-lead">{suggestion_lead(@attendance)}</span>
+              Join {@huddl.group.name} to hear about their next huddlz.
+            </p>
+            <div class="join-suggestion-actions">
+              <.button
+                variant={:secondary}
+                id="huddl-suggestion-join"
+                phx-click="join_group"
+                phx-disable-with="Joining..."
+              >
+                Join group
+              </.button>
+              <.button
+                variant={:muted}
+                id="huddl-suggestion-dismiss"
+                phx-click="dismiss_join_suggestion"
+                phx-disable-with="Not now"
+              >
+                Not now
+              </.button>
+            </div>
+          </div>
+          <div
+            :if={@join_suggestion == :joined}
+            id="huddl-join-suggestion-joined"
+            class="join-suggestion"
+          >
+            <div class="join-suggestion-actions">
+              <.pill variant={:cyan}>Member</.pill>
+              <span id="huddl-suggestion-joined-note" class="pref-saved" role="status">Joined</span>
+            </div>
+          </div>
+
           <div :if={@huddl.status != :cancelled} id="huddl-going" class="huddl-side-section">
             <h3>{going_heading(@huddl)}</h3>
             <%= cond do %>
@@ -559,6 +602,27 @@ defmodule HuddlzWeb.HuddlLive.Show do
               </span>
               <.icon name="hero-chevron-right" class="size-4 group-row-chevron" />
             </.link>
+            <div :if={@group_membership == :joinable} class="group-row-actions">
+              <.button
+                variant={:secondary}
+                id="huddl-group-join"
+                phx-click="join_group"
+                phx-disable-with="Joining..."
+              >
+                Join group
+              </.button>
+            </div>
+            <div :if={@group_membership == :member} class="group-row-actions">
+              <.pill variant={:cyan} id="huddl-group-member">Member</.pill>
+              <span
+                :if={@just_joined_group? && @join_suggestion == :none}
+                id="huddl-group-joined"
+                class="pref-saved"
+                role="status"
+              >
+                Joined
+              </span>
+            </div>
             <div class="creator-row">
               <span class="muted">Organized by</span>
               <.avatar user={@huddl.creator} size={:sm} />
@@ -1042,6 +1106,37 @@ defmodule HuddlzWeb.HuddlLive.Show do
   end
 
   @impl true
+  def handle_event("join_group", _, socket) do
+    huddl = socket.assigns.huddl
+    user = socket.assigns.current_user
+
+    case Communities.join_group(huddl.group.id, actor: user) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> assign(:just_joined_group?, true)
+         |> refresh_attendance(huddl, user)}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Couldn't join the group. Please try again.")}
+    end
+  end
+
+  @impl true
+  def handle_event("dismiss_join_suggestion", _, socket) do
+    huddl = socket.assigns.huddl
+    user = socket.assigns.current_user
+
+    case Communities.dismiss_join_suggestion(huddl.group.id, actor: user) do
+      {:ok, _} ->
+        {:noreply, assign(socket, :join_suggestion, :none)}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Couldn't save that. Please try again.")}
+    end
+  end
+
+  @impl true
   def handle_event("join_waitlist", _, socket) do
     huddl = socket.assigns.huddl
     user = socket.assigns.current_user
@@ -1339,6 +1434,8 @@ defmodule HuddlzWeb.HuddlLive.Show do
     |> assign(:waitlist_position, waitlist_position)
     |> assign(:going_visible, @going_visible)
     |> assign_going(huddl, user, attendance)
+    |> assign_group_membership(huddl.group, user)
+    |> assign_join_suggestion(huddl, attendance)
     |> assign(
       :can_edit_huddl,
       is_nil(huddl.group.archived_at) && editable_lifecycle?(huddl) &&
@@ -1360,6 +1457,57 @@ defmodule HuddlzWeb.HuddlLive.Show do
     )
     |> assign_turnout(huddl, user)
     |> load_photos(huddl, user, can_view_photos)
+  end
+
+  # The Hosted by card knows whether the viewer belongs to the group: a member
+  # sees so, anyone who may join a public group can do it from here, and
+  # everyone else (signed out, unconfirmed, archived group) gets the plain link.
+  defp assign_group_membership(socket, _group, nil), do: assign(socket, :group_membership, :none)
+
+  defp assign_group_membership(socket, group, user) do
+    membership =
+      case Communities.get_membership_in_group(group.id, actor: user) do
+        {:ok, %GroupMember{}} -> :member
+        _ -> if joinable?(group, user), do: :joinable, else: :none
+      end
+
+    assign(socket, :group_membership, membership)
+  end
+
+  # A drop-in holds an RSVP or a waitlist spot without belonging to the
+  # group. The RSVP state tells them once that they can join; right after
+  # they do, the same spot confirms it.
+  defp assign_join_suggestion(socket, huddl, attendance) do
+    going? = attendance in [:attending, :waitlisted] and dock_rsvp?(huddl) == true
+
+    suggestion =
+      case {going?, socket.assigns.group_membership, socket.assigns.just_joined_group?} do
+        {true, :joinable, _} -> open_suggestion(huddl.group, socket.assigns.current_user)
+        {true, :member, true} -> :joined
+        _ -> :none
+      end
+
+    assign(socket, :join_suggestion, suggestion)
+  end
+
+  # "Not now", leaving the group and being removed from it each end the
+  # reminder for that group for good.
+  defp open_suggestion(group, user) do
+    case Communities.get_drop_in_reminder(group.id, actor: user, not_found_error?: false) do
+      {:ok, %{suppressed?: true}} ->
+        :none
+
+      _ ->
+        :suggest
+    end
+  end
+
+  defp suggestion_lead(:waitlisted), do: "You're on the waitlist."
+  defp suggestion_lead(_attendance), do: "You're going."
+
+  defp joinable?(group, user) do
+    is_nil(group.archived_at) &&
+      Ash.can?({GroupMember, :join_group, %{group_id: group.id}}, user)
   end
 
   # Turnout is shown once a huddl has ended, to organizers only. It is

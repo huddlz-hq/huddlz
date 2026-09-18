@@ -254,12 +254,17 @@ defmodule Huddlz.Communities.Group do
       Groups the actor either owns or has joined. The `:relationship` arg
       scopes the result: `:hosting` (owned), `:joined` (member but not
       owner), or `:all` (default — both). Sorted alphabetically by name.
+
+      `:dropped_in` is the odd one out: public groups the actor has *not*
+      joined but holds an RSVP or waitlist spot with, or held an RSVP at a
+      completed huddl of. Groups they said "Not now" to, left, or were
+      removed from are left out. It is never part of `:all`.
       """
 
       argument :relationship, :atom do
         allow_nil? true
         default :all
-        constraints one_of: [:all, :hosting, :joined]
+        constraints one_of: [:all, :hosting, :joined, :dropped_in]
       end
 
       pagination offset?: true, countable: true, required?: false, default_limit: 20
@@ -479,6 +484,10 @@ defmodule Huddlz.Communities.Group do
     end
 
     has_many :group_members, Huddlz.Communities.GroupMember do
+      destination_attribute :group_id
+    end
+
+    has_many :drop_in_reminders, Huddlz.Communities.DropInReminder do
       destination_attribute :group_id
     end
 
