@@ -7,7 +7,8 @@ defmodule DropInJoinSteps do
   require Ash.Query
 
   alias Huddlz.Accounts.User
-  alias Huddlz.Communities.{Group, GroupMember}
+  alias Huddlz.Communities
+  alias Huddlz.Communities.{Group, GroupMember, Huddl}
 
   step "I can join {string} from the huddl page", %{args: [_group_name]} = context do
     assert_has(context.session, "#huddl-group button", text: "Join group")
@@ -22,6 +23,38 @@ defmodule DropInJoinSteps do
   step "I am shown as a member of {string} on the huddl page", %{args: [_group_name]} = context do
     assert_has(context.session, "#huddl-group", text: "Member")
     refute_has(context.session, "#huddl-group button", text: "Join group")
+    context
+  end
+
+  step "{string} has RSVPd to {string}", %{args: [email, title]} = context do
+    user = User |> Ash.Query.filter(email == ^email) |> Ash.read_one!(authorize?: false)
+    huddl = Huddl |> Ash.Query.filter(title == ^title) |> Ash.read_one!(authorize?: false)
+    Communities.rsvp_huddl!(huddl, actor: user)
+    context
+  end
+
+  step "the huddl page suggests joining {string}", %{args: [group_name]} = context do
+    assert_has(context.session, "#huddl-join-suggestion",
+      text: "Join #{group_name} to hear about their next huddlz."
+    )
+
+    context
+  end
+
+  step "the huddl page does not suggest joining {string}", %{args: [_group_name]} = context do
+    refute_has(context.session, "#huddl-join-suggestion")
+    context
+  end
+
+  step "I join {string} from the suggestion", %{args: [_group_name]} = context do
+    session =
+      within(context.session, "#huddl-join-suggestion", &click_button(&1, "Join group"))
+
+    Map.put(context, :session, session)
+  end
+
+  step "{string} does not belong to {string}", %{args: [email, group_name]} = context do
+    refute membership(email, group_name)
     context
   end
 

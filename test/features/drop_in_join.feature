@@ -19,3 +19,38 @@ Feature: Drop-ins can join the group from the huddl page
     When I join "Portland Elixir" from the huddl page
     Then I am shown as a member of "Portland Elixir" on the huddl page
     And "maya604@example.com" belongs to "Portland Elixir"
+
+  Scenario: RSVPing does not join the group
+    Given I am signed in as "maya604@example.com"
+    When I visit the huddl "Elixir hack night"
+    And I click the "RSVP to this huddl" button
+    Then "maya604@example.com" does not belong to "Portland Elixir"
+    And the huddl page suggests joining "Portland Elixir"
+
+  Scenario: Joining from the suggestion
+    Given I am signed in as "maya604@example.com"
+    And "maya604@example.com" has RSVPd to "Elixir hack night"
+    When I visit the huddl "Elixir hack night"
+    And I join "Portland Elixir" from the suggestion
+    Then the huddl page does not suggest joining "Portland Elixir"
+    And I am shown as a member of "Portland Elixir" on the huddl page
+    And "maya604@example.com" belongs to "Portland Elixir"
+
+  Scenario: Joining the waitlist also brings the suggestion
+    Given "Elixir hack night" has room for 1 people
+    And I am signed in as "maya604@example.com"
+    When I visit the huddl "Elixir hack night"
+    And I click the "Join waitlist" button
+    Then the huddl page suggests joining "Portland Elixir"
+
+  Scenario: Members are not reminded
+    Given "maya604@example.com" is a member of "Portland Elixir"
+    And I am signed in as "maya604@example.com"
+    When I visit the huddl "Elixir hack night"
+    And I click the "RSVP to this huddl" button
+    Then the huddl page does not suggest joining "Portland Elixir"
+
+  Scenario: Someone who has not RSVPd is not reminded
+    Given I am signed in as "maya604@example.com"
+    When I visit the huddl "Elixir hack night"
+    Then the huddl page does not suggest joining "Portland Elixir"

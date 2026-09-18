@@ -463,6 +463,39 @@ defmodule HuddlzWeb.HuddlLive.Show do
             </button>
           </div>
 
+          <div
+            :if={@join_suggestion == :suggest}
+            id="huddl-join-suggestion"
+            class="join-suggestion"
+            role="region"
+            aria-label="Join the group"
+          >
+            <p>
+              <span class="join-suggestion-lead">{suggestion_lead(@attendance)}</span>
+              Join {@huddl.group.name} to hear about their next huddlz.
+            </p>
+            <div class="join-suggestion-actions">
+              <.button
+                variant={:secondary}
+                id="huddl-suggestion-join"
+                phx-click="join_group"
+                phx-disable-with="Joining..."
+              >
+                Join group
+              </.button>
+            </div>
+          </div>
+          <div
+            :if={@join_suggestion == :joined}
+            id="huddl-join-suggestion-joined"
+            class="join-suggestion"
+          >
+            <div class="join-suggestion-actions">
+              <.pill variant={:cyan}>Member</.pill>
+              <span id="huddl-suggestion-joined-note" class="pref-saved" role="status">Joined</span>
+            </div>
+          </div>
+
           <div :if={@huddl.status != :cancelled} id="huddl-going" class="huddl-side-section">
             <h3>{going_heading(@huddl)}</h3>
             <%= cond do %>
@@ -573,7 +606,12 @@ defmodule HuddlzWeb.HuddlLive.Show do
             </div>
             <div :if={@group_membership == :member} class="group-row-actions">
               <.pill variant={:cyan} id="huddl-group-member">Member</.pill>
-              <span :if={@just_joined_group?} id="huddl-group-joined" class="pref-saved" role="status">
+              <span
+                :if={@just_joined_group? && @join_suggestion == :none}
+                id="huddl-group-joined"
+                class="pref-saved"
+                role="status"
+              >
                 Joined
               </span>
             </div>
@@ -1375,6 +1413,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
     |> assign(:going_visible, @going_visible)
     |> assign_going(huddl, user, attendance)
     |> assign_group_membership(huddl.group, user)
+    |> assign_join_suggestion(huddl, attendance)
     |> assign(
       :can_edit_huddl,
       is_nil(huddl.group.archived_at) && editable_lifecycle?(huddl) &&
@@ -1412,6 +1451,25 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
     assign(socket, :group_membership, membership)
   end
+
+  # A drop-in holds an RSVP or a waitlist spot without belonging to the
+  # group. The RSVP state tells them once that they can join; right after
+  # they do, the same spot confirms it.
+  defp assign_join_suggestion(socket, huddl, attendance) do
+    going? = attendance in [:attending, :waitlisted] and dock_rsvp?(huddl) == true
+
+    suggestion =
+      case {going?, socket.assigns.group_membership, socket.assigns.just_joined_group?} do
+        {true, :joinable, _} -> :suggest
+        {true, :member, true} -> :joined
+        _ -> :none
+      end
+
+    assign(socket, :join_suggestion, suggestion)
+  end
+
+  defp suggestion_lead(:waitlisted), do: "You're on the waitlist."
+  defp suggestion_lead(_attendance), do: "You're going."
 
   defp joinable?(group, user) do
     is_nil(group.archived_at) &&
