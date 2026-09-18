@@ -52,6 +52,8 @@ defmodule Huddlz.Notifications.Senders.GroupJoinSuggestionTest do
     email = GroupJoinSuggestion.build(person, payload)
 
     assert email.to == [{"", to_string(person.email)}]
+    assert email.from == Huddlz.Mailer.from()
+    refute email.text_body =~ "<"
     assert email.subject == "Hear about Tuesday Runners's next huddlz"
     assert email.text_body =~ "TUESDAY RUNNERS\nHear about their next huddlz"
     assert email.text_body =~ "You RSVPd to Long Run on "

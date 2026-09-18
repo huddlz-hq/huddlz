@@ -8,6 +8,8 @@ defmodule Huddlz.Communities.JoinSuggestionTest do
   use Huddlz.DataCase, async: true
   use Oban.Testing, repo: Huddlz.Repo
 
+  @moduletag :join_suggestion
+
   alias Huddlz.Communities
   alias Huddlz.Communities.HuddlAttendee
   alias Huddlz.Notifications
@@ -133,6 +135,49 @@ defmodule Huddlz.Communities.JoinSuggestionTest do
                  actor: person
                )
     end
+  end
+
+  describe "queued delivery" do
+    for change <- [:dismissed, :joined, :left, :removed, :private, :archived] do
+      test "does not send after #{change}", %{person: person} = context do
+        context |> completed_with_rsvp() |> Communities.suggest_joining!(authorize?: false)
+        [job] = suggestions_for(person)
+
+        change_eligibility(unquote(change), context)
+
+        assert :ok = perform_job(DeliverWorker, job.args)
+        refute_received {:email, %{subject: "Hear about " <> _}}
+      end
+    end
+  end
+
+  defp change_eligibility(:dismissed, %{group: group, person: person}) do
+    Communities.dismiss_join_suggestion!(group.id, actor: person)
+  end
+
+  defp change_eligibility(:joined, %{group: group, person: person}) do
+    Communities.join_group!(group.id, actor: person)
+  end
+
+  defp change_eligibility(:left, %{group: group, person: person}) do
+    group.id
+    |> Communities.join_group!(actor: person)
+    |> Communities.leave_group!(actor: person)
+  end
+
+  defp change_eligibility(:removed, %{group: group, person: person, owner: owner}) do
+    membership = Communities.join_group!(group.id, actor: person)
+    Communities.remove_member!(membership, group.id, person.id, actor: owner)
+  end
+
+  defp change_eligibility(:private, %{group: group, owner: owner}) do
+    group
+    |> Ash.Changeset.for_update(:update_details, %{is_public: false}, actor: owner)
+    |> Ash.update!()
+  end
+
+  defp change_eligibility(:archived, %{group: group, owner: owner}) do
+    Communities.archive_group!(group, actor: owner)
   end
 
   defp notifications(person) do

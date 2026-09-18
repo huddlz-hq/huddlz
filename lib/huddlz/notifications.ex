@@ -153,7 +153,7 @@ defmodule Huddlz.Notifications do
   def deliver_now(user, trigger, payload \\ %{}) do
     entry = Triggers.fetch!(trigger)
 
-    if should_deliver?(user, trigger, entry) do
+    if should_deliver?(user, trigger, entry) and eligible_for_payload?(user, trigger, payload) do
       ensure_sender_implemented!(trigger, entry.sender)
       email = entry.sender.build(user, Attribution.resolve(payload))
 
@@ -165,6 +165,15 @@ defmodule Huddlz.Notifications do
       :skipped
     end
   end
+
+  # Queued suggestions can outlive membership or reminder changes. Recheck
+  # on every attempt, including retries after a mail provider failure.
+  defp eligible_for_payload?(user, :group_join_suggestion, %{"group_id" => group_id}) do
+    Huddlz.Communities.drop_in?(group_id, actor: user)
+  end
+
+  defp eligible_for_payload?(_user, :group_join_suggestion, _payload), do: false
+  defp eligible_for_payload?(_user, _trigger, _payload), do: true
 
   # The registry references sender modules for triggers whose phases haven't
   # shipped yet. Raise a clear error rather than the cryptic

@@ -64,7 +64,7 @@ defmodule Huddlz.Notifications.Senders.RsvpConfirmation do
   end
 
   defp join_suggestion(user, group) do
-    if Communities.drop_in?(user, group.id) do
+    if Communities.drop_in?(group.id, actor: user) do
       [
         [
           "Hosted by ",

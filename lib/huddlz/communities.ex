@@ -11,8 +11,6 @@ defmodule Huddlz.Communities do
     include_versions? true
   end
 
-  require Ash.Query
-
   resources do
     resource Huddlz.Communities.Huddl do
       define :get_huddl, action: :read, get_by: [:id]
@@ -85,6 +83,7 @@ defmodule Huddlz.Communities do
       define :get_organizable_groups, action: :get_organizable
       define :get_joined_groups, action: :get_joined
       define :groups_for_actor, action: :groups_for_actor, args: [{:optional, :relationship}]
+      define :drop_in?, action: :drop_in?, args: [:group_id]
       define :list_drop_ins, action: :drop_ins
       define :get_by_slug, action: :get_by_slug, args: [:slug]
       define :get_group_for_organize, action: :get_for_organize, args: [:slug], get?: true
@@ -211,18 +210,6 @@ defmodule Huddlz.Communities do
       define :update_group_location, action: :update
       define :destroy_group_location, action: :destroy
     end
-  end
-
-  @doc """
-  Whether the person is a drop-in at the group right now: they hold a spot
-  at one of its huddlz, have not joined, and the reminder is still open.
-  The `:dropped_in` relationship of `:groups_for_actor` is the one rule.
-  """
-  def drop_in?(%Huddlz.Accounts.User{} = user, group_id) do
-    Huddlz.Communities.Group
-    |> Ash.Query.for_read(:groups_for_actor, %{relationship: :dropped_in}, actor: user)
-    |> Ash.Query.filter(id == ^group_id)
-    |> Ash.exists?()
   end
 
   @doc """

@@ -80,6 +80,13 @@ Feature: Drop-ins are told once by email that they can join the group
     And a day passes
     Then "maya606@example.com" receives no email about joining "Tuesday Runners"
 
+  Scenario: Joining before a queued suggestion is delivered cancels the email
+    Given "maya606@example.com" has RSVPd to "Long Run"
+    When "Long Run" completes
+    And a day passes
+    And "maya606@example.com" is a member of "Tuesday Runners"
+    Then "maya606@example.com" receives no email about joining "Tuesday Runners"
+
   Scenario: Not now cancels the email
     Given "maya606@example.com" has RSVPd to "Long Run"
     And "maya606@example.com" chose not now for "Tuesday Runners"

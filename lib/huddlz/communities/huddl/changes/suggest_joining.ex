@@ -4,15 +4,17 @@ defmodule Huddlz.Communities.Huddl.Changes.SuggestJoining do
   each drop-in who held an RSVP when the huddl completed (ADR-0011).
 
   Invoked by the AshOban-scheduled `:suggest_joining` action about a day
-  after completion. Eligibility is decided here, at send time, not when the
-  huddl completed: the person must still be a drop-in at the group, which
-  the `:dropped_in` relationship answers (public group, not joined, no
+  after completion. Eligibility is checked before enqueueing and again by
+  the notification orchestrator on delivery: the person must still be a
+  drop-in at the group, which the `:dropped_in` relationship answers
+  (public group, not joined, no
   "Not now", never left or removed). The waitlist never counts, because
   only RSVPs are read.
 
   "Once per group" is kept by `DropInReminder.:mark_emailed`, an upsert
   that wins only for a row never emailed before. Whoever loses that race,
   or was emailed after an earlier huddl, is skipped.
+  Enqueue failures roll back the claim and huddl stamp so a later run can retry.
   """
 
   use Ash.Resource.Change
@@ -37,10 +39,13 @@ defmodule Huddlz.Communities.Huddl.Changes.SuggestJoining do
     |> Communities.list_huddl_attendees!(authorize?: false)
     |> Enum.map(& &1.user_id)
     |> people()
-    |> Enum.filter(&Communities.drop_in?(&1, huddl.group_id))
-    |> Enum.each(&suggest(&1, huddl))
-
-    {:ok, huddl}
+    |> Enum.filter(&Communities.drop_in?(huddl.group_id, actor: &1))
+    |> Enum.reduce_while({:ok, huddl}, fn user, result ->
+      case suggest(user, huddl) do
+        {:ok, _job} -> {:cont, result}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
   end
 
   defp people([]), do: []
@@ -56,8 +61,14 @@ defmodule Huddlz.Communities.Huddl.Changes.SuggestJoining do
            %{group_id: huddl.group_id, user_id: user.id},
            authorize?: false
          ) do
-      {:ok, _reminder} -> Notifications.deliver(user, :group_join_suggestion, payload(huddl))
-      {:error, _already_suggested} -> :ok
+      {:ok, _reminder} ->
+        Notifications.deliver(user, :group_join_suggestion, payload(huddl))
+
+      {:error, %Ash.Error.Invalid{errors: [%Ash.Error.Changes.StaleRecord{}]}} ->
+        {:ok, :already_suggested}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
