@@ -7,17 +7,25 @@ defmodule HuddlzWeb.GroupsLive do
 
   All sorting and pagination happens in postgres via the `:groups_for_actor` read
   action — we do not sort in code.
+
+  Under the default view, after the person's own groups, a short section
+  lists the groups they have dropped in on: RSVPd to a huddl of, without
+  joining (`Huddlz.Communities.DropIns`). Each can be joined or answered
+  "Not now" in place; the section is absent when there is nothing to show.
   """
   use HuddlzWeb, :live_view
 
   import HuddlzWeb.Live.Helpers.ParamHelpers
 
   alias Huddlz.Communities
+  alias Huddlz.Communities.DropIns
   alias HuddlzWeb.Layouts
+  alias HuddlzWeb.Live.Helpers.HuddlCardHelpers
   require Logger
 
   @group_loads [:current_image_url, :member_count, :viewer_role]
   @page_size 20
+  @drop_ins_visible 6
   @valid_filters ~w(all hosting joined archived)
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
@@ -29,6 +37,8 @@ defmodule HuddlzWeb.GroupsLive do
      socket
      |> assign(:page_title, "Groups")
      |> assign(:groups, [])
+     |> assign(:drop_ins, [])
+     |> assign(:drop_ins_expanded?, false)
      |> assign(:counts, %{all: 0, hosting: 0, joined: 0})
      |> assign(:page_info, %{total_pages: 1, current_page: 1, total_count: 0})}
   end
@@ -44,6 +54,7 @@ defmodule HuddlzWeb.GroupsLive do
       |> assign(:filter, filter)
       |> assign(:counts, load_counts(user))
       |> load_results(filter, page, user)
+      |> load_drop_ins(filter, page, user)
 
     total_pages = socket.assigns.page_info.total_pages
 
@@ -74,6 +85,57 @@ defmodule HuddlzWeb.GroupsLive do
     page = parse_page(page_str)
     {:noreply, push_patch(socket, to: filter_path(socket.assigns.filter, page))}
   end
+
+  def handle_event("join_dropped_in", %{"group-id" => group_id}, socket) do
+    user = socket.assigns.current_user
+
+    with %{group: group} <- find_drop_in(socket, group_id),
+         {:ok, _membership} <- Communities.join_group(group.id, actor: user) do
+      {:noreply,
+       socket
+       |> put_flash(:info, "You joined #{group.name}.")
+       |> assign(:counts, load_counts(user))
+       |> load_results(socket.assigns.filter, socket.assigns.page_info.current_page, user)
+       |> load_drop_ins(socket.assigns.filter, socket.assigns.page_info.current_page, user)}
+    else
+      _ -> {:noreply, put_flash(socket, :error, "Couldn't join the group. Please try again.")}
+    end
+  end
+
+  def handle_event("dismiss_dropped_in", %{"group-id" => group_id}, socket) do
+    user = socket.assigns.current_user
+
+    with %{group: group} <- find_drop_in(socket, group_id),
+         {:ok, _reminder} <- Communities.dismiss_join_suggestion(group.id, actor: user) do
+      {:noreply,
+       load_drop_ins(socket, socket.assigns.filter, socket.assigns.page_info.current_page, user)}
+    else
+      _ -> {:noreply, put_flash(socket, :error, "Couldn't save that. Please try again.")}
+    end
+  end
+
+  def handle_event("show_all_dropped_in", _params, socket) do
+    {:noreply, assign(socket, :drop_ins_expanded?, true)}
+  end
+
+  defp find_drop_in(socket, group_id) do
+    Enum.find(socket.assigns.drop_ins, &(&1.group.id == group_id))
+  end
+
+  # The section belongs to the default view's first page: it follows the
+  # person's own groups rather than any one filter of them.
+  defp load_drop_ins(socket, :all, 1, user) do
+    case DropIns.list(user, load: [:current_image_url]) do
+      {:ok, drop_ins} ->
+        assign(socket, :drop_ins, drop_ins)
+
+      {:error, reason} ->
+        Logger.warning("GroupsLive drop-ins load failed: #{inspect(reason)}")
+        assign(socket, :drop_ins, [])
+    end
+  end
+
+  defp load_drop_ins(socket, _filter, _page, _user), do: assign(socket, :drop_ins, [])
 
   defp parse_filter(value) when value in @valid_filters, do: String.to_existing_atom(value)
   defp parse_filter(_), do: :all
@@ -195,7 +257,7 @@ defmodule HuddlzWeb.GroupsLive do
           </:action>
         </.empty_state>
       <% else %>
-        <div class="grid">
+        <div id="my-groups" class="grid">
           <.group_card :for={group <- @groups} group={group} role={group.viewer_role} />
         </div>
         <.pagination
@@ -205,8 +267,98 @@ defmodule HuddlzWeb.GroupsLive do
           event_name="change_page"
         />
       <% end %>
+
+      <section
+        :if={@drop_ins != []}
+        id="dropped-in-groups"
+        class="dropped-in"
+        aria-labelledby="dropped-in-title"
+      >
+        <div class="dropped-in-head">
+          <h2 id="dropped-in-title">Groups you've dropped in on</h2>
+          <p>You've RSVPd to their huddlz without joining. Join to hear about their next ones.</p>
+        </div>
+        <div class="grid">
+          <.dropped_in_card
+            :for={drop_in <- visible_drop_ins(@drop_ins, @drop_ins_expanded?)}
+            drop_in={drop_in}
+          />
+        </div>
+        <.button
+          :if={!@drop_ins_expanded? && length(@drop_ins) > drop_ins_visible()}
+          variant={:secondary}
+          id="dropped-in-show-all"
+          phx-click="show_all_dropped_in"
+        >
+          Show all {length(@drop_ins)}
+        </.button>
+      </section>
     </Layouts.app>
     """
+  end
+
+  attr :drop_in, :map, required: true
+
+  # Not the shared `<.card>`: that one is a single link, and this card holds
+  # two buttons. The name links to the group instead.
+  defp dropped_in_card(assigns) do
+    ~H"""
+    <article id={"dropped-in-#{@drop_in.group.id}"} class="card dropped-in-card">
+      <div class="card-cover">
+        <.group_cover id={"dropped-in-cover-#{@drop_in.group.id}"} group={@drop_in.group} />
+      </div>
+      <div class="card-body">
+        <span :if={@drop_in.group.location} class="card-group">{@drop_in.group.location}</span>
+        <h3 class="card-title">
+          <.link navigate={~p"/groups/#{@drop_in.group.slug}"}>{@drop_in.group.name}</.link>
+        </h3>
+        <div class="card-meta dropped-in-fact">
+          <.icon name={spot_icon(@drop_in.spot)} class="size-4" />
+          <span>{spot_line(@drop_in)}</span>
+        </div>
+      </div>
+      <div class="card-foot dropped-in-actions">
+        <.button
+          variant={:secondary}
+          phx-click="join_dropped_in"
+          phx-value-group-id={@drop_in.group.id}
+          phx-disable-with="Joining..."
+        >
+          Join group
+        </.button>
+        <.button
+          variant={:muted}
+          phx-click="dismiss_dropped_in"
+          phx-value-group-id={@drop_in.group.id}
+        >
+          Not now
+        </.button>
+      </div>
+    </article>
+    """
+  end
+
+  defp drop_ins_visible, do: @drop_ins_visible
+
+  defp visible_drop_ins(drop_ins, true), do: drop_ins
+  defp visible_drop_ins(drop_ins, false), do: Enum.take(drop_ins, @drop_ins_visible)
+
+  # huddlz knows who RSVPd, not who came, so a finished huddl reads "RSVPd".
+  defp spot_line(%{spot: :going, huddl: huddl}),
+    do: "You're going to #{huddl.title} on #{huddl_day(huddl)}"
+
+  defp spot_line(%{spot: :waitlisted, huddl: huddl}),
+    do: "Waitlisted for #{huddl.title} on #{huddl_day(huddl)}"
+
+  defp spot_line(%{spot: :rsvpd, huddl: huddl}),
+    do: "You RSVPd to #{huddl.title} on #{huddl_day(huddl)}"
+
+  defp spot_icon(:going), do: "hero-calendar"
+  defp spot_icon(:waitlisted), do: "hero-clock"
+  defp spot_icon(:rsvpd), do: "hero-check"
+
+  defp huddl_day(huddl) do
+    huddl |> HuddlCardHelpers.local_starts_at() |> Calendar.strftime("%b %-d")
   end
 
   attr :group, :map, required: true
