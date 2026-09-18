@@ -7,6 +7,10 @@ defmodule Huddlz.Communities.Group.Preparations.ApplyGroupRelationshipFilter do
     * `:hosting` — the actor owns the group.
     * `:joined`  — the actor is a member but not the owner.
     * `:all`     — either of the above.
+    * `:dropped_in` — public groups the actor has not joined, where they
+      hold an RSVP or waitlist spot on a published huddl or held an RSVP at
+      a completed one, and have not dismissed or closed the reminder
+      (see `Huddlz.Communities.DropInReminder`). Never part of `:all`.
 
   Sorting is delegated to `ApplyTrigramSearch` (alphabetical by `name` when
   no `:search` arg is present), so the SQL ordering matches the other group
@@ -40,11 +44,52 @@ defmodule Huddlz.Communities.Group.Preparations.ApplyGroupRelationshipFilter do
     )
   end
 
+  defp apply_filter(query, :dropped_in, actor_id) do
+    query
+    |> public_and_not_joined(actor_id)
+    |> reminder_still_open(actor_id)
+    |> holding_a_spot(actor_id)
+  end
+
   defp apply_filter(query, :all, actor_id) do
     Ash.Query.filter(
       query,
       owner_id == ^actor_id or
         exists(group_members, user_id == ^actor_id)
+    )
+  end
+
+  defp public_and_not_joined(query, actor_id) do
+    Ash.Query.filter(
+      query,
+      is_public == true and owner_id != ^actor_id and
+        not exists(group_members, user_id == ^actor_id)
+    )
+  end
+
+  # "Not now", leaving and being removed each end the reminder for good.
+  defp reminder_still_open(query, actor_id) do
+    Ash.Query.filter(
+      query,
+      not exists(
+        drop_in_reminders,
+        user_id == ^actor_id and (not is_nil(dismissed_at) or not is_nil(closed_at))
+      )
+    )
+  end
+
+  # An RSVP or waitlist spot on a published huddl, or an RSVP held when a
+  # huddl completed. A waitlist spot at a completed huddl never got in.
+  defp holding_a_spot(query, actor_id) do
+    Ash.Query.filter(
+      query,
+      exists(
+        huddlz,
+        is_private == false and
+          ((lifecycle_state == :published and exists(attendees, user_id == ^actor_id)) or
+             (lifecycle_state == :completed and
+                exists(attendees, user_id == ^actor_id and is_nil(waitlisted_at))))
+      )
     )
   end
 end

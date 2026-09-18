@@ -2,6 +2,8 @@ defmodule DropInJoinSteps do
   use Cucumber.StepDefinition
 
   import ExUnit.Assertions
+  import HuddlzWeb.ApiCase, only: [authenticated_conn: 2, gql_post: 3]
+  import Phoenix.ConnTest, only: [build_conn: 0, dispatch: 5, json_response: 2]
   import PhoenixTest
 
   require Ash.Query
@@ -74,6 +76,90 @@ defmodule DropInJoinSteps do
     :ok =
       Communities.remove_member!(membership, group.id, user.id, actor: find_user(organizer_email))
 
+    context
+  end
+
+  step "{string} lists the groups they've dropped in on through {string}",
+       %{args: [email, api]} = context do
+    conn = authenticated_conn(build_conn(), find_user(email))
+
+    names =
+      case api do
+        "GraphQL" ->
+          body =
+            conn
+            |> gql_post(
+              ~s|query { viewerGroups(relationship: "dropped_in") { results { name } } }|,
+              %{}
+            )
+            |> json_response(200)
+
+          refute Map.has_key?(body, "errors"), inspect(body)
+          Enum.map(body["data"]["viewerGroups"]["results"], & &1["name"])
+
+        "JSON:API" ->
+          conn
+          |> dispatch(
+            HuddlzWeb.Endpoint,
+            :get,
+            "/api/json/groups/mine?relationship=dropped_in",
+            nil
+          )
+          |> json_response(200)
+          |> Map.fetch!("data")
+          |> Enum.map(& &1["attributes"]["name"])
+      end
+
+    Map.put(context, :api_groups, names)
+  end
+
+  step "{string} declines the suggestion to join {string} through {string}",
+       %{args: [email, group_name, api]} = context do
+    conn = authenticated_conn(build_conn(), find_user(email))
+    group = find_group(group_name)
+
+    case api do
+      "GraphQL" ->
+        body =
+          conn
+          |> gql_post(
+            """
+            mutation($input: DismissJoinSuggestionInput!) {
+              dismissJoinSuggestion(input: $input) { result { dismissedAt } errors { message } }
+            }
+            """,
+            %{"input" => %{"groupId" => group.id}}
+          )
+          |> json_response(200)
+
+        refute Map.has_key?(body, "errors"), inspect(body)
+        assert body["data"]["dismissJoinSuggestion"]["errors"] == []
+        assert body["data"]["dismissJoinSuggestion"]["result"]["dismissedAt"]
+
+      "JSON:API" ->
+        conn
+        |> Plug.Conn.put_req_header("content-type", "application/vnd.api+json")
+        |> dispatch(
+          HuddlzWeb.Endpoint,
+          :post,
+          "/api/json/drop_in_reminders/dismiss",
+          Jason.encode!(%{
+            data: %{type: "drop_in_reminder", attributes: %{group_id: group.id}}
+          })
+        )
+        |> json_response(201)
+    end
+
+    context
+  end
+
+  step "the API returns the group {string}", %{args: [group_name]} = context do
+    assert context.api_groups == [group_name]
+    context
+  end
+
+  step "the API returns no groups", context do
+    assert context.api_groups == []
     context
   end
 

@@ -81,3 +81,24 @@ Feature: Drop-ins can join the group from the huddl page
     When I visit the huddl "Elixir hack night"
     And I click the "RSVP to this huddl" button
     Then the huddl page does not suggest joining "Portland Elixir"
+
+  Scenario Outline: Groups I've dropped in on are available on the API
+    Given "maya604@example.com" has RSVPd to "Elixir hack night"
+    When "maya604@example.com" lists the groups they've dropped in on through "<api>"
+    Then the API returns the group "Portland Elixir"
+    When "maya604@example.com" declines the suggestion to join "Portland Elixir" through "<api>"
+    And "maya604@example.com" lists the groups they've dropped in on through "<api>"
+    Then the API returns no groups
+
+    Examples:
+      | api      |
+      | GraphQL  |
+      | JSON:API |
+
+  Scenario: Groups I belong to, or only browsed, are not drop-in groups
+    Given a public group "Founder Coffee" exists with owner "owner604@example.com"
+    And an upcoming huddl "Morning coffee" exists in "Founder Coffee"
+    And "maya604@example.com" is a member of "Portland Elixir"
+    And "maya604@example.com" has RSVPd to "Elixir hack night"
+    When "maya604@example.com" lists the groups they've dropped in on through "GraphQL"
+    Then the API returns no groups
