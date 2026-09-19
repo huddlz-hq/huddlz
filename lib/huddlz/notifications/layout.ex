@@ -25,6 +25,8 @@ defmodule Huddlz.Notifications.Layout do
       `{:strong, text}` or `{:link, text, url}`.
     * `facts` — `{label, value}` or `{label, value, sub}` rows, optional.
       Huddl emails use `huddl_facts/1` so they carry what the card carries.
+    * `closing` — paragraphs after the facts, same shape as `paragraphs`,
+      optional.
     * `action` — `{label, url}`, at most one button, optional.
     * `aside` — a quiet paragraph under the button, optional.
     * `footer` — `%{reason: text, links: [{label, url}]}`, see
@@ -52,6 +54,7 @@ defmodule Huddlz.Notifications.Layout do
           optional(:kicker) => String.t() | nil,
           optional(:paragraphs) => [paragraph()],
           optional(:facts) => [fact()],
+          optional(:closing) => [paragraph()],
           optional(:action) => {String.t(), String.t()} | nil,
           optional(:aside) => paragraph() | nil,
           optional(:footer) => footer() | nil,
@@ -139,7 +142,7 @@ defmodule Huddlz.Notifications.Layout do
     </td></tr>
     <tr><td style="padding:28px 32px 32px;font-family:#{@font};">
     #{kicker_html(spec[:kicker])}<h1 style="margin:0 0 16px;font-family:#{@font};font-size:22px;font-weight:700;line-height:1.25;letter-spacing:-0.01em;color:#{@text};">#{title}</h1>
-    #{paragraphs_html(spec[:paragraphs] || [])}#{facts_html(spec[:facts] || [])}#{action_html(spec[:action])}#{aside_html(spec[:aside])}
+    #{paragraphs_html(spec[:paragraphs] || [])}#{facts_html(spec[:facts] || [])}#{paragraphs_html(spec[:closing] || [])}#{action_html(spec[:action])}#{aside_html(spec[:aside])}
     </td></tr>
     </table>
     </td></tr>
@@ -274,6 +277,7 @@ defmodule Huddlz.Notifications.Layout do
       "",
       paragraphs_text(spec[:paragraphs] || []),
       facts_text(spec[:facts] || []),
+      paragraphs_text(spec[:closing] || []),
       action_text(spec[:action]),
       aside_text(spec[:aside]),
       "--",

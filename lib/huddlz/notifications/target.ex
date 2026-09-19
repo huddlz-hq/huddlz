@@ -44,6 +44,13 @@ defmodule Huddlz.Notifications.Target do
   end
 
   def resolve(
+        %Notification{trigger: "group_join_suggestion", payload: %{"group_slug" => slug}},
+        %User{} = user
+      )
+      when is_binary(slug),
+      do: group_target(slug, user)
+
+  def resolve(
         %Notification{payload: %{"huddl_id" => huddl_id, "group_slug" => group_slug}},
         %User{} = user
       )
@@ -61,12 +68,8 @@ defmodule Huddlz.Notifications.Target do
         %Notification{payload: %{"group_slug" => group_slug}},
         %User{} = user
       )
-      when is_binary(group_slug) do
-    case Communities.get_by_slug(group_slug, actor: user) do
-      {:ok, %{slug: ^group_slug}} -> {:available, "/groups/#{group_slug}"}
-      _ -> :resolved
-    end
-  end
+      when is_binary(group_slug),
+      do: group_target(group_slug, user)
 
   def resolve(%Notification{source_url: source_url}, %User{})
       when source_url in ["/profile", "/profile/notifications", "/notifications"] do
@@ -74,4 +77,11 @@ defmodule Huddlz.Notifications.Target do
   end
 
   def resolve(%Notification{}, %User{}), do: :resolved
+
+  defp group_target(slug, user) do
+    case Communities.get_by_slug(slug, actor: user) do
+      {:ok, %{slug: ^slug}} -> {:available, "/groups/#{slug}"}
+      _ -> :resolved
+    end
+  end
 end

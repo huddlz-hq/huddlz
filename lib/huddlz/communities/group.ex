@@ -5,6 +5,8 @@ defmodule Huddlz.Communities.Group do
 
   @name_length 3..100
 
+  require Ash.Query
+
   use Ash.Resource,
     otp_app: :huddlz,
     domain: Huddlz.Communities,
@@ -103,6 +105,21 @@ defmodule Huddlz.Communities.Group do
   end
 
   actions do
+    action :drop_in?, :boolean do
+      description "Whether the actor is a drop-in with an open reminder at this group."
+
+      argument :group_id, :uuid, allow_nil?: false
+
+      run fn input, context ->
+        __MODULE__
+        |> Ash.Query.for_read(:groups_for_actor, %{relationship: :dropped_in},
+          actor: context.actor
+        )
+        |> Ash.Query.filter(id == ^input.arguments.group_id)
+        |> Ash.exists()
+      end
+    end
+
     action :drop_ins, :map do
       description "Dropped-in groups with one RSVP fact each, newest activity first."
 
@@ -355,7 +372,7 @@ defmodule Huddlz.Communities.Group do
   end
 
   policies do
-    policy action(:drop_ins) do
+    policy action([:drop_ins, :drop_in?]) do
       authorize_if actor_present()
     end
 

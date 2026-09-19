@@ -89,6 +89,25 @@ defmodule Huddlz.Communities.DropInReminder do
       change set_attribute(:closed_at, &DateTime.utc_now/0)
     end
 
+    create :mark_emailed do
+      description """
+      Internal: the join suggestion is going out. Wins only for a row that
+      has never been emailed, dismissed or closed, so two huddlz of one
+      group completing together still produce one suggestion; the loser
+      gets a stale-record error. Always forbidden by policy; callers pass
+      `authorize?: false`.
+      """
+
+      accept [:group_id, :user_id]
+
+      upsert? true
+      upsert_identity :unique_group_user
+      upsert_fields [:emailed_at, :updated_at]
+      upsert_condition expr(is_nil(emailed_at) and is_nil(dismissed_at) and is_nil(closed_at))
+
+      change set_attribute(:emailed_at, &DateTime.utc_now/0)
+    end
+
     read :for_group do
       description "The actor's own reminder row for one group, or nil."
       get? true
@@ -112,7 +131,7 @@ defmodule Huddlz.Communities.DropInReminder do
     end
 
     # Internal-only — must be called with `authorize?: false`.
-    policy action(:close) do
+    policy action([:close, :mark_emailed]) do
       forbid_if always()
     end
 

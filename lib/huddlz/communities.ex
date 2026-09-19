@@ -66,6 +66,8 @@ defmodule Huddlz.Communities do
       define :publish_huddl, action: :publish
       define :cancel_huddl, action: :cancel, args: [{:optional, :cancellation_reason}]
       define :complete_huddl, action: :complete
+      define :suggest_joining, action: :suggest_joining
+      define :huddlz_due_for_join_suggestions, action: :due_for_join_suggestions
       define :record_turnout, action: :record_turnout
       define :skip_turnout, action: :skip_turnout
       define :destroy_huddl, action: :destroy
@@ -81,6 +83,7 @@ defmodule Huddlz.Communities do
       define :get_organizable_groups, action: :get_organizable
       define :get_joined_groups, action: :get_joined
       define :groups_for_actor, action: :groups_for_actor, args: [{:optional, :relationship}]
+      define :drop_in?, action: :drop_in?, args: [:group_id]
       define :list_drop_ins, action: :drop_ins
       define :get_by_slug, action: :get_by_slug, args: [:slug]
       define :get_group_for_organize, action: :get_for_organize, args: [:slug], get?: true
@@ -152,6 +155,7 @@ defmodule Huddlz.Communities do
     resource Huddlz.Communities.DropInReminder do
       define :dismiss_join_suggestion, action: :dismiss, args: [:group_id]
       define :close_drop_in_reminder, action: :close
+      define :mark_join_suggestion_emailed, action: :mark_emailed
       define :get_drop_in_reminder, action: :for_group, args: [:group_id], get?: true
     end
 

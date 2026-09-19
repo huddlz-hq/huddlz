@@ -43,6 +43,7 @@ Each trigger has an ID (e.g. C3) used throughout the doc and the GitHub issues.
 | B5 | User leaves a group on their own | — | None | They did it themselves |
 | B6 | Group deleted/archived | All members | Transactional | They lose access to data they care about |
 | B7 | Group ownership transferred | Old + new owner | Transactional | |
+| B8 | Join suggestion (`group_join_suggestion`) | A drop-in who held an RSVP when the huddl completed | Activity | One per person per group, ever (ADR-0011). Goes out about a day after completion through the `:suggest_joining` AshOban trigger. Eligibility is re-checked at send time with the `:dropped_in` relationship: public group, not joined, no "Not now", never left or removed. The waitlist and cancelled huddlz never count. Lists up to three upcoming huddlz; the in-app row links to the group page. |
 
 ### C. Huddl lifecycle
 
@@ -69,7 +70,7 @@ Reminder jobs must be (a) scheduled when a huddl is created or rescheduled, (b) 
 |---|---|---|---|---|
 | E1 | Someone RSVPs to your huddl | Group owner + organizers | Activity | Per-RSVP, no cap in v1. Organizers tune via settings. |
 | E2 | Someone cancels their RSVP | Group owner + organizers | Activity | Same volume rule as E1. |
-| E3 | RSVP confirmation to the user | User | Activity | "You're going to X." Includes `.ics`. |
+| E3 | RSVP confirmation to the user | User | Activity | "You're going to X." Includes `.ics`. A drop-in also gets one paragraph after the facts naming the group and linking to it. |
 | E4 | RSVP cancellation confirmation | User | None | Skip — overkill |
 
 ### F. Digests (deferred, v2)
@@ -127,6 +128,7 @@ Toggles (and the trigger they map to):
 - RSVP confirmations to me (E3)
 - Group membership changes affecting me (B2, B3, B4, B6, B7)
 - Someone joined a group I organize (B1)
+- Suggestion to join a group I've dropped in on (B8)
 
 Unsubscribe links in email footers deep-link to a confirmation page, then a POST flips a single key via signed token and redirects.
 

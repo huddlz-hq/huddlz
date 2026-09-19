@@ -48,6 +48,10 @@ defmodule Huddlz.Notifications.Summary do
 
   defp title(:group_member_added, %{"group_name" => group}), do: "Added to #{group}"
   defp title(:group_invitation, %{"group_name" => group}), do: "Invitation to #{group}"
+
+  defp title(:group_join_suggestion, %{"group_name" => group}),
+    do: "Join #{group} to hear about their next huddlz"
+
   defp title(:group_member_removed, %{"group_name" => group}), do: "Removed from #{group}"
   defp title(:group_role_changed, %{"group_name" => group}), do: "Role changed in #{group}"
   defp title(:group_archived, %{"group_name" => group}), do: "Archived: #{group}"
@@ -125,6 +129,9 @@ defmodule Huddlz.Notifications.Summary do
        when is_binary(reason) and reason != "",
        do: reason
 
+  defp description(:group_join_suggestion, %{"huddl_title" => huddl}),
+    do: "You RSVPd to #{huddl} and are not a member yet."
+
   defp description(_, _), do: nil
 
   defp maybe_absolute_date(prefix, payload) do
@@ -163,6 +170,10 @@ defmodule Huddlz.Notifications.Summary do
   # ─── Source URLs ───────────────────────────────────────────────────────
 
   defp source_url(_trigger, %{"target_path" => "/notifications"}), do: "/notifications"
+
+  # The suggestion is about the group; the huddl is only why it was raised.
+  defp source_url(:group_join_suggestion, %{"group_slug" => slug}) when is_binary(slug),
+    do: "/groups/#{slug}"
 
   defp source_url(_trigger, %{"group_slug" => slug, "huddl_id" => huddl_id})
        when is_binary(slug) and is_binary(huddl_id),
