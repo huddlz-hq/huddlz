@@ -23,6 +23,7 @@ defmodule Huddlz.Admin.PlatformStats do
   require Ash.Query
 
   alias Huddlz.Accounts.{ActiveDay, UsageMeasurement, User}
+  alias Huddlz.Admin.DropInStats
   alias Huddlz.Communities.{Group, Huddl, HuddlAttendee, Periods}
 
   @coming_up_days 30
@@ -52,12 +53,15 @@ defmodule Huddlz.Admin.PlatformStats do
       of those never held a huddl at all
     * `coming_up` — the next 30 days: huddlz scheduled, RSVPs so far,
       groups with something on, and the next few huddlz
+    * `drop_ins` — RSVPs from people who had not joined the hosting group
+      and what followed; see `Huddlz.Admin.DropInStats`
   """
   def compute(period, actor, now \\ DateTime.utc_now()) do
     window = now |> Periods.calendar_window(Periods.spec(period)) |> Map.put(:actor, actor)
 
     groups = groups(actor)
     window = Map.put(window, :group_ids, Enum.map(groups, & &1.id))
+    window = Map.put(window, :huddl_ids, visible_huddl_ids(window))
     ended = ended_huddlz(window)
     rsvps = standing_rsvps(window)
 
@@ -70,7 +74,8 @@ defmodule Huddlz.Admin.PlatformStats do
       rsvps: rsvp_figures(rsvps, window),
       turnout: turnout(ended, window),
       active_groups: active_groups(groups, ended, rsvps, window),
-      coming_up: coming_up(window)
+      coming_up: coming_up(window),
+      drop_ins: DropInStats.compute(rsvps, window)
     }
   end
 
@@ -220,24 +225,30 @@ defmodule Huddlz.Admin.PlatformStats do
     }
   end
 
-  # RSVPs still standing, made since the previous period began, each with
-  # the group its huddl belongs to.
-  defp standing_rsvps(%{previous_start: since, actor: actor, group_ids: group_ids}) do
-    visible_huddl_ids =
-      Huddl
-      |> Ash.Query.filter(group_id in ^group_ids)
-      |> Ash.Query.select(:id)
-      |> Ash.read!(actor: actor)
-      |> Enum.map(& &1.id)
+  defp visible_huddl_ids(%{actor: actor, group_ids: group_ids}) do
+    Huddl
+    |> Ash.Query.filter(group_id in ^group_ids)
+    |> Ash.Query.select(:id)
+    |> Ash.read!(actor: actor)
+    |> Enum.map(& &1.id)
+  end
 
+  # RSVPs still standing, made since the previous period began, each with
+  # who made it, the huddl, and the group the huddl belongs to.
+  defp standing_rsvps(%{previous_start: since, actor: actor, huddl_ids: huddl_ids}) do
     HuddlAttendee
-    |> Ash.Query.filter(
-      huddl_id in ^visible_huddl_ids and is_nil(waitlisted_at) and rsvped_at >= ^since
-    )
-    |> Ash.Query.select([:rsvped_at])
+    |> Ash.Query.filter(huddl_id in ^huddl_ids and is_nil(waitlisted_at) and rsvped_at >= ^since)
+    |> Ash.Query.select([:rsvped_at, :user_id, :huddl_id])
     |> Ash.Query.load(huddl: Ash.Query.select(Huddl, [:group_id]))
     |> Ash.read!(authorize?: false, actor: actor)
-    |> Enum.map(&%{rsvped_at: &1.rsvped_at, group_id: &1.huddl.group_id})
+    |> Enum.map(
+      &%{
+        rsvped_at: &1.rsvped_at,
+        user_id: &1.user_id,
+        huddl_id: &1.huddl_id,
+        group_id: &1.huddl.group_id
+      }
+    )
   end
 
   defp rsvp_figures(rsvps, %{start: start, edges: edges}) do

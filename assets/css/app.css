@@ -2182,6 +2182,34 @@ body .coverage-note {
   line-height: 1.5;
 }
 
+/* Drop-ins: the coverage pattern with counts only, no share column. */
+body .drop-ins-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+body .drop-ins-grid + .coverage-note { margin-top: 16px; }
+body #drop-ins .stat { margin-bottom: 18px; }
+
+@media (min-width: 1100px) {
+  body .drop-ins-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; align-items: start; }
+}
+
+body .coverage h3 { margin: 0; font-size: 13px; font-weight: 600; color: var(--soft); }
+body .coverage.counts .coverage-row { grid-template-columns: 12px minmax(0, 1fr) auto; }
+body .coverage.counts .coverage-row.plain { grid-template-columns: minmax(0, 1fr) auto; }
+
+body .coverage-row output {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+body .coverage .joined { background: var(--accent); }
+body .coverage .rsvped-again { background: var(--accent-deep); }
+body .coverage .nothing { background: var(--line-strong); }
+body .coverage .dismissed { background: var(--warn); }
+
+body .coverage .turned-off {
+  background: repeating-linear-gradient(135deg, var(--line-strong) 0 3px, transparent 3px 7px);
+}
+
 body .group-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 
 body .group-table th {
