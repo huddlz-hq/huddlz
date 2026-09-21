@@ -11,7 +11,7 @@ defmodule AdminOverviewSteps do
 
   alias Huddlz.Accounts.User
   alias Huddlz.Admin
-  alias Huddlz.Communities.Group
+  alias Huddlz.Communities.{Group, Huddl, HuddlAttendee}
   alias Huddlz.Test.Helpers.Authentication
 
   step "the platform {string} figure shows {string}",
@@ -160,6 +160,25 @@ defmodule AdminOverviewSteps do
       text: "—",
       exact: true
     )
+
+    context
+  end
+
+  step "the most active groups do not list {string}",
+       %{args: [name], session: session} = context do
+    refute_has(session, "#active-group-#{find_group(name).id}")
+    context
+  end
+
+  step "the RSVPs for {string} were made {int} days ago",
+       %{args: [title, days]} = context do
+    huddl = Huddl |> Ash.Query.filter(title == ^title) |> Ash.read_one!(authorize?: false)
+    rsvped_at = DateTime.add(DateTime.utc_now(), -days, :day)
+
+    HuddlAttendee
+    |> Ash.Query.filter(huddl_id == ^huddl.id)
+    |> Ash.read!(authorize?: false)
+    |> Enum.each(&Ash.Seed.update!(&1, %{rsvped_at: rsvped_at}))
 
     context
   end

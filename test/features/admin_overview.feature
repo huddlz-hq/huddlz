@@ -57,6 +57,23 @@ Feature: Admin platform overview
     And the active group row for "Portland Elixir" shows "4 RSVPs" and "75%"
     And the active group row for "Founder Coffee" shows no show rate
 
+  Scenario: Active groups count RSVPs for huddlz held in the selected period
+    Given the in-person huddl "Recent" in "Portland Elixir" ended 10 days ago with 4 RSVPs
+    And the RSVPs for "Recent" were made 100 days ago
+    And 2 people are waitlisted for "Recent"
+    And the in-person huddl "Earlier" in "Portland Elixir" ended 60 days ago with 2 RSVPs
+    And the in-person huddl "Last season" in "Portland Elixir" ended 150 days ago with 3 RSVPs
+    And the in-person huddl "Next week" in "Portland Elixir" is upcoming with 8 RSVPs
+    And the in-person huddl "Future coffee" in "Founder Coffee" is upcoming with 20 RSVPs
+    And I am signed in as "admin553@example.com"
+    When I visit "/admin?period=30d"
+    Then the active group row for "Portland Elixir" shows "4 RSVPs" and "1 huddl"
+    And the most active groups do not list "Founder Coffee"
+    When I click "90 days"
+    Then the active group row for "Portland Elixir" shows "6 RSVPs" and "2 huddlz"
+    When I click "12 months"
+    Then the active group row for "Portland Elixir" shows "9 RSVPs" and "3 huddlz"
+
   Scenario: A quiet platform says so
     Given I am signed in as "admin553@example.com"
     When I visit "/admin"

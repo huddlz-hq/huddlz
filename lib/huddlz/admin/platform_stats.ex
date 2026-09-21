@@ -47,7 +47,7 @@ defmodule Huddlz.Admin.PlatformStats do
     * `turnout` — the past huddlz of the period: how many were counted,
       skipped or never answered, the show rate over the counted ones (nil
       without counts), and per-huddl show rates oldest first
-    * `active_groups` — the groups with the most RSVPs in the period,
+    * `active_groups` — the groups with the most RSVPs for huddlz held in the period,
       each with huddlz held, RSVPs, show rate (nil when never counted)
       and members; then how many live groups held nothing and how many
       of those never held a huddl at all
@@ -74,7 +74,7 @@ defmodule Huddlz.Admin.PlatformStats do
       held: held(ended, window),
       rsvps: rsvp_figures(rsvps, window),
       turnout: turnout(ended, window),
-      active_groups: active_groups(groups, ended, rsvps, window),
+      active_groups: active_groups(groups, ended, window),
       coming_up: coming_up(window),
       drop_ins: DropInStats.compute(rsvps, window)
     }
@@ -292,15 +292,10 @@ defmodule Huddlz.Admin.PlatformStats do
   defp show_rate(_came, 0), do: nil
   defp show_rate(came, rsvps), do: round(came * 100 / rsvps)
 
-  # Groups ranked by the RSVPs they gathered in the period, then by the
-  # huddlz they held; only groups with either make the list.
-  defp active_groups(groups, ended, rsvps, %{start: start, now: now}) do
+  # Groups ranked by RSVPs for huddlz held in the period, then by how many
+  # huddlz they held. RSVP dates do not affect this ranking.
+  defp active_groups(groups, ended, %{start: start, now: now}) do
     held = ended |> held_in(start, now) |> Enum.group_by(& &1.group_id)
-
-    rsvps_by_group =
-      rsvps
-      |> Enum.filter(&(DateTime.compare(&1.rsvped_at, start) != :lt))
-      |> Enum.frequencies_by(& &1.group_id)
 
     ever_held = ended |> Enum.filter(&held?/1) |> Enum.map(& &1.group_id) |> MapSet.new()
 
@@ -316,12 +311,12 @@ defmodule Huddlz.Admin.PlatformStats do
           name: group.name,
           slug: group.slug,
           held: length(huddlz),
-          rsvps: Map.get(rsvps_by_group, group.id, 0),
+          rsvps: Enum.sum(Enum.map(huddlz, & &1.rsvp_count)),
           show_rate: show_rate(Enum.sum(Enum.map(counted, &turnout_total/1)), counted_rsvps),
           members: group.member_count
         }
       end)
-      |> Enum.filter(&(&1.rsvps > 0 or &1.held > 0))
+      |> Enum.filter(&(&1.held > 0))
       |> Enum.sort_by(&{-&1.rsvps, -&1.held, String.downcase(to_string(&1.name))})
 
     quiet = Enum.filter(groups, &(is_nil(&1.archived_at) and not Map.has_key?(held, &1.id)))

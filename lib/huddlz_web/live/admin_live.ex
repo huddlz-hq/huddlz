@@ -230,7 +230,7 @@ defmodule HuddlzWeb.AdminLive do
             <div>
               <h2>Most active groups</h2>
               <div class="panel-sub">
-                By RSVPs gathered in the period. Show rate is over the group's counted huddlz.
+                By RSVPs for huddlz held in the period. Show rate is over the group's counted huddlz.
               </div>
             </div>
             <span :if={@stats.active_groups.groups != []} class="panel-sub panel-count">
