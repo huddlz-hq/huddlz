@@ -626,6 +626,9 @@ defmodule HuddlzWeb.OrganizeLive do
                 <span class="big">{signups_figure(@next)}</span>
                 <span class="cmp">{published_ago(@next.days)}{expectation(@next)}</span>
               </div>
+              <p :if={@next.not_members > 0} id="next-huddl-not-members" class="panel-sub">
+                {not_members_line(@next)}
+              </p>
               <.signup_chart
                 id="next-huddl"
                 curve={@next.curve}
@@ -737,6 +740,12 @@ defmodule HuddlzWeb.OrganizeLive do
     "RSVPs next to how many actually came, last #{length(huddlz)} huddlz. Dashed means no turnout was recorded."
   end
 
+  defp not_members_line(%{not_members: 1, rsvp_count: count}),
+    do: "1 of the #{count} isn't a member yet"
+
+  defp not_members_line(%{not_members: n, rsvp_count: count}),
+    do: "#{n} of the #{count} aren't members yet"
+
   defp expectation(%{expected: nil}), do: ""
 
   defp expectation(%{expected: %{count: count}, event_type: type}),
@@ -751,15 +760,27 @@ defmodule HuddlzWeb.OrganizeLive do
   defp activity_line(%{entry: %{kind: kind}} = assigns)
        when kind in [:joined, :left, :accepted_invitation] do
     ~H"""
-    <b>{@entry.user.display_name}</b> {activity_verb(@entry.kind)}
+    <span class="line"><b>{@entry.user.display_name}</b> {activity_verb(@entry.kind)}</span>
+    <small :if={drop_in_note(@entry)} class="note">{drop_in_note(@entry)}</small>
     """
   end
 
   defp activity_line(assigns) do
     ~H"""
-    <b>{@entry.user.display_name}</b> {activity_verb(@entry.kind)} <b>{huddl_name(@entry.huddl)}</b>
+    <span class="line">
+      <b>{@entry.user.display_name}</b> {activity_verb(@entry.kind)} <b>{huddl_name(@entry.huddl)}</b>
+    </span>
+    <small :if={drop_in_note(@entry)} class="note">{drop_in_note(@entry)}</small>
     """
   end
+
+  # The muted second line: what the entry says about drop-ins, if anything.
+  defp drop_in_note(%{kind: :rsvped, not_a_member_yet: true}), do: "Not a member yet"
+
+  defp drop_in_note(%{kind: :joined, rsvped_first: title}) when is_binary(title),
+    do: "RSVPd to #{title} first"
+
+  defp drop_in_note(_entry), do: nil
 
   defp activity_verb(:joined), do: "joined the group"
   defp activity_verb(:left), do: "left the group"
@@ -798,10 +819,15 @@ defmodule HuddlzWeb.OrganizeLive do
   defp signed(n) when n < 0, do: "−#{abs(n)}"
   defp signed(n), do: "+#{n}"
 
-  defp growth_cmp(%{left: 0}, period), do: "in #{GroupStats.period_label(period)}"
+  defp growth_cmp(growth, period),
+    do: "in #{GroupStats.period_label(period)}" <> joined_and_left(growth) <> rsvped_first(growth)
 
-  defp growth_cmp(%{joined: joined, left: left}, period),
-    do: "in #{GroupStats.period_label(period)} · #{joined} joined, #{left} left"
+  defp joined_and_left(%{left: 0}), do: ""
+  defp joined_and_left(%{joined: joined, left: left}), do: " · #{joined} joined, #{left} left"
+
+  # How many of the joiners found the group through one of its huddlz.
+  defp rsvped_first(%{rsvped_first: 0}), do: ""
+  defp rsvped_first(%{rsvped_first: count}), do: " · #{count} RSVPd to a huddl first"
 
   defp growth_sub(:month), do: "Members at month end, with how many joined each month"
   defp growth_sub(:fortnight), do: "Members at each fortnight's end, with how many joined in it"

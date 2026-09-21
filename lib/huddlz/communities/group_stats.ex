@@ -30,7 +30,14 @@ defmodule Huddlz.Communities.GroupStats do
 
   require Ash.Query
 
-  alias Huddlz.Communities.{GroupActivity, GroupMember, Huddl, HuddlAttendee, Periods}
+  alias Huddlz.Communities.{
+    DropInHistory,
+    GroupActivity,
+    GroupMember,
+    Huddl,
+    HuddlAttendee,
+    Periods
+  }
 
   @day 86_400
   @typical_min_history 3
@@ -55,8 +62,9 @@ defmodule Huddlz.Communities.GroupStats do
     * `members` — current member count, how many joined this calendar
       month in the group's time zone, and a sparkline of members over time
     * `growth` — the period bucketed by month, fortnight or week: members
-      at each bucket's end, how many joined and left in it, and the totals
-      joined, left and gained (net)
+      at each bucket's end, how many joined and left in it, the totals
+      joined, left and gained (net), and how many of those joins followed
+      an RSVP made while not a member (`rsvped_first`)
     * `rsvps` — RSVPs made in the period, the count in the period before
       it, and a per-bucket sparkline
     * `waitlist` — people waitlisted on upcoming huddlz right now, the
@@ -66,7 +74,8 @@ defmodule Huddlz.Communities.GroupStats do
       sparkline of per-huddl show rates
     * `turnout_chart` — the last few past huddlz, oldest first, each with
       RSVPs, capacity and turnout (room and call) or marked uncounted
-    * `next_huddl` — the next upcoming huddl with its RSVPs, capacity,
+    * `next_huddl` — the next upcoming huddl with its RSVPs, how many of
+      them are from people who are not members now (`not_members`), capacity,
       signup curve since publish, the group's typical curve (or nil), the
       expected turnout (or nil) and the other upcoming huddlz; nil when
       nothing is upcoming
@@ -85,7 +94,7 @@ defmodule Huddlz.Communities.GroupStats do
       waitlist: waitlist(group, now, edges),
       turnout: turnout(past, now, spec),
       turnout_chart: turnout_chart(past),
-      next_huddl: next_huddl(group, actor, past, now)
+      next_huddl: next_huddl(group, actor, past, membership, now)
     }
   end
 
@@ -179,7 +188,14 @@ defmodule Huddlz.Communities.GroupStats do
       Enum.map(rows, &%{kind: :joined, user_id: &1.user_id, occurred_at: &1.created_at})
 
     runs = runs(current_joins ++ activity, :left)
-    %{count: length(rows), joined_at: runs.started_at, left_at: runs.ended_at}
+
+    %{
+      count: length(rows),
+      member_ids: MapSet.new(rows, & &1.user_id),
+      joins: runs.started,
+      joined_at: runs.started_at,
+      left_at: runs.ended_at
+    }
   end
 
   # Walk entries in time order, one person at a time: a start counts only
@@ -187,23 +203,24 @@ defmodule Huddlz.Communities.GroupStats do
   # Endings are kept even without a known start, so a join or RSVP from
   # before the log existed shows its end and not its start.
   defp runs(entries, ending) do
-    {_in, started_at} =
+    {_in, started} =
       entries
       |> Enum.sort_by(& &1.occurred_at, DateTime)
       |> Enum.reduce({MapSet.new(), []}, fn
-        %{kind: ^ending, user_id: user_id}, {present, started_at} ->
-          {MapSet.delete(present, user_id), started_at}
+        %{kind: ^ending, user_id: user_id}, {present, started} ->
+          {MapSet.delete(present, user_id), started}
 
-        %{user_id: user_id, occurred_at: at}, {present, started_at} ->
+        %{user_id: user_id, occurred_at: at}, {present, started} ->
           if MapSet.member?(present, user_id) do
-            {present, started_at}
+            {present, started}
           else
-            {MapSet.put(present, user_id), [at | started_at]}
+            {MapSet.put(present, user_id), [{user_id, at} | started]}
           end
       end)
 
     %{
-      started_at: started_at,
+      started: started,
+      started_at: Enum.map(started, fn {_user_id, at} -> at end),
       ended_at: for(%{kind: ^ending, occurred_at: at} <- entries, do: at)
     }
   end
@@ -246,8 +263,21 @@ defmodule Huddlz.Communities.GroupStats do
       joined: joined,
       left: left,
       gained: joined - left,
+      rsvped_first: rsvped_first(membership, group, buckets),
       buckets: buckets
     }
+  end
+
+  # Of the joins counted in the buckets, how many followed an RSVP the
+  # person made to one of the group's huddlz while not a member.
+  defp rsvped_first(membership, group, buckets) do
+    joins =
+      Enum.filter(membership.joins, fn {_user_id, at} ->
+        Enum.any?(buckets, &Periods.within?(at, &1.starts_at, &1.ends_at))
+      end)
+
+    history = DropInHistory.load(group.id, Enum.map(joins, fn {user_id, _at} -> user_id end))
+    Enum.count(joins, fn {user_id, at} -> DropInHistory.latest_before(history, user_id, at) end)
   end
 
   # Today's count, minus everyone who joined after the moment, plus
@@ -298,7 +328,7 @@ defmodule Huddlz.Communities.GroupStats do
     }
   end
 
-  defp next_huddl(group, actor, past, now) do
+  defp next_huddl(group, actor, past, membership, now) do
     case organizer_huddlz(group, actor, :published, starts_at: :asc) do
       [] ->
         nil
@@ -310,6 +340,7 @@ defmodule Huddlz.Communities.GroupStats do
         next
         |> huddl_summary()
         |> Map.merge(%{
+          not_members: not_members(next, membership),
           published_at: published_at,
           days: days,
           curve: standing_by_day(next, rsvp_histories([next.id]), published_at, days),
@@ -318,6 +349,15 @@ defmodule Huddlz.Communities.GroupStats do
           others: Enum.map(others, &huddl_summary/1)
         })
     end
+  end
+
+  # Standing RSVPs from people who are not members of the group now.
+  defp not_members(huddl, membership) do
+    HuddlAttendee
+    |> Ash.Query.filter(huddl_id == ^huddl.id and is_nil(waitlisted_at))
+    |> Ash.Query.select([:user_id])
+    |> Ash.read!(authorize?: false)
+    |> Enum.count(&(not MapSet.member?(membership.member_ids, &1.user_id)))
   end
 
   # The group's past huddlz averaged day by day since each was published.
