@@ -33,7 +33,7 @@ defmodule HuddlzWeb.Live.AddressBookLocationFormTest do
         })
         |> render_submit()
 
-        assert render(view) =~ "Failed to save location"
+        assert has_element?(view, "#flash-error", "Failed to save location")
         assert has_element?(view, "#location-name-input[value='Final name']")
         assert has_element?(view, "#location-unit-input[value='#{invalid_unit}']")
         assert has_element?(view, "[data-testid=location-display]", "123 Main St")
