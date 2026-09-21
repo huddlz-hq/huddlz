@@ -16,6 +16,7 @@ defmodule HuddlzWeb.NotificationsLive do
   import HuddlzWeb.Live.Helpers.ParamHelpers
 
   alias Huddlz.Communities
+  alias Huddlz.Communities.JoinSource
   alias Huddlz.Notifications
   alias Huddlz.Notifications.Notification
   alias Huddlz.Notifications.Target
@@ -49,7 +50,7 @@ defmodule HuddlzWeb.NotificationsLive do
 
     with {:ok, notification} <- Notifications.get_notification(id, actor: user),
          {:available, destination} <- Target.resolve(notification, user) do
-      {:noreply, push_navigate(socket, to: destination)}
+      {:noreply, go_to(socket, destination)}
     else
       _ ->
         {:noreply,
@@ -115,6 +116,14 @@ defmodule HuddlzWeb.NotificationsLive do
     socket
     |> assign(:counts, load_counts(user))
     |> load_results(socket.assigns.filter, socket.assigns.page_info.current_page, user)
+  end
+
+  # A destination that names where it came from is loaded as a page, so that
+  # JoinSourceTag sees the request and takes the tag off the address.
+  defp go_to(socket, destination) do
+    if JoinSource.tagged?(destination),
+      do: redirect(socket, to: destination),
+      else: push_navigate(socket, to: destination)
   end
 
   defp parse_filter(value) when value in @valid_filters, do: String.to_existing_atom(value)

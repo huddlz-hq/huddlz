@@ -13,6 +13,7 @@ defmodule HuddlzWeb.GroupLive.Show do
   alias Huddlz.Communities.{GroupLocation, GroupMember, Huddl, MembershipEvents}
   alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Avatar
+  alias HuddlzWeb.JoinSourceTag
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
   alias HuddlzWeb.ReportAccount
@@ -26,10 +27,12 @@ defmodule HuddlzWeb.GroupLive.Show do
   @member_grid_visible 7
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(_params, session, socket) do
     {:ok,
      socket
      |> assign(:leave_dialog_open, false)
+     |> assign(:session, session)
+     |> assign(:join_source, nil)
      |> assign(:subscribed_group_id, nil)
      |> assign(:members_visible?, false)
      |> assign(:member_grid_extras, 0)
@@ -38,7 +41,15 @@ defmodule HuddlzWeb.GroupLive.Show do
      |> stream(:huddlz, [])}
   end
 
+  # A tagged link followed without a page load, as the notifications row is.
+  # The page is loaded afresh so that JoinSourceTag can move the tag from the
+  # address into the session.
   @impl true
+  def handle_params(%{"from" => _tag}, uri, socket) do
+    %URI{path: path, query: query} = URI.parse(uri)
+    {:noreply, redirect(socket, to: path <> "?" <> query)}
+  end
+
   def handle_params(%{"slug" => slug} = params, _, socket) do
     user = socket.assigns.current_user
 
@@ -68,6 +79,7 @@ defmodule HuddlzWeb.GroupLive.Show do
             if(group.is_public && is_nil(group.archived_at), do: meta.url)
           )
           |> assign(:group, group)
+          |> assign_join_source(slug)
           |> assign_member_grid(members)
           |> assign(:member_count, group.member_count)
           |> assign(:is_member, !is_nil(membership))
@@ -98,6 +110,20 @@ defmodule HuddlzWeb.GroupLive.Show do
   end
 
   def handle_info({:group_membership_changed, _group_id}, socket), do: {:noreply, socket}
+
+  # Decided once, as the page loads: a page that stays open keeps its source
+  # however long the person takes. JoinSourceTag explains the session side.
+  defp assign_join_source(%{assigns: %{join_source: nil}} = socket, slug) do
+    source = JoinSourceTag.source_for(socket.assigns.session, slug) || :group_page
+    assign(socket, :join_source, source)
+  end
+
+  defp assign_join_source(socket, _slug), do: socket
+
+  # Where sign-in sends the person back to. A tag that came with the visit
+  # goes along, so signing in on the way does not lose where the join began.
+  defp return_path(group, :group_page), do: ~p"/groups/#{group.slug}"
+  defp return_path(group, source), do: ~p"/groups/#{group.slug}?#{[from: source]}"
 
   defp subscribe_to_membership_changes(socket, group) do
     if connected?(socket) and socket.assigns.subscribed_group_id != group.id do
@@ -298,7 +324,7 @@ defmodule HuddlzWeb.GroupLive.Show do
           <.button
             :if={is_nil(@current_user) and @group.is_public and is_nil(@group.archived_at)}
             variant={:primary}
-            navigate={~p"/sign-in?#{[return_to: ~p"/groups/#{@group.slug}"]}"}
+            navigate={~p"/sign-in?#{[return_to: return_path(@group, @join_source)]}"}
           >
             Sign in to join
           </.button>
@@ -597,7 +623,11 @@ defmodule HuddlzWeb.GroupLive.Show do
   def handle_event("join_group", _, socket) do
     user = socket.assigns.current_user
 
-    case Communities.join_group(socket.assigns.group.id, actor: user) do
+    case Communities.join_group(
+           socket.assigns.group.id,
+           %{source: socket.assigns.join_source},
+           actor: user
+         ) do
       {:ok, _} ->
         {:noreply,
          socket

@@ -232,9 +232,14 @@ defmodule Huddlz.Communities.GroupMember do
         allow_nil? false
       end
 
+      argument :source, Huddlz.Communities.JoinSource do
+        description "The page or email the join came from. Optional; left out, the join has no source."
+      end
+
       change manage_relationship(:group_id, :group, type: :append)
       change relate_actor(:user)
       change set_attribute(:role, :member)
+      change set_attribute(:join_source, arg(:source))
       change Huddlz.Communities.GroupMember.Changes.NotifyJoined
     end
 
@@ -383,6 +388,10 @@ defmodule Huddlz.Communities.GroupMember do
       default :member
       constraints one_of: [:owner, :organizer, :member]
     end
+
+    # Where a self-join came from. For the admin overview only: not public,
+    # so members, organizers and the APIs never see it.
+    attribute :join_source, Huddlz.Communities.JoinSource
 
     create_timestamp :created_at
   end

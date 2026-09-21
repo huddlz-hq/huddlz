@@ -11,6 +11,7 @@ defmodule Huddlz.Notifications.Target do
 
   alias Huddlz.Accounts.User
   alias Huddlz.Communities
+  alias Huddlz.Communities.JoinSource
   alias Huddlz.Notifications.Notification
 
   @type resolution :: {:available, String.t()} | :resolved | :none
@@ -47,8 +48,12 @@ defmodule Huddlz.Notifications.Target do
         %Notification{trigger: "group_join_suggestion", payload: %{"group_slug" => slug}},
         %User{} = user
       )
-      when is_binary(slug),
-      do: group_target(slug, user)
+      when is_binary(slug) do
+    # The row names itself, so a join that follows it is counted for it.
+    with {:available, path} <- group_target(slug, user) do
+      {:available, JoinSource.tag(path, :join_suggestion_notification)}
+    end
+  end
 
   def resolve(
         %Notification{payload: %{"huddl_id" => huddl_id, "group_slug" => group_slug}},

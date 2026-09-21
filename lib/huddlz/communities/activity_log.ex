@@ -34,7 +34,7 @@ defmodule Huddlz.Communities.ActivityLog do
       }) do
     case member_kind(action.name) do
       nil -> :ok
-      kind -> record(kind, member.group_id, member.user_id, nil, actor)
+      kind -> record(kind, member.group_id, member.user_id, nil, actor, source(action, member))
     end
   end
 
@@ -67,6 +67,10 @@ defmodule Huddlz.Communities.ActivityLog do
   defp member_kind(:remove_member), do: :left
   defp member_kind(_other), do: nil
 
+  # Only a self-join has a source; being added by an organizer has none.
+  defp source(%{name: :join_group}, member), do: member.join_source
+  defp source(_action, _member), do: nil
+
   defp attendee_kind(%{type: :create, name: :rsvp}, _attendee), do: :rsvped
   defp attendee_kind(%{type: :create, name: :join_waitlist}, _attendee), do: :waitlisted
   defp attendee_kind(%{type: :update, name: :promote_from_waitlist}, _attendee), do: :promoted
@@ -98,13 +102,14 @@ defmodule Huddlz.Communities.ActivityLog do
   defp impersonation_id(%{__metadata__: %{impersonation: %{id: id}}}), do: id
   defp impersonation_id(_actor), do: nil
 
-  defp record(kind, group_id, user_id, huddl_id, actor) do
+  defp record(kind, group_id, user_id, huddl_id, actor, source \\ nil) do
     GroupActivity
     |> Ash.Changeset.for_create(:record, %{
       kind: kind,
       group_id: group_id,
       user_id: user_id,
       huddl_id: huddl_id,
+      source: source,
       impersonation_id: impersonation_id(actor)
     })
     |> Ash.create(authorize?: false)

@@ -57,7 +57,16 @@ defmodule Huddlz.Communities.GroupActivity do
 
     create :record do
       description "Append one entry. Internal: written by the activity log notifier."
-      accept [:kind, :occurred_at, :group_id, :huddl_id, :user_id, :impersonation_id]
+
+      accept [
+        :kind,
+        :occurred_at,
+        :group_id,
+        :huddl_id,
+        :user_id,
+        :impersonation_id,
+        :source
+      ]
     end
 
     read :for_group do
@@ -114,6 +123,10 @@ defmodule Huddlz.Communities.GroupActivity do
 
     # Set when an administrator was viewing huddlz as the person at the time.
     attribute :impersonation_id, :uuid
+
+    # Where a self-join came from, kept here so it outlives the membership.
+    # For the admin overview only: organizers reading the log never see it.
+    attribute :source, Huddlz.Communities.JoinSource
   end
 
   relationships do
