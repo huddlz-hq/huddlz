@@ -1110,7 +1110,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
     huddl = socket.assigns.huddl
     user = socket.assigns.current_user
 
-    case Communities.join_group(huddl.group.id, actor: user) do
+    case Communities.join_group(huddl.group.id, %{source: :huddl_page}, actor: user) do
       {:ok, _} ->
         {:noreply,
          socket
