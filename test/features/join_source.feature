@@ -48,6 +48,26 @@ Feature: A join records where it came from
     And I click the "Join Group" button
     Then the join of "maya610@example.com" to "Tuesday Runners" is recorded as coming from "the join suggestion email"
 
+  Scenario: The tag does not stay in the group page's address
+    Given "maya610@example.com" has RSVPd to "Long Run"
+    And "Long Run" completes
+    And a day passes
+    And "maya610@example.com" receives an email suggesting they join "Tuesday Runners"
+    And I am signed in as "maya610@example.com"
+    When I follow the email's link to the group page
+    Then the address of the "Tuesday Runners" group page carries no tag
+
+  Scenario: Loading the group page again during the visit keeps the source
+    Given "maya610@example.com" has RSVPd to "Long Run"
+    And "Long Run" completes
+    And a day passes
+    And "maya610@example.com" receives an email suggesting they join "Tuesday Runners"
+    And I am signed in as "maya610@example.com"
+    When I follow the email's link to the group page
+    And I load the "Tuesday Runners" group page again
+    And I click the "Join Group" button
+    Then the join of "maya610@example.com" to "Tuesday Runners" is recorded as coming from "the join suggestion email"
+
   Scenario: Joining after following the suggestion in my notifications
     Given "maya610@example.com" has RSVPd to "Long Run"
     And "Long Run" completes

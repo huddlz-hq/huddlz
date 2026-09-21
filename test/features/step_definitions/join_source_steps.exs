@@ -31,6 +31,17 @@ defmodule JoinSourceSteps do
     follow_group_link(context, sent)
   end
 
+  step "the address of the {string} group page carries no tag",
+       %{args: [group_name]} = context do
+    assert_path(context.session, "/groups/#{find_group(group_name).slug}", query_params: %{})
+    context
+  end
+
+  step "I load the {string} group page again", %{args: [group_name]} = context do
+    session = visit(context.session, "/groups/#{find_group(group_name).slug}")
+    Map.merge(context, %{session: session, conn: session})
+  end
+
   step "I follow the RSVP confirmation email's link to the group page", context do
     Oban.drain_queue(queue: :notifications)
     assert_received {:email, %{subject: "You're going to" <> _} = sent}

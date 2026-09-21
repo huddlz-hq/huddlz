@@ -33,6 +33,12 @@ defmodule Huddlz.Communities.JoinSource do
 
   def from_tag(_tag), do: nil
 
+  @doc "Whether the path carries a tag."
+  @spec tagged?(String.t()) :: boolean()
+  def tagged?(path) when is_binary(path) do
+    (URI.parse(path).query || "") |> URI.decode_query() |> Map.has_key?(@param)
+  end
+
   @doc """
   The path with the source's tag added, for links that lead to a group page.
   """

@@ -10,9 +10,10 @@ defmodule HuddlzWeb.GroupLive.Show do
   alias Huddlz.Accounts.ConfirmationDestination
   alias Huddlz.Accounts.User
   alias Huddlz.Communities
-  alias Huddlz.Communities.{GroupLocation, GroupMember, Huddl, JoinSource, MembershipEvents}
+  alias Huddlz.Communities.{GroupLocation, GroupMember, Huddl, MembershipEvents}
   alias Huddlz.Storage.GroupImages
   alias HuddlzWeb.Avatar
+  alias HuddlzWeb.JoinSourceTag
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.MetaHelpers
   alias HuddlzWeb.ReportAccount
@@ -26,11 +27,12 @@ defmodule HuddlzWeb.GroupLive.Show do
   @member_grid_visible 7
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(_params, session, socket) do
     {:ok,
      socket
      |> assign(:leave_dialog_open, false)
-     |> assign(:join_source, :group_page)
+     |> assign(:session, session)
+     |> assign(:join_source, nil)
      |> assign(:subscribed_group_id, nil)
      |> assign(:members_visible?, false)
      |> assign(:member_grid_extras, 0)
@@ -39,7 +41,15 @@ defmodule HuddlzWeb.GroupLive.Show do
      |> stream(:huddlz, [])}
   end
 
+  # A tagged link followed without a page load, as the notifications row is.
+  # The page is loaded afresh so that JoinSourceTag can move the tag from the
+  # address into the session.
   @impl true
+  def handle_params(%{"from" => _tag}, uri, socket) do
+    %URI{path: path, query: query} = URI.parse(uri)
+    {:noreply, redirect(socket, to: path <> "?" <> query)}
+  end
+
   def handle_params(%{"slug" => slug} = params, _, socket) do
     user = socket.assigns.current_user
 
@@ -69,7 +79,7 @@ defmodule HuddlzWeb.GroupLive.Show do
             if(group.is_public && is_nil(group.archived_at), do: meta.url)
           )
           |> assign(:group, group)
-          |> keep_join_source(params)
+          |> assign_join_source(slug)
           |> assign_member_grid(members)
           |> assign(:member_count, group.member_count)
           |> assign(:is_member, !is_nil(membership))
@@ -101,15 +111,14 @@ defmodule HuddlzWeb.GroupLive.Show do
 
   def handle_info({:group_membership_changed, _group_id}, socket), do: {:noreply, socket}
 
-  # A link from an email or a notification names itself in a `from` tag.
-  # A recognised tag holds for the rest of the visit: switching tabs drops it
-  # from the address, and the join should still count for where it began.
-  defp keep_join_source(socket, params) do
-    case JoinSource.from_tag(params[JoinSource.param()]) do
-      nil -> socket
-      source -> assign(socket, :join_source, source)
-    end
+  # Decided once, as the page loads: a page that stays open keeps its source
+  # however long the person takes. JoinSourceTag explains the session side.
+  defp assign_join_source(%{assigns: %{join_source: nil}} = socket, slug) do
+    source = JoinSourceTag.source_for(socket.assigns.session, slug) || :group_page
+    assign(socket, :join_source, source)
   end
+
+  defp assign_join_source(socket, _slug), do: socket
 
   # Where sign-in sends the person back to. A tag that came with the visit
   # goes along, so signing in on the way does not lose where the join began.

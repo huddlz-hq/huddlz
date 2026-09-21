@@ -26,6 +26,7 @@ defmodule HuddlzWeb.Router do
     plug :put_root_layout, html: {HuddlzWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug HuddlzWeb.JoinSourceTag
     plug :load_from_session_unless_loaded
     plug HuddlzWeb.BrowserSession
     plug HuddlzWeb.RejectSuspended, :browser
