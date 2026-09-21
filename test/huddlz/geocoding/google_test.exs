@@ -148,4 +148,52 @@ defmodule Huddlz.Geocoding.GoogleTest do
       assert {:error, :invalid_address} = Google.geocode(123)
     end
   end
+
+  describe "reverse_geocode/2" do
+    test "returns the full address and place id of the street address at the coordinates" do
+      Req.Test.stub(Google, fn conn ->
+        conn = Plug.Conn.fetch_query_params(conn)
+        assert conn.query_params["latlng"] == "30.1712,-81.6021"
+
+        Req.Test.json(conn, %{
+          "status" => "OK",
+          "results" => [
+            %{
+              "types" => ["route"],
+              "formatted_address" => "Old St Augustine Rd",
+              "place_id" => "route"
+            },
+            %{
+              "types" => ["street_address"],
+              "formatted_address" => "9801 Old St Augustine Rd, Jacksonville, FL 32257, USA",
+              "place_id" => "place-9801"
+            }
+          ]
+        })
+      end)
+
+      assert {:ok,
+              %{
+                formatted_address: "9801 Old St Augustine Rd, Jacksonville, FL 32257, USA",
+                place_id: "place-9801"
+              }} = Google.reverse_geocode(30.1712, -81.6021)
+    end
+
+    test "is not found when only regions are returned" do
+      Req.Test.stub(Google, fn conn ->
+        Req.Test.json(conn, %{
+          "status" => "OK",
+          "results" => [
+            %{
+              "types" => ["locality"],
+              "formatted_address" => "Jacksonville, FL, USA",
+              "place_id" => "c"
+            }
+          ]
+        })
+      end)
+
+      assert {:error, :not_found} = Google.reverse_geocode(30.1712, -81.6021)
+    end
+  end
 end

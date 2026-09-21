@@ -14,6 +14,7 @@ defmodule Huddlz.Places.DevStub do
       display_text: "San Francisco, CA, USA",
       main_text: "San Francisco",
       secondary_text: "CA, USA",
+      formatted_address: "1 Dr Carlton B Goodlett Pl, San Francisco, CA 94102, USA",
       latitude: 37.7749,
       longitude: -122.4194,
       time_zone: "America/Los_Angeles"
@@ -23,6 +24,7 @@ defmodule Huddlz.Places.DevStub do
       display_text: "Brooklyn, New York, NY, USA",
       main_text: "Brooklyn",
       secondary_text: "New York, NY, USA",
+      formatted_address: "209 Joralemon St, Brooklyn, NY 11201, USA",
       latitude: 40.6782,
       longitude: -74.0060,
       time_zone: "America/New_York"
@@ -32,6 +34,7 @@ defmodule Huddlz.Places.DevStub do
       display_text: "Austin, TX, USA",
       main_text: "Austin",
       secondary_text: "TX, USA",
+      formatted_address: "301 W 2nd St, Austin, TX 78701, USA",
       latitude: 30.2672,
       longitude: -97.7431,
       time_zone: "America/Chicago"
@@ -41,6 +44,7 @@ defmodule Huddlz.Places.DevStub do
       display_text: "Chicago, IL, USA",
       main_text: "Chicago",
       secondary_text: "IL, USA",
+      formatted_address: "121 N LaSalle St, Chicago, IL 60602, USA",
       latitude: 41.8781,
       longitude: -87.6298,
       time_zone: "America/Chicago"
@@ -50,6 +54,7 @@ defmodule Huddlz.Places.DevStub do
       display_text: "Portland, OR, USA",
       main_text: "Portland",
       secondary_text: "OR, USA",
+      formatted_address: "1221 SW 4th Ave, Portland, OR 97204, USA",
       latitude: 45.5051,
       longitude: -122.6750,
       time_zone: "America/Los_Angeles"
@@ -59,6 +64,7 @@ defmodule Huddlz.Places.DevStub do
       display_text: "Denver, CO, USA",
       main_text: "Denver",
       secondary_text: "CO, USA",
+      formatted_address: "1437 Bannock St, Denver, CO 80202, USA",
       latitude: 39.7392,
       longitude: -104.9903,
       time_zone: "America/Denver"
@@ -68,6 +74,7 @@ defmodule Huddlz.Places.DevStub do
       display_text: "Nashville, TN, USA",
       main_text: "Nashville",
       secondary_text: "TN, USA",
+      formatted_address: "1 Public Square, Nashville, TN 37201, USA",
       latitude: 36.1627,
       longitude: -86.7816,
       time_zone: "America/Chicago"
@@ -82,7 +89,12 @@ defmodule Huddlz.Places.DevStub do
   @details Map.new(
              @places,
              &{&1.place_id,
-              %{latitude: &1.latitude, longitude: &1.longitude, time_zone: &1.time_zone}}
+              %{
+                formatted_address: &1.formatted_address,
+                latitude: &1.latitude,
+                longitude: &1.longitude,
+                time_zone: &1.time_zone
+              }}
            )
 
   @impl true

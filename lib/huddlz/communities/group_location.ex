@@ -86,6 +86,13 @@ defmodule Huddlz.Communities.GroupLocation do
       end
     end
 
+    # Maintenance-only: resolves an older saved location to its full address
+    # and place id (see `Huddlz.Communities.PlaceBackfill`).
+    update :resolve_place do
+      accept [:address, :place_id]
+      require_atomic? false
+    end
+
     read :by_group do
       argument :group_id, :uuid, allow_nil?: false
       filter expr(group_id == ^arg(:group_id))

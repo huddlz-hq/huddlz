@@ -9,12 +9,22 @@ defmodule Huddlz.Geocoding do
   @doc "Geocode an address string to latitude/longitude coordinates"
   @callback geocode(String.t()) :: {:ok, coordinates()} | {:error, term()}
 
+  @type resolved_address :: %{formatted_address: String.t(), place_id: String.t()}
+
+  @doc "Resolve coordinates to the full street address and place id found there"
+  @callback reverse_geocode(float(), float()) :: {:ok, resolved_address()} | {:error, term()}
+
   @adapter Application.compile_env(:huddlz, [:geocoding, :adapter], Huddlz.Geocoding.Google)
 
   @doc """
   Geocode an address to coordinates using the configured adapter.
   """
   def geocode(address), do: @adapter.geocode(address)
+
+  @doc """
+  Resolve coordinates to a full street address and Google place id.
+  """
+  def reverse_geocode(latitude, longitude), do: @adapter.reverse_geocode(latitude, longitude)
 
   @doc """
   Returns a user-facing error message for geocoding failures.
