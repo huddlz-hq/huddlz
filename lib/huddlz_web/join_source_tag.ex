@@ -57,7 +57,12 @@ defmodule HuddlzWeb.JoinSourceTag do
     end
   end
 
-  defp remember(conn, _slug, nil), do: conn
+  defp remember(conn, slug, nil) do
+    case get_session(conn, @session_key) do
+      %{"slug" => ^slug} -> delete_session(conn, @session_key)
+      _ -> conn
+    end
+  end
 
   defp remember(conn, slug, source) do
     put_session(conn, @session_key, %{

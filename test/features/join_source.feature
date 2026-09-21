@@ -38,6 +38,13 @@ Feature: A join records where it came from
     And I click the "Join Group" button
     Then the join of "maya610@example.com" to "Tuesday Runners" is recorded as coming from "the group page"
 
+  Scenario: An unknown tag replaces a previously recognised source
+    Given I am signed in as "maya610@example.com"
+    When I visit the "Tuesday Runners" group page tagged "join_suggestion_email"
+    And I visit the "Tuesday Runners" group page tagged "somewhere_else"
+    And I click the "Join Group" button
+    Then the join of "maya610@example.com" to "Tuesday Runners" is recorded as coming from "the group page"
+
   Scenario: Joining after following the join suggestion email
     Given "maya610@example.com" has RSVPd to "Long Run"
     And "Long Run" completes
