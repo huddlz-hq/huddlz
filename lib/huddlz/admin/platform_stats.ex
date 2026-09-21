@@ -24,7 +24,7 @@ defmodule Huddlz.Admin.PlatformStats do
 
   alias Huddlz.Accounts.{ActiveDay, UsageMeasurement, User}
   alias Huddlz.Admin.DropInStats
-  alias Huddlz.Communities.{Group, Huddl, HuddlAttendee, Periods}
+  alias Huddlz.Communities.{Group, Huddl, Periods, RsvpMoment}
 
   @coming_up_days 30
   @coming_up_limit 5
@@ -61,7 +61,8 @@ defmodule Huddlz.Admin.PlatformStats do
 
     groups = groups(actor)
     window = Map.put(window, :group_ids, Enum.map(groups, & &1.id))
-    window = Map.put(window, :huddl_ids, visible_huddl_ids(window))
+    huddl_groups = visible_huddlz(window)
+    window = Map.merge(window, %{huddl_ids: Map.keys(huddl_groups), huddl_groups: huddl_groups})
     ended = ended_huddlz(window)
     rsvps = standing_rsvps(window)
 
@@ -225,28 +226,27 @@ defmodule Huddlz.Admin.PlatformStats do
     }
   end
 
-  defp visible_huddl_ids(%{actor: actor, group_ids: group_ids}) do
+  # The huddlz the administrator can see, each with its group.
+  defp visible_huddlz(%{actor: actor, group_ids: group_ids}) do
     Huddl
     |> Ash.Query.filter(group_id in ^group_ids)
-    |> Ash.Query.select(:id)
+    |> Ash.Query.select([:id, :group_id])
     |> Ash.read!(actor: actor)
-    |> Enum.map(& &1.id)
+    |> Map.new(&{&1.id, &1.group_id})
   end
 
   # RSVPs still standing, made since the previous period began, each with
-  # who made it, the huddl, and the group the huddl belongs to.
-  defp standing_rsvps(%{previous_start: since, actor: actor, huddl_ids: huddl_ids}) do
-    HuddlAttendee
-    |> Ash.Query.filter(huddl_id in ^huddl_ids and is_nil(waitlisted_at) and rsvped_at >= ^since)
-    |> Ash.Query.select([:rsvped_at, :user_id, :huddl_id])
-    |> Ash.Query.load(huddl: Ash.Query.select(Huddl, [:group_id]))
-    |> Ash.read!(authorize?: false, actor: actor)
+  # who made it, the huddl, and the group the huddl belongs to. A waitlist
+  # spot is made when it is promoted, as on a group's overview.
+  defp standing_rsvps(%{previous_start: since, huddl_ids: huddl_ids, huddl_groups: groups}) do
+    {:huddlz, huddl_ids}
+    |> RsvpMoment.standing_since(since)
     |> Enum.map(
       &%{
-        rsvped_at: &1.rsvped_at,
+        rsvped_at: &1.at,
         user_id: &1.user_id,
         huddl_id: &1.huddl_id,
-        group_id: &1.huddl.group_id
+        group_id: Map.fetch!(groups, &1.huddl_id)
       }
     )
   end
