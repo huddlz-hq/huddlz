@@ -48,6 +48,30 @@ Feature: The admin overview shows how drop-ins use huddlz
     Then the platform "RSVPs" figure shows "1"
     And the Drop-ins panel says "No RSVPs came from people who weren't members of the group in this period."
 
+  Scenario: A waitlist spot becomes an RSVP when it is promoted
+    Given the following capped huddl exists in "Tuesday Runners":
+      | title    | description | event_type | starts_at | virtual_link          | max_attendees |
+      | Long Run | Weekly run  | virtual    | tomorrow  | https://meet.test/run | 1             |
+    And "maya611@example.com" is on the waitlist for "Long Run"
+    And "maya611@example.com" joined "Tuesday Runners" from "the group page"
+    And "owner611@example.com" cancels their RSVP to "Long Run"
+    And I am signed in as "admin611@example.com"
+    When I visit "/admin"
+    Then the platform "RSVPs" figure shows "1"
+    And the Drop-ins panel says "No RSVPs came from people who weren't members of the group in this period."
+
+  Scenario: A promoted RSVP belongs to the period it was promoted in
+    Given the following capped huddl exists in "Tuesday Runners":
+      | title    | description | event_type | starts_at | virtual_link          | max_attendees |
+      | Long Run | Weekly run  | virtual    | tomorrow  | https://meet.test/run | 1             |
+    And "maya611@example.com" is on the waitlist for "Long Run"
+    And the RSVP from "maya611@example.com" to "Long Run" was made 120 days ago
+    And "owner611@example.com" cancels their RSVP to "Long Run"
+    And I am signed in as "admin611@example.com"
+    When I visit "/admin?period=30d"
+    Then the platform "RSVPs" figure shows "1"
+    And the Drop-ins panel says "1 of 1 RSVP came from a person who wasn't a member of the group"
+
   Scenario: What drop-ins did next
     Given "maya611@example.com" dropped in on "Tuesday Runners"
     And "maya611@example.com" joined "Tuesday Runners" from "the group page"

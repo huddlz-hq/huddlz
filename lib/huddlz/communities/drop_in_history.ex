@@ -13,7 +13,7 @@ defmodule Huddlz.Communities.DropInHistory do
 
   require Ash.Query
 
-  alias Huddlz.Communities.{GroupActivity, HuddlAttendee, MembershipHistory}
+  alias Huddlz.Communities.{GroupActivity, HuddlAttendee, MembershipHistory, RsvpMoment}
 
   @opaque t :: %{group_id: String.t(), rsvps: map(), membership: MembershipHistory.t()}
 
@@ -61,11 +61,7 @@ defmodule Huddlz.Communities.DropInHistory do
       |> Ash.Query.select([:user_id, :huddl_id, :kind, :occurred_at])
       |> Ash.read!(authorize?: false)
 
-    promoted_at =
-      activity
-      |> Enum.filter(&(&1.kind == :promoted))
-      |> Enum.group_by(&{&1.huddl_id, &1.user_id}, & &1.occurred_at)
-      |> Map.new(fn {key, times} -> {key, Enum.max(times, DateTime)} end)
+    promotions = RsvpMoment.promotions(activity)
 
     standing =
       HuddlAttendee
@@ -78,7 +74,7 @@ defmodule Huddlz.Communities.DropInHistory do
         %{
           user_id: row.user_id,
           huddl_id: row.huddl_id,
-          at: rsvp_at(row, promoted_at[{row.huddl_id, row.user_id}])
+          at: RsvpMoment.at(row, promotions)
         }
       end)
 
@@ -87,9 +83,4 @@ defmodule Huddlz.Communities.DropInHistory do
 
     Enum.group_by(standing ++ logged, & &1.user_id, &Map.take(&1, [:huddl_id, :at]))
   end
-
-  # A waitlist row becomes an RSVP at promotion; a later fresh RSVP keeps
-  # its own timestamp even if an older promotion remains in the log.
-  defp rsvp_at(row, nil), do: row.rsvped_at
-  defp rsvp_at(row, promoted_at), do: Enum.max([row.rsvped_at, promoted_at], DateTime)
 end

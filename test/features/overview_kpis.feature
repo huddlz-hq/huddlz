@@ -40,6 +40,16 @@ Feature: Overview KPIs over a period
     When I visit "/organize/portland-elixir"
     Then the RSVPs KPI shows "5" and "+400% vs previous 90 days"
 
+  Scenario: A waitlist spot counts as an RSVP from when it was promoted
+    Given the following capped huddl exists in "Portland Elixir":
+      | title      | description | event_type | starts_at | virtual_link           | max_attendees |
+      | Hack Night | Weekly hack | virtual    | tomorrow  | https://meet.test/hack | 1             |
+    And "member@example.com" is on the waitlist for "Hack Night"
+    And the RSVP from "member@example.com" to "Hack Night" was made 120 days ago
+    And "host@example.com" cancels their RSVP to "Hack Night"
+    When I visit "/organize/portland-elixir?period=30d"
+    Then the RSVPs KPI shows "1" and "None in the previous 30 days"
+
   Scenario: Switching the period changes the figures and the URL
     Given the huddlz of "Portland Elixir" gathered 3 RSVPs 10 days ago
     And the huddlz of "Portland Elixir" gathered 2 RSVPs 40 days ago

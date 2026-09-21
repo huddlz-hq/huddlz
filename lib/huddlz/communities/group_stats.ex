@@ -36,7 +36,8 @@ defmodule Huddlz.Communities.GroupStats do
     GroupMember,
     Huddl,
     HuddlAttendee,
-    Periods
+    Periods,
+    RsvpMoment
   }
 
   @day 86_400
@@ -66,7 +67,8 @@ defmodule Huddlz.Communities.GroupStats do
       joined, left and gained (net), and how many of those joins followed
       an RSVP made while not a member (`rsvped_first`)
     * `rsvps` — RSVPs made in the period, the count in the period before
-      it, and a per-bucket sparkline
+      it, and a per-bucket sparkline; a waitlist spot is made when it is
+      promoted (`Huddlz.Communities.RsvpMoment`)
     * `waitlist` — people waitlisted on upcoming huddlz right now, the
       titles of the huddlz that are full, and a cumulative sparkline
     * `turnout` — counted huddlz that ended in the period: how many, their
@@ -294,13 +296,7 @@ defmodule Huddlz.Communities.GroupStats do
     {period_start, previous_start} = Periods.starts(now, spec)
 
     rsvped_at =
-      HuddlAttendee
-      |> Ash.Query.filter(
-        huddl.group_id == ^group.id and is_nil(waitlisted_at) and rsvped_at >= ^previous_start
-      )
-      |> Ash.Query.select([:rsvped_at])
-      |> Ash.read!(authorize?: false)
-      |> Enum.map(& &1.rsvped_at)
+      {:group, group.id} |> RsvpMoment.standing_since(previous_start) |> Enum.map(& &1.at)
 
     {current, previous} = Enum.split_with(rsvped_at, &(DateTime.compare(&1, period_start) != :lt))
 
@@ -417,11 +413,7 @@ defmodule Huddlz.Communities.GroupStats do
       |> Ash.Query.select([:huddl_id, :user_id, :kind, :occurred_at])
       |> Ash.read!(authorize?: false)
 
-    promoted_at =
-      activity
-      |> Enum.filter(&(&1.kind == :promoted))
-      |> Enum.group_by(&{&1.huddl_id, &1.user_id}, & &1.occurred_at)
-      |> Map.new(fn {key, times} -> {key, Enum.max(times, DateTime)} end)
+    promotions = RsvpMoment.promotions(activity)
 
     standing =
       Enum.map(rows, fn row ->
@@ -429,7 +421,7 @@ defmodule Huddlz.Communities.GroupStats do
           kind: :rsvped,
           huddl_id: row.huddl_id,
           user_id: row.user_id,
-          occurred_at: latest(row.rsvped_at, promoted_at[{row.huddl_id, row.user_id}])
+          occurred_at: RsvpMoment.at(row, promotions)
         }
       end)
 
@@ -437,9 +429,6 @@ defmodule Huddlz.Communities.GroupStats do
     |> Enum.group_by(& &1.huddl_id)
     |> Map.new(fn {huddl_id, entries} -> {huddl_id, runs(entries, :cancelled_rsvp)} end)
   end
-
-  defp latest(at, nil), do: at
-  defp latest(at, other), do: if(DateTime.compare(other, at) == :gt, do: other, else: at)
 
   # One point per day from publish: RSVPs standing at the end of that day,
   # counted back from today's count through the RSVPs and cancellations
