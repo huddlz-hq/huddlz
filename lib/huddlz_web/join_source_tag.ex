@@ -8,7 +8,8 @@ defmodule HuddlzWeb.JoinSourceTag do
   with a copied or bookmarked link and credit other people's joins to the
   email. So a recognised tag moves into the session, beside the group it was
   for and when it arrived, and the request is redirected to the clean
-  address. An unrecognised tag is dropped.
+  address. An unrecognised tag is dropped, and it forgets a source remembered
+  earlier for the same group: the latest tagged arrival is the one that counts.
 
   The session is what lets the source outlast tab changes, reconnects and
   reloads. It counts for page loads within 30 minutes of arriving; a page
