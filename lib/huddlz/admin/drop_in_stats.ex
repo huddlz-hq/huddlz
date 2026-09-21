@@ -12,9 +12,9 @@ defmodule Huddlz.Admin.DropInStats do
 
   A drop-in RSVP is a standing RSVP made while the person was not a member of
   the hosting group. Membership at a moment is read from the membership row
-  (a member since it was created) and, for memberships that have ended, from
-  the group activity log: the last joined, accepted or left entry before the
-  moment says whether they belonged then.
+  (a member since it was created), the retained snapshot when a membership
+  ended, and the group activity log. The snapshot covers founding owners
+  whose creation is not recorded as a join in the activity log.
 
   What they did next is counted once per person per group, from their first
   drop-in RSVP of the period, and the first match wins: joined the group,
@@ -76,7 +76,9 @@ defmodule Huddlz.Admin.DropInStats do
 
   # Membership rows and membership log entries of the people in question,
   # by person and group.
-  defp history(%{group_ids: group_ids}, user_ids) do
+  defp history(_window, []), do: %{members: %{}, log: %{}, ended_memberships: %{}}
+
+  defp history(%{group_ids: group_ids, start: start}, user_ids) do
     user_ids = Enum.uniq(user_ids)
 
     members =
@@ -96,10 +98,41 @@ defmodule Huddlz.Admin.DropInStats do
       |> Ash.read!(authorize?: false)
       |> Enum.group_by(&pair/1)
 
-    %{members: members, log: log}
+    ended_memberships =
+      GroupMember.Version
+      |> Ash.Query.filter(
+        version_action_type == :destroy and version_inserted_at >= ^start and
+          get_path(changes, [:group_id]) in ^group_ids and
+          get_path(changes, [:user_id]) in ^user_ids
+      )
+      |> Ash.Query.select([:changes, :version_inserted_at])
+      |> Ash.read!(authorize?: false)
+      |> Enum.map(fn version ->
+        {:ok, since, _offset} = DateTime.from_iso8601(version.changes["created_at"])
+
+        %{
+          group_id: version.changes["group_id"],
+          user_id: version.changes["user_id"],
+          since: since,
+          until: version.version_inserted_at
+        }
+      end)
+      |> Enum.group_by(&pair/1)
+
+    %{members: members, log: log, ended_memberships: ended_memberships}
   end
 
-  defp member_at?(%{members: members, log: log}, pair, at) do
+  # Destruction snapshots retain the whole membership interval, including
+  # founding owners whose creation is deliberately absent from the activity log.
+  # Only departures since the period began can overlap one of its RSVPs.
+  defp member_at?(history, pair, at) do
+    Enum.any?(Map.get(history.ended_memberships, pair, []), fn membership ->
+      DateTime.compare(membership.since, at) != :gt and
+        DateTime.compare(at, membership.until) == :lt
+    end) or member_by_row_or_log?(history, pair, at)
+  end
+
+  defp member_by_row_or_log?(%{members: members, log: log}, pair, at) do
     case members[pair] do
       %{created_at: since} when not is_nil(since) ->
         DateTime.compare(since, at) != :gt or belonged_by_log?(log[pair], at)

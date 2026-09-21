@@ -10,7 +10,7 @@ defmodule AdminDropInsSteps do
   alias Huddlz.Accounts.User
   alias Huddlz.Admin
   alias Huddlz.Communities
-  alias Huddlz.Communities.{Group, HuddlAttendee}
+  alias Huddlz.Communities.{Group, Huddl, HuddlAttendee}
 
   @panel "#drop-ins"
 
@@ -56,12 +56,7 @@ defmodule AdminDropInsSteps do
   step "{string} dropped in on {string} {int} days ago",
        %{args: [email, group_name, days]} = context do
     huddl = drop_in(email, group_name)
-    user = find_user(email)
-
-    HuddlAttendee
-    |> Ash.Query.filter(huddl_id == ^huddl.id and user_id == ^user.id)
-    |> Ash.read_one!(authorize?: false)
-    |> Ash.Seed.update!(%{rsvped_at: DateTime.add(DateTime.utc_now(), -days, :day)})
+    backdate_rsvp(huddl, find_user(email), days)
 
     context
   end
@@ -71,10 +66,26 @@ defmodule AdminDropInsSteps do
     context
   end
 
+  step "the RSVP from {string} to {string} was made {int} days ago",
+       %{args: [email, title, days]} = context do
+    huddl = Huddl |> Ash.Query.filter(title == ^title) |> Ash.read_one!(authorize?: false)
+    backdate_rsvp(huddl, find_user(email), days)
+    context
+  end
+
   step "the Drop-ins panel shows {int} for {string}", %{args: [count, label]} = context do
     assert_has(context.session, "#{@panel} output[aria-label=\"#{label}\"]",
       text: "#{count}",
       exact: true
+    )
+
+    context
+  end
+
+  step "{string} transfers {string} to {string}",
+       %{args: [owner_email, group_name, successor_email]} = context do
+    Communities.transfer_group_ownership!(find_group(group_name), find_user(successor_email).id,
+      actor: find_user(owner_email)
     )
 
     context
@@ -96,8 +107,11 @@ defmodule AdminDropInsSteps do
     context
   end
 
-  step "the Drop-ins panel draws no bars", context do
-    refute_has(context.session, "#{@panel} [role=img]")
+  step "the Drop-ins panel does not offer a breakdown", context do
+    refute_has(context.session, @panel, text: "What they did next")
+    refute_has(context.session, @panel, text: "joins came from")
+    refute_has(context.session, @panel, text: "suggestion to join was emailed")
+    refute_has(context.session, @panel, text: "suggestions to join were emailed")
     context
   end
 
@@ -125,6 +139,13 @@ defmodule AdminDropInsSteps do
     huddl = upcoming_huddl(find_group(group_name))
     Communities.rsvp_huddl!(huddl, actor: find_user(email))
     huddl
+  end
+
+  defp backdate_rsvp(huddl, user, days) do
+    HuddlAttendee
+    |> Ash.Query.filter(huddl_id == ^huddl.id and user_id == ^user.id)
+    |> Ash.read_one!(authorize?: false)
+    |> Ash.Seed.update!(%{rsvped_at: DateTime.add(DateTime.utc_now(), -days, :day)})
   end
 
   # Creating a huddl RSVPs its creator. The scenarios count RSVPs, so the

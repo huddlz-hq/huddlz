@@ -38,6 +38,16 @@ Feature: The admin overview shows how drop-ins use huddlz
     When I visit "/admin"
     Then the Drop-ins panel says "No RSVPs came from people who weren't members of the group in this period."
 
+  Scenario: A founding owner's RSVPs remain member RSVPs after transferring ownership and leaving
+    Given "owner611@example.com" RSVPd to another huddl of "Tuesday Runners"
+    And "maya611@example.com" joined "Tuesday Runners" from "the group page"
+    And "owner611@example.com" transfers "Tuesday Runners" to "maya611@example.com"
+    And "owner611@example.com" leaves "Tuesday Runners"
+    And I am signed in as "admin611@example.com"
+    When I visit "/admin"
+    Then the platform "RSVPs" figure shows "1"
+    And the Drop-ins panel says "No RSVPs came from people who weren't members of the group in this period."
+
   Scenario: What drop-ins did next
     Given "maya611@example.com" dropped in on "Tuesday Runners"
     And "maya611@example.com" joined "Tuesday Runners" from "the group page"
@@ -135,7 +145,22 @@ Feature: The admin overview shows how drop-ins use huddlz
     And I am signed in as "admin611@example.com"
     When I visit "/admin"
     Then the Drop-ins panel says "No RSVPs came from people who weren't members of the group in this period."
-    And the Drop-ins panel draws no bars
+    And the Drop-ins panel does not offer a breakdown
+
+  Scenario: Suggestions from an earlier RSVP do not replace the empty period message
+    Given an upcoming huddl "Long Run" exists in "Tuesday Runners"
+    And "maya611@example.com" has RSVPd to "Long Run"
+    And the RSVP from "maya611@example.com" to "Long Run" was made 60 days ago
+    And "Long Run" completes
+    And a day passes
+    And "maya611@example.com" receives an email suggesting they join "Tuesday Runners"
+    And I am signed in as "admin611@example.com"
+    When I visit "/admin?period=30d"
+    Then the Drop-ins panel says "No RSVPs came from people who weren't members of the group in this period."
+    And the Drop-ins panel does not offer a breakdown
+    When I visit "/admin?period=90d"
+    Then the Drop-ins panel says "1 suggestion to join was emailed"
+    And the Drop-ins panel shows 1 for "Nothing yet"
 
   Scenario: The figures come with the platform overview action
     Given 3 people RSVPd to a huddl of "Tuesday Runners" without joining the group

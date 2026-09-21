@@ -342,8 +342,8 @@ defmodule HuddlzWeb.AdminLive do
           </output>
           <span class="cmp">{drop_ins_headline(@stats.drop_ins)}</span>
         </div>
-        <div class="drop-ins-grid">
-          <div :if={@stats.drop_ins.rsvps > 0} id="drop-ins-next" class="coverage counts">
+        <div :if={@stats.drop_ins.rsvps > 0} class="drop-ins-grid">
+          <div id="drop-ins-next" class="coverage counts">
             <h3>What they did next</h3>
             <div class="coverage-bar" role="img" aria-label={next_label(@stats.drop_ins.next)}>
               <span
@@ -361,7 +361,7 @@ defmodule HuddlzWeb.AdminLive do
               />
             </div>
           </div>
-          <div :if={@stats.drop_ins.rsvps > 0} id="drop-ins-sources" class="coverage counts">
+          <div id="drop-ins-sources" class="coverage counts">
             <h3>{join_sources_title(@stats.drop_ins.next.joined)}</h3>
             <p :if={@stats.drop_ins.next.joined == 0} class="muted">
               None of them has joined a group yet.
