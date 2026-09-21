@@ -10,7 +10,6 @@ defmodule HuddlzWeb.GroupLive.Locations do
   alias Huddlz.Communities.GroupLocation
   alias Huddlz.Communities.GroupLocation.DeletionImpact
   alias HuddlzWeb.Layouts
-  alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -24,7 +23,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
   @impl true
   def handle_params(%{"slug" => slug}, _, socket) do
     if socket.assigns[:group] && socket.assigns.group.slug == slug do
-      {:noreply, ModalLocationHelpers.clear(socket)}
+      {:noreply, socket}
     else
       load_locations_page(socket, slug)
     end
@@ -43,7 +42,6 @@ defmodule HuddlzWeb.GroupLive.Locations do
             |> assign(:page_title, "#{group.name} — Locations")
             |> assign(:group, group)
             |> assign(:locations, locations)
-            |> ModalLocationHelpers.init()
             |> assign(:editing_location_id, nil)
             |> assign(:deleting_location, nil)
             |> assign(:delete_location_reference_count, 0)
@@ -235,100 +233,17 @@ defmodule HuddlzWeb.GroupLive.Locations do
           Saved venues show up in the venue picker for everyone in your group.
         </p>
 
-        <form
+        <.live_component
+          module={HuddlzWeb.Live.AddressBookLocationForm}
           id="new-location-form"
-          phx-submit="save_new_location"
-          phx-change="modal_form_changed"
-          class="form-grid"
-        >
-          <div class="form-row">
-            <label class="form-label" for="modal-address-autocomplete-input">
-              Search for an address
-            </label>
-            <.live_component
-              module={HuddlzWeb.Live.LocationAutocomplete}
-              id="modal-address-autocomplete"
-              variant={:form}
-              placeholder="Search for an address or venue..."
-              types={[]}
-              location_bias={%{latitude: @group.latitude, longitude: @group.longitude}}
-              fetch_coordinates={true}
-              show_clear={true}
-            />
-          </div>
-
-          <div class="form-row">
-            <label class="form-label" for="location-name-input">Location name (optional)</label>
-            <input
-              type="text"
-              id="location-name-input"
-              name="location_name"
-              value={@modal_location_name}
-              phx-debounce="100"
-              placeholder="e.g., Community Center"
-              class="form-input"
-            />
-          </div>
-
-          <.input
-            type="text"
-            id="location-unit-input"
-            name="location_unit"
-            value={@modal_location_unit}
-            label="Unit (optional)"
-            placeholder="e.g., 711 or 4B"
-            autocomplete="address-line2"
-          />
-
-          <div class="form-foot is-flush">
-            <.button variant={:primary} type="submit" disabled={is_nil(@modal_location_address)}>
-              Save Address
-            </.button>
-            <.button variant={:secondary} patch={~p"/groups/#{@group.slug}/locations"}>
-              Cancel
-            </.button>
-          </div>
-        </form>
+          group={@group}
+          actor={@current_user}
+          cancel_path={~p"/groups/#{@group.slug}/locations"}
+          save_label="Save Address"
+        />
       </.modal>
     </Layouts.app>
     """
-  end
-
-  @impl true
-  def handle_event("save_new_location", params, socket) do
-    socket = ModalLocationHelpers.apply_params(socket, params)
-    user = socket.assigns.current_user
-    address = socket.assigns.modal_location_address
-    name = socket.assigns.modal_location_name
-    name = if name == "", do: nil, else: name
-
-    case Communities.create_group_location(
-           name,
-           address,
-           socket.assigns.modal_location_lat,
-           socket.assigns.modal_location_lng,
-           socket.assigns.modal_location_time_zone,
-           socket.assigns.group.id,
-           %{unit: socket.assigns.modal_location_unit},
-           actor: user
-         ) do
-      {:ok, _location} ->
-        locations = load_group_locations(socket.assigns.group.id, user)
-
-        {:noreply,
-         socket
-         |> assign(:locations, locations)
-         |> put_flash(:info, "Location saved")
-         |> push_patch(to: ~p"/groups/#{socket.assigns.group.slug}/locations")}
-
-      {:error, _error} ->
-        {:noreply, put_flash(socket, :error, "Failed to save location")}
-    end
-  end
-
-  @impl true
-  def handle_event("modal_form_changed", params, socket) do
-    {:noreply, ModalLocationHelpers.apply_params(socket, params)}
   end
 
   @impl true
@@ -428,13 +343,18 @@ defmodule HuddlzWeb.GroupLive.Locations do
   end
 
   @impl true
-  def handle_info({:location_selected, "modal-address-autocomplete", payload}, socket) do
-    {:noreply, ModalLocationHelpers.apply_selected(socket, payload)}
+  def handle_info({:address_book_location_created, _location}, socket) do
+    locations = load_group_locations(socket.assigns.group.id, socket.assigns.current_user)
+
+    {:noreply,
+     socket
+     |> assign(:locations, locations)
+     |> put_flash(:info, "Location saved")
+     |> push_patch(to: ~p"/groups/#{socket.assigns.group.slug}/locations")}
   end
 
-  @impl true
-  def handle_info({:location_cleared, "modal-address-autocomplete"}, socket) do
-    {:noreply, ModalLocationHelpers.clear(socket)}
+  def handle_info(:address_book_location_failed, socket) do
+    {:noreply, put_flash(socket, :error, "Failed to save location")}
   end
 
   defp get_group_by_slug(slug, actor) do

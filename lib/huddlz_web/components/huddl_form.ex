@@ -16,13 +16,11 @@ defmodule HuddlzWeb.Components.HuddlForm do
   <.capacity_panel form={@form} is_public={@group.is_public} />
 
   <.location_modal live_action={@live_action} cancel_path={~p"..."}
-    modal_location_address={@modal_location_address}
-    modal_location_name={@modal_location_name} />
+    group={@group} actor={@current_user} />
   ```
   """
   use Phoenix.Component
 
-  import HuddlzWeb.Components.Button, only: [button: 1]
   import HuddlzWeb.Components.Icon, only: [icon: 1]
 
   import HuddlzWeb.Components.Input,
@@ -324,11 +322,9 @@ defmodule HuddlzWeb.Components.HuddlForm do
   end
 
   attr :live_action, :atom, required: true
-  attr :modal_location_address, :string, default: nil
-  attr :modal_location_name, :string, default: nil
-  attr :modal_location_unit, :string, default: nil
+  attr :group, :map, required: true
+  attr :actor, :map, required: true
   attr :cancel_path, :string, required: true
-  attr :location_bias, :map, default: nil
 
   def location_modal(assigns) do
     ~H"""
@@ -342,62 +338,13 @@ defmodule HuddlzWeb.Components.HuddlForm do
         Add New Address
       </h2>
 
-      <form
+      <.live_component
+        module={HuddlzWeb.Live.AddressBookLocationForm}
         id="new-location-form"
-        phx-submit="save_location"
-        phx-change="modal_form_changed"
-        class="form-grid"
-      >
-        <div class="form-row">
-          <label class="form-label" for="modal-address-autocomplete-input">
-            Search for an address
-          </label>
-          <.live_component
-            module={HuddlzWeb.Live.LocationAutocomplete}
-            id="modal-address-autocomplete"
-            variant={:form}
-            placeholder="Search for an address or venue..."
-            types={[]}
-            location_bias={@location_bias}
-            fetch_coordinates={true}
-            show_clear={true}
-          />
-        </div>
-
-        <div class="form-row">
-          <label class="form-label" for="location-name-input">
-            Location name (optional)
-          </label>
-          <input
-            type="text"
-            id="location-name-input"
-            name="location_name"
-            value={@modal_location_name}
-            phx-debounce="100"
-            placeholder="e.g., Community Center"
-            class="form-input"
-          />
-        </div>
-
-        <.input
-          type="text"
-          id="location-unit-input"
-          name="location_unit"
-          value={@modal_location_unit}
-          label="Unit (optional)"
-          placeholder="e.g., 711 or 4B"
-          autocomplete="address-line2"
-        />
-
-        <div class="form-foot is-flush">
-          <.button variant={:primary} type="submit" disabled={is_nil(@modal_location_address)}>
-            Save address
-          </.button>
-          <.button variant={:secondary} patch={@cancel_path}>
-            Cancel
-          </.button>
-        </div>
-      </form>
+        group={@group}
+        actor={@actor}
+        cancel_path={@cancel_path}
+      />
     </.modal>
     """
   end

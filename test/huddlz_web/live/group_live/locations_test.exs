@@ -331,7 +331,7 @@ defmodule HuddlzWeb.GroupLive.LocationsTest do
 
       assert has_element?(
                view,
-               "form#new-location-form[phx-submit='save_new_location'][phx-change] [data-testid='location-input']"
+               "form#new-location-form[phx-change] [data-testid='location-input']"
              )
     end
 
@@ -353,11 +353,11 @@ defmodule HuddlzWeb.GroupLive.LocationsTest do
 
       # Submit the form
       view
-      |> element("form[phx-submit='save_new_location']")
+      |> element("#new-location-form")
       |> render_submit()
 
       # Should patch back to locations index (not a redirect)
-      assert_patched(view, ~p"/groups/#{group.slug}/locations")
+      assert_patch(view, ~p"/groups/#{group.slug}/locations")
 
       # Verify the location was created
       {:ok, locations} =
