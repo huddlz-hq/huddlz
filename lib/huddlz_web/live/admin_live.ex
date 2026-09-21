@@ -325,7 +325,102 @@ defmodule HuddlzWeb.AdminLive do
           </div>
         </div>
       </div>
+
+      <div id="drop-ins" class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Drop-ins</h2>
+            <div class="panel-sub">{drop_ins_sub(@stats.drop_ins)}</div>
+          </div>
+        </div>
+        <p :if={@stats.drop_ins.rsvps == 0} class="muted">
+          No RSVPs came from people who weren't members of the group in this period.
+        </p>
+        <div :if={@stats.drop_ins.rsvps > 0} class="stat">
+          <output class="big" aria-label="RSVPs from people who weren't members">
+            {@stats.drop_ins.rsvps}
+          </output>
+          <span class="cmp">{drop_ins_headline(@stats.drop_ins)}</span>
+        </div>
+        <div class="drop-ins-grid">
+          <div :if={@stats.drop_ins.rsvps > 0} id="drop-ins-next" class="coverage counts">
+            <h3>What they did next</h3>
+            <div class="coverage-bar" role="img" aria-label={next_label(@stats.drop_ins.next)}>
+              <span
+                :for={{kind, _label, count} <- next_rows(@stats.drop_ins.next)}
+                class={kind}
+                style={"width: #{share(count, next_total(@stats.drop_ins.next))}%"}
+              ></span>
+            </div>
+            <div class="coverage-rows">
+              <.count_row
+                :for={{kind, label, count} <- next_rows(@stats.drop_ins.next)}
+                kind={kind}
+                label={label}
+                count={count}
+              />
+            </div>
+          </div>
+          <div :if={@stats.drop_ins.rsvps > 0} id="drop-ins-sources" class="coverage counts">
+            <h3>{join_sources_title(@stats.drop_ins.next.joined)}</h3>
+            <p :if={@stats.drop_ins.next.joined == 0} class="muted">
+              None of them has joined a group yet.
+            </p>
+            <div :if={@stats.drop_ins.next.joined > 0} class="coverage-rows">
+              <.count_row
+                :for={%{source: source, count: count} <- ranked_sources(@stats.drop_ins.join_sources)}
+                label={join_source_label(source)}
+                count={count}
+              />
+            </div>
+          </div>
+          <div id="drop-ins-suggestions" class="coverage counts">
+            <h3>{suggestions_title(@stats.drop_ins.suggestions.emailed)}</h3>
+            <p :if={@stats.drop_ins.suggestions.emailed == 0} class="muted">
+              The suggestion goes out once per group, a day after the huddl.
+            </p>
+            <div
+              :if={@stats.drop_ins.suggestions.emailed > 0}
+              class="coverage-bar"
+              role="img"
+              aria-label={suggestions_label(@stats.drop_ins.suggestions)}
+            >
+              <span
+                :for={{kind, _label, count} <- suggestion_rows(@stats.drop_ins.suggestions)}
+                class={kind}
+                style={"width: #{share(count, @stats.drop_ins.suggestions.emailed)}%"}
+              ></span>
+            </div>
+            <div :if={@stats.drop_ins.suggestions.emailed > 0} class="coverage-rows">
+              <.count_row
+                :for={{kind, label, count} <- suggestion_rows(@stats.drop_ins.suggestions)}
+                kind={kind}
+                label={label}
+                count={count}
+              />
+            </div>
+          </div>
+        </div>
+        <p :if={@stats.drop_ins.rsvps > 0} class="coverage-note">
+          What they did next is counted once per person per group, from their first RSVP of the period. Joining wins over RSVPing again.
+        </p>
+      </div>
     </Layouts.app>
+    """
+  end
+
+  attr :kind, :string, default: nil
+  attr :label, :string, required: true
+  attr :count, :integer, required: true
+
+  # A count with no share beside it: the Drop-ins panel shows counts only.
+  defp count_row(assigns) do
+    ~H"""
+    <div class={["coverage-row", is_nil(@kind) && "plain"]}>
+      <i :if={@kind} class={["sq", @kind]}></i>
+      <span>{@label}</span>
+      <output aria-label={@label}>{@count}</output>
+    </div>
     """
   end
 
@@ -356,6 +451,80 @@ defmodule HuddlzWeb.AdminLive do
   defp coverage_sub(%{past: past}),
     do:
       "What organizers did with the turnout prompt after the #{past} #{if past == 1, do: "huddl", else: "huddlz"} that ended."
+
+  # ─── Drop-ins ─────────────────────────────────────────────────────────
+
+  defp drop_ins_sub(%{measured_since: nil}),
+    do: "People who RSVPd to a huddl of a group they hadn't joined. Counts, not rates."
+
+  defp drop_ins_sub(%{measured_since: from}) do
+    "People who RSVPd to a huddl of a group they hadn't joined. Counts, not rates. " <>
+      "Measured since #{measured_since(from, Date.utc_today())}."
+  end
+
+  defp drop_ins_headline(%{rsvps: rsvps, total_rsvps: total, people: people, groups: groups}) do
+    from =
+      if rsvps == 1,
+        do: "came from a person who wasn't a member of the group",
+        else: "came from people who weren't members of the group"
+
+    "of #{total} #{if total == 1, do: "RSVP", else: "RSVPs"} #{from} · " <>
+      "#{people} #{if people == 1, do: "person", else: "people"} across " <>
+      "#{groups} #{if groups == 1, do: "group", else: "groups"}"
+  end
+
+  defp next_rows(next) do
+    [
+      {"joined", "Joined the group", next.joined},
+      {"rsvped-again", "RSVPd again without joining", next.rsvped_again},
+      {"nothing", "Haven't RSVPd again", next.nothing}
+    ]
+  end
+
+  defp next_total(next), do: next.joined + next.rsvped_again + next.nothing
+
+  defp next_label(next),
+    do:
+      "#{next.joined} joined the group, #{next.rsvped_again} RSVPd again without joining, " <>
+        "#{next.nothing} haven't RSVPd again"
+
+  defp join_sources_title(1), do: "Where the 1 join came from"
+  defp join_sources_title(joined), do: "Where the #{joined} joins came from"
+
+  # Most joins first; joins with no recorded source stay last.
+  defp ranked_sources(sources) do
+    {recorded, unrecorded} = Enum.split_with(sources, & &1.source)
+    Enum.sort_by(recorded, &(-&1.count)) ++ unrecorded
+  end
+
+  defp join_source_label(:huddl_page), do: "The huddl page"
+  defp join_source_label(:groups_page), do: "The groups page"
+  defp join_source_label(:group_page), do: "The group page"
+  defp join_source_label(:join_suggestion_email), do: "The join suggestion email"
+
+  defp join_source_label(:join_suggestion_notification),
+    do: "The join suggestion in notifications"
+
+  defp join_source_label(:rsvp_confirmation_email), do: "The RSVP confirmation email"
+  defp join_source_label(nil), do: "No recorded source"
+
+  defp suggestions_title(0), do: "No suggestions to join were emailed"
+  defp suggestions_title(1), do: "1 suggestion to join was emailed"
+  defp suggestions_title(emailed), do: "#{emailed} suggestions to join were emailed"
+
+  defp suggestion_rows(suggestions) do
+    [
+      {"joined", "Joined since", suggestions.joined},
+      {"dismissed", "Chose Not now", suggestions.dismissed},
+      {"turned-off", "Turned the email off", suggestions.turned_off},
+      {"nothing", "Nothing yet", suggestions.nothing}
+    ]
+  end
+
+  defp suggestions_label(suggestions),
+    do:
+      "#{suggestions.joined} joined since, #{suggestions.dismissed} chose Not now, " <>
+        "#{suggestions.turned_off} turned the email off, #{suggestions.nothing} nothing yet"
 
   defp quiet?(%{count: 0, cancelled: 0}), do: true
   defp quiet?(_held), do: false
