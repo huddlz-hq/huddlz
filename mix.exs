@@ -139,7 +139,7 @@ defmodule Huddlz.MixProject do
       {:mox, "~> 1.0", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:phoenix_test, "~> 0.12", only: :test},
-      {:phoenix_test_playwright, "~> 0.17.0", only: :test, runtime: false},
+      {:phoenix_test_playwright, "~> 0.18.0", only: :test, runtime: false},
       {:slugify, "~> 1.3"},
       {:remote_ip, "~> 1.1"},
       {:envious, "~> 1.0"}
