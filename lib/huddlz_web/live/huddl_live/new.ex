@@ -14,7 +14,6 @@ defmodule HuddlzWeb.HuddlLive.New do
   alias Huddlz.Storage.HuddlCoverImages
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
-  alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -49,7 +48,6 @@ defmodule HuddlzWeb.HuddlLive.New do
     |> assign_create_form(group, user)
     |> assign(:group_locations, load_group_locations(group.id, user))
     |> assign(:selected_location, nil)
-    |> ModalLocationHelpers.init()
     |> assign(:image_error, nil)
     |> assign(:pending_image_id, nil)
     |> assign(:pending_preview_url, nil)
@@ -90,16 +88,7 @@ defmodule HuddlzWeb.HuddlLive.New do
   end
 
   @impl true
-  def handle_params(_params, _uri, socket) do
-    socket =
-      if socket.assigns.live_action == :new_location do
-        ModalLocationHelpers.clear(socket)
-      else
-        socket
-      end
-
-    {:noreply, socket}
-  end
+  def handle_params(_params, _uri, socket), do: {:noreply, socket}
 
   defp handle_upload_progress(:huddl_cover_image, entry, socket) do
     if entry.done? do
@@ -272,12 +261,10 @@ defmodule HuddlzWeb.HuddlLive.New do
       </.form>
 
       <.location_modal
-        location_bias={%{latitude: @group.latitude, longitude: @group.longitude}}
+        group={@group}
+        actor={@current_user}
         live_action={@live_action}
         cancel_path={~p"/groups/#{@group.slug}/huddlz/new"}
-        modal_location_address={@modal_location_address}
-        modal_location_name={@modal_location_name}
-        modal_location_unit={@modal_location_unit}
       />
     </Layouts.app>
     """
@@ -357,40 +344,18 @@ defmodule HuddlzWeb.HuddlLive.New do
   end
 
   @impl true
-  def handle_event("save_location", params, socket) do
-    socket = ModalLocationHelpers.apply_params(socket, params)
-    user = socket.assigns.current_user
-    address = socket.assigns.modal_location_address
-    name = socket.assigns.modal_location_name
-    name = if name == "", do: nil, else: name
+  def handle_info({:address_book_location_created, location}, socket) do
+    group_locations = load_group_locations(socket.assigns.group.id, socket.assigns.current_user)
 
-    case Communities.create_group_location(
-           name,
-           address,
-           socket.assigns.modal_location_lat,
-           socket.assigns.modal_location_lng,
-           socket.assigns.modal_location_time_zone,
-           socket.assigns.group.id,
-           %{unit: socket.assigns.modal_location_unit},
-           actor: user
-         ) do
-      {:ok, location} ->
-        group_locations = load_group_locations(socket.assigns.group.id, user)
-
-        {:noreply,
-         socket
-         |> assign(:group_locations, group_locations)
-         |> apply_saved_location_to_form(location)
-         |> push_patch(to: new_huddl_path(socket))}
-
-      {:error, _error} ->
-        {:noreply, put_flash(socket, :error, "Failed to save location")}
-    end
+    {:noreply,
+     socket
+     |> assign(:group_locations, group_locations)
+     |> apply_saved_location_to_form(location)
+     |> push_patch(to: new_huddl_path(socket))}
   end
 
-  @impl true
-  def handle_event("modal_form_changed", params, socket) do
-    {:noreply, ModalLocationHelpers.apply_params(socket, params)}
+  def handle_info(:address_book_location_failed, socket) do
+    {:noreply, put_flash(socket, :error, "Failed to save location")}
   end
 
   @impl true
@@ -401,16 +366,6 @@ defmodule HuddlzWeb.HuddlLive.New do
   @impl true
   def handle_info({:saved_location_cleared, "saved-location-picker"}, socket) do
     {:noreply, clear_saved_location(socket)}
-  end
-
-  @impl true
-  def handle_info({:location_selected, "modal-address-autocomplete", payload}, socket) do
-    {:noreply, ModalLocationHelpers.apply_selected(socket, payload)}
-  end
-
-  @impl true
-  def handle_info({:location_cleared, "modal-address-autocomplete"}, socket) do
-    {:noreply, ModalLocationHelpers.clear(socket)}
   end
 
   defp maybe_set_pending_image(changeset, nil), do: changeset

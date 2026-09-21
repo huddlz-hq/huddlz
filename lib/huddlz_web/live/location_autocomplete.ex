@@ -9,6 +9,9 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   Manages all autocomplete state internally and notifies the parent via messages:
   - `{:location_selected, id, %{place_id, display_text, main_text, latitude, longitude}}`
   - `{:location_cleared, id}`
+
+  With `notify_target`, sends a `location_selection: {action, payload}` update
+  to that LiveComponent instead. Existing message-based callers need no target.
   """
   use HuddlzWeb, :live_component
 
@@ -23,6 +26,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   attr :location_bias, :map, default: nil
   attr :show_clear, :boolean, default: true
   attr :fetch_coordinates, :boolean, default: true
+  attr :notify_target, :any, default: nil
 
   attr :variant, :atom,
     values: [:filter_pill, :form],
@@ -42,6 +46,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
        location_bias: nil,
        show_clear: true,
        fetch_coordinates: true,
+       notify_target: nil,
        variant: :form,
        # Internal state
        search_text: "",
@@ -604,6 +609,11 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
     |> start_async(:autocomplete, fn ->
       Huddlz.Places.autocomplete(text, session_token, opts)
     end)
+  end
+
+  defp notify_parent(%{assigns: %{notify_target: target}}, action, data)
+       when not is_nil(target) do
+    send_update(target, location_selection: {action, data})
   end
 
   defp notify_parent(socket, :selected, data) do

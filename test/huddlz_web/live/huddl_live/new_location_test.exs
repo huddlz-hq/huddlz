@@ -39,7 +39,7 @@ defmodule HuddlzWeb.HuddlLive.NewLocationTest do
 
       assert has_element?(
                view,
-               "form#new-location-form[phx-submit='save_location'][phx-change] [data-testid='location-input']"
+               "form#new-location-form[phx-change] [data-testid='location-input']"
              )
     end
 
@@ -102,11 +102,11 @@ defmodule HuddlzWeb.HuddlLive.NewLocationTest do
 
       # Submit the form
       view
-      |> element("form[phx-submit='save_location']")
+      |> element("#new-location-form")
       |> render_submit()
 
       # Should patch back to the huddl form (not redirect)
-      assert_patched(view, ~p"/groups/#{group.slug}/huddlz/new")
+      assert_patch(view, ~p"/groups/#{group.slug}/huddlz/new")
 
       # Verify the location was actually created
       {:ok, locations} =
@@ -174,7 +174,7 @@ defmodule HuddlzWeb.HuddlLive.NewLocationTest do
       |> element("#new-location-modal a", "Cancel")
       |> render_click()
 
-      assert_patched(view, ~p"/groups/#{group.slug}/huddlz/new")
+      assert_patch(view, ~p"/groups/#{group.slug}/huddlz/new")
 
       # No locations should have been created
       {:ok, locations} =

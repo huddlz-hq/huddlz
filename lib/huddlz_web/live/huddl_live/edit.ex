@@ -15,7 +15,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   alias Huddlz.Storage.HuddlCoverImages
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
-  alias HuddlzWeb.Live.Helpers.ModalLocationHelpers
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
@@ -29,7 +28,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   @impl true
   def handle_params(%{"group_slug" => group_slug, "id" => id} = params, _, socket) do
     if socket.assigns[:huddl] && socket.assigns.huddl.id == id do
-      {:noreply, apply_modal_state(socket)}
+      {:noreply, socket}
     else
       {:noreply, socket} = load_huddl(socket, group_slug, id)
       {:noreply, preset_edit_type(socket, params["edit_type"])}
@@ -72,7 +71,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
           :selected_location,
           Enum.find(group_locations, &(&1.id == huddl.group_location_id))
         )
-        |> ModalLocationHelpers.init()
         |> assign(:image_error, nil)
         |> assign(:pending_image_id, nil)
         |> assign(:pending_preview_url, nil)
@@ -95,13 +93,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
            action: "edit",
            resource_path: ~p"/groups/#{group_slug}/huddlz/#{id}"
          )}
-    end
-  end
-
-  defp apply_modal_state(socket) do
-    case socket.assigns.live_action do
-      :new_location -> ModalLocationHelpers.clear(socket)
-      _ -> socket
     end
   end
 
@@ -356,12 +347,10 @@ defmodule HuddlzWeb.HuddlLive.Edit do
       </.form>
 
       <.location_modal
-        location_bias={%{latitude: @huddl.group.latitude, longitude: @huddl.group.longitude}}
+        group={@huddl.group}
+        actor={@current_user}
         live_action={@live_action}
         cancel_path={~p"/groups/#{@group_slug}/huddlz/#{@huddl.id}/edit"}
-        modal_location_address={@modal_location_address}
-        modal_location_name={@modal_location_name}
-        modal_location_unit={@modal_location_unit}
       />
     </Layouts.app>
     """
@@ -488,42 +477,21 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   end
 
   @impl true
-  def handle_event("save_location", params, socket) do
-    socket = ModalLocationHelpers.apply_params(socket, params)
-    user = socket.assigns.current_user
-    address = socket.assigns.modal_location_address
-    name = socket.assigns.modal_location_name
-    name = if name == "", do: nil, else: name
+  def handle_info({:address_book_location_created, location}, socket) do
+    group_locations =
+      load_group_locations(socket.assigns.huddl.group.id, socket.assigns.current_user)
 
-    case Communities.create_group_location(
-           name,
-           address,
-           socket.assigns.modal_location_lat,
-           socket.assigns.modal_location_lng,
-           socket.assigns.modal_location_time_zone,
-           socket.assigns.huddl.group.id,
-           %{unit: socket.assigns.modal_location_unit},
-           actor: user
-         ) do
-      {:ok, location} ->
-        group_locations = load_group_locations(socket.assigns.huddl.group.id, user)
-
-        {:noreply,
-         socket
-         |> assign(:group_locations, group_locations)
-         |> apply_saved_location_to_form(location)
-         |> push_patch(
-           to: ~p"/groups/#{socket.assigns.group_slug}/huddlz/#{socket.assigns.huddl.id}/edit"
-         )}
-
-      {:error, _error} ->
-        {:noreply, put_flash(socket, :error, "Failed to save location")}
-    end
+    {:noreply,
+     socket
+     |> assign(:group_locations, group_locations)
+     |> apply_saved_location_to_form(location)
+     |> push_patch(
+       to: ~p"/groups/#{socket.assigns.group_slug}/huddlz/#{socket.assigns.huddl.id}/edit"
+     )}
   end
 
-  @impl true
-  def handle_event("modal_form_changed", params, socket) do
-    {:noreply, ModalLocationHelpers.apply_params(socket, params)}
+  def handle_info(:address_book_location_failed, socket) do
+    {:noreply, put_flash(socket, :error, "Failed to save location")}
   end
 
   @impl true
@@ -534,16 +502,6 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   @impl true
   def handle_info({:saved_location_cleared, "saved-location-picker"}, socket) do
     {:noreply, clear_saved_location(socket)}
-  end
-
-  @impl true
-  def handle_info({:location_selected, "modal-address-autocomplete", payload}, socket) do
-    {:noreply, ModalLocationHelpers.apply_selected(socket, payload)}
-  end
-
-  @impl true
-  def handle_info({:location_cleared, "modal-address-autocomplete"}, socket) do
-    {:noreply, ModalLocationHelpers.clear(socket)}
   end
 
   defp assign_pending_image_to_huddl(socket, huddl) do
