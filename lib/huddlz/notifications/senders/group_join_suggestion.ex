@@ -38,7 +38,8 @@ defmodule Huddlz.Notifications.Senders.GroupJoinSuggestion do
       title: "Hear about their next huddlz",
       paragraphs: [opening(huddl, group) | calendar_paragraph(upcoming)],
       facts: Enum.map(upcoming, &upcoming_fact/1),
-      action: {"See #{group.name}", url(~p"/groups/#{group.slug}")},
+      action:
+        {"See #{group.name}", url(~p"/groups/#{group.slug}?#{[from: :join_suggestion_email]}")},
       aside:
         "This is the only time we'll suggest it for #{group.name}. " <>
           "Joining is one click on the group page, and leaving is just as easy.",

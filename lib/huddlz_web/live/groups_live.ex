@@ -89,7 +89,7 @@ defmodule HuddlzWeb.GroupsLive do
   def handle_event("join_dropped_in", %{"group-id" => group_id}, socket) do
     user = socket.assigns.current_user
 
-    case Communities.join_group(group_id, actor: user, load: [:group]) do
+    case Communities.join_group(group_id, %{source: :groups_page}, actor: user, load: [:group]) do
       {:ok, %{group: group}} ->
         {:noreply,
          socket

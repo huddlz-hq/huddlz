@@ -32,4 +32,12 @@ defmodule Huddlz.Communities.JoinSource do
   end
 
   def from_tag(_tag), do: nil
+
+  @doc """
+  The path with the source's tag added, for links that lead to a group page.
+  """
+  @spec tag(String.t(), atom()) :: String.t()
+  def tag(path, source) when is_binary(path) and is_atom(source) do
+    path <> "?" <> URI.encode_query(%{@param => source})
+  end
 end

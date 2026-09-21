@@ -60,7 +60,7 @@ defmodule Huddlz.Notifications.Senders.GroupJoinSuggestionTest do
     assert email.text_body =~ "Tuesday Runners hosted it, and you're not a member yet."
 
     assert email.text_body =~
-             "See Tuesday Runners: http://localhost:4002/groups/tuesday-runners\n"
+             "See Tuesday Runners: http://localhost:4002/groups/tuesday-runners?from=join_suggestion_email\n"
 
     assert email.text_body =~ "This is the only time we'll suggest it for Tuesday Runners."
     refute email.text_body =~ ~r/\b(went|came|attended)\b/

@@ -70,7 +70,8 @@ defmodule Huddlz.Notifications.Senders.RsvpConfirmation do
           "Hosted by ",
           {:strong, group.name},
           ". You're not a member yet; joining is how you hear about their next huddlz. ",
-          {:link, "See the group", url(~p"/groups/#{group.slug}")},
+          {:link, "See the group",
+           url(~p"/groups/#{group.slug}?#{[from: :rsvp_confirmation_email]}")},
           "."
         ]
       ]
