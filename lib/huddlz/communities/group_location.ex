@@ -72,7 +72,7 @@ defmodule Huddlz.Communities.GroupLocation do
 
     create :create do
       primary? true
-      accept [:name, :address, :unit, :latitude, :longitude, :time_zone, :group_id]
+      accept [:name, :address, :unit, :place_id, :latitude, :longitude, :time_zone, :group_id]
     end
 
     update :update do
@@ -147,8 +147,16 @@ defmodule Huddlz.Communities.GroupLocation do
     attribute :address, :string do
       allow_nil? false
       public? true
-      description "Full address string from Google Places"
+      description "Full formatted address from Google Places"
       constraints min_length: 1, max_length: 500
+    end
+
+    attribute :place_id, :string do
+      allow_nil? true
+      public? true
+
+      description "Google place id, when known; lets map links open exactly this place"
+      constraints max_length: 300
     end
 
     attribute :unit, :string do

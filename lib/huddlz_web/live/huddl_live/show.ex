@@ -374,7 +374,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
                   <span class="whitespace-pre-line">{@huddl.physical_location}</span>
                   <a
                     class="map-link"
-                    href={"https://www.google.com/maps/search/?api=1&query=" <> URI.encode_www_form(@huddl.physical_location)}
+                    href={HuddlzWeb.MapLink.url(@huddl)}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
