@@ -82,7 +82,12 @@ defmodule Huddlz.Communities.GroupActivity do
       end
 
       filter expr(group_id == ^arg(:group_id))
-      prepare build(sort: [occurred_at: :desc, id: :desc], load: [:user, :huddl])
+
+      prepare build(
+                sort: [occurred_at: :desc, id: :desc],
+                load: [:user, :huddl, :not_a_member_yet, :rsvped_first]
+              )
+
       prepare Huddlz.Communities.GroupActivity.Preparations.LimitFromArgument
     end
   end
@@ -145,6 +150,22 @@ defmodule Huddlz.Communities.GroupActivity do
       read_action :read_for_others
       allow_nil? false
       attribute_public? true
+    end
+  end
+
+  calculations do
+    calculate :not_a_member_yet,
+              :boolean,
+              {Huddlz.Communities.GroupActivity.Calculations.DropInNote, note: :not_a_member_yet} do
+      description "On an RSVP: the person is not currently a member of the group."
+      public? true
+    end
+
+    calculate :rsvped_first,
+              :string,
+              {Huddlz.Communities.GroupActivity.Calculations.DropInNote, note: :rsvped_first} do
+      description "On a join: the latest huddl of the group the person RSVPd to before it while not a member."
+      public? true
     end
   end
 

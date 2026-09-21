@@ -11,10 +11,9 @@ defmodule Huddlz.Admin.DropInStats do
   trust that boundary.
 
   A drop-in RSVP is a standing RSVP made while the person was not a member of
-  the hosting group. Membership at a moment is read from the membership row
-  (a member since it was created), the retained snapshot when a membership
-  ended, and the group activity log. The snapshot covers founding owners
-  whose creation is not recorded as a join in the activity log.
+  the hosting group. Whether they belonged at that moment, and when they
+  joined after it, is `Huddlz.Communities.MembershipHistory`'s rule, shared
+  with the organizer overview.
 
   What they did next is counted once per person per group, from their first
   drop-in RSVP of the period, and the first match wins: joined the group,
@@ -24,10 +23,8 @@ defmodule Huddlz.Admin.DropInStats do
   require Ash.Query
 
   alias Huddlz.Accounts.User
-  alias Huddlz.Communities.{DropInReminder, GroupActivity, GroupMember, HuddlAttendee, JoinSource}
+  alias Huddlz.Communities.{DropInReminder, HuddlAttendee, JoinSource, MembershipHistory}
   alias Huddlz.Notifications
-
-  @membership_kinds [:joined, :accepted_invitation, :left]
 
   @doc """
   The figures for a window, given its standing RSVPs.
@@ -49,10 +46,17 @@ defmodule Huddlz.Admin.DropInStats do
     current = Enum.filter(rsvps, &(DateTime.compare(&1.rsvped_at, start) != :lt))
     reminders = emailed_reminders(window)
 
+    # Only departures since the period began can overlap one of its RSVPs.
     history =
-      history(window, Enum.map(current, & &1.user_id) ++ Enum.map(reminders, & &1.user_id))
+      MembershipHistory.load(
+        window.group_ids,
+        Enum.map(current, & &1.user_id) ++ Enum.map(reminders, & &1.user_id),
+        start
+      )
 
-    drop_ins = Enum.reject(current, &member_at?(history, pair(&1), &1.rsvped_at))
+    drop_ins =
+      Enum.reject(current, &MembershipHistory.member_at?(history, pair(&1), &1.rsvped_at))
+
     outcomes = Enum.map(first_drop_ins(drop_ins), &outcome(&1, rsvps, history))
     joins = for {:joined, source} <- outcomes, do: source
 
@@ -72,110 +76,7 @@ defmodule Huddlz.Admin.DropInStats do
     }
   end
 
-  defp pair(%{user_id: user_id, group_id: group_id}), do: {user_id, group_id}
-
-  # Membership rows and membership log entries of the people in question,
-  # by person and group.
-  defp history(_window, []), do: %{members: %{}, log: %{}, ended_memberships: %{}}
-
-  defp history(%{group_ids: group_ids, start: start}, user_ids) do
-    user_ids = Enum.uniq(user_ids)
-
-    members =
-      GroupMember
-      |> Ash.Query.filter(group_id in ^group_ids and user_id in ^user_ids)
-      |> Ash.Query.select([:user_id, :group_id, :created_at, :join_source])
-      |> Ash.read!(authorize?: false)
-      |> Map.new(&{pair(&1), &1})
-
-    log =
-      GroupActivity
-      |> Ash.Query.filter(
-        group_id in ^group_ids and user_id in ^user_ids and kind in ^@membership_kinds
-      )
-      |> Ash.Query.select([:user_id, :group_id, :kind, :occurred_at, :source])
-      |> Ash.Query.sort(occurred_at: :asc)
-      |> Ash.read!(authorize?: false)
-      |> Enum.group_by(&pair/1)
-
-    ended_memberships =
-      GroupMember.Version
-      |> Ash.Query.filter(
-        version_action_type == :destroy and version_inserted_at >= ^start and
-          get_path(changes, [:group_id]) in ^group_ids and
-          get_path(changes, [:user_id]) in ^user_ids
-      )
-      |> Ash.Query.select([:changes, :version_inserted_at])
-      |> Ash.read!(authorize?: false)
-      |> Enum.map(fn version ->
-        {:ok, since, _offset} = DateTime.from_iso8601(version.changes["created_at"])
-
-        %{
-          group_id: version.changes["group_id"],
-          user_id: version.changes["user_id"],
-          since: since,
-          until: version.version_inserted_at
-        }
-      end)
-      |> Enum.group_by(&pair/1)
-
-    %{members: members, log: log, ended_memberships: ended_memberships}
-  end
-
-  # Destruction snapshots retain the whole membership interval, including
-  # founding owners whose creation is deliberately absent from the activity log.
-  # Only departures since the period began can overlap one of its RSVPs.
-  defp member_at?(history, pair, at) do
-    Enum.any?(Map.get(history.ended_memberships, pair, []), fn membership ->
-      DateTime.compare(membership.since, at) != :gt and
-        DateTime.compare(at, membership.until) == :lt
-    end) or member_by_row_or_log?(history, pair, at)
-  end
-
-  defp member_by_row_or_log?(%{members: members, log: log}, pair, at) do
-    case members[pair] do
-      %{created_at: since} when not is_nil(since) ->
-        DateTime.compare(since, at) != :gt or belonged_by_log?(log[pair], at)
-
-      _ ->
-        belonged_by_log?(log[pair], at)
-    end
-  end
-
-  # The last membership entry at or before the moment decides.
-  defp belonged_by_log?(nil, _at), do: false
-
-  defp belonged_by_log?(entries, at) do
-    entries
-    |> Enum.take_while(&(DateTime.compare(&1.occurred_at, at) != :gt))
-    |> List.last()
-    |> case do
-      %{kind: kind} when kind in [:joined, :accepted_invitation] -> true
-      _ -> false
-    end
-  end
-
-  # The first join after a moment, as `{at, source}`, or nil. The membership
-  # row and its log entry describe the same join; the log alone remembers a
-  # join the person has since left.
-  defp join_after(%{members: members, log: log}, pair, at) do
-    from_row =
-      case members[pair] do
-        %{created_at: since, join_source: source} when not is_nil(since) -> [{since, source}]
-        _ -> []
-      end
-
-    from_log =
-      for %{kind: kind} = entry <- log[pair] || [], kind in [:joined, :accepted_invitation] do
-        {entry.occurred_at, entry.source}
-      end
-
-    (from_row ++ from_log)
-    |> Enum.filter(fn {joined_at, _source} -> DateTime.compare(joined_at, at) == :gt end)
-    |> Enum.min_by(fn {joined_at, _source} -> DateTime.to_unix(joined_at, :microsecond) end, fn ->
-      nil
-    end)
-  end
+  defp pair(row), do: MembershipHistory.pair(row)
 
   defp first_drop_ins(drop_ins) do
     drop_ins
@@ -184,7 +85,7 @@ defmodule Huddlz.Admin.DropInStats do
   end
 
   defp outcome(first, rsvps, history) do
-    case join_after(history, pair(first), first.rsvped_at) do
+    case MembershipHistory.join_after(history, pair(first), first.rsvped_at) do
       {_at, source} -> {:joined, source}
       nil -> if rsvped_again?(first, rsvps), do: :rsvped_again, else: :nothing
     end
@@ -215,7 +116,7 @@ defmodule Huddlz.Admin.DropInStats do
     outcomes =
       Enum.map(reminders, fn reminder ->
         cond do
-          join_after(history, pair(reminder), reminder.emailed_at) -> :joined
+          MembershipHistory.join_after(history, pair(reminder), reminder.emailed_at) -> :joined
           reminder.dismissed_at -> :dismissed
           MapSet.member?(turned_off, reminder.user_id) -> :turned_off
           true -> :nothing

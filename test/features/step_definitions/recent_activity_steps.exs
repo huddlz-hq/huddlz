@@ -124,12 +124,12 @@ defmodule RecentActivitySteps do
   end
 
   step "the feed shows {string} once", %{args: [line], session: session} = context do
-    assert_has(session, "#recent-activity .item .what", text: line, exact: true, count: 1)
+    assert_has(session, "#recent-activity .item .what .line", text: line, exact: true, count: 1)
     context
   end
 
   step "the feed does not show {string}", %{args: [line], session: session} = context do
-    refute_has(session, "#recent-activity .item .what", text: line, exact: true)
+    refute_has(session, "#recent-activity .item .what .line", text: line, exact: true)
     context
   end
 
@@ -138,7 +138,7 @@ defmodule RecentActivitySteps do
     |> Enum.with_index(1)
     |> Enum.each(fn {[what, when_], position} ->
       session
-      |> assert_has("#recent-activity .item:nth-child(#{position}) .what",
+      |> assert_has("#recent-activity .item:nth-child(#{position}) .what .line",
         text: what,
         exact: true
       )
@@ -152,7 +152,7 @@ defmodule RecentActivitySteps do
   end
 
   step "the feed shows {string}", %{args: [line], session: session} = context do
-    assert_has(session, "#recent-activity .item .what", text: line, exact: true)
+    assert_has(session, "#recent-activity .item .what .line", text: line, exact: true)
     context
   end
 
