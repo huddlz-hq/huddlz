@@ -39,6 +39,33 @@ Feature: The organizer overview mentions drop-ins
     When I visit "/organize/tuesday-runners"
     Then member growth does not mention RSVPing first
 
+  @cancelled_promotion
+  Scenario: A cancelled RSVP from a waitlist promotion still precedes a join
+    Given the following capped huddl exists in "Tuesday Runners":
+      | title    | description | event_type | starts_at | virtual_link            | max_attendees |
+      | Long Run | Weekly run  | virtual    | tomorrow  | https://meet.test/run   | 1             |
+    And "maya612@example.com" is on the waitlist for "Long Run"
+    And "host612@example.com" cancels their RSVP to "Long Run"
+    And "maya612@example.com" cancels their RSVP to "Long Run"
+    And "maya612@example.com" joined "Tuesday Runners" from "the group page"
+    And I am signed in as "host612@example.com"
+    When I visit "/organize/tuesday-runners"
+    Then member growth says "1 RSVPd to a huddl first"
+    And the feed shows "Maya Chen joined the group" with the note "RSVPd to Long Run first"
+
+  @promotion_after_join
+  Scenario: Joining while waitlisted does not count as RSVPing before joining
+    Given the following capped huddl exists in "Tuesday Runners":
+      | title    | description | event_type | starts_at | virtual_link          | max_attendees |
+      | Long Run | Weekly run  | virtual    | tomorrow  | https://meet.test/run | 1             |
+    And "maya612@example.com" is on the waitlist for "Long Run"
+    And "maya612@example.com" joined "Tuesday Runners" from "the group page"
+    And "host612@example.com" cancels their RSVP to "Long Run"
+    And I am signed in as "host612@example.com"
+    When I visit "/organize/tuesday-runners"
+    Then member growth does not mention RSVPing first
+    And the feed shows "Maya Chen joined the group" with no note
+
   Scenario: The next huddl says how many RSVPs aren't members yet
     Given an upcoming huddl "Long Run" exists in "Tuesday Runners"
     And "ana612@example.com" is a member of "Tuesday Runners"
@@ -70,6 +97,16 @@ Feature: The organizer overview mentions drop-ins
     And I am signed in as "host612@example.com"
     When I visit "/organize/tuesday-runners"
     Then the feed shows "Dev Patel RSVPd to Long Run" with no note
+
+  @former_member_note
+  Scenario: A former member's RSVP is marked while they are not a member
+    Given an upcoming huddl "Long Run" exists in "Tuesday Runners"
+    And "dev612@example.com" joined "Tuesday Runners" from "the group page"
+    And "dev612@example.com" leaves "Tuesday Runners"
+    And "dev612@example.com" has RSVPd to "Long Run"
+    And I am signed in as "host612@example.com"
+    When I visit "/organize/tuesday-runners"
+    Then the feed shows "Dev Patel RSVPd to Long Run" with the note "Not a member yet"
 
   Scenario: Recent activity says which huddl a joiner RSVPd to first
     Given an upcoming huddl "Track Tuesday" exists in "Tuesday Runners"

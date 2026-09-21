@@ -77,16 +77,6 @@ defmodule Huddlz.Communities.MembershipHistory do
   def member_now?(history, pair), do: is_map_key(history.members, pair)
 
   @doc """
-  Whether anything says the person has ever belonged to the group. Only as
-  complete as the `since` the history was loaded with.
-  """
-  @spec ever_member?(t(), pair()) :: boolean()
-  def ever_member?(history, pair) do
-    member_now?(history, pair) or is_map_key(history.log, pair) or
-      is_map_key(history.ended, pair)
-  end
-
-  @doc """
   The first join after a moment, as `{at, source}`, or nil. The membership
   row and its log entry describe the same join; the log alone remembers a
   join the person has since left.

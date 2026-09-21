@@ -2,8 +2,8 @@ defmodule Huddlz.Communities.GroupActivity.Calculations.DropInNote do
   @moduledoc """
   What an activity entry says about drop-ins, for the organizer's feed.
 
-    * `note: :not_a_member_yet` — true on an RSVP by someone who has never
-      belonged to the group. Someone who left is not "not a member yet".
+    * `note: :not_a_member_yet` — true on an RSVP by someone who is not
+      currently a member of the group.
     * `note: :rsvped_first` — on a join, the title of the latest huddl of
       the group the person RSVPd to before it while not a member, or nil.
       Accepted invitations say nothing: the invitation brought them.
@@ -39,7 +39,7 @@ defmodule Huddlz.Communities.GroupActivity.Calculations.DropInNote do
   defp kind(:rsvped_first), do: :joined
 
   defp note(:not_a_member_yet, %{kind: :rsvped} = entry, history),
-    do: not DropInHistory.ever_member?(history, entry.user_id)
+    do: not DropInHistory.member_now?(history, entry.user_id)
 
   defp note(:not_a_member_yet, _entry, _history), do: false
 
@@ -61,9 +61,10 @@ defmodule Huddlz.Communities.GroupActivity.Calculations.DropInNote do
 
     titles =
       Huddl
+      |> Ash.Query.for_read(:read, %{}, actor: actor)
       |> Ash.Query.filter(id in ^ids)
       |> Ash.Query.select([:id, :title])
-      |> Ash.read!(actor: actor)
+      |> Ash.read!()
       |> Map.new(&{&1.id, &1.title})
 
     Enum.map(huddl_ids, &Map.get(titles, &1))

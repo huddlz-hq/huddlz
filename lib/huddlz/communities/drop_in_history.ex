@@ -45,14 +45,28 @@ defmodule Huddlz.Communities.DropInHistory do
     |> Enum.max_by(&DateTime.to_unix(&1.at, :microsecond), fn -> nil end)
   end
 
-  @doc "Whether the person has ever belonged to the group."
-  @spec ever_member?(t(), String.t()) :: boolean()
-  def ever_member?(%{group_id: group_id, membership: membership}, user_id),
-    do: MembershipHistory.ever_member?(membership, {user_id, group_id})
+  @doc "Whether the person belongs to the group now."
+  @spec member_now?(t(), String.t()) :: boolean()
+  def member_now?(%{group_id: group_id, membership: membership}, user_id),
+    do: MembershipHistory.member_now?(membership, {user_id, group_id})
 
   defp rsvps(_group_id, []), do: %{}
 
   defp rsvps(group_id, user_ids) do
+    activity =
+      GroupActivity
+      |> Ash.Query.filter(
+        group_id == ^group_id and user_id in ^user_ids and kind in [:rsvped, :promoted]
+      )
+      |> Ash.Query.select([:user_id, :huddl_id, :kind, :occurred_at])
+      |> Ash.read!(authorize?: false)
+
+    promoted_at =
+      activity
+      |> Enum.filter(&(&1.kind == :promoted))
+      |> Enum.group_by(&{&1.huddl_id, &1.user_id}, & &1.occurred_at)
+      |> Map.new(fn {key, times} -> {key, Enum.max(times, DateTime)} end)
+
     standing =
       HuddlAttendee
       |> Ash.Query.filter(
@@ -60,15 +74,22 @@ defmodule Huddlz.Communities.DropInHistory do
       )
       |> Ash.Query.select([:user_id, :huddl_id, :rsvped_at])
       |> Ash.read!(authorize?: false)
-      |> Enum.map(&%{user_id: &1.user_id, huddl_id: &1.huddl_id, at: &1.rsvped_at})
+      |> Enum.map(fn row ->
+        %{
+          user_id: row.user_id,
+          huddl_id: row.huddl_id,
+          at: rsvp_at(row, promoted_at[{row.huddl_id, row.user_id}])
+        }
+      end)
 
     logged =
-      GroupActivity
-      |> Ash.Query.filter(group_id == ^group_id and user_id in ^user_ids and kind == :rsvped)
-      |> Ash.Query.select([:user_id, :huddl_id, :occurred_at])
-      |> Ash.read!(authorize?: false)
-      |> Enum.map(&%{user_id: &1.user_id, huddl_id: &1.huddl_id, at: &1.occurred_at})
+      Enum.map(activity, &%{user_id: &1.user_id, huddl_id: &1.huddl_id, at: &1.occurred_at})
 
     Enum.group_by(standing ++ logged, & &1.user_id, &Map.take(&1, [:huddl_id, :at]))
   end
+
+  # A waitlist row becomes an RSVP at promotion; a later fresh RSVP keeps
+  # its own timestamp even if an older promotion remains in the log.
+  defp rsvp_at(row, nil), do: row.rsvped_at
+  defp rsvp_at(row, promoted_at), do: Enum.max([row.rsvped_at, promoted_at], DateTime)
 end

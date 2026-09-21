@@ -157,7 +157,7 @@ defmodule Huddlz.Communities.GroupActivity do
     calculate :not_a_member_yet,
               :boolean,
               {Huddlz.Communities.GroupActivity.Calculations.DropInNote, note: :not_a_member_yet} do
-      description "On an RSVP: the person has never belonged to the group."
+      description "On an RSVP: the person is not currently a member of the group."
       public? true
     end
 
