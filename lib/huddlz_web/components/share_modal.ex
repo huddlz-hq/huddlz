@@ -45,6 +45,19 @@ defmodule HuddlzWeb.Components.ShareModal do
     <div id="share-actions" class="side-actions">
       <button
         type="button"
+        id={"#{@id}-native"}
+        class="btn-secondary"
+        phx-hook="NativeShare"
+        phx-update="ignore"
+        data-title={@title}
+        data-text={@text || @title}
+        data-url={@url}
+        hidden
+      >
+        <Icon.icon name="hero-arrow-up-tray" class="size-4" /> Share…
+      </button>
+      <button
+        type="button"
         id={"#{@id}-copy-link"}
         data-value={@url}
         data-copy-target={"##{@id}-url"}
