@@ -111,7 +111,7 @@ defmodule SocialConnectionsSteps do
   end
 
   step "I pause {string} from the Social tab of {string}",
-       %{args: [channel, group_name]} = context do
+       %{args: [_channel, group_name]} = context do
     group = lookup_group(group_name)
 
     session =
