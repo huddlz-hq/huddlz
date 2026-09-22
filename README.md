@@ -40,6 +40,11 @@ mix phx.server
 `mix setup` creates local environment files from the checked-in examples when
 needed. Run the test suite with `mix test`.
 
+Groups can connect a Slack or Discord channel for huddlz to post to. That
+needs an app registered on each platform; `scripts/social_setup.sh` walks
+through both consoles and records the client ids and secrets for development
+(`.dev.env`) or production (Fly secrets).
+
 ## Working with coding agents
 
 We use [Matt Pocock's skills](https://github.com/mattpocock/skills) in huddlz.
