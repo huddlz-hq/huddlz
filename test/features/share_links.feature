@@ -15,3 +15,34 @@ Feature: Anyone can share a huddl or group from its page
     When I open the huddl page
     And I choose to share it on "Bluesky"
     Then the compose screen opens with "Community lunch · Sat, Jul 20, 2030 · 12:00 PM EDT" and the huddl's link
+
+  Scenario: Sharing a group to a platform
+    Given a public group "Saturday Cyclists"
+    When I open the group page
+    And I choose to share it on "X"
+    Then the compose screen opens with "Saturday Cyclists" and the group's link
+
+  Scenario: Every place with a compose screen is offered
+    Given a public huddl "Community lunch"
+    When I open the huddl page
+    Then the Share section offers X, Bluesky, Threads, Facebook, LinkedIn and WhatsApp
+    And it explains that Instagram and Mastodon take a copied link
+
+  Scenario: Signed-out visitors can share too
+    Given a public huddl "Community lunch"
+    And I am signed out
+    When I open the huddl page
+    Then I can copy the huddl's link from the Share section
+    And the Share section offers X, Bluesky, Threads, Facebook, LinkedIn and WhatsApp
+
+  Scenario: A private huddl has no platform links
+    Given I am a member of a private group with a huddl "Members' picnic"
+    When I open the huddl page
+    Then I can copy the huddl's link from the Share section
+    But the Share section offers no platform links
+
+  Scenario: A private group has no platform links
+    Given I am a member of a private group with a huddl "Members' picnic"
+    When I open the group page
+    Then I can copy the group's link from the Share section
+    But the Share section offers no platform links

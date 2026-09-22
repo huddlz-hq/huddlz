@@ -81,6 +81,7 @@ defmodule HuddlzWeb.Components.ShareModal do
         >
           {name}
         </a>
+        <p class="share-platforms-note">Instagram and Mastodon: copy the link and paste it there.</p>
       </div>
     </div>
     """

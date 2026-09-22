@@ -3,6 +3,7 @@ defmodule ShareLinksSteps do
 
   import ExUnit.Assertions
   import Huddlz.Generator
+  import Huddlz.Test.Helpers.Authentication, only: [login: 2]
   import PhoenixTest
 
   step "a public huddl {string}", %{args: [title]} = context do
@@ -21,6 +22,38 @@ defmodule ShareLinksSteps do
       )
 
     Map.merge(context, %{group: group, huddl: huddl})
+  end
+
+  step "a public group {string}", %{args: [name]} = context do
+    owner = generate(user(role: :user))
+    group = generate(group(name: name, is_public: true, owner_id: owner.id, actor: owner))
+    Map.put(context, :group, group)
+  end
+
+  step "I am a member of a private group with a huddl {string}", %{args: [title]} = context do
+    owner = generate(user(role: :user))
+    member = generate(user(role: :user))
+    group = generate(group(is_public: false, owner_id: owner.id, actor: owner))
+    generate(group_member(group_id: group.id, user_id: member.id, role: :member, actor: owner))
+
+    huddl =
+      generate(
+        huddl(group_id: group.id, creator_id: owner.id, is_private: true, title: title, actor: owner)
+      )
+
+    session = Phoenix.ConnTest.build_conn() |> login(member) |> visit("/")
+
+    Map.merge(context, %{group: group, huddl: huddl, session: session, conn: session})
+  end
+
+  step "I am signed out", context do
+    Map.merge(context, %{session: nil, conn: nil})
+  end
+
+  step "I open the group page", context do
+    session = context[:session] || context[:conn] || Phoenix.ConnTest.build_conn()
+    session = visit(session, "/groups/#{context.group.slug}")
+    Map.merge(context, %{session: session, conn: session})
   end
 
   step "I open the huddl page", context do
@@ -50,6 +83,35 @@ defmodule ShareLinksSteps do
     context
   end
 
+  step "the compose screen opens with {string} and the group's link", %{args: [text]} = context do
+    assert_compose(context, text, group_url(context.group))
+    context
+  end
+
+  step "I can copy the group's link from the Share section", context do
+    assert_copies(context.session, group_url(context.group))
+    context
+  end
+
+  step "the Share section offers X, Bluesky, Threads, Facebook, LinkedIn and WhatsApp", context do
+    for name <- ~w(X Bluesky Threads Facebook LinkedIn WhatsApp) do
+      assert_has(context.session, "#share-actions a[target='_blank']", text: name, exact: true)
+    end
+
+    context
+  end
+
+  step "the Share section offers no platform links", context do
+    refute_has(context.session, "#share-actions a[target='_blank']")
+    context
+  end
+
+  step "it explains that Instagram and Mastodon take a copied link", context do
+    assert_has(context.session, "#share-actions", text: "Instagram")
+    assert_has(context.session, "#share-actions", text: "Mastodon")
+    context
+  end
+
   defp assert_compose(%{share_platform: platform, share_href: href}, text, url) do
     uri = URI.parse(href)
     query = URI.decode_query(uri.query || "")
@@ -76,7 +138,6 @@ defmodule ShareLinksSteps do
     assert_has(session, "#share-actions button[data-value='#{url}']", text: "Copy link")
   end
 
-  defp huddl_url(group, huddl) do
-    HuddlzWeb.Endpoint.url() <> "/groups/#{group.slug}/huddlz/#{huddl.id}"
-  end
+  defp huddl_url(group, huddl), do: group_url(group) <> "/huddlz/#{huddl.id}"
+  defp group_url(group), do: HuddlzWeb.Endpoint.url() <> "/groups/#{group.slug}"
 end
