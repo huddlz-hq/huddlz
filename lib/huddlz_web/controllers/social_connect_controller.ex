@@ -81,12 +81,17 @@ defmodule HuddlzWeb.SocialConnectController do
   defp save_connection(%{id: group_id}, kind, id, place, user) do
     case Communities.get_social_connection(id, actor: user) do
       {:ok, %{group_id: ^group_id, kind: ^kind} = connection} ->
-        Communities.reconnect_social_connection(connection, place, actor: user)
+        Communities.reconnect_social_connection(connection, keep_names(place, kind), actor: user)
 
       _ ->
         {:error, :invalid_connection}
     end
   end
+
+  # Discord's consent screen reports ids, not names, so the names the owner
+  # gave the place stay through a reconnection.
+  defp keep_names(place, :discord), do: Map.drop(place, [:workspace_name, :channel_name])
+  defp keep_names(place, _kind), do: place
 
   defp kind(param) do
     case Social.kind_from_param(param) do

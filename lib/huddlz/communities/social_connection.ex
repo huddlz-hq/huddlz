@@ -122,8 +122,8 @@ defmodule Huddlz.Communities.SocialConnection do
     end
 
     update :edit do
-      description "Change the social schedule and opening line"
-      accept [:moments, :opening_line]
+      description "Change the social schedule, the opening line, or what the place is called"
+      accept [:moments, :opening_line, :workspace_name, :channel_name]
     end
 
     update :mark_needs_reconnecting do

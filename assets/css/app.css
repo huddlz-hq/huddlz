@@ -2554,6 +2554,9 @@ body .not-yet-list li {
 body .not-yet-list li:first-child { border-top: 0; }
 body .not-yet-name { font-weight: 600; color: var(--soft); }
 
+body .place-names { border: 0; margin: 0 0 20px; padding: 0; }
+body .place-names legend { padding: 0 0 4px; }
+body .place-names-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
 body .schedule-moments { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; }
 body .schedule-moments legend { padding: 0 0 6px; }
 body .schedule-moment { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; padding: 8px 0; }
