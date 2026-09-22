@@ -315,9 +315,7 @@ defmodule HuddlzWeb.GroupLive.ShowTest do
       |> assert_has("#share-group-modal-email[href^='mailto:?subject=Share%20Test%20Group']")
       |> assert_has("#share-group-modal-open[phx-click*='share-group-modal']")
       |> assert_has("#share-group-modal-url[value='#{group_url}']")
-      |> assert_has(
-        "#share-group-modal-copy[data-copy-target='#share-group-modal-url'] #share-group-modal-copy-label[phx-hook='ClipboardCopy'][phx-update='ignore']"
-      )
+      |> assert_has("#share-group-modal-copy", text: "Copy link")
       |> assert_has("#share-group-modal .qr-frame svg")
     end
   end

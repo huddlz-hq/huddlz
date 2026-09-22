@@ -60,7 +60,6 @@ defmodule HuddlzWeb.Components.ShareModal do
         type="button"
         id={"#{@id}-copy-link"}
         data-value={@url}
-        data-copy-target={"##{@id}-url"}
         class="btn-secondary"
       >
         <Icon.icon name="hero-link" class="size-4" />
@@ -148,7 +147,6 @@ defmodule HuddlzWeb.Components.ShareModal do
           type="button"
           id={"#{@id}-copy"}
           data-value={@url}
-          data-copy-target={"##{@id}-url"}
           class="btn-secondary"
         >
           <span
