@@ -28,6 +28,7 @@ import {createCoverImageHook} from "./cover_image.mjs"
 import {createCoverCropHook} from "./cover_crop.mjs"
 import {mountPageLoading} from "./page_loading.mjs"
 import {createPopoverMenuHook} from "./popover_menu.mjs"
+import {createNativeShareHook} from "./native_share.mjs"
 
 // The appearance setting lives on <html data-theme>, outside any LiveView.
 // The header menu pushes a "theme" event after saving; "system" drops the attribute
@@ -45,6 +46,7 @@ const Hooks = {}
 Hooks.CoverImage = createCoverImageHook()
 Hooks.CoverCrop = createCoverCropHook()
 Hooks.PopoverMenu = createPopoverMenuHook()
+Hooks.NativeShare = createNativeShareHook()
 
 Hooks.LocationAutocomplete = {
   mounted() {
