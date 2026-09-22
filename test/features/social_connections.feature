@@ -47,3 +47,46 @@ Feature: A group connects a place for huddlz to post to
     When I pause "#general" from the Social tab of "Elixir Nashville"
     Then the connection shows as paused
     And the activity of "Elixir Nashville" says "Dana Organizer paused Slack · #general"
+
+  Scenario: An organizer cannot edit or remove a connection
+    Given "Elixir Nashville" posts to the Slack channel "#general"
+    And "organizer@example.com" is an organizer of "Elixir Nashville"
+    And I am signed in as "organizer@example.com"
+    When I open the Social tab of "Elixir Nashville"
+    Then I can see the connection to "#general" but cannot change its schedule or remove it
+    And the API refuses my attempt to remove it
+
+  Scenario: A member sees nothing
+    Given "Elixir Nashville" posts to the Slack channel "#general"
+    And "member@example.com" is a member of "Elixir Nashville"
+    And I am signed in as "member@example.com"
+    Then I cannot see the social connections of "Elixir Nashville" on the site or the API
+
+  Scenario: Removing a connection
+    Given "Elixir Nashville" posts to the Slack channel "#general"
+    And I am signed in as "owner@example.com"
+    When I remove "#general" from the Social tab of "Elixir Nashville" and confirm
+    Then the Social tab of "Elixir Nashville" lists no social connections
+    And the activity of "Elixir Nashville" says "Micah Woods removed Slack · #general"
+
+  Scenario: The new owner manages the connections
+    Given "Elixir Nashville" posts to the Slack channel "#general"
+    And "organizer@example.com" is a member of "Elixir Nashville"
+    And ownership of "Elixir Nashville" passes to "organizer@example.com"
+    And I am signed in as "organizer@example.com"
+    When I open the Social tab of "Elixir Nashville"
+    Then I can change the schedule of "#general" and remove it
+    And the connection still says it was connected by "Micah Woods"
+
+  Scenario: A private group cannot connect anything
+    Given a private group "Inner Circle" exists with owner "owner@example.com"
+    And I am signed in as "owner@example.com"
+    When I open the Social tab of "Inner Circle"
+    Then the Social tab explains that only public groups post
+    And the API refuses a connection for "Inner Circle"
+
+  Scenario: The webhook never leaves the server
+    Given "Elixir Nashville" posts to the Slack channel "#general"
+    And I am signed in as "owner@example.com"
+    When I read the social connections of "Elixir Nashville" through the API
+    Then the response names "#general" but carries no webhook address

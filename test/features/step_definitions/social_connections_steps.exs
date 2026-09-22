@@ -3,11 +3,13 @@ defmodule SocialConnectionsSteps do
 
   import ExUnit.Assertions
   import Huddlz.Generator
-  import Phoenix.ConnTest, only: [dispatch: 4, redirected_to: 1]
+  import HuddlzWeb.ApiCase, only: [authenticated_conn: 2, gql_post: 3]
+  import Phoenix.ConnTest, only: [build_conn: 0, dispatch: 4, json_response: 2, redirected_to: 1]
   import PhoenixTest
 
   require Ash.Query
 
+  alias Huddlz.Accounts.User
   alias Huddlz.Communities.Group
 
   # Connecting hands off to the platform's own consent screen and comes back
@@ -124,6 +126,197 @@ defmodule SocialConnectionsSteps do
     assert_has(context.session, "#social-connections .row", text: "Paused")
     context
   end
+
+  step "I open the Social tab of {string}", %{args: [group_name]} = context do
+    group = lookup_group(group_name)
+    session = visit(context.session, "/organize/#{group.slug}/social")
+    Map.merge(context, %{session: session, conn: session, group: group})
+  end
+
+  step "I can see the connection to {string} but cannot change its schedule or remove it",
+       %{args: [channel]} = context do
+    context.session
+    |> assert_has("#social-connections .row", text: channel)
+    |> refute_has("#social-connections button", text: "Edit")
+    |> refute_has("button", text: "Remove")
+
+    context
+  end
+
+  step "the API refuses my attempt to remove it", context do
+    response =
+      gql(
+        context.current_user,
+        """
+        mutation($id: ID!) { removeSocialConnection(id: $id) { result { id } errors { code message } } }
+        """,
+        %{"id" => context.connection.id}
+      )
+
+    assert refused?(response["data"]["removeSocialConnection"], response["errors"]),
+           "expected the removal to be refused, got #{inspect(response)}"
+
+    assert Ash.get!(Huddlz.Communities.SocialConnection, context.connection.id, authorize?: false)
+    context
+  end
+
+  step "I cannot see the social connections of {string} on the site or the API",
+       %{args: [group_name]} = context do
+    group = lookup_group(group_name)
+
+    context.session
+    |> visit("/organize/#{group.slug}/social")
+    |> refute_has("#social-connections")
+    |> refute_has("*", text: "#general")
+
+    response =
+      gql(
+        context.current_user,
+        """
+        query($groupId: ID!) { socialConnections(groupId: $groupId) { id channelName } }
+        """,
+        %{"groupId" => group.id}
+      )
+
+    assert response["errors"] == nil, inspect(response)
+    assert response["data"]["socialConnections"] == []
+    context
+  end
+
+  step "I remove {string} from the Social tab of {string} and confirm",
+       %{args: [channel, group_name]} = context do
+    session =
+      context
+      |> open_connection(channel, group_name)
+      |> click_button("Remove")
+      |> within("#remove-connection-dialog", fn dialog ->
+        click_button(dialog, "Remove connection")
+      end)
+
+    Map.merge(context, %{session: session, conn: session})
+  end
+
+  step "the Social tab of {string} lists no social connections",
+       %{args: [group_name]} = context do
+    group = lookup_group(group_name)
+
+    context.session
+    |> visit("/organize/#{group.slug}/social")
+    |> assert_has("#social-connections", text: "Nothing connected yet")
+    |> refute_has("#social-connections .row")
+
+    context
+  end
+
+  step "ownership of {string} passes to {string}", %{args: [group_name, email]} = context do
+    group = lookup_group(group_name) |> Ash.load!(:owner, authorize?: false)
+    new_owner = User |> Ash.Query.filter(email == ^email) |> Ash.read_one!(authorize?: false)
+
+    group
+    |> Ash.Changeset.for_update(:transfer_ownership, %{new_owner_id: new_owner.id},
+      actor: group.owner
+    )
+    |> Ash.update!()
+
+    context
+  end
+
+  step "I can change the schedule of {string} and remove it", %{args: [channel]} = context do
+    session =
+      context.session
+      |> within("#social-connections", fn list -> click_button(list, "Edit") end)
+      |> assert_has("#schedule-sheet", text: channel)
+      |> assert_has("#schedule-sheet button", text: "Remove")
+
+    Map.merge(context, %{session: session, conn: session})
+  end
+
+  step "the connection still says it was connected by {string}", %{args: [name]} = context do
+    context.session
+    |> visit("/organize/#{context.group.slug}/social")
+    |> assert_has("#social-connections .row", text: "connected by #{name}")
+
+    context
+  end
+
+  step "the Social tab explains that only public groups post", context do
+    context.session
+    |> assert_has("#social-private-note", text: "Only public groups post")
+    |> refute_has("button", text: "Connect a place")
+
+    context
+  end
+
+  step "the API refuses a connection for {string}", %{args: [group_name]} = context do
+    group = lookup_group(group_name)
+
+    response =
+      gql(
+        context.current_user,
+        """
+        mutation($input: ConnectPlaceInput!) {
+          connectPlace(input: $input) { result { id } errors { code message } }
+        }
+        """,
+        %{
+          "input" => %{
+            "groupId" => group.id,
+            "kind" => "SLACK",
+            "workspaceName" => "Inner Circle HQ",
+            "channelName" => "#private",
+            "webhookUrl" => "https://hooks.slack.com/services/T000/B000/private"
+          }
+        }
+      )
+
+    assert refused?(response["data"]["connectPlace"], response["errors"]),
+           "expected the connection to be refused, got #{inspect(response)}"
+
+    context
+  end
+
+  step "I read the social connections of {string} through the API",
+       %{args: [group_name]} = context do
+    group = lookup_group(group_name)
+
+    response =
+      gql(
+        context.current_user,
+        """
+        query($groupId: ID!) {
+          socialConnections(groupId: $groupId) { id kind channelName workspaceName moments state }
+          __type(name: "SocialConnection") { fields { name } }
+        }
+        """,
+        %{"groupId" => group.id}
+      )
+
+    Map.put(context, :api_response, response)
+  end
+
+  step "the response names {string} but carries no webhook address",
+       %{args: [channel]} = context do
+    response = context.api_response
+    assert [%{"channelName" => ^channel}] = response["data"]["socialConnections"]
+
+    fields = Enum.map(response["data"]["__type"]["fields"], & &1["name"])
+    refute Enum.any?(fields, &(&1 =~ ~r/webhook/i)), "the API type exposes #{inspect(fields)}"
+    refute Jason.encode!(response) =~ "hooks.slack.com"
+    context
+  end
+
+  defp gql(user, query, variables) do
+    build_conn()
+    |> authenticated_conn(user)
+    |> gql_post(query, variables)
+    |> json_response(200)
+  end
+
+  # A mutation is refused when the API understood it and answered with a
+  # policy or validation error rather than a result. A malformed query
+  # (top-level errors) is not a refusal.
+  defp refused?(%{"result" => nil, "errors" => [_ | _]}, nil), do: true
+  defp refused?(_payload, _errors), do: false
 
   # The Social tab with the named connection's sheet open.
   defp open_connection(context, channel, group_name) do

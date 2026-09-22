@@ -85,6 +85,7 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:social_connections, [])
      |> assign(:connect_dialog?, false)
      |> assign(:schedule_editor, nil)
+     |> assign(:removing_connection, nil)
      |> assign(:transfer_target_form, transfer_target_form())
      |> assign(:transfer_candidates, [])
      |> stream(:invitations, [])
@@ -414,6 +415,7 @@ defmodule HuddlzWeb.OrganizeLive do
             connect_dialog?={@connect_dialog?}
             editor={@schedule_editor}
             fresh?={not is_nil(@connected_id)}
+            removing={@removing_connection}
           />
         <% :settings -> %>
           <.settings_view
@@ -1821,6 +1823,31 @@ defmodule HuddlzWeb.OrganizeLive do
     {:noreply, close_schedule(socket)}
   end
 
+  def handle_event("ask_remove_connection", _params, socket) do
+    {:noreply, assign(socket, :removing_connection, socket.assigns.schedule_editor)}
+  end
+
+  def handle_event("cancel_remove_connection", _params, socket) do
+    {:noreply, assign(socket, :removing_connection, nil)}
+  end
+
+  def handle_event("remove_connection", _params, socket) do
+    %{removing_connection: connection, current_user: user, group: group} = socket.assigns
+
+    case Communities.remove_social_connection(connection, actor: user) do
+      :ok ->
+        {:noreply,
+         socket
+         |> assign(:removing_connection, nil)
+         |> put_flash(:info, "#{SocialConnection.place(connection)} is no longer connected.")
+         |> close_schedule()
+         |> load_connections(group, user)}
+
+      {:error, _error} ->
+        {:noreply, put_flash(socket, :error, "That connection didn't go.")}
+    end
+  end
+
   def handle_event("pause_connection", %{"id" => id}, socket) do
     set_connection_state(socket, id, &Communities.pause_social_connection/2, "is paused.")
   end
@@ -2260,6 +2287,7 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :connect_dialog?, :boolean, required: true
   attr :editor, :any, required: true
   attr :fresh?, :boolean, required: true
+  attr :removing, :any, required: true
 
   defp social_view(assigns) do
     ~H"""
@@ -2370,6 +2398,7 @@ defmodule HuddlzWeb.OrganizeLive do
       group={@group}
       fresh?={@fresh?}
     />
+    <.remove_connection_dialog :if={@removing} connection={@removing} />
     """
   end
 
@@ -2434,6 +2463,36 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   attr :connection, :map, required: true
+
+  defp remove_connection_dialog(assigns) do
+    ~H"""
+    <.modal id="remove-connection-dialog" show on_cancel={JS.push("cancel_remove_connection")}>
+      <div class="pr-8">
+        <h2 id="remove-connection-dialog-title" class="text-xl font-bold">
+          Remove {SocialConnection.place(@connection)}?
+        </h2>
+        <p class="mt-3 muted">
+          huddlz stops posting there. Connecting it again goes through {Kind.label(@connection.kind)}'s own screen.
+        </p>
+      </div>
+      <div class="form-foot mt-6">
+        <.button id="remove-connection-cancel" type="button" phx-click="cancel_remove_connection">
+          Cancel
+        </.button>
+        <.button
+          id="remove-connection-confirm"
+          type="button"
+          variant={:destructive}
+          phx-click="remove_connection"
+        >
+          Remove connection
+        </.button>
+      </div>
+    </.modal>
+    """
+  end
+
+  attr :connection, :map, required: true
   attr :group, :map, required: true
   attr :fresh?, :boolean, default: false
 
@@ -2485,6 +2544,14 @@ defmodule HuddlzWeb.OrganizeLive do
           Changes save as you make them and show in the group's activity.
         </p>
         <div class="form-foot mt-5">
+          <.button
+            id="remove-connection"
+            type="button"
+            variant={:destructive}
+            phx-click="ask_remove_connection"
+          >
+            Remove
+          </.button>
           <.button id="send-test-post" type="button" variant={:secondary} phx-click="send_test_post">
             Send a test post
           </.button>
