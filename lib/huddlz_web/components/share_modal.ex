@@ -42,7 +42,7 @@ defmodule HuddlzWeb.Components.ShareModal do
     assigns = assign(assigns, :platforms, platform_links(assigns))
 
     ~H"""
-    <div id="share-actions" class="side-actions">
+    <div id="share-actions" class="side-actions share-actions">
       <button
         type="button"
         id={"#{@id}-native"}
@@ -84,18 +84,18 @@ defmodule HuddlzWeb.Components.ShareModal do
       >
         <Icon.icon name="hero-qr-code" class="size-4" /> QR code
       </Button.button>
-      <div :if={@platforms != []} class="share-platforms">
-        <a
-          :for={{name, href} <- @platforms}
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="btn-secondary"
-        >
-          {name}
-        </a>
-        <p class="share-platforms-note">Instagram and Mastodon: copy the link and paste it there.</p>
-      </div>
+      <a
+        :for={{name, href} <- @platforms}
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="btn-secondary"
+      >
+        {name}
+      </a>
+      <p :if={@platforms != []} class="share-platforms-note">
+        Instagram and Mastodon: copy the link and paste it there.
+      </p>
     </div>
     """
   end
