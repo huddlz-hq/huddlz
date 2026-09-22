@@ -38,7 +38,13 @@ defmodule ShareLinksSteps do
 
     huddl =
       generate(
-        huddl(group_id: group.id, creator_id: owner.id, is_private: true, title: title, actor: owner)
+        huddl(
+          group_id: group.id,
+          creator_id: owner.id,
+          is_private: true,
+          title: title,
+          actor: owner
+        )
       )
 
     session = Phoenix.ConnTest.build_conn() |> login(member) |> visit("/")
@@ -132,7 +138,9 @@ defmodule ShareLinksSteps do
   defp compose_host("WhatsApp"), do: "wa.me"
 
   defp html(%{view: view}), do: view |> Phoenix.LiveViewTest.render() |> Floki.parse_fragment!()
-  defp html(%{conn: conn}), do: conn |> Phoenix.ConnTest.html_response(200) |> Floki.parse_document!()
+
+  defp html(%{conn: conn}),
+    do: conn |> Phoenix.ConnTest.html_response(200) |> Floki.parse_document!()
 
   defp assert_copies(session, url) do
     assert_has(session, "#share-actions button[data-value='#{url}']", text: "Copy link")

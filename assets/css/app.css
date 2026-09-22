@@ -4117,17 +4117,17 @@ body .side-actions > .side-actions-primary { height: 44px; font-size: 14px; }
 body .side-actions-row { display: flex; gap: 8px; }
 body .side-actions-row > .btn-secondary { flex: 1 1 0; justify-content: center; }
 
-/* Share section: compose links for the places that have one, two to a row,
-   with a line for the two that don't. */
-body .share-platforms {
+/* Share section: two buttons to a row. Share… is hidden where the browser
+   has no share sheet, and Copy link then takes the whole first row. The
+   compose links follow, with a line for the two places that have none. */
+body .share-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  padding-top: 4px;
 }
 
-body .share-platforms > .btn-secondary { justify-content: center; }
+body .share-actions > [hidden] + .btn-secondary { grid-column: 1 / -1; }
 
+body .share-actions-note,
 body .share-platforms-note {
   grid-column: 1 / -1;
   margin: 4px 0 0;
