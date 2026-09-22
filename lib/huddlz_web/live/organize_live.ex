@@ -28,6 +28,7 @@ defmodule HuddlzWeb.OrganizeLive do
   alias Huddlz.Communities.SocialConnection
   alias Huddlz.Communities.SocialConnection.Kind
   alias Huddlz.Communities.SocialConnection.Moment
+  alias Huddlz.Social.Post
   alias HuddlzWeb.Components.TurnoutForm
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
@@ -2304,6 +2305,27 @@ defmodule HuddlzWeb.OrganizeLive do
   defp test_post_error(%Ash.Error.Invalid{errors: [%{message: message} | _]}), do: message
   defp test_post_error(_error), do: "The test post didn't go through."
 
+  # The morning-of post for a made-up huddl this evening, worded by the same
+  # formatter scheduled posts use, so the preview cannot drift from a post.
+  defp preview_text(group, opening_line) do
+    today = group.time_zone |> DateTime.now!() |> DateTime.to_date()
+
+    Post.text(
+      %{
+        title: "Your next huddl with #{group.name}",
+        starts_at: DateTime.new!(today, ~T[18:00:00], group.time_zone),
+        time_zone: group.time_zone,
+        event_type: :virtual,
+        max_attendees: 20,
+        rsvp_count: 8,
+        waitlist_count: 0
+      },
+      moment: :morning_of,
+      opening_line: opening_line,
+      link: url(~p"/groups/#{group.slug}/huddlz/example")
+    )
+  end
+
   # Checkbox params: %{"week_before" => "true"} for the ticked moments.
   defp chosen_moments(nil), do: []
 
@@ -2541,7 +2563,10 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :moments_form, :any, required: true
 
   defp schedule_sheet(assigns) do
-    assigns = assign(assigns, :moments, Moment.values())
+    assigns =
+      assigns
+      |> assign(:moments, Moment.values())
+      |> assign(:preview, preview_text(assigns.group, assigns.form[:opening_line].value))
 
     ~H"""
     <.modal id="schedule-sheet" show on_cancel={JS.push("close_schedule")}>
@@ -2613,14 +2638,7 @@ defmodule HuddlzWeb.OrganizeLive do
           <p class="muted text-sm mt-1">
             An example with your opening line. Each post uses the huddl's own details and local time.
           </p>
-          <div class="mt-3 space-y-1 text-sm">
-            <p :if={@form[:opening_line].value} class="break-words">{@form[:opening_line].value}</p>
-            <p class="font-semibold">Your next huddl with {@group.name}</p>
-            <p>Today at 6:00 PM</p>
-            <p>Online</p>
-            <p>12 spots left</p>
-            <p class="break-all muted">{url(~p"/groups/#{@group.slug}/huddlz/example")}</p>
-          </div>
+          <p class="mt-3 text-sm whitespace-pre-wrap break-words">{@preview}</p>
         </section>
         <div class="form-foot schedule-actions mt-5">
           <.button
