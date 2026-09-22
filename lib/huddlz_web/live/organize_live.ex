@@ -2224,11 +2224,7 @@ defmodule HuddlzWeb.OrganizeLive do
   # ---------------------------------------------------------------------------
 
   defp save_schedule(socket, params) do
-    attrs = %{
-      "moments" => chosen_moments(params["moments"]),
-      "opening_line" => get_in(params, ["schedule", "opening_line"])
-    }
-
+    attrs = Map.put(params["schedule"] || %{}, "moments", chosen_moments(params["moments"]))
     form = AshPhoenix.Form.validate(socket.assigns.schedule_form, attrs)
 
     socket
@@ -2562,6 +2558,26 @@ defmodule HuddlzWeb.OrganizeLive do
         phx-submit="finish_schedule"
         class="mt-5"
       >
+        <fieldset :if={@connection.kind == :discord} class="place-names">
+          <legend class="form-label">What to call it</legend>
+          <p class="muted text-sm">
+            Discord shares only the server and channel ids, so name them the way your members would.
+          </p>
+          <div class="place-names-fields">
+            <.input
+              field={@form[:workspace_name]}
+              id="place-server-name"
+              label="Server name"
+              phx-debounce="300"
+            />
+            <.input
+              field={@form[:channel_name]}
+              id="place-channel-name"
+              label="Channel name"
+              phx-debounce="300"
+            />
+          </div>
+        </fieldset>
         <fieldset class="schedule-moments">
           <legend class="form-label">Social schedule</legend>
           <div :for={moment <- @moments} class="schedule-moment">

@@ -522,6 +522,23 @@ defmodule SocialConnectionsSteps do
     Map.merge(context, %{session: session, conn: session, group: group, connection: connection})
   end
 
+  step "I call the place {string} and its channel {string}",
+       %{args: [server, channel]} = context do
+    session =
+      context
+      |> open_connection("Channel 345626669224982402", "Elixir Nashville")
+      |> fill_in("Server name", with: server)
+      |> fill_in("Channel name", with: channel)
+      |> click_button("Done")
+
+    Map.merge(context, %{session: session, conn: session})
+  end
+
+  step "the Social tab says the place is {string}", %{args: [name]} = context do
+    assert_has(context.session, "#social-connections [id^='social-connection-']", text: name)
+    context
+  end
+
   step "{string} is paused", %{args: [_channel]} = context do
     connection =
       Huddlz.Communities.pause_social_connection!(context.connection, actor: context.current_user)

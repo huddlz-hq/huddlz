@@ -169,6 +169,16 @@ Feature: A group connects a place for huddlz to post to
     When I enter an opening line longer than 140 characters and finish
     Then I can correct the opening line and the saved connection is unchanged
 
+  Scenario: The owner names a Discord place, and reconnecting keeps the names
+    Given I am signed in as "owner@example.com"
+    When I connect the Discord channel "#meetups" of "Music City Makers" from the Social tab of "Elixir Nashville"
+    And I call the place "Music City Makers" and its channel "#meetups"
+    Then the Social tab lists a connection to "#meetups" on Discord
+    And the Social tab says the place is "Music City Makers"
+    When I reconnect this place through Discord
+    Then the Social tab lists a connection to "#meetups" on Discord
+    And the Social tab says the place is "Music City Makers"
+
   Scenario: A paused connection stays paused through a revoked place and its reconnection
     Given "Elixir Nashville" posts to the Slack channel "#general"
     And I am signed in as "owner@example.com"
