@@ -172,6 +172,13 @@ defmodule HuddlzWeb.Layouts do
                   Members
                 </.link>
                 <.link
+                  class={["sb-sub-item", @active_organize_section == :social && "active"]}
+                  navigate={~p"/organize/#{group.slug}/social"}
+                  aria-current={@active_organize_section == :social && "page"}
+                >
+                  Social
+                </.link>
+                <.link
                   :if={group.owner_id == @current_user.id}
                   class={["sb-sub-item", @active_organize_section == :settings && "active"]}
                   navigate={~p"/organize/#{group.slug}/settings"}

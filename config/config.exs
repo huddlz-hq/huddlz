@@ -109,6 +109,12 @@ config :huddlz,
 # Geocoding adapter (compile-time)
 config :huddlz, :geocoding, adapter: Huddlz.Geocoding.Google
 
+# Platforms a group can connect a place on. Client ids and secrets come
+# from the environment at runtime; without them the hand-off cannot start.
+config :huddlz, :social,
+  slack: [client_id: nil, client_secret: nil],
+  discord: [client_id: nil, client_secret: nil]
+
 # Places autocomplete adapter (compile-time)
 config :huddlz, :places, adapter: Huddlz.Places.Google
 
