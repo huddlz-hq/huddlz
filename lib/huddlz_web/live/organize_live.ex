@@ -191,14 +191,6 @@ defmodule HuddlzWeb.OrganizeLive do
     |> assign(:schedule_editor, editor)
   end
 
-  defp load_connections(socket, group, user) do
-    assign(
-      socket,
-      :social_connections,
-      Communities.list_social_connections!(group.id, actor: user)
-    )
-  end
-
   defp load_section(socket, :settings, group, user) when group.owner_id == user.id do
     assign_members(socket, list_group_members(group, user))
   end
@@ -207,6 +199,14 @@ defmodule HuddlzWeb.OrganizeLive do
     socket
     |> assign(:pending_member_action, nil)
     |> push_navigate(to: ~p"/organize/#{group.slug}")
+  end
+
+  defp load_connections(socket, group, user) do
+    assign(
+      socket,
+      :social_connections,
+      Communities.list_social_connections!(group.id, actor: user)
+    )
   end
 
   # The huddl a turnout event names: the nudge's, or one of the listed rows.
