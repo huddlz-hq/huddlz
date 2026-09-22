@@ -2567,6 +2567,7 @@ body .schedule-moment .muted { font-size: 13px; }
   body .row.social-row .social-moments,
   body .row.social-row .pill,
   body .row.social-row .social-actions { grid-column: 2; justify-content: flex-start; }
+  body .row.social-row .pill { justify-self: start; }
   body .place-tiles { grid-template-columns: minmax(0, 1fr); }
 }
 body .row.location-row .location-actions { display: flex; gap: 8px; align-items: center; }
