@@ -14,6 +14,7 @@ defmodule SocialConnectionsSteps do
 
   alias Huddlz.Accounts.User
   alias Huddlz.Communities.Group
+  alias Huddlz.Communities.SocialConnection
 
   # Connecting hands off to the platform's own consent screen and comes back
   # to huddlz with a code. The hand-off is followed by hand here: the redirect
@@ -500,30 +501,32 @@ defmodule SocialConnectionsSteps do
     Map.merge(context, %{session: session, conn: session})
   end
 
-  step "I reconnect this place through Slack", context do
-    session = context |> open_connection("#general", "Elixir Nashville")
+  step "I reconnect this place through {word}", %{args: [platform]} = context do
+    kind = platform |> String.downcase() |> String.to_existing_atom()
+    group = context[:group] || lookup_group("Elixir Nashville")
+    connection = context[:connection] || connection_of(group, kind)
+
+    session = context |> open_connection(connection.channel_name, group.name)
     assert_has(session, "a", text: "Reconnect")
 
-    Req.Test.stub(Huddlz.Social, fn conn ->
-      answer =
-        platform_answer(:slack, "Elixir Nashville HQ", "#general")
-        |> put_in(
-          ["incoming_webhook", "url"],
-          "https://hooks.slack.com/services/T000/B000/replacement"
-        )
-
-      Req.Test.json(conn, answer)
-    end)
+    Req.Test.stub(Huddlz.Social, fn conn -> Req.Test.json(conn, replacement_answer(kind)) end)
 
     session =
       follow_platform_handoff(
         session,
-        context.group,
-        :slack,
-        "/organize/#{context.group.slug}/social/reconnect/#{context.connection.id}"
+        group,
+        kind,
+        "/organize/#{group.slug}/social/reconnect/#{connection.id}"
       )
 
-    Map.merge(context, %{session: session, conn: session})
+    Map.merge(context, %{session: session, conn: session, group: group, connection: connection})
+  end
+
+  step "{string} is paused", %{args: [_channel]} = context do
+    connection =
+      Huddlz.Communities.pause_social_connection!(context.connection, actor: context.current_user)
+
+    Map.put(context, :connection, connection)
   end
 
   step "the same connection keeps its schedule, opening line and original attribution", context do
@@ -744,6 +747,27 @@ defmodule SocialConnectionsSteps do
         "url" => "https://discord.com/api/webhooks/1/secret"
       }
     }
+  end
+
+  # What the platform answers when a place is reconnected: the same place
+  # with a fresh webhook.
+  defp replacement_answer(:slack) do
+    platform_answer(:slack, "Elixir Nashville HQ", "#general")
+    |> put_in(
+      ["incoming_webhook", "url"],
+      "https://hooks.slack.com/services/T000/B000/replacement"
+    )
+  end
+
+  defp replacement_answer(:discord) do
+    platform_answer(:discord, nil, nil)
+    |> put_in(["webhook", "url"], "https://discord.com/api/webhooks/1/replacement")
+  end
+
+  defp connection_of(group, kind) do
+    SocialConnection
+    |> Ash.Query.filter(group_id == ^group.id and kind == ^kind)
+    |> Ash.read_one!(authorize?: false)
   end
 
   defp follow_platform_handoff(session, group, kind, path \\ nil) do

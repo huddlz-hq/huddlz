@@ -115,7 +115,10 @@ defmodule Huddlz.Communities.SocialConnection do
       change set_attribute(:webhook_url, arg(:webhook_url))
       validate Huddlz.Communities.SocialConnection.Validations.GroupIsPublic
       validate Huddlz.Communities.SocialConnection.Validations.PlatformWebhook
-      change set_attribute(:state, :posting)
+
+      # A paused connection stays paused; only a broken one starts posting again.
+      change set_attribute(:state, :posting),
+        where: [attribute_equals(:state, :needs_reconnecting)]
     end
 
     update :edit do
@@ -126,7 +129,10 @@ defmodule Huddlz.Communities.SocialConnection do
     update :mark_needs_reconnecting do
       description "Record that the platform no longer accepts this connection"
       accept []
-      change set_attribute(:state, :needs_reconnecting)
+
+      # Pausing already stops posting, so a paused connection keeps saying so.
+      change set_attribute(:state, :needs_reconnecting),
+        where: [attribute_equals(:state, :posting)]
     end
 
     update :pause do
