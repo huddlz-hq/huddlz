@@ -4117,6 +4117,25 @@ body .side-actions > .side-actions-primary { height: 44px; font-size: 14px; }
 body .side-actions-row { display: flex; gap: 8px; }
 body .side-actions-row > .btn-secondary { flex: 1 1 0; justify-content: center; }
 
+/* Share section: compose links for the places that have one, two to a row,
+   with a line for the two that don't. */
+body .share-platforms {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding-top: 4px;
+}
+
+body .share-platforms > .btn-secondary { justify-content: center; }
+
+body .share-platforms-note {
+  grid-column: 1 / -1;
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
 /* Warn-colored span inside an eyebrow (e.g. "Group · Private") */
 body .eyebrow .eyebrow-warn { color: var(--warn); }
 
