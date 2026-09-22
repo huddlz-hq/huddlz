@@ -168,3 +168,12 @@ Feature: A group connects a place for huddlz to post to
     And I am signed in as "owner@example.com"
     When I enter an opening line longer than 140 characters and finish
     Then I can correct the opening line and the saved connection is unchanged
+
+  Scenario: A paused connection stays paused through a revoked place and its reconnection
+    Given "Elixir Nashville" posts to the Slack channel "#general"
+    And I am signed in as "owner@example.com"
+    And "#general" is paused
+    When the platform no longer accepts a test post
+    Then the connection shows as paused
+    When I reconnect this place through Slack
+    Then the connection shows as paused
