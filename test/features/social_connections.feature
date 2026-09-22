@@ -26,3 +26,24 @@ Feature: A group connects a place for huddlz to post to
     When I connect the Discord channel "#meetups" of "Music City Makers" from the Social tab of "Elixir Nashville"
     Then the Social tab lists a connection to "#general" on Slack
     And the Social tab lists a connection to "#meetups" on Discord
+
+  Scenario: The owner sends a test post
+    Given "Elixir Nashville" posts to the Slack channel "#general"
+    And I am signed in as "owner@example.com"
+    When I send a test post to "#general" from the Social tab of "Elixir Nashville"
+    Then that channel receives a message saying it is a test from huddlz for "Elixir Nashville"
+
+  Scenario: The owner edits the opening line
+    Given "Elixir Nashville" posts to the Slack channel "#general"
+    And I am signed in as "owner@example.com"
+    When I change the opening line of "#general" to "This week at Elixir Nashville:" from the Social tab of "Elixir Nashville"
+    Then the connection to "#general" opens with "This week at Elixir Nashville:" without a save button
+    And the activity of "Elixir Nashville" says "Micah Woods changed the schedule for Slack · #general"
+
+  Scenario: An organizer pauses a connection
+    Given "Elixir Nashville" posts to the Slack channel "#general"
+    And "organizer@example.com" is an organizer of "Elixir Nashville"
+    And I am signed in as "organizer@example.com"
+    When I pause "#general" from the Social tab of "Elixir Nashville"
+    Then the connection shows as paused
+    And the activity of "Elixir Nashville" says "Dana Organizer paused Slack · #general"

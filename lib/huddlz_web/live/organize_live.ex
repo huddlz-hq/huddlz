@@ -176,19 +176,26 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   defp load_section(socket, :social, group, user) do
-    connections = Communities.list_social_connections!(group.id, actor: user)
+    socket = load_connections(socket, group, user)
 
     # Coming back from the platform opens the new connection's schedule.
     editor =
       case socket.assigns.connected_id do
         nil -> nil
-        id -> Enum.find(connections, &(&1.id == id))
+        id -> Enum.find(socket.assigns.social_connections, &(&1.id == id))
       end
 
     socket
-    |> assign(:social_connections, connections)
     |> assign(:connect_dialog?, false)
     |> assign(:schedule_editor, editor)
+  end
+
+  defp load_connections(socket, group, user) do
+    assign(
+      socket,
+      :social_connections,
+      Communities.list_social_connections!(group.id, actor: user)
+    )
   end
 
   defp load_section(socket, :settings, group, user) when group.owner_id == user.id do
@@ -406,6 +413,7 @@ defmodule HuddlzWeb.OrganizeLive do
             owner?={@group.owner_id == @current_user.id}
             connect_dialog?={@connect_dialog?}
             editor={@schedule_editor}
+            fresh?={not is_nil(@connected_id)}
           />
         <% :settings -> %>
           <.settings_view
@@ -1813,6 +1821,28 @@ defmodule HuddlzWeb.OrganizeLive do
     {:noreply, close_schedule(socket)}
   end
 
+  def handle_event("pause_connection", %{"id" => id}, socket) do
+    set_connection_state(socket, id, &Communities.pause_social_connection/2, "is paused.")
+  end
+
+  def handle_event("resume_connection", %{"id" => id}, socket) do
+    set_connection_state(socket, id, &Communities.resume_social_connection/2, "is posting again.")
+  end
+
+  def handle_event("send_test_post", _params, socket) do
+    %{schedule_editor: connection, current_user: user} = socket.assigns
+
+    case Communities.send_social_test_post(connection.id, actor: user) do
+      :ok ->
+        {:noreply,
+         put_flash(socket, :info, "A test post went to #{SocialConnection.place(connection)}.")}
+
+      {:error, error} ->
+        {:noreply, put_flash(socket, :error, test_post_error(error))}
+    end
+  end
+
+  # Every change saves on the spot; the button only closes the sheet.
   def handle_event("save_schedule", params, socket) do
     %{schedule_editor: connection, current_user: user, group: group} = socket.assigns
 
@@ -1822,16 +1852,24 @@ defmodule HuddlzWeb.OrganizeLive do
     }
 
     case Communities.edit_social_connection(connection, attrs, actor: user) do
-      {:ok, _connection} ->
+      {:ok, updated} ->
         {:noreply,
          socket
-         |> put_flash(:info, "#{SocialConnection.place(connection)} will post on that schedule.")
-         |> close_schedule()
-         |> load_section(:social, group, user)}
+         |> assign(:schedule_editor, updated)
+         |> load_connections(group, user)}
 
       {:error, _error} ->
         {:noreply, put_flash(socket, :error, "That schedule didn't save.")}
     end
+  end
+
+  def handle_event("finish_schedule", _params, socket) do
+    connection = socket.assigns.schedule_editor
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "#{SocialConnection.place(connection)} will post on that schedule.")
+     |> close_schedule()}
   end
 
   def handle_event("cancel_member_action", _params, socket) do
@@ -2181,6 +2219,25 @@ defmodule HuddlzWeb.OrganizeLive do
     end
   end
 
+  defp set_connection_state(socket, id, change, said) do
+    %{current_user: user, group: group} = socket.assigns
+    connection = Enum.find(socket.assigns.social_connections, &(&1.id == id))
+
+    case connection && change.(connection, actor: user) do
+      {:ok, _connection} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "#{SocialConnection.place(connection)} #{said}")
+         |> load_connections(group, user)}
+
+      _ ->
+        {:noreply, put_flash(socket, :error, "That didn't change.")}
+    end
+  end
+
+  defp test_post_error(%Ash.Error.Invalid{errors: [%{message: message} | _]}), do: message
+  defp test_post_error(_error), do: "The test post didn't go through."
+
   # Checkbox params: %{"week_before" => "true"} for the ticked moments.
   defp chosen_moments(nil), do: []
 
@@ -2202,6 +2259,7 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :owner?, :boolean, required: true
   attr :connect_dialog?, :boolean, required: true
   attr :editor, :any, required: true
+  attr :fresh?, :boolean, required: true
 
   defp social_view(assigns) do
     ~H"""
@@ -2260,6 +2318,9 @@ defmodule HuddlzWeb.OrganizeLive do
               {Kind.label(connection.kind)} · {connection.workspace_name}
               <span :if={connection.connected_by}>· connected by {connection.connected_by.display_name}</span>
             </span>
+            <span :if={connection.opening_line} class="meta social-opening-line">
+              Opens with “{connection.opening_line}”
+            </span>
           </span>
           <span class="social-moments">
             <span :for={moment <- connection.moments} class="pill">{Moment.short(moment)}</span>
@@ -2267,6 +2328,26 @@ defmodule HuddlzWeb.OrganizeLive do
           </span>
           <.pill variant={state_variant(connection.state)}>{state_label(connection.state)}</.pill>
           <span class="social-actions">
+            <.button
+              :if={connection.state == :posting}
+              id={"pause-connection-#{connection.id}"}
+              type="button"
+              variant={:secondary}
+              phx-click="pause_connection"
+              phx-value-id={connection.id}
+            >
+              Pause
+            </.button>
+            <.button
+              :if={connection.state == :paused}
+              id={"resume-connection-#{connection.id}"}
+              type="button"
+              variant={:secondary}
+              phx-click="resume_connection"
+              phx-value-id={connection.id}
+            >
+              Resume
+            </.button>
             <.button
               :if={@owner?}
               id={"edit-connection-#{connection.id}"}
@@ -2283,7 +2364,12 @@ defmodule HuddlzWeb.OrganizeLive do
     </section>
 
     <.connect_place_dialog :if={@connect_dialog?} group={@group} />
-    <.schedule_sheet :if={@editor} connection={@editor} group={@group} />
+    <.schedule_sheet
+      :if={@editor}
+      connection={@editor}
+      group={@group}
+      fresh?={@fresh?}
+    />
     """
   end
 
@@ -2349,6 +2435,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
   attr :connection, :map, required: true
   attr :group, :map, required: true
+  attr :fresh?, :boolean, default: false
 
   defp schedule_sheet(assigns) do
     assigns = assign(assigns, :moments, Moment.values())
@@ -2361,7 +2448,7 @@ defmodule HuddlzWeb.OrganizeLive do
           {SocialConnection.place(@connection)} · {@connection.workspace_name}. This applies to every public huddl from now on.
         </p>
       </div>
-      <form id="schedule-form" phx-submit="save_schedule" class="mt-5">
+      <form id="schedule-form" phx-change="save_schedule" phx-submit="finish_schedule" class="mt-5">
         <fieldset class="schedule-moments">
           <legend class="form-label">Social schedule</legend>
           <div :for={moment <- @moments} class="schedule-moment">
@@ -2382,19 +2469,28 @@ defmodule HuddlzWeb.OrganizeLive do
           </p>
         </fieldset>
         <div class="form-row mt-4">
-          <label for="opening-line" class="form-label">Opening line
-          <span class="muted">(optional)</span></label>
+          <label for="opening-line" class="form-label">Opening line</label>
           <input
             id="opening-line"
             name="opening_line"
             type="text"
             class="form-input"
             maxlength="140"
+            placeholder="Optional. For example: This week at Elixir Nashville:"
             value={@connection.opening_line}
+            phx-debounce="blur"
           />
         </div>
+        <p class="muted text-sm mt-2">
+          Changes save as you make them and show in the group's activity.
+        </p>
         <div class="form-foot mt-5">
-          <.button id="save-schedule" type="submit" variant={:primary}>Start posting</.button>
+          <.button id="send-test-post" type="button" variant={:secondary} phx-click="send_test_post">
+            Send a test post
+          </.button>
+          <.button id="finish-schedule" type="submit" variant={:primary}>
+            {if @fresh?, do: "Start posting", else: "Done"}
+          </.button>
         </div>
       </form>
     </.modal>

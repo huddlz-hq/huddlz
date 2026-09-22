@@ -208,6 +208,7 @@ defmodule Huddlz.Communities do
       define :pause_social_connection, action: :pause
       define :resume_social_connection, action: :resume
       define :remove_social_connection, action: :remove
+      define :send_social_test_post, action: :send_test_post, args: [:id]
     end
 
     resource Huddlz.Communities.GroupLocation do

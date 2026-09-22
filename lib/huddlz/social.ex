@@ -32,6 +32,23 @@ defmodule Huddlz.Social do
     provider(kind).exchange(config(kind), code, redirect_uri, req_options())
   end
 
+  @doc """
+  Send one message through a connection. `{:error, :revoked}` means the
+  platform no longer accepts the webhook, so the connection needs
+  reconnecting; any other error may pass.
+  """
+  @spec post(Huddlz.Communities.SocialConnection.t(), String.t()) ::
+          :ok | {:error, :revoked | term()}
+  def post(%{kind: kind, webhook_url: url}, text) when is_binary(text) do
+    provider(kind).post(url, text, req_options())
+  end
+
+  @doc "The words a test post carries."
+  @spec test_post_text(String.t()) :: String.t()
+  def test_post_text(group_name) do
+    "This is a test from huddlz. Posts for #{group_name} will appear here. Nothing else is needed."
+  end
+
   @doc "The platform's settings, from `config :huddlz, :social`."
   @spec config(Kind.t()) :: keyword()
   def config(kind) do

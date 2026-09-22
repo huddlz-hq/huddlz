@@ -14,4 +14,7 @@ defmodule Huddlz.Social.Provider do
               redirect_uri :: String.t(),
               req_options :: keyword()
             ) :: {:ok, Huddlz.Social.place()} | {:error, term()}
+
+  @callback post(webhook_url :: String.t(), text :: String.t(), req_options :: keyword()) ::
+              :ok | {:error, :revoked | term()}
 end

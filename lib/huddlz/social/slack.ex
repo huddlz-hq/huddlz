@@ -50,4 +50,14 @@ defmodule Huddlz.Social.Slack do
   end
 
   defp place(_body), do: {:error, :no_webhook}
+
+  @impl true
+  def post(webhook_url, text, req_options) do
+    case Req.post(webhook_url, [json: %{"text" => text}, retry: false] ++ req_options) do
+      {:ok, %{status: status}} when status in 200..299 -> :ok
+      {:ok, %{status: status}} when status in [403, 404, 410] -> {:error, :revoked}
+      {:ok, %{status: status}} -> {:error, {:status, status}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
 end
