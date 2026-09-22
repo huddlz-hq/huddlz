@@ -34,6 +34,44 @@ defmodule ShareLinksSteps do
     context
   end
 
+  step "I choose to share it on {string}", %{args: [platform]} = context do
+    [href] =
+      context.session
+      |> html()
+      |> Floki.find("#share-actions a")
+      |> Enum.filter(&(Floki.text(&1) |> String.trim() == platform))
+      |> Floki.attribute("href")
+
+    Map.merge(context, %{share_platform: platform, share_href: href})
+  end
+
+  step "the compose screen opens with {string} and the huddl's link", %{args: [text]} = context do
+    assert_compose(context, text, huddl_url(context.group, context.huddl))
+    context
+  end
+
+  defp assert_compose(%{share_platform: platform, share_href: href}, text, url) do
+    uri = URI.parse(href)
+    query = URI.decode_query(uri.query || "")
+    filled = query |> Map.values() |> Enum.join(" ")
+
+    assert compose_host(platform) == uri.host,
+           "expected the #{platform} link to open #{compose_host(platform)}, got #{href}"
+
+    assert filled =~ text, "expected the #{platform} compose screen to carry #{inspect(text)}"
+    assert filled =~ url, "expected the #{platform} compose screen to carry the link"
+  end
+
+  defp compose_host("Bluesky"), do: "bsky.app"
+  defp compose_host("X"), do: "x.com"
+  defp compose_host("Threads"), do: "www.threads.net"
+  defp compose_host("Facebook"), do: "www.facebook.com"
+  defp compose_host("LinkedIn"), do: "www.linkedin.com"
+  defp compose_host("WhatsApp"), do: "wa.me"
+
+  defp html(%{view: view}), do: view |> Phoenix.LiveViewTest.render() |> Floki.parse_fragment!()
+  defp html(%{conn: conn}), do: conn |> Phoenix.ConnTest.html_response(200) |> Floki.parse_document!()
+
   defp assert_copies(session, url) do
     assert_has(session, "#share-actions button[data-value='#{url}']", text: "Copy link")
   end

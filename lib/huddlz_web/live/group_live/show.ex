@@ -379,7 +379,12 @@ defmodule HuddlzWeb.GroupLive.Show do
 
           <div class="huddl-side-section">
             <h3>Share</h3>
-            <.share_actions id="share-group-modal" url={@meta.url} title={@page_title} />
+            <.share_actions
+              id="share-group-modal"
+              url={@meta.url}
+              title={@page_title}
+              public?={not is_nil(@canonical_url)}
+            />
           </div>
 
           <div class="huddl-side-section">

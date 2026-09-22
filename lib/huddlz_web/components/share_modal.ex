@@ -13,11 +13,34 @@ defmodule HuddlzWeb.Components.ShareModal do
   alias HuddlzWeb.Components.Input
   alias HuddlzWeb.Components.Modal
 
+  # Places with a public compose URL, in the order they are offered. Each
+  # takes the link and the pre-filled words as plain query parameters; no
+  # SDK, no script from their side. Mastodon (per-instance) and Instagram
+  # have no such URL, so they are left to Copy link.
+  @platforms [
+    {"X", "https://x.com/intent/post", :text_and_url},
+    {"Bluesky", "https://bsky.app/intent/compose", :text_with_url},
+    {"Threads", "https://www.threads.net/intent/post", :text_and_url},
+    {"Facebook", "https://www.facebook.com/sharer/sharer.php", :u},
+    {"LinkedIn", "https://www.linkedin.com/sharing/share-offsite/", :url},
+    {"WhatsApp", "https://wa.me/", :text_with_url}
+  ]
+
   attr :id, :string, required: true, doc: "id of the .share_modal the QR code option opens"
   attr :url, :string, required: true
   attr :title, :string, required: true
 
+  attr :text, :string,
+    default: nil,
+    doc: "words pre-filled on a platform's compose screen; defaults to the title"
+
+  attr :public?, :boolean,
+    default: false,
+    doc: "offer the platform compose links; off when the link dead-ends for outsiders"
+
   def share_actions(assigns) do
+    assigns = assign(assigns, :platforms, platform_links(assigns))
+
     ~H"""
     <div id="share-actions" class="side-actions">
       <button
@@ -48,9 +71,35 @@ defmodule HuddlzWeb.Components.ShareModal do
       >
         <Icon.icon name="hero-qr-code" class="size-4" /> QR code
       </Button.button>
+      <div :if={@platforms != []} class="share-platforms">
+        <a
+          :for={{name, href} <- @platforms}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="btn-secondary"
+        >
+          {name}
+        </a>
+      </div>
     </div>
     """
   end
+
+  defp platform_links(%{public?: false}), do: []
+
+  defp platform_links(%{url: url} = assigns) do
+    text = assigns.text || assigns.title
+
+    Enum.map(@platforms, fn {name, base, shape} ->
+      {name, base <> "?" <> URI.encode_query(compose_params(shape, text, url))}
+    end)
+  end
+
+  defp compose_params(:text_and_url, text, url), do: [text: text, url: url]
+  defp compose_params(:text_with_url, text, url), do: [text: "#{text} #{url}"]
+  defp compose_params(:u, _text, url), do: [u: url]
+  defp compose_params(:url, _text, url), do: [url: url]
 
   attr :id, :string, required: true
   attr :url, :string, required: true
