@@ -2,7 +2,8 @@ defmodule Huddlz.Communities.GroupActivity do
   @moduledoc """
   An append-only log of what happened in a group: someone joined or left,
   RSVPd, cancelled, joined a waitlist or got a spot from it, accepted an
-  invitation. Written by `Huddlz.Communities.ActivityLog` as those actions
+  invitation; a social connection was connected, edited, paused, resumed
+  or removed. Written by `Huddlz.Communities.ActivityLog` as those actions
   run, since cancelling an RSVP and leaving a group delete their rows and
   would otherwise leave no trace.
 
@@ -26,7 +27,12 @@ defmodule Huddlz.Communities.GroupActivity do
     :cancelled_rsvp,
     :waitlisted,
     :left_waitlist,
-    :promoted
+    :promoted,
+    :connected_place,
+    :edited_place,
+    :paused_place,
+    :resumed_place,
+    :removed_place
   ]
 
   graphql do
@@ -65,7 +71,8 @@ defmodule Huddlz.Communities.GroupActivity do
         :huddl_id,
         :user_id,
         :impersonation_id,
-        :source
+        :source,
+        :detail
       ]
     end
 
@@ -132,6 +139,13 @@ defmodule Huddlz.Communities.GroupActivity do
     # Where a self-join came from, kept here so it outlives the membership.
     # For the admin overview only: organizers reading the log never see it.
     attribute :source, Huddlz.Communities.JoinSource
+
+    # What a social connection entry is about ("Slack · #general"), kept
+    # here so it outlives the connection.
+    attribute :detail, :string do
+      public? true
+      constraints max_length: 300
+    end
   end
 
   relationships do

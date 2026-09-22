@@ -184,6 +184,40 @@ defmodule Huddlz.Generator do
   end
 
   @doc """
+  Connect a place for a group: a Slack channel unless told otherwise, with
+  no social schedule yet. The actor must be the group's owner.
+  """
+  def social_connection(opts \\ []) do
+    actor =
+      opts[:actor] ||
+        once(:default_actor, fn ->
+          generate(user(role: :user))
+        end)
+
+    group_id =
+      opts[:group_id] ||
+        once(:default_group_id, fn ->
+          generate(group(actor: actor, is_public: true)).id
+        end)
+
+    changeset_generator(
+      Huddlz.Communities.SocialConnection,
+      :connect,
+      defaults: [
+        group_id: group_id,
+        kind: :slack,
+        workspace_name: "Test Workspace",
+        channel_name: "#general",
+        webhook_url: "https://hooks.slack.com/services/T000/B000/test",
+        moments: [],
+        opening_line: nil
+      ],
+      overrides: Keyword.drop(opts, [:actor, :group_id]),
+      actor: actor
+    )
+  end
+
+  @doc """
   Create a group location with given attributes.
   """
   def group_location(opts \\ []) do
