@@ -5,9 +5,16 @@ defmodule Huddlz.Social do
   back with into a webhook. Each platform is a `Huddlz.Social.Provider`.
   """
 
-  alias Huddlz.Communities.SocialConnection.Kind
+  alias Huddlz.Communities.SocialConnection.{EncryptedString, Kind}
+  alias Huddlz.Social.Webhook
 
-  @type place :: %{workspace_name: String.t(), channel_name: String.t(), webhook_url: String.t()}
+  @type place :: %{
+          required(:workspace_name) => String.t(),
+          required(:channel_name) => String.t(),
+          required(:webhook_url) => String.t(),
+          optional(:discord_guild_id) => String.t(),
+          optional(:discord_channel_id) => String.t()
+        }
 
   @doc "The provider for a kind."
   @spec provider(Kind.t()) :: module()
@@ -39,8 +46,14 @@ defmodule Huddlz.Social do
   """
   @spec post(Huddlz.Communities.SocialConnection.t(), String.t()) ::
           :ok | {:error, :revoked | term()}
-  def post(%{kind: kind, webhook_url: url}, text) when is_binary(text) do
-    provider(kind).post(url, text, req_options())
+  def post(%{kind: kind, webhook_url: secret}, text) when is_binary(text) do
+    url = EncryptedString.reveal(secret)
+
+    if Webhook.valid?(kind, url) do
+      provider(kind).post(url, text, req_options())
+    else
+      {:error, :invalid_destination}
+    end
   end
 
   @doc "The words a test post carries."

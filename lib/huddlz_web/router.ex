@@ -100,6 +100,7 @@ defmodule HuddlzWeb.Router do
 
     # Connecting a place hands off to the platform's consent screen and back.
     get "/organize/:group_slug/social/connect/:kind", SocialConnectController, :connect
+    get "/organize/:group_slug/social/reconnect/:id", SocialConnectController, :reconnect
     get "/social/:kind/callback", SocialConnectController, :callback
 
     ash_authentication_live_session :authenticated_routes,

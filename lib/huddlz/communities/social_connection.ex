@@ -33,6 +33,7 @@ defmodule Huddlz.Communities.SocialConnection do
     mutations do
       action :send_social_test_post, :send_test_post
       create :connect_place, :connect
+      update :reconnect_social_connection, :reconnect
       update :edit_social_connection, :edit
       update :pause_social_connection, :pause
       update :resume_social_connection, :resume
@@ -49,6 +50,7 @@ defmodule Huddlz.Communities.SocialConnection do
       index :for_group, route: "/for_group"
       post :connect
       patch :edit
+      patch :reconnect, route: "/:id/reconnect"
       patch :pause, route: "/:id/pause"
       patch :resume, route: "/:id/resume"
       route :post, "/:id/test_post", :send_test_post
@@ -80,17 +82,51 @@ defmodule Huddlz.Communities.SocialConnection do
         allow_nil? false
       end
 
-      accept [:kind, :workspace_name, :channel_name, :webhook_url, :moments, :opening_line]
+      accept [
+        :kind,
+        :workspace_name,
+        :channel_name,
+        :webhook_url,
+        :moments,
+        :opening_line,
+        :discord_guild_id,
+        :discord_channel_id
+      ]
 
       validate Huddlz.Communities.SocialConnection.Validations.GroupIsPublic
+      validate Huddlz.Communities.SocialConnection.Validations.PlatformWebhook
 
       change set_attribute(:group_id, arg(:group_id))
       change relate_actor(:connected_by)
     end
 
+    update :reconnect do
+      description "Replace a place's credentials while keeping its social schedule and history"
+      # The destination validation examines the existing kind and unwraps the
+      # replacement credential, so it must run against the loaded record.
+      require_atomic? false
+      accept [:workspace_name, :channel_name, :discord_guild_id, :discord_channel_id]
+
+      argument :webhook_url, EncryptedString do
+        allow_nil? false
+        sensitive? true
+      end
+
+      change set_attribute(:webhook_url, arg(:webhook_url))
+      validate Huddlz.Communities.SocialConnection.Validations.GroupIsPublic
+      validate Huddlz.Communities.SocialConnection.Validations.PlatformWebhook
+      change set_attribute(:state, :posting)
+    end
+
     update :edit do
       description "Change the social schedule and opening line"
       accept [:moments, :opening_line]
+    end
+
+    update :mark_needs_reconnecting do
+      description "Record that the platform no longer accepts this connection"
+      accept []
+      change set_attribute(:state, :needs_reconnecting)
     end
 
     update :pause do
@@ -140,11 +176,12 @@ defmodule Huddlz.Communities.SocialConnection do
       authorize_if Huddlz.Communities.GroupMember.Checks.GroupOwner
     end
 
-    policy action([:edit, :remove]) do
+    policy action([:edit, :reconnect, :remove, :mark_needs_reconnecting]) do
       authorize_if expr(group.owner_id == ^actor(:id))
     end
 
     policy action(:send_test_post) do
+      forbid_unless Huddlz.Accounts.Checks.ConfirmedActor
       authorize_if Huddlz.Communities.SocialConnection.Checks.OwnsConnectionArgument
     end
 
@@ -192,6 +229,16 @@ defmodule Huddlz.Communities.SocialConnection do
       constraints max_length: 200
     end
 
+    attribute :discord_guild_id, :string do
+      public? true
+      constraints match: ~r/\A[0-9]+\z/, max_length: 20
+    end
+
+    attribute :discord_channel_id, :string do
+      public? true
+      constraints match: ~r/\A[0-9]+\z/, max_length: 20
+    end
+
     # The address posts go to. Never public: the API neither returns nor
     # filters on it, and the site never shows it.
     attribute :webhook_url, EncryptedString do
@@ -235,6 +282,17 @@ defmodule Huddlz.Communities.SocialConnection do
       attribute_public? true
     end
   end
+
+  @doc "The non-secret Discord channel link, distinct from the posting credential."
+  def destination_url(%__MODULE__{
+        kind: :discord,
+        discord_guild_id: guild,
+        discord_channel_id: channel
+      })
+      when is_binary(guild) and is_binary(channel),
+      do: "https://discord.com/channels/#{guild}/#{channel}"
+
+  def destination_url(_connection), do: nil
 
   @doc "Every state a connection can be in."
   def states, do: @states

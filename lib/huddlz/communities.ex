@@ -204,10 +204,12 @@ defmodule Huddlz.Communities do
       define :connect_place, action: :connect, args: [:group_id]
       define :list_social_connections, action: :for_group, args: [:group_id]
       define :get_social_connection, action: :read, get_by: [:id]
+      define :reconnect_social_connection, action: :reconnect
       define :edit_social_connection, action: :edit
       define :pause_social_connection, action: :pause
       define :resume_social_connection, action: :resume
       define :remove_social_connection, action: :remove
+      define :mark_social_connection_needs_reconnecting, action: :mark_needs_reconnecting
       define :send_social_test_post, action: :send_test_post, args: [:id]
     end
 

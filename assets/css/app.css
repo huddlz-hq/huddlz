@@ -2557,10 +2557,20 @@ body .not-yet-name { font-weight: 600; color: var(--soft); }
 body .schedule-moments { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; }
 body .schedule-moments legend { padding: 0 0 6px; }
 body .schedule-moment { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; padding: 8px 0; }
-body .schedule-moment input { width: 18px; height: 18px; margin: 3px 0 0; accent-color: var(--accent); flex-shrink: 0; }
+body .schedule-moment .toggle { margin-top: 3px; flex-shrink: 0; }
 body .schedule-moment > span { display: flex; flex-direction: column; gap: 2px; }
 body .schedule-moment .schedule-moment-name { font-weight: 500; cursor: pointer; }
 body .schedule-moment .muted { font-size: 13px; }
+
+@media (max-width: 600px) {
+  body .form-foot.schedule-actions { flex-direction: column-reverse; }
+  body .schedule-actions > * {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    white-space: nowrap;
+  }
+}
 
 @media (max-width: 760px) {
   body .row.social-row { grid-template-columns: 40px minmax(0, 1fr); }

@@ -207,6 +207,8 @@ defmodule Huddlz.Generator do
         group_id: group_id,
         kind: :slack,
         workspace_name: "Test Workspace",
+        discord_guild_id: nil,
+        discord_channel_id: nil,
         channel_name: "#general",
         webhook_url: "https://hooks.slack.com/services/T000/B000/test",
         moments: [],

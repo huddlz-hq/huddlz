@@ -81,6 +81,7 @@ defmodule Huddlz.Communities.ActivityLog do
   def notify(_notification), do: :ok
 
   defp connection_kind(:connect), do: :connected_place
+  defp connection_kind(:reconnect), do: :connected_place
   defp connection_kind(:edit), do: :edited_place
   defp connection_kind(:pause), do: :paused_place
   defp connection_kind(:resume), do: :resumed_place

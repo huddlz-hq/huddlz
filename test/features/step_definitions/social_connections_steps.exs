@@ -4,7 +4,10 @@ defmodule SocialConnectionsSteps do
   import ExUnit.Assertions
   import Huddlz.Generator
   import HuddlzWeb.ApiCase, only: [authenticated_conn: 2, gql_post: 3]
-  import Phoenix.ConnTest, only: [build_conn: 0, dispatch: 4, json_response: 2, redirected_to: 1]
+
+  import Phoenix.ConnTest,
+    only: [build_conn: 0, dispatch: 4, dispatch: 5, json_response: 2, redirected_to: 1]
+
   import PhoenixTest
 
   require Ash.Query
@@ -43,13 +46,13 @@ defmodule SocialConnectionsSteps do
 
   step "the Social tab lists a connection to {string} on {word}",
        %{args: [channel, platform]} = context do
-    assert_has(context.session, "#social-connections .row", text: channel)
-    assert_has(context.session, "#social-connections .row", text: platform)
+    assert_has(context.session, "#social-connections [id^='social-connection-']", text: channel)
+    assert_has(context.session, "#social-connections [id^='social-connection-']", text: platform)
     context
   end
 
   step "the connection shows as posting", context do
-    assert_has(context.session, "#social-connections .row", text: "Posting")
+    assert_has(context.session, "#social-connections [id^='social-connection-']", text: "Posting")
     context
   end
 
@@ -58,7 +61,7 @@ defmodule SocialConnectionsSteps do
 
     context.session
     |> visit("/organize/#{group.slug}")
-    |> assert_has("#recent-activity .line", text: line)
+    |> assert_has("#recent-activity", text: line)
 
     context
   end
@@ -104,8 +107,8 @@ defmodule SocialConnectionsSteps do
 
     context.session
     |> visit("/organize/#{context.group.slug}/social")
-    |> assert_has("#social-connections .row", text: channel)
-    |> assert_has("#social-connections .row", text: line)
+    |> assert_has("#social-connections [id^='social-connection-']", text: channel)
+    |> assert_has("#social-connections [id^='social-connection-']", text: line)
 
     context
   end
@@ -123,7 +126,7 @@ defmodule SocialConnectionsSteps do
   end
 
   step "the connection shows as paused", context do
-    assert_has(context.session, "#social-connections .row", text: "Paused")
+    assert_has(context.session, "#social-connections [id^='social-connection-']", text: "Paused")
     context
   end
 
@@ -136,7 +139,7 @@ defmodule SocialConnectionsSteps do
   step "I can see the connection to {string} but cannot change its schedule or remove it",
        %{args: [channel]} = context do
     context.session
-    |> assert_has("#social-connections .row", text: channel)
+    |> assert_has("#social-connections [id^='social-connection-']", text: channel)
     |> refute_has("#social-connections button", text: "Edit")
     |> refute_has("button", text: "Remove")
 
@@ -203,7 +206,7 @@ defmodule SocialConnectionsSteps do
     context.session
     |> visit("/organize/#{group.slug}/social")
     |> assert_has("#social-connections", text: "Nothing connected yet")
-    |> refute_has("#social-connections .row")
+    |> refute_has("#social-connections [id^='social-connection-']")
 
     context
   end
@@ -234,7 +237,7 @@ defmodule SocialConnectionsSteps do
   step "the connection still says it was connected by {string}", %{args: [name]} = context do
     context.session
     |> visit("/organize/#{context.group.slug}/social")
-    |> assert_has("#social-connections .row", text: "connected by #{name}")
+    |> assert_has("#social-connections [id^='social-connection-']", text: "connected by #{name}")
 
     context
   end
@@ -305,6 +308,389 @@ defmodule SocialConnectionsSteps do
     context
   end
 
+  step "I try to connect a {word} place at {string} through the API",
+       %{args: [kind, address]} = context do
+    test = self()
+
+    Req.Test.stub(Huddlz.Social, fn conn ->
+      send(test, :destination_contacted)
+      Req.Test.json(conn, %{})
+    end)
+
+    group = lookup_group("Elixir Nashville")
+
+    response =
+      gql(
+        context.current_user,
+        """
+        mutation($input: ConnectPlaceInput!) {
+          connectPlace(input: $input) { result { id } errors { code message } }
+        }
+        """,
+        %{
+          "input" => %{
+            "groupId" => group.id,
+            "kind" => kind,
+            "workspaceName" => "A place",
+            "channelName" => "#general",
+            "webhookUrl" => address
+          }
+        }
+      )
+
+    Map.put(context, :api_response, response)
+  end
+
+  step "the API refuses the destination without contacting it", context do
+    response = context.api_response
+    assert refused?(response["data"]["connectPlace"], response["errors"]), inspect(response)
+    refute_receive :destination_contacted
+    context
+  end
+
+  step "the platform redirects a test post to another address", context do
+    test = self()
+
+    Req.Test.stub(Huddlz.Social, fn
+      %{host: "hooks.slack.com"} = conn ->
+        conn
+        |> Plug.Conn.put_resp_header("location", "http://127.0.0.1/internal")
+        |> Plug.Conn.resp(307, "")
+
+      conn ->
+        send(test, :redirect_contacted)
+        Req.Test.json(conn, %{})
+    end)
+
+    result =
+      Huddlz.Communities.send_social_test_post(context.connection.id, actor: context.current_user)
+
+    Map.put(context, :post_result, result)
+  end
+
+  step "the test post fails without contacting the redirected address", context do
+    assert {:error, _} = context.post_result
+    refute_receive :redirect_contacted
+    context
+  end
+
+  step "I connect places through both APIs with diagnostic logging enabled", context do
+    group = lookup_group("Elixir Nashville")
+    secret = "diagnostic-secret-marker"
+    url = "https://hooks.slack.com/services/T000/B000/" <> secret
+    previous_level = Logger.level()
+    Logger.configure(level: :debug)
+    on_exit = fn -> Logger.configure(level: previous_level) end
+    ExUnit.Callbacks.on_exit(on_exit)
+
+    log =
+      ExUnit.CaptureLog.capture_log([level: :debug], fn ->
+        Logger.put_process_level(self(), :debug)
+
+        try do
+          response =
+            gql(
+              context.current_user,
+              """
+              mutation($input: ConnectPlaceInput!) {
+                connectPlace(input: $input) { result { id } errors { message } }
+              }
+              """,
+              %{
+                "input" => %{
+                  "groupId" => group.id,
+                  "kind" => "SLACK",
+                  "workspaceName" => "Workspace",
+                  "channelName" => "#general",
+                  "webhookUrl" => url
+                }
+              }
+            )
+
+          assert %{"data" => %{"connectPlace" => %{"result" => %{"id" => _}}}} = response
+
+          response =
+            gql(
+              context.current_user,
+              """
+              mutation { connectPlace(input: {groupId: "#{group.id}", kind: SLACK,
+                workspaceName: "Workspace", channelName: "#general", webhookUrl: "#{url}"}) {
+                result { id } errors { message }
+              } }
+              """,
+              %{}
+            )
+
+          assert %{"data" => %{"connectPlace" => %{"result" => %{"id" => _}}}} = response
+
+          conn =
+            build_conn()
+            |> authenticated_conn(context.current_user)
+            |> Plug.Conn.put_req_header("content-type", "application/vnd.api+json")
+            |> dispatch(HuddlzWeb.Endpoint, :post, "/api/json/social_connections", %{
+              "data" => %{
+                "type" => "social_connection",
+                "attributes" => %{
+                  "group_id" => group.id,
+                  "kind" => "slack",
+                  "workspace_name" => "Workspace",
+                  "channel_name" => "#general",
+                  "webhook_url" => url
+                }
+              }
+            })
+
+          assert %{"data" => %{"id" => _}} = json_response(conn, 201)
+        after
+          Logger.delete_process_level(self())
+        end
+      end)
+
+    Logger.configure(level: previous_level)
+    Map.merge(context, %{diagnostic_log: log, diagnostic_secret: secret})
+  end
+
+  step "no webhook credential appears in the diagnostic logs", context do
+    assert context.diagnostic_log != ""
+    refute context.diagnostic_log =~ context.diagnostic_secret
+    context
+  end
+
+  step "I try to send a test post after my address becomes unconfirmed", context do
+    test = self()
+
+    Req.Test.stub(Huddlz.Social, fn conn ->
+      send(test, :platform_contacted)
+      Req.Test.json(conn, %{})
+    end)
+
+    Ash.Seed.update!(context.current_user, %{confirmed_at: nil})
+
+    result =
+      Huddlz.Communities.send_social_test_post(context.connection.id, actor: context.current_user)
+
+    Map.put(context, :post_result, result)
+  end
+
+  step "the test post is refused without contacting the platform", context do
+    assert {:error, %Ash.Error.Forbidden{}} = context.post_result
+    refute_receive :platform_contacted
+    context
+  end
+
+  step "the Discord connection opens its channel in server {string}",
+       %{args: [server]} = context do
+    context.session
+    |> assert_has("#social-connections", text: "Server #{server}")
+    |> assert_has("a[href='https://discord.com/channels/#{server}/345626669224982402']",
+      text: "Open channel"
+    )
+
+    context
+  end
+
+  step "I have chosen a week-before schedule and opening line for this connection", context do
+    session =
+      context
+      |> open_connection("#general", "Elixir Nashville")
+      |> check("A week before")
+      |> fill_in("Opening line", with: "See you there!")
+      |> click_button("Done")
+
+    Map.merge(context, %{session: session, conn: session})
+  end
+
+  step "I reconnect this place through Slack", context do
+    session = context |> open_connection("#general", "Elixir Nashville")
+    assert_has(session, "a", text: "Reconnect")
+
+    Req.Test.stub(Huddlz.Social, fn conn ->
+      answer =
+        platform_answer(:slack, "Elixir Nashville HQ", "#general")
+        |> put_in(
+          ["incoming_webhook", "url"],
+          "https://hooks.slack.com/services/T000/B000/replacement"
+        )
+
+      Req.Test.json(conn, answer)
+    end)
+
+    session =
+      follow_platform_handoff(
+        session,
+        context.group,
+        :slack,
+        "/organize/#{context.group.slug}/social/reconnect/#{context.connection.id}"
+      )
+
+    Map.merge(context, %{session: session, conn: session})
+  end
+
+  step "the same connection keeps its schedule, opening line and original attribution", context do
+    [connection] =
+      Huddlz.Communities.list_social_connections!(context.group.id, actor: context.current_user)
+
+    assert connection.id == context.connection.id
+    assert connection.moments == [:week_before]
+    assert connection.opening_line == "See you there!"
+    assert connection.connected_by_id == context.connection.connected_by_id
+    assert connection.inserted_at == context.connection.inserted_at
+    assert connection.state == :posting
+    context
+  end
+
+  step "test posts use the replacement connection", context do
+    test = self()
+
+    Req.Test.stub(Huddlz.Social, fn conn ->
+      send(test, {:post_path, conn.request_path})
+      Req.Test.json(conn, %{})
+    end)
+
+    assert :ok =
+             Huddlz.Communities.send_social_test_post(context.connection.id,
+               actor: context.current_user
+             )
+
+    assert_receive {:post_path, "/services/T000/B000/replacement"}
+    context
+  end
+
+  step "the platform no longer accepts a test post", context do
+    Req.Test.stub(Huddlz.Social, fn conn -> Plug.Conn.resp(conn, 404, "revoked") end)
+
+    session =
+      context
+      |> open_connection("#general", "Elixir Nashville")
+      |> click_button("Send a test post")
+
+    Map.merge(context, %{session: session, conn: session})
+  end
+
+  step "the connection shows as needing reconnection", context do
+    assert_has(context.session, "#social-connections", text: "Needs reconnecting")
+    assert_has(context.session, "#schedule-sheet a", text: "Reconnect")
+    context
+  end
+
+  step "the morning-of preview starts with {string}", %{args: [line]} = context do
+    context.session
+    |> assert_has("#social-post-preview", text: line)
+    |> assert_has("#social-post-preview", text: "Today at 6:00 PM")
+    |> assert_has("#social-post-preview", text: "Online")
+    |> assert_has("#social-post-preview", text: "12 spots left")
+    |> assert_has("#social-post-preview", text: "/huddlz/example")
+
+    context
+  end
+
+  step "I reconnect through the {word} API", %{args: [api]} = context do
+    response = reconnect_api(api, context.current_user, context.connection.id)
+    Map.merge(context, %{reconnect_response: response, reconnect_api: api})
+  end
+
+  step "the reconnection is {word}", %{args: [outcome]} = context do
+    case {context.reconnect_api, outcome, context.reconnect_response} do
+      {"GraphQL", "allowed",
+       %{"data" => %{"reconnectSocialConnection" => %{"result" => %{"id" => id}, "errors" => []}}}} ->
+        assert id == context.connection.id
+
+      {"GraphQL", "refused", response} ->
+        assert refused?(response["data"]["reconnectSocialConnection"], response["errors"])
+
+      {"JSONAPI", "allowed", conn} ->
+        assert %{"data" => %{"id" => id}} = json_response(conn, 200)
+        assert id == context.connection.id
+
+      {"JSONAPI", "refused", conn} ->
+        assert %{"errors" => [_ | _]} = json_response(conn, 403)
+    end
+
+    test = self()
+
+    Req.Test.stub(Huddlz.Social, fn conn ->
+      send(test, {:post_path, conn.request_path})
+      Req.Test.json(conn, %{})
+    end)
+
+    assert :ok =
+             Huddlz.Communities.send_social_test_post(context.connection.id,
+               actor: context.group.owner
+             )
+
+    expected =
+      if outcome == "allowed",
+        do: "/services/T000/B000/replacement",
+        else: "/services/T000/B000/test"
+
+    assert_receive {:post_path, ^expected}
+    context
+  end
+
+  step "I reconnect without replacement credentials", context do
+    result =
+      Huddlz.Communities.reconnect_social_connection(context.connection, %{},
+        actor: context.current_user
+      )
+
+    Map.put(context, :reconnect_result, result)
+  end
+
+  step "the incomplete reconnection is refused", context do
+    assert {:error, %Ash.Error.Invalid{}} = context.reconnect_result
+    context
+  end
+
+  defp reconnect_api("GraphQL", user, id) do
+    gql(
+      user,
+      """
+      mutation($id: ID!, $input: ReconnectSocialConnectionInput!) {
+        reconnectSocialConnection(id: $id, input: $input) { result { id } errors { message code } }
+      }
+      """,
+      %{
+        "id" => id,
+        "input" => %{"webhookUrl" => "https://hooks.slack.com/services/T000/B000/replacement"}
+      }
+    )
+  end
+
+  defp reconnect_api("JSONAPI", user, id) do
+    build_conn()
+    |> authenticated_conn(user)
+    |> Plug.Conn.put_req_header("content-type", "application/vnd.api+json")
+    |> dispatch(HuddlzWeb.Endpoint, :patch, "/api/json/social_connections/#{id}/reconnect", %{
+      "data" => %{
+        "type" => "social_connection",
+        "id" => id,
+        "attributes" => %{
+          "webhook_url" => "https://hooks.slack.com/services/T000/B000/replacement"
+        }
+      }
+    })
+  end
+
+  step "I enter an opening line longer than 140 characters and finish", context do
+    session =
+      context
+      |> open_connection("#general", "Elixir Nashville")
+      |> fill_in("Opening line", with: String.duplicate("a", 141))
+      |> click_button("Done")
+
+    Map.merge(context, %{session: session, conn: session})
+  end
+
+  step "I can correct the opening line and the saved connection is unchanged", context do
+    assert_has(context.session, "#schedule-sheet [role='alert']", text: "140")
+
+    assert Huddlz.Communities.get_social_connection!(context.connection.id,
+             actor: context.current_user
+           ).opening_line == nil
+
+    context
+  end
+
   defp gql(user, query, variables) do
     build_conn()
     |> authenticated_conn(user)
@@ -349,23 +735,24 @@ defmodule SocialConnectionsSteps do
     }
   end
 
-  defp platform_answer(:discord, workspace, channel) do
+  defp platform_answer(:discord, _workspace, _channel) do
     %{
-      "guild" => %{"name" => workspace},
       "webhook" => %{
-        "name" => String.trim_leading(channel, "#"),
+        "guild_id" => "290926792226357250",
+        "channel_id" => "345626669224982402",
+        "name" => "huddlz",
         "url" => "https://discord.com/api/webhooks/1/secret"
       }
     }
   end
 
-  defp follow_platform_handoff(session, group, kind) do
+  defp follow_platform_handoff(session, group, kind, path \\ nil) do
     conn =
       dispatch(
         session.conn,
         HuddlzWeb.Endpoint,
         :get,
-        "/organize/#{group.slug}/social/connect/#{kind}"
+        path || "/organize/#{group.slug}/social/connect/#{kind}"
       )
 
     handoff = URI.parse(redirected_to(conn))

@@ -2,8 +2,8 @@ defmodule Huddlz.Social.Discord do
   @moduledoc """
   Discord through its `webhook.incoming` consent flow: Discord's own screen
   picks the server and channel and hands back a webhook for that channel.
-  The answer names the server and the webhook, not the channel, so the
-  webhook's name stands in for the channel.
+  Webhook-only consent returns destination IDs, not destination names.
+  Keep the IDs so people can distinguish places and open the actual channel.
   """
 
   @behaviour Huddlz.Social.Provider
@@ -34,18 +34,21 @@ defmodule Huddlz.Social.Discord do
       redirect_uri: redirect_uri
     ]
 
-    case Req.post(@token_url, [form: form, retry: false] ++ req_options) do
+    case Req.post(@token_url, [form: form, retry: false, redirect: false] ++ req_options) do
       {:ok, %{status: 200, body: body}} -> place(body)
       {:ok, %{status: status}} -> {:error, {:status, status}}
       {:error, reason} -> {:error, reason}
     end
   end
 
-  defp place(%{"webhook" => %{"url" => url} = webhook} = body) when is_binary(url) do
+  defp place(%{"webhook" => %{"url" => url, "guild_id" => guild_id, "channel_id" => channel_id}})
+       when is_binary(url) and is_binary(guild_id) and is_binary(channel_id) do
     {:ok,
      %{
-       workspace_name: get_in(body, ["guild", "name"]) || "Discord",
-       channel_name: "#" <> (webhook["name"] || "channel"),
+       workspace_name: "Server #{guild_id}",
+       channel_name: "Channel #{channel_id}",
+       discord_guild_id: guild_id,
+       discord_channel_id: channel_id,
        webhook_url: url
      }}
   end
@@ -54,7 +57,10 @@ defmodule Huddlz.Social.Discord do
 
   @impl true
   def post(webhook_url, text, req_options) do
-    case Req.post(webhook_url, [json: %{"content" => text}, retry: false] ++ req_options) do
+    case Req.post(
+           webhook_url,
+           [json: %{"content" => text}, retry: false, redirect: false] ++ req_options
+         ) do
       {:ok, %{status: status}} when status in 200..299 -> :ok
       {:ok, %{status: status}} when status in [403, 404, 410] -> {:error, :revoked}
       {:ok, %{status: status}} -> {:error, {:status, status}}

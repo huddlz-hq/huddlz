@@ -85,6 +85,8 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:social_connections, [])
      |> assign(:connect_dialog?, false)
      |> assign(:schedule_editor, nil)
+     |> assign(:schedule_form, nil)
+     |> assign(:moments_form, nil)
      |> assign(:removing_connection, nil)
      |> assign(:transfer_target_form, transfer_target_form())
      |> assign(:transfer_candidates, [])
@@ -188,7 +190,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
     socket
     |> assign(:connect_dialog?, false)
-    |> assign(:schedule_editor, editor)
+    |> assign_schedule(editor)
   end
 
   defp load_section(socket, :settings, group, user) when group.owner_id == user.id do
@@ -414,6 +416,8 @@ defmodule HuddlzWeb.OrganizeLive do
             owner?={@group.owner_id == @current_user.id}
             connect_dialog?={@connect_dialog?}
             editor={@schedule_editor}
+            form={@schedule_form}
+            moments_form={@moments_form}
             fresh?={not is_nil(@connected_id)}
             removing={@removing_connection}
           />
@@ -1816,7 +1820,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
   def handle_event("edit_connection", %{"id" => id}, socket) do
     editor = Enum.find(socket.assigns.social_connections, &(&1.id == id))
-    {:noreply, assign(socket, :schedule_editor, editor)}
+    {:noreply, assign_schedule(socket, editor)}
   end
 
   def handle_event("close_schedule", _params, socket) do
@@ -1865,38 +1869,20 @@ defmodule HuddlzWeb.OrganizeLive do
          put_flash(socket, :info, "A test post went to #{SocialConnection.place(connection)}.")}
 
       {:error, error} ->
-        {:noreply, put_flash(socket, :error, test_post_error(error))}
-    end
-  end
-
-  # Every change saves on the spot; the button only closes the sheet.
-  def handle_event("save_schedule", params, socket) do
-    %{schedule_editor: connection, current_user: user, group: group} = socket.assigns
-
-    attrs = %{
-      moments: chosen_moments(params["moments"]),
-      opening_line: blank_to_nil(params["opening_line"])
-    }
-
-    case Communities.edit_social_connection(connection, attrs, actor: user) do
-      {:ok, updated} ->
         {:noreply,
          socket
-         |> assign(:schedule_editor, updated)
-         |> load_connections(group, user)}
-
-      {:error, _error} ->
-        {:noreply, put_flash(socket, :error, "That schedule didn't save.")}
+         |> load_connections(socket.assigns.group, user)
+         |> put_flash(:error, test_post_error(error))}
     end
   end
 
-  def handle_event("finish_schedule", _params, socket) do
-    connection = socket.assigns.schedule_editor
+  def handle_event("save_schedule", params, socket) do
+    {:noreply, save_schedule(socket, params)}
+  end
 
-    {:noreply,
-     socket
-     |> put_flash(:info, "#{SocialConnection.place(connection)} will post on that schedule.")
-     |> close_schedule()}
+  def handle_event("finish_schedule", params, socket) do
+    socket = save_schedule(socket, params)
+    {:noreply, finish_schedule(socket, socket.assigns.schedule_form.source.valid?)}
   end
 
   def handle_event("cancel_member_action", _params, socket) do
@@ -2237,8 +2223,65 @@ defmodule HuddlzWeb.OrganizeLive do
   # Social
   # ---------------------------------------------------------------------------
 
+  defp save_schedule(socket, params) do
+    attrs = %{
+      "moments" => chosen_moments(params["moments"]),
+      "opening_line" => get_in(params, ["schedule", "opening_line"])
+    }
+
+    form = AshPhoenix.Form.validate(socket.assigns.schedule_form, attrs)
+
+    socket
+    |> assign(:moments_form, to_form(params["moments"] || %{}, as: :moments))
+    |> persist_schedule(form)
+  end
+
+  defp persist_schedule(socket, %AshPhoenix.Form{valid?: true, changed?: false}), do: socket
+
+  defp persist_schedule(socket, form) do
+    case AshPhoenix.Form.submit(form, params: form.params) do
+      {:ok, updated} ->
+        socket
+        |> assign_schedule(updated)
+        |> load_connections(socket.assigns.group, socket.assigns.current_user)
+
+      {:error, form} ->
+        assign(socket, :schedule_form, to_form(form))
+    end
+  end
+
+  defp finish_schedule(socket, false), do: socket
+
+  defp finish_schedule(socket, true) do
+    socket
+    |> put_flash(
+      :info,
+      "#{SocialConnection.place(socket.assigns.schedule_editor)} will post on that schedule."
+    )
+    |> close_schedule()
+  end
+
+  defp assign_schedule(socket, nil) do
+    assign(socket, schedule_editor: nil, schedule_form: nil, moments_form: nil)
+  end
+
+  defp assign_schedule(socket, connection) do
+    form =
+      connection
+      |> AshPhoenix.Form.for_update(:edit, actor: socket.assigns.current_user, as: "schedule")
+      |> to_form()
+
+    moments = Map.new(Moment.values(), &{Atom.to_string(&1), &1 in connection.moments})
+
+    assign(socket,
+      schedule_editor: connection,
+      schedule_form: form,
+      moments_form: to_form(moments, as: :moments)
+    )
+  end
+
   defp close_schedule(socket) do
-    socket = assign(socket, :schedule_editor, nil)
+    socket = assign_schedule(socket, nil)
 
     case socket.assigns.connected_id do
       nil -> socket
@@ -2272,20 +2315,13 @@ defmodule HuddlzWeb.OrganizeLive do
     Enum.filter(Moment.values(), fn moment -> params[Atom.to_string(moment)] == "true" end)
   end
 
-  defp blank_to_nil(nil), do: nil
-
-  defp blank_to_nil(text) when is_binary(text) do
-    case String.trim(text) do
-      "" -> nil
-      trimmed -> trimmed
-    end
-  end
-
   attr :group, :map, required: true
   attr :connections, :list, required: true
   attr :owner?, :boolean, required: true
   attr :connect_dialog?, :boolean, required: true
   attr :editor, :any, required: true
+  attr :form, :any, required: true
+  attr :moments_form, :any, required: true
   attr :fresh?, :boolean, required: true
   attr :removing, :any, required: true
 
@@ -2346,6 +2382,13 @@ defmodule HuddlzWeb.OrganizeLive do
               {Kind.label(connection.kind)} · {connection.workspace_name}
               <span :if={connection.connected_by}>· connected by {connection.connected_by.display_name}</span>
             </span>
+            <.link
+              :if={SocialConnection.destination_url(connection)}
+              href={SocialConnection.destination_url(connection)}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="meta underline"
+            >Open channel</.link>
             <span :if={connection.opening_line} class="meta social-opening-line">
               Opens with “{connection.opening_line}”
             </span>
@@ -2395,6 +2438,8 @@ defmodule HuddlzWeb.OrganizeLive do
     <.schedule_sheet
       :if={@editor}
       connection={@editor}
+      form={@form}
+      moments_form={@moments_form}
       group={@group}
       fresh?={@fresh?}
     />
@@ -2496,6 +2541,9 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :group, :map, required: true
   attr :fresh?, :boolean, default: false
 
+  attr :form, :any, required: true
+  attr :moments_form, :any, required: true
+
   defp schedule_sheet(assigns) do
     assigns = assign(assigns, :moments, Moment.values())
 
@@ -2507,19 +2555,19 @@ defmodule HuddlzWeb.OrganizeLive do
           {SocialConnection.place(@connection)} · {@connection.workspace_name}. This applies to every public huddl from now on.
         </p>
       </div>
-      <form id="schedule-form" phx-change="save_schedule" phx-submit="finish_schedule" class="mt-5">
+      <.form
+        for={@form}
+        id="schedule-form"
+        phx-change="save_schedule"
+        phx-submit="finish_schedule"
+        class="mt-5"
+      >
         <fieldset class="schedule-moments">
           <legend class="form-label">Social schedule</legend>
           <div :for={moment <- @moments} class="schedule-moment">
-            <input
-              type="checkbox"
-              id={"moment-#{moment}"}
-              name={"moments[#{moment}]"}
-              value="true"
-              checked={moment in @connection.moments}
-            />
+            <.toggle field={@moments_form[moment]} label={Moment.label(moment)} labelled_externally />
             <span>
-              <label for={"moment-#{moment}"} class="schedule-moment-name">{Moment.label(moment)}</label>
+              <label for={@moments_form[moment].id} class="schedule-moment-name">{Moment.label(moment)}</label>
               <span :if={Moment.hint(moment) != ""} class="muted">{Moment.hint(moment)}</span>
             </span>
           </div>
@@ -2527,23 +2575,38 @@ defmodule HuddlzWeb.OrganizeLive do
             If a posted huddl is cancelled or moved, huddlz always posts a short follow-up here.
           </p>
         </fieldset>
-        <div class="form-row mt-4">
-          <label for="opening-line" class="form-label">Opening line</label>
-          <input
+        <div class="mt-4">
+          <.input
+            field={@form[:opening_line]}
             id="opening-line"
-            name="opening_line"
-            type="text"
-            class="form-input"
-            maxlength="140"
+            label="Opening line"
             placeholder="Optional. For example: This week at Elixir Nashville:"
-            value={@connection.opening_line}
-            phx-debounce="blur"
+            help="Up to 140 characters."
+            phx-debounce="300"
           />
         </div>
         <p class="muted text-sm mt-2">
           Changes save as you make them and show in the group's activity.
         </p>
-        <div class="form-foot mt-5">
+        <section
+          id="social-post-preview"
+          aria-label="Morning-of post preview"
+          class="mt-5 rounded-xl border border-base-content/15 bg-base-content/5 p-4"
+        >
+          <h3 class="font-semibold">Morning-of post preview</h3>
+          <p class="muted text-sm mt-1">
+            An example with your opening line. Each post uses the huddl's own details and local time.
+          </p>
+          <div class="mt-3 space-y-1 text-sm">
+            <p :if={@form[:opening_line].value} class="break-words">{@form[:opening_line].value}</p>
+            <p class="font-semibold">Your next huddl with {@group.name}</p>
+            <p>Today at 6:00 PM</p>
+            <p>Online</p>
+            <p>12 spots left</p>
+            <p class="break-all muted">{url(~p"/groups/#{@group.slug}/huddlz/example")}</p>
+          </div>
+        </section>
+        <div class="form-foot schedule-actions mt-5">
           <.button
             id="remove-connection"
             type="button"
@@ -2552,6 +2615,10 @@ defmodule HuddlzWeb.OrganizeLive do
           >
             Remove
           </.button>
+          <.link
+            href={~p"/organize/#{@group.slug}/social/reconnect/#{@connection.id}"}
+            class="btn-secondary"
+          >Reconnect</.link>
           <.button id="send-test-post" type="button" variant={:secondary} phx-click="send_test_post">
             Send a test post
           </.button>
@@ -2559,7 +2626,7 @@ defmodule HuddlzWeb.OrganizeLive do
             {if @fresh?, do: "Start posting", else: "Done"}
           </.button>
         </div>
-      </form>
+      </.form>
     </.modal>
     """
   end
