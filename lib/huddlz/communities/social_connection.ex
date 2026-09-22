@@ -31,6 +31,7 @@ defmodule Huddlz.Communities.SocialConnection do
     end
 
     mutations do
+      action :send_social_test_post, :send_test_post
       create :connect_place, :connect
       update :edit_social_connection, :edit
       update :pause_social_connection, :pause
@@ -50,6 +51,7 @@ defmodule Huddlz.Communities.SocialConnection do
       patch :edit
       patch :pause, route: "/:id/pause"
       patch :resume, route: "/:id/resume"
+      route :post, "/:id/test_post", :send_test_post
       delete :remove
     end
   end
@@ -107,6 +109,16 @@ defmodule Huddlz.Communities.SocialConnection do
       description "Drop the connection; reconnecting goes through the platform again"
     end
 
+    action :send_test_post do
+      description "Post a message to the place saying it is a test from huddlz"
+
+      argument :id, :uuid do
+        allow_nil? false
+      end
+
+      run Huddlz.Communities.SocialConnection.Actions.SendTestPost
+    end
+
     read :for_group do
       description "The group's social connections, oldest first, for its owner and organizers"
 
@@ -130,6 +142,10 @@ defmodule Huddlz.Communities.SocialConnection do
 
     policy action([:edit, :remove]) do
       authorize_if expr(group.owner_id == ^actor(:id))
+    end
+
+    policy action(:send_test_post) do
+      authorize_if Huddlz.Communities.SocialConnection.Checks.OwnsConnectionArgument
     end
 
     policy action([:pause, :resume]) do
