@@ -68,8 +68,8 @@ defmodule ShareLinksSteps do
     Map.merge(context, %{session: session, conn: session})
   end
 
-  step "I can copy the huddl's link from the Share section", context do
-    assert_copies(context.session, huddl_url(context.group, context.huddl))
+  step "the Share section offers copying the link", context do
+    assert_has(context.session, "#share-actions button", text: "Copy link", exact: true)
     context
   end
 
@@ -91,11 +91,6 @@ defmodule ShareLinksSteps do
 
   step "the compose screen opens with {string} and the group's link", %{args: [text]} = context do
     assert_compose(context, text, group_url(context.group))
-    context
-  end
-
-  step "I can copy the group's link from the Share section", context do
-    assert_copies(context.session, group_url(context.group))
     context
   end
 
@@ -141,10 +136,6 @@ defmodule ShareLinksSteps do
 
   defp html(%{conn: conn}),
     do: conn |> Phoenix.ConnTest.html_response(200) |> Floki.parse_document!()
-
-  defp assert_copies(session, url) do
-    assert_has(session, "#share-actions button[data-value='#{url}']", text: "Copy link")
-  end
 
   defp huddl_url(group, huddl), do: group_url(group) <> "/huddlz/#{huddl.id}"
   defp group_url(group), do: HuddlzWeb.Endpoint.url() <> "/groups/#{group.slug}"

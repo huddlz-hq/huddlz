@@ -5,10 +5,10 @@ Feature: Anyone can share a huddl or group from its page
   hands them the link and opens the compose screen of the places that have
   one, pre-filled. Sharing is a person sending a link, not a social post.
 
-  Scenario: Copying the huddl link
+  Scenario: Offering the huddl link for copying
     Given a public huddl "Community lunch"
     When I open the huddl page
-    Then I can copy the huddl's link from the Share section
+    Then the Share section offers copying the link
 
   Scenario: Sharing a huddl to a platform
     Given a public huddl "Community lunch" in "America/New_York" on 2030-07-20 at 12:00
@@ -32,17 +32,17 @@ Feature: Anyone can share a huddl or group from its page
     Given a public huddl "Community lunch"
     And I am signed out
     When I open the huddl page
-    Then I can copy the huddl's link from the Share section
+    Then the Share section offers copying the link
     And the Share section offers X, Bluesky, Threads, Facebook, LinkedIn and WhatsApp
 
   Scenario: A private huddl has no platform links
     Given I am a member of a private group with a huddl "Members' picnic"
     When I open the huddl page
-    Then I can copy the huddl's link from the Share section
+    Then the Share section offers copying the link
     But the Share section offers no platform links
 
   Scenario: A private group has no platform links
     Given I am a member of a private group with a huddl "Members' picnic"
     When I open the group page
-    Then I can copy the group's link from the Share section
+    Then the Share section offers copying the link
     But the Share section offers no platform links

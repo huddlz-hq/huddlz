@@ -11,6 +11,12 @@ defmodule BrowserHooks do
 
     context =
       cond do
+        Map.get(context, :clipboard_browser) ->
+          Map.put(context, :browser_context_opts,
+            timezone_id: "America/New_York",
+            permissions: ["clipboard-read", "clipboard-write"]
+          )
+
         Map.get(context, :mobile) ->
           Map.put(context, :browser_context_opts,
             timezone_id: "America/New_York",

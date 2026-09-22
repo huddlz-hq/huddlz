@@ -128,9 +128,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> assert_has("#share-huddl-modal-email[href^='mailto:?subject=Virtual%20Meeting']")
       |> assert_has("#share-huddl-modal-open[phx-click*='share-huddl-modal']")
       |> assert_has("#share-huddl-modal-url[value='#{huddl_url}']")
-      |> assert_has(
-        "#share-huddl-modal-copy[data-copy-target='#share-huddl-modal-url'] #share-huddl-modal-copy-label[phx-hook='ClipboardCopy'][phx-update='ignore']"
-      )
+      |> assert_has("#share-huddl-modal-copy", text: "Copy link")
       |> assert_has("#share-huddl-modal .qr-frame svg")
     end
 

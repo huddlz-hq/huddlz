@@ -110,29 +110,34 @@ Hooks.ClipboardCopy = {
         this.flashStatus("Copied!")
         return
       } catch (_error) {
-        // Fall back to selecting the visible link and using the browser copy command.
+        // Fall back to a selectable input and the browser copy command.
       }
     }
 
-    if (this.copySelectedLink()) {
+    if (this.copySelectedLink(value)) {
       this.flashStatus("Copied!")
     } else {
       this.flashStatus("Copy manually", 2500)
     }
   },
 
-  copySelectedLink() {
-    const input = document.querySelector(this.button.dataset.copyTarget)
-    if (!input) return false
-
-    input.focus()
-    input.select()
-    input.setSelectionRange(0, input.value.length)
+  copySelectedLink(value) {
+    const previousFocus = document.activeElement
+    const input = document.createElement("textarea")
+    input.value = value
+    input.readOnly = true
+    input.style.cssText = "position: fixed; top: 0; left: 0; opacity: 0; pointer-events: none;"
+    document.body.appendChild(input)
 
     try {
+      input.focus({preventScroll: true})
+      input.select()
       return document.execCommand("copy")
     } catch (_error) {
       return false
+    } finally {
+      input.remove()
+      previousFocus?.focus({preventScroll: true})
     }
   },
 
