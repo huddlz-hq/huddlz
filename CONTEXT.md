@@ -136,3 +136,15 @@ _Avoid_: Attendee list, attendees (for the people; "attendee" stays the API reso
 **Activity**:
 The group's own record of what people did: joined or left, RSVPd or cancelled, joined a waitlist or got a spot from it, accepted an invitation. Appended as those actions run, so it remembers what the membership and RSVP rows forget, and shown newest first on the overview to the group's organizers and owner.
 _Avoid_: Audit log, events, history, feed (in the domain; "feed" is fine for the panel)
+
+**Social connection**:
+A group's link to one outside place where huddlz posts on the group's behalf, such as one Slack channel or one Discord channel. One connection is one channel; a group connects again to post somewhere else. The group owns it: the owner connects, edits and removes it, organizers can see it and pause it. Only public groups have them.
+_Avoid_: Integration, channel (that is Slack's word for the place), webhook
+
+**Social post**:
+One message about one huddl sent to one social connection: the huddl's title, local time, place and link. Only public huddlz are posted.
+_Avoid_: Announcement, share, reminder (the email to people who RSVPd)
+
+**Social schedule**:
+The moments at which a social connection posts each huddl, chosen per connection from a fixed list such as a week before and the morning of. A moment that has already passed is skipped, never sent late.
+_Avoid_: Automation, campaign, cadence
