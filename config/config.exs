@@ -7,6 +7,19 @@
 # General application configuration
 import Config
 
+# GraphQL documents may contain inline secrets; filtering variables alone cannot
+# protect them. Phoenix request logging must also omit the document and inputs.
+config :absinthe, log: false
+
+config :phoenix, :filter_parameters, [
+  "password",
+  "secret",
+  "token",
+  "webhook",
+  "query",
+  "variables"
+]
+
 config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
 
 config :ash_graphql, authorize_update_destroy_with_error?: true

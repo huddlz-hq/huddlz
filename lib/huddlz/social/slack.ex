@@ -31,7 +31,7 @@ defmodule Huddlz.Social.Slack do
       redirect_uri: redirect_uri
     ]
 
-    case Req.post(@access_url, [form: form, retry: false] ++ req_options) do
+    case Req.post(@access_url, [form: form, retry: false, redirect: false] ++ req_options) do
       {:ok, %{status: 200, body: %{"ok" => true} = body}} -> place(body)
       {:ok, %{status: 200, body: %{"error" => error}}} -> {:error, error}
       {:ok, %{status: status}} -> {:error, {:status, status}}
@@ -53,7 +53,10 @@ defmodule Huddlz.Social.Slack do
 
   @impl true
   def post(webhook_url, text, req_options) do
-    case Req.post(webhook_url, [json: %{"text" => text}, retry: false] ++ req_options) do
+    case Req.post(
+           webhook_url,
+           [json: %{"text" => text}, retry: false, redirect: false] ++ req_options
+         ) do
       {:ok, %{status: status}} when status in 200..299 -> :ok
       {:ok, %{status: status}} when status in [403, 404, 410] -> {:error, :revoked}
       {:ok, %{status: status}} -> {:error, {:status, status}}

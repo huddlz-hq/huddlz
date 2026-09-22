@@ -19,7 +19,7 @@ defmodule HuddlzWeb.SocialConnectController do
 
     with {:ok, kind} <- kind(kind_param),
          {:ok, group} <- owned_group(slug, user) do
-      state = Phoenix.Token.sign(conn, @salt, {group.id, user.id, kind})
+      state = Phoenix.Token.sign(conn, @salt, {group.id, user.id, kind, nil})
       redirect(conn, external: Social.authorize_url(kind, state, callback_url(conn, kind)))
     else
       {:error, :not_owner} -> refuse(conn, ~p"/organize/#{slug}/social")
@@ -27,17 +27,35 @@ defmodule HuddlzWeb.SocialConnectController do
     end
   end
 
+  def reconnect(conn, %{"group_slug" => slug, "id" => id}) do
+    user = conn.assigns[:current_user]
+
+    with {:ok, group} <- owned_group(slug, user),
+         {:ok, %{group_id: group_id} = connection} <-
+           Communities.get_social_connection(id, actor: user),
+         true <- group_id == group.id do
+      state = Phoenix.Token.sign(conn, @salt, {group.id, user.id, connection.kind, connection.id})
+
+      redirect(conn,
+        external:
+          Social.authorize_url(connection.kind, state, callback_url(conn, connection.kind))
+      )
+    else
+      _ -> refuse(conn, ~p"/organize/#{slug}/social")
+    end
+  end
+
   def callback(conn, %{"kind" => kind_param, "code" => code, "state" => state}) do
     user = conn.assigns[:current_user]
 
     with {:ok, kind} <- kind(kind_param),
-         {:ok, {group_id, user_id, ^kind}} <-
+         {:ok, {group_id, user_id, ^kind, connection_id}} <-
            Phoenix.Token.verify(conn, @salt, state, max_age: @state_max_age),
          true <- not is_nil(user) and user.id == user_id,
          {:ok, group} <- owned_group_by_id(group_id, user),
          {:ok, place} <- Social.exchange(kind, code, callback_url(conn, kind)),
          {:ok, connection} <-
-           Communities.connect_place(group.id, Map.put(place, :kind, kind), actor: user) do
+           save_connection(group, kind, connection_id, place, user) do
       conn
       |> put_flash(:info, "#{Communities.SocialConnection.place(connection)} is connected.")
       |> redirect(to: ~p"/organize/#{group.slug}/social?connected=#{connection.id}")
@@ -54,6 +72,20 @@ defmodule HuddlzWeb.SocialConnectController do
     conn
     |> put_flash(:info, "Nothing was connected.")
     |> redirect(to: ~p"/organize")
+  end
+
+  defp save_connection(group, kind, nil, place, user) do
+    Communities.connect_place(group.id, Map.put(place, :kind, kind), actor: user)
+  end
+
+  defp save_connection(%{id: group_id}, kind, id, place, user) do
+    case Communities.get_social_connection(id, actor: user) do
+      {:ok, %{group_id: ^group_id, kind: ^kind} = connection} ->
+        Communities.reconnect_social_connection(connection, place, actor: user)
+
+      _ ->
+        {:error, :invalid_connection}
+    end
   end
 
   defp kind(param) do
