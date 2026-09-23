@@ -12,7 +12,4 @@ defmodule Huddlz.GeocodingStub do
 
   @impl true
   def geocode(_address), do: {:ok, %{latitude: 29.9012, longitude: -81.3124}}
-
-  @impl true
-  def reverse_geocode(_latitude, _longitude), do: {:error, :not_found}
 end

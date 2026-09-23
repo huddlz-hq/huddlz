@@ -32,37 +32,6 @@ defmodule Huddlz.Geocoding.Google do
 
   def geocode(_), do: {:error, :invalid_address}
 
-  @impl true
-  def reverse_geocode(lat, lng) when is_number(lat) and is_number(lng) do
-    opts =
-      [params: [latlng: "#{lat},#{lng}", key: api_key()]] ++ @req_options ++ req_test_options()
-
-    case Req.get(@geocoding_url, opts) do
-      {:ok, %{status: 200, body: %{"status" => "OK", "results" => results}}} ->
-        results
-        |> Enum.find(&addressable_result?/1)
-        |> case do
-          %{"formatted_address" => address, "place_id" => place_id} ->
-            {:ok, %{formatted_address: address, place_id: place_id}}
-
-          nil ->
-            {:error, :not_found}
-        end
-
-      {:ok, %{status: 200, body: %{"status" => "ZERO_RESULTS"}}} ->
-        {:error, :not_found}
-
-      {:ok, %{status: 200, body: %{"status" => status}}} ->
-        {:error, {:api_error, status}}
-
-      {:ok, %{status: status}} ->
-        {:error, {:api_error, status}}
-
-      {:error, reason} ->
-        {:error, {:request_failed, reason}}
-    end
-  end
-
   defp do_geocode(address) do
     address
     |> fetch_coordinates(api_key())
@@ -108,14 +77,6 @@ defmodule Huddlz.Geocoding.Google do
   end
 
   defp geographic_result?(_), do: false
-
-  # Only a street-level (or finer) result names one address; a locality or
-  # region would be no more specific than what a map search already has.
-  defp addressable_result?(%{"types" => types}) do
-    Enum.any?(types, &(&1 in ~w(street_address premise subpremise)))
-  end
-
-  defp addressable_result?(_), do: false
 
   defp api_key do
     Application.get_env(:huddlz, :google_maps)[:api_key]
