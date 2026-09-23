@@ -17,6 +17,11 @@ defmodule BrowserSocialScheduleSteps do
       |> visit("/organize/#{group.slug}/social")
       |> click_button("Edit")
       |> assert_has("#social-post-preview", text: "Morning-of post preview")
+      # The sheet moves focus to its first control again two animation
+      # frames after mounting; wait for it to finish opening before typing.
+      |> assert_browser(
+        "getComputedStyle(document.querySelector('#schedule-sheet-container')).opacity === '1'"
+      )
 
     Map.put(context, :conn, conn)
   end
