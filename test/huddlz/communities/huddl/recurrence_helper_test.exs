@@ -73,12 +73,12 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
       # Include day 22, the selected final local date, along with days 8 and 15.
       assert length(generated) == 3
 
-      dates = generated |> Enum.map(&DateTime.to_date(&1.starts_at)) |> Enum.sort()
+      dates = generated |> Enum.map(&local_date(&1.starts_at, ctx.huddl)) |> Enum.sort(Date)
 
-      expected_first = Date.add(DateTime.to_date(ctx.starts_at), 7)
-      expected_second = Date.add(DateTime.to_date(ctx.starts_at), 14)
-
-      expected_third = Date.add(DateTime.to_date(ctx.starts_at), 21)
+      source_date = local_date(ctx.starts_at, ctx.huddl)
+      expected_first = Date.add(source_date, 7)
+      expected_second = Date.add(source_date, 14)
+      expected_third = Date.add(source_date, 21)
 
       assert dates == Enum.sort([expected_first, expected_second, expected_third])
     end
@@ -127,10 +127,10 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
         Huddl
         |> Ash.Query.filter(huddl_template_id == ^template.id)
         |> Ash.read!(authorize?: false)
-        |> Enum.map(&DateTime.to_date(&1.starts_at))
+        |> Enum.map(&local_date(&1.starts_at, ctx.huddl))
         |> Enum.sort(Date)
 
-      source_date = DateTime.to_date(ctx.starts_at)
+      source_date = local_date(ctx.starts_at, ctx.huddl)
 
       assert dates == [
                Date.add(source_date, 14),
@@ -306,6 +306,12 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
     |> Ash.read!(authorize?: false)
     |> Enum.map(&DateTime.to_date(&1.starts_at))
     |> Enum.sort(Date)
+  end
+
+  # Series keep their local wall-clock time, so an evening start moves to the
+  # next UTC day once the series crosses a daylight-saving change.
+  defp local_date(datetime, huddl) do
+    datetime |> DateTime.shift_zone!(huddl.time_zone) |> DateTime.to_date()
   end
 
   defp template_attrs(huddl, attrs) do
