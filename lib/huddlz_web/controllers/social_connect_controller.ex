@@ -138,7 +138,12 @@ defmodule HuddlzWeb.SocialConnectController do
     |> redirect(to: to)
   end
 
-  defp callback_url(conn, kind), do: url(conn, ~p"/social/#{kind}/callback")
+  defp callback_url(conn, kind) do
+    case Social.callback_origin() do
+      nil -> url(conn, ~p"/social/#{kind}/callback")
+      origin -> origin <> ~p"/social/#{kind}/callback"
+    end
+  end
 
   defp refuse(conn, to) do
     conn

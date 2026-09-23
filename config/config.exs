@@ -125,6 +125,7 @@ config :huddlz, :geocoding, adapter: Huddlz.Geocoding.Google
 # Platforms a group can connect a place on. Client ids and secrets come
 # from the environment at runtime; without them the hand-off cannot start.
 config :huddlz, :social,
+  callback_origin: nil,
   slack: [client_id: nil, client_secret: nil],
   discord: [client_id: nil, client_secret: nil]
 
