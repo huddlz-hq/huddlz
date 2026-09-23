@@ -41,6 +41,12 @@ config :huddlz, :geocoding, adapter: Huddlz.MockGeocoding
 config :huddlz, :places, adapter: Huddlz.MockPlaces
 config :huddlz, geocoding_req_plug: {Req.Test, Huddlz.Geocoding.Google}
 config :huddlz, places_req_plug: {Req.Test, Huddlz.Places.Google}
+config :huddlz, social_req_plug: {Req.Test, Huddlz.Social}
+
+config :huddlz, :social,
+  slack: [client_id: "slack-client", client_secret: "slack-secret"],
+  discord: [client_id: "discord-client", client_secret: "discord-secret"]
+
 # Real Google adapters read this key for request headers; the configured
 # MockGeocoding/MockPlaces adapters mean live code never sends it, but the
 # *_req_plug-backed adapter tests need a non-nil value.

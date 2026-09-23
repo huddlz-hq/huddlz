@@ -98,6 +98,11 @@ defmodule HuddlzWeb.Router do
     get "/unsubscribe/:token", UnsubscribeController, :show
     post "/unsubscribe/:token", UnsubscribeController, :update
 
+    # Connecting a place hands off to the platform's consent screen and back.
+    get "/organize/:group_slug/social/connect/:kind", SocialConnectController, :connect
+    get "/organize/:group_slug/social/reconnect/:id", SocialConnectController, :reconnect
+    get "/social/:kind/callback", SocialConnectController, :callback
+
     ash_authentication_live_session :authenticated_routes,
       on_mount_prepend:
         if(Application.compile_env(:huddlz, :sql_sandbox?, false),
@@ -141,6 +146,7 @@ defmodule HuddlzWeb.Router do
       live "/organize/:group_slug", OrganizeLive, :overview
       live "/organize/:group_slug/huddlz", OrganizeLive, :huddlz
       live "/organize/:group_slug/members", OrganizeLive, :members
+      live "/organize/:group_slug/social", OrganizeLive, :social
       live "/organize/:group_slug/settings", OrganizeLive, :settings
 
       # Group routes
