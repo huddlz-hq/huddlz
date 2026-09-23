@@ -64,7 +64,7 @@ defmodule Huddlz.Places.Google do
         redirect: false,
         headers: [
           {"X-Goog-Api-Key", api_key()},
-          {"X-Goog-FieldMask", "formattedAddress,location,timeZone"}
+          {"X-Goog-FieldMask", "formattedAddress,location,timeZone,types"}
         ],
         params: [sessionToken: session_token]
       ] ++ @req_options ++ req_test_options()
@@ -82,6 +82,7 @@ defmodule Huddlz.Places.Google do
         {:ok,
          %{
            formatted_address: body["formattedAddress"],
+           types: body["types"] || [],
            latitude: lat,
            longitude: lng,
            time_zone: time_zone

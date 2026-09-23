@@ -50,7 +50,7 @@ defmodule Huddlz.Test.Helpers.LocationSelection do
   defp select_address(view, id, payload) do
     suggestion = Map.take(payload, [:place_id, :display_text, :main_text])
     suggestion = Map.put(suggestion, :secondary_text, "")
-    details = Map.take(payload, [:formatted_address, :latitude, :longitude, :time_zone])
+    details = Map.take(payload, [:formatted_address, :types, :latitude, :longitude, :time_zone])
 
     Mox.stub(Huddlz.MockPlaces, :autocomplete, fn _, _, _ -> {:ok, [suggestion]} end)
     Mox.stub(Huddlz.MockPlaces, :place_details, fn _, _ -> {:ok, details} end)

@@ -240,7 +240,6 @@ defmodule Huddlz.Generator do
       :create,
       defaults: [
         name: StreamData.repeatedly(fn -> Faker.Company.name() end),
-        unit: nil,
         place_id: nil,
         address:
           StreamData.repeatedly(fn ->
@@ -382,12 +381,15 @@ defmodule Huddlz.Generator do
   """
   def address_book_location_id(group_id) do
     alias Huddlz.Communities.GroupLocation
+    require Ash.Query
     group = Ash.get!(Group, group_id, authorize?: false)
 
-    case Ash.get(GroupLocation, [group_id: group_id, name: "Main Street", unit: nil],
-           authorize?: false
-         ) do
-      {:ok, location} ->
+    GroupLocation
+    |> Ash.Query.filter(group_id == ^group_id and name == "Main Street")
+    |> Ash.Query.limit(1)
+    |> Ash.read_one(authorize?: false)
+    |> case do
+      {:ok, %GroupLocation{} = location} ->
         location.id
 
       _missing ->

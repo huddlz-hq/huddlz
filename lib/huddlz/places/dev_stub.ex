@@ -91,6 +91,7 @@ defmodule Huddlz.Places.DevStub do
              &{&1.place_id,
               %{
                 formatted_address: &1.formatted_address,
+                types: ["locality", "political"],
                 latitude: &1.latitude,
                 longitude: &1.longitude,
                 time_zone: &1.time_zone
