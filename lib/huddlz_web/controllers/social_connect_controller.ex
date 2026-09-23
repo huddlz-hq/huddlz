@@ -86,7 +86,9 @@ defmodule HuddlzWeb.SocialConnectController do
   defp save_connection(%{id: group_id}, kind, id, place, user) do
     case Communities.get_social_connection(id, actor: user) do
       {:ok, %{group_id: ^group_id, kind: ^kind} = connection} ->
-        Communities.reconnect_social_connection(connection, keep_names(place, kind), actor: user)
+        Communities.reconnect_social_connection(connection, keep_names(place, connection),
+          actor: user
+        )
 
       _ ->
         {:error, :invalid_connection}
@@ -94,9 +96,15 @@ defmodule HuddlzWeb.SocialConnectController do
   end
 
   # Discord's consent screen reports ids, not names, so the names the owner
-  # gave the place stay through a reconnection.
-  defp keep_names(place, :discord), do: Map.drop(place, [:workspace_name, :channel_name])
-  defp keep_names(place, _kind), do: place
+  # gave the place stay when it is reconnected to the same channel. A
+  # different channel takes the platform's names until the owner renames it.
+  defp keep_names(
+         %{discord_guild_id: guild, discord_channel_id: channel} = place,
+         %{kind: :discord, discord_guild_id: guild, discord_channel_id: channel}
+       ),
+       do: Map.drop(place, [:workspace_name, :channel_name])
+
+  defp keep_names(place, _connection), do: place
 
   defp kind(param) do
     case Social.kind_from_param(param) do
