@@ -69,6 +69,19 @@ defmodule Huddlz.Social do
   end
 
   @doc """
+  Where the platform sends people back to, when it isn't this server's own
+  address: a development server behind an https tunnel registers the
+  tunnel's origin with the platform. Nil means use the server's URL.
+  """
+  @spec callback_origin() :: String.t() | nil
+  def callback_origin do
+    case Application.get_env(:huddlz, :social, [])[:callback_origin] do
+      origin when is_binary(origin) and origin != "" -> String.trim_trailing(origin, "/")
+      _ -> nil
+    end
+  end
+
+  @doc """
   Whether this server has the platform's app registered, so a hand-off can
   start. Without it the tile says so and the hand-off route refuses.
   """

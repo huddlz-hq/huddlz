@@ -522,6 +522,34 @@ defmodule SocialConnectionsSteps do
     Map.merge(context, %{session: session, conn: session, group: group, connection: connection})
   end
 
+  step "hand-offs come back through {string}", %{args: [origin]} = context do
+    social = Application.get_env(:huddlz, :social)
+    ExUnit.Callbacks.on_exit(fn -> Application.put_env(:huddlz, :social, social) end)
+    Application.put_env(:huddlz, :social, Keyword.put(social, :callback_origin, origin))
+    context
+  end
+
+  step "I start connecting Slack from the Social tab of {string}",
+       %{args: [group_name]} = context do
+    group = lookup_group(group_name)
+
+    conn =
+      dispatch(
+        context.session.conn,
+        HuddlzWeb.Endpoint,
+        :get,
+        "/organize/#{group.slug}/social/connect/slack"
+      )
+
+    Map.put(context, :handoff, URI.parse(redirected_to(conn)))
+  end
+
+  step "Slack is told to send me back to {string}", %{args: [callback]} = context do
+    assert context.handoff.host == "slack.com"
+    assert %{"redirect_uri" => ^callback} = URI.decode_query(context.handoff.query)
+    context
+  end
+
   step "I call the place {string} and its channel {string}",
        %{args: [server, channel]} = context do
     session =

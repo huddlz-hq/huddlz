@@ -194,3 +194,9 @@ Feature: A group connects a place for huddlz to post to
     When I open the connect dialog of "Elixir Nashville"
     Then Discord says it is not set up on this server
     And asking for the Discord hand-off directly is refused
+
+  Scenario: A development server sends the platform back through its tunnel
+    Given I am signed in as "owner@example.com"
+    And hand-offs come back through "https://dev.example"
+    When I start connecting Slack from the Social tab of "Elixir Nashville"
+    Then Slack is told to send me back to "https://dev.example/social/slack/callback"
