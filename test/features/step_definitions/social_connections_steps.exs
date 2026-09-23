@@ -718,6 +718,64 @@ defmodule SocialConnectionsSteps do
     |> json_response(200)
   end
 
+  step "{word} is not set up on this server", %{args: [platform]} = context do
+    kind = platform |> String.downcase() |> String.to_existing_atom()
+    social = Application.get_env(:huddlz, :social)
+    ExUnit.Callbacks.on_exit(fn -> Application.put_env(:huddlz, :social, social) end)
+
+    Application.put_env(
+      :huddlz,
+      :social,
+      Keyword.put(social, kind, client_id: nil, client_secret: nil)
+    )
+
+    context
+  end
+
+  step "I open the connect dialog of {string}", %{args: [group_name]} = context do
+    group = lookup_group(group_name)
+
+    session =
+      context.session
+      |> visit("/organize/#{group.slug}/social")
+      |> click_button("Connect a place")
+
+    Map.merge(context, %{session: session, conn: session, group: group})
+  end
+
+  step "{word} says it is not set up on this server", %{args: [platform]} = context do
+    id = "#connect-#{String.downcase(platform)}"
+
+    context.session
+    |> assert_has(id, text: platform)
+    |> assert_has(id, text: "Not set up on this server yet.")
+    |> refute_has("a#{id}")
+
+    context
+  end
+
+  step "asking for the {word} hand-off directly is refused", %{args: [platform]} = context do
+    kind = String.downcase(platform)
+    group = context.group
+
+    conn =
+      dispatch(
+        context.session.conn,
+        HuddlzWeb.Endpoint,
+        :get,
+        "/organize/#{group.slug}/social/connect/#{kind}"
+      )
+
+    assert redirected_to(conn) == "/organize/#{group.slug}/social"
+
+    context.session
+    |> visit("/organize/#{group.slug}/social")
+    |> refute_has("#social-connections [id^='social-connection-']")
+
+    assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "isn't set up on this server yet"
+    context
+  end
+
   # A mutation is refused when the API understood it and answered with a
   # policy or validation error rather than a result. A malformed query
   # (top-level errors) is not a refusal.

@@ -28,6 +28,7 @@ defmodule HuddlzWeb.OrganizeLive do
   alias Huddlz.Communities.SocialConnection
   alias Huddlz.Communities.SocialConnection.Kind
   alias Huddlz.Communities.SocialConnection.Moment
+  alias Huddlz.Social
   alias Huddlz.Social.Post
   alias HuddlzWeb.Components.TurnoutForm
   alias HuddlzWeb.HuddlStatus
@@ -2483,7 +2484,13 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :group, :map, required: true
 
   defp connect_place_dialog(assigns) do
-    assigns = assign(assigns, :not_yet, @not_yet)
+    assigns =
+      assigns
+      |> assign(:not_yet, @not_yet)
+      |> assign(:tiles, [
+        {:slack, "S", "Pick the workspace and channel on Slack's own screen."},
+        {:discord, "D", "Pick the server and channel on Discord's own screen."}
+      ])
 
     ~H"""
     <.modal id="connect-place-dialog" show on_cancel={JS.push("close_connect_dialog")}>
@@ -2492,24 +2499,27 @@ defmodule HuddlzWeb.OrganizeLive do
         <p class="mt-2 muted">Where should huddlz post for {@group.name}?</p>
       </div>
       <div class="place-tiles mt-5">
-        <a
-          id="connect-slack"
-          class="place-tile"
-          href={~p"/organize/#{@group.slug}/social/connect/slack"}
-        >
-          <span class="place-mark slack" aria-hidden="true">S</span>
-          <span class="place-tile-name">Slack</span>
-          <span class="place-tile-line">Pick the workspace and channel on Slack's own screen.</span>
-        </a>
-        <a
-          id="connect-discord"
-          class="place-tile"
-          href={~p"/organize/#{@group.slug}/social/connect/discord"}
-        >
-          <span class="place-mark discord" aria-hidden="true">D</span>
-          <span class="place-tile-name">Discord</span>
-          <span class="place-tile-line">Pick the server and channel on Discord's own screen.</span>
-        </a>
+        <%= for {kind, mark, line} <- @tiles do %>
+          <.link
+            :if={Social.configured?(kind)}
+            id={"connect-#{kind}"}
+            class="place-tile"
+            href={~p"/organize/#{@group.slug}/social/connect/#{kind}"}
+          >
+            <span class={"place-mark #{kind}"} aria-hidden="true">{mark}</span>
+            <span class="place-tile-name">{Kind.label(kind)}</span>
+            <span class="place-tile-line">{line}</span>
+          </.link>
+          <div
+            :if={!Social.configured?(kind)}
+            id={"connect-#{kind}"}
+            class="place-tile place-tile-off"
+          >
+            <span class={"place-mark #{kind}"} aria-hidden="true">{mark}</span>
+            <span class="place-tile-name">{Kind.label(kind)}</span>
+            <span class="place-tile-line">Not set up on this server yet.</span>
+          </div>
+        <% end %>
       </div>
       <ul class="not-yet-list mt-4">
         <li :for={{name, why} <- @not_yet}>

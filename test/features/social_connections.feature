@@ -187,3 +187,10 @@ Feature: A group connects a place for huddlz to post to
     Then the connection shows as paused
     When I reconnect this place through Slack
     Then the connection shows as paused
+
+  Scenario: A platform this server has not set up cannot be connected
+    Given I am signed in as "owner@example.com"
+    And Discord is not set up on this server
+    When I open the connect dialog of "Elixir Nashville"
+    Then Discord says it is not set up on this server
+    And asking for the Discord hand-off directly is refused
