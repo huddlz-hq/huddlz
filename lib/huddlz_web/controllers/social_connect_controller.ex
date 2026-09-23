@@ -8,6 +8,7 @@ defmodule HuddlzWeb.SocialConnectController do
   use HuddlzWeb, :controller
 
   alias Huddlz.Communities
+  alias Huddlz.Communities.SocialConnection.Kind
   alias Huddlz.Social
 
   @salt "social connect"
@@ -18,10 +19,12 @@ defmodule HuddlzWeb.SocialConnectController do
     user = conn.assigns[:current_user]
 
     with {:ok, kind} <- kind(kind_param),
-         {:ok, group} <- owned_group(slug, user) do
+         {:ok, group} <- owned_group(slug, user),
+         :ok <- set_up(kind) do
       state = Phoenix.Token.sign(conn, @salt, {group.id, user.id, kind, nil})
       redirect(conn, external: Social.authorize_url(kind, state, callback_url(conn, kind)))
     else
+      {:error, :not_set_up, kind} -> not_set_up(conn, kind, ~p"/organize/#{slug}/social")
       {:error, :not_owner} -> refuse(conn, ~p"/organize/#{slug}/social")
       {:error, _} -> refuse(conn, ~p"/organize")
     end
@@ -33,7 +36,8 @@ defmodule HuddlzWeb.SocialConnectController do
     with {:ok, group} <- owned_group(slug, user),
          {:ok, %{group_id: group_id} = connection} <-
            Communities.get_social_connection(id, actor: user),
-         true <- group_id == group.id do
+         true <- group_id == group.id,
+         :ok <- set_up(connection.kind) do
       state = Phoenix.Token.sign(conn, @salt, {group.id, user.id, connection.kind, connection.id})
 
       redirect(conn,
@@ -41,6 +45,7 @@ defmodule HuddlzWeb.SocialConnectController do
           Social.authorize_url(connection.kind, state, callback_url(conn, connection.kind))
       )
     else
+      {:error, :not_set_up, kind} -> not_set_up(conn, kind, ~p"/organize/#{slug}/social")
       _ -> refuse(conn, ~p"/organize/#{slug}/social")
     end
   end
@@ -116,6 +121,21 @@ defmodule HuddlzWeb.SocialConnectController do
       {:ok, _group} -> {:error, :not_owner}
       {:error, _} = error -> error
     end
+  end
+
+  # A platform without its app registered on this server has no consent
+  # screen to send anyone to.
+  defp set_up(kind) do
+    if Social.configured?(kind), do: :ok, else: {:error, :not_set_up, kind}
+  end
+
+  defp not_set_up(conn, kind, to) do
+    conn
+    |> put_flash(
+      :error,
+      "#{Kind.label(kind)} isn't set up on this server yet."
+    )
+    |> redirect(to: to)
   end
 
   defp callback_url(conn, kind), do: url(conn, ~p"/social/#{kind}/callback")

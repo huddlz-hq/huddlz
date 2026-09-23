@@ -68,6 +68,18 @@ defmodule Huddlz.Social do
     Application.get_env(:huddlz, :social, []) |> Keyword.get(kind, [])
   end
 
+  @doc """
+  Whether this server has the platform's app registered, so a hand-off can
+  start. Without it the tile says so and the hand-off route refuses.
+  """
+  @spec configured?(Kind.t()) :: boolean()
+  def configured?(kind) do
+    config = config(kind)
+    present?(config[:client_id]) and present?(config[:client_secret])
+  end
+
+  defp present?(value), do: is_binary(value) and String.trim(value) != ""
+
   # Tests route the platform calls through Req.Test.
   defp req_options do
     case Application.get_env(:huddlz, :social_req_plug) do

@@ -2538,6 +2538,8 @@ body .place-tile {
 
 body .place-tile:hover { border-color: var(--accent); background: var(--accent-soft); }
 body .place-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+body .place-tile-off { opacity: 0.6; }
+body .place-tile-off:hover { border-color: var(--line-strong); background: var(--panel-2); }
 body .place-tile-name { font-size: 15px; font-weight: 600; }
 body .place-tile-line { color: var(--muted); font-size: 13px; }
 
