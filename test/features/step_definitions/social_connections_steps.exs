@@ -503,23 +503,22 @@ defmodule SocialConnectionsSteps do
 
   step "I reconnect this place through {word}", %{args: [platform]} = context do
     kind = platform |> String.downcase() |> String.to_existing_atom()
-    group = context[:group] || lookup_group("Elixir Nashville")
-    connection = context[:connection] || connection_of(group, kind)
+    reconnect(context, kind, replacement_answer(kind))
+  end
 
-    session = context |> open_connection(connection.channel_name, group.name)
-    assert_has(session, "a", text: "Reconnect")
+  step "I reconnect this place through Discord to channel {string}",
+       %{args: [channel_id]} = context do
+    answer = put_in(replacement_answer(:discord), ["webhook", "channel_id"], channel_id)
+    reconnect(context, :discord, answer)
+  end
 
-    Req.Test.stub(Huddlz.Social, fn conn -> Req.Test.json(conn, replacement_answer(kind)) end)
+  step "the Discord connection opens channel {string} in server {string}",
+       %{args: [channel_id, server]} = context do
+    assert_has(context.session, "a[href='https://discord.com/channels/#{server}/#{channel_id}']",
+      text: "Open channel"
+    )
 
-    session =
-      follow_platform_handoff(
-        session,
-        group,
-        kind,
-        "/organize/#{group.slug}/social/reconnect/#{connection.id}"
-      )
-
-    Map.merge(context, %{session: session, conn: session, group: group, connection: connection})
+    context
   end
 
   step "hand-offs come back through {string}", %{args: [origin]} = context do
@@ -850,6 +849,28 @@ defmodule SocialConnectionsSteps do
         "url" => "https://discord.com/api/webhooks/1/secret"
       }
     }
+  end
+
+  # Reconnects the group's connection of that kind through the platform,
+  # which answers with the given place.
+  defp reconnect(context, kind, answer) do
+    group = context[:group] || lookup_group("Elixir Nashville")
+    connection = context[:connection] || connection_of(group, kind)
+
+    session = context |> open_connection(connection.channel_name, group.name)
+    assert_has(session, "a", text: "Reconnect")
+
+    Req.Test.stub(Huddlz.Social, fn conn -> Req.Test.json(conn, answer) end)
+
+    session =
+      follow_platform_handoff(
+        session,
+        group,
+        kind,
+        "/organize/#{group.slug}/social/reconnect/#{connection.id}"
+      )
+
+    Map.merge(context, %{session: session, conn: session, group: group, connection: connection})
   end
 
   # What the platform answers when a place is reconnected: the same place

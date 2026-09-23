@@ -178,6 +178,9 @@ Feature: A group connects a place for huddlz to post to
     When I reconnect this place through Discord
     Then the Social tab lists a connection to "#meetups" on Discord
     And the Social tab says the place is "Music City Makers"
+    When I reconnect this place through Discord to channel "555000111222333444"
+    Then the Social tab lists a connection to "Channel 555000111222333444" on Discord
+    And the Discord connection opens channel "555000111222333444" in server "290926792226357250"
 
   Scenario: A paused connection stays paused through a revoked place and its reconnection
     Given "Elixir Nashville" posts to the Slack channel "#general"
