@@ -20,7 +20,14 @@ defmodule Huddlz.Communities.ActivityLog do
 
   require Logger
 
-  alias Huddlz.Communities.{GroupActivity, GroupInvitation, GroupMember, Huddl, HuddlAttendee}
+  alias Huddlz.Communities.{
+    GroupActivity,
+    GroupInvitation,
+    GroupMember,
+    Huddl,
+    HuddlAttendee,
+    SocialConnection
+  }
 
   @impl true
   def requires_original_data?(_resource, _action), do: false
@@ -59,7 +66,27 @@ defmodule Huddlz.Communities.ActivityLog do
     end
   end
 
+  def notify(%Ash.Notifier.Notification{
+        resource: SocialConnection,
+        action: action,
+        data: connection,
+        actor: actor
+      }) do
+    case connection_kind(action.name) do
+      nil -> :ok
+      kind -> record_for_connection(kind, connection, actor)
+    end
+  end
+
   def notify(_notification), do: :ok
+
+  defp connection_kind(:connect), do: :connected_place
+  defp connection_kind(:reconnect), do: :connected_place
+  defp connection_kind(:edit), do: :edited_place
+  defp connection_kind(:pause), do: :paused_place
+  defp connection_kind(:resume), do: :resumed_place
+  defp connection_kind(:remove), do: :removed_place
+  defp connection_kind(_other), do: nil
 
   defp member_kind(:join_group), do: :joined
   defp member_kind(:add_member), do: :joined
@@ -101,6 +128,26 @@ defmodule Huddlz.Communities.ActivityLog do
   # is viewing huddlz as the person.
   defp impersonation_id(%{__metadata__: %{impersonation: %{id: id}}}), do: id
   defp impersonation_id(_actor), do: nil
+
+  # The actor is the person who acted on the connection; the place is kept
+  # as text so the entry still reads once the connection is gone.
+  defp record_for_connection(kind, connection, %{id: actor_id} = actor) do
+    GroupActivity
+    |> Ash.Changeset.for_create(:record, %{
+      kind: kind,
+      group_id: connection.group_id,
+      user_id: actor_id,
+      detail: SocialConnection.place(connection),
+      impersonation_id: impersonation_id(actor)
+    })
+    |> Ash.create(authorize?: false)
+    |> case do
+      {:ok, _activity} -> :ok
+      {:error, error} -> report(kind, error)
+    end
+  end
+
+  defp record_for_connection(kind, _connection, _actor), do: report(kind, :no_actor)
 
   defp record(kind, group_id, user_id, huddl_id, actor, source \\ nil) do
     GroupActivity

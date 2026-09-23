@@ -62,6 +62,24 @@ config :huddlz,
 
 config :huddlz, :dns_cluster_query, optional("DNS_CLUSTER_QUERY")
 
+# Platforms a group can connect a place on. Leave unset and the Social tab
+# says the platform isn't set up on this server. Tests stub the ids in
+# config/test.exs, which this would otherwise overwrite. The callback origin
+# is for development behind an https tunnel, where the platform must send
+# people back to the tunnel rather than to localhost.
+if config_env() != :test do
+  config :huddlz, :social,
+    callback_origin: optional("SOCIAL_CALLBACK_ORIGIN"),
+    slack: [
+      client_id: optional("SLACK_CLIENT_ID"),
+      client_secret: optional("SLACK_CLIENT_SECRET")
+    ],
+    discord: [
+      client_id: optional("DISCORD_CLIENT_ID"),
+      client_secret: optional("DISCORD_CLIENT_SECRET")
+    ]
+end
+
 # =============================================================================
 # Mailer Configuration
 # =============================================================================
