@@ -72,11 +72,16 @@ A group's managed collection of reusable physical meeting places.
 _Avoid_: Saved locations, group locations, venues
 
 **Address book location**:
-One reusable physical meeting place in a group's address book, optionally given a friendly name and unit identifier; different units in the same building can be separate entries. It carries its own local scheduling context, which a huddl takes on when the location is chosen for it.
+One reusable physical meeting place in a group's address book: a place, the organizer's address for it, and an optional friendly name. Nothing about an entry must be unique; two rooms in one building are simply two entries, and organizers tidy their own address book. It carries its own local scheduling context, which a huddl takes on when the location is chosen for it.
 _Avoid_: Saved location, group location, venue, group home location
 
-**Unit identifier**:
-The optional number or alphanumeric designation of a meeting place within a building, such as 711 or 4B. It can identify an apartment, room, suite, or other unit without requiring a type.
+**Place**:
+The spot on the map that an address book location points to, as the map provider identifies it. The place decides where a huddl is: map links, distance searches and the huddl's time zone use it, and attendees never read it.
+_Avoid_: Venue, address, coordinates
+
+**Address**:
+The organizer's own words for where an address book location is, filled in from its place and freely editable, including any suite, floor or room. It is what attendees read on the huddl page, in emails and in calendar invites; editing it never moves the place.
+_Avoid_: Formatted address, unit identifier, directions
 
 **Huddl**:
 A single gathering organized by a group. A huddl may be in-person, virtual, or hybrid.
