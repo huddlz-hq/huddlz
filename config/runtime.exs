@@ -104,6 +104,14 @@ google_maps_api_key =
 
 config :huddlz, :google_maps, api_key: google_maps_api_key
 
+# Browser key for the map on the huddl page. Restrict it to the site's domains
+# and the Maps Embed API; without it the huddl page shows no map.
+google_maps_embed_key = optional("GOOGLE_MAPS_EMBED_KEY")
+
+if google_maps_embed_key do
+  config :huddlz, :google_maps, embed_key: google_maps_embed_key
+end
+
 if config_env() == :prod do
   required!("AWS_ACCESS_KEY_ID")
   required!("AWS_SECRET_ACCESS_KEY")
