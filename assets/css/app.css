@@ -4883,15 +4883,22 @@ body .facts li {
   font-size: 13px;
 }
 
-/* Embedded map under the Where fact; Google's embed can't be themed, so the frame carries it */
+/* Embedded map under the Where fact; Google's embed can't be themed, so the frame carries it.
+   Google doesn't support embeds under 200px in either dimension. */
 body .facts li.facts-map { display: block; }
 body .facts-map iframe {
   display: block;
   width: 100%;
+  min-height: 200px;
   aspect-ratio: 16 / 9;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   background: var(--panel-2);
+}
+
+/* On phones the map follows every fact instead of splitting them */
+@media (max-width: 760px) {
+  body .facts li.facts-map { order: 1; }
 }
 
 body .facts svg { width: 18px; height: 18px; flex: 0 0 auto; color: var(--accent-ink); margin-top: 1px; }
