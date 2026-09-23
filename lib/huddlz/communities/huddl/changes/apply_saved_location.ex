@@ -43,6 +43,7 @@ defmodule Huddlz.Communities.Huddl.Changes.ApplySavedLocation do
           :physical_location,
           GroupLocation.full_address(location)
         )
+        |> Ash.Changeset.force_change_attribute(:place_id, location.place_id)
         |> Ash.Changeset.force_change_attribute(:latitude, location.latitude)
         |> Ash.Changeset.force_change_attribute(:longitude, location.longitude)
 

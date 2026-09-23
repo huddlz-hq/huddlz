@@ -1007,6 +1007,12 @@ defmodule Huddlz.Communities.Huddl do
       constraints max_length: 606
     end
 
+    attribute :place_id, :string do
+      allow_nil? true
+      description "Google place id snapshotted from the saved location, used for map links"
+      constraints max_length: 300
+    end
+
     attribute :virtual_link, :string do
       allow_nil? true
       sensitive? true

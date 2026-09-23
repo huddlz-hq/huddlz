@@ -26,6 +26,7 @@ defmodule Huddlz.Communities.Huddl.Changes.ClearUnusedLocationFields do
       :virtual ->
         changeset
         |> Ash.Changeset.force_change_attribute(:physical_location, nil)
+        |> Ash.Changeset.force_change_attribute(:place_id, nil)
         |> Ash.Changeset.force_change_attribute(:group_location_id, nil)
 
       :in_person ->

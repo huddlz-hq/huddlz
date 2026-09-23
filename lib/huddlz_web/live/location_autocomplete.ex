@@ -7,7 +7,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   - **Selected**: Static display of selected location with edit/clear buttons
 
   Manages all autocomplete state internally and notifies the parent via messages:
-  - `{:location_selected, id, %{place_id, display_text, main_text, latitude, longitude}}`
+  - `{:location_selected, id, %{place_id, display_text, main_text, formatted_address, latitude, longitude}}`
   - `{:location_cleared, id}`
 
   With `notify_target`, sends a `location_selection: {action, payload}` update
@@ -480,13 +480,14 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
 
   def handle_async(
         :place_details,
-        {:ok, {:ok, %{latitude: lat, longitude: lng, time_zone: time_zone}}},
+        {:ok, {:ok, %{latitude: lat, longitude: lng, time_zone: time_zone} = details}},
         socket
       ) do
     notify_parent(socket, :selected, %{
       place_id: socket.assigns.selected_place_id,
       display_text: socket.assigns.selected_text,
       main_text: socket.assigns.selected_main_text,
+      formatted_address: details[:formatted_address],
       latitude: lat,
       longitude: lng,
       time_zone: time_zone

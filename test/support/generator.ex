@@ -241,6 +241,7 @@ defmodule Huddlz.Generator do
       defaults: [
         name: StreamData.repeatedly(fn -> Faker.Company.name() end),
         unit: nil,
+        place_id: nil,
         address:
           StreamData.repeatedly(fn ->
             Faker.Address.street_address() <> ", " <> Faker.Address.city() <> ", TX"

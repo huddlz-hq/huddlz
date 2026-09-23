@@ -539,7 +539,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> visit(~p"/groups/#{group.slug}/huddlz/#{in_person_huddl.id}")
       |> assert_has(".facts .value", text: "123 Main St, Anytown, USA")
       |> assert_has(
-        "a.map-link[href='https://www.google.com/maps/search/?api=1&query=123+Main+St%2C+Anytown%2C+USA']",
+        "a.map-link[href='#{map_href(in_person_huddl)}']",
         text: "View on map"
       )
       |> refute_has(".facts .label", text: "Virtual access")
@@ -570,7 +570,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       |> visit(~p"/groups/#{group.slug}/huddlz/#{hybrid_huddl.id}")
       |> assert_has(".facts .value", text: "123 Main St, Anytown, USA")
       |> assert_has(
-        "a.map-link[href='https://www.google.com/maps/search/?api=1&query=123+Main+St%2C+Anytown%2C+USA']",
+        "a.map-link[href='#{map_href(hybrid_huddl)}']",
         text: "View on map"
       )
       |> assert_has(".facts .label", text: "Virtual access")
@@ -1042,6 +1042,13 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
     |> Ash.Query.for_read(:get_for_recurrence, %{id: id})
     |> Ash.read_one!(authorize?: false)
     |> is_struct(Huddl)
+  end
+
+  # A saved location's coordinates pinpoint the place, so the map link uses
+  # them rather than the ambiguous street-and-city text.
+  defp map_href(huddl) do
+    "https://www.google.com/maps/search/?api=1&query=" <>
+      URI.encode_www_form("#{huddl.latitude},#{huddl.longitude}")
   end
 
   defp create_confirmed_user do

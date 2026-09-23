@@ -116,13 +116,22 @@ defmodule HuddlzWeb.Live.AddressBookLocationForm do
 
     Communities.create_group_location(
       name,
-      location.display_text,
+      full_address(location),
       location.latitude,
       location.longitude,
       location.time_zone,
       assigns.group.id,
-      %{unit: assigns.unit},
+      %{unit: assigns.unit, place_id: location[:place_id]},
       actor: assigns.actor
     )
+  end
+
+  # Autocomplete's display text can be just a street and city; the resolved
+  # place's formatted address is the unambiguous one.
+  defp full_address(location) do
+    case location[:formatted_address] do
+      address when is_binary(address) and address != "" -> address
+      _ -> location.display_text
+    end
   end
 end

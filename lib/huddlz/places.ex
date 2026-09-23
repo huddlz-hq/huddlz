@@ -12,6 +12,7 @@ defmodule Huddlz.Places do
         }
 
   @type place_details :: %{
+          optional(:formatted_address) => String.t() | nil,
           latitude: float(),
           longitude: float(),
           time_zone: String.t()
@@ -21,7 +22,7 @@ defmodule Huddlz.Places do
   @callback autocomplete(query :: String.t(), session_token :: String.t(), opts :: keyword()) ::
               {:ok, [suggestion()]} | {:error, term()}
 
-  @doc "Get coordinates and the canonical IANA time zone for a place."
+  @doc "Get the full formatted address, coordinates and canonical IANA time zone for a place."
   @callback place_details(place_id :: String.t(), session_token :: String.t()) ::
               {:ok, place_details()} | {:error, term()}
 

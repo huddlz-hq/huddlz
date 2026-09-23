@@ -93,6 +93,34 @@ defmodule Huddlz.Places.GoogleTest do
                Google.place_details("place-123", "session-token")
     end
 
+    test "returns the formatted address so a venue or street resolves to a full address" do
+      Req.Test.stub(Google, fn conn ->
+        conn = Plug.Conn.fetch_query_params(conn)
+        [field_mask] = Plug.Conn.get_req_header(conn, "x-goog-fieldmask")
+        assert "formattedAddress" in String.split(field_mask, ",")
+
+        Req.Test.json(conn, %{
+          "formattedAddress" => "9801 Old St Augustine Rd, Jacksonville, FL 32257, USA",
+          "location" => %{"latitude" => 30.1712, "longitude" => -81.6021},
+          "timeZone" => %{"id" => "America/New_York"}
+        })
+      end)
+
+      assert {:ok, %{formatted_address: "9801 Old St Augustine Rd, Jacksonville, FL 32257, USA"}} =
+               Google.place_details("place-123", "session-token")
+    end
+
+    test "omits the formatted address when Google does not return one" do
+      Req.Test.stub(Google, fn conn ->
+        Req.Test.json(conn, %{
+          "location" => %{"latitude" => 30.2672, "longitude" => -97.7431},
+          "timeZone" => %{"id" => "America/Chicago"}
+        })
+      end)
+
+      assert {:ok, %{formatted_address: nil}} = Google.place_details("place-123", "session-token")
+    end
+
     test "returns request_failed without retrying when the request times out" do
       test_pid = self()
 

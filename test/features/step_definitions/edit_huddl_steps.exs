@@ -40,6 +40,26 @@ defmodule EditHuddlSteps do
     Map.put(context, :group_locations, [location | locations])
   end
 
+  step "the group {string} has a saved location {string} at {string} for place {string}",
+       %{args: [group_name, name, address, place_id]} = context do
+    group = lookup_group(group_name)
+    owner = Enum.find(context.users, &(&1.id == group.owner_id))
+
+    location =
+      generate(
+        group_location(
+          group_id: group.id,
+          name: name,
+          address: address,
+          place_id: place_id,
+          actor: owner
+        )
+      )
+
+    locations = Map.get(context, :group_locations, [])
+    Map.put(context, :group_locations, [location | locations])
+  end
+
   step "the group {string} has a huddl {string} at {string}",
        %{args: [group_name, title, address]} = context do
     group = lookup_group(group_name)
