@@ -28,3 +28,29 @@ defmodule HuddlzWeb.MapLinkTest do
     assert MapLink.url(huddl) == @base <> "Main+St%2C+Austin"
   end
 end
+
+defmodule HuddlzWeb.MapLinkEmbedTest do
+  # Changes the global Google Maps config, so it can't run alongside other tests.
+  use ExUnit.Case, async: false
+
+  alias HuddlzWeb.MapLink
+
+  @huddl %{physical_location: "Main St, Austin", place_id: nil, latitude: nil, longitude: nil}
+
+  setup do
+    config = Application.get_env(:huddlz, :google_maps)
+    on_exit(fn -> Application.put_env(:huddlz, :google_maps, config) end)
+    %{config: config}
+  end
+
+  test "the address text is the map query when there is neither place id nor coordinates" do
+    assert MapLink.embed_url(@huddl) ==
+             "https://www.google.com/maps/embed/v1/place?key=test-embed-key&q=Main+St%2C+Austin"
+  end
+
+  test "there is no map without an embed key", %{config: config} do
+    Application.put_env(:huddlz, :google_maps, Keyword.delete(config, :embed_key))
+
+    assert MapLink.embed_url(@huddl) == nil
+  end
+end

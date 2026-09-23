@@ -385,6 +385,22 @@ defmodule HuddlzWeb.HuddlLive.Show do
               </div>
             </li>
 
+            <li
+              :if={
+                @huddl.event_type in [:in_person, :hybrid] && @huddl.physical_location &&
+                  HuddlzWeb.MapLink.embed_url(@huddl)
+              }
+              class="facts-map"
+            >
+              <iframe
+                src={HuddlzWeb.MapLink.embed_url(@huddl)}
+                title={"Map of " <> first_line(@huddl.physical_location)}
+                loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"
+                allowfullscreen
+              ></iframe>
+            </li>
+
             <li :if={@huddl.event_type in [:virtual, :hybrid]}>
               <svg
                 viewBox="0 0 24 24"
@@ -1768,6 +1784,8 @@ defmodule HuddlzWeb.HuddlLive.Show do
 
   defp hero_location_segment(%{event_type: :virtual}), do: "Online"
   defp hero_location_segment(_), do: nil
+
+  defp first_line(text), do: text |> String.split("\n", parts: 2) |> hd()
 
   defp format_fact_when(huddl) do
     starts_at = DateTime.shift_zone!(huddl.starts_at, huddl.time_zone)

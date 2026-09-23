@@ -50,7 +50,7 @@ config :huddlz, :social,
 # Real Google adapters read this key for request headers; the configured
 # MockGeocoding/MockPlaces adapters mean live code never sends it, but the
 # *_req_plug-backed adapter tests need a non-nil value.
-config :huddlz, :google_maps, api_key: "test-google-maps-key"
+config :huddlz, :google_maps, api_key: "test-google-maps-key", embed_key: "test-embed-key"
 config :huddlz, Huddlz.Repo, pool: Ecto.Adapters.SQL.Sandbox
 config :huddlz, :sql_sandbox?, true
 
