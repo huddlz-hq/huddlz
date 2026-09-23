@@ -39,10 +39,7 @@ defmodule Huddlz.Communities.Huddl.Changes.ApplySavedLocation do
         changeset
         |> preserve_wall_clock_on_move(time_zone)
         |> Ash.Changeset.force_change_attribute(:time_zone, time_zone)
-        |> Ash.Changeset.force_change_attribute(
-          :physical_location,
-          GroupLocation.full_address(location)
-        )
+        |> Ash.Changeset.force_change_attribute(:physical_location, location.address)
         |> Ash.Changeset.force_change_attribute(:place_id, location.place_id)
         |> Ash.Changeset.force_change_attribute(:latitude, location.latitude)
         |> Ash.Changeset.force_change_attribute(:longitude, location.longitude)

@@ -1,7 +1,8 @@
 defmodule Huddlz.Communities.GroupLocation do
   @moduledoc """
-  A saved location in a group's address book.
-  Stores geocoded coordinates so locations can be reused without re-geocoding.
+  An address book location: a place (Google place id and coordinates), the
+  organizer's own address text for it, and an optional friendly name. Nothing
+  about an entry has to be unique; organizers tidy their own address book.
   """
 
   use Ash.Resource,
@@ -72,12 +73,12 @@ defmodule Huddlz.Communities.GroupLocation do
 
     create :create do
       primary? true
-      accept [:name, :address, :unit, :place_id, :latitude, :longitude, :time_zone, :group_id]
+      accept [:name, :address, :place_id, :latitude, :longitude, :time_zone, :group_id]
     end
 
     update :update do
       primary? true
-      accept [:name, :unit]
+      accept [:name, :address]
       require_atomic? false
 
       validate present(:name) do
@@ -126,6 +127,7 @@ defmodule Huddlz.Communities.GroupLocation do
 
   changes do
     change Huddlz.Communities.Changes.RequireActiveGroup, on: [:create, :update, :destroy]
+    change Huddlz.Communities.GroupLocation.Changes.NormalizeAddress, on: [:create, :update]
   end
 
   validations do
@@ -147,7 +149,7 @@ defmodule Huddlz.Communities.GroupLocation do
     attribute :address, :string do
       allow_nil? false
       public? true
-      description "Full formatted address from Google Places"
+      description "The organizer's address text, filled in from the place and freely editable"
       constraints min_length: 1, max_length: 500
     end
 
@@ -157,13 +159,6 @@ defmodule Huddlz.Communities.GroupLocation do
 
       description "Google place id, when known; lets map links open exactly this place"
       constraints max_length: 300
-    end
-
-    attribute :unit, :string do
-      allow_nil? true
-      public? true
-      description "Optional unit identifier (e.g., 711 or 4B)"
-      constraints max_length: 100
     end
 
     attribute :latitude, :float do
@@ -198,19 +193,5 @@ defmodule Huddlz.Communities.GroupLocation do
     has_many :huddlz, Huddlz.Communities.Huddl do
       destination_attribute :group_location_id
     end
-  end
-
-  @doc "The street address with any optional unit details for display and huddl snapshots."
-  def full_address(%{address: address} = location) do
-    case Map.get(location, :unit) do
-      unit when unit in [nil, ""] -> address
-      unit -> address <> "\nUnit " <> unit
-    end
-  end
-
-  identities do
-    identity :unique_name_and_unit_per_group, [:group_id, :name, :unit],
-      nils_distinct?: false,
-      pre_check?: true
   end
 end

@@ -25,7 +25,7 @@ defmodule HuddlzWeb.GroupLive.LocationsTest do
       conn
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}/locations")
-      |> assert_has("h1", text: "Saved Locations")
+      |> assert_has("h1", text: "Address book")
     end
 
     test "page is wrapped in the v3 sidebar shell", %{conn: conn, owner: owner, group: group} do
@@ -43,7 +43,7 @@ defmodule HuddlzWeb.GroupLive.LocationsTest do
       conn
       |> login(organizer)
       |> visit(~p"/groups/#{group.slug}/locations")
-      |> assert_has("h1", text: "Saved Locations")
+      |> assert_has("h1", text: "Address book")
     end
 
     test "regular member is redirected", %{conn: conn, member: member, group: group} do
@@ -87,7 +87,7 @@ defmodule HuddlzWeb.GroupLive.LocationsTest do
       conn
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}/locations")
-      |> assert_has("*", text: "No saved locations yet")
+      |> assert_has("*", text: "No addresses yet")
     end
 
     test "opens and cancels a styled deletion dialog without changing the location", %{

@@ -119,7 +119,7 @@ defmodule HuddlzWeb.HuddlLive.NewLocationTest do
 
     for mode <- [:new, :edit] do
       @mode mode
-      test "#{mode} huddl address dialog saves unit details from the final submission", %{
+      test "#{mode} huddl address dialog saves the address from the final submission", %{
         conn: conn,
         owner: owner,
         group: group
@@ -143,19 +143,20 @@ defmodule HuddlzWeb.HuddlLive.NewLocationTest do
         )
 
         view
-        |> form("#new-location-form", %{"location_unit" => "  4B  "})
+        |> form("#new-location-form", %{
+          "location_address" => "  Suite 4B, 320 1st St N, Jacksonville Beach, FL  "
+        })
         |> render_submit()
 
         assert has_element?(
                  view,
                  "[data-testid='saved-location-display']",
-                 ~r/320 1st St N, Jacksonville Beach, FL\s+Unit 4B/
+                 "Suite 4B, 320 1st St N, Jacksonville Beach, FL"
                )
 
         locations = Huddlz.Communities.list_group_locations!(group.id, actor: owner)
         location = Enum.find(locations, &(&1.name == "Beach meeting place"))
-        assert location.unit == "4B"
-        assert location.address == "320 1st St N, Jacksonville Beach, FL"
+        assert location.address == "Suite 4B, 320 1st St N, Jacksonville Beach, FL"
       end
     end
 

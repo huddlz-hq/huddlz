@@ -110,6 +110,22 @@ defmodule Huddlz.Places.GoogleTest do
                Google.place_details("place-123", "session-token")
     end
 
+    test "returns the place's types so a venue can be told from a street" do
+      Req.Test.stub(Google, fn conn ->
+        [field_mask] = Plug.Conn.get_req_header(conn, "x-goog-fieldmask")
+        assert "types" in String.split(field_mask, ",")
+
+        Req.Test.json(conn, %{
+          "types" => ["cafe", "establishment", "point_of_interest"],
+          "location" => %{"latitude" => 30.1712, "longitude" => -81.6021},
+          "timeZone" => %{"id" => "America/New_York"}
+        })
+      end)
+
+      assert {:ok, %{types: ["cafe", "establishment", "point_of_interest"]}} =
+               Google.place_details("place-123", "session-token")
+    end
+
     test "omits the formatted address when Google does not return one" do
       Req.Test.stub(Google, fn conn ->
         Req.Test.json(conn, %{

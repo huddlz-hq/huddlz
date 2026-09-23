@@ -5511,6 +5511,21 @@ body .form-input-wrap .form-input-icon {
 body .form-input-wrap:has(.form-input:focus) .form-input-icon { color: var(--accent-ink); }
 
 body .form-help { color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+/* Address book form: asks before a newly chosen place replaces an edited address */
+body .address-replace {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  font-size: 13px;
+}
+body .address-replace p { margin: 0; }
+body .address-replace-preview { color: var(--soft); white-space: pre-line; }
+body .address-replace-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 body .form-error { color: var(--danger); font-size: 12px; font-weight: 500; }
 
 body .form-control.read-only {

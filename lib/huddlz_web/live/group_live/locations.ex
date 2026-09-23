@@ -1,13 +1,12 @@
 defmodule HuddlzWeb.GroupLive.Locations do
   @moduledoc """
-  LiveView for managing group saved locations (address book).
+  LiveView for managing a group's address book.
   """
   use HuddlzWeb, :live_view
 
   import HuddlzWeb.HuddlLive.FormHelpers, only: [load_group_locations: 2]
 
   alias Huddlz.Communities
-  alias Huddlz.Communities.GroupLocation
   alias Huddlz.Communities.GroupLocation.DeletionImpact
   alias HuddlzWeb.Layouts
 
@@ -83,10 +82,10 @@ defmodule HuddlzWeb.GroupLive.Locations do
 
       <div class="page-head">
         <div>
-          <h1>Saved Locations</h1>
+          <h1>Address book</h1>
           <p>
-            Manage saved addresses for <strong>{@group.name}</strong>.
-            They appear in the venue picker when you schedule a huddl.
+            Places where <strong>{@group.name}</strong> meets.
+            Pick one when you schedule a huddl.
           </p>
         </div>
         <div class="actions">
@@ -101,12 +100,12 @@ defmodule HuddlzWeb.GroupLive.Locations do
           <h2>Addresses</h2>
         </:head>
         <:sub :if={@locations != []}>
-          Edit a location's name or unit details, or remove it.
+          Edit a location's name or address, or remove it.
         </:sub>
 
         <%= if @locations == [] do %>
           <div class="empty-state">
-            <p>No saved locations yet.</p>
+            <p>No addresses yet.</p>
             <p class="muted">
               Add addresses that your group uses regularly so you can pick them when scheduling a huddl.
             </p>
@@ -127,12 +126,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
                     autocomplete="off"
                     autofocus
                   />
-                  <.input
-                    field={@rename_form[:unit]}
-                    label="Unit (optional)"
-                    placeholder="e.g., 711 or 4B"
-                    autocomplete="address-line2"
-                  />
+                  <.textarea field={@rename_form[:address]} label="Address" rows="3" />
                   <div class="location-rename-actions">
                     <.button variant={:primary} type="submit">Save</.button>
                     <.button variant={:secondary} type="button" phx-click="cancel_rename">
@@ -142,8 +136,8 @@ defmodule HuddlzWeb.GroupLive.Locations do
                 </.form>
               <% else %>
                 <div class="location-info">
-                  <div class="row-title">{loc.name || GroupLocation.full_address(loc)}</div>
-                  <div :if={loc.name} class="row-desc">{GroupLocation.full_address(loc)}</div>
+                  <div class="row-title whitespace-pre-line">{loc.name || loc.address}</div>
+                  <div :if={loc.name} class="row-desc whitespace-pre-line">{loc.address}</div>
                 </div>
                 <div class="location-actions">
                   <.button
@@ -187,9 +181,9 @@ defmodule HuddlzWeb.GroupLive.Locations do
             </span>
             <h2 id="delete-location-modal-title">Delete this saved location?</h2>
             <p>
-              <strong>{@deleting_location.name || GroupLocation.full_address(@deleting_location)}</strong>
+              <strong>{@deleting_location.name || @deleting_location.address}</strong>
               <span :if={@deleting_location.name}>{" — " <>
-                GroupLocation.full_address(@deleting_location)}</span>
+                @deleting_location.address}</span>
             </p>
             <p :if={!@delete_location_blocked?}>
               It will no longer appear in future venue pickers. Past huddlz keep their
@@ -230,7 +224,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
       >
         <h2 class="modal-title">Add New Address</h2>
         <p class="modal-sub">
-          Saved venues show up in the venue picker for everyone in your group.
+          Addresses show up for everyone in your group when they schedule a huddl.
         </p>
 
         <.live_component

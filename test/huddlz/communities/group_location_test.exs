@@ -33,6 +33,29 @@ defmodule Huddlz.Communities.GroupLocationTest do
       assert location.longitude == -97.74
     end
 
+    test "the address keeps one kind of line break and no surrounding whitespace" do
+      owner = generate(user(role: :user))
+      group = generate(group(owner_id: owner.id, actor: owner))
+
+      location =
+        generate(
+          group_location(
+            group_id: group.id,
+            address: "  Back room\r\n222 West King Street  ",
+            actor: owner
+          )
+        )
+
+      assert location.address == "Back room\n222 West King Street"
+
+      updated =
+        location
+        |> Ash.Changeset.for_update(:update, %{address: "Rooftop\r\n222 West King Street\n"})
+        |> Ash.update!(actor: owner)
+
+      assert updated.address == "Rooftop\n222 West King Street"
+    end
+
     test "organizer can create a group location" do
       owner = generate(user(role: :user))
       organizer = generate(user(role: :user))
@@ -123,7 +146,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
       assert is_nil(location.name)
     end
 
-    test "duplicate names within same group are rejected" do
+    test "duplicate names within same group are allowed" do
       owner = generate(user(role: :user))
       group = generate(group(owner_id: owner.id, actor: owner))
 
@@ -139,7 +162,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
         })
         |> Ash.create(actor: owner)
 
-      assert {:error, _} =
+      assert {:ok, _} =
                GroupLocation
                |> Ash.Changeset.for_create(:create, %{
                  name: "HQ",
