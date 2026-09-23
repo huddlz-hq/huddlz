@@ -123,10 +123,11 @@ google_maps_api_key =
 config :huddlz, :google_maps, api_key: google_maps_api_key
 
 # Browser key for the map on the huddl page. Restrict it to the site's domains
-# and the Maps Embed API; without it the huddl page shows no map.
+# and the Maps Embed API; without it the huddl page shows no map. Tests keep the
+# fixed key from config/test.exs, so a value in .test.env can't change them.
 google_maps_embed_key = optional("GOOGLE_MAPS_EMBED_KEY")
 
-if google_maps_embed_key do
+if config_env() != :test and google_maps_embed_key not in [nil, ""] do
   config :huddlz, :google_maps, embed_key: google_maps_embed_key
 end
 
