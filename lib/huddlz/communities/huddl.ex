@@ -210,6 +210,7 @@ defmodule Huddlz.Communities.Huddl do
     metadata :impersonation_id, :uuid
     metadata :impersonator_id, :uuid
     metadata :automatic?, :boolean
+    metadata :copied_from_id, :uuid
     version_extensions authorizers: [Ash.Policy.Authorizer]
     mixin {Huddlz.Audit.Version, :mixin, []}
   end
@@ -227,8 +228,16 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     create :create do
+      # Copying fills the group and schedule inputs, so it runs first.
+      change Huddlz.Communities.Huddl.Changes.CopyFromHuddl
       change Huddlz.Communities.Changes.RequireActiveGroup
       primary? true
+
+      # A copy fills these from its source, so callers may leave them out.
+      # The title is checked here rather than at the end of the action so a
+      # blank one is reported alongside the form's other errors.
+      allow_nil_input [:title, :group_id, :starts_at, :ends_at]
+      validate present(:title), message: "is required"
 
       accept [
         :title,
@@ -260,6 +269,12 @@ defmodule Huddlz.Communities.Huddl do
       argument :frequency, :string, allow_nil?: true
 
       argument :pending_image_id, :uuid, allow_nil?: true, public?: false
+
+      argument :copied_from_id, :uuid do
+        allow_nil? true
+
+        description "Another huddl of the same group to copy. Details you leave out come from it; the date is always yours."
+      end
 
       validate one_of(:lifecycle_state, [:draft, :published])
       validate Huddlz.Communities.Huddl.Validations.FutureDateValidation

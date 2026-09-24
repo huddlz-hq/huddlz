@@ -361,7 +361,8 @@ defmodule Huddlz.Generator do
         lifecycle_state: :published,
         huddl_template_id: nil,
         is_recurring: false,
-        max_attendees: nil
+        max_attendees: nil,
+        copied_from_id: nil
       ],
       overrides: opts,
       actor: actor
