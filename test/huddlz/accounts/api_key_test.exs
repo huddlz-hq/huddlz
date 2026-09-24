@@ -40,6 +40,28 @@ defmodule Huddlz.Accounts.ApiKeyTest do
     end
   end
 
+  describe "audit history" do
+    test "keeps a key's lifecycle without its name, hash or last use" do
+      user = generate(user())
+      key = build_key!(user, in_days(7))
+      key |> Ash.Changeset.for_update(:mark_used, %{}, actor: user) |> Ash.update!()
+      :ok = Ash.destroy(key, actor: user)
+
+      versions =
+        ApiKey.Version
+        |> Ash.Query.filter(version_source_id == ^key.id)
+        |> Ash.read!(authorize?: false)
+
+      assert versions |> Enum.map(& &1.version_action_name) |> Enum.sort() == [:create, :destroy]
+
+      for version <- versions do
+        refute Map.has_key?(version.changes, "name")
+        refute Map.has_key?(version.changes, "api_key_hash")
+        refute Map.has_key?(version.changes, "last_used_at")
+      end
+    end
+  end
+
   describe ":mark_used action" do
     test "stamps the first use and skips repeats within a minute" do
       user = generate(user())

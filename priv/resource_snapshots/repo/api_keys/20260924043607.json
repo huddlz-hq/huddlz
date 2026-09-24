@@ -61,7 +61,7 @@
       "type": "utc_datetime_usec"
     },
     {
-      "allow_nil?": false,
+      "allow_nil?": true,
       "default": "fragment(\"(now() AT TIME ZONE 'utc')\")",
       "generated?": false,
       "precision": null,
@@ -136,7 +136,7 @@
   ],
   "custom_statements": [],
   "has_create_action": true,
-  "hash": "5982A6FBF940C046BE8C223A9A0E78297BAB41997D7F513BEDDCBA26CB9CDABD",
+  "hash": "37710715DC4E1E6A90E9E90F4E65E0B7774EFDEC9D5B67A839E19CBE37EB75ED",
   "identities": [
     {
       "all_tenants?": false,

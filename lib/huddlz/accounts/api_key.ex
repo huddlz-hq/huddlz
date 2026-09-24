@@ -6,7 +6,8 @@ defmodule Huddlz.Accounts.ApiKey do
   Plaintext keys are returned only at create time via the
   `plaintext_api_key` metadata; only the hash is persisted. Each key has
   the name its owner gave it and records when it was last used, at most
-  once a minute so busy clients don't write on every request.
+  once a minute so busy clients don't write on every request. Audit history
+  keeps each key's lifecycle but not its name, hash or last use.
   """
 
   use Ash.Resource,
@@ -34,7 +35,7 @@ defmodule Huddlz.Accounts.ApiKey do
     store_action_name? true
     reference_source? false
     sensitive_attributes :ignore
-    ignore_attributes [:inserted_at, :updated_at, :api_key_hash, :last_used_at]
+    ignore_attributes [:inserted_at, :updated_at, :api_key_hash, :last_used_at, :name]
     ignore_actions [:mark_used]
     belongs_to_actor :actor, Huddlz.Accounts.User, domain: Huddlz.Accounts, on_delete: :nilify
     metadata :impersonation_id, :uuid
@@ -115,7 +116,9 @@ defmodule Huddlz.Accounts.ApiKey do
       public? true
     end
 
-    create_timestamp :inserted_at, public?: true
+    # Keys made before creation times were stored take theirs from audit
+    # history when it recorded them; otherwise the time is unknown.
+    create_timestamp :inserted_at, public?: true, allow_nil?: true
   end
 
   relationships do

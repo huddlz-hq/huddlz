@@ -151,7 +151,7 @@ defmodule HuddlzWeb.Api.AuthController do
       %User{} = user ->
         keys =
           ApiKey
-          |> Ash.Query.sort(inserted_at: :desc)
+          |> Ash.Query.sort(inserted_at: :desc_nils_last)
           |> Ash.read!(actor: user)
           |> Enum.map(&serialize_api_key/1)
 
