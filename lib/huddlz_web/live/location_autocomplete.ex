@@ -11,7 +11,8 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   - `{:location_cleared, id}`
   - `{:location_pending, id}`, only with `notify_pending`: a place was picked and
     its coordinates are still on the way. `:location_selected` follows, or
-    `:location_cleared` when the lookup fails.
+    `:location_cleared` when the lookup fails. With `notify_pending`, reopening
+    a pick to edit it also sends `:location_cleared`.
 
   With `notify_target`, sends a `location_selection: {action, payload}` update
   to that LiveComponent instead. Existing message-based callers need no target.
@@ -412,7 +413,12 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
     {:noreply, select_suggestion(socket, place_id, display_text, main_text)}
   end
 
+  # Reopening the pick to edit it abandons it, whether or not its lookup has
+  # finished. A parent tracking pending picks hears that, so it neither waits
+  # for a cancelled lookup nor keeps a place the picker no longer shows.
   def handle_event("edit", _params, socket) do
+    if socket.assigns.notify_pending, do: notify_parent(socket, :cleared, nil)
+
     {:noreply,
      socket
      |> cancel_async(:place_details)

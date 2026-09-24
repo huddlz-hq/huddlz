@@ -77,6 +77,22 @@ Feature: Landing surface
     And I click the "Find a huddl" button
     Then Discover searches without a place
 
+  Scenario: Editing Near while the place is loading keeps it out of the search
+    When I visit "/"
+    And I type "aus" in the location field
+    And I pick "Austin" from the location suggestions while its details are still loading
+    And I reopen Near and erase the place
+    And I click the "Find a huddl" button
+    Then Discover searches without a place
+
+  Scenario: Erasing a picked place keeps it out of the search
+    When I visit "/"
+    And I type "aus" in the location field
+    And I select "Austin" from the location suggestions
+    And I reopen Near and erase the place
+    And I click the "Find a huddl" button
+    Then Discover searches without a place
+
   Scenario: Visitor picks an interest from the landing page
     When I visit "/"
     And I click link "Board games"

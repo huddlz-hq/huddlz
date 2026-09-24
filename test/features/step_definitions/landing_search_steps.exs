@@ -58,6 +58,19 @@ defmodule LandingSearchSteps do
     context
   end
 
+  step "I reopen Near and erase the place", context do
+    session = context[:session] || context[:conn]
+    view = session.view
+
+    view |> element("[data-testid='location-display']") |> render_click()
+
+    view
+    |> element("#location-autocomplete-input")
+    |> render_change(%{"location-autocomplete_search" => ""})
+
+    context
+  end
+
   step "Discover searches without a place", context do
     session = context[:session] || context[:conn]
     %URI{path: path, query: query} = URI.parse(session.current_path)
