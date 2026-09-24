@@ -72,6 +72,27 @@ defmodule CopyHuddlApiSteps do
     organizer_context(context, owner, group, source)
   end
 
+  step "I organize a private group with a draft huddl {string}", %{args: [title]} = context do
+    owner = generate(user())
+    group = generate(group(actor: owner, owner_id: owner.id, is_public: false))
+
+    source =
+      generate(
+        huddl(
+          title: title,
+          description: @description,
+          group_id: group.id,
+          actor: owner,
+          lifecycle_state: :draft,
+          max_attendees: 12
+        )
+      )
+
+    assert source.lifecycle_state == :draft
+    assert source.is_private
+    organizer_context(context, owner, group, source)
+  end
+
   step "a group I belong to as a member has a past huddl {string}", %{args: [title]} = context do
     {owner, group} = organized_group()
     member = generate(user())
@@ -153,7 +174,7 @@ defmodule CopyHuddlApiSteps do
     |> then(&Ash.get!(GroupLocation, &1, authorize?: false))
     |> Ash.destroy!(authorize?: false)
 
-    Map.put(context, :source, reload(context.source))
+    Map.put(context, :source, reload(context.source, context.owner))
   end
 
   step "I organize another group", context do
@@ -198,6 +219,23 @@ defmodule CopyHuddlApiSteps do
     })
   end
 
+  step "I copy it through {string} starting at a future time", %{args: [api]} = context do
+    starts_at = local_datetime(future_date(), ~T[19:00:00], context.source.time_zone)
+
+    context
+    |> Map.put(:copy_starts_at, starts_at)
+    |> copy(api, %{"starts_at" => DateTime.to_iso8601(starts_at)})
+  end
+
+  step "I copy it through {string} starting and ending at past times", %{args: [api]} = context do
+    starts_at = DateTime.add(DateTime.utc_now(), -3, :day)
+
+    copy(context, api, %{
+      "starts_at" => DateTime.to_iso8601(starts_at),
+      "ends_at" => DateTime.to_iso8601(DateTime.add(starts_at, 2, :hour))
+    })
+  end
+
   step "I copy it into the other group through {string}", %{args: [api]} = context do
     copy(context, api, %{
       "date" => Date.to_iso8601(future_date()),
@@ -236,6 +274,17 @@ defmodule CopyHuddlApiSteps do
 
     assert DateTime.to_date(local) == future_date()
     assert DateTime.to_time(local) == ~T[18:30:00]
+
+    assert DateTime.diff(copy.ends_at, copy.starts_at) ==
+             DateTime.diff(source.ends_at, source.starts_at)
+
+    context
+  end
+
+  step "the copy starts at that time and lasts as long as the original", context do
+    %{source: source, copy: copy} = copied(context)
+
+    assert DateTime.compare(copy.starts_at, context.copy_starts_at) == :eq
 
     assert DateTime.diff(copy.ends_at, copy.starts_at) ==
              DateTime.diff(source.ends_at, source.starts_at)
@@ -382,7 +431,9 @@ defmodule CopyHuddlApiSteps do
     date |> DateTime.new!(time, time_zone) |> DateTime.shift_zone!("Etc/UTC")
   end
 
-  defp reload(huddl), do: Ash.get!(Huddl, huddl.id, authorize?: false)
+  # Reads run as the organizer: the visibility filter hides drafts and
+  # private huddlz from reads without an actor, even unauthorized ones.
+  defp reload(huddl, actor), do: Ash.get!(Huddl, huddl.id, actor: actor, authorize?: false)
 
   defp copy(context, api, attributes) do
     attributes = Map.put(attributes, "copied_from_id", context.source.id)
@@ -436,7 +487,10 @@ defmodule CopyHuddlApiSteps do
           response["data"]["createHuddl"]["result"]["id"]
       end
 
-    %{source: reload(context.source), copy: Ash.get!(Huddl, id, authorize?: false)}
+    %{
+      source: reload(context.source, context.owner),
+      copy: Ash.get!(Huddl, id, actor: context.owner, authorize?: false)
+    }
   end
 
   defp refusal_errors(%{copy_api: "JSON:API", copy_response: response}) do

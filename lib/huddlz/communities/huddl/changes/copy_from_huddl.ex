@@ -55,13 +55,13 @@ defmodule Huddlz.Communities.Huddl.Changes.CopyFromHuddl do
     end
   end
 
-  # The actor must be able to see the source; the copy's own create policy
-  # then decides whether they may organize huddlz in its group.
+  # The read's visibility filter runs with the actor, so organizers can copy
+  # drafts and private huddlz. Authorization stays off so field policies
+  # don't mask values such as the online link; the copy's own create policy
+  # decides whether the actor may organize huddlz in the source's group.
   defp fetch_source(source_id, actor) do
-    with {:ok, %Huddl{}} <- Ash.get(Huddl, source_id, actor: actor),
-         {:ok, %Huddl{} = source} <- Ash.get(Huddl, source_id, authorize?: false) do
-      {:ok, source}
-    else
+    case Ash.get(Huddl, source_id, actor: actor, authorize?: false) do
+      {:ok, %Huddl{} = source} -> {:ok, source}
       _missing -> :error
     end
   end
@@ -118,18 +118,44 @@ defmodule Huddlz.Communities.Huddl.Changes.CopyFromHuddl do
 
   defp removed_location_name(_source), do: "The copied huddl's location"
 
+  # A copy is scheduled either by date (start time and duration default to
+  # the source's) or by a start timestamp (the end defaults to the source's
+  # length). Either way it must start in the future.
   defp put_schedule(changeset, source) do
-    changeset
-    |> require_date()
-    |> default_argument(:start_time, :starts_at, fn -> local_start_time(source) end)
-    |> default_argument(:duration_minutes, :ends_at, fn ->
-      DateTime.diff(source.ends_at, source.starts_at, :minute)
-    end)
+    if supplied?(changeset, :starts_at) do
+      changeset
+      |> default_ends_at(source)
+      |> Ash.Changeset.before_action(&require_future_start/1)
+    else
+      changeset
+      |> require_date()
+      |> default_argument(:start_time, fn -> local_start_time(source) end)
+      |> default_argument(:duration_minutes, fn -> duration_minutes(source) end)
+    end
+  end
+
+  defp default_ends_at(changeset, source) do
+    if supplied?(changeset, :ends_at) do
+      changeset
+    else
+      starts_at = Ash.Changeset.get_attribute(changeset, :starts_at)
+      ends_at = DateTime.add(starts_at, duration_minutes(source), :minute)
+      Ash.Changeset.change_attribute(changeset, :ends_at, ends_at)
+    end
+  end
+
+  defp require_future_start(changeset) do
+    starts_at = Ash.Changeset.get_attribute(changeset, :starts_at)
+
+    if DateTime.after?(starts_at, DateTime.utc_now()) do
+      changeset
+    else
+      Ash.Changeset.add_error(changeset, field: :starts_at, message: "must be in the future")
+    end
   end
 
   defp require_date(changeset) do
-    if is_nil(Ash.Changeset.get_argument(changeset, :date)) and
-         not supplied?(changeset, :starts_at) do
+    if is_nil(Ash.Changeset.get_argument(changeset, :date)) do
       Ash.Changeset.add_error(changeset,
         field: :date,
         message: "is required when copying a huddl"
@@ -139,14 +165,15 @@ defmodule Huddlz.Communities.Huddl.Changes.CopyFromHuddl do
     end
   end
 
-  defp default_argument(changeset, argument, attribute, value) do
-    if is_nil(Ash.Changeset.get_argument(changeset, argument)) and
-         not supplied?(changeset, attribute) do
+  defp default_argument(changeset, argument, value) do
+    if is_nil(Ash.Changeset.get_argument(changeset, argument)) do
       Ash.Changeset.set_argument(changeset, argument, value.())
     else
       changeset
     end
   end
+
+  defp duration_minutes(source), do: DateTime.diff(source.ends_at, source.starts_at, :minute)
 
   defp local_start_time(source) do
     source.starts_at

@@ -83,3 +83,23 @@ Feature: Copy a huddl through the API
     Given I organize a group with a past huddl "Hands-on with Ash Framework"
     When I copy it through "JSON:API" on a future date
     Then the copy's history records that it was copied from the original
+
+  Scenario Outline: Copying a draft in a private group
+    Given I organize a private group with a draft huddl "Hands-on with Ash Framework"
+    When I copy it through "<api>" on a future date
+    Then the copy has the original's title, description, format, location, online link, capacity and visibility
+
+    Examples:
+      | api      |
+      | JSON:API |
+      | GraphQL  |
+
+  Scenario: Copying onto a start time keeps the original's length
+    Given I organize a group with a past huddl "Hands-on with Ash Framework"
+    When I copy it through "JSON:API" starting at a future time
+    Then the copy starts at that time and lasts as long as the original
+
+  Scenario: A copy cannot start in the past
+    Given I organize a group with a past huddl "Hands-on with Ash Framework"
+    When I copy it through "JSON:API" starting and ending at past times
+    Then the copy is refused because "starts_at" "must be in the future"
