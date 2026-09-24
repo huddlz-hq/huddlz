@@ -76,23 +76,6 @@ defmodule HuddlzWeb.ApiAuth do
     |> Plug.Conn.halt()
   end
 
-  defp mark_key_used(
-         %{assigns: %{current_user: %User{__metadata__: %{api_key: %ApiKey{} = key}} = user}} =
-           conn
-       ) do
-    case key |> Ash.Changeset.for_update(:mark_used, %{}, actor: user) |> Ash.update() do
-      {:ok, _key} ->
-        :ok
-
-      {:error, error} ->
-        Logger.warning("could not record an API key's use: #{Exception.message(error)}")
-    end
-
-    conn
-  end
-
-  defp mark_key_used(conn), do: conn
-
   @doc """
   Default `on_error` handler. Returns the same JSON 401 body as
   `HuddlzWeb.Api.AuthController.auth_required/1` so all 401s from the
