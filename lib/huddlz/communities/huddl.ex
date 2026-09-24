@@ -276,6 +276,12 @@ defmodule Huddlz.Communities.Huddl do
         description "Another huddl of the same group to copy. Details you leave out come from it; the date is always yours."
       end
 
+      argument :copy_cover, :boolean do
+        default true
+
+        description "When copying, whether the copy gets its own copy of the source's cover image."
+      end
+
       validate one_of(:lifecycle_state, [:draft, :published])
       validate Huddlz.Communities.Huddl.Validations.FutureDateValidation
 

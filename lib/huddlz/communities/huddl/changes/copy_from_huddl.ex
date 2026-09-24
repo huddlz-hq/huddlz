@@ -182,7 +182,8 @@ defmodule Huddlz.Communities.Huddl.Changes.CopyFromHuddl do
   end
 
   defp copy_cover(changeset, source) do
-    if Ash.Changeset.get_argument(changeset, :pending_image_id) do
+    if Ash.Changeset.get_argument(changeset, :pending_image_id) ||
+         Ash.Changeset.get_argument(changeset, :copy_cover) == false do
       changeset
     else
       Ash.Changeset.after_action(changeset, &copy_cover_to(&1, &2, source))

@@ -193,6 +193,11 @@ defmodule CopyHuddlApiSteps do
     copy(context, api, %{"date" => Date.to_iso8601(future_date()), "title" => title})
   end
 
+  step "I copy it through {string} on a future date without its cover",
+       %{args: [api]} = context do
+    copy(context, api, %{"date" => Date.to_iso8601(future_date()), "copy_cover" => false})
+  end
+
   step "I copy it through {string} without a date", %{args: [api]} = context do
     copy(context, api, %{})
   end
@@ -343,6 +348,15 @@ defmodule CopyHuddlApiSteps do
     assert Storage.exists?(image.storage_path)
     assert Storage.exists?(image.thumbnail_path)
     Map.put(context, :copy_image, image)
+  end
+
+  step "the copy has no cover image", context do
+    %{copy: copy} = copied(context)
+
+    assert {:error, %Ash.Error.Invalid{}} =
+             Communities.get_current_huddl_cover_image(copy.id, authorize?: false)
+
+    context
   end
 
   step "I remove the copy's cover image", context do

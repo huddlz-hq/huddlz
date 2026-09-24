@@ -36,6 +36,12 @@ Feature: Copy a huddl through the API
     When I remove the copy's cover image
     Then the original still has its cover image
 
+  Scenario: Leaving the cover behind
+    Given I organize a group with a past huddl "Hands-on with Ash Framework"
+    And that huddl has a cover image
+    When I copy it through "JSON:API" on a future date without its cover
+    Then the copy has no cover image
+
   Scenario: A copy of a series huddl is a one-off
     Given I organize a group with a weekly series "Elixir study night"
     When I copy it through "JSON:API" on a future date
