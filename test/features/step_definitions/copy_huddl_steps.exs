@@ -32,6 +32,33 @@ defmodule CopyHuddlSteps do
     })
   end
 
+  step "I organize a group with a 45-minute huddl", context do
+    owner = generate(user())
+    group = generate(group(actor: owner, owner_id: owner.id, is_public: true))
+
+    source =
+      generate(
+        huddl(
+          title: "Quick study session",
+          group_id: group.id,
+          actor: owner,
+          duration_minutes: 45
+        )
+      )
+
+    Map.merge(context, %{
+      owner: owner,
+      group: group,
+      source: source,
+      conn: login(context.conn, owner)
+    })
+  end
+
+  step "the copied duration is 45 minutes", context do
+    assert_has(context.session, "select", label: "Duration", selected: "45 minutes")
+    context
+  end
+
   step "I visit that huddl and choose to copy it", context do
     session =
       context.conn
@@ -132,18 +159,47 @@ defmodule CopyHuddlSteps do
   step "the new huddl has its own copy of the cover image", context do
     [copy] = copies(context)
 
-    {:ok, original} =
-      Communities.get_current_huddl_cover_image(context.source.id, authorize?: false)
-
-    {:ok, image} = Communities.get_current_huddl_cover_image(copy.id, authorize?: false)
-
     ExUnit.Callbacks.on_exit(fn ->
       File.rm_rf!("priv/static/uploads/huddl_cover_images/#{copy.id}")
     end)
 
-    assert image.filename == original.filename
-    refute image.storage_path == original.storage_path
+    assert_cover_available(copy.id, context.owner)
+    Map.put(context, :copy, copy)
+  end
+
+  step "I remove the saved copy's cover", context do
+    session =
+      context.conn
+      |> visit("/groups/#{context.group.slug}/huddlz/#{context.copy.id}/edit")
+      |> click_button("Remove")
+      |> assert_has("*", text: "Image removed")
+
+    {:ok, copy} =
+      Communities.get_huddl(context.copy.id, actor: context.owner, load: [:current_image_url])
+
+    assert is_nil(copy.current_image_url)
+    Map.put(context, :session, session)
+  end
+
+  step "the original cover is still available", context do
+    assert_cover_available(context.source.id, context.owner)
     context
+  end
+
+  defp assert_cover_available(id, actor) do
+    {:ok, huddl} = Communities.get_huddl(id, actor: actor, load: [:current_image_url])
+    assert is_binary(huddl.current_image_url)
+
+    conn =
+      Phoenix.ConnTest.dispatch(
+        Phoenix.ConnTest.build_conn(),
+        HuddlzWeb.Endpoint,
+        :get,
+        huddl.current_image_url,
+        nil
+      )
+
+    assert Phoenix.ConnTest.response(conn, 200) == File.read!("test/fixtures/test_image.jpg")
   end
 
   step "the new huddl has no cover image", context do

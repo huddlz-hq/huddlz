@@ -36,6 +36,8 @@ Feature: Copy a huddl
     Then the form shows a copy of the original's cover
     When I schedule the huddl
     Then the new huddl has its own copy of the cover image
+    When I remove the saved copy's cover
+    Then the original cover is still available
 
   Scenario: Removing the copied cover
     Given I organize a group with a past huddl "Hands-on with Ash Framework"
@@ -68,3 +70,10 @@ Feature: Copy a huddl
     And I organize another group
     When I open the new huddl form for the other group copying that huddl
     Then the new huddl form is empty
+
+  Scenario: Copying a huddl with a 45-minute duration
+    Given I organize a group with a 45-minute huddl
+    When I visit that huddl and choose to copy it
+    Then the copied duration is 45 minutes
+    When I schedule the huddl
+    Then the group has a new upcoming "Quick study session"

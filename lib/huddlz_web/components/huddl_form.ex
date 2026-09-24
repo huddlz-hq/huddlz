@@ -152,6 +152,18 @@ defmodule HuddlzWeb.Components.HuddlForm do
 
   def duration_options, do: @duration_options
 
+  defp duration_options(value) when value in [nil, ""], do: @duration_options
+
+  defp duration_options(value) do
+    value = to_string(value)
+
+    if Enum.any?(@duration_options, fn {_label, minutes} -> minutes == value end) do
+      @duration_options
+    else
+      [{"#{value} minutes", value} | @duration_options]
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # Shared panels
   # ---------------------------------------------------------------------------
@@ -230,7 +242,7 @@ defmodule HuddlzWeb.Components.HuddlForm do
               field={@form[:duration_minutes]}
               label="Duration"
               prompt={@duration_prompt}
-              options={duration_options()}
+              options={duration_options(@form[:duration_minutes].value)}
             />
           </div>
         </div>

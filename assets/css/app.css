@@ -7934,3 +7934,25 @@ body .photo-delete-preview figcaption { overflow-wrap: anywhere; }
     justify-self: end;
   }
 }
+
+@media (max-width: 640px) {
+  body #huddl-form:has(> .huddl-create-actions) {
+    padding-bottom: calc(132px + env(safe-area-inset-bottom));
+  }
+
+  body .form-foot.huddl-create-actions {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+  }
+
+  body .huddl-create-actions > :first-child { grid-column: 1 / -1; }
+  body .huddl-create-actions > * { min-height: 44px; justify-content: center; }
+}

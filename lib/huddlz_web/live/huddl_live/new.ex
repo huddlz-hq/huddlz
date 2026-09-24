@@ -108,7 +108,7 @@ defmodule HuddlzWeb.HuddlLive.New do
   defp fetch_copy_source(id, %{id: group_id}, user) do
     with {:ok, _uuid} <- Ecto.UUID.cast(id),
          {:ok, %Huddl{group_id: ^group_id} = source} <-
-           Ash.get(Huddl, id, actor: user, load: [:current_image_url, :huddl_template]) do
+           Communities.get_huddl(id, actor: user, load: [:current_image_url, :huddl_template]) do
       {:ok, source}
     else
       _not_copyable -> :error
@@ -301,7 +301,7 @@ defmodule HuddlzWeb.HuddlLive.New do
 
         <.capacity_panel form={@form} is_public={@group.is_public} />
 
-        <div class="form-foot is-flush">
+        <div class="form-foot is-flush huddl-create-actions">
           <.button
             id="publish-huddl"
             variant={:primary}

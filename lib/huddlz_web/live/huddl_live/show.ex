@@ -10,7 +10,6 @@ defmodule HuddlzWeb.HuddlLive.Show do
   alias Huddlz.Accounts.User
   alias Huddlz.Communities
   alias Huddlz.Communities.GroupMember
-  alias Huddlz.Communities.Huddl
   alias Huddlz.Storage.HuddlCoverImages
   alias Huddlz.Storage.HuddlPhotos
   alias HuddlzWeb.Avatar
@@ -644,6 +643,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
               </.button>
               <.button
                 :if={@can_copy_huddl}
+                id="copy-huddl"
                 variant={:secondary}
                 navigate={~p"/groups/#{@huddl.group.slug}/huddlz/new?#{[copy: @huddl.id]}"}
               >
@@ -1477,7 +1477,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
     |> assign(
       :can_copy_huddl,
       is_nil(huddl.group.archived_at) &&
-        Ash.can?({Huddl, :create, %{group_id: huddl.group_id}}, user)
+        Communities.can_create_huddl?(user, %{group_id: huddl.group_id})
     )
     |> assign(
       :can_publish_huddl,
