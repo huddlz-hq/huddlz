@@ -15,8 +15,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
 
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
-  alias Huddlz.Communities.HuddlCoverImage
-  alias Huddlz.Storage.HuddlCoverImages
+  alias Huddlz.Communities.Huddl.CoverCopy
   alias Huddlz.TimeZone
 
   @max_instances 104
@@ -234,35 +233,11 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   end
 
   defp copy_current_image!(source, instance, metadata, opts) do
-    case Communities.list_huddl_cover_images(source.id, authorize?: false) do
-      {:ok, []} ->
-        :ok
+    context = Map.put(Keyword.get(opts, :context, %{}), :paper_trail_metadata, metadata)
 
-      {:ok, [image | _]} ->
-        attrs = duplicate_image!(image, instance.id)
-
-        HuddlCoverImage
-        |> Ash.Changeset.for_create(:create, Map.put(attrs, :huddl_id, instance.id), opts)
-        |> Ash.Changeset.set_context(%{paper_trail_metadata: metadata})
-        |> Ash.create(authorize?: false)
-        |> case do
-          {:ok, _image} ->
-            :ok
-
-          {:error, error} ->
-            HuddlCoverImages.delete(attrs.storage_path)
-            HuddlCoverImages.delete(attrs.thumbnail_path)
-            raise error
-        end
-
-      {:error, error} ->
-        raise error
-    end
-  end
-
-  defp duplicate_image!(image, instance_id) do
-    case HuddlCoverImages.duplicate(image, instance_id) do
-      {:ok, attrs} -> attrs
+    case CoverCopy.copy_current(source.id, instance.id, Keyword.put(opts, :context, context)) do
+      :ok -> :ok
+      {:error, %{__exception__: true} = error} -> raise error
       {:error, reason} -> raise "failed to copy recurring huddl image: #{inspect(reason)}"
     end
   end

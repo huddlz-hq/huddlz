@@ -134,6 +134,10 @@ _Avoid_: Headcount, attendance, check-in
 Turnout as a share of a huddl's RSVPs, not counting the waitlist. It can exceed 100% when more people come than RSVPd.
 _Avoid_: Attendance rate, conversion
 
+**Huddl copy**:
+A new huddl filled in from another huddl of the same group, on a date of its own. After that it shares nothing with its source: no RSVPs, photos, turnout or series, and editing one never changes the other. Only the audit history records which huddl it came from.
+_Avoid_: Duplicate, clone, template, rerun
+
 **Group overview**:
 The organizer summary for one group: how membership, RSVPs and turnout are moving over a chosen period.
 _Avoid_: Dashboard, analytics, stats page
