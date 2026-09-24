@@ -46,12 +46,20 @@ defmodule HuddlzWeb.LandingLive do
     {:noreply, assign(socket, :location, :pending)}
   end
 
-  def handle_info({:location_selected, "location-autocomplete", location}, socket) do
+  # Every pick here passes through :pending first, so a place that arrives
+  # at any other time belongs to a pick that was since cleared.
+  def handle_info(
+        {:location_selected, "location-autocomplete", location},
+        %{assigns: %{location: :pending}} = socket
+      ) do
     case socket.assigns.waiting_query do
       nil -> {:noreply, assign(socket, :location, location)}
       query -> {:noreply, push_navigate(socket, to: discover_path(query, location))}
     end
   end
+
+  def handle_info({:location_selected, "location-autocomplete", _stale}, socket),
+    do: {:noreply, socket}
 
   def handle_info({:location_cleared, "location-autocomplete"}, socket) do
     {:noreply, assign(socket, location: nil, waiting_query: nil)}

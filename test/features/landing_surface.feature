@@ -58,6 +58,25 @@ Feature: Landing surface
     When the place details arrive
     Then Discover opens searching near "Austin, TX, USA"
 
+  Scenario: A failed place lookup leaves Near empty
+    When I visit "/"
+    And I type "aus" in the location field
+    And I pick "Austin" from the location suggestions while its details are still loading
+    And the place lookup fails
+    Then the location filter should not be active
+    And I should see "Location search is currently unavailable"
+    When I click the "Find a huddl" button
+    Then Discover searches without a place
+
+  Scenario: Clearing Near while the place is loading keeps it out of the search
+    When I visit "/"
+    And I type "aus" in the location field
+    And I pick "Austin" from the location suggestions while its details are still loading
+    And I clear the selected location
+    And the cleared place's lookup finishes
+    And I click the "Find a huddl" button
+    Then Discover searches without a place
+
   Scenario: Visitor picks an interest from the landing page
     When I visit "/"
     And I click link "Board games"

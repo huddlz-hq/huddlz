@@ -414,7 +414,9 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
 
   def handle_event("edit", _params, socket) do
     {:noreply,
-     assign(socket,
+     socket
+     |> cancel_async(:place_details)
+     |> assign(
        selected: false,
        search_text: socket.assigns.selected_text || "",
        suggestions: [],
@@ -483,6 +485,11 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
     {:noreply, assign(socket, loading: false)}
   end
 
+  # A pick cleared or edited while its lookup ran is gone; a late result
+  # (or the exit from cancelling it) must not bring it back.
+  def handle_async(:place_details, _result, %{assigns: %{selected: false}} = socket),
+    do: {:noreply, assign(socket, loading: false)}
+
   def handle_async(
         :place_details,
         {:ok, {:ok, %{latitude: lat, longitude: lng, time_zone: time_zone} = details}},
@@ -508,32 +515,38 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
      )}
   end
 
-  def handle_async(:place_details, {:ok, {:error, reason}}, socket) do
-    notify_lookup_failed(socket)
-
-    {:noreply,
-     assign(socket,
-       error: Huddlz.Places.error_message(reason),
-       loading: false
-     )}
-  end
+  def handle_async(:place_details, {:ok, {:error, reason}}, socket),
+    do: {:noreply, lookup_failed(socket, Huddlz.Places.error_message(reason))}
 
   def handle_async(:place_details, {:ok, {:ok, _details}}, socket) do
-    notify_lookup_failed(socket)
-
     {:noreply,
-     assign(socket,
-       error: "That location did not include a time zone. Please choose another result.",
-       loading: false
+     lookup_failed(
+       socket,
+       "That location did not include a time zone. Please choose another result."
      )}
   end
 
-  def handle_async(:place_details, {:exit, _reason}, socket) do
-    notify_lookup_failed(socket)
-    {:noreply, assign(socket, loading: false)}
-  end
+  def handle_async(:place_details, {:exit, _reason}, socket),
+    do: {:noreply, lookup_failed(socket, nil)}
 
   # -- Private helpers --
+
+  # A failed lookup leaves nothing selected: the picked text goes back into
+  # the search box beside the error, so the picker never shows a place that
+  # isn't applied.
+  defp lookup_failed(socket, error) do
+    notify_lookup_failed(socket)
+
+    assign(socket,
+      selected: false,
+      search_text: socket.assigns.selected_text || "",
+      selected_text: nil,
+      selected_place_id: nil,
+      selected_main_text: nil,
+      error: error,
+      loading: false
+    )
+  end
 
   defp try_select_highlighted(socket) do
     idx = socket.assigns.suggestion_index
@@ -553,7 +566,9 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   end
 
   defp reset_state(socket) do
-    assign(socket,
+    socket
+    |> cancel_async(:place_details)
+    |> assign(
       selected: false,
       selected_text: nil,
       selected_place_id: nil,

@@ -2,7 +2,8 @@ defmodule LandingSearchSteps do
   @moduledoc """
   Steps for the landing page search when the picked place's details are slow
   to arrive. The place details stub waits for the scenario to release it, so
-  the search can be submitted while the place is still loading.
+  the search can be submitted, or the place cleared, while it is still
+  loading, and the lookup can be made to fail.
   """
   use Cucumber.StepDefinition
   import Huddlz.Test.MoxHelpers
@@ -20,6 +21,7 @@ defmodule LandingSearchSteps do
 
       receive do
         :release -> {:ok, Map.fetch!(known_coords(), place_id)}
+        {:fail, reason} -> {:error, reason}
       end
     end)
 
@@ -33,12 +35,35 @@ defmodule LandingSearchSteps do
   step "the search waits for the place", context do
     session = context[:session] || context[:conn]
     assert_path(session, "/")
-    assert render(session.view) =~ "Find a huddl"
+    assert_has(session, "button", text: "Find a huddl")
     context
   end
 
   step "the place details arrive", context do
     send(context.place_details_lookup, :release)
+    context
+  end
+
+  step "the place lookup fails", context do
+    session = context[:session] || context[:conn]
+    send(context.place_details_lookup, {:fail, {:request_failed, :timeout}})
+    render_async(session.view)
+    context
+  end
+
+  step "the cleared place's lookup finishes", context do
+    session = context[:session] || context[:conn]
+    send(context.place_details_lookup, :release)
+    render_async(session.view)
+    context
+  end
+
+  step "Discover searches without a place", context do
+    session = context[:session] || context[:conn]
+    %URI{path: path, query: query} = URI.parse(session.current_path)
+    assert path == "/discover"
+    refute Map.has_key?(URI.decode_query(query || ""), "lat")
+    refute_has(session, "[data-testid='location-display']")
     context
   end
 
