@@ -41,6 +41,23 @@ defmodule HuddlzWeb.ApiAuth do
     end
   end
 
+  defp mark_key_used(
+         %{assigns: %{current_user: %User{__metadata__: %{api_key: %ApiKey{} = key}} = user}} =
+           conn
+       ) do
+    case key |> Ash.Changeset.for_update(:mark_used, %{}, actor: user) |> Ash.update() do
+      {:ok, _key} ->
+        :ok
+
+      {:error, error} ->
+        Logger.warning("could not record an API key's use: #{Exception.message(error)}")
+    end
+
+    conn
+  end
+
+  defp mark_key_used(conn), do: conn
+
   @doc """
   `on_error` handler for MCP, where every call needs a signed-in person.
   The body tells an agent what to send instead of a bare refusal.
