@@ -11,6 +11,7 @@ defmodule HuddlzWeb.HuddlLive.New do
 
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
+  alias Huddlz.Communities.Huddl.CopySuggestion
   alias Huddlz.Storage.HuddlCoverImages
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
@@ -52,6 +53,8 @@ defmodule HuddlzWeb.HuddlLive.New do
     |> assign(:pending_image_id, nil)
     |> assign(:pending_preview_url, nil)
     |> assign(:upload_processing, false)
+    |> assign(:copy_source, nil)
+    |> assign(:copy_cover?, false)
     |> maybe_allow_image_upload()
   end
 
@@ -87,8 +90,66 @@ defmodule HuddlzWeb.HuddlLive.New do
     |> assign(:calculated_end_time, calculate_end_time(tomorrow, default_time, 60))
   end
 
+  # `?copy=<huddl id>` fills the form from another huddl of this group. Nothing
+  # is saved until the organizer submits; an id they can't copy from leaves
+  # the form empty. Later patches (the location modal) drop the param but
+  # keep the copy.
   @impl true
+  def handle_params(%{"copy" => id}, _uri, %{assigns: %{copy_source: nil}} = socket)
+      when is_binary(id) do
+    case fetch_copy_source(id, socket.assigns.group, socket.assigns.current_user) do
+      {:ok, source} -> {:noreply, assign_copy(socket, source)}
+      :error -> {:noreply, socket}
+    end
+  end
+
   def handle_params(_params, _uri, socket), do: {:noreply, socket}
+
+  defp fetch_copy_source(id, %{id: group_id}, user) do
+    with {:ok, _uuid} <- Ecto.UUID.cast(id),
+         {:ok, %Huddl{group_id: ^group_id} = source} <-
+           Ash.get(Huddl, id, actor: user, load: [:current_image_url, :huddl_template]) do
+      {:ok, source}
+    else
+      _not_copyable -> :error
+    end
+  end
+
+  defp assign_copy(socket, source) do
+    local_starts_at = DateTime.shift_zone!(source.starts_at, source.time_zone)
+    date = CopySuggestion.date(source)
+    start_time = DateTime.to_time(local_starts_at)
+    duration = DateTime.diff(source.ends_at, source.starts_at, :minute)
+
+    location =
+      Enum.find(socket.assigns.group_locations, &(&1.id == source.group_location_id))
+
+    params = %{
+      "copied_from_id" => source.id,
+      "group_id" => source.group_id,
+      "title" => source.title,
+      "description" => source.description || "",
+      "event_type" => to_string(source.event_type),
+      "virtual_link" => source.virtual_link || "",
+      "max_attendees" => if(source.max_attendees, do: to_string(source.max_attendees), else: ""),
+      "is_private" => to_string(source.is_private),
+      "date" => Date.to_iso8601(date),
+      "start_time" => Calendar.strftime(start_time, "%H:%M"),
+      "duration_minutes" => to_string(duration),
+      "group_location_id" => location && location.id
+    }
+
+    # Validating right away shows a removed location's error as the form opens.
+    form = AshPhoenix.Form.validate(socket.assigns.form.source, params)
+
+    socket
+    |> assign(:copy_source, source)
+    |> assign(:copy_cover?, not is_nil(source.current_image_url))
+    |> assign(:selected_location, location)
+    |> assign(:form, to_form(form))
+    |> update_event_type_visibility(params)
+    |> assign(:calculated_end_time, calculate_end_time(date, start_time, duration))
+  end
 
   defp handle_upload_progress(:huddl_cover_image, entry, socket) do
     if entry.done? do
@@ -167,12 +228,16 @@ defmodule HuddlzWeb.HuddlLive.New do
         </div>
       </div>
 
+      <.copy_notice :if={@copy_source} source={@copy_source} />
+
       <.form for={@form} id="huddl-form" phx-change="validate" phx-submit="save">
+        <.input :if={@copy_source} field={@form[:copied_from_id]} type="hidden" />
+
         <.cover_image_panel
           id="huddl-cover-upload"
           upload={@uploads.huddl_cover_image}
-          image_url={@pending_preview_url}
-          caption="Image uploaded · ready to publish."
+          image_url={cover_url(assigns)}
+          caption={cover_caption(assigns)}
           processing?={@upload_processing}
           image_error={@image_error}
           optional
@@ -192,11 +257,12 @@ defmodule HuddlzWeb.HuddlLive.New do
           duration_prompt="Select duration…"
           schedule_time_zone={@schedule_time_zone}
           ambiguous_time_label={@ambiguous_time_label}
+          date_help={suggested_date_help(@copy_source, @form)}
         >
           <:recurring_controls>
             <div class="form-row">
               <.toggle field={@form[:is_recurring]} label="Recurring huddl" />
-              <p class="form-help">Repeats on a schedule until you stop it.</p>
+              <p class="form-help">{recurring_help(@copy_source)}</p>
             </div>
 
             <%= if Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_recurring].value) do %>
@@ -275,7 +341,12 @@ defmodule HuddlzWeb.HuddlLive.New do
     {:noreply, cancel_upload(socket, :huddl_cover_image, ref)}
   end
 
+  # Remove drops an uploaded cover first, then a copied one.
   @impl true
+  def handle_event("cancel_pending_image", _params, %{assigns: %{pending_image_id: nil}} = socket) do
+    {:noreply, assign(socket, :copy_cover?, false)}
+  end
+
   def handle_event("cancel_pending_image", _params, socket) do
     {:noreply, cleanup_pending_image(socket)}
   end
@@ -311,6 +382,7 @@ defmodule HuddlzWeb.HuddlLive.New do
       params
       |> Map.put("group_id", socket.assigns.group.id)
       |> Map.put("lifecycle_state", lifecycle_state)
+      |> put_copy_params(socket.assigns)
       |> inject_saved_location_params(
         socket.assigns[:selected_location],
         socket.assigns.form,
@@ -367,6 +439,74 @@ defmodule HuddlzWeb.HuddlLive.New do
   def handle_info({:saved_location_cleared, "saved-location-picker"}, socket) do
     {:noreply, clear_saved_location(socket)}
   end
+
+  # The form is the whole copy: a field the organizer cleared or hid stays
+  # empty instead of falling back to the source's value.
+  @copied_fields ~w(description virtual_link max_attendees)
+
+  defp put_copy_params(params, %{copy_source: nil}), do: params
+
+  defp put_copy_params(params, %{copy_cover?: copy_cover?}) do
+    @copied_fields
+    |> Enum.reduce(params, &Map.put_new(&2, &1, nil))
+    |> Map.put("copy_cover", to_string(copy_cover?))
+  end
+
+  defp cover_url(%{pending_preview_url: url}) when is_binary(url), do: url
+  defp cover_url(%{copy_cover?: true, copy_source: source}), do: source.current_image_url
+  defp cover_url(_assigns), do: nil
+
+  defp cover_caption(%{pending_preview_url: url}) when is_binary(url),
+    do: "Image uploaded · ready to publish."
+
+  defp cover_caption(%{copy_cover?: true, copy_source: source}),
+    do: "A copy of the #{short_date(source)} cover. Changing it here leaves the original alone."
+
+  defp cover_caption(_assigns), do: nil
+
+  attr :source, Huddl, required: true
+
+  defp copy_notice(assigns) do
+    ~H"""
+    <div id="copy-notice" class="copy-notice" role="status">
+      <span class="copy-notice-icon" aria-hidden="true">
+        <.icon name="hero-document-duplicate" class="size-5" />
+      </span>
+      <div>
+        <h2>Copied from “{@source.title}”</h2>
+        <p>
+          Everything from the {Calendar.strftime(local_date(@source), "%a, %b %-d")} huddl is filled in. Pick a date and check the details.
+        </p>
+        <p class="copy-notice-aside">RSVPs, photos and turnout stay with the original.</p>
+      </div>
+    </div>
+    """
+  end
+
+  defp suggested_date_help(nil, _form), do: nil
+
+  defp suggested_date_help(source, form) do
+    suggested = CopySuggestion.date(source)
+
+    if Phoenix.HTML.Form.input_value(form, :date) in [suggested, Date.to_iso8601(suggested)] do
+      "Suggested: the next #{Calendar.strftime(suggested, "%A")}."
+    end
+  end
+
+  defp recurring_help(%Huddl{huddl_template: %{} = template} = source) do
+    "Copied as a one-off. The #{short_date(source)} huddl was part of #{series_phrase(template)}."
+  end
+
+  defp recurring_help(_source), do: "Repeats on a schedule until you stop it."
+
+  defp series_phrase(%{interval: 1, unit: :week}), do: "a weekly series"
+  defp series_phrase(%{interval: 1, unit: :month}), do: "a monthly series"
+  defp series_phrase(%{interval: n, unit: unit}), do: "a series every #{n} #{unit}s"
+
+  defp short_date(source), do: Calendar.strftime(local_date(source), "%b %-d")
+
+  defp local_date(huddl),
+    do: huddl.starts_at |> DateTime.shift_zone!(huddl.time_zone) |> DateTime.to_date()
 
   defp maybe_set_pending_image(changeset, nil), do: changeset
 

@@ -3,6 +3,7 @@ defmodule CopyHuddlApiSteps do
 
   import ExUnit.Assertions
   import Huddlz.Generator
+  import Huddlz.Test.Helpers.Authentication, only: [login: 2]
   import HuddlzWeb.ApiCase
   import Phoenix.ConnTest
 
@@ -114,7 +115,7 @@ defmodule CopyHuddlApiSteps do
 
     context
     |> organizer_context(owner, group, source)
-    |> Map.put(:conn, authenticated_conn(context.conn, member))
+    |> Map.merge(%{member: member, conn: signed_in_conn(context.conn, member)})
   end
 
   step "people RSVPd to that huddl, shared a photo and a turnout was recorded", context do
@@ -437,9 +438,13 @@ defmodule CopyHuddlApiSteps do
       owner: owner,
       group: group,
       source: source,
-      conn: authenticated_conn(context.conn, owner)
+      conn: signed_in_conn(context.conn, owner)
     })
   end
+
+  # Signed in for both the API (bearer token) and the web pages (session),
+  # so the copy UI's scenarios share these steps.
+  defp signed_in_conn(conn, user), do: conn |> login(user) |> authenticated_conn(user)
 
   defp future_date, do: Date.add(eastern_today(), 12)
 

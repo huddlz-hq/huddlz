@@ -3615,7 +3615,8 @@ body .org-huddl-actions {
   gap: 4px;
 }
 
-body .org-huddl-edit-series {
+body .org-huddl-edit-series,
+body .org-huddl-copy {
   color: var(--accent-ink);
   font-size: 12px;
   font-weight: 600;
@@ -3623,7 +3624,8 @@ body .org-huddl-edit-series {
   white-space: nowrap;
 }
 
-body .org-huddl-edit-series:hover { text-decoration: underline; }
+body .org-huddl-edit-series:hover,
+body .org-huddl-copy:hover { text-decoration: underline; }
 
 body .org-list-more {
   display: flex;
@@ -6262,6 +6264,33 @@ body .panel > .form-foot {
   margin: 20px -24px -20px;
   padding: 16px 24px;
 }
+
+/* The notice above a new-huddl form that was filled in from another huddl. */
+body .copy-notice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+}
+
+body .copy-notice-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--accent-ink);
+  display: grid;
+  place-items: center;
+}
+
+body .copy-notice h2 { margin: 0 0 4px; font-size: 14px; font-weight: 600; color: var(--text); }
+body .copy-notice p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--soft); }
+body .copy-notice p.copy-notice-aside { margin-top: 4px; color: var(--muted); }
 
 /* No top border or gap — for foots stacked under their own panel/form. */
 body .form-foot.is-flush {
