@@ -47,6 +47,14 @@ The neutral label every ordinary surface, including the API and notifications, s
 An administrator's manual reversal of a suspension judged mistaken. It lets the person sign in again from scratch; revoked sessions and API keys stay revoked and released spots are not rebooked.
 _Avoid_: Unban, reactivation
 
+**API key**:
+A secret a person creates, names and gives an expiry so software can act as them through the huddlz APIs, including the agent tools. It is shown once; revoking it, or suspending its owner, ends it immediately, and only a person with a confirmed address can create one.
+_Avoid_: Token, access token, personal access token
+
+**Agent**:
+An AI assistant a person lets act as them on huddlz, today through an API key. What an agent does is that person using huddlz; nothing records it separately.
+_Avoid_: Bot, integration, app
+
 **Account report**:
 A confirmed member's request for administrators to review an account they can already see, including the organizer of a public huddl without joining its group or RSVPing, for spam or another concern. A report does not itself suspend the account; its details and the reporter's identity are available only to huddlz staff for review.
 
