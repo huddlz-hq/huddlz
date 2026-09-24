@@ -87,3 +87,11 @@ Feature: Discover and join huddlz with an agent
     And another person's private huddl cannot be read or joined
     And a member without a home location must choose a search location
 
+  Scenario: Find the agent setup guide from Help
+    Given I am signed in as a member with a confirmed address
+    When I visit "/help"
+    And I click "Connect an agent"
+    Then I should see "Add huddlz to your agent"
+    And the guide explains how to add huddlz to Claude Code and Codex CLI
+    When I click "Create a key"
+    Then I should see "Your keys"

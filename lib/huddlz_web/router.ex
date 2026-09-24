@@ -165,6 +165,7 @@ defmodule HuddlzWeb.Router do
       live "/", LandingLive, :index
       live "/discover", HuddlLive, :index
       live "/help", HelpLive, :index
+      live "/help/agents", HelpLive.Agents, :index
       live "/terms", LegalLive, :terms
       live "/code-of-conduct", LegalLive, :conduct
       live "/privacy", LegalLive, :privacy

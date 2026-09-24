@@ -1,7 +1,7 @@
 defmodule HuddlzWeb.HelpLive do
   @moduledoc """
   Public help directory with only working support, developer, legal, and source
-  destinations.
+  destinations. The API keys row shows only to people who can create keys.
   """
 
   use HuddlzWeb, :live_view
@@ -70,6 +70,26 @@ defmodule HuddlzWeb.HelpLive do
             </div>
           </:head>
           <div class="settings-list row-list">
+            <.link navigate={~p"/help/agents"} class="row help-link-row">
+              <div>
+                <div class="row-title">Connect an agent</div>
+                <div class="row-desc">
+                  Set up Claude Code, Codex or another MCP client with an API key.
+                </div>
+              </div>
+              <.pill>Set up →</.pill>
+            </.link>
+            <.link
+              :if={confirmed?(@current_user)}
+              navigate={~p"/profile/api-keys"}
+              class="row help-link-row"
+            >
+              <div>
+                <div class="row-title">API keys</div>
+                <div class="row-desc">Create and revoke the keys scripts and agents use.</div>
+              </div>
+              <.pill>Manage →</.pill>
+            </.link>
             <a
               class="row help-link-row"
               href={~p"/api/json/swaggerui"}
@@ -157,4 +177,7 @@ defmodule HuddlzWeb.HelpLive do
     </Layouts.app>
     """
   end
+
+  defp confirmed?(%{confirmed_at: %DateTime{}}), do: true
+  defp confirmed?(_user), do: false
 end
