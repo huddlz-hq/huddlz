@@ -116,17 +116,19 @@ defmodule HuddlzWeb.Api.AuthController do
       expires_at = DateTime.utc_now() |> DateTime.add(days * 24 * 3600, :second)
 
       ApiKey
-      |> Ash.Changeset.for_create(:create, %{expires_at: expires_at}, actor: user)
+      |> Ash.Changeset.for_create(:create, %{name: params["name"], expires_at: expires_at},
+        actor: user
+      )
       |> Ash.create()
       |> case do
         {:ok, record} ->
           conn
           |> put_status(:created)
-          |> json(%{
-            id: record.id,
-            key: record.__metadata__.plaintext_api_key,
-            expires_at: record.expires_at
-          })
+          |> json(
+            record
+            |> serialize_api_key()
+            |> Map.put(:key, record.__metadata__.plaintext_api_key)
+          )
 
         {:error, error} ->
           conn
@@ -149,7 +151,7 @@ defmodule HuddlzWeb.Api.AuthController do
       %User{} = user ->
         keys =
           ApiKey
-          |> Ash.Query.load([:valid])
+          |> Ash.Query.sort(inserted_at: :desc)
           |> Ash.read!(actor: user)
           |> Enum.map(&serialize_api_key/1)
 
@@ -165,8 +167,11 @@ defmodule HuddlzWeb.Api.AuthController do
   defp serialize_api_key(record) do
     %{
       id: record.id,
+      name: record.name,
+      created_at: record.inserted_at,
       expires_at: record.expires_at,
-      valid: record.valid
+      last_used_at: record.last_used_at,
+      valid: DateTime.after?(record.expires_at, DateTime.utc_now())
     }
   end
 

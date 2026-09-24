@@ -233,7 +233,7 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
       conn =
         conn
         |> authenticated_conn(target)
-        |> post("/api/auth/api_keys", %{"expires_in_days" => 30})
+        |> post("/api/auth/api_keys", %{"name" => "Laptop", "expires_in_days" => 30})
 
       assert %{"id" => id, "key" => key, "expires_at" => expires_at} = json_response(conn, 201)
       assert is_binary(id)
@@ -248,7 +248,7 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
       create_conn =
         conn
         |> authenticated_conn(target)
-        |> post("/api/auth/api_keys", %{})
+        |> post("/api/auth/api_keys", %{"name" => "Laptop"})
 
       assert %{"key" => key} = json_response(create_conn, 201)
 
@@ -259,6 +259,17 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
 
       assert %{"user" => %{"id" => id}} = json_response(follow_up, 200)
       assert id == target.id
+    end
+
+    test "requires a name", %{conn: conn} do
+      target = generate(user())
+
+      conn =
+        conn
+        |> authenticated_conn(target)
+        |> post("/api/auth/api_keys", %{"expires_in_days" => 30})
+
+      assert %{"errors" => [%{"field" => "name"}]} = json_response(conn, 422)
     end
 
     test "returns 401 when no bearer is provided", %{conn: conn} do
@@ -272,7 +283,7 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
       conn =
         conn
         |> authenticated_conn(target)
-        |> post("/api/auth/api_keys", %{"expires_in_days" => -1})
+        |> post("/api/auth/api_keys", %{"name" => "Laptop", "expires_in_days" => -1})
 
       assert %{"errors" => [%{"field" => "expires_in_days"}]} = json_response(conn, 422)
     end
@@ -283,7 +294,7 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
       conn =
         conn
         |> authenticated_conn(target)
-        |> post("/api/auth/api_keys", %{"expires_in_days" => 365_000})
+        |> post("/api/auth/api_keys", %{"name" => "Laptop", "expires_in_days" => 365_000})
 
       assert %{"errors" => [%{"field" => "expires_in_days"}]} = json_response(conn, 422)
     end
@@ -294,7 +305,7 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
       conn =
         conn
         |> authenticated_conn(target)
-        |> post("/api/auth/api_keys", %{"expires_in_days" => "banana"})
+        |> post("/api/auth/api_keys", %{"name" => "Laptop", "expires_in_days" => "banana"})
 
       assert %{"errors" => [%{"field" => "expires_in_days"}]} = json_response(conn, 422)
     end
@@ -308,7 +319,7 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
         for _ <- 1..2 do
           conn
           |> authenticated_conn(target)
-          |> post("/api/auth/api_keys", %{})
+          |> post("/api/auth/api_keys", %{"name" => "Laptop"})
           |> json_response(201)
         end
 
@@ -326,8 +337,11 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
       for record <- api_keys do
         refute Map.has_key?(record, "key")
         refute Map.has_key?(record, "api_key_hash")
-        assert Map.has_key?(record, "expires_at")
-        assert Map.has_key?(record, "valid")
+        assert record["name"] == "Laptop"
+        assert is_binary(record["created_at"])
+        assert is_binary(record["expires_at"])
+        assert record["last_used_at"] == nil
+        assert record["valid"] == true
       end
     end
 
@@ -335,7 +349,7 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
       me = generate(user())
       other = generate(user())
 
-      conn |> authenticated_conn(other) |> post("/api/auth/api_keys", %{})
+      conn |> authenticated_conn(other) |> post("/api/auth/api_keys", %{"name" => "Laptop"})
 
       list_conn =
         conn
@@ -358,7 +372,7 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
       %{"id" => id, "key" => key} =
         conn
         |> authenticated_conn(target)
-        |> post("/api/auth/api_keys", %{})
+        |> post("/api/auth/api_keys", %{"name" => "Laptop"})
         |> json_response(201)
 
       delete_response =
@@ -383,7 +397,7 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
       %{"id" => other_id} =
         conn
         |> authenticated_conn(other)
-        |> post("/api/auth/api_keys", %{})
+        |> post("/api/auth/api_keys", %{"name" => "Laptop"})
         |> json_response(201)
 
       delete_response =
