@@ -17,21 +17,44 @@ defmodule HuddlzWeb.LandingLive do
      |> assign(:page_title, "huddlz")
      |> assign(:body_class, "is-landing")
      |> assign(:interests, @interests)
-     |> assign(:location, nil)}
+     |> assign(:search, to_form(%{"q" => ""}, as: :search))
+     |> assign(:location, nil)
+     |> assign(:waiting_query, nil)}
+  end
+
+  # A place picked in Near shows at once but its coordinates arrive later.
+  # A search submitted in between waits for them, so Discover always opens
+  # with the place the visitor sees.
+  @impl true
+  def handle_event(
+        "search",
+        %{"search" => %{"q" => query}},
+        %{assigns: %{location: :pending}} = socket
+      ) do
+    {:noreply,
+     socket
+     |> assign(:search, to_form(%{"q" => query}, as: :search))
+     |> assign(:waiting_query, query)}
+  end
+
+  def handle_event("search", %{"search" => %{"q" => query}}, socket) do
+    {:noreply, push_navigate(socket, to: discover_path(query, socket.assigns.location))}
   end
 
   @impl true
-  def handle_event("search", params, socket) do
-    {:noreply, push_navigate(socket, to: discover_path(params["q"], socket.assigns.location))}
+  def handle_info({:location_pending, "location-autocomplete"}, socket) do
+    {:noreply, assign(socket, :location, :pending)}
   end
 
-  @impl true
   def handle_info({:location_selected, "location-autocomplete", location}, socket) do
-    {:noreply, assign(socket, :location, location)}
+    case socket.assigns.waiting_query do
+      nil -> {:noreply, assign(socket, :location, location)}
+      query -> {:noreply, push_navigate(socket, to: discover_path(query, location))}
+    end
   end
 
   def handle_info({:location_cleared, "location-autocomplete"}, socket) do
-    {:noreply, assign(socket, :location, nil)}
+    {:noreply, assign(socket, location: nil, waiting_query: nil)}
   end
 
   defp discover_path(query, location) do
@@ -93,32 +116,24 @@ defmodule HuddlzWeb.LandingLive do
           </p>
 
           <div class="land-search">
-            <form id="landing-search" phx-submit="search" class="land-search-form">
-              <svg
-                class="land-search-icon"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                aria-hidden="true"
-              >
-                <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
-              </svg>
+            <.form for={@search} id="landing-search" phx-submit="search" class="land-search-form">
+              <.icon name="hero-magnifying-glass" class="size-5 land-search-icon" />
               <div class="land-search-field is-into">
-                <label for="landing-q">Into</label>
-                <input
-                  id="landing-q"
+                <.input
+                  field={@search[:q]}
                   type="search"
-                  name="q"
+                  label="Into"
                   placeholder="board games, running, Spanish…"
                   autocomplete="off"
                 />
               </div>
-              <button type="submit" class="btn-primary land-search-submit">Find a huddl</button>
-            </form>
+              <button
+                type="submit"
+                class={["btn-primary land-search-submit", @waiting_query && "phx-click-loading"]}
+              >
+                Find a huddl
+              </button>
+            </.form>
             <div class="land-search-field is-near">
               <span class="land-search-label" aria-hidden="true">Near</span>
               <.live_component
@@ -126,6 +141,7 @@ defmodule HuddlzWeb.LandingLive do
                 id="location-autocomplete"
                 variant={:filter_pill}
                 placeholder="Your city"
+                notify_pending
               />
             </div>
           </div>
@@ -142,9 +158,13 @@ defmodule HuddlzWeb.LandingLive do
           </div>
 
           <ul class="land-promises">
-            <li><.check />Free to join</li>
-            <li><.check />RSVP without joining a group</li>
-            <li><.check />An open API for your AI assistant</li>
+            <li><.icon name="hero-check" class="size-4 land-icon-check" />Free to join</li>
+            <li>
+              <.icon name="hero-check" class="size-4 land-icon-check" />RSVP without joining a group
+            </li>
+            <li>
+              <.icon name="hero-check" class="size-4 land-icon-check" />An open API for your AI assistant
+            </li>
           </ul>
         </div>
 
@@ -191,7 +211,9 @@ defmodule HuddlzWeb.LandingLive do
           </div>
 
           <div class="land-chat is-floating" aria-hidden="true">
-            <div class="land-chat-source"><.spark />Example chat · your assistant, using huddlz</div>
+            <div class="land-chat-source">
+              <.icon name="hero-sparkles" class="size-4" />Example chat · your assistant, using huddlz
+            </div>
             <div class="land-bubble">Anything low-key Thursday after work?</div>
             <p class="land-reply">
               <strong>Board game night</strong>
@@ -214,7 +236,7 @@ defmodule HuddlzWeb.LandingLive do
           <article class="land-step">
             <div class="land-step-art" aria-hidden="true">
               <div class="land-mini-search">
-                <.search_icon />something outdoorsy saturday
+                <.icon name="hero-magnifying-glass" class="size-4" />something outdoorsy saturday
               </div>
               <div class="land-mini-row">
                 <.scene name="riverside-run" />
@@ -233,7 +255,7 @@ defmodule HuddlzWeb.LandingLive do
           </article>
           <article class="land-step">
             <div class="land-step-art is-centered" aria-hidden="true">
-              <span class="land-going"><.check />You’re going</span>
+              <span class="land-going"><.icon name="hero-check" class="size-4 land-icon-check" />You’re going</span>
               <span class="land-step-note">No need to join the group first</span>
             </div>
             <span class="land-step-num">02</span>
@@ -244,8 +266,12 @@ defmodule HuddlzWeb.LandingLive do
           </article>
           <article class="land-step">
             <div class="land-step-art is-list" aria-hidden="true">
-              <div class="land-mini-fact"><.clock />Thu, Sep 24 · 7:00 PM EDT</div>
-              <div class="land-mini-fact"><.pin />The Loft, 2nd floor</div>
+              <div class="land-mini-fact">
+                <.icon name="hero-clock" class="size-4" />Thu, Sep 24 · 7:00 PM EDT
+              </div>
+              <div class="land-mini-fact">
+                <.icon name="hero-map-pin" class="size-4" />The Loft, 2nd floor
+              </div>
               <div class="land-mini-fact">
                 <.faces people={~w(pk sj do)} />Priya, Sam and 12 others
               </div>
@@ -273,13 +299,13 @@ defmodule HuddlzWeb.LandingLive do
               <li>“RSVP me to the Thursday one.”</li>
             </ul>
             <.link navigate={~p"/help"} class="land-arrow-link">
-              Explore the API <.arrow />
+              Explore the API <.icon name="hero-arrow-right" class="size-4" />
             </.link>
           </div>
 
           <div class="land-chat" aria-hidden="true">
             <div class="land-bubble">Find me something outdoorsy Saturday morning, not too far.</div>
-            <span class="land-tool"><.wrench />huddlz · search huddlz</span>
+            <span class="land-tool"><.icon name="hero-wrench" class="size-4" />huddlz · search huddlz</span>
             <p class="land-reply">Two good fits this Saturday:</p>
             <div class="land-results">
               <div class="land-result">
@@ -297,7 +323,7 @@ defmodule HuddlzWeb.LandingLive do
             </div>
             <div class="land-bubble">RSVP me to the 5K.</div>
             <p class="land-reply land-done">
-              <span class="land-done-mark"><.check /></span>
+              <span class="land-done-mark"><.icon name="hero-check" class="size-4 land-icon-check" /></span>
               <span>Done. You’re going to <strong>Riverside 5K + coffee</strong>, Saturday at 8:00 AM.</span>
             </p>
           </div>
@@ -320,7 +346,7 @@ defmodule HuddlzWeb.LandingLive do
                 <strong>Board game night</strong>
                 <span>Tabletop Collective · Every Thursday · 7:00 PM</span>
               </div>
-              <span class="land-pill is-outline"><.repeat />Series</span>
+              <span class="land-pill is-outline"><.icon name="hero-arrow-path" class="size-3" />Series</span>
             </div>
             <.series_row date="Thu, Sep 24" fill={75} label="18 of 24 going" />
             <.series_row date="Thu, Oct 1" fill={100} label="Full · 3 waiting" warn />
@@ -337,7 +363,7 @@ defmodule HuddlzWeb.LandingLive do
 
           <ul class="land-benefits">
             <li>
-              <span class="land-benefit-icon"><.repeat /></span>
+              <span class="land-benefit-icon"><.icon name="hero-arrow-path" class="size-5" /></span>
               <div>
                 <h3>Weekly, set once</h3>
                 <p>
@@ -346,7 +372,7 @@ defmodule HuddlzWeb.LandingLive do
               </div>
             </li>
             <li>
-              <span class="land-benefit-icon"><.people /></span>
+              <span class="land-benefit-icon"><.icon name="hero-user-group" class="size-5" /></span>
               <div>
                 <h3>Capacity that fills itself</h3>
                 <p>
@@ -355,7 +381,7 @@ defmodule HuddlzWeb.LandingLive do
               </div>
             </li>
             <li>
-              <span class="land-benefit-icon"><.share /></span>
+              <span class="land-benefit-icon"><.icon name="hero-share" class="size-5" /></span>
               <div>
                 <h3>Share it everywhere</h3>
                 <p>
@@ -364,7 +390,7 @@ defmodule HuddlzWeb.LandingLive do
               </div>
             </li>
             <li>
-              <span class="land-benefit-icon"><.bars /></span>
+              <span class="land-benefit-icon"><.icon name="hero-chart-bar" class="size-5" /></span>
               <div>
                 <h3>See what’s working</h3>
                 <p>
@@ -464,122 +490,6 @@ defmodule HuddlzWeb.LandingLive do
       <span class="land-bar"><span style={"width: #{@fill}%"}></span></span>
       <span class={["land-series-label", @warn && "is-warn"]}>{@label}</span>
     </div>
-    """
-  end
-
-  defp check(assigns) do
-    ~H"""
-    <svg
-      class="land-icon-check"
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2.4"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M5 12.5 10 17 19 7" />
-    </svg>
-    """
-  end
-
-  defp search_icon(assigns) do
-    ~H"""
-    <.stroke_icon><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></.stroke_icon>
-    """
-  end
-
-  defp clock(assigns) do
-    ~H"""
-    <.stroke_icon><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></.stroke_icon>
-    """
-  end
-
-  defp pin(assigns) do
-    ~H"""
-    <.stroke_icon>
-      <path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" />
-      <circle cx="12" cy="9.5" r="2.5" />
-    </.stroke_icon>
-    """
-  end
-
-  defp spark(assigns) do
-    ~H"""
-    <.stroke_icon>
-      <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
-    </.stroke_icon>
-    """
-  end
-
-  defp wrench(assigns) do
-    ~H"""
-    <.stroke_icon>
-      <path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z" />
-    </.stroke_icon>
-    """
-  end
-
-  defp arrow(assigns) do
-    ~H"""
-    <.stroke_icon><path d="M5 12h14M13 6l6 6-6 6" /></.stroke_icon>
-    """
-  end
-
-  defp repeat(assigns) do
-    ~H"""
-    <.stroke_icon>
-      <path d="M17 2l4 4-4 4" /><path d="M3 11v-1a4 4 0 0 1 4-4h14" />
-      <path d="M7 22l-4-4 4-4" /><path d="M21 13v1a4 4 0 0 1-4 4H3" />
-    </.stroke_icon>
-    """
-  end
-
-  defp people(assigns) do
-    ~H"""
-    <.stroke_icon>
-      <path d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20" />
-      <circle cx="10" cy="8" r="3.5" />
-      <path d="M20 20v-1.5a3.5 3.5 0 0 0-2.5-3.35M15.5 4.6a3.5 3.5 0 0 1 0 6.8" />
-    </.stroke_icon>
-    """
-  end
-
-  defp share(assigns) do
-    ~H"""
-    <.stroke_icon>
-      <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-      <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
-    </.stroke_icon>
-    """
-  end
-
-  defp bars(assigns) do
-    ~H"""
-    <.stroke_icon><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></.stroke_icon>
-    """
-  end
-
-  slot :inner_block, required: true
-
-  defp stroke_icon(assigns) do
-    ~H"""
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.8"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
-      {render_slot(@inner_block)}
-    </svg>
     """
   end
 end

@@ -5133,7 +5133,9 @@ body .land-search-submit { order: 4; }
 
 body .land-search-field { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 
-body .land-search-field label,
+body .land-search-field .form-row { gap: 2px; }
+
+body .land-search .land-search-field .form-label,
 body .land-search-label {
   font-size: 11px;
   font-weight: 600;
@@ -5142,10 +5144,13 @@ body .land-search-label {
   color: var(--muted);
 }
 
-body .land-search-field input[type="search"] {
+body .land-search .land-search-field .form-input,
+body .land-search .land-search-field .form-input:focus {
   width: 100%;
   padding: 0;
   border: 0;
+  border-radius: 0;
+  box-shadow: none;
   outline: 0;
   background: transparent;
   color: var(--text);
@@ -5153,7 +5158,7 @@ body .land-search-field input[type="search"] {
   font-size: 16px;
 }
 
-body .land-search-field input::placeholder { color: var(--muted); }
+body .land-search .land-search-field .form-input::placeholder { color: var(--muted); }
 
 body .land-search-field.is-near .filter-location {
   height: auto;
@@ -5281,7 +5286,6 @@ body .land-pill.is-outline {
   font-size: 12px;
 }
 
-body .land-pill.is-outline svg { width: 13px; height: 13px; }
 
 body .land-chat {
   display: flex;
@@ -5299,7 +5303,7 @@ body .land-chat.is-floating {
 }
 
 body .land-chat-source { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; font-weight: 600; }
-body .land-chat-source svg { width: 16px; height: 16px; color: var(--accent-ink); }
+body .land-chat-source [class^="hero-"] { color: var(--accent-ink); }
 
 body .land-bubble {
   align-self: flex-end;
@@ -5396,7 +5400,7 @@ body .land-mini-search {
   background: var(--panel);
 }
 
-body .land-mini-search svg { width: 16px; height: 16px; color: var(--muted); }
+body .land-mini-search [class^="hero-"] { color: var(--muted); }
 
 body .land-mini-row {
   display: flex;
@@ -5427,7 +5431,7 @@ body .land-going {
 body .land-step-note { color: var(--muted); font-size: 13px; }
 
 body .land-mini-fact { display: flex; align-items: center; gap: 10px; color: var(--soft); }
-body .land-mini-fact > svg { width: 16px; height: 16px; color: var(--accent-ink); }
+body .land-mini-fact > [class^="hero-"] { color: var(--accent-ink); }
 body .land-mini-fact .member-mark { box-shadow: 0 0 0 2px var(--panel-2); }
 
 body .land-step-num { margin-bottom: 8px; color: var(--accent-ink); font-size: 13px; font-weight: 700; }
@@ -5480,8 +5484,8 @@ body .land-arrow-link {
   font-weight: 600;
 }
 
-body .land-arrow-link svg { transition: transform 150ms ease; }
-body .land-arrow-link:hover svg { transform: translateX(3px); }
+body .land-arrow-link [class^="hero-"] { transition: transform 150ms ease; }
+body .land-arrow-link:hover [class^="hero-"] { transform: translateX(3px); }
 
 body .land-agents .land-chat { gap: 16px; padding: 24px; background: var(--bg); box-shadow: none; }
 body .land-agents .land-bubble,
@@ -5500,7 +5504,6 @@ body .land-tool {
   font-size: 12px;
 }
 
-body .land-tool svg { width: 14px; height: 14px; }
 
 body .land-results { display: flex; flex-direction: column; gap: 8px; }
 
@@ -5531,7 +5534,6 @@ body .land-done-mark {
   color: var(--success);
 }
 
-body .land-done-mark svg { width: 14px; height: 14px; }
 
 /* Organizers */
 body .land-organize {
@@ -5745,11 +5747,11 @@ body .land-foot nav { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8p
   body.is-landing .btn-primary,
   body.is-landing .btn-secondary,
   body .land-step,
-  body .land-arrow-link svg { transition: none; }
+  body .land-arrow-link [class^="hero-"] { transition: none; }
 
   body.is-landing .btn-primary:hover,
   body .land-step:hover,
-  body .land-arrow-link:hover svg { transform: none; }
+  body .land-arrow-link:hover [class^="hero-"] { transform: none; }
 }
 
 /* ─────────────────────────────────────────  AUTH PAGES  ─────── */

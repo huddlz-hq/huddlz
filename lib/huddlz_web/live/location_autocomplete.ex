@@ -9,6 +9,9 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   Manages all autocomplete state internally and notifies the parent via messages:
   - `{:location_selected, id, %{place_id, display_text, main_text, formatted_address, types, latitude, longitude}}`
   - `{:location_cleared, id}`
+  - `{:location_pending, id}`, only with `notify_pending`: a place was picked and
+    its coordinates are still on the way. `:location_selected` follows, or
+    `:location_cleared` when the lookup fails.
 
   With `notify_target`, sends a `location_selection: {action, payload}` update
   to that LiveComponent instead. Existing message-based callers need no target.
@@ -27,6 +30,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   attr :show_clear, :boolean, default: true
   attr :fetch_coordinates, :boolean, default: true
   attr :notify_target, :any, default: nil
+  attr :notify_pending, :boolean, default: false
 
   attr :variant, :atom,
     values: [:filter_pill, :form],
@@ -47,6 +51,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
        show_clear: true,
        fetch_coordinates: true,
        notify_target: nil,
+       notify_pending: false,
        variant: :form,
        # Internal state
        search_text: "",
@@ -504,6 +509,8 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   end
 
   def handle_async(:place_details, {:ok, {:error, reason}}, socket) do
+    notify_lookup_failed(socket)
+
     {:noreply,
      assign(socket,
        error: Huddlz.Places.error_message(reason),
@@ -512,6 +519,8 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   end
 
   def handle_async(:place_details, {:ok, {:ok, _details}}, socket) do
+    notify_lookup_failed(socket)
+
     {:noreply,
      assign(socket,
        error: "That location did not include a time zone. Please choose another result.",
@@ -520,6 +529,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   end
 
   def handle_async(:place_details, {:exit, _reason}, socket) do
+    notify_lookup_failed(socket)
     {:noreply, assign(socket, loading: false)}
   end
 
@@ -574,6 +584,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
 
     if socket.assigns.fetch_coordinates do
       session_token = socket.assigns.session_token
+      if socket.assigns.notify_pending, do: notify_parent(socket, :pending, nil)
 
       socket
       |> assign(loading: true)
@@ -625,4 +636,13 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   defp notify_parent(socket, :cleared, _data) do
     send(self(), {:location_cleared, socket.assigns.id})
   end
+
+  defp notify_parent(socket, :pending, _data) do
+    send(self(), {:location_pending, socket.assigns.id})
+  end
+
+  defp notify_lookup_failed(%{assigns: %{notify_pending: true}} = socket),
+    do: notify_parent(socket, :cleared, nil)
+
+  defp notify_lookup_failed(_socket), do: :ok
 end

@@ -49,6 +49,15 @@ Feature: Landing surface
     And I click the "Find a huddl" button
     Then the location filter should be active with "Austin, TX, USA"
 
+  Scenario: A landing search waits for the picked place before opening Discover
+    When I visit "/"
+    And I type "aus" in the location field
+    And I pick "Austin" from the location suggestions while its details are still loading
+    And I click the "Find a huddl" button
+    Then the search waits for the place
+    When the place details arrive
+    Then Discover opens searching near "Austin, TX, USA"
+
   Scenario: Visitor picks an interest from the landing page
     When I visit "/"
     And I click link "Board games"
