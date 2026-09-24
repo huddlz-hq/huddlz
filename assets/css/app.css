@@ -6400,17 +6400,23 @@ body .api-key-name h3 { margin: 0; font-size: 14px; }
 body .api-key-name h3.muted { color: var(--soft); }
 body .api-key-row .row-desc { margin-top: 4px; color: var(--muted); font-size: 13px; }
 body .api-key-expiry { margin: 0; padding: 0; border: 0; }
-body .api-key-expiry .segmented {
+body .segmented {
   display: inline-flex;
   align-self: flex-start;
   width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
   gap: 2px;
   padding: 3px;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
   background: var(--bg);
 }
-body .api-key-expiry .segmented-option {
+body .segmented-option {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  font: inherit;
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -6423,9 +6429,11 @@ body .api-key-expiry .segmented-option {
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
 }
-body .api-key-expiry .segmented-option:hover { color: var(--text); }
-body .api-key-expiry .segmented-option.on { background: var(--line); color: var(--text); font-weight: 600; }
-body .api-key-expiry .segmented-option:has(input:focus-visible) { box-shadow: inset 0 0 0 1px var(--accent); }
+body .segmented-option:hover { color: var(--text); }
+body .segmented-option.on { background: var(--line); color: var(--text); font-weight: 600; }
+body .segmented-option:focus-visible { outline: none; }
+body .segmented-option:has(input:focus-visible),
+body .segmented-option:focus-visible { box-shadow: inset 0 0 0 1px var(--accent); }
 body .api-key-expiry .segmented-option input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 body .api-key-shown { display: flex; flex-direction: column; gap: 16px; }
 body .api-key-warning {
@@ -6443,10 +6451,90 @@ body .api-key-secret-row { display: flex; align-items: flex-end; gap: 8px; }
 body .api-key-secret-row .form-row { flex: 1 1 auto; min-width: 0; margin: 0; }
 body .api-key-value { font-family: var(--mono); font-size: 13px; }
 body .api-key-secret-row .btn-primary { height: 40px; }
+body .api-key-shown-foot { justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; }
+
+/* Help · Connect an agent: numbered steps, client tabs with copyable setup,
+   then what an agent can do. */
+body .back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+body .panel.agent-guide { max-width: 1120px; padding: 0; }
+body .agent-steps { margin: 0; padding: 0; list-style: none; }
+body .agent-step {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--line);
+}
+body .agent-step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  background: var(--panel-2);
+  color: var(--soft);
+  font-size: 13px;
+  font-weight: 600;
+}
+body .agent-step-body { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+body .agent-step-body h2 { margin: 0; font-size: 15px; font-weight: 600; }
+body .agent-step-body p { margin: 0; color: var(--soft); font-size: 14px; line-height: 1.55; }
+body .agent-guide code { font-family: var(--mono); font-size: 13px; color: var(--text); }
+body .agent-code {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+body .agent-code pre { flex: 1 1 auto; min-width: 0; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+body .agent-settings {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 10px 16px;
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  font-size: 13px;
+}
+body .agent-settings dt { color: var(--muted); }
+body .agent-settings dd { margin: 0; overflow-wrap: anywhere; }
+body .agent-prompts { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+body .agent-prompts li { padding: 8px 12px; border-radius: var(--radius-sm); background: var(--panel-2); font-size: 13px; }
+body .agent-notes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  padding: 20px 24px;
+}
+body .agent-notes h2 { margin: 0 0 10px; font-size: 14px; font-weight: 600; }
+body .agent-notes ul { margin: 0 0 10px; padding-left: 18px; list-style: disc; color: var(--soft); font-size: 13px; line-height: 1.5; }
+body .agent-notes li { margin-bottom: 6px; }
+body .agent-notes a,
+body .page-head p a { color: var(--accent-ink); font-weight: 600; }
+body .agent-notes p { margin: 0; font-size: 13px; line-height: 1.5; }
 
 body .api-keys-panel .panel-head .btn-primary { white-space: nowrap; }
 
 @media (max-width: 640px) {
+  body .panel.agent-guide { padding: 0; }
+  body .agent-step { grid-template-columns: 1fr; gap: 10px; padding: 16px 14px; }
+  body .agent-code { flex-direction: column; align-items: stretch; padding: 12px; }
+  body .agent-code .btn-secondary { height: 44px; justify-content: center; }
+  body .agent-notes { grid-template-columns: 1fr; padding: 16px 14px; }
+  body .agent-settings { grid-template-columns: 1fr; gap: 4px; }
   body .api-key-list { margin: -14px; }
   body .api-key-row { flex-direction: column; align-items: stretch; padding: 14px; }
   body .api-key-row .btn-secondary { height: 44px; justify-content: center; font-size: 14px; }

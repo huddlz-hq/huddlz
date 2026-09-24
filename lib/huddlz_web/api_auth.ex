@@ -59,6 +59,24 @@ defmodule HuddlzWeb.ApiAuth do
   defp mark_key_used(conn), do: conn
 
   @doc """
+  `on_error` handler for MCP, where every call needs a signed-in person.
+  The body tells an agent what to send instead of a bare refusal.
+  """
+  def mcp_on_error(conn, _error) do
+    body =
+      Jason.encode!(%{
+        error: "Authentication required: send an API key as Authorization: Bearer <key>.",
+        help: HuddlzWeb.Endpoint.url() <> "/help/agents"
+      })
+
+    conn
+    |> Plug.Conn.put_resp_content_type("application/json")
+    |> Plug.Conn.put_resp_header("cache-control", "no-store")
+    |> Plug.Conn.send_resp(401, body)
+    |> Plug.Conn.halt()
+  end
+
+  @doc """
   Default `on_error` handler. Returns the same JSON 401 body as
   `HuddlzWeb.Api.AuthController.auth_required/1` so all 401s from the
   API surface use a consistent shape.

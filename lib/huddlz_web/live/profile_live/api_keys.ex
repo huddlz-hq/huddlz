@@ -159,7 +159,10 @@ defmodule HuddlzWeb.ProfileLive.ApiKeys do
       <div class="page-head">
         <div>
           <h1>API keys</h1>
-          <p>Let a script or an AI agent use huddlz as you.</p>
+          <p>
+            Let a script or an AI agent use huddlz as you.
+            <.link navigate={~p"/help/agents"}>Connect an agent</.link>
+          </p>
         </div>
       </div>
 
@@ -335,8 +338,9 @@ defmodule HuddlzWeb.ProfileLive.ApiKeys do
         </div>
       </div>
 
-      <div class="form-foot">
+      <div class="form-foot api-key-shown-foot">
         <.button type="button" phx-click="done">Done</.button>
+        <.link navigate={~p"/help/agents"}>Next: connect your agent</.link>
       </div>
     </section>
     """
