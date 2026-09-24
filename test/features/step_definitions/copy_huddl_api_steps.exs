@@ -47,6 +47,7 @@ defmodule CopyHuddlApiSteps do
 
   step "I organize a group with a weekly series {string}", %{args: [title]} = context do
     {owner, group} = organized_group()
+    today = eastern_today()
 
     source =
       generate(
@@ -54,9 +55,10 @@ defmodule CopyHuddlApiSteps do
           title: title,
           group_id: group.id,
           actor: owner,
+          date: Date.add(today, 7),
           is_recurring: true,
           frequency: "weekly",
-          repeat_until: Date.add(eastern_today(), 28)
+          repeat_until: Date.add(today, 28)
         )
       )
 
