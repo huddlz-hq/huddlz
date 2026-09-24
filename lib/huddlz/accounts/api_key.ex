@@ -1,9 +1,13 @@
 defmodule Huddlz.Accounts.ApiKey do
   @moduledoc """
-  API keys for machine-to-machine authentication.
+  API keys: secrets a person creates so software can act as them through
+  the huddlz APIs.
 
   Plaintext keys are returned only at create time via the
-  `plaintext_api_key` metadata; only the hash is persisted.
+  `plaintext_api_key` metadata; only the hash is persisted. Each key has
+  the name its owner gave it and records when it was last used, at most
+  once a minute so busy clients don't write on every request. Audit history
+  keeps each key's lifecycle but not its name, hash or last use.
   """
 
   use Ash.Resource,
@@ -31,7 +35,8 @@ defmodule Huddlz.Accounts.ApiKey do
     store_action_name? true
     reference_source? false
     sensitive_attributes :ignore
-    ignore_attributes [:inserted_at, :updated_at, :api_key_hash]
+    ignore_attributes [:inserted_at, :updated_at, :api_key_hash, :last_used_at, :name]
+    ignore_actions [:mark_used]
     belongs_to_actor :actor, Huddlz.Accounts.User, domain: Huddlz.Accounts, on_delete: :nilify
     metadata :impersonation_id, :uuid
     metadata :impersonator_id, :uuid
@@ -45,12 +50,20 @@ defmodule Huddlz.Accounts.ApiKey do
 
     create :create do
       primary? true
-      accept [:expires_at]
+      accept [:name, :expires_at]
 
       change relate_actor(:user)
 
       change {AshAuthentication.Strategy.ApiKey.GenerateApiKey,
               prefix: :huddlz, hash: :api_key_hash}
+    end
+
+    update :mark_used do
+      description "Record that the key was just used, unless that was already noted in the last minute."
+      accept []
+      require_atomic? false
+
+      change Huddlz.Accounts.ApiKey.Changes.MarkUsed
     end
   end
 
@@ -69,6 +82,11 @@ defmodule Huddlz.Accounts.ApiKey do
       authorize_if expr(user_id == ^actor(:id))
     end
 
+    policy action(:mark_used) do
+      description "A key's use is recorded for its owner"
+      authorize_if expr(user_id == ^actor(:id))
+    end
+
     policy action(:destroy) do
       description "Users can revoke their own API keys"
       authorize_if expr(user_id == ^actor(:id))
@@ -78,6 +96,12 @@ defmodule Huddlz.Accounts.ApiKey do
   attributes do
     uuid_primary_key :id
 
+    attribute :name, :string do
+      allow_nil? false
+      public? true
+      constraints min_length: 1, max_length: 80, trim?: true
+    end
+
     attribute :api_key_hash, :binary do
       allow_nil? false
       sensitive? true
@@ -85,7 +109,16 @@ defmodule Huddlz.Accounts.ApiKey do
 
     attribute :expires_at, :utc_datetime_usec do
       allow_nil? false
+      public? true
     end
+
+    attribute :last_used_at, :utc_datetime_usec do
+      public? true
+    end
+
+    # Keys made before creation times were stored take theirs from audit
+    # history when it recorded them; otherwise the time is unknown.
+    create_timestamp :inserted_at, public?: true, allow_nil?: true
   end
 
   relationships do

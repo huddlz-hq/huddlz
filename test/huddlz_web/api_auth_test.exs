@@ -9,6 +9,8 @@ defmodule HuddlzWeb.ApiAuthTest do
 
   use HuddlzWeb.ApiCase, async: true
 
+  require Ash.Query
+
   describe "Authorization: Bearer <jwt> on the :api pipeline" do
     test "authenticates the actor", %{conn: conn} do
       target = generate(user())
@@ -34,6 +36,19 @@ defmodule HuddlzWeb.ApiAuthTest do
 
       assert %{"user" => %{"id" => id}} = json_response(conn, 200)
       assert id == target.id
+    end
+
+    test "records when the key was used", %{conn: conn} do
+      target = generate(user())
+      conn = conn |> api_key_conn(target) |> get("/api/auth/me")
+      assert json_response(conn, 200)
+
+      [key] =
+        Huddlz.Accounts.ApiKey
+        |> Ash.Query.filter(user_id == ^target.id)
+        |> Ash.read!(authorize?: false)
+
+      assert %DateTime{} = key.last_used_at
     end
 
     test "expired API key results in unauthenticated access", %{conn: conn} do

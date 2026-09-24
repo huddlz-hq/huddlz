@@ -140,6 +140,7 @@ defmodule HuddlzWeb.Router do
       live "/email-change/:token", EmailChangeLive, :show
       live "/profile", ProfileLive, :index
       live "/profile/notifications", ProfileLive.Notifications, :index
+      live "/profile/api-keys", ProfileLive.ApiKeys, :index
 
       # Organizer workspace — per-group structure
       live "/organize", OrganizeLive, :index

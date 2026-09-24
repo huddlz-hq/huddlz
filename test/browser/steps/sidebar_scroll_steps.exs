@@ -121,12 +121,17 @@ defmodule BrowserSidebarScrollSteps do
     Map.put(context, :conn, conn)
   end
 
+  # The pointer goes to the middle of the element's on-screen part: an element
+  # partly below the fold has its centre off the page, where a wheel reaches
+  # nothing.
   defp wheel_over(conn, selector, delta_y) do
     %{"x" => x, "y" => y} =
       evaluate(conn, """
       (() => {
         const r = document.querySelector(#{inspect(selector)}).getBoundingClientRect();
-        return {x: r.left + r.width / 2, y: r.top + r.height / 2};
+        const top = Math.max(r.top, 0);
+        const bottom = Math.min(r.bottom, window.innerHeight);
+        return {x: r.left + r.width / 2, y: (top + bottom) / 2};
       })()
       """)
 

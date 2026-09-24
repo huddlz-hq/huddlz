@@ -60,7 +60,7 @@ defmodule Huddlz.Accounts.SuspensionTest do
         Huddlz.Accounts.ApiKey
         |> Ash.Changeset.for_create(
           :create,
-          %{expires_at: DateTime.add(DateTime.utc_now(), 3600)},
+          %{name: "Test key", expires_at: DateTime.add(DateTime.utc_now(), 3600)},
           actor: person
         )
         |> Ash.create!()

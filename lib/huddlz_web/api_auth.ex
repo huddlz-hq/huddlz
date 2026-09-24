@@ -12,11 +12,18 @@ defmodule HuddlzWeb.ApiAuth do
   When no actor is loaded yet, the wrapped plug runs normally — including
   its 401 `on_error` handler — so an invalid Bearer token is rejected
   rather than silently treated as anonymous.
+
+  A request signed in with an API key records the key's use, which the
+  API keys page shows as "Used … ago". A failure to record it never fails
+  the request.
   """
 
   @behaviour Plug
 
+  require Logger
+
   alias AshAuthentication.Strategy.ApiKey.Plug, as: ApiKeyPlug
+  alias Huddlz.Accounts.{ApiKey, User}
 
   @impl true
   def init(opts) do
@@ -30,9 +37,26 @@ defmodule HuddlzWeb.ApiAuth do
     if Ash.PlugHelpers.get_actor(conn) do
       conn
     else
-      ApiKeyPlug.call(conn, config)
+      conn |> ApiKeyPlug.call(config) |> mark_key_used()
     end
   end
+
+  defp mark_key_used(
+         %{assigns: %{current_user: %User{__metadata__: %{api_key: %ApiKey{} = key}} = user}} =
+           conn
+       ) do
+    case key |> Ash.Changeset.for_update(:mark_used, %{}, actor: user) |> Ash.update() do
+      {:ok, _key} ->
+        :ok
+
+      {:error, error} ->
+        Logger.warning("could not record an API key's use: #{Exception.message(error)}")
+    end
+
+    conn
+  end
+
+  defp mark_key_used(conn), do: conn
 
   @doc """
   Default `on_error` handler. Returns the same JSON 401 body as

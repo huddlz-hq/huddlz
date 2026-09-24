@@ -13,7 +13,7 @@ defmodule Huddlz.Accounts.ApiKeyTest do
         ApiKey
         |> Ash.Changeset.for_create(
           :create,
-          %{expires_at: in_days(7)},
+          %{name: "Laptop", expires_at: in_days(7)},
           actor: user
         )
         |> Ash.create()
@@ -27,11 +27,72 @@ defmodule Huddlz.Accounts.ApiKeyTest do
     end
   end
 
+  describe "names" do
+    test "a key needs a name" do
+      user = generate(user())
+
+      assert {:error, %Ash.Error.Invalid{}} =
+               ApiKey
+               |> Ash.Changeset.for_create(:create, %{name: "  ", expires_at: in_days(7)},
+                 actor: user
+               )
+               |> Ash.create()
+    end
+  end
+
+  describe "audit history" do
+    test "keeps a key's lifecycle without its name, hash or last use" do
+      user = generate(user())
+      key = build_key!(user, in_days(7))
+      key |> Ash.Changeset.for_update(:mark_used, %{}, actor: user) |> Ash.update!()
+      :ok = Ash.destroy(key, actor: user)
+
+      versions =
+        ApiKey.Version
+        |> Ash.Query.filter(version_source_id == ^key.id)
+        |> Ash.read!(authorize?: false)
+
+      assert versions |> Enum.map(& &1.version_action_name) |> Enum.sort() == [:create, :destroy]
+
+      for version <- versions do
+        refute Map.has_key?(version.changes, "name")
+        refute Map.has_key?(version.changes, "api_key_hash")
+        refute Map.has_key?(version.changes, "last_used_at")
+      end
+    end
+  end
+
+  describe ":mark_used action" do
+    test "stamps the first use and skips repeats within a minute" do
+      user = generate(user())
+      key = build_key!(user, in_days(7))
+      assert key.last_used_at == nil
+
+      used = key |> Ash.Changeset.for_update(:mark_used, %{}, actor: user) |> Ash.update!()
+      assert %DateTime{} = used.last_used_at
+
+      again = used |> Ash.Changeset.for_update(:mark_used, %{}, actor: user) |> Ash.update!()
+      assert again.last_used_at == used.last_used_at
+
+      stale = Ash.Seed.update!(again, %{last_used_at: DateTime.add(again.last_used_at, -120)})
+      later = stale |> Ash.Changeset.for_update(:mark_used, %{}, actor: user) |> Ash.update!()
+      assert DateTime.after?(later.last_used_at, stale.last_used_at)
+    end
+
+    test "only the owner's use is recorded" do
+      key = build_key!(generate(user()), in_days(7))
+      stranger = generate(user())
+
+      assert {:error, %Ash.Error.Forbidden{}} =
+               key |> Ash.Changeset.for_update(:mark_used, %{}, actor: stranger) |> Ash.update()
+    end
+  end
+
   describe "ownership invariants" do
     test "fails to create without an actor" do
       assert {:error, %Ash.Error.Invalid{errors: errors}} =
                ApiKey
-               |> Ash.Changeset.for_create(:create, %{expires_at: in_days(7)})
+               |> Ash.Changeset.for_create(:create, %{name: "Laptop", expires_at: in_days(7)})
                |> Ash.create(authorize?: false)
 
       assert Enum.any?(errors, fn err ->
@@ -103,7 +164,7 @@ defmodule Huddlz.Accounts.ApiKeyTest do
     ApiKey
     |> Ash.Changeset.for_create(
       :create,
-      %{expires_at: expires_at},
+      %{name: "Laptop", expires_at: expires_at},
       actor: user
     )
     |> Ash.create!()

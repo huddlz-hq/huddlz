@@ -108,7 +108,7 @@ defmodule ConfirmationParticipationSteps do
       Huddlz.Accounts.ApiKey
       |> Ash.Changeset.for_create(
         :create,
-        %{expires_at: DateTime.add(DateTime.utc_now(), 86_400)},
+        %{name: "Test key", expires_at: DateTime.add(DateTime.utc_now(), 86_400)},
         actor: owner
       )
       |> Ash.create()
@@ -148,7 +148,7 @@ defmodule ConfirmationParticipationSteps do
       Huddlz.Accounts.ApiKey
       |> Ash.Changeset.for_create(
         :create,
-        %{expires_at: DateTime.add(DateTime.utc_now(), 86_400)},
+        %{name: "Test key", expires_at: DateTime.add(DateTime.utc_now(), 86_400)},
         actor: stale_user
       )
       |> Ash.create!()
