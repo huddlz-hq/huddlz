@@ -117,7 +117,13 @@ config :spark,
 config :huddlz,
   ecto_repos: [Huddlz.Repo],
   generators: [timestamp_type: :utc_datetime],
-  ash_domains: [Huddlz.Accounts, Huddlz.Admin, Huddlz.Communities, Huddlz.Notifications]
+  ash_domains: [
+    Huddlz.Accounts,
+    Huddlz.Admin,
+    Huddlz.Communities,
+    Huddlz.Notifications,
+    Huddlz.Mcp
+  ]
 
 # Geocoding adapter (compile-time)
 config :huddlz, :geocoding, adapter: Huddlz.Geocoding.Google

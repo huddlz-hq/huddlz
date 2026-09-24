@@ -41,6 +41,24 @@ defmodule HuddlzWeb.ApiAuth do
     end
   end
 
+  @doc """
+  `on_error` handler for MCP, where every call needs a signed-in person.
+  The body tells an agent what to send instead of a bare refusal.
+  """
+  def mcp_on_error(conn, _error) do
+    body =
+      Jason.encode!(%{
+        error: "Authentication required: send an API key as Authorization: Bearer <key>.",
+        help: HuddlzWeb.Endpoint.url() <> "/help/agents"
+      })
+
+    conn
+    |> Plug.Conn.put_resp_content_type("application/json")
+    |> Plug.Conn.put_resp_header("cache-control", "no-store")
+    |> Plug.Conn.send_resp(401, body)
+    |> Plug.Conn.halt()
+  end
+
   defp mark_key_used(
          %{assigns: %{current_user: %User{__metadata__: %{api_key: %ApiKey{} = key}} = user}} =
            conn
