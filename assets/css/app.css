@@ -3608,15 +3608,19 @@ body .org-huddl-series {
 
 body .org-huddl-series .icon { color: var(--accent-ink); }
 
+/* Buttons side by side; Edit series (the whole series) on a line of its own. */
 body .org-huddl-actions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  max-width: 280px;
 }
 
-body .org-huddl-edit-series,
-body .org-huddl-copy {
+body .org-huddl-actions .org-huddl-edit-series { flex-basis: 100%; text-align: right; }
+
+body .org-huddl-edit-series {
   color: var(--accent-ink);
   font-size: 12px;
   font-weight: 600;
@@ -3624,8 +3628,7 @@ body .org-huddl-copy {
   white-space: nowrap;
 }
 
-body .org-huddl-edit-series:hover,
-body .org-huddl-copy:hover { text-decoration: underline; }
+body .org-huddl-edit-series:hover { text-decoration: underline; }
 
 body .org-list-more {
   display: flex;
@@ -3647,7 +3650,9 @@ body .btn-sm { height: 32px; padding: 0 12px; font-size: 13px; }
   }
   body .org-huddl .org-huddl-rsvps,
   body .org-huddl .org-huddl-actions { grid-column: 2; justify-self: start; }
-  body .org-huddl-actions { flex-direction: row; align-items: center; gap: 12px; }
+  body .org-huddl-actions { justify-content: flex-start; max-width: none; }
+  body .org-huddl-actions .btn-sm { height: 44px; }
+  body .org-huddl-actions .org-huddl-edit-series { flex-basis: auto; text-align: left; }
 }
 
 /* Agenda: the month's huddlz grouped by day. A date rail on the left, one

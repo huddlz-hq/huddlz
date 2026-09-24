@@ -1053,9 +1053,9 @@ defmodule HuddlzWeb.OrganizeLive do
           :if={is_nil(@group.archived_at)}
           id={"organize-huddl-copy-#{@huddl.id}"}
           navigate={~p"/groups/#{@group.slug}/huddlz/new?#{[copy: @huddl.id]}"}
-          class="org-huddl-copy"
+          class="btn-secondary btn-sm org-huddl-copy"
         >
-          Copy
+          <.icon name="hero-document-duplicate" class="size-4" /> Copy
         </.link>
         <.link
           :if={@huddl.huddl_template && @huddl.status not in [:cancelled, :completed]}
