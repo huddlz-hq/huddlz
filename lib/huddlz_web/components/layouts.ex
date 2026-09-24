@@ -213,6 +213,15 @@ defmodule HuddlzWeb.Layouts do
             <span class="label">Notifications</span>
           </.link>
           <.link
+            :if={confirmed?(@current_user)}
+            class={["sb-item", @active == "api_keys" && "active"]}
+            navigate={~p"/profile/api-keys"}
+            aria-current={@active == "api_keys" && "page"}
+          >
+            <.nav_icon name="key" />
+            <span class="label">API keys</span>
+          </.link>
+          <.link
             class={["sb-item", @active == "help" && "active"]}
             navigate={~p"/help"}
             aria-current={@active == "help" && "page"}
@@ -717,6 +726,26 @@ defmodule HuddlzWeb.Layouts do
     </svg>
     """
   end
+
+  defp nav_icon(%{name: "key"} = assigns) do
+    ~H"""
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <circle cx="8" cy="15" r="4" /><path d="M10.8 12.2 20 3" /><path d="m16 7 3 3" /><path d="m18 5 2 2" />
+    </svg>
+    """
+  end
+
+  defp confirmed?(%User{confirmed_at: %DateTime{}}), do: true
+  defp confirmed?(_user), do: false
 
   defp display_name(%{display_name: name}) when is_binary(name) and name != "", do: name
   defp display_name(%{email: email}) when is_binary(email), do: email
