@@ -4281,6 +4281,14 @@ body .huddl-side-section {
   border-top: 1px solid var(--line);
 }
 
+/* The section that opens the sidebar divides itself from what follows. */
+body .huddl-side-section.huddl-side-lead {
+  margin: 0 0 20px;
+  padding: 0 0 20px;
+  border-top: 0;
+  border-bottom: 1px solid var(--line);
+}
+
 body .huddl-side-section h3 {
   margin: 0 0 12px;
   font-size: 12px;
