@@ -31,6 +31,7 @@ defmodule HuddlzWeb.ProfileLive.ApiKeys do
          |> assign(:page_title, "API keys")
          |> assign(:mode, :list)
          |> assign(:revoking, nil)
+         |> stream_configure(:keys, dom_id: &"api-key-#{&1.id}")
          |> load_keys()}
 
       _unconfirmed ->
@@ -47,7 +48,7 @@ defmodule HuddlzWeb.ProfileLive.ApiKeys do
   end
 
   def handle_event("cancel", _params, socket) do
-    {:noreply, assign(socket, :mode, :list)}
+    {:noreply, socket |> assign(:mode, :list) |> load_keys()}
   end
 
   def handle_event("validate", %{"api_key" => params}, socket) do
@@ -64,20 +65,24 @@ defmodule HuddlzWeb.ProfileLive.ApiKeys do
       {:ok, key} ->
         {:noreply,
          socket
-         |> assign(:mode, {:shown, key.__metadata__.plaintext_api_key, key})
-         |> load_keys()}
+         |> assign(:mode, {:shown, key.__metadata__.plaintext_api_key, key})}
 
       {:error, form} ->
         {:noreply, socket |> assign(:form, form) |> assign(:expiry, expiry)}
     end
   end
 
+  # The list leaves the page while a key is being created, so its stream is
+  # filled again on the way back.
   def handle_event("done", _params, socket) do
-    {:noreply, assign(socket, :mode, :list)}
+    {:noreply, socket |> assign(:mode, :list) |> load_keys()}
   end
 
   def handle_event("ask_revoke", %{"id" => id}, socket) do
-    {:noreply, assign(socket, :revoking, find_key(socket, id))}
+    case find_key(socket, id) do
+      %ApiKey{} = key -> {:noreply, assign(socket, :revoking, key)}
+      nil -> {:noreply, socket}
+    end
   end
 
   def handle_event("keep", _params, socket) do
@@ -97,20 +102,32 @@ defmodule HuddlzWeb.ProfileLive.ApiKeys do
 
   defp destroy(socket, key) do
     case Ash.destroy(key, actor: socket.assigns.current_user) do
-      :ok -> load_keys(socket)
-      {:error, _error} -> put_flash(socket, :error, "That key could not be removed. Try again.")
+      :ok ->
+        socket |> stream_delete(:keys, key) |> update(:key_count, &(&1 - 1))
+
+      {:error, _error} ->
+        put_flash(socket, :error, "That key could not be removed. Try again.")
     end
   end
 
-  defp find_key(socket, id), do: Enum.find(socket.assigns.keys, &(&1.id == id))
+  # Only the person's own keys are readable, so an id from the page can't
+  # reach anyone else's.
+  defp find_key(socket, id) do
+    case Ash.get(ApiKey, id, actor: socket.assigns.current_user) do
+      {:ok, key} -> key
+      {:error, _error} -> nil
+    end
+  end
 
   defp load_keys(socket) do
     keys =
       ApiKey
-      |> Ash.Query.sort(inserted_at: :desc)
+      |> Ash.Query.sort(inserted_at: :desc_nils_last)
       |> Ash.read!(actor: socket.assigns.current_user)
 
-    assign(socket, :keys, keys)
+    socket
+    |> assign(:key_count, length(keys))
+    |> stream(:keys, keys, reset: true)
   end
 
   defp assign_form(socket, expiry) do
@@ -147,7 +164,7 @@ defmodule HuddlzWeb.ProfileLive.ApiKeys do
       </div>
 
       <div class="settings-stack">
-        <.keys_panel :if={@mode == :list} keys={@keys} />
+        <.keys_panel :if={@mode == :list} keys={@streams.keys} key_count={@key_count} />
         <.create_panel :if={@mode == :create} form={@form} expiry={@expiry} choices={@expiry_choices} />
         <.shown_panel :if={match?({:shown, _, _}, @mode)} mode={@mode} />
       </div>
@@ -157,7 +174,8 @@ defmodule HuddlzWeb.ProfileLive.ApiKeys do
     """
   end
 
-  attr :keys, :list, required: true
+  attr :keys, :any, required: true
+  attr :key_count, :integer, required: true
 
   defp keys_panel(assigns) do
     ~H"""
@@ -174,12 +192,17 @@ defmodule HuddlzWeb.ProfileLive.ApiKeys do
         </.button>
       </div>
 
-      <.empty_state :if={@keys == []} id="api-keys-empty" icon="hero-key" title="No keys yet">
+      <.empty_state :if={@key_count == 0} id="api-keys-empty" icon="hero-key" title="No keys yet">
         Create one when you want an agent or a script to use huddlz for you.
       </.empty_state>
 
-      <ul :if={@keys != []} class="row-list api-key-list" aria-label="Your keys">
-        <li :for={key <- @keys} id={"api-key-#{key.id}"} class="row api-key-row">
+      <ul
+        id="api-keys"
+        class={["row-list api-key-list", @key_count == 0 && "hidden"]}
+        aria-label="Your keys"
+        phx-update="stream"
+      >
+        <li :for={{dom_id, key} <- @keys} id={dom_id} class="row api-key-row">
           <div>
             <div class="api-key-name">
               <h3 class={["row-title", expired?(key) && "muted"]}>{key.name}</h3>
@@ -289,9 +312,15 @@ defmodule HuddlzWeb.ProfileLive.ApiKeys do
           This is the only time huddlz shows this key. Paste it into your agent now, or keep it in a password manager. Anyone with it can act as you.
         </p>
         <div class="api-key-secret">
-          <label for="new-api-key" class="form-label">Your key</label>
           <div class="api-key-secret-row">
-            <input id="new-api-key" type="text" class="api-key-value" value={@plaintext} readonly />
+            <.input
+              id="new-api-key"
+              name="new_api_key"
+              label="Your key"
+              value={@plaintext}
+              class="api-key-value"
+              readonly
+            />
             <button type="button" id="new-api-key-copy" class="btn-primary" data-value={@plaintext}>
               <span
                 id="new-api-key-copy-label"
@@ -340,13 +369,15 @@ defmodule HuddlzWeb.ProfileLive.ApiKeys do
     do: not DateTime.after?(expires_at, DateTime.utc_now())
 
   defp key_meta(key) do
-    [
-      "Created #{format_date(key.inserted_at)}",
-      expiry_text(key),
-      use_text(key)
-    ]
+    [created_text(key), expiry_text(key), use_text(key)]
+    |> Enum.reject(&is_nil/1)
     |> Enum.join(" · ")
   end
+
+  # Keys made before creation times were recorded have none; say nothing
+  # rather than guess.
+  defp created_text(%ApiKey{inserted_at: nil}), do: nil
+  defp created_text(%ApiKey{inserted_at: at}), do: "Created #{format_date(at)}"
 
   defp expiry_text(key) do
     if expired?(key),

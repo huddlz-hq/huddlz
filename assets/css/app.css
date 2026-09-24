@@ -5736,19 +5736,9 @@ body .api-key-warning {
   line-height: 1.5;
 }
 body .api-key-secret { display: flex; flex-direction: column; gap: 8px; }
-body .api-key-secret-row { display: flex; gap: 8px; }
-body .api-key-value {
-  flex: 1 1 auto;
-  min-width: 0;
-  height: 40px;
-  padding: 0 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-sm);
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 13px;
-}
+body .api-key-secret-row { display: flex; align-items: flex-end; gap: 8px; }
+body .api-key-secret-row .form-row { flex: 1 1 auto; min-width: 0; margin: 0; }
+body .api-key-value { font-family: var(--mono); font-size: 13px; }
 body .api-key-secret-row .btn-primary { height: 40px; }
 
 body .api-keys-panel .panel-head .btn-primary { white-space: nowrap; }

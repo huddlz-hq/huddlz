@@ -218,7 +218,7 @@ defmodule HuddlzWeb.Layouts do
             navigate={~p"/profile/api-keys"}
             aria-current={@active == "api_keys" && "page"}
           >
-            <.nav_icon name="key" />
+            <.icon name="hero-key" class="size-[18px]" />
             <span class="label">API keys</span>
           </.link>
           <.link
@@ -723,23 +723,6 @@ defmodule HuddlzWeb.Layouts do
       stroke-linejoin="round"
     >
       <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" />
-    </svg>
-    """
-  end
-
-  defp nav_icon(%{name: "key"} = assigns) do
-    ~H"""
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.8"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      <circle cx="8" cy="15" r="4" /><path d="M10.8 12.2 20 3" /><path d="m16 7 3 3" /><path d="m18 5 2 2" />
     </svg>
     """
   end
