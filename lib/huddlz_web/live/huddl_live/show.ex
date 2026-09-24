@@ -334,6 +334,58 @@ defmodule HuddlzWeb.HuddlLive.Show do
         </div>
 
         <aside class="huddl-side">
+          <div id="huddl-group" class="huddl-side-section huddl-side-lead">
+            <h3>Hosted by</h3>
+            <.link id="huddl-group-link" navigate={~p"/groups/#{@huddl.group.slug}"} class="group-row">
+              <.group_cover group={@huddl.group} id="huddl-group-cover" variant={:thumb} />
+              <span class="group-row-copy">
+                <span class="group-row-name">{@huddl.group.name}</span>
+                <span class="group-row-meta">{group_meta(@huddl.group)}</span>
+              </span>
+              <.icon name="hero-chevron-right" class="size-4 group-row-chevron" />
+            </.link>
+            <div :if={@group_membership == :joinable} class="group-row-actions">
+              <.button
+                variant={:secondary}
+                id="huddl-group-join"
+                phx-click="join_group"
+                phx-disable-with="Joining..."
+              >
+                Join group
+              </.button>
+            </div>
+            <div :if={@group_membership == :member} class="group-row-actions">
+              <.pill variant={:cyan} id="huddl-group-member">Member</.pill>
+              <span
+                :if={@just_joined_group? && @join_suggestion == :none}
+                id="huddl-group-joined"
+                class="pref-saved"
+                role="status"
+              >
+                Joined
+              </span>
+            </div>
+            <div class="creator-row">
+              <span class="muted">Organized by</span>
+              <.avatar user={@huddl.creator} size={:sm} />
+              <span>{@huddl.creator.display_name || @huddl.creator.email}</span>
+              <.person_menu
+                :if={
+                  ReportAccount.offer?(
+                    @current_user,
+                    @huddl.creator.id,
+                    User.suspended?(@huddl.creator)
+                  )
+                }
+                id={"creator-menu-#{@huddl.creator.id}"}
+                name={@huddl.creator.display_name}
+                user_id={@huddl.creator.id}
+                source={{:huddl, @huddl.id}}
+                class="creator-menu"
+              />
+            </div>
+          </div>
+
           <h3>RSVP</h3>
 
           <ul class="facts">
@@ -611,58 +663,6 @@ defmodule HuddlzWeb.HuddlLive.Show do
               >
                 Delete huddl
               </.button>
-            </div>
-          </div>
-
-          <div id="huddl-group" class="huddl-side-section">
-            <h3>Hosted by</h3>
-            <.link id="huddl-group-link" navigate={~p"/groups/#{@huddl.group.slug}"} class="group-row">
-              <.group_cover group={@huddl.group} id="huddl-group-cover" variant={:thumb} />
-              <span class="group-row-copy">
-                <span class="group-row-name">{@huddl.group.name}</span>
-                <span class="group-row-meta">{group_meta(@huddl.group)}</span>
-              </span>
-              <.icon name="hero-chevron-right" class="size-4 group-row-chevron" />
-            </.link>
-            <div :if={@group_membership == :joinable} class="group-row-actions">
-              <.button
-                variant={:secondary}
-                id="huddl-group-join"
-                phx-click="join_group"
-                phx-disable-with="Joining..."
-              >
-                Join group
-              </.button>
-            </div>
-            <div :if={@group_membership == :member} class="group-row-actions">
-              <.pill variant={:cyan} id="huddl-group-member">Member</.pill>
-              <span
-                :if={@just_joined_group? && @join_suggestion == :none}
-                id="huddl-group-joined"
-                class="pref-saved"
-                role="status"
-              >
-                Joined
-              </span>
-            </div>
-            <div class="creator-row">
-              <span class="muted">Organized by</span>
-              <.avatar user={@huddl.creator} size={:sm} />
-              <span>{@huddl.creator.display_name || @huddl.creator.email}</span>
-              <.person_menu
-                :if={
-                  ReportAccount.offer?(
-                    @current_user,
-                    @huddl.creator.id,
-                    User.suspended?(@huddl.creator)
-                  )
-                }
-                id={"creator-menu-#{@huddl.creator.id}"}
-                name={@huddl.creator.display_name}
-                user_id={@huddl.creator.id}
-                source={{:huddl, @huddl.id}}
-                class="creator-menu"
-              />
             </div>
           </div>
         </aside>
