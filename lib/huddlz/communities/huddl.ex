@@ -958,9 +958,15 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     # Scoped to the primary actions so RSVPs and lifecycle transitions on
-    # legacy huddlz that predate the address book keep working.
+    # legacy huddlz that predate the address book keep working. Copies get
+    # this check from CopyFromHuddl, which can name a removed location.
     validate present(:group_location_id) do
-      where [action_is([:create, :update]), one_of(:event_type, [:in_person, :hybrid])]
+      where [
+        action_is([:create, :update]),
+        one_of(:event_type, [:in_person, :hybrid]),
+        argument_equals(:copied_from_id, nil)
+      ]
+
       message "is required for in-person and hybrid huddlz"
     end
 

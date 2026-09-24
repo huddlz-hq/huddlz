@@ -46,6 +46,23 @@ defmodule CopyHuddlApiSteps do
     organizer_context(context, owner, group, source)
   end
 
+  step "I organize a group with an online huddl {string}", %{args: [title]} = context do
+    {owner, group} = organized_group()
+
+    source =
+      generate(
+        huddl(
+          title: title,
+          group_id: group.id,
+          actor: owner,
+          event_type: :virtual,
+          virtual_link: @virtual_link
+        )
+      )
+
+    organizer_context(context, owner, group, source)
+  end
+
   step "I organize a group with a weekly series {string}", %{args: [title]} = context do
     {owner, group} = organized_group()
     today = eastern_today()
@@ -197,6 +214,11 @@ defmodule CopyHuddlApiSteps do
   step "I copy it through {string} on a future date without its cover",
        %{args: [api]} = context do
     copy(context, api, %{"date" => Date.to_iso8601(future_date()), "copy_cover" => false})
+  end
+
+  step "I copy it through {string} on a future date as an in-person huddl",
+       %{args: [api]} = context do
+    copy(context, api, %{"date" => Date.to_iso8601(future_date()), "event_type" => "in_person"})
   end
 
   step "I copy it through {string} without a date", %{args: [api]} = context do

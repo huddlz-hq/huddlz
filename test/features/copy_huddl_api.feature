@@ -74,6 +74,11 @@ Feature: Copy a huddl through the API
     When I copy it through "JSON:API" on a future date at "Ecotrust Building"
     Then the copy meets at "Ecotrust Building"
 
+  Scenario: A copy made in person needs a location
+    Given I organize a group with an online huddl "Remote pairing hour"
+    When I copy it through "JSON:API" on a future date as an in-person huddl
+    Then the copy is refused because "group_location_id" "is required for in-person and hybrid huddlz"
+
   Scenario: Only organizers of the group can copy
     Given a group I belong to as a member has a past huddl "Hands-on with Ash Framework"
     When I copy it through "JSON:API" on a future date

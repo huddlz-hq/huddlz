@@ -216,6 +216,7 @@ defmodule CopyHuddlSteps do
 
     context.session
     |> assert_has("*", text: "#{address} was removed from the address book; choose a location")
+    |> refute_has("*", text: "is required for in-person and hybrid huddlz")
 
     context
   end
