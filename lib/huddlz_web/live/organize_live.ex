@@ -64,7 +64,6 @@ defmodule HuddlzWeb.OrganizeLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    user = socket.assigns.current_user
     time_zone = BrowserTimeZone.for_socket(socket)
 
     {:ok,
@@ -80,7 +79,6 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:period, GroupStats.default_period())
      |> assign(:stats, nil)
      |> assign(:invitation_count, 0)
-     |> assign(:invitation_form, invitation_form(user))
      |> assign(:member_lookup, %{})
      |> assign(:member_role_counts, %{owner: 0, organizer: 0, member: 0})
      |> assign(:subscribed_group_id, nil)
@@ -178,6 +176,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
     socket
     |> assign_members(members)
+    |> assign_new(:invitation_form, fn -> invitation_form(user) end)
     |> assign(:invitation_count, length(invitations))
     |> stream(:invitations, invitations, reset: true)
   end
@@ -300,10 +299,10 @@ defmodule HuddlzWeb.OrganizeLive do
     end
   end
 
-  # A problem with the email itself shows under the Email field; anything
-  # the form cannot point at gets a flash instead.
+  # A problem with a field shows under that field; anything the form cannot
+  # point at gets a flash instead.
   defp put_invitation_failure_flash(socket, form) do
-    if Keyword.has_key?(AshPhoenix.Form.errors(form), :email) do
+    if Enum.any?(AshPhoenix.Form.errors(form), fn {field, _} -> field in [:email, :role] end) do
       socket
     else
       put_flash(
