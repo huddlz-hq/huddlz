@@ -43,3 +43,22 @@ Keep every version for two years (730 days) and prune older versions daily, as d
 Pruning uses atomic bulk destruction through each version resource's `:expire` action. The shared action enforces the same 730-day cutoff everywhere; the job only orchestrates the actions and propagates failures for retry.
 
 Retention applies to new PaperTrail versions only; this work does not change the existing organizer activity feed's deletion policy. An audit UI and private-group moderation access are deferred.
+
+## Copy measurement
+
+A copied huddl's creation version records `copied_from_id` and
+`copied_source_ends_at`. The source end time is captured during copying, so
+later edits, deletion, and source-history expiry cannot rewrite its historical
+classification. Earlier copies without this metadata remain in the total and
+show source timing as unavailable. Distinct organizers use the creation
+snapshot's `creator_id`, which remains when account deletion clears actor links.
+
+The admin Copies panel counts retained audit facts across the whole platform,
+including private groups, private huddlz, drafts and deleted copies. ADR-0004
+permits this narrow exception for aggregate copy counts only: the panel exposes
+no individual records, and ordinary private-content access remains unchanged.
+Measurement coverage begins with the deployment that records source timing and
+initializes `copy_measurement`, independently of the first copy. Earlier copies
+are still counted, but comparisons require complete coverage; the later of this
+deployment timestamp and the 730-day retention cutoff bounds that coverage.
+The deployment marker is collection metadata and contains no group activity.

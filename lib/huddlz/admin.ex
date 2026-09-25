@@ -9,6 +9,8 @@ defmodule Huddlz.Admin do
     otp_app: :huddlz
 
   resources do
+    resource Huddlz.Admin.CopyMeasurement
+
     resource Huddlz.Admin.AccountReview do
       define :review_account, action: :review, args: [:user_id]
     end

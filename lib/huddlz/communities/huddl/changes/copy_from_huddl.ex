@@ -209,12 +209,17 @@ defmodule Huddlz.Communities.Huddl.Changes.CopyFromHuddl do
   defp cover_opts(changeset) do
     changeset
     |> Huddlz.Audit.nested_opts()
-    |> update_in([:context, :paper_trail_metadata], &Map.delete(&1, :copied_from_id))
+    |> update_in(
+      [:context, :paper_trail_metadata],
+      &Map.drop(&1, [:copied_from_id, :copied_source_ends_at])
+    )
   end
 
   defp record_source(changeset, source) do
     metadata =
-      Map.put(changeset.context[:paper_trail_metadata] || %{}, :copied_from_id, source.id)
+      (changeset.context[:paper_trail_metadata] || %{})
+      |> Map.put(:copied_from_id, source.id)
+      |> Map.put(:copied_source_ends_at, source.ends_at)
 
     Ash.Changeset.put_context(changeset, :paper_trail_metadata, metadata)
   end

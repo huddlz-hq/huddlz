@@ -19,7 +19,8 @@ defmodule Huddlz.Admin.PlatformOverview do
       Platform-wide overview figures for a period: people and how many
       signed up, active people and when measuring them began, groups and
       how many held a huddl, huddlz held, RSVPs and show rate against the
-      period before, the most active groups and what is coming up.
+      period before, the most active groups, what is coming up, RSVPs from
+      people who had not joined the group, and huddlz copied from another.
       Periods are "30d", "90d" (default) and "12m".
       """
 

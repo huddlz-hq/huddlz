@@ -1,0 +1,206 @@
+defmodule AdminCopiesSteps do
+  use Cucumber.StepDefinition
+
+  import ExUnit.Assertions
+  import Huddlz.Generator
+  import PhoenixTest
+
+  require Ash.Query
+
+  alias Huddlz.Accounts.User
+  alias Huddlz.Communities
+  alias Huddlz.Communities.{Group, Huddl}
+
+  @panel "#copies"
+
+  step "{string} copied {int} huddl(z) of {string}",
+       %{args: [email, count, group_name]} = context do
+    for _copy <- 1..count, do: copy(email, upcoming_huddl(group_name, email))
+    context
+  end
+
+  step "{string} created a huddl of {string} from scratch",
+       %{args: [email, group_name]} = context do
+    upcoming_huddl(group_name, email)
+    context
+  end
+
+  step "{string} copied a huddl of {string} that had already happened",
+       %{args: [email, group_name]} = context do
+    copy(email, past_huddl_of(group_name, email, 2))
+    context
+  end
+
+  step "{string} copied a huddl of {string} that was still upcoming",
+       %{args: [email, group_name]} = context do
+    copy(email, upcoming_huddl(group_name, email))
+    context
+  end
+
+  step "{string} copied a huddl of {string} {int} days ago that ended {int} days ago",
+       %{args: [email, group_name, copied_days, ended_days]} = context do
+    email |> copy(past_huddl_of(group_name, email, ended_days)) |> backdate(copied_days)
+    context
+  end
+
+  step "{string} copied a huddl of {string} {int} days ago",
+       %{args: [email, group_name, days]} = context do
+    copied = copy(email, upcoming_huddl(group_name, email))
+    backdate(copied, days)
+    Map.put(context, :last_copy, copied)
+  end
+
+  step "{string} copied a past huddl of {string} which was later moved into the future",
+       %{args: [email, group_name]} = context do
+    source = past_huddl_of(group_name, email, 2)
+    copy(email, source)
+    Ash.Seed.update!(source, %{ends_at: DateTime.add(DateTime.utc_now(), 30, :day)})
+    context
+  end
+
+  step "copy measurement began {int} days ago", %{args: [days]} = context do
+    Huddlz.Admin.CopyMeasurement
+    |> Ash.read_one!(authorize?: false)
+    |> Ash.Seed.update!(%{started_at: DateTime.add(DateTime.utc_now(), -days, :day)})
+
+    context
+  end
+
+  step "the copying organizers are no longer linked to their accounts", context do
+    # Account deletion nilifies the audit foreign key, retaining the snapshot.
+    Huddl.Version
+    |> Ash.Query.filter(not is_nil(copied_from_id))
+    |> Ash.read!(authorize?: false)
+    |> Enum.each(&Ash.Seed.update!(&1, %{actor_id: nil}))
+
+    context
+  end
+
+  step "{string} made a copy of {string} before source timing was recorded",
+       %{args: [email, group_name]} = context do
+    copied = copy(email, past_huddl_of(group_name, email, 2))
+
+    Huddl.Version
+    |> Ash.Query.filter(version_source_id == ^copied.id and version_action_name == :create)
+    |> Ash.read_one!(authorize?: false)
+    |> Ash.Seed.update!(%{copied_source_ends_at: nil})
+
+    context
+  end
+
+  step "{string} made a private copy in {string} {int} days ago",
+       %{args: [email, group_name, days]} = context do
+    copied = copy(email, upcoming_huddl(group_name, email), %{is_private: true})
+    backdate(copied, days)
+    Map.put(context, :last_copy, copied)
+  end
+
+  step "{string} still cannot read the copied huddl",
+       %{args: [email], last_copy: copied} = context do
+    assert {:error, _} = Ash.get(Huddl, copied.id, actor: find_user(email))
+    context
+  end
+
+  step "{string} made a draft copy in {string}", %{args: [email, group_name]} = context do
+    copied = copy(email, upcoming_huddl(group_name, email), %{lifecycle_state: :draft})
+    Map.put(context, :last_copy, copied)
+  end
+
+  step "{string} deleted their copied huddl", %{args: [email], last_copy: copied} = context do
+    Ash.destroy!(copied, actor: find_user(email))
+    context
+  end
+
+  step "the Copies panel shows {int} for {string}", %{args: [count, label]} = context do
+    assert_has(context.session, "#{@panel} output[aria-label=\"#{label}\"]",
+      text: "#{count}",
+      exact: true
+    )
+
+    context
+  end
+
+  step "the Copies panel says {string}", %{args: [text]} = context do
+    assert_has(context.session, @panel, text: text)
+    context
+  end
+
+  step "the Copies panel says it has been measured since {int} days ago",
+       %{args: [days]} = context do
+    since = Date.add(Date.utc_today(), -days)
+    # The page keeps the date on one line with a no-break space.
+    assert_has(context.session, @panel,
+      text: "Measured since #{Calendar.strftime(since, "%b %-d")}"
+    )
+
+    context
+  end
+
+  step "the Copies panel does not mention unavailable source timing", context do
+    refute_has(context.session, @panel, text: "Source timing unavailable")
+    context
+  end
+
+  step "the Copies panel does not say when it has been measured since", context do
+    refute_has(context.session, @panel, text: "Measured since")
+    context
+  end
+
+  step "the Copies panel does not compare with the previous period", context do
+    refute_has(context.session, @panel, text: "in the previous")
+    context
+  end
+
+  step "its copy figures count {int} huddlz by {int} organizer",
+       %{args: [count, organizers], overview_result: result} = context do
+    assert {:ok, %{copies: %{count: ^count, organizers: ^organizers}}} = result
+    context
+  end
+
+  # Copies go through the huddl create action, as the form and the API do,
+  # so the audit history records them.
+  defp copy(email, source, attributes \\ %{}) do
+    Communities.create_huddl!(
+      Map.merge(%{copied_from_id: source.id, date: Date.add(Date.utc_today(), 14)}, attributes),
+      actor: find_user(email)
+    )
+  end
+
+  defp backdate(copy, days) do
+    Huddl.Version
+    |> Ash.Query.filter(version_source_id == ^copy.id and version_action_name == :create)
+    |> Ash.read_one!(authorize?: false)
+    |> Ash.Seed.update!(%{version_inserted_at: DateTime.add(DateTime.utc_now(), -days, :day)})
+  end
+
+  defp upcoming_huddl(group_name, email) do
+    group = find_group(group_name)
+    generate(huddl(group_id: group.id, actor: find_user(email), is_private: false))
+  end
+
+  # Seeded without history; copying must capture its dates at that moment.
+  defp past_huddl_of(group_name, email, ended_days) do
+    group = find_group(group_name)
+    ends_at = DateTime.add(DateTime.utc_now(), -ended_days, :day)
+
+    generate(
+      past_huddl(
+        group_id: group.id,
+        creator_id: find_user(email).id,
+        group_location_id: address_book_location_id(group.id),
+        time_zone: group.time_zone,
+        starts_at: DateTime.add(ends_at, -2, :hour),
+        ends_at: ends_at,
+        lifecycle_state: :completed
+      )
+    )
+  end
+
+  defp find_group(name) do
+    Group |> Ash.Query.filter(name == ^name) |> Ash.read_one!(authorize?: false)
+  end
+
+  defp find_user(email) do
+    User |> Ash.Query.filter(email == ^email) |> Ash.read_one!(authorize?: false)
+  end
+end

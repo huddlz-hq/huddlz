@@ -14,3 +14,19 @@ Start and stop are recorded. Meaningful changes use the shared AshPaperTrail his
 ## Consequences
 
 Administrators retain personal actions and exactly the rights of their own group roles. Platform views respect private visibility; private-group analytics require an owner or organizer role. A future moderation feature needs an explicit access decision rather than restoring the old bypass.
+
+## Exception: platform-wide aggregate copy counts
+
+The admin overview's Copies panel may count copying activity across every group,
+including private groups, private huddlz, drafts and deleted copies whose audit
+history is still retained. It returns only total copies, distinct organizer and
+group counts, source-timing counts, and period comparisons. It exposes no names,
+identifiers, individual records, content, or drill-down into private activity.
+
+Filtering these adoption figures by the administrator's memberships makes the
+platform totals incomplete and different for each administrator. Complete
+aggregate counts are therefore an explicit exception to the visibility rule
+above. Small counts remain visible; the counts themselves are authorized staff
+information. This exception does not grant private-content access, change the
+visibility of other overview panels, or expose staff analytics through public
+APIs. The administrator-only dashboard action remains the access boundary.
