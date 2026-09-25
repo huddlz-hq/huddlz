@@ -156,6 +156,47 @@ defmodule CopyHuddlSteps do
     Map.update!(context, :session, &click_button(&1, "Remove"))
   end
 
+  step "I replace the copied cover", context do
+    session = upload(context.session, "Cover image", "test/fixtures/tall_red_blue.png")
+    Phoenix.LiveViewTest.render_async(session.view, 5_000)
+    session = assert_has(session, "*", text: "Image uploaded · ready to publish.", timeout: 5_000)
+    html = Phoenix.LiveViewTest.render(session.view)
+
+    [url] =
+      html
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("#huddl-cover-upload img")
+      |> LazyHTML.attribute("src")
+
+    image =
+      Huddlz.Communities.HuddlCoverImage
+      |> Ash.Query.filter(thumbnail_path == ^url)
+      |> Ash.read_one!(authorize?: false)
+
+    ExUnit.Callbacks.on_exit(fn ->
+      Huddlz.Storage.delete(image.storage_path)
+      Huddlz.Storage.delete(image.thumbnail_path)
+    end)
+
+    expected_cover = served_cover(url)
+    Map.merge(context, %{session: session, replacement_cover: expected_cover})
+  end
+
+  step "the new huddl shows my replacement cover", context do
+    [copy] = copies(context)
+
+    ExUnit.Callbacks.on_exit(fn ->
+      File.rm_rf!("priv/static/uploads/huddl_cover_images/#{copy.id}")
+    end)
+
+    {:ok, copy} = Communities.get_huddl(copy.id, actor: context.owner, load: [:current_image_url])
+
+    assert served_cover(copy.current_image_url) == context.replacement_cover,
+           "The saved huddl should display the uploaded replacement cover"
+
+    context
+  end
+
   step "the new huddl has its own copy of the cover image", context do
     [copy] = copies(context)
 
@@ -190,16 +231,14 @@ defmodule CopyHuddlSteps do
     {:ok, huddl} = Communities.get_huddl(id, actor: actor, load: [:current_image_url])
     assert is_binary(huddl.current_image_url)
 
-    conn =
-      Phoenix.ConnTest.dispatch(
-        Phoenix.ConnTest.build_conn(),
-        HuddlzWeb.Endpoint,
-        :get,
-        huddl.current_image_url,
-        nil
-      )
+    assert served_cover(huddl.current_image_url) == File.read!("test/fixtures/test_image.jpg")
+  end
 
-    assert Phoenix.ConnTest.response(conn, 200) == File.read!("test/fixtures/test_image.jpg")
+  defp served_cover(url) do
+    conn =
+      Phoenix.ConnTest.dispatch(Phoenix.ConnTest.build_conn(), HuddlzWeb.Endpoint, :get, url, nil)
+
+    Phoenix.ConnTest.response(conn, 200)
   end
 
   step "the new huddl has no cover image", context do

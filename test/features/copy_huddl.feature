@@ -77,3 +77,12 @@ Feature: Copy a huddl
     Then the copied duration is 45 minutes
     When I schedule the huddl
     Then the group has a new upcoming "Quick study session"
+
+  Scenario: Replacing the copied cover
+    Given I organize a group with a past huddl "Hands-on with Ash Framework"
+    And that huddl has a cover image
+    When I visit that huddl and choose to copy it
+    And I replace the copied cover
+    And I schedule the huddl
+    Then the new huddl shows my replacement cover
+    And the original cover is still available
