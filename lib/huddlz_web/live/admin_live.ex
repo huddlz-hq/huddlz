@@ -490,11 +490,16 @@ defmodule HuddlzWeb.AdminLive do
 
   # ─── Copies ───────────────────────────────────────────────────────────
 
+  # Unlike the other panels, Copies counts every group (ADR-0004), so the
+  # subtitle says so before anyone compares it with them.
   defp copies_sub(%{measured_since: nil}),
-    do: "Huddlz organizers made by copying another huddl. Counts, not rates."
+    do:
+      "Huddlz organizers made by copying another huddl. " <>
+        "Across every group, private ones included. Counts, not rates."
 
   defp copies_sub(%{measured_since: from}) do
-    "Huddlz organizers made by copying another huddl. Counts, not rates. " <>
+    "Huddlz organizers made by copying another huddl. " <>
+      "Across every group, private ones included. Counts, not rates. " <>
       "Measured since #{measured_since(from, Date.utc_today())}."
   end
 

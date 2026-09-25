@@ -112,6 +112,7 @@ Feature: The admin overview shows how often huddlz are copied
     And the Copies panel says "0 in the previous 30 days"
     And the Copies panel does not say when it has been measured since
     And "admin642@example.com" still cannot read the copied huddl
+    And the Copies panel says "Across every group, private ones included."
 
   Scenario: Earlier copies with no recorded source timing are counted honestly
     Given "owner642@example.com" made a copy of "Tuesday Runners" before source timing was recorded
