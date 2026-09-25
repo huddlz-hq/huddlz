@@ -211,6 +211,7 @@ defmodule Huddlz.Communities.Huddl do
     metadata :impersonator_id, :uuid
     metadata :automatic?, :boolean
     metadata :copied_from_id, :uuid
+    metadata :copied_source_ends_at, :utc_datetime_usec
     version_extensions authorizers: [Ash.Policy.Authorizer]
     mixin {Huddlz.Audit.Version, :mixin, []}
   end

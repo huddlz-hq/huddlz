@@ -49,6 +49,44 @@ defmodule AdminCopiesSteps do
     context
   end
 
+  step "{string} copied a past huddl of {string} which was later moved into the future",
+       %{args: [email, group_name]} = context do
+    source = past_huddl_of(group_name, email, 2)
+    copy(email, source)
+    Ash.Seed.update!(source, %{ends_at: DateTime.add(DateTime.utc_now(), 30, :day)})
+    context
+  end
+
+  step "copy measurement began {int} days ago", %{args: [days]} = context do
+    Huddlz.Admin.CopyMeasurement
+    |> Ash.read_one!(authorize?: false)
+    |> Ash.Seed.update!(%{started_at: DateTime.add(DateTime.utc_now(), -days, :day)})
+
+    context
+  end
+
+  step "the copying organizers are no longer linked to their accounts", context do
+    # Account deletion nilifies the audit foreign key, retaining the snapshot.
+    Huddl.Version
+    |> Ash.Query.filter(not is_nil(copied_from_id))
+    |> Ash.read!(authorize?: false)
+    |> Enum.each(&Ash.Seed.update!(&1, %{actor_id: nil}))
+
+    context
+  end
+
+  step "{string} made a copy of {string} before source timing was recorded",
+       %{args: [email, group_name]} = context do
+    copied = copy(email, past_huddl_of(group_name, email, 2))
+
+    Huddl.Version
+    |> Ash.Query.filter(version_source_id == ^copied.id and version_action_name == :create)
+    |> Ash.read_one!(authorize?: false)
+    |> Ash.Seed.update!(%{copied_source_ends_at: nil})
+
+    context
+  end
+
   step "the Copies panel shows {int} for {string}", %{args: [count, label]} = context do
     assert_has(context.session, "#{@panel} output[aria-label=\"#{label}\"]",
       text: "#{count}",
@@ -111,7 +149,7 @@ defmodule AdminCopiesSteps do
     generate(huddl(group_id: group.id, actor: find_user(email), is_private: false))
   end
 
-  # Seeded, so it has no history of its own: its current dates stand in.
+  # Seeded without history; copying must capture its dates at that moment.
   defp past_huddl_of(group_name, email, ended_days) do
     group = find_group(group_name)
     ends_at = DateTime.add(DateTime.utc_now(), -ended_days, :day)

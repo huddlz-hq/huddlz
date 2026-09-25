@@ -514,12 +514,14 @@ defmodule HuddlzWeb.AdminLive do
   defp copy_source_rows(copies) do
     [
       {"copied-past", "Copied from a past huddl", copies.past},
-      {"copied-upcoming", "Copied from an upcoming huddl", copies.upcoming}
+      {"copied-upcoming", "Copied from an upcoming huddl", copies.upcoming},
+      {"copy-unknown", "Source timing unavailable", copies.unknown}
     ]
   end
 
   defp copy_sources_label(copies),
-    do: "#{copies.past} copied from a past huddl, #{copies.upcoming} from an upcoming huddl"
+    do:
+      "#{copies.past} copied from a past huddl, #{copies.upcoming} from an upcoming huddl, #{copies.unknown} with source timing unavailable"
 
   # ─── Drop-ins ─────────────────────────────────────────────────────────
 

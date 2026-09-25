@@ -12,6 +12,7 @@ Feature: The admin overview shows how often huddlz are copied
       | host642@example.com  | user  | Host Hana    |
     And a public group "Tuesday Runners" exists with owner "owner642@example.com"
     And a public group "Book Club" exists with owner "host642@example.com"
+    And copy measurement began 120 days ago
 
   Scenario: Counting copies in a period
     Given "owner642@example.com" copied 2 huddlz of "Tuesday Runners"
@@ -60,7 +61,8 @@ Feature: The admin overview shows how often huddlz are copied
     Then the Copies panel says "No huddlz were copied in this period."
 
   Scenario: A period that starts before copies were recorded
-    Given "owner642@example.com" copied a huddl of "Tuesday Runners" 10 days ago
+    Given copy measurement began 10 days ago
+    And "owner642@example.com" copied a huddl of "Tuesday Runners" 10 days ago
     And I am signed in as "admin642@example.com"
     When I visit "/admin?period=90d"
     Then the Copies panel says it has been measured since 10 days ago
@@ -76,3 +78,51 @@ Feature: The admin overview shows how often huddlz are copied
     Given "owner642@example.com" copied 2 huddlz of "Tuesday Runners"
     When "admin642@example.com" runs the platform overview action
     Then its copy figures count 2 huddlz by 1 organizer
+
+  Scenario: Later source edits do not rewrite copy history
+    Given "owner642@example.com" copied a past huddl of "Tuesday Runners" which was later moved into the future
+    And I am signed in as "admin642@example.com"
+    When I visit "/admin"
+    Then the Copies panel shows 1 for "Copied from a past huddl"
+    And the Copies panel shows 0 for "Copied from an upcoming huddl"
+
+  Scenario: Measurement coverage exists before the first copy
+    Given copy measurement began 10 days ago
+    And I am signed in as "admin642@example.com"
+    When I visit "/admin?period=90d"
+    Then the Copies panel says it has been measured since 10 days ago
+    And the Copies panel does not compare with the previous period
+
+  Scenario: Organizers remain distinct after their account links are removed
+    Given "owner642@example.com" copied 2 huddlz of "Tuesday Runners"
+    And "host642@example.com" copied 1 huddl of "Book Club"
+    And the copying organizers are no longer linked to their accounts
+    And I am signed in as "admin642@example.com"
+    When I visit "/admin"
+    Then the Copies panel says "by 2 organizers in 2 groups"
+
+  Scenario: Private copies do not affect an administrator without group access
+    Given copy measurement began 120 days ago
+    And a private group "Hidden Club" exists with owner "owner642@example.com"
+    And "owner642@example.com" copied a huddl of "Hidden Club" 10 days ago
+    And I am signed in as "admin642@example.com"
+    When I visit "/admin?period=30d"
+    Then the Copies panel says "No huddlz were copied in this period."
+    And the Copies panel says "0 in the previous 30 days"
+    And the Copies panel does not say when it has been measured since
+
+  Scenario: Earlier copies with no recorded source timing are counted honestly
+    Given "owner642@example.com" made a copy of "Tuesday Runners" before source timing was recorded
+    And I am signed in as "admin642@example.com"
+    When I visit "/admin"
+    Then the Copies panel shows 1 for "Huddlz copied"
+    And the Copies panel shows 0 for "Copied from a past huddl"
+    And the Copies panel shows 0 for "Copied from an upcoming huddl"
+    And the Copies panel shows 1 for "Source timing unavailable"
+
+  Scenario: Fully measured periods with no copies still compare
+    Given copy measurement began 120 days ago
+    And I am signed in as "admin642@example.com"
+    When I visit "/admin?period=30d"
+    Then the Copies panel says "0 in the previous 30 days"
+    And the Copies panel does not say when it has been measured since

@@ -446,6 +446,7 @@ defmodule CopyHuddlApiSteps do
       |> Ash.read_one!(authorize?: false)
 
     assert version.copied_from_id == source.id
+    assert DateTime.compare(version.copied_source_ends_at, source.ends_at) == :eq
     context
   end
 
