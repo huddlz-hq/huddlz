@@ -1,4 +1,4 @@
-@database @conn @share_links
+@async @database @conn @share_links
 Feature: Anyone can share a huddl or group from its page
   huddlz posts to Slack and Discord for a group; everywhere else a person
   shares the link themselves. The Share section on a huddl or group page

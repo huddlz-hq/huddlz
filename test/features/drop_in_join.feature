@@ -1,4 +1,4 @@
-@database @conn @drop_in
+@async @database @conn @drop_in
 Feature: Drop-ins can join the group from the huddl page
   As someone going to a huddl of a group I have not joined
   I want to be told once that I can join the group

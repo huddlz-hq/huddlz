@@ -1,4 +1,4 @@
-@database @conn @confirmation_participation
+@async @database @conn @confirmation_participation
 Feature: Confirming before participation
   A person proves their address before joining groups or RSVPing.
   Confirmation returns them to their destination without acting for them.

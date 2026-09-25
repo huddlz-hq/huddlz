@@ -1,4 +1,4 @@
-@database @participation_history
+@async @database @participation_history
 Feature: Participation history
   As huddlz
   I want the record of who joined, RSVPed and organized alongside troubleshooting history for two years

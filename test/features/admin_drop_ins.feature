@@ -1,4 +1,4 @@
-@database @conn @admin_drop_ins
+@async @database @conn @admin_drop_ins
 Feature: The admin overview shows how drop-ins use huddlz
   As the person running huddlz
   I want to see how many RSVPs come from people who have not joined the group, and what they do next

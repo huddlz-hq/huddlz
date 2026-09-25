@@ -1,4 +1,4 @@
-@database @conn @active_people
+@async @database @conn @active_people
 Feature: Active people
   As an administrator
   I want to know how many people used huddlz over a period

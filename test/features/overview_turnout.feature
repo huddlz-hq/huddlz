@@ -1,4 +1,4 @@
-@database @conn @overview_turnout
+@async @database @conn @overview_turnout
 Feature: Turnout on the overview
   As an organizer
   I want the overview to show how many people actually come

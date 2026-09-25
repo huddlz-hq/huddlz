@@ -1,4 +1,4 @@
-@database @conn
+@async @database @conn
 Feature: Reaching a huddl's group from its page
   A huddl page names the group hosting it, so a visitor can learn about the
   group and get to it in one step.

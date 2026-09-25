@@ -1,4 +1,4 @@
-@database @conn @structured_data
+@async @database @conn @structured_data
 Feature: Public structured data
   Scenario: An anonymous crawler reads a public huddl's schedule and organizer
     Given a public in-person huddl with a known schedule and address

@@ -1,4 +1,4 @@
-@database @conn @recent_activity
+@async @database @conn @recent_activity
 Feature: Recent activity on the overview
   As an organizer
   I want to see what happened in my group most recently

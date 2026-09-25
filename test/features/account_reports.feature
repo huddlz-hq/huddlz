@@ -1,4 +1,4 @@
-@database @conn @account_reports
+@async @database @conn @account_reports
 Feature: Confirmed members report accounts to an administrator queue
   As a confirmed member
   I want to report an account I can already see

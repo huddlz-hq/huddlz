@@ -1,4 +1,4 @@
-@database @conn @whos_going
+@async @database @conn @whos_going
 Feature: Who's going
   As someone going to a huddl
   I want to see who else is going

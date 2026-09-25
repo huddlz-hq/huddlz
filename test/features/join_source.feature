@@ -1,4 +1,4 @@
-@database @conn @join_source
+@async @database @conn @join_source
 Feature: A join records where it came from
   As the person running huddlz
   I want each join to say which page or email led to it

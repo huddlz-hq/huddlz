@@ -1,4 +1,4 @@
-@conn @favicon
+@async @conn @favicon
 Feature: The favicon is the brand mark
   The icon in the browser tab should be the same mark as the sidebar and the
   cards: a flat cyan rounded square with a dark "h", no glow.

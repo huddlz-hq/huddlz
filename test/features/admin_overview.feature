@@ -1,4 +1,4 @@
-@database @conn @admin_overview
+@async @database @conn @admin_overview
 Feature: Admin platform overview
   As an administrator
   I want one page with platform-wide figures

@@ -1,3 +1,4 @@
+# Keep serial: scenarios change global rate-limit configuration.
 @database @conn @mcp
 Feature: Discover and join huddlz with an agent
   As a member using an MCP client

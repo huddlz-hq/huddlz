@@ -1,4 +1,4 @@
-@database @conn @recurrence_boundaries
+@async @database @conn @recurrence_boundaries
 Feature: Organizers can trust recurrence boundaries
   As a group organizer
   I want invalid recurring schedules rejected before publication

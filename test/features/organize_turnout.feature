@@ -1,4 +1,4 @@
-@database @conn @organize_turnout
+@async @database @conn @organize_turnout
 Feature: Turnout across Organize
   As an organizer
   I want past huddlz to show how many came, and a reminder when a recent one is uncounted

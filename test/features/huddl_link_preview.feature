@@ -1,4 +1,4 @@
-@database @conn @huddl_link_preview
+@async @database @conn @huddl_link_preview
 Feature: Shared huddl links say when the huddl is
   Pasting a huddl link into a chat should tell readers when it takes place
   without opening it. The preview's title carries the date and start time in

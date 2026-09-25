@@ -1,4 +1,4 @@
-@database @conn @confirm_email
+@async @database @conn @confirm_email
 Feature: Confirming an email address
   As someone who just registered
   I want the confirmation link to land on a huddlz page

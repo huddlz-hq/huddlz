@@ -1,4 +1,4 @@
-@database @conn @turnout
+@async @database @conn @turnout
 Feature: Recording turnout for a past huddl
   As an organizer
   I want to note how many people actually came to a huddl

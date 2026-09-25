@@ -1,3 +1,4 @@
+# Keep serial: scenarios change the global mailer adapter.
 @database @conn @email_confirmation
 Feature: Email confirmation status
   As a person whose address is not confirmed yet

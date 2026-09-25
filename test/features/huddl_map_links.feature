@@ -1,4 +1,4 @@
-@database @conn @map_links
+@async @database @conn @map_links
 Feature: Finding a huddl on a map
   As an attendee
   I want to open a huddl's physical location on a map
