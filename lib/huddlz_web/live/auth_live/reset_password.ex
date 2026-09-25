@@ -9,6 +9,7 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
   alias AshPhoenix.Form
   alias Huddlz.Accounts.User
   alias HuddlzWeb.AuthFormErrors
+  alias HuddlzWeb.FormFocus
 
   @impl true
   def mount(_params, _session, socket) do
@@ -96,7 +97,10 @@ defmodule HuddlzWeb.AuthLive.ResetPassword do
           {:noreply, assign(socket, :submitted, true)}
       end
     else
-      {:noreply, assign(socket, form: to_form(form))}
+      {:noreply,
+       socket
+       |> assign(form: to_form(form))
+       |> FormFocus.first_error("reset-password-form")}
     end
   end
 end

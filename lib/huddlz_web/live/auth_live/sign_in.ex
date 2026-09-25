@@ -9,6 +9,7 @@ defmodule HuddlzWeb.AuthLive.SignIn do
   alias Huddlz.Accounts.User
   alias HuddlzWeb.AuthLive.Components
   alias HuddlzWeb.AuthReturnTo
+  alias HuddlzWeb.FormFocus
 
   @impl true
   def render(assigns) do
@@ -124,7 +125,9 @@ defmodule HuddlzWeb.AuthLive.SignIn do
     if form.valid? do
       submit_password_form(socket, form)
     else
-      assign_password_form(socket, form)
+      socket
+      |> assign_password_form(form)
+      |> FormFocus.first_error("password-sign-in-form")
     end
   end
 
@@ -137,6 +140,7 @@ defmodule HuddlzWeb.AuthLive.SignIn do
     socket
     |> assign(:password_form, form)
     |> assign(:trigger_action, form.source.valid?)
+    |> FormFocus.first_error("password-sign-in-form")
   end
 
   defp submit_password_form(socket, form) do
@@ -148,6 +152,7 @@ defmodule HuddlzWeb.AuthLive.SignIn do
         socket
         |> put_flash(:error, "Incorrect email or password")
         |> assign_password_form(form)
+        |> FormFocus.first_error("password-sign-in-form")
     end
   end
 

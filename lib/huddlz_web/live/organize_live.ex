@@ -31,6 +31,7 @@ defmodule HuddlzWeb.OrganizeLive do
   alias Huddlz.Social
   alias Huddlz.Social.Post
   alias HuddlzWeb.Components.TurnoutForm
+  alias HuddlzWeb.FormFocus
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.BrowserTimeZone
@@ -78,7 +79,6 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:period, GroupStats.default_period())
      |> assign(:stats, nil)
      |> assign(:invitation_count, 0)
-     |> assign(:invitation_form, invitation_form())
      |> assign(:member_lookup, %{})
      |> assign(:member_role_counts, %{owner: 0, organizer: 0, member: 0})
      |> assign(:subscribed_group_id, nil)
@@ -176,6 +176,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
     socket
     |> assign_members(members)
+    |> assign_new(:invitation_form, fn -> invitation_form(user) end)
     |> assign(:invitation_count, length(invitations))
     |> stream(:invitations, invitations, reset: true)
   end
@@ -278,23 +279,37 @@ defmodule HuddlzWeb.OrganizeLive do
     |> Enum.map(&normalize_invitation_expiration(&1, user))
   end
 
-  defp create_invitation(socket, group, user, role, email, params) do
-    case Communities.invite_to_group_by_email(group.id, email, role, actor: user) do
+  defp create_invitation(socket, group, user, params) do
+    params = Map.put(params, "group_id", group.id)
+
+    case AshPhoenix.Form.submit(socket.assigns.invitation_form, params: params) do
       {:ok, _invitation} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Invitation sent to #{email}.")
-         |> assign(:invitation_form, invitation_form())
+         |> put_flash(:info, "Invitation sent to #{String.trim(params["email"] || "")}.")
+         |> assign(:invitation_form, invitation_form(user))
          |> refresh_invitations(group, user)}
 
-      {:error, _reason} ->
+      {:error, form} ->
         {:noreply,
          socket
-         |> put_flash(
-           :error,
-           "Could not send that invitation. They may already be a member or have a pending invitation."
-         )
-         |> assign(:invitation_form, invitation_form(params))}
+         |> put_invitation_failure_flash(form)
+         |> assign(:invitation_form, to_form(form))
+         |> FormFocus.first_error("group-invitation-form")}
+    end
+  end
+
+  # A problem with a field shows under that field; anything the form cannot
+  # point at gets a flash instead.
+  defp put_invitation_failure_flash(socket, form) do
+    if Enum.any?(AshPhoenix.Form.errors(form), fn {field, _} -> field in [:email, :role] end) do
+      socket
+    else
+      put_flash(
+        socket,
+        :error,
+        "Could not send that invitation. They may already be a member or have a pending invitation."
+      )
     end
   end
 
@@ -306,12 +321,26 @@ defmodule HuddlzWeb.OrganizeLive do
     |> stream(:invitations, invitations, reset: true)
   end
 
-  defp invitation_form(params \\ %{"email" => "", "role" => "member"}) do
-    to_form(params, as: :invitation)
+  defp invitation_form(user) do
+    Huddlz.Communities.GroupInvitation
+    |> AshPhoenix.Form.for_create(:invite,
+      as: "invitation",
+      actor: user,
+      domain: Huddlz.Communities,
+      transform_errors: &invitation_form_error/2
+    )
+    |> to_form()
   end
 
-  defp parse_invitation_role("organizer"), do: :organizer
-  defp parse_invitation_role(_), do: :member
+  # Invitations are entered by email here, even when the recipient has an account.
+  defp invitation_form_error(
+         _changeset,
+         %Ash.Error.Changes.InvalidAttribute{field: :invitee_id, private_vars: vars} = error
+       ) do
+    if vars[:constraint_type] == :unique, do: %{error | field: :email}, else: error
+  end
+
+  defp invitation_form_error(_changeset, error), do: error
 
   defp normalize_invitation_expiration(
          %{status: :pending, expires_at: expires_at} = invitation,
@@ -450,6 +479,9 @@ defmodule HuddlzWeb.OrganizeLive do
   defp active_section(:settings), do: :settings
   defp active_section(_), do: nil
 
+  defp turnout_form_id(:overview, _huddl), do: "turnout-form-nudge"
+  defp turnout_form_id(:huddlz, huddl), do: "turnout-form-#{huddl.id}"
+
   # ─────────────────────────────────────────  PICKER (/organize)  ───
   attr :groups, :list, required: true
 
@@ -569,7 +601,7 @@ defmodule HuddlzWeb.OrganizeLive do
       </div>
       <TurnoutForm.turnout_form
         :if={editing?(@turnout_editor, @turnout_nudge)}
-        id="turnout-form-nudge"
+        id={turnout_form_id(:overview, @turnout_nudge)}
         huddl={@turnout_editor.huddl}
         form={@turnout_editor.form}
       />
@@ -1067,7 +1099,7 @@ defmodule HuddlzWeb.OrganizeLive do
       </div>
       <div :if={editing?(@turnout_editor, @huddl)} class="org-huddl-editor">
         <TurnoutForm.turnout_form
-          id={"turnout-form-#{@huddl.id}"}
+          id={turnout_form_id(:huddlz, @huddl)}
           huddl={@turnout_editor.huddl}
           form={@turnout_editor.form}
         />
@@ -1753,7 +1785,10 @@ defmodule HuddlzWeb.OrganizeLive do
          |> refresh_after_turnout()}
 
       {:error, form} ->
-        {:noreply, assign(socket, :turnout_editor, %{editor | form: to_form(form)})}
+        {:noreply,
+         socket
+         |> assign(:turnout_editor, %{editor | form: to_form(form)})
+         |> FormFocus.first_error(turnout_form_id(socket.assigns.live_action, editor.huddl))}
     end
   end
 
@@ -1771,12 +1806,7 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   def handle_event("invite", %{"invitation" => params}, socket) do
-    group = socket.assigns.group
-    user = socket.assigns.current_user
-    email = String.trim(params["email"] || "")
-    role = parse_invitation_role(params["role"])
-
-    create_invitation(socket, group, user, role, email, params)
+    create_invitation(socket, socket.assigns.group, socket.assigns.current_user, params)
   end
 
   def handle_event("revoke_invitation", %{"id" => id}, socket) do
@@ -2256,7 +2286,7 @@ defmodule HuddlzWeb.OrganizeLive do
     end
   end
 
-  defp finish_schedule(socket, false), do: socket
+  defp finish_schedule(socket, false), do: FormFocus.first_error(socket, "schedule-form")
 
   defp finish_schedule(socket, true) do
     socket

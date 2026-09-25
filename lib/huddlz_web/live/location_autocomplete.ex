@@ -19,7 +19,11 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   """
   use HuddlzWeb, :live_component
 
+  alias HuddlzWeb.Components.Input
+  alias Phoenix.HTML.FormField
+
   attr :id, :string, required: true
+  attr :field, FormField, default: nil, doc: "parent form field whose errors describe the picker"
   attr :field_name, :string, default: nil
   attr :value, :string, default: nil
   attr :latitude, :float, default: nil
@@ -44,6 +48,7 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
     {:ok,
      assign(socket,
        # Configuration defaults (overridden by parent via update/2)
+       field: nil,
        field_name: nil,
        label: nil,
        placeholder: "Search for a city...",
@@ -255,6 +260,8 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
   # when searching, falls back to a `.form-input` + `.filter-location-listbox`
   # dropdown so the suggestions reuse the v3 panel styling.
   defp render_form(assigns) do
+    assigns = assign(assigns, :field_error_ids, picker_error_ids(assigns.field))
+
     ~H"""
     <div
       id={@id}
@@ -314,6 +321,8 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
             aria-expanded={to_string(@show_suggestions && @suggestions != [])}
             aria-autocomplete="list"
             aria-controls={"#{@id}-listbox"}
+            aria-invalid={@field_error_ids != [] && "true"}
+            aria-describedby={Enum.join(@field_error_ids, " ")}
           />
           <button
             :if={@show_clear && @search_text != "" && !@loading}
@@ -366,6 +375,9 @@ defmodule HuddlzWeb.Live.LocationAutocomplete do
     </div>
     """
   end
+
+  defp picker_error_ids(nil), do: []
+  defp picker_error_ids(%FormField{} = field), do: Input.field_error_ids(field)
 
   # Placeholder rows shown while a place search is in flight and there is no
   # earlier list to keep on screen. Held back by the stylesheet for the

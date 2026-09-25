@@ -29,14 +29,14 @@ defmodule Huddlz.Communities.GroupInvitation do
         unique: true,
         where: "status = 'pending'",
         name: "group_invitations_unique_pending_index",
-        message: "already has a pending invitation to this group",
+        message: "This person already has a pending invitation to this group.",
         error_fields: [:invitee_id]
 
       index [:group_id, :email],
         unique: true,
         where: "status = 'pending'",
         name: "group_invitations_unique_pending_email_index",
-        message: "already has a pending invitation to this group",
+        message: "This person already has a pending invitation to this group.",
         error_fields: [:email]
 
       index [:invitee_id, :status, :inserted_at]
@@ -81,7 +81,15 @@ defmodule Huddlz.Communities.GroupInvitation do
       argument :invitee_id, :uuid
       argument :email, :ci_string
 
-      validate present([:invitee_id, :email], exactly: 1)
+      validate present(:email) do
+        where absent(:invitee_id)
+        message "Enter an email address."
+      end
+
+      validate absent(:email) do
+        where present(:invitee_id)
+        message "Invite by account or by email, not both."
+      end
 
       validate match(:email, ~r/^[^\s]+@[^\s]+$/) do
         where present(:email)
@@ -100,8 +108,8 @@ defmodule Huddlz.Communities.GroupInvitation do
       change relate_actor(:inviter)
       change set_attribute(:role, arg(:role))
       change SetExpiration
-      validate GroupIsPrivate
-      validate InviteeIsNotMember
+      validate GroupIsPrivate, only_when_valid?: true
+      validate InviteeIsNotMember, only_when_valid?: true
       change Huddlz.Communities.GroupInvitation.Changes.QueueEmail
       change NotifyInvitee
     end

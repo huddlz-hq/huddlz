@@ -27,6 +27,7 @@ import {mountMobileNavigation} from "./mobile_navigation.mjs"
 import {createCoverImageHook} from "./cover_image.mjs"
 import {createCoverCropHook} from "./cover_crop.mjs"
 import {mountPageLoading} from "./page_loading.mjs"
+import {mountFormFocus} from "./form_focus.mjs"
 import {createPopoverMenuHook} from "./popover_menu.mjs"
 import {createNativeShareHook} from "./native_share.mjs"
 
@@ -166,6 +167,7 @@ mountPageLoading({topbar})
 liveSocket.connect()
 
 mountMobileNavigation()
+mountFormFocus()
 
 // "/" focuses the chrome search box, GitHub-style. Skipped while the user
 // is already typing in an editable field, or when modifier keys are held.

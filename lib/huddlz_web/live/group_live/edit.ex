@@ -17,6 +17,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
   alias Huddlz.Communities
   alias Huddlz.Communities.GroupImage
   alias Huddlz.Storage.GroupImages
+  alias HuddlzWeb.FormFocus
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
   alias Phoenix.LiveView.JS
@@ -254,6 +255,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
                 module={HuddlzWeb.Live.LocationAutocomplete}
                 id="group-location"
                 variant={:form}
+                field={@form[:location]}
                 field_name="form[location]"
                 value={@form[:location].value}
                 latitude={@selected_location_data && @selected_location_data.latitude}
@@ -566,7 +568,12 @@ defmodule HuddlzWeb.GroupLive.Edit do
 
       {:error, form} ->
         message = form |> AshPhoenix.Form.errors(format: :plaintext) |> Enum.join(". ")
-        {:noreply, socket |> assign(:form, to_form(form)) |> put_flash(:error, message)}
+
+        {:noreply,
+         socket
+         |> assign(:form, to_form(form))
+         |> put_flash(:error, message)
+         |> FormFocus.first_error("edit-group-form")}
     end
   end
 

@@ -6,6 +6,7 @@ defmodule Huddlz.Communities.GroupInvitationTest do
   alias Ecto.Adapters.SQL
   alias Huddlz.Communities
   alias Huddlz.Communities.Group
+  alias Huddlz.Communities.GroupInvitation
   alias Huddlz.Communities.GroupMember
 
   setup do
@@ -117,6 +118,30 @@ defmodule Huddlz.Communities.GroupInvitationTest do
              Communities.invite_to_group(group.id, invitee.id, :member, actor: owner)
 
     assert Exception.message(error) =~ "already has a pending invitation"
+  end
+
+  test "an invitation names one recipient, by account or by email", context do
+    %{owner: owner, invitee: invitee, group: group} = context
+
+    assert {:error, error} =
+             Communities.invite_to_group_by_email(group.id, "  ", :member, actor: owner)
+
+    assert [%{field: :email, message: "Enter an email address."}] = error.errors
+
+    assert {:error, error} =
+             GroupInvitation
+             |> Ash.Changeset.for_create(
+               :invite,
+               %{group_id: group.id, invitee_id: invitee.id, email: "someone@example.com"},
+               actor: owner
+             )
+             |> Ash.create()
+
+    assert [%{fields: [:email], message: "Invite by account or by email, not both."}] =
+             error.errors
+
+    assert {:ok, _invitation} =
+             Communities.invite_to_group(group.id, invitee.id, :member, actor: owner)
   end
 
   test "public groups do not accept invitations", %{owner: owner, invitee: invitee} do

@@ -203,6 +203,24 @@ defmodule HuddlzWeb.GroupInvitationLiveTest do
     assert Communities.group_invitations_for_actor!(actor: invitee) == []
   end
 
+  # The select only offers member and organizer, so this takes a crafted request.
+  test "a role outside the offered choices is shown on the role field", context do
+    %{conn: conn, owner: owner, invitee: invitee, group: group} = context
+
+    {:ok, view, _html} =
+      conn
+      |> login(owner)
+      |> live(~p"/organize/#{group.slug}/members")
+
+    render_submit(view, "invite", %{
+      "invitation" => %{"email" => to_string(invitee.email), "role" => "owner"}
+    })
+
+    assert has_element?(view, "#group-invitation-form select[aria-invalid='true']")
+    refute has_element?(view, "#flash-error", "They may already be a member")
+    assert Communities.group_invitations_for_actor!(actor: invitee) == []
+  end
+
   test "public groups do not show the invitation form", context do
     %{conn: conn, owner: owner} = context
 

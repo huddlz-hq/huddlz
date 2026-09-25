@@ -12,6 +12,7 @@ defmodule HuddlzWeb.AuthLive.Register do
   alias HuddlzWeb.AuthFormErrors
   alias HuddlzWeb.AuthLive.Components
   alias HuddlzWeb.AuthReturnTo
+  alias HuddlzWeb.FormFocus
 
   @impl true
   def mount(params, _session, socket) do
@@ -114,6 +115,12 @@ defmodule HuddlzWeb.AuthLive.Register do
                 id={@form[:legal_acceptance].id}
                 name={@form[:legal_acceptance].name}
                 value="true"
+                aria-invalid={
+                  HuddlzWeb.Components.Input.visible_errors(@form[:legal_acceptance]) != [] && "true"
+                }
+                aria-describedby={
+                  Enum.join(HuddlzWeb.Components.Input.field_error_ids(@form[:legal_acceptance]), " ")
+                }
                 checked={
                   Phoenix.HTML.Form.normalize_value(
                     "checkbox",
@@ -188,6 +195,7 @@ defmodule HuddlzWeb.AuthLive.Register do
         socket
         |> assign(check_errors: true)
         |> assign_form(form)
+        |> FormFocus.first_error("registration-form")
       end
 
     {:noreply, socket}
@@ -203,6 +211,7 @@ defmodule HuddlzWeb.AuthLive.Register do
         |> assign(check_errors: true)
         |> assign_form(form)
         |> put_flash(:error, get_form_errors(form))
+        |> FormFocus.first_error("registration-form")
     end
   end
 
