@@ -1,4 +1,4 @@
-@database @conn @agenda_home
+@async @database @conn @agenda_home
 Feature: Agenda is home
   As a signed-in person
   I want the agenda to be the first thing I see

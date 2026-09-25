@@ -1,4 +1,4 @@
-@database @conn @sitemap
+@async @database @conn @sitemap
 Feature: Discover public pages through sitemaps
   Scenario: A crawler discovers public canonical pages
     Given a public group with a published huddl for sitemap discovery

@@ -1,4 +1,4 @@
-@database @conn @drop_in_emails
+@async @database @conn @drop_in_emails
 Feature: Drop-ins are told once by email that they can join the group
   As someone who RSVPd to a huddl of a group I have not joined
   I want to hear once that the group exists and how to follow it

@@ -1,4 +1,4 @@
-@database @conn
+@async @database @conn
 Feature: Group archival
   Group owners can close a group without losing its community and history.
 

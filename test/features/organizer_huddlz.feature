@@ -1,4 +1,4 @@
-@database @conn
+@async @database @conn
 Feature: Organizer huddlz page
   As an organizer
   I want the group's huddlz laid out for managing, in date order, with series dates marked

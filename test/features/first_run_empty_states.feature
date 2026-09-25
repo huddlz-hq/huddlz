@@ -1,4 +1,4 @@
-@database @conn
+@async @database @conn
 Feature: First-run empty states
   A new account has no RSVPs, no groups and an empty calendar. Rather than
   saying "nothing here", each empty page explains what it will hold and

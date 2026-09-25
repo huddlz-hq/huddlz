@@ -1,4 +1,4 @@
-@database @conn @audit_history
+@async @database @conn @audit_history
 Feature: Attributable change history
   As a person troubleshooting a change
   I want meaningful changes to retain their author and details

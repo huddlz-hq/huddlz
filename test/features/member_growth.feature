@@ -1,4 +1,4 @@
-@database @conn @member_growth
+@async @database @conn @member_growth
 Feature: Member growth on the overview
   As an organizer
   I want to see how the group has grown over the period

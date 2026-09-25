@@ -1,4 +1,4 @@
-@database @conn @next_huddl_panel
+@async @database @conn @next_huddl_panel
 Feature: Next huddl panel on the overview
   As an organizer
   I want the overview to show how my next huddl is filling

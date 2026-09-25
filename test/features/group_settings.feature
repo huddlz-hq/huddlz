@@ -1,4 +1,4 @@
-@database @conn @group_settings
+@async @database @conn @group_settings
 Feature: Owner-only group settings
   Owners manage group governance separately from the member roster.
 

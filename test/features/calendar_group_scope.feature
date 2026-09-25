@@ -1,4 +1,4 @@
-@database @conn @calendar_scope
+@async @database @conn @calendar_scope
 Feature: Calendar scope: my RSVPs or everything my groups have on
   As a member of active groups
   I want the calendar to show everything my groups have scheduled, not only what I have responded to

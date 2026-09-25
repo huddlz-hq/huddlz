@@ -1,4 +1,4 @@
-@database @conn
+@async @database @conn
 Feature: Calendar week view and day panel
   As someone with RSVPs
   I want to page through my calendar a week at a time and open any day of the month

@@ -1,4 +1,4 @@
-@database @conn
+@async @database @conn
 Feature: Calendar agenda grouped by day
   As someone with RSVPs
   I want the agenda to start at today and read as days rather than as rows

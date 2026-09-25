@@ -1,4 +1,4 @@
-@database @conn @series_calendar_updates
+@async @database @conn @series_calendar_updates
 Feature: Calendar entries after a recurring series update
   As an attendee of recurring huddlz
   I want refreshed calendar entries for the dates I have RSVPed to

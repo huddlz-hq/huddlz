@@ -95,6 +95,22 @@ mix test path/to/test.exs
 mix test path/to/test.exs:line
 ```
 
+Run all browser-free Cucumber scenarios, or select a feature by its tag, with:
+
+```sh
+mix test test/features_test.exs
+mix test test/features_test.exs --only account_reports
+```
+
+Scenarios are registered by this test file, so selecting another ExUnit file
+does not also run the behavior suite. Keep new isolated features `@async`;
+features that change global application configuration must remain serial.
+Use distinct fixture names, slugs, and emails across concurrent features to
+avoid waits on unique database constraints, even with SQL sandbox isolation.
+
+Default ExUnit concurrency is capped at the database pool size. An explicit
+`--max-cases` still overrides that default.
+
 Run `mix test` when broader suite feedback is useful. When the change is
 complete, run the full project validation once:
 

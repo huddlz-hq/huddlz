@@ -1,4 +1,4 @@
-@database @conn @organizer_drop_in_lines
+@async @database @conn @organizer_drop_in_lines
 Feature: The organizer overview mentions drop-ins
   As an organizer
   I want to know when people who have not joined are coming, and that my huddlz are how people find the group

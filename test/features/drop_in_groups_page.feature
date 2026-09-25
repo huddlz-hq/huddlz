@@ -1,4 +1,4 @@
-@database @conn @drop_in_groups_page
+@async @database @conn @drop_in_groups_page
 Feature: Groups I've dropped in on appear on my groups page
   As someone who has RSVPd to huddlz of groups I have not joined
   I want those groups listed on my groups page

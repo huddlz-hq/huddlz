@@ -1,3 +1,4 @@
+# Keep serial: scenarios change global social configuration.
 @database @conn @social_connections
 Feature: A group connects a place for huddlz to post to
   Organizers paste a link to each huddl into their Slack by hand. A social

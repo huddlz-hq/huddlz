@@ -1,4 +1,4 @@
-@database @conn @admin_impersonation
+@async @database @conn @admin_impersonation
 Feature: Administrators troubleshoot as a user instead of editing as one
   As an administrator
   I want to see huddlz as a particular person sees it

@@ -1,4 +1,4 @@
-@database @conn @launch_invitations
+@async @database @conn @launch_invitations
 Feature: Private group invitations
   Organizers can invite people by email without exposing private groups.
 

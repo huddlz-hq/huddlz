@@ -1,4 +1,4 @@
-@database @conn
+@async @database @conn
 Feature: Huddlz that are happening now on the agenda and calendar
   As someone with an RSVP to a huddl that has already started
   I want the agenda and the calendar to say it is happening now

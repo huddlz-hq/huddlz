@@ -1,4 +1,4 @@
-@database @conn @account_suspension
+@async @database @conn @account_suspension
 Feature: Administrators suspend abusive accounts and restore mistaken suspensions
   As an administrator
   I want to suspend an abusive account with a reason

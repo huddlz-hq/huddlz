@@ -1,4 +1,4 @@
-@database @conn @overview_kpis
+@async @database @conn @overview_kpis
 Feature: Overview KPIs over a period
   As an organizer
   I want the group overview's numbers to move with a chosen period

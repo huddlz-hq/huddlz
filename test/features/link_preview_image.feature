@@ -1,4 +1,4 @@
-@database @conn @link_preview_image
+@async @database @conn @link_preview_image
 Feature: Link previews without a cover picture
   When someone pastes a huddl or group link into a chat, the preview should
   carry a picture even if the organizer never uploaded a cover. For a huddl the
