@@ -72,14 +72,20 @@ Feature: Private group invitations
     When I try to visit the group page for "Quiet Makers"
     Then I should see the branded not found recovery page
 
-  Scenario: An organizer cannot send a duplicate pending email invitation
+  Scenario Outline: An organizer cannot send a duplicate pending email invitation
     Given I am signed in as "owner@example.com"
     When I open the member workspace for "Quiet Makers"
-    And I submit a member invitation for "new-maker@example.com"
-    Then I should see "Invitation sent to new-maker@example.com."
-    When I submit a member invitation for "NEW-MAKER@example.com"
+    And I submit a member invitation for "<email>"
+    Then I should see "Invitation sent to <email>."
+    When I submit a member invitation for "<duplicate_email>"
     Then I should see "This person already has a pending invitation to this group."
+    And I should not see "Could not send that invitation."
     And I should see "Awaiting response"
+
+    Examples:
+      | email                 | duplicate_email       |
+      | new-maker@example.com | NEW-MAKER@example.com |
+      | invitee@example.com   | INVITEE@example.com   |
 
   Scenario: An organizer is told when the person is already a member
     Given "invitee@example.com" is a member of "Quiet Makers"

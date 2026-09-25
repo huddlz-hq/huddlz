@@ -326,10 +326,21 @@ defmodule HuddlzWeb.OrganizeLive do
     |> AshPhoenix.Form.for_create(:invite,
       as: "invitation",
       actor: user,
-      domain: Huddlz.Communities
+      domain: Huddlz.Communities,
+      transform_errors: &invitation_form_error/2
     )
     |> to_form()
   end
+
+  # Invitations are entered by email here, even when the recipient has an account.
+  defp invitation_form_error(
+         _changeset,
+         %Ash.Error.Changes.InvalidAttribute{field: :invitee_id, private_vars: vars} = error
+       ) do
+    if vars[:constraint_type] == :unique, do: %{error | field: :email}, else: error
+  end
+
+  defp invitation_form_error(_changeset, error), do: error
 
   defp normalize_invitation_expiration(
          %{status: :pending, expires_at: expires_at} = invitation,

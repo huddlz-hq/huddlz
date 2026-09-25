@@ -47,6 +47,13 @@ Feature: Keyboard focus past navigation and onto form errors
       | address book      | Address       |
       | invitation        | Email         |
 
+  @focus_duplicate_invitation
+  Scenario: A duplicate invitation focuses the existing account's email
+    Given I open the "invitation" form in a browser
+    When I send an invitation twice to someone who already has an account
+    Then "Email" has keyboard focus
+    And "Email" describes what is wrong with it
+
   Scenario: A save with nothing wrong leaves focus alone
     Given I open the "profile" form in a browser
     When I save it with "Display name" set to "Keyboard Person"

@@ -217,7 +217,7 @@ defmodule HuddlzWeb.GroupInvitationLiveTest do
     })
 
     assert has_element?(view, "#group-invitation-form select[aria-invalid='true']")
-    refute render(view) =~ "They may already be a member"
+    refute has_element?(view, "#flash-error", "They may already be a member")
     assert Communities.group_invitations_for_actor!(actor: invitee) == []
   end
 

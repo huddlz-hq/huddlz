@@ -84,6 +84,14 @@ defmodule BrowserKeyboardFocusSteps do
     Map.put(context, :conn, conn)
   end
 
+  step "I send an invitation twice to someone who already has an account", context do
+    invitee = generate(user(role: :user))
+    email = to_string(invitee.email)
+    context = save_with(context, "Email", email)
+    assert_has(context.conn, "#flash-info", text: "Invitation sent to #{email}.")
+    save_with(context, "Email", email)
+  end
+
   step "I save the new group without a location", context do
     conn =
       context.conn
