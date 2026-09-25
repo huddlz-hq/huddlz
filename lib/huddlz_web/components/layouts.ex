@@ -59,6 +59,7 @@ defmodule HuddlzWeb.Layouts do
       |> assign_new(:signed_in, fn -> assigns.current_user != nil end)
 
     ~H"""
+    <.skip_link />
     <.impersonation_banner current_user={@current_user} />
     <%= if @signed_in do %>
       <button
@@ -344,7 +345,7 @@ defmodule HuddlzWeb.Layouts do
         </div>
       </header>
 
-      <div class="content-body">
+      <div id="main-content" class="content-body" tabindex="-1">
         <.flash_group flash={@flash} />
         <.confirmation_reminder current_user={@current_user} />
         {render_slot(@inner_block)}
@@ -514,6 +515,19 @@ defmodule HuddlzWeb.Layouts do
   end
 
   @doc """
+  The first Tab stop on a page: a link past the navigation to the element
+  with id `main-content`, which each page shell marks with `tabindex="-1"`
+  so the browser moves focus there. Hidden until it has focus.
+  """
+  def skip_link(assigns) do
+    ~H"""
+    <a href="#main-content" class="skip-link">
+      Skip to main content <.icon name="hero-arrow-right" class="size-4" />
+    </a>
+    """
+  end
+
+  @doc """
   V3 auth shell — chromeless wrapper used by `/sign-in`, `/register`, `/reset`,
   and `/reset/:token`. Renders the brand topbar, the flash group, and an
   `auth-frame` container around the inner content.
@@ -527,6 +541,7 @@ defmodule HuddlzWeb.Layouts do
 
   def auth_shell(assigns) do
     ~H"""
+    <.skip_link />
     <.impersonation_banner current_user={@current_user} />
     <Layouts.flash_group flash={@flash} />
 
@@ -538,9 +553,9 @@ defmodule HuddlzWeb.Layouts do
         </.link>
       </header>
 
-      <div class="auth-frame">
+      <main id="main-content" class="auth-frame" tabindex="-1">
         {render_slot(@inner_block)}
-      </div>
+      </main>
     </div>
     """
   end

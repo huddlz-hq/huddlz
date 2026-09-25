@@ -90,6 +90,7 @@ defmodule HuddlzWeb.LandingLive do
   @impl true
   def render(assigns) do
     ~H"""
+    <Layouts.skip_link />
     <Layouts.flash_group flash={@flash} />
 
     <header class="land-topbar">
@@ -108,7 +109,7 @@ defmodule HuddlzWeb.LandingLive do
       </div>
     </header>
 
-    <main class="land">
+    <main id="main-content" class="land" tabindex="-1">
       <section class="land-hero">
         <div class="land-hero-copy">
           <span class="land-live"><span class="dot"></span>In person and online, every week</span>
