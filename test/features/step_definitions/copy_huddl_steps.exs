@@ -12,6 +12,7 @@ defmodule CopyHuddlSteps do
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.Huddl.CopySuggestion
   alias Huddlz.Storage.HuddlCoverImages
+  alias Huddlz.Storage.Local
 
   # Steps that set up a group and a huddl to copy live with the API's copy
   # feature (copy_huddl_api_steps.exs); they sign the organizer in for both.
@@ -163,6 +164,14 @@ defmodule CopyHuddlSteps do
     context
   end
 
+  step "the cover preview comes from remote storage", context do
+    url =
+      "https://covers.storage.example.com/uploads/huddl_cover_images/#{context.source.id}/banner_thumb.jpg"
+
+    assert_has(context.session, "#huddl-cover-upload img[src='#{url}']")
+    context
+  end
+
   step "I remove the copied cover", context do
     Map.update!(context, :session, &click_button(&1, "Remove"))
   end
@@ -185,8 +194,8 @@ defmodule CopyHuddlSteps do
       |> Ash.read_one!(authorize?: false)
 
     ExUnit.Callbacks.on_exit(fn ->
-      Huddlz.Storage.delete(image.storage_path)
-      Huddlz.Storage.delete(image.thumbnail_path)
+      Local.delete(image.storage_path)
+      Local.delete(image.thumbnail_path)
     end)
 
     expected_cover = served_cover(url)

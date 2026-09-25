@@ -3,24 +3,6 @@ defmodule CucumberHooks do
 
   alias Ecto.Adapters.SQL.Sandbox
 
-  # Remote URL configuration is global, so these scenarios must stay serial.
-  before_scenario "@remote_storage", context do
-    storage = Application.fetch_env!(:huddlz, :storage)
-
-    Application.put_env(
-      :huddlz,
-      :storage,
-      Keyword.merge(storage,
-        url_adapter: Huddlz.Storage.S3,
-        bucket: "covers",
-        endpoint: "https://storage.example.com"
-      )
-    )
-
-    ExUnit.Callbacks.on_exit(fn -> Application.put_env(:huddlz, :storage, storage) end)
-    {:ok, context}
-  end
-
   # Hook for @database tag - sets up database sandbox
   before_scenario "@database", context do
     # LiveViews can outlive the scenario process while handling queued messages.
@@ -30,6 +12,15 @@ defmodule CucumberHooks do
 
     Mox.stub_with(Huddlz.MockGeocoding, Huddlz.GeocodingStub)
     Mox.stub_with(Huddlz.MockPlaces, Huddlz.PlacesStub)
+    Mox.stub_with(Huddlz.MockStorage, Huddlz.Storage.Local)
+
+    {:ok, context}
+  end
+
+  before_scenario "@remote_storage", context do
+    Mox.stub(Huddlz.MockStorage, :url, fn path ->
+      "https://covers.storage.example.com" <> path
+    end)
 
     {:ok, context}
   end

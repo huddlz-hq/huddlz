@@ -1,6 +1,11 @@
 defmodule Huddlz.ImageUploadTest do
   use ExUnit.Case, async: true
 
+  setup do
+    Mox.stub_with(Huddlz.MockStorage, Huddlz.Storage.Local)
+    :ok
+  end
+
   alias Huddlz.ImageProcessing
   alias Huddlz.Storage
   alias Huddlz.Storage.{HuddlCoverImages, HuddlPhotos, ImageUpload}
