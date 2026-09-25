@@ -23,7 +23,7 @@ defmodule Huddlz.Admin.PlatformStats do
   require Ash.Query
 
   alias Huddlz.Accounts.{ActiveDay, UsageMeasurement, User}
-  alias Huddlz.Admin.DropInStats
+  alias Huddlz.Admin.{CopyStats, DropInStats}
   alias Huddlz.Communities.{Group, Huddl, Periods, RsvpMoment}
 
   @coming_up_days 30
@@ -55,6 +55,8 @@ defmodule Huddlz.Admin.PlatformStats do
       groups with something on, and the next few huddlz
     * `drop_ins` — RSVPs from people who had not joined the hosting group
       and what followed; see `Huddlz.Admin.DropInStats`
+    * `copies` — huddlz organizers created by copying another huddl; see
+      `Huddlz.Admin.CopyStats`
   """
   def compute(period, actor, now \\ DateTime.utc_now()) do
     window = now |> Periods.calendar_window(Periods.spec(period)) |> Map.put(:actor, actor)
@@ -76,7 +78,8 @@ defmodule Huddlz.Admin.PlatformStats do
       turnout: turnout(ended, window),
       active_groups: active_groups(groups, ended, window),
       coming_up: coming_up(window),
-      drop_ins: DropInStats.compute(rsvps, window)
+      drop_ins: DropInStats.compute(rsvps, window),
+      copies: CopyStats.compute(window)
     }
   end
 

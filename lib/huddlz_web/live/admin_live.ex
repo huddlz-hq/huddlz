@@ -405,6 +405,42 @@ defmodule HuddlzWeb.AdminLive do
           What they did next is counted once per person per group, from their first RSVP of the period. Joining wins over RSVPing again.
         </p>
       </div>
+
+      <div id="copies" class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Copies</h2>
+            <div class="panel-sub">{copies_sub(@stats.copies)}</div>
+          </div>
+        </div>
+        <p :if={@stats.copies.count == 0} class="muted">
+          No huddlz were copied in this period.{copies_previous(@stats.copies, @period, " ")}
+        </p>
+        <div :if={@stats.copies.count > 0} class="copies-grid">
+          <div class="stat">
+            <output class="big" aria-label="Huddlz copied">{@stats.copies.count}</output>
+            <span class="cmp">{copies_headline(@stats.copies, @period)}</span>
+          </div>
+          <div id="copies-sources" class="coverage counts">
+            <h3>What they copied</h3>
+            <div class="coverage-bar" role="img" aria-label={copy_sources_label(@stats.copies)}>
+              <span
+                :for={{kind, _label, count} <- copy_source_rows(@stats.copies)}
+                class={kind}
+                style={"width: #{share(count, @stats.copies.count)}%"}
+              ></span>
+            </div>
+            <div class="coverage-rows">
+              <.count_row
+                :for={{kind, label, count} <- copy_source_rows(@stats.copies)}
+                kind={kind}
+                label={label}
+                count={count}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
     </Layouts.app>
     """
   end
@@ -451,6 +487,39 @@ defmodule HuddlzWeb.AdminLive do
   defp coverage_sub(%{past: past}),
     do:
       "What organizers did with the turnout prompt after the #{past} #{if past == 1, do: "huddl", else: "huddlz"} that ended."
+
+  # ─── Copies ───────────────────────────────────────────────────────────
+
+  defp copies_sub(%{measured_since: nil}),
+    do: "Huddlz organizers made by copying another huddl. Counts, not rates."
+
+  defp copies_sub(%{measured_since: from}) do
+    "Huddlz organizers made by copying another huddl. Counts, not rates. " <>
+      "Measured since #{measured_since(from, Date.utc_today())}."
+  end
+
+  defp copies_headline(%{count: count, organizers: organizers, groups: groups} = copies, period) do
+    "#{if count == 1, do: "huddl", else: "huddlz"} copied by " <>
+      "#{organizers} #{if organizers == 1, do: "organizer", else: "organizers"} in " <>
+      "#{groups} #{if groups == 1, do: "group", else: "groups"}" <>
+      copies_previous(copies, period, " · ")
+  end
+
+  # The period before is compared only when the records cover all of it.
+  defp copies_previous(%{previous: nil}, _period, _separator), do: ""
+
+  defp copies_previous(%{previous: previous}, period, separator),
+    do: "#{separator}#{previous} in the previous #{Periods.period_label(period)}"
+
+  defp copy_source_rows(copies) do
+    [
+      {"copied-past", "Copied from a past huddl", copies.past},
+      {"copied-upcoming", "Copied from an upcoming huddl", copies.upcoming}
+    ]
+  end
+
+  defp copy_sources_label(copies),
+    do: "#{copies.past} copied from a past huddl, #{copies.upcoming} from an upcoming huddl"
 
   # ─── Drop-ins ─────────────────────────────────────────────────────────
 
