@@ -53,7 +53,10 @@ classification. Earlier copies without this metadata remain in the total and
 show source timing as unavailable. Distinct organizers use the creation
 snapshot's `creator_id`, which remains when account deletion clears actor links.
 
-The admin Copies panel reads these audit facts for permitted groups only.
+The admin Copies panel counts retained audit facts across the whole platform,
+including private groups, private huddlz, drafts and deleted copies. ADR-0004
+permits this narrow exception for aggregate copy counts only: the panel exposes
+no individual records, and ordinary private-content access remains unchanged.
 Measurement coverage begins with the deployment that records source timing and
 initializes `copy_measurement`, independently of the first copy. Earlier copies
 are still counted, but comparisons require complete coverage; the later of this

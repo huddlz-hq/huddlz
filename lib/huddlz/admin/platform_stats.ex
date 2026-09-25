@@ -5,7 +5,8 @@ defmodule Huddlz.Admin.PlatformStats do
   administrators in; the reads here trust that boundary. The actor is
   passed along so group and huddl reads follow the administrator's ordinary
   visibility. Private-group analytics additionally require an owner or
-  organizer role, as on the group's overview.
+  organizer role, as on the group's overview. The Copies panel is the explicit
+  ADR-0004 exception: it returns platform-wide aggregate counts only.
 
   Every definition is the organizer overview's (`Huddlz.Communities.GroupStats`)
   so a number means the same thing on `/admin` and on a group's page:

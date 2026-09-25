@@ -102,15 +102,16 @@ Feature: The admin overview shows how often huddlz are copied
     When I visit "/admin"
     Then the Copies panel says "by 2 organizers in 2 groups"
 
-  Scenario: Private copies do not affect an administrator without group access
+  Scenario: Aggregate copy counts include private groups without granting group access
     Given copy measurement began 120 days ago
     And a private group "Hidden Club" exists with owner "owner642@example.com"
     And "owner642@example.com" copied a huddl of "Hidden Club" 10 days ago
     And I am signed in as "admin642@example.com"
     When I visit "/admin?period=30d"
-    Then the Copies panel says "No huddlz were copied in this period."
+    Then the Copies panel shows 1 for "Huddlz copied"
     And the Copies panel says "0 in the previous 30 days"
     And the Copies panel does not say when it has been measured since
+    And "admin642@example.com" still cannot read the copied huddl
 
   Scenario: Earlier copies with no recorded source timing are counted honestly
     Given "owner642@example.com" made a copy of "Tuesday Runners" before source timing was recorded
@@ -127,3 +128,26 @@ Feature: The admin overview shows how often huddlz are copied
     When I visit "/admin?period=30d"
     Then the Copies panel says "0 in the previous 30 days"
     And the Copies panel does not say when it has been measured since
+
+  Scenario: Aggregate copy counts include private huddlz in public groups
+    Given "owner642@example.com" made a private copy in "Tuesday Runners" 5 days ago
+    And "owner642@example.com" made a private copy in "Tuesday Runners" 45 days ago
+    And I am signed in as "admin642@example.com"
+    When I visit "/admin?period=30d"
+    Then the Copies panel shows 1 for "Huddlz copied"
+    And the Copies panel says "1 in the previous 30 days"
+    And "admin642@example.com" still cannot read the copied huddl
+
+  Scenario: Aggregate copy counts include drafts without exposing them
+    Given "owner642@example.com" made a draft copy in "Tuesday Runners"
+    And I am signed in as "admin642@example.com"
+    When I visit "/admin"
+    Then the Copies panel shows 1 for "Huddlz copied"
+    And "admin642@example.com" still cannot read the copied huddl
+
+  Scenario: Deleting a copy does not erase its recorded adoption
+    Given "owner642@example.com" made a draft copy in "Tuesday Runners"
+    And "owner642@example.com" deleted their copied huddl
+    And I am signed in as "admin642@example.com"
+    When I visit "/admin"
+    Then the Copies panel shows 1 for "Huddlz copied"

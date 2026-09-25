@@ -9,9 +9,10 @@ defmodule Huddlz.Admin.CopyStats do
   who made it and a snapshot of the new huddl. The huddl itself keeps no link
   to its source, and history is kept for two years (ADR-0007).
 
-  Called by `Huddlz.Admin.PlatformStats`, which has already narrowed the
-  window to the groups the administrator may see; the reads here trust that
-  boundary.
+  Called behind the administrator-only platform overview action. ADR-0004
+  permits these platform-wide aggregate counts across private groups, private
+  huddlz, drafts and deleted copies while their history is retained. This
+  exception exposes no individual records and grants no content access.
   """
 
   require Ash.Query
@@ -49,9 +50,9 @@ defmodule Huddlz.Admin.CopyStats do
     }
   end
 
-  # Copies made since the previous period began, in the groups the
-  # administrator can see.
-  defp copies(%{previous_start: since, now: now, group_ids: group_ids}) do
+  # Count retained audit facts across the platform, independent of the
+  # administrator's memberships and the copied huddl's current visibility.
+  defp copies(%{previous_start: since, now: now}) do
     Huddl.Version
     |> Ash.Query.filter(
       version_action_name == :create and not is_nil(copied_from_id) and
@@ -67,7 +68,6 @@ defmodule Huddlz.Admin.CopyStats do
         group_id: snapshot(&1.changes, :group_id)
       }
     )
-    |> Enum.filter(&(&1.group_id in group_ids))
   end
 
   defp measured_from(now) do

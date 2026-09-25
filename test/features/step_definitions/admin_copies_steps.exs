@@ -45,8 +45,9 @@ defmodule AdminCopiesSteps do
 
   step "{string} copied a huddl of {string} {int} days ago",
        %{args: [email, group_name, days]} = context do
-    email |> copy(upcoming_huddl(group_name, email)) |> backdate(days)
-    context
+    copied = copy(email, upcoming_huddl(group_name, email))
+    backdate(copied, days)
+    Map.put(context, :last_copy, copied)
   end
 
   step "{string} copied a past huddl of {string} which was later moved into the future",
@@ -84,6 +85,29 @@ defmodule AdminCopiesSteps do
     |> Ash.read_one!(authorize?: false)
     |> Ash.Seed.update!(%{copied_source_ends_at: nil})
 
+    context
+  end
+
+  step "{string} made a private copy in {string} {int} days ago",
+       %{args: [email, group_name, days]} = context do
+    copied = copy(email, upcoming_huddl(group_name, email), %{is_private: true})
+    backdate(copied, days)
+    Map.put(context, :last_copy, copied)
+  end
+
+  step "{string} still cannot read the copied huddl",
+       %{args: [email], last_copy: copied} = context do
+    assert {:error, _} = Ash.get(Huddl, copied.id, actor: find_user(email))
+    context
+  end
+
+  step "{string} made a draft copy in {string}", %{args: [email, group_name]} = context do
+    copied = copy(email, upcoming_huddl(group_name, email), %{lifecycle_state: :draft})
+    Map.put(context, :last_copy, copied)
+  end
+
+  step "{string} deleted their copied huddl", %{args: [email], last_copy: copied} = context do
+    Ash.destroy!(copied, actor: find_user(email))
     context
   end
 
@@ -135,9 +159,9 @@ defmodule AdminCopiesSteps do
 
   # Copies go through the huddl create action, as the form and the API do,
   # so the audit history records them.
-  defp copy(email, source) do
+  defp copy(email, source, attributes \\ %{}) do
     Communities.create_huddl!(
-      %{copied_from_id: source.id, date: Date.add(Date.utc_today(), 14)},
+      Map.merge(%{copied_from_id: source.id, date: Date.add(Date.utc_today(), 14)}, attributes),
       actor: find_user(email)
     )
   end
