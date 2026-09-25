@@ -4,6 +4,8 @@ defmodule ApiArtworkSteps do
   import ExUnit.Assertions
   import Huddlz.Generator
 
+  alias Huddlz.Storage.Local
+
   step "public upcoming huddlz with their own artwork, group artwork, and no artwork", context do
     owner = generate(user())
     group = generate(group(owner_id: owner.id, is_public: true, actor: owner))
@@ -72,7 +74,8 @@ defmodule ApiArtworkSteps do
       |> Ash.create!()
 
     ExUnit.Callbacks.on_exit(fn ->
-      for path <- [image.storage_path, image.thumbnail_path], do: Huddlz.Storage.delete(path)
+      for path <- [image.storage_path, image.thumbnail_path],
+          do: Local.delete(path)
     end)
 
     image

@@ -1,7 +1,36 @@
 defmodule Huddlz.StorageTest do
   use ExUnit.Case, async: true
 
+  setup do
+    Mox.stub_with(Huddlz.MockStorage, Huddlz.Storage.Local)
+    :ok
+  end
+
+  alias Huddlz.MockStorage
+  alias Huddlz.Storage
   alias Huddlz.Storage.Local
+
+  test "concurrent callers keep their own storage URL stubs" do
+    owner = self()
+    path = "/uploads/cover.jpg"
+
+    remote =
+      Task.async(fn ->
+        Mox.stub(MockStorage, :url, fn path -> "https://covers.storage.example.com" <> path end)
+        send(owner, {:remote_storage_ready, self()})
+
+        receive do
+          :read_cover_url -> Storage.url(path)
+        end
+      end)
+
+    assert_receive {:remote_storage_ready, remote_pid}, 1_000
+    assert Storage.url(path) == path
+
+    send(remote_pid, :read_cover_url)
+    assert Task.await(remote) == "https://covers.storage.example.com/uploads/cover.jpg"
+    assert Storage.url(path) == path
+  end
 
   describe "Storage.Local" do
     setup do

@@ -8,6 +8,7 @@ defmodule BrowserHooks do
     Mox.set_mox_global()
     Mox.stub_with(Huddlz.MockGeocoding, Huddlz.GeocodingStub)
     Mox.stub_with(Huddlz.MockPlaces, Huddlz.PlacesStub)
+    Mox.stub_with(Huddlz.MockStorage, Huddlz.Storage.Local)
 
     context =
       cond do

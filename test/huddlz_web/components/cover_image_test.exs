@@ -1,6 +1,11 @@
 defmodule HuddlzWeb.Components.CoverImageTest do
   use ExUnit.Case, async: true
 
+  setup do
+    Mox.stub_with(Huddlz.MockStorage, Huddlz.Storage.Local)
+    :ok
+  end
+
   import Phoenix.LiveViewTest
   import HuddlzWeb.Components.CoverImage
 
