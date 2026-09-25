@@ -25,3 +25,26 @@ Feature: Keyboard focus past navigation and onto form errors
       | the home page   |
       | sign in         |
       | discover        |
+
+  Scenario Outline: A failed save puts keyboard focus on the first field to fix
+    Given I open the "<form>" form in a browser
+    When I save it with "<field>" left empty
+    Then "<field>" has keyboard focus
+    And "<field>" describes what is wrong with it
+
+    Examples:
+      | form              | field         |
+      | sign in           | Email         |
+      | registration      | Email         |
+      | password reset    | Email         |
+      | profile           | Display name  |
+      | new group         | Group name    |
+      | edit group        | Group Name    |
+      | new huddl         | Title         |
+      | edit huddl        | Title         |
+      | address book      | Address       |
+
+  Scenario: A save with nothing wrong leaves focus alone
+    Given I open the "profile" form in a browser
+    When I save it with "Display name" set to "Keyboard Person"
+    Then "Save changes" still has keyboard focus

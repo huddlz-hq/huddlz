@@ -33,6 +33,13 @@ defmodule BrowserKeyboardFocusSteps do
     context
   end
 
+  step "{string} still has keyboard focus", %{args: [name]} = context do
+    # Let the save's reply land before looking.
+    context.conn |> assert_has(context.focus_form <> ":not(.phx-submit-loading)")
+    assert_focused(context.conn, name)
+    context
+  end
+
   step "keyboard focus is in the page content", context do
     assert_browser(context.conn, "document.activeElement.id === 'main-content'")
     context
@@ -47,12 +54,124 @@ defmodule BrowserKeyboardFocusSteps do
     context
   end
 
+  step "I open the {string} form in a browser", %{args: [form]} = context do
+    open_form(context, form)
+  end
+
+  step "I save it with {string} left empty", %{args: [label]} = context do
+    save_with(context, label, "")
+  end
+
+  step "I save it with {string} set to {string}", %{args: [label, value]} = context do
+    save_with(context, label, value)
+  end
+
+  step "{string} describes what is wrong with it", %{args: [name]} = context do
+    assert_browser(context.conn, """
+    (() => {
+      const field = document.activeElement;
+      const described = (field.getAttribute('aria-describedby') || '').split(/\\s+/)
+        .map(id => document.getElementById(id))
+        .filter(element => element?.getAttribute('role') === 'alert');
+      return #{label_matches("field")} === #{Jason.encode!(name)} &&
+        field.getAttribute('aria-invalid') === 'true' &&
+        described.some(element => element.textContent.trim() !== '');
+    })()
+    """)
+
+    context
+  end
+
   defp open_page(context, "the home page"), do: visit_signed_out(context, "/")
   defp open_page(context, "sign in"), do: visit_signed_out(context, "/sign-in")
   defp open_page(context, "discover"), do: visit_signed_out(context, "/discover")
 
   defp visit_signed_out(context, path) do
     Map.put(context, :conn, context.conn |> visit(path) |> assert_has(".phx-connected"))
+  end
+
+  defp open_form(context, "sign in"),
+    do: signed_out_form(context, "/sign-in", "#password-sign-in-form")
+
+  defp open_form(context, "registration"),
+    do: signed_out_form(context, "/register", "#registration-form")
+
+  defp open_form(context, "password reset"),
+    do: signed_out_form(context, "/reset", "#reset-password-form")
+
+  defp open_form(context, "profile") do
+    member = generate(user(role: :user))
+    signed_in_form(context, member, "/profile", "#profile-form")
+  end
+
+  defp open_form(context, "new group") do
+    member = generate(user(role: :user))
+    signed_in_form(context, member, "/groups/new", "#group-form")
+  end
+
+  defp open_form(context, "edit group") do
+    {owner, group} = owned_group()
+    signed_in_form(context, owner, "/groups/#{group.slug}/edit", "#edit-group-form")
+  end
+
+  defp open_form(context, "new huddl") do
+    {owner, group} = owned_group()
+
+    signed_in_form(
+      context,
+      owner,
+      "/groups/#{group.slug}/huddlz/new",
+      "#huddl-form",
+      "#publish-huddl"
+    )
+  end
+
+  defp open_form(context, "edit huddl") do
+    {owner, group} = owned_group()
+    huddl = generate(huddl(group_id: group.id, actor: owner))
+
+    signed_in_form(
+      context,
+      owner,
+      "/groups/#{group.slug}/huddlz/#{huddl.id}/edit",
+      "#huddl-form"
+    )
+  end
+
+  defp open_form(context, "address book") do
+    {owner, group} = owned_group()
+    generate(group_location(group_id: group.id, actor: owner))
+
+    context = signed_in_form(context, owner, "/groups/#{group.slug}/locations", nil)
+    conn = click_button(context.conn, "Edit")
+    Map.merge(context, %{conn: conn, focus_form: "#location-rename-form"})
+  end
+
+  defp owned_group do
+    owner = generate(user(role: :user))
+    {owner, generate(group(owner_id: owner.id, is_public: true, actor: owner))}
+  end
+
+  defp signed_out_form(context, path, form) do
+    context |> visit_signed_out(path) |> Map.put(:focus_form, form)
+  end
+
+  defp signed_in_form(context, member, path, form, submit \\ nil) do
+    conn = context.conn |> sign_in(member) |> visit(path) |> assert_has(".phx-connected")
+    Map.merge(context, %{conn: conn, focus_form: form, focus_submit: submit})
+  end
+
+  # Clear or set the field, then press Enter on the form's submit button,
+  # the way a keyboard user saves.
+  defp save_with(context, label, value) do
+    submit = context[:focus_submit] || context.focus_form <> " button[type=submit]"
+
+    conn =
+      context.conn
+      |> within(context.focus_form, &fill_in(&1, label, with: value))
+      |> press(submit, "Enter")
+
+    Map.put(context, :conn, conn)
   end
 
   defp assert_focused(conn, name) do

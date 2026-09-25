@@ -7,6 +7,7 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
 
   alias AshPhoenix.Form
   alias Huddlz.Accounts.User
+  alias HuddlzWeb.FormFocus
 
   @impl true
   def mount(%{"token" => token}, _session, socket) do
@@ -134,6 +135,7 @@ defmodule HuddlzWeb.AuthLive.ResetPasswordConfirm do
       socket
       |> assign(:form, to_form(form))
       |> assign(:trigger_action, form.valid?)
+      |> FormFocus.first_error("reset-password-confirm-form")
 
     {:noreply, socket}
   end

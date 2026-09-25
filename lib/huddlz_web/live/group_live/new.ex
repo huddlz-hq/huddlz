@@ -18,6 +18,7 @@ defmodule HuddlzWeb.GroupLive.New do
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.GroupImage
   alias Huddlz.Storage.GroupImages
+  alias HuddlzWeb.FormFocus
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
 
@@ -145,7 +146,7 @@ defmodule HuddlzWeb.GroupLive.New do
          |> redirect(to: ~p"/groups/#{group.slug}")}
 
       {:error, form} ->
-        {:noreply, assign(socket, :form, to_form(form))}
+        {:noreply, socket |> assign(:form, to_form(form)) |> FormFocus.first_error("group-form")}
     end
   end
 

@@ -12,6 +12,7 @@ defmodule HuddlzWeb.AuthLive.Register do
   alias HuddlzWeb.AuthFormErrors
   alias HuddlzWeb.AuthLive.Components
   alias HuddlzWeb.AuthReturnTo
+  alias HuddlzWeb.FormFocus
 
   @impl true
   def mount(params, _session, socket) do
@@ -188,6 +189,7 @@ defmodule HuddlzWeb.AuthLive.Register do
         socket
         |> assign(check_errors: true)
         |> assign_form(form)
+        |> FormFocus.first_error("registration-form")
       end
 
     {:noreply, socket}
@@ -203,6 +205,7 @@ defmodule HuddlzWeb.AuthLive.Register do
         |> assign(check_errors: true)
         |> assign_form(form)
         |> put_flash(:error, get_form_errors(form))
+        |> FormFocus.first_error("registration-form")
     end
   end
 

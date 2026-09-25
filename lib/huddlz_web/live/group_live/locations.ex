@@ -8,6 +8,7 @@ defmodule HuddlzWeb.GroupLive.Locations do
 
   alias Huddlz.Communities
   alias Huddlz.Communities.GroupLocation.DeletionImpact
+  alias HuddlzWeb.FormFocus
   alias HuddlzWeb.Layouts
 
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
@@ -280,7 +281,10 @@ defmodule HuddlzWeb.GroupLive.Locations do
          |> assign(:rename_form, nil)}
 
       {:error, form} ->
-        {:noreply, assign(socket, :rename_form, form)}
+        {:noreply,
+         socket
+         |> assign(:rename_form, form)
+         |> FormFocus.first_error("location-rename-form")}
     end
   end
 

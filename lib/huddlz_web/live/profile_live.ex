@@ -11,6 +11,7 @@ defmodule HuddlzWeb.ProfileLive do
   alias Huddlz.Storage.ProfilePictures
   alias HuddlzWeb.AuthFormErrors
   alias HuddlzWeb.Avatar
+  alias HuddlzWeb.FormFocus
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.UploadHelpers
   alias Phoenix.LiveView.JS
@@ -499,7 +500,8 @@ defmodule HuddlzWeb.ProfileLive do
         {:noreply,
          socket
          |> put_flash(:error, "Failed to update display name. Please check the errors below.")
-         |> assign(:form, form |> to_form())}
+         |> assign(:form, form |> to_form())
+         |> FormFocus.first_error("profile-form")}
     end
   end
 
@@ -605,7 +607,8 @@ defmodule HuddlzWeb.ProfileLive do
         {:noreply,
          socket
          |> put_flash(:error, "Email could not be updated. Please check the errors below.")
-         |> assign(:email_form, to_form(form))}
+         |> assign(:email_form, to_form(form))
+         |> FormFocus.first_error("email-change-form")}
     end
   end
 
@@ -635,7 +638,8 @@ defmodule HuddlzWeb.ProfileLive do
          socket
          |> put_flash(:error, "Failed to update password. Please check the errors below.")
          |> assign(:password_form, form |> to_form())
-         |> update(:password_input_reset_generation, &(&1 + 1))}
+         |> update(:password_input_reset_generation, &(&1 + 1))
+         |> FormFocus.first_error("password-form")}
     end
   end
 

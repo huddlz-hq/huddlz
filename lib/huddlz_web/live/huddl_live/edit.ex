@@ -13,6 +13,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
   alias Huddlz.Communities.HuddlTemplate
   alias Huddlz.Storage.GroupImages
   alias Huddlz.Storage.HuddlCoverImages
+  alias HuddlzWeb.FormFocus
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.ImageUploadPipeline
 
@@ -472,7 +473,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
          )}
 
       {:error, form} ->
-        {:noreply, assign(socket, :form, to_form(form))}
+        {:noreply, socket |> assign(:form, to_form(form)) |> FormFocus.first_error("huddl-form")}
     end
   end
 
