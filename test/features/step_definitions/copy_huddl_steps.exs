@@ -11,6 +11,7 @@ defmodule CopyHuddlSteps do
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.Huddl.CopySuggestion
+  alias Huddlz.Storage.HuddlCoverImages
 
   # Steps that set up a group and a huddl to copy live with the API's copy
   # feature (copy_huddl_api_steps.exs); they sign the organizer in for both.
@@ -149,6 +150,16 @@ defmodule CopyHuddlSteps do
 
   step "the form shows a copy of the original's cover", context do
     assert_has(context.session, "*", text: "Changing it here leaves the original alone")
+
+    {:ok, source} =
+      Communities.get_huddl(context.source.id,
+        actor: context.owner,
+        load: [:current_image_url]
+      )
+
+    url = HuddlCoverImages.url(source.current_image_url)
+    assert_has(context.session, "#huddl-cover-upload img[src='#{url}']")
+    assert served_cover(URI.parse(url).path) == File.read!("test/fixtures/test_image.jpg")
     context
   end
 
