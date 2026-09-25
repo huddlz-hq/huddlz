@@ -63,6 +63,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    user = socket.assigns.current_user
     time_zone = BrowserTimeZone.for_socket(socket)
 
     {:ok,
@@ -78,7 +79,7 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:period, GroupStats.default_period())
      |> assign(:stats, nil)
      |> assign(:invitation_count, 0)
-     |> assign(:invitation_form, invitation_form())
+     |> assign(:invitation_form, invitation_form(user))
      |> assign(:member_lookup, %{})
      |> assign(:member_role_counts, %{owner: 0, organizer: 0, member: 0})
      |> assign(:subscribed_group_id, nil)
@@ -278,23 +279,36 @@ defmodule HuddlzWeb.OrganizeLive do
     |> Enum.map(&normalize_invitation_expiration(&1, user))
   end
 
-  defp create_invitation(socket, group, user, role, email, params) do
-    case Communities.invite_to_group_by_email(group.id, email, role, actor: user) do
+  defp create_invitation(socket, group, user, params) do
+    params = Map.put(params, "group_id", group.id)
+
+    case AshPhoenix.Form.submit(socket.assigns.invitation_form, params: params) do
       {:ok, _invitation} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Invitation sent to #{email}.")
-         |> assign(:invitation_form, invitation_form())
+         |> put_flash(:info, "Invitation sent to #{String.trim(params["email"] || "")}.")
+         |> assign(:invitation_form, invitation_form(user))
          |> refresh_invitations(group, user)}
 
-      {:error, _reason} ->
+      {:error, form} ->
         {:noreply,
          socket
-         |> put_flash(
-           :error,
-           "Could not send that invitation. They may already be a member or have a pending invitation."
-         )
-         |> assign(:invitation_form, invitation_form(params))}
+         |> put_invitation_failure_flash(form)
+         |> assign(:invitation_form, to_form(form))}
+    end
+  end
+
+  # A problem with the email itself shows under the Email field; anything
+  # the form cannot point at gets a flash instead.
+  defp put_invitation_failure_flash(socket, form) do
+    if Keyword.has_key?(AshPhoenix.Form.errors(form), :email) do
+      socket
+    else
+      put_flash(
+        socket,
+        :error,
+        "Could not send that invitation. They may already be a member or have a pending invitation."
+      )
     end
   end
 
@@ -306,12 +320,15 @@ defmodule HuddlzWeb.OrganizeLive do
     |> stream(:invitations, invitations, reset: true)
   end
 
-  defp invitation_form(params \\ %{"email" => "", "role" => "member"}) do
-    to_form(params, as: :invitation)
+  defp invitation_form(user) do
+    Huddlz.Communities.GroupInvitation
+    |> AshPhoenix.Form.for_create(:invite,
+      as: "invitation",
+      actor: user,
+      domain: Huddlz.Communities
+    )
+    |> to_form()
   end
-
-  defp parse_invitation_role("organizer"), do: :organizer
-  defp parse_invitation_role(_), do: :member
 
   defp normalize_invitation_expiration(
          %{status: :pending, expires_at: expires_at} = invitation,
@@ -1771,12 +1788,7 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   def handle_event("invite", %{"invitation" => params}, socket) do
-    group = socket.assigns.group
-    user = socket.assigns.current_user
-    email = String.trim(params["email"] || "")
-    role = parse_invitation_role(params["role"])
-
-    create_invitation(socket, group, user, role, email, params)
+    create_invitation(socket, socket.assigns.group, socket.assigns.current_user, params)
   end
 
   def handle_event("revoke_invitation", %{"id" => id}, socket) do
