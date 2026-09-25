@@ -147,6 +147,18 @@ defmodule BrowserKeyboardFocusSteps do
     Map.merge(context, %{conn: conn, focus_form: "#location-rename-form"})
   end
 
+  defp open_form(context, "invitation") do
+    owner = generate(user(role: :user))
+    group = generate(group(owner_id: owner.id, is_public: false, actor: owner))
+
+    signed_in_form(
+      context,
+      owner,
+      "/organize/#{group.slug}/members",
+      "#group-invitation-form"
+    )
+  end
+
   defp owned_group do
     owner = generate(user(role: :user))
     {owner, generate(group(owner_id: owner.id, is_public: true, actor: owner))}

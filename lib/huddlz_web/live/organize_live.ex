@@ -31,6 +31,7 @@ defmodule HuddlzWeb.OrganizeLive do
   alias Huddlz.Social
   alias Huddlz.Social.Post
   alias HuddlzWeb.Components.TurnoutForm
+  alias HuddlzWeb.FormFocus
   alias HuddlzWeb.HuddlStatus
   alias HuddlzWeb.Layouts
   alias HuddlzWeb.Live.Helpers.BrowserTimeZone
@@ -294,7 +295,8 @@ defmodule HuddlzWeb.OrganizeLive do
         {:noreply,
          socket
          |> put_invitation_failure_flash(form)
-         |> assign(:invitation_form, to_form(form))}
+         |> assign(:invitation_form, to_form(form))
+         |> FormFocus.first_error("group-invitation-form")}
     end
   end
 

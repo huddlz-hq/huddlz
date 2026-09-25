@@ -43,6 +43,7 @@ Feature: Keyboard focus past navigation and onto form errors
       | new huddl         | Title         |
       | edit huddl        | Title         |
       | address book      | Address       |
+      | invitation        | Email         |
 
   Scenario: A save with nothing wrong leaves focus alone
     Given I open the "profile" form in a browser
