@@ -468,6 +468,9 @@ defmodule HuddlzWeb.OrganizeLive do
   defp active_section(:settings), do: :settings
   defp active_section(_), do: nil
 
+  defp turnout_form_id(:overview, _huddl), do: "turnout-form-nudge"
+  defp turnout_form_id(:huddlz, huddl), do: "turnout-form-#{huddl.id}"
+
   # ─────────────────────────────────────────  PICKER (/organize)  ───
   attr :groups, :list, required: true
 
@@ -587,7 +590,7 @@ defmodule HuddlzWeb.OrganizeLive do
       </div>
       <TurnoutForm.turnout_form
         :if={editing?(@turnout_editor, @turnout_nudge)}
-        id="turnout-form-nudge"
+        id={turnout_form_id(:overview, @turnout_nudge)}
         huddl={@turnout_editor.huddl}
         form={@turnout_editor.form}
       />
@@ -1085,7 +1088,7 @@ defmodule HuddlzWeb.OrganizeLive do
       </div>
       <div :if={editing?(@turnout_editor, @huddl)} class="org-huddl-editor">
         <TurnoutForm.turnout_form
-          id={"turnout-form-#{@huddl.id}"}
+          id={turnout_form_id(:huddlz, @huddl)}
           huddl={@turnout_editor.huddl}
           form={@turnout_editor.form}
         />
@@ -1771,7 +1774,10 @@ defmodule HuddlzWeb.OrganizeLive do
          |> refresh_after_turnout()}
 
       {:error, form} ->
-        {:noreply, assign(socket, :turnout_editor, %{editor | form: to_form(form)})}
+        {:noreply,
+         socket
+         |> assign(:turnout_editor, %{editor | form: to_form(form)})
+         |> FormFocus.first_error(turnout_form_id(socket.assigns.live_action, editor.huddl))}
     end
   end
 
@@ -2269,7 +2275,7 @@ defmodule HuddlzWeb.OrganizeLive do
     end
   end
 
-  defp finish_schedule(socket, false), do: socket
+  defp finish_schedule(socket, false), do: FormFocus.first_error(socket, "schedule-form")
 
   defp finish_schedule(socket, true) do
     socket

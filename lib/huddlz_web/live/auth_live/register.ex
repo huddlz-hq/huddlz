@@ -115,6 +115,12 @@ defmodule HuddlzWeb.AuthLive.Register do
                 id={@form[:legal_acceptance].id}
                 name={@form[:legal_acceptance].name}
                 value="true"
+                aria-invalid={
+                  HuddlzWeb.Components.Input.visible_errors(@form[:legal_acceptance]) != [] && "true"
+                }
+                aria-describedby={
+                  Enum.join(HuddlzWeb.Components.Input.field_error_ids(@form[:legal_acceptance]), " ")
+                }
                 checked={
                   Phoenix.HTML.Form.normalize_value(
                     "checkbox",

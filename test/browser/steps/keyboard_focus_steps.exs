@@ -3,6 +3,7 @@ defmodule BrowserKeyboardFocusSteps do
 
   import Huddlz.Generator
   import Huddlz.Test.BrowserHelpers
+  import Huddlz.Test.MoxHelpers
   import PhoenixTest
   import PhoenixTest.Playwright, only: [press: 3]
 
@@ -45,6 +46,11 @@ defmodule BrowserKeyboardFocusSteps do
     context
   end
 
+  step "the main content landmark has keyboard focus", context do
+    assert_browser(context.conn, "document.activeElement.matches('main, [role=main]')")
+    context
+  end
+
   step "keyboard focus is still in the page content", context do
     assert_browser(context.conn, """
     document.activeElement !== document.getElementById('main-content') &&
@@ -64,6 +70,71 @@ defmodule BrowserKeyboardFocusSteps do
 
   step "I save it with {string} set to {string}", %{args: [label, value]} = context do
     save_with(context, label, value)
+  end
+
+  step "I register without accepting the terms", context do
+    conn =
+      context.conn
+      |> fill_in("Email", with: "focus-#{System.unique_integer([:positive])}@example.com")
+      |> fill_in("Display Name", with: "Keyboard Person")
+      |> fill_in("Password", with: "ValidPassword123!")
+      |> fill_in("Confirm Password", with: "ValidPassword123!")
+      |> press("#registration-form button[type=submit]", "Enter")
+
+    Map.put(context, :conn, conn)
+  end
+
+  step "I save the new group without a location", context do
+    conn =
+      context.conn
+      |> fill_in("Group name", with: "Keyboard Review Group")
+      |> fill_in("Description", with: "A group for reviewing keyboard access")
+      |> press("#group-form button[type=submit]", "Enter")
+
+    Map.put(context, :conn, conn)
+  end
+
+  step "I clear the group location and save", context do
+    conn =
+      context.conn
+      |> within("#group-location", &click_button(&1, "Clear"))
+      |> assert_has("#group-location-input")
+      |> press("#edit-group-form button[type=submit]", "Enter")
+
+    Map.put(context, :conn, conn)
+  end
+
+  step "I finish with an opening line longer than 140 characters", context do
+    conn =
+      context.conn
+      |> fill_in("Opening line", with: String.duplicate("a", 141))
+      |> press("#schedule-form button[type=submit]", "Enter")
+
+    Map.put(context, :conn, conn)
+  end
+
+  step "I try to record turnout without a count", context do
+    conn =
+      context.conn
+      |> click_button("#turnout-nudge button", "Add turnout")
+      |> press("#turnout-form-nudge button[type=submit]", "Enter")
+
+    Map.put(context, :conn, conn)
+  end
+
+  step "the agreement has keyboard focus and describes what is wrong", context do
+    assert_focused(context.conn, Huddlz.Legal.acceptance_text())
+
+    assert_browser(context.conn, """
+    (() => {
+      const field = document.activeElement;
+      return field.getAttribute('aria-invalid') === 'true' &&
+        (field.getAttribute('aria-describedby') || '').split(/\\s+/).some(id =>
+          document.getElementById(id)?.textContent.includes('accept'));
+    })()
+    """)
+
+    context
   end
 
   step "{string} describes what is wrong with it", %{args: [name]} = context do
@@ -145,6 +216,26 @@ defmodule BrowserKeyboardFocusSteps do
     context = signed_in_form(context, owner, "/groups/#{group.slug}/locations", nil)
     conn = click_button(context.conn, "Edit")
     Map.merge(context, %{conn: conn, focus_form: "#location-rename-form"})
+  end
+
+  defp open_form(context, "new address") do
+    {owner, group} = owned_group()
+    stub_places_autocomplete(%{"saint" => [:saint_augustine]})
+    stub_place_details(:defaults)
+
+    context =
+      signed_in_form(context, owner, "/groups/#{group.slug}/locations/new", "#new-location-form")
+
+    conn =
+      context.conn
+      |> fill_in("Search for an address", with: "saint")
+      |> assert_has("[role='option']")
+      |> press("#modal-address-autocomplete-input", "ArrowDown")
+      |> assert_has("#modal-address-autocomplete[data-has-highlight='true']")
+      |> press("#modal-address-autocomplete-input", "Enter")
+      |> assert_has("#new-location-form button[type=submit]:not([disabled])")
+
+    Map.put(context, :conn, conn)
   end
 
   defp open_form(context, "invitation") do

@@ -255,6 +255,7 @@ defmodule HuddlzWeb.GroupLive.Edit do
                 module={HuddlzWeb.Live.LocationAutocomplete}
                 id="group-location"
                 variant={:form}
+                field={@form[:location]}
                 field_name="form[location]"
                 value={@form[:location].value}
                 latitude={@selected_location_data && @selected_location_data.latitude}

@@ -288,7 +288,7 @@ defmodule HuddlzWeb.Layouts do
       </aside>
     <% end %>
 
-    <main class="main" data-mobile-nav-background>
+    <div class="main" data-mobile-nav-background>
       <header class="content-topbar">
         <%= if @signed_in do %>
           <button
@@ -345,12 +345,12 @@ defmodule HuddlzWeb.Layouts do
         </div>
       </header>
 
-      <div id="main-content" class="content-body" tabindex="-1">
+      <main id="main-content" class="content-body" tabindex="-1">
         <.flash_group flash={@flash} />
         <.confirmation_reminder current_user={@current_user} />
         {render_slot(@inner_block)}
-      </div>
-    </main>
+      </main>
+    </div>
     """
   end
 

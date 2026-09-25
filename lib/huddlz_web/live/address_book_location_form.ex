@@ -13,7 +13,9 @@ defmodule HuddlzWeb.Live.AddressBookLocationForm do
   """
   use HuddlzWeb, :live_component
 
-  alias Huddlz.Communities
+  alias AshPhoenix.Form
+  alias Huddlz.Communities.GroupLocation
+  alias HuddlzWeb.FormFocus
 
   # Place types that name a venue rather than a street or an area.
   @venue_types ~w(establishment point_of_interest premise)
@@ -73,6 +75,7 @@ defmodule HuddlzWeb.Live.AddressBookLocationForm do
       </div>
 
       <.textarea
+        field={@form[:address]}
         id="location-address-input"
         name="location_address"
         value={@address}
@@ -106,6 +109,7 @@ defmodule HuddlzWeb.Live.AddressBookLocationForm do
       </div>
 
       <.input
+        field={@form[:name]}
         type="text"
         id="location-name-input"
         name="location_name"
@@ -144,11 +148,22 @@ defmodule HuddlzWeb.Live.AddressBookLocationForm do
     socket = apply_params(socket, params)
 
     case create_location(socket.assigns) do
-      {:ok, location} -> send(self(), {:address_book_location_created, location})
-      {:error, _error} -> send(self(), :address_book_location_failed)
-    end
+      {:ok, location} ->
+        send(self(), {:address_book_location_created, location})
+        {:noreply, socket}
 
-    {:noreply, socket}
+      {:error, %Form{} = form} ->
+        send(self(), :address_book_location_failed)
+
+        {:noreply,
+         socket
+         |> assign(:form, to_form(form))
+         |> FormFocus.first_error(socket.assigns.id)}
+
+      {:error, :unresolved_address} ->
+        send(self(), :address_book_location_failed)
+        {:noreply, socket}
+    end
   end
 
   defp reset(socket) do
@@ -157,7 +172,8 @@ defmodule HuddlzWeb.Live.AddressBookLocationForm do
       name: "",
       address: "",
       suggested_address: nil,
-      pending_address: nil
+      pending_address: nil,
+      form: GroupLocation |> Form.for_create(:create) |> to_form()
     )
   end
 
@@ -183,15 +199,18 @@ defmodule HuddlzWeb.Live.AddressBookLocationForm do
     location = assigns.location
     name = if assigns.name == "", do: nil, else: assigns.name
 
-    Communities.create_group_location(
-      name,
-      assigns.address,
-      location.latitude,
-      location.longitude,
-      location.time_zone,
-      assigns.group.id,
-      %{place_id: location[:place_id]},
-      actor: assigns.actor
+    GroupLocation
+    |> Form.for_create(:create, actor: assigns.actor)
+    |> Form.submit(
+      params: %{
+        "name" => name,
+        "address" => assigns.address,
+        "latitude" => location.latitude,
+        "longitude" => location.longitude,
+        "time_zone" => location.time_zone,
+        "group_id" => assigns.group.id,
+        "place_id" => location[:place_id]
+      }
     )
   end
 
