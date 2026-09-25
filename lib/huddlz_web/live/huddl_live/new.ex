@@ -453,7 +453,10 @@ defmodule HuddlzWeb.HuddlLive.New do
   end
 
   defp cover_url(%{pending_preview_url: url}) when is_binary(url), do: url
-  defp cover_url(%{copy_cover?: true, copy_source: source}), do: source.current_image_url
+
+  defp cover_url(%{copy_cover?: true, copy_source: source}),
+    do: HuddlCoverImages.url(source.current_image_url)
+
   defp cover_url(_assigns), do: nil
 
   defp cover_caption(%{pending_preview_url: url}) when is_binary(url),
