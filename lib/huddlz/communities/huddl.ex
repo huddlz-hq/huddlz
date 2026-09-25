@@ -276,6 +276,12 @@ defmodule Huddlz.Communities.Huddl do
         description "Another huddl of the same group to copy. Details you leave out come from it; the date is always yours."
       end
 
+      argument :copy_cover, :boolean do
+        default true
+
+        description "When copying, whether the copy gets its own copy of the source's cover image."
+      end
+
       validate one_of(:lifecycle_state, [:draft, :published])
       validate Huddlz.Communities.Huddl.Validations.FutureDateValidation
 
@@ -952,9 +958,15 @@ defmodule Huddlz.Communities.Huddl do
     end
 
     # Scoped to the primary actions so RSVPs and lifecycle transitions on
-    # legacy huddlz that predate the address book keep working.
+    # legacy huddlz that predate the address book keep working. Copies get
+    # this check from CopyFromHuddl, which can name a removed location.
     validate present(:group_location_id) do
-      where [action_is([:create, :update]), one_of(:event_type, [:in_person, :hybrid])]
+      where [
+        action_is([:create, :update]),
+        one_of(:event_type, [:in_person, :hybrid]),
+        argument_equals(:copied_from_id, nil)
+      ]
+
       message "is required for in-person and hybrid huddlz"
     end
 

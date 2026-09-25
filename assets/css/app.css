@@ -3608,12 +3608,17 @@ body .org-huddl-series {
 
 body .org-huddl-series .icon { color: var(--accent-ink); }
 
+/* Buttons side by side; Edit series (the whole series) on a line of its own. */
 body .org-huddl-actions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  max-width: 280px;
 }
+
+body .org-huddl-actions .org-huddl-edit-series { flex-basis: 100%; text-align: right; }
 
 body .org-huddl-edit-series {
   color: var(--accent-ink);
@@ -3645,7 +3650,9 @@ body .btn-sm { height: 32px; padding: 0 12px; font-size: 13px; }
   }
   body .org-huddl .org-huddl-rsvps,
   body .org-huddl .org-huddl-actions { grid-column: 2; justify-self: start; }
-  body .org-huddl-actions { flex-direction: row; align-items: center; gap: 12px; }
+  body .org-huddl-actions { justify-content: flex-start; max-width: none; }
+  body .org-huddl-actions .btn-sm { height: 44px; }
+  body .org-huddl-actions .org-huddl-edit-series { flex-basis: auto; text-align: left; }
 }
 
 /* Agenda: the month's huddlz grouped by day. A date rail on the left, one
@@ -6263,6 +6270,33 @@ body .panel > .form-foot {
   padding: 16px 24px;
 }
 
+/* The notice above a new-huddl form that was filled in from another huddl. */
+body .copy-notice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+}
+
+body .copy-notice-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--accent-ink);
+  display: grid;
+  place-items: center;
+}
+
+body .copy-notice h2 { margin: 0 0 4px; font-size: 14px; font-weight: 600; color: var(--text); }
+body .copy-notice p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--soft); }
+body .copy-notice p.copy-notice-aside { margin-top: 4px; color: var(--muted); }
+
 /* No top border or gap — for foots stacked under their own panel/form. */
 body .form-foot.is-flush {
   margin-top: 0;
@@ -7899,4 +7933,26 @@ body .photo-delete-preview figcaption { overflow-wrap: anywhere; }
     grid-column: 2;
     justify-self: end;
   }
+}
+
+@media (max-width: 640px) {
+  body #huddl-form:has(> .huddl-create-actions) {
+    padding-bottom: calc(132px + env(safe-area-inset-bottom));
+  }
+
+  body .form-foot.huddl-create-actions {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+  }
+
+  body .huddl-create-actions > :first-child { grid-column: 1 / -1; }
+  body .huddl-create-actions > * { min-height: 44px; justify-content: center; }
 }

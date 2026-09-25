@@ -1050,6 +1050,14 @@ defmodule HuddlzWeb.OrganizeLive do
         <.organizer_edit_link group={@group} huddl={@huddl} label="Edit" />
         <.organizer_turnout_action huddl={@huddl} />
         <.link
+          :if={is_nil(@group.archived_at)}
+          id={"organize-huddl-copy-#{@huddl.id}"}
+          navigate={~p"/groups/#{@group.slug}/huddlz/new?#{[copy: @huddl.id]}"}
+          class="btn-secondary btn-sm org-huddl-copy"
+        >
+          <.icon name="hero-document-duplicate" class="size-4" /> Copy
+        </.link>
+        <.link
           :if={@huddl.huddl_template && @huddl.status not in [:cancelled, :completed]}
           navigate={huddl_edit_path(@group, @huddl, "all")}
           class="org-huddl-edit-series"

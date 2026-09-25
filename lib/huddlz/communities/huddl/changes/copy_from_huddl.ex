@@ -95,22 +95,28 @@ defmodule Huddlz.Communities.Huddl.Changes.CopyFromHuddl do
       attribute not in changeset.defaults
   end
 
-  # A deleted address book location leaves the source without one. The copy
-  # must not quietly lose its place, so the caller has to choose a new one.
+  # A copy that meets in person needs a location. The resource's own check
+  # skips copies so this is the only error: when the source's location was
+  # deleted from the address book, it names that place so the caller knows
+  # why the field is empty.
   defp require_location(changeset, source) do
     physical? = Ash.Changeset.get_attribute(changeset, :event_type) in [:in_person, :hybrid]
 
-    if physical? and is_nil(Ash.Changeset.get_attribute(changeset, :group_location_id)) and
-         source.event_type in [:in_person, :hybrid] do
+    if physical? and is_nil(Ash.Changeset.get_attribute(changeset, :group_location_id)) do
       Ash.Changeset.add_error(changeset,
         field: :group_location_id,
-        message:
-          "#{removed_location_name(source)} was removed from the address book; choose a location"
+        message: missing_location_message(source)
       )
     else
       changeset
     end
   end
+
+  defp missing_location_message(%{event_type: event_type} = source)
+       when event_type in [:in_person, :hybrid],
+       do: "#{removed_location_name(source)} was removed from the address book; choose a location"
+
+  defp missing_location_message(_source), do: "is required for in-person and hybrid huddlz"
 
   defp removed_location_name(%{physical_location: address})
        when is_binary(address) and address != "",
@@ -182,17 +188,20 @@ defmodule Huddlz.Communities.Huddl.Changes.CopyFromHuddl do
   end
 
   defp copy_cover(changeset, source) do
-    if Ash.Changeset.get_argument(changeset, :pending_image_id) do
-      changeset
-    else
-      Ash.Changeset.after_action(changeset, &copy_cover_to(&1, &2, source))
-    end
+    Ash.Changeset.after_action(changeset, &copy_cover_to(&1, &2, source))
   end
 
+  # The form supplies its pending upload just before submission, after changes
+  # have run. Decide here so that an uploaded replacement takes precedence.
   defp copy_cover_to(changeset, huddl, source) do
-    case CoverCopy.copy_current(source.id, huddl.id, cover_opts(changeset)) do
-      :ok -> {:ok, huddl}
-      {:error, error} -> {:error, error}
+    if Ash.Changeset.get_argument(changeset, :pending_image_id) ||
+         Ash.Changeset.get_argument(changeset, :copy_cover) == false do
+      {:ok, huddl}
+    else
+      case CoverCopy.copy_current(source.id, huddl.id, cover_opts(changeset)) do
+        :ok -> {:ok, huddl}
+        {:error, error} -> {:error, error}
+      end
     end
   end
 

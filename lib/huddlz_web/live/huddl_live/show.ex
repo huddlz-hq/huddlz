@@ -626,7 +626,10 @@ defmodule HuddlzWeb.HuddlLive.Show do
           </div>
 
           <div
-            :if={@can_edit_huddl || @can_publish_huddl || @can_cancel_huddl || @can_delete_huddl}
+            :if={
+              @can_edit_huddl || @can_copy_huddl || @can_publish_huddl || @can_cancel_huddl ||
+                @can_delete_huddl
+            }
             class="huddl-side-section"
           >
             <h3>Organize</h3>
@@ -637,6 +640,14 @@ defmodule HuddlzWeb.HuddlLive.Show do
                 navigate={~p"/groups/#{@huddl.group.slug}/huddlz/#{@huddl.id}/edit"}
               >
                 Edit huddl
+              </.button>
+              <.button
+                :if={@can_copy_huddl}
+                id="copy-huddl"
+                variant={:secondary}
+                navigate={~p"/groups/#{@huddl.group.slug}/huddlz/new?#{[copy: @huddl.id]}"}
+              >
+                <.icon name="hero-document-duplicate" class="size-4" /> Copy huddl
               </.button>
               <.button
                 :if={@can_publish_huddl}
@@ -1462,6 +1473,11 @@ defmodule HuddlzWeb.HuddlLive.Show do
       :can_edit_huddl,
       is_nil(huddl.group.archived_at) && editable_lifecycle?(huddl) &&
         Communities.can_update_huddl?(user, huddl)
+    )
+    |> assign(
+      :can_copy_huddl,
+      is_nil(huddl.group.archived_at) &&
+        Communities.can_create_huddl?(user, %{group_id: huddl.group_id})
     )
     |> assign(
       :can_publish_huddl,

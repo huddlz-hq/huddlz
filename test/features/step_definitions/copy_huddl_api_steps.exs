@@ -3,6 +3,7 @@ defmodule CopyHuddlApiSteps do
 
   import ExUnit.Assertions
   import Huddlz.Generator
+  import Huddlz.Test.Helpers.Authentication, only: [login: 2]
   import HuddlzWeb.ApiCase
   import Phoenix.ConnTest
 
@@ -39,6 +40,23 @@ defmodule CopyHuddlApiSteps do
           lifecycle_state: :completed,
           group_id: group.id,
           creator_id: owner.id
+        )
+      )
+
+    organizer_context(context, owner, group, source)
+  end
+
+  step "I organize a group with an online huddl {string}", %{args: [title]} = context do
+    {owner, group} = organized_group()
+
+    source =
+      generate(
+        huddl(
+          title: title,
+          group_id: group.id,
+          actor: owner,
+          event_type: :virtual,
+          virtual_link: @virtual_link
         )
       )
 
@@ -114,7 +132,7 @@ defmodule CopyHuddlApiSteps do
 
     context
     |> organizer_context(owner, group, source)
-    |> Map.put(:conn, authenticated_conn(context.conn, member))
+    |> Map.merge(%{member: member, conn: signed_in_conn(context.conn, member)})
   end
 
   step "people RSVPd to that huddl, shared a photo and a turnout was recorded", context do
@@ -191,6 +209,16 @@ defmodule CopyHuddlApiSteps do
   step "I copy it through {string} on a future date titled {string}",
        %{args: [api, title]} = context do
     copy(context, api, %{"date" => Date.to_iso8601(future_date()), "title" => title})
+  end
+
+  step "I copy it through {string} on a future date without its cover",
+       %{args: [api]} = context do
+    copy(context, api, %{"date" => Date.to_iso8601(future_date()), "copy_cover" => false})
+  end
+
+  step "I copy it through {string} on a future date as an in-person huddl",
+       %{args: [api]} = context do
+    copy(context, api, %{"date" => Date.to_iso8601(future_date()), "event_type" => "in_person"})
   end
 
   step "I copy it through {string} without a date", %{args: [api]} = context do
@@ -345,6 +373,15 @@ defmodule CopyHuddlApiSteps do
     Map.put(context, :copy_image, image)
   end
 
+  step "the copy has no cover image", context do
+    %{copy: copy} = copied(context)
+
+    assert {:error, %Ash.Error.Invalid{}} =
+             Communities.get_current_huddl_cover_image(copy.id, authorize?: false)
+
+    context
+  end
+
   step "I remove the copy's cover image", context do
     context.copy_image
     |> Ash.Changeset.for_destroy(:hard_delete, %{})
@@ -423,9 +460,13 @@ defmodule CopyHuddlApiSteps do
       owner: owner,
       group: group,
       source: source,
-      conn: authenticated_conn(context.conn, owner)
+      conn: signed_in_conn(context.conn, owner)
     })
   end
+
+  # Signed in for both the API (bearer token) and the web pages (session),
+  # so the copy UI's scenarios share these steps.
+  defp signed_in_conn(conn, user), do: conn |> login(user) |> authenticated_conn(user)
 
   defp future_date, do: Date.add(eastern_today(), 12)
 

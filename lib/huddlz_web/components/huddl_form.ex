@@ -152,6 +152,18 @@ defmodule HuddlzWeb.Components.HuddlForm do
 
   def duration_options, do: @duration_options
 
+  defp duration_options(value) when value in [nil, ""], do: @duration_options
+
+  defp duration_options(value) do
+    value = to_string(value)
+
+    if Enum.any?(@duration_options, fn {_label, minutes} -> minutes == value end) do
+      @duration_options
+    else
+      [{"#{value} minutes", value} | @duration_options]
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # Shared panels
   # ---------------------------------------------------------------------------
@@ -201,6 +213,7 @@ defmodule HuddlzWeb.Components.HuddlForm do
   attr :duration_prompt, :string, default: nil
   attr :schedule_time_zone, :string, default: nil
   attr :ambiguous_time_label, :string, default: nil
+  attr :date_help, :string, default: nil
   slot :recurring_controls
 
   def when_panel(assigns) do
@@ -219,7 +232,7 @@ defmodule HuddlzWeb.Components.HuddlForm do
 
         <div class="form-row form-row-inline">
           <div class="form-col-md">
-            <.input field={@form[:date]} type="date" label="Date" />
+            <.input field={@form[:date]} type="date" label="Date" help={@date_help} />
           </div>
           <div class="form-col-sm">
             <.input field={@form[:start_time]} type="time" label="Start time" />
@@ -229,7 +242,7 @@ defmodule HuddlzWeb.Components.HuddlForm do
               field={@form[:duration_minutes]}
               label="Duration"
               prompt={@duration_prompt}
-              options={duration_options()}
+              options={duration_options(@form[:duration_minutes].value)}
             />
           </div>
         </div>
