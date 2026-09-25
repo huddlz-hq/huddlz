@@ -511,13 +511,20 @@ defmodule HuddlzWeb.AdminLive do
   defp copies_previous(%{previous: previous}, period, separator),
     do: "#{separator}#{previous} in the previous #{Periods.period_label(period)}"
 
+  # Only copies made before source timing was recorded lack it, so that row
+  # shows only while such copies fall in the period.
   defp copy_source_rows(copies) do
     [
       {"copied-past", "Copied from a past huddl", copies.past},
-      {"copied-upcoming", "Copied from an upcoming huddl", copies.upcoming},
-      {"copy-unknown", "Source timing unavailable", copies.unknown}
-    ]
+      {"copied-upcoming", "Copied from an upcoming huddl", copies.upcoming}
+    ] ++ if(copies.unknown > 0, do: [unknown_copy_row(copies)], else: [])
   end
+
+  defp unknown_copy_row(copies),
+    do: {"copy-unknown", "Source timing unavailable", copies.unknown}
+
+  defp copy_sources_label(%{unknown: 0} = copies),
+    do: "#{copies.past} copied from a past huddl, #{copies.upcoming} from an upcoming huddl"
 
   defp copy_sources_label(copies),
     do:

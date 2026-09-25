@@ -21,6 +21,7 @@ Feature: The admin overview shows how often huddlz are copied
     When I visit "/admin"
     Then the Copies panel shows 2 for "Huddlz copied"
     And the Copies panel says "by 1 organizer in 1 group"
+    And the Copies panel does not mention unavailable source timing
 
   Scenario: Organizers and groups are counted once each
     Given "owner642@example.com" copied 2 huddlz of "Tuesday Runners"

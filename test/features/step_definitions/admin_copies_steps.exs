@@ -112,6 +112,11 @@ defmodule AdminCopiesSteps do
     context
   end
 
+  step "the Copies panel does not mention unavailable source timing", context do
+    refute_has(context.session, @panel, text: "Source timing unavailable")
+    context
+  end
+
   step "the Copies panel does not say when it has been measured since", context do
     refute_has(context.session, @panel, text: "Measured since")
     context
