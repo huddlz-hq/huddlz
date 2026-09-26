@@ -19,7 +19,9 @@ would be invalid. The next scheduled refresh discovers newly published pages.
 Generation streams one SQL cursor in batches of 500 rows, selecting only kind,
 ID, group slug and modification time. Its explicit public predicates match
 anonymous page access: public groups, and non-private published/completed
-huddlz inside public groups, plus public cancellations whose scheduled end is still in the future. No full Ash resources, relationships, or attendee
+huddlz inside public groups, plus public cancellations whose scheduled end is still in the future.
+Recurring huddlz are additionally limited to starts at or before 90 days from
+the refresh instant. No full Ash resources, relationships, or attendee
 lists are loaded. The cursor's single statement gives a consistent MVCC
 snapshot, with unique `(kind, id)` ordering and no shifting pagination offsets.
 Concurrent mutations enter the next refresh. The database may sort/spill the
@@ -67,7 +69,9 @@ public canonical eligibility must update this projection and the sitemap HTTP
 parity tests in `test/huddlz_web/controllers/sitemap_controller_test.exs` together.
 Those tests fetch listed pages anonymously, compare canonical URLs, and verify
 that private groups, private huddlz, drafts, expired cancellations and deleted records
-are excluded. The Cucumber sitemap scenario also checks that the current index
+are excluded. Sitemap inclusion is narrower than public access: a recurring
+huddl beyond the 90-day window is still public and retains its own canonical
+URL. The Cucumber sitemap scenario also checks that the current index
 preserves an unrelated child's URL and body after publication and deletion.
 
 ## Freshness, privacy and modification times
@@ -82,11 +86,21 @@ formerly public URLs until their retention expires. Sitemap removal is not an
 access-control mechanism: ordinary anonymous page reads enforce current
 visibility and return 404 for inaccessible/deleted pages immediately.
 
-Past and completed public huddlz stay listed because their detail pages remain
-public and canonical. Cancelled huddlz are excluded: current access rules make
-them visible only to organizers and people with RSVP history. Drafts and
-private content are excluded. Administrative deletion and group deletion are
-also reflected in the next snapshot. This task does not broaden page access.
+Public groups, past and completed public huddlz, and one-off future huddlz
+stay listed. Recurring huddlz (those linked to a huddl template) enter the
+sitemap when their start falls within the next 90 days, inclusive of the
+cutoff instant. Each scheduled refresh advances that window automatically;
+no content edit or new publication is needed. Public cancellations remain
+eligible only until their scheduled end and follow the same recurring window.
+Drafts, private content and deleted records are excluded.
+
+The 90-day window limits advance promotion of repetitive recurring dates;
+it is a discovery policy, not an access restriction or a Google requirement.
+Later dates remain reachable through public pages, can still be discovered
+and indexed through links, and keep their self-referencing canonicals and
+structured data. Sitemap omission does not remove already indexed URLs or
+guarantee indexing of the remaining pages. Historical sitemap children may
+mention later dates until their retention expires.
 
 `lastmod` is a content timestamp, never generation time. A database-maintained
 huddl `sitemap_modified_at` records actual attribute changes while excluding

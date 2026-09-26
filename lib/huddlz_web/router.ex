@@ -36,6 +36,10 @@ defmodule HuddlzWeb.Router do
     plug :prevent_authenticated_page_caching
   end
 
+  pipeline :noindex do
+    plug :put_noindex_header
+  end
+
   # MCP takes the same bearer credentials as the JSON API (an API key, or a
   # JWT from the API sign-in), but every call needs a signed-in person.
   pipeline :mcp do
@@ -212,7 +216,7 @@ defmodule HuddlzWeb.Router do
   end
 
   scope "/", HuddlzWeb do
-    pipe_through :browser
+    pipe_through [:browser, :noindex]
 
     auth_routes AuthController, Huddlz.Accounts.User, path: "/auth"
 
@@ -272,6 +276,11 @@ defmodule HuddlzWeb.Router do
   end
 
   defp prevent_authenticated_page_caching(conn, _opts), do: conn
+
+  # Account access URLs vary by return destination or token, not public content.
+  # An HTTP header also avoids carrying noindex into a public LiveView's head.
+  defp put_noindex_header(conn, _opts),
+    do: Plug.Conn.put_resp_header(conn, "x-robots-tag", "noindex")
 
   defp load_from_session_unless_loaded(%{assigns: %{current_user: _current_user}} = conn, _opts),
     do: conn

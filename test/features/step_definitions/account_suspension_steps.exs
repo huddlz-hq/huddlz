@@ -18,6 +18,8 @@ defmodule AccountSuspensionSteps do
 
   @notice_subject "Your huddlz account has been suspended"
   @endpoint HuddlzWeb.Endpoint
+  # Match the database-backed channel assertions in GraphqlSocketTest.
+  @reply_timeout 1_000
 
   step "{string} has an open authenticated API connection", %{args: [email]} = context do
     user = find_user(email)
@@ -25,14 +27,14 @@ defmodule AccountSuspensionSteps do
     {:ok, socket} = connect(HuddlzWeb.GraphqlSocket, %{"token" => token})
     {:ok, _, socket} = subscribe_and_join(socket, "__absinthe__:control")
     ref = push(socket, "doc", %{"query" => "{ me { id } }"})
-    assert_reply ref, :ok, %{data: %{"me" => %{"id" => id}}}
+    assert_reply ref, :ok, %{data: %{"me" => %{"id" => id}}}, @reply_timeout
     assert id == user.id
     Map.put(context, :api_socket, socket)
   end
 
   step "the open API connection can no longer read the person's account", context do
     ref = push(context.api_socket, "doc", %{"query" => "{ me { id } }"})
-    assert_reply ref, :ok, %{data: %{"me" => nil}}
+    assert_reply ref, :ok, %{data: %{"me" => nil}}, @reply_timeout
     context
   end
 

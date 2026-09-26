@@ -25,6 +25,56 @@ defmodule HuddlzWeb.SitemapControllerTest do
     assert get_resp_header(conn, "cache-control") == ["no-store"]
   end
 
+  test "the recurring horizon preserves past huddlz and distant one-off huddlz" do
+    host = generate(user())
+    group = generate(group(actor: host, is_public: true))
+
+    near =
+      generate(
+        huddl(
+          group_id: group.id,
+          actor: host,
+          date: Date.add(eastern_today(), 89),
+          is_recurring: true,
+          frequency: :weekly,
+          repeat_until: Date.add(eastern_today(), 370)
+        )
+      )
+
+    later =
+      generate(
+        huddl(
+          group_id: group.id,
+          actor: host,
+          date: Date.add(eastern_today(), 91),
+          huddl_template_id: near.huddl_template_id
+        )
+      )
+
+    one_off =
+      generate(huddl(group_id: group.id, actor: host, date: Date.add(eastern_today(), 365)))
+
+    past =
+      generate(
+        past_huddl(
+          group_id: group.id,
+          creator_id: host.id,
+          lifecycle_state: :completed,
+          huddl_template_id: near.huddl_template_id
+        )
+      )
+
+    assert {:ok, :ok} = Sitemaps.refresh()
+    entries = sitemap_entries()
+    assert Map.has_key?(entries, "#{HuddlzWeb.Endpoint.url()}/groups/#{group.slug}")
+
+    for huddl <- [near, one_off, past] do
+      assert Map.has_key?(entries, huddl_url(group, huddl))
+    end
+
+    refute Map.has_key?(entries, huddl_url(group, later))
+  end
+
   test "lastmod changes for content edits but not reminder delivery" do
     host = generate(user())
     group = generate(group(actor: host, is_public: true))

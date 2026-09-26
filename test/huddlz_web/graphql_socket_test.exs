@@ -8,6 +8,8 @@ defmodule HuddlzWeb.GraphqlSocketTest do
   alias HuddlzWeb.GraphqlSocket
 
   @endpoint HuddlzWeb.Endpoint
+  # Database-backed channel replies can exceed ExUnit's 100 ms default in CI.
+  @reply_timeout 1_000
 
   describe "connect/3" do
     test "connects with actor: nil when no token provided" do
@@ -58,9 +60,10 @@ defmodule HuddlzWeb.GraphqlSocketTest do
         """
       })
 
-    assert_reply ref, :ok, %{
-      data: %{"updateDisplayName" => %{"result" => nil, "errors" => errors}}
-    }
+    assert_reply ref,
+                 :ok,
+                 %{data: %{"updateDisplayName" => %{"result" => nil, "errors" => errors}}},
+                 @reply_timeout
 
     assert errors != []
   end
@@ -74,10 +77,10 @@ defmodule HuddlzWeb.GraphqlSocketTest do
     restored = Accounts.restore_user!(suspended, actor: admin)
 
     old_ref = push(channel, "doc", %{"query" => "{ me { id } }"})
-    assert_reply old_ref, :ok, %{data: %{"me" => nil}}
+    assert_reply old_ref, :ok, %{data: %{"me" => nil}}, @reply_timeout
 
     new_ref = restored |> open_channel() |> push("doc", %{"query" => "{ me { id } }"})
-    assert_reply new_ref, :ok, %{data: %{"me" => %{"id" => id}}}
+    assert_reply new_ref, :ok, %{data: %{"me" => %{"id" => id}}}, @reply_timeout
     assert id == person.id
   end
 

@@ -17,6 +17,58 @@ defmodule SitemapSteps do
     assert :ok = Refresh.perform(%Oban.Job{})
   end
 
+  step "a public group with recurring huddlz next week and next year", context do
+    host = generate(user())
+    group = generate(group(actor: host, is_public: true))
+
+    near =
+      generate(
+        huddl(
+          group_id: group.id,
+          actor: host,
+          date: Date.add(eastern_today(), 7),
+          is_recurring: true,
+          frequency: :weekly,
+          repeat_until: Date.add(eastern_today(), 370)
+        )
+      )
+
+    later =
+      generate(
+        huddl(
+          group_id: group.id,
+          actor: host,
+          date: Date.add(eastern_today(), 364),
+          huddl_template_id: near.huddl_template_id
+        )
+      )
+
+    {:ok, Map.merge(context, %{sitemap_group: group, sitemap_huddl: near, later_huddl: later})}
+  end
+
+  step "the sitemap lists the group and next week's recurring huddl but not next year's",
+       context do
+    body = Enum.map_join(sitemap_children(), fn {_child, body} -> body end)
+    assert body =~ "/groups/#{context.sitemap_group.slug}</loc>"
+    assert body =~ "/huddlz/#{context.sitemap_huddl.id}</loc>"
+    refute body =~ "/huddlz/#{context.later_huddl.id}</loc>"
+    :ok
+  end
+
+  step "next year's recurring huddl remains publicly accessible at its canonical URL",
+       context do
+    path = "/groups/#{context.sitemap_group.slug}/huddlz/#{context.later_huddl.id}"
+    conn = get(build_conn(), path)
+    document = conn |> html_response(200) |> Floki.parse_document!()
+
+    assert Floki.attribute(document, "link[rel=canonical]", "href") == [
+             HuddlzWeb.Endpoint.url() <> path
+           ]
+
+    assert Plug.Conn.get_resp_header(conn, "x-robots-tag") == []
+    :ok
+  end
+
   step "a crawler has cached the sitemap child containing that huddl", context do
     assert :ok = Refresh.perform(%Oban.Job{})
 

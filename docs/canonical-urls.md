@@ -17,6 +17,13 @@ are disposable. Different pages and filters are not collapsed onto unfiltered
 results or page one. Existing out-of-range page handling remains in place.
 This change does not introduce a noindex policy for search results.
 
+Account access responses (sign-in, registration, password reset, email
+confirmation and suspension) send `X-Robots-Tag: noindex`, including variants
+with `return_to` parameters or tokens. Crawlers may still follow their links.
+The header is scoped to the account routes, so public discovery, group and
+huddl responses remain eligible for indexing. Using a response header avoids
+retaining a noindex meta tag in the root head during LiveView navigation.
+
 Private groups, members-only huddlz, and drafts do not receive
 public canonical links, even when an authorized viewer can access them.
 Authorization still controls anonymous HTTP responses. Canonical links are not
@@ -46,4 +53,5 @@ Google's selected canonical.
 References:
 
 - [Google canonical URL guidance](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls)
+- [Google noindex guidance](https://developers.google.com/search/docs/crawling-indexing/block-indexing)
 - [Google pagination guidance](https://developers.google.com/search/docs/specialty/ecommerce/pagination-and-incremental-page-loading)
