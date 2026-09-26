@@ -9,6 +9,8 @@ defmodule Huddlz.Sitemaps do
   alias Huddlz.Repo
   alias Huddlz.Sitemaps.XML
 
+  @recurring_horizon_days 90
+
   def fetch(name) do
     Repo.one(from d in "sitemap_documents", where: d.name == ^name, select: d.body)
   end
@@ -27,6 +29,7 @@ defmodule Huddlz.Sitemaps do
 
   defp generate(opts) do
     now = DateTime.utc_now()
+    recurring_cutoff = now |> DateTime.add(@recurring_horizon_days, :day) |> DateTime.to_naive()
     # Retention begins when a document is superseded, even after a long outage.
     Repo.update_all(from(d in "sitemap_documents", where: d.active == true),
       set: [active: false, retained_at: now]
@@ -43,6 +46,7 @@ defmodule Huddlz.Sitemaps do
     SELECT 'huddl', h.id::text, g.slug, greatest(h.sitemap_modified_at, g.updated_at, g.sitemap_modified_at)
     FROM huddlz h JOIN groups g ON g.id = h.group_id
     WHERE g.is_public = true AND h.is_private = false
+      AND (h.huddl_template_id IS NULL OR h.starts_at <= $1)
       AND (h.lifecycle_state IN ('published', 'completed')
         OR (h.lifecycle_state = 'cancelled' AND h.ends_at > CURRENT_TIMESTAMP))
     ORDER BY kind, id
@@ -50,7 +54,7 @@ defmodule Huddlz.Sitemaps do
 
     files =
       Repo
-      |> SQL.stream(sql, [], max_rows: 500)
+      |> SQL.stream(sql, [recurring_cutoff], max_rows: 500)
       |> Stream.flat_map(& &1.rows)
       |> Stream.map(&entry/1)
       |> XML.urlsets(opts)
