@@ -9,8 +9,8 @@ if File.exists?(env_file) do
   env_file |> File.read!() |> parse!() |> System.put_env()
 end
 
-# Server mode (only parse if set, nil would raise)
-if optional("PHX_SERVER") do
+# Server mode: rel/overlays/bin/server sets PHX_SERVER=true in production
+if optional("PHX_SERVER", "false") |> boolean!() do
   config :huddlz, HuddlzWeb.Endpoint, server: true
 end
 
