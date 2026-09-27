@@ -6,6 +6,10 @@ defmodule Huddlz.Social.Post do
   a cap, and the link. Scheduled posts and the schedule sheet's preview both
   come from here, so what the preview shows is what the place receives.
 
+  Follow-ups are short and carry no opening line: a cancelled huddl says it
+  won't go ahead; a moved one gives its new time with the old one, and the
+  link.
+
   A new series is announced once, by its first huddl: the when line names
   the pattern ("Every Thursday at 6:00 PM") and the spots line is left out,
   since each date has its own.
@@ -31,7 +35,8 @@ defmodule Huddlz.Social.Post do
   @type series :: %{interval: pos_integer(), unit: :week | :month}
 
   @type option ::
-          {:moment, Moment.t() | :series}
+          {:moment, Moment.t() | :series | :cancelled | :moved}
+          | {:previous_starts_at, DateTime.t() | nil}
           | {:opening_line, String.t() | nil}
           | {:link, String.t()}
           | {:series, series() | nil}
@@ -43,6 +48,31 @@ defmodule Huddlz.Social.Post do
   @doc "The parts of the post in order, skipping any the huddl has no use for."
   @spec lines(huddl(), [option()]) :: [String.t()]
   def lines(huddl, opts) do
+    case opts[:moment] do
+      :cancelled -> ["Cancelled: #{huddl.title} on #{start_day(huddl)} won't go ahead."]
+      :moved -> moved_lines(huddl, opts)
+      _announcement -> announcement_lines(huddl, opts)
+    end
+  end
+
+  defp moved_lines(huddl, opts) do
+    was = opts[:previous_starts_at] && " (was #{format_local(opts[:previous_starts_at], huddl)})"
+
+    [
+      "New time: #{huddl.title} is now #{format_local(huddl.starts_at, huddl)}#{was}.",
+      opts[:link]
+    ]
+  end
+
+  defp start_day(huddl) do
+    huddl.starts_at |> DateTime.shift_zone!(huddl.time_zone) |> Calendar.strftime("%a, %b %-d")
+  end
+
+  defp format_local(at, huddl) do
+    at |> DateTime.shift_zone!(huddl.time_zone) |> Calendar.strftime("%a, %b %-d at %-I:%M %p")
+  end
+
+  defp announcement_lines(huddl, opts) do
     [
       opts[:opening_line],
       huddl.title,

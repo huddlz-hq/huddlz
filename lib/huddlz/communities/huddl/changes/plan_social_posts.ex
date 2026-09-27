@@ -6,6 +6,10 @@ defmodule Huddlz.Communities.Huddl.Changes.PlanSocialPosts do
   `Huddlz.Social.Schedule`). A huddl that has just gone public is also
   announced to the connections that post when a huddl is published; a new
   series is announced once, by its first huddl, rather than date by date.
+
+  A huddl that has already been posted to a connection and is then
+  cancelled or moved gets one follow-up there saying so, whatever the
+  schedule.
   """
 
   use Ash.Resource.Change
@@ -17,6 +21,7 @@ defmodule Huddlz.Communities.Huddl.Changes.PlanSocialPosts do
     Ash.Changeset.after_action(changeset, fn changeset, huddl ->
       :ok = Schedule.plan_huddl(huddl)
       :ok = announce(changeset, huddl)
+      :ok = follow_up(changeset, huddl)
       {:ok, huddl}
     end)
   end
@@ -31,6 +36,23 @@ defmodule Huddlz.Communities.Huddl.Changes.PlanSocialPosts do
 
       is_nil(huddl.huddl_template_id) ->
         Schedule.announce(huddl, :when_published)
+
+      true ->
+        :ok
+    end
+  end
+
+  defp follow_up(changeset, huddl) do
+    before = changeset.data
+
+    cond do
+      changeset.context[:lifecycle_transition] == :cancelled ->
+        Schedule.follow_up(huddl, :cancelled)
+
+      changeset.action_type == :update and before.lifecycle_state == :published and
+        huddl.lifecycle_state == :published and
+          DateTime.compare(before.starts_at, huddl.starts_at) != :eq ->
+        Schedule.follow_up(huddl, :moved, before.starts_at)
 
       true ->
         :ok

@@ -86,3 +86,29 @@ Feature: Huddlz are posted on each connection's social schedule
     And I publish "Hack night" every Thursday at 6:00 PM for four weeks
     When the morning of the second "Hack night" arrives
     Then "#general" receives a post saying the second "Hack night" is today at 6:00 PM
+
+  Scenario: A cancelled huddl gets a follow-up
+    Given "Elixir Nashville" posts to the Slack channel "#general" a week before and the morning of
+    And "Elixir Nashville" has a public huddl "Hack night" in ten days at 6:00 PM
+    And I am signed in as "owner@example.com"
+    And the week-before post of "Hack night" went out to "#general"
+    When I cancel "Hack night"
+    Then "#general" receives a post saying "Hack night" is cancelled
+    And the upcoming posts on the Social tab of "Elixir Nashville" do not mention "Hack night"
+
+  Scenario: A moved huddl gets a follow-up
+    Given "Elixir Nashville" posts to the Slack channel "#general" a week before and the morning of
+    And "Elixir Nashville" has a public huddl "Hack night" in ten days at 6:00 PM
+    And I am signed in as "owner@example.com"
+    And the week-before post of "Hack night" went out to "#general"
+    When I move "Hack night" to the next day
+    Then "#general" receives a post giving the new time of "Hack night" and the old one
+    When the morning of "Hack night" arrives
+    Then "#general" receives a post saying "Hack night" is today at 6:00 PM
+
+  Scenario: A huddl that was never posted gets no follow-up
+    Given "Elixir Nashville" posts to the Slack channel "#general" the morning of
+    And "Elixir Nashville" has a public huddl "Hack night" in ten days at 6:00 PM
+    And I am signed in as "owner@example.com"
+    When I cancel "Hack night"
+    Then "#general" receives nothing

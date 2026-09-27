@@ -78,6 +78,25 @@ defmodule Huddlz.Social.PostTest do
     end
   end
 
+  describe "follow-ups" do
+    test "a cancelled huddl says it won't go ahead, without the opening line" do
+      huddl = series_huddl(~N[2026-10-01 18:00:00], event_type: :virtual)
+
+      assert Post.lines(huddl, moment: :cancelled, opening_line: "This week:", link: @link) ==
+               ["Cancelled: Hack night on Thu, Oct 1 won't go ahead."]
+    end
+
+    test "a moved huddl gives the new time with the old one, and the link" do
+      huddl = series_huddl(~N[2026-10-02 19:00:00], event_type: :virtual)
+      was = ~U[2026-10-01 22:00:00Z]
+
+      assert Post.lines(huddl, moment: :moved, previous_starts_at: was, link: @link) == [
+               "New time: Hack night is now Fri, Oct 2 at 7:00 PM (was Thu, Oct 1 at 6:00 PM).",
+               @link
+             ]
+    end
+  end
+
   # The first huddl of a series, as a plain map: the formatter reads no more.
   defp series_huddl(local, opts) do
     Map.merge(

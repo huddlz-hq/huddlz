@@ -81,6 +81,35 @@ defmodule Huddlz.Social.Schedule do
     :ok
   end
 
+  @doc """
+  Tell every connection a huddl has already been posted to that it has
+  been cancelled, or moved from `previous_starts_at`. Connections it was
+  never posted to hear nothing.
+  """
+  @spec follow_up(Huddl.t(), :cancelled | :moved, DateTime.t() | nil) :: :ok
+  def follow_up(%Huddl{} = huddl, occasion, previous_starts_at \\ nil)
+      when occasion in [:cancelled, :moved] do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    SocialPost
+    |> Ash.Query.filter(huddl_id == ^huddl.id and state == :sent)
+    |> Ash.Query.select([:social_connection_id])
+    |> Ash.read!(authorize?: false)
+    |> Enum.map(& &1.social_connection_id)
+    |> Enum.uniq()
+    |> Enum.each(fn connection_id ->
+      SocialPost
+      |> Ash.Changeset.for_create(:schedule, %{
+        social_connection_id: connection_id,
+        huddl_id: huddl.id,
+        occasion: occasion,
+        due_at: now,
+        previous_starts_at: previous_starts_at
+      })
+      |> Ash.create!(authorize?: false)
+    end)
+  end
+
   @doc "Plan a connection's timed posts for every upcoming huddl of its group."
   @spec plan_connection(SocialConnection.t()) :: :ok
   def plan_connection(%SocialConnection{} = connection) do

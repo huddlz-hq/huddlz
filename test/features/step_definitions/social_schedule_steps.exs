@@ -97,6 +97,57 @@ defmodule SocialScheduleSteps do
     context
   end
 
+  step "the week-before post of {string} went out to {string}",
+       %{args: [title, _channel]} = context do
+    moment_arrives(title, :week_before)
+    assert next_post!() =~ title
+    context
+  end
+
+  step "I cancel {string}", %{args: [title]} = context do
+    title
+    |> lookup_huddl()
+    |> Huddlz.Communities.cancel_huddl!(nil, actor: context.current_user)
+
+    context
+  end
+
+  step "I move {string} to the next day", %{args: [title]} = context do
+    huddl = lookup_huddl(title)
+
+    Huddlz.Communities.update_huddl!(
+      huddl,
+      %{
+        starts_at: DateTime.add(huddl.starts_at, 1, :day),
+        ends_at: DateTime.add(huddl.ends_at, 1, :day)
+      },
+      actor: context.current_user
+    )
+
+    Map.put(context, :moved_from, huddl)
+  end
+
+  step "{string} receives a post saying {string} is cancelled",
+       %{args: [_channel, title]} = context do
+    run_scheduler()
+    text = next_post!()
+    assert text =~ "Cancelled: #{title}"
+    refute_other_posts()
+    context
+  end
+
+  step "{string} receives a post giving the new time of {string} and the old one",
+       %{args: [_channel, title]} = context do
+    run_scheduler()
+    huddl = lookup_huddl(title)
+    text = next_post!()
+    assert text =~ "New time: #{title}"
+    assert text =~ local_start(huddl)
+    assert text =~ local_start(context.moved_from)
+    refute_other_posts()
+    context
+  end
+
   step "{string} is resumed", %{args: [_channel]} = context do
     connection =
       Huddlz.Communities.resume_social_connection!(context.connection,
@@ -366,6 +417,12 @@ defmodule SocialScheduleSteps do
 
   defp run_scheduler do
     AshOban.Test.schedule_and_run_triggers(SocialPost, drain_queues?: true, with_scheduled: true)
+  end
+
+  defp local_start(huddl) do
+    huddl.starts_at
+    |> DateTime.shift_zone!(huddl.time_zone)
+    |> Calendar.strftime("%a, %b %-d at %-I:%M %p")
   end
 
   defp next_post! do

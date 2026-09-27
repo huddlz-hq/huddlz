@@ -72,7 +72,8 @@ defmodule Huddlz.Social.Changes.Deliver do
       moment: post.occasion,
       opening_line: connection.opening_line,
       link: Social.huddl_link(huddl),
-      series: huddl.huddl_template
+      series: huddl.huddl_template,
+      previous_starts_at: post.previous_starts_at
     )
   end
 
