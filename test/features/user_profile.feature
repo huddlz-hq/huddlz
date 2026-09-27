@@ -84,10 +84,10 @@ Feature: User Profile Management
   Scenario: Rejecting a sign-in email already used by another person
     Given the user "alice+user-profile@example.com" has password "OldPassword123!"
     And the following users exist:
-      | email             | role | display_name |
-      | taken@example.com | user | Taken Email  |
+      | email                          | role | display_name |
+      | taken+user-profile@example.com | user | Taken Email  |
     And I am on my profile page
-    When I fill in "New email" with "taken@example.com"
+    When I fill in "New email" with "taken+user-profile@example.com"
     And I fill in "Confirm current password" with "OldPassword123!"
     And I click the "Change email" button
     Then I should see "That email is already in use."

@@ -87,7 +87,7 @@ defmodule OverviewKpisSteps do
 
   step "the overview URL records the period {string}",
        %{args: [period], session: session} = context do
-    assert_path(session, "/organize/portland-elixir", query_params: %{"period" => period})
+    assert_path(session, "/organize/kpi-portland-elixir", query_params: %{"period" => period})
     context
   end
 

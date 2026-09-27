@@ -8,22 +8,22 @@ Feature: Organizer pages highlight the group's section
     Given the following users exist:
       | email                                  | display_name | role    |
       | owner+organizer-navigation@example.com | Owner User   | regular |
-    And a public group "Portland Elixir" exists with owner "owner+organizer-navigation@example.com"
-    And a huddl "Ash workshop" exists in "Portland Elixir" created by "owner+organizer-navigation@example.com"
+    And a public group "Navigation Portland Elixir" exists with owner "owner+organizer-navigation@example.com"
+    And a huddl "Ash workshop" exists in "Navigation Portland Elixir" created by "owner+organizer-navigation@example.com"
     And I am signed in as "owner+organizer-navigation@example.com"
 
   Scenario: Scheduling a huddl highlights the group's huddlz
-    When I visit the new huddl page for group "Portland Elixir"
-    Then navigation should identify "Huddlz" under group "Portland Elixir" as the current destination
+    When I visit the new huddl page for group "Navigation Portland Elixir"
+    Then navigation should identify "Huddlz" under group "Navigation Portland Elixir" as the current destination
 
   Scenario: Editing a huddl highlights the group's huddlz
     When I visit the edit page for huddl "Ash workshop"
-    Then navigation should identify "Huddlz" under group "Portland Elixir" as the current destination
+    Then navigation should identify "Huddlz" under group "Navigation Portland Elixir" as the current destination
 
   Scenario: Editing a group highlights its overview
-    When I visit the edit page for group "Portland Elixir"
-    Then navigation should identify "Overview" under group "Portland Elixir" as the current destination
+    When I visit the edit page for group "Navigation Portland Elixir"
+    Then navigation should identify "Overview" under group "Navigation Portland Elixir" as the current destination
 
   Scenario: Managing locations highlights the group's overview
-    When I visit the locations page for "Portland Elixir"
-    Then navigation should identify "Overview" under group "Portland Elixir" as the current destination
+    When I visit the locations page for "Navigation Portland Elixir"
+    Then navigation should identify "Overview" under group "Navigation Portland Elixir" as the current destination

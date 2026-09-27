@@ -6,12 +6,12 @@ Feature: Calendar scope: my RSVPs or everything my groups have on
 
   Background:
     Given the following users exist:
-      | email               | display_name | role    |
-      | member@example.com  | Member User  | regular |
-    And I am signed in as "member@example.com"
+      | email                                   | display_name | role    |
+      | member+calendar-group-scope@example.com | Member User  | regular |
+    And I am signed in as "member+calendar-group-scope@example.com"
 
   Scenario: The calendar starts with what I have responded to
-    Given I belong to "Portland Elixir", which has scheduled "Hands-on with Ash Framework"
+    Given I belong to "Scope Portland Elixir", which has scheduled "Hands-on with Ash Framework"
     And I am going to "Async Rust reading group" with another group
     When I open the agenda
     Then the calendar offers "RSVPs" and "Groups" scopes
@@ -19,7 +19,7 @@ Feature: Calendar scope: my RSVPs or everything my groups have on
     And the agenda does not list "Hands-on with Ash Framework"
 
   Scenario: Everything my groups have on
-    Given I belong to "Portland Elixir", which has scheduled "Hands-on with Ash Framework"
+    Given I belong to "Scope Portland Elixir", which has scheduled "Hands-on with Ash Framework"
     And I am going to "Async Rust reading group" with another group
     And a group I have not joined has scheduled "Not for me"
     When I open the agenda
@@ -29,7 +29,7 @@ Feature: Calendar scope: my RSVPs or everything my groups have on
     And the agenda does not list "Not for me"
 
   Scenario: The scope counts describe the view I am looking at
-    Given "Portland Elixir", a group I belong to, has scheduled "Hands-on with Ash Framework" on day 16 of next month
+    Given "Scope Portland Elixir", a group I belong to, has scheduled "Hands-on with Ash Framework" on day 16 of next month
     And my RSVP "Async Rust reading group" is on day 16 of next month
     And my RSVP "Elixir office hours" is on day 24 of next month
     When I open next month

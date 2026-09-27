@@ -4,18 +4,18 @@ Feature: Private group invitations
 
   Background:
     Given the following users exist:
-      | email                 | role | display_name |
-      | owner@example.com     | user | Group Owner  |
-      | invitee@example.com   | user | Invited User |
-    And a private group "Quiet Makers" exists with owner "owner@example.com"
+      | email                                         | role | display_name |
+      | owner+private-group-invitations@example.com   | user | Group Owner  |
+      | invitee+private-group-invitations@example.com | user | Invited User |
+    And a private group "Quiet Makers" exists with owner "owner+private-group-invitations@example.com"
 
   Scenario: An invited person accepts and gains private group access
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "owner+private-group-invitations@example.com"
     When I open the member workspace for "Quiet Makers"
-    And I submit a member invitation for "invitee@example.com"
-    Then I should see "Invitation sent to invitee@example.com."
-    And an invitation email should be sent to "invitee@example.com" for "Quiet Makers"
-    Given I am signed in as "invitee@example.com"
+    And I submit a member invitation for "invitee+private-group-invitations@example.com"
+    Then I should see "Invitation sent to invitee+private-group-invitations@example.com."
+    And an invitation email should be sent to "invitee+private-group-invitations@example.com" for "Quiet Makers"
+    Given I am signed in as "invitee+private-group-invitations@example.com"
     When I try to visit the group page for "Quiet Makers"
     Then I should see the branded not found recovery page
     When I visit "/notifications"
@@ -38,7 +38,7 @@ Feature: Private group invitations
     Then I should see "Quiet Makers"
 
   Scenario: A new recipient registers from their email and accepts the intended invitation
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "owner+private-group-invitations@example.com"
     When I open the member workspace for "Quiet Makers"
     And I submit a member invitation for "new-maker@example.com"
     Then I should see "Invitation sent to new-maker@example.com."
@@ -60,7 +60,7 @@ Feature: Private group invitations
     Then I should see "Quiet Makers"
 
   Scenario: An invitation email does not give a different account private group access
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "owner+private-group-invitations@example.com"
     When I open the member workspace for "Quiet Makers"
     And I submit a member invitation for "new-maker@example.com"
     Then an invitation email should be sent to "new-maker@example.com" for "Quiet Makers"
@@ -73,7 +73,7 @@ Feature: Private group invitations
     Then I should see the branded not found recovery page
 
   Scenario Outline: An organizer cannot send a duplicate pending email invitation
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "owner+private-group-invitations@example.com"
     When I open the member workspace for "Quiet Makers"
     And I submit a member invitation for "<email>"
     Then I should see "Invitation sent to <email>."
@@ -83,20 +83,20 @@ Feature: Private group invitations
     And I should see "Awaiting response"
 
     Examples:
-      | email                 | duplicate_email       |
-      | new-maker@example.com | NEW-MAKER@example.com |
-      | invitee@example.com   | INVITEE@example.com   |
+      | email                                         | duplicate_email                               |
+      | new-maker@example.com                         | NEW-MAKER@example.com                         |
+      | invitee+private-group-invitations@example.com | INVITEE+PRIVATE-GROUP-INVITATIONS@example.com |
 
   Scenario: An organizer is told when the person is already a member
-    Given "invitee@example.com" is a member of "Quiet Makers"
-    And I am signed in as "owner@example.com"
+    Given "invitee+private-group-invitations@example.com" is a member of "Quiet Makers"
+    And I am signed in as "owner+private-group-invitations@example.com"
     When I open the member workspace for "Quiet Makers"
-    And I submit a member invitation for "invitee@example.com"
+    And I submit a member invitation for "invitee+private-group-invitations@example.com"
     Then I should see "Could not send that invitation. They may already be a member"
     And I should see "No invitations yet."
 
   Scenario: An organizer is told what is wrong with the email they entered
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "owner+private-group-invitations@example.com"
     When I open the member workspace for "Quiet Makers"
     And I submit a member invitation for ""
     Then I should see "Enter an email address."
@@ -107,7 +107,7 @@ Feature: Private group invitations
     And I should see "No invitations yet."
 
   Scenario: A revoked email invitation cannot be claimed after registration
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "owner+private-group-invitations@example.com"
     When I open the member workspace for "Quiet Makers"
     And I submit a member invitation for "new-maker@example.com"
     Then an invitation email should be sent to "new-maker@example.com" for "Quiet Makers"
@@ -122,7 +122,7 @@ Feature: Private group invitations
     Then I should see the branded not found recovery page
 
   Scenario: A new recipient can decline without joining and revisit without duplicate notifications
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "owner+private-group-invitations@example.com"
     When I open the member workspace for "Quiet Makers"
     And I submit a member invitation for "new-maker@example.com"
     Then an invitation email should be sent to "new-maker@example.com" for "Quiet Makers"
@@ -141,7 +141,7 @@ Feature: Private group invitations
     Then I should see the branded not found recovery page
 
   Scenario: Expired invitations remain unavailable and can be replaced
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "owner+private-group-invitations@example.com"
     When I open the member workspace for "Quiet Makers"
     And I submit a member invitation for "new-maker@example.com"
     Then an invitation email should be sent to "new-maker@example.com" for "Quiet Makers"
@@ -158,25 +158,25 @@ Feature: Private group invitations
     And I should not see "Accept invitation"
 
   Scenario: Sharing a private group link does not grant access
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "owner+private-group-invitations@example.com"
     When I visit the group page for "Quiet Makers"
     Then "Quiet Makers" has working email and QR sharing controls
     When I open that shared group link while signed out
     Then I should see the branded not found recovery page
-    Given I am signed in as "invitee@example.com"
+    Given I am signed in as "invitee+private-group-invitations@example.com"
     When I try to visit the group page for "Quiet Makers"
     Then I should see the branded not found recovery page
 
   Scenario: Registered recipients keep their invitation email preference
-    Given I am signed in as "invitee@example.com"
+    Given I am signed in as "invitee+private-group-invitations@example.com"
     When I visit "/profile/notifications"
     And I turn off "I was invited to a group"
     Then the page confirms the change was saved
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "owner+private-group-invitations@example.com"
     When I open the member workspace for "Quiet Makers"
-    And I submit a member invitation for "invitee@example.com"
-    Then no invitation email should be sent to "invitee@example.com"
-    Given I am signed in as "invitee@example.com"
+    And I submit a member invitation for "invitee+private-group-invitations@example.com"
+    Then no invitation email should be sent to "invitee+private-group-invitations@example.com"
+    Given I am signed in as "invitee+private-group-invitations@example.com"
     When I visit "/notifications?filter=invites"
     Then I should see "Invitation to Quiet Makers"
     When I click "Open"
@@ -184,7 +184,7 @@ Feature: Private group invitations
     Then I should see "Welcome to Quiet Makers."
 
   Scenario: Queued invitations respect preferences chosen after independent registration
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "owner+private-group-invitations@example.com"
     When I open the member workspace for "Quiet Makers"
     And I submit a member invitation for "new-maker@example.com"
     And I start registration without an invitation link
@@ -203,7 +203,7 @@ Feature: Private group invitations
     And no invitation email should be sent to "new-maker@example.com"
 
   Scenario: Independently registered recipients confirm their email before invitation delivery
-    Given I am signed in as "owner@example.com"
+    Given I am signed in as "owner+private-group-invitations@example.com"
     When I open the member workspace for "Quiet Makers"
     And I submit a member invitation for "new-maker@example.com"
     And I start registration without an invitation link
