@@ -26,6 +26,30 @@ defmodule SocialScheduleSteps do
     connect(context, group_name, channel, moments: [:week_before, :morning_of])
   end
 
+  step "{string} posts to the Slack channel {string} the morning of",
+       %{args: [group_name, channel]} = context do
+    connect(context, group_name, channel, moments: [:morning_of])
+  end
+
+  step "{string} posts to the Slack channel {string} the morning of, opening with {string}",
+       %{args: [group_name, channel, line]} = context do
+    connect(context, group_name, channel, moments: [:morning_of], opening_line: line)
+  end
+
+  step "every spot at {string} is taken and someone is on the waitlist",
+       %{args: [title]} = context do
+    huddl = lookup_huddl(title)
+
+    # The owner who created it is already going; one more fills it.
+    huddl =
+      Huddlz.Communities.update_huddl!(huddl, %{max_attendees: 2}, actor: context.group.owner)
+
+    [going, waiting] = generate_many(user(), 2)
+    Huddlz.Communities.rsvp_huddl!(huddl, actor: going)
+    Huddlz.Communities.join_waitlist_huddl!(huddl, actor: waiting)
+    context
+  end
+
   step "{string} has a public huddl {string} in ten days at 6:00 PM",
        %{args: [group_name, title]} = context do
     group = lookup_group(group_name)
@@ -74,6 +98,19 @@ defmodule SocialScheduleSteps do
     assert text =~ title
     assert text =~ "Today at 6:00 PM"
     refute_other_posts()
+    context
+  end
+
+  step "the post to {string} begins with {string}", %{args: [_channel, line]} = context do
+    assert String.starts_with?(next_post!(), line <> "\n")
+    context
+  end
+
+  step "{string} receives a post saying {string} is full and the waitlist is open",
+       %{args: [_channel, title]} = context do
+    text = next_post!()
+    assert text =~ title
+    assert text =~ "Full, waitlist open"
     context
   end
 

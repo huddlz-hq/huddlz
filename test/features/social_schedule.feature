@@ -19,3 +19,16 @@ Feature: Huddlz are posted on each connection's social schedule
     Then "#general" receives a post naming "Hack night", its time, its place and its link
     When the morning of "Hack night" arrives
     Then "#general" receives a post saying "Hack night" is today at 6:00 PM
+
+  Scenario: The opening line leads the post
+    Given "Elixir Nashville" posts to the Slack channel "#general" the morning of, opening with "This week at Elixir Nashville:"
+    And "Elixir Nashville" has a public huddl "Hack night" in ten days at 6:00 PM
+    When the morning of "Hack night" arrives
+    Then the post to "#general" begins with "This week at Elixir Nashville:"
+
+  Scenario: A full huddl still posts
+    Given "Elixir Nashville" posts to the Slack channel "#general" the morning of
+    And "Elixir Nashville" has a public huddl "Hack night" in ten days at 6:00 PM
+    And every spot at "Hack night" is taken and someone is on the waitlist
+    When the morning of "Hack night" arrives
+    Then "#general" receives a post saying "Hack night" is full and the waitlist is open
