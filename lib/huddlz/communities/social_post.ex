@@ -48,7 +48,9 @@ defmodule Huddlz.Communities.SocialPost do
         action :deliver
         read_action :due
         worker_read_action :read
-        where expr(state == :scheduled)
+        # Checked again when the job runs: a post whose huddl moved later
+        # after its job was queued waits for its new time.
+        where expr(state == :scheduled and due_at <= now())
         scheduler_cron "* * * * *"
         queue :social
         max_attempts 4

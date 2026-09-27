@@ -31,9 +31,18 @@ defmodule Huddlz.Social.Changes.Deliver do
   end
 
   defp deliver(%{data: %{state: :scheduled} = post} = changeset) do
+    now = DateTime.utc_now()
+
+    if DateTime.after?(post.due_at, now),
+      do: changeset,
+      else: deliver_due(changeset, post, now)
+  end
+
+  defp deliver(changeset), do: changeset
+
+  defp deliver_due(changeset, post, now) do
     connection = lock_connection(post.social_connection_id)
     huddl = load_huddl(post.huddl_id)
-    now = DateTime.utc_now()
 
     if sendable?(post, connection, huddl, now) do
       send_post(changeset, post, connection, huddl, now)
@@ -41,8 +50,6 @@ defmodule Huddlz.Social.Changes.Deliver do
       Ash.Changeset.force_change_attribute(changeset, :state, :skipped)
     end
   end
-
-  defp deliver(changeset), do: changeset
 
   defp sendable?(post, connection, huddl, now) do
     connection.state == :posting and huddl != nil and
