@@ -148,6 +148,84 @@ defmodule SocialScheduleSteps do
     context
   end
 
+  step "Slack refuses the morning-of post of {string} because the connection was revoked",
+       %{args: [title]} = context do
+    Req.Test.stub(Huddlz.Social, fn conn -> Plug.Conn.resp(conn, 404, "no_service") end)
+    moment_arrives(title, :morning_of)
+    context
+  end
+
+  step "Slack fails once and then accepts the morning-of post of {string}",
+       %{args: [title]} = context do
+    test = self()
+    attempts = :counters.new(1, [])
+
+    Req.Test.stub(Huddlz.Social, fn conn ->
+      :counters.add(attempts, 1, 1)
+
+      if :counters.get(attempts, 1) == 1 do
+        Plug.Conn.resp(conn, 500, "server_error")
+      else
+        send(test, {:social_post, conn.body_params["text"]})
+        Req.Test.json(conn, %{"ok" => true})
+      end
+    end)
+
+    moment_arrives(title, :morning_of)
+    context
+  end
+
+  step "the Social tab of {string} shows {string} as needing reconnecting",
+       %{args: [group_name, channel]} = context do
+    session =
+      context.session
+      |> visit("/organize/#{lookup_group(group_name).slug}/social")
+      |> assert_has("#social-connections [id^='social-connection-']", text: channel)
+      |> assert_has("#social-connections [id^='social-connection-']", text: "Needs reconnecting")
+
+    Map.put(context, :session, session)
+  end
+
+  step "Slack keeps failing the morning-of post of {string}", %{args: [title]} = context do
+    Req.Test.stub(Huddlz.Social, fn conn -> Plug.Conn.resp(conn, 500, "server_error") end)
+    moment_arrives(title, :morning_of)
+    context
+  end
+
+  step "the Social tab of {string} shows {string} as posting",
+       %{args: [group_name, channel]} = context do
+    session =
+      context.session
+      |> visit("/organize/#{lookup_group(group_name).slug}/social")
+      |> assert_has("#social-connections [id^='social-connection-']", text: channel)
+      |> assert_has("#social-connections [id^='social-connection-']", text: "Posting")
+
+    Map.put(context, :session, session)
+  end
+
+  step "it lists the morning-of post of {string} as not sent", %{args: [title]} = context do
+    context.session
+    |> assert_has("#recent-social-posts [id^='social-post-']", text: title)
+    |> assert_has("#recent-social-posts [id^='social-post-']", text: "Morning of")
+    |> assert_has("#recent-social-posts [id^='social-post-']", text: "Didn't send")
+
+    context
+  end
+
+  step "{string} is emailed that posts to {string} stopped while posting {string}",
+       %{args: [email, channel, title]} = context do
+    [sent] = emails_about(channel)
+    assert [{_, ^email}] = sent.to
+    assert sent.text_body =~ title
+    assert sent.html_body =~ "/organize/#{context.group.slug}/social"
+    context
+  end
+
+  step "nobody is emailed about {string}", %{args: [channel]} = context do
+    assert emails_about(channel) == []
+    context
+  end
+
   step "{string} is resumed", %{args: [_channel]} = context do
     connection =
       Huddlz.Communities.resume_social_connection!(context.connection,
@@ -415,8 +493,28 @@ defmodule SocialScheduleSteps do
     run_scheduler()
   end
 
+  # Runs the scheduler and every job it queues, retries included.
   defp run_scheduler do
-    AshOban.Test.schedule_and_run_triggers(SocialPost, drain_queues?: true, with_scheduled: true)
+    AshOban.Test.schedule_and_run_triggers(SocialPost,
+      drain_queues?: true,
+      with_scheduled: true,
+      with_recursion: true
+    )
+  end
+
+  # Delivers queued email, then keeps what says posts to that channel stopped.
+  defp emails_about(channel) do
+    Oban.drain_queue(queue: :notifications)
+
+    Stream.repeatedly(fn ->
+      receive do
+        {:email, sent} -> sent
+      after
+        0 -> nil
+      end
+    end)
+    |> Enum.take_while(& &1)
+    |> Enum.filter(&(&1.subject == "Posts to #{channel} have stopped"))
   end
 
   defp local_start(huddl) do

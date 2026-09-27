@@ -6,14 +6,17 @@ defmodule Huddlz.Social.Changes.Deliver do
   long after its moment is skipped: posts are never sent late.
 
   A platform that refuses the post outright marks the post not sent and the
-  connection as needing reconnecting. Any other failure fails the action so
-  the job retries; the trigger records the post as not sent once the
-  retries run out.
+  connection as needing reconnecting, and the group owner is emailed once.
+  Any other failure fails the action so the job retries; the trigger
+  records the post as not sent once the retries run out, without an email.
   """
 
   use Ash.Resource.Change
 
+  alias Huddlz.Communities
   alias Huddlz.Communities.{Huddl, SocialConnection}
+  alias Huddlz.Communities.SocialConnection.Kind
+  alias Huddlz.Notifications
   alias Huddlz.Social
   alias Huddlz.Social.{Post, Schedule}
 
@@ -59,12 +62,42 @@ defmodule Huddlz.Social.Changes.Deliver do
         |> Ash.Changeset.force_change_attribute(:state, :sent)
         |> Ash.Changeset.force_change_attribute(:sent_at, now)
 
+      {:error, :revoked} ->
+        changeset
+        |> Ash.Changeset.force_change_attribute(:state, :not_sent)
+        |> Ash.Changeset.after_action(fn _changeset, post ->
+          :ok = stop(connection, huddl)
+          {:ok, post}
+        end)
+
       {:error, reason} ->
         Ash.Changeset.add_error(
           changeset,
           "The social post didn't go through: #{inspect(reason)}"
         )
     end
+  end
+
+  # The connection stops posting and its owner hears about it, once: only
+  # a connection that was posting is moved, so later refusals stay quiet.
+  defp stop(connection, huddl) do
+    stopped =
+      Communities.mark_social_connection_needs_reconnecting!(connection, authorize?: false)
+
+    if connection.state == :posting and stopped.state == :needs_reconnecting do
+      owner = Ash.get!(Huddlz.Accounts.User, huddl.group.owner_id, authorize?: false)
+
+      {:ok, _job} =
+        Notifications.deliver(owner, :social_connection_stopped, %{
+          "group_name" => to_string(huddl.group.name),
+          "group_slug" => to_string(huddl.group.slug),
+          "channel_name" => connection.channel_name,
+          "platform" => Kind.label(connection.kind),
+          "huddl_title" => huddl.title
+        })
+    end
+
+    :ok
   end
 
   defp text(post, connection, huddl) do

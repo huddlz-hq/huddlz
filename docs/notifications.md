@@ -44,6 +44,7 @@ Each trigger has an ID (e.g. C3) used throughout the doc and the GitHub issues.
 | B6 | Group deleted/archived | All members | Transactional | They lose access to data they care about |
 | B7 | Group ownership transferred | Old + new owner | Transactional | |
 | B8 | Join suggestion (`group_join_suggestion`) | A drop-in who held an RSVP when the huddl completed | Activity | One per person per group, ever (ADR-0011). Goes out about a day after completion through the `:suggest_joining` AshOban trigger. Eligibility is re-checked at send time with the `:dropped_in` relationship: public group, not joined, no "Not now", never left or removed. The waitlist and cancelled huddlz never count. Lists up to three upcoming huddlz; the in-app row links to the group page. |
+| B9 | A social connection stopped posting (`social_connection_stopped`) | Group owner | Transactional | Sent once, when the platform refuses a scheduled post (app removed, channel gone) and the connection turns Needs reconnecting. Names the channel and the huddl it was posting; the button opens the Social tab to reconnect. Passing failures retry and never email. |
 
 ### C. Huddl lifecycle
 

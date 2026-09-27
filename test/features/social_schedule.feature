@@ -112,3 +112,30 @@ Feature: Huddlz are posted on each connection's social schedule
     And I am signed in as "owner@example.com"
     When I cancel "Hack night"
     Then "#general" receives nothing
+
+  Scenario: The platform refuses the post
+    Given "Elixir Nashville" posts to the Slack channel "#general" the morning of
+    And "Elixir Nashville" has a public huddl "Hack night" in ten days at 6:00 PM
+    And I am signed in as "owner@example.com"
+    When Slack refuses the morning-of post of "Hack night" because the connection was revoked
+    Then the Social tab of "Elixir Nashville" shows "#general" as needing reconnecting
+    And it lists the morning-of post of "Hack night" as not sent
+    And "owner@example.com" is emailed that posts to "#general" stopped while posting "Hack night"
+
+  Scenario: A passing failure does not break the connection
+    Given "Elixir Nashville" posts to the Slack channel "#general" the morning of
+    And "Elixir Nashville" has a public huddl "Hack night" in ten days at 6:00 PM
+    And I am signed in as "owner@example.com"
+    When Slack fails once and then accepts the morning-of post of "Hack night"
+    Then "#general" receives a post saying "Hack night" is today at 6:00 PM
+    And the Social tab of "Elixir Nashville" shows "#general" as posting
+    And nobody is emailed about "#general"
+
+  Scenario: A post that keeps failing is listed as not sent
+    Given "Elixir Nashville" posts to the Slack channel "#general" the morning of
+    And "Elixir Nashville" has a public huddl "Hack night" in ten days at 6:00 PM
+    And I am signed in as "owner@example.com"
+    When Slack keeps failing the morning-of post of "Hack night"
+    Then the Social tab of "Elixir Nashville" shows "#general" as posting
+    And it lists the morning-of post of "Hack night" as not sent
+    And nobody is emailed about "#general"

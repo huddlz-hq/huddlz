@@ -62,6 +62,9 @@ defmodule Huddlz.Notifications.Summary do
   defp title(:group_ownership_transferred, %{"group_name" => group}),
     do: "You're now the owner of #{group}"
 
+  defp title(:social_connection_stopped, %{"channel_name" => channel}),
+    do: "Posts to #{channel} have stopped"
+
   # Huddl lifecycle
   defp title(:huddl_new, %{"group_name" => group, "huddl_title" => huddl}),
     do: "New in #{group}: #{huddl}"
@@ -172,6 +175,9 @@ defmodule Huddlz.Notifications.Summary do
   defp source_url(_trigger, %{"target_path" => "/notifications"}), do: "/notifications"
 
   # The suggestion is about the group; the huddl is only why it was raised.
+  defp source_url(:social_connection_stopped, %{"group_slug" => slug}) when is_binary(slug),
+    do: "/organize/#{slug}/social"
+
   defp source_url(:group_join_suggestion, %{"group_slug" => slug}) when is_binary(slug),
     do: "/groups/#{slug}"
 

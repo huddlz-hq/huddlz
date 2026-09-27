@@ -89,6 +89,12 @@ defmodule Huddlz.Notifications.Senders.LayoutCoverageTest do
         Map.put(group_payload, "archived_at", DateTime.to_iso8601(DateTime.utc_now())),
       group_ownership_transferred:
         Map.merge(group_payload, %{"role" => "new_owner", "previous_owner_display_name" => "Alex"}),
+      social_connection_stopped:
+        Map.merge(group_payload, %{
+          "channel_name" => "#general",
+          "platform" => "Slack",
+          "huddl_title" => "Hack night"
+        }),
       huddl_new: huddl_payload,
       huddl_updated: Map.put(huddl_payload, "changed_fields", ["starts_at", "physical_location"]),
       huddl_cancelled: Map.put(huddl_payload, "cancellation_reason", "Rain all weekend"),
