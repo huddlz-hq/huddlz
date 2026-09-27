@@ -2544,6 +2544,10 @@ body .row.location-row .row-desc { color: var(--muted); font-size: 12px; margin-
 body .row.social-row { grid-template-columns: 40px minmax(0, 1fr) auto auto auto; }
 body .row.social-row .row-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 body .row.social-row .row-title .meta { display: block; }
+body .row.social-post-row { grid-template-columns: 170px minmax(0, 1fr) auto; }
+body .row.social-post-row .row-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+body .row.social-post-row .row-title .meta { display: block; }
+body .social-post-time { color: var(--muted); font-variant-numeric: tabular-nums; }
 body .social-moments { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
 body .social-actions { display: flex; gap: 8px; }
 
@@ -2622,6 +2626,8 @@ body .schedule-moment .muted { font-size: 13px; }
   body .row.social-row .pill,
   body .row.social-row .social-actions { grid-column: 2; justify-content: flex-start; }
   body .row.social-row .pill { justify-self: start; }
+  body .row.social-post-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  body .row.social-post-row .pill { justify-self: start; }
   body .place-tiles { grid-template-columns: minmax(0, 1fr); }
 }
 body .row.location-row .location-actions { display: flex; gap: 8px; align-items: center; }

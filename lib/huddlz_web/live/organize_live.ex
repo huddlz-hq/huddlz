@@ -28,6 +28,7 @@ defmodule HuddlzWeb.OrganizeLive do
   alias Huddlz.Communities.SocialConnection
   alias Huddlz.Communities.SocialConnection.Kind
   alias Huddlz.Communities.SocialConnection.Moment
+  alias Huddlz.Communities.SocialPost.Occasion
   alias Huddlz.Social
   alias Huddlz.Social.Post
   alias HuddlzWeb.Components.TurnoutForm
@@ -85,6 +86,8 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:pending_member_action, nil)
      |> assign(:member_action_form, member_action_form())
      |> assign(:social_connections, [])
+     |> assign(:upcoming_posts, [])
+     |> assign(:recent_posts, [])
      |> assign(:connect_dialog?, false)
      |> assign(:schedule_editor, nil)
      |> assign(:schedule_form, nil)
@@ -207,11 +210,10 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   defp load_connections(socket, group, user) do
-    assign(
-      socket,
-      :social_connections,
-      Communities.list_social_connections!(group.id, actor: user)
-    )
+    socket
+    |> assign(:social_connections, Communities.list_social_connections!(group.id, actor: user))
+    |> assign(:upcoming_posts, Communities.list_upcoming_social_posts!(group.id, actor: user))
+    |> assign(:recent_posts, Communities.list_recent_social_posts!(group.id, actor: user))
   end
 
   # The huddl a turnout event names: the nudge's, or one of the listed rows.
@@ -451,6 +453,8 @@ defmodule HuddlzWeb.OrganizeLive do
             moments_form={@moments_form}
             fresh?={not is_nil(@connected_id)}
             removing={@removing_connection}
+            upcoming={@upcoming_posts}
+            recent={@recent_posts}
           />
         <% :settings -> %>
           <.settings_view
@@ -2381,6 +2385,8 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :moments_form, :any, required: true
   attr :fresh?, :boolean, required: true
   attr :removing, :any, required: true
+  attr :upcoming, :list, required: true
+  attr :recent, :list, required: true
 
   defp social_view(assigns) do
     ~H"""
@@ -2491,6 +2497,51 @@ defmodule HuddlzWeb.OrganizeLive do
       </div>
     </section>
 
+    <section :if={@group.is_public && @connections != []} id="upcoming-social-posts" class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Upcoming posts</h2>
+          <div class="panel-sub">
+            Times are in each huddl's time zone. A paused connection posts nothing, so its posts are not listed.
+          </div>
+        </div>
+      </div>
+      <p :if={@upcoming == []} class="muted">
+        Nothing to post yet. Posts appear here as public huddlz are published.
+      </p>
+      <div :if={@upcoming != []} class="row-list">
+        <div :for={post <- @upcoming} id={"social-post-#{post.id}"} class="row social-post-row">
+          <span class="social-post-time">{post_time(post.due_at, post.huddl)}</span>
+          <span class="row-title">
+            {post_huddl(post)}
+            <span class="meta">
+              {Occasion.label(post.occasion)} · {post.social_connection.channel_name}
+            </span>
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <section :if={@group.is_public && @recent != []} id="recent-social-posts" class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Recent posts</h2>
+        </div>
+      </div>
+      <div class="row-list">
+        <div :for={post <- @recent} id={"social-post-#{post.id}"} class="row social-post-row">
+          <span class="social-post-time">{post_time(post.sent_at || post.due_at, post.huddl)}</span>
+          <span class="row-title">
+            {post_huddl(post)}
+            <span class="meta">
+              {Occasion.label(post.occasion)} · {post.social_connection.channel_name}
+            </span>
+          </span>
+          <.pill :if={post.state == :not_sent} variant={:magenta}>Didn't send</.pill>
+        </div>
+      </div>
+    </section>
+
     <.connect_place_dialog :if={@connect_dialog?} group={@group} />
     <.schedule_sheet
       :if={@editor}
@@ -2502,6 +2553,22 @@ defmodule HuddlzWeb.OrganizeLive do
     />
     <.remove_connection_dialog :if={@removing} connection={@removing} />
     """
+  end
+
+  # When a post goes out, read in its huddl's time zone.
+  defp post_time(at, huddl) do
+    at |> DateTime.shift_zone!(huddl.time_zone) |> Calendar.strftime("%a, %b %-d, %-I:%M %p")
+  end
+
+  # The huddl a post is about, with its date when the post goes out on
+  # another day.
+  defp post_huddl(%{huddl: huddl} = post) do
+    starts = DateTime.shift_zone!(huddl.starts_at, huddl.time_zone)
+    due = DateTime.shift_zone!(post.due_at, huddl.time_zone)
+
+    if DateTime.to_date(starts) == DateTime.to_date(due),
+      do: huddl.title,
+      else: "#{huddl.title} · #{Calendar.strftime(starts, "%a, %b %-d")}"
   end
 
   defp state_label(:posting), do: "Posting"

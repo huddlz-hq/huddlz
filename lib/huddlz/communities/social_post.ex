@@ -16,22 +16,30 @@ defmodule Huddlz.Communities.SocialPost do
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
-    extensions: [AshOban]
+    extensions: [AshOban, AshGraphql.Resource, AshJsonApi.Resource]
 
   alias Huddlz.Communities.SocialPost.Occasion
 
   @states [:scheduled, :sent, :not_sent, :skipped]
 
-  postgres do
-    table "social_posts"
-    repo Huddlz.Repo
+  graphql do
+    type :social_post
 
-    references do
-      reference :social_connection, on_delete: :delete
-      reference :huddl, on_delete: :delete
+    queries do
+      list :upcoming_social_posts, :upcoming_for_group
+      list :recent_social_posts, :recent_for_group
     end
+  end
 
-    identity_wheres_to_sql unique_occasion: "occasion <> 'moved'"
+  json_api do
+    type "social_post"
+
+    routes do
+      base "/social_posts"
+
+      index :upcoming_for_group, route: "/upcoming"
+      index :recent_for_group, route: "/recent"
+    end
   end
 
   oban do
@@ -51,6 +59,18 @@ defmodule Huddlz.Communities.SocialPost do
     end
   end
 
+  postgres do
+    table "social_posts"
+    repo Huddlz.Repo
+
+    references do
+      reference :social_connection, on_delete: :delete
+      reference :huddl, on_delete: :delete
+    end
+
+    identity_wheres_to_sql unique_occasion: "occasion <> 'moved'"
+  end
+
   actions do
     defaults [:read]
 
@@ -67,6 +87,44 @@ defmodule Huddlz.Communities.SocialPost do
 
     destroy :drop do
       description "Drop a post that has not gone out"
+    end
+
+    read :upcoming_for_group do
+      description """
+      The group's next posts, soonest first, on connections that are posting.
+      Times are UTC; each huddl carries the time zone they are read in.
+      """
+
+      argument :group_id, :uuid do
+        allow_nil? false
+      end
+
+      filter expr(
+               social_connection.group_id == ^arg(:group_id) and state == :scheduled and
+                 due_at > now() and social_connection.state == :posting
+             )
+
+      prepare build(
+                sort: [due_at: :asc],
+                limit: 50,
+                load: [:social_connection, huddl: [:group]]
+              )
+    end
+
+    read :recent_for_group do
+      description "The group's posts that went out or could not be sent, latest first"
+
+      argument :group_id, :uuid do
+        allow_nil? false
+      end
+
+      filter expr(social_connection.group_id == ^arg(:group_id) and state in [:sent, :not_sent])
+
+      prepare build(
+                sort: [due_at: :desc],
+                limit: 20,
+                load: [:social_connection, huddl: [:group]]
+              )
     end
 
     read :due do

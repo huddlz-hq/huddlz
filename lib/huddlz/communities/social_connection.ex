@@ -8,7 +8,7 @@ defmodule Huddlz.Communities.SocialConnection do
   The webhook address the connection posts through is a secret: stored
   encrypted, never shown, never returned by the API. Each connection
   carries its own social schedule (the moments it posts each huddl at) and
-  an optional opening line; scheduled posting itself lives elsewhere.
+  an optional opening line; the posts it plans are `SocialPost`s.
   """
 
   use Ash.Resource,
@@ -98,6 +98,7 @@ defmodule Huddlz.Communities.SocialConnection do
 
       change set_attribute(:group_id, arg(:group_id))
       change relate_actor(:connected_by)
+      change Huddlz.Communities.SocialConnection.Changes.PlanSocialPosts
     end
 
     update :reconnect do
@@ -119,11 +120,14 @@ defmodule Huddlz.Communities.SocialConnection do
       # A paused connection stays paused; only a broken one starts posting again.
       change set_attribute(:state, :posting),
         where: [attribute_equals(:state, :needs_reconnecting)]
+
+      change Huddlz.Communities.SocialConnection.Changes.PlanSocialPosts
     end
 
     update :edit do
       description "Change the social schedule, the opening line, or what the place is called"
       accept [:moments, :opening_line, :workspace_name, :channel_name]
+      change Huddlz.Communities.SocialConnection.Changes.PlanSocialPosts
     end
 
     update :mark_needs_reconnecting do
@@ -145,6 +149,7 @@ defmodule Huddlz.Communities.SocialConnection do
       description "Post again from now on"
       accept []
       change set_attribute(:state, :posting)
+      change Huddlz.Communities.SocialConnection.Changes.PlanSocialPosts
     end
 
     destroy :remove do

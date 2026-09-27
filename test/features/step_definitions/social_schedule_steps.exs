@@ -3,9 +3,13 @@ defmodule SocialScheduleSteps do
 
   import ExUnit.Assertions
   import Huddlz.Generator
+  import PhoenixTest
+  import HuddlzWeb.ApiCase, only: [authenticated_conn: 2, gql_post: 3]
+  import Phoenix.ConnTest, only: [build_conn: 0, json_response: 2]
 
   require Ash.Query
 
+  alias Huddlz.Accounts.User
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.SocialPost
@@ -41,8 +45,53 @@ defmodule SocialScheduleSteps do
     connect(context, group_name, channel, moments: [:when_published])
   end
 
+  step "{string} posts to the Slack channel {string} when a huddl is published and the morning of",
+       %{args: [group_name, channel]} = context do
+    connect(context, group_name, channel, moments: [:when_published, :morning_of])
+  end
+
   step "I publish a public huddl {string} next week", %{args: [title]} = context do
     publish(context, title, is_private: false)
+  end
+
+  step "I publish a public huddl {string} three days from now", %{args: [title]} = context do
+    publish(context, title, is_private: false, date: Date.add(eastern_today(), 3))
+  end
+
+  step "I publish a private huddl {string} next week", %{args: [title]} = context do
+    publish(context, title, is_private: true)
+  end
+
+  step "{string} receives nothing", %{args: [_channel]} = context do
+    run_scheduler()
+    refute_received {:social_post, _}
+    context
+  end
+
+  step "the Social tab of {string} lists the morning-of post of {string} as upcoming",
+       %{args: [group_name, title]} = context do
+    session =
+      context.session
+      |> visit("/organize/#{lookup_group(group_name).slug}/social")
+      |> assert_has("#upcoming-social-posts [id^='social-post-']", text: title)
+      |> assert_has("#upcoming-social-posts [id^='social-post-']", text: "Morning of")
+
+    Map.put(context, :session, session)
+  end
+
+  step "it lists no week-before post of {string}", %{args: [_title]} = context do
+    refute_has(context.session, "#upcoming-social-posts", text: "Week before")
+    context
+  end
+
+  step "the upcoming posts on the Social tab of {string} do not mention {string}",
+       %{args: [group_name, title]} = context do
+    context.session
+    |> visit("/organize/#{lookup_group(group_name).slug}/social")
+    |> assert_has("#upcoming-social-posts")
+    |> refute_has("#upcoming-social-posts", text: title)
+
+    context
   end
 
   step "{string} receives a post about {string}", %{args: [_channel, title]} = context do
@@ -154,6 +203,54 @@ defmodule SocialScheduleSteps do
       actor: context.current_user
     )
 
+    context
+  end
+
+  step "{string} asks the API for the upcoming social posts of {string}",
+       %{args: [email, group_name]} = context do
+    user = User |> Ash.Query.filter(email == ^email) |> Ash.read_one!(authorize?: false)
+
+    response =
+      build_conn()
+      |> authenticated_conn(user)
+      |> gql_post(
+        """
+        query($groupId: ID!) {
+          upcomingSocialPosts(groupId: $groupId) {
+            occasion dueAt
+            huddl { title timeZone }
+            socialConnection { channelName }
+          }
+        }
+        """,
+        %{"groupId" => lookup_group(group_name).id}
+      )
+      |> json_response(200)
+
+    assert response["errors"] == nil, inspect(response)
+    Map.put(context, :upcoming, response["data"]["upcomingSocialPosts"])
+  end
+
+  step "the answer lists the week-before and morning-of posts of {string} with their times",
+       %{args: [title]} = context do
+    huddl = lookup_huddl(title)
+
+    expected =
+      for moment <- [:week_before, :morning_of] do
+        %{
+          "occasion" => moment |> Atom.to_string() |> String.upcase(),
+          "dueAt" => moment |> Schedule.due_at(huddl) |> DateTime.to_iso8601(),
+          "huddl" => %{"title" => title, "timeZone" => huddl.time_zone},
+          "socialConnection" => %{"channelName" => "#general"}
+        }
+      end
+
+    assert context.upcoming == expected
+    context
+  end
+
+  step "the answer lists no posts", context do
+    assert context.upcoming == []
     context
   end
 
