@@ -13,7 +13,6 @@ defmodule SocialScheduleSteps do
   alias Huddlz.Communities.Group
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.SocialPost
-  alias Huddlz.Social.Schedule
 
   # Every post a platform receives comes back to the test as a message.
   defp listen_to_platforms do
@@ -427,14 +426,19 @@ defmodule SocialScheduleSteps do
 
   step "the answer lists the week-before and morning-of posts of {string} with their times",
        %{args: [title]} = context do
-    huddl = lookup_huddl(title)
+    # The huddl is ten days out at 6:00 PM Eastern: a week before is three
+    # days out at 6:00 PM, and the morning of is 9:00 AM on the day.
+    day = eastern_today() |> Date.add(10)
 
     expected =
-      for moment <- [:week_before, :morning_of] do
+      for {moment, date, time} <- [
+            {"WEEK_BEFORE", Date.add(day, -7), ~T[18:00:00]},
+            {"MORNING_OF", day, ~T[09:00:00]}
+          ] do
         %{
-          "occasion" => moment |> Atom.to_string() |> String.upcase(),
-          "dueAt" => moment |> Schedule.due_at(huddl) |> DateTime.to_iso8601(),
-          "huddl" => %{"title" => title, "timeZone" => huddl.time_zone},
+          "occasion" => moment,
+          "dueAt" => eastern_utc_iso8601(date, time),
+          "huddl" => %{"title" => title, "timeZone" => "America/New_York"},
           "socialConnection" => %{"channelName" => "#general"}
         }
       end
@@ -497,13 +501,13 @@ defmodule SocialScheduleSteps do
     |> Enum.at(n - 1)
   end
 
-  # The clock reaches the moment: the post planned for it becomes due, and
-  # the scheduler runs as it would each minute.
+  # The clock reaches the moment. The post is planned for the moment's
+  # time and nothing goes out before it; then that time comes (the post is
+  # made due) and the scheduler runs as it would each minute.
   defp moment_arrives(title, moment), do: title |> lookup_huddl() |> arrive(moment)
 
   defp arrive(huddl, moment) do
     title = huddl.title
-    expected = Schedule.due_at(moment, huddl)
 
     post =
       SocialPost
@@ -511,10 +515,36 @@ defmodule SocialScheduleSteps do
       |> Ash.read_one!(authorize?: false)
 
     assert post, "no #{moment} post is planned for #{title}"
-    assert DateTime.compare(post.due_at, expected) == :eq
+    assert DateTime.compare(post.due_at, moment_time(huddl, moment)) == :eq
+
+    run_scheduler()
+    refute_received {:social_post, _}, "a #{moment} post went out before its moment"
 
     Ash.Seed.update!(post, %{due_at: DateTime.add(DateTime.utc_now(), -1, :second)})
     run_scheduler()
+  end
+
+  # When a moment falls, from the huddl's local start: a week or a day
+  # before at its own time of day, or 9:00 AM on the day.
+  defp moment_time(huddl, moment) do
+    local = DateTime.shift_zone!(huddl.starts_at, huddl.time_zone)
+    date = DateTime.to_date(local)
+
+    {date, time} =
+      case moment do
+        :week_before -> {Date.add(date, -7), DateTime.to_time(local)}
+        :day_before -> {Date.add(date, -1), DateTime.to_time(local)}
+        :morning_of -> {date, ~T[09:00:00]}
+      end
+
+    DateTime.new!(date, time, huddl.time_zone)
+  end
+
+  defp eastern_utc_iso8601(date, time) do
+    date
+    |> DateTime.new!(time, "America/New_York")
+    |> DateTime.shift_zone!("Etc/UTC")
+    |> DateTime.to_iso8601()
   end
 
   # Runs the scheduler and every job it queues, retries included.
