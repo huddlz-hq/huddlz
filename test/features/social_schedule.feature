@@ -63,3 +63,13 @@ Feature: Huddlz are posted on each connection's social schedule
     Then the answer lists the week-before and morning-of posts of "Hack night" with their times
     When "member@example.com" asks the API for the upcoming social posts of "Elixir Nashville"
     Then the answer lists no posts
+
+  Scenario: A paused connection posts nothing
+    Given "Elixir Nashville" posts to the Slack channel "#general" the morning of
+    And "Elixir Nashville" has a public huddl "Hack night" in ten days at 6:00 PM
+    And I am signed in as "owner@example.com"
+    And "#general" is paused
+    When the morning of "Hack night" arrives
+    Then "#general" receives nothing
+    When "#general" is resumed
+    Then "#general" receives nothing

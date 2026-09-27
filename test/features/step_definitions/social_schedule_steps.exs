@@ -62,6 +62,13 @@ defmodule SocialScheduleSteps do
     publish(context, title, is_private: true)
   end
 
+  step "{string} is resumed", %{args: [_channel]} = context do
+    connection =
+      Huddlz.Communities.resume_social_connection!(context.connection, actor: context.current_user)
+
+    Map.put(context, :connection, connection)
+  end
+
   step "{string} receives nothing", %{args: [_channel]} = context do
     run_scheduler()
     refute_received {:social_post, _}
