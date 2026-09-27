@@ -142,6 +142,12 @@ defmodule Huddlz.Communities.SocialPost do
       change Huddlz.Social.Changes.Deliver
     end
 
+    update :skip do
+      description "Record that the post's moment passed without it going out"
+      accept []
+      change set_attribute(:state, :skipped)
+    end
+
     update :give_up do
       description "Record that the post could not be sent after its retries"
       accept []

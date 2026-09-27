@@ -62,7 +62,7 @@ defmodule Huddlz.Social.Schedule do
   end
 
   @doc """
-  Post a huddl that has just gone public, straight away, on every
+  Post a huddl that has just gone public, straight away, on every posting
   connection that posts when a huddl is published: as itself, or as the
   first huddl of a new series (`:series`).
   """
@@ -74,7 +74,7 @@ defmodule Huddlz.Social.Schedule do
     if postable?(huddl) do
       huddl.group_id
       |> connections_of()
-      |> Enum.filter(&(:when_published in &1.moments))
+      |> Enum.filter(&(&1.state == :posting and :when_published in &1.moments))
       |> Enum.each(&schedule!(&1, huddl, occasion, now))
     end
 
@@ -82,9 +82,9 @@ defmodule Huddlz.Social.Schedule do
   end
 
   @doc """
-  Tell every connection a huddl has already been posted to that it has
-  been cancelled, or moved from `previous_starts_at`. Connections it was
-  never posted to hear nothing.
+  Tell every posting connection a huddl has already been posted to that it
+  has been cancelled, or moved from `previous_starts_at`. Connections it
+  was never posted to, and paused or broken ones, hear nothing.
   """
   @spec follow_up(Huddl.t(), :cancelled | :moved, DateTime.t() | nil) :: :ok
   def follow_up(%Huddl{} = huddl, occasion, previous_starts_at \\ nil)
@@ -92,7 +92,9 @@ defmodule Huddlz.Social.Schedule do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     SocialPost
-    |> Ash.Query.filter(huddl_id == ^huddl.id and state == :sent)
+    |> Ash.Query.filter(
+      huddl_id == ^huddl.id and state == :sent and social_connection.state == :posting
+    )
     |> Ash.Query.select([:social_connection_id])
     |> Ash.read!(authorize?: false)
     |> Enum.map(& &1.social_connection_id)
@@ -108,6 +110,21 @@ defmodule Huddlz.Social.Schedule do
       })
       |> Ash.create!(authorize?: false)
     end)
+  end
+
+  @doc """
+  Skip a connection's posts whose moment passed while it was not posting,
+  so resuming or reconnecting never sends what was missed.
+  """
+  @spec skip_missed(SocialConnection.t()) :: :ok
+  def skip_missed(%SocialConnection{} = connection) do
+    SocialPost
+    |> Ash.Query.filter(
+      social_connection_id == ^connection.id and state == :scheduled and due_at <= now()
+    )
+    |> Ash.bulk_update!(:skip, %{}, authorize?: false, strategy: [:atomic, :stream])
+
+    :ok
   end
 
   @doc "Plan a connection's timed posts for every upcoming huddl of its group."

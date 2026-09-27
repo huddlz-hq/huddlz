@@ -74,6 +74,14 @@ Feature: Huddlz are posted on each connection's social schedule
     When "#general" is resumed
     Then "#general" receives nothing
 
+  Scenario: A huddl published while paused is not posted when resumed
+    Given "Elixir Nashville" posts to the Slack channel "#general" when a huddl is published
+    And I am signed in as "owner@example.com"
+    And "#general" is paused
+    When I publish a public huddl "Hack night" next week
+    And "#general" is resumed
+    Then "#general" receives nothing
+
   Scenario: A series posts once when published
     Given "Elixir Nashville" posts to the Slack channel "#general" when a huddl is published
     And I am signed in as "owner@example.com"
