@@ -11,7 +11,7 @@ defmodule HuddlzWeb.BasicPasswordResetTest do
       {:ok, user} =
         User
         |> Ash.Changeset.for_create(:register_with_password, %{
-          email: "test@example.com",
+          email: "test+password-reset@example.com",
           password: "oldpassword123",
           password_confirmation: "oldpassword123",
           display_name: "Test User",
@@ -31,7 +31,7 @@ defmodule HuddlzWeb.BasicPasswordResetTest do
       session =
         conn
         |> visit("/reset")
-        |> fill_in("Email", with: "test@example.com")
+        |> fill_in("Email", with: "test+password-reset@example.com")
         |> click_button("Send reset instructions")
 
       # Should show success message
@@ -39,7 +39,7 @@ defmodule HuddlzWeb.BasicPasswordResetTest do
 
       # Should have sent reset email
       assert_email_sent(fn email ->
-        email.to == [{"", "test@example.com"}] &&
+        email.to == [{"", "test+password-reset@example.com"}] &&
           email.subject == "Reset your password" &&
           email.html_body =~ "/reset/"
       end)

@@ -78,7 +78,8 @@ defmodule OverviewTurnoutSteps do
        %{session: session} = context do
     session
     |> assert_has("#kpi-showrate .value", text: "—", exact: true)
-    |> assert_has("#kpi-showrate .delta a[href='/organize/portland-elixir/huddlz?filter=past']",
+    |> assert_has(
+      "#kpi-showrate .delta a[href='/organize/overview-turnout-portland-elixir/huddlz?filter=past']",
       text: "Record turnout"
     )
 

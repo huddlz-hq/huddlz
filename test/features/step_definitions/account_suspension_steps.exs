@@ -298,8 +298,8 @@ defmodule AccountSuspensionSteps do
     Huddlz.Notifications.deliver(find_user(email), :rsvp_received, %{
       "rsvper_display_name" => name,
       "huddl_title" => title,
-      "group_name" => "Portland Elixir",
-      "group_slug" => "portland-elixir"
+      "group_name" => "Suspension Portland Elixir",
+      "group_slug" => "suspension-portland-elixir"
     })
 
     context

@@ -11,7 +11,7 @@ defmodule Huddlz.Communities.GroupPoliciesTest do
     group =
       generate(
         group(
-          name: "Test Group",
+          name: "Policies Test Group",
           description: "A test group",
           location: "Test Location",
           is_public: true,

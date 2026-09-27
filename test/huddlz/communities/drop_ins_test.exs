@@ -60,7 +60,7 @@ defmodule Huddlz.Communities.DropInsTest do
   end
 
   test "an ended published huddl does not outrank a future RSVP", %{person: person} do
-    {group, owner} = public_group("Tuesday Runners")
+    {group, owner} = public_group("Drop-ins Tuesday Runners")
 
     ended = completed(group, owner, title: "Ended", lifecycle_state: :published)
     assert ended.lifecycle_state == :published
@@ -72,7 +72,7 @@ defmodule Huddlz.Communities.DropInsTest do
   end
 
   test "an upcoming huddl is mentioned ahead of a completed one", %{person: person} do
-    {group, owner} = public_group("Tuesday Runners")
+    {group, owner} = public_group("Drop-ins Tuesday Runners")
     hold_rsvp(person, completed(group, owner, title: "Track Night"))
     Communities.rsvp_huddl!(upcoming(group, owner, title: "Long Run"), actor: person)
 
@@ -81,7 +81,7 @@ defmodule Huddlz.Communities.DropInsTest do
   end
 
   test "the soonest upcoming huddl is the one mentioned", %{person: person} do
-    {group, owner} = public_group("Tuesday Runners")
+    {group, owner} = public_group("Drop-ins Tuesday Runners")
 
     later = upcoming(group, owner, title: "Later", date: Date.add(eastern_today(), 20))
     sooner = upcoming(group, owner, title: "Sooner", date: Date.add(eastern_today(), 5))
@@ -94,7 +94,7 @@ defmodule Huddlz.Communities.DropInsTest do
   end
 
   test "with only completed huddlz, the most recent is mentioned as RSVPd", %{person: person} do
-    {group, owner} = public_group("Tuesday Runners")
+    {group, owner} = public_group("Drop-ins Tuesday Runners")
 
     hold_rsvp(
       person,
@@ -142,7 +142,7 @@ defmodule Huddlz.Communities.DropInsTest do
 
   test "another person's spots are never mentioned", %{person: person} do
     other = generate(user(role: :user))
-    {group, owner} = public_group("Tuesday Runners")
+    {group, owner} = public_group("Drop-ins Tuesday Runners")
     Communities.rsvp_huddl!(upcoming(group, owner, title: "Long Run"), actor: other)
 
     assert {:ok, %{entries: [], count: 0}} = Communities.list_drop_ins(actor: person)

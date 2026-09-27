@@ -12,10 +12,10 @@ Feature: Confirmed members report accounts to an administrator queue
       | spam589@example.com     | user  | Crypto Kings Promo |
       | member589@example.com   | user  | Member Maya        |
       | outsider589@example.com | user  | Outsider Omar      |
-    And a public group "Portland Elixir" exists with owner "owner589@example.com"
-    And "spam589@example.com" is an organizer of "Portland Elixir"
-    And "member589@example.com" is a member of "Portland Elixir"
-    And the huddl "Elixir Hack Night" exists in group "Portland Elixir" hosted by "owner589@example.com"
+    And a public group "Moderation Portland Elixir" exists with owner "owner589@example.com"
+    And "spam589@example.com" is an organizer of "Moderation Portland Elixir"
+    And "member589@example.com" is a member of "Moderation Portland Elixir"
+    And the huddl "Elixir Hack Night" exists in group "Moderation Portland Elixir" hosted by "owner589@example.com"
     And "spam589@example.com" has RSVPed to "Elixir Hack Night"
     And "member589@example.com" has RSVPed to "Elixir Hack Night"
 
@@ -74,7 +74,7 @@ Feature: Confirmed members report accounts to an administrator queue
   Scenario: Reporting again while a report is open adds nothing
     Given "member589@example.com" has reported "spam589@example.com" for "spam"
     And I am signed in as "member589@example.com"
-    When I visit the group page for "Portland Elixir"
+    When I visit the group page for "Moderation Portland Elixir"
     And I choose "Report account" from the menu for "Crypto Kings Promo"
     And I choose "Other"
     And I confirm with "Report account"
@@ -86,7 +86,7 @@ Feature: Confirmed members report accounts to an administrator queue
 
   Scenario: The organizer roster offers reporting alongside membership actions
     Given I am signed in as "owner589@example.com"
-    When I open the organizer roster for "Portland Elixir"
+    When I open the organizer roster for "Moderation Portland Elixir"
     Then the menu for "Crypto Kings Promo" offers "Demote to member"
     And the menu for "Crypto Kings Promo" offers "Report account"
     And there is no menu for "Owner Olive"
@@ -117,9 +117,9 @@ Feature: Confirmed members report accounts to an administrator queue
     Then the report is refused
     When I report "member589@example.com" for "spam" saying "" through JSON:API
     Then the JSON:API report is refused
-    Given "admin589@example.com" is a member of "Portland Elixir"
+    Given "admin589@example.com" is a member of "Moderation Portland Elixir"
     And I am signed in as "admin589@example.com"
-    When I visit the group page for "Portland Elixir"
+    When I visit the group page for "Moderation Portland Elixir"
     Then there is no menu for "Crypto Kings Promo"
 
   Scenario: Reports are for administrators only and never reach the reported person
@@ -161,15 +161,15 @@ Feature: Confirmed members report accounts to an administrator queue
     Then "Crypto Kings Promo" is listed under "Handled"
 
   Scenario: The queue shows where a report came from only within the administrator's ordinary access
-    Given a private group "Quiet Circle" exists with owner "spam589@example.com"
-    And "member589@example.com" is a member of "Quiet Circle"
-    And "member589@example.com" has reported "spam589@example.com" for "other" from the group "Quiet Circle"
+    Given a private group "Moderation Quiet Circle" exists with owner "spam589@example.com"
+    And "member589@example.com" is a member of "Moderation Quiet Circle"
+    And "member589@example.com" has reported "spam589@example.com" for "other" from the group "Moderation Quiet Circle"
     And I am signed in as "admin589@example.com"
     When I visit "/admin/reports"
     Then "Crypto Kings Promo" is listed under "Open"
     And I should see "Other"
     And I should see "a group you cannot open"
-    And I should not see "Quiet Circle"
+    And I should not see "Moderation Quiet Circle"
 
   Scenario: A report expires after two years while the suspension stays
     Given "member589@example.com" reported "spam589@example.com" for "spam" two years ago

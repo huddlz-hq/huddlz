@@ -57,7 +57,8 @@ defmodule HuddlzWeb.HuddlLiveTest do
       conn: conn,
       host: host
     } do
-      group = generate(group(name: "Phoenix Elixir Meetup", owner_id: host.id, actor: host))
+      group =
+        generate(group(name: "Phoenix Elixir Listing Meetup", owner_id: host.id, actor: host))
 
       bare =
         generate(huddl(group_id: group.id, creator_id: host.id, is_private: false, actor: host))

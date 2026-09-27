@@ -54,7 +54,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
         |> Ash.Changeset.for_create(
           :create_group,
           %{
-            name: "Test Group",
+            name: "RSVP Test Group",
             description: "A test group",
             location: "Saint Augustine, FL",
             time_zone: "America/New_York",
@@ -414,7 +414,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
         |> Ash.Changeset.for_create(
           :create_group,
           %{
-            name: "Private Group",
+            name: "RSVP Private Group",
             description: "A private group",
             location: "Saint Augustine, FL",
             time_zone: "America/New_York",
@@ -570,7 +570,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
         |> Ash.Changeset.for_create(
           :create_group,
           %{
-            name: "Test Group",
+            name: "RSVP Test Group",
             description: "A test group",
             location: "Saint Augustine, FL",
             time_zone: "America/New_York",
@@ -765,7 +765,7 @@ defmodule Huddlz.Communities.HuddlRsvpTest do
         |> Ash.Changeset.for_create(
           :create_group,
           %{
-            name: "Test Group",
+            name: "RSVP Test Group",
             description: "A test group",
             location: "Saint Augustine, FL",
             time_zone: "America/New_York",

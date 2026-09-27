@@ -44,7 +44,7 @@ defmodule CalendarHappeningNowSteps do
     host = generate(user(role: :user))
 
     group =
-      generate(group(name: "Portland Elixir", owner_id: host.id, is_public: true, actor: host))
+      generate(group(owner_id: host.id, is_public: true, actor: host))
 
     generate(group_member(group_id: group.id, user_id: member.id, role: "member", actor: host))
 
@@ -117,7 +117,7 @@ defmodule CalendarHappeningNowSteps do
 
     group =
       context[:happening_group] ||
-        generate(group(name: "Portland Elixir", owner_id: host.id, is_public: true, actor: host))
+        generate(group(owner_id: host.id, is_public: true, actor: host))
 
     huddl =
       generate(

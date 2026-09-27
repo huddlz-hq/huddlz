@@ -157,7 +157,7 @@ defmodule RecentActivitySteps do
   end
 
   step "the recent activity panel links to the Members tab", %{session: session} = context do
-    assert_has(session, "#recent-activity a[href='/organize/portland-elixir/members']",
+    assert_has(session, "#recent-activity a[href='/organize/activity-portland-elixir/members']",
       text: "All members"
     )
 

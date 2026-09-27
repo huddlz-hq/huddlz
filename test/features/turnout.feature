@@ -6,16 +6,16 @@ Feature: Recording turnout for a past huddl
 
   Background:
     Given the following users exist:
-      | email              | display_name | role    |
-      | host@example.com   | Host User    | regular |
-      | member@example.com | Member User  | regular |
-    And a public group "Portland Elixir" exists with owner "host@example.com"
-    And "member@example.com" is a member of "Portland Elixir"
+      | email                      | display_name | role    |
+      | host+turnout@example.com   | Host User    | regular |
+      | member+turnout@example.com | Member User  | regular |
+    And a public group "Turnout Portland Elixir" exists with owner "host+turnout@example.com"
+    And "member+turnout@example.com" is a member of "Turnout Portland Elixir"
 
   Scenario: Organizers read turnout on the huddl page and record it in Organize
-    Given the in-person huddl "Elixir hack night" in "Portland Elixir" ended yesterday with 4 RSVPs
+    Given the in-person huddl "Elixir hack night" in "Turnout Portland Elixir" ended yesterday with 4 RSVPs
     And the turnout for "Elixir hack night" was recorded as 2 in the room
-    And I am signed in as "host@example.com"
+    And I am signed in as "host+turnout@example.com"
     When I visit the huddl "Elixir hack night"
     Then I should see "2 in the room"
     And I should see "50% showed"
@@ -23,8 +23,8 @@ Feature: Recording turnout for a past huddl
     And I should not see "Edit turnout"
 
   Scenario: An uncounted huddl page points at Organize
-    Given the in-person huddl "Elixir hack night" in "Portland Elixir" ended yesterday with 4 RSVPs
-    And I am signed in as "host@example.com"
+    Given the in-person huddl "Elixir hack night" in "Turnout Portland Elixir" ended yesterday with 4 RSVPs
+    And I am signed in as "host+turnout@example.com"
     When I visit the huddl "Elixir hack night"
     Then I should see "Turnout not recorded"
     And I should not see "How many came?"
@@ -32,20 +32,20 @@ Feature: Recording turnout for a past huddl
     Then I should see "Add turnout"
 
   Scenario: Members never see turnout
-    Given the in-person huddl "Elixir hack night" in "Portland Elixir" ended yesterday with 4 RSVPs
+    Given the in-person huddl "Elixir hack night" in "Turnout Portland Elixir" ended yesterday with 4 RSVPs
     And the turnout for "Elixir hack night" was recorded as 2 in the room
-    And I am signed in as "member@example.com"
+    And I am signed in as "member+turnout@example.com"
     When I visit the huddl "Elixir hack night"
     Then I should not see "How many came?"
     And I should not see "in the room"
     And I should not see "showed"
-    And the API hides the turnout of "Elixir hack night" from "member@example.com"
+    And the API hides the turnout of "Elixir hack night" from "member+turnout@example.com"
 
   Scenario Outline: Recording turnout through the API
-    Given the hybrid huddl "Lightning talks" in "Portland Elixir" ended yesterday with 4 RSVPs
-    When "host@example.com" records 3 in the room and 2 on the call for "Lightning talks" through "<api>"
+    Given the hybrid huddl "Lightning talks" in "Turnout Portland Elixir" ended yesterday with 4 RSVPs
+    When "host+turnout@example.com" records 3 in the room and 2 on the call for "Lightning talks" through "<api>"
     Then the API shows "Lightning talks" with 3 in the room, 2 on the call and a 125% show rate
-    When "member@example.com" records 3 in the room and 2 on the call for "Lightning talks" through "<api>"
+    When "member+turnout@example.com" records 3 in the room and 2 on the call for "Lightning talks" through "<api>"
     Then the API refuses the turnout
 
     Examples:

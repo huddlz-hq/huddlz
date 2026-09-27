@@ -23,7 +23,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
         |> Ash.Changeset.for_create(
           :create_group,
           %{
-            name: "Test Group",
+            name: "Test Group for Huddl Show",
             description: "A test group for huddl show",
             location: "Saint Augustine, FL",
             time_zone: "America/New_York",
@@ -83,10 +83,14 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
       session = visit(conn, "/groups/#{group.slug}/huddlz/#{huddl.id}")
 
       session
-      |> assert_has("#huddl-hero-group[href='/groups/#{group.slug}']", text: "Test Group")
+      |> assert_has("#huddl-hero-group[href='/groups/#{group.slug}']",
+        text: "Test Group for Huddl Show"
+      )
       |> assert_has("#huddl-hero-group .group-mark", text: "TG", exact: true)
       |> assert_has(".hero-fallback span", text: "TG", exact: true)
-      |> assert_has("#huddl-group-link[href='/groups/#{group.slug}']", text: "Test Group")
+      |> assert_has("#huddl-group-link[href='/groups/#{group.slug}']",
+        text: "Test Group for Huddl Show"
+      )
       |> assert_has("#huddl-group-link .group-row-meta", text: "Saint Augustine, FL")
       |> assert_has("#huddl-group-link .group-cover-signal", text: "TG")
       |> assert_has("#huddl-group .creator-row", text: "Organized by")
@@ -591,7 +595,7 @@ defmodule HuddlzWeb.HuddlLive.ShowTest do
         |> Ash.Changeset.for_create(
           :create_group,
           %{
-            name: "Private Group",
+            name: "Huddl Show Private Group",
             description: "Members only",
             location: "Saint Augustine, FL",
             time_zone: "America/New_York",

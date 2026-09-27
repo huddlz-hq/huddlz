@@ -11,10 +11,10 @@ Feature: Active people
       | owner564@example.com  | user  | Owner Olive  |
       | member564@example.com | user  | Member Maya  |
       | quiet564@example.com  | user  | Quiet Quinn  |
-    And a public group "Portland Elixir" exists with owner "owner564@example.com"
+    And a public group "Active People Portland Elixir" exists with owner "owner564@example.com"
 
   Scenario: Browsing a huddl while signed in counts as using huddlz
-    Given the in-person huddl "Kickoff" in "Portland Elixir" is upcoming with 0 RSVPs
+    Given the in-person huddl "Kickoff" in "Active People Portland Elixir" is upcoming with 0 RSVPs
     And I am signed in as "member564@example.com"
     When I visit the huddl "Kickoff"
     Then "member564@example.com" is counted as active today
@@ -34,8 +34,8 @@ Feature: Active people
     Then "member564@example.com" is counted as active today
 
   Scenario: A change applied by someone else does not make a person active
-    Given "quiet564@example.com" is a member of "Portland Elixir"
-    When the owner removes "quiet564@example.com" from "Portland Elixir"
+    Given "quiet564@example.com" is a member of "Active People Portland Elixir"
+    When the owner removes "quiet564@example.com" from "Active People Portland Elixir"
     Then "quiet564@example.com" is not counted as active today
 
   Scenario: Viewing huddlz as someone counts the administrator

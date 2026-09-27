@@ -9,44 +9,44 @@ Feature: Groups I've dropped in on appear on my groups page
       | email                | display_name |
       | owner605@example.com | Owner Olive  |
       | maya605@example.com  | Maya Chen    |
-    And a public group "Tuesday Runners" exists with owner "owner605@example.com"
+    And a public group "Drop In Groups Page Tuesday Runners" exists with owner "owner605@example.com"
     And I am signed in as "maya605@example.com"
 
   Scenario: An upcoming RSVP lists the group
-    Given an upcoming huddl "Long Run" exists in "Tuesday Runners"
+    Given an upcoming huddl "Long Run" exists in "Drop In Groups Page Tuesday Runners"
     And "maya605@example.com" has RSVPd to "Long Run"
     When I visit "/groups"
-    Then "Tuesday Runners" is listed among groups I've dropped in on
+    Then "Drop In Groups Page Tuesday Runners" is listed among groups I've dropped in on
     And its listing says I'm going to "Long Run"
 
   Scenario: A completed huddl lists the group
-    Given "maya605@example.com" held an RSVP to "Track Night" in "Tuesday Runners" when it completed
+    Given "maya605@example.com" held an RSVP to "Track Night" in "Drop In Groups Page Tuesday Runners" when it completed
     When I visit "/groups"
-    Then "Tuesday Runners" is listed among groups I've dropped in on
+    Then "Drop In Groups Page Tuesday Runners" is listed among groups I've dropped in on
     And its listing says I RSVPd to "Track Night"
 
   Scenario: A waitlist spot lists the group
-    Given an upcoming huddl "Long Run" exists in "Tuesday Runners"
+    Given an upcoming huddl "Long Run" exists in "Drop In Groups Page Tuesday Runners"
     And "Long Run" has room for 1 people
     And "maya605@example.com" is on the waitlist for "Long Run"
     When I visit "/groups"
-    Then "Tuesday Runners" is listed among groups I've dropped in on
+    Then "Drop In Groups Page Tuesday Runners" is listed among groups I've dropped in on
     And its listing says I'm waitlisted for "Long Run"
 
   Scenario: An ended huddl reads as a past RSVP before completion is recorded
-    Given "maya605@example.com" held an RSVP to "Track Night" in "Tuesday Runners" when it ended
+    Given "maya605@example.com" held an RSVP to "Track Night" in "Drop In Groups Page Tuesday Runners" when it ended
     When I visit "/groups"
     Then its listing says I RSVPd to "Track Night"
 
   Scenario: An upcoming huddl is mentioned ahead of a completed one
-    Given "maya605@example.com" held an RSVP to "Track Night" in "Tuesday Runners" when it completed
-    And an upcoming huddl "Long Run" exists in "Tuesday Runners"
+    Given "maya605@example.com" held an RSVP to "Track Night" in "Drop In Groups Page Tuesday Runners" when it completed
+    And an upcoming huddl "Long Run" exists in "Drop In Groups Page Tuesday Runners"
     And "maya605@example.com" has RSVPd to "Long Run"
     When I visit "/groups"
     Then its listing says I'm going to "Long Run"
 
   Scenario: A waitlist spot stops suggesting the group when the huddl ends
-    Given an upcoming huddl "Long Run" exists in "Tuesday Runners"
+    Given an upcoming huddl "Long Run" exists in "Drop In Groups Page Tuesday Runners"
     And "Long Run" has room for 1 people
     And "maya605@example.com" is on the waitlist for "Long Run"
     When "Long Run" ends before completion is recorded
@@ -54,33 +54,33 @@ Feature: Groups I've dropped in on appear on my groups page
     Then there is no section for groups I've dropped in on
 
   Scenario: Joining from the list
-    Given an upcoming huddl "Long Run" exists in "Tuesday Runners"
+    Given an upcoming huddl "Long Run" exists in "Drop In Groups Page Tuesday Runners"
     And "maya605@example.com" has RSVPd to "Long Run"
     When I visit "/groups"
-    And I join "Tuesday Runners" from the groups I've dropped in on
-    Then "Tuesday Runners" is listed among my groups
+    And I join "Drop In Groups Page Tuesday Runners" from the groups I've dropped in on
+    Then "Drop In Groups Page Tuesday Runners" is listed among my groups
     And there is no section for groups I've dropped in on
 
   Scenario: Not now removes the group for good
-    Given an upcoming huddl "Long Run" exists in "Tuesday Runners"
-    And an upcoming huddl "Hill Repeats" exists in "Tuesday Runners"
+    Given an upcoming huddl "Long Run" exists in "Drop In Groups Page Tuesday Runners"
+    And an upcoming huddl "Hill Repeats" exists in "Drop In Groups Page Tuesday Runners"
     And "maya605@example.com" has RSVPd to "Long Run"
     When I visit "/groups"
-    And I choose not now for "Tuesday Runners"
+    And I choose not now for "Drop In Groups Page Tuesday Runners"
     Then there is no section for groups I've dropped in on
     When "maya605@example.com" has RSVPd to "Hill Repeats"
     And I visit "/groups"
     Then there is no section for groups I've dropped in on
 
   Scenario: The section is absent when there is nothing to show
-    Given "maya605@example.com" is a member of "Tuesday Runners"
-    And an upcoming huddl "Long Run" exists in "Tuesday Runners"
+    Given "maya605@example.com" is a member of "Drop In Groups Page Tuesday Runners"
+    And an upcoming huddl "Long Run" exists in "Drop In Groups Page Tuesday Runners"
     And "maya605@example.com" has RSVPd to "Long Run"
     When I visit "/groups"
     Then there is no section for groups I've dropped in on
 
   Scenario: The section only appears with all my groups
-    Given an upcoming huddl "Long Run" exists in "Tuesday Runners"
+    Given an upcoming huddl "Long Run" exists in "Drop In Groups Page Tuesday Runners"
     And "maya605@example.com" has RSVPd to "Long Run"
     When I visit "/groups?filter=joined"
     Then there is no section for groups I've dropped in on

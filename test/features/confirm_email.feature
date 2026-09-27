@@ -6,23 +6,23 @@ Feature: Confirming an email address
 
   Scenario: The confirmation link lands on a huddlz page
     Given I start registration without an invitation link
-    And I complete registration as "new@example.com"
-    When I open the confirmation link sent to "new@example.com"
+    And I complete registration as "new+confirm-email@example.com"
+    When I open the confirmation link sent to "new+confirm-email@example.com"
     Then I see a huddlz page asking me to confirm my email
     And I should not see "Ash Framework"
 
   Scenario: Confirming completes the account
     Given I start registration without an invitation link
-    And I complete registration as "new@example.com"
-    When I open the confirmation link sent to "new@example.com"
+    And I complete registration as "new+confirm-email@example.com"
+    When I open the confirmation link sent to "new+confirm-email@example.com"
     And I click "Confirm my email"
-    Then "new@example.com" is confirmed
+    Then "new+confirm-email@example.com" is confirmed
     And I should see "Your email address has now been confirmed"
 
   Scenario: A used link explains itself
     Given I start registration without an invitation link
-    And I complete registration as "new@example.com"
-    And I open the confirmation link sent to "new@example.com"
+    And I complete registration as "new+confirm-email@example.com"
+    And I open the confirmation link sent to "new+confirm-email@example.com"
     And I click "Confirm my email"
     When I open that confirmation link again
     Then the page tells me the link no longer works and offers to sign in
