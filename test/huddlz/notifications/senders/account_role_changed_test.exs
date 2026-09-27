@@ -13,10 +13,10 @@ defmodule Huddlz.Notifications.Senders.AccountRoleChangedTest do
     end
 
     test "sends to the user's email" do
-      user = generate(user(email: "alice@example.com"))
+      user = generate(user(email: "alice+account-role-changed@example.com"))
       email = AccountRoleChanged.build(user, %{"new_role" => "admin"})
 
-      assert email.to == [{"", "alice@example.com"}]
+      assert email.to == [{"", "alice+account-role-changed@example.com"}]
     end
 
     test "uses the configured from-address" do

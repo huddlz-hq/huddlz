@@ -12,10 +12,24 @@ defmodule Huddlz.Communities.HuddlPermissionsEdgeCasesTest do
 
     # Groups are automatically created with owner membership
     public_group =
-      generate(group(name: "Public Group", is_public: true, owner_id: owner.id, actor: owner))
+      generate(
+        group(
+          name: "Permission Edge Cases Public Group",
+          is_public: true,
+          owner_id: owner.id,
+          actor: owner
+        )
+      )
 
     private_group =
-      generate(group(name: "Private Group", is_public: false, owner_id: owner.id, actor: owner))
+      generate(
+        group(
+          name: "Permission Edge Cases Private Group",
+          is_public: false,
+          owner_id: owner.id,
+          actor: owner
+        )
+      )
 
     # Add additional members to public group
     generate(

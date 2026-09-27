@@ -11,8 +11,8 @@ defmodule HuddlzWeb.GroupEditLinkTest do
       group =
         generate(
           group(
-            name: "Test Group",
-            slug: "test-group",
+            name: "Edit Link Test Group",
+            slug: "edit-link-test-group",
             is_public: true,
             actor: owner
           )

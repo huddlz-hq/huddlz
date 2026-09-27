@@ -12,12 +12,22 @@ defmodule Huddlz.Communities.GroupMembershipPermissionsTest do
     # Groups are automatically created with owner membership
     public_group =
       generate(
-        group(name: "Public Group", is_public: true, owner_id: verified.id, actor: verified)
+        group(
+          name: "Membership Permissions Public Group",
+          is_public: true,
+          owner_id: verified.id,
+          actor: verified
+        )
       )
 
     private_group =
       generate(
-        group(name: "Private Group", is_public: false, owner_id: verified.id, actor: verified)
+        group(
+          name: "Membership Permissions Private Group",
+          is_public: false,
+          owner_id: verified.id,
+          actor: verified
+        )
       )
 
     %{

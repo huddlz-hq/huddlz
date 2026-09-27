@@ -173,7 +173,9 @@ defmodule Huddlz.Notifications.LayoutTest do
       owner = generate(user(role: :user))
 
       group =
-        generate(group(name: "Pickup Sports", is_public: true, owner_id: owner.id, actor: owner))
+        generate(
+          group(name: "Layout Pickup Sports", is_public: true, owner_id: owner.id, actor: owner)
+        )
 
       huddl =
         generate(
@@ -194,7 +196,7 @@ defmodule Huddlz.Notifications.LayoutTest do
                {"When", DateTimeFormatter.format_starts_at(huddl.starts_at, huddl.time_zone),
                 "2 hours"},
                {"Where", huddl.physical_location},
-               {"Group", "Pickup Sports"}
+               {"Group", "Layout Pickup Sports"}
              ]
 
       assert huddl.physical_location =~ "Main St"
