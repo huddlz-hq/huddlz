@@ -5,6 +5,10 @@ defmodule Huddlz.Social.Post do
   (day-of posts say "Today"), where, how many spots are left when there is
   a cap, and the link. Scheduled posts and the schedule sheet's preview both
   come from here, so what the preview shows is what the place receives.
+
+  A new series is announced once, by its first huddl: the when line names
+  the pattern ("Every Thursday at 6:00 PM") and the spots line is left out,
+  since each date has its own.
   """
 
   alias Huddlz.Communities.SocialConnection.Moment
@@ -23,8 +27,14 @@ defmodule Huddlz.Social.Post do
           optional(:waitlist_count) => non_neg_integer()
         }
 
+  @typedoc "How a series repeats; a loaded huddl template or a map shaped like one."
+  @type series :: %{interval: pos_integer(), unit: :week | :month}
+
   @type option ::
-          {:moment, Moment.t()} | {:opening_line, String.t() | nil} | {:link, String.t()}
+          {:moment, Moment.t() | :series}
+          | {:opening_line, String.t() | nil}
+          | {:link, String.t()}
+          | {:series, series() | nil}
 
   @doc "The post as one message, a line per part."
   @spec text(huddl(), [option()]) :: String.t()
@@ -36,13 +46,33 @@ defmodule Huddlz.Social.Post do
     [
       opts[:opening_line],
       huddl.title,
-      when_line(huddl, opts[:moment]),
+      when_line(huddl, opts[:moment], opts[:series]),
       where_line(huddl),
-      spots_line(huddl),
+      opts[:moment] != :series && spots_line(huddl),
       opts[:link]
     ]
     |> Enum.reject(&blank?/1)
   end
+
+  defp when_line(huddl, :series, %{interval: interval, unit: unit}) do
+    local = DateTime.shift_zone!(huddl.starts_at, huddl.time_zone)
+    time = Calendar.strftime(local, "%-I:%M %p")
+    day = Calendar.strftime(local, "%A")
+    first = Calendar.strftime(local, "%a, %b %-d")
+
+    pattern =
+      case {interval, unit} do
+        {1, :week} -> "Every #{day}"
+        {2, :week} -> "Every other #{day}"
+        {n, :week} -> "Every #{n} weeks on #{day}"
+        {1, :month} -> "Monthly on the #{ordinal(local.day)}"
+        {n, :month} -> "Every #{n} months on the #{ordinal(local.day)}"
+      end
+
+    "#{pattern} at #{time}, starting #{first}"
+  end
+
+  defp when_line(huddl, moment, _series), do: when_line(huddl, moment)
 
   defp when_line(huddl, moment) do
     local = DateTime.shift_zone!(huddl.starts_at, huddl.time_zone)
@@ -79,6 +109,18 @@ defmodule Huddlz.Social.Post do
     end
   end
 
+  defp ordinal(day) when day in [11, 12, 13], do: "#{day}th"
+
+  defp ordinal(day) do
+    case rem(day, 10) do
+      1 -> "#{day}st"
+      2 -> "#{day}nd"
+      3 -> "#{day}rd"
+      _ -> "#{day}th"
+    end
+  end
+
+  defp blank?(false), do: true
   defp blank?(nil), do: true
   defp blank?(text) when is_binary(text), do: String.trim(text) == ""
 end

@@ -46,6 +46,52 @@ defmodule Huddlz.Social.PostTest do
     end
   end
 
+  describe "a new series" do
+    test "names the pattern and where it starts, without a spots line" do
+      huddl = series_huddl(~N[2026-10-01 18:00:00], event_type: :in_person, max_attendees: 20)
+
+      assert Post.lines(huddl,
+               moment: :series,
+               series: %{interval: 1, unit: :week},
+               link: @link
+             ) == [
+               huddl.title,
+               "Every Thursday at 6:00 PM, starting Thu, Oct 1",
+               "123 Main St, Anytown, USA",
+               @link
+             ]
+    end
+
+    test "says every other week and the day of the month" do
+      huddl = series_huddl(~N[2026-10-22 18:30:00], event_type: :virtual)
+      lines = &Post.lines(huddl, moment: :series, series: &1, link: @link)
+
+      assert "Every other Thursday at 6:30 PM, starting Thu, Oct 22" in lines.(%{
+               interval: 2,
+               unit: :week
+             })
+
+      assert "Monthly on the 22nd at 6:30 PM, starting Thu, Oct 22" in lines.(%{
+               interval: 1,
+               unit: :month
+             })
+    end
+  end
+
+  # The first huddl of a series, as a plain map: the formatter reads no more.
+  defp series_huddl(local, opts) do
+    Map.merge(
+      %{
+        title: "Hack night",
+        starts_at:
+          local |> DateTime.from_naive!("America/New_York") |> DateTime.shift_zone!("Etc/UTC"),
+        time_zone: "America/New_York",
+        physical_location: "123 Main St, Anytown, USA"
+      },
+      Map.new(opts)
+    )
+  end
+
   # A huddl on that date; `going:` is how many people are going, counting the
   # creator, whom creating it signs up.
   defp huddl_at(date, time, opts) do

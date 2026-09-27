@@ -62,9 +62,46 @@ defmodule SocialScheduleSteps do
     publish(context, title, is_private: true)
   end
 
+  step "I publish {string} every Thursday at 6:00 PM for twelve weeks",
+       %{args: [title]} = context do
+    publish_series(context, title, 12)
+  end
+
+  step "I publish {string} every Thursday at 6:00 PM for four weeks",
+       %{args: [title]} = context do
+    publish_series(context, title, 4)
+  end
+
+  step "{string} receives one post saying {string} and linking to the first {string}",
+       %{args: [_channel, pattern, title]} = context do
+    run_scheduler()
+    text = next_post!()
+    assert text =~ title
+    assert text =~ pattern
+    assert text =~ Huddlz.Social.huddl_link(nth_huddl(title, 1))
+    refute_other_posts()
+    context
+  end
+
+  step "the morning of the second {string} arrives", %{args: [title]} = context do
+    title |> nth_huddl(2) |> arrive(:morning_of)
+    context
+  end
+
+  step "{string} receives a post saying the second {string} is today at 6:00 PM",
+       %{args: [_channel, title]} = context do
+    text = next_post!()
+    assert text =~ "Today at 6:00 PM"
+    assert text =~ Huddlz.Social.huddl_link(nth_huddl(title, 2))
+    refute_other_posts()
+    context
+  end
+
   step "{string} is resumed", %{args: [_channel]} = context do
     connection =
-      Huddlz.Communities.resume_social_connection!(context.connection, actor: context.current_user)
+      Huddlz.Communities.resume_social_connection!(context.connection,
+        actor: context.current_user
+      )
 
     Map.put(context, :connection, connection)
   end
@@ -279,10 +316,40 @@ defmodule SocialScheduleSteps do
     Map.merge(context, %{connection: connection, group: group})
   end
 
+  # A weekly series from next Thursday, with its dates generated as the
+  # background job would.
+  defp publish_series(context, title, weeks) do
+    today = eastern_today()
+    # The next Thursday after today, one to seven days out.
+    thursday = Date.add(today, rem(10 - Date.day_of_week(today), 7) + 1)
+
+    publish(context, title,
+      date: thursday,
+      is_recurring: true,
+      frequency: "weekly",
+      repeat_until: Date.add(thursday, 7 * (weeks - 1))
+    )
+
+    Oban.drain_queue(queue: :default)
+    context
+  end
+
+  # The nth huddl of that title, soonest first.
+  defp nth_huddl(title, n) do
+    Huddl
+    |> Ash.Query.filter(title == ^title)
+    |> Ash.Query.sort(starts_at: :asc)
+    |> Ash.Query.load(:group)
+    |> Ash.read!(authorize?: false)
+    |> Enum.at(n - 1)
+  end
+
   # The clock reaches the moment: the post planned for it becomes due, and
   # the scheduler runs as it would each minute.
-  defp moment_arrives(title, moment) do
-    huddl = lookup_huddl(title)
+  defp moment_arrives(title, moment), do: title |> lookup_huddl() |> arrive(moment)
+
+  defp arrive(huddl, moment) do
+    title = huddl.title
     expected = Schedule.due_at(moment, huddl)
 
     post =

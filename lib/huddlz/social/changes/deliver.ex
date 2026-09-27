@@ -71,14 +71,15 @@ defmodule Huddlz.Social.Changes.Deliver do
     Post.text(huddl,
       moment: post.occasion,
       opening_line: connection.opening_line,
-      link: Social.huddl_link(huddl)
+      link: Social.huddl_link(huddl),
+      series: huddl.huddl_template
     )
   end
 
   defp load_huddl(id) do
     Huddl
     |> Ash.Query.for_read(:get_for_mutation, %{id: id})
-    |> Ash.Query.load([:group, :rsvp_count, :waitlist_count])
+    |> Ash.Query.load([:group, :huddl_template, :rsvp_count, :waitlist_count])
     |> Ash.read_one!(authorize?: false)
   end
 end

@@ -73,3 +73,16 @@ Feature: Huddlz are posted on each connection's social schedule
     Then "#general" receives nothing
     When "#general" is resumed
     Then "#general" receives nothing
+
+  Scenario: A series posts once when published
+    Given "Elixir Nashville" posts to the Slack channel "#general" when a huddl is published
+    And I am signed in as "owner@example.com"
+    When I publish "Hack night" every Thursday at 6:00 PM for twelve weeks
+    Then "#general" receives one post saying "Every Thursday at 6:00 PM" and linking to the first "Hack night"
+
+  Scenario: Each huddl in a series gets its own timed posts
+    Given "Elixir Nashville" posts to the Slack channel "#general" the morning of
+    And I am signed in as "owner@example.com"
+    And I publish "Hack night" every Thursday at 6:00 PM for four weeks
+    When the morning of the second "Hack night" arrives
+    Then "#general" receives a post saying the second "Hack night" is today at 6:00 PM

@@ -4,7 +4,8 @@ defmodule Huddlz.Communities.Huddl.Changes.PlanSocialPosts do
   planned on each connection's social schedule while it can be posted,
   moved with its start, and dropped once it cannot (see
   `Huddlz.Social.Schedule`). A huddl that has just gone public is also
-  announced to the connections that post when a huddl is published.
+  announced to the connections that post when a huddl is published; a new
+  series is announced once, by its first huddl, rather than date by date.
   """
 
   use Ash.Resource.Change
@@ -21,10 +22,18 @@ defmodule Huddlz.Communities.Huddl.Changes.PlanSocialPosts do
   end
 
   defp announce(changeset, huddl) do
-    if published_now?(changeset, huddl) and is_nil(huddl.huddl_template_id) do
-      Schedule.announce(huddl)
-    else
-      :ok
+    cond do
+      not published_now?(changeset, huddl) ->
+        :ok
+
+      Ash.Changeset.get_argument(changeset, :is_recurring) == true ->
+        Schedule.announce(huddl, :series)
+
+      is_nil(huddl.huddl_template_id) ->
+        Schedule.announce(huddl, :when_published)
+
+      true ->
+        :ok
     end
   end
 

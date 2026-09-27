@@ -63,10 +63,11 @@ defmodule Huddlz.Social.Schedule do
 
   @doc """
   Post a huddl that has just gone public, straight away, on every
-  connection that posts when a huddl is published.
+  connection that posts when a huddl is published: as itself, or as the
+  first huddl of a new series (`:series`).
   """
-  @spec announce(Huddl.t()) :: :ok
-  def announce(%Huddl{} = huddl) do
+  @spec announce(Huddl.t(), :when_published | :series) :: :ok
+  def announce(%Huddl{} = huddl, occasion) when occasion in [:when_published, :series] do
     huddl = Ash.load!(huddl, [:group], authorize?: false)
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
@@ -74,7 +75,7 @@ defmodule Huddlz.Social.Schedule do
       huddl.group_id
       |> connections_of()
       |> Enum.filter(&(:when_published in &1.moments))
-      |> Enum.each(&schedule!(&1, huddl, :when_published, now))
+      |> Enum.each(&schedule!(&1, huddl, occasion, now))
     end
 
     :ok
