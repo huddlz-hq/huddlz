@@ -115,7 +115,8 @@ defmodule Huddlz.Social.Changes.Deliver do
       opening_line: connection.opening_line,
       link: Social.huddl_link(huddl),
       series: huddl.huddl_template,
-      previous_starts_at: post.previous_starts_at
+      previous_starts_at: post.previous_starts_at,
+      previous_time_zone: post.previous_time_zone
     )
   end
 

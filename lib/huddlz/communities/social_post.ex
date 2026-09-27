@@ -78,7 +78,15 @@ defmodule Huddlz.Communities.SocialPost do
 
     create :schedule do
       description "Plan a post; an existing post for the same moment moves to the new time while still scheduled"
-      accept [:social_connection_id, :huddl_id, :occasion, :due_at, :previous_starts_at]
+
+      accept [
+        :social_connection_id,
+        :huddl_id,
+        :occasion,
+        :due_at,
+        :previous_starts_at,
+        :previous_time_zone
+      ]
 
       upsert? true
       upsert_identity :unique_occasion
@@ -199,6 +207,11 @@ defmodule Huddlz.Communities.SocialPost do
 
     attribute :previous_starts_at, :utc_datetime do
       description "For a moved huddl's follow-up, when it used to start"
+      public? true
+    end
+
+    attribute :previous_time_zone, :string do
+      description "For a moved huddl's follow-up, the time zone it used to start in"
       public? true
     end
 

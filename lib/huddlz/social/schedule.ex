@@ -98,12 +98,13 @@ defmodule Huddlz.Social.Schedule do
 
   @doc """
   Tell every posting connection a huddl has already been posted to that it
-  has been cancelled, or moved from `previous_starts_at`. Connections it
+  has been cancelled, or moved from its previous start and time zone. Connections it
   was never posted to, and paused or broken ones, hear nothing.
   """
-  @spec follow_up(Huddl.t(), :cancelled | :moved, DateTime.t() | nil) :: :ok
-  def follow_up(%Huddl{} = huddl, occasion, previous_starts_at \\ nil)
+  @spec follow_up(Huddl.t(), :cancelled | :moved, {DateTime.t(), String.t()} | nil) :: :ok
+  def follow_up(%Huddl{} = huddl, occasion, previous \\ nil)
       when occasion in [:cancelled, :moved] do
+    {previous_starts_at, previous_time_zone} = previous || {nil, nil}
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     SocialPost
@@ -121,7 +122,8 @@ defmodule Huddlz.Social.Schedule do
         huddl_id: huddl.id,
         occasion: occasion,
         due_at: now,
-        previous_starts_at: previous_starts_at
+        previous_starts_at: previous_starts_at,
+        previous_time_zone: previous_time_zone
       })
       |> Ash.create!(authorize?: false)
     end)

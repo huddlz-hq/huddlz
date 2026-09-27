@@ -15,6 +15,7 @@ defmodule Huddlz.Repo.Migrations.SocialPosts do
       add :state, :text, null: false, default: "scheduled"
       add :sent_at, :utc_datetime_usec
       add :previous_starts_at, :utc_datetime
+      add :previous_time_zone, :text
 
       add :inserted_at, :utc_datetime_usec,
         null: false,

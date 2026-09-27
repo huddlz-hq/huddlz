@@ -52,7 +52,7 @@ defmodule Huddlz.Communities.Huddl.Changes.PlanSocialPosts do
       changeset.action_type == :update and before.lifecycle_state == :published and
         huddl.lifecycle_state == :published and
           DateTime.compare(before.starts_at, huddl.starts_at) != :eq ->
-        Schedule.follow_up(huddl, :moved, before.starts_at)
+        Schedule.follow_up(huddl, :moved, {before.starts_at, before.time_zone})
 
       true ->
         :ok

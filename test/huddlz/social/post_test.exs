@@ -93,6 +93,27 @@ defmodule Huddlz.Social.PostTest do
                ["Cancelled: Hack night on Thu, Oct 1 won't go ahead."]
     end
 
+    test "the old time is read where the huddl was, when it moved time zone" do
+      huddl =
+        huddl_like(~D[2026-10-02], ~T[17:00:00],
+          title: "Hack night",
+          event_type: :virtual,
+          time_zone: "America/Chicago",
+          starts_at: ~U[2026-10-02 22:00:00Z]
+        )
+
+      [line, _link] =
+        Post.lines(huddl,
+          moment: :moved,
+          previous_starts_at: ~U[2026-10-01 22:00:00Z],
+          previous_time_zone: "America/New_York",
+          link: @link
+        )
+
+      assert line ==
+               "New time: Hack night is now Fri, Oct 2 at 5:00 PM CDT (was Thu, Oct 1 at 6:00 PM EDT)."
+    end
+
     test "a moved huddl gives the new time with the old one, and the link" do
       huddl = huddl_like(~D[2026-10-02], ~T[19:00:00], title: "Hack night", event_type: :virtual)
       was = ~U[2026-10-01 22:00:00Z]

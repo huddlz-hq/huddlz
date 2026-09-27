@@ -64,6 +64,42 @@ defmodule Huddlz.Social.DeliveryTest do
     assert DateTime.after?(post.due_at, DateTime.utc_now())
   end
 
+  test "a huddl moved to another time zone gives its old time where it was", %{
+    owner: owner,
+    connection: connection,
+    huddl: huddl
+  } do
+    Ash.Seed.seed!(SocialPost, %{
+      social_connection_id: connection.id,
+      huddl_id: huddl.id,
+      occasion: :week_before,
+      due_at: DateTime.add(DateTime.utc_now(), -1, :day) |> DateTime.truncate(:second),
+      state: :sent
+    })
+
+    # The address book place is in Chicago; the huddl keeps its 6:00 PM
+    # there, an hour later than it was in New York.
+    chicago = generate(group_location(group_id: huddl.group_id, actor: owner))
+
+    moved =
+      Communities.update_huddl!(huddl, %{group_location_id: chicago.id}, actor: owner)
+
+    assert moved.time_zone == "America/Chicago"
+    AshOban.Test.schedule_and_run_triggers(SocialPost, drain_queues?: true)
+
+    assert_received {:social_post, text}
+
+    day =
+      huddl.starts_at
+      |> DateTime.shift_zone!("America/New_York")
+      |> Calendar.strftime("%a, %b %-d")
+
+    was = "#{day} at 6:00 PM EDT"
+    now = "#{day} at 6:00 PM CDT"
+
+    assert text =~ "is now #{now} (was #{was})."
+  end
+
   defp morning_of(huddl) do
     SocialPost
     |> Ash.Query.filter(huddl_id == ^huddl.id and occasion == :morning_of)

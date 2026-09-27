@@ -37,6 +37,7 @@ defmodule Huddlz.Social.Post do
   @type option ::
           {:moment, Moment.t() | :series | :cancelled | :moved}
           | {:previous_starts_at, DateTime.t() | nil}
+          | {:previous_time_zone, String.t() | nil}
           | {:opening_line, String.t() | nil}
           | {:link, String.t()}
           | {:series, series() | nil}
@@ -55,21 +56,28 @@ defmodule Huddlz.Social.Post do
     end
   end
 
+  # The old time is read where the huddl was. When the place moved to
+  # another time zone, both times carry their zone so they can be told apart.
   defp moved_lines(huddl, opts) do
-    was = opts[:previous_starts_at] && " (was #{format_local(opts[:previous_starts_at], huddl)})"
+    was_zone = opts[:previous_time_zone] || huddl.time_zone
+    zones? = was_zone != huddl.time_zone
+    now = format_local(huddl.starts_at, huddl.time_zone, zones?)
 
-    [
-      "New time: #{huddl.title} is now #{format_local(huddl.starts_at, huddl)}#{was}.",
-      opts[:link]
-    ]
+    was =
+      opts[:previous_starts_at] &&
+        " (was #{format_local(opts[:previous_starts_at], was_zone, zones?)})"
+
+    ["New time: #{huddl.title} is now #{now}#{was}.", opts[:link]]
   end
 
   defp start_day(huddl) do
     huddl.starts_at |> DateTime.shift_zone!(huddl.time_zone) |> Calendar.strftime("%a, %b %-d")
   end
 
-  defp format_local(at, huddl) do
-    at |> DateTime.shift_zone!(huddl.time_zone) |> Calendar.strftime("%a, %b %-d at %-I:%M %p")
+  defp format_local(at, time_zone, zone?) do
+    local = DateTime.shift_zone!(at, time_zone)
+    text = Calendar.strftime(local, "%a, %b %-d at %-I:%M %p")
+    if zone?, do: "#{text} #{local.zone_abbr}", else: text
   end
 
   defp announcement_lines(huddl, opts) do
