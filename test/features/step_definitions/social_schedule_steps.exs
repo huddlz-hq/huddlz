@@ -36,6 +36,25 @@ defmodule SocialScheduleSteps do
     connect(context, group_name, channel, moments: [:morning_of], opening_line: line)
   end
 
+  step "{string} posts to the Slack channel {string} when a huddl is published",
+       %{args: [group_name, channel]} = context do
+    connect(context, group_name, channel, moments: [:when_published])
+  end
+
+  step "I publish a public huddl {string} next week", %{args: [title]} = context do
+    publish(context, title, is_private: false)
+  end
+
+  step "{string} receives a post about {string}", %{args: [_channel, title]} = context do
+    run_scheduler()
+    huddl = lookup_huddl(title)
+    text = next_post!()
+    assert text =~ title
+    assert text =~ Huddlz.Social.huddl_link(huddl)
+    refute_other_posts()
+    context
+  end
+
   step "every spot at {string} is taken and someone is on the waitlist",
        %{args: [title]} = context do
     huddl = lookup_huddl(title)
@@ -111,6 +130,30 @@ defmodule SocialScheduleSteps do
     text = next_post!()
     assert text =~ title
     assert text =~ "Full, waitlist open"
+    context
+  end
+
+  # Publishes a huddl a week out as the signed-in organizer.
+  defp publish(context, title, attrs) do
+    group = context[:group] || lookup_group("Elixir Nashville")
+
+    Huddlz.Communities.create_huddl!(
+      Map.merge(
+        %{
+          group_id: group.id,
+          title: title,
+          date: Date.add(eastern_today(), 7),
+          start_time: ~T[18:00:00],
+          duration_minutes: 120,
+          event_type: :virtual,
+          virtual_link: "https://meet.example.com/hack-night",
+          lifecycle_state: :published
+        },
+        Map.new(attrs)
+      ),
+      actor: context.current_user
+    )
+
     context
   end
 

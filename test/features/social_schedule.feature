@@ -32,3 +32,9 @@ Feature: Huddlz are posted on each connection's social schedule
     And every spot at "Hack night" is taken and someone is on the waitlist
     When the morning of "Hack night" arrives
     Then "#general" receives a post saying "Hack night" is full and the waitlist is open
+
+  Scenario: Publishing posts right away
+    Given "Elixir Nashville" posts to the Slack channel "#general" when a huddl is published
+    And I am signed in as "owner@example.com"
+    When I publish a public huddl "Hack night" next week
+    Then "#general" receives a post about "Hack night"

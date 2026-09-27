@@ -61,6 +61,25 @@ defmodule Huddlz.Social.Schedule do
     end
   end
 
+  @doc """
+  Post a huddl that has just gone public, straight away, on every
+  connection that posts when a huddl is published.
+  """
+  @spec announce(Huddl.t()) :: :ok
+  def announce(%Huddl{} = huddl) do
+    huddl = Ash.load!(huddl, [:group], authorize?: false)
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    if postable?(huddl) do
+      huddl.group_id
+      |> connections_of()
+      |> Enum.filter(&(:when_published in &1.moments))
+      |> Enum.each(&schedule!(&1, huddl, :when_published, now))
+    end
+
+    :ok
+  end
+
   @doc "Plan a connection's timed posts for every upcoming huddl of its group."
   @spec plan_connection(SocialConnection.t()) :: :ok
   def plan_connection(%SocialConnection{} = connection) do
