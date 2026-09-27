@@ -10,8 +10,8 @@ defmodule Huddlz.Notifications.Senders.HuddlReminder24hTest do
     group =
       generate(
         group(
-          name: attrs[:group_name] || "Pickup Sports",
-          slug: attrs[:group_slug] || "pickup-sports",
+          name: attrs[:group_name] || "Reminder Pickup Sports",
+          slug: attrs[:group_slug] || "reminder-pickup-sports",
           is_public: true,
           owner_id: owner.id,
           actor: owner
@@ -67,15 +67,15 @@ defmodule Huddlz.Notifications.Senders.HuddlReminder24hTest do
       huddl =
         setup_huddl(%{
           title: "Saturday Soccer",
-          group_name: "Pickup Sports",
-          group_slug: "pickup-sports"
+          group_name: "Reminder Pickup Sports",
+          group_slug: "reminder-pickup-sports"
         })
 
       email = HuddlReminder24h.build(user, %{"huddl_id" => huddl.id})
 
       assert email.html_body =~ "Saturday Soccer"
-      assert email.html_body =~ "Pickup Sports"
-      assert email.html_body =~ "/groups/pickup-sports/huddlz/#{huddl.id}"
+      assert email.html_body =~ "Reminder Pickup Sports"
+      assert email.html_body =~ "/groups/reminder-pickup-sports/huddlz/#{huddl.id}"
     end
 
     test "attaches an .ics calendar event" do
@@ -102,7 +102,7 @@ defmodule Huddlz.Notifications.Senders.HuddlReminder24hTest do
 
     test "html-escapes user-controlled strings in html_body" do
       user = generate(user(display_name: "<script>x</script>"))
-      huddl = setup_huddl(%{title: "<img src=x>", group_name: "<b>Boom</b>"})
+      huddl = setup_huddl(%{title: "<img src=x>", group_name: "<b>Boom</b> 24h"})
 
       email = HuddlReminder24h.build(user, %{"huddl_id" => huddl.id})
 

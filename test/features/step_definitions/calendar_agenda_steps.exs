@@ -11,7 +11,7 @@ defmodule CalendarAgendaSteps do
 
     group =
       context[:agenda_group] ||
-        generate(group(name: "Portland Elixir", owner_id: host.id, is_public: true, actor: host))
+        generate(group(owner_id: host.id, is_public: true, actor: host))
 
     {:ok, start_time} = Time.from_iso8601(time <> ":00")
 
@@ -134,9 +134,10 @@ defmodule CalendarAgendaSteps do
     context
   end
 
-  step "each agenda huddl shows its group and my status", %{session: session} = context do
+  step "each agenda huddl shows its group and my status",
+       %{session: session, agenda_group: group} = context do
     session
-    |> assert_has(".cal-agenda-entry .cal-agenda-meta", text: "Portland Elixir", count: 3)
+    |> assert_has(".cal-agenda-entry .cal-agenda-meta", text: group.name, count: 3)
     |> assert_has(".cal-agenda-entry .cal-entry-status[data-status=going]",
       text: "Going",
       count: 3

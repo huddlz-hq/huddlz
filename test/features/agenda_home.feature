@@ -10,9 +10,9 @@ Feature: Agenda is home
       | ada@example.com | Ada Park     | regular |
 
   Scenario: Signing in lands on the agenda
-    Given a user exists with email "test@example.com" and password "Password123!"
+    Given a user exists with email "test+agenda-home@example.com" and password "Password123!"
     And the user navigates to the sign in page
-    When the user enters "test@example.com" in the email field
+    When the user enters "test+agenda-home@example.com" in the email field
     And the user enters "Password123!" in the password field
     And the user submits the password sign in form
     Then the user lands on the agenda

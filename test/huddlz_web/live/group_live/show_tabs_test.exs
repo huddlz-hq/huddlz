@@ -18,7 +18,7 @@ defmodule HuddlzWeb.GroupLive.ShowTabsTest do
           group(
             owner_id: user.id,
             is_public: true,
-            name: "Test Group",
+            name: "Show Tabs Test Group",
             description: "A short, deterministic group description for tests.",
             actor: user
           )

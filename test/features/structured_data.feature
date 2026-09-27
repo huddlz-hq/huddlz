@@ -1,4 +1,6 @@
-@async @database @conn @structured_data
+# Keep serial: a sitemap refresh holds a database-wide advisory lock until the
+# sandbox transaction ends, so a concurrent refresh would skip generation.
+@database @conn @structured_data
 Feature: Public structured data
   Scenario: An anonymous crawler reads a public huddl's schedule and organizer
     Given a public in-person huddl with a known schedule and address

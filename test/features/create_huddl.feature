@@ -13,8 +13,8 @@ Feature: Create Huddl
       | regular+create-huddl@example.com   | regular  | Regular User |
     And the following groups exist:
       | name                     | owner_email                    | is_public |
-      | Scheduling Tech Meetup | owner+create-huddl@example.com | true      |
-      | Private Group            | owner+create-huddl@example.com | false     |
+      | Scheduling Tech Meetup   | owner+create-huddl@example.com | true      |
+      | Scheduling Private Group | owner+create-huddl@example.com | false     |
     And the following group memberships exist:
       | group_name               | user_email                         | role      |
       | Scheduling Tech Meetup | organizer+create-huddl@example.com | organizer |
@@ -133,7 +133,7 @@ Feature: Create Huddl
 
   Scenario: Private groups create private huddls only
     Given I am signed in as "owner+create-huddl@example.com"
-    When I visit the new huddl page for "Private Group"
+    When I visit the new huddl page for "Scheduling Private Group"
     Then I should not see a checkbox for "Members only"
     And I should see "This will be a private huddl"
     When I fill in the huddl form with:

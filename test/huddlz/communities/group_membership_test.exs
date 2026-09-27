@@ -185,7 +185,7 @@ defmodule Huddlz.Communities.GroupMembershipTest do
         |> Ash.Changeset.for_create(
           :create_group,
           %{
-            name: "Test Group",
+            name: "Membership Rules Test Group",
             description: "Test",
             location: "Saint Augustine, FL",
             time_zone: "America/New_York",

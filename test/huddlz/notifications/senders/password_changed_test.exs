@@ -12,10 +12,10 @@ defmodule Huddlz.Notifications.Senders.PasswordChangedTest do
     end
 
     test "sends to the user's email" do
-      user = generate(user(email: "alice@example.com"))
+      user = generate(user(email: "alice+password-changed@example.com"))
       email = PasswordChanged.build(user, %{})
 
-      assert email.to == [{"", "alice@example.com"}]
+      assert email.to == [{"", "alice+password-changed@example.com"}]
     end
 
     test "uses the configured from-address" do

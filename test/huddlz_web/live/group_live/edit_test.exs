@@ -13,8 +13,8 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       group =
         generate(
           group(
-            name: "Test Group",
-            slug: "test-group",
+            name: "Group Edit Test Group",
+            slug: "group-edit-test-group",
             description: "Original description",
             location: "Original location",
             is_public: true,
@@ -30,8 +30,8 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}/edit")
       |> assert_has("h1", text: "Edit Group")
-      |> assert_has("input[name='form[name]'][value='Test Group']")
-      |> assert_has("input[name='form[slug]'][value='test-group']")
+      |> assert_has("input[name='form[name]'][value='Group Edit Test Group']")
+      |> assert_has("input[name='form[slug]'][value='group-edit-test-group']")
       |> assert_has("#group-visibility-current", text: "Public")
       |> assert_has("#group-visibility-selection", text: "Public group")
       |> assert_has(
@@ -130,8 +130,8 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       private_group =
         generate(
           group(
-            name: "Private Test Group",
-            slug: "private-test-group",
+            name: "Group Edit Private Test Group",
+            slug: "group-edit-private-test-group",
             is_public: false,
             actor: owner
           )
@@ -194,7 +194,7 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       |> fill_in("URL Slug", with: "new-slug")
       |> assert_has("h3", text: "Warning: URL Change")
       |> assert_has(".slug-warn p", text: "Changing the slug will break existing links")
-      |> assert_has(".slug-warn span", text: "/groups/test-group")
+      |> assert_has(".slug-warn span", text: "/groups/group-edit-test-group")
       |> assert_has(".slug-warn span", text: "/groups/new-slug")
     end
 
@@ -225,7 +225,7 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       |> click_button("Save Changes")
       |> assert_has("div[role='alert']", text: "Group updated successfully")
       # After redirect, we should be on the new slug page
-      |> assert_has("h1", text: "Test Group")
+      |> assert_has("h1", text: "Group Edit Test Group")
     end
 
     test "shows location error when submitting with a location that is too long", %{
@@ -250,7 +250,7 @@ defmodule HuddlzWeb.GroupLive.EditTest do
       |> login(owner)
       |> visit(~p"/groups/#{group.slug}/edit")
       |> click_link("Cancel")
-      |> assert_has("h1", text: "Test Group")
+      |> assert_has("h1", text: "Group Edit Test Group")
     end
 
     test "displays current location with city picker UI", %{

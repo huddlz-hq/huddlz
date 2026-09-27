@@ -55,21 +55,21 @@ Feature: Password Authentication
 
   @password_sign_in
   Scenario: User signs in with password
-    Given a user exists with email "existing@example.com" and password "Password123!"
+    Given a user exists with email "existing+password-authentication@example.com" and password "Password123!"
     And I am on the sign-in page
     When I fill in the password sign-in form with:
-      | email    | existing@example.com |
-      | password | Password123!         |
+      | email    | existing+password-authentication@example.com |
+      | password | Password123!                                 |
     And I submit the password sign-in form
     Then I should be signed in
     And I should see "huddlz"
 
   Scenario: User fails to sign in with wrong password
-    Given a user exists with email "existing@example.com" and password "Password123!"
+    Given a user exists with email "existing+password-authentication@example.com" and password "Password123!"
     And I am on the sign-in page
     When I fill in the password sign-in form with:
-      | email    | existing@example.com |
-      | password | WrongPassword        |
+      | email    | existing+password-authentication@example.com |
+      | password | WrongPassword                                |
     And I submit the password sign-in form
     Then I should see "Incorrect email or password"
     And I should not be signed in

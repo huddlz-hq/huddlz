@@ -17,7 +17,7 @@ defmodule Huddlz.Communities.HuddlRsvpEdgeCasesTest do
         |> Ash.Changeset.for_create(
           :create_group,
           %{
-            name: "Test Group",
+            name: "RSVP Edge Cases Test Group",
             description: "A test group",
             location: "Saint Augustine, FL",
             time_zone: "America/New_York",

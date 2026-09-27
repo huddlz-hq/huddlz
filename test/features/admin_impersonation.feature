@@ -11,21 +11,21 @@ Feature: Administrators troubleshoot as a user instead of editing as one
       | other554@example.com  | admin | Admin Avery  |
       | owner554@example.com  | user  | Owner Olive  |
       | member554@example.com | user  | Member Maya  |
-    And a public group "Portland Elixir" exists with owner "owner554@example.com"
-    And "member554@example.com" is a member of "Portland Elixir"
+    And a public group "Impersonation Portland Elixir" exists with owner "owner554@example.com"
+    And "member554@example.com" is a member of "Impersonation Portland Elixir"
 
   Scenario: An administrator cannot edit a group they do not organize
     Given I am signed in as "admin554@example.com"
-    When I visit "/groups/portland-elixir/edit"
-    Then I am told I cannot edit "Portland Elixir"
-    And "admin554@example.com" cannot rename "Portland Elixir" through the API
+    When I visit "/groups/impersonation-portland-elixir/edit"
+    Then I am told I cannot edit "Impersonation Portland Elixir"
+    And "admin554@example.com" cannot rename "Impersonation Portland Elixir" through the API
 
   Scenario: An administrator who organizes a group keeps that role
-    Given "admin554@example.com" is an organizer of "Portland Elixir"
+    Given "admin554@example.com" is an organizer of "Impersonation Portland Elixir"
     And I am signed in as "admin554@example.com"
-    When I visit "/groups/portland-elixir/huddlz/new"
+    When I visit "/groups/impersonation-portland-elixir/huddlz/new"
     Then I am offered to schedule a huddl
-    And "admin554@example.com" cannot transfer ownership of "Portland Elixir"
+    And "admin554@example.com" cannot transfer ownership of "Impersonation Portland Elixir"
 
   Scenario: An administrator views huddlz as a member
     Given I am signed in as "admin554@example.com"
@@ -38,8 +38,8 @@ Feature: Administrators troubleshoot as a user instead of editing as one
 
   Scenario: The impersonated session has only the member's rights
     Given I am viewing huddlz as "member554@example.com"
-    When I visit "/groups/portland-elixir/edit"
-    Then I am told I cannot edit "Portland Elixir"
+    When I visit "/groups/impersonation-portland-elixir/edit"
+    Then I am told I cannot edit "Impersonation Portland Elixir"
 
   Scenario: Stopping returns the administrator to their own session
     Given I am viewing huddlz as "member554@example.com"
@@ -60,7 +60,7 @@ Feature: Administrators troubleshoot as a user instead of editing as one
     But I am offered to view as "owner554@example.com"
 
   Scenario: Start, stop and what happened in between are on record
-    Given the in-person huddl "Kickoff" in "Portland Elixir" is upcoming with 0 RSVPs
+    Given the in-person huddl "Kickoff" in "Impersonation Portland Elixir" is upcoming with 0 RSVPs
     And I am viewing huddlz as "member554@example.com"
     When I RSVP to "Kickoff"
     And I stop viewing as "Member Maya"
@@ -69,25 +69,25 @@ Feature: Administrators troubleshoot as a user instead of editing as one
 
   @admin_private_visibility
   Scenario: Private visibility follows the impersonated member and ends on stop
-    Given "Portland Elixir" is private for impersonation troubleshooting
-    And the in-person huddl "Private planning" in "Portland Elixir" is upcoming with 0 RSVPs
+    Given "Impersonation Portland Elixir" is private for impersonation troubleshooting
+    And the in-person huddl "Private planning" in "Impersonation Portland Elixir" is upcoming with 0 RSVPs
     And I am signed in as "admin554@example.com"
-    Then I cannot discover the private group "Portland Elixir"
+    Then I cannot discover the private group "Impersonation Portland Elixir"
     And I cannot open the private huddl "Private planning"
     When I visit "/admin/users"
     And I choose to view as "member554@example.com"
-    And I visit "/groups/portland-elixir"
-    Then I should see "Portland Elixir"
+    And I visit "/groups/impersonation-portland-elixir"
+    Then I should see "Impersonation Portland Elixir"
     And I should see "Private planning"
     When I stop viewing as "Member Maya"
-    Then I cannot discover the private group "Portland Elixir"
+    Then I cannot discover the private group "Impersonation Portland Elixir"
     And I cannot open the private huddl "Private planning"
 
   @impersonation_edit_audit
   Scenario: An impersonated owner's edit records both identities and the change
     Given I am viewing huddlz as "owner554@example.com"
-    When I rename "Portland Elixir" to "Portland Elixir Updated"
-    Then the group edit to "Portland Elixir Updated" records both impersonation identities
+    When I rename "Impersonation Portland Elixir" to "Impersonation Portland Elixir Updated"
+    Then the group edit to "Impersonation Portland Elixir Updated" records both impersonation identities
 
   @impersonation_profile
   Scenario: Personal profile changes keep impersonation active

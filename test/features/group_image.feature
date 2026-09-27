@@ -23,13 +23,13 @@ Feature: Group Image Management
   Scenario: Creating a group without an image
     Given I am signed in as "group-image-owner@example.com"
     When I visit "/groups/new"
-    And I fill in "Group name" with "No Image Group"
+    And I fill in "Group name" with "Feature No Image Group"
     And I fill in "Description" with "A group without an image"
     And I select "Saint Augustine, FL, USA" as the group city in "America/New_York"
     And I check "Public group"
     And I click "Create group"
     Then I should see "Group created successfully"
-    And I should see "No Image Group"
+    And I should see "Feature No Image Group"
 
   Scenario: Creating a group with an image upload
     Given I am signed in as "group-image-owner@example.com"
@@ -85,9 +85,9 @@ Feature: Group Image Management
   # ===== Group Editing with Image =====
 
   Scenario: Owner can see image upload area when editing a group
-    Given a public group "Edit Test Group" exists with owner "group-image-owner@example.com"
+    Given a public group "Feature Edit Test Group" exists with owner "group-image-owner@example.com"
     And I am signed in as "group-image-owner@example.com"
-    When I visit the edit page for group "Edit Test Group"
+    When I visit the edit page for group "Feature Edit Test Group"
     Then I should see "Cover image"
 
   Scenario: Owner can upload a new image for existing group

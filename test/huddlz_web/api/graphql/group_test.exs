@@ -75,10 +75,10 @@ defmodule HuddlzWeb.Api.Graphql.GroupTest do
       member = generate(user())
       stranger = generate(user())
 
-      owned = generate(group(name: "Owned by member", actor: member, is_public: true))
+      owned = generate(group(name: "GraphQL owned by member", actor: member, is_public: true))
 
       joined =
-        generate(group(name: "Joined by member", actor: stranger, is_public: true))
+        generate(group(name: "GraphQL joined by member", actor: stranger, is_public: true))
 
       generate(group_member(group_id: joined.id, user_id: member.id, actor: stranger))
 

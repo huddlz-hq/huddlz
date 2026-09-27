@@ -20,7 +20,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
         generate(
           group(
             is_public: true,
-            name: "Public Group",
+            name: "Functionality Public Group",
             actor: owner
           )
         )
@@ -29,7 +29,7 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
         generate(
           group(
             is_public: false,
-            name: "Private Group",
+            name: "Functionality Private Group",
             actor: owner
           )
         )
@@ -202,9 +202,21 @@ defmodule Huddlz.Communities.GroupLiveFunctionalityTest do
 
       groups = [
         generate(group(name: "Alpha Group", is_public: true, owner_id: owner1.id, actor: owner1)),
-        generate(group(name: "Beta Group", is_public: true, owner_id: owner2.id, actor: owner2)),
         generate(
-          group(name: "Gamma Group", is_public: false, owner_id: owner1.id, actor: owner1)
+          group(
+            name: "Functionality Beta Group",
+            is_public: true,
+            owner_id: owner2.id,
+            actor: owner2
+          )
+        ),
+        generate(
+          group(
+            name: "Functionality Gamma Group",
+            is_public: false,
+            owner_id: owner1.id,
+            actor: owner1
+          )
         ),
         generate(group(name: "Delta Group", is_public: true, owner_id: owner2.id, actor: owner2))
       ]

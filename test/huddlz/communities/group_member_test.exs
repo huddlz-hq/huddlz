@@ -44,7 +44,7 @@ defmodule Huddlz.Communities.GroupMemberTest do
       group =
         generate(
           group(
-            name: "Membership Test Group",
+            name: "Member Rules Membership Test Group",
             description: "A group for testing membership functions",
             is_public: true,
             actor: owner

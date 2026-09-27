@@ -11,8 +11,8 @@ Feature: Who's going
       | maya14@example.com  | Maya Chen    |
       | sam14@example.com   | Sam Rivera   |
       | quinn14@example.com | Quinn Park   |
-    And a public group "Portland Elixir" exists with owner "owner14@example.com"
-    And an upcoming huddl "Elixir hack night" exists in "Portland Elixir"
+    And a public group "Going Portland Elixir" exists with owner "owner14@example.com"
+    And an upcoming huddl "Elixir hack night" exists in "Going Portland Elixir"
     And "maya14@example.com" and "sam14@example.com" have RSVPd to "Elixir hack night"
 
   Scenario: Someone going sees who else is going
@@ -78,7 +78,7 @@ Feature: Who's going
     Then 14 people going are named
 
   Scenario: Nobody has RSVPd yet
-    Given an upcoming huddl "Lightning talks" exists in "Portland Elixir"
+    Given an upcoming huddl "Lightning talks" exists in "Going Portland Elixir"
     And "owner14@example.com" cancels their RSVP to "Lightning talks"
     And I am signed in as "quinn14@example.com"
     When I visit the huddl "Lightning talks"
@@ -86,7 +86,7 @@ Feature: Who's going
     And I should not see "RSVP to see who's going."
 
   Scenario: An ended huddl shows who RSVPd, not who came
-    Given a past huddl "Elixir retro" exists in "Portland Elixir"
+    Given a past huddl "Elixir retro" exists in "Going Portland Elixir"
     And "maya14@example.com" and "sam14@example.com" have RSVPd to "Elixir retro"
     And I am signed in as "maya14@example.com"
     When I visit the huddl "Elixir retro"
@@ -95,7 +95,7 @@ Feature: Who's going
     And the people going are "You, Sam Rivera"
 
   Scenario: A visitor cannot RSVP to reveal an ended huddl's list
-    Given a past huddl "Elixir retro" exists in "Portland Elixir"
+    Given a past huddl "Elixir retro" exists in "Going Portland Elixir"
     And "maya14@example.com" and "sam14@example.com" have RSVPd to "Elixir retro"
     When I visit the huddl "Elixir retro"
     Then nobody going is named

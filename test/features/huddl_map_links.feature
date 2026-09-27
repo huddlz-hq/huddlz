@@ -6,9 +6,9 @@ Feature: Finding a huddl on a map
 
   Background:
     Given the following users exist:
-      | email            | display_name | role    |
-      | host@example.com | Host User    | regular |
-    And a public group "Map Crew" exists with owner "host@example.com"
+      | email                            | display_name | role    |
+      | host+huddl-map-links@example.com | Host User    | regular |
+    And a public group "Map Crew" exists with owner "host+huddl-map-links@example.com"
 
   Scenario: A visitor can find an in-person huddl on a map
     Given the in-person huddl "Meet nearby" in "Map Crew" is upcoming with 0 RSVPs

@@ -8,7 +8,7 @@ Feature: Address suggestions near the group
       | email                          | role     | display_name |
       | address-bias-owner@example.com | verified | Group Owner  |
     And I am signed in as "address-bias-owner@example.com"
-    And my group "Saint Augustine Neighbors" is based in "America/New_York"
+    And my group "Bias Saint Augustine Neighbors" is based in "America/New_York"
 
   Scenario Outline: Adding an address favors the group's home city
     When I add an address from "<entry point>"
