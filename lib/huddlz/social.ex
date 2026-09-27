@@ -5,6 +5,8 @@ defmodule Huddlz.Social do
   back with into a webhook. Each platform is a `Huddlz.Social.Provider`.
   """
 
+  use HuddlzWeb, :verified_routes
+
   alias Huddlz.Communities.SocialConnection.{EncryptedString, Kind}
   alias Huddlz.Social.Webhook
 
@@ -55,6 +57,10 @@ defmodule Huddlz.Social do
       {:error, :invalid_destination}
     end
   end
+
+  @doc "The link a post carries: the huddl's page, which unfurls with its card."
+  @spec huddl_link(%{id: String.t(), group: %{slug: String.t()}}) :: String.t()
+  def huddl_link(%{id: id, group: %{slug: slug}}), do: url(~p"/groups/#{slug}/huddlz/#{id}")
 
   @doc "The words a test post carries."
   @spec test_post_text(String.t()) :: String.t()

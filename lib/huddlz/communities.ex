@@ -213,6 +213,8 @@ defmodule Huddlz.Communities do
       define :send_social_test_post, action: :send_test_post, args: [:id]
     end
 
+    resource Huddlz.Communities.SocialPost
+
     resource Huddlz.Communities.GroupLocation do
       define :create_group_location,
         action: :create,
