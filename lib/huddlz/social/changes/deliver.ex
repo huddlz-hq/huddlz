@@ -13,6 +13,8 @@ defmodule Huddlz.Social.Changes.Deliver do
 
   use Ash.Resource.Change
 
+  require Ash.Query
+
   alias Huddlz.Communities
   alias Huddlz.Communities.{Huddl, SocialConnection}
   alias Huddlz.Communities.SocialConnection.Kind
@@ -29,7 +31,7 @@ defmodule Huddlz.Social.Changes.Deliver do
   end
 
   defp deliver(%{data: %{state: :scheduled} = post} = changeset) do
-    connection = Ash.get!(SocialConnection, post.social_connection_id, authorize?: false)
+    connection = lock_connection(post.social_connection_id)
     huddl = load_huddl(post.huddl_id)
     now = DateTime.utc_now()
 
@@ -108,6 +110,15 @@ defmodule Huddlz.Social.Changes.Deliver do
       series: huddl.huddl_template,
       previous_starts_at: post.previous_starts_at
     )
+  end
+
+  # Posts through one connection go one at a time, so a refusal is seen by
+  # the next post and the owner is emailed once.
+  defp lock_connection(id) do
+    SocialConnection
+    |> Ash.Query.filter(id == ^id)
+    |> Ash.Query.lock(:for_update)
+    |> Ash.read_one!(authorize?: false)
   end
 
   defp load_huddl(id) do
