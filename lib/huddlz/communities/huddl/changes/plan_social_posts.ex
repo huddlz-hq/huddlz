@@ -31,11 +31,11 @@ defmodule Huddlz.Communities.Huddl.Changes.PlanSocialPosts do
       not published_now?(changeset, huddl) ->
         :ok
 
-      Ash.Changeset.get_argument(changeset, :is_recurring) == true ->
-        Schedule.announce(huddl, :series)
-
       is_nil(huddl.huddl_template_id) ->
         Schedule.announce(huddl, :when_published)
+
+      series_published?(changeset) ->
+        Schedule.announce(huddl, :series)
 
       true ->
         :ok
@@ -58,6 +58,14 @@ defmodule Huddlz.Communities.Huddl.Changes.PlanSocialPosts do
         :ok
     end
   end
+
+  # A series goes public when it is created published, or when a drafted
+  # date of it is published; its generated dates never announce themselves.
+  # `Schedule.announce/2` posts a series once per connection.
+  defp series_published?(%{action_type: :create} = changeset),
+    do: Ash.Changeset.get_argument(changeset, :is_recurring) == true
+
+  defp series_published?(_changeset), do: true
 
   defp published_now?(%{action_type: :create}, huddl), do: huddl.lifecycle_state == :published
 

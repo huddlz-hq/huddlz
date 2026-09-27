@@ -88,6 +88,15 @@ Feature: Huddlz are posted on each connection's social schedule
     When I publish "Hack night" every Thursday at 6:00 PM for twelve weeks
     Then "#general" receives one post saying "Every Thursday at 6:00 PM" and linking to the first "Hack night"
 
+  Scenario: A draft series posts once when its first huddl is published
+    Given "Elixir Nashville" posts to the Slack channel "#general" when a huddl is published
+    And I am signed in as "owner@example.com"
+    And I have drafted "Hack night" every Thursday at 6:00 PM for four weeks
+    When I publish the first "Hack night"
+    Then "#general" receives one post saying "Every Thursday at 6:00 PM" and linking to the first "Hack night"
+    When I publish the second "Hack night"
+    Then "#general" receives nothing
+
   Scenario: Each huddl in a series gets its own timed posts
     Given "Elixir Nashville" posts to the Slack channel "#general" the morning of
     And I am signed in as "owner@example.com"

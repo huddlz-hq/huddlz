@@ -67,6 +67,27 @@ defmodule SocialScheduleSteps do
     publish_series(context, title, 12)
   end
 
+  step "I have drafted {string} every Thursday at 6:00 PM for four weeks",
+       %{args: [title]} = context do
+    publish_series(context, title, 4, lifecycle_state: :draft)
+  end
+
+  step "I publish the first {string}", %{args: [title]} = context do
+    title
+    |> nth_huddl(1, context.current_user)
+    |> Huddlz.Communities.publish_huddl!(actor: context.current_user)
+
+    context
+  end
+
+  step "I publish the second {string}", %{args: [title]} = context do
+    title
+    |> nth_huddl(2, context.current_user)
+    |> Huddlz.Communities.publish_huddl!(actor: context.current_user)
+
+    context
+  end
+
   step "I publish {string} every Thursday at 6:00 PM for four weeks",
        %{args: [title]} = context do
     publish_series(context, title, 4)
@@ -447,29 +468,32 @@ defmodule SocialScheduleSteps do
 
   # A weekly series from next Thursday, with its dates generated as the
   # background job would.
-  defp publish_series(context, title, weeks) do
+  defp publish_series(context, title, weeks, attrs \\ []) do
     today = eastern_today()
     # The next Thursday after today, one to seven days out.
     thursday = Date.add(today, rem(10 - Date.day_of_week(today), 7) + 1)
 
-    publish(context, title,
+    [
       date: thursday,
       is_recurring: true,
       frequency: "weekly",
       repeat_until: Date.add(thursday, 7 * (weeks - 1))
-    )
+    ]
+    |> Keyword.merge(attrs)
+    |> then(&publish(context, title, &1))
 
     Oban.drain_queue(queue: :default)
     context
   end
 
-  # The nth huddl of that title, soonest first.
-  defp nth_huddl(title, n) do
+  # The nth huddl of that title, soonest first, as someone who can see it
+  # (drafts only show to the group's organizers).
+  defp nth_huddl(title, n, actor \\ nil) do
     Huddl
     |> Ash.Query.filter(title == ^title)
     |> Ash.Query.sort(starts_at: :asc)
     |> Ash.Query.load(:group)
-    |> Ash.read!(authorize?: false)
+    |> Ash.read!(actor: actor, authorize?: false)
     |> Enum.at(n - 1)
   end
 

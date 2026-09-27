@@ -72,14 +72,29 @@ defmodule Huddlz.Social.Schedule do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     if postable?(huddl) do
+      announced = announced_series(huddl, occasion)
+
       huddl.group_id
       |> connections_of()
       |> Enum.filter(&(&1.state == :posting and :when_published in &1.moments))
+      |> Enum.reject(&(&1.id in announced))
       |> Enum.each(&schedule!(&1, huddl, occasion, now))
     end
 
     :ok
   end
+
+  # The connections a series has already been announced on: a drafted
+  # series is published a date at a time, and only the first announces it.
+  defp announced_series(%{huddl_template_id: template_id}, :series) do
+    SocialPost
+    |> Ash.Query.filter(occasion == :series and huddl.huddl_template_id == ^template_id)
+    |> Ash.Query.select([:social_connection_id])
+    |> Ash.read!(authorize?: false)
+    |> Enum.map(& &1.social_connection_id)
+  end
+
+  defp announced_series(_huddl, :when_published), do: []
 
   @doc """
   Tell every posting connection a huddl has already been posted to that it
