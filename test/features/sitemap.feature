@@ -1,4 +1,6 @@
-@async @database @conn @sitemap
+# Keep serial: a sitemap refresh holds a database-wide advisory lock until the
+# sandbox transaction ends, so a concurrent refresh would skip generation.
+@database @conn @sitemap
 Feature: Discover public pages through sitemaps
   Scenario: A crawler discovers public canonical pages
     Given a public group with a published huddl for sitemap discovery
