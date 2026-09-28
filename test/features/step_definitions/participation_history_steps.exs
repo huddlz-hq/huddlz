@@ -35,7 +35,7 @@ defmodule ParticipationHistorySteps do
   # back afterwards, versions included.
   step "{string} was created, edited and had its turnout recorded four months ago",
        %{args: [title]} = context do
-    group = find_group("Portland Elixir")
+    group = find_group("History Portland Elixir")
     owner = Ash.get!(User, group.owner_id, authorize?: false)
     starts_at = DateTime.add(DateTime.utc_now(), 3, :day)
 
@@ -138,7 +138,10 @@ defmodule ParticipationHistorySteps do
        %{args: [owner_email, email]} = context do
     owner = find_user(owner_email)
     member = find_user(email)
-    assert [removal] = member_versions(member, find_group("Portland Elixir"), :remove_member)
+
+    assert [removal] =
+             member_versions(member, find_group("History Portland Elixir"), :remove_member)
+
     assert removal.actor_id == owner.id
     assert removal.changes["user_id"] == member.id
     context

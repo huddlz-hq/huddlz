@@ -1,5 +1,7 @@
 defmodule HuddlzWeb.SitemapControllerTest do
-  use HuddlzWeb.ConnCase, async: true
+  # async: false — a sitemap refresh holds a database-wide advisory lock until
+  # the sandbox transaction ends, so a concurrent refresh would skip generation.
+  use HuddlzWeb.ConnCase, async: false
   @moduletag :sitemap
   alias Huddlz.Sitemaps
 

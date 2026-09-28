@@ -7,13 +7,13 @@ Feature: Link previews without a cover picture
   huddlz site card, so a pasted huddlz.com link never unfurls without a picture.
 
   Scenario: A public huddl without a cover advertises a generated preview picture
-    Given a public group "Phoenix Elixir Meetup" hosting an upcoming huddl "Hands-on with Ash Framework" with no cover picture
+    Given a public group "Preview Phoenix Elixir Meetup" hosting an upcoming huddl "Hands-on with Ash Framework" with no cover picture
     When a link preview fetches the huddl page
     Then the page advertises a generated preview picture
     And that picture is a 1200 by 630 PNG
 
   Scenario: A huddl without its own cover shares its group's cover picture
-    Given a public group "Phoenix Elixir Meetup" with a cover picture
+    Given a public group "Preview Phoenix Elixir Meetup" with a cover picture
     And an upcoming huddl "Hands-on with Ash Framework" in that group with no cover of its own
     When a link preview fetches the huddl page
     Then the page advertises the group's cover picture
@@ -24,7 +24,7 @@ Feature: Link previews without a cover picture
     Then there is nothing to fetch
 
   Scenario: A public group without a cover advertises a generated preview picture
-    Given a public group "Phoenix Elixir Meetup" with no cover picture
+    Given a public group "Preview Phoenix Elixir Meetup" with no cover picture
     When a link preview fetches the group page
     Then the page advertises a generated group preview picture
     And that picture is a 1200 by 630 PNG
@@ -44,7 +44,7 @@ Feature: Link previews without a cover picture
     Then the page advertises the huddlz site card as its preview picture
 
   Scenario: Pages with their own picture keep it
-    Given a public group "Phoenix Elixir Meetup" with no cover picture
+    Given a public group "Preview Phoenix Elixir Meetup" with no cover picture
     When a link preview fetches the group page
     Then the page advertises a generated group preview picture
     And the page does not advertise the site card

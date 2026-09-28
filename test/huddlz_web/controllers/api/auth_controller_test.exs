@@ -34,7 +34,7 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
 
     test "creates a user and returns a JWT that authenticates the user", %{conn: conn} do
       params = %{
-        "email" => "alice@example.com",
+        "email" => "alice+auth-controller@example.com",
         "display_name" => "Alice",
         "password" => "correct horse battery staple",
         "password_confirmation" => "correct horse battery staple",
@@ -44,7 +44,7 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
       conn = post(conn, "/api/auth/register", params)
 
       assert %{"token" => token, "user" => user} = json_response(conn, 201)
-      assert user["email"] == "alice@example.com"
+      assert user["email"] == "alice+auth-controller@example.com"
       assert user["display_name"] == "Alice"
       assert is_binary(user["id"])
       assert is_binary(token)
@@ -53,10 +53,10 @@ defmodule HuddlzWeb.Api.AuthControllerTest do
     end
 
     test "rejects duplicate email with 422", %{conn: conn} do
-      _existing = generate(user(email: "taken@example.com"))
+      _existing = generate(user(email: "taken+auth-controller@example.com"))
 
       params = %{
-        "email" => "taken@example.com",
+        "email" => "taken+auth-controller@example.com",
         "display_name" => "New",
         "password" => "correct horse battery staple",
         "password_confirmation" => "correct horse battery staple",

@@ -13,11 +13,11 @@ Feature: The admin overview shows how drop-ins use huddlz
       | dev611@example.com   | user  | Dev Patel    |
       | jon611@example.com   | user  | Jon Park     |
       | ana611@example.com   | user  | Ana Silva    |
-    And a public group "Tuesday Runners" exists with owner "owner611@example.com"
+    And a public group "Admin Drop Ins Tuesday Runners" exists with owner "owner611@example.com"
 
   Scenario: RSVPs from people who weren't members are counted
-    Given 3 people RSVPd to a huddl of "Tuesday Runners" without joining the group
-    And 5 members of "Tuesday Runners" RSVPd to one of its huddlz
+    Given 3 people RSVPd to a huddl of "Admin Drop Ins Tuesday Runners" without joining the group
+    And 5 members of "Admin Drop Ins Tuesday Runners" RSVPd to one of its huddlz
     And I am signed in as "admin611@example.com"
     When I visit "/admin"
     Then the platform "RSVPs" figure shows "8"
@@ -25,35 +25,35 @@ Feature: The admin overview shows how drop-ins use huddlz
     And the Drop-ins panel says "3 people across 1 group"
 
   Scenario: Someone who joined before they RSVPd is not a drop-in
-    Given "maya611@example.com" joined "Tuesday Runners" and then RSVPd to one of its huddlz
+    Given "maya611@example.com" joined "Admin Drop Ins Tuesday Runners" and then RSVPd to one of its huddlz
     And I am signed in as "admin611@example.com"
     When I visit "/admin"
     Then the platform "RSVPs" figure shows "1"
     And the Drop-ins panel says "No RSVPs came from people who weren't members of the group in this period."
 
   Scenario: Someone who RSVPd while a member and has since left is not a drop-in
-    Given "maya611@example.com" joined "Tuesday Runners" and then RSVPd to one of its huddlz
-    And "maya611@example.com" leaves "Tuesday Runners"
+    Given "maya611@example.com" joined "Admin Drop Ins Tuesday Runners" and then RSVPd to one of its huddlz
+    And "maya611@example.com" leaves "Admin Drop Ins Tuesday Runners"
     And I am signed in as "admin611@example.com"
     When I visit "/admin"
     Then the Drop-ins panel says "No RSVPs came from people who weren't members of the group in this period."
 
   Scenario: A founding owner's RSVPs remain member RSVPs after transferring ownership and leaving
-    Given "owner611@example.com" RSVPd to another huddl of "Tuesday Runners"
-    And "maya611@example.com" joined "Tuesday Runners" from "the group page"
-    And "owner611@example.com" transfers "Tuesday Runners" to "maya611@example.com"
-    And "owner611@example.com" leaves "Tuesday Runners"
+    Given "owner611@example.com" RSVPd to another huddl of "Admin Drop Ins Tuesday Runners"
+    And "maya611@example.com" joined "Admin Drop Ins Tuesday Runners" from "the group page"
+    And "owner611@example.com" transfers "Admin Drop Ins Tuesday Runners" to "maya611@example.com"
+    And "owner611@example.com" leaves "Admin Drop Ins Tuesday Runners"
     And I am signed in as "admin611@example.com"
     When I visit "/admin"
     Then the platform "RSVPs" figure shows "1"
     And the Drop-ins panel says "No RSVPs came from people who weren't members of the group in this period."
 
   Scenario: A waitlist spot becomes an RSVP when it is promoted
-    Given the following capped huddl exists in "Tuesday Runners":
+    Given the following capped huddl exists in "Admin Drop Ins Tuesday Runners":
       | title    | description | event_type | starts_at | virtual_link          | max_attendees |
       | Long Run | Weekly run  | virtual    | tomorrow  | https://meet.test/run | 1             |
     And "maya611@example.com" is on the waitlist for "Long Run"
-    And "maya611@example.com" joined "Tuesday Runners" from "the group page"
+    And "maya611@example.com" joined "Admin Drop Ins Tuesday Runners" from "the group page"
     And "owner611@example.com" cancels their RSVP to "Long Run"
     And I am signed in as "admin611@example.com"
     When I visit "/admin"
@@ -61,7 +61,7 @@ Feature: The admin overview shows how drop-ins use huddlz
     And the Drop-ins panel says "No RSVPs came from people who weren't members of the group in this period."
 
   Scenario: A promoted RSVP belongs to the period it was promoted in
-    Given the following capped huddl exists in "Tuesday Runners":
+    Given the following capped huddl exists in "Admin Drop Ins Tuesday Runners":
       | title    | description | event_type | starts_at | virtual_link          | max_attendees |
       | Long Run | Weekly run  | virtual    | tomorrow  | https://meet.test/run | 1             |
     And "maya611@example.com" is on the waitlist for "Long Run"
@@ -73,11 +73,11 @@ Feature: The admin overview shows how drop-ins use huddlz
     And the Drop-ins panel says "1 of 1 RSVP came from a person who wasn't a member of the group"
 
   Scenario: What drop-ins did next
-    Given "maya611@example.com" dropped in on "Tuesday Runners"
-    And "maya611@example.com" joined "Tuesday Runners" from "the group page"
-    And "dev611@example.com" dropped in on "Tuesday Runners"
-    And "dev611@example.com" RSVPd to another huddl of "Tuesday Runners"
-    And "jon611@example.com" dropped in on "Tuesday Runners"
+    Given "maya611@example.com" dropped in on "Admin Drop Ins Tuesday Runners"
+    And "maya611@example.com" joined "Admin Drop Ins Tuesday Runners" from "the group page"
+    And "dev611@example.com" dropped in on "Admin Drop Ins Tuesday Runners"
+    And "dev611@example.com" RSVPd to another huddl of "Admin Drop Ins Tuesday Runners"
+    And "jon611@example.com" dropped in on "Admin Drop Ins Tuesday Runners"
     And I am signed in as "admin611@example.com"
     When I visit "/admin"
     Then the Drop-ins panel says "4 of 4 RSVPs came from people who weren't members of the group"
@@ -87,9 +87,9 @@ Feature: The admin overview shows how drop-ins use huddlz
     And the Drop-ins panel shows 1 for "Haven't RSVPd again"
 
   Scenario: Joining wins over RSVPing again
-    Given "maya611@example.com" dropped in on "Tuesday Runners"
-    And "maya611@example.com" RSVPd to another huddl of "Tuesday Runners"
-    And "maya611@example.com" joined "Tuesday Runners" from "the group page"
+    Given "maya611@example.com" dropped in on "Admin Drop Ins Tuesday Runners"
+    And "maya611@example.com" RSVPd to another huddl of "Admin Drop Ins Tuesday Runners"
+    And "maya611@example.com" joined "Admin Drop Ins Tuesday Runners" from "the group page"
     And I am signed in as "admin611@example.com"
     When I visit "/admin"
     Then the Drop-ins panel shows 1 for "Joined the group"
@@ -97,19 +97,19 @@ Feature: The admin overview shows how drop-ins use huddlz
     And the Drop-ins panel shows 0 for "Haven't RSVPd again"
 
   Scenario: Someone who joined and has since left still counts as joined
-    Given "maya611@example.com" dropped in on "Tuesday Runners"
-    And "maya611@example.com" joined "Tuesday Runners" from "the join suggestion email"
-    And "maya611@example.com" leaves "Tuesday Runners"
+    Given "maya611@example.com" dropped in on "Admin Drop Ins Tuesday Runners"
+    And "maya611@example.com" joined "Admin Drop Ins Tuesday Runners" from "the join suggestion email"
+    And "maya611@example.com" leaves "Admin Drop Ins Tuesday Runners"
     And I am signed in as "admin611@example.com"
     When I visit "/admin"
     Then the Drop-ins panel shows 1 for "Joined the group"
     And the Drop-ins panel shows 1 for "The join suggestion email"
 
   Scenario: Joins are split by where they came from
-    Given "maya611@example.com" dropped in on "Tuesday Runners"
-    And "maya611@example.com" joined "Tuesday Runners" from "the join suggestion email"
-    And "ana611@example.com" dropped in on "Tuesday Runners"
-    And "ana611@example.com" joined "Tuesday Runners" from "the huddl page"
+    Given "maya611@example.com" dropped in on "Admin Drop Ins Tuesday Runners"
+    And "maya611@example.com" joined "Admin Drop Ins Tuesday Runners" from "the join suggestion email"
+    And "ana611@example.com" dropped in on "Admin Drop Ins Tuesday Runners"
+    And "ana611@example.com" joined "Admin Drop Ins Tuesday Runners" from "the huddl page"
     And I am signed in as "admin611@example.com"
     When I visit "/admin"
     Then the Drop-ins panel says "Where the 2 joins came from"
@@ -118,22 +118,22 @@ Feature: The admin overview shows how drop-ins use huddlz
     And the Drop-ins panel shows 0 for "The group page"
 
   Scenario: A join with no recorded source
-    Given "maya611@example.com" dropped in on "Tuesday Runners"
-    And "maya611@example.com" joins "Tuesday Runners" through "GraphQL" without naming a source
+    Given "maya611@example.com" dropped in on "Admin Drop Ins Tuesday Runners"
+    And "maya611@example.com" joins "Admin Drop Ins Tuesday Runners" through "GraphQL" without naming a source
     And I am signed in as "admin611@example.com"
     When I visit "/admin"
     Then the Drop-ins panel shows 1 for "No recorded source"
 
   Scenario: What the suggestion emails led to
-    Given an upcoming huddl "Long Run" exists in "Tuesday Runners"
+    Given an upcoming huddl "Long Run" exists in "Admin Drop Ins Tuesday Runners"
     And "maya611@example.com" has RSVPd to "Long Run"
     And "dev611@example.com" has RSVPd to "Long Run"
     And "jon611@example.com" has RSVPd to "Long Run"
     And "ana611@example.com" has RSVPd to "Long Run"
     And "Long Run" completes
     And a day passes
-    And "maya611@example.com" joined "Tuesday Runners" from "the join suggestion email"
-    And "dev611@example.com" chose not now for "Tuesday Runners"
+    And "maya611@example.com" joined "Admin Drop Ins Tuesday Runners" from "the join suggestion email"
+    And "dev611@example.com" chose not now for "Admin Drop Ins Tuesday Runners"
     And "jon611@example.com" turned off suggestions to join groups they've dropped in on
     And I am signed in as "admin611@example.com"
     When I visit "/admin"
@@ -144,7 +144,7 @@ Feature: The admin overview shows how drop-ins use huddlz
     And the Drop-ins panel shows 1 for "Nothing yet"
 
   Scenario: The panel follows the period
-    Given "maya611@example.com" dropped in on "Tuesday Runners" 60 days ago
+    Given "maya611@example.com" dropped in on "Admin Drop Ins Tuesday Runners" 60 days ago
     And I am signed in as "admin611@example.com"
     When I visit "/admin?period=30d"
     Then the Drop-ins panel says "No RSVPs came from people who weren't members of the group in this period."
@@ -153,31 +153,31 @@ Feature: The admin overview shows how drop-ins use huddlz
     And the Drop-ins panel says "1 person across 1 group"
 
   Scenario: A period that starts before the data does
-    Given "maya611@example.com" dropped in on "Tuesday Runners" 10 days ago
+    Given "maya611@example.com" dropped in on "Admin Drop Ins Tuesday Runners" 10 days ago
     And I am signed in as "admin611@example.com"
     When I visit "/admin?period=90d"
     Then the Drop-ins panel says it has been measured since 10 days ago
 
   Scenario: A period the data covers says nothing about measuring
-    Given "maya611@example.com" dropped in on "Tuesday Runners" 60 days ago
+    Given "maya611@example.com" dropped in on "Admin Drop Ins Tuesday Runners" 60 days ago
     And I am signed in as "admin611@example.com"
     When I visit "/admin?period=30d"
     Then the Drop-ins panel does not say when it has been measured since
 
   Scenario: Nothing to show
-    Given 2 members of "Tuesday Runners" RSVPd to one of its huddlz
+    Given 2 members of "Admin Drop Ins Tuesday Runners" RSVPd to one of its huddlz
     And I am signed in as "admin611@example.com"
     When I visit "/admin"
     Then the Drop-ins panel says "No RSVPs came from people who weren't members of the group in this period."
     And the Drop-ins panel does not offer a breakdown
 
   Scenario: Suggestions from an earlier RSVP do not replace the empty period message
-    Given an upcoming huddl "Long Run" exists in "Tuesday Runners"
+    Given an upcoming huddl "Long Run" exists in "Admin Drop Ins Tuesday Runners"
     And "maya611@example.com" has RSVPd to "Long Run"
     And the RSVP from "maya611@example.com" to "Long Run" was made 60 days ago
     And "Long Run" completes
     And a day passes
-    And "maya611@example.com" receives an email suggesting they join "Tuesday Runners"
+    And "maya611@example.com" receives an email suggesting they join "Admin Drop Ins Tuesday Runners"
     And I am signed in as "admin611@example.com"
     When I visit "/admin?period=30d"
     Then the Drop-ins panel says "No RSVPs came from people who weren't members of the group in this period."
@@ -187,7 +187,7 @@ Feature: The admin overview shows how drop-ins use huddlz
     And the Drop-ins panel shows 1 for "Nothing yet"
 
   Scenario: The figures come with the platform overview action
-    Given 3 people RSVPd to a huddl of "Tuesday Runners" without joining the group
+    Given 3 people RSVPd to a huddl of "Admin Drop Ins Tuesday Runners" without joining the group
     When "admin611@example.com" runs the platform overview action
     Then its drop-in figures count 3 of 3 RSVPs
 

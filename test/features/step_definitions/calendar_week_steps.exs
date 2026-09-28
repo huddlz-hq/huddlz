@@ -54,7 +54,7 @@ defmodule CalendarWeekSteps do
   end
 
   step "the day panel lists {string} then {string} with their times and places",
-       %{args: [first, second], session: session} = context do
+       %{args: [first, second], session: session, agenda_group: group} = context do
     session = assert_has(session, "#calendar-day-panel")
 
     assert render_texts(session, "#calendar-day-panel .cal-agenda-title") == [first, second]
@@ -64,7 +64,7 @@ defmodule CalendarWeekSteps do
     assert String.starts_with?(evening, "6:30 PM")
 
     session
-    |> assert_has("#calendar-day-panel .cal-agenda-meta", text: "Portland Elixir", count: 2)
+    |> assert_has("#calendar-day-panel .cal-agenda-meta", text: to_string(group.name), count: 2)
     |> assert_has("#calendar-day-panel .cal-agenda-day-title", text: day_heading(17))
 
     context

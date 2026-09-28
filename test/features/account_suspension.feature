@@ -12,9 +12,9 @@ Feature: Administrators suspend abusive accounts and restore mistaken suspension
       | owner587@example.com  | user  | Owner Olive        |
       | spam587@example.com   | user  | Crypto Kings Promo |
       | member587@example.com | user  | Member Maya        |
-    And a public group "Portland Elixir" exists with owner "owner587@example.com"
-    And "spam587@example.com" is an organizer of "Portland Elixir"
-    And "member587@example.com" is an organizer of "Portland Elixir"
+    And a public group "Suspension Portland Elixir" exists with owner "owner587@example.com"
+    And "spam587@example.com" is an organizer of "Suspension Portland Elixir"
+    And "member587@example.com" is an organizer of "Suspension Portland Elixir"
 
   Scenario: An administrator suspends an account with a reason
     Given I am signed in as "admin587@example.com"
@@ -53,7 +53,7 @@ Feature: Administrators suspend abusive accounts and restore mistaken suspension
     Then the other device is signed out with "This account is suspended"
     And the API key of "spam587@example.com" is rejected
     And "spam587@example.com" cannot sign in with password "Password123!"
-    But the public group page for "Portland Elixir" is still open to browse
+    But the public group page for "Suspension Portland Elixir" is still open to browse
 
   @suspension_socket
   Scenario: Suspension ends access on an already connected API client
@@ -80,25 +80,25 @@ Feature: Administrators suspend abusive accounts and restore mistaken suspension
     And "spam587@example.com" is still unconfirmed
 
   Scenario: A suspended account disappears from member lists and who's going
-    Given the huddl "Elixir Hack Night" exists in group "Portland Elixir" hosted by "owner587@example.com"
+    Given the huddl "Elixir Hack Night" exists in group "Suspension Portland Elixir" hosted by "owner587@example.com"
     And "spam587@example.com" has RSVPed to "Elixir Hack Night"
     And "member587@example.com" has RSVPed to "Elixir Hack Night"
     And "admin587@example.com" suspends "spam587@example.com" for "Spam"
     Given I am signed in as "owner587@example.com"
-    When I open the organizer roster for "Portland Elixir"
+    When I open the organizer roster for "Suspension Portland Elixir"
     Then I should see "2 people"
     And I should not see "Crypto Kings Promo"
-    When I visit the group page for "Portland Elixir"
+    When I visit the group page for "Suspension Portland Elixir"
     Then I should not see "Crypto Kings Promo"
     Given I am signed in as "member587@example.com"
     When I visit the huddl page for "Elixir Hack Night"
     Then I should see "Member Maya"
     And I should not see "Crypto Kings Promo"
-    And the API members of "Portland Elixir" do not include "Crypto Kings Promo"
+    And the API members of "Suspension Portland Elixir" do not include "Crypto Kings Promo"
     And the API people going to "Elixir Hack Night" do not include "Crypto Kings Promo"
 
   Scenario: Records that must keep their author show a neutral label
-    Given the past huddl "Coin Listing Party" exists in group "Portland Elixir" hosted by "spam587@example.com"
+    Given the past huddl "Coin Listing Party" exists in group "Suspension Portland Elixir" hosted by "spam587@example.com"
     And "spam587@example.com" attended "Coin Listing Party"
     And "member587@example.com" attended "Coin Listing Party"
     When "admin587@example.com" suspends "spam587@example.com" for "Spam"
@@ -108,12 +108,12 @@ Feature: Administrators suspend abusive accounts and restore mistaken suspension
     And I should not see "Crypto Kings Promo"
     And the people going to "Coin Listing Party" read through the API include "Suspended account" but not "Crypto Kings Promo"
     Given I am signed in as "owner587@example.com"
-    When I visit "/organize/portland-elixir"
+    When I visit "/organize/suspension-portland-elixir"
     Then the feed shows "Suspended account RSVPd to Coin Listing Party"
     And the feed does not show "Crypto Kings Promo RSVPd to Coin Listing Party"
 
   Scenario: Suspension releases upcoming spots and lets the waitlist move
-    Given the huddl "Full House" exists in group "Portland Elixir" hosted by "spam587@example.com"
+    Given the huddl "Full House" exists in group "Suspension Portland Elixir" hosted by "spam587@example.com"
     And "Full House" has room for 1 people
     And "member587@example.com" is on the waitlist for "Full House"
     When "admin587@example.com" suspends "spam587@example.com" for "Spam"
@@ -122,7 +122,7 @@ Feature: Administrators suspend abusive accounts and restore mistaken suspension
     And the RSVP by "spam587@example.com" to "Full House" is still on record
 
   Scenario: A suspended person on a waitlist is never promoted
-    Given the huddl "Tight Squeeze" exists in group "Portland Elixir" hosted by "member587@example.com"
+    Given the huddl "Tight Squeeze" exists in group "Suspension Portland Elixir" hosted by "member587@example.com"
     And "Tight Squeeze" has room for 1 people
     And "spam587@example.com" is on the waitlist for "Tight Squeeze"
     And "owner587@example.com" is on the waitlist for "Tight Squeeze"
@@ -135,7 +135,7 @@ Feature: Administrators suspend abusive accounts and restore mistaken suspension
   Scenario: Owned groups and upcoming huddlz stay and are flagged for review
     Given a public group "Crypto Kings PDX" exists with owner "spam587@example.com"
     And the huddl "Coin Launch" exists in group "Crypto Kings PDX" hosted by "spam587@example.com"
-    And the huddl "Guest Coin Talk" exists in group "Portland Elixir" hosted by "spam587@example.com"
+    And the huddl "Guest Coin Talk" exists in group "Suspension Portland Elixir" hosted by "spam587@example.com"
     When "admin587@example.com" suspends "spam587@example.com" for "Spam"
     Given I am signed in as "admin587@example.com"
     When I visit "/admin/users"
@@ -175,7 +175,7 @@ Feature: Administrators suspend abusive accounts and restore mistaken suspension
 
   @suspension_notification_names
   Scenario: Pending email and the inbox hide a suspended person's old name
-    Given the huddl "Elixir Hack Night" exists in group "Portland Elixir" hosted by "owner587@example.com"
+    Given the huddl "Elixir Hack Night" exists in group "Suspension Portland Elixir" hosted by "owner587@example.com"
     And "spam587@example.com" has RSVPed to "Elixir Hack Night"
     And I am signed in as "owner587@example.com"
     When I visit "/notifications"
@@ -202,14 +202,14 @@ Feature: Administrators suspend abusive accounts and restore mistaken suspension
     When "admin587@example.com" suspends "spam587@example.com" for "Two member reports"
     Then a suspension notice is sent to "spam587@example.com" with the support address
     And the notice does not mention "Two member reports"
-    When "owner587@example.com" announces the huddl "After the Fact" in "Portland Elixir"
+    When "owner587@example.com" announces the huddl "After the Fact" in "Suspension Portland Elixir"
     Then no huddl announcement is sent to "spam587@example.com"
     But a huddl announcement is sent to "member587@example.com"
 
   Scenario: Restoration is manual and brings back sign-in without reviving what was revoked
     Given the user "spam587@example.com" has password "Password123!"
     And "spam587@example.com" is signed in on another device
-    And the huddl "Full House" exists in group "Portland Elixir" hosted by "spam587@example.com"
+    And the huddl "Full House" exists in group "Suspension Portland Elixir" hosted by "spam587@example.com"
     And "Full House" has room for 1 people
     And "member587@example.com" is on the waitlist for "Full House"
     And "admin587@example.com" suspends "spam587@example.com" for "Mistaken report"
