@@ -11,7 +11,14 @@ defmodule CalendarAgendaSteps do
 
     group =
       context[:agenda_group] ||
-        generate(group(owner_id: host.id, is_public: true, actor: host))
+        generate(
+          group(
+            name: "Readers' group #{System.unique_integer([:positive])}",
+            owner_id: host.id,
+            is_public: true,
+            actor: host
+          )
+        )
 
     {:ok, start_time} = Time.from_iso8601(time <> ":00")
 
@@ -137,7 +144,7 @@ defmodule CalendarAgendaSteps do
   step "each agenda huddl shows its group and my status",
        %{session: session, agenda_group: group} = context do
     session
-    |> assert_has(".cal-agenda-entry .cal-agenda-meta", text: group.name, count: 3)
+    |> assert_has(".cal-agenda-entry .cal-agenda-meta", text: to_string(group.name), count: 3)
     |> assert_has(".cal-agenda-entry .cal-entry-status[data-status=going]",
       text: "Going",
       count: 3
