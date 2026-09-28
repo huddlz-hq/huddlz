@@ -8,8 +8,6 @@ defmodule HuddlzWeb.GraphqlSocketTest do
   alias HuddlzWeb.GraphqlSocket
 
   @endpoint HuddlzWeb.Endpoint
-  # Database-backed channel replies can exceed ExUnit's 100 ms default in CI.
-  @reply_timeout 1_000
 
   describe "connect/3" do
     test "connects with actor: nil when no token provided" do
@@ -43,27 +41,26 @@ defmodule HuddlzWeb.GraphqlSocketTest do
     admin = generate(user(role: :admin))
     channel = open_channel(person)
     topic = channel.id
-    :ok = @endpoint.subscribe(topic)
 
+    # connect/2 made this process the transport, subscribed to the socket id,
+    # and the suspension broadcasts before it returns.
     Accounts.suspend_user!(person, "Spam", actor: admin)
-    assert_receive %Phoenix.Socket.Broadcast{topic: ^topic, event: "disconnect"}
+    assert_received %Phoenix.Socket.Broadcast{topic: ^topic, event: "disconnect"}
 
     ref =
-      push(channel, "doc", %{
-        "query" => """
-        mutation {
-          updateDisplayName(id: "#{person.id}", input: {displayName: "Still here"}) {
-            result { id }
-            errors { message }
-          }
+      run_doc(channel, """
+      mutation {
+        updateDisplayName(id: "#{person.id}", input: {displayName: "Still here"}) {
+          result { id }
+          errors { message }
         }
-        """
-      })
+      }
+      """)
 
     assert_reply ref,
                  :ok,
                  %{data: %{"updateDisplayName" => %{"result" => nil, "errors" => errors}}},
-                 @reply_timeout
+                 0
 
     assert errors != []
   end
@@ -76,11 +73,11 @@ defmodule HuddlzWeb.GraphqlSocketTest do
     suspended = Accounts.suspend_user!(person, "Mistaken report", actor: admin)
     restored = Accounts.restore_user!(suspended, actor: admin)
 
-    old_ref = push(channel, "doc", %{"query" => "{ me { id } }"})
-    assert_reply old_ref, :ok, %{data: %{"me" => nil}}, @reply_timeout
+    old_ref = run_doc(channel, "{ me { id } }")
+    assert_reply old_ref, :ok, %{data: %{"me" => nil}}, 0
 
-    new_ref = restored |> open_channel() |> push("doc", %{"query" => "{ me { id } }"})
-    assert_reply new_ref, :ok, %{data: %{"me" => %{"id" => id}}}, @reply_timeout
+    new_ref = restored |> open_channel() |> run_doc("{ me { id } }")
+    assert_reply new_ref, :ok, %{data: %{"me" => %{"id" => id}}}, 0
     assert id == person.id
   end
 
@@ -89,6 +86,14 @@ defmodule HuddlzWeb.GraphqlSocketTest do
     {:ok, socket} = connect(GraphqlSocket, %{"token" => token})
     {:ok, _, channel} = subscribe_and_join(socket, "__absinthe__:control")
     channel
+  end
+
+  # The channel replies from inside handle_in, so once it has answered a
+  # later system message the reply is already in this process's mailbox.
+  defp run_doc(channel, query) do
+    ref = push(channel, "doc", %{"query" => query})
+    _ = :sys.get_state(channel.channel_pid, :infinity)
+    ref
   end
 
   defp socket do
