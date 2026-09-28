@@ -64,7 +64,7 @@ defmodule CalendarWeekSteps do
     assert String.starts_with?(evening, "6:30 PM")
 
     session
-    |> assert_has("#calendar-day-panel .cal-agenda-meta", text: group.name, count: 2)
+    |> assert_has("#calendar-day-panel .cal-agenda-meta", text: to_string(group.name), count: 2)
     |> assert_has("#calendar-day-panel .cal-agenda-day-title", text: day_heading(17))
 
     context
