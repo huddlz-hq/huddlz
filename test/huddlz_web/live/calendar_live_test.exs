@@ -914,15 +914,25 @@ defmodule HuddlzWeb.CalendarLiveTest do
       attendee: attendee
     } do
       today = Huddlz.Generator.eastern_today()
-      next = shift(today, 1)
-      first_week = Date.beginning_of_week(next, :sunday)
+      this_week = Date.beginning_of_week(today, :sunday)
 
-      conn
-      |> login(attendee)
-      |> visit("/calendar/month")
-      |> assert_has("#calendar-view-week[href='/calendar/week']", text: "Week")
-      |> visit("/calendar/month?month=#{next_month_param(today)}")
-      |> assert_has("#calendar-view-week[href='/calendar/week?week=#{first_week}']")
+      session =
+        conn
+        |> login(attendee)
+        |> visit("/calendar/month")
+        |> click_link("Week")
+        |> assert_has("#calendar-week-day-#{this_week}")
+
+      # Next month may start in this week; the following month never does.
+      for offset <- [1, 2] do
+        month = shift(today, offset)
+        first_week = Date.beginning_of_week(month, :sunday)
+
+        session
+        |> visit("/calendar/month?month=#{Calendar.strftime(month, "%Y-%m")}")
+        |> click_link("Week")
+        |> assert_has("#calendar-week-day-#{first_week}")
+      end
     end
 
     test "draws every day of the week, blank where nothing is on, and today says so", %{
