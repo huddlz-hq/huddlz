@@ -913,15 +913,17 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn: conn,
       attendee: attendee
     } do
+      # The month after next: its first week never holds today, which
+      # would drop the week param from the link.
       today = Huddlz.Generator.eastern_today()
-      next = shift(today, 1)
-      first_week = Date.beginning_of_week(next, :sunday)
+      later = shift(today, 2)
+      first_week = Date.beginning_of_week(later, :sunday)
 
       conn
       |> login(attendee)
       |> visit("/calendar/month")
       |> assert_has("#calendar-view-week[href='/calendar/week']", text: "Week")
-      |> visit("/calendar/month?month=#{next_month_param(today)}")
+      |> visit("/calendar/month?month=#{month_param(later)}")
       |> assert_has("#calendar-view-week[href='/calendar/week?week=#{first_week}']")
     end
 
@@ -1094,9 +1096,10 @@ defmodule HuddlzWeb.CalendarLiveTest do
     |> Date.add(41)
   end
 
-  defp next_month_param(date) do
-    next = shift(date, 1)
-    :io_lib.format("~4..0B-~2..0B", [next.year, next.month]) |> IO.iodata_to_binary()
+  defp next_month_param(date), do: date |> shift(1) |> month_param()
+
+  defp month_param(date) do
+    :io_lib.format("~4..0B-~2..0B", [date.year, date.month]) |> IO.iodata_to_binary()
   end
 
   defp shift(date, delta) do
