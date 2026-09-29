@@ -124,7 +124,15 @@ defmodule Huddlz.AuditTest do
     |> Ash.read_one!(authorize?: false)
   end
 
-  test "extending a series records the editor without changing its original creator", %{
+  # An edit re-dates and removes, but never creates (Task 7). Extending a
+  # series alone leaves every existing occurrence's date untouched (the
+  # window just asks for as many dates as already exist), so it is a genuine
+  # no-op until the scheduled run — nothing here to attribute. Changing the
+  # cadence is what actually re-dates the retained occurrences, so that is
+  # what this test exercises: the editor's impersonation attribution lands on
+  # each re-dated occurrence's *update*, and the occurrences' original
+  # creator is untouched.
+  test "changing a series' cadence records the editor without changing the original creator", %{
     owner: owner,
     group: group
   } do
@@ -139,28 +147,45 @@ defmodule Huddlz.AuditTest do
           actor: owner,
           date: date,
           is_recurring: true,
-          frequency: :weekly,
-          repeat_until: Date.add(date, 7)
+          frequency: :monthly,
+          repeat_until: nil
         )
       )
+
+    assert :ok =
+             MaintainRecurringSeries.perform(%Oban.Job{
+               args: %{"huddl_template_id" => source.huddl_template_id},
+               attempt: 1,
+               max_attempts: 3
+             })
 
     id = Ash.UUID.generate()
 
     Communities.update_huddl!(
       source,
-      %{edit_type: "all", frequency: :weekly, repeat_until: Date.add(date, 14)},
+      %{edit_type: "all", frequency: :weekly},
       actor: editor,
       context: %{paper_trail_metadata: %{impersonation_id: id}}
     )
 
-    generated =
+    updated =
       Huddl.Version
-      |> Ash.Query.filter(impersonation_id == ^id and version_action_type == :create)
+      |> Ash.Query.filter(impersonation_id == ^id and version_action_type == :update)
       |> Ash.read!(authorize?: false)
 
-    assert generated != []
-    assert Enum.all?(generated, &(&1.actor_id == editor.id))
-    assert Enum.all?(generated, &(&1.changes["creator_id"] == owner.id))
+    assert updated != []
+    assert Enum.all?(updated, &(&1.actor_id == editor.id))
+
+    siblings =
+      Huddl
+      |> Ash.Query.for_read(:siblings_in_series, %{
+        huddl_template_id: source.huddl_template_id,
+        starting_after: ~U[1970-01-01 00:00:00Z]
+      })
+      |> Ash.read!(authorize?: false)
+
+    assert siblings != []
+    assert Enum.all?(siblings, &(&1.creator_id == owner.id))
   end
 
   setup do

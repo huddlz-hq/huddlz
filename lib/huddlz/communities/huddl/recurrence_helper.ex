@@ -121,10 +121,11 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     * existing future instances are **updated in place** to the source's fields
       and recomputed times (RSVPs untouched; the series change sends one summary
       per affected person)
-    * dates added by extending the series are **created**
-    * published dates dropped by shortening the series / changing frequency are
-      **cancelled** (their subscribers get the cancel notice and RSVP history remains)
-    * unpublished dates dropped from the series are **destroyed**
+    * dates the series no longer reaches are **removed**: published ones are
+      cancelled, so their subscribers get the notice and the RSVP history
+      stands, and unpublished ones are destroyed
+    * nothing is created — extending a series materializes on the next
+      scheduled sweep, not on the edit
 
   `actor` is the editor; it is threaded through so they are excluded from the
   update emails for instances they're attending.
@@ -132,9 +133,15 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   def reconcile_future_instances(source, template, actor, context \\ %{}) do
     opts = [actor: actor, authorize?: false, context: context]
 
+    existing =
+      source
+      |> future_instances()
+      |> Enum.filter(&(&1.lifecycle_state in [:draft, :published]))
+      |> Enum.sort_by(& &1.starts_at, DateTime)
+
     with {:ok, desired} <-
-           SeriesWindow.next_occurrences(template, source.starts_at, SeriesWindow.horizon()) do
-      reconcile_desired_instances(source, template, opts, desired)
+           SeriesWindow.next_occurrences(template, source.starts_at, length(existing)) do
+      reconcile_desired_instances(source, opts, existing, desired)
     end
   end
 
@@ -150,24 +157,18 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     |> Ash.read!(authorize?: false)
   end
 
-  defp reconcile_desired_instances(source, template, opts, desired) do
-    existing =
-      source
-      |> future_instances()
-      |> Enum.filter(&(&1.lifecycle_state in [:draft, :published]))
-      |> Enum.sort_by(& &1.starts_at, DateTime)
-
-    {retained, new_desired, obsolete_existing} = match_occurrences(existing, desired)
+  defp reconcile_desired_instances(source, opts, existing, desired) do
+    # Asking for no more dates than already exist makes the creation branch of
+    # match_occurrences/2 unreachable, which is the point: an edit re-dates and
+    # removes, never creates. Filling the window is the scheduled job's work,
+    # so the empty list here is an assertion, not a discard.
+    {retained, [], obsolete} = match_occurrences(existing, desired)
 
     Enum.each(retained, fn {instance, {starts_at, ends_at}} ->
       update_instance!(instance, source, starts_at, ends_at, opts)
     end)
 
-    Enum.each(new_desired, fn {starts_at, ends_at} ->
-      create_instance!(source, template, starts_at, ends_at, opts)
-    end)
-
-    Enum.each(obsolete_existing, &remove_instance!(&1, opts))
+    Enum.each(obsolete, &remove_instance!(&1, opts))
 
     :ok
   end

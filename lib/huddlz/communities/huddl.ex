@@ -419,11 +419,12 @@ defmodule Huddlz.Communities.Huddl do
 
       require_atomic? false
 
-      validate present(:frequency) do
-        where argument_equals(:edit_type, "all")
-        message "is required when editing the whole series"
-      end
-
+      # `frequency` is not required here: the web form always submits it
+      # (Huddlz.HuddlLive.Edit presets it from the series' current cadence),
+      # but an API/GraphQL caller editing the whole series to change only,
+      # say, the title omits it — and omission means "leave the cadence
+      # alone", the same way an omitted `repeat_until` leaves the end date
+      # alone. See `Changes.EditRecurringHuddlz.reconcile_series/4`.
       change Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup
       change Huddlz.Communities.Huddl.Changes.ApplySavedLocation
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs
