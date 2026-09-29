@@ -302,7 +302,7 @@ defmodule HuddlzWeb.HuddlLive.Edit do
         >
           <:recurring_controls>
             <%= if @huddl.huddl_template_id && edit_type_value(@form) == "all" do %>
-              <div class="form-row form-row-inline">
+              <div class="form-row form-row-inline is-top-aligned">
                 <div class="form-col-md">
                   <.select
                     field={@form[:frequency]}
@@ -319,8 +319,8 @@ defmodule HuddlzWeb.HuddlLive.Edit do
                     field={@form[:repeat_until]}
                     type="date"
                     label="Ends on"
+                    help="Leave blank to repeat indefinitely."
                   />
-                  <p class="form-help">Leave blank to repeat indefinitely.</p>
                 </div>
               </div>
             <% end %>

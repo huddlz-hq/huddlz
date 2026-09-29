@@ -267,7 +267,7 @@ defmodule HuddlzWeb.HuddlLive.New do
             </div>
 
             <%= if Phoenix.HTML.Form.normalize_value("checkbox", @form[:is_recurring].value) do %>
-              <div class="form-row form-row-inline">
+              <div class="form-row form-row-inline is-top-aligned">
                 <div class="form-col-md">
                   <.select
                     field={@form[:frequency]}
@@ -284,8 +284,8 @@ defmodule HuddlzWeb.HuddlLive.New do
                     field={@form[:repeat_until]}
                     type="date"
                     label="Ends on"
+                    help="Leave blank to repeat indefinitely."
                   />
-                  <p class="form-help">Leave blank to repeat indefinitely.</p>
                 </div>
               </div>
             <% end %>

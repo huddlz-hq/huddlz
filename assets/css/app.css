@@ -6690,6 +6690,10 @@ body .form-row-inline {
 
 body .form-row-inline > div { display: flex; flex-direction: column; gap: 6px; }
 
+/* Top-align fields instead of their bottoms, so a help line under one
+   column doesn't drag the other column's field down with it. */
+body .form-row-inline.is-top-aligned { align-items: flex-start; }
+
 /* Slug control */
 body .slug-control {
   display: flex;
