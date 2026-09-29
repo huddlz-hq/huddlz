@@ -7,7 +7,7 @@ defmodule RecurrenceBoundariesSteps do
   import PhoenixTest
 
   alias Huddlz.Communities.{Huddl, HuddlTemplate}
-  alias Huddlz.Communities.Workers.RegenerateRecurringSeries
+  alias Huddlz.Communities.Workers.MaintainRecurringSeries
   alias Huddlz.Notifications
 
   step "an organizer preparing a recurring huddl for a group with a member", context do
@@ -60,8 +60,8 @@ defmodule RecurrenceBoundariesSteps do
     [huddl] = Ash.read!(Huddl, actor: context.owner)
 
     :ok =
-      RegenerateRecurringSeries.perform(%Oban.Job{
-        args: %{"huddl_id" => huddl.id},
+      MaintainRecurringSeries.perform(%Oban.Job{
+        args: %{"huddl_template_id" => huddl.huddl_template_id},
         attempt: 1,
         max_attempts: 3
       })

@@ -57,7 +57,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
       |> Ash.Changeset.for_update(:update, %{huddl_template_id: template.id}, actor: owner)
       |> Ash.update!()
 
-    RecurrenceHelper.generate_huddlz_from_template(template, source)
+    :ok = RecurrenceHelper.fill_window(template)
 
     %{owner: owner, group: group, source: source, template: template, repeat_until: repeat_until}
   end

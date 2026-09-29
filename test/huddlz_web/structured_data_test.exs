@@ -2,7 +2,7 @@ defmodule HuddlzWeb.StructuredDataTest do
   use HuddlzWeb.ConnCase, async: true
   import Phoenix.LiveViewTest, only: [live: 2]
 
-  alias Huddlz.Communities.Workers.RegenerateRecurringSeries
+  alias Huddlz.Communities.Workers.MaintainRecurringSeries
 
   @moduletag :structured_data
 
@@ -263,8 +263,8 @@ defmodule HuddlzWeb.StructuredDataTest do
       )
 
     assert :ok =
-             RegenerateRecurringSeries.perform(%Oban.Job{
-               args: %{"huddl_id" => huddl.id},
+             MaintainRecurringSeries.perform(%Oban.Job{
+               args: %{"huddl_template_id" => huddl.huddl_template_id},
                attempt: 1,
                max_attempts: 3
              })

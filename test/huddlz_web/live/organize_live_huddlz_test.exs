@@ -39,12 +39,26 @@ defmodule HuddlzWeb.OrganizeLiveHuddlzTest do
           date: Date.add(today, 1),
           is_recurring: true,
           frequency: "weekly",
-          # 25 weekly dates; the cutoff sits the day after the last one.
-          repeat_until: Date.add(today, 1 + 7 * 24 + 1)
+          repeat_until: Date.add(today, 365)
         )
       )
 
     Oban.drain_queue(queue: :default)
+
+    # The rolling window only fills SeriesWindow.horizon() dates per run
+    # (12 total, including the source), so pad the rest with independent
+    # upcoming huddlz to reach the 25 needed to exercise pagination.
+    for n <- 1..13 do
+      generate(
+        huddl(
+          title: "Padding #{n}",
+          group_id: group.id,
+          creator_id: owner.id,
+          actor: owner,
+          date: Date.add(today, 100 + n)
+        )
+      )
+    end
 
     conn
     |> login(owner)

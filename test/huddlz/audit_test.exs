@@ -8,7 +8,7 @@ defmodule Huddlz.AuditTest do
   alias Huddlz.Communities.GroupInvitation.ConfirmedRecipientWorker
   alias Huddlz.Communities.GroupInvitation.EmailToken
   alias Huddlz.Communities.Huddl
-  alias Huddlz.Communities.Workers.RegenerateRecurringSeries
+  alias Huddlz.Communities.Workers.MaintainRecurringSeries
 
   test "invitation expiry is explicitly automatic", %{owner: owner} do
     group = generate(group(actor: owner, is_public: false))
@@ -307,8 +307,8 @@ defmodule Huddlz.AuditTest do
       )
 
     assert :ok =
-             RegenerateRecurringSeries.perform(%Oban.Job{
-               args: %{"huddl_id" => source.id},
+             MaintainRecurringSeries.perform(%Oban.Job{
+               args: %{"huddl_template_id" => source.huddl_template_id},
                attempt: 1,
                max_attempts: 3
              })

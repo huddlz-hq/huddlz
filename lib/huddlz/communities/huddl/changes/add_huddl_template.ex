@@ -6,7 +6,7 @@ defmodule Huddlz.Communities.Huddl.Changes.AddHuddlTemplate do
   use Ash.Resource.Change
 
   alias Huddlz.Communities.HuddlTemplate
-  alias Huddlz.Communities.Workers.RegenerateRecurringSeries
+  alias Huddlz.Communities.Workers.MaintainRecurringSeries
 
   def change(changeset, _opts, _context) do
     if Ash.Changeset.get_argument(changeset, :is_recurring) == true do
@@ -61,12 +61,13 @@ defmodule Huddlz.Communities.Huddl.Changes.AddHuddlTemplate do
     {:ok, huddl}
   end
 
-  # Generating up to 104 instances (each a full create) is too much work for the
-  # request transaction, so defer it to Oban once the parent huddl commits. The
-  # job insert is transactional, so it is rolled back if the create fails.
+  # Generating a window of occurrences, each a full create, is too much work
+  # for the request transaction, so defer it to Oban once the parent huddl
+  # commits. The job insert is transactional, so it is rolled back if the
+  # create fails.
   defp enqueue_generation(_changeset, huddl) do
-    %{huddl_id: huddl.id}
-    |> RegenerateRecurringSeries.new()
+    %{huddl_template_id: huddl.huddl_template_id}
+    |> MaintainRecurringSeries.new()
     |> Oban.insert!()
 
     {:ok, huddl}
