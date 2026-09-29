@@ -106,19 +106,29 @@ defmodule Huddlz.Communities.HuddlTemplateTest do
       refute MapSet.member?(due_ids(), huddl.huddl_template_id)
     end
 
-    # Review Focus 1: an archived group's series must stop generating.
-    test "excludes a series whose group has been archived" do
-      %{huddl: huddl, group: group, owner: owner} = series(repeat_until: nil)
+    # Pins the defect this filter's earlier `exists(huddlz, ...)` shape had:
+    # traversing `huddlz` resolves to Huddl's primary :read, which applies
+    # FilterByVisibility and, run with no actor, would silently drop every
+    # private group's series. due_for_maintenance must not depend on that
+    # traversal, so a private group's series must still be returned.
+    test "includes a series in a private group" do
+      owner = generate(user(role: :user))
+      group = generate(group(is_public: false, owner_id: owner.id, actor: owner))
+
+      huddl =
+        generate(
+          huddl(
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            date: Date.add(eastern_today(), 7),
+            is_recurring: true,
+            frequency: "weekly",
+            repeat_until: nil
+          )
+        )
 
       assert MapSet.member?(due_ids(), huddl.huddl_template_id)
-
-      # A published, future-dated huddl blocks group archival regardless of
-      # recurrence; cancel the source huddl so archival can proceed and the
-      # test can isolate due_for_maintenance's own archived-group guard.
-      Communities.cancel_huddl!(huddl, nil, actor: owner)
-      Communities.archive_group!(group, actor: owner)
-
-      refute MapSet.member?(due_ids(), huddl.huddl_template_id)
     end
   end
 end

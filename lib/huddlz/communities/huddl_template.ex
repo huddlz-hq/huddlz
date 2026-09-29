@@ -40,15 +40,17 @@ defmodule Huddlz.Communities.HuddlTemplate do
 
     read :due_for_maintenance do
       description """
-      Internal, visibility-free listing of the series the scheduled sweep
-      should maintain: still generating, and belonging to a group that is
-      still active. Invoke only with `authorize?: false`.
+      Internal, visibility-free listing of the series that are still
+      generating (no end date, or one still ahead). Deliberately does not
+      filter on the owning group's state: reaching the group means
+      traversing `huddlz`, whose default read action applies
+      FilterByVisibility, which would silently drop every private group's
+      series when this runs with no actor. The archived-group guard instead
+      lives in MaintainRecurringSeries, the single path through which
+      occurrences are created. Invoke only with `authorize?: false`.
       """
 
-      filter expr(
-               (is_nil(repeat_until) or repeat_until > now()) and
-                 exists(huddlz, is_nil(group.archived_at))
-             )
+      filter expr(is_nil(repeat_until) or repeat_until > now())
     end
 
     create :create do
