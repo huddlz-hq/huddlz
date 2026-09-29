@@ -301,9 +301,21 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
       base
       |> Map.put(:group_id, source.group_id)
       |> Map.put(:huddl_template_id, template.id)
-      |> Map.put(:lifecycle_state, source.lifecycle_state)
+      |> Map.put(:lifecycle_state, generated_lifecycle_state(source))
     else
       base
     end
   end
+
+  # A generated occurrence's lifecycle reflects the *series*, not whatever
+  # state the source huddl happens to be in right now. The source drifts
+  # through :completed (once its own date passes) and :cancelled (if that one
+  # week is called off) while the series itself is still very much alive, and
+  # the `:create` action only accepts :draft or :published — copying
+  # :completed or :cancelled straight through would make every future
+  # generation attempt raise. Draft is the one state that says "the series
+  # itself isn't live yet"; anything else means new occurrences should be
+  # published.
+  defp generated_lifecycle_state(%{lifecycle_state: :draft}), do: :draft
+  defp generated_lifecycle_state(_source), do: :published
 end

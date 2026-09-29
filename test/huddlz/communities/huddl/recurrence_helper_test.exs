@@ -106,6 +106,46 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
     end
 
     # Review Focus 5: a gap must not end the series.
+    test "a series whose source has completed still generates published occurrences", ctx do
+      %{template: template, huddl: source, owner: owner} = boundless_series(ctx)
+      assert :ok = RecurrenceHelper.fill_window(template)
+
+      now = DateTime.utc_now()
+
+      source =
+        source
+        |> Ash.Changeset.for_update(:update, %{
+          starts_at: DateTime.add(now, -2, :hour),
+          ends_at: DateTime.add(now, -1, :hour)
+        })
+        |> Ash.update!(actor: owner, authorize?: false)
+
+      source = Communities.complete_huddl!(source, authorize?: false)
+      assert source.lifecycle_state == :completed
+
+      latest = template |> occurrences() |> Enum.max_by(& &1.starts_at, DateTime)
+
+      assert :ok =
+               RecurrenceHelper.fill_window(template, DateTime.add(latest.starts_at, -1, :day))
+
+      generated =
+        template
+        |> occurrences()
+        |> Enum.filter(&(DateTime.compare(&1.starts_at, latest.starts_at) == :gt))
+
+      assert generated != []
+      assert Enum.all?(generated, &(&1.lifecycle_state == :published))
+    end
+
+    test "a draft series still generates drafts", ctx do
+      %{template: template} = boundless_series(ctx, lifecycle_state: :draft)
+
+      assert :ok = RecurrenceHelper.fill_window(template)
+
+      assert length(occurrences(template)) == SeriesWindow.horizon()
+      assert Enum.all?(occurrences(template), &(&1.lifecycle_state == :draft))
+    end
+
     test "generates through a daylight saving gap", ctx do
       %{template: template} =
         boundless_series(ctx,
