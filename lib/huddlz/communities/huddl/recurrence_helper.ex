@@ -72,12 +72,20 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     |> MapSet.new(&local_date(&1.starts_at, template.time_zone))
   end
 
-  # The huddl whose details every generated occurrence copies. Normally the
-  # template's designated source; when that huddl has been hard-deleted the
-  # pointer is nilified, so fall back to the series' latest occurrence.
-  defp series_source(%{source_huddl_id: nil} = template), do: latest_occurrence(template)
+  @doc """
+  The single answer to "which huddl does this series copy from": normally the
+  template's designated source; when that huddl has been hard-deleted the
+  pointer is nilified, so fall back to the series' latest occurrence. Used
+  both to generate new occurrences (`fill_window/2`) and, by
+  `MaintainRecurringSeries`, to find the series' current group for the
+  archived-group guard — the two must never resolve to different huddlz.
 
-  defp series_source(template) do
+  Returns `{:error, :no_source}` when the series has no huddl left to copy
+  from.
+  """
+  def series_source(%{source_huddl_id: nil} = template), do: latest_occurrence(template)
+
+  def series_source(template) do
     Huddl
     |> Ash.Query.for_read(:get_for_recurrence, %{id: template.source_huddl_id})
     |> Ash.read_one!(authorize?: false)

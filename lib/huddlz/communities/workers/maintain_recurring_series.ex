@@ -32,21 +32,11 @@ defmodule Huddlz.Communities.Workers.MaintainRecurringSeries do
   end
 
   defp fill(template, job) do
-    if archived_group?(template) do
-      :ok
-    else
-      case RecurrenceHelper.fill_window(template) do
-        :ok ->
-          :ok
-
-        # The series has no huddl left to copy details from. Not a failure.
-        {:error, :no_source} ->
-          :ok
-
-        {:error, reason} ->
-          notify_organizer_after_final_failure(%{job | attempt: job.max_attempts}, template)
-          {:cancel, reason}
-      end
+    case RecurrenceHelper.series_source(template) do
+      # Nothing left to copy from, so nothing to generate and nothing to
+      # guard.
+      {:error, :no_source} -> :ok
+      {:ok, source} -> fill_unless_archived(template, job, source)
     end
   rescue
     exception ->
@@ -54,18 +44,47 @@ defmodule Huddlz.Communities.Workers.MaintainRecurringSeries do
       reraise exception, __STACKTRACE__
   end
 
+  defp fill_unless_archived(template, job, source) do
+    if archived_group?(source) do
+      :ok
+    else
+      generate(template, job)
+    end
+  end
+
+  defp generate(template, job) do
+    case RecurrenceHelper.fill_window(template) do
+      :ok ->
+        :ok
+
+      # The series has no huddl left to copy details from. Not a failure.
+      {:error, :no_source} ->
+        :ok
+
+      {:error, reason} ->
+        notify_organizer_after_final_failure(%{job | attempt: job.max_attempts}, template)
+        {:cancel, reason}
+    end
+  end
+
   # The owning group can be archived after the series was created. This is
   # the single path through which occurrences are created, so the guard lives
   # here rather than in HuddlTemplate's :due_for_maintenance filter, which
   # would have to traverse `huddlz` — and its default read action applies
   # FilterByVisibility, silently excluding every private group's series when
-  # this runs with no actor. Reaching the group through the source huddl's
-  # :get_for_recurrence read keeps this visibility-free instead.
-  defp archived_group?(%HuddlTemplate{source_huddl_id: nil}), do: false
-
-  defp archived_group?(%HuddlTemplate{source_huddl_id: source_huddl_id}) do
+  # this runs with no actor.
+  #
+  # The huddl to check is resolved through `RecurrenceHelper.series_source/1`
+  # — the same resolution `fill_window/2` uses, fallback included — rather
+  # than duplicated here. A template whose `source_huddl_id` has been
+  # nilified by a hard delete still falls back to the series' latest
+  # occurrence there, and this guard must see the same huddl `fill_window/2`
+  # is about to generate from, or an archived group's series could keep
+  # growing through exactly that gap. Reaching the group through the source
+  # huddl's :get_for_recurrence read keeps this visibility-free.
+  defp archived_group?(%Huddl{id: source_id}) do
     Huddl
-    |> Ash.Query.for_read(:get_for_recurrence, %{id: source_huddl_id})
+    |> Ash.Query.for_read(:get_for_recurrence, %{id: source_id})
     |> Ash.Query.load(:group)
     |> Ash.read_one(authorize?: false)
     |> case do

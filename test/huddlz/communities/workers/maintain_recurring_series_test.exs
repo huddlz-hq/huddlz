@@ -359,6 +359,68 @@ defmodule Huddlz.Communities.Workers.MaintainRecurringSeriesTest do
     assert future_instances(huddl) == []
   end
 
+  # The archived-group guard must resolve the same huddl fill_window/2 is
+  # about to generate from — RecurrenceHelper.series_source/1 — rather than
+  # its own copy of the fallback. A hard-deleted source nilifies
+  # source_huddl_id; without going through the shared resolution the guard
+  # would never look the group up and would let a now-archived group's
+  # series keep growing.
+  test "does not extend a series whose source was hard-deleted once its group is archived" do
+    %{owner: owner, group: group, huddl: huddl} = create_recurring()
+
+    assert %{success: 1} = Oban.drain_queue(queue: :default)
+    remaining = future_instances(huddl)
+    assert length(remaining) == 2
+
+    # Hard-delete the source; the FK nilifies the template's source_huddl_id.
+    Ash.destroy!(huddl, authorize?: false)
+
+    # A future published huddl blocks archiving, so cancel the survivors too.
+    for occurrence <- remaining do
+      Communities.cancel_huddl!(occurrence, nil, actor: owner)
+    end
+
+    Communities.archive_group!(group, actor: owner)
+
+    assert :ok =
+             perform_job(MaintainRecurringSeries, %{huddl_template_id: huddl.huddl_template_id})
+
+    after_run =
+      Huddl
+      |> Ash.Query.for_read(:siblings_in_series, %{
+        huddl_template_id: huddl.huddl_template_id,
+        starting_after: ~U[1970-01-01 00:00:00Z]
+      })
+      |> Ash.read!(authorize?: false)
+
+    assert Enum.map(after_run, & &1.id) |> Enum.sort() ==
+             Enum.map(remaining, & &1.id) |> Enum.sort()
+  end
+
+  test "still extends a series via the latest-occurrence fallback when only the source was hard-deleted" do
+    %{huddl: huddl} = create_recurring(repeat_until: Date.add(Generator.eastern_today(), 365))
+
+    assert %{success: 1} = Oban.drain_queue(queue: :default)
+    remaining = future_instances(huddl)
+
+    # Hard-delete the source; the FK nilifies the template's source_huddl_id,
+    # so generation must fall back to the latest remaining occurrence.
+    Ash.destroy!(huddl, authorize?: false)
+
+    assert :ok =
+             perform_job(MaintainRecurringSeries, %{huddl_template_id: huddl.huddl_template_id})
+
+    after_run =
+      Huddl
+      |> Ash.Query.for_read(:siblings_in_series, %{
+        huddl_template_id: huddl.huddl_template_id,
+        starting_after: ~U[1970-01-01 00:00:00Z]
+      })
+      |> Ash.read!(authorize?: false)
+
+    assert length(after_run) > length(remaining)
+  end
+
   test "surfaces a final generation failure to the organizer" do
     %{owner: owner, huddl: huddl} =
       create_recurring(
