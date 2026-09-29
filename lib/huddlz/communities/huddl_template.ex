@@ -13,6 +13,10 @@ defmodule Huddlz.Communities.HuddlTemplate do
   postgres do
     table "huddl_templates"
     repo Huddlz.Repo
+
+    references do
+      reference :source_huddl, on_delete: :nilify
+    end
   end
 
   paper_trail do
@@ -34,6 +38,19 @@ defmodule Huddlz.Communities.HuddlTemplate do
       primary? true
     end
 
+    read :due_for_maintenance do
+      description """
+      Internal, visibility-free listing of the series the scheduled sweep
+      should maintain: still generating, and belonging to a group that is
+      still active. Invoke only with `authorize?: false`.
+      """
+
+      filter expr(
+               (is_nil(repeat_until) or repeat_until > now()) and
+                 exists(huddlz, is_nil(group.archived_at))
+             )
+    end
+
     create :create do
       primary? true
 
@@ -43,7 +60,8 @@ defmodule Huddlz.Communities.HuddlTemplate do
         :unit,
         :starts_at_local,
         :ends_at_local,
-        :time_zone
+        :time_zone,
+        :source_huddl_id
       ]
 
       argument :frequency, :atom do
@@ -63,7 +81,8 @@ defmodule Huddlz.Communities.HuddlTemplate do
         :unit,
         :starts_at_local,
         :ends_at_local,
-        :time_zone
+        :time_zone,
+        :source_huddl_id
       ]
 
       argument :frequency, :atom do
@@ -77,6 +96,10 @@ defmodule Huddlz.Communities.HuddlTemplate do
   end
 
   policies do
+    policy action(:due_for_maintenance) do
+      forbid_if always()
+    end
+
     # Templates are managed through huddl actions.
     policy action_type([:create, :update, :destroy]) do
       forbid_if always()
@@ -96,7 +119,12 @@ defmodule Huddlz.Communities.HuddlTemplate do
     uuid_primary_key :id
 
     attribute :repeat_until, :utc_datetime do
-      allow_nil? false
+      description """
+      The last local date the series may occupy. `nil` means the series is
+      boundless: it keeps generating until an organizer stops it.
+      """
+
+      allow_nil? true
     end
 
     attribute :interval, :integer do
@@ -128,6 +156,15 @@ defmodule Huddlz.Communities.HuddlTemplate do
   relationships do
     has_many :huddlz, Huddlz.Communities.Huddl do
       destination_attribute :huddl_template_id
+    end
+
+    # The huddl whose details every generated occurrence copies: the creating
+    # huddl at first, then whichever occurrence an "edit all" was made from.
+    # Nullable so the template can still be created before the huddl's insert,
+    # and nilified rather than cascading if that huddl is ever hard-deleted.
+    belongs_to :source_huddl, Huddlz.Communities.Huddl do
+      attribute_type :uuid
+      allow_nil? true
     end
   end
 

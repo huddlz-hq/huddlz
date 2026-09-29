@@ -12,6 +12,7 @@ defmodule Huddlz.Communities.Huddl.Changes.AddHuddlTemplate do
     if Ash.Changeset.get_argument(changeset, :is_recurring) == true do
       changeset
       |> Ash.Changeset.before_action(&create_and_link_template/1)
+      |> Ash.Changeset.after_action(&set_source_huddl/2)
       |> Ash.Changeset.after_action(&enqueue_generation/2)
     else
       changeset
@@ -42,6 +43,22 @@ defmodule Huddlz.Communities.Huddl.Changes.AddHuddlTemplate do
       |> Ash.create!(authorize?: false)
 
     Ash.Changeset.force_change_attribute(changeset, :huddl_template_id, template.id)
+  end
+
+  # The template is created before the huddl exists, so it cannot point back
+  # at it yet. Once the huddl has an id, record it as the source whose details
+  # every generated occurrence copies.
+  defp set_source_huddl(changeset, huddl) do
+    HuddlTemplate
+    |> Ash.get!(huddl.huddl_template_id, authorize?: false)
+    |> Ash.Changeset.for_update(
+      :update,
+      %{source_huddl_id: huddl.id},
+      Huddlz.Audit.nested_opts(changeset)
+    )
+    |> Ash.update!(authorize?: false)
+
+    {:ok, huddl}
   end
 
   # Generating up to 104 instances (each a full create) is too much work for the

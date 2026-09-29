@@ -291,11 +291,6 @@ defmodule Huddlz.Communities.Huddl do
         message "is required for recurring huddlz"
       end
 
-      validate present(:repeat_until) do
-        where argument_equals(:is_recurring, true)
-        message "is required for recurring huddlz"
-      end
-
       change Huddlz.Communities.Huddl.Changes.SetCreatorToActor
       change Huddlz.Communities.Huddl.Changes.AddCreatorAsAttendee
       change Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup
@@ -425,11 +420,6 @@ defmodule Huddlz.Communities.Huddl do
       require_atomic? false
 
       validate present(:frequency) do
-        where argument_equals(:edit_type, "all")
-        message "is required when editing the whole series"
-      end
-
-      validate present(:repeat_until) do
         where argument_equals(:edit_type, "all")
         message "is required when editing the whole series"
       end
