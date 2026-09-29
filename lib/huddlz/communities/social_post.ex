@@ -28,6 +28,7 @@ defmodule Huddlz.Communities.SocialPost do
     queries do
       list :upcoming_social_posts, :upcoming_for_group
       list :recent_social_posts, :recent_for_group
+      list :huddl_social_posts, :for_huddl
     end
   end
 
@@ -39,6 +40,7 @@ defmodule Huddlz.Communities.SocialPost do
 
       index :upcoming_for_group, route: "/upcoming"
       index :recent_for_group, route: "/recent"
+      index :for_huddl, route: "/for_huddl"
     end
   end
 
@@ -70,7 +72,7 @@ defmodule Huddlz.Communities.SocialPost do
       reference :huddl, on_delete: :delete
     end
 
-    identity_wheres_to_sql unique_occasion: "occasion <> 'moved'"
+    identity_wheres_to_sql unique_occasion: "occasion NOT IN ('moved', 'now')"
   end
 
   actions do
@@ -135,6 +137,21 @@ defmodule Huddlz.Communities.SocialPost do
                 limit: 20,
                 load: [:social_connection, huddl: [:group]]
               )
+    end
+
+    read :for_huddl do
+      description """
+      One huddl's posts on every connection, in the order they go out: the
+      planned ones and those that went out or could not be sent. Times are
+      UTC; the huddl's time zone is the one they are read in.
+      """
+
+      argument :huddl_id, :uuid do
+        allow_nil? false
+      end
+
+      filter expr(huddl_id == ^arg(:huddl_id) and state in [:scheduled, :sent, :not_sent])
+      prepare build(sort: [due_at: :asc, inserted_at: :asc], load: [:social_connection])
     end
 
     read :due do
@@ -233,7 +250,7 @@ defmodule Huddlz.Communities.SocialPost do
 
   identities do
     identity :unique_occasion, [:social_connection_id, :huddl_id, :occasion] do
-      where expr(occasion != :moved)
+      where expr(occasion not in [:moved, :now])
     end
   end
 

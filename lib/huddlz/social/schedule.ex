@@ -7,12 +7,13 @@ defmodule Huddlz.Social.Schedule do
 
   A moment that has already passed, or that would fall once the huddl has
   started, is skipped rather than planned late. Only a published public
-  huddl of a public group is planned for.
+  huddl of a public group is planned for, and never on a connection an
+  organizer has skipped it on (`skip/2`).
   """
 
   require Ash.Query
 
-  alias Huddlz.Communities.{Huddl, SocialConnection, SocialPost}
+  alias Huddlz.Communities.{Huddl, SocialConnection, SocialPost, SocialSkip}
   alias Huddlz.Communities.SocialPost.Occasion
   alias Huddlz.TimeZone
 
@@ -52,7 +53,7 @@ defmodule Huddlz.Social.Schedule do
   @spec plan_huddl(Huddl.t()) :: :ok
   def plan_huddl(%Huddl{} = huddl) do
     huddl = Ash.load!(huddl, [:group], authorize?: false)
-    connections = connections_of(huddl.group_id)
+    connections = unskipped_connections(huddl)
 
     if postable?(huddl) do
       Enum.each(connections, &plan(&1, huddl))
@@ -74,8 +75,8 @@ defmodule Huddlz.Social.Schedule do
     if postable?(huddl) do
       announced = announced_series(huddl, occasion)
 
-      huddl.group_id
-      |> connections_of()
+      huddl
+      |> unskipped_connections()
       |> Enum.filter(&(&1.state == :posting and :when_published in &1.moments))
       |> Enum.reject(&(&1.id in announced))
       |> Enum.each(&schedule!(&1, huddl, occasion, now))
@@ -98,14 +99,16 @@ defmodule Huddlz.Social.Schedule do
 
   @doc """
   Tell every posting connection a huddl has already been posted to that it
-  has been cancelled, or moved from its previous start and time zone. Connections it
-  was never posted to, and paused or broken ones, hear nothing.
+  has been cancelled, or moved from its previous start and time zone.
+  Connections it was never posted to, paused or broken ones, and ones it is
+  skipped on hear nothing.
   """
   @spec follow_up(Huddl.t(), :cancelled | :moved, {DateTime.t(), String.t()} | nil) :: :ok
   def follow_up(%Huddl{} = huddl, occasion, previous \\ nil)
       when occasion in [:cancelled, :moved] do
     {previous_starts_at, previous_time_zone} = previous || {nil, nil}
     now = DateTime.utc_now() |> DateTime.truncate(:second)
+    skipped = skipped_connection_ids(huddl.id)
 
     SocialPost
     |> Ash.Query.filter(
@@ -115,6 +118,7 @@ defmodule Huddlz.Social.Schedule do
     |> Ash.read!(authorize?: false)
     |> Enum.map(& &1.social_connection_id)
     |> Enum.uniq()
+    |> Enum.reject(&(&1 in skipped))
     |> Enum.each(fn connection_id ->
       SocialPost
       |> Ash.Changeset.for_create(:schedule, %{
@@ -147,16 +151,78 @@ defmodule Huddlz.Social.Schedule do
   @doc "Plan a connection's timed posts for every upcoming huddl of its group."
   @spec plan_connection(SocialConnection.t()) :: :ok
   def plan_connection(%SocialConnection{} = connection) do
+    connection_id = connection.id
+
     Huddl
     |> Ash.Query.filter(
       group_id == ^connection.group_id and lifecycle_state == :published and
-        is_private == false and starts_at > now()
+        is_private == false and starts_at > now() and
+        not exists(social_skips, social_connection_id == ^connection_id)
     )
     |> Ash.Query.load(:group)
     |> Ash.read!(authorize?: false)
     |> Enum.filter(&postable?/1)
     |> Enum.each(&plan(connection, &1))
   end
+
+  @doc """
+  Leave a huddl off one connection: its posts there that have not gone
+  out are dropped, follow-ups included, and nothing more is planned there
+  until it is unskipped.
+  """
+  @spec skip(Huddl.t(), SocialConnection.t()) :: :ok
+  def skip(%Huddl{} = huddl, %SocialConnection{} = connection) do
+    SocialSkip
+    |> Ash.Changeset.for_create(:skip, %{social_connection_id: connection.id, huddl_id: huddl.id})
+    |> Ash.create!(authorize?: false)
+
+    SocialPost
+    |> Ash.Query.filter(
+      social_connection_id == ^connection.id and huddl_id == ^huddl.id and state == :scheduled
+    )
+    |> Ash.bulk_destroy!(:drop, %{}, authorize?: false, strategy: [:atomic, :stream])
+
+    :ok
+  end
+
+  @doc """
+  Post a huddl on a connection again: its timed posts there are planned
+  afresh from the schedule, skipping moments that have passed.
+  """
+  @spec unskip(Huddl.t(), SocialConnection.t()) :: :ok
+  def unskip(%Huddl{} = huddl, %SocialConnection{} = connection) do
+    SocialSkip
+    |> Ash.Query.filter(social_connection_id == ^connection.id and huddl_id == ^huddl.id)
+    |> Ash.bulk_destroy!(:unskip, %{}, authorize?: false, strategy: [:atomic, :stream])
+
+    huddl = Ash.load!(huddl, [:group], authorize?: false)
+    if postable?(huddl), do: plan(connection, huddl)
+    :ok
+  end
+
+  @doc """
+  Post a huddl on a connection right away, on top of its schedule. The
+  post is sent before this returns; a passing failure leaves it planned
+  for the scheduler to retry, as any other post.
+  """
+  @spec post_now(Huddl.t(), SocialConnection.t()) :: {:ok, SocialPost.t()} | {:error, term()}
+  def post_now(%Huddl{} = huddl, %SocialConnection{} = connection) do
+    SocialPost
+    |> Ash.Changeset.for_create(:schedule, %{
+      social_connection_id: connection.id,
+      huddl_id: huddl.id,
+      occasion: :now,
+      due_at: DateTime.utc_now() |> DateTime.truncate(:second)
+    })
+    |> Ash.create!(authorize?: false)
+    |> Ash.Changeset.for_update(:deliver, %{})
+    |> Ash.update(authorize?: false)
+  end
+
+  @doc "Whether a huddl is skipped on a connection."
+  @spec skipped?(Huddl.t(), SocialConnection.t()) :: boolean()
+  def skipped?(%Huddl{id: huddl_id}, %SocialConnection{id: connection_id}),
+    do: connection_id in skipped_connection_ids(huddl_id)
 
   @doc "Whether a huddl may be posted at all: published, public, in a public group."
   def postable?(%Huddl{
@@ -206,9 +272,20 @@ defmodule Huddlz.Social.Schedule do
     :ok
   end
 
-  defp connections_of(group_id) do
+  # The group's connections, less the ones the huddl is skipped on.
+  defp unskipped_connections(huddl) do
+    skipped = skipped_connection_ids(huddl.id)
+
     SocialConnection
-    |> Ash.Query.filter(group_id == ^group_id)
+    |> Ash.Query.filter(group_id == ^huddl.group_id and id not in ^skipped)
     |> Ash.read!(authorize?: false)
+  end
+
+  defp skipped_connection_ids(huddl_id) do
+    SocialSkip
+    |> Ash.Query.filter(huddl_id == ^huddl_id)
+    |> Ash.Query.select([:social_connection_id])
+    |> Ash.read!(authorize?: false)
+    |> Enum.map(& &1.social_connection_id)
   end
 end
