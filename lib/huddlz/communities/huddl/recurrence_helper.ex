@@ -32,8 +32,15 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   ]
 
   @doc """
-  Creates the occurrences missing from the series' rolling window: the next
-  `SeriesWindow.horizon/0` dates after `cutoff`, which defaults to now.
+  Creates the occurrences missing from the series' rolling window.
+
+  The horizon is a count of **upcoming occurrences**, not of grid slots: it is
+  `SeriesWindow.horizon/0` minus however many occurrences the series already
+  has after `cutoff` (which defaults to now), in any lifecycle state. Without
+  this cap, an "edit all" that moves the template's anchor mid-series leaves
+  the still-upcoming occurrences *before* the new anchor outside the grid
+  `SeriesWindow.next_occurrences/3` searches, so they contribute nothing to
+  the count and every sweep pads on a fresh set of grid slots on top of them.
 
   A date already occupied by an occurrence in **any** lifecycle state is left
   alone. That is what keeps a cancelled week cancelled rather than helpfully
@@ -48,12 +55,15 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
 
     with {:ok, source} <- series_source(template),
          {:ok, occurrences} <- SeriesWindow.next_occurrences(template, cutoff) do
-      occupied = occupied_dates(template, cutoff)
+      existing = series_occurrences(template, cutoff)
+      occupied = occupied_dates(template, existing)
+      capacity = max(SeriesWindow.horizon() - length(existing), 0)
 
       occurrences
       |> Enum.reject(fn {starts_at, _ends_at} ->
         MapSet.member?(occupied, local_date(starts_at, template.time_zone))
       end)
+      |> Enum.take(capacity)
       |> Enum.each(fn {starts_at, ends_at} ->
         create_instance!(source, template, starts_at, ends_at)
       end)
@@ -66,10 +76,8 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     datetime |> DateTime.shift_zone!(time_zone) |> DateTime.to_date()
   end
 
-  defp occupied_dates(template, cutoff) do
-    template
-    |> series_occurrences(cutoff)
-    |> MapSet.new(&local_date(&1.starts_at, template.time_zone))
+  defp occupied_dates(template, existing) do
+    MapSet.new(existing, &local_date(&1.starts_at, template.time_zone))
   end
 
   @doc """
@@ -96,9 +104,14 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   end
 
   defp latest_occurrence(template) do
-    template
-    |> series_occurrences(~U[1970-01-01 00:00:00Z])
-    |> Enum.max_by(& &1.starts_at, DateTime, fn -> nil end)
+    Huddl
+    |> Ash.Query.for_read(:siblings_in_series, %{
+      huddl_template_id: template.id,
+      starting_after: ~U[1970-01-01 00:00:00Z]
+    })
+    |> Ash.Query.sort(starts_at: :desc)
+    |> Ash.Query.limit(1)
+    |> Ash.read_one!(authorize?: false)
     |> case do
       %Huddl{} = source -> {:ok, source}
       nil -> {:error, :no_source}

@@ -174,6 +174,32 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelperTest do
 
       assert [~T[03:00:00], ~T[02:30:00] | _] = local_times
     end
+
+    # Regression: an "edit all" from a mid-series occurrence moves the
+    # template's anchor forward, but the occurrences still upcoming *before*
+    # the new anchor sit outside the grid SeriesWindow.next_occurrences/3
+    # searches. They are still real, live occurrences, so the window must not
+    # pad a fresh set of grid slots on top of them.
+    test "an edit-all from a mid-series occurrence does not overshoot the window", ctx do
+      %{template: template, owner: owner} = boundless_series(ctx)
+      assert :ok = RecurrenceHelper.fill_window(template)
+      assert length(occurrences(template)) == SeriesWindow.horizon()
+
+      sixth_upcoming =
+        template |> occurrences() |> Enum.sort_by(& &1.starts_at, DateTime) |> Enum.at(5)
+
+      assert {:ok, _huddl} =
+               Communities.update_huddl(
+                 sixth_upcoming,
+                 %{title: "Renamed series", edit_type: "all"},
+                 actor: owner
+               )
+
+      template = Ash.get!(HuddlTemplate, template.id, authorize?: false)
+      assert :ok = RecurrenceHelper.fill_window(template)
+
+      assert length(occurrences(template)) == SeriesWindow.horizon()
+    end
   end
 
   defp boundless_series(ctx, overrides \\ []) do

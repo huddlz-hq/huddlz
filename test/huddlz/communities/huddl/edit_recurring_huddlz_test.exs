@@ -453,8 +453,15 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
     end
 
     # The spec calls this out: with no future siblings there is nothing to
-    # re-date, so the edit is invisible until the scheduled run.
-    test "from the last occurrence, takes effect on the next scheduled run", ctx do
+    # re-date, so the edit creates nothing and the series' count is unchanged
+    # — the eleven occurrences before the edited one keep their existing
+    # schedule. The template still takes the new cadence, but the scheduled
+    # run must not pad a fresh twelve occurrences on top of the ones that
+    # already exist; that padding is exactly the overshoot the fill step must
+    # never produce. The new cadence is real from the moment of the edit, it
+    # just materializes as the rolling window advances past the new anchor
+    # and capacity frees up.
+    test "from the last occurrence, creates nothing until the window advances past it", ctx do
       %{huddl: huddl, owner: owner} = monthly_series(ctx)
       assert :ok = RecurrenceHelper.fill_window(template_for(huddl))
 
@@ -466,8 +473,28 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
       assert future_count(huddl) == before
       assert template_for(huddl).unit == :week
 
+      # The series is already at its twelve-occurrence capacity, so the next
+      # scheduled run creates nothing.
       assert :ok = RecurrenceHelper.fill_window(template_for(huddl))
+      assert future_count(huddl) == before
+
+      # Once the window advances past the new anchor, capacity frees up and
+      # the new weekly cadence starts materializing.
+      assert :ok =
+               RecurrenceHelper.fill_window(
+                 template_for(huddl),
+                 DateTime.add(last.starts_at, 1, :day)
+               )
+
       assert future_count(huddl) > before
+
+      new_occurrence =
+        huddl
+        |> future_occurrences()
+        |> Enum.filter(&(DateTime.compare(&1.starts_at, last.starts_at) == :gt))
+        |> Enum.min_by(& &1.starts_at, DateTime)
+
+      assert DateTime.diff(new_occurrence.starts_at, last.starts_at, :day) == 7
     end
 
     # The spec calls this out: a cancelled occurrence is not re-dated and does

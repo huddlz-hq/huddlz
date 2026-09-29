@@ -123,16 +123,14 @@ defmodule Huddlz.Communities.Workers.MaintainRecurringSeries do
 
   defp notify_organizer_after_final_failure(_job, _template), do: :ok
 
-  defp source_for_notification(%HuddlTemplate{source_huddl_id: nil}), do: :error
-
-  defp source_for_notification(%HuddlTemplate{source_huddl_id: source_huddl_id}) do
-    Huddl
-    |> Ash.Query.for_read(:get_for_recurrence, %{id: source_huddl_id})
-    |> Ash.Query.load([:creator, :group])
-    |> Ash.read_one(authorize?: false)
-    |> case do
-      {:ok, %Huddl{} = huddl} -> {:ok, huddl}
-      _other -> :error
+  # Resolved the same way `fill_window/2` resolves the huddl it generates
+  # from: through `RecurrenceHelper.series_source/1`, so a hard-deleted
+  # source still falls back to the series' latest occurrence instead of
+  # losing its failure notifications.
+  defp source_for_notification(template) do
+    case RecurrenceHelper.series_source(template) do
+      {:ok, %Huddl{} = huddl} -> Ash.load(huddl, [:creator, :group], authorize?: false)
+      {:error, :no_source} -> :error
     end
   end
 

@@ -6,6 +6,7 @@ defmodule Huddlz.Communities.Workers.MaintainRecurringSeriesTest do
 
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
+  alias Huddlz.Communities.Huddl.SeriesWindow
   alias Huddlz.Communities.HuddlTemplate
   alias Huddlz.Communities.Workers.MaintainRecurringSeries
   alias Huddlz.Generator
@@ -451,5 +452,105 @@ defmodule Huddlz.Communities.Workers.MaintainRecurringSeriesTest do
              notification.trigger == "recurring_huddl_generation_failed" and
                notification.source_url =~ huddl.id
            end)
+  end
+
+  # Every other test in this suite builds its series moments before exercising
+  # it, so the template's anchor is always the earliest upcoming occurrence.
+  # That hid the overshoot in fill_window/2: an anchor that is not the
+  # earliest upcoming occurrence, with some occurrences already materialized
+  # ahead of it, is exactly the shape a boundless series has after an "edit
+  # all" and every day thereafter. This drives the worker against a template
+  # whose anchor is two years old, with three occurrences already
+  # materialized on the grid, and checks the sweep tops up to twelve without
+  # duplicating or skipping a date.
+  test "tops up a series with a materially aged anchor and already-materialized occurrences" do
+    owner = generate(user(role: :user))
+    group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+
+    first_upcoming_date = Date.add(Generator.eastern_today(), 7)
+
+    earliest =
+      generate(
+        huddl(
+          title: "Aged series",
+          group_id: group.id,
+          creator_id: owner.id,
+          actor: owner,
+          date: first_upcoming_date,
+          start_time: ~T[14:00:00],
+          duration_minutes: 60
+        )
+      )
+
+    schedule = HuddlTemplate.wall_clock_schedule(earliest)
+
+    template =
+      HuddlTemplate
+      |> Ash.Changeset.for_create(:create, %{
+        interval: 1,
+        unit: :week,
+        repeat_until: nil,
+        starts_at_local: NaiveDateTime.shift(schedule.starts_at_local, week: -104),
+        ends_at_local: NaiveDateTime.shift(schedule.ends_at_local, week: -104),
+        time_zone: schedule.time_zone,
+        source_huddl_id: earliest.id
+      })
+      |> Ash.create!(authorize?: false)
+
+    earliest =
+      earliest
+      |> Ash.Changeset.for_update(:update, %{huddl_template_id: template.id}, actor: owner)
+      |> Ash.update!()
+
+    already_materialized =
+      for weeks_out <- [1, 2] do
+        generate(
+          huddl(
+            title: "Aged series",
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            date: Date.add(first_upcoming_date, weeks_out * 7),
+            start_time: ~T[14:00:00],
+            duration_minutes: 60
+          )
+        )
+        |> Ash.Changeset.for_update(:update, %{huddl_template_id: template.id}, actor: owner)
+        |> Ash.update!()
+      end
+
+    pre_existing_ids = [earliest | already_materialized] |> Enum.map(& &1.id) |> Enum.sort()
+
+    assert :ok = perform_job(MaintainRecurringSeries, %{huddl_template_id: template.id})
+
+    all_occurrences =
+      Huddl
+      |> Ash.Query.for_read(:siblings_in_series, %{
+        huddl_template_id: template.id,
+        starting_after: ~U[1970-01-01 00:00:00Z]
+      })
+      |> Ash.read!(authorize?: false)
+
+    assert length(all_occurrences) == SeriesWindow.horizon()
+
+    dates =
+      all_occurrences
+      |> Enum.sort_by(& &1.starts_at, DateTime)
+      |> Enum.map(
+        &(&1.starts_at
+          |> DateTime.shift_zone!(schedule.time_zone)
+          |> DateTime.to_date())
+      )
+
+    expected_dates = for weeks_out <- 0..11, do: Date.add(first_upcoming_date, weeks_out * 7)
+    assert dates == expected_dates
+
+    kept_ids =
+      all_occurrences
+      |> Enum.filter(&(&1.id in pre_existing_ids))
+      |> Enum.map(& &1.id)
+      |> Enum.sort()
+
+    assert kept_ids == pre_existing_ids
   end
 end
