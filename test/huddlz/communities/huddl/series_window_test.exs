@@ -183,9 +183,18 @@ defmodule Huddlz.Communities.Huddl.SeriesWindowTest do
                  2
                )
 
-      [{gap_start, _}, {next_start, _}] = occurrences
+      [{gap_start, gap_ends}, {next_start, _}] = occurrences
 
       assert gap_start |> DateTime.shift_zone!(@zone) |> DateTime.to_time() == ~T[03:00:00]
+
+      # The nominal span is 02:30-03:30. Only the start falls in the gap, so
+      # only it moves forward; the end resolves unchanged, compressing this
+      # occurrence to thirty minutes. That's deliberate: every occurrence
+      # resolves in local wall-clock terms, and changing that to preserve
+      # absolute duration would alter every occurrence spanning a DST
+      # boundary, not just this one.
+      assert gap_ends |> DateTime.shift_zone!(@zone) |> DateTime.to_time() == ~T[03:30:00]
+
       assert local_dates(occurrences) == [~D[2030-03-10], ~D[2030-03-17]]
       assert next_start |> DateTime.shift_zone!(@zone) |> DateTime.to_time() == ~T[02:30:00]
     end

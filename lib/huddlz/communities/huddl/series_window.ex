@@ -85,10 +85,21 @@ defmodule Huddlz.Communities.Huddl.SeriesWindow do
     NaiveDateTime.shift(template.starts_at_local, month: interval * index)
   end
 
-  # Estimate the index arithmetically, then correct it. The weekly estimate is
-  # exact. The monthly one can be a step out where clamping shortens a month,
-  # so the correction walks at most a step or two in either direction — never
-  # the length of the series.
+  # Estimate the index arithmetically, then correct it. Both estimates are
+  # floors, so the index they land on is never later than the true first
+  # index after the cutoff — only equal to it or short of it. The answer we
+  # want must be strictly after the cutoff, so the correction walks *up*: by
+  # exactly one step in the ordinary case (cutoff at or after the anchor),
+  # and by zero steps when the cutoff is before the anchor — there, occurrence
+  # 0 is already after the cutoff by definition, and `max/2` has already
+  # ruled out anything earlier. Either way the correction never walks the
+  # length of the series.
+  #
+  # `correct/3` also has a downward branch (index - 1), guarding against an
+  # estimate that overshoots the answer. Neither flooring formula above can
+  # produce an overshoot today, so that branch is unreachable — it is kept
+  # anyway so a future change to `estimate_index/2` cannot silently return a
+  # too-late index.
   defp first_index_after(template, cutoff_local) do
     template
     |> estimate_index(cutoff_local)
