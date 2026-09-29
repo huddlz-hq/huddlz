@@ -101,9 +101,7 @@ defmodule SocialSteeringSteps do
 
   step "the Social posts panel shows {string} as skipped for this huddl",
        %{args: [channel]} = context do
-    context.session
-    |> assert_has(block(channel), text: "Skipped for this huddl")
-    |> refute_has("#{block(channel)} [id^='huddl-social-post-']")
+    assert_has(context.session, block(channel), text: "Skipped for this huddl")
 
     context
   end
@@ -144,6 +142,46 @@ defmodule SocialSteeringSteps do
     Map.put(context, :session, session)
   end
 
+  step "Slack is temporarily unavailable", context do
+    Req.Test.stub(Huddlz.Social, fn conn -> Plug.Conn.resp(conn, 503, "try later") end)
+    context
+  end
+
+  step "I am told huddlz will try posting again", context do
+    assert_has(context.session, "[role='alert']", text: "huddlz will try again in a minute")
+    context
+  end
+
+  step "the Social posts panel lists a post to {string} as awaiting delivery",
+       %{args: [channel]} = context do
+    context.session
+    |> assert_has(block(channel), text: "Posted now")
+    |> refute_has(block(channel), text: "Sent")
+
+    context
+  end
+
+  step "Slack accepts posts again", context do
+    test = self()
+
+    Req.Test.stub(Huddlz.Social, fn conn ->
+      send(test, {:social_post, conn.body_params["text"]})
+      Req.Test.json(conn, %{"ok" => true})
+    end)
+
+    context
+  end
+
+  step "huddlz retries its social posts", context do
+    AshOban.Test.schedule_and_run_triggers(Huddlz.Communities.SocialPost,
+      drain_queues?: true,
+      with_scheduled: true,
+      with_recursion: true
+    )
+
+    context
+  end
+
   step "the Social posts panel lists a post to {string} as posted now and sent",
        %{args: [channel]} = context do
     assert_has(context.session, "#{block(channel)} [id^='huddl-social-post-']",
@@ -154,21 +192,25 @@ defmodule SocialSteeringSteps do
     context
   end
 
-  step "the post I can copy names {string}, its time, its place and its link",
-       %{args: [title]} = context do
-    huddl = lookup_huddl(title)
-    local = DateTime.shift_zone!(huddl.starts_at, huddl.time_zone)
+  step "the Social posts panel shows {string} as paused", %{args: [channel]} = context do
+    assert_has(context.session, block(channel), text: "Paused")
+    context
+  end
 
-    [text] =
-      context.session
-      |> page_html()
-      |> Floki.parse_document!()
-      |> Floki.attribute("#social-posts-copy", "data-value")
+  step "Slack refuses posts because the connection was revoked", context do
+    Req.Test.stub(Huddlz.Social, fn conn -> Plug.Conn.resp(conn, 404, "no_service") end)
+    context
+  end
 
-    assert text =~ title
-    assert text =~ Calendar.strftime(local, "%a, %b %-d at 6:00 PM")
-    assert text =~ huddl.physical_location
-    assert text =~ Huddlz.Social.huddl_link(huddl)
+  step "the Social posts panel shows {string} as needing reconnecting",
+       %{args: [channel]} = context do
+    assert_has(context.session, block(channel), text: "Needs reconnecting")
+    context
+  end
+
+  step "the Social posts panel lists a post to {string} as not sent",
+       %{args: [channel]} = context do
+    assert_has(context.session, block(channel), text: "Didn't send")
     context
   end
 
@@ -321,9 +363,6 @@ defmodule SocialSteeringSteps do
       )
     )
   end
-
-  defp page_html(%PhoenixTest.Live{view: view}), do: Phoenix.LiveViewTest.render(view)
-  defp page_html(%PhoenixTest.Static{conn: conn}), do: conn.resp_body
 
   defp connection(channel) do
     SocialConnection

@@ -16,6 +16,7 @@ defmodule Huddlz.Communities.SocialPost do
     domain: Huddlz.Communities,
     data_layer: AshPostgres.DataLayer,
     authorizers: [Ash.Policy.Authorizer],
+    notifiers: [Huddlz.Communities.ActivityLog],
     extensions: [AshOban, AshGraphql.Resource, AshJsonApi.Resource]
 
   alias Huddlz.Communities.SocialPost.Occasion
@@ -70,6 +71,7 @@ defmodule Huddlz.Communities.SocialPost do
     references do
       reference :social_connection, on_delete: :delete
       reference :huddl, on_delete: :delete
+      reference :requested_by, on_delete: :nilify
     end
 
     identity_wheres_to_sql unique_occasion: "occasion NOT IN ('moved', 'now')"
@@ -87,7 +89,9 @@ defmodule Huddlz.Communities.SocialPost do
         :occasion,
         :due_at,
         :previous_starts_at,
-        :previous_time_zone
+        :previous_time_zone,
+        :requested_by_id,
+        :impersonation_id
       ]
 
       upsert? true
@@ -234,9 +238,14 @@ defmodule Huddlz.Communities.SocialPost do
 
     create_timestamp :inserted_at
     update_timestamp :updated_at
+
+    # Retains the trusted browser attribution when delivery needs a retry.
+    attribute :impersonation_id, :uuid
   end
 
   relationships do
+    belongs_to :requested_by, Huddlz.Accounts.User
+
     belongs_to :social_connection, Huddlz.Communities.SocialConnection do
       allow_nil? false
       public? true

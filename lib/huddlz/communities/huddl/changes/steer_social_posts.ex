@@ -18,20 +18,45 @@ defmodule Huddlz.Communities.Huddl.Changes.SteerSocialPosts do
   alias Huddlz.Social.Schedule
 
   @impl true
-  def change(changeset, opts, _context) do
+  def change(changeset, opts, context) do
     id = Ash.Changeset.get_argument(changeset, :social_connection_id)
     huddl = Ash.load!(changeset.data, [:group], authorize?: false)
 
     with {:ok, connection} <- connection_of(huddl, id),
          :ok <- steerable(huddl),
          :ok <- allowed(opts[:to], huddl, connection) do
-      Ash.Changeset.after_action(changeset, fn _changeset, result ->
-        {:ok, steer(opts[:to], result, huddl, connection)}
-      end)
+      register_steering(changeset, opts[:to], huddl, connection, context.actor)
     else
       {:error, message} ->
         Ash.Changeset.add_error(changeset, field: :social_connection_id, message: message)
     end
+  end
+
+  # Delivery has its own transaction: a temporary failure must not roll
+  # back the scheduled post that the worker will retry.
+  defp register_steering(changeset, :post_now, huddl, connection, actor) do
+    Ash.Changeset.after_transaction(changeset, fn
+      _changeset, {:ok, result} ->
+        post =
+          case Schedule.post_now(huddl, connection, actor) do
+            {:ok, post} -> post
+            {:error, _error} -> nil
+          end
+
+        {:ok,
+         result
+         |> with_connection(connection)
+         |> Ash.Resource.put_metadata(:social_post, post)}
+
+      _changeset, result ->
+        result
+    end)
+  end
+
+  defp register_steering(changeset, to, huddl, connection, _actor) do
+    Ash.Changeset.after_action(changeset, fn _changeset, result ->
+      {:ok, steer(to, result, huddl, connection)}
+    end)
   end
 
   defp steer(:skip, result, huddl, connection) do
@@ -42,20 +67,6 @@ defmodule Huddlz.Communities.Huddl.Changes.SteerSocialPosts do
   defp steer(:unskip, result, huddl, connection) do
     :ok = Schedule.unskip(huddl, connection)
     with_connection(result, connection)
-  end
-
-  # A passing failure leaves the post planned for the scheduler to retry,
-  # so it is reported, not raised: the action itself went through.
-  defp steer(:post_now, result, huddl, connection) do
-    post =
-      case Schedule.post_now(huddl, connection) do
-        {:ok, post} -> post
-        {:error, _error} -> nil
-      end
-
-    result
-    |> with_connection(connection)
-    |> Ash.Resource.put_metadata(:social_post, post)
   end
 
   defp with_connection(result, connection),

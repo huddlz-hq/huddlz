@@ -205,19 +205,25 @@ defmodule Huddlz.Social.Schedule do
   post is sent before this returns; a passing failure leaves it planned
   for the scheduler to retry, as any other post.
   """
-  @spec post_now(Huddl.t(), SocialConnection.t()) :: {:ok, SocialPost.t()} | {:error, term()}
-  def post_now(%Huddl{} = huddl, %SocialConnection{} = connection) do
+  @spec post_now(Huddl.t(), SocialConnection.t(), Huddlz.Accounts.User.t()) ::
+          {:ok, SocialPost.t()} | {:error, term()}
+  def post_now(%Huddl{} = huddl, %SocialConnection{} = connection, actor) do
     SocialPost
     |> Ash.Changeset.for_create(:schedule, %{
       social_connection_id: connection.id,
       huddl_id: huddl.id,
       occasion: :now,
+      requested_by_id: actor.id,
+      impersonation_id: impersonation_id(actor),
       due_at: DateTime.utc_now() |> DateTime.truncate(:second)
     })
     |> Ash.create!(authorize?: false)
     |> Ash.Changeset.for_update(:deliver, %{})
     |> Ash.update(authorize?: false)
   end
+
+  defp impersonation_id(%{__metadata__: %{impersonation: %{id: id}}}), do: id
+  defp impersonation_id(_actor), do: nil
 
   @doc "Whether a huddl is skipped on a connection."
   @spec skipped?(Huddl.t(), SocialConnection.t()) :: boolean()
