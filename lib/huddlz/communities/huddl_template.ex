@@ -17,6 +17,10 @@ defmodule Huddlz.Communities.HuddlTemplate do
     references do
       reference :source_huddl, on_delete: :nilify
     end
+
+    custom_indexes do
+      index [:source_huddl_id], name: "huddl_templates_source_huddl_id_index"
+    end
   end
 
   paper_trail do

@@ -144,6 +144,9 @@ defmodule Huddlz.Communities.Huddl do
       index [:lifecycle_state, :ends_at],
         name: "huddlz_lifecycle_state_ends_at_index"
 
+      index [:huddl_template_id, :starts_at],
+        name: "huddlz_huddl_template_id_starts_at_index"
+
       index "ST_MakePoint(longitude, latitude)",
         name: "huddlz_location_gist_index",
         using: "GIST",
