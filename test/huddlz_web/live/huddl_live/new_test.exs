@@ -395,7 +395,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> select("Duration", option: "2 hours")
         |> check("Recurring huddl")
         |> select("Frequency", option: "Every two weeks")
-        |> fill_in("Repeat until", with: Date.to_iso8601(repeat_until))
+        |> fill_in("Ends on", with: Date.to_iso8601(repeat_until))
 
       select_physical_location(session.view, group, owner, "123 Main St")
 

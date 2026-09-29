@@ -337,7 +337,7 @@ defmodule CreateHuddlSteps do
             select(session, "Frequency", option: value, exact: false)
 
           "repeat_until" ->
-            fill_in(session, "Repeat until", with: value, exact: false)
+            fill_in(session, "Ends on", with: value, exact: false)
 
           # Already handled above
           "event_type" ->

@@ -318,8 +318,9 @@ defmodule HuddlzWeb.HuddlLive.Edit do
                   <.input
                     field={@form[:repeat_until]}
                     type="date"
-                    label="Repeat until"
+                    label="Ends on"
                   />
+                  <p class="form-help">Leave blank to repeat indefinitely.</p>
                 </div>
               </div>
             <% end %>

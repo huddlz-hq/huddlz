@@ -187,7 +187,7 @@ defmodule SeriesCalendarUpdatesSteps do
     |> login(context.owner)
     |> visit("/groups/#{context.group.slug}/huddlz/#{context.source.id}/edit")
     |> click_button("Whole series")
-    |> fill_in("Repeat until", with: "2030-11-04", exact: false)
+    |> fill_in("Ends on", with: "2030-11-04", exact: false)
     |> click_button("Save changes")
     |> assert_has("#flash-info", text: "Huddl updated successfully!")
 

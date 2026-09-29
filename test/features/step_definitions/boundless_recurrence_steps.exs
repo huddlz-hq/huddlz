@@ -3,9 +3,12 @@ defmodule BoundlessRecurrenceSteps do
 
   import ExUnit.Assertions
   import Huddlz.Generator
+  import Huddlz.Test.Helpers.Authentication, only: [login: 2]
+  import PhoenixTest
 
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
+  alias Huddlz.Communities.HuddlTemplate
   alias Huddlz.Communities.Workers.MaintainRecurringSeries
 
   step "a weekly huddl that repeats with no end date", context do
@@ -86,6 +89,67 @@ defmodule BoundlessRecurrenceSteps do
 
     assert Enum.all?(gaps, &(&1 == 7))
     context
+  end
+
+  step "an organizer preparing a recurring huddl for their group", context do
+    owner = generate(user())
+    group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+
+    session =
+      context.conn
+      |> login(owner)
+      |> visit("/groups/#{group.slug}/huddlz/new")
+      |> fill_in("Title", with: "Boundless series")
+      |> choose("Virtual")
+      |> fill_in("Online link", with: "https://example.com/boundless")
+      |> fill_in("Date", with: Date.to_iso8601(Date.add(eastern_today(), 7)))
+      |> fill_in("Start time", with: "18:30")
+      |> check("Recurring huddl")
+
+    Map.merge(context, %{owner: owner, group: group, session: session})
+  end
+
+  step "the organizer schedules a weekly huddl and leaves the end date blank", context do
+    session =
+      context.session
+      |> select("Frequency", option: "Weekly")
+      |> click_button("Schedule huddl")
+      |> assert_path("/groups/#{context.group.slug}")
+
+    Map.put(context, :session, session)
+  end
+
+  step "the organizer schedules a weekly huddl ending in four weeks", context do
+    session =
+      context.session
+      |> select("Frequency", option: "Weekly")
+      |> fill_in("Ends on", with: Date.to_iso8601(Date.add(eastern_today(), 28)))
+      |> click_button("Schedule huddl")
+      |> assert_path("/groups/#{context.group.slug}")
+
+    Map.put(context, :session, session)
+  end
+
+  step "the huddl should be published", context do
+    assert [scheduled] = Ash.read!(Huddl, actor: context.owner)
+    assert scheduled.lifecycle_state == :published
+    Map.put(context, :huddl, scheduled)
+  end
+
+  step "the series should repeat with no end date", context do
+    assert is_nil(template_for(context.huddl).repeat_until)
+    context
+  end
+
+  step "the series should end four weeks out", context do
+    assert DateTime.to_date(template_for(context.huddl).repeat_until) ==
+             Date.add(eastern_today(), 28)
+
+    context
+  end
+
+  defp template_for(huddl) do
+    Ash.get!(HuddlTemplate, huddl.huddl_template_id, authorize?: false)
   end
 
   defp start_series(context, opts) do

@@ -33,3 +33,15 @@ Feature: Recurring huddlz keep themselves going
     Then the series should have 3 upcoming dates
     When the scheduled recurrence run happens
     Then the series should have 12 upcoming dates
+
+  Scenario: An organizer creates a series without choosing an end date
+    Given an organizer preparing a recurring huddl for their group
+    When the organizer schedules a weekly huddl and leaves the end date blank
+    Then the huddl should be published
+    And the series should repeat with no end date
+
+  Scenario: An organizer can still end a series on a chosen date
+    Given an organizer preparing a recurring huddl for their group
+    When the organizer schedules a weekly huddl ending in four weeks
+    Then the huddl should be published
+    And the series should end four weeks out
