@@ -55,15 +55,15 @@ defmodule Huddlz.Social.PostTest do
 
   describe "a new series" do
     test "names the pattern and where it starts, without a spots line" do
-      huddl = huddl_like(~D[2026-10-01], ~T[18:00:00], title: "Hack night", max_attendees: 20)
+      huddl = huddl_like(~D[2026-10-09], ~T[19:00:00], title: "Hack night", max_attendees: 20)
 
       assert Post.lines(huddl,
                moment: :series,
-               series: %{interval: 1, unit: :week},
+               series: %{interval: 1, unit: :week, starts_at_local: ~N[2026-10-01 18:00:00]},
                link: @link
              ) == [
                huddl.title,
-               "Every Thursday at 6:00 PM, starting Thu, Oct 1",
+               "Every Thursday at 6:00 PM, starting Fri, Oct 9",
                "123 Main St, Anytown, USA",
                @link
              ]
@@ -75,12 +75,14 @@ defmodule Huddlz.Social.PostTest do
 
       assert "Every other Thursday at 6:30 PM, starting Thu, Oct 22" in lines.(%{
                interval: 2,
-               unit: :week
+               unit: :week,
+               starts_at_local: ~N[2026-10-22 18:30:00]
              })
 
       assert "Monthly on the 22nd at 6:30 PM, starting Thu, Oct 22" in lines.(%{
                interval: 1,
-               unit: :month
+               unit: :month,
+               starts_at_local: ~N[2026-10-22 18:30:00]
              })
     end
   end

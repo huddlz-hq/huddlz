@@ -32,7 +32,11 @@ defmodule Huddlz.Social.Post do
         }
 
   @typedoc "How a series repeats; a loaded huddl template or a map shaped like one."
-  @type series :: %{interval: pos_integer(), unit: :week | :month}
+  @type series :: %{
+          interval: pos_integer(),
+          unit: :week | :month,
+          starts_at_local: NaiveDateTime.t()
+        }
 
   @type option ::
           {:moment, Moment.t() | :series | :cancelled | :moved}
@@ -92,19 +96,18 @@ defmodule Huddlz.Social.Post do
     |> Enum.reject(&blank?/1)
   end
 
-  defp when_line(huddl, :series, %{interval: interval, unit: unit}) do
-    local = DateTime.shift_zone!(huddl.starts_at, huddl.time_zone)
-    time = Calendar.strftime(local, "%-I:%M %p")
-    day = Calendar.strftime(local, "%A")
-    first = Calendar.strftime(local, "%a, %b %-d")
+  defp when_line(huddl, :series, %{interval: interval, unit: unit, starts_at_local: anchor}) do
+    time = Calendar.strftime(anchor, "%-I:%M %p")
+    day = Calendar.strftime(anchor, "%A")
+    first = start_day(huddl)
 
     pattern =
       case {interval, unit} do
         {1, :week} -> "Every #{day}"
         {2, :week} -> "Every other #{day}"
         {n, :week} -> "Every #{n} weeks on #{day}"
-        {1, :month} -> "Monthly on the #{ordinal(local.day)}"
-        {n, :month} -> "Every #{n} months on the #{ordinal(local.day)}"
+        {1, :month} -> "Monthly on the #{ordinal(anchor.day)}"
+        {n, :month} -> "Every #{n} months on the #{ordinal(anchor.day)}"
       end
 
     "#{pattern} at #{time}, starting #{first}"

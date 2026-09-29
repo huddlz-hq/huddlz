@@ -89,13 +89,15 @@ defmodule Huddlz.Social.DeliveryTest do
 
     assert_received {:social_post, text}
 
-    day =
+    was =
       huddl.starts_at
       |> DateTime.shift_zone!("America/New_York")
-      |> Calendar.strftime("%a, %b %-d")
+      |> Calendar.strftime("%a, %b %-d at 6:00 PM %Z")
 
-    was = "#{day} at 6:00 PM EDT"
-    now = "#{day} at 6:00 PM CDT"
+    now =
+      moved.starts_at
+      |> DateTime.shift_zone!("America/Chicago")
+      |> Calendar.strftime("%a, %b %-d at 6:00 PM %Z")
 
     assert text =~ "is now #{now} (was #{was})."
   end

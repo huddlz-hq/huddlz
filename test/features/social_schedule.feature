@@ -97,6 +97,13 @@ Feature: Huddlz are posted on each connection's social schedule
     When I publish the second "Hack night"
     Then "#general" receives nothing
 
+  Scenario: Publishing February preserves a monthly series' 31st pattern
+    Given "Elixir Nashville" posts to the Slack channel "#general" when a huddl is published
+    And I am signed in as "owner@example.com"
+    And I have drafted "Hack night" monthly on the 31st from January through March
+    When I publish the second "Hack night"
+    Then "#general" receives one post saying "Monthly on the 31st at 6:00 PM" and linking to the second "Hack night"
+
   Scenario: Each huddl in a series gets its own timed posts
     Given "Elixir Nashville" posts to the Slack channel "#general" the morning of
     And I am signed in as "owner@example.com"
@@ -122,6 +129,14 @@ Feature: Huddlz are posted on each connection's social schedule
     Then "#general" receives a post giving the new time of "Hack night" and the old one
     When the morning of "Hack night" arrives
     Then "#general" receives a post saying "Hack night" is today at 6:00 PM
+
+  Scenario: A moved huddl still gets a follow-up after its new start
+    Given "Elixir Nashville" posts to the Slack channel "#general" a week before and the morning of
+    And "Elixir Nashville" has a public huddl "Hack night" in ten days at 6:00 PM
+    And I am signed in as "owner@example.com"
+    And the week-before post of "Hack night" went out to "#general"
+    When I move "Hack night" to a minute ago
+    Then "#general" receives a post giving the new time of "Hack night" and the old one
 
   Scenario: A huddl that was never posted gets no follow-up
     Given "Elixir Nashville" posts to the Slack channel "#general" the morning of

@@ -71,6 +71,22 @@ defmodule SocialScheduleSteps do
     publish_series(context, title, 4, lifecycle_state: :draft)
   end
 
+  step "I have drafted {string} monthly on the 31st from January through March",
+       %{args: [title]} = context do
+    year = eastern_today().year + 1
+
+    publish(context, title,
+      date: Date.new!(year, 1, 31),
+      is_recurring: true,
+      frequency: "monthly",
+      repeat_until: Date.new!(year, 3, 31),
+      lifecycle_state: :draft
+    )
+
+    Oban.drain_queue(queue: :default)
+    context
+  end
+
   step "I publish the first {string}", %{args: [title]} = context do
     title
     |> nth_huddl(1, context.current_user)
@@ -103,6 +119,16 @@ defmodule SocialScheduleSteps do
     context
   end
 
+  step "{string} receives one post saying {string} and linking to the second {string}",
+       %{args: [_channel, pattern, title]} = context do
+    run_scheduler()
+    text = next_post!()
+    assert text =~ pattern
+    assert text =~ Huddlz.Social.huddl_link(nth_huddl(title, 2, context.current_user))
+    refute_other_posts()
+    context
+  end
+
   step "the morning of the second {string} arrives", %{args: [title]} = context do
     title |> nth_huddl(2) |> arrive(:morning_of)
     context
@@ -122,6 +148,19 @@ defmodule SocialScheduleSteps do
     moment_arrives(title, :week_before)
     assert next_post!() =~ title
     context
+  end
+
+  step "I move {string} to a minute ago", %{args: [title]} = context do
+    huddl = lookup_huddl(title)
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    Huddlz.Communities.update_huddl!(
+      huddl,
+      %{starts_at: DateTime.add(now, -60, :second), ends_at: DateTime.add(now, 1, :hour)},
+      actor: context.current_user
+    )
+
+    Map.put(context, :moved_from, huddl)
   end
 
   step "I cancel {string}", %{args: [title]} = context do

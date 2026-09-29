@@ -60,6 +60,7 @@ defmodule Huddlz.Social.Changes.Deliver do
   defp huddl_sendable?(_occasion, %{is_private: true}, _now), do: false
   defp huddl_sendable?(_occasion, %{group: %{is_public: false}}, _now), do: false
   defp huddl_sendable?(:cancelled, huddl, _now), do: huddl.lifecycle_state == :cancelled
+  defp huddl_sendable?(:moved, huddl, _now), do: Schedule.postable?(huddl)
 
   defp huddl_sendable?(_occasion, huddl, now),
     do: Schedule.postable?(huddl) and DateTime.after?(huddl.starts_at, now)
