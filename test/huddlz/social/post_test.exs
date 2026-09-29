@@ -53,6 +53,80 @@ defmodule Huddlz.Social.PostTest do
     end
   end
 
+  describe "a new series" do
+    test "names the pattern and where it starts, without a spots line" do
+      huddl = huddl_like(~D[2026-10-09], ~T[19:00:00], title: "Hack night", max_attendees: 20)
+
+      assert Post.lines(huddl,
+               moment: :series,
+               series: %{interval: 1, unit: :week, starts_at_local: ~N[2026-10-01 18:00:00]},
+               link: @link
+             ) == [
+               huddl.title,
+               "Every Thursday at 6:00 PM, starting Fri, Oct 9",
+               "123 Main St, Anytown, USA",
+               @link
+             ]
+    end
+
+    test "says every other week and the day of the month" do
+      huddl = huddl_like(~D[2026-10-22], ~T[18:30:00], title: "Hack night", event_type: :virtual)
+      lines = &Post.lines(huddl, moment: :series, series: &1, link: @link)
+
+      assert "Every other Thursday at 6:30 PM, starting Thu, Oct 22" in lines.(%{
+               interval: 2,
+               unit: :week,
+               starts_at_local: ~N[2026-10-22 18:30:00]
+             })
+
+      assert "Monthly on the 22nd at 6:30 PM, starting Thu, Oct 22" in lines.(%{
+               interval: 1,
+               unit: :month,
+               starts_at_local: ~N[2026-10-22 18:30:00]
+             })
+    end
+  end
+
+  describe "follow-ups" do
+    test "a cancelled huddl says it won't go ahead, without the opening line" do
+      huddl = huddl_like(~D[2026-10-01], ~T[18:00:00], title: "Hack night", event_type: :virtual)
+
+      assert Post.lines(huddl, moment: :cancelled, opening_line: "This week:", link: @link) ==
+               ["Cancelled: Hack night on Thu, Oct 1 won't go ahead."]
+    end
+
+    test "the old time is read where the huddl was, when it moved time zone" do
+      huddl =
+        huddl_like(~D[2026-10-02], ~T[17:00:00],
+          title: "Hack night",
+          event_type: :virtual,
+          time_zone: "America/Chicago",
+          starts_at: ~U[2026-10-02 22:00:00Z]
+        )
+
+      [line, _link] =
+        Post.lines(huddl,
+          moment: :moved,
+          previous_starts_at: ~U[2026-10-01 22:00:00Z],
+          previous_time_zone: "America/New_York",
+          link: @link
+        )
+
+      assert line ==
+               "New time: Hack night is now Fri, Oct 2 at 5:00 PM CDT (was Thu, Oct 1 at 6:00 PM EDT)."
+    end
+
+    test "a moved huddl gives the new time with the old one, and the link" do
+      huddl = huddl_like(~D[2026-10-02], ~T[19:00:00], title: "Hack night", event_type: :virtual)
+      was = ~U[2026-10-01 22:00:00Z]
+
+      assert Post.lines(huddl, moment: :moved, previous_starts_at: was, link: @link) == [
+               "New time: Hack night is now Fri, Oct 2 at 7:00 PM (was Thu, Oct 1 at 6:00 PM).",
+               @link
+             ]
+    end
+  end
+
   # A map shaped like a loaded huddl on that date, so pinned dates never have
   # to pass the create action's future-date check.
   defp huddl_like(date, time, attrs) do

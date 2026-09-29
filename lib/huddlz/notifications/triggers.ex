@@ -94,6 +94,12 @@ defmodule Huddlz.Notifications.Triggers do
       default: true,
       label: "Group ownership transferred"
     },
+    social_connection_stopped: %{
+      category: :transactional,
+      sender: Senders.SocialConnectionStopped,
+      default: true,
+      label: "A social connection of a group I own stopped posting"
+    },
 
     # C — Huddl lifecycle
     huddl_new: %{

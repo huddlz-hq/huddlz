@@ -42,6 +42,7 @@ config :huddlz, Oban,
   queues: [
     default: 10,
     notifications: 10,
+    social: 5,
     profile_picture_cleanup: 5,
     group_image_cleanup: 5,
     huddl_image_cleanup: 5

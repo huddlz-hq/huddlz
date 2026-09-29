@@ -314,6 +314,7 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Communities.Huddl.Changes.DefaultLocationFromGroup
       change Huddlz.Communities.Huddl.Changes.SetInitialLifecycleTimestamps
       change Huddlz.Communities.Huddl.Changes.NotifyNewInGroup
+      change Huddlz.Communities.Huddl.Changes.PlanSocialPosts
       validate Huddlz.TimeZone.Validation
       validate {Huddlz.Communities.Huddl.Validations.WebUrlValidation, attribute: :virtual_link}
     end
@@ -325,6 +326,7 @@ defmodule Huddlz.Communities.Huddl do
 
       change {Huddlz.Communities.Huddl.Changes.TransitionLifecycle, to: :published}
       change Huddlz.Communities.Huddl.Changes.NotifyNewInGroup
+      change Huddlz.Communities.Huddl.Changes.PlanSocialPosts
     end
 
     update :cancel do
@@ -339,6 +341,7 @@ defmodule Huddlz.Communities.Huddl do
 
       change {Huddlz.Communities.Huddl.Changes.TransitionLifecycle, to: :cancelled}
       change Huddlz.Communities.Huddl.Changes.NotifyCancelled
+      change Huddlz.Communities.Huddl.Changes.PlanSocialPosts
     end
 
     update :complete do
@@ -449,6 +452,7 @@ defmodule Huddlz.Communities.Huddl do
       change Huddlz.Communities.Huddl.Changes.ResetReminderStamps
       change Huddlz.Communities.Huddl.Changes.NotifyMeaningfulUpdate
       change Huddlz.Communities.Huddl.Changes.PromoteOnCapacityIncrease
+      change Huddlz.Communities.Huddl.Changes.PlanSocialPosts
       validate Huddlz.TimeZone.Validation
       validate {Huddlz.Communities.Huddl.Validations.WebUrlValidation, attribute: :virtual_link}
     end

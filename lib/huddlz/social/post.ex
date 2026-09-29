@@ -5,6 +5,14 @@ defmodule Huddlz.Social.Post do
   (day-of posts say "Today"), where, how many spots are left when there is
   a cap, and the link. Scheduled posts and the schedule sheet's preview both
   come from here, so what the preview shows is what the place receives.
+
+  Follow-ups are short and carry no opening line: a cancelled huddl says it
+  won't go ahead; a moved one gives its new time with the old one, and the
+  link.
+
+  A new series is announced once, by its first huddl: the when line names
+  the pattern ("Every Thursday at 6:00 PM") and the spots line is left out,
+  since each date has its own.
   """
 
   alias Huddlz.Communities.SocialConnection.Moment
@@ -23,8 +31,20 @@ defmodule Huddlz.Social.Post do
           optional(:waitlist_count) => non_neg_integer()
         }
 
+  @typedoc "How a series repeats; a loaded huddl template or a map shaped like one."
+  @type series :: %{
+          interval: pos_integer(),
+          unit: :week | :month,
+          starts_at_local: NaiveDateTime.t()
+        }
+
   @type option ::
-          {:moment, Moment.t()} | {:opening_line, String.t() | nil} | {:link, String.t()}
+          {:moment, Moment.t() | :series | :cancelled | :moved}
+          | {:previous_starts_at, DateTime.t() | nil}
+          | {:previous_time_zone, String.t() | nil}
+          | {:opening_line, String.t() | nil}
+          | {:link, String.t()}
+          | {:series, series() | nil}
 
   @doc "The post as one message, a line per part."
   @spec text(huddl(), [option()]) :: String.t()
@@ -33,16 +53,67 @@ defmodule Huddlz.Social.Post do
   @doc "The parts of the post in order, skipping any the huddl has no use for."
   @spec lines(huddl(), [option()]) :: [String.t()]
   def lines(huddl, opts) do
+    case opts[:moment] do
+      :cancelled -> ["Cancelled: #{huddl.title} on #{start_day(huddl)} won't go ahead."]
+      :moved -> moved_lines(huddl, opts)
+      _announcement -> announcement_lines(huddl, opts)
+    end
+  end
+
+  # The old time is read where the huddl was. When the place moved to
+  # another time zone, both times carry their zone so they can be told apart.
+  defp moved_lines(huddl, opts) do
+    was_zone = opts[:previous_time_zone] || huddl.time_zone
+    zones? = was_zone != huddl.time_zone
+    now = format_local(huddl.starts_at, huddl.time_zone, zones?)
+
+    was =
+      opts[:previous_starts_at] &&
+        " (was #{format_local(opts[:previous_starts_at], was_zone, zones?)})"
+
+    ["New time: #{huddl.title} is now #{now}#{was}.", opts[:link]]
+  end
+
+  defp start_day(huddl) do
+    huddl.starts_at |> DateTime.shift_zone!(huddl.time_zone) |> Calendar.strftime("%a, %b %-d")
+  end
+
+  defp format_local(at, time_zone, zone?) do
+    local = DateTime.shift_zone!(at, time_zone)
+    text = Calendar.strftime(local, "%a, %b %-d at %-I:%M %p")
+    if zone?, do: "#{text} #{local.zone_abbr}", else: text
+  end
+
+  defp announcement_lines(huddl, opts) do
     [
       opts[:opening_line],
       huddl.title,
-      when_line(huddl, opts[:moment]),
+      when_line(huddl, opts[:moment], opts[:series]),
       where_line(huddl),
-      spots_line(huddl),
+      opts[:moment] != :series && spots_line(huddl),
       opts[:link]
     ]
     |> Enum.reject(&blank?/1)
   end
+
+  defp when_line(huddl, :series, %{interval: interval, unit: unit, starts_at_local: anchor}) do
+    time = Calendar.strftime(anchor, "%-I:%M %p")
+    day = Calendar.strftime(anchor, "%A")
+    first = start_day(huddl)
+
+    pattern =
+      case {interval, unit} do
+        {1, :week} -> "Every #{day}"
+        {2, :week} -> "Every other #{day}"
+        {n, :week} -> "Every #{n} weeks on #{day}"
+        {1, :month} -> "Monthly on the #{ordinal(anchor.day)}"
+        {n, :month} -> "Every #{n} months on the #{ordinal(anchor.day)}"
+      end
+
+    "#{pattern} at #{time}, starting #{first}"
+  end
+
+  defp when_line(huddl, moment, _series), do: when_line(huddl, moment)
 
   defp when_line(huddl, moment) do
     local = DateTime.shift_zone!(huddl.starts_at, huddl.time_zone)
@@ -79,6 +150,18 @@ defmodule Huddlz.Social.Post do
     end
   end
 
+  defp ordinal(day) when day in [11, 12, 13], do: "#{day}th"
+
+  defp ordinal(day) do
+    case rem(day, 10) do
+      1 -> "#{day}st"
+      2 -> "#{day}nd"
+      3 -> "#{day}rd"
+      _ -> "#{day}th"
+    end
+  end
+
+  defp blank?(false), do: true
   defp blank?(nil), do: true
   defp blank?(text) when is_binary(text), do: String.trim(text) == ""
 end
