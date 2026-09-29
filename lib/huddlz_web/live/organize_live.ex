@@ -9,6 +9,7 @@ defmodule HuddlzWeb.OrganizeLive do
     * `/organize` — landing picker (owned groups + create CTA, or empty state)
     * `/organize/:group_slug` — overview (KPIs + next huddl)
     * `/organize/:group_slug/huddlz` — huddlz list, lifecycle filters
+    * `/organize/:group_slug/huddlz/:huddl_id` — one huddl for its organizers, with its social posts
     * `/organize/:group_slug/members` — roster grouped by role, one menu per person
     * `/organize/:group_slug/social` — social connections: the places huddlz posts to
     * `/organize/:group_slug/settings` — owner-only group administration
@@ -17,6 +18,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
   import HuddlzWeb.Components.Sparkline
   import HuddlzWeb.Components.GrowthChart
+  import HuddlzWeb.Components.HuddlSocialPosts
   import HuddlzWeb.Components.SignupChart
   import HuddlzWeb.Components.TurnoutChart
   import HuddlzWeb.ReportAccount, only: [report_menu_item: 1, report_account_dialog: 1]
@@ -31,6 +33,7 @@ defmodule HuddlzWeb.OrganizeLive do
   alias Huddlz.Communities.SocialPost.Occasion
   alias Huddlz.Social
   alias Huddlz.Social.Post
+  alias Huddlz.Social.Schedule
   alias HuddlzWeb.Components.TurnoutForm
   alias HuddlzWeb.FormFocus
   alias HuddlzWeb.HuddlStatus
@@ -88,6 +91,8 @@ defmodule HuddlzWeb.OrganizeLive do
      |> assign(:social_connections, [])
      |> assign(:upcoming_posts, [])
      |> assign(:recent_posts, [])
+     |> assign(:organized_huddl, nil)
+     |> assign(:huddl_social, nil)
      |> assign(:connect_dialog?, false)
      |> assign(:schedule_editor, nil)
      |> assign(:schedule_form, nil)
@@ -112,6 +117,7 @@ defmodule HuddlzWeb.OrganizeLive do
       |> assign(:huddlz_filter, parse_huddlz_filter(params["filter"]))
       |> assign(:period, GroupStats.parse_period(params["period"]))
       |> assign(:connected_id, params["connected"])
+      |> assign(:huddl_id, params["huddl_id"])
       |> load_action(action, params, user)
 
     {:noreply, socket}
@@ -173,6 +179,24 @@ defmodule HuddlzWeb.OrganizeLive do
     |> assign(:huddlz_counts, counts)
   end
 
+  defp load_section(socket, :huddl, group, user) do
+    case Communities.get_huddl(socket.assigns.huddl_id,
+           actor: user,
+           load: [:rsvp_count, :waitlist_count, :status, :display_image_url, group: [:owner]]
+         ) do
+      {:ok, %{group_id: group_id} = huddl} when group_id == group.id ->
+        socket
+        |> assign(:page_title, "#{huddl.title} · Organizer")
+        |> assign(:organized_huddl, huddl)
+        |> load_huddl_social(huddl, user)
+
+      _other ->
+        socket
+        |> put_flash(:error, "That huddl isn't in #{group.name}.")
+        |> push_navigate(to: ~p"/organize/#{group.slug}/huddlz")
+    end
+  end
+
   defp load_section(socket, :members, group, user) do
     members = list_group_members(group, user)
     invitations = list_group_invitations(group, user)
@@ -207,6 +231,26 @@ defmodule HuddlzWeb.OrganizeLive do
     socket
     |> assign(:pending_member_action, nil)
     |> push_navigate(to: ~p"/organize/#{group.slug}")
+  end
+
+  # The Social posts panel shows for a published public huddl of a public
+  # group; its switches and Post now until the huddl starts.
+  defp load_huddl_social(socket, huddl, user) do
+    if Schedule.postable?(huddl) do
+      assign(socket, :huddl_social, %{
+        connections: Communities.list_social_connections!(huddl.group_id, actor: user),
+        posts: Communities.list_huddl_social_posts!(huddl.id, actor: user),
+        skipped_ids:
+          huddl.id
+          |> Communities.list_huddl_social_skips!(actor: user)
+          |> Enum.map(& &1.social_connection_id),
+        copy_text: Post.text(huddl, moment: :now, link: Social.huddl_link(huddl)),
+        steerable?:
+          is_nil(huddl.group.archived_at) and DateTime.after?(huddl.starts_at, DateTime.utc_now())
+      })
+    else
+      assign(socket, :huddl_social, nil)
+    end
   end
 
   defp load_connections(socket, group, user) do
@@ -424,6 +468,13 @@ defmodule HuddlzWeb.OrganizeLive do
             today={@today}
             turnout_editor={@turnout_editor}
           />
+        <% :huddl -> %>
+          <.huddl_view
+            :if={@organized_huddl}
+            group={@group}
+            huddl={@organized_huddl}
+            social={@huddl_social}
+          />
         <% :members -> %>
           <.members_view
             group={@group}
@@ -478,6 +529,7 @@ defmodule HuddlzWeb.OrganizeLive do
 
   defp active_section(:overview), do: :overview
   defp active_section(:huddlz), do: :huddlz
+  defp active_section(:huddl), do: :huddlz
   defp active_section(:members), do: :members
   defp active_section(:social), do: :social
   defp active_section(:settings), do: :settings
@@ -857,6 +909,16 @@ defmodule HuddlzWeb.OrganizeLive do
   end
 
   defp activity_line(%{entry: %{kind: kind}} = assigns)
+       when kind in [:skipped_huddl_on_place, :unskipped_huddl_on_place, :posted_huddl_now] do
+    ~H"""
+    <span class="line">
+      <b>{@entry.user.display_name}</b> {activity_verb(@entry.kind)} <b>{huddl_name(@entry.huddl)}</b>
+      {activity_preposition(@entry.kind)} <b>{@entry.detail}</b>
+    </span>
+    """
+  end
+
+  defp activity_line(%{entry: %{kind: kind}} = assigns)
        when kind in [:joined, :left, :accepted_invitation] do
     ~H"""
     <span class="line"><b>{@entry.user.display_name}</b> {activity_verb(@entry.kind)}</span>
@@ -894,6 +956,12 @@ defmodule HuddlzWeb.OrganizeLive do
   defp activity_verb(:paused_place), do: "paused"
   defp activity_verb(:resumed_place), do: "resumed"
   defp activity_verb(:removed_place), do: "removed"
+  defp activity_verb(:skipped_huddl_on_place), do: "skipped"
+  defp activity_verb(:unskipped_huddl_on_place), do: "turned posting back on for"
+  defp activity_verb(:posted_huddl_now), do: "posted"
+
+  defp activity_preposition(:posted_huddl_now), do: "to"
+  defp activity_preposition(_kind), do: "on"
 
   defp huddl_name(nil), do: "a huddl since deleted"
   defp huddl_name(%{title: title}), do: title
@@ -936,6 +1004,97 @@ defmodule HuddlzWeb.OrganizeLive do
   defp growth_sub(:month), do: "Members at month end, with how many joined each month"
   defp growth_sub(:fortnight), do: "Members at each fortnight's end, with how many joined in it"
   defp growth_sub(:week), do: "Members at each week's end, with how many joined that week"
+
+  # How a Post now went: sent; refused, so the connection needs
+  # reconnecting; or not through yet, so the scheduler tries again.
+  defp put_post_now_flash(socket, %{state: :sent}, connection),
+    do: put_flash(socket, :info, "Posted to #{SocialConnection.place(connection)}.")
+
+  defp put_post_now_flash(socket, %{state: :not_sent}, connection) do
+    put_flash(
+      socket,
+      :error,
+      "#{Kind.label(connection.kind)} refused the post. #{connection.channel_name} needs reconnecting."
+    )
+  end
+
+  defp put_post_now_flash(socket, _post, connection) do
+    put_flash(
+      socket,
+      :error,
+      "Couldn't reach #{Kind.label(connection.kind)} just now. huddlz will try again in a minute."
+    )
+  end
+
+  defp steer_error(%Ash.Error.Forbidden{}),
+    do: "Only the group's owner and organizers can steer its social posts."
+
+  defp steer_error(error) do
+    case Ash.Error.to_error_class(error) do
+      %{errors: [%{message: message} | _]} when is_binary(message) ->
+        "That place " <> message <> "."
+
+      _other ->
+        "Something went wrong. Try again."
+    end
+  end
+
+  # ─────────────────────────────────────────  ONE HUDDL  ───
+  attr :group, :map, required: true
+  attr :huddl, :map, required: true
+  attr :social, :map, default: nil
+
+  defp huddl_view(assigns) do
+    ~H"""
+    <nav class="org-crumbs" aria-label="Breadcrumb">
+      <.link navigate={~p"/organize/#{@group.slug}/huddlz"}>Huddlz</.link>
+      <span aria-hidden="true">/</span>
+      <span aria-current="page">{@huddl.title}</span>
+    </nav>
+    <div class="page-head org-huddl-head">
+      <div class="org-huddl-head-body">
+        <h1>{@huddl.title} <.organizer_status huddl={@huddl} /></h1>
+        <p>
+          {format_organizer_day(@huddl)} · {organizer_place(@huddl)}
+        </p>
+        <p class="muted">{HuddlCardHelpers.rsvp_label(@huddl)}</p>
+      </div>
+      <div class="actions">
+        <.link class="btn-secondary" navigate={huddl_show_path(@group, @huddl)}>
+          View huddl page
+        </.link>
+        <.link
+          :if={is_nil(@group.archived_at)}
+          class="btn-secondary"
+          navigate={~p"/groups/#{@group.slug}/huddlz/new?#{[copy: @huddl.id]}"}
+        >
+          <.icon name="hero-document-duplicate" class="size-4" /> Copy
+        </.link>
+        <.link
+          :if={is_nil(@group.archived_at) and @huddl.status not in [:cancelled, :completed]}
+          class="btn-primary"
+          navigate={huddl_edit_path(@group, @huddl, nil)}
+        >
+          Edit
+        </.link>
+      </div>
+    </div>
+    <.social_posts_panel
+      :if={@social}
+      huddl={@huddl}
+      connections={@social.connections}
+      posts={@social.posts}
+      skipped_ids={@social.skipped_ids}
+      copy_text={@social.copy_text}
+      steerable?={@social.steerable?}
+    />
+    """
+  end
+
+  defp format_organizer_day(huddl) do
+    local = HuddlCardHelpers.local_starts_at(huddl)
+    Calendar.strftime(local, "%a %-d %b, %-I:%M %p") <> " " <> local.zone_abbr
+  end
 
   # ─────────────────────────────────────────  HUDDLZ  ───
   attr :group, :map, required: true
@@ -1063,7 +1222,10 @@ defmodule HuddlzWeb.OrganizeLive do
       <.organizer_thumb huddl={@huddl} group={@group} />
       <div class="org-huddl-body">
         <h3 class="org-huddl-title">
-          <.link id={"organize-huddl-link-#{@huddl.id}"} navigate={huddl_show_path(@group, @huddl)}>
+          <.link
+            id={"organize-huddl-link-#{@huddl.id}"}
+            navigate={~p"/organize/#{@group.slug}/huddlz/#{@huddl.id}"}
+          >
             {@huddl.title}
           </.link>
           <.organizer_status huddl={@huddl} />
@@ -1896,6 +2058,49 @@ defmodule HuddlzWeb.OrganizeLive do
     end
   end
 
+  # Each switch's field is named by its connection's id.
+  def handle_event("toggle_social_skip", %{"steer" => steer}, socket) do
+    %{organized_huddl: huddl, current_user: user} = socket.assigns
+    [{id, post}] = Map.to_list(steer)
+
+    {steer, done} =
+      if post == "true",
+        do: {&Communities.unskip_social_connection/3, "will be posted there again"},
+        else: {&Communities.skip_social_connection/3, "won't be posted there"}
+
+    case steer.(huddl, id, actor: user) do
+      {:ok, huddl} ->
+        {:noreply,
+         socket
+         |> load_huddl_social(socket.assigns.organized_huddl, user)
+         |> put_flash(
+           :info,
+           "#{huddl.title} #{done}: #{SocialConnection.place(huddl.__metadata__.social_connection)}."
+         )}
+
+      {:error, error} ->
+        {:noreply,
+         socket
+         |> load_huddl_social(huddl, user)
+         |> put_flash(:error, steer_error(error))}
+    end
+  end
+
+  def handle_event("post_social_now", %{"id" => id}, socket) do
+    %{organized_huddl: huddl, current_user: user} = socket.assigns
+
+    socket =
+      case Communities.post_social_now(huddl, id, actor: user) do
+        {:ok, %{__metadata__: %{social_connection: connection, social_post: post}}} ->
+          put_post_now_flash(socket, post, connection)
+
+        {:error, error} ->
+          put_flash(socket, :error, steer_error(error))
+      end
+
+    {:noreply, load_huddl_social(socket, huddl, user)}
+  end
+
   def handle_event("pause_connection", %{"id" => id}, socket) do
     set_connection_state(socket, id, &Communities.pause_social_connection/2, "is paused.")
   end
@@ -2513,7 +2718,9 @@ defmodule HuddlzWeb.OrganizeLive do
         <div :for={post <- @upcoming} id={"social-post-#{post.id}"} class="row social-post-row">
           <span class="social-post-time">{post_time(post.due_at, post.huddl)}</span>
           <span class="row-title">
-            {post_huddl(post)}
+            <.link navigate={~p"/organize/#{@group.slug}/huddlz/#{post.huddl.id}"}>
+              {post_huddl(post)}
+            </.link>
             <span class="meta">
               {Occasion.label(post.occasion)} · {post.social_connection.channel_name}
             </span>
@@ -2532,7 +2739,9 @@ defmodule HuddlzWeb.OrganizeLive do
         <div :for={post <- @recent} id={"social-post-#{post.id}"} class="row social-post-row">
           <span class="social-post-time">{post_time(post.sent_at || post.due_at, post.huddl)}</span>
           <span class="row-title">
-            {post_huddl(post)}
+            <.link navigate={~p"/organize/#{@group.slug}/huddlz/#{post.huddl.id}"}>
+              {post_huddl(post)}
+            </.link>
             <span class="meta">
               {Occasion.label(post.occasion)} · {post.social_connection.channel_name}
             </span>
