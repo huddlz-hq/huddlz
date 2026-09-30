@@ -47,6 +47,17 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   resurrecting it, repairs a gap left by a partial failure, and makes a retried
   or overlapping run create nothing twice.
 
+  The grid `SeriesWindow.next_occurrences/3` searches starts no earlier than
+  `source`'s own date. The template's anchor never moves except on an "edit
+  all", so a long-lived series' anchor drifts arbitrarily far behind both
+  `cutoff` and the source huddl it currently generates from. Without this
+  floor, the cutoff-relative arithmetic can land on a date *before* the
+  source — congruent with the cadence, but one the series never actually
+  reached, since every occurrence up to the source was already resolved
+  (materialized, cancelled, or otherwise accounted for). Flooring at the
+  source's own date keeps the grid from manufacturing an occurrence earlier
+  than the one the series is currently generating from.
+
   Returns `{:error, :no_source}` when the series has no huddl left to copy
   details from. That is not a failure — there is simply nothing to generate.
   """
@@ -54,7 +65,8 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     cutoff = cutoff || DateTime.utc_now()
 
     with {:ok, source} <- series_source(template),
-         {:ok, occurrences} <- SeriesWindow.next_occurrences(template, cutoff) do
+         {:ok, occurrences} <-
+           SeriesWindow.next_occurrences(template, max_datetime(cutoff, source.starts_at)) do
       existing = series_occurrences(template, cutoff)
       occupied = occupied_dates(template, existing)
       capacity = max(SeriesWindow.horizon() - length(existing), 0)
@@ -70,6 +82,10 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
 
       :ok
     end
+  end
+
+  defp max_datetime(a, b) do
+    if DateTime.compare(a, b) == :gt, do: a, else: b
   end
 
   defp local_date(datetime, time_zone) do
