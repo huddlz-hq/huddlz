@@ -144,6 +144,9 @@ defmodule Huddlz.Communities.Huddl do
       index [:lifecycle_state, :ends_at],
         name: "huddlz_lifecycle_state_ends_at_index"
 
+      index [:huddl_template_id, :starts_at],
+        name: "huddlz_huddl_template_id_starts_at_index"
+
       index "ST_MakePoint(longitude, latitude)",
         name: "huddlz_location_gist_index",
         using: "GIST",
@@ -291,11 +294,6 @@ defmodule Huddlz.Communities.Huddl do
         message "is required for recurring huddlz"
       end
 
-      validate present(:repeat_until) do
-        where argument_equals(:is_recurring, true)
-        message "is required for recurring huddlz"
-      end
-
       change Huddlz.Communities.Huddl.Changes.SetCreatorToActor
       change Huddlz.Communities.Huddl.Changes.AddCreatorAsAttendee
       change Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup
@@ -424,16 +422,12 @@ defmodule Huddlz.Communities.Huddl do
 
       require_atomic? false
 
-      validate present(:frequency) do
-        where argument_equals(:edit_type, "all")
-        message "is required when editing the whole series"
-      end
-
-      validate present(:repeat_until) do
-        where argument_equals(:edit_type, "all")
-        message "is required when editing the whole series"
-      end
-
+      # `frequency` is not required here: the web form always submits it
+      # (Huddlz.HuddlLive.Edit presets it from the series' current cadence),
+      # but an API/GraphQL caller editing the whole series to change only,
+      # say, the title omits it — and omission means "leave the cadence
+      # alone", the same way an omitted `repeat_until` leaves the end date
+      # alone. See `Changes.EditRecurringHuddlz.reconcile_series/4`.
       change Huddlz.Communities.Huddl.Changes.DefaultTimeZoneFromGroup
       change Huddlz.Communities.Huddl.Changes.ApplySavedLocation
       change Huddlz.Communities.Huddl.Changes.CalculateDateTimeFromInputs

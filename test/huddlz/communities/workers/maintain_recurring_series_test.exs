@@ -1,4 +1,4 @@
-defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
+defmodule Huddlz.Communities.Workers.MaintainRecurringSeriesTest do
   use Huddlz.DataCase, async: true
   use Oban.Testing, repo: Huddlz.Repo
 
@@ -6,7 +6,10 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
 
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
-  alias Huddlz.Communities.Workers.RegenerateRecurringSeries
+  alias Huddlz.Communities.Huddl.SeriesWindow
+  alias Huddlz.Communities.HuddlTemplate
+  alias Huddlz.Communities.Workers.MaintainRecurringSeries
+  alias Huddlz.Generator
   alias Huddlz.Notifications
   alias Huddlz.Storage
 
@@ -26,10 +29,10 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
               group_id: group.id,
               creator_id: owner.id,
               actor: owner,
-              date: Date.add(Date.utc_today(), 1),
+              date: Date.add(Generator.eastern_today(), 1),
               is_recurring: true,
               frequency: "weekly",
-              repeat_until: Date.add(Date.utc_today(), 15)
+              repeat_until: Date.add(Generator.eastern_today(), 15)
             ],
             opts
           )
@@ -80,7 +83,14 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
 
     # Fan-out is deferred: nothing generated until the queue runs.
     assert future_instances(huddl) == []
-    assert_enqueued(worker: RegenerateRecurringSeries, args: %{huddl_id: huddl.id})
+
+    assert_enqueued(
+      worker: MaintainRecurringSeries,
+      args: %{huddl_template_id: huddl.huddl_template_id}
+    )
+
+    template = Ash.get!(HuddlTemplate, huddl.huddl_template_id, authorize?: false)
+    assert template.source_huddl_id == huddl.id
   end
 
   test "the create transaction assigns a pending cover image before generation is enqueued" do
@@ -115,7 +125,7 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
         %{
           title: "Recurring with image",
           description: "Test",
-          date: Date.add(Date.utc_today(), 1),
+          date: Date.add(Generator.eastern_today(), 1),
           start_time: ~T[14:00:00],
           duration_minutes: 60,
           event_type: :virtual,
@@ -123,7 +133,7 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
           group_id: group.id,
           is_recurring: true,
           frequency: "weekly",
-          repeat_until: Date.add(Date.utc_today(), 15)
+          repeat_until: Date.add(Generator.eastern_today(), 15)
         },
         actor: owner
       )
@@ -220,6 +230,9 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
            |> Enum.all?(&(&1.max_attendees == 3))
   end
 
+  # Re-running the job no longer clears and rebuilds: it matches existing
+  # occurrences by calendar date and leaves them untouched, so the same
+  # occurrences (and the same images) survive a second run.
   test "re-running the job regenerates without duplicating" do
     %{owner: owner, huddl: huddl} = create_recurring()
     attach_cover_image(huddl, owner)
@@ -228,25 +241,27 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
     first_generation = future_instances(huddl)
     assert length(first_generation) == 2
 
-    old_image_paths =
-      Enum.map(first_generation, fn occurrence ->
+    image_paths_by_id =
+      Map.new(first_generation, fn occurrence ->
         assert {:ok, image} =
                  Communities.get_current_huddl_cover_image(occurrence.id, authorize?: false)
 
-        image.storage_path
+        {occurrence.id, image.storage_path}
       end)
 
-    assert :ok = perform_job(RegenerateRecurringSeries, %{huddl_id: huddl.id})
+    assert :ok =
+             perform_job(MaintainRecurringSeries, %{huddl_template_id: huddl.huddl_template_id})
 
     second_generation = future_instances(huddl)
-    assert length(second_generation) == 2
 
-    refute Enum.any?(old_image_paths, &Storage.exists?/1)
+    assert Enum.map(second_generation, & &1.id) |> Enum.sort() ==
+             Enum.map(first_generation, & &1.id) |> Enum.sort()
 
     for occurrence <- second_generation do
       assert {:ok, image} =
                Communities.get_current_huddl_cover_image(occurrence.id, authorize?: false)
 
+      assert image.storage_path == Map.fetch!(image_paths_by_id, occurrence.id)
       assert Storage.exists?(image.storage_path)
     end
   end
@@ -267,7 +282,7 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
         %{
           title: "Recurring",
           description: "Test",
-          date: Date.add(Date.utc_today(), 1),
+          date: Date.add(Generator.eastern_today(), 1),
           start_time: ~T[14:00:00],
           duration_minutes: 60,
           event_type: :in_person,
@@ -275,7 +290,7 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
           group_id: group.id,
           is_recurring: true,
           frequency: "weekly",
-          repeat_until: Date.add(Date.utc_today(), 15)
+          repeat_until: Date.add(Generator.eastern_today(), 15)
         },
         actor: owner
       )
@@ -293,7 +308,118 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
     %{huddl: huddl} = create_recurring()
     Ash.destroy!(huddl, authorize?: false)
 
-    assert :ok = perform_job(RegenerateRecurringSeries, %{huddl_id: huddl.id})
+    assert :ok =
+             perform_job(MaintainRecurringSeries, %{huddl_template_id: huddl.huddl_template_id})
+  end
+
+  test "is a no-op when the series has no huddlz left" do
+    %{huddl: huddl} = create_recurring()
+
+    Huddl
+    |> Ash.Query.for_read(:siblings_in_series, %{
+      huddl_template_id: huddl.huddl_template_id,
+      starting_after: ~U[1970-01-01 00:00:00Z]
+    })
+    |> Ash.read!(authorize?: false)
+    |> Enum.each(fn occurrence ->
+      occurrence |> Ash.Changeset.for_destroy(:destroy, %{}) |> Ash.destroy!(authorize?: false)
+    end)
+
+    HuddlTemplate
+    |> Ash.get!(huddl.huddl_template_id, authorize?: false)
+    |> Ash.Changeset.for_update(:update, %{source_huddl_id: nil})
+    |> Ash.update!(authorize?: false)
+
+    assert :ok =
+             MaintainRecurringSeries.perform(%Oban.Job{
+               args: %{"huddl_template_id" => huddl.huddl_template_id},
+               attempt: 1,
+               max_attempts: 3
+             })
+  end
+
+  test "is a no-op when the series was deleted before the job ran" do
+    assert :ok =
+             MaintainRecurringSeries.perform(%Oban.Job{
+               args: %{"huddl_template_id" => Ash.UUID.generate()},
+               attempt: 1,
+               max_attempts: 3
+             })
+  end
+
+  test "does not extend a series whose group has been archived" do
+    %{owner: owner, group: group, huddl: huddl} = create_recurring()
+
+    # A future published huddl blocks archiving, so cancel it first.
+    Communities.cancel_huddl!(huddl, nil, actor: owner)
+    Communities.archive_group!(group, actor: owner)
+
+    assert :ok =
+             perform_job(MaintainRecurringSeries, %{huddl_template_id: huddl.huddl_template_id})
+
+    assert future_instances(huddl) == []
+  end
+
+  # The archived-group guard must resolve the same huddl fill_window/2 is
+  # about to generate from — RecurrenceHelper.series_source/1 — rather than
+  # its own copy of the fallback. A hard-deleted source nilifies
+  # source_huddl_id; without going through the shared resolution the guard
+  # would never look the group up and would let a now-archived group's
+  # series keep growing.
+  test "does not extend a series whose source was hard-deleted once its group is archived" do
+    %{owner: owner, group: group, huddl: huddl} = create_recurring()
+
+    assert %{success: 1} = Oban.drain_queue(queue: :default)
+    remaining = future_instances(huddl)
+    assert length(remaining) == 2
+
+    # Hard-delete the source; the FK nilifies the template's source_huddl_id.
+    Ash.destroy!(huddl, authorize?: false)
+
+    # A future published huddl blocks archiving, so cancel the survivors too.
+    for occurrence <- remaining do
+      Communities.cancel_huddl!(occurrence, nil, actor: owner)
+    end
+
+    Communities.archive_group!(group, actor: owner)
+
+    assert :ok =
+             perform_job(MaintainRecurringSeries, %{huddl_template_id: huddl.huddl_template_id})
+
+    after_run =
+      Huddl
+      |> Ash.Query.for_read(:siblings_in_series, %{
+        huddl_template_id: huddl.huddl_template_id,
+        starting_after: ~U[1970-01-01 00:00:00Z]
+      })
+      |> Ash.read!(authorize?: false)
+
+    assert Enum.map(after_run, & &1.id) |> Enum.sort() ==
+             Enum.map(remaining, & &1.id) |> Enum.sort()
+  end
+
+  test "still extends a series via the latest-occurrence fallback when only the source was hard-deleted" do
+    %{huddl: huddl} = create_recurring(repeat_until: Date.add(Generator.eastern_today(), 365))
+
+    assert %{success: 1} = Oban.drain_queue(queue: :default)
+    remaining = future_instances(huddl)
+
+    # Hard-delete the source; the FK nilifies the template's source_huddl_id,
+    # so generation must fall back to the latest remaining occurrence.
+    Ash.destroy!(huddl, authorize?: false)
+
+    assert :ok =
+             perform_job(MaintainRecurringSeries, %{huddl_template_id: huddl.huddl_template_id})
+
+    after_run =
+      Huddl
+      |> Ash.Query.for_read(:siblings_in_series, %{
+        huddl_template_id: huddl.huddl_template_id,
+        starting_after: ~U[1970-01-01 00:00:00Z]
+      })
+      |> Ash.read!(authorize?: false)
+
+    assert length(after_run) > length(remaining)
   end
 
   test "surfaces a final generation failure to the organizer" do
@@ -310,13 +436,13 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
     )
 
     job = %Oban.Job{
-      args: %{"huddl_id" => huddl.id},
+      args: %{"huddl_template_id" => huddl.huddl_template_id},
       attempt: 3,
       max_attempts: 3
     }
 
     assert_raise Ash.Error.Invalid, fn ->
-      RegenerateRecurringSeries.perform(job)
+      MaintainRecurringSeries.perform(job)
     end
 
     assert {:ok, %{results: notifications}} =
@@ -326,5 +452,105 @@ defmodule Huddlz.Communities.Workers.RegenerateRecurringSeriesTest do
              notification.trigger == "recurring_huddl_generation_failed" and
                notification.source_url =~ huddl.id
            end)
+  end
+
+  # Every other test in this suite builds its series moments before exercising
+  # it, so the template's anchor is always the earliest upcoming occurrence.
+  # That hid the overshoot in fill_window/2: an anchor that is not the
+  # earliest upcoming occurrence, with some occurrences already materialized
+  # ahead of it, is exactly the shape a boundless series has after an "edit
+  # all" and every day thereafter. This drives the worker against a template
+  # whose anchor is two years old, with three occurrences already
+  # materialized on the grid, and checks the sweep tops up to twelve without
+  # duplicating or skipping a date.
+  test "tops up a series with a materially aged anchor and already-materialized occurrences" do
+    owner = generate(user(role: :user))
+    group = generate(group(is_public: true, owner_id: owner.id, actor: owner))
+
+    first_upcoming_date = Date.add(Generator.eastern_today(), 7)
+
+    earliest =
+      generate(
+        huddl(
+          title: "Aged series",
+          group_id: group.id,
+          creator_id: owner.id,
+          actor: owner,
+          date: first_upcoming_date,
+          start_time: ~T[14:00:00],
+          duration_minutes: 60
+        )
+      )
+
+    schedule = HuddlTemplate.wall_clock_schedule(earliest)
+
+    template =
+      HuddlTemplate
+      |> Ash.Changeset.for_create(:create, %{
+        interval: 1,
+        unit: :week,
+        repeat_until: nil,
+        starts_at_local: NaiveDateTime.shift(schedule.starts_at_local, week: -104),
+        ends_at_local: NaiveDateTime.shift(schedule.ends_at_local, week: -104),
+        time_zone: schedule.time_zone,
+        source_huddl_id: earliest.id
+      })
+      |> Ash.create!(authorize?: false)
+
+    earliest =
+      earliest
+      |> Ash.Changeset.for_update(:update, %{huddl_template_id: template.id}, actor: owner)
+      |> Ash.update!()
+
+    already_materialized =
+      for weeks_out <- [1, 2] do
+        generate(
+          huddl(
+            title: "Aged series",
+            group_id: group.id,
+            creator_id: owner.id,
+            actor: owner,
+            date: Date.add(first_upcoming_date, weeks_out * 7),
+            start_time: ~T[14:00:00],
+            duration_minutes: 60
+          )
+        )
+        |> Ash.Changeset.for_update(:update, %{huddl_template_id: template.id}, actor: owner)
+        |> Ash.update!()
+      end
+
+    pre_existing_ids = [earliest | already_materialized] |> Enum.map(& &1.id) |> Enum.sort()
+
+    assert :ok = perform_job(MaintainRecurringSeries, %{huddl_template_id: template.id})
+
+    all_occurrences =
+      Huddl
+      |> Ash.Query.for_read(:siblings_in_series, %{
+        huddl_template_id: template.id,
+        starting_after: ~U[1970-01-01 00:00:00Z]
+      })
+      |> Ash.read!(authorize?: false)
+
+    assert length(all_occurrences) == SeriesWindow.horizon()
+
+    dates =
+      all_occurrences
+      |> Enum.sort_by(& &1.starts_at, DateTime)
+      |> Enum.map(
+        &(&1.starts_at
+          |> DateTime.shift_zone!(schedule.time_zone)
+          |> DateTime.to_date())
+      )
+
+    expected_dates = for weeks_out <- 0..11, do: Date.add(first_upcoming_date, weeks_out * 7)
+    assert dates == expected_dates
+
+    kept_ids =
+      all_occurrences
+      |> Enum.filter(&(&1.id in pre_existing_ids))
+      |> Enum.map(& &1.id)
+      |> Enum.sort()
+
+    assert kept_ids == pre_existing_ids
   end
 end

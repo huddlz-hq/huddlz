@@ -57,7 +57,7 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
       |> Ash.Changeset.for_update(:update, %{huddl_template_id: template.id}, actor: owner)
       |> Ash.update!()
 
-    RecurrenceHelper.generate_huddlz_from_template(template, source)
+    :ok = RecurrenceHelper.fill_window(template)
 
     %{owner: owner, group: group, source: source, template: template, repeat_until: repeat_until}
   end
@@ -338,11 +338,18 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
            |> Enum.sort(Date) == [~D[2028-02-20], ~D[2028-03-20], ~D[2028-04-20]]
   end
 
-  test "extending a shortened series creates a new active occurrence for a cancelled date" do
+  # An edit re-dates and removes but never creates (Task 7): extending a
+  # shortened series does not resurrect the date its shortening cancelled —
+  # fill_window/2 treats a date occupied in *any* lifecycle state, cancelled
+  # included, as already taken. The scheduled run still grows the window with
+  # fresh dates once the series reaches further into the future again.
+  test "extending a shortened series does not resurrect its cancelled date, but the scheduled run still grows the window" do
     original_repeat_until = Date.add(Huddlz.Generator.eastern_today(), 36)
 
     %{owner: owner, source: source, template: template} =
       build_series(true, repeat_until: original_repeat_until)
+
+    before_count = length(future_instances(template.id, source.starts_at))
 
     dropped =
       template.id
@@ -354,16 +361,237 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlzTest do
     assert %{lifecycle_state: :cancelled} =
              Communities.get_huddl!(dropped.id, actor: owner)
 
-    edit_all(shortened_source, owner, original_repeat_until)
+    extended_repeat_until = Date.add(Huddlz.Generator.eastern_today(), 90)
+    edit_all(shortened_source, owner, extended_repeat_until)
 
     restored_date = DateTime.to_date(dropped.starts_at)
 
-    restored =
+    on_restored_date =
       template.id
       |> future_instances(source.starts_at)
       |> Enum.filter(&(DateTime.to_date(&1.starts_at) == restored_date))
 
-    assert Enum.any?(restored, &(&1.id == dropped.id and &1.lifecycle_state == :cancelled))
-    assert Enum.any?(restored, &(&1.id != dropped.id and &1.lifecycle_state == :published))
+    # Extending never creates: the cancelled date is not resurrected by the edit.
+    assert [%{id: id, lifecycle_state: :cancelled}] = on_restored_date
+    assert id == dropped.id
+
+    assert :ok =
+             RecurrenceHelper.fill_window(Ash.get!(HuddlTemplate, template.id, authorize?: false))
+
+    still_on_restored_date =
+      template.id
+      |> future_instances(source.starts_at)
+      |> Enum.filter(&(DateTime.to_date(&1.starts_at) == restored_date))
+
+    # ...nor does the scheduled run: the date stays cancelled, not doubled up.
+    assert [%{id: ^id, lifecycle_state: :cancelled}] = still_on_restored_date
+
+    after_count = length(future_instances(template.id, source.starts_at))
+    assert after_count > before_count
+  end
+
+  describe "changing the frequency" do
+    setup do
+      owner = Generator.generate(Generator.user())
+
+      group =
+        Generator.generate(Generator.group(owner_id: owner.id, is_public: true, actor: owner))
+
+      %{owner: owner, group: group}
+    end
+
+    test "keeps the same number of occurrences and re-spaces them", ctx do
+      %{huddl: huddl, owner: owner} = monthly_series(ctx)
+      assert :ok = RecurrenceHelper.fill_window(template_for(huddl))
+
+      before = future_count(huddl)
+      assert before > 1
+
+      Communities.update_huddl!(huddl, %{edit_type: "all", frequency: "weekly"}, actor: owner)
+
+      assert future_count(huddl) == before
+
+      [first, second | _] =
+        huddl
+        |> future_occurrences()
+        |> Enum.sort_by(& &1.starts_at, DateTime)
+        |> Enum.map(&DateTime.to_date(&1.starts_at))
+
+      assert Date.diff(second, first) == 7
+    end
+
+    test "moves an attendee's RSVP with its occurrence", ctx do
+      %{huddl: huddl, owner: owner} = monthly_series(ctx)
+      assert :ok = RecurrenceHelper.fill_window(template_for(huddl))
+
+      target = huddl |> future_occurrences() |> Enum.sort_by(& &1.starts_at, DateTime) |> hd()
+      attendee = Generator.generate(Generator.user())
+      Communities.rsvp_huddl!(target, actor: attendee)
+
+      Communities.update_huddl!(huddl, %{edit_type: "all", frequency: "weekly"}, actor: owner)
+
+      moved = Ash.get!(Huddl, target.id, authorize?: false)
+      assert DateTime.compare(moved.starts_at, target.starts_at) == :lt
+
+      attendees = Communities.list_huddl_attendees!(moved.id, actor: owner)
+      assert Enum.any?(attendees, &(&1.user_id == attendee.id))
+    end
+
+    test "records the edited occurrence as the series' new source", ctx do
+      %{huddl: huddl, owner: owner} = monthly_series(ctx)
+      assert :ok = RecurrenceHelper.fill_window(template_for(huddl))
+
+      edited = huddl |> future_occurrences() |> Enum.sort_by(& &1.starts_at, DateTime) |> hd()
+
+      Communities.update_huddl!(
+        edited,
+        %{edit_type: "all", title: "Renamed from a later occurrence"},
+        actor: owner
+      )
+
+      assert template_for(huddl).source_huddl_id == edited.id
+    end
+
+    # The spec calls this out: with no future siblings there is nothing to
+    # re-date, so the edit creates nothing and the series' count is unchanged
+    # — the eleven occurrences before the edited one keep their existing
+    # schedule. The template still takes the new cadence, but the scheduled
+    # run must not pad a fresh twelve occurrences on top of the ones that
+    # already exist; that padding is exactly the overshoot the fill step must
+    # never produce. The new cadence is real from the moment of the edit, it
+    # just materializes as the rolling window advances past the new anchor
+    # and capacity frees up.
+    test "from the last occurrence, creates nothing until the window advances past it", ctx do
+      %{huddl: huddl, owner: owner} = monthly_series(ctx)
+      assert :ok = RecurrenceHelper.fill_window(template_for(huddl))
+
+      last = huddl |> future_occurrences() |> Enum.max_by(& &1.starts_at, DateTime)
+      before = future_count(huddl)
+
+      Communities.update_huddl!(last, %{edit_type: "all", frequency: "weekly"}, actor: owner)
+
+      assert future_count(huddl) == before
+      assert template_for(huddl).unit == :week
+
+      # The series is already at its twelve-occurrence capacity, so the next
+      # scheduled run creates nothing.
+      assert :ok = RecurrenceHelper.fill_window(template_for(huddl))
+      assert future_count(huddl) == before
+
+      # Once the window advances past the new anchor, capacity frees up and
+      # the new weekly cadence starts materializing.
+      assert :ok =
+               RecurrenceHelper.fill_window(
+                 template_for(huddl),
+                 DateTime.add(last.starts_at, 1, :day)
+               )
+
+      assert future_count(huddl) > before
+
+      new_occurrence =
+        huddl
+        |> future_occurrences()
+        |> Enum.filter(&(DateTime.compare(&1.starts_at, last.starts_at) == :gt))
+        |> Enum.min_by(& &1.starts_at, DateTime)
+
+      assert DateTime.diff(new_occurrence.starts_at, last.starts_at, :day) == 7
+    end
+
+    # The spec calls this out: a cancelled occurrence is not re-dated and does
+    # not count toward the dates reconciliation asks for.
+    test "leaves a cancelled occurrence on its original date", ctx do
+      %{huddl: huddl, owner: owner} = monthly_series(ctx)
+      assert :ok = RecurrenceHelper.fill_window(template_for(huddl))
+
+      cancelled =
+        huddl |> future_occurrences() |> Enum.sort_by(& &1.starts_at, DateTime) |> Enum.at(2)
+
+      Communities.cancel_huddl!(cancelled, nil, actor: owner)
+      original_date = DateTime.to_date(cancelled.starts_at)
+
+      Communities.update_huddl!(huddl, %{edit_type: "all", frequency: "weekly"}, actor: owner)
+
+      reloaded = Ash.get!(Huddl, cancelled.id, authorize?: false)
+      assert reloaded.lifecycle_state == :cancelled
+      assert DateTime.to_date(reloaded.starts_at) == original_date
+    end
+  end
+
+  describe "repeat_until on an edit" do
+    setup do
+      owner = Generator.generate(Generator.user())
+
+      group =
+        Generator.generate(Generator.group(owner_id: owner.id, is_public: true, actor: owner))
+
+      %{owner: owner, group: group}
+    end
+
+    test "an update that does not mention it leaves the series' end date alone", ctx do
+      %{huddl: huddl, owner: owner} =
+        monthly_series(ctx, repeat_until: Date.add(Generator.eastern_today(), 400))
+
+      expected = DateTime.to_date(template_for(huddl).repeat_until)
+
+      Communities.update_huddl!(
+        huddl,
+        %{edit_type: "all", title: "Renamed, nothing else"},
+        actor: owner
+      )
+
+      assert DateTime.to_date(template_for(huddl).repeat_until) == expected
+    end
+
+    test "an update that clears it makes the series boundless", ctx do
+      %{huddl: huddl, owner: owner} =
+        monthly_series(ctx, repeat_until: Date.add(Generator.eastern_today(), 400))
+
+      Communities.update_huddl!(
+        huddl,
+        %{edit_type: "all", frequency: "monthly", repeat_until: nil},
+        actor: owner
+      )
+
+      assert is_nil(template_for(huddl).repeat_until)
+    end
+  end
+
+  defp template_for(huddl) do
+    Ash.get!(HuddlTemplate, huddl.huddl_template_id, authorize?: false)
+  end
+
+  defp future_occurrences(huddl) do
+    Huddl
+    |> Ash.Query.for_read(:siblings_in_series, %{
+      huddl_template_id: huddl.huddl_template_id,
+      starting_after: huddl.starts_at
+    })
+    |> Ash.read!(authorize?: false)
+    |> Enum.filter(&(&1.lifecycle_state in [:draft, :published]))
+  end
+
+  defp future_count(huddl), do: length(future_occurrences(huddl))
+
+  defp monthly_series(ctx, opts \\ []) do
+    huddl =
+      Generator.generate(
+        Generator.huddl(
+          Keyword.merge(
+            [
+              title: "Monthly series",
+              group_id: ctx.group.id,
+              creator_id: ctx.owner.id,
+              actor: ctx.owner,
+              date: Date.add(Generator.eastern_today(), 7),
+              is_recurring: true,
+              frequency: "monthly",
+              repeat_until: nil
+            ],
+            opts
+          )
+        )
+      )
+
+    %{huddl: huddl, owner: ctx.owner, group: ctx.group}
   end
 end

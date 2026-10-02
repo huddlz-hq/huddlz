@@ -8,7 +8,7 @@ defmodule RecurringHuddlGenerationSteps do
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.HuddlCoverImage
-  alias Huddlz.Communities.Workers.RegenerateRecurringSeries
+  alias Huddlz.Communities.Workers.MaintainRecurringSeries
   alias Huddlz.Notifications
   alias Huddlz.Storage
 
@@ -67,13 +67,13 @@ defmodule RecurringHuddlGenerationSteps do
 
   step "its final recurring generation attempt runs", context do
     job = %Oban.Job{
-      args: %{"huddl_id" => context.huddl.id},
+      args: %{"huddl_template_id" => context.huddl.huddl_template_id},
       attempt: 3,
       max_attempts: 3
     }
 
     assert_raise Ash.Error.Invalid, fn ->
-      RegenerateRecurringSeries.perform(job)
+      MaintainRecurringSeries.perform(job)
     end
 
     context
@@ -205,10 +205,10 @@ defmodule RecurringHuddlGenerationSteps do
               creator_id: owner.id,
               actor: owner,
               group_location_id: address_book_location_id(group.id),
-              date: Date.add(Date.utc_today(), 1),
+              date: Date.add(eastern_today(), 1),
               is_recurring: true,
               frequency: "weekly",
-              repeat_until: Date.add(Date.utc_today(), 15)
+              repeat_until: Date.add(eastern_today(), 15)
             ],
             opts
           )
@@ -242,8 +242,8 @@ defmodule RecurringHuddlGenerationSteps do
   end
 
   defp perform_job(huddl) do
-    RegenerateRecurringSeries.perform(%Oban.Job{
-      args: %{"huddl_id" => huddl.id},
+    MaintainRecurringSeries.perform(%Oban.Job{
+      args: %{"huddl_template_id" => huddl.huddl_template_id},
       attempt: 1,
       max_attempts: 3
     })

@@ -573,7 +573,7 @@ defmodule Huddlz.Communities.GroupLocationTest do
           )
         )
 
-      assert :ok = RecurrenceHelper.generate_huddlz_from_template(template, source)
+      assert :ok = RecurrenceHelper.fill_window(template)
 
       assert [_generated] =
                Huddl

@@ -1,24 +1,23 @@
 defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   @moduledoc """
-  Shared logic for generating and reconciling a recurring huddl series.
+  Generating and reconciling a recurring huddl series.
 
-  Two entry points:
+  Two entry points, and only the first ever creates a huddl:
 
-    * `regenerate_series/2` — used by the create-path worker. Clears and rebuilds
-      the future instances. Safe because freshly-created series have no
-      subscribers to lose.
-    * `reconcile_future_instances/3` — used by "edit all". Updates the existing
-      future instances *in place* (preserving every RSVP/waitlist spot and
-      notifying their subscribers), creates any newly-added dates, and removes
-      dates that fall off the schedule according to their lifecycle state.
+    * `fill_window/2` — creates the occurrences missing from the series'
+      rolling window. Called by `MaintainRecurringSeries`, on create and once a
+      day thereafter.
+    * `reconcile_future_instances/4` — used by "edit all". Updates the existing
+      future occurrences *in place*, preserving every RSVP and waitlist spot
+      and notifying their subscribers, and removes occurrences an edit dropped.
+      It never creates: an edit changes the series, and filling the window is
+      the scheduled job's business.
   """
 
   alias Huddlz.Communities
   alias Huddlz.Communities.Huddl
   alias Huddlz.Communities.Huddl.CoverCopy
-  alias Huddlz.TimeZone
-
-  @max_instances 104
+  alias Huddlz.Communities.Huddl.SeriesWindow
 
   # Fields copied from the source huddl onto every generated/reconciled instance.
   @copied_attrs [
@@ -33,16 +32,115 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   ]
 
   @doc """
-  Clears every later instance in the series and regenerates them from `source`.
-  Idempotent, so a retried create-path Oban job rebuilds rather than duplicates.
-  Only appropriate when the instances have no subscribers (create path) — it
-  cascade-deletes RSVPs. "Edit all" uses `reconcile_future_instances/3` instead.
+  Creates the occurrences missing from the series' rolling window.
+
+  The horizon is a count of **upcoming occurrences**, not of grid slots: it is
+  `SeriesWindow.horizon/0` minus however many occurrences the series already
+  has after `cutoff` (which defaults to now), in any lifecycle state. Without
+  this cap, an "edit all" that moves the template's anchor mid-series leaves
+  the still-upcoming occurrences *before* the new anchor outside the grid
+  `SeriesWindow.next_occurrences/3` searches, so they contribute nothing to
+  the count and every sweep pads on a fresh set of grid slots on top of them.
+
+  A date already occupied by an occurrence in **any** lifecycle state is left
+  alone. That is what keeps a cancelled week cancelled rather than helpfully
+  resurrecting it, repairs a gap left by a partial failure, and makes a retried
+  or overlapping run create nothing twice.
+
+  The grid `SeriesWindow.next_occurrences/3` searches starts no earlier than
+  `source`'s own date. The template's anchor never moves except on an "edit
+  all", so a long-lived series' anchor drifts arbitrarily far behind both
+  `cutoff` and the source huddl it currently generates from. Without this
+  floor, the cutoff-relative arithmetic can land on a date *before* the
+  source — congruent with the cadence, but one the series never actually
+  reached, since every occurrence up to the source was already resolved
+  (materialized, cancelled, or otherwise accounted for). Flooring at the
+  source's own date keeps the grid from manufacturing an occurrence earlier
+  than the one the series is currently generating from.
+
+  Returns `{:error, :no_source}` when the series has no huddl left to copy
+  details from. That is not a failure — there is simply nothing to generate.
   """
-  def regenerate_series(source, template) do
-    with {:ok, _occurrences} <- desired_occurrences(template) do
-      source |> future_instances() |> Enum.each(&destroy_instance!(&1))
-      generate_huddlz_from_template(template, source)
+  def fill_window(template, cutoff \\ nil) do
+    cutoff = cutoff || DateTime.utc_now()
+
+    with {:ok, source} <- series_source(template),
+         {:ok, occurrences} <-
+           SeriesWindow.next_occurrences(template, max_datetime(cutoff, source.starts_at)) do
+      existing = series_occurrences(template, cutoff)
+      occupied = occupied_dates(template, existing)
+      capacity = max(SeriesWindow.horizon() - length(existing), 0)
+
+      occurrences
+      |> Enum.reject(fn {starts_at, _ends_at} ->
+        MapSet.member?(occupied, local_date(starts_at, template.time_zone))
+      end)
+      |> Enum.take(capacity)
+      |> Enum.each(fn {starts_at, ends_at} ->
+        create_instance!(source, template, starts_at, ends_at)
+      end)
+
+      :ok
     end
+  end
+
+  defp max_datetime(a, b) do
+    if DateTime.compare(a, b) == :gt, do: a, else: b
+  end
+
+  defp local_date(datetime, time_zone) do
+    datetime |> DateTime.shift_zone!(time_zone) |> DateTime.to_date()
+  end
+
+  defp occupied_dates(template, existing) do
+    MapSet.new(existing, &local_date(&1.starts_at, template.time_zone))
+  end
+
+  @doc """
+  The single answer to "which huddl does this series copy from": normally the
+  template's designated source; when that huddl has been hard-deleted the
+  pointer is nilified, so fall back to the series' latest occurrence. Used
+  both to generate new occurrences (`fill_window/2`) and, by
+  `MaintainRecurringSeries`, to find the series' current group for the
+  archived-group guard — the two must never resolve to different huddlz.
+
+  Returns `{:error, :no_source}` when the series has no huddl left to copy
+  from.
+  """
+  def series_source(%{source_huddl_id: nil} = template), do: latest_occurrence(template)
+
+  def series_source(template) do
+    Huddl
+    |> Ash.Query.for_read(:get_for_recurrence, %{id: template.source_huddl_id})
+    |> Ash.read_one!(authorize?: false)
+    |> case do
+      %Huddl{} = source -> {:ok, source}
+      nil -> latest_occurrence(template)
+    end
+  end
+
+  defp latest_occurrence(template) do
+    Huddl
+    |> Ash.Query.for_read(:siblings_in_series, %{
+      huddl_template_id: template.id,
+      starting_after: ~U[1970-01-01 00:00:00Z]
+    })
+    |> Ash.Query.sort(starts_at: :desc)
+    |> Ash.Query.limit(1)
+    |> Ash.read_one!(authorize?: false)
+    |> case do
+      %Huddl{} = source -> {:ok, source}
+      nil -> {:error, :no_source}
+    end
+  end
+
+  defp series_occurrences(template, starting_after) do
+    Huddl
+    |> Ash.Query.for_read(:siblings_in_series, %{
+      huddl_template_id: template.id,
+      starting_after: starting_after
+    })
+    |> Ash.read!(authorize?: false)
   end
 
   @doc """
@@ -52,10 +150,11 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     * existing future instances are **updated in place** to the source's fields
       and recomputed times (RSVPs untouched; the series change sends one summary
       per affected person)
-    * dates added by extending the series are **created**
-    * published dates dropped by shortening the series / changing frequency are
-      **cancelled** (their subscribers get the cancel notice and RSVP history remains)
-    * unpublished dates dropped from the series are **destroyed**
+    * dates the series no longer reaches are **removed**: published ones are
+      cancelled, so their subscribers get the notice and the RSVP history
+      stands, and unpublished ones are destroyed
+    * nothing is created — extending a series materializes on the next
+      scheduled sweep, not on the edit
 
   `actor` is the editor; it is threaded through so they are excluded from the
   update emails for instances they're attending.
@@ -63,32 +162,42 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
   def reconcile_future_instances(source, template, actor, context \\ %{}) do
     opts = [actor: actor, authorize?: false, context: context]
 
-    starting_after =
-      source.starts_at |> DateTime.shift_zone!(template.time_zone) |> DateTime.to_naive()
-
-    with {:ok, desired} <- desired_occurrences(template, starting_after) do
-      reconcile_desired_instances(source, template, opts, desired)
-    end
-  end
-
-  defp reconcile_desired_instances(source, template, opts, desired) do
     existing =
       source
       |> future_instances()
       |> Enum.filter(&(&1.lifecycle_state in [:draft, :published]))
       |> Enum.sort_by(& &1.starts_at, DateTime)
 
-    {retained, new_desired, obsolete_existing} = match_occurrences(existing, desired)
+    with {:ok, desired} <-
+           SeriesWindow.next_occurrences(template, source.starts_at, length(existing)) do
+      reconcile_desired_instances(source, opts, existing, desired)
+    end
+  end
+
+  @doc false
+  # Later instances in the series, read through the dedicated visibility-free
+  # action so a private series is reached in full regardless of actor.
+  def future_instances(source) do
+    Huddl
+    |> Ash.Query.for_read(:siblings_in_series, %{
+      huddl_template_id: source.huddl_template_id,
+      starting_after: source.starts_at
+    })
+    |> Ash.read!(authorize?: false)
+  end
+
+  defp reconcile_desired_instances(source, opts, existing, desired) do
+    # Asking for no more dates than already exist makes the creation branch of
+    # match_occurrences/2 unreachable, which is the point: an edit re-dates and
+    # removes, never creates. Filling the window is the scheduled job's work,
+    # so the empty list here is an assertion, not a discard.
+    {retained, [], obsolete} = match_occurrences(existing, desired)
 
     Enum.each(retained, fn {instance, {starts_at, ends_at}} ->
       update_instance!(instance, source, starts_at, ends_at, opts)
     end)
 
-    Enum.each(new_desired, fn {starts_at, ends_at} ->
-      create_instance!(source, template, starts_at, ends_at, opts)
-    end)
-
-    Enum.each(obsolete_existing, &remove_instance!(&1, opts))
+    Enum.each(obsolete, &remove_instance!(&1, opts))
 
     :ok
   end
@@ -130,83 +239,6 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     {retained, new_desired, obsolete_existing}
   end
 
-  @doc """
-  Recursively generates future huddlz based on the template's frequency and
-  repeat_until date. Each new huddl copies the source huddl's properties and
-  advances the start/end times by the appropriate interval.
-
-  Monthly huddlz retain the selected local calendar day. Short months use their
-  final day; later months restore the selected day when it exists again.
-
-  Stops after `@max_instances` (#{@max_instances}) to prevent unbounded generation.
-  """
-  def generate_huddlz_from_template(template, source, count \\ 0)
-
-  def generate_huddlz_from_template(_template, _source, count) when count >= @max_instances,
-    do: :ok
-
-  def generate_huddlz_from_template(template, source, count) do
-    case desired_occurrence(template, count + 1) do
-      {:ok, {starts_at, ends_at}} ->
-        create_instance!(source, template, starts_at, ends_at)
-        generate_huddlz_from_template(template, source, count + 1)
-
-      {:error, _reason} = error ->
-        error
-
-      :done ->
-        :ok
-    end
-  end
-
-  @doc false
-  # Later instances in the series, read through the dedicated visibility-free
-  # action so a private series is reached in full regardless of actor.
-  def future_instances(source) do
-    Huddl
-    |> Ash.Query.for_read(:siblings_in_series, %{
-      huddl_template_id: source.huddl_template_id,
-      starting_after: source.starts_at
-    })
-    |> Ash.read!(authorize?: false)
-  end
-
-  # The start/end times the series should have, from the source forward, capped
-  # at @max_instances. Times shift with the source, so editing the time moves
-  # every future occurrence.
-  defp desired_occurrences(template, starting_after \\ nil) do
-    1..@max_instances
-    |> Enum.reduce_while([], fn k, acc ->
-      case desired_occurrence(template, k, starting_after) do
-        {:ok, occurrence} -> {:cont, [occurrence | acc]}
-        :skip -> {:cont, acc}
-        {:error, reason} -> {:halt, {:error, reason}}
-        :done -> {:halt, {:ok, Enum.reverse(acc)}}
-      end
-    end)
-    |> case do
-      occurrences when is_list(occurrences) -> {:ok, Enum.reverse(occurrences)}
-      result -> result
-    end
-  end
-
-  defp desired_occurrence(template, index, starting_after \\ nil) do
-    starts_at_local = occurrence_datetime(template.starts_at_local, template, index)
-    duration = NaiveDateTime.diff(template.ends_at_local, template.starts_at_local, :second)
-    ends_at_local = NaiveDateTime.add(starts_at_local, duration, :second)
-
-    cond do
-      Date.after?(NaiveDateTime.to_date(starts_at_local), repeat_until_date(template)) ->
-        :done
-
-      starting_after && not NaiveDateTime.after?(starts_at_local, starting_after) ->
-        :skip
-
-      true ->
-        resolve_occurrence(starts_at_local, ends_at_local, template.time_zone)
-    end
-  end
-
   defp create_instance!(source, template, starts_at, ends_at, opts \\ []) do
     context = Keyword.get(opts, :context, %{})
     metadata = Map.put(context[:paper_trail_metadata] || %{}, :automatic?, true)
@@ -242,10 +274,7 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
     end
   end
 
-  defp destroy_instance!(
-         instance,
-         opts \\ [authorize?: false, context: %{paper_trail_metadata: %{automatic?: true}}]
-       ) do
+  defp destroy_instance!(instance, opts) do
     instance.id
     |> Communities.list_huddl_cover_images(authorize?: false)
     |> then(fn
@@ -302,45 +331,21 @@ defmodule Huddlz.Communities.Huddl.RecurrenceHelper do
       base
       |> Map.put(:group_id, source.group_id)
       |> Map.put(:huddl_template_id, template.id)
-      |> Map.put(:lifecycle_state, source.lifecycle_state)
+      |> Map.put(:lifecycle_state, generated_lifecycle_state(source))
     else
       base
     end
   end
 
-  defp occurrence_datetime(datetime, %{interval: interval, unit: :week}, index) do
-    NaiveDateTime.shift(datetime, week: interval * index)
-  end
-
-  # Anchor each shift to the selected day, so Jan 31 becomes Feb 28/29 then Mar 31.
-  defp occurrence_datetime(datetime, %{interval: interval, unit: :month}, index) do
-    NaiveDateTime.shift(datetime, month: interval * index)
-  end
-
-  defp repeat_until_date(%{repeat_until: %Date{} = date}), do: date
-  defp repeat_until_date(%{repeat_until: datetime}), do: DateTime.to_date(datetime)
-
-  defp resolve_occurrence(starts_at_local, ends_at_local, time_zone) do
-    with {:ok, starts_at} <- resolve_local(starts_at_local, time_zone),
-         {:ok, ends_at} <- resolve_local(ends_at_local, time_zone) do
-      {:ok,
-       {
-         DateTime.shift_zone!(starts_at, "Etc/UTC"),
-         DateTime.shift_zone!(ends_at, "Etc/UTC")
-       }}
-    end
-  end
-
-  defp resolve_local(local, time_zone) do
-    case TimeZone.resolve_local(local, time_zone) do
-      {:ok, datetime} ->
-        {:ok, datetime}
-
-      {:error, :daylight_saving_gap} ->
-        {:error, "recurring huddl time #{local} does not exist in #{time_zone}"}
-
-      {:error, reason} ->
-        {:error, "could not resolve recurring huddl time in #{time_zone}: #{inspect(reason)}"}
-    end
-  end
+  # A generated occurrence's lifecycle reflects the *series*, not whatever
+  # state the source huddl happens to be in right now. The source drifts
+  # through :completed (once its own date passes) and :cancelled (if that one
+  # week is called off) while the series itself is still very much alive, and
+  # the `:create` action only accepts :draft or :published — copying
+  # :completed or :cancelled straight through would make every future
+  # generation attempt raise. Draft is the one state that says "the series
+  # itself isn't live yet"; anything else means new occurrences should be
+  # published.
+  defp generated_lifecycle_state(%{lifecycle_state: :draft}), do: :draft
+  defp generated_lifecycle_state(_source), do: :published
 end

@@ -29,7 +29,6 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz do
   end
 
   defp reconcile_series(changeset, huddl, actor, changed_fields) do
-    repeat_until = Ash.Changeset.get_argument(changeset, :repeat_until)
     frequency = Ash.Changeset.get_argument(changeset, :frequency)
 
     # The update result doesn't carry loaded relationships, and API/GraphQL
@@ -43,29 +42,26 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz do
 
       huddl_template ->
         changed_fields =
-          if schedule_changed?(huddl_template, repeat_until, frequency) do
+          if schedule_changed?(huddl_template, changeset, frequency) do
             [:schedule | changed_fields]
           else
             changed_fields
           end
 
-        schedule = series_schedule(huddl_template, changeset.data, huddl, frequency)
+        attrs =
+          huddl_template
+          |> series_schedule(changeset.data, huddl, frequency)
+          |> Map.merge(%{frequency: frequency, source_huddl_id: huddl.id})
+          |> put_repeat_until(changeset)
 
         {:ok, huddl_template} =
           huddl_template
-          |> Ash.Changeset.for_update(
-            :update,
-            Map.merge(schedule, %{
-              repeat_until: repeat_until,
-              frequency: frequency
-            }),
-            Huddlz.Audit.nested_opts(changeset)
-          )
+          |> Ash.Changeset.for_update(:update, attrs, Huddlz.Audit.nested_opts(changeset))
           |> Ash.update(authorize?: false)
 
-        # Synchronous: "edit all" is a rare organizer action, bounded at the
-        # series cap, and immediate consistency is preferable here. The create
-        # path defers its fan-out to RegenerateRecurringSeries instead.
+        # Synchronous: "edit all" is a rare organizer action, bounded by the
+        # number of occurrences that already exist, and immediate consistency
+        # is preferable here. Creating occurrences is the scheduled job's work.
         case RecurrenceHelper.reconcile_future_instances(huddl, huddl_template, actor, %{
                paper_trail_metadata: changeset.context[:paper_trail_metadata] || %{}
              }) do
@@ -78,6 +74,20 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz do
         end
     end
   end
+
+  # `nil` means two different things on this argument. For the web form, which
+  # always submits the field, it means "boundless". For an API caller who only
+  # changed the title, it means "not supplied". Only the argument's presence
+  # tells them apart, so an omitted end date must never un-bound a series.
+  defp put_repeat_until(attrs, changeset) do
+    if repeat_until_supplied?(changeset) do
+      Map.put(attrs, :repeat_until, Ash.Changeset.get_argument(changeset, :repeat_until))
+    else
+      attrs
+    end
+  end
+
+  defp repeat_until_supplied?(changeset), do: Map.has_key?(changeset.arguments, :repeat_until)
 
   defp series_schedule(%{unit: :month} = template, original, huddl, frequency)
        when frequency in [nil, :monthly, "monthly"] do
@@ -108,14 +118,17 @@ defmodule Huddlz.Communities.Huddl.Changes.EditRecurringHuddlz do
     HuddlTemplate.wall_clock_schedule(huddl)
   end
 
-  defp schedule_changed?(template, repeat_until, frequency) do
-    repeat_until_changed?(template, repeat_until) or frequency_changed?(template, frequency)
+  defp schedule_changed?(template, changeset, frequency) do
+    repeat_until_changed?(template, changeset) or frequency_changed?(template, frequency)
   end
 
-  defp repeat_until_changed?(_template, nil), do: false
-
-  defp repeat_until_changed?(template, repeat_until) do
-    DateTime.to_date(template.repeat_until) != repeat_until
+  defp repeat_until_changed?(template, changeset) do
+    if repeat_until_supplied?(changeset) do
+      current = template.repeat_until && DateTime.to_date(template.repeat_until)
+      current != Ash.Changeset.get_argument(changeset, :repeat_until)
+    else
+      false
+    end
   end
 
   defp frequency_changed?(_template, nil), do: false
