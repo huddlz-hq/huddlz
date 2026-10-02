@@ -147,10 +147,10 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> assert_has(".cal-view-tabs .scope-tab:first-child.is-active[aria-current='page']",
         text: "Week"
       )
-      |> assert_has(".cal-view-tabs .scope-tab:last-child[href='/calendar/month']",
+      |> assert_has(".cal-view-tabs .scope-tab:last-child",
         text: "Month"
       )
-      |> assert_has(".cal-view-tabs .scope-tab.is-active[href='/calendar/week']", text: "Week")
+      |> assert_has(".cal-view-tabs .scope-tab.is-active", text: "Week")
       |> assert_has(".cal-view-tabs .scope-tab", count: 2)
       |> refute_has(".cal-view-tabs .scope-tab", text: "Agenda")
       |> refute_has("#month-calendar")
@@ -847,16 +847,19 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn: conn,
       attendee: attendee
     } do
-      next = next_month_param(Huddlz.Generator.eastern_today())
-
       conn
       |> login(attendee)
       |> visit("/calendar/week?scope=groups")
-      |> assert_has("#calendar-view-month[href='/calendar/month?scope=groups']")
+      |> click_link("#calendar-view-month", "Month")
+      |> assert_has("#month-calendar")
+      |> assert_has("#calendar-scope-groups[aria-current='page']", text: "Groups")
       |> visit("/calendar/month?scope=groups")
-      |> assert_has("#calendar-view-week[href='/calendar/week?scope=groups']")
-      |> assert_has(~s(a.cal-nav-btn[href="/calendar/month?month=#{next}&scope=groups"]))
-      |> assert_has("#calendar-scope-mine[href='/calendar/month']")
+      |> click_link("#calendar-view-week", "Week")
+      |> refute_has("#month-calendar")
+      |> assert_has("#calendar-scope-groups[aria-current='page']", text: "Groups")
+      |> visit("/calendar/month?scope=groups")
+      |> click_link("Next month")
+      |> assert_has("#calendar-scope-groups[aria-current='page']", text: "Groups")
     end
 
     test "my groups leaves out the past and cancelled huddlz nobody answered", %{

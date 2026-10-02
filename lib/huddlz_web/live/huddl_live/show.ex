@@ -38,6 +38,7 @@ defmodule HuddlzWeb.HuddlLive.Show do
     :display_image_url,
     :turnout_total,
     :show_rate,
+    :group_location,
     group: [:member_count, :current_image_url],
     creator: [:current_profile_picture_url]
   ]
@@ -423,6 +424,9 @@ defmodule HuddlzWeb.HuddlLive.Show do
               <div>
                 <div class="label">Where</div>
                 <div class="value">
+                  <span :if={@huddl.group_location && @huddl.group_location.name} class="block">
+                    {@huddl.group_location.name}
+                  </span>
                   <span class="whitespace-pre-line">{@huddl.physical_location}</span>
                   <a
                     class="map-link"

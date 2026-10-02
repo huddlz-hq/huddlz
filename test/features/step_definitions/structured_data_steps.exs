@@ -42,6 +42,69 @@ defmodule StructuredDataSteps do
      })}
   end
 
+  step "its address book location is named {string}", %{args: [name]} = context do
+    context.structured_huddl.group_location_id
+    |> then(&Ash.get!(Huddlz.Communities.GroupLocation, &1, actor: context.structured_owner))
+    |> Ash.Changeset.for_update(:update, %{name: name}, actor: context.structured_owner)
+    |> Ash.update!()
+
+    :ok
+  end
+
+  step "the public huddl names {string} as its location", %{args: [name]} = context do
+    data = huddl_data(context.structured_html)
+    assert data["location"]["name"] == name
+
+    document = Floki.parse_document!(context.structured_html)
+    assert Floki.text(document) =~ name
+    assert Floki.text(document) =~ "123 Main St, Anytown, USA"
+    :ok
+  end
+
+  step "an unnamed address book location is chosen for that huddl", context do
+    location =
+      Huddlz.Communities.GroupLocation
+      |> Ash.Changeset.for_create(
+        :create,
+        %{
+          group_id: context.structured_group.id,
+          address: "123 Main St, Anytown, USA",
+          latitude: 29.9012,
+          longitude: -81.3124,
+          time_zone: "America/New_York"
+        },
+        actor: context.structured_owner
+      )
+      |> Ash.create!()
+
+    Huddlz.Communities.update_huddl!(
+      context.structured_huddl,
+      %{group_location_id: location.id},
+      actor: context.structured_owner
+    )
+
+    :ok
+  end
+
+  step "the public huddl provides its address without inventing a location name", context do
+    data = huddl_data(context.structured_html)
+    refute Map.has_key?(data["location"], "name")
+    assert data["location"]["address"]["name"] == "123 Main St, Anytown, USA"
+
+    assert context.structured_html |> Floki.parse_document!() |> Floki.text() =~
+             "123 Main St, Anytown, USA"
+
+    :ok
+  end
+
+  step "the public huddl makes no admission price or performer claim", context do
+    data = huddl_data(context.structured_html)
+    refute Map.has_key?(data, "offers")
+    refute Map.has_key?(data, "isAccessibleForFree")
+    refute Map.has_key?(data, "performer")
+    :ok
+  end
+
   step "a crawler requests the huddl page without signing in", context do
     path = "/groups/#{context.structured_group.slug}/huddlz/#{context.structured_huddl.id}"
     html = build_conn() |> get(path) |> html_response(200)
