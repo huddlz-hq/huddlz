@@ -104,8 +104,10 @@ defmodule HuddlzWeb.StructuredData do
   defp physical_location(huddl) do
     %{
       "@type" => "Place",
+      "name" => huddl.group_location && huddl.group_location.name,
       "address" => %{"@type" => "PostalAddress", "name" => huddl.physical_location}
     }
+    |> Map.reject(fn {_key, value} -> is_nil(value) end)
   end
 
   attr :data, :map, default: nil
