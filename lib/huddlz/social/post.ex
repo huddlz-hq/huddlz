@@ -4,7 +4,9 @@ defmodule Huddlz.Social.Post do
   connection's opening line if it has one, the huddl's title, when it is
   (day-of posts say "Today"), where, how many spots are left when there is
   a cap, and the link. Scheduled posts and the schedule sheet's preview both
-  come from here, so what the preview shows is what the place receives.
+  come from here, so what the preview shows is what the place receives. A
+  post made now (`:now`: posted by an organizer, or copied to paste
+  elsewhere) says "Today" only when the huddl is today.
 
   Follow-ups are short and carry no opening line: a cancelled huddl says it
   won't go ahead; a moved one gives its new time with the old one, and the
@@ -39,7 +41,7 @@ defmodule Huddlz.Social.Post do
         }
 
   @type option ::
-          {:moment, Moment.t() | :series | :cancelled | :moved}
+          {:moment, Moment.t() | :series | :cancelled | :moved | :now}
           | {:previous_starts_at, DateTime.t() | nil}
           | {:previous_time_zone, String.t() | nil}
           | {:opening_line, String.t() | nil}
@@ -119,10 +121,15 @@ defmodule Huddlz.Social.Post do
     local = DateTime.shift_zone!(huddl.starts_at, huddl.time_zone)
     time = Calendar.strftime(local, "%-I:%M %p")
 
-    if moment in @day_of,
+    if day_of?(moment, local),
       do: "Today at #{time}",
       else: "#{Calendar.strftime(local, "%a, %b %-d")} at #{time}"
   end
+
+  defp day_of?(:now, local),
+    do: DateTime.to_date(local) == local.time_zone |> DateTime.now!() |> DateTime.to_date()
+
+  defp day_of?(moment, _local), do: moment in @day_of
 
   defp where_line(%{event_type: :virtual}), do: "Online"
 
