@@ -79,7 +79,9 @@ jobs:
 
     # Step: Define how to cache the `_build` directory. After the first run,
     # this speeds up tests runs a lot. This includes not re-compiling our
-    # project's downloaded deps every run.
+    # project's downloaded deps every run. No fallback restore: a build from
+    # another mix.lock keeps deps compiled against old versions of the deps
+    # they use (an upgraded library's structs stay stale in its dependents).
     - name: Cache compiled build
       id: cache-build
       uses: actions/cache@v6
@@ -88,9 +90,6 @@ jobs:
       with:
         path: _build
         key: ${{ runner.os }}-mix-${{ env.cache-name }}-${{ hashFiles('**/mix.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-mix-${{ env.cache-name }}-
-          ${{ runner.os }}-mix-
 
     # Step: Download project dependencies. If unchanged, uses
     # the cached version.
@@ -178,8 +177,6 @@ jobs:
       with:
         path: _build
         key: ${{ runner.os }}-mix-${{ env.cache-name }}-${{ hashFiles('**/mix.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-mix-${{ env.cache-name }}-
 
     - name: Install dependencies
       run: mix deps.get
@@ -213,15 +210,20 @@ jobs:
         node-version: '22'
         cache: npm
         cache-dependency-path: assets/package-lock.json
-    - name: Cache browser job dependencies and compilation
+    # The compiled build restores only on an exact mix.lock match; see the
+    # test job's build cache.
+    - name: Cache browser job dependencies
       uses: actions/cache@v6
       with:
-        path: |
-          deps
-          _build/test
-        key: ${{ runner.os }}-browser-otp29-elixir1.20-${{ hashFiles('mix.lock') }}
+        path: deps
+        key: ${{ runner.os }}-browser-deps-otp29-elixir1.20-${{ hashFiles('mix.lock') }}
         restore-keys: |
-          ${{ runner.os }}-browser-otp29-elixir1.20-
+          ${{ runner.os }}-browser-deps-otp29-elixir1.20-
+    - name: Cache browser job compilation
+      uses: actions/cache@v6
+      with:
+        path: _build/test
+        key: ${{ runner.os }}-browser-build-otp29-elixir1.20-${{ hashFiles('mix.lock') }}
     - name: Setup test environment
       run: cp .test.env.example .test.env
     - name: Install dependencies and asset tools
