@@ -28,10 +28,12 @@ defmodule Huddlz.Communities.ActivityLog do
     GroupMember,
     Huddl,
     HuddlAttendee,
-    SocialConnection
+    SocialConnection,
+    SocialPost
   }
 
   @impl true
+  def requires_original_data?(SocialPost, %{name: :deliver}), do: true
   def requires_original_data?(_resource, _action), do: false
 
   @impl true
@@ -92,13 +94,40 @@ defmodule Huddlz.Communities.ActivityLog do
     end
   end
 
+  def notify(%Ash.Notifier.Notification{
+        resource: SocialPost,
+        action: %{name: :deliver},
+        changeset: %{data: %{state: :scheduled}},
+        data: %{occasion: :now, state: :sent} = post
+      }) do
+    case Ash.get(SocialConnection, post.social_connection_id, authorize?: false) do
+      {:ok, %SocialConnection{} = connection} -> record_post_now(post, connection)
+      {:ok, nil} -> report(:posted_huddl_now, :connection_not_found)
+      {:error, error} -> report(:posted_huddl_now, error)
+    end
+  end
+
   def notify(_notification), do: :ok
+
+  defp record_post_now(post, connection) do
+    GroupActivity
+    |> Ash.Changeset.for_create(:record, %{
+      kind: :posted_huddl_now,
+      group_id: connection.group_id,
+      user_id: post.requested_by_id,
+      huddl_id: post.huddl_id,
+      detail: SocialConnection.place(connection),
+      impersonation_id: post.impersonation_id
+    })
+    |> Ash.create(authorize?: false)
+    |> case do
+      {:ok, _activity} -> :ok
+      {:error, error} -> report(:posted_huddl_now, error)
+    end
+  end
 
   defp steering_kind(:skip_social_connection, _huddl), do: :skipped_huddl_on_place
   defp steering_kind(:unskip_social_connection, _huddl), do: :unskipped_huddl_on_place
-
-  defp steering_kind(:post_social_now, %{__metadata__: %{social_post: %{state: :sent}}}),
-    do: :posted_huddl_now
 
   defp steering_kind(_action, _huddl), do: nil
 

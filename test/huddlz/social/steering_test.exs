@@ -139,6 +139,61 @@ defmodule Huddlz.Social.SteeringTest do
     assert huddl |> posts() |> Enum.count(&(&1.occasion == :now and &1.state == :sent)) == 2
   end
 
+  test "a retried post retains its organizer and impersonation, and records activity once", %{
+    owner: owner,
+    group: group,
+    connection: connection,
+    huddl: huddl
+  } do
+    impersonation_id = Ash.UUID.generate()
+    actor = Ash.Resource.put_metadata(owner, :impersonation, %{id: impersonation_id})
+    Req.Test.stub(Huddlz.Social, fn conn -> Plug.Conn.resp(conn, 503, "try later") end)
+
+    assert {:ok, _huddl} = Communities.post_social_now(huddl, connection.id, actor: actor)
+    refute_received {:social_post, _}
+    assert posted_now_activity(group, owner) == []
+
+    [planned] =
+      huddl.id
+      |> Communities.list_huddl_social_posts!(actor: owner)
+      |> Enum.filter(&(&1.occasion == :now))
+
+    assert planned.state == :scheduled
+
+    test = self()
+
+    Req.Test.stub(Huddlz.Social, fn conn ->
+      send(test, {:social_post, conn.body_params["text"]})
+      Req.Test.json(conn, %{"ok" => true})
+    end)
+
+    AshOban.Test.schedule_and_run_triggers(SocialPost,
+      drain_queues?: true,
+      with_scheduled: true,
+      with_recursion: true
+    )
+
+    assert_received {:social_post, _}
+    [activity] = posted_now_activity(group, owner)
+    assert activity.user_id == owner.id
+    assert activity.impersonation_id == impersonation_id
+
+    [sent] =
+      huddl.id
+      |> Communities.list_huddl_social_posts!(actor: owner)
+      |> Enum.filter(&(&1.occasion == :now))
+
+    sent |> Ash.Changeset.for_update(:deliver, %{}) |> Ash.update!(authorize?: false)
+    refute_received {:social_post, _}
+    assert [^activity] = posted_now_activity(group, owner)
+  end
+
+  defp posted_now_activity(group, actor) do
+    group.id
+    |> Communities.list_group_activity!(20, actor: actor)
+    |> Enum.filter(&(&1.kind == :posted_huddl_now))
+  end
+
   # The huddl's posts that are planned or went out.
   defp posts(huddl) do
     SocialPost

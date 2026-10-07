@@ -237,9 +237,27 @@ defmodule HuddlzWeb.OrganizeLive do
   # group; its switches and Post now until the huddl starts.
   defp load_huddl_social(socket, huddl, user) do
     if Schedule.postable?(huddl) do
+      connections = Communities.list_social_connections!(huddl.group_id, actor: user)
+
+      posts_by_connection =
+        huddl.id
+        |> Communities.list_huddl_social_posts!(actor: user)
+        |> Enum.group_by(& &1.social_connection_id)
+
+      socket =
+        Enum.reduce(connections, socket, fn connection, socket ->
+          stream(
+            socket,
+            social_post_stream_name(connection.id),
+            Map.get(posts_by_connection, connection.id, []),
+            reset: true,
+            dom_id: &"huddl-social-post-#{&1.id}"
+          )
+        end)
+
       assign(socket, :huddl_social, %{
-        connections: Communities.list_social_connections!(huddl.group_id, actor: user),
-        posts: Communities.list_huddl_social_posts!(huddl.id, actor: user),
+        connections: connections,
+        post_counts: Map.new(posts_by_connection, fn {id, posts} -> {id, length(posts)} end),
         skipped_ids:
           huddl.id
           |> Communities.list_huddl_social_skips!(actor: user)
@@ -474,6 +492,7 @@ defmodule HuddlzWeb.OrganizeLive do
             group={@group}
             huddl={@organized_huddl}
             social={@huddl_social}
+            post_streams={@streams}
           />
         <% :members -> %>
           <.members_view
@@ -1043,6 +1062,7 @@ defmodule HuddlzWeb.OrganizeLive do
   attr :group, :map, required: true
   attr :huddl, :map, required: true
   attr :social, :map, default: nil
+  attr :post_streams, :map, required: true
 
   defp huddl_view(assigns) do
     ~H"""
@@ -1083,7 +1103,8 @@ defmodule HuddlzWeb.OrganizeLive do
       :if={@social}
       huddl={@huddl}
       connections={@social.connections}
-      posts={@social.posts}
+      post_streams={@post_streams}
+      post_counts={@social.post_counts}
       skipped_ids={@social.skipped_ids}
       copy_text={@social.copy_text}
       steerable?={@social.steerable?}

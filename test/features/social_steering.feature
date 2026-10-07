@@ -74,12 +74,52 @@ Feature: One huddl's social posts can be steered
     And the Social posts panel lists a post to "#general" as posted now and sent
     And the activity of "Elixir Nashville" shows "Micah Woods" posted "Hack night" to "#general"
 
-  Scenario: Copying the post
+  Scenario: Posting now survives a temporary failure
+    Given "Elixir Nashville" posts to the Slack channel "#general" the morning of
+    And "Elixir Nashville" has a public huddl "Hack night" in ten days at 6:00 PM
+    And I am signed in as "owner@example.com"
+    And Slack is temporarily unavailable
+    When I open "Hack night" in the organize workspace
+    And I post it now to "#general"
+    Then I am told huddlz will try posting again
+    And the Social posts panel lists a post to "#general" as awaiting delivery
+    When Slack accepts posts again
+    And huddlz retries its social posts
+    And I open "Hack night" in the organize workspace
+    Then "#general" receives a post about "Hack night"
+    And the Social posts panel lists a post to "#general" as posted now and sent
+    And the activity of "Elixir Nashville" shows "Micah Woods" posted "Hack night" to "#general"
+
+  Scenario: Skipping retains posts that were already sent
     Given "Elixir Nashville" posts to the Slack channel "#general" the morning of
     And "Elixir Nashville" has a public huddl "Hack night" in ten days at 6:00 PM
     And I am signed in as "owner@example.com"
     When I open "Hack night" in the organize workspace
-    Then the post I can copy names "Hack night", its time, its place and its link
+    And I post it now to "#general"
+    And I turn off posting it to "#general"
+    Then the Social posts panel shows "#general" as skipped for this huddl
+    And the Social posts panel lists a post to "#general" as posted now and sent
+
+  Scenario: Pausing retains posts that were already sent
+    Given "Elixir Nashville" posts to the Slack channel "#general" the morning of
+    And "Elixir Nashville" has a public huddl "Hack night" in ten days at 6:00 PM
+    And I am signed in as "owner@example.com"
+    When I open "Hack night" in the organize workspace
+    And I post it now to "#general"
+    And I pause "#general" from the Social tab of "Elixir Nashville"
+    And I open "Hack night" in the organize workspace
+    Then the Social posts panel shows "#general" as paused
+    And the Social posts panel lists a post to "#general" as posted now and sent
+
+  Scenario: A refused post stays visible when the connection needs reconnecting
+    Given "Elixir Nashville" posts to the Slack channel "#general" the morning of
+    And "Elixir Nashville" has a public huddl "Hack night" in ten days at 6:00 PM
+    And I am signed in as "owner@example.com"
+    And Slack refuses posts because the connection was revoked
+    When I open "Hack night" in the organize workspace
+    And I post it now to "#general"
+    Then the Social posts panel shows "#general" as needing reconnecting
+    And the Social posts panel lists a post to "#general" as not sent
 
   Scenario: A group with no connections still offers the copy
     Given "Elixir Nashville" has a public huddl "Hack night" in ten days at 6:00 PM

@@ -21,7 +21,8 @@ defmodule HuddlzWeb.Components.HuddlSocialPosts do
 
   attr :huddl, :map, required: true
   attr :connections, :list, required: true
-  attr :posts, :list, required: true
+  attr :post_streams, :map, required: true
+  attr :post_counts, :map, required: true
   attr :skipped_ids, :list, required: true
   attr :copy_text, :string, required: true
   attr :steerable?, :boolean, required: true, doc: "whether the switches and Post now show"
@@ -51,7 +52,8 @@ defmodule HuddlzWeb.Components.HuddlSocialPosts do
           connection={connection}
           huddl={@huddl}
           skipped?={connection.id in @skipped_ids}
-          posts={Enum.filter(@posts, &(&1.social_connection_id == connection.id))}
+          posts={@post_streams[social_post_stream_name(connection.id)]}
+          post_count={Map.get(@post_counts, connection.id, 0)}
           steerable?={@steerable?}
         />
       </div>
@@ -120,43 +122,30 @@ defmodule HuddlzWeb.Components.HuddlSocialPosts do
   attr :connection, :map, required: true
   attr :huddl, :map, required: true
   attr :skipped?, :boolean, required: true
-  attr :posts, :list, required: true
+  attr :posts, :any, required: true
+  attr :post_count, :integer, required: true
   attr :steerable?, :boolean, required: true
 
-  defp place_body(%{skipped?: true} = assigns) do
-    ~H"""
-    <p class="social-posts-note">Skipped for this huddl.</p>
-    """
-  end
-
-  defp place_body(%{connection: %{state: :paused}} = assigns) do
-    ~H"""
-    <p class="social-posts-note">Paused. Nothing will post until it is resumed.</p>
-    """
-  end
-
-  defp place_body(%{connection: %{state: :needs_reconnecting}} = assigns) do
-    ~H"""
-    <p class="social-posts-note">
-      Needs reconnecting. Nothing will post until the group owner reconnects it.
-    </p>
-    """
-  end
-
   defp place_body(assigns) do
+    assigns = assign(assigns, :note, connection_note(assigns.skipped?, assigns.connection.state))
+
     ~H"""
-    <p :if={@posts == []} class="social-posts-note">
+    <p :if={@note} class="social-posts-note">{@note}</p>
+    <p :if={@post_count == 0 and is_nil(@note)} class="social-posts-note">
       Nothing planned: none of its moments are still ahead for this huddl.
     </p>
-    <ol :if={@posts != []} class="social-posts-list">
-      <li :for={post <- @posts} id={"huddl-social-post-#{post.id}"} class="social-posts-post">
+    <ol id={social_post_stream_name(@connection.id)} phx-update="stream" class="social-posts-list">
+      <li :for={{dom_id, post} <- @posts} id={dom_id} class="social-posts-post">
         <span class="social-post-time">{post_time(post, @huddl)}</span>
         <span>{Occasion.label(post.occasion)}</span>
         <.pill :if={post.state == :sent} variant={:cyan}>Sent</.pill>
         <.pill :if={post.state == :not_sent} variant={:magenta}>Didn't send</.pill>
       </li>
     </ol>
-    <div :if={@steerable?} class="social-posts-actions">
+    <div
+      :if={@steerable? and not @skipped? and @connection.state == :posting}
+      class="social-posts-actions"
+    >
       <button
         type="button"
         class="btn-secondary btn-sm"
@@ -168,6 +157,16 @@ defmodule HuddlzWeb.Components.HuddlSocialPosts do
     </div>
     """
   end
+
+  def social_post_stream_name(connection_id), do: "huddl-social-posts-#{connection_id}"
+
+  defp connection_note(true, _state), do: "Skipped for this huddl."
+  defp connection_note(false, :paused), do: "Paused. Nothing will post until it is resumed."
+
+  defp connection_note(false, :needs_reconnecting),
+    do: "Needs reconnecting. Nothing will post until the group owner reconnects it."
+
+  defp connection_note(false, _state), do: nil
 
   defp copy_line([]), do: "Copy the post to paste into a chat or channel."
   defp copy_line(_connections), do: "Posting somewhere huddlz can't reach? Copy the same words."
