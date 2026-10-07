@@ -61,6 +61,8 @@ defmodule HuddlzWeb.StructuredDataTest do
         for location <- List.wrap(data["location"]) do
           case location["@type"] do
             "Place" ->
+              assert location["name"] == "Main Street"
+
               assert location["address"] == %{
                        "@type" => "PostalAddress",
                        "name" => "123 Main St, Anytown, USA"

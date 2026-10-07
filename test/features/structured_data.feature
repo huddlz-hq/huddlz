@@ -7,6 +7,21 @@ Feature: Public structured data
     When a crawler requests the huddl page without signing in
     Then the initial HTML describes that huddl once as structured data
 
+  @location_name
+  Scenario: A crawler and visitor can identify a named huddl location
+    Given a public in-person huddl with a known schedule and address
+    And its address book location is named "Community Center"
+    When a crawler requests the huddl page without signing in
+    Then the public huddl names "Community Center" as its location
+
+  @location_name
+  Scenario: Unknown admission and location details are not invented
+    Given a public in-person huddl with a known schedule and address
+    And an unnamed address book location is chosen for that huddl
+    When a crawler requests the huddl page without signing in
+    Then the public huddl provides its address without inventing a location name
+    And the public huddl makes no admission price or performer claim
+
   Scenario: An anonymous crawler identifies a public group
     Given a public in-person huddl with a known schedule and address
     When a crawler requests the group page without signing in

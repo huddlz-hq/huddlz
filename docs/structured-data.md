@@ -20,10 +20,13 @@ artwork and group fallback as the visible page; missing artwork is omitted.
 The organizing group supplies the organizer name and public URL.
 
 Physical locations use the publicly displayed address as `PostalAddress.name`,
-without guessing address components or publishing an address-book name that the
-page does not show. Virtual locations identify the visible online attendance
-option; they never contain the restricted join URL, including when the viewer
-is an organizer or attendee. Hybrid huddlz include both location types.
+without guessing address components. When the address book location has a name,
+the huddl page displays it alongside the address and publishes it as `Place.name`.
+Unnamed or removed address book locations omit `Place.name` rather than using
+the huddl title or address as a substitute. Virtual locations identify the
+visible online attendance option; they never contain the restricted join URL,
+including when the viewer is an organizer or attendee. Hybrid huddlz include
+both location types.
 [Google's address examples](https://developers.google.com/search/docs/appearance/structured-data/event#structured-data-type-definitions)
 and [schema.org VirtualLocation](https://schema.org/VirtualLocation) support these
 vocabularies; their presence alone does not establish rich-result eligibility.
@@ -34,6 +37,20 @@ to be a headquarters or mailing address, and a cover image is not called a logo.
 Private membership details and owner contact information are excluded.
 [Google's Organization guidance](https://developers.google.com/search/docs/appearance/structured-data/organization)
 has no required properties and recommends supplying relevant, available facts.
+
+## Search Console recommendations
+
+Search Console reported missing `location.name`, `offers`, and `performer` on
+two otherwise valid public huddl pages in September 2026. A known address book
+location name now supplies `location.name` for in-person and hybrid huddlz.
+Unknown names still remain omitted, as Google's guidance recommends.
+
+huddlz does not collect money, but a free RSVP does not establish free admission
+to a concert or other gathering. There is no admission-price or ticket-offer
+field, so the markup omits `offers` and `isAccessibleForFree`. The organizing
+group is not necessarily a performer, and no performer is recorded, so
+`performer` also remains omitted. Those non-critical recommendations can remain
+until the relevant facts are recorded and displayed on the public page.
 
 ## Lifecycle limits
 
