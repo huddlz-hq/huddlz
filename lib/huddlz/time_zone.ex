@@ -30,5 +30,24 @@ defmodule Huddlz.TimeZone do
     end
   end
 
+  @doc """
+  Resolves a local time, moving forward out of a daylight saving gap rather
+  than failing.
+
+  Generated recurring occurrences use this. A boundless series must not die
+  permanently because one of its dates falls in the hour a zone skips, so the
+  occurrence happens at the first valid local time instead. `resolve_local/2`
+  keeps rejecting a gap, because a time a person typed into a form does not
+  exist and they should be told so.
+  """
+  def resolve_local_forward(%NaiveDateTime{} = local, time_zone) do
+    case DateTime.from_naive(local, time_zone) do
+      {:ok, datetime} -> {:ok, datetime}
+      {:ambiguous, earlier, _later} -> {:ok, earlier}
+      {:gap, _before_gap, after_gap} -> {:ok, after_gap}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   def eastern, do: @eastern
 end

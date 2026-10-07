@@ -53,7 +53,8 @@ config :huddlz, Oban,
      crontab: [
        {"@reboot", Huddlz.Sitemaps.Refresh},
        {"*/15 * * * *", Huddlz.Sitemaps.Refresh},
-       {"0 3 * * *", Huddlz.Audit.Prune}
+       {"0 3 * * *", Huddlz.Audit.Prune},
+       {"0 4 * * *", Huddlz.Communities.Workers.SweepRecurringSeries}
      ]}
   ]
 

@@ -1076,7 +1076,11 @@ defmodule HuddlzWeb.OrganizeLive do
             <span class="dot" aria-hidden="true"></span>
             <span class="org-huddl-series">
               <.icon name="hero-arrow-path" class="size-3.5" />
-              {series_cadence(@huddl)} · until {series_until(@huddl)}
+              <%= if until = series_until(@huddl) do %>
+                {series_cadence(@huddl)} · until {until}
+              <% else %>
+                {series_cadence(@huddl)}
+              <% end %>
             </span>
           <% end %>
         </div>
@@ -1312,6 +1316,9 @@ defmodule HuddlzWeb.OrganizeLive do
       {n, :month} -> "Every #{n} months"
     end
   end
+
+  # A boundless series has no end date to show.
+  defp series_until(%{huddl_template: %{repeat_until: nil}}), do: nil
 
   # The template stores the chosen end date at midnight UTC, so the date
   # the organizer picked is its UTC date, not a zone-shifted one.

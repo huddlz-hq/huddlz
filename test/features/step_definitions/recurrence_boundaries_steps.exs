@@ -7,7 +7,7 @@ defmodule RecurrenceBoundariesSteps do
   import PhoenixTest
 
   alias Huddlz.Communities.{Huddl, HuddlTemplate}
-  alias Huddlz.Communities.Workers.RegenerateRecurringSeries
+  alias Huddlz.Communities.Workers.MaintainRecurringSeries
   alias Huddlz.Notifications
 
   step "an organizer preparing a recurring huddl for a group with a member", context do
@@ -45,7 +45,7 @@ defmodule RecurrenceBoundariesSteps do
     session =
       context.session
       |> select("Frequency", option: cadence)
-      |> fill_in("Repeat until", with: "2030-09-07")
+      |> fill_in("Ends on", with: "2030-09-07")
       |> click_button("Schedule huddl")
 
     Map.put(context, :session, session)
@@ -53,15 +53,15 @@ defmodule RecurrenceBoundariesSteps do
 
   step "the organizer has published the weekly series", context do
     context.session
-    |> fill_in("Repeat until", with: "2030-09-23")
+    |> fill_in("Ends on", with: "2030-09-23")
     |> click_button("Schedule huddl")
     |> assert_path("/groups/#{context.group.slug}")
 
     [huddl] = Ash.read!(Huddl, actor: context.owner)
 
     :ok =
-      RegenerateRecurringSeries.perform(%Oban.Job{
-        args: %{"huddl_id" => huddl.id},
+      MaintainRecurringSeries.perform(%Oban.Job{
+        args: %{"huddl_template_id" => huddl.huddl_template_id},
         attempt: 1,
         max_attempts: 3
       })
@@ -84,7 +84,7 @@ defmodule RecurrenceBoundariesSteps do
       |> login(context.owner)
       |> visit("/groups/#{context.group.slug}/huddlz/#{context.huddl.id}/edit")
       |> click_button("Whole series")
-      |> fill_in("Repeat until", with: "2030-09-07")
+      |> fill_in("Ends on", with: "2030-09-07")
       |> click_button("Save changes")
 
     Map.put(context, :session, session)
@@ -108,7 +108,7 @@ defmodule RecurrenceBoundariesSteps do
   step "the organizer schedules the huddl ending on its first local date", context do
     session =
       context.session
-      |> fill_in("Repeat until", with: "2030-09-08")
+      |> fill_in("Ends on", with: "2030-09-08")
       |> click_button("Schedule huddl")
       |> assert_path("/groups/#{context.group.slug}")
 

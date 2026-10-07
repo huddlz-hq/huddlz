@@ -39,12 +39,26 @@ defmodule HuddlzWeb.OrganizeLiveHuddlzTest do
           date: Date.add(today, 1),
           is_recurring: true,
           frequency: "weekly",
-          # 25 weekly dates; the cutoff sits the day after the last one.
-          repeat_until: Date.add(today, 1 + 7 * 24 + 1)
+          repeat_until: Date.add(today, 365)
         )
       )
 
     Oban.drain_queue(queue: :default)
+
+    # The rolling window only fills SeriesWindow.horizon() dates per run
+    # (12 total, including the source), so pad the rest with independent
+    # upcoming huddlz to reach the 25 needed to exercise pagination.
+    for n <- 1..13 do
+      generate(
+        huddl(
+          title: "Padding #{n}",
+          group_id: group.id,
+          creator_id: owner.id,
+          actor: owner,
+          date: Date.add(today, 100 + n)
+        )
+      )
+    end
 
     conn
     |> login(owner)
@@ -86,5 +100,33 @@ defmodule HuddlzWeb.OrganizeLiveHuddlzTest do
     |> refute_has(
       "#organize-huddl-link-#{cancelled_huddl.id}[href='/groups/#{group.slug}/huddlz/#{cancelled_huddl.id}/edit']"
     )
+  end
+
+  test "a series with no end date renders its cadence without an until clause", %{
+    conn: conn,
+    group: group,
+    owner: owner
+  } do
+    today = Huddlz.Generator.eastern_today()
+
+    source =
+      generate(
+        huddl(
+          title: "Boundless Standup",
+          group_id: group.id,
+          creator_id: owner.id,
+          actor: owner,
+          date: Date.add(today, 1),
+          is_recurring: true,
+          frequency: "weekly",
+          repeat_until: nil
+        )
+      )
+
+    conn
+    |> login(owner)
+    |> visit(~p"/organize/#{group.slug}/huddlz")
+    |> assert_has("#organize-huddl-#{source.id} .org-huddl-series", text: "Weekly")
+    |> refute_has("#organize-huddl-#{source.id} .org-huddl-series", text: "until")
   end
 end

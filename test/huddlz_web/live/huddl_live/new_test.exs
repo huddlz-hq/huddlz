@@ -395,7 +395,7 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
         |> select("Duration", option: "2 hours")
         |> check("Recurring huddl")
         |> select("Frequency", option: "Every two weeks")
-        |> fill_in("Repeat until", with: Date.to_iso8601(repeat_until))
+        |> fill_in("Ends on", with: Date.to_iso8601(repeat_until))
 
       select_physical_location(session.view, group, owner, "123 Main St")
 
@@ -528,11 +528,12 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
       assert is_nil(huddl.max_attendees)
     end
 
-    test "recurrence requirements are validated by the model instead of the browser", %{
-      conn: conn,
-      owner: owner,
-      group: group
-    } do
+    test "a recurring huddl may be scheduled with no end date, per the model rather than the browser",
+         %{
+           conn: conn,
+           owner: owner,
+           group: group
+         } do
       tomorrow = Date.utc_today() |> Date.add(1) |> Date.to_iso8601()
 
       session =
@@ -551,8 +552,15 @@ defmodule HuddlzWeb.HuddlLive.NewTest do
 
       session
       |> click_button("Schedule huddl")
-      |> assert_path(~p"/groups/#{group.slug}/huddlz/new")
-      |> assert_has("#form_repeat_until-error-0", text: "is required for recurring huddlz")
+      |> assert_path(~p"/groups/#{group.slug}")
+
+      huddl =
+        Huddl
+        |> Ash.Query.filter(title == "Recurring Huddl" and group_id == ^group.id)
+        |> Ash.read_one!(actor: owner)
+        |> Ash.load!(:huddl_template, actor: owner)
+
+      assert is_nil(huddl.huddl_template.repeat_until)
     end
 
     test "shows physical location error when submitting in-person huddl without a location", %{
