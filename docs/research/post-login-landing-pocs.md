@@ -149,7 +149,7 @@ on the others.
 | A | Return to origin | 1 | S | Not started | — |
 | B | Better default landing | 2 | S–M | Not started | — |
 | C | Discover inside the agenda | 3 | L | Not started | — |
-| D | Prominent search on the agenda | 4 | M | In progress | — |
+| D | Prominent search on the agenda | 4 | M | PR open #671 | [#671](https://github.com/huddlz-hq/huddlz/pull/671) |
 | E | Intent-based login flow | 5 | M | Not started | — |
 | F | Adaptive nudge | 6 | M–L | Not started | — |
 | G | Combination: A + B + C | "these can be combined" | L | Not started | — |
