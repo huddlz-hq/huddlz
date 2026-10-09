@@ -148,7 +148,7 @@ on the others.
 | --- | --- | --- | --- | --- | --- |
 | A | Return to origin | 1 | S | Not started | — |
 | B | Better default landing | 2 | S–M | Not started | — |
-| C | Discover inside the agenda | 3 | L | Not started | — |
+| C | Discover inside the agenda | 3 | L | In progress | — |
 | D | Prominent search on the agenda | 4 | M | Not started | — |
 | E | Intent-based login flow | 5 | M | Not started | — |
 | F | Adaptive nudge | 6 | M–L | Not started | — |
@@ -292,30 +292,124 @@ not an implementation detail — report on it.
   This is the hypothesis's actual test.
 
 **Tasks**
-- [ ] Write a Cucumber scenario: a signed-in person visits `/agenda`, chooses the nearby
+- [x] Write a Cucumber scenario: a signed-in person visits `/agenda`, chooses the nearby
       filter, and sees an upcoming huddl from a group they don't belong to. Demonstrate it
       failing.
-- [ ] Write a scenario: the RSVPs and Groups filters still behave as before.
-- [ ] Write a scenario for a person with no home search location choosing the nearby filter.
-- [ ] Map Discover's huddl query and decide how to reuse it from the agenda; record the
+- [x] Write a scenario: the RSVPs and Groups filters still behave as before.
+- [x] Write a scenario for a person with no home search location choosing the nearby filter.
+- [x] Map Discover's huddl query and decide how to reuse it from the agenda; record the
       approach in Findings.
-- [ ] Add the new scope(s) to `parse_scope/1` and the agenda's URL state.
-- [ ] Load the new scope's entries into the agenda's entry shape, reusing the existing day
+- [x] Add the new scope(s) to `parse_scope/1` and the agenda's URL state.
+- [x] Load the new scope's entries into the agenda's entry shape, reusing the existing day
       grouping and status logic.
-- [ ] Resolve the chip-count problem; document the resolution.
-- [ ] Resolve sync-vs-async rendering; document the resolution.
-- [ ] Constrain the time window; justify the number chosen.
-- [ ] Measure clicks; record in Findings.
-- [ ] `mix precommit`.
+- [x] Resolve the chip-count problem; document the resolution.
+- [x] Resolve sync-vs-async rendering; document the resolution.
+- [x] Constrain the time window; justify the number chosen.
+- [x] Measure clicks; record in Findings.
+- [ ] `mix precommit`. _(deliberate follow-up after review, per the POC brief: this PR is
+      verified by scenario and a clean `--warnings-as-errors` compile only.)_
 
-**Findings** _(fill in during the PR)_
+**Findings**
 
-- Clicks from login to an un-RSVP'd huddl:
-- First-time user without help:
-- Did the agenda stay calm:
-- Where the design strained:
-- What you'd cut:
-- Terminology used:
+- **Clicks from login to an un-RSVP'd huddl: 2.** Sign in → land on `/agenda` → click the
+  **Nearby** chip (1) → the huddl is listed → click it (2). The baseline is *also* 2 —
+  `/agenda` → Discover in the sidebar (1) → a card (2) — because Discover already defaults a
+  signed-in person's location to their home search location. **So this variant does not win
+  on click count, and claiming otherwise would be dishonest.** What it changes is what those
+  two clicks cost: click 1 here lands on one list with one control, where on Discover it
+  lands on a search console with ~14 interactive controls (search field, huddlz/groups tabs,
+  Location, Within, Type, When, Sort) whose state the person now owns. The measurable
+  difference is *controls to ignore*, not clicks: **+1 chip vs +14**.
+
+- **First-time user without help:** good in the one case the variant was built for and
+  genuinely uncertain in another. "Nearby" sitting as a third chip beside RSVPs and Groups
+  reads as "more of the same list, wider" — which is exactly right, and it inherits the
+  agenda's day rail, so a stranger's huddl is legible at a glance. The uncertainty: the chip
+  row now mixes two *kinds* of thing. RSVPs and Groups are facts about you; Nearby is a
+  search. They look identical. A person may not expect the third chip to be able to be empty
+  for reasons (no saved location) that the first two never have.
+
+- **Did the agenda stay calm: yes, but only because of three things I chose not to bring
+  over, and the calm is load-bearing on all three.** Honest answer with the hedge intact:
+  1. **No filter bar.** Nearby is a fixed query — upcoming, 25 miles, not-mine — with no
+     knobs. The moment someone adds "Within" or "Type" to this surface, the agenda becomes
+     Discover with a date rail and the variant's whole claim evaporates. This is the
+     variant's real fragility: its calm is a *restraint*, not a property of the design, and
+     nothing in the code stops the next change from spending it.
+  2. **No count on the Nearby chip** (see below).
+  3. **One line of prose, not a filter summary.** A single `cal-scope-note` under the chips
+     names the distance and the saved location and offers "Search all huddlz →" as the
+     escape hatch to Discover, so the agenda never has to grow the controls it is declining
+     to show.
+
+  What did import a little clutter: Nearby needs three states the other scopes don't have
+  (no saved location, search in flight, nothing in range), so the agenda now has three empty
+  states instead of one. That is real added surface area, even though only one of them is
+  ever on screen.
+
+- **Where the design strained:**
+  - **Chip counts — resolved by making counts optional per scope, and this is a real
+    concession.** `scope_counts/4` compares two in-memory lists; Nearby is a paginated
+    search. Options were (a) a second `count: true` query, (b) count after the search lands,
+    (c) no count. I chose (c): `counts.nearby` is `nil` and `<.chip>` already renders no
+    count span for `nil`, so no component change was needed. (b) was rejected because a
+    number that appears a beat after the chip row paints reads as a bug; (a) spends a
+    round-trip on a number nobody asked for. **The cost is a visibly asymmetric chip row** —
+    "RSVPs 2 · Groups 3 · Nearby" — and the asymmetry is permanent, not a polish item.
+  - **Sync vs async — resolved by funnelling both through one derivation step, which is the
+    one structural change this PR makes to the agenda.** `handle_params/3` previously
+    computed the scope's entries and everything derived from them in one pass. I split that:
+    `handle_params/3` loads the two synchronous scopes and sets URL state, then
+    `put_view_state/1` derives the day groups, grid entries, legend and counts from
+    whichever scope is selected. `handle_async/3` assigns the nearby results and calls
+    `put_view_state/1` again, so the async scope redraws through *exactly* the same code path
+    as the synchronous ones — no second rendering path, no duplicated grouping logic. A
+    stale-ref guard drops a late reply from a scope the person has already left. The agenda's
+    own two scopes are untouched and still paint in the first render.
+  - **Nearby is agenda-only, by necessity.** `parse_scope/2` takes the view mode and falls
+    back to `:mine` for the week and the month grid, and `scope_param/2` drops the param from
+    any link leaving the agenda. A stranger's huddl is not a calendar fact, and putting one
+    in a month cell would misrepresent the person's schedule.
+  - **Today's row.** The agenda always draws today, empty or not, because an empty today is a
+    fact about your schedule. Under Nearby that produces a "Nothing today." row about huddlz
+    that were never yours, so `anchor_today?/1` turns it off for this scope only.
+  - **The exclusion set is in memory, not in the query.** Ash's `:search` action has a
+    `relationship` argument for "mine" but no inverse, so "huddlz I have *no* relationship
+    to" is done by pulling one page and rejecting ids already in the RSVPs/Groups lists. It
+    is correct and cheap at this scale, but it means the page size is nominal rather than
+    exact — a person in many nearby groups gets a shorter list than someone in none. A real
+    implementation would want the negation pushed into the query.
+
+- **One new scope or two? One. "All" was deliberately not built.** Without a location, "all
+  upcoming huddlz everywhere" is an unranked firehose with no reason to be in a *calendar* —
+  that is Discover's job, and the scope note links straight to it. Adding "all" would also
+  have forced the pagination question the agenda's fixed window currently sidesteps.
+
+- **No home search location:** the Nearby chip stays visible and clickable, and the scope
+  answers in place with "Tell us where you are" and a primary action to `/profile`. It does
+  not guess from the browser, and it does not hide the chip — a hidden chip is unexplainable,
+  whereas an empty state teaches what the chip is for.
+
+- **Time window: `@agenda_days` (7 days that have huddlz), reused unchanged.** #670 suggests
+  "maybe the next few days only" and the agenda already had exactly this window, so Nearby
+  borrows it rather than inventing a second one — the two scopes stay comparable because
+  their windows are the same. The search asks for `limit: 60` with no offset, which always
+  overfills a 7-day window, so Nearby never paginates.
+
+- **What you'd cut:** the skeleton. Nearby is a single indexed PostGIS query and lands fast
+  enough that the 250ms CSS hold-back means the skeleton is usually never seen; it cost
+  ~40 lines of markup and CSS for a flash most people won't get. I kept it only because the
+  agenda had no loading state at all and dropping rows in with no warning felt worse. If this
+  variant wins, try deleting it and see if anyone notices.
+
+- **Terminology used:** **"nearby"** for the scope (chip label "Nearby", URL `?scope=nearby`,
+  heading "Near you"), and **"home search location"** for the origin it searches from — the
+  term already used by `user.home_location` and by Discover, so no new vocabulary was coined.
+  For the slice itself I avoided naming it at all in UI copy, describing it instead:
+  "Upcoming huddlz within 25 miles of X that you haven't responded to." If this variant is
+  chosen, *nearby huddlz* is the glossary candidate. I did not need the *landing* /
+  *post-sign-in destination* vocabulary — this variant changes what the landing page can
+  show, not where sign-in goes.
 
 ---
 
