@@ -149,7 +149,7 @@ on the others.
 | A | Return to origin | 1 | S | Not started | — |
 | B | Better default landing | 2 | S–M | Not started | — |
 | C | Discover inside the agenda | 3 | L | Not started | — |
-| D | Prominent search on the agenda | 4 | M | Not started | — |
+| D | Prominent search on the agenda | 4 | M | In progress | — |
 | E | Intent-based login flow | 5 | M | Not started | — |
 | F | Adaptive nudge | 6 | M–L | Not started | — |
 | G | Combination: A + B + C | "these can be combined" | L | Not started | — |
@@ -339,24 +339,71 @@ stays calm and gains exactly one affordance. If your diff adds filters, you've d
 - Is one field enough without a location, or does "near me" have to be implicit?
 
 **Tasks**
-- [ ] Write a Cucumber scenario: a signed-in person on `/agenda` searches for a huddl by name
+- [x] Write a Cucumber scenario: a signed-in person on `/agenda` searches for a huddl by name
       and reaches it. Demonstrate it failing.
-- [ ] Write a scenario: a search with no matches explains itself.
-- [ ] Decide navigate-vs-inline; record the reasoning in Findings.
-- [ ] Add the search entry point to the agenda using `<.input>`, with Ash-driven validation.
-- [ ] Wire it to Discover's existing search; do not write a second search path.
-- [ ] Confirm the agenda gained no other affordances (self-review the diff against C).
-- [ ] Measure clicks; record in Findings.
-- [ ] `mix precommit`.
+- [x] Write a scenario: a search with no matches explains itself.
+- [x] Decide navigate-vs-inline; record the reasoning in Findings.
+- [x] Add the search entry point to the agenda using `<.input>`, with Ash-driven validation.
+- [x] Wire it to Discover's existing search; do not write a second search path.
+- [x] Confirm the agenda gained no other affordances (self-review the diff against C).
+- [x] Measure clicks; record in Findings.
+- [ ] `mix precommit`. _(deliberate follow-up after review; verified by scenario +
+      `--warnings-as-errors` compile per the POC brief)_
 
-**Findings** _(fill in during the PR)_
+**Findings**
 
-- Clicks from login to an un-RSVP'd huddl:
-- First-time user without help:
-- Did the agenda stay calm:
-- What surprised you:
-- What you'd cut:
-- Terminology used:
+- **Clicks from login to an un-RSVP'd huddl: 3.** Land on `/agenda` (0) → click the search
+  field (1) → type the name → click "Search" (2) → click the huddl in Discover's results (3).
+  Then RSVP on the huddl page is a 4th. Baseline today is also 3 to reach the huddl
+  (Discover in the sidebar → the search field → submit → the result = 4, unless you spot the
+  huddl without searching), so D's win is not raw click count — it is that **the first click
+  is on the thing you actually want**, with no navigation decision in front of it. Typing
+  beats browsing on a known title.
+- **Navigate, not inline — and I'd make the same call again.** Three reasons beyond the
+  spec's. (1) `/discover` already has the whole result surface: headings
+  (`Results for “…”`), the huddl/group tabs, the "Nothing matches those filters" empty state,
+  async loading. Rendering results on the agenda would have duplicated all of it. (2) Inline
+  results would have forced a decision about where results sit relative to "What's next" —
+  and any answer to that makes the agenda feel like Discover, which is the one thing D is
+  defined not to do. (3) The landing page at `/` *already* does exactly this handoff
+  (`LandingLive.handle_event("search", …)` → `push_navigate` to `/discover?q=…`). Copying a
+  proven pattern made the whole implementation 37 lines in the LiveView.
+- **Huddlz and groups, for free.** I did not have to decide. Because the handoff is a plain
+  `/discover?q=…` navigate, the person lands on Discover's combined search, which already
+  searches both and offers the Groups tab. An inline version would have had to pick.
+- **"Near me" is not implicit, and that's a real gap.** Discover defaults a signed-in
+  person's location to their home search location *when it loads its own filters*, but a
+  `?q=` navigate from the agenda passes no `lat`/`lng`, so the location filter opens inactive.
+  So a search for "running" from the agenda is global, not local. The landing page solves
+  this with a second "Near" picker beside the query field — which I deliberately did not
+  copy, because a location picker is a filter, and a filter is variant C. The honest reading
+  is that one field is enough for a *known title* (D's actual hypothesis) and not enough for
+  a *category*. If D wins, passing the person's home location through the handoff is the
+  first follow-up, and it costs nothing in the agenda's UI.
+- **Did the agenda stay calm: yes, measurably.** The diff is 104 insertions and 0 deletions —
+  purely additive. `load_entries/2`, `load_group_extras/4`, `parse_scope/1` and the
+  RSVPs/Groups chips are untouched. The agenda gained exactly one `<input type="search">` and
+  one submit button; the scenario "The agenda gains no filters of its own" asserts there is
+  exactly one search input and no `select`, checkbox or radio inside `#agenda-search`, so the
+  discipline is enforced by a test rather than by my own restraint.
+- **What surprised me.** (1) How much of this variant was already built — the landing page's
+  search is the same idea on a different surface, so D is arguably less "add search" than
+  "the signed-in home page is missing the affordance the signed-out one has." That asymmetry
+  is the strongest argument for D and it isn't in the spec. (2) Ash-driven validation turned
+  out to be a non-event: there is no new resource or attribute here, and a blank query is a
+  legitimate input, not an error. So "no HTML5 `required`" was satisfied by having nothing to
+  validate. I made blank submit open Discover's browse view rather than show an error, which
+  I think is the right behavior and sidesteps validation entirely.
+- **What I'd cut.** The dedicated "Search" button. On the agenda, Enter-to-submit covers the
+  keyboard case and the button is mostly there for touch; a magnifying-glass icon button, or
+  the field alone, would be calmer still. I kept it because a visible button is what makes
+  search *look* available at a glance, which is the entire hypothesis — but it is the first
+  thing I would test removing. I would also cut the placeholder copy ("Looking for something
+  you haven't RSVP'd to?") down if it reads as apologetic; it is doing explanatory work that
+  a well-placed field maybe shouldn't need.
+- **Terminology used.** "Search huddlz" as the field label (matches Discover's existing
+  placeholder of the same words). "huddl"/"huddlz" lowercase throughout the UI copy,
+  scenarios and comments. No new domain terms, so nothing for `GLOSSARY.md`.
 
 ---
 
