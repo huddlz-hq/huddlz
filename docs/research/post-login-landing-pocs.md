@@ -146,7 +146,7 @@ on the others.
 
 | ID | Variant | Issue proposal | Size | Status | PR |
 | --- | --- | --- | --- | --- | --- |
-| A | Return to origin | 1 | S | In progress | — |
+| A | Return to origin | 1 | S | PR open #672 | [#672](https://github.com/huddlz-hq/huddlz/pull/672) |
 | B | Better default landing | 2 | S–M | Not started | — |
 | C | Discover inside the agenda | 3 | L | Not started | — |
 | D | Prominent search on the agenda | 4 | M | Not started | — |
