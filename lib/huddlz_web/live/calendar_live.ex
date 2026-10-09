@@ -17,7 +17,12 @@ defmodule HuddlzWeb.CalendarLive do
   Every piece of state is in the URL, so closing the panel, the browser's
   back button and returning from a huddl all land on the same view.
   `?scope=groups` widens every view from the person's own RSVPs to
-  everything their groups have scheduled.
+  everything their groups have scheduled. `?scope=nearby` widens it once
+  more, to upcoming huddlz near the person's home search location that they
+  have no relationship to at all — the agenda's answer to arriving with
+  nothing on it. Nearby is agenda-only: the week and the month grid are
+  records of the person's own commitments, and a stranger's huddl is not
+  one.
   """
   use HuddlzWeb, :live_view
 
@@ -42,6 +47,16 @@ defmodule HuddlzWeb.CalendarLive do
   # at the month view for the rest.
   @agenda_days 7
 
+  # Nearby: how far from the person's home search location to look, in
+  # miles. Discover's own default, so the two surfaces agree.
+  @nearby_distance_miles 25
+
+  # Nearby: how many huddlz to pull. The agenda shows at most @agenda_days
+  # days of them and nothing beyond, so one page is always enough to fill
+  # the window; asking for more would only be paginating something the
+  # agenda never shows.
+  @nearby_limit 60
+
   on_mount {HuddlzWeb.LiveUserAuth, :live_user_required}
   on_mount {HuddlzWeb.LiveUserAuth, :app}
 
@@ -54,6 +69,9 @@ defmodule HuddlzWeb.CalendarLive do
      socket
      |> assign(:time_zone, time_zone)
      |> assign(:today, today)
+     |> assign(:nearby_entries, [])
+     |> assign(:nearby_loading?, false)
+     |> assign(:nearby_ref, nil)
      |> stream_configure(:legend_items, dom_id: &"calendar-legend-item-#{&1.key}")}
   end
 
@@ -73,20 +91,65 @@ defmodule HuddlzWeb.CalendarLive do
     {grid_start, grid_end} = month_grid_window(focus_month)
     user = socket.assigns.current_user
 
-    scope = parse_scope(params["scope"])
+    scope = parse_scope(params["scope"], view_mode)
     own = load_entries(user, socket.assigns.time_zone)
     group_extras = load_group_extras(user, socket.assigns.time_zone, own, today)
     everything = merge_entries(own, group_extras)
-    all = if scope == :groups, do: everything, else: own
-    entries = grid_entries(all, grid_start, grid_end, socket.assigns.time_zone)
-    {agenda_days, agenda_more} = agenda_window(all, today)
+
+    socket =
+      socket
+      |> assign(:page_title, page_title(view_mode))
+      |> assign(:focus_month, focus_month)
+      |> assign(:focus_week, focus_week)
+      |> assign(:view_mode, view_mode)
+      |> assign(:scope, scope)
+      |> assign(:nav, %{
+        view: view_mode,
+        month: focus_month,
+        week: focus_week,
+        scope: scope,
+        today: today
+      })
+      |> assign(:open_day, open_day)
+      |> assign(
+        :counts,
+        scope_counts(view_mode, own, everything, %{
+          today: today,
+          week: focus_week,
+          month: focus_month
+        })
+      )
+      |> assign(:grid_start, grid_start)
+      |> assign(:grid_end, grid_end)
+      |> assign(:own_entries, own)
+      |> assign(:everything_entries, everything)
+      |> assign(:nearby_location, nearby_location(user))
+
+    {:noreply, socket |> request_nearby(scope) |> put_view_state()}
+  end
+
+  # Everything the three views draw, derived from whichever scope is
+  # selected. Called again when a nearby search lands, so the async scope
+  # redraws through exactly the same path as the synchronous ones.
+  defp put_view_state(socket) do
+    %{
+      view_mode: view_mode,
+      today: today,
+      focus_week: focus_week,
+      focus_month: focus_month,
+      grid_start: grid_start,
+      grid_end: grid_end,
+      open_day: open_day,
+      time_zone: time_zone
+    } = socket.assigns
+
+    all = scope_entries(socket)
+    entries = grid_entries(all, grid_start, grid_end, time_zone)
+    {agenda_days, agenda_more} = agenda_window(all, today, anchor_today?(socket.assigns.scope))
     agenda_entries = Enum.flat_map(agenda_days, & &1.entries)
     week_days = week_days(all, focus_week, today)
     week_entries = Enum.flat_map(week_days, & &1.entries)
     day_entries = if open_day, do: Enum.filter(all, &(&1.calendar_date == open_day)), else: []
-
-    entries_by_day = group_by_day(entries)
-    in_month_count = Enum.count(entries, &in_focus_month?(&1, focus_month))
 
     visible =
       case view_mode do
@@ -97,44 +160,26 @@ defmodule HuddlzWeb.CalendarLive do
 
     legend_items = legend_items(visible, today)
 
-    {:noreply,
-     socket
-     |> assign(:page_title, page_title(view_mode))
-     |> assign(:focus_month, focus_month)
-     |> assign(:focus_week, focus_week)
-     |> assign(:view_mode, view_mode)
-     |> assign(:scope, scope)
-     |> assign(:nav, %{
-       view: view_mode,
-       month: focus_month,
-       week: focus_week,
-       scope: scope,
-       today: today
-     })
-     |> assign(:open_day, open_day)
-     |> assign(:day_entries, day_entries)
-     |> assign(
-       :counts,
-       scope_counts(view_mode, own, everything, %{
-         today: today,
-         week: focus_week,
-         month: focus_month
-       })
-     )
-     |> assign(:grid_start, grid_start)
-     |> assign(:grid_end, grid_end)
-     |> assign(:entries, entries)
-     |> assign(:first_run?, all == [])
-     |> assign(:entries_by_day, entries_by_day)
-     |> assign(:in_month_count, in_month_count)
-     |> assign(:agenda_days, agenda_days)
-     |> assign(:agenda_more, agenda_more)
-     |> assign(:agenda_count, length(agenda_entries))
-     |> assign(:week_days, week_days)
-     |> assign(:week_count, length(week_entries))
-     |> assign(:legend_empty?, legend_items == [])
-     |> stream(:legend_items, legend_items, reset: true)}
+    socket
+    |> assign(:day_entries, day_entries)
+    |> assign(:entries, entries)
+    |> assign(:first_run?, socket.assigns.own_entries == [] && socket.assigns.scope == :mine)
+    |> assign(:entries_by_day, group_by_day(entries))
+    |> assign(:in_month_count, Enum.count(entries, &in_focus_month?(&1, focus_month)))
+    |> assign(:agenda_days, agenda_days)
+    |> assign(:agenda_more, agenda_more)
+    |> assign(:agenda_count, length(agenda_entries))
+    |> assign(:week_days, week_days)
+    |> assign(:week_count, length(week_entries))
+    |> assign(:legend_empty?, legend_items == [])
+    |> stream(:legend_items, legend_items, reset: true)
   end
+
+  defp scope_entries(%{assigns: %{scope: :groups}} = socket),
+    do: socket.assigns.everything_entries
+
+  defp scope_entries(%{assigns: %{scope: :nearby}} = socket), do: socket.assigns.nearby_entries
+  defp scope_entries(socket), do: socket.assigns.own_entries
 
   defp parse_month(nil, today), do: first_of_month(today)
 
@@ -155,6 +200,11 @@ defmodule HuddlzWeb.CalendarLive do
   end
 
   defp parse_month(_, today), do: first_of_month(today)
+
+  # The agenda's own heading over the list. "What's next" is a promise
+  # about the person's own schedule; Nearby is not their schedule yet.
+  defp agenda_title(:nearby), do: "Near you"
+  defp agenda_title(_scope), do: "What's next"
 
   defp page_title(:agenda), do: "Agenda"
   defp page_title(_view), do: "Calendar"
@@ -190,8 +240,117 @@ defmodule HuddlzWeb.CalendarLive do
       else: Date.beginning_of_week(month_first, :sunday)
   end
 
-  defp parse_scope("groups"), do: :groups
-  defp parse_scope(_), do: :mine
+  defp parse_scope("groups", _view_mode), do: :groups
+  # Nearby belongs to the agenda only; the week and month grid are records
+  # of the person's own commitments, so they fall back to their own RSVPs.
+  defp parse_scope("nearby", :agenda), do: :nearby
+  defp parse_scope(_, _view_mode), do: :mine
+
+  # Nearby searches around the person's home search location. Without one
+  # there is no "near", so the agenda says so rather than guessing.
+  defp nearby_location(%{home_latitude: lat, home_longitude: lng} = user)
+       when is_float(lat) and is_float(lng) do
+    %{
+      latitude: lat,
+      longitude: lng,
+      label: user.home_location,
+      time_zone: user.home_time_zone
+    }
+  end
+
+  defp nearby_location(_user), do: nil
+
+  # Nearby is the one scope the agenda cannot answer from its own tables,
+  # so it runs off the socket while the rest of the page is already drawn.
+  # Entering any other scope cancels an in-flight search by dropping its
+  # ref, so a late reply can never overwrite the current scope.
+  defp request_nearby(socket, :nearby) do
+    case socket.assigns.nearby_location do
+      nil ->
+        assign(socket, nearby_entries: [], nearby_loading?: false, nearby_ref: nil)
+
+      location ->
+        ref = make_ref()
+        today = socket.assigns.today
+        time_zone = socket.assigns.time_zone
+        user = socket.assigns.current_user
+        exclude = MapSet.new(socket.assigns.everything_entries, & &1.huddl.id)
+
+        socket
+        |> assign(:nearby_ref, ref)
+        |> assign(:nearby_loading?, true)
+        |> start_async({:nearby, ref}, fn ->
+          load_nearby_entries(user, location, time_zone, today, exclude)
+        end)
+    end
+  end
+
+  defp request_nearby(socket, _scope),
+    do: assign(socket, nearby_entries: [], nearby_loading?: false, nearby_ref: nil)
+
+  @impl true
+  def handle_async({:nearby, ref}, {:ok, entries}, %{assigns: %{nearby_ref: ref}} = socket) do
+    {:noreply,
+     socket
+     |> assign(nearby_entries: entries, nearby_loading?: false, nearby_ref: nil)
+     |> put_view_state()}
+  end
+
+  def handle_async({:nearby, ref}, {:exit, reason}, %{assigns: %{nearby_ref: ref}} = socket) do
+    Logger.warning("Agenda nearby search crashed: #{inspect(reason)}")
+
+    {:noreply,
+     socket
+     |> assign(nearby_entries: [], nearby_loading?: false, nearby_ref: nil)
+     |> put_view_state()}
+  end
+
+  # A reply from a search the person has already navigated away from.
+  def handle_async({:nearby, _stale_ref}, _result, socket), do: {:noreply, socket}
+
+  # Discover's own query, borrowed whole: the same `:search` action, the
+  # same upcoming date filter and the same PostGIS distance filter, with no
+  # relationship argument so it reaches huddlz the person has nothing to do
+  # with. What arrives is then put into the agenda's entry shape — no
+  # roles, so the agenda's own status logic labels it "No RSVP" — and
+  # anything the person already has a relationship to is dropped, so
+  # Nearby never repeats what RSVPs and Groups already showed.
+  defp load_nearby_entries(user, location, time_zone, today, exclude) do
+    case Communities.search_huddlz_in_time_zone(
+           nil,
+           :upcoming,
+           nil,
+           location.latitude,
+           location.longitude,
+           @nearby_distance_miles,
+           nil,
+           location.time_zone || time_zone,
+           actor: user,
+           query: [sort: [starts_at: :asc]],
+           page: [limit: @nearby_limit],
+           load: @card_loads
+         ) do
+      {:ok, %{results: huddlz}} ->
+        build_nearby_entries(huddlz, time_zone, today, exclude)
+
+      {:ok, huddlz} when is_list(huddlz) ->
+        build_nearby_entries(huddlz, time_zone, today, exclude)
+
+      {:error, reason} ->
+        Logger.warning("Agenda nearby search failed: #{inspect(reason)}")
+        []
+    end
+  end
+
+  defp build_nearby_entries(huddlz, time_zone, today, exclude) do
+    huddlz
+    |> Enum.reject(&MapSet.member?(exclude, &1.id))
+    |> Enum.filter(& &1.starts_at)
+    |> Enum.map(&%{huddl: &1, roles: MapSet.new()})
+    |> Enum.map(&put_calendar_time(&1, time_zone))
+    |> Enum.filter(&current_or_future?(&1, today))
+    |> Enum.sort_by(& &1.huddl.starts_at, DateTime)
+  end
 
   defp first_of_month(date), do: %{date | day: 1}
 
@@ -237,10 +396,19 @@ defmodule HuddlzWeb.CalendarLive do
 
   # What each scope would show in the current view, so a chip's count
   # answers "how many here", not "how many ever".
+  #
+  # Nearby has no count, deliberately. RSVPs and Groups are counted by
+  # comparing two lists already in memory; Nearby is a paginated search of
+  # everything within range, and counting it would mean a second
+  # round-trip whose answer nobody asked for — and showing it only after
+  # the search landed would make the chip row jump. An uncounted chip
+  # still reads as a place to go; a chip whose number appears late reads
+  # as a bug.
   defp scope_counts(view_mode, own, everything, window) do
     %{
       mine: count_in_view(view_mode, own, window),
-      groups: count_in_view(view_mode, everything, window)
+      groups: count_in_view(view_mode, everything, window),
+      nearby: nil
     }
   end
 
@@ -337,13 +505,19 @@ defmodule HuddlzWeb.CalendarLive do
       [
         month: view == :month && month_param(month, nav.today),
         week: view == :week && week_param(week, nav.today),
-        scope: scope == :groups && "groups",
+        scope: scope_param(scope, view),
         day: day && Date.to_iso8601(day)
       ]
       |> Enum.filter(fn {_key, value} -> value end)
 
     page_path(view, params)
   end
+
+  # Nearby only exists on the agenda, so a link to the week or the month
+  # leaves it behind rather than carrying a scope that view cannot honor.
+  defp scope_param(:groups, _view), do: "groups"
+  defp scope_param(:nearby, :agenda), do: "nearby"
+  defp scope_param(_scope, _view), do: false
 
   defp page_path(:agenda, []), do: ~p"/agenda"
   defp page_path(:agenda, params), do: ~p"/agenda?#{params}"
@@ -568,6 +742,8 @@ defmodule HuddlzWeb.CalendarLive do
 
   @impl true
   def render(assigns) do
+    assigns = assign(assigns, :nearby_distance_miles, @nearby_distance_miles)
+
     ~H"""
     <Layouts.app
       flash={@flash}
@@ -617,8 +793,10 @@ defmodule HuddlzWeb.CalendarLive do
             </div>
           <% :agenda -> %>
             <div class="cal-month-title">
-              <span class="cal-month-name">What's next</span>
-              <span class="cal-month-count">{format_count(@agenda_count)}</span>
+              <span class="cal-month-name">{agenda_title(@scope)}</span>
+              <span :if={!(@scope == :nearby && @nearby_loading?)} class="cal-month-count">
+                {format_count(@agenda_count)}
+              </span>
             </div>
         <% end %>
 
@@ -652,7 +830,25 @@ defmodule HuddlzWeb.CalendarLive do
         >
           Groups
         </.chip>
+        <.chip
+          :if={@view_mode == :agenda}
+          id="calendar-scope-nearby"
+          patch={calendar_path(@nav, scope: :nearby)}
+          active={@scope == :nearby}
+          count={@counts.nearby}
+        >
+          Nearby
+        </.chip>
       </div>
+
+      <p :if={@scope == :nearby && @nearby_location} id="calendar-nearby-note" class="cal-scope-note">
+        Upcoming huddlz within {@nearby_distance_miles} miles of
+        <strong>{@nearby_location.label || "your saved location"}</strong>
+        that you haven't responded to.
+        <.link navigate={~p"/discover"} class="cal-scope-note-link">
+          Search all huddlz <.icon name="hero-arrow-right" class="size-3.5" />
+        </.link>
+      </p>
 
       <%= case @view_mode do %>
         <% :month -> %>
@@ -669,13 +865,23 @@ defmodule HuddlzWeb.CalendarLive do
         <% :week -> %>
           <.week_view days={@week_days} today={@today} first_run?={@first_run?} />
         <% :agenda -> %>
-          <.agenda_view
-            days={@agenda_days}
-            more={@agenda_more}
-            today={@today}
-            nav={@nav}
-            first_run?={@first_run?}
-          />
+          <%= if @scope == :nearby do %>
+            <.nearby_view
+              days={@agenda_days}
+              today={@today}
+              location={@nearby_location}
+              loading?={@nearby_loading?}
+              distance_miles={@nearby_distance_miles}
+            />
+          <% else %>
+            <.agenda_view
+              days={@agenda_days}
+              more={@agenda_more}
+              today={@today}
+              nav={@nav}
+              first_run?={@first_run?}
+            />
+          <% end %>
       <% end %>
 
       <.day_panel
@@ -1026,6 +1232,94 @@ defmodule HuddlzWeb.CalendarLive do
     """
   end
 
+  # The Nearby scope as the agenda: the same day-by-day list, filled with
+  # huddlz the person has no relationship to. Three states it has and the
+  # other scopes do not — no saved location, a search in flight, and
+  # nothing within range — each answered in place rather than by sending
+  # the person to another page.
+  attr :days, :list, required: true
+  attr :today, Date, required: true
+  attr :location, :any, required: true
+  attr :loading?, :boolean, required: true
+  attr :distance_miles, :integer, required: true
+
+  defp nearby_view(assigns) do
+    ~H"""
+    <%= cond do %>
+      <% is_nil(@location) -> %>
+        <.empty_state
+          id="calendar-nearby-no-location"
+          icon="hero-map-pin"
+          title="Tell us where you are"
+        >
+          Nearby needs somewhere to look from. Save a location and upcoming huddlz around you show up here.
+          <:action>
+            <.button variant={:primary} navigate={~p"/profile"}>
+              <.icon name="hero-map-pin" class="size-4" /> Set your location
+            </.button>
+          </:action>
+        </.empty_state>
+      <% @loading? -> %>
+        <.nearby_skeleton distance_miles={@distance_miles} />
+      <% Enum.all?(@days, &(&1.entries == [])) -> %>
+        <.empty_state
+          id="calendar-nearby-empty"
+          icon="hero-map-pin"
+          title="Nothing nearby in the next few days"
+        >
+          No upcoming huddlz within {@distance_miles} miles that you haven't already responded to.
+          <:action>
+            <.button variant={:secondary} navigate={~p"/discover"}>
+              <.icon name="hero-magnifying-glass" class="size-4" /> Widen the search
+            </.button>
+          </:action>
+        </.empty_state>
+      <% true -> %>
+        <.agenda_list
+          id="calendar-agenda"
+          entry_prefix="calendar-entry"
+          days={@days}
+          today={@today}
+        />
+    <% end %>
+    """
+  end
+
+  # Placeholder rows in the agenda's own shape while the nearby search is
+  # out. Held back by the same delay Discover's skeleton uses, so a fast
+  # search never flashes it.
+  attr :distance_miles, :integer, required: true
+
+  defp nearby_skeleton(assigns) do
+    ~H"""
+    <div
+      id="calendar-nearby-loading"
+      class="cal-agenda cal-agenda-skeleton"
+      role="status"
+      aria-busy="true"
+      aria-label={"Looking for huddlz within #{@distance_miles} miles"}
+    >
+      <div :for={width <- ~w(wide mid narrow)} class="cal-agenda-day" aria-hidden="true">
+        <div class="cal-agenda-rail">
+          <span class="skel skel-line skel-weekday"></span>
+          <span class="skel skel-daynum"></span>
+        </div>
+        <div class="cal-agenda-entries">
+          <div class="cal-agenda-entry is-skeleton">
+            <div class="cal-agenda-thumb"><span class="skel cal-agenda-thumb-img"></span></div>
+            <div class="cal-agenda-body">
+              <span class="skel skel-line skel-clock"></span>
+              <span class={["skel", "skel-title", "skel-#{width}"]}></span>
+              <span class="skel skel-line skel-meta skel-place"></span>
+            </div>
+            <div class="cal-agenda-side"><span class="skel skel-pill"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   # The agenda list: one group per day with a date rail on the left and
   # the day's huddlz on the right, in time order. The next row is the next
   # thing, so an empty today says no more than that.
@@ -1133,15 +1427,22 @@ defmodule HuddlzWeb.CalendarLive do
   # The agenda window: today, then the next @agenda_days days that have
   # huddlz, whatever month they fall in. Returns the day groups and the
   # first day with huddlz beyond the window, if any.
-  defp agenda_window(entries, today) do
+  defp agenda_window(entries, today, anchor? \\ true) do
     upcoming = Enum.filter(entries, &current_or_future?(&1, today))
     dates = upcoming |> Enum.map(& &1.calendar_date) |> Enum.uniq()
     {shown, rest} = Enum.split(dates, @agenda_days)
     shown = MapSet.new(shown)
     windowed = Enum.filter(upcoming, &MapSet.member?(shown, &1.calendar_date))
 
-    {agenda_days(windowed, first_of_month(today), today, anchor_today: true), List.first(rest)}
+    {agenda_days(windowed, first_of_month(today), today, anchor_today: anchor?), List.first(rest)}
   end
+
+  # Today's row is drawn with or without a huddl on it for the person's own
+  # scopes, because an empty today is a fact about their schedule. Nearby
+  # is not their schedule: a "Nothing today" row there would be noise, so
+  # the list starts at the first day that actually has something.
+  defp anchor_today?(:nearby), do: false
+  defp anchor_today?(_scope), do: true
 
   defp current_or_future?(%{huddl: %{status: :in_progress}}, _today), do: true
 
