@@ -14,7 +14,7 @@ Feature: First-run empty states
   Scenario: A newcomer's agenda sends them to find a huddl
     When I visit "/agenda"
     Then I should see "Nothing on your agenda yet"
-    And I should see "huddlz you RSVP to show up here, soonest first."
+    And I should see "Join a group and its huddlz show up here"
     When I click link "Find a huddl"
     Then I should see "Browse huddlz"
 
@@ -29,7 +29,7 @@ Feature: First-run empty states
   Scenario: A newcomer's calendar explains what fills it
     When I visit "/calendar/week"
     Then I should see "Your calendar is empty"
-    And I should see "huddlz you RSVP to show up here"
+    And I should see "Join a group and its huddlz show up here"
     When I click link "Find a huddl"
     Then I should see "Browse huddlz"
 

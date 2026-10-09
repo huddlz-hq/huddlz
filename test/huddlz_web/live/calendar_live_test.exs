@@ -594,7 +594,9 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> login(attendee)
       |> visit("/agenda")
       |> assert_has("#calendar-agenda-empty.empty-state h3", text: "Nothing coming up")
-      |> assert_has("#calendar-agenda-empty p", text: "Your next RSVP will land here.")
+      |> assert_has("#calendar-agenda-empty p",
+        text: "Nothing your groups have scheduled is coming up."
+      )
       |> assert_has("#calendar-agenda-empty a.btn-secondary[href='/discover']",
         text: "Browse huddlz"
       )
@@ -609,7 +611,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
         |> visit("/agenda")
         |> assert_has("#calendar-first-run.empty-state h3", text: "Nothing on your agenda yet")
         |> assert_has("#calendar-first-run p",
-          text: "huddlz you RSVP to show up here, soonest first."
+          text: "Join a group and its huddlz show up here, soonest first"
         )
         |> assert_has("#calendar-first-run a.btn-primary[href='/discover']", text: "Find a huddl")
         |> refute_has("#calendar-agenda-empty")
@@ -800,7 +802,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       %{}
     end
 
-    test "the chips carry upcoming counts and default to my RSVPs", %{
+    test "the chips carry upcoming counts and default to my groups", %{
       conn: conn,
       attendee: attendee,
       host: host,
@@ -815,14 +817,14 @@ defmodule HuddlzWeb.CalendarLiveTest do
       conn
       |> login(attendee)
       |> visit("/agenda")
-      |> assert_has("#calendar-scope-mine.chip.is-active[aria-current='page']", text: "RSVPs")
-      |> assert_has("#calendar-scope-mine .chip-count", text: "1")
-      |> assert_has(
-        "#calendar-scope-groups.chip:not(.is-active)[href='/agenda?scope=groups']",
-        text: "Groups"
-      )
+      |> assert_has("#calendar-scope-groups.chip.is-active[aria-current='page']", text: "Groups")
       |> assert_has("#calendar-scope-groups .chip-count", text: "2")
-      |> refute_has(".cal-agenda-title", text: "Theirs")
+      |> assert_has(
+        "#calendar-scope-mine.chip:not(.is-active)[href='/agenda?scope=mine']",
+        text: "RSVPs"
+      )
+      |> assert_has("#calendar-scope-mine .chip-count", text: "1")
+      |> assert_has(".cal-agenda-title", text: "Theirs")
     end
 
     test "my groups adds unanswered huddlz with an outlined pill in the grid and a legend entry",
@@ -901,9 +903,9 @@ defmodule HuddlzWeb.CalendarLiveTest do
 
       conn
       |> login(attendee)
-      |> visit("/agenda")
+      |> visit("/agenda?scope=mine")
       |> assert_has("#calendar-first-run")
-      |> visit("/agenda?scope=groups")
+      |> visit("/agenda")
       |> refute_has("#calendar-first-run")
       |> assert_has("#calendar-entry-#{theirs.id} .cal-agenda-title", text: "Theirs")
       |> refute_has("#calendar-entry-#{theirs.id} .cal-entry-status")
@@ -1008,8 +1010,8 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> refute_has("#calendar-week .cal-agenda-title", text: "The week after")
       |> assert_has(".cal-month-count", text: "1 huddl")
       |> assert_has("#calendar-legend .cal-legend-item", count: 1)
-      |> assert_has("a.cal-nav-btn[href='/calendar/week?week=2030-10-06&scope=groups']")
-      |> assert_has("#calendar-scope-mine[href='/calendar/week?week=2030-09-29']")
+      |> assert_has("a.cal-nav-btn[href='/calendar/week?week=2030-10-06']")
+      |> assert_has("#calendar-scope-mine[href='/calendar/week?week=2030-09-29&scope=mine']")
     end
   end
 
@@ -1062,7 +1064,7 @@ defmodule HuddlzWeb.CalendarLiveTest do
       |> visit("/calendar/month?month=2030-10&scope=groups&day=2030-10-03")
       |> assert_has("#calendar-day-panel .cal-agenda-quiet", text: "Nothing on this day.")
       |> assert_has("#calendar-day-panel .cal-day-count", text: "0 huddlz")
-      |> assert_has("#calendar-day-close[href='/calendar/month?month=2030-10&scope=groups']")
+      |> assert_has("#calendar-day-close[href='/calendar/month?month=2030-10']")
       |> visit("/calendar/month?month=2030-10&day=not-a-day")
       |> refute_has("#calendar-day-panel")
     end

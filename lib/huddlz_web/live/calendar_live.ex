@@ -16,8 +16,9 @@ defmodule HuddlzWeb.CalendarLive do
 
   Every piece of state is in the URL, so closing the panel, the browser's
   back button and returning from a huddl all land on the same view.
-  `?scope=groups` widens every view from the person's own RSVPs to
-  everything their groups have scheduled.
+  `?scope=` chooses between the person's own RSVPs (`mine`) and everything
+  their groups have scheduled (`groups`). With no scope in the address the
+  person's `agenda_landing` preference decides; it defaults to `groups`.
   """
   use HuddlzWeb, :live_view
 
@@ -73,7 +74,7 @@ defmodule HuddlzWeb.CalendarLive do
     {grid_start, grid_end} = month_grid_window(focus_month)
     user = socket.assigns.current_user
 
-    scope = parse_scope(params["scope"])
+    scope = parse_scope(params["scope"], user.agenda_landing)
     own = load_entries(user, socket.assigns.time_zone)
     group_extras = load_group_extras(user, socket.assigns.time_zone, own, today)
     everything = merge_entries(own, group_extras)
@@ -109,6 +110,7 @@ defmodule HuddlzWeb.CalendarLive do
        month: focus_month,
        week: focus_week,
        scope: scope,
+       landing: user.agenda_landing,
        today: today
      })
      |> assign(:open_day, open_day)
@@ -190,8 +192,15 @@ defmodule HuddlzWeb.CalendarLive do
       else: Date.beginning_of_week(month_first, :sunday)
   end
 
-  defp parse_scope("groups"), do: :groups
-  defp parse_scope(_), do: :mine
+  # An explicit `?scope=` in the address always wins, so both filters stay
+  # linkable and bookmarkable. With no scope in the address the person's
+  # `agenda_landing` preference decides, which defaults to their groups:
+  # the huddl someone arrives for is usually one their groups have on, and
+  # it is not on their RSVPs yet by definition.
+  defp parse_scope("groups", _preference), do: :groups
+  defp parse_scope("mine", _preference), do: :mine
+  defp parse_scope(_scope, preference) when preference in [:groups, :mine], do: preference
+  defp parse_scope(_scope, _preference), do: :groups
 
   defp first_of_month(date), do: %{date | day: 1}
 
@@ -337,7 +346,7 @@ defmodule HuddlzWeb.CalendarLive do
       [
         month: view == :month && month_param(month, nav.today),
         week: view == :week && week_param(week, nav.today),
-        scope: scope == :groups && "groups",
+        scope: scope != nav.landing && Atom.to_string(scope),
         day: day && Date.to_iso8601(day)
       ]
       |> Enum.filter(fn {_key, value} -> value end)
@@ -665,9 +674,9 @@ defmodule HuddlzWeb.CalendarLive do
             nav={@nav}
             open_day={@open_day}
           />
-          <.first_run_empty :if={@first_run?} />
+          <.first_run_empty :if={@first_run?} scope={@scope} />
         <% :week -> %>
-          <.week_view days={@week_days} today={@today} first_run?={@first_run?} />
+          <.week_view days={@week_days} today={@today} first_run?={@first_run?} scope={@scope} />
         <% :agenda -> %>
           <.agenda_view
             days={@agenda_days}
@@ -675,6 +684,7 @@ defmodule HuddlzWeb.CalendarLive do
             today={@today}
             nav={@nav}
             first_run?={@first_run?}
+            scope={@scope}
           />
       <% end %>
 
@@ -873,8 +883,12 @@ defmodule HuddlzWeb.CalendarLive do
 
   # The first run: no huddl in any month. Says what the page holds and
   # offers the action that fills it. The agenda is the signed-in home, so
-  # its copy speaks of the agenda rather than the calendar.
+  # its copy speaks of the agenda rather than the calendar. Under the
+  # Groups filter — the agenda's default — an empty page usually means the
+  # person has not joined a group yet, so the copy names that instead of
+  # talking only about RSVPs.
   attr :agenda?, :boolean, default: false
+  attr :scope, :atom, default: :mine
 
   defp first_run_empty(assigns) do
     ~H"""
@@ -884,10 +898,14 @@ defmodule HuddlzWeb.CalendarLive do
       title={if @agenda?, do: "Nothing on your agenda yet", else: "Your calendar is empty"}
       data-first-run
     >
-      <%= if @agenda? do %>
-        huddlz you RSVP to show up here, soonest first.
-      <% else %>
-        huddlz you RSVP to show up here, in their own time zone.
+      <%= cond do %>
+        <% @scope == :groups -> %>
+          Join a group and its huddlz show up here, soonest first — the ones you have
+          RSVP'd to and the ones still open to you.
+        <% @agenda? -> %>
+          huddlz you RSVP to show up here, soonest first.
+        <% true -> %>
+          huddlz you RSVP to show up here, in their own time zone.
       <% end %>
       <:action>
         <.button variant={:primary} navigate={~p"/discover"}>
@@ -903,11 +921,12 @@ defmodule HuddlzWeb.CalendarLive do
   attr :days, :list, required: true
   attr :today, Date, required: true
   attr :first_run?, :boolean, default: false
+  attr :scope, :atom, default: :mine
 
   defp week_view(assigns) do
     ~H"""
     <.agenda_list id="calendar-week" entry_prefix="calendar-entry" days={@days} today={@today} />
-    <.first_run_empty :if={@first_run?} />
+    <.first_run_empty :if={@first_run?} scope={@scope} />
     """
   end
 
@@ -995,15 +1014,20 @@ defmodule HuddlzWeb.CalendarLive do
   attr :today, Date, required: true
   attr :nav, :map, required: true
   attr :first_run?, :boolean, default: false
+  attr :scope, :atom, default: :mine
 
   defp agenda_view(assigns) do
     ~H"""
     <%= if @first_run? do %>
-      <.first_run_empty agenda?={true} />
+      <.first_run_empty agenda?={true} scope={@scope} />
     <% else %>
       <%= if Enum.all?(@days, &(&1.entries == [])) do %>
         <.empty_state id="calendar-agenda-empty" icon="hero-calendar" title="Nothing coming up">
-          Your next RSVP will land here.
+          <%= if @scope == :groups do %>
+            Nothing your groups have scheduled is coming up.
+          <% else %>
+            Your next RSVP will land here.
+          <% end %>
           <:action>
             <.button variant={:secondary} navigate={~p"/discover"}>Browse huddlz</.button>
           </:action>

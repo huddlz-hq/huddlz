@@ -10,10 +10,10 @@ Feature: Calendar scope: my RSVPs or everything my groups have on
       | member+calendar-group-scope@example.com | Member User  | regular |
     And I am signed in as "member+calendar-group-scope@example.com"
 
-  Scenario: The calendar starts with what I have responded to
+  Scenario: Narrowing to what I have responded to
     Given I belong to "Scope Portland Elixir", which has scheduled "Hands-on with Ash Framework"
     And I am going to "Async Rust reading group" with another group
-    When I open the agenda
+    When I open the agenda on just my RSVPs
     Then the calendar offers "RSVPs" and "Groups" scopes
     And the agenda lists "Async Rust reading group" as going
     And the agenda does not list "Hands-on with Ash Framework"
