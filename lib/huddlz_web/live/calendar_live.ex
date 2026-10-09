@@ -53,6 +53,7 @@ defmodule HuddlzWeb.CalendarLive do
     {:ok,
      socket
      |> assign(:time_zone, time_zone)
+     |> assign(:search, to_form(%{"q" => ""}, as: :search))
      |> assign(:today, today)
      |> stream_configure(:legend_items, dom_id: &"calendar-legend-item-#{&1.key}")}
   end
@@ -134,6 +135,22 @@ defmodule HuddlzWeb.CalendarLive do
      |> assign(:week_count, length(week_entries))
      |> assign(:legend_empty?, legend_items == [])
      |> stream(:legend_items, legend_items, reset: true)}
+  end
+
+  # The agenda's one search affordance hands off to Discover rather than
+  # rendering results here: the agenda's job is what you are already going
+  # to, and Discover already searches every huddl and group. A blank query
+  # opens Discover's browse view, which is more use than an empty result.
+  @impl true
+  def handle_event("search", %{"search" => %{"q" => query}}, socket) do
+    {:noreply, push_navigate(socket, to: discover_path(query))}
+  end
+
+  defp discover_path(query) do
+    case query && String.trim(query) do
+      trimmed when trimmed in [nil, ""] -> ~p"/discover"
+      trimmed -> ~p"/discover?#{[q: trimmed]}"
+    end
   end
 
   defp parse_month(nil, today), do: first_of_month(today)
@@ -590,6 +607,26 @@ defmodule HuddlzWeb.CalendarLive do
           </p>
         </div>
       </div>
+
+      <.form
+        :if={@view_mode == :agenda}
+        for={@search}
+        id="agenda-search"
+        phx-submit="search"
+        class="agenda-search"
+      >
+        <div class="agenda-search-field">
+          <.input
+            field={@search[:q]}
+            type="search"
+            label="Search huddlz"
+            placeholder="Looking for something you haven't RSVP'd to?"
+            icon="hero-magnifying-glass"
+            autocomplete="off"
+          />
+        </div>
+        <button type="submit" class="btn-primary agenda-search-submit">Search</button>
+      </.form>
 
       <div class="cal-toolbar">
         <%= case @view_mode do %>

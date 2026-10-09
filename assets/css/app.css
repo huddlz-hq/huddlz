@@ -3223,6 +3223,71 @@ body .cal-toolbar {
 
 body .cal-scope { margin-bottom: 16px; }
 
+/* Agenda search: the agenda's single affordance for a huddl that isn't on
+   it yet. One field, one button, handing off to Discover. Deliberately
+   quieter than the landing hero's search and carrying no filters. */
+body .agenda-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 8px 8px 8px 16px;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+body .agenda-search:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line-strong)); }
+
+body .agenda-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+body .agenda-search-field { flex: 1 1 auto; min-width: 0; }
+body .agenda-search-field .form-row { gap: 0; }
+
+body .agenda-search-field .form-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+body .agenda-search-field .form-input-wrap.has-icon { padding: 0; }
+body .agenda-search-field .form-input-icon { left: 0; color: var(--muted); }
+
+body .agenda-search-field .form-input,
+body .agenda-search-field .form-input:focus {
+  width: 100%;
+  height: auto;
+  padding: 0 0 0 24px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+}
+
+body .agenda-search-field .form-input::placeholder {
+  color: var(--muted);
+  transition: opacity 150ms ease;
+}
+
+body .agenda-search:focus-within .form-input::placeholder { opacity: 0.6; }
+
+body .agenda-search-submit {
+  flex: 0 0 auto;
+  height: 40px;
+  padding: 0 18px;
+  font-size: 14px;
+}
+
 body .cal-nav { display: flex; gap: 4px; }
 
 body .cal-nav-btn {
@@ -4107,6 +4172,8 @@ body .cal-legend-note { margin-left: auto; font-size: 12px; }
 
 @media (max-width: 760px) {
   body .cal-toolbar { gap: 12px; margin-bottom: 16px; }
+  body .agenda-search { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 14px; }
+  body .agenda-search-submit { width: 100%; height: 44px; }
   body .cal-view-tabs { margin-left: 0; flex: 1 1 100%; }
   body .cal-view-tabs .scope-tab { flex: 1 1 0; justify-content: center; }
   body .cal-cell { height: 64px; }
