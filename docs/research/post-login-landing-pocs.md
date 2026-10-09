@@ -147,7 +147,7 @@ on the others.
 | ID | Variant | Issue proposal | Size | Status | PR |
 | --- | --- | --- | --- | --- | --- |
 | A | Return to origin | 1 | S | Not started | — |
-| B | Better default landing | 2 | S–M | Not started | — |
+| B | Better default landing | 2 | S–M | In progress | — |
 | C | Discover inside the agenda | 3 | L | Not started | — |
 | D | Prominent search on the agenda | 4 | M | Not started | — |
 | E | Intent-based login flow | 5 | M | Not started | — |
@@ -234,30 +234,129 @@ unreachable, and the chip counts (`scope_counts/4`) must stay correct for both.
   the first-run case `first_run?` already handles. Does the default need to be dynamic?
 
 **Tasks**
-- [ ] Write a Cucumber scenario: a signed-in person in a group visits `/agenda` and sees their
+- [x] Write a Cucumber scenario: a signed-in person in a group visits `/agenda` and sees their
       group's huddlz, including ones they haven't RSVP'd to. Demonstrate it failing.
-- [ ] Write a scenario: the RSVPs filter is still reachable and still shows only own RSVPs.
-- [ ] Write a scenario for a person in zero groups landing on the agenda.
-- [ ] Flip the default scope; keep `?scope=mine` explicit and working.
-- [ ] Verify both chips' counts are still correct.
-- [ ] Decide scope-vs-page for the setting; record the reasoning in Findings.
-- [ ] Add the preference attribute + Ash update action + policy, following
+- [x] Write a scenario: the RSVPs filter is still reachable and still shows only own RSVPs.
+- [x] Write a scenario for a person in zero groups landing on the agenda.
+- [x] Flip the default scope; keep `?scope=mine` explicit and working.
+- [x] Verify both chips' counts are still correct.
+- [x] Decide scope-vs-page for the setting; record the reasoning in Findings.
+- [x] Add the preference attribute + Ash update action + policy, following
       `theme_preference`.
-- [ ] Add the setting's UI with Ash-driven validation (no HTML5 `required`).
-- [ ] Honor the preference in the post-auth redirect, routed through
+- [x] Add the setting's UI with Ash-driven validation (no HTML5 `required`).
+- [x] Honor the preference in the post-auth redirect, routed through
       `AuthReturnTo.validate/1`, and confirm an explicit `return_to` still wins over it.
-- [ ] Write a scenario: a person who set a landing preference lands there after signing in.
-- [ ] Measure clicks; record in Findings.
-- [ ] `mix precommit`.
+- [x] Write a scenario: a person who set a landing preference lands there after signing in.
+- [x] Measure clicks; record in Findings.
+- [ ] `mix precommit`. _(deliberate follow-up after review, per the POC brief: this PR is
+      verified by scenario and a clean `--warnings-as-errors` compile only.)_
 
-**Findings** _(fill in during the PR)_
+**Findings**
 
-- Clicks from login to an un-RSVP'd huddl:
-- First-time user without help:
-- Did piece 1 alone carry the value:
-- What surprised you:
-- What you'd cut:
-- Terminology used:
+- **Clicks from login to an un-RSVP'd huddl: 3 → 2**, for the main case this issue describes
+  (the huddl belongs to a group the person is already in, and they signed in without a
+  `return_to`). Before: land on `/agenda` showing own RSVPs, where the huddl is absent by
+  definition → click the Groups chip (1) → click the huddl (2) → click RSVP (3). After: the
+  agenda already opens on Groups, so the huddl is on screen → click the huddl (1) → click
+  RSVP (2). The whole agenda row is a link to the huddl page (`huddl_path/1`), so there is
+  no intermediate hop.
+  For a huddl **outside** every group the person belongs to, B changes nothing: both before
+  and after, the agenda cannot show it and the journey goes through `/discover`. That slice
+  is variant C's, not B's.
+- **First-time user without help:** fine, and slightly better than before. A person in zero
+  groups still gets the existing first-run empty state, so the flip does not strand them —
+  but the old copy ("huddlz you RSVP to show up here") was now only half the story, so under
+  the Groups filter it reads "Join a group and its huddlz show up here, soonest first — the
+  ones you have RSVP'd to and the ones still open to you." That names the actual next action
+  (join a group) instead of only describing RSVPs. The "Find a huddl" button is unchanged.
+  The default is **not** dynamic: `agenda_landing` defaults to `:groups` for everyone,
+  including people in zero groups. A dynamic default ("groups unless you have none") was
+  considered and rejected — it makes the landing unpredictable, it flips under the person
+  the moment they join or leave a group, and the empty state already does the teaching that
+  a dynamic default would be doing implicitly.
+- **Did piece 1 alone carry the value: yes — piece 1 is essentially all of the value.**
+  Flipping the default is what removes the click. The setting removes nothing; it only
+  offers an opt-out to people who preferred the old behavior. If this variant is chosen,
+  piece 1 is the shippable part and the setting is an optional follow-up. Piece 1 is ~15
+  lines of `calendar_live.ex`; the setting is a new Ash type, action, policy, attribute,
+  migration, a profile panel and ~110 lines of CSS.
+- **Scope, not page** — the setting is `agenda_landing` with values `:groups | :mine`, and it
+  chooses which *filter* the agenda opens on, not which *page* a person lands on. Reasoning:
+  (a) "which page" needs a validated whitelist of destinations, and a wrong or stale value
+  becomes an open-redirect or dead-end risk in exactly the area the Shared Constraints call
+  "the one hard failure mode"; an enum of two atoms cannot be either. (b) "which page" would
+  make B a superset of parts of C and E, so the comparison would stop measuring B's actual
+  hypothesis — the issue asks whether Groups is the better *default*, and a page picker
+  answers a different question. (c) `/` already redirects signed-in people to `/agenda`;
+  keeping one landing surface means no new hop and no new redirect-loop surface to reason
+  about. If the comparison concludes people want `/discover` as home, that is a *different,
+  later* change, and `agenda_landing` does not block it — a page preference can be added
+  beside it.
+- **What surprised me:**
+  1. **`parse_scope/1` was the easy half; `calendar_path/2` was the subtle one.** The spec
+     calls the flip "a one-line change", and `parse_scope` is. But `calendar_path/2` built
+     its query string by *omitting the default* (`scope: scope == :groups && "groups"`).
+     Left alone, that would have made the RSVPs chip link to a bare `/agenda` — which now
+     resolves back to Groups, so the RSVPs chip would have been a no-op and the filter
+     genuinely unreachable, exactly the failure mode the spec's "Watch out" warns about. The
+     fix is to omit whichever scope matches *the person's preference* rather than a hardcoded
+     one (`scope != nav.landing`), which means the preference has to be threaded into `@nav`.
+     Chip counts needed no change at all — `handle_params/3` already computes both scopes
+     every render, as the spec says.
+  2. **The default flip is observable in a surprising number of places.** Seven existing unit
+     tests and three Cucumber scenarios pinned the old default, and most of them were not
+     about scope at all — they asserted generated hrefs like
+     `/calendar/week?week=…&scope=groups`, because `groups` used to be the scope that got
+     written into links and now it is the one that gets omitted. One existing scenario
+     ("The calendar starts with what I have responded to") had to be reframed as "Narrowing
+     to what I have responded to", starting from an explicit `?scope=mine`. Its *behavior* is
+     unchanged and still covered; only its starting point moved.
+  3. **`return_to` and the preference compose cleanly with no new code.** `return_to/2` takes
+     the preference as the *last* candidate in the existing `Enum.find_value` chain, so an
+     explicit `return_to` from a huddl page's RSVP button still wins, and the preference only
+     fills the blank. It goes through `AuthReturnTo.validate/1` like every other candidate.
+     `sign_out` deliberately keeps the old user-less `return_to/1`.
+- **What I'd cut:** the setting, if forced to ship one half. See "did piece 1 alone carry the
+  value". I would also cut the post-auth redirect's explicit `?scope=mine` if reviewers find
+  it noisy — the preference is honored by `parse_scope/2` either way, so the query param only
+  makes the landing *address* match what the page shows (worth it, in my view: the URL stays
+  the whole state, which is the stated design of this LiveView). I would **not** cut the
+  empty-state copy change; leaving the old copy under a Groups-filtered agenda would be
+  actively misleading.
+- **Terminology used:** I avoided *landing* and *home* as user-facing words entirely. The UI
+  says "**Open my agenda on**" with the choices "Everything from my groups" / "Just my
+  RSVPs", and the chips keep their existing "Groups" / "RSVPs" labels. In code the attribute
+  is `agenda_landing` (`Huddlz.Accounts.AgendaLanding`, values `:groups | :mine`) — *landing*
+  survives as the internal term because that is what it is, but no person reads it. The
+  existing word for what the chips do is **filter** in `agenda_home.feature` and **scope** in
+  `calendar_group_scope.feature`; I used "filter" in UI copy and kept "scope" in code and in
+  the `?scope=` param. If B wins, the glossary should settle filter-vs-scope, which is a
+  pre-existing inconsistency this variant did not create. "huddl"/"huddlz" throughout; no
+  "event" in anything I wrote.
+- **How B compares with A (PR #672), and how it relates to E (PR #673):**
+  - **A measured 2 clicks in a 37-line change; B measures 2 clicks in a much larger one.**
+    So on the click metric alone, A wins outright and B is not worth its size. But A and B
+    answer different questions, and the counts are not comparable head to head: A's 2 clicks
+    are for the person who arrived **with a specific huddl in mind** and had their intent
+    carried through sign-in — for them the landing page never matters, and A is strictly the
+    better fix. B's 2 clicks are for the person who arrives **without** one, lands on the
+    agenda, and has to find something: A does nothing for them (there is no intent to
+    return to), and before this change they paid a click on the Groups chip every single
+    visit, not just the first. B is the only variant here that improves the *repeat* visit.
+    My honest read: ship A first; B's remaining value is the steady-state default, which is
+    real but smaller than the issue implies.
+  - **E (PR #673) added a `landing_choice` attribute on the same `theme_preference` shape,**
+    so E and B now carry two separate but near-identical preferences. They are not the same
+    thing: E's `landing_choice` is a **page** preference (it is a discovery mechanism — it
+    asks the person where to go), and my `agenda_landing` is deliberately a **scope**
+    preference for one page (see "Scope, not page" above). If both B and E are chosen they
+    should collapse to **one** attribute, and E's is the more general of the two: a page
+    preference can express "the agenda" while a scope preference cannot express
+    "`/discover`". The clean combination is E's `landing_choice` as the stored attribute,
+    B's default-scope flip as what "the agenda" then means, and B's profile panel as the
+    settings UI for it — which is also what E concluded independently. In that world my
+    `agenda_landing` attribute and its migration are the throwaway part of this PR; the
+    `parse_scope/2` + `calendar_path/2` change is the part that survives.
 
 ---
 
