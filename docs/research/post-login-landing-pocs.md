@@ -151,7 +151,7 @@ on the others.
 | C | Discover inside the agenda | 3 | L | Not started | — |
 | D | Prominent search on the agenda | 4 | M | Not started | — |
 | E | Intent-based login flow | 5 | M | Not started | — |
-| F | Adaptive nudge | 6 | M–L | In progress | — |
+| F | Adaptive nudge | 6 | M–L | PR open #674 | [#674](https://github.com/huddlz-hq/huddlz/pull/674) |
 | G | Combination: A + B + C | "these can be combined" | L | Not started | — |
 
 Size is relative effort, not priority.
