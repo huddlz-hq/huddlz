@@ -8001,3 +8001,115 @@ body .photo-delete-preview figcaption { overflow-wrap: anywhere; }
   body .huddl-create-actions > :first-child { grid-column: 1 / -1; }
   body .huddl-create-actions > * { min-height: 44px; justify-content: center; }
 }
+
+/* Profile → Agenda: which filter the agenda opens on. Two cards, side by
+   side on wide screens and stacked on phones. The visible radio dot is
+   decorative; the real input is visually hidden but focusable. */
+body .agenda-landing-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+body .agenda-landing-choices legend {
+  margin-bottom: 8px;
+  padding: 0;
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 760px) {
+  body .agenda-landing-choices { grid-template-columns: 1fr; }
+}
+
+body .agenda-landing-option {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+
+body .agenda-landing-option:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+}
+
+body .agenda-landing-option.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+body .agenda-landing-option:has(.choice-control-input:focus-visible) {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+body .agenda-landing-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--muted);
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+body .agenda-landing-option.is-active .agenda-landing-icon {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+body .agenda-landing-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+body .agenda-landing-title { font-size: 14px; font-weight: 700; color: var(--text); }
+body .agenda-landing-desc { font-size: 12px; line-height: 1.45; color: var(--muted); }
+
+body .agenda-landing-radio {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  margin-left: auto;
+  border: 2px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--panel);
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+body .agenda-landing-option.is-active .agenda-landing-radio {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 4px var(--panel);
+  background: var(--accent);
+}
+
+body .agenda-landing-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body .agenda-landing-option { transition: none; }
+  body .agenda-landing-option:hover { transform: none; }
+}

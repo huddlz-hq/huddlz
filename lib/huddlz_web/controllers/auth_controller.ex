@@ -27,7 +27,7 @@ defmodule HuddlzWeb.AuthController do
       if activity == {:confirm_new_user, :confirm} do
         ConfirmationDestination.validate(user.__metadata__[:confirmation_destination]) || ~p"/"
       else
-        return_to(conn)
+        return_to(conn, user)
       end
 
     ConfirmationDestination.remember(user, return_to)
@@ -125,4 +125,18 @@ defmodule HuddlzWeb.AuthController do
     |> Enum.find_value(&AuthReturnTo.validate/1)
     |> Kernel.||(~p"/")
   end
+
+  # Where someone lands when they signed in with no destination in mind.
+  # An explicit `return_to` still wins: the person who clicked RSVP on a
+  # huddl goes back to that huddl, not to their agenda. The preference only
+  # fills the blank, and it goes through `AuthReturnTo.validate/1` like any
+  # other post-auth path.
+  defp return_to(conn, %User{} = user) do
+    [conn.params["return_to"], get_session(conn, :return_to), agenda_landing_path(user)]
+    |> Enum.find_value(&AuthReturnTo.validate/1)
+    |> Kernel.||(~p"/")
+  end
+
+  defp agenda_landing_path(%User{agenda_landing: :mine}), do: ~p"/agenda?scope=mine"
+  defp agenda_landing_path(_user), do: ~p"/agenda"
 end
