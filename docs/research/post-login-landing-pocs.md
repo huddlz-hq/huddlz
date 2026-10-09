@@ -152,7 +152,7 @@ on the others.
 | D | Prominent search on the agenda | 4 | M | Not started | — |
 | E | Intent-based login flow | 5 | M | Not started | — |
 | F | Adaptive nudge | 6 | M–L | Not started | — |
-| G | Combination: A + B + C | "these can be combined" | L | Not started | — |
+| G | Combination: A + B + C | "these can be combined" | L | PR open #677 | [#677](https://github.com/huddlz-hq/huddlz/pull/677) |
 
 Size is relative effort, not priority.
 
@@ -467,28 +467,82 @@ G tests whether the three together feel like one coherent page or three features
 together. Judge it on coherence, and say so if it feels stapled.
 
 **Tasks**
-- [ ] Confirm at least two of A, B, C have open PRs. If not, stop and build one of those.
-- [ ] Write a Cucumber scenario covering the combined journey: arrive at a huddl signed out,
+- [x] Confirm at least two of A, B, C have open PRs. If not, stop and build one of those.
+- [x] Write a Cucumber scenario covering the combined journey: arrive at a huddl signed out,
       sign in, land back on the huddl. Demonstrate it failing.
-- [ ] Write a scenario: a person arriving *without* a destination lands on the Groups-scoped
+- [x] Write a scenario: a person arriving *without* a destination lands on the Groups-scoped
       agenda and can reach a huddl outside their groups from there.
-- [ ] Cherry-pick A's changes; note any conflicts in Findings.
-- [ ] Cherry-pick B's changes; note any conflicts.
-- [ ] Cherry-pick C's changes; note any conflicts.
-- [ ] Resolve interactions — especially precedence between `return_to`, a landing preference,
+- [x] Cherry-pick A's changes; note any conflicts in Findings.
+- [x] Cherry-pick B's changes; note any conflicts.
+- [x] Cherry-pick C's changes; note any conflicts.
+- [x] Resolve interactions — especially precedence between `return_to`, a landing preference,
       and the default scope. Document the precedence order you chose.
-- [ ] Assess coherence honestly; record in Findings.
-- [ ] Measure clicks for both journeys (with and without a destination).
-- [ ] `mix precommit`.
+- [x] Assess coherence honestly; record in Findings.
+- [x] Measure clicks for both journeys (with and without a destination).
+- [ ] `mix precommit`. *(deliberate follow-up after review — see the PR body.)*
 
-**Findings** _(fill in during the PR)_
+**Findings**
 
-- Clicks, arriving with a destination:
-- Clicks, arriving without one:
-- Precedence order chosen:
-- Coherent or stapled:
-- What you'd cut:
-- Terminology used:
+- **Clicks, arriving with a destination:** 2 to get back to the huddl ("Sign in" in the
+  header, submit the form), landing on the huddl page itself. The RSVP is the 3rd click and
+  no click is spent on navigation. Same as A alone — B and C add nothing to this journey and,
+  importantly, cost it nothing.
+- **Clicks, arriving without one:** 1 to a huddl their groups have on (submit the form, land
+  on the Groups-filtered agenda, click the huddl). 2 to a huddl outside their groups (Nearby
+  chip, then the huddl). Before this combination the second journey was 3 and left the
+  agenda for `/discover`.
+- **Precedence order chosen:** `return_to` (explicit) > stored landing preference > default
+  filter. One ordering, applied in two places: `return_to/2` in `auth_controller.ex` decides
+  the page, and `parse_scope/3` in `calendar_live.ex` decides the filter — an explicit
+  `?scope=` beats the preference, which beats the `:groups` default. The reasoning: a return
+  destination is something the person did a moment ago, a preference is something they said
+  once, and a default is something nobody said. Recency of intent wins. Pinned by
+  `test/features/combined_landing.feature`, which fails if the ordering is inverted.
+- **B's preference enum vs C's `nearby` scope — a person cannot choose to land on Nearby, and
+  `agenda_landing` deliberately has no `nearby` value.** Nearby is a search, not a fact: it
+  has three states the other two filters do not (no saved location, search in flight, nothing
+  in range). Landing somebody there means the signed-in home can open on a spinner or on
+  "tell us where you are" — a question instead of an answer. Nearby stays reachable by
+  address and by chip, one click from wherever the person lands.
+- **The one place combining actually changed behavior: `first_run?`.** Everything else was
+  plumbing — two functions growing an argument. This was a genuine collision. C had narrowed
+  `first_run?` to `own_entries == [] && scope == :mine`, because under C the agenda still
+  opened on RSVPs. B, independently, had written new first-run copy for the Groups filter
+  ("Join a group and its huddlz show up here"). Cherry-picked together, C's narrowing makes
+  B's new copy **dead code** — reachable by no state, because the only scope that can show a
+  first-run panel is the one whose copy B did not change. Neither PR is wrong alone; the
+  conflict exists only in the combination, and git merged both hunks without a marker. It
+  took a failing unit test (`calendar_live_test.exs:893`) to surface the second half of it.
+  Resolved by making first-run mean "nothing of your own anywhere, *and* the filter you are
+  looking at has nothing to show": `:mine` with no own entries, or `:groups` with neither own
+  nor group entries. Both variants' copy is now reachable and both their tests pass. This is
+  the class of problem G exists to find, and it is invisible from any single variant's PR.
+- **Coherent or stapled: coherent, with one seam.** The three pieces land on the same surface
+  rather than beside it, and that is not luck — all three are already expressed in the same
+  vocabulary the agenda had before any of them. A, B and C are, respectively: a destination,
+  a default for that destination, and a third value for the filter that destination opens on.
+  Nothing invents a page, a modal or a step. The agenda reads as one page with three filters
+  and a memory of where you were going.
+  The seam is Nearby. RSVPs and Groups are two views of the person's own commitments, counted
+  from the same two in-memory lists; Nearby is a paginated PostGIS search with no count, a
+  loading state and a "set your location" prompt. The chip row presents three peers, but the
+  third behaves unlike the other two, and the uncounted chip is where you can feel it. It is
+  the right seam to have — Discover-inside-the-agenda is the largest of the three ideas — but
+  anyone shipping this should expect Nearby to read as the newcomer in the row.
+- **What you'd cut:** the profile panel from B. It is the heaviest part of the combination —
+  an Ash attribute, an action, a policy, a migration and a UI panel — to let people opt out
+  of a default that, after C, is the right default for nearly everybody. Ship B's flipped
+  default and A and C entire; hold the preference until somebody asks for it. That would
+  remove the precedence question from the product (though not from the code, since
+  `return_to` still has to beat the default) and shrink the combination substantially.
+  I would also keep Nearby's chip uncounted rather than finding a way to count it — a number
+  arriving a beat late reads worse than no number.
+- **Terminology used:** *return destination* for the remembered pre-auth intent (A's term,
+  kept). *Landing* for the post-sign-in destination, and `agenda_landing` for the stored
+  preference — B's term, kept, and narrowed in its own moduledoc to a *filter* preference
+  rather than a destination, since the agenda stays the one signed-in home. *Nearby* for C's
+  "upcoming huddlz near me, outside my groups" slice (C's term, kept). No new vocabulary was
+  introduced by the combination, which is itself mild evidence for coherence.
 
 ---
 
